@@ -29870,45 +29870,69 @@
        "evidence": [
         {
          "task": "S7-01",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "fe9287701aec070dd4a729511c2abfe8e2076e81",
          "kind": "click",
          "action": "10만 메타데이터 스크롤·검색·검증된 이미지 선택",
          "expected": "Three actual ordered120-row keyset pages produce360 distinct UUIDs; DOM maximum32 and response maximum120; exact tail search selects the owned verified image.",
          "observed": "browser: Three actual ordered120-row keyset pages produce360 distinct UUIDs; DOM maximum32 and response maximum120; exact tail search selects the owned verified image. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/scale-library-controls.spec.ts::100k metadata pages through the actual library picker and restores the exact tail image",
-         "receipt": "2026-10-08-scale-library-369b8e1-browser.json",
-         "receipt_sha256": "5eec47ca4f195dcfd90d941e1ee09a6847f69911d781b4a41b579b63d7ae0886",
+         "receipt": "2026-10-08-metadata-picker-fe92877-browser.json",
+         "receipt_sha256": "139c823ccd2076bf687ab06acf50ea94f7c7ee2836152ef89e93eb82151c2d02",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "2b039917d7a1abab5d2a64f0cdaef71ad6c9ec330077a060383fd7ae22cd4bff"
+           "sha256": "d86cbae5c1b0e86fe05f3ddc39f7579b392577dfd6d4163427cb11f2a8472795"
           },
           {
            "id": "screenshot-1",
-           "sha256": "11c5202bffabf798857c6e73f2d60a528400ca029178bfaf1dc10acf431a02c2"
+           "sha256": "7ea1d2741b0241d984e52bd744f144c1e4504f49bd525692c1a3be77cfb0f9b0"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f43101b7799a7cfe3f73b685c3d2a52c242485e4de30ddc6595244becf54a408"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "d0afbf9dbf63e1347175299319bc87cef854367b593e3d3d284e30238c96f54f"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "27f455a902265fb36ab6c3638516acfcc1be37149252b78d09aefa324367dae7"
           }
          ]
         },
         {
          "task": "S7-01",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "fe9287701aec070dd4a729511c2abfe8e2076e81",
          "kind": "click",
          "action": "10만 메타데이터 스크롤·검색·검증된 이미지 선택",
          "expected": "Three actual ordered120-row keyset pages produce360 distinct UUIDs; DOM maximum32 and response maximum120; exact tail search selects the owned verified image.",
          "observed": "electron: Three actual ordered120-row keyset pages produce360 distinct UUIDs; DOM maximum32 and response maximum120; exact tail search selects the owned verified image. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/scale-library-controls.spec.ts::native 100k metadata picker preserves keyset progress and exact reopened identity",
-         "receipt": "2026-10-08-scale-library-369b8e1-electron.json",
-         "receipt_sha256": "07b46cc6581329bee48e9229c149f0291a25fed7e2f7b98e784408c0d1715a1a",
+         "receipt": "2026-10-08-metadata-picker-fe92877-electron.json",
+         "receipt_sha256": "27cd152592e7153e1d07c4559a1f2514d5147cd98862bc1e52515016fcb2ccb0",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "94f0de8de4ad7a870a7f0f38ba9fee4f16bda3d52a4d8ef2ef7aa259e6ba2feb"
+           "sha256": "6edb3145443700505bdad17cef9c1a85232d9de35ee17a9cc2ad486c0aac4610"
           },
           {
            "id": "screenshot-1",
-           "sha256": "06cec9654b306a85481cf5b44631e433385b36e6e532435616a03fac0d8ba6fe"
+           "sha256": "97ef6e32ae338702c97285796ea483c044ad857791e53a07d674d885d3a15f74"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "a48f616021d617894b0f11c3f1da910f0773b1727010562f9784806973d79139"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "0ef945d35dfb63f529fc3b9a85a9d027188f11824d36522363d68b10b1bd73b2"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "5b0327473eebc0705e44138245b8d8c5336b32ce18d63416165adc0cc51c3a7c"
           }
          ]
         }
@@ -29919,45 +29943,69 @@
        "evidence": [
         {
          "task": "S7-01",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "fe9287701aec070dd4a729511c2abfe8e2076e81",
          "kind": "click",
          "action": "10만 메타데이터 스크롤·검색·검증된 이미지 선택",
          "expected": "Searching a nonexistent name returns explicit no-match with zero rows.",
          "observed": "browser: Searching a nonexistent name returns explicit no-match with zero rows. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/scale-library-controls.spec.ts::100k metadata pages through the actual library picker and restores the exact tail image",
-         "receipt": "2026-10-08-scale-library-369b8e1-browser.json",
-         "receipt_sha256": "5eec47ca4f195dcfd90d941e1ee09a6847f69911d781b4a41b579b63d7ae0886",
+         "receipt": "2026-10-08-metadata-picker-fe92877-browser.json",
+         "receipt_sha256": "139c823ccd2076bf687ab06acf50ea94f7c7ee2836152ef89e93eb82151c2d02",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "2b039917d7a1abab5d2a64f0cdaef71ad6c9ec330077a060383fd7ae22cd4bff"
+           "sha256": "d86cbae5c1b0e86fe05f3ddc39f7579b392577dfd6d4163427cb11f2a8472795"
           },
           {
            "id": "screenshot-1",
-           "sha256": "11c5202bffabf798857c6e73f2d60a528400ca029178bfaf1dc10acf431a02c2"
+           "sha256": "7ea1d2741b0241d984e52bd744f144c1e4504f49bd525692c1a3be77cfb0f9b0"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f43101b7799a7cfe3f73b685c3d2a52c242485e4de30ddc6595244becf54a408"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "d0afbf9dbf63e1347175299319bc87cef854367b593e3d3d284e30238c96f54f"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "27f455a902265fb36ab6c3638516acfcc1be37149252b78d09aefa324367dae7"
           }
          ]
         },
         {
          "task": "S7-01",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "fe9287701aec070dd4a729511c2abfe8e2076e81",
          "kind": "click",
          "action": "10만 메타데이터 스크롤·검색·검증된 이미지 선택",
          "expected": "Searching a nonexistent name returns explicit no-match with zero rows.",
          "observed": "electron: Searching a nonexistent name returns explicit no-match with zero rows. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/scale-library-controls.spec.ts::native 100k metadata picker preserves keyset progress and exact reopened identity",
-         "receipt": "2026-10-08-scale-library-369b8e1-electron.json",
-         "receipt_sha256": "07b46cc6581329bee48e9229c149f0291a25fed7e2f7b98e784408c0d1715a1a",
+         "receipt": "2026-10-08-metadata-picker-fe92877-electron.json",
+         "receipt_sha256": "27cd152592e7153e1d07c4559a1f2514d5147cd98862bc1e52515016fcb2ccb0",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "94f0de8de4ad7a870a7f0f38ba9fee4f16bda3d52a4d8ef2ef7aa259e6ba2feb"
+           "sha256": "6edb3145443700505bdad17cef9c1a85232d9de35ee17a9cc2ad486c0aac4610"
           },
           {
            "id": "screenshot-1",
-           "sha256": "06cec9654b306a85481cf5b44631e433385b36e6e532435616a03fac0d8ba6fe"
+           "sha256": "97ef6e32ae338702c97285796ea483c044ad857791e53a07d674d885d3a15f74"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "a48f616021d617894b0f11c3f1da910f0773b1727010562f9784806973d79139"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "0ef945d35dfb63f529fc3b9a85a9d027188f11824d36522363d68b10b1bd73b2"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "5b0327473eebc0705e44138245b8d8c5336b32ce18d63416165adc0cc51c3a7c"
           }
          ]
         }
@@ -29968,110 +30016,365 @@
        "evidence": [
         {
          "task": "S7-01",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "fe9287701aec070dd4a729511c2abfe8e2076e81",
          "kind": "click",
          "action": "10만 메타데이터 스크롤·검색·검증된 이미지 선택",
          "expected": "Missing/unverified metadata row has no file/hash and actual thumbnail404; clicking it shows refusal and preserves the previous validated tail identity.",
          "observed": "browser: Missing/unverified metadata row has no file/hash and actual thumbnail404; clicking it shows refusal and preserves the previous validated tail identity. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/scale-library-controls.spec.ts::100k metadata pages through the actual library picker and restores the exact tail image",
-         "receipt": "2026-10-08-scale-library-369b8e1-browser.json",
-         "receipt_sha256": "5eec47ca4f195dcfd90d941e1ee09a6847f69911d781b4a41b579b63d7ae0886",
+         "receipt": "2026-10-08-metadata-picker-fe92877-browser.json",
+         "receipt_sha256": "139c823ccd2076bf687ab06acf50ea94f7c7ee2836152ef89e93eb82151c2d02",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "2b039917d7a1abab5d2a64f0cdaef71ad6c9ec330077a060383fd7ae22cd4bff"
+           "sha256": "d86cbae5c1b0e86fe05f3ddc39f7579b392577dfd6d4163427cb11f2a8472795"
           },
           {
            "id": "screenshot-1",
-           "sha256": "11c5202bffabf798857c6e73f2d60a528400ca029178bfaf1dc10acf431a02c2"
+           "sha256": "7ea1d2741b0241d984e52bd744f144c1e4504f49bd525692c1a3be77cfb0f9b0"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f43101b7799a7cfe3f73b685c3d2a52c242485e4de30ddc6595244becf54a408"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "d0afbf9dbf63e1347175299319bc87cef854367b593e3d3d284e30238c96f54f"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "27f455a902265fb36ab6c3638516acfcc1be37149252b78d09aefa324367dae7"
           }
          ]
         },
         {
          "task": "S7-01",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "fe9287701aec070dd4a729511c2abfe8e2076e81",
          "kind": "click",
          "action": "10만 메타데이터 스크롤·검색·검증된 이미지 선택",
          "expected": "Missing/unverified metadata row has no file/hash and actual thumbnail404; clicking it shows refusal and preserves the previous validated tail identity.",
          "observed": "electron: Missing/unverified metadata row has no file/hash and actual thumbnail404; clicking it shows refusal and preserves the previous validated tail identity. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/scale-library-controls.spec.ts::native 100k metadata picker preserves keyset progress and exact reopened identity",
-         "receipt": "2026-10-08-scale-library-369b8e1-electron.json",
-         "receipt_sha256": "07b46cc6581329bee48e9229c149f0291a25fed7e2f7b98e784408c0d1715a1a",
+         "receipt": "2026-10-08-metadata-picker-fe92877-electron.json",
+         "receipt_sha256": "27cd152592e7153e1d07c4559a1f2514d5147cd98862bc1e52515016fcb2ccb0",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "94f0de8de4ad7a870a7f0f38ba9fee4f16bda3d52a4d8ef2ef7aa259e6ba2feb"
+           "sha256": "6edb3145443700505bdad17cef9c1a85232d9de35ee17a9cc2ad486c0aac4610"
           },
           {
            "id": "screenshot-1",
-           "sha256": "06cec9654b306a85481cf5b44631e433385b36e6e532435616a03fac0d8ba6fe"
+           "sha256": "97ef6e32ae338702c97285796ea483c044ad857791e53a07d674d885d3a15f74"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "a48f616021d617894b0f11c3f1da910f0773b1727010562f9784806973d79139"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "0ef945d35dfb63f529fc3b9a85a9d027188f11824d36522363d68b10b1bd73b2"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "5b0327473eebc0705e44138245b8d8c5336b32ce18d63416165adc0cc51c3a7c"
           }
          ]
         }
        ]
       },
       "error": {
-       "state": "pending",
-       "reason": "This dimension has not been exercised by the retained exact GUI case."
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "fe9287701aec070dd4a729511c2abfe8e2076e81",
+         "kind": "click",
+         "action": "10만 메타데이터 스크롤·검색·검증된 이미지 선택",
+         "expected": "Controlled HTTP503 displays the explicit error; explicit retry reloads the matching row while preserving the confirmed selection.",
+         "observed": "browser: Controlled HTTP503 displays the explicit error; explicit retry reloads the matching row while preserving the confirmed selection. Actual GUI and owned backend;100000 metadata rows/3 actual images, controlled503/409 transport. No inference, full-raster equality, model quality, hardware or release acceptance inferred.",
+         "reviewer": "Root exact-source GUI, screenshot and owned teardown readback; complete-feature independent acceptance remains pending",
+         "test": "scripts/e2e/scale-library-controls.spec.ts::100k metadata pages through the actual library picker and restores the exact tail image",
+         "receipt": "2026-10-08-metadata-picker-fe92877-browser.json",
+         "receipt_sha256": "139c823ccd2076bf687ab06acf50ea94f7c7ee2836152ef89e93eb82151c2d02",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d86cbae5c1b0e86fe05f3ddc39f7579b392577dfd6d4163427cb11f2a8472795"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "7ea1d2741b0241d984e52bd744f144c1e4504f49bd525692c1a3be77cfb0f9b0"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f43101b7799a7cfe3f73b685c3d2a52c242485e4de30ddc6595244becf54a408"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "d0afbf9dbf63e1347175299319bc87cef854367b593e3d3d284e30238c96f54f"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "27f455a902265fb36ab6c3638516acfcc1be37149252b78d09aefa324367dae7"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "fe9287701aec070dd4a729511c2abfe8e2076e81",
+         "kind": "click",
+         "action": "10만 메타데이터 스크롤·검색·검증된 이미지 선택",
+         "expected": "Controlled HTTP503 displays the explicit error; explicit retry reloads the matching row while preserving the confirmed selection.",
+         "observed": "electron: Controlled HTTP503 displays the explicit error; explicit retry reloads the matching row while preserving the confirmed selection. Actual GUI and owned backend;100000 metadata rows/3 actual images, controlled503/409 transport. No inference, full-raster equality, model quality, hardware or release acceptance inferred.",
+         "reviewer": "Root exact-source GUI, screenshot and owned teardown readback; complete-feature independent acceptance remains pending",
+         "test": "scripts/e2e/scale-library-controls.spec.ts::native 100k metadata picker preserves keyset progress and exact reopened identity",
+         "receipt": "2026-10-08-metadata-picker-fe92877-electron.json",
+         "receipt_sha256": "27cd152592e7153e1d07c4559a1f2514d5147cd98862bc1e52515016fcb2ccb0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "6edb3145443700505bdad17cef9c1a85232d9de35ee17a9cc2ad486c0aac4610"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "97ef6e32ae338702c97285796ea483c044ad857791e53a07d674d885d3a15f74"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "a48f616021d617894b0f11c3f1da910f0773b1727010562f9784806973d79139"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "0ef945d35dfb63f529fc3b9a85a9d027188f11824d36522363d68b10b1bd73b2"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "5b0327473eebc0705e44138245b8d8c5336b32ce18d63416165adc0cc51c3a7c"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
-       "state": "pending",
-       "reason": "This dimension has not been exercised by the retained exact GUI case."
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "fe9287701aec070dd4a729511c2abfe8e2076e81",
+         "kind": "click",
+         "action": "10만 메타데이터 스크롤·검색·검증된 이미지 선택",
+         "expected": "An unconfirmed selection is discarded on close; the held old HTTP409 released after reopening does not replace the reopened library or confirmed selection.",
+         "observed": "browser: An unconfirmed selection is discarded on close; the held old HTTP409 released after reopening does not replace the reopened library or confirmed selection. Actual GUI and owned backend;100000 metadata rows/3 actual images, controlled503/409 transport. No inference, full-raster equality, model quality, hardware or release acceptance inferred.",
+         "reviewer": "Root exact-source GUI, screenshot and owned teardown readback; complete-feature independent acceptance remains pending",
+         "test": "scripts/e2e/scale-library-controls.spec.ts::100k metadata pages through the actual library picker and restores the exact tail image",
+         "receipt": "2026-10-08-metadata-picker-fe92877-browser.json",
+         "receipt_sha256": "139c823ccd2076bf687ab06acf50ea94f7c7ee2836152ef89e93eb82151c2d02",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d86cbae5c1b0e86fe05f3ddc39f7579b392577dfd6d4163427cb11f2a8472795"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "7ea1d2741b0241d984e52bd744f144c1e4504f49bd525692c1a3be77cfb0f9b0"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f43101b7799a7cfe3f73b685c3d2a52c242485e4de30ddc6595244becf54a408"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "d0afbf9dbf63e1347175299319bc87cef854367b593e3d3d284e30238c96f54f"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "27f455a902265fb36ab6c3638516acfcc1be37149252b78d09aefa324367dae7"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "fe9287701aec070dd4a729511c2abfe8e2076e81",
+         "kind": "click",
+         "action": "10만 메타데이터 스크롤·검색·검증된 이미지 선택",
+         "expected": "An unconfirmed selection is discarded on close; the held old HTTP409 released after reopening does not replace the reopened library or confirmed selection.",
+         "observed": "electron: An unconfirmed selection is discarded on close; the held old HTTP409 released after reopening does not replace the reopened library or confirmed selection. Actual GUI and owned backend;100000 metadata rows/3 actual images, controlled503/409 transport. No inference, full-raster equality, model quality, hardware or release acceptance inferred.",
+         "reviewer": "Root exact-source GUI, screenshot and owned teardown readback; complete-feature independent acceptance remains pending",
+         "test": "scripts/e2e/scale-library-controls.spec.ts::native 100k metadata picker preserves keyset progress and exact reopened identity",
+         "receipt": "2026-10-08-metadata-picker-fe92877-electron.json",
+         "receipt_sha256": "27cd152592e7153e1d07c4559a1f2514d5147cd98862bc1e52515016fcb2ccb0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "6edb3145443700505bdad17cef9c1a85232d9de35ee17a9cc2ad486c0aac4610"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "97ef6e32ae338702c97285796ea483c044ad857791e53a07d674d885d3a15f74"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "a48f616021d617894b0f11c3f1da910f0773b1727010562f9784806973d79139"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "0ef945d35dfb63f529fc3b9a85a9d027188f11824d36522363d68b10b1bd73b2"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "5b0327473eebc0705e44138245b8d8c5336b32ce18d63416165adc0cc51c3a7c"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
        "state": "verified",
        "evidence": [
         {
          "task": "S7-01",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "fe9287701aec070dd4a729511c2abfe8e2076e81",
          "kind": "click",
          "action": "10만 메타데이터 스크롤·검색·검증된 이미지 선택",
          "expected": "Reopen restores exactly the previously saved tail UUID/SHA/path without depending on row position; all real source bytes remain unchanged.",
          "observed": "browser: Reopen restores exactly the previously saved tail UUID/SHA/path without depending on row position; all real source bytes remain unchanged. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/scale-library-controls.spec.ts::100k metadata pages through the actual library picker and restores the exact tail image",
-         "receipt": "2026-10-08-scale-library-369b8e1-browser.json",
-         "receipt_sha256": "5eec47ca4f195dcfd90d941e1ee09a6847f69911d781b4a41b579b63d7ae0886",
+         "receipt": "2026-10-08-metadata-picker-fe92877-browser.json",
+         "receipt_sha256": "139c823ccd2076bf687ab06acf50ea94f7c7ee2836152ef89e93eb82151c2d02",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "2b039917d7a1abab5d2a64f0cdaef71ad6c9ec330077a060383fd7ae22cd4bff"
+           "sha256": "d86cbae5c1b0e86fe05f3ddc39f7579b392577dfd6d4163427cb11f2a8472795"
           },
           {
            "id": "screenshot-1",
-           "sha256": "11c5202bffabf798857c6e73f2d60a528400ca029178bfaf1dc10acf431a02c2"
+           "sha256": "7ea1d2741b0241d984e52bd744f144c1e4504f49bd525692c1a3be77cfb0f9b0"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f43101b7799a7cfe3f73b685c3d2a52c242485e4de30ddc6595244becf54a408"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "d0afbf9dbf63e1347175299319bc87cef854367b593e3d3d284e30238c96f54f"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "27f455a902265fb36ab6c3638516acfcc1be37149252b78d09aefa324367dae7"
           }
          ]
         },
         {
          "task": "S7-01",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "fe9287701aec070dd4a729511c2abfe8e2076e81",
          "kind": "click",
          "action": "10만 메타데이터 스크롤·검색·검증된 이미지 선택",
          "expected": "Reopen restores exactly the previously saved tail UUID/SHA/path without depending on row position; all real source bytes remain unchanged.",
          "observed": "electron: Reopen restores exactly the previously saved tail UUID/SHA/path without depending on row position; all real source bytes remain unchanged. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/scale-library-controls.spec.ts::native 100k metadata picker preserves keyset progress and exact reopened identity",
-         "receipt": "2026-10-08-scale-library-369b8e1-electron.json",
-         "receipt_sha256": "07b46cc6581329bee48e9229c149f0291a25fed7e2f7b98e784408c0d1715a1a",
+         "receipt": "2026-10-08-metadata-picker-fe92877-electron.json",
+         "receipt_sha256": "27cd152592e7153e1d07c4559a1f2514d5147cd98862bc1e52515016fcb2ccb0",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "94f0de8de4ad7a870a7f0f38ba9fee4f16bda3d52a4d8ef2ef7aa259e6ba2feb"
+           "sha256": "6edb3145443700505bdad17cef9c1a85232d9de35ee17a9cc2ad486c0aac4610"
           },
           {
            "id": "screenshot-1",
-           "sha256": "06cec9654b306a85481cf5b44631e433385b36e6e532435616a03fac0d8ba6fe"
+           "sha256": "97ef6e32ae338702c97285796ea483c044ad857791e53a07d674d885d3a15f74"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "a48f616021d617894b0f11c3f1da910f0773b1727010562f9784806973d79139"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "0ef945d35dfb63f529fc3b9a85a9d027188f11824d36522363d68b10b1bd73b2"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "5b0327473eebc0705e44138245b8d8c5336b32ce18d63416165adc0cc51c3a7c"
           }
          ]
         }
        ]
       },
       "handoff": {
-       "state": "pending",
-       "reason": "This dimension has not been exercised by the retained exact GUI case."
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "fe9287701aec070dd4a729511c2abfe8e2076e81",
+         "kind": "click",
+         "action": "10만 메타데이터 스크롤·검색·검증된 이미지 선택",
+         "expected": "The confirmed UUID, source SHA and path reach FlowchartStudio test preview; actual authenticated preview decodes to the32x32 source dimensions and center RGB within JPEG tolerance3.",
+         "observed": "browser: The confirmed UUID, source SHA and path reach FlowchartStudio test preview; actual authenticated preview decodes to the32x32 source dimensions and center RGB within JPEG tolerance3. Actual GUI and owned backend;100000 metadata rows/3 actual images, controlled503/409 transport. No inference, full-raster equality, model quality, hardware or release acceptance inferred.",
+         "reviewer": "Root exact-source GUI, screenshot and owned teardown readback; complete-feature independent acceptance remains pending",
+         "test": "scripts/e2e/scale-library-controls.spec.ts::100k metadata pages through the actual library picker and restores the exact tail image",
+         "receipt": "2026-10-08-metadata-picker-fe92877-browser.json",
+         "receipt_sha256": "139c823ccd2076bf687ab06acf50ea94f7c7ee2836152ef89e93eb82151c2d02",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d86cbae5c1b0e86fe05f3ddc39f7579b392577dfd6d4163427cb11f2a8472795"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "7ea1d2741b0241d984e52bd744f144c1e4504f49bd525692c1a3be77cfb0f9b0"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f43101b7799a7cfe3f73b685c3d2a52c242485e4de30ddc6595244becf54a408"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "d0afbf9dbf63e1347175299319bc87cef854367b593e3d3d284e30238c96f54f"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "27f455a902265fb36ab6c3638516acfcc1be37149252b78d09aefa324367dae7"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "fe9287701aec070dd4a729511c2abfe8e2076e81",
+         "kind": "click",
+         "action": "10만 메타데이터 스크롤·검색·검증된 이미지 선택",
+         "expected": "The confirmed UUID, source SHA and path reach FlowchartStudio test preview; actual authenticated preview decodes to the32x32 source dimensions and center RGB within JPEG tolerance3.",
+         "observed": "electron: The confirmed UUID, source SHA and path reach FlowchartStudio test preview; actual authenticated preview decodes to the32x32 source dimensions and center RGB within JPEG tolerance3. Actual GUI and owned backend;100000 metadata rows/3 actual images, controlled503/409 transport. No inference, full-raster equality, model quality, hardware or release acceptance inferred.",
+         "reviewer": "Root exact-source GUI, screenshot and owned teardown readback; complete-feature independent acceptance remains pending",
+         "test": "scripts/e2e/scale-library-controls.spec.ts::native 100k metadata picker preserves keyset progress and exact reopened identity",
+         "receipt": "2026-10-08-metadata-picker-fe92877-electron.json",
+         "receipt_sha256": "27cd152592e7153e1d07c4559a1f2514d5147cd98862bc1e52515016fcb2ccb0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "6edb3145443700505bdad17cef9c1a85232d9de35ee17a9cc2ad486c0aac4610"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "97ef6e32ae338702c97285796ea483c044ad857791e53a07d674d885d3a15f74"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "a48f616021d617894b0f11c3f1da910f0773b1727010562f9784806973d79139"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "0ef945d35dfb63f529fc3b9a85a9d027188f11824d36522363d68b10b1bd73b2"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "5b0327473eebc0705e44138245b8d8c5336b32ce18d63416165adc0cc51c3a7c"
+          }
+         ]
+        }
+       ]
       }
      }
     }

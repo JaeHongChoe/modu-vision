@@ -5714,6 +5714,14 @@
           "receipt_sha256": "ad919678b166487b09a049d7c807f774ae3a28841442394203ed8b222f30ea91",
           "result": "385 unchanged related outcomes plus36 corrected command/inventory/resource regressions,952 renderer/main cases and4 clean actual GUI cases verified. The initial388-case gate retained3 stale-fixture failures; no second full-suite execution is claimed.",
           "scope": "Controlled real source process binding and actual GUI lifecycle/recovery controls only; native packaged positive startup, actual known-image inference, whole writer reconciliation, publisher, installer and release remain pending."
+        },
+        {
+          "kind": "actual-metadata-picker-error-cancel-handoff",
+          "source_sha": "fe9287701aec070dd4a729511c2abfe8e2076e81",
+          "receipt": "docs/verification/receipts/2026-10-08-metadata-picker-closure-fe92877.json",
+          "receipt_sha256": "b026c57efa3286d794ccdd9454f4998f136fed76fc562ab7a3f478cffa51341f",
+          "result": "Clean browser and native Electron each passed once;3 newly exercised U030 dimensions verified,207 actions/572 verified/877 pending.",
+          "scope": "Actual metadata picker and decoded preview; no model inference, photo-scale,72h, hardware, human or complete-feature acceptance."
         }
       ],
       "file_actions": {
@@ -6080,6 +6088,14 @@
           "receipt_sha256": "083e9d91db7e94fae2c1c5f7c5eefdc1e98ebee0e309b6a36b2ce90ba4e8fb83",
           "result": "412 integrated backend,922 renderer/main,39 scope/registry,29 candidate validation regressions and7 clean browser/native GUI cases passed. Individual software evidence only.",
           "scope": "Explicit POSIX owned installed-home adoption, finite immutable logical snapshots, update/migration launch guards, fail-closed persistent launch foundation, protected manual candidate validation workflow, actual saved evaluation and100k-metadata GUI controls. Only controlled software fixtures; no actual user installed-home adoption or native authenticated updated-app launch. Native caller/controller and actual acceptance remain pending."
+        },
+        {
+          "kind": "actual-metadata-picker-error-cancel-handoff",
+          "source_sha": "fe9287701aec070dd4a729511c2abfe8e2076e81",
+          "receipt": "docs/verification/receipts/2026-10-08-metadata-picker-closure-fe92877.json",
+          "receipt_sha256": "b026c57efa3286d794ccdd9454f4998f136fed76fc562ab7a3f478cffa51341f",
+          "result": "Clean browser and native Electron each passed once;3 newly exercised U030 dimensions verified,207 actions/572 verified/877 pending.",
+          "scope": "Actual metadata picker and decoded preview; no model inference, photo-scale,72h, hardware, human or complete-feature acceptance."
         }
       ],
       "file_actions": {

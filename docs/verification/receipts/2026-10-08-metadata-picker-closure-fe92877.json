@@ -1,0 +1,150 @@
+{
+  "schema": "modu-vision.metadata-picker-closure/v1",
+  "source_sha": "fe9287701aec070dd4a729511c2abfe8e2076e81",
+  "actual_gui_cases": 2,
+  "attempts_each": 1,
+  "observations": [
+    {
+      "mode": "browser",
+      "harness_sha256": "d7b389dab141d5239fbc2955d63a3dcb2ff3f49cf6dc9c72d4fd669dd8aff7f8",
+      "controlled_error_retry_verified": true,
+      "close_late_response_guard_verified": true,
+      "exact_uuid_sha_path_handoff_verified": true,
+      "preview_source_size": [
+        32,
+        32
+      ],
+      "preview_size": [
+        32,
+        32
+      ],
+      "preview_center_rgb": [
+        101,
+        146,
+        113
+      ],
+      "source_center_rgb": [
+        101,
+        147,
+        113
+      ],
+      "actual_preview_sha256": "aff0ca92ff59f3d85664111bdd08f36fb49aa62d58d8db7c3701b705b3e35c56",
+      "metadata_rows": 100000,
+      "actual_images": 3,
+      "maximum_dom_rows": 32,
+      "maximum_response_rows": 120,
+      "actual_inference": false,
+      "owned_teardown_verified": true
+    },
+    {
+      "mode": "electron",
+      "harness_sha256": "c04a8e0d902717df75602370d0f405c9f28e0837dccea9d81afaf15493a238a4",
+      "controlled_error_retry_verified": true,
+      "close_late_response_guard_verified": true,
+      "exact_uuid_sha_path_handoff_verified": true,
+      "preview_source_size": [
+        32,
+        32
+      ],
+      "preview_size": [
+        32,
+        32
+      ],
+      "preview_center_rgb": [
+        101,
+        146,
+        113
+      ],
+      "source_center_rgb": [
+        101,
+        147,
+        113
+      ],
+      "actual_preview_sha256": "aff0ca92ff59f3d85664111bdd08f36fb49aa62d58d8db7c3701b705b3e35c56",
+      "metadata_rows": 100000,
+      "actual_images": 3,
+      "maximum_dom_rows": 32,
+      "maximum_response_rows": 120,
+      "actual_inference": false,
+      "owned_teardown_verified": true
+    }
+  ],
+  "prior_gui_lineage": [
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/scale-library-controls.spec.ts::100k metadata pages through the actual library picker and restores the exact tail image",
+      "prior_source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+      "prior_receipt": "2026-10-08-scale-library-369b8e1-browser.json",
+      "prior_receipt_sha256": "5eec47ca4f195dcfd90d941e1ee09a6847f69911d781b4a41b579b63d7ae0886"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/scale-library-controls.spec.ts::native 100k metadata picker preserves keyset progress and exact reopened identity",
+      "prior_source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+      "prior_receipt": "2026-10-08-scale-library-369b8e1-electron.json",
+      "prior_receipt_sha256": "07b46cc6581329bee48e9229c149f0291a25fed7e2f7b98e784408c0d1715a1a"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/scale-library-controls.spec.ts::100k metadata pages through the actual library picker and restores the exact tail image",
+      "prior_source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+      "prior_receipt": "2026-10-08-scale-library-369b8e1-browser.json",
+      "prior_receipt_sha256": "5eec47ca4f195dcfd90d941e1ee09a6847f69911d781b4a41b579b63d7ae0886"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/scale-library-controls.spec.ts::native 100k metadata picker preserves keyset progress and exact reopened identity",
+      "prior_source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+      "prior_receipt": "2026-10-08-scale-library-369b8e1-electron.json",
+      "prior_receipt_sha256": "07b46cc6581329bee48e9229c149f0291a25fed7e2f7b98e784408c0d1715a1a"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/scale-library-controls.spec.ts::100k metadata pages through the actual library picker and restores the exact tail image",
+      "prior_source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+      "prior_receipt": "2026-10-08-scale-library-369b8e1-browser.json",
+      "prior_receipt_sha256": "5eec47ca4f195dcfd90d941e1ee09a6847f69911d781b4a41b579b63d7ae0886"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/scale-library-controls.spec.ts::native 100k metadata picker preserves keyset progress and exact reopened identity",
+      "prior_source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+      "prior_receipt": "2026-10-08-scale-library-369b8e1-electron.json",
+      "prior_receipt_sha256": "07b46cc6581329bee48e9229c149f0291a25fed7e2f7b98e784408c0d1715a1a"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/scale-library-controls.spec.ts::100k metadata pages through the actual library picker and restores the exact tail image",
+      "prior_source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+      "prior_receipt": "2026-10-08-scale-library-369b8e1-browser.json",
+      "prior_receipt_sha256": "5eec47ca4f195dcfd90d941e1ee09a6847f69911d781b4a41b579b63d7ae0886"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/scale-library-controls.spec.ts::native 100k metadata picker preserves keyset progress and exact reopened identity",
+      "prior_source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+      "prior_receipt": "2026-10-08-scale-library-369b8e1-electron.json",
+      "prior_receipt_sha256": "07b46cc6581329bee48e9229c149f0291a25fed7e2f7b98e784408c0d1715a1a"
+    }
+  ],
+  "counts": {
+    "actions": 207,
+    "verified": 572,
+    "pending": 877
+  },
+  "parent_implementation_verified": 69,
+  "parent_implementation_pending": 13,
+  "required_pending": 11,
+  "accepted_parents": 0,
+  "independent_spec_review_freeze_sha256": "c5326ee2996f0c9171113d9e0e02ca43b420f149d2ae0bc473c6ad41df4134f5",
+  "root_test_delta": "Use the actual renderer session for preview bytes, preserving native backend authentication; no product or authority change. Both final modes rerun clean and passed without retries.",
+  "retained_failures": [
+    "Earlier parallel seeds exceeded the30sec metadata setup deadline; preserved as failed attempts, owned teardown verified.",
+    "Earlier serial native case used a separate unauthenticated Playwright request client for preview bytes; failed after four GUI checkpoints. Preserved as failed, corrected test path then rerun."
+  ],
+  "limitations": [
+    "Metadata-only100000 rows with3 owned images; no100000-photo qualification.",
+    "Decoded preview dimensions and center RGB tolerance3 only; no full-raster identity or model inference.",
+    "Original72-hour run and native release/hardware/human acceptance remain pending."
+  ]
+}

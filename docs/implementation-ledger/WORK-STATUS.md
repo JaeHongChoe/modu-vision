@@ -32,7 +32,7 @@
 | S6-04 | 오프라인 설치와 업데이트 | POSIX 앱/DB cutover·복구·기존 home 인수, 영속 controller와 main/backend 인증 handshake를 구현하고 검증했다. 실제 CPU 기준 이미지 실행, 활성 pointer 변경 전 candidate 검사, 전체 process-tree 종료 확인, OS installer adapter와 native packaged positive startup을 이어간다. 실 publisher 서명은 별도 조건이다. |
 | S6-05 | 공개 CI와 source 재현성 | 이전 소스의 hosted 성공·실패를 보존한다. 보호된 수동 candidate 검증 workflow와 source/artifact/환경 정책 gate를 추가했다. 실제 workflow 실행·서명·배포는 하지 않았고, 새 게시 소스의 전체 hosted 결과가 필요하다. |
 | S6-06 | 서명과 릴리스 채널 | 실제 Authenticode/publisher identity·서명 후 byte inventory·채널 승인 필요. |
-| S7-01 | 기존 기능 전체 coverage 계약 | 원래156개 ID를 유지한다. 현재207개 curated action의569개 시나리오 검증,880개 pending이다. 알려진 누락 메뉴/shortcut·남은 시나리오·전체 기능 수락을 이어간다. 행동 수와 전체 기능 완료 수는 다르다. |
+| S7-01 | 기존 기능 전체 coverage 계약 | 원래156개 ID를 유지한다. 현재207개 curated action의572개 시나리오 검증,877개 pending이다. 알려진 누락 메뉴/shortcut·남은 시나리오·전체 기능 수락을 이어간다. 행동 수와 전체 기능 완료 수는 다르다. |
 | S7-02 | 10모델군 실제 작업 시나리오 | 실제5 distinct learned chain은 완료. 10모델군 각각 사람이 검토한 정답과 대표 multi-task recipe 검증 필요. |
 | S7-03 | Windows 실제 설치와 사용 QA | Windows 실제 설치·사용 QA 사용자 면제. hosted Server2025 component 실행을 Win11 실사용 성공으로 세지 않음. |
 | S7-05 | 데이터 규모와 연속 운전 | 실제 browser/native에서10만 메타데이터·실제 이미지3장,3×120 keyset page·최대DOM32·응답120·tail UUID/SHA 재열기·파일 없는 항목 선택 거절을 검증했다. 10만 실제 사진 decode나 target 자원/택트 수락은 아니다. a184b1e의 동일 외장72시간 실행은 유지 중이며 이전 시간을 합산하지 않고 terminal receipt가 필요하다. |
@@ -251,3 +251,7 @@ independent/human/physical/release acceptance.
 GitHub run37642522031은 release workflow 파일 검증 단계에서 실패했고 실행 job은0개였다. 두 runner.temp 경로를 job env에서 step env로 옮겨 실제 actionlint 문법·context 검사와 관련30개 회귀가 통과했다. 수동 protected main 후보 검사이며 실제 실행·서명·배포는 하지 않았다. 새 소스 hosted CI 완료는 아직 확인하지 않았다.
 
 원래 부모67verified/15pending, 요청 범위13pending은 유지한다. persistent native controller·authenticated handshake·process-tree reconciliation·known-image execution·OS installer adapter를 다음 구현으로 계속한다. 이전7개 실제 GUI는 소스369b8e1의 근거이며 최신 소스의 전체 GUI 완료로 바꾸지 않는다. 근거: `../verification/receipts/2026-10-08-launch-transition-workflow-e3c4d7c4.json`.
+
+## 추가 실제 이미지 선택 화면 검증 · fe92877
+
+브라우저·네이티브 Electron에서 각각 retry0으로 통과했다. 제어된503 오류 후 재시도, 취소 뒤 늦은409 응답, UUID/SHA/path의 테스트 미리보기 전달3차원을 추가 검증했다. 현재 curated action207개·verified572개·pending877개다.10만 metadata와 실제 이미지3장만 사용했으며 모델 추론·10만 사진·72시간·전체 기능 수락은 완료로 바꾸지 않는다. 이전 setup timeout과 native 검사 클라이언트의 인증 실패는 실패로 보존하고, 실제 renderer session으로 수정해 두 mode를 모두 다시 실행했다. 근거: `../verification/receipts/2026-10-08-metadata-picker-closure-fe92877.json`.
