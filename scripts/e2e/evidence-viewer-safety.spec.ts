@@ -37,13 +37,16 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Owne
  await page.route('**/api/inspections/runs/**',async route=>{
   const request=route.request(),pathname=new URL(request.url()).pathname;
   if(request.method()!=='GET'||![runPath,originalPath].includes(pathname)){await route.fallback();return;}
-  const response=await route.fetch();expect(response.ok()).toBe(true);const body=await response.json();hits[`${mode}:${pathname===runPath?'report':'original'}`]=(hits[`${mode}:${pathname===runPath?'report':'original'}`]||0)+1;
+  // Replay the exact authenticated read captured above. In native Electron,
+  // route.fetch does not pass through main's process-token injection; do not
+  // expose that token to a test or disable the production authentication.
+  const body=structuredClone(pathname===runPath?protectedRun:protectedOriginal);hits[`${mode}:${pathname===runPath?'report':'original'}`]=(hits[`${mode}:${pathname===runPath?'report':'original'}`]||0)+1;
   if(pathname===originalPath){if(mode==='bad-base')body.image=bad;else if(mode==='empty')body.image='';else if(mode==='external')body.image=external;}
   else if(mode==='bad-overlay'||mode==='empty'||mode==='external')for(const row of body.rows)if(row.result){
    if(mode==='bad-overlay')row.result.annotated_image=bad;
    else{row.result.annotated_image=mode==='external'?external:'';row.result.crops=mode==='empty'?[]:row.result.crops.map((crop:any)=>({...crop,crop_thumbnail:external,mask:external,anomaly_map:external}));}
   }
-  await route.fulfill({response,json:body});
+  await route.fulfill({status:200,json:body});
  });
  page.on('request',request=>{const pathname=new URL(request.url()).pathname;if(request.url().startsWith('https://viewer-external.invalid/'))foreignRequests.push(request.url());if(request.method()!=='GET'&&/\/api\/(train|jobs|evaluation|inspections|flowchart\/pipeline)(\/|$)/.test(pathname))writes.push(`${request.method()} ${pathname}`);});
  const open=async(next:Mode)=>{mode=next;if(url)await page.goto(url);else await page.reload();await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText('Evidence viewer recovery fixture');await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(5).click();await page.locator('[aria-label="검사 이력"]').getByRole('button').filter({hasText:frozen.name}).click();await page.getByRole('button',{name:'원본·판정 근거 보기',exact:true}).click();await expect.poll(()=>hits[`${next}:original`]||0).toBeGreaterThan(0);};
@@ -55,7 +58,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Owne
  await viewer.getByLabel('근거 이미지 종류').selectOption('roi:0:map');await expect(zoom).toBeEnabled();await expect(viewer.getByRole('alert')).toHaveCount(0);expect(await viewer.locator('img').getAttribute('src')).toBe(result.crops[0].anomaly_map);
  await zoom.click();await expect(viewer.getByRole('status')).toHaveText('125%');await page.keyboard.press('Escape');await expect(viewer).toHaveCount(0);await expect(page.locator('[aria-label="선택한 검사 실행 식별자"]')).toContainText(saved.version_id.slice(0,8));
  await open('valid');await assertIdentity();await expect(zoom).toBeEnabled();await expect(viewer.getByRole('alert')).toHaveCount(0);await expect(viewer.getByRole('status')).toHaveText('100%');expect(await viewer.locator('img').first().getAttribute('src')).toBe(protectedOriginal.image);
- await overlay.selectOption('overlay');await expect(opacity).toBeEnabled();await opacity.fill('.25');await expect(viewer.getByAltText('겹침 저장된 판정 overlay')).toHaveCSS('opacity','0.25');await viewer.getByLabel('근거 ROI 라벨').uncheck();await expect(viewer.getByLabel('근거 ROI 표시').locator('text')).toHaveCount(0);await expect(viewer.getByLabel('근거 ROI 표시').locator('rect')).toHaveCount(1);
+ await overlay.selectOption('overlay');await expect(opacity).toBeEnabled();await opacity.fill('0.25');await expect(viewer.getByAltText('겹침 저장된 판정 overlay')).toHaveCSS('opacity','0.25');await viewer.getByLabel('근거 ROI 라벨').uncheck();await expect(viewer.getByLabel('근거 ROI 표시').locator('text')).toHaveCount(0);await expect(viewer.getByLabel('근거 ROI 표시').locator('rect')).toHaveCount(1);
  await surface.focus();for(let i=0;i<20;i++)await page.keyboard.press('+');await expect(viewer.getByRole('status')).toHaveText('800%');for(let i=0;i<30;i++)await page.keyboard.press('-');await expect(viewer.getByRole('status')).toHaveText('25%');await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowDown');expect(await transform()).toContain('translate(30px, 30px) scale(0.25)');await page.keyboard.press('0');expect(await transform()).toContain('translate(0px, 0px) scale(1)');
  const rect=await surface.boundingBox();expect(rect).not.toBeNull();await page.mouse.move(rect!.x+80,rect!.y+80);await page.mouse.down();await page.mouse.move(rect!.x+125,rect!.y+105);await page.mouse.up();expect(await transform()).toContain('translate(45px, 25px) scale(1)');await fit.click();expect(await transform()).toContain('translate(0px, 0px) scale(1)');
  await evidence.screenshot(page,`${native?'native':'browser'}-valid-overlay-zoom-fit`);
