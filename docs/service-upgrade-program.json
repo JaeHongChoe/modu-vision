@@ -4844,6 +4844,14 @@
           "receipt_sha256": "af5b66a884006b641c02c02b5fa77f0ee9a55d0b4307b68fd64cac2897138952",
           "result": "Current combined source102 Python cases passed with zero skips, including41 new CPU-origin cases;15 bridge/supervisor cases and main/preload typecheck passed. Actual isolated CPU OCR output A and exact retained output hash verified.",
           "scope": "Controlled source fixtures and generated checkpoint, not training provenance/native/frozen/S010 preactivation/quality/process-tree/release acceptance."
+        },
+        {
+          "kind": "actual-cooperative-writer-owner-repair",
+          "source_sha": "c7d852dd76a229fcdcfadff45f4fbd27f0c0539d",
+          "receipt": "docs/verification/receipts/2026-10-08-cooperative-writer-owner-c7d852d.json",
+          "receipt_sha256": "e13ef499d0b965ced4cc8a370ec69794bbbc210eb4807af91a9cbfa655dfb733",
+          "result": "Current combined62 cases passed without skips. Copied thread/task/fork and real numeric thread-ID reuse were reproduced and corrected with live execution ownership.",
+          "scope": "Enrolled cooperative guard writers only; whole writer/process-tree/staging/native qualification remains pending."
         }
       ],
       "file_actions": {

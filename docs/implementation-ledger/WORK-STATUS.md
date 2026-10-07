@@ -271,3 +271,7 @@ GitHub run37642522031은 release workflow 파일 검증 단계에서 실패했�
 ## 원래 백엔드 epoch에 고정한 실제 CPU 검증 · 3f3ac66
 
 등록된 프로젝트·계획·원본 앱과 데이터 세대를 독립적으로 고정하고, 확인된 원래 controller/main/backend 연결로만1회 CPU 검증을 전달한다. 현재 조합 소스의102건 Python 검사와15건 main bridge 검사가 통과했고 main·preload 타입 검사도 통과했다. 생성한 시험 OCR 체크포인트가 실제 별도 CPU 계산으로 문자 A를 반환했으며 결과 hash와 CUDA 비가시 환경을 확인했다. 시험용 main/backend·체크포인트 근거이며 학습 완료 출처나 설치 앱·frozen·모델 품질 수락이 아니다. 사전 실행 S010·전체 writer/프로세스 계보·설치 adapter는 이어서 구현한다. 부모69/13·요청 필요11·종합 수락0, 행동575/874는 유지한다. 근거: `../verification/receipts/2026-10-08-owned-source-cpu-epoch-3f3ac66.json`.
+
+## 쓰기 잠금 실행 소유자 보정 · c7d852d
+
+배경 스레드·비동기 작업·fork가 복사한 context로 부모 잠금을 빌리던 결함을 수정했다. 실제 서로 다른 스레드에서 같은 숫자 ID가 재사용되는 경우도 재현했고, PID·Thread 객체·비동기 Task의 살아 있는 소유권으로 재진입을 제한했다. 현재 조합의62건은 skip 없이 통과했다. 신호 종료 fallback이 있는 기존4건은 명시적으로 제외했으며 새 실제 fork 검사는 협력 종료·회수를 확인했다. 전체 writer 목록·프로세스 계보·staging 권한·native 설치는 별도 미완료다. 부모69/13·요청 필요11·종합 수락0 상태를 유지한다. 근거: `../verification/receipts/2026-10-08-cooperative-writer-owner-c7d852d.json`.

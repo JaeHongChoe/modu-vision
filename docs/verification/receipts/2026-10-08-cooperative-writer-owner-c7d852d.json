@@ -1,0 +1,84 @@
+{
+  "schema": "modu-vision.cooperative-writer-owner-repair/v1",
+  "source_sha": "c7d852dd76a229fcdcfadff45f4fbd27f0c0539d",
+  "source_bindings": {
+    "backend/engine/migration_guard.py": "ba45738538a33f8c2b085464f724c4cef9e989130330c6935f5aeca475af8723",
+    "backend/tests/test_migration_guard_writer_ownership.py": "e8b0296c36c7212a8fef7adcff3e1d140846711b649cd0fd5a141846ea24762b"
+  },
+  "frozen_handoff_sha256": "1780d525866324debd356204e4434ac81dfb8e945aa2fbe15f6ff6effc4714f3",
+  "root_current_gate": {
+    "passed": 62,
+    "failed": 0,
+    "skipped": 0,
+    "deselected": 4,
+    "seconds": 31.90154083300149,
+    "unchanged_inputs": 2112
+  },
+  "meaningful_reproductions": {
+    "initial_copied_thread_task_fork_defect": {
+      "failed": 6,
+      "passed": 1
+    },
+    "actual_distinct_thread_numeric_id_reuse": {
+      "failed": 1,
+      "skipped": 0
+    },
+    "corrected_owner_primary_cases": 8
+  },
+  "actual_scenarios": [
+    {
+      "exclusive_refused_until_writer_exit": true,
+      "scenario": "copied-thread-profile-save",
+      "thread_exited": true,
+      "writer_committed": true
+    },
+    {
+      "exclusive_refused_until_transaction_exit": true,
+      "scenario": "copied-async-task-sqlite",
+      "task_exited": true,
+      "transaction_committed": true
+    },
+    {
+      "attempt": 1,
+      "distinct_real_thread": true,
+      "inherited_exclusive": false,
+      "numeric_id_reused": true,
+      "scenario": "actual-recycled-thread-id",
+      "shared_refused": true
+    },
+    {
+      "child_entered": true,
+      "child_exit": 0,
+      "exclusive_after_child_exit": true,
+      "exclusive_refused_after_parent_exit": true,
+      "inherited_exclusive": false,
+      "scenario": "actual-posix-fork-shared"
+    },
+    {
+      "child_exit": 0,
+      "exclusive_after_child_exit": true,
+      "inherited_exclusive": false,
+      "scenario": "actual-posix-fork-exclusive",
+      "shared_refused": true
+    }
+  ],
+  "contract": "Reentrancy and exclusive admission require live original PID, Thread object and async Task. Copied-context writers retain independent OS admission until critical-section exit. Fork inherited descriptors remain untouched.",
+  "private_evidence_sha256": {
+    "writer-current.xml": "ae219d228eab5a6e759de96ca656202b5b3d91a9b27bf075d0e057c18c01b3c4",
+    "writer-current.log": "dbccfb479064af3684a29175d0c6a716546f69f681d1e3089c11bc80ec0c9ef2",
+    "writer-current-command.json": "4417395ab3f8a35c2a90217b21a2d47f61dc1dea72e8e1e08824b61fce3a4fc6",
+    "writer-source-before.json": "1daa1384cb752fa5730049428a9087699f0b189cc5abcbddd4b3a571c8029050",
+    "writer-source-after.json": "1daa1384cb752fa5730049428a9087699f0b189cc5abcbddd4b3a571c8029050"
+  },
+  "limitations": [
+    "Bounded cooperative enrolled writer repair; whole writer inventory/process-tree/native acceptance remain pending.",
+    "Four older native-process admission cases with signal cleanup fallback deliberately deselected; new cooperative actual fork cases complete and are reaped without signals.",
+    "Adjacent raw shared/staging capability readers require their own review.",
+    "No GPU job, original72-hour worker, user-home adoption, real publisher or deployment changed."
+  ],
+  "original_S6_04_parent_complete": false,
+  "whole_active_writer_inventory_closed": false,
+  "whole_process_tree_reconciled": false,
+  "native_target_accepted": false,
+  "release_ready": false
+}
