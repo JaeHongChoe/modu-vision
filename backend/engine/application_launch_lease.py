@@ -19,6 +19,7 @@ import uuid
 import psutil
 
 from backend.engine.global_store_paths import owned_root, store_admission
+from backend.engine.process_isolation import session_isolation
 
 ACTIVE_LEASE = 'application-launch-lease.json'
 LEASES = '.application-launches'
@@ -389,7 +390,7 @@ class LaunchSupervisor:
                     pass_fds = (child_channel.fileno(),)
                 self._process = subprocess.Popen([row['binding']['executable']], env=environment,
                     cwd=self.root, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                    close_fds=True, start_new_session=True, pass_fds=pass_fds)
+                    close_fds=True, pass_fds=pass_fds, **session_isolation())
                 _checkpoint('after_spawn')
                 identity = _identity(self._process.pid)
                 return self._persist(self._owned(), process=identity)

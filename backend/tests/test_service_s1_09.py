@@ -14,6 +14,7 @@ import time
 import urllib.request
 import uuid
 from pathlib import Path
+from types import SimpleNamespace
 
 import psutil
 import pytest
@@ -477,17 +478,40 @@ def test_a_job_file_held_open_by_a_reader_on_windows_is_replaced_once_the_reader
     from backend.remote import file_replace, worker
     real_replace, sleeps, attempts = os.replace, [], []
 
-    def held_by_a_reader(times):
+    unrelated_done, unrelated_errors = threading.Event(), []
+    unrelated_source, unrelated_target = tmp_path / 'unrelated.tmp', tmp_path / 'unrelated.json'
+    unrelated_source.write_text('{"unrelated": true}', encoding='utf-8')
+
+    def unrelated_writer():
+        try:
+            time.sleep(.025)
+            os.replace(unrelated_source, unrelated_target)
+        except Exception as exc:
+            unrelated_errors.append(exc)
+        finally:
+            unrelated_done.set()
+
+    unrelated_thread = threading.Thread(target=unrelated_writer, name='UnrelatedFileWriter')
+
+    def held_by_a_reader(times, concurrent_writer=False):
+        writer_started = False
         def replace(source, destination):
+            nonlocal writer_started
             attempts.append(destination)
+            if concurrent_writer and not writer_started:
+                writer_started = True
+                unrelated_thread.start()
+                assert unrelated_done.wait(5), 'Unrelated file writer did not finish'
             if len(attempts) <= times:
                 raise PermissionError(13, 'Access is denied')
             return real_replace(source, destination)
         return replace
 
     monkeypatch.setattr(file_replace, '_WINDOWS', True)
-    monkeypatch.setattr(file_replace.time, 'sleep', sleeps.append)
-    monkeypatch.setattr(file_replace.os, 'replace', held_by_a_reader(3))
+    # These imports are shared module objects. Patch this retry helper's
+    # namespaces so unrelated queue sleeps and atomic writers stay real.
+    monkeypatch.setattr(file_replace, 'time', SimpleNamespace(sleep=sleeps.append))
+    monkeypatch.setattr(file_replace, 'os', SimpleNamespace(replace=held_by_a_reader(3)))
     runtime_process_control.atomic_private_json(tmp_path / 'local_cancel.json', {'cancel': True})
     assert json.loads((tmp_path / 'local_cancel.json').read_text()) == {'cancel': True} and len(attempts) == 4
     attempts.clear()
@@ -495,10 +519,19 @@ def test_a_job_file_held_open_by_a_reader_on_windows_is_replaced_once_the_reader
     assert json.loads((tmp_path / 'status.json').read_text()) == {'status': 'running'} and len(attempts) == 4
     # a reader that never lets go still fails the write, after about two seconds, instead of hanging
     attempts.clear(); sleeps.clear()
-    monkeypatch.setattr(file_replace.os, 'replace', held_by_a_reader(10_000))
-    with pytest.raises(PermissionError):
-        runtime_process_control.atomic_private_json(tmp_path / 'local_cancel.json', {'cancel': False})
-    assert len(attempts) == file_replace.ATTEMPTS and 1.0 < sum(sleeps) < 4.0
+    monkeypatch.setattr(file_replace.os, 'replace', held_by_a_reader(10_000, concurrent_writer=True))
+    try:
+        with pytest.raises(PermissionError):
+            runtime_process_control.atomic_private_json(tmp_path / 'local_cancel.json', {'cancel': False})
+    finally:
+        unrelated_thread.join(5)
+        assert not unrelated_thread.is_alive(), 'Unrelated file writer did not exit'
+    assert not unrelated_errors, unrelated_errors
+    assert json.loads(unrelated_target.read_text()) == {'unrelated': True}
+    assert len(attempts) == file_replace.ATTEMPTS and len(sleeps) == file_replace.ATTEMPTS - 1
+    assert 1.0 < sum(sleeps) < 4.0
+    assert json.loads((tmp_path / 'local_cancel.json').read_text()) == {'cancel': True}
+    assert not list(tmp_path.glob('.local_cancel.json-*.tmp'))
     # elsewhere a refused replacement is a real error at once
     attempts.clear()
     monkeypatch.setattr(file_replace, '_WINDOWS', False)
@@ -522,7 +555,7 @@ def test_a_job_file_read_during_a_replacement_on_windows_is_read_again(tmp_path,
         return real_read(self, *args, **kwargs)
 
     monkeypatch.setattr(file_replace, '_WINDOWS', True)
-    monkeypatch.setattr(file_replace.time, 'sleep', lambda seconds: None)
+    monkeypatch.setattr(file_replace, 'time', SimpleNamespace(sleep=lambda seconds: None))
     monkeypatch.setattr(Path, 'read_text', busy_twice)
     assert json.loads(file_replace.read_text(target)) == {'status': 'running'} and len(reads) == 3
     # the worker's cancel watch reads its cancel file through the same retry

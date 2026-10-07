@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import threading
 import time
 
 import pytest
@@ -62,17 +63,45 @@ def test_local_cancel_intent_is_durable_and_escalation_reaps_only_owned_child(lo
     assert not manager._leases.list()
 
 
-def test_preparation_failure_never_launches_local_cli_or_keeps_reservation(local_data):
+def test_preparation_failure_never_launches_local_cli_or_keeps_reservation(local_data, monkeypatch):
     source, output = local_data
+    cleanup_entered, release_cleanup = threading.Event(), threading.Event()
+
+    def blocked_cleanup():
+        # The manager deliberately retains its reservation through cleanup.
+        # Control that boundary without unrelated GC or device-cache latency.
+        cleanup_entered.set()
+        assert release_cleanup.wait(5), 'Test did not release cache cleanup'
+
+    monkeypatch.setattr(routes_training, 'clear_device_cache', blocked_cleanup)
     manager = routes_training.TrainingJobManager()
     def failed(cancel):
         raise ValueError('Prepared labels changed')
     record = manager.start_job('job_local_prepare_failed', 'classification', str(source), str(output),
                                device='cpu', prepare_dataset=failed, config_overrides={'pretrained': False})
-    record.thread.join(5)
+    try:
+        assert cleanup_entered.wait(5), 'Preparation exception did not reach cache cleanup'
+        assert record.thread.is_alive() and record.status == 'running'
+        assert manager.is_training
+        assert [row['job_id'] for row in manager._leases.list()] == [record.job_id]
+        assert record.process is None
+        assert not (output / 'local_job.json').exists()
+        assert not (output / 'job_receipt.json').exists()
+        with pytest.raises(routes_training.HTTPException) as overlap:
+            manager.start_job('job_overlap_preparation_cleanup', 'classification', str(source), str(output / 'overlap'),
+                              device='cpu', config_overrides={'pretrained': False})
+        assert overlap.value.status_code == 409
+    finally:
+        release_cleanup.set()
+        record.thread.join(5)
+        assert not record.thread.is_alive(), 'Worker did not finish after cache cleanup'
     assert record.status == 'failed'
     assert getattr(record, 'process', None) is None
     assert not (output / 'local_job.json').exists()
+    receipt = json.loads((output / 'job_receipt.json').read_text())
+    assert receipt['job_id'] == record.job_id and receipt['status'] == 'failed'
+    assert receipt['error']['details'] == 'Prepared labels changed'
+    assert not manager.is_training
     assert not manager._leases.list()
 
 
