@@ -2032,7 +2032,414 @@
   },
   {
    "id": "F018",
-   "actions": [],
+   "actions": [
+    {
+     "id": "completed-model-organizational-flags",
+     "label": "완료 모델 사용자 플래그 저장",
+     "source": "src/renderer/components/dataset/ProjectPreferencePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "0084be010ec97e4cf474f76109048a8812a10460",
+         "kind": "click",
+         "action": "완료 모델 사용자 플래그 저장",
+         "expected": "Model marks remain explicit project preferences bound to the selected actual completed job, preserving other model/source bytes through the named scenario without starting training or deployment.",
+         "observed": "browser: Two real owned CPU classification jobs each completed2/2epochs with pretrained=false. Saving Best/Important marks changed only the selected completed model preference, deduplicated names and displayed their option suffix. The other model and all checkpoint/meta/job-receipt bytes were preserved.",
+         "reviewer": "Codex root actual clean-source UI/network/JSON and original completed job/epoch/checkpoint readback; representative quality, independent and human operational acceptance pending",
+         "test": "scripts/e2e/completed-model-flag-controls.spec.ts::completed model flags remain marks through invalid input cancel stale writes and reopen",
+         "receipt": "2026-10-07-completed-model-flags-0084be0-browser.json",
+         "receipt_sha256": "493b848a79c3edd94a815704bdf6c005e87385bbdf97f83660e256d7a1261696",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "6156e3516e481af2ee38d10c58602a07b263824196c1ae5814bf4406ea85708b"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "b932757040d9a6c13553df75d04485a5486b3435572b353f5e52fcfaec581e71"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "148e6de65bf96098c8cb5f2000b63fae5c8f52cfef795c27351f9cfe121f47bf"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "0084be010ec97e4cf474f76109048a8812a10460",
+         "kind": "click",
+         "action": "완료 모델 사용자 플래그 저장",
+         "expected": "Model marks remain explicit project preferences bound to the selected actual completed job, preserving other model/source bytes through the named scenario without starting training or deployment.",
+         "observed": "electron: Two real owned CPU classification jobs each completed2/2epochs with pretrained=false. Saving Best/Important marks changed only the selected completed model preference, deduplicated names and displayed their option suffix. The other model and all checkpoint/meta/job-receipt bytes were preserved.",
+         "reviewer": "Codex root actual clean-source UI/network/JSON and original completed job/epoch/checkpoint readback; representative quality, independent and human operational acceptance pending",
+         "test": "scripts/e2e/completed-model-flag-controls.spec.ts::native completed model flags remain marks through invalid input cancel stale writes and reopen",
+         "receipt": "2026-10-07-completed-model-flags-0084be0-electron.json",
+         "receipt_sha256": "5b9a25e9d8f7180be622b86a0ec45ae81b657bfaafc4e90377b3fd275ac75520",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2b61a09f3373a09bbefd44d9dfd894288d47b8075dbf3ecc4c79262813014662"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5def70c90285bee68229e91348467319a16088d4ef24dad956fa555c248471f2"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f1ae700b033ac9eaad2fcdaf8d49fcc75f9cd463354bcb8935f0238b44c654f1"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "0084be010ec97e4cf474f76109048a8812a10460",
+         "kind": "click",
+         "action": "완료 모델 사용자 플래그 저장",
+         "expected": "Model marks remain explicit project preferences bound to the selected actual completed job, preserving other model/source bytes through the named scenario without starting training or deployment.",
+         "observed": "browser: No model selected disabled saving even with entered text and created no preference file. An explicitly saved empty flag list later cleared only the selected second model, preserving the first model flags.",
+         "reviewer": "Codex root actual clean-source UI/network/JSON and original completed job/epoch/checkpoint readback; representative quality, independent and human operational acceptance pending",
+         "test": "scripts/e2e/completed-model-flag-controls.spec.ts::completed model flags remain marks through invalid input cancel stale writes and reopen",
+         "receipt": "2026-10-07-completed-model-flags-0084be0-browser.json",
+         "receipt_sha256": "493b848a79c3edd94a815704bdf6c005e87385bbdf97f83660e256d7a1261696",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "6156e3516e481af2ee38d10c58602a07b263824196c1ae5814bf4406ea85708b"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "b932757040d9a6c13553df75d04485a5486b3435572b353f5e52fcfaec581e71"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "148e6de65bf96098c8cb5f2000b63fae5c8f52cfef795c27351f9cfe121f47bf"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "0084be010ec97e4cf474f76109048a8812a10460",
+         "kind": "click",
+         "action": "완료 모델 사용자 플래그 저장",
+         "expected": "Model marks remain explicit project preferences bound to the selected actual completed job, preserving other model/source bytes through the named scenario without starting training or deployment.",
+         "observed": "electron: No model selected disabled saving even with entered text and created no preference file. An explicitly saved empty flag list later cleared only the selected second model, preserving the first model flags.",
+         "reviewer": "Codex root actual clean-source UI/network/JSON and original completed job/epoch/checkpoint readback; representative quality, independent and human operational acceptance pending",
+         "test": "scripts/e2e/completed-model-flag-controls.spec.ts::native completed model flags remain marks through invalid input cancel stale writes and reopen",
+         "receipt": "2026-10-07-completed-model-flags-0084be0-electron.json",
+         "receipt_sha256": "5b9a25e9d8f7180be622b86a0ec45ae81b657bfaafc4e90377b3fd275ac75520",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2b61a09f3373a09bbefd44d9dfd894288d47b8075dbf3ecc4c79262813014662"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5def70c90285bee68229e91348467319a16088d4ef24dad956fa555c248471f2"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f1ae700b033ac9eaad2fcdaf8d49fcc75f9cd463354bcb8935f0238b44c654f1"
+          }
+         ]
+        }
+       ]
+      },
+      "invalid": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "0084be010ec97e4cf474f76109048a8812a10460",
+         "kind": "click",
+         "action": "완료 모델 사용자 플래그 저장",
+         "expected": "Model marks remain explicit project preferences bound to the selected actual completed job, preserving other model/source bytes through the named scenario without starting training or deployment.",
+         "observed": "browser: A41-character model flag reached the actual backend and returned422 without creating preferences. Valid Best/Important values were deliberately entered and saved afterwards.",
+         "reviewer": "Codex root actual clean-source UI/network/JSON and original completed job/epoch/checkpoint readback; representative quality, independent and human operational acceptance pending",
+         "test": "scripts/e2e/completed-model-flag-controls.spec.ts::completed model flags remain marks through invalid input cancel stale writes and reopen",
+         "receipt": "2026-10-07-completed-model-flags-0084be0-browser.json",
+         "receipt_sha256": "493b848a79c3edd94a815704bdf6c005e87385bbdf97f83660e256d7a1261696",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "6156e3516e481af2ee38d10c58602a07b263824196c1ae5814bf4406ea85708b"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "b932757040d9a6c13553df75d04485a5486b3435572b353f5e52fcfaec581e71"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "148e6de65bf96098c8cb5f2000b63fae5c8f52cfef795c27351f9cfe121f47bf"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "0084be010ec97e4cf474f76109048a8812a10460",
+         "kind": "click",
+         "action": "완료 모델 사용자 플래그 저장",
+         "expected": "Model marks remain explicit project preferences bound to the selected actual completed job, preserving other model/source bytes through the named scenario without starting training or deployment.",
+         "observed": "electron: A41-character model flag reached the actual backend and returned422 without creating preferences. Valid Best/Important values were deliberately entered and saved afterwards.",
+         "reviewer": "Codex root actual clean-source UI/network/JSON and original completed job/epoch/checkpoint readback; representative quality, independent and human operational acceptance pending",
+         "test": "scripts/e2e/completed-model-flag-controls.spec.ts::native completed model flags remain marks through invalid input cancel stale writes and reopen",
+         "receipt": "2026-10-07-completed-model-flags-0084be0-electron.json",
+         "receipt_sha256": "5b9a25e9d8f7180be622b86a0ec45ae81b657bfaafc4e90377b3fd275ac75520",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2b61a09f3373a09bbefd44d9dfd894288d47b8075dbf3ecc4c79262813014662"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5def70c90285bee68229e91348467319a16088d4ef24dad956fa555c248471f2"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f1ae700b033ac9eaad2fcdaf8d49fcc75f9cd463354bcb8935f0238b44c654f1"
+          }
+         ]
+        }
+       ]
+      },
+      "error": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "0084be010ec97e4cf474f76109048a8812a10460",
+         "kind": "click",
+         "action": "완료 모델 사용자 플래그 저장",
+         "expected": "Model marks remain explicit project preferences bound to the selected actual completed job, preserving other model/source bytes through the named scenario without starting training or deployment.",
+         "observed": "browser: An explicit controlled503 retained previous preference bytes and required deliberate retry. After a separate fixture actor wrote the second model/tag/labelset settings, stale UI revision saving returned actual409 and preserved that writer hash. Explicit refresh/reselection/retry merged only the intended first model marks.",
+         "reviewer": "Codex root actual clean-source UI/network/JSON and original completed job/epoch/checkpoint readback; representative quality, independent and human operational acceptance pending",
+         "test": "scripts/e2e/completed-model-flag-controls.spec.ts::completed model flags remain marks through invalid input cancel stale writes and reopen",
+         "receipt": "2026-10-07-completed-model-flags-0084be0-browser.json",
+         "receipt_sha256": "493b848a79c3edd94a815704bdf6c005e87385bbdf97f83660e256d7a1261696",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "6156e3516e481af2ee38d10c58602a07b263824196c1ae5814bf4406ea85708b"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "b932757040d9a6c13553df75d04485a5486b3435572b353f5e52fcfaec581e71"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "148e6de65bf96098c8cb5f2000b63fae5c8f52cfef795c27351f9cfe121f47bf"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "0084be010ec97e4cf474f76109048a8812a10460",
+         "kind": "click",
+         "action": "완료 모델 사용자 플래그 저장",
+         "expected": "Model marks remain explicit project preferences bound to the selected actual completed job, preserving other model/source bytes through the named scenario without starting training or deployment.",
+         "observed": "electron: An explicit controlled503 retained previous preference bytes and required deliberate retry. After a separate fixture actor wrote the second model/tag/labelset settings, stale UI revision saving returned actual409 and preserved that writer hash. Explicit refresh/reselection/retry merged only the intended first model marks.",
+         "reviewer": "Codex root actual clean-source UI/network/JSON and original completed job/epoch/checkpoint readback; representative quality, independent and human operational acceptance pending",
+         "test": "scripts/e2e/completed-model-flag-controls.spec.ts::native completed model flags remain marks through invalid input cancel stale writes and reopen",
+         "receipt": "2026-10-07-completed-model-flags-0084be0-electron.json",
+         "receipt_sha256": "5b9a25e9d8f7180be622b86a0ec45ae81b657bfaafc4e90377b3fd275ac75520",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2b61a09f3373a09bbefd44d9dfd894288d47b8075dbf3ecc4c79262813014662"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5def70c90285bee68229e91348467319a16088d4ef24dad956fa555c248471f2"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f1ae700b033ac9eaad2fcdaf8d49fcc75f9cd463354bcb8935f0238b44c654f1"
+          }
+         ]
+        }
+       ]
+      },
+      "cancel": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "0084be010ec97e4cf474f76109048a8812a10460",
+         "kind": "click",
+         "action": "완료 모델 사용자 플래그 저장",
+         "expected": "Model marks remain explicit project preferences bound to the selected actual completed job, preserving other model/source bytes through the named scenario without starting training or deployment.",
+         "observed": "browser: Leaving the stage with an unsubmitted model mark retained the exact preference SHA. Reopening selected no model; explicitly selecting the original first model showed its last saved Best/Important values.",
+         "reviewer": "Codex root actual clean-source UI/network/JSON and original completed job/epoch/checkpoint readback; representative quality, independent and human operational acceptance pending",
+         "test": "scripts/e2e/completed-model-flag-controls.spec.ts::completed model flags remain marks through invalid input cancel stale writes and reopen",
+         "receipt": "2026-10-07-completed-model-flags-0084be0-browser.json",
+         "receipt_sha256": "493b848a79c3edd94a815704bdf6c005e87385bbdf97f83660e256d7a1261696",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "6156e3516e481af2ee38d10c58602a07b263824196c1ae5814bf4406ea85708b"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "b932757040d9a6c13553df75d04485a5486b3435572b353f5e52fcfaec581e71"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "148e6de65bf96098c8cb5f2000b63fae5c8f52cfef795c27351f9cfe121f47bf"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "0084be010ec97e4cf474f76109048a8812a10460",
+         "kind": "click",
+         "action": "완료 모델 사용자 플래그 저장",
+         "expected": "Model marks remain explicit project preferences bound to the selected actual completed job, preserving other model/source bytes through the named scenario without starting training or deployment.",
+         "observed": "electron: Leaving the stage with an unsubmitted model mark retained the exact preference SHA. Reopening selected no model; explicitly selecting the original first model showed its last saved Best/Important values.",
+         "reviewer": "Codex root actual clean-source UI/network/JSON and original completed job/epoch/checkpoint readback; representative quality, independent and human operational acceptance pending",
+         "test": "scripts/e2e/completed-model-flag-controls.spec.ts::native completed model flags remain marks through invalid input cancel stale writes and reopen",
+         "receipt": "2026-10-07-completed-model-flags-0084be0-electron.json",
+         "receipt_sha256": "5b9a25e9d8f7180be622b86a0ec45ae81b657bfaafc4e90377b3fd275ac75520",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2b61a09f3373a09bbefd44d9dfd894288d47b8075dbf3ecc4c79262813014662"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5def70c90285bee68229e91348467319a16088d4ef24dad956fa555c248471f2"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f1ae700b033ac9eaad2fcdaf8d49fcc75f9cd463354bcb8935f0238b44c654f1"
+          }
+         ]
+        }
+       ]
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "0084be010ec97e4cf474f76109048a8812a10460",
+         "kind": "click",
+         "action": "완료 모델 사용자 플래그 저장",
+         "expected": "Model marks remain explicit project preferences bound to the selected actual completed job, preserving other model/source bytes through the named scenario without starting training or deployment.",
+         "observed": "browser: After actual reload the model selector began empty and save was disabled. Explicitly selecting each exact completed job restored its respective distinct saved flags while the final preference SHA stayed unchanged.",
+         "reviewer": "Codex root actual clean-source UI/network/JSON and original completed job/epoch/checkpoint readback; representative quality, independent and human operational acceptance pending",
+         "test": "scripts/e2e/completed-model-flag-controls.spec.ts::completed model flags remain marks through invalid input cancel stale writes and reopen",
+         "receipt": "2026-10-07-completed-model-flags-0084be0-browser.json",
+         "receipt_sha256": "493b848a79c3edd94a815704bdf6c005e87385bbdf97f83660e256d7a1261696",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "6156e3516e481af2ee38d10c58602a07b263824196c1ae5814bf4406ea85708b"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "b932757040d9a6c13553df75d04485a5486b3435572b353f5e52fcfaec581e71"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "148e6de65bf96098c8cb5f2000b63fae5c8f52cfef795c27351f9cfe121f47bf"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "0084be010ec97e4cf474f76109048a8812a10460",
+         "kind": "click",
+         "action": "완료 모델 사용자 플래그 저장",
+         "expected": "Model marks remain explicit project preferences bound to the selected actual completed job, preserving other model/source bytes through the named scenario without starting training or deployment.",
+         "observed": "electron: After actual reload the model selector began empty and save was disabled. Explicitly selecting each exact completed job restored its respective distinct saved flags while the final preference SHA stayed unchanged.",
+         "reviewer": "Codex root actual clean-source UI/network/JSON and original completed job/epoch/checkpoint readback; representative quality, independent and human operational acceptance pending",
+         "test": "scripts/e2e/completed-model-flag-controls.spec.ts::native completed model flags remain marks through invalid input cancel stale writes and reopen",
+         "receipt": "2026-10-07-completed-model-flags-0084be0-electron.json",
+         "receipt_sha256": "5b9a25e9d8f7180be622b86a0ec45ae81b657bfaafc4e90377b3fd275ac75520",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2b61a09f3373a09bbefd44d9dfd894288d47b8075dbf3ecc4c79262813014662"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5def70c90285bee68229e91348467319a16088d4ef24dad956fa555c248471f2"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f1ae700b033ac9eaad2fcdaf8d49fcc75f9cd463354bcb8935f0238b44c654f1"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "0084be010ec97e4cf474f76109048a8812a10460",
+         "kind": "click",
+         "action": "완료 모델 사용자 플래그 저장",
+         "expected": "Model marks remain explicit project preferences bound to the selected actual completed job, preserving other model/source bytes through the named scenario without starting training or deployment.",
+         "observed": "browser: Actual preference response and saved JSON were identical and all original source/checkpoint/meta/job-receipt SHA values stayed unchanged. No additional training POST or deployment mutation occurred while using the flags, and the actual deployment active pointer remained null; organizational flags are not approval or activation.",
+         "reviewer": "Codex root actual clean-source UI/network/JSON and original completed job/epoch/checkpoint readback; representative quality, independent and human operational acceptance pending",
+         "test": "scripts/e2e/completed-model-flag-controls.spec.ts::completed model flags remain marks through invalid input cancel stale writes and reopen",
+         "receipt": "2026-10-07-completed-model-flags-0084be0-browser.json",
+         "receipt_sha256": "493b848a79c3edd94a815704bdf6c005e87385bbdf97f83660e256d7a1261696",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "6156e3516e481af2ee38d10c58602a07b263824196c1ae5814bf4406ea85708b"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "b932757040d9a6c13553df75d04485a5486b3435572b353f5e52fcfaec581e71"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "148e6de65bf96098c8cb5f2000b63fae5c8f52cfef795c27351f9cfe121f47bf"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "0084be010ec97e4cf474f76109048a8812a10460",
+         "kind": "click",
+         "action": "완료 모델 사용자 플래그 저장",
+         "expected": "Model marks remain explicit project preferences bound to the selected actual completed job, preserving other model/source bytes through the named scenario without starting training or deployment.",
+         "observed": "electron: Actual preference response and saved JSON were identical and all original source/checkpoint/meta/job-receipt SHA values stayed unchanged. No additional training POST or deployment mutation occurred while using the flags, and the actual deployment active pointer remained null; organizational flags are not approval or activation.",
+         "reviewer": "Codex root actual clean-source UI/network/JSON and original completed job/epoch/checkpoint readback; representative quality, independent and human operational acceptance pending",
+         "test": "scripts/e2e/completed-model-flag-controls.spec.ts::native completed model flags remain marks through invalid input cancel stale writes and reopen",
+         "receipt": "2026-10-07-completed-model-flags-0084be0-electron.json",
+         "receipt_sha256": "5b9a25e9d8f7180be622b86a0ec45ae81b657bfaafc4e90377b3fd275ac75520",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2b61a09f3373a09bbefd44d9dfd894288d47b8075dbf3ecc4c79262813014662"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5def70c90285bee68229e91348467319a16088d4ef24dad956fa555c248471f2"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f1ae700b033ac9eaad2fcdaf8d49fcc75f9cd463354bcb8935f0238b44c654f1"
+          }
+         ]
+        }
+       ]
+      }
+     }
+    }
+   ],
    "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
   },
   {

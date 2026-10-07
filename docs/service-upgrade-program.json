@@ -3733,6 +3733,14 @@
      "result": "Five distinct authentic DINOv3 classifiers each train for two epochs against the same immutable dataset version. Native comparison selection/reload/export, two whole-flow evaluations on the same untouched three-image cohort and all five model-node receipts pass. A separate package subprocess reproduces all three whole-flow results; 92 comparison/whole-flow/package contract regressions pass.",
      "scope": "Synthetic disjoint train/validation/test controls only. Source/checkpoint bytes preserved; no human quality, deployment, physical device or independent-review approval. Native manifest SHA-256 049eddb66c2f8a512cd2b5aff27fb129ef6ff38197a1578f4d93546b0a5fa857.",
      "platform": "Actual macOS Electron, local CPU and separate package processes; supplied pinned upstream weights; no public CI weight download"
+    },
+    {
+     "kind": "actual-clean-completed-model-flag-controls",
+     "source_sha": "0084be010ec97e4cf474f76109048a8812a10460",
+     "receipt": "docs/verification/receipts/2026-10-07-completed-model-flag-closure-0084be0.json",
+     "receipt_sha256": "121a8c1255353bae07e62e3636e19b7c1754b177afcf6f92b13225827f92496d",
+     "result": "Actual browser1/Electron1 passed with no retry and owned teardown;4 actual owned CPU jobs each completed2/2epochs. Added the unlisted F018 action with7 exercised dimensions and exact preserved model/source hashes.",
+     "scope": "Actual browser/Electron model-mark controls using4 independently executed owned short CPU jobs across both modes. Generated40-image inputs and actual2epoch execution do not establish representative model quality. No additional training, approval, activation, deployment, human truth, native publisher or independent acceptance was inferred."
     }
    ],
    "file_actions": {
@@ -5461,6 +5469,14 @@
      "receipt_sha256": "d0facf67fde174a728a7e523d903bd181b69d3724d36084d0d701212be8520d4",
      "result": "Actual browser1/Electron1 passed with no retry and owned teardown. Twelve pending tag/flag/named-copy dimensions are separately evidenced; actual409 preserves a separate fixture actor write.",
      "scope": "Actual browser/Electron existing tag/flag/copy controls with source and full saved annotation byte preservation,422 flag refusal,409 concurrent preference refusal, explicit controlled503 transport failure/cancellation/correction/retry and reopened identity/CSS/JSON. No models were trained and fixture labels or actors are not human quality truth. No installer/publisher/Windows/physical device/independent acceptance was inferred."
+    },
+    {
+     "kind": "actual-clean-completed-model-flag-controls",
+     "source_sha": "0084be010ec97e4cf474f76109048a8812a10460",
+     "receipt": "docs/verification/receipts/2026-10-07-completed-model-flag-closure-0084be0.json",
+     "receipt_sha256": "121a8c1255353bae07e62e3636e19b7c1754b177afcf6f92b13225827f92496d",
+     "result": "Actual browser1/Electron1 passed with no retry and owned teardown;4 actual owned CPU jobs each completed2/2epochs. Added the unlisted F018 action with7 exercised dimensions and exact preserved model/source hashes.",
+     "scope": "Actual browser/Electron model-mark controls using4 independently executed owned short CPU jobs across both modes. Generated40-image inputs and actual2epoch execution do not establish representative model quality. No additional training, approval, activation, deployment, human truth, native publisher or independent acceptance was inferred."
     }
    ],
    "file_actions": {
@@ -5485,7 +5501,7 @@
    },
    "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts",
    "remaining": [
-    "192 curated actions now have453 verified scenarios and891 pending scenarios. Other helpers/menus/shortcuts and all156-feature full acceptance remain pending."
+    "193 curated actions now have460 verified scenarios and891 pending scenarios. Other helpers/menus/shortcuts and all156-feature full acceptance remain pending."
    ]
   },
   {

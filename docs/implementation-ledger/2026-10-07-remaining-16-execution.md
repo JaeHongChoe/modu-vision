@@ -12,7 +12,7 @@
 | S6-04 | 오프라인 업데이트 | owned POSIX portable 앱·DB cutover, crash finish, 새 account/profile 보존 forward recovery; actual frozen CLI5회·별도 CPU known-image2회; 새 main/preload/renderer 검토·복구 연결, 관련Python125/Node40 및 UI2개 통과 | 실제 OS installer·설치된 home·native layout·실 publisher 서명·native positive 설치 및 installed-app known-image handoff |
 | S6-05 | 공개 CI | 기존 hosted success 보존; 전체 CPU2706 pass/고지 누락1 fail·고지62 및 optional27 repair pass | 최신 게시 source 전체 CI 완료; 기존 queue 및 실패 기록 보존 |
 | S6-06 | 서명·채널 | unsigned 상태와 checksum/source 연결 | 실제 publisher/서명 키·최종 artifact와 stable/beta 운영 정책 |
-| S7-01 | 전체 기능 행동 coverage | 192개 curated action, 453개 시나리오 검증; retention·template 실제 browser/Electron 근거 추가 | 891개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
+| S7-01 | 전체 기능 행동 coverage | 193개 curated action, 460개 시나리오 검증; retention·template 실제 browser/Electron 근거 추가 | 891개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
 | S7-02 | 10개 모델군 시나리오 | 실제 family별 학습/추론·다중 checkpoint·flow/package control 기록 | 사람이 검토한 대표 분류/정상/OCR/OBB/향상/GAN truth와 품질 판정 |
 | S7-03 | Windows 실사용 | 기존 unsigned runner 결과 보존 | 사용자 면제. 신규 실기 테스트를 시작하지 않으며 pass로 바꾸지 않음 |
 | S7-04 | 동시 작업·장애 | 2개 계정/agent·actual CPU·재접속·권한/충돌 control; controlled signed portable 앱·DB cutover 및 crash recovery | 물리적 장애와 실제 publisher가 서명한 native 앱 업데이트 |
@@ -198,3 +198,9 @@
 - 별도 fixture actor가 실제 preference revision을 올린 뒤 옛 화면 저장은 actual409로 거절됐다. 별도 actor의 파일 hash를 유지하고 직접 새로 읽고 재시도해 그 tag를 보존했다. Fixture actor/라벨을 사람의 공정 품질 정답이나 승인으로 세지 않는다.
 - 최초39e6220은 정상 UI가 다른 image/default team records를 등록하기 전 metadata hash를 고정해 실패했다. 원래 label JSON은 바뀌지 않았고 등록 record를 확인했다. Fixture의 정상 read를 먼저 수행해 고정했으며 원래 실패와 report/teardown은 보존했다. Product code는 바꾸지 않았다.
 - 기존3 actions의 pending12 dimensions를 채워192 actions/453 verified/891 pending이다. Parent67/82·pending15/82·전체 수락0과 Windows 면제를 유지한다. Public receipt:project-display-control-closure-c1446e4.
+
+## 추가 실행: 실제 완료 모델의 Best·Important 표시
+
+- Clean0084be0의 actual browser1/Electron1 passed이다. 모드별 격리 synthetic40 images에서 CPU/pretrained=false 학습2개가 각각2/2epochs 완료됐다. 모델 flag의 빈 선택·41자 actual422·미제출 취소·controlled503·별도 actor의 actual revision409·직접 새로 읽기/재시도·선택 모델의 빈 flag 제거·실제 재열기를 확인했다.
+- Best/Important와 두 번째 모델의 표시는 서로 분리됐고 tag/labelset 설정과 actual original checkpoint/meta/job receipts/source hashes가 유지됐다. Flag controls는 추가 학습·deployment write를 제출하지 않았고 active deployment는 null이다. Tiny 실제 학습은 대표 품질 승인이 아니다.
+- 누락됐던 F018의 curated action1개/실행한7 dimensions를 추가해193 actions/460 verified/891 pending이다. 새 action을 추가했으므로 기존 미실행 차원을 임의로 줄이지 않는다. Parent67/82·pending15/82·전체 수락0은 유지한다. Public receipt:completed-model-flag-closure-0084be0.

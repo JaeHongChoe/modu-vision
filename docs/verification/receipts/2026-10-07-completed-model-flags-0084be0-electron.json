@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0084be010ec97e4cf474f76109048a8812a10460",
+  "source_dirty": false,
+  "test": "scripts/e2e/completed-model-flag-controls.spec.ts::native completed model flags remain marks through invalid input cancel stale writes and reopen",
+  "test_source_sha256": "69fc6810ae7b147605013fe56f42791d2fba1723d4eced9f41a599a8b718a1eb",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "63e49eda51173dfe4851b2a2ed3624d02bb49cd903f21b2d16034a6f7ed1b1bc",
+  "harness_sha256": "6a4e113ef0a4875eec9130cdc18289df8d444292b6461cd9f6ce862a28e1e90a",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "2b61a09f3373a09bbefd44d9dfd894288d47b8075dbf3ecc4c79262813014662"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "5def70c90285bee68229e91348467319a16088d4ef24dad956fa555c248471f2"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "f1ae700b033ac9eaad2fcdaf8d49fcc75f9cd463354bcb8935f0238b44c654f1"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

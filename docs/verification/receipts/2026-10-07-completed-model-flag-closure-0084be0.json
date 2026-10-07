@@ -1,0 +1,88 @@
+{
+  "schema": "modu-vision.completed-model-organizational-flags/v1",
+  "source_sha": "0084be010ec97e4cf474f76109048a8812a10460",
+  "actual_gui": [
+    {
+      "mode": "browser",
+      "receipt": "2026-10-07-completed-model-flags-0084be0-browser.json",
+      "receipt_sha256": "493b848a79c3edd94a815704bdf6c005e87385bbdf97f83660e256d7a1261696"
+    },
+    {
+      "mode": "electron",
+      "receipt": "2026-10-07-completed-model-flags-0084be0-electron.json",
+      "receipt_sha256": "5b9a25e9d8f7180be622b86a0ec45ae81b657bfaafc4e90377b3fd275ac75520"
+    }
+  ],
+  "actual_jobs": [
+    {
+      "mode": "browser",
+      "job_id": "job_1791368940_873001",
+      "status": "completed",
+      "epochs_requested": 2,
+      "epochs_actual": 2,
+      "device": "cpu",
+      "source_and_checkpoint_receipt_preserved": true,
+      "model_files_sha256": {
+        "best_model.pt": "ec5956ec85d0136e969f49e3689aa102357fbed74fe3bcb0013e123e21ffd667",
+        "model_meta.json": "8a05c99068cfba6d1b0d722cac35db6c77d2be7cf128a82b7de7aa1fa2ca5bc5",
+        "job_receipt.json": "5cbe0912efb89e14b21315aa9b7156a6e9550ce7814f4a4a8ec92cd3ae6abefb"
+      }
+    },
+    {
+      "mode": "browser",
+      "job_id": "job_1791368947_bc3277",
+      "status": "completed",
+      "epochs_requested": 2,
+      "epochs_actual": 2,
+      "device": "cpu",
+      "source_and_checkpoint_receipt_preserved": true,
+      "model_files_sha256": {
+        "best_model.pt": "5295e611bb45dcab3160f61873e632f812403b46f5731eb205fce8277d04bacd",
+        "model_meta.json": "a876d2cac70187297cbadbcbf715bab0eb7830823542bd031e2c7276ff46d92f",
+        "job_receipt.json": "12bcb7021bad466008999325d048e419da24bd934dfb39cdcbeda3ac548df619"
+      }
+    },
+    {
+      "mode": "electron",
+      "job_id": "job_1791368998_53f6db",
+      "status": "completed",
+      "epochs_requested": 2,
+      "epochs_actual": 2,
+      "device": "cpu",
+      "source_and_checkpoint_receipt_preserved": true,
+      "model_files_sha256": {
+        "best_model.pt": "648cfeb69676d0c76e3c39765af5d20df03f0146a3f148dbbb6f873d513c45b8",
+        "model_meta.json": "7932811319e829cd4047214c5fffab9a5b5723975e553ca5b177eb9d2fedb402",
+        "job_receipt.json": "7c5add94d9cb4807c4b19d75758886bf6bd950c610323e216c71a47d008ef851"
+      }
+    },
+    {
+      "mode": "electron",
+      "job_id": "job_1791369005_852bf4",
+      "status": "completed",
+      "epochs_requested": 2,
+      "epochs_actual": 2,
+      "device": "cpu",
+      "source_and_checkpoint_receipt_preserved": true,
+      "model_files_sha256": {
+        "best_model.pt": "febbf2a5dada9919948cd29373c5ad8b02393d6e713e9a5aac608cfe0d173cfc",
+        "model_meta.json": "99800e4c2f251933b60a7ac63274d4382dac37554b3e08413f57949ba1e62c72",
+        "job_receipt.json": "2a475528f4e2f6bd5ad4c284cf4e3cc37ec59a5dda0cc87ecf7c00ccc9e1437d"
+      }
+    }
+  ],
+  "new_curated_actions": 1,
+  "new_verified_scenarios": 7,
+  "observations": {
+    "success": "Two real owned CPU classification jobs each completed2/2epochs with pretrained=false. Saving Best/Important marks changed only the selected completed model preference, deduplicated names and displayed their option suffix. The other model and all checkpoint/meta/job-receipt bytes were preserved.",
+    "empty": "No model selected disabled saving even with entered text and created no preference file. An explicitly saved empty flag list later cleared only the selected second model, preserving the first model flags.",
+    "invalid": "A41-character model flag reached the actual backend and returned422 without creating preferences. Valid Best/Important values were deliberately entered and saved afterwards.",
+    "error": "An explicit controlled503 retained previous preference bytes and required deliberate retry. After a separate fixture actor wrote the second model/tag/labelset settings, stale UI revision saving returned actual409 and preserved that writer hash. Explicit refresh/reselection/retry merged only the intended first model marks.",
+    "cancel": "Leaving the stage with an unsubmitted model mark retained the exact preference SHA. Reopening selected no model; explicitly selecting the original first model showed its last saved Best/Important values.",
+    "reopen": "After actual reload the model selector began empty and save was disabled. Explicitly selecting each exact completed job restored its respective distinct saved flags while the final preference SHA stayed unchanged.",
+    "handoff": "Actual preference response and saved JSON were identical and all original source/checkpoint/meta/job-receipt SHA values stayed unchanged. No additional training POST or deployment mutation occurred while using the flags, and the actual deployment active pointer remained null; organizational flags are not approval or activation."
+  },
+  "scope": "Actual browser/Electron model-mark controls using4 independently executed owned short CPU jobs across both modes. Generated40-image inputs and actual2epoch execution do not establish representative model quality. No additional training, approval, activation, deployment, human truth, native publisher or independent acceptance was inferred.",
+  "review": "root_only",
+  "parent_acceptance": "pending"
+}
