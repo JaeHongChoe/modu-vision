@@ -48,6 +48,11 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   await page.unroute('**/api/flow-workspace/templates');waiting=saveResponse();await partial.click();const partialReply=await waiting;expect(partialReply.status()).toBe(200);const module=await partialReply.json();
   expect(module.kind).toBe('subgraph');expect(module.pipeline.nodes.map((n:any)=>n.id).sort()).toEqual(nodes.map((n:any)=>n.id).sort());expect(module.ports.inputs).toHaveLength(1);expect(module.ports.outputs).toHaveLength(1);
   const savedLibrary=(await api(library)).templates;expect(savedLibrary).toHaveLength(2);
+  const ownedLibrary=path.join(workspace.home,'.modu_vision','flow_templates');
+  const templateFiles=fs.readdirSync(ownedLibrary,{recursive:true}).map(String).filter(file=>file.endsWith('.json')).map(file=>path.join(ownedLibrary,file));
+  expect(templateFiles).toHaveLength(2);
+  const templateHashes=templateFiles.map(file=>({path:file,sha256:sha(fs.readFileSync(file))}));
+  expect(templateFiles.map(file=>JSON.parse(fs.readFileSync(file,'utf8')).template_id).sort()).toEqual([template.template_id,module.template_id].sort());
   await name.fill('Abandoned unsubmitted subset');await open();expect((await api(library)).templates).toEqual(savedLibrary);await expect(name).not.toHaveValue('Abandoned unsubmitted subset');
   await page.getByLabel('내 템플릿 선택',{exact:true}).selectOption(module.template_id);expect((await api(library)).templates.find((r:any)=>r.template_id===module.template_id)).toEqual(module);
   await page.getByLabel('내 템플릿 선택',{exact:true}).selectOption(template.template_id);
@@ -76,9 +81,10 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   await page.reload();await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(4).click();await page.getByRole('tab',{name:'편집',exact:true}).click();
   expect((await api('/api/flowchart/draft')).draft_sha256).toBe(finalDraft.draft_sha256);expect((await api(library)).templates).toEqual(savedLibrary);
   expect(sha(fs.readFileSync(versionFile))).toBe(versionSha);expect(sha(fs.readFileSync(checkpoint))).toBe(checkpointSha);expect(fs.existsSync(path.join(project.project_dir,'flowcharts/active.json'))).toBe(false);
+  for(const record of templateHashes){expect(sha(fs.readFileSync(record.path))).toBe(record.sha256);evidence.addFile(record.path);}
   for(const row of fixture.files){expect(sha(fs.readFileSync(row.path))).toBe(row.sha256);evidence.addFile(row.path);}evidence.addFile(checkpoint);evidence.addFile(versionFile);
   await evidence.screenshot(page,`${prefix}-mapped-draft-reopened-and-saved-source-version-preserved`);page.off('request',listener);
-  evidence.note('template_safety',{project,graph,template,module,savedLibrary,beforeDraft,finalDraft,mappedRequest,mappedBody,checkpoint_sha256:checkpointSha,source_version_sha256:versionSha,
+  evidence.note('template_safety',{project,graph,template,module,savedLibrary,beforeDraft,finalDraft,mappedRequest,mappedBody,owned_template_root:ownedLibrary,owned_template_files:templateHashes,owned_template_store_verified:true,checkpoint_sha256:checkpointSha,source_version_sha256:versionSha,
     actual_ui_and_backend:true,empty_and_oversize_name_422:true,subset_empty_name_422:true,controlled_save_subset_map_503:true,corrected_whole_and_subset_saved:true,abandoned_unsubmitted_save_preserved:true,
     template_library_reopened_exact:true,replacement_cancelled_without_map_request:true,empty_model_and_class_422:true,unknown_class_422:true,failed_mapping_preserved_draft:true,explicit_mapping_round_trip:true,
     mapped_draft_reopened_exact:true,source_images_and_checkpoint_preserved:true,saved_source_version_preserved:true,no_active_version:true,no_training:true,quality_approved:false,independent_acceptance:false});

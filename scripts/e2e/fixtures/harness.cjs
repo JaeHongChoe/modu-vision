@@ -173,6 +173,7 @@ function backendCommand({ python = resolvePython(), repoRoot = REPO_ROOT, worksp
     PYTHONPATH: repoRoot,
     PYTHONDONTWRITEBYTECODE: '1',
     VISION_AI_STUDIO_USER_DATA_DIR: workspace.userData,
+    MODU_FLOW_TEMPLATE_DIR: path.join(workspace.home, '.modu_vision', 'flow_templates'),
   };
   if (isolateHome) Object.assign(env, { HOME: workspace.home, USERPROFILE: workspace.home });
   return {
@@ -691,6 +692,7 @@ function electronLaunchOptions({ appDir, workspace, python = resolvePython(), de
   }
   Object.assign(env, {
     VISION_AI_STUDIO_USER_DATA_DIR: workspace.userData,
+    MODU_FLOW_TEMPLATE_DIR: path.join(workspace.home, '.modu_vision', 'flow_templates'),
     VISION_AI_PYTHON: python,
     VISION_AI_STUDIO_DEV_SOURCE_BACKEND: '1',
     VITE_DEV_SERVER_URL: devServerUrl,

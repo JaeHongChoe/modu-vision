@@ -13,6 +13,18 @@ const { spawn, execFileSync } = require('node:child_process');
 const harness = require('../e2e/fixtures/harness.cjs');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
+
+test('browser and Electron template stores remain owned even without changing the native home', () => {
+  const workspace = { root: '/owned-fixture', home: '/owned-fixture/home', userData: '/owned-fixture/userData', projects: '/owned-fixture/projects' };
+  const backend = harness.backendCommand({ python: process.execPath, workspace, isolateHome: false });
+  const electronOptions = harness.electronLaunchOptions({ appDir: REPO_ROOT, workspace, python: process.execPath,
+    electronPath: process.execPath, devServerUrl: 'http://127.0.0.1:1', isolateHome: false,
+    baseEnv: { HOME: '/native-home', MODU_FLOW_TEMPLATE_DIR: '/foreign-template-store' } });
+  const expected = path.join(workspace.home, '.modu_vision', 'flow_templates');
+  assert.equal(backend.env.MODU_FLOW_TEMPLATE_DIR, expected);
+  assert.equal(electronOptions.env.MODU_FLOW_TEMPLATE_DIR, expected);
+  assert.equal(electronOptions.env.HOME, '/native-home');
+});
 const FAKE_BACKEND = String.raw`
 const http=require('http'),{spawn}=require('child_process'),fs=require('fs');
 const token=process.env.VISION_AI_STUDIO_API_TOKEN;
@@ -371,7 +383,7 @@ test('electron launch options isolate the profile and never carry backend or sha
 });
 
 test('native OpenVINO uses only the explicitly selected test interpreter', () => {
-  const args = { appDir:'/runs/app', workspace:{userData:'/owned/profile'}, python:'/base/python',
+  const args = { appDir:'/runs/app', workspace:{userData:'/owned/profile', home:'/owned/home'}, python:'/base/python',
     devServerUrl:'http://127.0.0.1:9' };
   const unselected=harness.electronLaunchOptions({...args,baseEnv:{VISION_OPENVINO_PYTHON:'/shared/python'}});
   assert.equal(unselected.env.VISION_OPENVINO_PYTHON,undefined);
