@@ -1,0 +1,205 @@
+{
+  "schema": "modu-vision.saved-evaluation-refresh-closure/v1",
+  "source_sha": "530803ad4d8207c4f3d80ef59336a1eee92c6541",
+  "source_file_sha256": "c8be562d8c76e8181f07cb94492cdf5940aac0a4f0e80c185527aeea062c0d6b",
+  "independent_handoff_freeze_sha256": "5d7f0100c3e3090b0e227e1e99a41252a541b3d055d809fffa4768a60db9dffa",
+  "actual_gui_cases": 2,
+  "attempts_each": 1,
+  "tracked_inputs_unchanged": 2105,
+  "observations": [
+    {
+      "mode": "electron",
+      "harness_sha256": "170fb65ed6d7322d00172a4f9ebda50a00a06dde9988a7e50cf63cc2d8f1f1e6",
+      "pending_dimensions": {
+        "action": "F059.native-saved-evaluation-refresh",
+        "empty": {
+          "project_id": "36e8613f",
+          "refresh_clicked": true,
+          "http_status": 200,
+          "selector_absent": true,
+          "record_identity_absent": true,
+          "visible_empty_state": true
+        },
+        "error": {
+          "controlled_http_status": 503,
+          "visible_error": "Controlled evaluation refresh transport failure",
+          "stale_record_and_result_absent": true,
+          "reevaluation_disabled": true,
+          "explicit_retry_http_status": 200,
+          "restored_evaluation_id": "evaluation_47725899944144019fc777000aa4dd38",
+          "restored_evidence_sha256": "d55b31db109a7ca83e8796bd54b72a4f3961898efd636b2f2beed4577bf5ef5d"
+        },
+        "reopen": {
+          "actual_renderer_reload": true,
+          "project_id": "46a8a755",
+          "task": "segmentation",
+          "labelset_id": "default",
+          "group": "lot",
+          "evaluation_id": "evaluation_47725899944144019fc777000aa4dd38",
+          "evidence_sha256": "d55b31db109a7ca83e8796bd54b72a4f3961898efd636b2f2beed4577bf5ef5d"
+        },
+        "saved_report_and_input_bytes_unchanged": true,
+        "evaluation_training_job_writes": [],
+        "controlled_saved_reports": true,
+        "controlled_transport_fixture": true,
+        "model_inference_executed": false,
+        "human_label_approval": false,
+        "model_quality_approved": false,
+        "target_execution_verified": false
+      },
+      "controlled_saved_reports_not_model_inference": true,
+      "owned_teardown_verified": true
+    },
+    {
+      "mode": "browser",
+      "harness_sha256": "a15b70a20a379ff993b3de6071a3c1015df577532f6cc490e62d417b5b3c75bb",
+      "pending_dimensions": {
+        "action": "F059.native-saved-evaluation-refresh",
+        "empty": {
+          "project_id": "b612fdf3",
+          "refresh_clicked": true,
+          "http_status": 200,
+          "selector_absent": true,
+          "record_identity_absent": true,
+          "visible_empty_state": true
+        },
+        "error": {
+          "controlled_http_status": 503,
+          "visible_error": "Controlled evaluation refresh transport failure",
+          "stale_record_and_result_absent": true,
+          "reevaluation_disabled": true,
+          "explicit_retry_http_status": 200,
+          "restored_evaluation_id": "evaluation_a3199dce4e3947f19be286c6908e2df4",
+          "restored_evidence_sha256": "3ede3d95fe8427fc8446a35c42763e258ad5209dfab4fae8e0d0ab4ec34af918"
+        },
+        "reopen": {
+          "actual_renderer_reload": true,
+          "project_id": "e9a39e33",
+          "task": "segmentation",
+          "labelset_id": "default",
+          "group": "lot",
+          "evaluation_id": "evaluation_a3199dce4e3947f19be286c6908e2df4",
+          "evidence_sha256": "3ede3d95fe8427fc8446a35c42763e258ad5209dfab4fae8e0d0ab4ec34af918"
+        },
+        "saved_report_and_input_bytes_unchanged": true,
+        "evaluation_training_job_writes": [],
+        "controlled_saved_reports": true,
+        "controlled_transport_fixture": true,
+        "model_inference_executed": false,
+        "human_label_approval": false,
+        "model_quality_approved": false,
+        "target_execution_verified": false
+      },
+      "controlled_saved_reports_not_model_inference": true,
+      "owned_teardown_verified": true
+    }
+  ],
+  "prior_gui_lineage": [
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
+      "prior_source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+      "prior_receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json",
+      "prior_receipt_sha256": "b13078cb12e4b0ebce46f9ae53677f29bb6ff4510547b58c0ed87e174f8de220"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
+      "prior_source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+      "prior_receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json",
+      "prior_receipt_sha256": "b13078cb12e4b0ebce46f9ae53677f29bb6ff4510547b58c0ed87e174f8de220"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
+      "prior_source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+      "prior_receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json",
+      "prior_receipt_sha256": "b13078cb12e4b0ebce46f9ae53677f29bb6ff4510547b58c0ed87e174f8de220"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
+      "prior_source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+      "prior_receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json",
+      "prior_receipt_sha256": "b13078cb12e4b0ebce46f9ae53677f29bb6ff4510547b58c0ed87e174f8de220"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
+      "prior_source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+      "prior_receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json",
+      "prior_receipt_sha256": "b13078cb12e4b0ebce46f9ae53677f29bb6ff4510547b58c0ed87e174f8de220"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
+      "prior_source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+      "prior_receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json",
+      "prior_receipt_sha256": "b13078cb12e4b0ebce46f9ae53677f29bb6ff4510547b58c0ed87e174f8de220"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
+      "prior_source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+      "prior_receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json",
+      "prior_receipt_sha256": "b13078cb12e4b0ebce46f9ae53677f29bb6ff4510547b58c0ed87e174f8de220"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
+      "prior_source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+      "prior_receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json",
+      "prior_receipt_sha256": "b13078cb12e4b0ebce46f9ae53677f29bb6ff4510547b58c0ed87e174f8de220"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
+      "prior_source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+      "prior_receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json",
+      "prior_receipt_sha256": "b13078cb12e4b0ebce46f9ae53677f29bb6ff4510547b58c0ed87e174f8de220"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
+      "prior_source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+      "prior_receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json",
+      "prior_receipt_sha256": "b13078cb12e4b0ebce46f9ae53677f29bb6ff4510547b58c0ed87e174f8de220"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
+      "prior_source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+      "prior_receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json",
+      "prior_receipt_sha256": "b13078cb12e4b0ebce46f9ae53677f29bb6ff4510547b58c0ed87e174f8de220"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
+      "prior_source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+      "prior_receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json",
+      "prior_receipt_sha256": "b13078cb12e4b0ebce46f9ae53677f29bb6ff4510547b58c0ed87e174f8de220"
+    }
+  ],
+  "counts": {
+    "actions": 207,
+    "verified": 575,
+    "pending": 874
+  },
+  "parent_implementation_verified": 69,
+  "parent_implementation_pending": 13,
+  "required_pending": 11,
+  "accepted_parents": 0,
+  "retained_primary": {
+    "evaluation-current.log": "06eb4768af9be09285a2ef8a92d852d287daa08752b2cddcae88b87644a059bf",
+    "evaluation-source-before.json": "174be6b0c6f3a373cd2f9ad36855e490923c4f3f1157e8d1f60e533910663160",
+    "evaluation-source-after.json": "174be6b0c6f3a373cd2f9ad36855e490923c4f3f1157e8d1f60e533910663160",
+    "evaluation-current-command.json": "afe6e9a5650e576577f36572b29fd9f1e55a1573ad2d66b57ad77a87ca4183e4"
+  },
+  "limits": [
+    "Actual Chrome and unpacked macOS Electron, with controlled saved evaluation reports and503 transport.",
+    "No model inference, human label quality, installed native target, GPU, Windows or whole-feature acceptance.",
+    "Original72-hour run and unrelated jobs unchanged."
+  ],
+  "release_ready": false,
+  "model_quality_approved": false
+}

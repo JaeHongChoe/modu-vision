@@ -5746,6 +5746,14 @@
           "receipt_sha256": "b026c57efa3286d794ccdd9454f4998f136fed76fc562ab7a3f478cffa51341f",
           "result": "Clean browser and native Electron each passed once;3 newly exercised U030 dimensions verified,207 actions/572 verified/877 pending.",
           "scope": "Actual metadata picker and decoded preview; no model inference, photo-scale,72h, hardware, human or complete-feature acceptance."
+        },
+        {
+          "kind": "actual-saved-evaluation-refresh-empty-error-reopen",
+          "source_sha": "530803ad4d8207c4f3d80ef59336a1eee92c6541",
+          "receipt": "docs/verification/receipts/2026-10-08-saved-evaluation-refresh-closure-530803a.json",
+          "receipt_sha256": "0c2b851676f8bfa313a4dfc29bdcc3d78cc556c6b2fe89fe9cac93e61099d05f",
+          "result": "Actual browser and unpacked Electron both passed once;3 new F059 refresh dimensions.207 actions/575 verified/874 pending.",
+          "scope": "Controlled saved reports; no inference, human quality or complete-feature acceptance."
         }
       ],
       "file_actions": {

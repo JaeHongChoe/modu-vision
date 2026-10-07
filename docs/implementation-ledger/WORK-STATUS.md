@@ -263,3 +263,7 @@ GitHub run37642522031은 release workflow 파일 검증 단계에서 실패했�
 ## 패키지 worker 시작 격리와 실제 C# 실행 · 94118fb
 
 실제 CPU 실행에서 package의 미등록 sitecustomize와 부모의 비밀·plugin 환경 상속을 재현해 수정했다. 소스 worker는 -I/-B·전용 bytecode prefix·전용 임시 작업 폴더·사용자 폴더·캐시·제한된 환경을 쓰며 기존 offline 설정을 유지한다. 현재 소스에서17건 통과·2건 환경 gate였고, 공식 hash를 확인한.NET8 SDK를 외장 임시 공간에 준비한 뒤 C# compile/PInvoke CPU 전체 graph·reference parity·deadline 종료1건도 통과했다. 중복 없는 통과18건이며 Linux loader는 이 macOS에서 실행했다고 바꾸지 않는다. 기존72시간 worker·GPU·권한·release 상태는 변경하지 않았다. 원래 부모69/13·요청 필요11·종합 수락0은 유지한다. 근거: `../verification/receipts/2026-10-08-owned-package-startup-94118fb.json`.
+
+## 저장 평가 새로고침의 빈 목록·오류·다시 열기 · 530803a
+
+실제 브라우저와 macOS Electron에서 각1회, retry0으로 통과했다. 빈 프로젝트의 새로고침200, 제어된503 뒤 기존 이력·결과 제거와 재평가 차단, 명시적 재시도 뒤 정확한 ID/SHA 복원, 실제 reload 후 선택 유지3차원을 추가 확인했다. 저장된 시험 보고서·입력 hash와2105개 소스는 불변이며 평가·학습·job 생성은 없었다. 현재207개 행동의575개 시나리오 검증·874개 pending이다. 부모69/13·요청 필요11·종합 수락0, 모델 추론·사람 품질 검수·72시간은 그대로 남는다. 근거: `../verification/receipts/2026-10-08-saved-evaluation-refresh-closure-530803a.json`.

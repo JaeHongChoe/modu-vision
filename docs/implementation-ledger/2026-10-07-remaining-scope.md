@@ -6,7 +6,7 @@
 
 `python3 scripts/remaining_work_report.py`는 원장과 행동 registry의 실제 파일을 읽고 입력 SHA-256과 현재 수를 출력한다. 저장된 부모 수가 실제 행과 다르거나 bool로 기록됐으면 실패한다. 면제의 직접 지시·대상·상태가 확대되거나 pass로 바뀐 기록도 거절한다. 보고서는 원래 program이나 수락 gate를 쓰지 않는다. 이후 수는 이 명령으로 다시 읽으며 이 문서의 snapshot을 최신 실행 증거로 사용하지 않는다.
 
-2026-10-08 소스fe92877까지의 추가 실행 뒤 curated 행동은 **207개·검증 572개·pending 877개·not_required 0개**다. 이전369b8e1에서는 새6개 action에42차원을 추가하고 실제19개를 검증했다. 이후1a9b830의 launch action2개에14차원을 추가하고 실제5개를 검증해 나머지9개를 pending으로 유지한다. fe92877에서 metadata picker의 오류·취소·전달3차원을 실제 browser와 native로 추가 확인했다. 이 수는 부모나 전체 기능 수락 수에 더하지 않는다. 실제 slice 기록은18개이며 원장의 별도 요약은 병합 slice16개·추가 개선 영역2개다. 부모와 겹치는 구현 기록으로 독립 수락이나 서로 더할 수 있는 진척 수가 아니다.
+2026-10-08 소스530803a까지의 추가 실행 뒤 curated 행동은 **207개·검증 575개·pending 874개·not_required 0개**다. 이전369b8e1에서는 새6개 action에42차원을 추가하고 실제19개를 검증했다. 이후1a9b830의 launch action2개에14차원을 추가하고 실제5개를 검증해 나머지9개를 pending으로 유지한다. fe92877에서 metadata picker의 오류·취소·전달3차원을 실제 browser와 native로 추가 확인했다. 이 수는 부모나 전체 기능 수락 수에 더하지 않는다. 실제 slice 기록은18개이며 원장의 별도 요약은 병합 slice16개·추가 개선 영역2개다. 부모와 겹치는 구현 기록으로 독립 수락이나 서로 더할 수 있는 진척 수가 아니다.
 
 S6-03의 inert runtime pack API/GUI는 source `5284df6e979d4d4ceadc0a8256b5a90176adbbe6`에 연결된 근거가 이미 있다. 깨끗한 browser/native 검사 5개에 pack 설치·pin·integrity readback과 진단·지원 동선이 포함되며 공개 receipt는 `2026-10-07-runtime-pack-studio-closure-5284df6.json`이다. 이 동선을 미작성 API로 취급하지 않는다. S6-04의 portable 앱/DB cutover·검토·복구도 구현되어 있다. 영속 controller·native caller·main/backend 인증 handshake는1a9b830에서 검증했다. 실제 기준 이미지 실행·pointer 변경 전 candidate 검사·전체 process-tree reconciliation·native packaged positive startup·OS installer adapter를 이어간다.
 
