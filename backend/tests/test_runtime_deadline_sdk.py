@@ -62,6 +62,68 @@ def test_python_predictor_executor_use_same_full_dag_and_strict_options(real_pac
     with pytest.raises(ValueError,match='unknown|Unknown'): Executor(package).execute({'image_path':str(image),'fake':1})
 
 
+def test_owned_package_worker_skips_unlisted_startup_and_parent_environment(real_package, tmp_path, monkeypatch):
+    """Observe real CPU inference and interpreter startup, not a stub worker."""
+    import hashlib
+    from backend.engine import runtime_deadline
+    from backend.engine.flow_package_runtime import Predictor
+    package, image = real_package
+    marker, probe = tmp_path/'unlisted-startup-executed', tmp_path/'owned-worker-probe.json'
+    (package/'sitecustomize.py').write_text(f'from pathlib import Path\nPath({str(marker)!r}).write_text("unverified startup")\n')
+    inherited = {
+        'OPENAI_API_KEY':'controlled-parent-secret', 'AWS_SECRET_ACCESS_KEY':'controlled-parent-secret',
+        'VISION_AI_STUDIO_API_TOKEN':'controlled-parent-secret', 'VISION_RESOURCE_LEASE_DB':str(tmp_path/'foreign.sqlite3'),
+        'PYTHONPATH':str(tmp_path/'parent-plugin'), 'PYTHONUSERBASE':str(tmp_path/'parent-user-site'),
+        'PYTHONSTARTUP':str(tmp_path/'parent-startup.py'), 'QT_PLUGIN_PATH':str(tmp_path/'parent-plugin'),
+        'LD_PRELOAD':'', 'DYLD_INSERT_LIBRARIES':'',
+    }
+    for key,value in inherited.items():monkeypatch.setenv(key,value)
+    monkeypatch.setenv('HOME',str(tmp_path/'parent-home'))
+    monkeypatch.setenv('VISION_PACKAGE_PARITY_IDENTITY','1')
+    monkeypatch.setenv('CUDA_VISIBLE_DEVICES','')
+    monkeypatch.setenv('OPENBLAS_NUM_THREADS','17')
+    offline = ('HF_HUB_OFFLINE', 'TRANSFORMERS_OFFLINE', 'HF_DATASETS_OFFLINE')
+    for key in offline:monkeypatch.setenv(key,'1')
+    observed = {}
+    execute = runtime_deadline.execute_owned_process
+    def inspect_real_child(command, *, deadline_ms, env=None, cwd=None, cancel_event=None):
+        observed.update(command=list(command), environment=dict(env), cwd=str(cwd))
+        command=list(command)
+        # Test-only bootstrap telemetry runs after interpreter startup. The
+        # production command, environment and full packaged graph stay real.
+        inspection=('import json,os,sys;from pathlib import Path;'
+                    f'Path({str(probe)!r}).write_text(json.dumps({{"isolated":sys.flags.isolated,'
+                    '"no_user_site":sys.flags.no_user_site,"dont_write_bytecode":sys.dont_write_bytecode,'
+                    '"pycache_prefix":sys.pycache_prefix,"cwd":os.getcwd(),'
+                    f'"inherited_present":[key for key in {list(inherited)!r} if key in os.environ],'
+                    f'"offline":{{key:os.environ.get(key) for key in {list(offline)!r}}},'
+                    '"home":os.environ.get("HOME"),"omp":os.environ.get("OMP_NUM_THREADS"),'
+                    '"mkl":os.environ.get("MKL_NUM_THREADS"),"openblas":os.environ.get("OPENBLAS_NUM_THREADS")}));')
+        command[command.index('-c')+1]=inspection+command[command.index('-c')+1]
+        return execute(command,deadline_ms=deadline_ms,env=env,cwd=cwd,cancel_event=cancel_event)
+    monkeypatch.setattr(runtime_deadline,'execute_owned_process',inspect_real_child)
+    before={p.relative_to(package).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in package.rglob('*') if p.is_file()}
+    result=Predictor(package,device='cpu',deadline_ms=30000,cpu_threads=1).predict(image,'owned-startup-proof')
+    (tmp_path/'owned-worker-result.json').write_text(json.dumps(result,ensure_ascii=False),encoding='utf-8')
+    (tmp_path/'package-before.json').write_text(json.dumps(before,sort_keys=True),encoding='utf-8')
+    assert result['final_verdict']=='NG' and result['runtime_device_identity']['device']=='cpu'
+    assert result['runtime_device_identity']['cuda_visible_devices']==''
+    assert not marker.exists(),'Unlisted package-root sitecustomize ran before verified runtime imports'
+    child=json.loads(probe.read_text())
+    assert child['isolated']==child['no_user_site']==1 and child['dont_write_bytecode'] is True
+    assert child['inherited_present']==[]
+    assert child['offline']=={key:'1' for key in offline}
+    assert child['omp']==child['mkl']==child['openblas']=='1'
+    owned=Path(observed['cwd'])
+    assert owned!=package and owned.name.startswith('vision-inference-')
+    assert Path(child['pycache_prefix'])==owned/'bytecode' and Path(child['home']).is_relative_to(owned)
+    assert observed['command'][1:3]==['-I','-B']
+    assert observed['command'][3:5]==['-X','pycache_prefix='+str(owned/'bytecode')]
+    assert observed['command'][-3:]==[str(package),str(owned/'request.json'),str(owned/'result.json')]
+    assert not owned.exists(),'Owned inference temporary state must be removed after exit'
+    assert before=={p.relative_to(package).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in package.rglob('*') if p.is_file()}
+
+
 def test_runtime_ignores_unlisted_bytecode_and_preserves_all_package_bytes(real_package,tmp_path):
     import hashlib,importlib.util,py_compile,struct
     from backend.engine.flow_package_runtime import Predictor

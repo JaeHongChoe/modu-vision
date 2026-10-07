@@ -183,6 +183,31 @@ def run_flow_package(package_dir: Path, image_path: Path, image_id: str | None =
     return result
 
 
+def _owned_runtime_environment(temporary: Path, options: dict[str, Any]) -> dict[str, str]:
+    """Carry OS/device/parity settings; keep credentials, plugins and caches private."""
+    allowed = ('PATH', 'SYSTEMROOT', 'WINDIR', 'COMSPEC', 'PATHEXT', 'LANG', 'LC_ALL', 'LC_CTYPE',
+               'CUDA_VISIBLE_DEVICES', 'NVIDIA_VISIBLE_DEVICES', 'CUDA_DEVICE_ORDER', 'PYTORCH_ENABLE_MPS_FALLBACK',
+               'HF_HUB_OFFLINE', 'TRANSFORMERS_OFFLINE', 'HF_DATASETS_OFFLINE',
+               'VISION_PACKAGE_PARITY_IDENTITY', 'VISION_PACKAGE_PARITY_CUDA_BUDGET_MB')
+    env = {key: os.environ[key] for key in allowed if key in os.environ}
+    home, cache, scratch = temporary/'home', temporary/'cache', temporary/'tmp'
+    for directory in (home, cache, scratch):directory.mkdir(mode=0o700)
+    env.update(HOME=str(home), USERPROFILE=str(home), APPDATA=str(home/'AppData/Roaming'),
+               LOCALAPPDATA=str(home/'AppData/Local'), XDG_CACHE_HOME=str(cache),
+               TORCH_HOME=str(cache/'torch'), HF_HOME=str(cache/'huggingface'),
+               HUGGINGFACE_HUB_CACHE=str(cache/'huggingface/hub'), TRANSFORMERS_CACHE=str(cache/'transformers'),
+               MPLCONFIGDIR=str(cache/'matplotlib'), CUDA_CACHE_PATH=str(cache/'cuda'),
+               TMPDIR=str(scratch), TMP=str(scratch), TEMP=str(scratch),
+               # The frozen dispatcher keeps its existing command. These owned
+               # settings also isolate its cache; source Python uses -I/-B/-X.
+               PYTHONNOUSERSITE='1', PYTHONDONTWRITEBYTECODE='1',
+               PYTHONPYCACHEPREFIX=str(temporary/'bytecode'))
+    for key in ('OMP_NUM_THREADS', 'MKL_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'NUMEXPR_NUM_THREADS',
+                'VECLIB_MAXIMUM_THREADS', 'BLIS_NUM_THREADS'):
+        env[key] = str(options['cpu_threads'])
+    return env
+
+
 def _run_isolated(package_dir, image_path, image_id, options, cancel_event=None):
     from backend.engine.runtime_deadline import execute_owned_process
     root=Path(package_dir).expanduser().resolve()
@@ -197,7 +222,7 @@ def _run_isolated(package_dir, image_path, image_id, options, cancel_event=None)
         request=Path(temporary)/'request.json';output=Path(temporary)/'result.json'
         request.write_text(json.dumps({'image_path':str(Path(image_path).expanduser().resolve()),'image_id':image_id,
                                        'options':options}),encoding='utf-8')
-        bootstrap="import sys;sys.modules['pyarrow']=None;from backend.engine.flow_package_runtime import worker_main;worker_main()"
+        bootstrap="import sys;sys.path.insert(0,sys.argv[1]);sys.modules['pyarrow']=None;from backend.engine.flow_package_runtime import worker_main;worker_main()"
         explicit_openvino=options['device'].startswith('openvino:') and bool(os.environ.get('VISION_OPENVINO_PYTHON'))
         if getattr(sys,'frozen',False) and not explicit_openvino:
             # A frozen app cannot run -c; its worker re-verifies and runs this package's own runtime.
@@ -205,13 +230,13 @@ def _run_isolated(package_dir, image_path, image_id, options, cancel_event=None)
                      '--request',str(request),'--output',str(output)]
         else:
             python=os.environ['VISION_OPENVINO_PYTHON'] if explicit_openvino else sys.executable
-            command=[python,'-c',bootstrap,str(root),str(request),str(output)]
-        env={**os.environ,'PYTHONPATH':str(root),'PYTHONNOUSERSITE':'1',
-             # An owned empty prefix prevents unlisted cache payloads from
-             # shadowing verified source, and never writes into a release.
-             'PYTHONDONTWRITEBYTECODE':'1','PYTHONPYCACHEPREFIX':str(Path(temporary)/'bytecode'),
-             'OMP_NUM_THREADS':str(options['cpu_threads']),'MKL_NUM_THREADS':str(options['cpu_threads'])}
-        outcome=execute_owned_process(command,deadline_ms=options['deadline_ms'],env=env,cwd=root,cancel_event=cancel_event)
+            # Package and parent startup hooks cannot enter sys.path until
+            # isolated startup finishes. Read bytecode only from an owned empty
+            # prefix, never from unlisted package cache payloads.
+            command=[python,'-I','-B','-X','pycache_prefix='+str(Path(temporary)/'bytecode'),
+                     '-c',bootstrap,str(root),str(request),str(output)]
+        env=_owned_runtime_environment(Path(temporary),options)
+        outcome=execute_owned_process(command,deadline_ms=options['deadline_ms'],env=env,cwd=temporary,cancel_event=cancel_event)
         if outcome['status'] in ('timeout','cancelled'):
             outcome['image_id']=image_id
             return outcome

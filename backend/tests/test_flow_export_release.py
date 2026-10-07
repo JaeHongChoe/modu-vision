@@ -468,6 +468,7 @@ def test_frozen_isolated_inference_runs_the_vendored_worker(tmp_path, package, m
 
     def fake(command, *, deadline_ms, env=None, cwd=None, cancel_event=None):
         seen["command"] = command
+        seen["cwd"] = cwd
         target = command[command.index("--output") + 1] if "--output" in command else command[-1]
         Path(target).write_text(json.dumps({"final_verdict": "OK"}), encoding="utf-8")
         return {"status": "completed", "returncode": 0, "pid": 1, "elapsed_ms": 1.0, "stdout": "", "stderr": ""}
@@ -484,7 +485,13 @@ def test_frozen_isolated_inference_runs_the_vendored_worker(tmp_path, package, m
     assert result["final_verdict"] == "OK" and result["runtime_execution"]["isolated_process"] is True
     monkeypatch.setattr(flow_package_runtime.sys, "frozen", False)
     flow_package_runtime._run_isolated(root, image, "img", options)
-    assert seen["command"][1] == "-c"
+    command = seen["command"]
+    owned = Path(seen["cwd"])
+    assert owned != root and owned.name.startswith("vision-inference-")
+    assert command[:3] == [flow_package_runtime.sys.executable, "-I", "-B"]
+    assert command[3:6] == ["-X", "pycache_prefix=" + str(owned / "bytecode"), "-c"]
+    assert "sys.path.insert(0,sys.argv[1])" in command[6]
+    assert command[-3:] == [str(root), str(owned / "request.json"), str(owned / "result.json")]
 
 
 # ---------- package identity before and after parity ----------
