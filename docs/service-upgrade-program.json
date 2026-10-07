@@ -1040,7 +1040,9 @@
     "backend/remote/profiles.py",
     "backend/remote/coordinator.py",
     "backend/engine/shared_scheduler.py",
-    "backend/engine/shared_accounts.py"
+    "backend/engine/shared_accounts.py",
+    "backend/tests/test_remote_terminal_receipt_identity.py",
+    "backend/tests/test_remote_source_aliases.py"
    ],
    "proposed_contract": "migrate_project(source, dry_run=True) -> MigrationReport / restore_migration(backup)",
    "acceptance": [
@@ -1096,6 +1098,14 @@
      "result": "Original pending label proposals now survive owned drained binding, cutover, forward recovery and fresh terminal readback. Original worker/snapshot/coordinator/receipt producer paths execute with controlled model/transport boundaries. Final related suite163 passed,0 skipped;32 label cases preserve candidate content and reject changed hashes, auto-approval, unsafe image identities, extra artifacts, epoch states, linked or unbounded inputs and stale previews.",
      "scope": "Root review only. Receipt SHA256 111a2434fcbbe0056ecec2bc50f3f0a2f251b65878415be6b0fac8509e213c0b. No remote launch, live worker/lease ownership, automatic annotation adoption, human quality or full-parent acceptance is created.",
      "platform": "Actual private macOS filesystem/SQLite and local worker/coordinator controls; no user-store migration or new GPU job"
+    },
+    {
+     "kind": "exact-ended-specialist-status-readback",
+     "source_sha": "4d4ccd885057702d05a844b3ef3570fc585d6137",
+     "result": "Related229 cases passed with no skips; clean committed45-case subset passed. Native/remote alias, profile/data/state bindings preserve exact terminal epoch/loss, and malformed JSON/specification cannot hide valid ended records. Actual1-epoch local CPU rotation follows worker/snapshot/relocation/receipt/fresh-readback paths with controlled loopback transport.",
+     "scope": "Root review only. No live ownership, specialist relocation migration, new remote/GPU launch or human quality acceptance. FakeRemote protocol transfers are bounded to51 bytes; actual pretrained qualification stays separate. Latest complete hosted CI required.",
+     "receipt": "docs/verification/receipts/2026-10-07-remote-terminal-identity.json",
+     "receipt_sha256": "7d37fcf47538495ba309ed7acc95da93895b3273e7ed20f854320fb3366ec845"
     }
    ],
    "file_actions": {
@@ -1105,7 +1115,9 @@
     "backend/remote/profiles.py": "Modify",
     "backend/remote/coordinator.py": "Modify",
     "backend/engine/shared_scheduler.py": "Modify",
-    "backend/engine/shared_accounts.py": "Modify"
+    "backend/engine/shared_accounts.py": "Modify",
+    "backend/tests/test_remote_terminal_receipt_identity.py": "Create",
+    "backend/tests/test_remote_source_aliases.py": "Modify"
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-1-platform.md",
    "acceptance_state": {
@@ -4555,7 +4567,12 @@
     "build/ci/requirements-windows-py313-cpu.lock",
     "scripts/e2e/fixtures/keyboard-action.ts",
     "scripts/e2e/keyboard-action-wait.spec.ts",
-    "scripts/e2e/keyboard-canvas-closure.spec.ts"
+    "scripts/e2e/keyboard-canvas-closure.spec.ts",
+    "backend/remote/coordinator.py",
+    "backend/tests/test_remote_source_aliases.py",
+    "backend/tests/test_remote_terminal_receipt_identity.py",
+    "backend/tests/test_remote_compute_reliability.py",
+    "backend/tests/test_remote_operations.py"
    ],
    "proposed_contract": "BuildManifest(source_sha, lockfiles, toolchain, platform, sbom, checksums)",
    "acceptance": [
@@ -4708,10 +4725,18 @@
      "scope": "Only focus preconditions are retried; each key is sent once. Product locks are unchanged. Seven CPU skips, the explicit CPU full-flow opt-in skip and11 excluded authentic-weight cases are recorded as uncovered. Root review only; latest complete hosted result required.",
      "receipt": "docs/verification/receipts/2026-10-07-keyboard-saving-control.json",
      "receipt_sha256": "f3e20ce3a0979390add33b51f75d1ac1682c65543b7f040606bf5a2039478917"
+    },
+    {
+     "kind": "bounded-remote-control-fixtures-and-recovery-regression",
+     "source_sha": "4d4ccd885057702d05a844b3ef3570fc585d6137",
+     "result": "Related229 cases passed with no skips; clean committed45-case subset passed. Native/remote alias, profile/data/state bindings preserve exact terminal epoch/loss, and malformed JSON/specification cannot hide valid ended records. Actual1-epoch local CPU rotation follows worker/snapshot/relocation/receipt/fresh-readback paths with controlled loopback transport.",
+     "scope": "Root review only. No live ownership, specialist relocation migration, new remote/GPU launch or human quality acceptance. FakeRemote protocol transfers are bounded to51 bytes; actual pretrained qualification stays separate. Latest complete hosted CI required.",
+     "receipt": "docs/verification/receipts/2026-10-07-remote-terminal-identity.json",
+     "receipt_sha256": "7d37fcf47538495ba309ed7acc95da93895b3273e7ed20f854320fb3366ec845"
     }
    ],
    "file_actions": {
-    ".github/workflows/ci.yml": "Create",
+    ".github/workflows/ci.yml": "Modify",
     ".github/workflows/windows-native.yml": "Create",
     ".github/workflows/release.yml": "Create",
     "scripts/check_service_plan.py": "Create",
@@ -4729,7 +4754,12 @@
     "build/ci/requirements-windows-py313-cpu.lock": "Create",
     "scripts/e2e/fixtures/keyboard-action.ts": "Create",
     "scripts/e2e/keyboard-action-wait.spec.ts": "Create",
-    "scripts/e2e/keyboard-canvas-closure.spec.ts": "Modify"
+    "scripts/e2e/keyboard-canvas-closure.spec.ts": "Modify",
+    "backend/remote/coordinator.py": "Modify",
+    "backend/tests/test_remote_source_aliases.py": "Modify",
+    "backend/tests/test_remote_terminal_receipt_identity.py": "Create",
+    "backend/tests/test_remote_compute_reliability.py": "Modify",
+    "backend/tests/test_remote_operations.py": "Modify"
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-6-opensource.md",
    "acceptance_state": {

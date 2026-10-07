@@ -1,0 +1,143 @@
+{
+  "schema": "RemoteTerminalIdentityRecovery/v1",
+  "source_sha": "4d4ccd885057702d05a844b3ef3570fc585d6137",
+  "source_dirty": false,
+  "source_base_sha": "ec127afd2bafe4c26b640efa3e68daabb29b5fbe",
+  "source_input_sha256": {
+    ".github/workflows/ci.yml": "4ab632f5f2042998190ec82aefa2dca0af47f9caa7cb766d92f883201758b362",
+    "backend/remote/coordinator.py": "d32d8ebadb218f446507b32ea8217eef5714bbc2ab537f9e86d2c70e3afe0530",
+    "backend/tests/test_remote_source_aliases.py": "0dde87dfcfb61f7cc6b39b31905d78f40d04844bbbc578c1392d6645a4ef7cb2",
+    "backend/tests/test_remote_terminal_receipt_identity.py": "29d4089694d923eb94690f414c2e0706dc4e1842be8ddee75e34542de34d55f3",
+    "backend/tests/test_remote_compute_reliability.py": "0f03fc933a1ed4e77257db5333f8e9f9dc54bd59cb9bf9f61644176a749e0ff9",
+    "backend/tests/test_remote_operations.py": "0a6853b3ccf0d044c383b105af850c03801df0e6201d2fa2615503ecdd00f2dd"
+  },
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "python": "3.13.5",
+    "torch": "2.9.1"
+  },
+  "related_suite": {
+    "passed": 229,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "junit_sha256": "fc9b33da136f3d3f27b7f0301ab17e1518d2b0a369e4a386012311c1557102e8",
+    "selectors": [
+      "tests/test_remote_compute_reliability.py",
+      "tests/test_remote_coordinator.py",
+      "tests/test_remote_operations.py",
+      "tests/test_remote_source_aliases.py",
+      "tests/test_remote_terminal_receipt_identity.py",
+      "tests/test_service_ci_dependencies.py",
+      "tests/test_source_ci_model_lanes.py",
+      "tests/test_terminal_remote_epoch_history.py",
+      "tests/test_terminal_remote_history.py",
+      "tests/test_terminal_remote_label_history.py"
+    ]
+  },
+  "clean_source_qualification": {
+    "passed": 45,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "junit_sha256": "01e7244694ba78d14da2e82592a39034ebd6ab3846249a42391ec25772fee913",
+    "selectors": [
+      "tests/test_remote_source_aliases.py",
+      "tests/test_remote_terminal_receipt_identity.py"
+    ]
+  },
+  "qualification_overlap": "The45 focused cases are a subset of229 related cases; never add the counts.",
+  "regression_red": {
+    "epoch_identity_log_sha256": "4435dd969a97849a599a9ad6ff80e6cd2ff749121fda0802944bc959a97531e1",
+    "observed": "Native receipt epoch3 was ignored because its native model ID differs from the journal remote ID; fresh readback showed0.",
+    "malformed_journal_log_sha256": "fd6bcd6aba6951ef15dd43fe2ae76fb6b782b17791ccf6c12e3d20e6b15f4075",
+    "malformed_launch_log_sha256": "135c12d58e106d3b6bd659bd1532f5895c177a43bbe49008c3bf05f4c2f7a8d8",
+    "malformed_observed": "Non-object journal or launch specification raised AttributeError before all original ended records could be read."
+  },
+  "actual_cpu_producer_qualification": {
+    "task": "rotation",
+    "epochs_completed": 1,
+    "worker_executions_in_case": 1,
+    "model_sha256": "cae9e4f1898792dbb603410e97f369bc63e298100b4270dcaa8c082803905aa1",
+    "job_receipt_sha256": "f69c8e1a1c1389c72365e89fe57ffc4fbcd1c3788f1c44ea74032a5a2751c47b",
+    "journal_sha256": "cbb076bf59efcdce93d8c78cee74c4b3981eedaac546a5899fdae7c7f52e6d5f",
+    "observed_train_loss": 0.513157844543457,
+    "observed_val_loss": 0.5113507732748985,
+    "loss_history_count": 1,
+    "fresh_readback_preserved_epoch_and_loss": true,
+    "artifact_bytes_preserved": true,
+    "fresh_readback_started_worker": false,
+    "fresh_readback_acquired_lease": false,
+    "execution_boundary": "Actual local CPU worker/training; controlled synchronous loopback transport/liveness, not a network GPU or detached process qualification"
+  },
+  "accepted_identity_families": [
+    "rotation",
+    "ocr",
+    "rotated_detection",
+    "enhancement",
+    "defect_gan"
+  ],
+  "terminal_states": [
+    "completed",
+    "failed",
+    "aborted"
+  ],
+  "bindings_checked": [
+    "native_id",
+    "remote_id",
+    "launch_alias",
+    "task",
+    "status",
+    "output",
+    "dataset",
+    "profile",
+    "source",
+    "fingerprint",
+    "training_provenance"
+  ],
+  "bounded_control_transfers": {
+    "files": 97,
+    "total_bytes": 4943,
+    "largest_bytes": 51,
+    "prior_two_attempts_accumulated_weight_bytes": 7800927020,
+    "scope": "FakeRemote protocol tests use opaque bounded transfer fixtures. Authentic pretrained execution suites and actual CPU rotation remain separate."
+  },
+  "storage_recovery": {
+    "receipt_sha256": "7ff85d26506a3f893412a14e7773f145dbe4da3063b24578bfd83a753d7ed657",
+    "target_count": 2,
+    "preserved_tree_count": 2,
+    "entries": 7267,
+    "copy_hash_errors": 0,
+    "deletion_errors": 0,
+    "protected_hash_errors": 0,
+    "before_internal_free": 148606976,
+    "after_internal_free": 8257511424,
+    "scope": "Two ended owned test temporary trees preserved externally before removing their internal copies; no original checkout or evidence deleted"
+  },
+  "retained_preliminary_attempts": [
+    {
+      "log_sha256": "7a931deeccb2cacd4eb7300d2cba30dfa289d6137fc05b0da695aecdf7b4457e",
+      "result": "37 passed,2 failed: deliberate output rename was refused by the existing saver; direct launch journal omitted its identity specification"
+    },
+    {
+      "log_sha256": "25cdacfa9491d247846bf4db3588fe62ef1dcc423d43ad9942bd1082dd3f07e9",
+      "result": "Four collection errors from a patch indentation mistake; fixed before final qualification"
+    },
+    {
+      "log_sha256": "e0f6abf839092274fe03dd01f9a8cef9f495f0900866bb31eee4ae7f9cfab3e0",
+      "result": "84 passed,5 failed,120 errors after internal disk exhaustion; environmental failure retained"
+    },
+    {
+      "log_sha256": "1b7b2d082889b551cedad2f7dfcf095afaa00f11c64b6687376a8578f21e846c",
+      "result": "4 passed,16 fixture errors during the same internal disk exhaustion; final external suite includes these checks"
+    }
+  ],
+  "actual_remote_compute_submitted": false,
+  "user_installation_migrated": false,
+  "worker_authority_created": false,
+  "human_quality_approved": false,
+  "independent_review_accepted": false,
+  "parent_promoted": false,
+  "scope": "Original ended receipt display/readback and malformed-journal isolation only. Live/uncertain migration, specialist relocation migration, other operation archival formats, whole hosted CI and acceptance remain pending."
+}
