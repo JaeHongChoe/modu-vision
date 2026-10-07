@@ -18,6 +18,82 @@ _EXECUTIONS = weakref.WeakKeyDictionary()
 _EXECUTIONS_LOCK = threading.Lock()
 
 
+class _ProcessWorkspace:
+    """Keep private request/cache files until the owned result is confirmed."""
+    def __init__(self, prefix, directory):
+        import tempfile
+        from pathlib import Path
+        self.path = Path(tempfile.mkdtemp(prefix=prefix,dir=directory)).resolve()
+        self.path.chmod(0o700)
+        self._identity = self.path.lstat()
+        self._fd = os.open(self.path,os.O_RDONLY|getattr(os,'O_DIRECTORY',0)|getattr(os,'O_NOFOLLOW',0)) if os.name=='posix' else None
+        self._started = self._finished = False
+
+    def _matches(self):
+        import stat
+        try:
+            original=os.fstat(self._fd) if self._fd is not None else self._identity;current=self.path.lstat()
+            return stat.S_ISDIR(current.st_mode) and (original.st_dev,original.st_ino)==(current.st_dev,current.st_ino)
+        except OSError:return False
+
+    def started(self):
+        if not self._matches():raise RuntimeError('Owned workspace identity changed before execution')
+        self._started=True
+
+    def finished(self, outcome):
+        if not self._matches():raise RuntimeError('Owned workspace identity changed after execution')
+        if not isinstance(outcome,dict):return
+        if outcome.get('status')=='completed' and type(outcome.get('returncode')) is int:
+            self._finished=True
+        elif outcome.get('status') in ('timeout','cancelled'):
+            deadline=outcome.get('deadline')
+            self._finished=isinstance(deadline,dict) and deadline.get('leader_exit_confirmed') is True and deadline.get('terminated') is True
+
+    def close(self):
+        try:
+            # Without a retained directory handle, do not authorize removal or
+            # write a recovery marker through a possibly reused path identity.
+            # Native Windows cleanup remains separately unqualified.
+            if self._fd is None:return
+            # An unconfirmed result/exception cannot authorize removal. A moved
+            # or replaced directory is never followed or treated as original.
+            if not self._matches():return
+            if self._started and not self._finished:
+                import json
+                value={'schema_version':1,'status':'recovery_required','execution_attempt_started':True,
+                    'reason':'owned_process_result_unconfirmed','complete_process_tree_verified':False,
+                    'automatic_cleanup_performed':False}
+                try:
+                    fd=os.open('workspace-retention.json',os.O_WRONLY|os.O_CREAT|os.O_EXCL|getattr(os,'O_NOFOLLOW',0),0o600,dir_fd=self._fd)
+                    with os.fdopen(fd,'w') as out:json.dump(value,out);out.flush();os.fsync(out.fileno())
+                except OSError:pass  # Preserve the workspace and original exception; never replace an existing marker.
+            else:
+                import shutil
+                import stat
+                if not shutil.rmtree.avoids_symlink_attacks or os.listdir not in os.supports_fd:return
+                # Clear only entries of the retained original directory. Do
+                # not remove its root by resolving a path again: a replacement
+                # between identity check and deletion cannot become ours.
+                try:
+                    for name in os.listdir(self._fd):
+                        entry=os.stat(name,dir_fd=self._fd,follow_symlinks=False)
+                        if stat.S_ISDIR(entry.st_mode):shutil.rmtree(name,dir_fd=self._fd)
+                        else:os.unlink(name,dir_fd=self._fd)
+                except OSError:pass  # Preserve remaining owned bytes and any original caller error.
+        finally:
+            if self._fd is not None:
+                fd,self._fd=self._fd,None
+                os.close(fd)
+
+
+@contextmanager
+def owned_process_workspace(*,prefix,directory=None):
+    """Own one private directory; uncertain work has no automatic cleanup path."""
+    workspace=_ProcessWorkspace(prefix,directory)
+    try:yield workspace
+    finally:workspace.close()
+
+
 def _optional_psutil():
     # Generation exports do not require psutil. Its existing installation can
     # supply stronger positive identities; stdlib observation still fences a

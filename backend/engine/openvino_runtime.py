@@ -250,7 +250,7 @@ def _image_tensor(path,size,channels,task=None):
 def optimize_flow_package(package_dir,*,output_dir,precision='fp32',calibration_images=(),validation_images=(),device='CPU',cpu_threads=1,cancel_event=None,input_receipt=None):
     """Conversion is owned by an isolated worker, never by the app's native libraries."""
     from backend.engine.flow_package_runtime import verify_flow_package
-    from backend.engine.runtime_deadline import execute_owned_process
+    from backend.engine.runtime_deadline import execute_owned_process,owned_process_workspace
     verify_flow_package(Path(package_dir))
     output=Path(output_dir).expanduser()
     if output.exists() or output.resolve().is_relative_to(Path(package_dir).resolve()) or any(p.is_symlink() for p in (output,*output.parents)):
@@ -259,14 +259,17 @@ def optimize_flow_package(package_dir,*,output_dir,precision='fp32',calibration_
     payload={'package_dir':str(package_dir),'precision':precision,
         'calibration_images':[str(p) for p in calibration_images],'validation_images':[str(p) for p in validation_images],
         'device':device,'cpu_threads':cpu_threads,'input_receipt':input_receipt}
-    with tempfile.TemporaryDirectory(prefix='.vision-conversion-',dir=output.parent) as temporary:
+    with owned_process_workspace(prefix='.vision-conversion-',directory=output.parent) as workspace:
+        temporary=workspace.path
         request=Path(temporary)/'request.json';result_file=Path(temporary)/'result.json'
         staged=Path(temporary)/'candidate';payload['output_dir']=str(staged)
         request.write_text(json.dumps(payload),encoding='utf-8')
         python=os.environ.get('VISION_OPENVINO_PYTHON',sys.executable)
         code="import sys;sys.modules['pyarrow']=None;from backend.engine.openvino_runtime import optimization_worker;optimization_worker()"
+        workspace.started()
         result=execute_owned_process([python,'-c',code,str(request),str(result_file)],deadline_ms=3600000,
             env={**os.environ,'PYTHONPATH':str(Path(__file__).resolve().parents[2]),'OMP_NUM_THREADS':str(cpu_threads),'MKL_NUM_THREADS':str(cpu_threads)},cancel_event=cancel_event)
+        workspace.finished(result)
         if result['status']=='cancelled' or (cancel_event is not None and cancel_event.is_set()):
             raise InterruptedError('OpenVINO optimization cancelled; owned conversion process terminated')
         if result['status']=='timeout':raise ValueError('OpenVINO conversion exceeded its one hour owned worker budget')

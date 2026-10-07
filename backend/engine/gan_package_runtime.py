@@ -101,7 +101,7 @@ class GeneratorExecutor:
     def _execute(self,request,cancel_event):
         import os
         import sys
-        from backend.engine.runtime_deadline import execute_owned_process
+        from backend.engine.runtime_deadline import execute_owned_process,owned_process_workspace
         allowed={'output_dir','count','seed','source_image_path','regions','source_sha256'}
         if not isinstance(request,dict) or set(request)-allowed or not isinstance(request.get('output_dir'),str):raise ValueError('GeneratorExecutor requires explicit output_dir and known generation fields')
         if type(request.get('count',8)) is not int or not 1<=request.get('count',8)<=500:raise ValueError('Generation count must be an integer from 1 to 500')
@@ -109,14 +109,17 @@ class GeneratorExecutor:
         output=Path(request['output_dir']).expanduser()
         if output.exists() or any(p.is_symlink() for p in (output,*output.parents)) or output.resolve().is_relative_to(self.root):raise ValueError('Generation output must be a new owned directory outside the package')
         output.parent.mkdir(parents=True,exist_ok=True)
-        with tempfile.TemporaryDirectory(prefix='.native-generation-',dir=output.parent) as temporary:
+        with owned_process_workspace(prefix='.native-generation-',directory=output.parent) as workspace:
+            temporary=workspace.path
             staged=Path(temporary)/'candidate';request_path=Path(temporary)/'request.json';result_path=Path(temporary)/'result.json'
             request_path.write_text(json.dumps({**request,'output_dir':str(staged),'device':self.options['device']}),encoding='utf-8')
             bootstrap='from backend.engine.gan_package_runtime import generator_worker;generator_worker()'
+            workspace.started()
             result=execute_owned_process([sys.executable,'-c',bootstrap,str(self.root),str(request_path),str(result_path)],deadline_ms=self.options['deadline_ms'],cwd=self.root,cancel_event=cancel_event,
                 env={**os.environ,'PYTHONPATH':str(self.root),'PYTHONDONTWRITEBYTECODE':'1',
                      'PYTHONPYCACHEPREFIX':str(Path(temporary)/'bytecode'),
                      'OMP_NUM_THREADS':str(self.options['cpu_threads']),'MKL_NUM_THREADS':str(self.options['cpu_threads'])})
+            workspace.finished(result)
             if result['status'] in ('timeout','cancelled'):return {**result,'task':'defect_gan','output_state':'synthetic_unreviewed','quality_status':'unvalidated'}
             if result['returncode']!=0:raise RuntimeError('Owned generation failed: '+result['stderr'])
             def relocate(value):

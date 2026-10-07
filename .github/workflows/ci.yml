@@ -150,6 +150,7 @@ jobs:
           backend/tests/test_runtime_deadline_sdk.py::test_runtime_ignores_unlisted_bytecode_and_preserves_all_package_bytes
           backend/tests/test_runtime_deadline_sdk.py::test_packaged_cpp_native_sdk_embeds_python_and_matches_whole_graph
           backend/tests/test_runtime_deadline_tree.py
+          backend/tests/test_runtime_workspace_retention.py
           backend/tests/test_gan_generation_package.py
           backend/tests/test_dino_flow_threshold_precision.py
           backend/tests/test_flow_package.py

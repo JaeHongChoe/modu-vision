@@ -209,7 +209,7 @@ def _owned_runtime_environment(temporary: Path, options: dict[str, Any]) -> dict
 
 
 def _run_isolated(package_dir, image_path, image_id, options, cancel_event=None):
-    from backend.engine.runtime_deadline import execute_owned_process
+    from backend.engine.runtime_deadline import execute_owned_process,owned_process_workspace
     root=Path(package_dir).expanduser().resolve()
     # Validate graph and content before executing a packaged Python entry point.
     verify_flow_package(root)
@@ -218,7 +218,8 @@ def _run_isolated(package_dir, image_path, image_id, options, cancel_event=None)
         raise ValueError('OpenVINO requires a verified converted package')
     if manifest.get('runtime_acceptance_sha256') and options['device']!=manifest['runtime']['device']:
         raise ValueError('Reviewed precision runtime requires its explicitly accepted device')
-    with tempfile.TemporaryDirectory(prefix='vision-inference-') as temporary:
+    with owned_process_workspace(prefix='vision-inference-') as workspace:
+        temporary=workspace.path
         request=Path(temporary)/'request.json';output=Path(temporary)/'result.json'
         request.write_text(json.dumps({'image_path':str(Path(image_path).expanduser().resolve()),'image_id':image_id,
                                        'options':options}),encoding='utf-8')
@@ -236,7 +237,9 @@ def _run_isolated(package_dir, image_path, image_id, options, cancel_event=None)
             command=[python,'-I','-B','-X','pycache_prefix='+str(Path(temporary)/'bytecode'),
                      '-c',bootstrap,str(root),str(request),str(output)]
         env=_owned_runtime_environment(Path(temporary),options)
+        workspace.started()
         outcome=execute_owned_process(command,deadline_ms=options['deadline_ms'],env=env,cwd=temporary,cancel_event=cancel_event)
+        workspace.finished(outcome)
         if outcome['status'] in ('timeout','cancelled'):
             outcome['image_id']=image_id
             return outcome
