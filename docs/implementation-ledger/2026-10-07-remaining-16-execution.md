@@ -12,7 +12,7 @@
 | S6-04 | 오프라인 업데이트 | owned POSIX portable 앱·DB cutover, crash finish, 새 account/profile 보존 forward recovery; actual frozen CLI5회·별도 CPU known-image2회; 새 main/preload/renderer 검토·복구 연결, 관련Python125/Node40 및 UI2개 통과 | 실제 OS installer·설치된 home·실 publisher 서명·native positive 설치 및 installed-app known-image handoff |
 | S6-05 | 공개 CI | 기존 hosted success 보존; 전체 CPU2706 pass/고지 누락1 fail·고지62 및 optional27 repair pass | 최신 게시 source 전체 CI 완료; 기존 queue 및 실패 기록 보존 |
 | S6-06 | 서명·채널 | unsigned 상태와 checksum/source 연결 | 실제 publisher/서명 키·최종 artifact와 stable/beta 운영 정책 |
-| S7-01 | 전체 기능 행동 coverage | 198개 curated action, 539개 시나리오 검증; retention·template 실제 browser/Electron 근거 추가 | 847개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
+| S7-01 | 전체 기능 행동 coverage | 199개 curated action, 545개 시나리오 검증; retention·template 실제 browser/Electron 근거 추가 | 848개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
 | S7-02 | 10개 모델군 시나리오 | 실제 family별 학습/추론·다중 checkpoint·flow/package control 기록 | 사람이 검토한 대표 분류/정상/OCR/OBB/향상/GAN truth와 품질 판정 |
 | S7-03 | Windows 실사용 | 기존 unsigned runner 결과 보존 | 사용자 면제. 신규 실기 테스트를 시작하지 않으며 pass로 바꾸지 않음 |
 | S7-04 | 동시 작업·장애 | 2개 계정/agent·actual CPU·재접속·권한/충돌 control; controlled signed portable 앱·DB cutover 및 crash recovery | 물리적 장애와 실제 publisher가 서명한 native 앱 업데이트 |
@@ -292,3 +292,10 @@ Owned qualification-key macOS fixture의 actual install→entrypoint→new profi
 ## 같은72시간 운전의 추가 관찰
 
 - 2026-10-07T13:28:40.123254+00:00 실제 원본 receipt는 running·22.01시간/1317cycles이고 completed/중복 거절/backpressure 거절이 각각1317/1317/1317이다. 원래 worker/observer/caffeinate PID와 create time·시작시각·checkpoint가 일치한다. 재시작·기존 실패 실행 합산 없이 유지했으며72시간 종료는 아직 아니다. Public receipt:2026-10-07-same-soak-progress-4a4b4d7.json.
+
+## 추가 실행: Studio 선택형 팩 검증·프로젝트 보관 연결
+
+- Source5284df6에서 CLI와 frozen backend가 같은 inert installer를 사용하고, 현재 프로젝트 입력만 받은 뒤 별도 SHA admission을 고정 저장한다. 실제 API/Studio에서 원본 hash, 새 payload hash, OS/arch/protocol과 wheel ABI 태그를 재확인한다. 보관과 실행 환경 활성화·publisher 서명·대상 실행은 구분한다. Shared owner+server administrator 외 설치 거절, 다른 프로젝트 입력/linked path/변조/과대 metadata 거절, 설치 receipt 보존 및 비식별 진단을 확인했다.
+- 실제 pydicom3.0.2 wheel+원래 LICENSE2 files/2,379,963 bytes로 clean browser2/native3 cases retry0 passed. 정상 보관·잘못된 pin409·실제 파일 변조·network error·재시도·다른 프로젝트 격리·정확한 재열기와 기존 diagnostic download 회귀를 통과했다. Original receipt와 입력 bytes/active dependency inventory는 보존됐다.
+- Separate read-only reviewer가 FIFO 교체 blocking, 정상 driver upgrade의 idempotence, 검증 뒤 receipt 재읽기 race를 발견·재현했고, root는 failing production tests 뒤 수정했다. Focused backend83 pass/0 skip, renderer/main907 pass/0 fail/0 skip, product/e2e types pass. 실제 실행·배포 서명 또는 전체 acceptance 승격은 하지 않았다.
+- Public receipt:2026-10-07-runtime-pack-studio-closure-5284df6.json. 새 설치 action의7차원 중 실제6만 검증하여199 actions/545 verified/848 pending; native picker cancel은 미검증이다. 전체 parent15가 전부 즉시 불가능하다는 뜻이 아니며, 코드 구현과 외부 실사용 수락 조건을 분리해 추적한다.

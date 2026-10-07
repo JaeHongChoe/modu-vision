@@ -10,7 +10,7 @@
   "src/renderer/components/labeling/AnnotationDraftRecovery.tsx": "21cc584ca3683631e26d7df1d711ea4ad1e59f7baa6931c9c30bc6156cb9874f",
   "src/renderer/components/labeling/LabelbookEditor.tsx": "2b46bc631bd6c8c1187dfd9f87cd3e24cfbff6be26616373e1196482991c54fb",
   "src/renderer/components/labeling/DicomPanel.tsx": "1e191527a5572743bd92888d92445734dd314d9d64125ff62c02204cd15cd0e7",
-  "src/renderer/components/runtime/ProductDeliveryWorkspace.tsx": "e703e6deb33b642e9da292583e45e5005c386a3d7bd15fee5510fcbf9f5ec106",
+  "src/renderer/components/runtime/ProductDeliveryWorkspace.tsx": "8323b2de60c928431997a8ec2262372f7768da519198d95f53c4daab68500b5c",
   "src/renderer/components/wizard/ProjectWorkspaceDialog.tsx": "8be688631863ce99a0593aabb3d0a229c25389622615c338d8ee35bb17601464",
   "src/renderer/components/wizard/ArtifactRetentionPanel.tsx": "b892d9aa9aa0707ec5c58fc142d2b3ec4ecbffa15df8d513b4da20267c045dd4",
   "src/renderer/components/common/ImagePickerModal.tsx": "6cde4dc76f927e9ed7469c1765ba6b9f84193f24caf2df3bda0b347466030966",
@@ -55,7 +55,8 @@
   "src/renderer/components/evaluation/ModelComparisonPanel.tsx": "cf0c49e1cb75377c37351424ba3f536db39b3c55bdd05c6c4e39aa45bcfac248",
   "src/renderer/components/dataset/CaptureIntakePanel.tsx": "7021606464274e98970014a0a18bc8b273a22db2e7f2436f6ad163eef4770b36",
   "src/renderer/components/inference/BatchInspectionPanel.tsx": "febedf6aec0ec0bbcd12af0439b0e210ced6f613576791955ce657a3e91d2b34",
-  "src/renderer/components/flowchart/IntermediateCropDrawer.tsx": "b8d4e37fde319fc00f93c6f51ffc2730599fdbc6b5c9a330c6e9f26b2871c8d3"
+  "src/renderer/components/flowchart/IntermediateCropDrawer.tsx": "b8d4e37fde319fc00f93c6f51ffc2730599fdbc6b5c9a330c6e9f26b2871c8d3",
+  "src/renderer/components/runtime/RuntimePackPanel.tsx": "4161e79ae817d605a06f3ecba75c3cb80dd8666387421d68f313c9af4b6f2644"
  },
  "records": [
   {
@@ -19776,19 +19777,19 @@
        "evidence": [
         {
          "task": "S6-09",
-         "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
          "kind": "click",
          "action": "진단 자료 포함 항목 선택",
          "expected": "Only the selected section is sent; empty selection disables Save.",
          "observed": "Actual checkbox choices produced exact one-section requests; no selected section disabled the actual save button.",
          "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
          "test": "scripts/e2e/support-bundle-closure.spec.ts::native support button downloads exact selected sanitized persisted bundles",
-         "receipt": "2026-10-07-app-support-bundle-closure.spec-electron.json",
-         "receipt_sha256": "ba7caa4ecf14cc936e16a8ec4f23c03094f26d4f3dac8bc122f8a4ae1db253a8",
+         "receipt": "2026-10-07-support-bundle-5284df6-electron.json",
+         "receipt_sha256": "725fda7dee92d30e93d75b918825a5bc1f1ee2a9d4eef5bbe0acc6d6cdd4251b",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "8d82eac47e47ed0ece29ec64c544b8a876d107e72836b134972e51c0aa93d1ac"
+           "sha256": "b3c88554ee3d92477c7df49747e1e55e74f46894e29d46f6227ce577c5ec60bc"
           }
          ]
         }
@@ -19799,19 +19800,19 @@
        "evidence": [
         {
          "task": "S6-09",
-         "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
          "kind": "click",
          "action": "진단 자료 포함 항목 선택",
          "expected": "Only the selected section is sent; empty selection disables Save.",
          "observed": "Actual checkbox choices produced exact one-section requests; no selected section disabled the actual save button.",
          "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
          "test": "scripts/e2e/support-bundle-closure.spec.ts::native support button downloads exact selected sanitized persisted bundles",
-         "receipt": "2026-10-07-app-support-bundle-closure.spec-electron.json",
-         "receipt_sha256": "ba7caa4ecf14cc936e16a8ec4f23c03094f26d4f3dac8bc122f8a4ae1db253a8",
+         "receipt": "2026-10-07-support-bundle-5284df6-electron.json",
+         "receipt_sha256": "725fda7dee92d30e93d75b918825a5bc1f1ee2a9d4eef5bbe0acc6d6cdd4251b",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "8d82eac47e47ed0ece29ec64c544b8a876d107e72836b134972e51c0aa93d1ac"
+           "sha256": "b3c88554ee3d92477c7df49747e1e55e74f46894e29d46f6227ce577c5ec60bc"
           }
          ]
         }
@@ -19825,61 +19826,61 @@
        "evidence": [
         {
          "task": "S6-09",
-         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
          "kind": "click",
          "action": "진단 자료 포함 항목 선택",
          "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
          "observed": "browser: An explicit delayed503 on selected operator_errors disabled all section controls while pending, retained that exact selection after failure and preserved the original saved bundle. Removing the transport fixture and deliberately retrying sent the same selected section.",
          "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
          "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
-         "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
-         "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca",
+         "receipt": "2026-10-07-diagnostic-controls-5284df6-browser.json",
+         "receipt_sha256": "5086451c4984fd3fec682a06a3eea68282b672871502f707d8b8accc90c5e123",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "dfa628b49532a4733fac4c8cce8def2f0e874ba996dab80413ea07150be50c0c"
+           "sha256": "33500ebac401147eefe8595d5e0b12db61db3c0104aa8a68f6dfe6f12ea440a5"
           },
           {
            "id": "screenshot-1",
-           "sha256": "76c1840876ed09740cc560d779fe677dee0f366074584f70027769b7541dc2a7"
+           "sha256": "bc0c17f7c07a752c3556ae1aaf90ce5f33630c62211cdac95e301647e42a59d4"
           },
           {
            "id": "screenshot-2",
-           "sha256": "ac3d9c2f894fc760abab302f0a7946104b5168a4e9edb2332259b958bbdcea34"
+           "sha256": "490c5b1ce84e5e972a11329f7c853f02916309ae70c0a958d10365d665418c44"
           },
           {
            "id": "screenshot-3",
-           "sha256": "adf86f5a1d5ed57f39e961f9e638ebccdb7574d600314f4eabadbc54fd47d755"
+           "sha256": "f0ce8fe2ad6c9d120f9b5f2d5e4ccd17666c8a71e19007ae62d6d2e1192ee56a"
           }
          ]
         },
         {
          "task": "S6-09",
-         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
          "kind": "click",
          "action": "진단 자료 포함 항목 선택",
          "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
          "observed": "electron: An explicit delayed503 on selected operator_errors disabled all section controls while pending, retained that exact selection after failure and preserved the original saved bundle. Removing the transport fixture and deliberately retrying sent the same selected section.",
          "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
          "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
-         "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
-         "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576",
+         "receipt": "2026-10-07-diagnostic-controls-5284df6-electron.json",
+         "receipt_sha256": "d61cdc6ed22ac34d6f2e0786bcb71429188763154e82107ccf374b705e96c7ca",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "fa70f8d4278c39c54339c220a372bdfae93033714ffd1df64c0206b77aee38d0"
+           "sha256": "76927e8494f436cad56614c807ae7c53795d86ca006d7f267888238c0738e1c9"
           },
           {
            "id": "screenshot-1",
-           "sha256": "a1cf6fb37232e7b0198f8ebe3456b22a6dbddfbca5402272e93bda4f9f016c2f"
+           "sha256": "8076478ca8ae11ced9dedac5c1ff2295c21b57aaed4479b07dddf8f410df3a44"
           },
           {
            "id": "screenshot-2",
-           "sha256": "81b192611d4cd40c5918c12b45138c286855f257008e26bc4cba357e6416eafa"
+           "sha256": "82330416a4d51a05f3a9ee14ed11b0f688c2fb35f9ce85bf0702ebaa2ee35fec"
           },
           {
            "id": "screenshot-3",
-           "sha256": "44b340f62b63ff60d9544b7dac860e835f73cc6990522af6358a14f2f6f13dcd"
+           "sha256": "b0756514fbd4944eebeaae61a18dd59ab36a0a7a1fb06ca0056f63f96a3d15ee"
           }
          ]
         }
@@ -19890,61 +19891,61 @@
        "evidence": [
         {
          "task": "S6-09",
-         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
          "kind": "click",
          "action": "진단 자료 포함 항목 선택",
          "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
          "observed": "browser: Choosing an unsubmitted hardware section and closing the actual workspace emitted no new diagnostics POST or download and retained the previous persisted JSON hash.",
          "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
          "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
-         "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
-         "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca",
+         "receipt": "2026-10-07-diagnostic-controls-5284df6-browser.json",
+         "receipt_sha256": "5086451c4984fd3fec682a06a3eea68282b672871502f707d8b8accc90c5e123",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "dfa628b49532a4733fac4c8cce8def2f0e874ba996dab80413ea07150be50c0c"
+           "sha256": "33500ebac401147eefe8595d5e0b12db61db3c0104aa8a68f6dfe6f12ea440a5"
           },
           {
            "id": "screenshot-1",
-           "sha256": "76c1840876ed09740cc560d779fe677dee0f366074584f70027769b7541dc2a7"
+           "sha256": "bc0c17f7c07a752c3556ae1aaf90ce5f33630c62211cdac95e301647e42a59d4"
           },
           {
            "id": "screenshot-2",
-           "sha256": "ac3d9c2f894fc760abab302f0a7946104b5168a4e9edb2332259b958bbdcea34"
+           "sha256": "490c5b1ce84e5e972a11329f7c853f02916309ae70c0a958d10365d665418c44"
           },
           {
            "id": "screenshot-3",
-           "sha256": "adf86f5a1d5ed57f39e961f9e638ebccdb7574d600314f4eabadbc54fd47d755"
+           "sha256": "f0ce8fe2ad6c9d120f9b5f2d5e4ccd17666c8a71e19007ae62d6d2e1192ee56a"
           }
          ]
         },
         {
          "task": "S6-09",
-         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
          "kind": "click",
          "action": "진단 자료 포함 항목 선택",
          "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
          "observed": "electron: Choosing an unsubmitted hardware section and closing the actual workspace emitted no new diagnostics POST or download and retained the previous persisted JSON hash.",
          "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
          "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
-         "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
-         "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576",
+         "receipt": "2026-10-07-diagnostic-controls-5284df6-electron.json",
+         "receipt_sha256": "d61cdc6ed22ac34d6f2e0786bcb71429188763154e82107ccf374b705e96c7ca",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "fa70f8d4278c39c54339c220a372bdfae93033714ffd1df64c0206b77aee38d0"
+           "sha256": "76927e8494f436cad56614c807ae7c53795d86ca006d7f267888238c0738e1c9"
           },
           {
            "id": "screenshot-1",
-           "sha256": "a1cf6fb37232e7b0198f8ebe3456b22a6dbddfbca5402272e93bda4f9f016c2f"
+           "sha256": "8076478ca8ae11ced9dedac5c1ff2295c21b57aaed4479b07dddf8f410df3a44"
           },
           {
            "id": "screenshot-2",
-           "sha256": "81b192611d4cd40c5918c12b45138c286855f257008e26bc4cba357e6416eafa"
+           "sha256": "82330416a4d51a05f3a9ee14ed11b0f688c2fb35f9ce85bf0702ebaa2ee35fec"
           },
           {
            "id": "screenshot-3",
-           "sha256": "44b340f62b63ff60d9544b7dac860e835f73cc6990522af6358a14f2f6f13dcd"
+           "sha256": "b0756514fbd4944eebeaae61a18dd59ab36a0a7a1fb06ca0056f63f96a3d15ee"
           }
          ]
         }
@@ -19955,61 +19956,61 @@
        "evidence": [
         {
          "task": "S6-09",
-         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
          "kind": "click",
          "action": "진단 자료 포함 항목 선택",
          "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
          "observed": "browser: Closing then reopening reset all transient section controls to the default selection, removed the previous success notice and preserved the exact last stored bundle without a new export.",
          "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
          "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
-         "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
-         "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca",
+         "receipt": "2026-10-07-diagnostic-controls-5284df6-browser.json",
+         "receipt_sha256": "5086451c4984fd3fec682a06a3eea68282b672871502f707d8b8accc90c5e123",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "dfa628b49532a4733fac4c8cce8def2f0e874ba996dab80413ea07150be50c0c"
+           "sha256": "33500ebac401147eefe8595d5e0b12db61db3c0104aa8a68f6dfe6f12ea440a5"
           },
           {
            "id": "screenshot-1",
-           "sha256": "76c1840876ed09740cc560d779fe677dee0f366074584f70027769b7541dc2a7"
+           "sha256": "bc0c17f7c07a752c3556ae1aaf90ce5f33630c62211cdac95e301647e42a59d4"
           },
           {
            "id": "screenshot-2",
-           "sha256": "ac3d9c2f894fc760abab302f0a7946104b5168a4e9edb2332259b958bbdcea34"
+           "sha256": "490c5b1ce84e5e972a11329f7c853f02916309ae70c0a958d10365d665418c44"
           },
           {
            "id": "screenshot-3",
-           "sha256": "adf86f5a1d5ed57f39e961f9e638ebccdb7574d600314f4eabadbc54fd47d755"
+           "sha256": "f0ce8fe2ad6c9d120f9b5f2d5e4ccd17666c8a71e19007ae62d6d2e1192ee56a"
           }
          ]
         },
         {
          "task": "S6-09",
-         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
          "kind": "click",
          "action": "진단 자료 포함 항목 선택",
          "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
          "observed": "electron: Closing then reopening reset all transient section controls to the default selection, removed the previous success notice and preserved the exact last stored bundle without a new export.",
          "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
          "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
-         "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
-         "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576",
+         "receipt": "2026-10-07-diagnostic-controls-5284df6-electron.json",
+         "receipt_sha256": "d61cdc6ed22ac34d6f2e0786bcb71429188763154e82107ccf374b705e96c7ca",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "fa70f8d4278c39c54339c220a372bdfae93033714ffd1df64c0206b77aee38d0"
+           "sha256": "76927e8494f436cad56614c807ae7c53795d86ca006d7f267888238c0738e1c9"
           },
           {
            "id": "screenshot-1",
-           "sha256": "a1cf6fb37232e7b0198f8ebe3456b22a6dbddfbca5402272e93bda4f9f016c2f"
+           "sha256": "8076478ca8ae11ced9dedac5c1ff2295c21b57aaed4479b07dddf8f410df3a44"
           },
           {
            "id": "screenshot-2",
-           "sha256": "81b192611d4cd40c5918c12b45138c286855f257008e26bc4cba357e6416eafa"
+           "sha256": "82330416a4d51a05f3a9ee14ed11b0f688c2fb35f9ce85bf0702ebaa2ee35fec"
           },
           {
            "id": "screenshot-3",
-           "sha256": "44b340f62b63ff60d9544b7dac860e835f73cc6990522af6358a14f2f6f13dcd"
+           "sha256": "b0756514fbd4944eebeaae61a18dd59ab36a0a7a1fb06ca0056f63f96a3d15ee"
           }
          ]
         }
@@ -20020,61 +20021,61 @@
        "evidence": [
         {
          "task": "S6-09",
-         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
          "kind": "click",
          "action": "진단 자료 포함 항목 선택",
          "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
          "observed": "browser: The actual chosen packages/operator_errors sections were the exact respective POST bodies, downloaded JSON sections and persisted backend JSON sections; controlled private values and original image identity were excluded.",
          "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
          "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
-         "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
-         "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca",
+         "receipt": "2026-10-07-diagnostic-controls-5284df6-browser.json",
+         "receipt_sha256": "5086451c4984fd3fec682a06a3eea68282b672871502f707d8b8accc90c5e123",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "dfa628b49532a4733fac4c8cce8def2f0e874ba996dab80413ea07150be50c0c"
+           "sha256": "33500ebac401147eefe8595d5e0b12db61db3c0104aa8a68f6dfe6f12ea440a5"
           },
           {
            "id": "screenshot-1",
-           "sha256": "76c1840876ed09740cc560d779fe677dee0f366074584f70027769b7541dc2a7"
+           "sha256": "bc0c17f7c07a752c3556ae1aaf90ce5f33630c62211cdac95e301647e42a59d4"
           },
           {
            "id": "screenshot-2",
-           "sha256": "ac3d9c2f894fc760abab302f0a7946104b5168a4e9edb2332259b958bbdcea34"
+           "sha256": "490c5b1ce84e5e972a11329f7c853f02916309ae70c0a958d10365d665418c44"
           },
           {
            "id": "screenshot-3",
-           "sha256": "adf86f5a1d5ed57f39e961f9e638ebccdb7574d600314f4eabadbc54fd47d755"
+           "sha256": "f0ce8fe2ad6c9d120f9b5f2d5e4ccd17666c8a71e19007ae62d6d2e1192ee56a"
           }
          ]
         },
         {
          "task": "S6-09",
-         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
          "kind": "click",
          "action": "진단 자료 포함 항목 선택",
          "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
          "observed": "electron: The actual chosen packages/operator_errors sections were the exact respective POST bodies, downloaded JSON sections and persisted backend JSON sections; controlled private values and original image identity were excluded.",
          "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
          "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
-         "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
-         "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576",
+         "receipt": "2026-10-07-diagnostic-controls-5284df6-electron.json",
+         "receipt_sha256": "d61cdc6ed22ac34d6f2e0786bcb71429188763154e82107ccf374b705e96c7ca",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "fa70f8d4278c39c54339c220a372bdfae93033714ffd1df64c0206b77aee38d0"
+           "sha256": "76927e8494f436cad56614c807ae7c53795d86ca006d7f267888238c0738e1c9"
           },
           {
            "id": "screenshot-1",
-           "sha256": "a1cf6fb37232e7b0198f8ebe3456b22a6dbddfbca5402272e93bda4f9f016c2f"
+           "sha256": "8076478ca8ae11ced9dedac5c1ff2295c21b57aaed4479b07dddf8f410df3a44"
           },
           {
            "id": "screenshot-2",
-           "sha256": "81b192611d4cd40c5918c12b45138c286855f257008e26bc4cba357e6416eafa"
+           "sha256": "82330416a4d51a05f3a9ee14ed11b0f688c2fb35f9ce85bf0702ebaa2ee35fec"
           },
           {
            "id": "screenshot-3",
-           "sha256": "44b340f62b63ff60d9544b7dac860e835f73cc6990522af6358a14f2f6f13dcd"
+           "sha256": "b0756514fbd4944eebeaae61a18dd59ab36a0a7a1fb06ca0056f63f96a3d15ee"
           }
          ]
         }
@@ -20092,19 +20093,19 @@
        "evidence": [
         {
          "task": "S6-09",
-         "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
          "kind": "click",
          "action": "진단 자료 저장",
          "expected": "Downloaded JSON matches the response and persisted bundle without originals or private error values.",
          "observed": "Actual native downloads for errors and installation equaled persisted responses; controlled secrets, contact, source path/image/hash were absent; empty selection refused.",
          "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
          "test": "scripts/e2e/support-bundle-closure.spec.ts::native support button downloads exact selected sanitized persisted bundles",
-         "receipt": "2026-10-07-app-support-bundle-closure.spec-electron.json",
-         "receipt_sha256": "ba7caa4ecf14cc936e16a8ec4f23c03094f26d4f3dac8bc122f8a4ae1db253a8",
+         "receipt": "2026-10-07-support-bundle-5284df6-electron.json",
+         "receipt_sha256": "725fda7dee92d30e93d75b918825a5bc1f1ee2a9d4eef5bbe0acc6d6cdd4251b",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "8d82eac47e47ed0ece29ec64c544b8a876d107e72836b134972e51c0aa93d1ac"
+           "sha256": "b3c88554ee3d92477c7df49747e1e55e74f46894e29d46f6227ce577c5ec60bc"
           }
          ]
         }
@@ -20115,19 +20116,19 @@
        "evidence": [
         {
          "task": "S6-09",
-         "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
          "kind": "click",
          "action": "진단 자료 저장",
          "expected": "Downloaded JSON matches the response and persisted bundle without originals or private error values.",
          "observed": "Actual native downloads for errors and installation equaled persisted responses; controlled secrets, contact, source path/image/hash were absent; empty selection refused.",
          "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
          "test": "scripts/e2e/support-bundle-closure.spec.ts::native support button downloads exact selected sanitized persisted bundles",
-         "receipt": "2026-10-07-app-support-bundle-closure.spec-electron.json",
-         "receipt_sha256": "ba7caa4ecf14cc936e16a8ec4f23c03094f26d4f3dac8bc122f8a4ae1db253a8",
+         "receipt": "2026-10-07-support-bundle-5284df6-electron.json",
+         "receipt_sha256": "725fda7dee92d30e93d75b918825a5bc1f1ee2a9d4eef5bbe0acc6d6cdd4251b",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "8d82eac47e47ed0ece29ec64c544b8a876d107e72836b134972e51c0aa93d1ac"
+           "sha256": "b3c88554ee3d92477c7df49747e1e55e74f46894e29d46f6227ce577c5ec60bc"
           }
          ]
         }
@@ -20141,61 +20142,61 @@
        "evidence": [
         {
          "task": "S6-09",
-         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
          "kind": "click",
          "action": "진단 자료 저장",
          "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
          "observed": "browser: An explicit503 retained the prior bundle bytes and produced no new actual download. The control was restored and a deliberate retry after fixture removal saved the selected sanitized response.",
          "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
          "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
-         "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
-         "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca",
+         "receipt": "2026-10-07-diagnostic-controls-5284df6-browser.json",
+         "receipt_sha256": "5086451c4984fd3fec682a06a3eea68282b672871502f707d8b8accc90c5e123",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "dfa628b49532a4733fac4c8cce8def2f0e874ba996dab80413ea07150be50c0c"
+           "sha256": "33500ebac401147eefe8595d5e0b12db61db3c0104aa8a68f6dfe6f12ea440a5"
           },
           {
            "id": "screenshot-1",
-           "sha256": "76c1840876ed09740cc560d779fe677dee0f366074584f70027769b7541dc2a7"
+           "sha256": "bc0c17f7c07a752c3556ae1aaf90ce5f33630c62211cdac95e301647e42a59d4"
           },
           {
            "id": "screenshot-2",
-           "sha256": "ac3d9c2f894fc760abab302f0a7946104b5168a4e9edb2332259b958bbdcea34"
+           "sha256": "490c5b1ce84e5e972a11329f7c853f02916309ae70c0a958d10365d665418c44"
           },
           {
            "id": "screenshot-3",
-           "sha256": "adf86f5a1d5ed57f39e961f9e638ebccdb7574d600314f4eabadbc54fd47d755"
+           "sha256": "f0ce8fe2ad6c9d120f9b5f2d5e4ccd17666c8a71e19007ae62d6d2e1192ee56a"
           }
          ]
         },
         {
          "task": "S6-09",
-         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
          "kind": "click",
          "action": "진단 자료 저장",
          "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
          "observed": "electron: An explicit503 retained the prior bundle bytes and produced no new actual download. The control was restored and a deliberate retry after fixture removal saved the selected sanitized response.",
          "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
          "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
-         "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
-         "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576",
+         "receipt": "2026-10-07-diagnostic-controls-5284df6-electron.json",
+         "receipt_sha256": "d61cdc6ed22ac34d6f2e0786bcb71429188763154e82107ccf374b705e96c7ca",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "fa70f8d4278c39c54339c220a372bdfae93033714ffd1df64c0206b77aee38d0"
+           "sha256": "76927e8494f436cad56614c807ae7c53795d86ca006d7f267888238c0738e1c9"
           },
           {
            "id": "screenshot-1",
-           "sha256": "a1cf6fb37232e7b0198f8ebe3456b22a6dbddfbca5402272e93bda4f9f016c2f"
+           "sha256": "8076478ca8ae11ced9dedac5c1ff2295c21b57aaed4479b07dddf8f410df3a44"
           },
           {
            "id": "screenshot-2",
-           "sha256": "81b192611d4cd40c5918c12b45138c286855f257008e26bc4cba357e6416eafa"
+           "sha256": "82330416a4d51a05f3a9ee14ed11b0f688c2fb35f9ce85bf0702ebaa2ee35fec"
           },
           {
            "id": "screenshot-3",
-           "sha256": "44b340f62b63ff60d9544b7dac860e835f73cc6990522af6358a14f2f6f13dcd"
+           "sha256": "b0756514fbd4944eebeaae61a18dd59ab36a0a7a1fb06ca0056f63f96a3d15ee"
           }
          ]
         }
@@ -20206,61 +20207,61 @@
        "evidence": [
         {
          "task": "S6-09",
-         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
          "kind": "click",
          "action": "진단 자료 저장",
          "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
          "observed": "browser: Closing after unsubmitted section changes emitted no diagnostics POST, wrote no new bundle and triggered no browser/native download event.",
          "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
          "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
-         "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
-         "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca",
+         "receipt": "2026-10-07-diagnostic-controls-5284df6-browser.json",
+         "receipt_sha256": "5086451c4984fd3fec682a06a3eea68282b672871502f707d8b8accc90c5e123",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "dfa628b49532a4733fac4c8cce8def2f0e874ba996dab80413ea07150be50c0c"
+           "sha256": "33500ebac401147eefe8595d5e0b12db61db3c0104aa8a68f6dfe6f12ea440a5"
           },
           {
            "id": "screenshot-1",
-           "sha256": "76c1840876ed09740cc560d779fe677dee0f366074584f70027769b7541dc2a7"
+           "sha256": "bc0c17f7c07a752c3556ae1aaf90ce5f33630c62211cdac95e301647e42a59d4"
           },
           {
            "id": "screenshot-2",
-           "sha256": "ac3d9c2f894fc760abab302f0a7946104b5168a4e9edb2332259b958bbdcea34"
+           "sha256": "490c5b1ce84e5e972a11329f7c853f02916309ae70c0a958d10365d665418c44"
           },
           {
            "id": "screenshot-3",
-           "sha256": "adf86f5a1d5ed57f39e961f9e638ebccdb7574d600314f4eabadbc54fd47d755"
+           "sha256": "f0ce8fe2ad6c9d120f9b5f2d5e4ccd17666c8a71e19007ae62d6d2e1192ee56a"
           }
          ]
         },
         {
          "task": "S6-09",
-         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
          "kind": "click",
          "action": "진단 자료 저장",
          "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
          "observed": "electron: Closing after unsubmitted section changes emitted no diagnostics POST, wrote no new bundle and triggered no browser/native download event.",
          "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
          "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
-         "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
-         "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576",
+         "receipt": "2026-10-07-diagnostic-controls-5284df6-electron.json",
+         "receipt_sha256": "d61cdc6ed22ac34d6f2e0786bcb71429188763154e82107ccf374b705e96c7ca",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "fa70f8d4278c39c54339c220a372bdfae93033714ffd1df64c0206b77aee38d0"
+           "sha256": "76927e8494f436cad56614c807ae7c53795d86ca006d7f267888238c0738e1c9"
           },
           {
            "id": "screenshot-1",
-           "sha256": "a1cf6fb37232e7b0198f8ebe3456b22a6dbddfbca5402272e93bda4f9f016c2f"
+           "sha256": "8076478ca8ae11ced9dedac5c1ff2295c21b57aaed4479b07dddf8f410df3a44"
           },
           {
            "id": "screenshot-2",
-           "sha256": "81b192611d4cd40c5918c12b45138c286855f257008e26bc4cba357e6416eafa"
+           "sha256": "82330416a4d51a05f3a9ee14ed11b0f688c2fb35f9ce85bf0702ebaa2ee35fec"
           },
           {
            "id": "screenshot-3",
-           "sha256": "44b340f62b63ff60d9544b7dac860e835f73cc6990522af6358a14f2f6f13dcd"
+           "sha256": "b0756514fbd4944eebeaae61a18dd59ab36a0a7a1fb06ca0056f63f96a3d15ee"
           }
          ]
         }
@@ -20271,61 +20272,61 @@
        "evidence": [
         {
          "task": "S6-09",
-         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
          "kind": "click",
          "action": "진단 자료 저장",
          "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
          "observed": "browser: Reopening did not trigger another export or download; the final exact persisted bundle and original image hash were retained and transient notices cleared.",
          "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
          "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
-         "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
-         "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca",
+         "receipt": "2026-10-07-diagnostic-controls-5284df6-browser.json",
+         "receipt_sha256": "5086451c4984fd3fec682a06a3eea68282b672871502f707d8b8accc90c5e123",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "dfa628b49532a4733fac4c8cce8def2f0e874ba996dab80413ea07150be50c0c"
+           "sha256": "33500ebac401147eefe8595d5e0b12db61db3c0104aa8a68f6dfe6f12ea440a5"
           },
           {
            "id": "screenshot-1",
-           "sha256": "76c1840876ed09740cc560d779fe677dee0f366074584f70027769b7541dc2a7"
+           "sha256": "bc0c17f7c07a752c3556ae1aaf90ce5f33630c62211cdac95e301647e42a59d4"
           },
           {
            "id": "screenshot-2",
-           "sha256": "ac3d9c2f894fc760abab302f0a7946104b5168a4e9edb2332259b958bbdcea34"
+           "sha256": "490c5b1ce84e5e972a11329f7c853f02916309ae70c0a958d10365d665418c44"
           },
           {
            "id": "screenshot-3",
-           "sha256": "adf86f5a1d5ed57f39e961f9e638ebccdb7574d600314f4eabadbc54fd47d755"
+           "sha256": "f0ce8fe2ad6c9d120f9b5f2d5e4ccd17666c8a71e19007ae62d6d2e1192ee56a"
           }
          ]
         },
         {
          "task": "S6-09",
-         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
          "kind": "click",
          "action": "진단 자료 저장",
          "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
          "observed": "electron: Reopening did not trigger another export or download; the final exact persisted bundle and original image hash were retained and transient notices cleared.",
          "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
          "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
-         "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
-         "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576",
+         "receipt": "2026-10-07-diagnostic-controls-5284df6-electron.json",
+         "receipt_sha256": "d61cdc6ed22ac34d6f2e0786bcb71429188763154e82107ccf374b705e96c7ca",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "fa70f8d4278c39c54339c220a372bdfae93033714ffd1df64c0206b77aee38d0"
+           "sha256": "76927e8494f436cad56614c807ae7c53795d86ca006d7f267888238c0738e1c9"
           },
           {
            "id": "screenshot-1",
-           "sha256": "a1cf6fb37232e7b0198f8ebe3456b22a6dbddfbca5402272e93bda4f9f016c2f"
+           "sha256": "8076478ca8ae11ced9dedac5c1ff2295c21b57aaed4479b07dddf8f410df3a44"
           },
           {
            "id": "screenshot-2",
-           "sha256": "81b192611d4cd40c5918c12b45138c286855f257008e26bc4cba357e6416eafa"
+           "sha256": "82330416a4d51a05f3a9ee14ed11b0f688c2fb35f9ce85bf0702ebaa2ee35fec"
           },
           {
            "id": "screenshot-3",
-           "sha256": "44b340f62b63ff60d9544b7dac860e835f73cc6990522af6358a14f2f6f13dcd"
+           "sha256": "b0756514fbd4944eebeaae61a18dd59ab36a0a7a1fb06ca0056f63f96a3d15ee"
           }
          ]
         }
@@ -20336,61 +20337,61 @@
        "evidence": [
         {
          "task": "S6-09",
-         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
          "kind": "click",
          "action": "진단 자료 저장",
          "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
          "observed": "browser: The actual downloaded JSON parsed exactly to both the actual response bundle and persisted backend JSON. The chosen operator_errors alone contained a controlled failed inspection with null model verdict and redacted URL/private values; no image or authentication value was exported.",
          "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
          "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
-         "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
-         "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca",
+         "receipt": "2026-10-07-diagnostic-controls-5284df6-browser.json",
+         "receipt_sha256": "5086451c4984fd3fec682a06a3eea68282b672871502f707d8b8accc90c5e123",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "dfa628b49532a4733fac4c8cce8def2f0e874ba996dab80413ea07150be50c0c"
+           "sha256": "33500ebac401147eefe8595d5e0b12db61db3c0104aa8a68f6dfe6f12ea440a5"
           },
           {
            "id": "screenshot-1",
-           "sha256": "76c1840876ed09740cc560d779fe677dee0f366074584f70027769b7541dc2a7"
+           "sha256": "bc0c17f7c07a752c3556ae1aaf90ce5f33630c62211cdac95e301647e42a59d4"
           },
           {
            "id": "screenshot-2",
-           "sha256": "ac3d9c2f894fc760abab302f0a7946104b5168a4e9edb2332259b958bbdcea34"
+           "sha256": "490c5b1ce84e5e972a11329f7c853f02916309ae70c0a958d10365d665418c44"
           },
           {
            "id": "screenshot-3",
-           "sha256": "adf86f5a1d5ed57f39e961f9e638ebccdb7574d600314f4eabadbc54fd47d755"
+           "sha256": "f0ce8fe2ad6c9d120f9b5f2d5e4ccd17666c8a71e19007ae62d6d2e1192ee56a"
           }
          ]
         },
         {
          "task": "S6-09",
-         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
          "kind": "click",
          "action": "진단 자료 저장",
          "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
          "observed": "electron: The actual downloaded JSON parsed exactly to both the actual response bundle and persisted backend JSON. The chosen operator_errors alone contained a controlled failed inspection with null model verdict and redacted URL/private values; no image or authentication value was exported.",
          "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
          "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
-         "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
-         "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576",
+         "receipt": "2026-10-07-diagnostic-controls-5284df6-electron.json",
+         "receipt_sha256": "d61cdc6ed22ac34d6f2e0786bcb71429188763154e82107ccf374b705e96c7ca",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "fa70f8d4278c39c54339c220a372bdfae93033714ffd1df64c0206b77aee38d0"
+           "sha256": "76927e8494f436cad56614c807ae7c53795d86ca006d7f267888238c0738e1c9"
           },
           {
            "id": "screenshot-1",
-           "sha256": "a1cf6fb37232e7b0198f8ebe3456b22a6dbddfbca5402272e93bda4f9f016c2f"
+           "sha256": "8076478ca8ae11ced9dedac5c1ff2295c21b57aaed4479b07dddf8f410df3a44"
           },
           {
            "id": "screenshot-2",
-           "sha256": "81b192611d4cd40c5918c12b45138c286855f257008e26bc4cba357e6416eafa"
+           "sha256": "82330416a4d51a05f3a9ee14ed11b0f688c2fb35f9ce85bf0702ebaa2ee35fec"
           },
           {
            "id": "screenshot-3",
-           "sha256": "44b340f62b63ff60d9544b7dac860e835f73cc6990522af6358a14f2f6f13dcd"
+           "sha256": "b0756514fbd4944eebeaae61a18dd59ab36a0a7a1fb06ca0056f63f96a3d15ee"
           }
          ]
         }
@@ -20408,19 +20409,19 @@
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
          "kind": "click",
          "action": "설치·진단 재열기",
          "expected": "The installation panel opens and remains reachable after native reload.",
          "observed": "Actual native tab selection then reload reopened project schema guidance; no installer activation or migration was performed.",
          "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
          "test": "scripts/e2e/support-bundle-closure.spec.ts::native support button downloads exact selected sanitized persisted bundles",
-         "receipt": "2026-10-07-app-support-bundle-closure.spec-electron.json",
-         "receipt_sha256": "ba7caa4ecf14cc936e16a8ec4f23c03094f26d4f3dac8bc122f8a4ae1db253a8",
+         "receipt": "2026-10-07-support-bundle-5284df6-electron.json",
+         "receipt_sha256": "725fda7dee92d30e93d75b918825a5bc1f1ee2a9d4eef5bbe0acc6d6cdd4251b",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "8d82eac47e47ed0ece29ec64c544b8a876d107e72836b134972e51c0aa93d1ac"
+           "sha256": "b3c88554ee3d92477c7df49747e1e55e74f46894e29d46f6227ce577c5ec60bc"
           }
          ]
         }
@@ -20437,61 +20438,61 @@
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
          "kind": "click",
          "action": "설치·진단 재열기",
          "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
          "observed": "browser: Explicit transport503 on installation GET displayed the actual error and unready environment state and performed no diagnostics export. Removing the fixture and deliberately reopening read the actual host metadata.",
          "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
          "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
-         "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
-         "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca",
+         "receipt": "2026-10-07-diagnostic-controls-5284df6-browser.json",
+         "receipt_sha256": "5086451c4984fd3fec682a06a3eea68282b672871502f707d8b8accc90c5e123",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "dfa628b49532a4733fac4c8cce8def2f0e874ba996dab80413ea07150be50c0c"
+           "sha256": "33500ebac401147eefe8595d5e0b12db61db3c0104aa8a68f6dfe6f12ea440a5"
           },
           {
            "id": "screenshot-1",
-           "sha256": "76c1840876ed09740cc560d779fe677dee0f366074584f70027769b7541dc2a7"
+           "sha256": "bc0c17f7c07a752c3556ae1aaf90ce5f33630c62211cdac95e301647e42a59d4"
           },
           {
            "id": "screenshot-2",
-           "sha256": "ac3d9c2f894fc760abab302f0a7946104b5168a4e9edb2332259b958bbdcea34"
+           "sha256": "490c5b1ce84e5e972a11329f7c853f02916309ae70c0a958d10365d665418c44"
           },
           {
            "id": "screenshot-3",
-           "sha256": "adf86f5a1d5ed57f39e961f9e638ebccdb7574d600314f4eabadbc54fd47d755"
+           "sha256": "f0ce8fe2ad6c9d120f9b5f2d5e4ccd17666c8a71e19007ae62d6d2e1192ee56a"
           }
          ]
         },
         {
          "task": "S6-04",
-         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
          "kind": "click",
          "action": "설치·진단 재열기",
          "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
          "observed": "electron: Explicit transport503 on installation GET displayed the actual error and unready environment state and performed no diagnostics export. Removing the fixture and deliberately reopening read the actual host metadata.",
          "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
          "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
-         "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
-         "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576",
+         "receipt": "2026-10-07-diagnostic-controls-5284df6-electron.json",
+         "receipt_sha256": "d61cdc6ed22ac34d6f2e0786bcb71429188763154e82107ccf374b705e96c7ca",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "fa70f8d4278c39c54339c220a372bdfae93033714ffd1df64c0206b77aee38d0"
+           "sha256": "76927e8494f436cad56614c807ae7c53795d86ca006d7f267888238c0738e1c9"
           },
           {
            "id": "screenshot-1",
-           "sha256": "a1cf6fb37232e7b0198f8ebe3456b22a6dbddfbca5402272e93bda4f9f016c2f"
+           "sha256": "8076478ca8ae11ced9dedac5c1ff2295c21b57aaed4479b07dddf8f410df3a44"
           },
           {
            "id": "screenshot-2",
-           "sha256": "81b192611d4cd40c5918c12b45138c286855f257008e26bc4cba357e6416eafa"
+           "sha256": "82330416a4d51a05f3a9ee14ed11b0f688c2fb35f9ce85bf0702ebaa2ee35fec"
           },
           {
            "id": "screenshot-3",
-           "sha256": "44b340f62b63ff60d9544b7dac860e835f73cc6990522af6358a14f2f6f13dcd"
+           "sha256": "b0756514fbd4944eebeaae61a18dd59ab36a0a7a1fb06ca0056f63f96a3d15ee"
           }
          ]
         }
@@ -20502,61 +20503,61 @@
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
          "kind": "click",
          "action": "설치·진단 재열기",
          "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
          "observed": "browser: Closing the actual workspace with an unsubmitted section choice retained all stored diagnostic/source hashes and emitted no additional export or download.",
          "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
          "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
-         "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
-         "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca",
+         "receipt": "2026-10-07-diagnostic-controls-5284df6-browser.json",
+         "receipt_sha256": "5086451c4984fd3fec682a06a3eea68282b672871502f707d8b8accc90c5e123",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "dfa628b49532a4733fac4c8cce8def2f0e874ba996dab80413ea07150be50c0c"
+           "sha256": "33500ebac401147eefe8595d5e0b12db61db3c0104aa8a68f6dfe6f12ea440a5"
           },
           {
            "id": "screenshot-1",
-           "sha256": "76c1840876ed09740cc560d779fe677dee0f366074584f70027769b7541dc2a7"
+           "sha256": "bc0c17f7c07a752c3556ae1aaf90ce5f33630c62211cdac95e301647e42a59d4"
           },
           {
            "id": "screenshot-2",
-           "sha256": "ac3d9c2f894fc760abab302f0a7946104b5168a4e9edb2332259b958bbdcea34"
+           "sha256": "490c5b1ce84e5e972a11329f7c853f02916309ae70c0a958d10365d665418c44"
           },
           {
            "id": "screenshot-3",
-           "sha256": "adf86f5a1d5ed57f39e961f9e638ebccdb7574d600314f4eabadbc54fd47d755"
+           "sha256": "f0ce8fe2ad6c9d120f9b5f2d5e4ccd17666c8a71e19007ae62d6d2e1192ee56a"
           }
          ]
         },
         {
          "task": "S6-04",
-         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
          "kind": "click",
          "action": "설치·진단 재열기",
          "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
          "observed": "electron: Closing the actual workspace with an unsubmitted section choice retained all stored diagnostic/source hashes and emitted no additional export or download.",
          "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
          "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
-         "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
-         "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576",
+         "receipt": "2026-10-07-diagnostic-controls-5284df6-electron.json",
+         "receipt_sha256": "d61cdc6ed22ac34d6f2e0786bcb71429188763154e82107ccf374b705e96c7ca",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "fa70f8d4278c39c54339c220a372bdfae93033714ffd1df64c0206b77aee38d0"
+           "sha256": "76927e8494f436cad56614c807ae7c53795d86ca006d7f267888238c0738e1c9"
           },
           {
            "id": "screenshot-1",
-           "sha256": "a1cf6fb37232e7b0198f8ebe3456b22a6dbddfbca5402272e93bda4f9f016c2f"
+           "sha256": "8076478ca8ae11ced9dedac5c1ff2295c21b57aaed4479b07dddf8f410df3a44"
           },
           {
            "id": "screenshot-2",
-           "sha256": "81b192611d4cd40c5918c12b45138c286855f257008e26bc4cba357e6416eafa"
+           "sha256": "82330416a4d51a05f3a9ee14ed11b0f688c2fb35f9ce85bf0702ebaa2ee35fec"
           },
           {
            "id": "screenshot-3",
-           "sha256": "44b340f62b63ff60d9544b7dac860e835f73cc6990522af6358a14f2f6f13dcd"
+           "sha256": "b0756514fbd4944eebeaae61a18dd59ab36a0a7a1fb06ca0056f63f96a3d15ee"
           }
          ]
         }
@@ -20567,19 +20568,19 @@
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
          "kind": "click",
          "action": "설치·진단 재열기",
          "expected": "The installation panel opens and remains reachable after native reload.",
          "observed": "Actual native tab selection then reload reopened project schema guidance; no installer activation or migration was performed.",
          "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
          "test": "scripts/e2e/support-bundle-closure.spec.ts::native support button downloads exact selected sanitized persisted bundles",
-         "receipt": "2026-10-07-app-support-bundle-closure.spec-electron.json",
-         "receipt_sha256": "ba7caa4ecf14cc936e16a8ec4f23c03094f26d4f3dac8bc122f8a4ae1db253a8",
+         "receipt": "2026-10-07-support-bundle-5284df6-electron.json",
+         "receipt_sha256": "725fda7dee92d30e93d75b918825a5bc1f1ee2a9d4eef5bbe0acc6d6cdd4251b",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "8d82eac47e47ed0ece29ec64c544b8a876d107e72836b134972e51c0aa93d1ac"
+           "sha256": "b3c88554ee3d92477c7df49747e1e55e74f46894e29d46f6227ce577c5ec60bc"
           }
          ]
         }
@@ -20590,61 +20591,61 @@
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
          "kind": "click",
          "action": "설치·진단 재열기",
          "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
          "observed": "browser: The actual reopened installation displayed the exact version, OS, architecture and Python from the actual backend response before a selected sanitized diagnostics download; unsupported publisher installation was not accepted.",
          "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
          "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
-         "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
-         "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca",
+         "receipt": "2026-10-07-diagnostic-controls-5284df6-browser.json",
+         "receipt_sha256": "5086451c4984fd3fec682a06a3eea68282b672871502f707d8b8accc90c5e123",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "dfa628b49532a4733fac4c8cce8def2f0e874ba996dab80413ea07150be50c0c"
+           "sha256": "33500ebac401147eefe8595d5e0b12db61db3c0104aa8a68f6dfe6f12ea440a5"
           },
           {
            "id": "screenshot-1",
-           "sha256": "76c1840876ed09740cc560d779fe677dee0f366074584f70027769b7541dc2a7"
+           "sha256": "bc0c17f7c07a752c3556ae1aaf90ce5f33630c62211cdac95e301647e42a59d4"
           },
           {
            "id": "screenshot-2",
-           "sha256": "ac3d9c2f894fc760abab302f0a7946104b5168a4e9edb2332259b958bbdcea34"
+           "sha256": "490c5b1ce84e5e972a11329f7c853f02916309ae70c0a958d10365d665418c44"
           },
           {
            "id": "screenshot-3",
-           "sha256": "adf86f5a1d5ed57f39e961f9e638ebccdb7574d600314f4eabadbc54fd47d755"
+           "sha256": "f0ce8fe2ad6c9d120f9b5f2d5e4ccd17666c8a71e19007ae62d6d2e1192ee56a"
           }
          ]
         },
         {
          "task": "S6-04",
-         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
          "kind": "click",
          "action": "설치·진단 재열기",
          "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
          "observed": "electron: The actual reopened installation displayed the exact version, OS, architecture and Python from the actual backend response before a selected sanitized diagnostics download; unsupported publisher installation was not accepted.",
          "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
          "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
-         "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
-         "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576",
+         "receipt": "2026-10-07-diagnostic-controls-5284df6-electron.json",
+         "receipt_sha256": "d61cdc6ed22ac34d6f2e0786bcb71429188763154e82107ccf374b705e96c7ca",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "fa70f8d4278c39c54339c220a372bdfae93033714ffd1df64c0206b77aee38d0"
+           "sha256": "76927e8494f436cad56614c807ae7c53795d86ca006d7f267888238c0738e1c9"
           },
           {
            "id": "screenshot-1",
-           "sha256": "a1cf6fb37232e7b0198f8ebe3456b22a6dbddfbca5402272e93bda4f9f016c2f"
+           "sha256": "8076478ca8ae11ced9dedac5c1ff2295c21b57aaed4479b07dddf8f410df3a44"
           },
           {
            "id": "screenshot-2",
-           "sha256": "81b192611d4cd40c5918c12b45138c286855f257008e26bc4cba357e6416eafa"
+           "sha256": "82330416a4d51a05f3a9ee14ed11b0f688c2fb35f9ce85bf0702ebaa2ee35fec"
           },
           {
            "id": "screenshot-3",
-           "sha256": "44b340f62b63ff60d9544b7dac860e835f73cc6990522af6358a14f2f6f13dcd"
+           "sha256": "b0756514fbd4944eebeaae61a18dd59ab36a0a7a1fb06ca0056f63f96a3d15ee"
           }
          ]
         }
@@ -28834,7 +28835,409 @@
   },
   {
    "id": "U033",
-   "actions": [],
+   "actions": [
+    {
+     "id": "reviewed-runtime-pack-install",
+     "label": "팩 검증·보관",
+     "source": "src/renderer/components/runtime/RuntimePackPanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
+         "kind": "click",
+         "action": "팩 검증·보관",
+         "expected": "Explicit separately supplied inventory pin, actual payload byte verification and project-scoped inactive installation.",
+         "observed": "browser: Actual pydicom3.0.2 upstream wheel and original LICENSE,2 files/2379963 bytes, SHA c33eda8a44c45c52867776fe43c7ea910eb93098f4434f2b1ca639b6d42a92bc. Empty controls, wrong-pin409, successful actual file copy, aborted POST and idempotent deliberate retry, actual owned tamper/409/no repair, separate project empty and original exact re-open. Runtime dependency inventory and original source/receipt bytes unchanged. No activation, publisher signature or target execution claim.",
+         "reviewer": "Root actual browser/native controls, hashes and native screenshot; separate engine/renderer review; full independent acceptance pending",
+         "test": "scripts/e2e/runtime-pack-installation.spec.ts::runtime packs install inertly and preserve reviewed pin through refusal tamper and reopen",
+         "receipt": "2026-10-07-runtime-pack-5284df6-browser.json",
+         "receipt_sha256": "04e45d18fa6c2988f63e25f05be51eaec5a1c00bf028c67ed0994316925a71ab",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "7922f6ac464915be75f7bc7d583d951b900181361f72ae0952e415ec78b4defe"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "b2a1f9cb9f1555332388daa22ecc8fec7fb8f92b462c17bf2800ffe5c658617a"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "474a5425404082b0e05ae1001bb8897c1f3f1aeb4841b47afaa9b777c1a4869a"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "167e299fcb1dbef4d45b6fe09a3acaf1c9c33822c32520121edce3fd52ff551a"
+          }
+         ]
+        },
+        {
+         "task": "S6-03",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
+         "kind": "click",
+         "action": "팩 검증·보관",
+         "expected": "Explicit separately supplied inventory pin, actual payload byte verification and project-scoped inactive installation.",
+         "observed": "electron: Actual pydicom3.0.2 upstream wheel and original LICENSE,2 files/2379963 bytes, SHA c33eda8a44c45c52867776fe43c7ea910eb93098f4434f2b1ca639b6d42a92bc. Empty controls, wrong-pin409, successful actual file copy, aborted POST and idempotent deliberate retry, actual owned tamper/409/no repair, separate project empty and original exact re-open. Runtime dependency inventory and original source/receipt bytes unchanged. No activation, publisher signature or target execution claim.",
+         "reviewer": "Root actual browser/native controls, hashes and native screenshot; separate engine/renderer review; full independent acceptance pending",
+         "test": "scripts/e2e/runtime-pack-installation.spec.ts::native runtime packs install inertly and preserve reviewed pin through refusal tamper and reopen",
+         "receipt": "2026-10-07-runtime-pack-5284df6-electron.json",
+         "receipt_sha256": "25105105e7595962cdc7f28f2e814294d601836655daa3c00a808047676a390f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d2d9d4539e54dfae0f7627e5b1e1817790a0773cb1d4fe3411abd69b4dd09dff"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "78fae28ab004c5197243dab9cdcf856c2eaf2c39703a452ade67dfe883afdf91"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "4964ef0550c13d016e61a5e6dfa43d97b30edbb0c825da43d2886adfcc265d43"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "17dbf4251edb1ce01b8003aa2e61ba591cac3571a500993eca381fdde95d73e1"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
+         "kind": "click",
+         "action": "팩 검증·보관",
+         "expected": "Empty inputs disable installation, an unrelated project has no admitted packs and its inputs are cleared.",
+         "observed": "browser: Actual pydicom3.0.2 upstream wheel and original LICENSE,2 files/2379963 bytes, SHA c33eda8a44c45c52867776fe43c7ea910eb93098f4434f2b1ca639b6d42a92bc. Empty controls, wrong-pin409, successful actual file copy, aborted POST and idempotent deliberate retry, actual owned tamper/409/no repair, separate project empty and original exact re-open. Runtime dependency inventory and original source/receipt bytes unchanged. No activation, publisher signature or target execution claim.",
+         "reviewer": "Root actual browser/native controls, hashes and native screenshot; separate engine/renderer review; full independent acceptance pending",
+         "test": "scripts/e2e/runtime-pack-installation.spec.ts::runtime packs install inertly and preserve reviewed pin through refusal tamper and reopen",
+         "receipt": "2026-10-07-runtime-pack-5284df6-browser.json",
+         "receipt_sha256": "04e45d18fa6c2988f63e25f05be51eaec5a1c00bf028c67ed0994316925a71ab",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "7922f6ac464915be75f7bc7d583d951b900181361f72ae0952e415ec78b4defe"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "b2a1f9cb9f1555332388daa22ecc8fec7fb8f92b462c17bf2800ffe5c658617a"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "474a5425404082b0e05ae1001bb8897c1f3f1aeb4841b47afaa9b777c1a4869a"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "167e299fcb1dbef4d45b6fe09a3acaf1c9c33822c32520121edce3fd52ff551a"
+          }
+         ]
+        },
+        {
+         "task": "S6-03",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
+         "kind": "click",
+         "action": "팩 검증·보관",
+         "expected": "Empty inputs disable installation, an unrelated project has no admitted packs and its inputs are cleared.",
+         "observed": "electron: Actual pydicom3.0.2 upstream wheel and original LICENSE,2 files/2379963 bytes, SHA c33eda8a44c45c52867776fe43c7ea910eb93098f4434f2b1ca639b6d42a92bc. Empty controls, wrong-pin409, successful actual file copy, aborted POST and idempotent deliberate retry, actual owned tamper/409/no repair, separate project empty and original exact re-open. Runtime dependency inventory and original source/receipt bytes unchanged. No activation, publisher signature or target execution claim.",
+         "reviewer": "Root actual browser/native controls, hashes and native screenshot; separate engine/renderer review; full independent acceptance pending",
+         "test": "scripts/e2e/runtime-pack-installation.spec.ts::native runtime packs install inertly and preserve reviewed pin through refusal tamper and reopen",
+         "receipt": "2026-10-07-runtime-pack-5284df6-electron.json",
+         "receipt_sha256": "25105105e7595962cdc7f28f2e814294d601836655daa3c00a808047676a390f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d2d9d4539e54dfae0f7627e5b1e1817790a0773cb1d4fe3411abd69b4dd09dff"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "78fae28ab004c5197243dab9cdcf856c2eaf2c39703a452ade67dfe883afdf91"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "4964ef0550c13d016e61a5e6dfa43d97b30edbb0c825da43d2886adfcc265d43"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "17dbf4251edb1ce01b8003aa2e61ba591cac3571a500993eca381fdde95d73e1"
+          }
+         ]
+        }
+       ]
+      },
+      "invalid": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
+         "kind": "click",
+         "action": "팩 검증·보관",
+         "expected": "A wrong independent pin and mutated installed payload are refused without publication or automatic repair.",
+         "observed": "browser: Actual pydicom3.0.2 upstream wheel and original LICENSE,2 files/2379963 bytes, SHA c33eda8a44c45c52867776fe43c7ea910eb93098f4434f2b1ca639b6d42a92bc. Empty controls, wrong-pin409, successful actual file copy, aborted POST and idempotent deliberate retry, actual owned tamper/409/no repair, separate project empty and original exact re-open. Runtime dependency inventory and original source/receipt bytes unchanged. No activation, publisher signature or target execution claim.",
+         "reviewer": "Root actual browser/native controls, hashes and native screenshot; separate engine/renderer review; full independent acceptance pending",
+         "test": "scripts/e2e/runtime-pack-installation.spec.ts::runtime packs install inertly and preserve reviewed pin through refusal tamper and reopen",
+         "receipt": "2026-10-07-runtime-pack-5284df6-browser.json",
+         "receipt_sha256": "04e45d18fa6c2988f63e25f05be51eaec5a1c00bf028c67ed0994316925a71ab",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "7922f6ac464915be75f7bc7d583d951b900181361f72ae0952e415ec78b4defe"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "b2a1f9cb9f1555332388daa22ecc8fec7fb8f92b462c17bf2800ffe5c658617a"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "474a5425404082b0e05ae1001bb8897c1f3f1aeb4841b47afaa9b777c1a4869a"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "167e299fcb1dbef4d45b6fe09a3acaf1c9c33822c32520121edce3fd52ff551a"
+          }
+         ]
+        },
+        {
+         "task": "S6-03",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
+         "kind": "click",
+         "action": "팩 검증·보관",
+         "expected": "A wrong independent pin and mutated installed payload are refused without publication or automatic repair.",
+         "observed": "electron: Actual pydicom3.0.2 upstream wheel and original LICENSE,2 files/2379963 bytes, SHA c33eda8a44c45c52867776fe43c7ea910eb93098f4434f2b1ca639b6d42a92bc. Empty controls, wrong-pin409, successful actual file copy, aborted POST and idempotent deliberate retry, actual owned tamper/409/no repair, separate project empty and original exact re-open. Runtime dependency inventory and original source/receipt bytes unchanged. No activation, publisher signature or target execution claim.",
+         "reviewer": "Root actual browser/native controls, hashes and native screenshot; separate engine/renderer review; full independent acceptance pending",
+         "test": "scripts/e2e/runtime-pack-installation.spec.ts::native runtime packs install inertly and preserve reviewed pin through refusal tamper and reopen",
+         "receipt": "2026-10-07-runtime-pack-5284df6-electron.json",
+         "receipt_sha256": "25105105e7595962cdc7f28f2e814294d601836655daa3c00a808047676a390f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d2d9d4539e54dfae0f7627e5b1e1817790a0773cb1d4fe3411abd69b4dd09dff"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "78fae28ab004c5197243dab9cdcf856c2eaf2c39703a452ade67dfe883afdf91"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "4964ef0550c13d016e61a5e6dfa43d97b30edbb0c825da43d2886adfcc265d43"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "17dbf4251edb1ce01b8003aa2e61ba591cac3571a500993eca381fdde95d73e1"
+          }
+         ]
+        }
+       ]
+      },
+      "error": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
+         "kind": "click",
+         "action": "팩 검증·보관",
+         "expected": "A real aborted installation request shows failure; deliberate retry revalidates and preserves original receipt bytes.",
+         "observed": "browser: Actual pydicom3.0.2 upstream wheel and original LICENSE,2 files/2379963 bytes, SHA c33eda8a44c45c52867776fe43c7ea910eb93098f4434f2b1ca639b6d42a92bc. Empty controls, wrong-pin409, successful actual file copy, aborted POST and idempotent deliberate retry, actual owned tamper/409/no repair, separate project empty and original exact re-open. Runtime dependency inventory and original source/receipt bytes unchanged. No activation, publisher signature or target execution claim.",
+         "reviewer": "Root actual browser/native controls, hashes and native screenshot; separate engine/renderer review; full independent acceptance pending",
+         "test": "scripts/e2e/runtime-pack-installation.spec.ts::runtime packs install inertly and preserve reviewed pin through refusal tamper and reopen",
+         "receipt": "2026-10-07-runtime-pack-5284df6-browser.json",
+         "receipt_sha256": "04e45d18fa6c2988f63e25f05be51eaec5a1c00bf028c67ed0994316925a71ab",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "7922f6ac464915be75f7bc7d583d951b900181361f72ae0952e415ec78b4defe"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "b2a1f9cb9f1555332388daa22ecc8fec7fb8f92b462c17bf2800ffe5c658617a"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "474a5425404082b0e05ae1001bb8897c1f3f1aeb4841b47afaa9b777c1a4869a"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "167e299fcb1dbef4d45b6fe09a3acaf1c9c33822c32520121edce3fd52ff551a"
+          }
+         ]
+        },
+        {
+         "task": "S6-03",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
+         "kind": "click",
+         "action": "팩 검증·보관",
+         "expected": "A real aborted installation request shows failure; deliberate retry revalidates and preserves original receipt bytes.",
+         "observed": "electron: Actual pydicom3.0.2 upstream wheel and original LICENSE,2 files/2379963 bytes, SHA c33eda8a44c45c52867776fe43c7ea910eb93098f4434f2b1ca639b6d42a92bc. Empty controls, wrong-pin409, successful actual file copy, aborted POST and idempotent deliberate retry, actual owned tamper/409/no repair, separate project empty and original exact re-open. Runtime dependency inventory and original source/receipt bytes unchanged. No activation, publisher signature or target execution claim.",
+         "reviewer": "Root actual browser/native controls, hashes and native screenshot; separate engine/renderer review; full independent acceptance pending",
+         "test": "scripts/e2e/runtime-pack-installation.spec.ts::native runtime packs install inertly and preserve reviewed pin through refusal tamper and reopen",
+         "receipt": "2026-10-07-runtime-pack-5284df6-electron.json",
+         "receipt_sha256": "25105105e7595962cdc7f28f2e814294d601836655daa3c00a808047676a390f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d2d9d4539e54dfae0f7627e5b1e1817790a0773cb1d4fe3411abd69b4dd09dff"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "78fae28ab004c5197243dab9cdcf856c2eaf2c39703a452ade67dfe883afdf91"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "4964ef0550c13d016e61a5e6dfa43d97b30edbb0c825da43d2886adfcc265d43"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "17dbf4251edb1ce01b8003aa2e61ba591cac3571a500993eca381fdde95d73e1"
+          }
+         ]
+        }
+       ]
+      },
+      "cancel": {
+       "state": "pending",
+       "reason": "Native picker cancellation and its surrounding field preservation have not been exercised."
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
+         "kind": "click",
+         "action": "팩 검증·보관",
+         "expected": "Reopening the original project rehashes the same admitted inventory and payload while clearing input paths and pin.",
+         "observed": "browser: Actual pydicom3.0.2 upstream wheel and original LICENSE,2 files/2379963 bytes, SHA c33eda8a44c45c52867776fe43c7ea910eb93098f4434f2b1ca639b6d42a92bc. Empty controls, wrong-pin409, successful actual file copy, aborted POST and idempotent deliberate retry, actual owned tamper/409/no repair, separate project empty and original exact re-open. Runtime dependency inventory and original source/receipt bytes unchanged. No activation, publisher signature or target execution claim.",
+         "reviewer": "Root actual browser/native controls, hashes and native screenshot; separate engine/renderer review; full independent acceptance pending",
+         "test": "scripts/e2e/runtime-pack-installation.spec.ts::runtime packs install inertly and preserve reviewed pin through refusal tamper and reopen",
+         "receipt": "2026-10-07-runtime-pack-5284df6-browser.json",
+         "receipt_sha256": "04e45d18fa6c2988f63e25f05be51eaec5a1c00bf028c67ed0994316925a71ab",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "7922f6ac464915be75f7bc7d583d951b900181361f72ae0952e415ec78b4defe"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "b2a1f9cb9f1555332388daa22ecc8fec7fb8f92b462c17bf2800ffe5c658617a"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "474a5425404082b0e05ae1001bb8897c1f3f1aeb4841b47afaa9b777c1a4869a"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "167e299fcb1dbef4d45b6fe09a3acaf1c9c33822c32520121edce3fd52ff551a"
+          }
+         ]
+        },
+        {
+         "task": "S6-03",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
+         "kind": "click",
+         "action": "팩 검증·보관",
+         "expected": "Reopening the original project rehashes the same admitted inventory and payload while clearing input paths and pin.",
+         "observed": "electron: Actual pydicom3.0.2 upstream wheel and original LICENSE,2 files/2379963 bytes, SHA c33eda8a44c45c52867776fe43c7ea910eb93098f4434f2b1ca639b6d42a92bc. Empty controls, wrong-pin409, successful actual file copy, aborted POST and idempotent deliberate retry, actual owned tamper/409/no repair, separate project empty and original exact re-open. Runtime dependency inventory and original source/receipt bytes unchanged. No activation, publisher signature or target execution claim.",
+         "reviewer": "Root actual browser/native controls, hashes and native screenshot; separate engine/renderer review; full independent acceptance pending",
+         "test": "scripts/e2e/runtime-pack-installation.spec.ts::native runtime packs install inertly and preserve reviewed pin through refusal tamper and reopen",
+         "receipt": "2026-10-07-runtime-pack-5284df6-electron.json",
+         "receipt_sha256": "25105105e7595962cdc7f28f2e814294d601836655daa3c00a808047676a390f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d2d9d4539e54dfae0f7627e5b1e1817790a0773cb1d4fe3411abd69b4dd09dff"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "78fae28ab004c5197243dab9cdcf856c2eaf2c39703a452ade67dfe883afdf91"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "4964ef0550c13d016e61a5e6dfa43d97b30edbb0c825da43d2886adfcc265d43"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "17dbf4251edb1ce01b8003aa2e61ba591cac3571a500993eca381fdde95d73e1"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
+         "kind": "click",
+         "action": "팩 검증·보관",
+         "expected": "Installed files enter the same project inventory and compatibility readback with signature/execution/activation false; other project remains isolated.",
+         "observed": "browser: Actual pydicom3.0.2 upstream wheel and original LICENSE,2 files/2379963 bytes, SHA c33eda8a44c45c52867776fe43c7ea910eb93098f4434f2b1ca639b6d42a92bc. Empty controls, wrong-pin409, successful actual file copy, aborted POST and idempotent deliberate retry, actual owned tamper/409/no repair, separate project empty and original exact re-open. Runtime dependency inventory and original source/receipt bytes unchanged. No activation, publisher signature or target execution claim.",
+         "reviewer": "Root actual browser/native controls, hashes and native screenshot; separate engine/renderer review; full independent acceptance pending",
+         "test": "scripts/e2e/runtime-pack-installation.spec.ts::runtime packs install inertly and preserve reviewed pin through refusal tamper and reopen",
+         "receipt": "2026-10-07-runtime-pack-5284df6-browser.json",
+         "receipt_sha256": "04e45d18fa6c2988f63e25f05be51eaec5a1c00bf028c67ed0994316925a71ab",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "7922f6ac464915be75f7bc7d583d951b900181361f72ae0952e415ec78b4defe"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "b2a1f9cb9f1555332388daa22ecc8fec7fb8f92b462c17bf2800ffe5c658617a"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "474a5425404082b0e05ae1001bb8897c1f3f1aeb4841b47afaa9b777c1a4869a"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "167e299fcb1dbef4d45b6fe09a3acaf1c9c33822c32520121edce3fd52ff551a"
+          }
+         ]
+        },
+        {
+         "task": "S6-03",
+         "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
+         "kind": "click",
+         "action": "팩 검증·보관",
+         "expected": "Installed files enter the same project inventory and compatibility readback with signature/execution/activation false; other project remains isolated.",
+         "observed": "electron: Actual pydicom3.0.2 upstream wheel and original LICENSE,2 files/2379963 bytes, SHA c33eda8a44c45c52867776fe43c7ea910eb93098f4434f2b1ca639b6d42a92bc. Empty controls, wrong-pin409, successful actual file copy, aborted POST and idempotent deliberate retry, actual owned tamper/409/no repair, separate project empty and original exact re-open. Runtime dependency inventory and original source/receipt bytes unchanged. No activation, publisher signature or target execution claim.",
+         "reviewer": "Root actual browser/native controls, hashes and native screenshot; separate engine/renderer review; full independent acceptance pending",
+         "test": "scripts/e2e/runtime-pack-installation.spec.ts::native runtime packs install inertly and preserve reviewed pin through refusal tamper and reopen",
+         "receipt": "2026-10-07-runtime-pack-5284df6-electron.json",
+         "receipt_sha256": "25105105e7595962cdc7f28f2e814294d601836655daa3c00a808047676a390f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d2d9d4539e54dfae0f7627e5b1e1817790a0773cb1d4fe3411abd69b4dd09dff"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "78fae28ab004c5197243dab9cdcf856c2eaf2c39703a452ade67dfe883afdf91"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "4964ef0550c13d016e61a5e6dfa43d97b30edbb0c825da43d2886adfcc265d43"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "17dbf4251edb1ce01b8003aa2e61ba591cac3571a500993eca381fdde95d73e1"
+          }
+         ]
+        }
+       ]
+      }
+     }
+    }
+   ],
    "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
   }
  ]

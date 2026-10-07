@@ -8573,19 +8573,19 @@
     "evidence": [
      {
       "task": "S6-09",
-      "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+      "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
       "kind": "click",
       "action": "진단 자료 저장",
       "expected": "Downloaded JSON matches the response and persisted bundle without originals or private error values.",
       "observed": "Actual native downloads for errors and installation equaled persisted responses; controlled secrets, contact, source path/image/hash were absent; empty selection refused.",
       "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
       "test": "scripts/e2e/support-bundle-closure.spec.ts::native support button downloads exact selected sanitized persisted bundles",
-      "receipt": "2026-10-07-app-support-bundle-closure.spec-electron.json",
-      "receipt_sha256": "ba7caa4ecf14cc936e16a8ec4f23c03094f26d4f3dac8bc122f8a4ae1db253a8",
+      "receipt": "2026-10-07-support-bundle-5284df6-electron.json",
+      "receipt_sha256": "725fda7dee92d30e93d75b918825a5bc1f1ee2a9d4eef5bbe0acc6d6cdd4251b",
       "artifacts": [
        {
         "id": "screenshot-0",
-        "sha256": "8d82eac47e47ed0ece29ec64c544b8a876d107e72836b134972e51c0aa93d1ac"
+        "sha256": "b3c88554ee3d92477c7df49747e1e55e74f46894e29d46f6227ce577c5ec60bc"
        }
       ]
      }
@@ -8596,19 +8596,19 @@
     "evidence": [
      {
       "task": "S6-09",
-      "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+      "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
       "kind": "click",
       "action": "진단 자료 저장",
       "expected": "Downloaded JSON matches the response and persisted bundle without originals or private error values.",
       "observed": "Actual native downloads for errors and installation equaled persisted responses; controlled secrets, contact, source path/image/hash were absent; empty selection refused.",
       "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
       "test": "scripts/e2e/support-bundle-closure.spec.ts::native support button downloads exact selected sanitized persisted bundles",
-      "receipt": "2026-10-07-app-support-bundle-closure.spec-electron.json",
-      "receipt_sha256": "ba7caa4ecf14cc936e16a8ec4f23c03094f26d4f3dac8bc122f8a4ae1db253a8",
+      "receipt": "2026-10-07-support-bundle-5284df6-electron.json",
+      "receipt_sha256": "725fda7dee92d30e93d75b918825a5bc1f1ee2a9d4eef5bbe0acc6d6cdd4251b",
       "artifacts": [
        {
         "id": "screenshot-0",
-        "sha256": "8d82eac47e47ed0ece29ec64c544b8a876d107e72836b134972e51c0aa93d1ac"
+        "sha256": "b3c88554ee3d92477c7df49747e1e55e74f46894e29d46f6227ce577c5ec60bc"
        }
       ]
      }
@@ -8619,19 +8619,19 @@
     "evidence": [
      {
       "task": "S6-04",
-      "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+      "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
       "kind": "click",
       "action": "설치·진단 재열기",
       "expected": "The installation panel opens and remains reachable after native reload.",
       "observed": "Actual native tab selection then reload reopened project schema guidance; no installer activation or migration was performed.",
       "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
       "test": "scripts/e2e/support-bundle-closure.spec.ts::native support button downloads exact selected sanitized persisted bundles",
-      "receipt": "2026-10-07-app-support-bundle-closure.spec-electron.json",
-      "receipt_sha256": "ba7caa4ecf14cc936e16a8ec4f23c03094f26d4f3dac8bc122f8a4ae1db253a8",
+      "receipt": "2026-10-07-support-bundle-5284df6-electron.json",
+      "receipt_sha256": "725fda7dee92d30e93d75b918825a5bc1f1ee2a9d4eef5bbe0acc6d6cdd4251b",
       "artifacts": [
        {
         "id": "screenshot-0",
-        "sha256": "8d82eac47e47ed0ece29ec64c544b8a876d107e72836b134972e51c0aa93d1ac"
+        "sha256": "b3c88554ee3d92477c7df49747e1e55e74f46894e29d46f6227ce577c5ec60bc"
        }
       ]
      }
@@ -8642,19 +8642,19 @@
     "evidence": [
      {
       "task": "S6-09",
-      "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+      "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
       "kind": "click",
       "action": "진단 자료 포함 항목 선택",
       "expected": "Only the selected section is sent; empty selection disables Save.",
       "observed": "Actual checkbox choices produced exact one-section requests; no selected section disabled the actual save button.",
       "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
       "test": "scripts/e2e/support-bundle-closure.spec.ts::native support button downloads exact selected sanitized persisted bundles",
-      "receipt": "2026-10-07-app-support-bundle-closure.spec-electron.json",
-      "receipt_sha256": "ba7caa4ecf14cc936e16a8ec4f23c03094f26d4f3dac8bc122f8a4ae1db253a8",
+      "receipt": "2026-10-07-support-bundle-5284df6-electron.json",
+      "receipt_sha256": "725fda7dee92d30e93d75b918825a5bc1f1ee2a9d4eef5bbe0acc6d6cdd4251b",
       "artifacts": [
        {
         "id": "screenshot-0",
-        "sha256": "8d82eac47e47ed0ece29ec64c544b8a876d107e72836b134972e51c0aa93d1ac"
+        "sha256": "b3c88554ee3d92477c7df49747e1e55e74f46894e29d46f6227ce577c5ec60bc"
        }
       ]
      }

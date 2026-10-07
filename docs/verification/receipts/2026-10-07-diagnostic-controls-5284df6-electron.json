@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
+  "source_dirty": false,
+  "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+  "test_source_sha256": "e1fa994590d4f4722aaa7cf793782e22415630ee19c35ea14acdb0ee7ec0b87f",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "31f2870127e2e0410993a5edce5806908c7579b62b5f8b71de90f93a27d68e49",
+  "harness_sha256": "b76bf0f660c4b4b387dbc20e00335bb65eab63e78e4b09f44345e6e5967413ee",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "76927e8494f436cad56614c807ae7c53795d86ca006d7f267888238c0738e1c9"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "8076478ca8ae11ced9dedac5c1ff2295c21b57aaed4479b07dddf8f410df3a44"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "82330416a4d51a05f3a9ee14ed11b0f688c2fb35f9ce85bf0702ebaa2ee35fec"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "b0756514fbd4944eebeaae61a18dd59ab36a0a7a1fb06ca0056f63f96a3d15ee"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

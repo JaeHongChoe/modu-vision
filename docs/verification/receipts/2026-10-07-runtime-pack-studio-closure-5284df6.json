@@ -1,0 +1,312 @@
+{
+  "schema": "modu-vision.runtime-pack-studio-closure/v1",
+  "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
+  "actual_gui_cases": 5,
+  "attempts_each": 1,
+  "payload": {
+    "provider": "pydicom3.0.2",
+    "files": 2,
+    "bytes": 2379963,
+    "inventory_sha256": "c33eda8a44c45c52867776fe43c7ea910eb93098f4434f2b1ca639b6d42a92bc"
+  },
+  "root_native_visual_readback": true,
+  "observed": "Studio project-owned install, separately supplied pin, fresh payload and receipt hashes, current backend OS/arch/protocol and wheel tags. Wrong pin/owned tampering refused; transport failure and deliberate retry preserve exact immutable receipt; current-project and reload isolation. Existing diagnostic download5 total combined GUI cases passed with owned teardown.",
+  "focused_backend": {
+    "passed": 83,
+    "skipped": 0,
+    "log_sha256": "9bee250c911a471effe6305f451f7a60260ca253fb429bcf08c4e0452cd5d402"
+  },
+  "renderer_main": {
+    "passed": 907,
+    "failed": 0,
+    "skipped": 0,
+    "log_sha256": "e7701c29178f73de849e6234bb99ff397adfa8d17dadd93f77880506485b8a98"
+  },
+  "types_log_sha256": "3cea01ca6731d254d8cb8265f4fb29f0abcddf05eb43593ffedb269501b44fad",
+  "meaningful_red_logs": [
+    {
+      "name": "runtime-pack-studio-red.log",
+      "sha256": "fd3a33ae8da50b0e014ed97da37930f3ca46fa10a88205639b92def7d68c1eac"
+    },
+    {
+      "name": "runtime-pack-studio-fifo-red.log",
+      "sha256": "01e4d6cf6c44aeffe4dbbcd1d95f11e2e394b21735726551f9c5130e1f54f265"
+    },
+    {
+      "name": "runtime-pack-studio-driver-red.log",
+      "sha256": "d3b5de29420cc0d9e0b9d0720ec1becb01528e6e2a2e30d21696ca6bdb437f94"
+    },
+    {
+      "name": "runtime-pack-studio-receipt-race-red.log",
+      "sha256": "e6213941e6f1722a1948d87c6f48f6845ce017a9ce7d2177fc34f57d273bad31"
+    }
+  ],
+  "separate_review": "Read-only separate agent found and independently reproduced FIFO open race, compatible driver upgrade idempotence and post-validation receipt-return race. Root added failing production regressions and fixed them. Reviewer repeated inert-fixture verification; no remaining blocking finding within scoped inert store. Pathname checks are not claimed atomic against hostile concurrent filesystem writers.",
+  "activation": false,
+  "publisher_signature_verified": false,
+  "target_execution_qualified": false,
+  "remaining": "Full offline base distribution, signed Studio pack activation, installed/frozen target qualification, representative human-quality and legal/publisher acceptance remain separate. Windows native testing waived, never a pass.",
+  "receipts": [
+    {
+      "receipt": "2026-10-07-diagnostic-controls-5284df6-browser.json",
+      "sha256": "5086451c4984fd3fec682a06a3eea68282b672871502f707d8b8accc90c5e123",
+      "mode": "browser",
+      "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen"
+    },
+    {
+      "receipt": "2026-10-07-runtime-pack-5284df6-browser.json",
+      "sha256": "04e45d18fa6c2988f63e25f05be51eaec5a1c00bf028c67ed0994316925a71ab",
+      "mode": "browser",
+      "test": "scripts/e2e/runtime-pack-installation.spec.ts::runtime packs install inertly and preserve reviewed pin through refusal tamper and reopen"
+    },
+    {
+      "receipt": "2026-10-07-support-bundle-5284df6-electron.json",
+      "sha256": "725fda7dee92d30e93d75b918825a5bc1f1ee2a9d4eef5bbe0acc6d6cdd4251b",
+      "mode": "electron",
+      "test": "scripts/e2e/support-bundle-closure.spec.ts::native support button downloads exact selected sanitized persisted bundles"
+    },
+    {
+      "receipt": "2026-10-07-runtime-pack-5284df6-electron.json",
+      "sha256": "25105105e7595962cdc7f28f2e814294d601836655daa3c00a808047676a390f",
+      "mode": "electron",
+      "test": "scripts/e2e/runtime-pack-installation.spec.ts::native runtime packs install inertly and preserve reviewed pin through refusal tamper and reopen"
+    },
+    {
+      "receipt": "2026-10-07-diagnostic-controls-5284df6-electron.json",
+      "sha256": "d61cdc6ed22ac34d6f2e0786bcb71429188763154e82107ccf374b705e96c7ca",
+      "mode": "electron",
+      "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen"
+    }
+  ],
+  "prior_reference_lineage": [
+    {
+      "registry": "docs/service-upgrade-evidence.json",
+      "test": "scripts/e2e/support-bundle-closure.spec.ts::native support button downloads exact selected sanitized persisted bundles",
+      "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+      "receipt": "2026-10-07-app-support-bundle-closure.spec-electron.json",
+      "receipt_sha256": "ba7caa4ecf14cc936e16a8ec4f23c03094f26d4f3dac8bc122f8a4ae1db253a8"
+    },
+    {
+      "registry": "docs/service-upgrade-evidence.json",
+      "test": "scripts/e2e/support-bundle-closure.spec.ts::native support button downloads exact selected sanitized persisted bundles",
+      "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+      "receipt": "2026-10-07-app-support-bundle-closure.spec-electron.json",
+      "receipt_sha256": "ba7caa4ecf14cc936e16a8ec4f23c03094f26d4f3dac8bc122f8a4ae1db253a8"
+    },
+    {
+      "registry": "docs/service-upgrade-evidence.json",
+      "test": "scripts/e2e/support-bundle-closure.spec.ts::native support button downloads exact selected sanitized persisted bundles",
+      "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+      "receipt": "2026-10-07-app-support-bundle-closure.spec-electron.json",
+      "receipt_sha256": "ba7caa4ecf14cc936e16a8ec4f23c03094f26d4f3dac8bc122f8a4ae1db253a8"
+    },
+    {
+      "registry": "docs/service-upgrade-evidence.json",
+      "test": "scripts/e2e/support-bundle-closure.spec.ts::native support button downloads exact selected sanitized persisted bundles",
+      "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+      "receipt": "2026-10-07-app-support-bundle-closure.spec-electron.json",
+      "receipt_sha256": "ba7caa4ecf14cc936e16a8ec4f23c03094f26d4f3dac8bc122f8a4ae1db253a8"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/support-bundle-closure.spec.ts::native support button downloads exact selected sanitized persisted bundles",
+      "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+      "receipt": "2026-10-07-app-support-bundle-closure.spec-electron.json",
+      "receipt_sha256": "ba7caa4ecf14cc936e16a8ec4f23c03094f26d4f3dac8bc122f8a4ae1db253a8"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/support-bundle-closure.spec.ts::native support button downloads exact selected sanitized persisted bundles",
+      "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+      "receipt": "2026-10-07-app-support-bundle-closure.spec-electron.json",
+      "receipt_sha256": "ba7caa4ecf14cc936e16a8ec4f23c03094f26d4f3dac8bc122f8a4ae1db253a8"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+      "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+      "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
+      "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+      "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+      "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
+      "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+      "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+      "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
+      "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+      "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+      "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
+      "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+      "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+      "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
+      "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+      "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+      "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
+      "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+      "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+      "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
+      "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+      "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+      "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
+      "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/support-bundle-closure.spec.ts::native support button downloads exact selected sanitized persisted bundles",
+      "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+      "receipt": "2026-10-07-app-support-bundle-closure.spec-electron.json",
+      "receipt_sha256": "ba7caa4ecf14cc936e16a8ec4f23c03094f26d4f3dac8bc122f8a4ae1db253a8"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/support-bundle-closure.spec.ts::native support button downloads exact selected sanitized persisted bundles",
+      "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+      "receipt": "2026-10-07-app-support-bundle-closure.spec-electron.json",
+      "receipt_sha256": "ba7caa4ecf14cc936e16a8ec4f23c03094f26d4f3dac8bc122f8a4ae1db253a8"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+      "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+      "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
+      "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+      "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+      "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
+      "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+      "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+      "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
+      "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+      "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+      "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
+      "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+      "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+      "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
+      "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+      "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+      "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
+      "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+      "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+      "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
+      "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+      "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+      "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
+      "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/support-bundle-closure.spec.ts::native support button downloads exact selected sanitized persisted bundles",
+      "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+      "receipt": "2026-10-07-app-support-bundle-closure.spec-electron.json",
+      "receipt_sha256": "ba7caa4ecf14cc936e16a8ec4f23c03094f26d4f3dac8bc122f8a4ae1db253a8"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+      "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+      "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
+      "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+      "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+      "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
+      "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+      "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+      "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
+      "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+      "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+      "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
+      "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/support-bundle-closure.spec.ts::native support button downloads exact selected sanitized persisted bundles",
+      "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+      "receipt": "2026-10-07-app-support-bundle-closure.spec-electron.json",
+      "receipt_sha256": "ba7caa4ecf14cc936e16a8ec4f23c03094f26d4f3dac8bc122f8a4ae1db253a8"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+      "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+      "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
+      "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+      "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+      "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
+      "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576"
+    }
+  ],
+  "actions": 199,
+  "verified_scenarios": 545,
+  "pending_scenarios": 848,
+  "parent_implementation_verified": 67,
+  "parent_pending": 15
+}

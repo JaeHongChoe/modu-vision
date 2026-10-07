@@ -4660,6 +4660,14 @@
      "receipt_sha256": "4958286756adc1d5387c8ff624cd36607a09d41cbbb905f764df9e29b01a722a",
      "result": "Five-file first-party OCR asset pack installed/idempotently reopened; four original generated images inferred twice by fresh processes from exact installed payload code and the retained completed checkpoint.",
      "scope": "First-party CTC code plus a tiny synthetic completed-training checkpoint in an inactive asset pack. Existing pinned local CPU dependencies are required and are not distributed inside this pack. Four generated images and a fresh-process reopen are execution evidence, not representative OCR quality, a third-party OCR provider, full offline base installation, GPU, Windows or publisher acceptance."
+    },
+    {
+     "kind": "actual-studio-project-runtime-pack-installation",
+     "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
+     "receipt": "docs/verification/receipts/2026-10-07-runtime-pack-studio-closure-5284df6.json",
+     "receipt_sha256": "e18ffee645428e69f89e95b89e129f01107f26f84d3c8d3462c567f6fbed157a",
+     "result": "Clean source actual browser2/native3 cases retry0,83 backend/907 renderer-main regressions, types and separate scoped review pass. Shared inert engine now connected to actual Studio project-owned install/inventory/diagnostics.",
+     "scope": "Full offline base distribution, signed Studio pack activation, installed/frozen target qualification, representative human-quality and legal/publisher acceptance remain separate. Windows native testing waived, never a pass."
     }
    ],
    "file_actions": {
@@ -4684,7 +4692,7 @@
     "E07"
    ],
    "remaining": [
-    "OpenVINO FP32/FP16, NNCF INT8, ONNX CUDA12 and the inactive first-party CTC code/checkpoint pack have separate execution evidence. Full offline base-runtime installation, automatic Studio pack activation, other providers/devices, native-library legal/publisher decisions and representative heldout quality remain pending. No alternate OCR-engine provider is required by the existing CTC implementation."
+    "Studio project-owned inert install, pin and fresh integrity/compatibility/ABI readback are now connected. Optional OpenVINO FP32/FP16/NNCF INT8, CUDA12 and first-party CTC asset qualification remain separately receipt-bound. Full offline base distribution, signed automatic pack activation and installed/frozen native targets, representative quality and legal/publisher acceptance still require their own evidence; no alternate OCR provider is required by the current CTC implementation."
    ]
   },
   {
@@ -5613,6 +5621,14 @@
      "receipt_sha256": "a9dc789657f722aef9f0ac5c7824f71629dd0515d45e88d24bffd0930bbe8c0c",
      "result": "Clean browser/native1 each retry0 passed; one existing pending error scenario filled after actual decoder-error close and exact valid re-open.",
      "scope": "Owned synthetic images/untrained PaDiM fixture real CPU inspection; no model training, representative human quality, hardware, Windows, publisher/release/independent acceptance."
+    },
+    {
+     "kind": "actual-studio-project-runtime-pack-installation",
+     "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
+     "receipt": "docs/verification/receipts/2026-10-07-runtime-pack-studio-closure-5284df6.json",
+     "receipt_sha256": "e18ffee645428e69f89e95b89e129f01107f26f84d3c8d3462c567f6fbed157a",
+     "result": "Clean source actual browser2/native3 cases retry0,83 backend/907 renderer-main regressions, types and separate scoped review pass. Shared inert engine now connected to actual Studio project-owned install/inventory/diagnostics.",
+     "scope": "Full offline base distribution, signed Studio pack activation, installed/frozen target qualification, representative human-quality and legal/publisher acceptance remain separate. Windows native testing waived, never a pass."
     }
    ],
    "file_actions": {
@@ -5637,7 +5653,7 @@
    },
    "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts",
    "remaining": [
-    "198 curated actions have539 verified scenarios and847 pending scenarios. Other helpers/menus/shortcuts and all156-feature full acceptance remain pending."
+    "199 curated actions have545 verified scenarios and848 pending scenarios. Other helpers/menus/shortcuts and all156-feature full acceptance remain pending. New action adds seven dimensions, six actual verified and one pending; it is not a complete hardware-matrix claim."
    ]
   },
   {
@@ -5853,6 +5869,14 @@
      "receipt_sha256": "a9dc789657f722aef9f0ac5c7824f71629dd0515d45e88d24bffd0930bbe8c0c",
      "result": "Clean browser/native1 each retry0 passed; one existing pending error scenario filled after actual decoder-error close and exact valid re-open.",
      "scope": "Owned synthetic images/untrained PaDiM fixture real CPU inspection; no model training, representative human quality, hardware, Windows, publisher/release/independent acceptance."
+    },
+    {
+     "kind": "actual-studio-project-runtime-pack-installation",
+     "source_sha": "5284df6e979d4d4ceadc0a8256b5a90176adbbe6",
+     "receipt": "docs/verification/receipts/2026-10-07-runtime-pack-studio-closure-5284df6.json",
+     "receipt_sha256": "e18ffee645428e69f89e95b89e129f01107f26f84d3c8d3462c567f6fbed157a",
+     "result": "Clean source actual browser2/native3 cases retry0,83 backend/907 renderer-main regressions, types and separate scoped review pass. Shared inert engine now connected to actual Studio project-owned install/inventory/diagnostics.",
+     "scope": "Full offline base distribution, signed Studio pack activation, installed/frozen target qualification, representative human-quality and legal/publisher acceptance remain separate. Windows native testing waived, never a pass."
     }
    ],
    "file_actions": {
