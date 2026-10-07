@@ -7,6 +7,7 @@ import type {ChildProcess} from 'node:child_process';
 import type {Duplex} from 'node:stream';
 
 const LIMIT=65536,HEX32=/^[a-f0-9]{32}$/,HEX64=/^[a-f0-9]{64}$/;
+const APPLICATION_MANIFEST_LIMIT=8*1024**2,APPLICATION_MEMBER_LIMIT=20000;
 const CONTEXT=['VISION_APPLICATION_LAUNCH_FD','VISION_APPLICATION_LAUNCH_NONCE','VISION_APPLICATION_GENERATION','VISION_APPLICATION_DATABASE_GENERATION','VISION_APPLICATION_BACKEND_FD'];
 const hash=(raw:Buffer|string)=>createHash('sha256').update(raw).digest('hex');
 const canonical=(value:any):string=>value===null||typeof value!=='object'?JSON.stringify(value):Array.isArray(value)?'['+value.map(canonical).join(',')+']':'{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+canonical(value[k])).join(',')+'}';
@@ -53,7 +54,7 @@ export class OwnedApplicationLaunch {
  readonly projects:string;readonly auth:string;private usedBackend=false;
  constructor(readonly root:string,readonly nonce:string,readonly binding:any,readonly mainProcess:any,private challenge:string,private frames:Frames){this.projects=path.join(root,'projects');this.auth=path.join(root,'auth');}
  private current():void {validateBinding(this.root,this.nonce,this.binding,this.mainProcess);this.frames.assertEmpty();}
- executable(file:string):{sha256:string;build:string|null} {this.current();const application=path.join(this.root,'.application-generations',this.binding.application_generation,'application');const manifest=parsePrivateDocument(stable(path.join(application,'portable-application.json'),1024**2) as Buffer,1024**2).value;
+ executable(file:string):{sha256:string;build:string|null} {this.current();const application=path.join(this.root,'.application-generations',this.binding.application_generation,'application');const manifest=parsePrivateDocument(stable(path.join(application,'portable-application.json'),APPLICATION_MANIFEST_LIMIT) as Buffer,APPLICATION_MANIFEST_LIMIT).value;
  const relative=path.relative(application,file).split(path.sep).join('/');if(path.isAbsolute(relative)||relative.startsWith('../')||relative==='..')throw new Error('Backend executable escapes committed application');
  const rows=manifest.files.filter((row:any)=>row.path===relative&&row.executable===true);if(rows.length!==1)throw new Error('Backend executable is not a committed row');stable(file,1024**3,rows[0]);
  const receiptPath=path.join(path.dirname(file),'backend-release.json');const receiptRelative=path.relative(application,receiptPath).split(path.sep).join('/');const receiptRows=manifest.files.filter((row:any)=>row.path===receiptRelative);
@@ -97,9 +98,9 @@ function validateBinding(root:string,nonce:string,binding:any,main:any):void {
  if(fs.existsSync(path.join(root,'application-update-pending.json')))throw new Error('Application update requires recovery');
  const pointer=document(path.join(root,'application-launch-lease.json')).value,journal=document(path.join(root,'.application-launches',nonce,'journal.json'));
  if(pointer.nonce!==nonce||pointer.installation_id!==owner.installation_id||pointer.revision!==journal.value.revision||pointer.record_sha256!==hash(journal.canonical)||journal.value.nonce!==nonce||!['starting','ready'].includes(journal.value.state)||journal.value.supervisor?.pid!==process.ppid||journal.value.process?.pid!==process.pid||canonical(journal.value.binding)!==canonical(binding)||canonical(journal.value.process)!==canonical(main))throw new Error('Original controller/main ownership differs');
- const application=path.join(root,'.application-generations',binding.application_generation,'application'),manifestRaw=stable(path.join(application,'portable-application.json'),1024**2) as Buffer;
- if(hash(manifestRaw)!==binding.application_manifest_sha256)throw new Error('Committed application manifest differs');const manifest=parsePrivateDocument(manifestRaw,1024**2).value;
- if(!Array.isArray(manifest.files)||manifest.files.length>10000||typeof manifest.entrypoint!=='string'||binding.executable!==path.join(application,manifest.entrypoint))throw new Error('Committed application entrypoint differs');
+ const application=path.join(root,'.application-generations',binding.application_generation,'application'),manifestRaw=stable(path.join(application,'portable-application.json'),APPLICATION_MANIFEST_LIMIT) as Buffer;
+ if(hash(manifestRaw)!==binding.application_manifest_sha256)throw new Error('Committed application manifest differs');const manifest=parsePrivateDocument(manifestRaw,APPLICATION_MANIFEST_LIMIT).value;
+ if(!Array.isArray(manifest.files)||manifest.files.length>APPLICATION_MEMBER_LIMIT||typeof manifest.entrypoint!=='string'||binding.executable!==path.join(application,manifest.entrypoint))throw new Error('Committed application entrypoint differs');
  const entry=manifest.files.filter((row:any)=>row.path===manifest.entrypoint&&row.executable===true&&row.sha256===binding.executable_sha256);if(entry.length!==1)throw new Error('Committed application executable differs');stable(binding.executable,1024**3,entry[0]);
  if(process.execPath!==binding.executable&&process.argv[1]!==binding.executable)throw new Error('This process is not the committed application executable');
 }

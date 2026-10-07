@@ -408,12 +408,15 @@ def test_frozen_canary_refuses_before_any_staging_or_process_attempt(tmp_path,mo
     from backend.engine import runtime_update as update,staged_update_canary as canary
     root,value,previous,_,_=source_candidate(tmp_path)
     monkeypatch.setattr(canary.sys,'frozen',True,raising=False)
-    proposal=update.plan_update(root,value['directory'],value['envelope'],value['authority'],
-        pinned_authority_sha256=value['pinned_authority_sha256'],target=value['target'],
-        canary=previous.canary)
-    assert update.review_update(proposal)['preactivation_canary']['status']=='requires_target'
-    with pytest.raises(ValueError,match='frozen'):update.install_update(root,proposal)
+    # A source process claiming frozen without the compiled inventory must be
+    # refused during admission, before a staged operation can exist.
+    with pytest.raises(ValueError,match='frozen'):
+        proposal=update.plan_update(root,value['directory'],value['envelope'],value['authority'],
+            pinned_authority_sha256=value['pinned_authority_sha256'],target=value['target'],
+            canary=previous.canary)
+        update.install_update(root,proposal)
     assert not (root/'.application-updates').exists()
+    assert pointers(root)=={'global-active.json':None,'application-active.json':None}
 
 
 def test_actual_cli_preview_and_install_bind_exact_explicit_canary_pins(tmp_path):

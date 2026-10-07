@@ -1,8 +1,8 @@
 """One pinned CPU OCR execution in the original authenticated source backend.
 
 This is an execution capability, not model approval or native acceptance. The
-current-runtime worker never imports Python from an exported package. Frozen
-execution deliberately refuses until its fixed native worker is qualified.
+current-runtime worker never imports Python from an exported package. Source
+and frozen workers use separate fixed entry points and receipt scopes.
 """
 from __future__ import annotations
 
@@ -28,6 +28,12 @@ MAX_FILE = 32 * 1024**2
 MAX_TOTAL = 128 * 1024**2
 MAX_RESULT = 8 * 1024**2
 MAX_FILES = 1024
+CPU_PROTOCOL = 'owned_application_cpu_execution_protocol'
+CPU_RESOURCES = ('scripts/frozen_backend_entry.py',
+    'backend/engine/application_launch_controller.py', 'backend/engine/application_launch_handshake.py',
+    'backend/engine/application_launch_lease.py', 'backend/engine/application_launch_execution.py',
+    'backend/engine/flow_package_runtime.py', 'backend/engine/ocr.py',
+    'backend/engine/runtime_deadline.py', 'backend/engine/process_isolation.py')
 REQUEST_FIELDS = {'schema_version', 'kind', 'challenge', 'request_id', 'nonce', 'epoch',
     'binding_sha256', 'backend_claim_sha256', 'workspace_id', 'project_id', 'plan_sha256'}
 PLAN_FIELDS = {'schema_version', 'kind', 'workspace_id', 'project_id', 'project_manifest_sha256',
@@ -103,7 +109,9 @@ def _read(path, limit=65536, *, expected=None, destination=None):
 
 
 def runtime_source_identity(*, copy_to=None):
-    """Exact current source inputs, never a frozen-build or native attestation."""
+    """Exact runtime resource rows; this never proves native acceptance."""
+    if getattr(sys,'frozen',False):
+        return _frozen_inventory()[1]
     root = Path(__file__).resolve().parents[2]
     for item in (root/'backend').rglob('*'):
         if 'tests' in item.relative_to(root/'backend').parts:continue
@@ -121,6 +129,49 @@ def runtime_source_identity(*, copy_to=None):
     if files != sorted(p for p in (root/'backend').rglob('*.py') if 'tests' not in p.relative_to(root/'backend').parts):
         raise ExecutionError('Current runtime source inventory changed')
     return update._sha(update._canonical(rows))
+
+
+def _frozen_inventory():
+    """Bind every bundled backend source resource to this compiled inventory."""
+    if not getattr(sys,'frozen',False) or not isinstance(getattr(sys,'_MEIPASS',None),str):
+        raise ExecutionError('requires_target: fixed CPU worker requires a compiled frozen backend')
+    root=update._unlinked(sys._MEIPASS)
+    inventory=_json(_read(root/'backend-build-inventory.json',MAX_RESULT))
+    if (not isinstance(inventory,dict) or type(inventory.get(CPU_PROTOCOL)) is not int
+            or inventory[CPU_PROTOCOL]!=1 or type(inventory.get('owned_application_launch_controller_protocol')) is not int
+            or inventory['owned_application_launch_controller_protocol']!=1
+            or not update._hex(inventory.get('build_identity_sha256'))
+            or update._sha(update._canonical({k:v for k,v in inventory.items() if k!='build_identity_sha256'}))!=inventory['build_identity_sha256']
+            or not isinstance(inventory.get('resources'),list) or len(inventory['resources'])>MAX_FILES*2):
+        raise ExecutionError('Frozen CPU worker inventory capability is missing or changed')
+    pins={}
+    for row in inventory['resources']:
+        if not isinstance(row,dict) or set(row)!={'path','sha256'} or not update._hex(row['sha256']):
+            raise ExecutionError('Invalid frozen CPU resource row')
+        name=update._safe_path(row['path'])
+        if name in pins:raise ExecutionError('Duplicate frozen CPU resource row')
+        pins[name]=row['sha256']
+    if not set(CPU_RESOURCES)<=pins.keys():raise ExecutionError('Frozen CPU prerequisites are not checksum-bound')
+    names=sorted(name for name in pins if name.startswith('backend/') and name.endswith('.py'))
+    if not 1<=len(names)<=MAX_FILES:raise ExecutionError('Frozen CPU source resource bound exceeded')
+    # Native libraries are legitimate bundled dependencies. Only source rows
+    # are a source digest; none are put on sys.path or imported dynamically.
+    actual=sorted(p.relative_to(root).as_posix() for p in (root/'backend').rglob('*.py'))
+    if actual!=names:raise ExecutionError('Frozen backend source resource membership differs')
+    total=0;rows=[]
+    for name in sorted(set(names)|set(CPU_RESOURCES)):
+        raw=_read(root/name,MAX_FILE,expected=pins[name]);total+=len(raw)
+        if total>MAX_TOTAL:raise ExecutionError('Frozen CPU source resources exceed total bound')
+        if name in names:rows.append({'path':name,'size':len(raw),'sha256':pins[name]})
+    rows.sort(key=lambda row:row['path'])
+    if actual!=sorted(p.relative_to(root).as_posix() for p in (root/'backend').rglob('*.py')):
+        raise ExecutionError('Frozen CPU source resources changed')
+    return inventory,update._sha(update._canonical(rows))
+
+
+def _scope(frozen):
+    if type(frozen) is not bool:raise ExecutionError('Invalid CPU runtime mode')
+    return 'controlled_frozen_backend' if frozen else 'controlled_source_backend'
 
 
 def _project(root, workspace_id, project_id):
@@ -335,8 +386,8 @@ def _validate_receipt(row,intent,bootstrap,receipt):
         'challenge_sha256':update._sha(request_['challenge'].encode()),'backend_claim_sha256':request_['backend_claim_sha256'],
         'plan_sha256':request_['plan_sha256'],'epoch':bootstrap['epoch'],'main_process':row['process'],
         'backend_process':bootstrap['backend_process'],'backend_executable':bootstrap['backend_executable'],
-        'backend_executable_sha256':bootstrap['backend_executable_sha256'],'backend_frozen':False,
-        'execution_scope':'controlled_source_backend','runtime_source_sha256':plan['runtime_source_sha256'],
+        'backend_executable_sha256':bootstrap['backend_executable_sha256'],'backend_frozen':bootstrap['backend_frozen'],
+        'execution_scope':_scope(bootstrap['backend_frozen']),'runtime_source_sha256':plan['runtime_source_sha256'],
         'workspace_id':request_['workspace_id'],'project_id':request_['project_id'],
         'scope_key':capability['scope_key'],'checkpoints':plan['checkpoints'],
         'package_manifest_sha256':plan['package_manifest_sha256'],'graph_sha256':plan['graph_sha256'],
@@ -354,6 +405,9 @@ def _validate_receipt(row,intent,bootstrap,receipt):
 def _live_origin(root,row,bootstrap):
     from backend.engine.application_launch_controller import _same_identity,_backend_artifact
     import psutil
+    if (row.get('state')!='ready' or row.get('claimed') is not True
+            or not update._hex(row.get('ready_receipt_sha256'))):
+        raise ExecutionError('Original CPU ownership is not ready')
     try:
         for process in (row['supervisor'],row['process'],bootstrap['backend_process']):
             if not _same_identity(process,process['pid']):raise ExecutionError('Original CPU process birth or command changed')
@@ -361,8 +415,8 @@ def _live_origin(root,row,bootstrap):
         if (psutil.Process(main['pid']).ppid()!=row['supervisor']['pid'] or psutil.Process(backend['pid']).ppid()!=main['pid']
                 or os.getsid(main['pid'])!=main['pid'] or os.getpgid(main['pid'])!=main['pid']):
             raise ExecutionError('Original CPU process parent/session changed')
-        if bootstrap['backend_frozen']:raise ExecutionError('Frozen CPU execution is unqualified')
-        _backend_artifact(root,row['binding'],bootstrap['backend_executable'],bootstrap['backend_executable_sha256'],None,False,backend['pid'])
+        _backend_artifact(root,row['binding'],bootstrap['backend_executable'],bootstrap['backend_executable_sha256'],
+            bootstrap['backend_build_identity_sha256'],bootstrap['backend_frozen'],backend['pid'])
     except (psutil.Error,OSError) as exc:raise ExecutionError('Original CPU process ownership is ambiguous') from exc
 
 
@@ -406,10 +460,114 @@ def _retained_snapshot(outputs, request_id):
     yield directory
 
 
+def _frozen_worker_admission(path, digest):
+    """Validate the original direct parent and seals before writable caches."""
+    inventory,source_digest=_frozen_inventory()
+    if not update._hex(digest):raise ExecutionError('Frozen worker requires an independent request pin')
+    raw=_read(path,65536,expected=digest);capsule=_json(raw)
+    if (not isinstance(capsule,dict) or set(capsule)!={'schema_version','kind','root','request','backend_proof','capability'}
+            or type(capsule['schema_version']) is not int or capsule['schema_version']!=1
+            or capsule['kind']!='owned_frozen_cpu_worker' or not isinstance(capsule['root'],str)):
+        raise ExecutionError('Invalid fixed frozen worker capsule')
+    root,_=update._root(capsule['root']);proof=capsule['backend_proof'];frame=capsule['request']
+    from backend.engine.application_launch_controller import _same_identity,_backend_artifact
+    from backend.engine import application_launch_lease as lease
+    import psutil
+    # No request can manufacture the original process birth/command or make a
+    # foreign process become our direct parent. The controller's original
+    # authenticated proof is independently sealed in the intent hash.
+    if (not isinstance(proof,dict) or set(proof)!={'schema_version','kind','challenge','epoch','nonce','binding_sha256',
+            'process','executable','executable_sha256','build_identity_sha256','frozen'}
+            or proof['frozen'] is not True or proof['build_identity_sha256']!=inventory['build_identity_sha256']
+            or not isinstance(proof['process'],dict) or proof['process'].get('pid')!=os.getppid()
+            or not _same_identity(proof['process'],os.getppid())
+            or psutil.Process(os.getppid()).exe()!=sys.executable or proof['executable']!=sys.executable):
+        raise ExecutionError('Frozen CPU worker has a foreign original backend parent/build')
+    intent=validate_request(frame,proof,root)
+    row=lease._load(root)
+    bootstrap=_json(_read(root/lease.LEASES/frame['nonce']/'bootstrap-receipt.json'))
+    if (bootstrap['backend_frozen'] is not True or bootstrap['backend_process']!=proof['process']
+            or bootstrap['backend_build_identity_sha256']!=proof['build_identity_sha256']
+            or bootstrap['backend_executable_sha256']!=proof['executable_sha256']
+            or bootstrap['epoch']!=proof['epoch']):
+        raise ExecutionError('Frozen CPU worker original epoch/receipt differs')
+    _live_origin(root,row,bootstrap)
+    _backend_artifact(root,row['binding'],proof['executable'],proof['executable_sha256'],proof['build_identity_sha256'],True,os.getppid())
+    capability=admit_plan(root,frame['workspace_id'],frame['project_id'],frame['plan_sha256'])
+    if (update._canonical(capability)!=update._canonical(intent['capability'])
+            or update._canonical(capability)!=update._canonical(capsule['capability'])
+            or capability['plan']['runtime_source_sha256']!=source_digest):
+        raise ExecutionError('Frozen CPU worker capability/source differs')
+    directory=update._unlinked(Path(capability['project_path'])/OUTPUTS/('.owned-cpu-'+frame['request_id']))
+    if update._unlinked(path)!=directory/'worker-request.json':raise ExecutionError('Frozen CPU request is outside its fixed retained path')
+    if _read(path,65536,expected=digest)!=raw:raise ExecutionError('Frozen CPU request changed during admission')
+    return root,frame,proof,capability,directory
+
+
+def frozen_worker_main(argv=None):
+    """Only the fixed compiled entry calls this; arbitrary modules are refused."""
+    if not getattr(sys,'frozen',False):
+        print('requires_target: fixed CPU worker requires compiled backend',file=sys.stderr)
+        return 2
+    import argparse
+    parser=argparse.ArgumentParser(add_help=False,allow_abbrev=False)
+    parser.add_argument('--request-file',required=True);parser.add_argument('--request-sha256',required=True)
+    args=parser.parse_args(argv)
+    try:
+        root,frame,proof,capability,directory=_frozen_worker_admission(args.request_file,args.request_sha256)
+        # A interrupted or previous execution is never retried by the worker.
+        marker=directory/'worker-admission.json';update._unlinked(marker)
+        fd=os.open(marker,os.O_WRONLY|os.O_CREAT|os.O_EXCL|getattr(os,'O_NOFOLLOW',0),0o600)
+        with os.fdopen(fd,'wb') as writer:
+            writer.write(update._canonical({'request_sha256':args.request_sha256,'parent':proof['process'],'worker_pid':os.getpid()}))
+            writer.flush();os.fsync(writer.fileno())
+        update.migration._sync_directories(directory,recursive=False)
+        # Independently re-read every exact private row. Heavy model imports and
+        # library-created home/cache state occur only after parent admission.
+        plan=capability['plan'];package=directory/'package';manifest=_json(_read(package/'manifest.json',MAX_RESULT,expected=plan['package_manifest_sha256']))
+        if _members(package)!={'manifest.json',*(row['path'] for row in manifest['files'])}:
+            raise ExecutionError('Frozen CPU snapshot has unlisted files')
+        for item in manifest['files']:_read(package/item['path'],item['size'],expected=item['sha256'])
+        _read(directory/'input.png',MAX_FILE,expected=plan['input_sha256'])
+        for name in ('home','cache','tmp'):
+            folder=update._unlinked(directory/name)
+            if not folder.is_dir() or folder.stat().st_mode&0o077:raise ExecutionError('Frozen CPU cache is not private')
+        if (os.environ.get('HOME')!=str(directory/'home') or os.environ.get('TMPDIR')!=str(directory/'tmp')
+                or os.environ.get('CUDA_VISIBLE_DEVICES')!='' or os.environ.get('NVIDIA_VISIBLE_DEVICES')!='none'):
+            raise ExecutionError('Frozen CPU environment differs from fixed private contract')
+        from backend.engine.flow_package_runtime import run_flow_package
+        import torch
+        torch.set_num_threads(1)
+        result=run_flow_package(package,directory/'input.png','owned-cpu-known-image',device='cpu',cpu_threads=1,_owned_worker=True)
+        validate_result(result,capability)
+        after=admit_plan(root,frame['workspace_id'],frame['project_id'],frame['plan_sha256'])
+        if update._canonical(after)!=update._canonical(capability):raise ExecutionError('Frozen CPU artifacts changed during arithmetic')
+        raw=update._canonical(result)
+        if len(raw)>MAX_RESULT:raise ExecutionError('Frozen CPU result exceeds bound')
+        from backend.engine import application_launch_lease as lease
+        with lease._transition_admission(root,frame['nonce']):
+            original=_json(_read(root/lease.LEASES/frame['nonce']/'bootstrap-receipt.json'))
+            _live_origin(root,lease._load(root),original)
+            fd=os.open(update._unlinked(directory/'result.json'),os.O_WRONLY|os.O_CREAT|os.O_EXCL|getattr(os,'O_NOFOLLOW',0),0o600)
+            with os.fdopen(fd,'wb') as writer:writer.write(raw);writer.flush();os.fsync(writer.fileno())
+            update.migration._sync_directories(directory,recursive=False)
+        return 0
+    except (ValueError,OSError,KeyError,TypeError) as exc:
+        print('Frozen CPU execution refused: '+str(exc)[:1000],file=sys.stderr)
+        return 2
+
+
 def execute_backend(frame, proof, root):
     """Only the authenticated cache consumer calls this, under its shared life."""
-    if proof['frozen']: raise ExecutionError('requires_target: fixed frozen CPU worker is not qualified')
+    if proof['frozen']:
+        inventory,_=_frozen_inventory()
+        if inventory['build_identity_sha256']!=proof['build_identity_sha256']:
+            raise ExecutionError('Frozen CPU backend inventory differs from original claim')
     intent = validate_request(frame,proof,root)
+    from backend.engine import application_launch_lease as lease
+    row=lease._load(root)
+    original=_json(_read(root/lease.LEASES/frame['nonce']/'bootstrap-receipt.json'))
+    _live_origin(root,row,original)
     capability = admit_plan(root,frame['workspace_id'],frame['project_id'],frame['plan_sha256'])
     if update._canonical(capability)!=update._canonical(intent['capability']): raise ExecutionError('Reviewed project capability changed')
     directory = Path(capability['project_path']); outputs=update._unlinked(directory/OUTPUTS)
@@ -442,7 +600,17 @@ def execute_backend(frame, proof, root):
             'YOLO_CONFIG_DIR':str(home/'yolo'),'OPENBLAS_NUM_THREADS':'1','NUMEXPR_NUM_THREADS':'1',
             'VECLIB_MAXIMUM_THREADS':'1','BLIS_NUM_THREADS':'1'}
         from backend.engine.runtime_deadline import execute_owned_process
-        outcome=execute_owned_process([sys.executable,'-I','-B','-X','pycache_prefix='+str(temporary/'bytecode'),'-c',bootstrap,str(request_path),str(output)],
+        command=[sys.executable,'-I','-B','-X','pycache_prefix='+str(temporary/'bytecode'),'-c',bootstrap,str(request_path),str(output)]
+        if proof['frozen']:
+            worker_request=temporary/'worker-request.json'
+            capsule=update._canonical({'schema_version':1,'kind':'owned_frozen_cpu_worker','root':str(root),
+                'request':frame,'backend_proof':proof,'capability':capability})
+            fd=os.open(worker_request,os.O_WRONLY|os.O_CREAT|os.O_EXCL|getattr(os,'O_NOFOLLOW',0),0o600)
+            with os.fdopen(fd,'wb') as writer:writer.write(capsule);writer.flush();os.fsync(writer.fileno())
+            update.migration._sync_directories(temporary,recursive=False)
+            command=[sys.executable,'--owned-application-cpu-worker','--request-file',str(worker_request),
+                '--request-sha256',update._sha(capsule)]
+        outcome=execute_owned_process(command,
             deadline_ms=plan['deadline_ms'],env=environment,cwd=temporary)
         if outcome['status']!='completed' or outcome['returncode']!=0:
             raise ExecutionError('Owned CPU execution failed or timed out; process-tree exit remains unverified')
@@ -457,12 +625,17 @@ def execute_backend(frame, proof, root):
         if update._canonical(after)!=update._canonical(capability): raise ExecutionError('CPU execution source changed')
         raw=update._canonical(result)
         if len(raw)>MAX_RESULT: raise ExecutionError('CPU result exceeds publication bound')
-        path=outputs/(frame['request_id']+'.json'); update._unlinked(path)
-        if path.exists(): raise ExecutionError('Foreign CPU output requires recovery')
-        # Exclusive creation: interrupted output is not silently overwritten.
-        fd=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL|getattr(os,'O_NOFOLLOW',0),0o600)
-        with os.fdopen(fd,'wb') as writer: writer.write(raw);writer.flush();os.fsync(writer.fileno())
-        update.migration._sync_directories(outputs,recursive=False)
+        # Publication and the final original-owner check share the lifecycle
+        # transition admission. Recovery cannot win between the check and a
+        # new public output; the backend lifespan still blocks cutover.
+        with lease._transition_admission(root,frame['nonce']):
+            _live_origin(root,lease._load(root),original)
+            path=outputs/(frame['request_id']+'.json'); update._unlinked(path)
+            if path.exists(): raise ExecutionError('Foreign CPU output requires recovery')
+            # Exclusive creation: interrupted output is not overwritten.
+            fd=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL|getattr(os,'O_NOFOLLOW',0),0o600)
+            with os.fdopen(fd,'wb') as writer: writer.write(raw);writer.flush();os.fsync(writer.fileno())
+            update.migration._sync_directories(outputs,recursive=False)
         _checkpoint('after_cpu_output')
         return {'schema_version':1,'kind':'cpu_execution_completed','request':frame,
             'backend_proof':proof,'output_path':OUTPUTS+'/'+path.name,'output_sha256':update._sha(raw),
@@ -490,7 +663,7 @@ def verify_completion(owner, intent, proof):
             'process':bootstrap['backend_process'],'executable':bootstrap['backend_executable'],
             'executable_sha256':bootstrap['backend_executable_sha256'],
             'build_identity_sha256':bootstrap['backend_build_identity_sha256'],'frozen':bootstrap['backend_frozen']}
-        if (update._canonical(backend)!=update._canonical(expected) or not update._hex(expected['challenge']) or expected['frozen']
+        if (update._canonical(backend)!=update._canonical(expected) or not update._hex(expected['challenge'])
                 or update._canonical(backend)!=update._canonical(owner._authenticated_backend_proof)
                 or update._sha(update._canonical(backend))!=request_['backend_claim_sha256']):
             raise ExecutionError('CPU completion backend epoch/build differs')
@@ -498,7 +671,8 @@ def verify_completion(owner, intent, proof):
         import psutil
         if not _same_identity(process,process['pid']) or psutil.Process(process['pid']).ppid()!=row['process']['pid']:
             raise ExecutionError('Original CPU backend birth or parent changed')
-        _backend_artifact(owner.root,row['binding'],expected['executable'],expected['executable_sha256'],None,False,process['pid'])
+        _backend_artifact(owner.root,row['binding'],expected['executable'],expected['executable_sha256'],
+            expected['build_identity_sha256'],expected['frozen'],process['pid'])
     output=OUTPUTS+'/'+request_['request_id']+'.json'
     if proof['output_path']!=output or proof['runtime_source_sha256']!=plan['runtime_source_sha256']:
         raise ExecutionError('CPU completion output or source path differs')
@@ -514,8 +688,8 @@ def verify_completion(owner, intent, proof):
         'backend_claim_sha256':request_['backend_claim_sha256'],
         'plan_sha256':request_['plan_sha256'],'epoch':bootstrap['epoch'],'main_process':row['process'],
         'backend_process':bootstrap['backend_process'],'backend_executable':bootstrap['backend_executable'],
-        'backend_executable_sha256':bootstrap['backend_executable_sha256'],'backend_frozen':False,
-        'execution_scope':'controlled_source_backend','runtime_source_sha256':plan['runtime_source_sha256'],
+        'backend_executable_sha256':bootstrap['backend_executable_sha256'],'backend_frozen':bootstrap['backend_frozen'],
+        'execution_scope':_scope(bootstrap['backend_frozen']),'runtime_source_sha256':plan['runtime_source_sha256'],
         'workspace_id':request_['workspace_id'],'project_id':request_['project_id'],'scope_key':capability['scope_key'],
         'package_manifest_sha256':plan['package_manifest_sha256'],'graph_sha256':plan['graph_sha256'],
         'checkpoints':plan['checkpoints'],'input_sha256':plan['input_sha256'],'output_path':output,
@@ -578,7 +752,7 @@ def validate_sealed_execution(row, directory):
                 or update._canonical(receipt.get('backend_process'))!=update._canonical(bootstrap['backend_process'])
                 or receipt.get('backend_executable')!=bootstrap['backend_executable']
                 or receipt.get('backend_executable_sha256')!=bootstrap['backend_executable_sha256']
-                or receipt.get('backend_frozen') is not False or receipt.get('execution_scope')!='controlled_source_backend'
+                or receipt.get('backend_frozen') is not bootstrap['backend_frozen'] or receipt.get('execution_scope')!=_scope(bootstrap['backend_frozen'])
                 or receipt.get('runtime_source_sha256')!=plan['runtime_source_sha256']
                 or receipt.get('package_manifest_sha256')!=plan['package_manifest_sha256'] or receipt.get('graph_sha256')!=plan['graph_sha256']
                 or receipt.get('input_sha256')!=plan['input_sha256'] or receipt.get('semantic_output_sha256')!=plan['semantic_output_sha256']
@@ -642,5 +816,5 @@ def inspect_execution(args):
             'database_fence':binding['database_pointer']['fence'],'plan_sha256':pin,
             'receipt_sha256':state['receipt_sha256'] if state else None,
             'actual_cpu_execution_verified':receipt is not None,'owned_backend_execution_origin_verified':receipt is not None,
-            'execution_scope':'controlled_source_backend','worker_process_tree_exit_verified':False,
+            'execution_scope':receipt['execution_scope'] if receipt else _scope(bool(getattr(sys,'frozen',False))), 'worker_process_tree_exit_verified':False,
             'actual_application_inference_verified':False,'native_app_handshake_verified':False,'model_quality_approved':False,'release_ready':False}

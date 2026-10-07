@@ -4860,6 +4860,14 @@
           "receipt_sha256": "029205c91560e43f86ff0daa25694a8d7005e53b0397bb8b427ea4914045a6dc",
           "result": "Current combined84 cases passed with zero skips. Expired staging, recycled exclusive admission and foreign-thread/task readiness are refused; original same-owner writes and predecessor rows remain verified.",
           "scope": "Actual cooperative store/SQLite and controlled bootstrap admission reader; not native descriptor authentication or whole writer/tree/installer acceptance."
+        },
+        {
+          "kind": "source-bound-followup",
+          "source_sha": "fbcdc7aea3cf87ea592b4c3e6fc0e5870187d083",
+          "receipt": "docs/verification/receipts/2026-10-08-staged-source-canary-fbcdc7a.json",
+          "receipt_sha256": "13583e45943713fbb6ea4b85206977f9a31581b7016efd304d4a506b95f742a2",
+          "result": "Current343 backend cases,961 UI cases and actual browser2/Electron1 passed. A private CPU known-image receipt now guards source candidate activation and recovery.",
+          "scope": "Source software execution and real source Electron refusal; compiled candidate, process tree, OS installer and real publisher acceptance remain open."
         }
       ],
       "file_actions": {
@@ -5177,6 +5185,14 @@
           "receipt_sha256": "af5b66a884006b641c02c02b5fa77f0ee9a55d0b4307b68fd64cac2897138952",
           "result": "Current combined source102 Python cases passed with zero skips, including41 new CPU-origin cases;15 bridge/supervisor cases and main/preload typecheck passed. Actual isolated CPU OCR output A and exact retained output hash verified.",
           "scope": "Controlled source fixtures and generated checkpoint, not training provenance/native/frozen/S010 preactivation/quality/process-tree/release acceptance."
+        },
+        {
+          "kind": "source-bound-followup",
+          "source_sha": "fbcdc7aea3cf87ea592b4c3e6fc0e5870187d083",
+          "receipt": "docs/verification/receipts/2026-10-08-live-ocr-ci-race-fbcdc7a.json",
+          "receipt_sha256": "eac5c07f0dde220eacc82114f4fa1599acfce651ce180746538c320577acb961",
+          "result": "Exact prior hosted failure audited. Current33 unique CPU cases qualified across31 initial successes and2 rerun successes; existing review freshness guard retained.",
+          "scope": "Local source gate and workflow selector configuration; a new hosted full run still requires readback."
         }
       ],
       "file_actions": {

@@ -110,7 +110,9 @@ def test_full_build_child_public_api_receives_exact_utf8_arguments(tmp_path, mon
     assert calls[0][0] == sys.executable
     assert len(calls[0]) == 4
     assert len(subprocess.list2cmdline(calls[0]).encode('utf-16-le')) // 2 + 1 < 2048
-    assert received.count('--add-data') == len(build.export_resource_files(snapshot)) + 1
+    assert received.count('--add-data') == len(build.export_resource_files(snapshot)) + 2
+    assert str(snapshot/'scripts/frozen_backend_entry.py')+';scripts' in received
+    assert '--hidden-import=backend.engine.application_launch_execution' in received
     assert '--hidden-import=backend.engine.service_bootstrap' in received
     assert '--collect-all=onnxruntime' in received
     assert '--exclude-module=pytest' in received

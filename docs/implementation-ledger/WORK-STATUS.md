@@ -29,10 +29,10 @@
 | S5-01 | 독립 검사 서비스 | 독립 서비스의 SCM 등록·권한·Session0·재부팅과 실제 장치 검증 필요. |
 | S6-02 | Windows CPU 설치 프로그램 | 현재 Windows unsigned NSIS/portable 빌드·CPU 패키지 실행은 통과. non-admin 설치·제거·SCM 분리와 실제 설치 QA는 미검증/면제. |
 | S6-03 | 선택형 GPU와 runtime pack | pydicom·OpenVINO·CUDA12·CTC의 개별 범위 근거를 유지한다. Studio의 프로젝트별 비활성 설치·별도 pin·실제 변조 거절·재시도·재열기는 clean5284df6 browser2/native3, backend83, renderer907개로 검증했다. 자동 활성화·frozen/native 배포 조합·실 publisher·대표 품질은 별도 조건이다. |
-| S6-04 | 오프라인 설치와 업데이트 | POSIX 앱/DB cutover·복구·기존 home 인수, 영속 controller와 main/backend 인증 handshake를 구현하고 검증했다. 실제 CPU 기준 이미지 실행, 활성 pointer 변경 전 candidate 검사, 전체 process-tree 종료 확인, OS installer adapter와 native packaged positive startup을 이어간다. 실 publisher 서명은 별도 조건이다. |
+| S6-04 | 오프라인 설치와 업데이트 | POSIX 앱/DB cutover·복구·기존 home 인수, 영속 controller와 main/backend 인증 handshake를 구현하고 검증했다. 원래 backend epoch의 source CPU 기준 이미지 실행과 source candidate 활성 pointer 변경 전 검사·복구를 추가 검증했다. 실제 compiled candidate adapter, 전체 process-tree 종료 확인, OS installer adapter와 native packaged positive startup을 이어간다. 실 publisher 서명은 별도 조건이다. |
 | S6-05 | 공개 CI와 source 재현성 | 이전 소스의 hosted 성공·실패를 보존한다. 보호된 수동 candidate 검증 workflow와 source/artifact/환경 정책 gate를 추가했다. 실제 workflow 실행·서명·배포는 하지 않았고, 새 게시 소스의 전체 hosted 결과가 필요하다. |
 | S6-06 | 서명과 릴리스 채널 | 실제 Authenticode/publisher identity·서명 후 byte inventory·채널 승인 필요. |
-| S7-01 | 기존 기능 전체 coverage 계약 | 원래156개 ID를 유지한다. 현재207개 curated action의572개 시나리오 검증,877개 pending이다. 알려진 누락 메뉴/shortcut·남은 시나리오·전체 기능 수락을 이어간다. 행동 수와 전체 기능 완료 수는 다르다. |
+| S7-01 | 기존 기능 전체 coverage 계약 | 원래156개 ID를 유지한다. 현재207개 curated action의575개 시나리오 검증,874개 pending이다. 알려진 누락 메뉴/shortcut·남은 시나리오·전체 기능 수락을 이어간다. 행동 수와 전체 기능 완료 수는 다르다. |
 | S7-02 | 10모델군 실제 작업 시나리오 | 실제5 distinct learned chain은 완료. 10모델군 각각 사람이 검토한 정답과 대표 multi-task recipe 검증 필요. |
 | S7-03 | Windows 실제 설치와 사용 QA | Windows 실제 설치·사용 QA 사용자 면제. hosted Server2025 component 실행을 Win11 실사용 성공으로 세지 않음. |
 | S7-05 | 데이터 규모와 연속 운전 | 실제 browser/native에서10만 메타데이터·실제 이미지3장,3×120 keyset page·최대DOM32·응답120·tail UUID/SHA 재열기·파일 없는 항목 선택 거절을 검증했다. 10만 실제 사진 decode나 target 자원/택트 수락은 아니다. a184b1e의 동일 외장72시간 실행은 유지 중이며 이전 시간을 합산하지 않고 terminal receipt가 필요하다. |
@@ -279,3 +279,9 @@ GitHub run37642522031은 release workflow 파일 검증 단계에서 실패했�
 ## 임시 데이터 영역과 준비 상태의 권한 수명 · 446588e
 
 임시 데이터 영역은 원래의 살아 있는 독점 잠금과 유효한 작업 범위가 함께 있어야 쓸 수 있게 수정했다. 종료한 범위를 새 잠금으로 되살리거나 다른 스레드·비동기 작업이 준비 상태를 대신 승인할 수 없다. 현재 소스 조합의84건 검사가 통과했고 실제 시험 SQLite·프로필 쓰기 보존을 확인했다. 네이티브 인증·전체 writer와 프로세스 계보·설치 adapter 수락은 별도이며 부모69/13·필수11·종합 수락0과 행동575/874는 유지한다. 근거: `../verification/receipts/2026-10-08-privileged-reader-ownership-446588e.json`.
+
+## 활성화 전 기준 이미지 실행·화면 복구와 CI 검토 경합 · fbcdc7a
+
+서명된 source candidate는 검토한 프로젝트3개 pin에 묶인 실제 CPU 기준 이미지 결과가 있어야 DB와 앱 pointer를 바꿀 수 있다. 중앙 게시와 직접 복구에도 같은 검사·봉인 기록을 적용했다. 현재 조합의 backend343건, 화면961건과3개 타입 검사, 실제 browser2/Electron1이 통과했다. 브라우저에서 적용·새 계정과 라벨 보존·중단 복구·재열기를 확인했고 Electron은 미설정 개발 설치를 거절했다. 생성한 OCR checkpoint와 시험 서명이며 실 publisher·compiled candidate·전체 계보·품질 수락은 미검증이다. 근거: `../verification/receipts/2026-10-08-staged-source-canary-fbcdc7a.json`.
+
+이전 hosted CI의2797 통과·1 실패·17 skip을 보존했다. 실패는 실제 학습 reservation heartbeat 뒤에 오래된 검토를 적용한 경우였다. 보호는 유지하고 테스트가 기존12초 checkpoint 안에서 새로 검토하도록 수정했다. 현재31건의 초기 통과와 runner 기록 폴더를 바로잡은2건의 별도 재실행으로33개 고유 case가 확인됐다. 새 전체 hosted 결과는 별도로 읽는다. 부모69/13·필수11·종합 수락0과 행동207개·575/874는 유지한다. 근거: `../verification/receipts/2026-10-08-live-ocr-ci-race-fbcdc7a.json`.

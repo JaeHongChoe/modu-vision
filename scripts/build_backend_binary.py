@@ -42,6 +42,14 @@ OWNED_APPLICATION_LAUNCH_RESOURCES = (
     'backend/engine/application_launch_lease.py',
 )
 OWNED_APPLICATION_LAUNCH_PROTOCOL = 'owned_application_launch_controller_protocol'
+OWNED_APPLICATION_CPU_PROTOCOL = 'owned_application_cpu_execution_protocol'
+OWNED_APPLICATION_CPU_RESOURCES = OWNED_APPLICATION_LAUNCH_RESOURCES + (
+    'backend/engine/application_launch_execution.py',
+    'backend/engine/flow_package_runtime.py',
+    'backend/engine/ocr.py',
+    'backend/engine/runtime_deadline.py',
+    'backend/engine/process_isolation.py',
+)
 
 # Names are distribution/module pairs because wheel and import names differ.
 DEPENDENCIES = (
@@ -68,12 +76,12 @@ def sha256(path):
     return digest.hexdigest()
 
 
-def _launch_protocol_resources(resources):
+def _launch_protocol_resources(resources, names=OWNED_APPLICATION_LAUNCH_RESOURCES):
     """Require one exact checksum row per prerequisite; aliases are not pins."""
     if not isinstance(resources, list):
         raise ValueError('Owned application launch protocol resources are missing')
     pins = {}
-    for name in OWNED_APPLICATION_LAUNCH_RESOURCES:
+    for name in names:
         rows = [row for row in resources if isinstance(row, dict) and row.get('path') == name]
         if len(rows) != 1 or set(rows[0]) != {'path', 'sha256'}:
             raise ValueError('Owned application launch protocol resource differs: '+name)
@@ -140,6 +148,30 @@ def _owned_launch_protocol_available(root, resources):
             and _launch_dispatch_present(raw))
 
 
+def _owned_cpu_protocol_available(root, resources):
+    """The separately versioned worker must precede every mutable fallback."""
+    if not _owned_launch_protocol_available(root, resources): return False
+    try:
+        pins = _launch_protocol_resources(resources, OWNED_APPLICATION_CPU_RESOURCES)
+        for name, digest in pins.items():
+            source = Path(root)/name
+            if source.is_symlink() or not source.is_file() or sha256(source) != digest: return False
+        tree = ast.parse((Path(root)/OWNED_APPLICATION_LAUNCH_RESOURCES[0]).read_bytes())
+        shape = lambda node: ast.dump(node, include_attributes=False)
+        guard = ast.parse("if __name__ == '__main__': pass").body[0].test
+        worker = ast.parse("""if len(sys.argv)>1 and sys.argv[1]=='--owned-application-cpu-worker':
+    from backend.engine.application_launch_execution import frozen_worker_main
+    raise SystemExit(frozen_worker_main(sys.argv[2:]))
+""").body[0]
+        entry = next(node for node in tree.body if isinstance(node, ast.If) and shape(node.test)==shape(guard))
+        # The original controller declaration independently validates its exact
+        # prefix. The new worker is its immediate successor, before diagnostics,
+        # ordinary bootstrap, or any additional command dispatcher.
+        positions = [i for i,node in enumerate(entry.body) if shape(node)==shape(worker)]
+        return positions == [2] and shape(entry.body[0])==shape(ast.parse('multiprocessing.freeze_support()').body[0])
+    except (ValueError, SyntaxError, OSError, StopIteration): return False
+
+
 def dependency_inventory(root: Path, *, supplier_manifest=None) -> dict:
     from packaging.requirements import Requirement
     root = Path(root)
@@ -179,6 +211,8 @@ def dependency_inventory(root: Path, *, supplier_manifest=None) -> dict:
         # This declares the fixed bootstrap interface, never native startup,
         # process-tree exit, inference, publisher, or release acceptance.
         inventory[OWNED_APPLICATION_LAUNCH_PROTOCOL] = 1
+    if _owned_cpu_protocol_available(root, inventory['resources']):
+        inventory[OWNED_APPLICATION_CPU_PROTOCOL] = 1
     if supplier_manifest is not None:
         from scripts.package_license_texts import _supplier_licenses,_read
         source=Path(supplier_manifest).absolute();suppliers=_supplier_licenses(source)
@@ -189,6 +223,13 @@ def dependency_inventory(root: Path, *, supplier_manifest=None) -> dict:
 
 
 def validate_inventory(inventory):
+    if OWNED_APPLICATION_CPU_PROTOCOL in inventory:
+        if (type(inventory[OWNED_APPLICATION_CPU_PROTOCOL]) is not int
+                or inventory[OWNED_APPLICATION_CPU_PROTOCOL] != 1
+                or type(inventory.get(OWNED_APPLICATION_LAUNCH_PROTOCOL)) is not int
+                or inventory[OWNED_APPLICATION_LAUNCH_PROTOCOL] != 1):
+            raise ValueError('Unsupported owned application CPU execution protocol declaration')
+        _launch_protocol_resources(inventory.get('resources'), OWNED_APPLICATION_CPU_RESOURCES)
     if OWNED_APPLICATION_LAUNCH_PROTOCOL in inventory:
         protocol = inventory[OWNED_APPLICATION_LAUNCH_PROTOCOL]
         if type(protocol) is not int or protocol != 1:
@@ -241,6 +282,7 @@ def pyinstaller_command(root: Path, output: Path, target: str) -> list[str]:
     separator = ';' if target == 'Windows' else ':'
     for source, destination in export_resource_files(root):
         command.extend(['--add-data', f'{source}{separator}{destination}'])
+    command.extend(['--add-data', f'{root / "scripts" / "frozen_backend_entry.py"}{separator}scripts'])
     command.extend(['--add-data', f'{output / ".build" / "backend-build-inventory.json"}{separator}.'])
     command.append(str(root / 'scripts' / 'frozen_backend_entry.py'))
     return command

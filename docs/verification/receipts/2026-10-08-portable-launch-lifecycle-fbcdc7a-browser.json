@@ -1,0 +1,33 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "fbcdc7aea3cf87ea592b4c3e6fc0e5870187d083",
+  "source_dirty": false,
+  "test": "scripts/e2e/portable-update-review.spec.ts::controlled launch lifecycle UI preserves response-loss readback and durable state across reopening",
+  "test_source_sha256": "87579d5b61650e882ca2506889002e7d4e3360afdfac884a4154b94942ccad29",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "d9c1befe51bb3f576659d32d390e852cbe539b74b0eb8b322489ace59c7540dc",
+  "harness_sha256": "341f8570c09cc3a0ad28ad964bea1fdfd8423d66010162b2ef3438cc4a99f100",
+  "teardown_sha256": "1b52624f891278f526eadc7e362dea3e1367a0430c44d10f3366cf6a8a530e14",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "acbd8fb7c5cebf145e3df6203721a071727fda6dee5d43542b8f028c900085ab"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "176491f8a349914c1005126ce6bb2461e02293aa70ea5aef2ff015637def3635"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Exact clean committed-source GUI case only. Browser portable update executes real source CPU math with generated OCR checkpoint and disposable signature; browser launch lifecycle uses controlled CLI responses; actual Electron verifies unprovisioned refusal. No provisioned native, publisher, whole-tree, quality or release acceptance."
+}

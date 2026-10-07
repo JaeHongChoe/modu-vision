@@ -214,7 +214,6 @@ def _cpu_capability(args, root):
     values=[getattr(args,name,None) for name in ('cpu_known_image_workspace_id','cpu_known_image_project_id','cpu_known_image_plan_sha256')]
     if not any(value is not None for value in values):return None
     if any(value is None for value in values) or args.inspect:raise HandshakeError('CPU known-image request requires all pins and a new owned launch')
-    if getattr(sys,'frozen',False):raise HandshakeError('requires_target: fixed frozen CPU worker is not qualified')
     from backend.engine.application_launch_execution import admit_plan
     return admit_plan(root,*values)
 
@@ -225,7 +224,6 @@ def execute_cpu(owner, capability):
     with lease._transition_admission(owner.root,owner.nonce):
         row=owner._owned();owner._binding(row);owner._live(row,row['process'])
         bootstrap=update._json(update._read(owner.root/lease.LEASES/owner.nonce/'bootstrap-receipt.json'))
-        if bootstrap['backend_frozen']:raise HandshakeError('requires_target: fixed frozen CPU worker is not qualified')
         request=execution.request(owner,capability,bootstrap['epoch'])
     intent=owner._begin_cpu_execution(request,capability)
     send_frame(owner._bootstrap_channel,request)

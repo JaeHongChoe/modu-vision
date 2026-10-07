@@ -144,3 +144,31 @@ def test_current_checkout_declares_exact_controller_bootstrap_resources(monkeypa
         rows = [row for row in inventory['resources'] if row['path'] == name]
         assert rows == [{'path': name, 'sha256': hashlib.sha256((ROOT/name).read_bytes()).hexdigest()}]
     build.validate_inventory(inventory)
+
+
+@pytest.mark.parametrize('change', ['old', 'dormant', 'wrong-target', 'late', 'missing-resource', 'duplicate-resource', 'float'])
+def test_cpu_protocol_is_distinct_and_cannot_probe_older_or_forged_inventory(tmp_path,monkeypatch,change):
+    root=checkout(tmp_path,monkeypatch)
+    worker="""    if len(sys.argv)>1 and sys.argv[1]=='--owned-application-cpu-worker':
+        from backend.engine.application_launch_execution import frozen_worker_main
+        raise SystemExit(frozen_worker_main(sys.argv[2:]))
+"""
+    entry=DISPATCH.replace('    from backend.engine.application_launch_handshake',worker+'    from backend.engine.application_launch_handshake')
+    for name in build.OWNED_APPLICATION_CPU_RESOURCES:
+        path=root/name;path.parent.mkdir(parents=True,exist_ok=True)
+        if not path.exists():path.write_text('# CPU protocol prerequisite fixture\n')
+    if change=='old':entry=DISPATCH
+    elif change=='dormant':entry=DISPATCH+'\ndef unused():\n'+worker
+    elif change=='wrong-target':entry=entry.replace('application_launch_execution import frozen_worker_main','flow_package_runtime import frozen_worker_main')
+    elif change=='late':entry=DISPATCH+worker
+    (root/PATHS[0]).write_text(entry)
+    field=build.OWNED_APPLICATION_CPU_PROTOCOL
+    if change=='missing-resource':(root/build.OWNED_APPLICATION_CPU_RESOURCES[-1]).unlink()
+    inventory=build.dependency_inventory(root)
+    if change in {'old','dormant','wrong-target','late','missing-resource'}:
+        assert field not in inventory
+    else:
+        assert inventory[field]==1
+        if change=='float':inventory[field]=1.0
+        else:inventory['resources'].append(copy.deepcopy(next(row for row in inventory['resources'] if row['path']==build.OWNED_APPLICATION_CPU_RESOURCES[-1])))
+        with pytest.raises(ValueError):build.validate_inventory(inventory)

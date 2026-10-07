@@ -1,0 +1,90 @@
+{
+  "schema": "modu-vision.live-ocr-ci-review-race/v1",
+  "source_sha": "fbcdc7aea3cf87ea592b4c3e6fc0e5870187d083",
+  "source_bindings": {
+    "backend/tests/test_live_specialist_control.py": "5470e6ecc98981a41d41383d5d63c6975ed5cf2bf40bddd7a1c72f7d9cd1446d",
+    ".github/workflows/ci.yml": "09a311830408ab99b44316c5779be8ebb96ef306c975cc25cba437fc55f3925e"
+  },
+  "independent_freeze_sha256": "d8c7ebfb2ac41912cd4f9969c057cac18c7c117c57dabf37bca1c80dbe9bf315",
+  "independent_review_sha256": "0b6432040b8ca5a5d138f3c8aefe59c3afc487f19cacbdd52841216d523c0d56",
+  "hosted_prior_failure": {
+    "run_id": 37661834730,
+    "source_sha": "f608adc63723c07284a3d3eb4307d1d30deea80e",
+    "passed": 2797,
+    "failed": 1,
+    "skipped": 17,
+    "cause": "A real reservation heartbeat changed source after preview. Stale review refusal is required and preserved.",
+    "audit_sha256": "c8c377ce096412e1989ba0307f08783226cfe16968917ccefaf9f3a1b8d84adf",
+    "failed_log_sha256": "616b35bea822b7e39953b5edebcbdb466fa8364263212f2ef20efd6e49b25812"
+  },
+  "root_gate": {
+    "unique_qualified_cases": 33,
+    "initial_passed": 31,
+    "initial_runner_artifact_directory_failures": 2,
+    "focused_rerun_passed": 2,
+    "focused_rerun_skipped": 0,
+    "one_33_case_green_invocation": false,
+    "rerun_command_sha256": "0465880da3dd94a38d492491646eb3457809f37d26806a9dfde77c8c8f6570f2",
+    "rerun_xml_sha256": "6141829b1d37242f52bbe2b148a712967474d4c0fad156596ba6754c88b474f5"
+  },
+  "actual_cpu_receipts": [
+    {
+      "review_race": "natural",
+      "actual_cpu_training": true,
+      "epochs_completed": 2,
+      "attempt_count": 1,
+      "worker_relaunches": 0,
+      "model_sha256": "30b3207e75da5f44add4f3f5180430aaa29c4554a6c8762121931643c8d571a4",
+      "stale_review_refusals": [],
+      "review_attempts": [
+        {
+          "source_sha256": "53d31d7cb8683709b9a93c4c3d50c86eadec519b8315c8e191ceadc22411929f",
+          "returncode": 0
+        }
+      ],
+      "quality_approved": false,
+      "execution_sha256": "8753d0ae7dd641cf6829215394f55918faa2eda5c00ff722e55d81e726efc89b"
+    },
+    {
+      "review_race": "heartbeat_after_preview",
+      "actual_cpu_training": true,
+      "epochs_completed": 2,
+      "attempt_count": 1,
+      "worker_relaunches": 0,
+      "model_sha256": "ba8155932d5a4954cbda0024d9bfaa53c038c3854eff094bc75c937454a2c5b3",
+      "stale_review_refusals": [
+        "02f829192dc9f4870e0f5857f3bd51195a271c8d33eacac32b45e852a1356be3"
+      ],
+      "review_attempts": [
+        {
+          "source_sha256": "02f829192dc9f4870e0f5857f3bd51195a271c8d33eacac32b45e852a1356be3",
+          "returncode": 1
+        },
+        {
+          "source_sha256": "154be8594db2e0d9c3df53852e323313f52e9e4220e38d821ee88ab88334517f",
+          "returncode": 0
+        }
+      ],
+      "quality_approved": false,
+      "execution_sha256": "ac1ad1919e9d8bc2b0fbc8727ad690b5023fbe0c6af51dab25739d44054c7949"
+    }
+  ],
+  "repair": "Only the live OCR test renews its review after the exact stale-source refusal, within its original12-second checkpoint window and30-second maximum runtime. Other refusals fail. No production CAS, heartbeat, reservation or uncertain-state guard was relaxed.",
+  "source_ci_selectors_added": [
+    "staged_update_canary",
+    "application_launch_execution",
+    "application_launch_controller",
+    "application_launch_lease",
+    "application_launch_handshake",
+    "live_update_inspection",
+    "owned_launch_build_inventory",
+    "pyinstaller_command_boundary",
+    "migration_guard_writer_ownership",
+    "privileged_reader_ownership"
+  ],
+  "source_ci_config_gate_xml_sha256": "7cb82400866bc1b0505c19186018cbd52b8c1ad2cf6a7cf0abf6c78fe7a53439",
+  "current_hosted_run_verified": false,
+  "native_or_gpu_acceptance": false,
+  "model_quality_approved": false,
+  "release_ready": false
+}

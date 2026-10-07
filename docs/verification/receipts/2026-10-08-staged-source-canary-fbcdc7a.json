@@ -1,0 +1,218 @@
+{
+  "schema": "modu-vision.staged-source-canary-and-ui/v1",
+  "source_sha": "fbcdc7aea3cf87ea592b4c3e6fc0e5870187d083",
+  "source_bindings": {
+    "backend/engine/global_migration.py": "0e9fbd9784f66e6604d5510797d5068c7f77c9d3d9e7cda0b4f53139498b1ac6",
+    "backend/engine/runtime_update.py": "79bc948382a8dd1426ffbd869ed120052418e3ea09e1ce4134b82e4f12d8d654",
+    "backend/engine/staged_update_canary.py": "7eadcfdddc4c9a17d692bc5d96c80e6e3ed9b06cee56b7927cb225d55654144f",
+    "backend/tests/test_service_s6_04.py": "8c80a22a2d91515053cb98b6c4d0d7e9937e2904232c5be718e8df9ab152d029",
+    "backend/tests/test_staged_update_canary.py": "21b3211802a324aa96a73ba0c81e93d41d4dc7bb1cdbf12e969bd3fbc542ce1c",
+    "src/main/portableUpdate.ts": "7c56dc81214e5d8900174a2b0f93d1dabe66b22e0f700fa96f4a960ea3b5233e",
+    "src/main/portableUpdate.test.cjs": "ab545c8d2fd2280db72b4e0cb8af0bd5fd3cc1695475a1fa82622b12be2fd055",
+    "src/main/ipc.ts": "4eab34ca71b80c665efda2bb8a32766442095e46fe014022069b22cb4043e224",
+    "src/preload/index.ts": "71a458c4af7822c81894f6f2b5e2ebd17cf4e95a14c5dbc4bfe98b3a875ea562",
+    "src/types/electron.d.ts": "fe2abd0ef37d3e72ed3b984200dc312d7a0be24d7ca0b5331328d0a8e26181e9",
+    "src/renderer/services/hostAdapter.ts": "f1776e473ca9f46565e8b1ad6ed3ed0df2362a4ca351911ffec7aa80640f6d0c",
+    "src/renderer/services/hostAdapter.test.cjs": "ca11236fc292c704b0e5a4bec11ef3396225593b07676e14c81848077c8859b8",
+    "src/renderer/components/runtime/PortableUpdatePanel.tsx": "4f747509c427ab35d41745d3da7f26e50a3c3f3a93acdca35beb5fee9145796b",
+    "src/renderer/components/runtime/PortableUpdatePanel.test.cjs": "ecd9957e4a2d98d3e875e6aa42e173450992f4ed27dd470b0a0a78f5bce996db",
+    "backend/tests/test_native_update_layout.py": "4031f861a59710c9d77f31041f868f815e69a6c4317ae8b3a372d270a6bf4903",
+    "backend/tests/test_portable_update_review.py": "5037e36176d398b4c5c0429ffa50417517c20527bf2be660a40177dcc48b8cc9",
+    "backend/tests/test_application_launch_lease.py": "6a6cf9f2d17b5373ff57766269d07a0abef6d973f245fc1320fbe61ac9756938",
+    "backend/tests/test_application_launch_handshake.py": "898fb77bc5ffbaee84ef3e6d10766ea60e18e9c3f5874ae28fe37f8787827e25",
+    "backend/tests/test_application_launch_controller.py": "e3d2eee84f6d91e8ff44104edb533ac5cc04778cecd8676bcbd77a18978765bb",
+    "backend/tests/test_live_update_inspection.py": "8fc8f2e27e1fe54a20bfa97c2adafd788aeeae53d027eabfc8437029d0780cd2",
+    "backend/tests/test_application_launch_execution.py": "a9d64631cf95aab8abd3ec9291f3b92e6e189162acaf1b545eb26f5af84ad125",
+    "scripts/e2e/portable-update-review.spec.ts": "87579d5b61650e882ca2506889002e7d4e3360afdfac884a4154b94942ccad29"
+  },
+  "independent_freezes": {
+    "staged_backend": "80e69bcec0d37ca9bbd0a01b6c05529a35306b8dab3833a94539a6afc9f9e42c",
+    "main_renderer": "267fddac6a3be4a782fbec36a980d9b3df2cd999b8b52027646c8d910ce3eea4",
+    "root_consumers_and_gui": "a0a7f663fd9185f8a36a4b57d6c2c758d3158a6d118ce75cb77b525461b0204e"
+  },
+  "root_backend_gate": {
+    "passed": 343,
+    "failed": 0,
+    "skipped": 0,
+    "tracked_inputs_unchanged": 2115,
+    "seconds": 706.4446002920158,
+    "xml_sha256": "4ba28f225f8e6a205c4626a9b8e6f4c1023d5543ccd3fa497d903163276a04e5",
+    "log_sha256": "aa61751e35954eb8e35c9d607c06a00e9f83e510e15612dab23615f4dad904c8"
+  },
+  "root_ui_gate": {
+    "node_passed": 961,
+    "node_failed": 0,
+    "node_skipped": 0,
+    "renderer_main_e2e_types_exit": [
+      0,
+      0,
+      0
+    ],
+    "commands_sha256": "554c96b17b9ec91b051547d29f23fba6ec706c3558073521449f5d35b28efc12",
+    "log_sha256": "877f973c771772fca3d875f167a5aeb67f74174ba3f8ef80fbbf584138e5acaa"
+  },
+  "actual_gui": [
+    {
+      "mode": "browser",
+      "result": "pass",
+      "manifest_sha256": "4ce1eaf50844926a5145a0b9d9a42c235376e88d74feffca75104489645c7834",
+      "teardown_sha256": "4f3a900f90a3a2e3493e3ea280997e2f3dd92278df16b11543f35f3c213651fa",
+      "scope": {
+        "actual_main_manager": true,
+        "actual_python_signed_update_and_forward_recovery": true,
+        "commands": [
+          "inspect",
+          "preview",
+          "install",
+          "inspect",
+          "preview",
+          "install",
+          "inspect",
+          "inspect",
+          "recover",
+          "inspect",
+          "inspect",
+          "inspect",
+          "recover",
+          "inspect",
+          "preview",
+          "install",
+          "inspect",
+          "inspect",
+          "recover",
+          "inspect",
+          "preview",
+          "install",
+          "inspect",
+          "inspect",
+          "recover",
+          "inspect",
+          "inspect"
+        ],
+        "source_changed_after_review_refused": true,
+        "controlled_application_entrypoint_executed": true,
+        "new_user_preserved": true,
+        "labels_preserved": true,
+        "database_fence": 2,
+        "pre_database_abort_reopens_prior_pair": true,
+        "post_database_finish_reopens_new_pair": true,
+        "post_database_abort_absent": true,
+        "controlled_child_exit_boundaries": [
+          "before_database",
+          "after_database"
+        ],
+        "actual_staged_source_cpu_canary": true,
+        "generated_ocr_checkpoint": true,
+        "canary_semantic_output": {
+          "defective_roi_count": 0,
+          "final_verdict": "OK",
+          "recognized_texts": [
+            "A"
+          ],
+          "roi_count": 1,
+          "routed_output_node_id": "output"
+        },
+        "canary_runtime_execution": {
+          "cpu_threads": 1,
+          "deadline_ms": 30000,
+          "device": "cpu",
+          "elapsed_ms": 8458.863,
+          "isolated_process": true,
+          "pid": 80188
+        },
+        "physical_power_loss": false,
+        "native_signatures": "controlled output only; not real publisher acceptance",
+        "renderer_host": "browser with controlled bridge",
+        "native_electron": false,
+        "windows": false,
+        "model_quality_approved": false,
+        "release_ready": false
+      },
+      "screenshots": [
+        {
+          "name": "portable-update-reopen-new-writes.png",
+          "sha256": "14ad825900908212d0bf191106101044b46ec0735be12f58bba55541d791aa34"
+        },
+        {
+          "name": "portable-update-interruption-finish-reopen.png",
+          "sha256": "81354e80ec057069d3a05b93566280be49c486a028fd16488be8a4da34f84ada"
+        }
+      ]
+    },
+    {
+      "mode": "browser",
+      "result": "pass",
+      "manifest_sha256": "9962a27e0d2be62c57963f37a668ba5e4deb3390f9f789aa170fbf03a97e06a1",
+      "teardown_sha256": "4f3a900f90a3a2e3493e3ea280997e2f3dd92278df16b11543f35f3c213651fa",
+      "scope": {
+        "actual_browser_renderer": true,
+        "actual_main_manager": true,
+        "controlled_cli_and_signature_responses": true,
+        "persistent_controller_executed": false,
+        "native_application_executed": false,
+        "launch_requests": 1,
+        "launch_inspections": 4,
+        "response_loss_not_retried": true,
+        "reselection_restores_durable_readback": true,
+        "update_and_recovery_blocked_while_launch_unresolved": true,
+        "actual_inference": false,
+        "real_publisher_acceptance": false,
+        "release_ready": false
+      },
+      "screenshots": [
+        {
+          "name": "portable-launch-response-loss-no-retry.png",
+          "sha256": "4f4b22aeeab5173cceb8b1249bc45e18fe9772be87b0a2b0f4669c2e7e9c1b1a"
+        },
+        {
+          "name": "portable-launch-reopened-recovery-no-retry.png",
+          "sha256": "89f34e20960780036a5f2d6f20d3bdf92979c357cc401f5dccd51763e849dc3f"
+        }
+      ]
+    },
+    {
+      "mode": "electron",
+      "result": "pass",
+      "manifest_sha256": "062ac09a091a691b9f7c0ebbe314f93206fee6fc632002459dca9599d5efc172",
+      "teardown_sha256": "a08f63d6c834c177c360d34c4f7877d8783f32d968707bbd8ac203e6cccbc817",
+      "scope": {
+        "actual_electron_main_preload_renderer": true,
+        "unprovisioned_development_refused": true,
+        "directory_dialog_opened": false,
+        "installation_or_database_modified": false,
+        "real_signed_installation_qualified": false
+      },
+      "screenshots": [
+        {
+          "name": "native-portable-unprovisioned-refusal.png",
+          "sha256": "062c347838bacc41d8018c8849f0d1bb453bc08a6aec609d9cacb9e8706b2071"
+        }
+      ]
+    }
+  ],
+  "implementation": "Three reviewed project pins bind a one-use source CPU canary to signed candidate bytes and private known-image inputs. Central database and app publication, forward recovery and direct recovery require its sealed receipt. Expired reviews and retained old UI callbacks cannot apply. Changed or unsupported runtime candidates are refused before staging.",
+  "qualification": {
+    "actual_staged_source_cpu_math": true,
+    "actual_browser_apply_and_recovery": true,
+    "actual_source_electron_unprovisioned_refusal": true,
+    "candidate_main_launch_verified": false,
+    "native_application_verified": false,
+    "frozen_backend_verified": false,
+    "owned_backend_execution_origin_verified": false,
+    "worker_process_tree_exit_verified": false,
+    "model_quality_verified": false,
+    "real_publisher_approved": false,
+    "release_ready": false
+  },
+  "limits": [
+    "Generated OCR checkpoint and disposable signing identity qualify software execution only.",
+    "The browser uses a controlled bridge and inert application entrypoint; its first case executes real source CPU math. The other lifecycle case uses controlled CLI responses.",
+    "Electron verifies the real main/preload/renderer refusal path, not a provisioned signed installation.",
+    "After the343-case backend gate, only the e2e observer wait changed to the existing120-second CLI budget. The fixed30-second CPU worker deadline stayed unchanged; all3 GUI cases then passed with zero retries.",
+    "Backend343, UI961 and GUI3 are separate gates; they are not a new entire hosted-source run. Separate later deltas are the locally qualified live OCR test, workflow selectors and evidence documents. The22 declared slice files match every frozen copy."
+  ],
+  "parent_implementation_verified": 69,
+  "parent_implementation_pending": 13,
+  "required_pending": 11,
+  "accepted_parents": 0
+}

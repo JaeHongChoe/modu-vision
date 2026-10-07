@@ -91,6 +91,9 @@ if __name__ == '__main__':
     if len(sys.argv)>1 and sys.argv[1]=='--owned-application-launch-controller':
         from backend.engine.application_launch_controller import main
         raise SystemExit(main(sys.argv[2:]))
+    if len(sys.argv)>1 and sys.argv[1]=='--owned-application-cpu-worker':
+        from backend.engine.application_launch_execution import frozen_worker_main
+        raise SystemExit(frozen_worker_main(sys.argv[2:]))
     if sys.argv[1:] == ['--backend-diagnostics']:
         raise SystemExit(diagnostics())
     if len(sys.argv)>1 and sys.argv[1] in ('--flow-package-runner','--flow-package-worker'):
