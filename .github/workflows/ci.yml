@@ -50,6 +50,7 @@ jobs:
         run: |
           npm run typecheck
           npm run typecheck:e2e
+          node scripts/verify-supervisor.js --owned-bootstrap-order
           npm run test:renderer
           npm run build
           npm run test:e2e:harness

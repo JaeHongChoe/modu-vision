@@ -4988,6 +4988,14 @@
           "receipt_sha256": "2a23e02a4f285ab4138aee550fe3d2a942f84b0f8627a755f7b21db54e077d96",
           "result": "Exact339 source/335 exported resource pins,11729files/95links independently rehashed; compiled A/OK sealed before both pointers and original-installer exit readback/replay refusal verified. Five distinct successful observations; first cold30s timeout retained separately.",
           "scope": "Staged compiled worker software proof only. Native app bootstrap, cold latency, complete tree, installed upgrade, publisher, model quality and whole acceptance remain false."
+        },
+        {
+          "kind": "original-owned-bootstrap-before-http-health-budget",
+          "source_sha": "cbe56a469731cd51c6d77d53401a8aba01e24d0e",
+          "receipt": "docs/verification/receipts/2026-10-08-owned-bootstrap-order-cbe56a4.json",
+          "receipt_sha256": "b50507eaad9cb4d9ce73cc3bfb86a73ba98b621b3008a5e019660e687b6795c5",
+          "result": "Actual native diagnostic located startup-order failure; original-source red2 then green2, renderer/main types and20 CI contracts passed with2165 same tracked inputs. CI now executes the2 exact supervisor-source regressions.",
+          "scope": "Source repair with controlled child handles and real local HTTP only; actual new frozen native gate, installed target, OS adapter, signing, latest hosted CI and whole acceptance remain pending."
         }
       ],
       "file_actions": {
@@ -5010,7 +5018,7 @@
       },
       "proposed_test_file": "backend/tests/test_service_s6_04.py",
       "remaining": [
-        "Persistent controller, early main/backend generation binding, declared frozen dispatcher protocol and durable GUI readback are implemented and source-fixture qualified. Actual packaged descriptor retention/startup, same-backend known-image execution, qualification-S010 pre-cutover canary, whole writer/process-tree reconciliation, OS installer adapters, real publisher and installed native acceptance remain pending."
+        "Persistent controller, early main/backend generation binding, frozen dispatcher protocol and source GUI readback are implemented. Coherent4 compiled pre-cutover CPU canary has five distinct successful observations with the first cold missing-FD timeout retained; installed live upgrade is not accepted. Original owned-bootstrap-before-health ordering is source-qualified; actual packaged descriptor/startup and same-backend native known-image execution are under qualification. Whole writer/process-tree reconciliation, OS installer adapters, real publisher and installed native acceptance remain pending."
       ]
     },
     {
@@ -5313,6 +5321,14 @@
           "receipt_sha256": "eac5c07f0dde220eacc82114f4fa1599acfce651ce180746538c320577acb961",
           "result": "Exact prior hosted failure audited. Current33 unique CPU cases qualified across31 initial successes and2 rerun successes; existing review freshness guard retained.",
           "scope": "Local source gate and workflow selector configuration; a new hosted full run still requires readback."
+        },
+        {
+          "kind": "original-owned-bootstrap-before-http-health-budget",
+          "source_sha": "cbe56a469731cd51c6d77d53401a8aba01e24d0e",
+          "receipt": "docs/verification/receipts/2026-10-08-owned-bootstrap-order-cbe56a4.json",
+          "receipt_sha256": "b50507eaad9cb4d9ce73cc3bfb86a73ba98b621b3008a5e019660e687b6795c5",
+          "result": "Actual native diagnostic located startup-order failure; original-source red2 then green2, renderer/main types and20 CI contracts passed with2165 same tracked inputs. CI now executes the2 exact supervisor-source regressions.",
+          "scope": "Source repair with controlled child handles and real local HTTP only; actual new frozen native gate, installed target, OS adapter, signing, latest hosted CI and whole acceptance remain pending."
         }
       ],
       "file_actions": {

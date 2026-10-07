@@ -375,3 +375,10 @@ compiled canary의 닫힌 protocol2/worker8개 필드를 화면 bridge에서 검
 - 실제 compiled4 바이너리에서 A/OK·ROI1개·결함0개를 두 pointer 변경 전에 봉인하고 원래 installer 종료 이후 같은 receipt를 읽었다. 다른 parent의 capsule 재실행은 private bytes를 바꾸지 않고 거절했다. 1ms deadline은 기존 pair와 복구 기록을 보존하며 finish/abort 재실행을 거절했다.
 - 최초 cold missing-FD 호출은30초 제한을 넘겼다. 동일 소스·fixture·30초로 수행한 재시도가 통과했다. 최초3pass/1fail과 이후2pass를 각각 보존하고5개 고유 케이스 성공 관찰로 집계하며, 한 번의 전부 성공 실행이나 cold 시작 성능으로 표시하지 않는다.
 - root가339개 소스와335개 exported resource,11729개 artifact file·95개 link를 독립적으로 다시 읽었다. null prior pair·inert main인 임시 설치 fixture이며 실제 Electron/native bootstrap·전체 tree·실사용 설치·publisher·사람 품질·전체 수락을 대신하지 않는다. 부모 구현69/13은 유지한다.
+
+
+## 2026-10-08 실제 앱 시작 순서 실패 수정
+
+- frozen native 실행의 descriptor EOF를 보존하고, 별도 private 진단에서 원래 backend binding이 완료되기 전에15초 HTTP health 검사가 시작해 종료된 것을 확인했다. 같은 bind promise를 먼저 기다리도록 순서만 바꿨다. port180초·bootstrap210초·health15초와 권한·인증·종료 조건은 유지했다.
+- 실제 supervisor source를 transpile한 회귀2개는 수정 전 실패하고 수정 후 통과했다. root의 renderer/main typecheck와 기존 CI 계약20개도 통과했으며2165 tracked inputs는 전후 동일했다. CI에 이 회귀 명령을 추가했다. child는 통제된 handle이고 HTTP는 실제 loopback이며 실제 native 성공으로 세지 않는다.
+- 새 frontend 묶음과 같은 coherent4 backend의 실제 frozen-controller 실행은 별도 검증 중이다. 설치·publisher·전체 프로세스 트리·최신 hosted CI·부모 전체 수락은 여전히 pending이다.

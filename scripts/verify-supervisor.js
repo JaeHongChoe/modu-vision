@@ -214,7 +214,131 @@ async function testCompiledSupervisorClass() {
   console.log('[PASS] BackendSupervisor.stop() shut down daemon cleanly');
 }
 
+async function testOwnedBootstrapOrdering(completion) {
+  const assert = require('node:assert/strict');
+  const { EventEmitter } = require('node:events');
+  const { PassThrough } = require('node:stream');
+  const ts = require('typescript');
+  const source = path.join(PROJECT_ROOT, 'src/main/supervisor.ts');
+  const compiled = ts.transpileModule(fs.readFileSync(source, 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true },
+  }).outputText;
+  const events = [];
+  let requests = 0;
+  const server = http.createServer((req, res) => {
+    requests++;
+    assert.equal(req.url, '/health');
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'ok', version: 'controlled', device: 'cpu', device_name: 'controlled' }));
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const port = server.address().port;
+  const child = new EventEmitter();
+  child.pid = completion === 'resolve' ? 12001 : 12002; // Modeled handles; no OS process or signal.
+  child.exitCode = child.signalCode = null;
+  child.killed = false;
+  child.stdin = new PassThrough(); child.stdout = new PassThrough(); child.stderr = new PassThrough();
+  child.stdio = [child.stdin, child.stdout, child.stderr, new PassThrough()];
+  child.kill = signal => {
+    events.push('modeled-stop:' + signal);
+    setImmediate(() => { child.exitCode = 0; child.emit('exit', 0, null); });
+    return true;
+  };
+  if (process.platform === 'win32') child.stdin.once('finish', () => child.kill('controlled-stdin-eof'));
+  let release, reject, settled = false;
+  const bootstrap = new Promise((resolve, refuse) => { release = resolve; reject = refuse; });
+  let portObserved;
+  const discovered = new Promise(resolve => { portObserved = resolve; });
+  const artifact = { sha256: 'a'.repeat(64), build: 'b'.repeat(64) };
+  const executable = path.join(os.tmpdir(), 'controlled-owned-backend');
+  let spawns = 0, refusals = 0, binds = 0;
+  const owned = {
+    projects: path.join(os.tmpdir(), 'controlled-projects'), auth: path.join(os.tmpdir(), 'controlled-auth'),
+    executable: file => { assert.equal(file, executable); return artifact; },
+    backendEnvironment: env => ({ ...env, VISION_APPLICATION_BACKEND_FD: '3' }),
+    bindBackend: (proc, file, build) => {
+      assert.equal(proc, child); assert.equal(file, executable); assert.equal(build, artifact.build);
+      binds++; events.push('bootstrap-pending'); return bootstrap;
+    },
+    refuse: () => { refusals++; events.push('refused'); },
+  };
+  const originalChildProcess = require('node:child_process');
+  const fixtureRequire = name => {
+    if (name === 'child_process') return { ...originalChildProcess, spawn: (file, args, options) => {
+      assert.equal(file, executable); assert.deepEqual(options.stdio, ['pipe', 'pipe', 'pipe', 'pipe']);
+      assert.ok(args.includes('--shared-auth-dir')); assert.equal(options.env.VISION_APPLICATION_BACKEND_FD, '3');
+      spawns++; setImmediate(() => child.stdout.write('VISION_AI_STUDIO_PORT=' + port + '\n')); return child;
+    } };
+    if (name === 'electron') return { app: { isPackaged: true, getPath: () => os.tmpdir(), getVersion: () => 'controlled' } };
+    return require(name);
+  };
+  const loaded = { exports: {} };
+  new Function('require', 'module', 'exports', '__filename', '__dirname', compiled)(
+    fixtureRequire, loaded, loaded.exports, source, path.dirname(source));
+  const { BackendSupervisor } = loaded.exports;
+  BackendSupervisor.prototype.registerProcessHooks = () => {}; // This fixture has no real child handles.
+  const supervisor = new BackendSupervisor({ ownedApplicationLaunch: owned });
+  supervisor.resolveStandaloneBinary = () => executable;
+  supervisor.getAppRoot = () => os.tmpdir();
+  supervisor.getBackendWorkingDirectory = () => os.tmpdir();
+  const originalDiscovery = supervisor.discoverPort.bind(supervisor);
+  supervisor.discoverPort = async (proc, budget) => {
+    assert.equal(budget, 180000); const result = await originalDiscovery(proc, budget);
+    events.push('port'); portObserved(); return result;
+  };
+  const originalHealth = supervisor.pollHealth.bind(supervisor);
+  supervisor.pollHealth = (...args) => {
+    assert.equal(args[2], 15000); events.push('health-start'); return originalHealth(...args);
+  };
+  const startup = supervisor.startBackend().then(value => ({ value }), error => ({ error }));
+  try {
+    await discovered;
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(binds, 1);
+    assert.equal(supervisor.isHealthy(), false);
+    if (completion === 'resolve') {
+      assert.ok(!events.includes('health-start'), 'Health polling began before original owned bootstrap resolved');
+      assert.equal(requests, 0);
+    }
+    settled = true;
+    if (completion === 'resolve') {
+      events.push('bootstrap-resolved'); release();
+      const result = await startup;
+      assert.equal(result.error, undefined); assert.equal(result.value, port);
+      assert.equal(requests, 1); assert.ok(supervisor.isHealthy());
+      assert.ok(events.indexOf('bootstrap-resolved') < events.indexOf('health-start'));
+      await supervisor.stopBackend();
+      assert.equal(refusals, 0);
+    } else {
+      const originalRefusal = new Error('controlled original bootstrap refusal');
+      reject(originalRefusal);
+      const result = await startup;
+      assert.equal(result.error, originalRefusal); assert.equal(requests, 0);
+      assert.ok(!events.includes('health-start')); assert.equal(refusals, 1);
+      assert.equal(supervisor.isHealthy(), false);
+      assert.equal(supervisor.getStatusInfo().state, 'CRASHED');
+    }
+    assert.equal(spawns, 1);
+    assert.ok(!events.includes('modeled-stop:SIGKILL'));
+  } finally {
+    if (!settled) reject(new Error('controlled fixture teardown'));
+    await startup;
+    await supervisor.stopBackend();
+    child.stdio.forEach(stream => stream.destroy());
+    await new Promise(resolve => server.close(resolve));
+  }
+  console.log('[PASS] Actual supervisor source owned bootstrap ' + completion + ': ' + JSON.stringify({ events, requests, spawns, modeled_child_only: true }));
+}
+
 async function run() {
+  if (process.argv.includes('--owned-bootstrap-order')) {
+    const results = await Promise.allSettled(['resolve', 'reject'].map(testOwnedBootstrapOrdering));
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') console.error('[FAIL] owned bootstrap ' + ['resolve', 'reject'][index] + ': ' + result.reason.stack);
+    });
+    if (results.some(result => result.status === 'rejected')) throw new Error('Owned bootstrap ordering failed');
+    return;
+  }
   const pythonBin = resolvePython();
   console.log(`[PASS] Resolved Python executable: ${pythonBin}`);
   testChunkStreamParser();
@@ -230,4 +354,3 @@ run().catch((err) => {
   console.error('[FATAL] Verification failed:', err);
   process.exit(1);
 });
-

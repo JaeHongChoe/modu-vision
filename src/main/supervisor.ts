@@ -314,13 +314,14 @@ export class BackendSupervisor extends EventEmitter {
       this.port = port;
       console.log(`[Supervisor] Ephemeral port discovered: ${port}`);
 
+      // Owned recovery and binding must finish before the HTTP health budget.
+      if(bootstrap)await bootstrap;
       // 2. Poll /health endpoint with exponential backoff
       const health = await this.pollHealth(
         port,
         this.config.host,
         this.config.healthCheckTimeoutMs
       );
-      if(bootstrap)await bootstrap;
       this.healthInfo = health;
       this.startTime = Date.now();
       this.setState('HEALTHY');

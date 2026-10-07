@@ -1,0 +1,79 @@
+{
+  "schema": "modu-vision.owned-bootstrap-order-source/v1",
+  "base_commit": "cbe56a469731cd51c6d77d53401a8aba01e24d0e",
+  "owned_source_sha256": {
+    "src/main/supervisor.ts": "b4a690f6de8101023864e1cb8fd87a41e82f27da86602bbdf8cb1196621532e6",
+    "scripts/verify-supervisor.js": "0cdf7de5167a30cbc622b42226062394690a35c55fb5f338e28f5a32d616574c",
+    ".github/workflows/ci.yml": "76d0dee9d66ceaf63434437016315893f956f9a1999bf97f55edcc6ab25ef54a"
+  },
+  "cause": "Actual frozen-controller native diagnostic captured the existing15s HTTP health timeout while original owned backend bootstrap had not finished immutable application/backend binding. Port publication precedes lifespan readiness.",
+  "change": "Await the original owned bind promise before starting the unchanged15s HTTP health budget. Original port180s and owned-bootstrap210s budgets, process ownership, authentication and shutdown are unchanged.",
+  "regression": {
+    "red": {
+      "passed": 0,
+      "failed": 2,
+      "scope": "Same real transpiled supervisor source with controlled original child handles and a real loopback HTTP endpoint"
+    },
+    "green": {
+      "passed": 2,
+      "failed": 0,
+      "resolve": "No HTTP request or healthy state before original bind resolves; afterwards exactly one successful health request, one spawn and ordinary modeled stop.",
+      "reject": "Original bind refusal propagates before any HTTP request; never healthy and one spawn/refusal; no modeled SIGKILL."
+    }
+  },
+  "root_commands": [
+    {
+      "kind": "actual-supervisor-source-order-regressions",
+      "exit_code": 0,
+      "elapsed_seconds": 0.44289829197805375,
+      "log_sha256": "d3b0776bb80a92d190665878ce967cd24d4dd36354f5c467cfaed6878663ce5f"
+    },
+    {
+      "kind": "renderer-and-main-typecheck",
+      "exit_code": 0,
+      "elapsed_seconds": 6.733626208035275,
+      "log_sha256": "3cea01ca6731d254d8cb8265f4fb29f0abcddf05eb43593ffedb269501b44fad"
+    },
+    {
+      "kind": "existing-ci-contracts",
+      "exit_code": 0,
+      "elapsed_seconds": 5.242043584003113,
+      "log_sha256": "c6f4e7fb064b6c7574e57441ec25e60297f0009ae19102e3dcb9724501b28a43"
+    }
+  ],
+  "ci_contracts": {
+    "passed": 20,
+    "failed": 0,
+    "skipped": 0,
+    "xml_sha256": "5274e9be107a0b5e98533006bfd4e91a9536b677b5ff8f2650140fd6c6410ada"
+  },
+  "source_binding": {
+    "tracked_files": 2165,
+    "same_before_after": true,
+    "before_sha256": "5dbafe31b718f6a8ae258527b499daa5e9693c00178e88bcbcc96bf54cb14ea0",
+    "after_sha256": "5dbafe31b718f6a8ae258527b499daa5e9693c00178e88bcbcc96bf54cb14ea0",
+    "dirty_scope": [
+      ".github/workflows/ci.yml",
+      "scripts/verify-supervisor.js",
+      "src/main/supervisor.ts"
+    ]
+  },
+  "independent_review_sha256": {
+    "root": "544c5e25eef36ecdd621937ee6785f155f8663ccf34a98d9bc1a82faf50744de",
+    "peer": "591a17b0eab8c036c1af1a58df88ffb2c989051945986e1b352d51b32bdb2bb6"
+  },
+  "acceptance": {
+    "source_order_repair": true,
+    "native_application_positive": false,
+    "installed_target_or_OS_registration": false,
+    "whole_process_tree": false,
+    "publisher_or_release": false,
+    "human_truth_or_quality": false,
+    "latest_hosted_ci": false,
+    "whole_parent": false
+  },
+  "retained_failures": [
+    "Actual native primary8 descriptor EOF and its private diagnostic are retained. This source regression does not turn that failed native observation into success.",
+    "Earlier root invocation used nonexistent tsconfig.node.json; the actual declared renderer/main typecheck command then passed unchanged."
+  ]
+}
