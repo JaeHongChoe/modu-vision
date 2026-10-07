@@ -38,7 +38,10 @@
   "src/renderer/components/wizard/WizardHeader.tsx": "1d62c46aa0ade805dc1390fb48ed194fb6192638abd5257fe7e5f93985f6cf86",
   "src/renderer/components/training/PatchClassificationWorkbench.tsx": "cde9853f3daf15749f7e42f8dbcd9f41a2bdc58acd624ae64ba0e9c93eb98b4c",
   "src/renderer/components/training/PatchRecipePreview.tsx": "fb0b91b076e0512583cd955a9a2bc134275db03145961a488c89ce2e1c63f542",
-  "src/renderer/components/training/EnhancementWorkbench.tsx": "a352a4b0b7d9b01383a3505982430dd4e5dd0bc18bb5bf93ef14db523b4d48b6"
+  "src/renderer/components/training/EnhancementWorkbench.tsx": "a352a4b0b7d9b01383a3505982430dd4e5dd0bc18bb5bf93ef14db523b4d48b6",
+  "src/renderer/components/training/DefectGANWorkbench.tsx": "fb3ed02f8e651b16c912ab78d67262e40f42a44811796ebd1472d1b545466f40",
+  "src/renderer/components/training/GANCompositionEditor.tsx": "4efa78cf4c0c6c98e02aa7764ea46e5a2140bc6b4932d949e92270fc211d66e3",
+  "src/renderer/components/training/RotatedDetectionPanel.tsx": "ae00129395b52847a08db514892f7df15e8825971913a3e299fcd5fa9d86c697"
  },
  "records": [
   {
@@ -2722,8 +2725,345 @@
   },
   {
    "id": "F029",
-   "actions": [],
-   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+   "actions": [
+    {
+     "id": "obb-native-trusted-weight-gate",
+     "label": "선택한 로컬 모델의 출처와 네이티브 로딩을 신뢰합니다.",
+     "source": "src/renderer/components/training/RotatedDetectionPanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-07",
+         "source_sha": "6246c26b7d220354ef0a6c1ecebbb8888cb9540b",
+         "kind": "click",
+         "action": "선택한 로컬 모델의 출처와 네이티브 로딩을 신뢰합니다.",
+         "expected": "Block native model loading until the user explicitly trusts the selected local file.",
+         "observed": "Native entered actual local OBB weights and start was disabled before the checkbox. After explicit trust and valid input the actual CPU job completed. Trust control execution, not license approval.",
+         "reviewer": "Codex root exact native control review; human quality, license, device, independent and release acceptance pending",
+         "test": "scripts/e2e/yolo-obb-closure.spec.ts::native authentic OBB actual axial detection and fitted original geometry survive offline recipe",
+         "receipt": "2026-10-07-app-execution-9515fb4d5dfa5d3ac25b.json",
+         "receipt_sha256": "327f4f47c4339269185aa30cc945151cf5f0fc9eec1124478b5b08e9f55ba8cf",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "46673151b672ca70a153e97db6d0c72510dbbafe85a854f4dc130e329f43228f"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "8b08ab7cc0287bbd803cae31b805921c7ab11a9236e78897e90e14798adf204f"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-07",
+         "source_sha": "6246c26b7d220354ef0a6c1ecebbb8888cb9540b",
+         "kind": "click",
+         "action": "선택한 로컬 모델의 출처와 네이티브 로딩을 신뢰합니다.",
+         "expected": "Block native model loading until the user explicitly trusts the selected local file.",
+         "observed": "Native entered actual local OBB weights and start was disabled before the checkbox. After explicit trust and valid input the actual CPU job completed. Trust control execution, not license approval.",
+         "reviewer": "Codex root exact native control review; human quality, license, device, independent and release acceptance pending",
+         "test": "scripts/e2e/yolo-obb-closure.spec.ts::native authentic OBB actual axial detection and fitted original geometry survive offline recipe",
+         "receipt": "2026-10-07-app-execution-9515fb4d5dfa5d3ac25b.json",
+         "receipt_sha256": "327f4f47c4339269185aa30cc945151cf5f0fc9eec1124478b5b08e9f55ba8cf",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "46673151b672ca70a153e97db6d0c72510dbbafe85a854f4dc130e329f43228f"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "8b08ab7cc0287bbd803cae31b805921c7ab11a9236e78897e90e14798adf204f"
+          }
+         ]
+        }
+       ]
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "obb-native-original-manifest",
+     "label": "정답·이미지 해시 저장",
+     "source": "src/renderer/components/training/RotatedDetectionPanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-07",
+         "source_sha": "6246c26b7d220354ef0a6c1ecebbb8888cb9540b",
+         "kind": "click",
+         "action": "정답·이미지 해시 저장",
+         "expected": "Bind empty/crowded multiclass synthetic original annotations to image hashes.",
+         "observed": "Native manifest button returned6 source images including3 explicit background samples and35 objects in the crowded training sample; all original image and annotation hashes stayed unchanged.",
+         "reviewer": "Codex root exact native control review; human quality, license, device, independent and release acceptance pending",
+         "test": "scripts/e2e/yolo-obb-closure.spec.ts::native authentic OBB actual axial detection and fitted original geometry survive offline recipe",
+         "receipt": "2026-10-07-app-execution-9515fb4d5dfa5d3ac25b.json",
+         "receipt_sha256": "327f4f47c4339269185aa30cc945151cf5f0fc9eec1124478b5b08e9f55ba8cf",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "46673151b672ca70a153e97db6d0c72510dbbafe85a854f4dc130e329f43228f"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "8b08ab7cc0287bbd803cae31b805921c7ab11a9236e78897e90e14798adf204f"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "obb-native-actual-train",
+     "label": "후보 학습",
+     "source": "src/renderer/components/training/RotatedDetectionPanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-07",
+         "source_sha": "6246c26b7d220354ef0a6c1ecebbb8888cb9540b",
+         "kind": "click",
+         "action": "후보 학습",
+         "expected": "Train the entered actual YOLO OBB candidate on local CPU.",
+         "observed": "Native two-epoch CPU training completed using selected authentic weights and ultralytics_yolo_obb adapter. Metadata keeps license distribution pending_review and direction_enabled=false.",
+         "reviewer": "Codex root exact native control review; human quality, license, device, independent and release acceptance pending",
+         "test": "scripts/e2e/yolo-obb-closure.spec.ts::native authentic OBB actual axial detection and fitted original geometry survive offline recipe",
+         "receipt": "2026-10-07-app-execution-9515fb4d5dfa5d3ac25b.json",
+         "receipt_sha256": "327f4f47c4339269185aa30cc945151cf5f0fc9eec1124478b5b08e9f55ba8cf",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "46673151b672ca70a153e97db6d0c72510dbbafe85a854f4dc130e329f43228f"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "8b08ab7cc0287bbd803cae31b805921c7ab11a9236e78897e90e14798adf204f"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "obb-native-heldout-evaluation",
+     "label": "시험 분할 평가",
+     "source": "src/renderer/components/training/RotatedDetectionPanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-07",
+         "source_sha": "6246c26b7d220354ef0a6c1ecebbb8888cb9540b",
+         "kind": "click",
+         "action": "시험 분할 평가",
+         "expected": "Evaluate the completed candidate through its exact local execution recipe.",
+         "observed": "Native evaluate returned2 heldout samples/2 ground-truth objects, finite mAP50 and an execution hash. Direction was explicitly unsupported. Human geometry quality and direction acceptance remain pending.",
+         "reviewer": "Codex root exact native control review; human quality, license, device, independent and release acceptance pending",
+         "test": "scripts/e2e/yolo-obb-closure.spec.ts::native authentic OBB actual axial detection and fitted original geometry survive offline recipe",
+         "receipt": "2026-10-07-app-execution-9515fb4d5dfa5d3ac25b.json",
+         "receipt_sha256": "327f4f47c4339269185aa30cc945151cf5f0fc9eec1124478b5b08e9f55ba8cf",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "46673151b672ca70a153e97db6d0c72510dbbafe85a854f4dc130e329f43228f"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "8b08ab7cc0287bbd803cae31b805921c7ab11a9236e78897e90e14798adf204f"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "obb-native-original-prediction",
+     "label": "회전 박스 예측",
+     "source": "src/renderer/components/training/RotatedDetectionPanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-07",
+         "source_sha": "6246c26b7d220354ef0a6c1ecebbb8888cb9540b",
+         "kind": "click",
+         "action": "회전 박스 예측",
+         "expected": "Predict on the entered original image through the saved completed candidate.",
+         "observed": "Native predict used an explicit local CPU recipe and returned execution hash plus clockwise_degrees_axial_180 convention; actual original-image box preview became visible. Axial boxes do not assert independent object direction.",
+         "reviewer": "Codex root exact native control review; human quality, license, device, independent and release acceptance pending",
+         "test": "scripts/e2e/yolo-obb-closure.spec.ts::native authentic OBB actual axial detection and fitted original geometry survive offline recipe",
+         "receipt": "2026-10-07-app-execution-9515fb4d5dfa5d3ac25b.json",
+         "receipt_sha256": "327f4f47c4339269185aa30cc945151cf5f0fc9eec1124478b5b08e9f55ba8cf",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "46673151b672ca70a153e97db6d0c72510dbbafe85a854f4dc130e329f43228f"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "8b08ab7cc0287bbd803cae31b805921c7ab11a9236e78897e90e14798adf204f"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "obb-native-model-manifest-reopen",
+     "label": "완료 후보 모델 · 프로젝트에 저장된 회전 박스 정답",
+     "source": "src/renderer/components/training/RotatedDetectionPanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "pending"
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-07",
+         "source_sha": "6246c26b7d220354ef0a6c1ecebbb8888cb9540b",
+         "kind": "click",
+         "action": "완료 후보 모델 · 프로젝트에 저장된 회전 박스 정답",
+         "expected": "Reopen the same completed model and prepared original manifest.",
+         "observed": "Native reload retained exact job ID and prepared dataset path before flow selection. No model-quality or license approval is inferred.",
+         "reviewer": "Codex root exact native control review; human quality, license, device, independent and release acceptance pending",
+         "test": "scripts/e2e/yolo-obb-closure.spec.ts::native authentic OBB actual axial detection and fitted original geometry survive offline recipe",
+         "receipt": "2026-10-07-app-execution-9515fb4d5dfa5d3ac25b.json",
+         "receipt_sha256": "327f4f47c4339269185aa30cc945151cf5f0fc9eec1124478b5b08e9f55ba8cf",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "46673151b672ca70a153e97db6d0c72510dbbafe85a854f4dc130e329f43228f"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "8b08ab7cc0287bbd803cae31b805921c7ab11a9236e78897e90e14798adf204f"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    }
+   ],
+   "remaining": "Only exact listed controls and scenarios have executed. Unlisted actions, human quality, physical targets, licensing and whole-feature acceptance remain pending."
   },
   {
    "id": "F030",
@@ -2747,8 +3087,417 @@
   },
   {
    "id": "F034",
-   "actions": [],
-   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+   "actions": [
+    {
+     "id": "gan-native-prepare",
+     "label": "원본을 보존하고 학습 복사본 준비",
+     "source": "src/renderer/components/training/DefectGANWorkbench.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-10",
+         "source_sha": "6246c26b7d220354ef0a6c1ecebbb8888cb9540b",
+         "kind": "click",
+         "action": "원본을 보존하고 학습 복사본 준비",
+         "expected": "Prepare an explicit original defect-region table into an isolated split.",
+         "observed": "Native button prepared4 train/2 val/2 test crops; original image and split bytes stayed unchanged. Synthetic controlled regions, not human quality approval.",
+         "reviewer": "Codex root exact native control review; human quality, license, device, independent and release acceptance pending",
+         "test": "scripts/e2e/gan-adoption-closure.spec.ts::native actual GAN generates masked candidates adopts only train and reopens full heldout A/B",
+         "receipt": "2026-10-07-app-execution-9ebe6b3e61ad1fa4bc14.json",
+         "receipt_sha256": "7cabca6779773e9a3943669fa9da29bf724db0800395fe13c05df9cac8e57884",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4c9736d928dba6ae3935a42200e4c475cce33ee4ee8fe1bd4f4719486f94ce48"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "8e99fd61363de07b507728e66342f8d492d806476994bf75f1385663a61a336f"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "gan-native-train",
+     "label": "생성 모델 학습",
+     "source": "src/renderer/components/training/DefectGANWorkbench.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-10",
+         "source_sha": "6246c26b7d220354ef0a6c1ecebbb8888cb9540b",
+         "kind": "click",
+         "action": "생성 모델 학습",
+         "expected": "Train the entered two-epoch local CPU generation candidate.",
+         "observed": "Actual native job completed and the completed-model selector held its returned ID; the request contained the exact CPU/two-epoch recipe.",
+         "reviewer": "Codex root exact native control review; human quality, license, device, independent and release acceptance pending",
+         "test": "scripts/e2e/gan-adoption-closure.spec.ts::native actual GAN generates masked candidates adopts only train and reopens full heldout A/B",
+         "receipt": "2026-10-07-app-execution-9ebe6b3e61ad1fa4bc14.json",
+         "receipt_sha256": "7cabca6779773e9a3943669fa9da29bf724db0800395fe13c05df9cac8e57884",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4c9736d928dba6ae3935a42200e4c475cce33ee4ee8fe1bd4f4719486f94ce48"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "8e99fd61363de07b507728e66342f8d492d806476994bf75f1385663a61a336f"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "gan-native-generate-reopen",
+     "label": "후보 생성 · 저장된 생성 후보 열기",
+     "source": "src/renderer/components/training/DefectGANWorkbench.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-10",
+         "source_sha": "6246c26b7d220354ef0a6c1ecebbb8888cb9540b",
+         "kind": "click",
+         "action": "후보 생성 · 저장된 생성 후보 열기",
+         "expected": "Generate from the selected completed model and reopen saved pending candidates.",
+         "observed": "Actual native generation used an explicit local CPU recipe with execution hash. Two candidates reopened after reload; generated pixels and source SHA were recorded. No region-widget persistence or semantic acceptance inferred.",
+         "reviewer": "Codex root exact native control review; human quality, license, device, independent and release acceptance pending",
+         "test": "scripts/e2e/gan-adoption-closure.spec.ts::native actual GAN generates masked candidates adopts only train and reopens full heldout A/B",
+         "receipt": "2026-10-07-app-execution-9ebe6b3e61ad1fa4bc14.json",
+         "receipt_sha256": "7cabca6779773e9a3943669fa9da29bf724db0800395fe13c05df9cac8e57884",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4c9736d928dba6ae3935a42200e4c475cce33ee4ee8fe1bd4f4719486f94ce48"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "8e99fd61363de07b507728e66342f8d492d806476994bf75f1385663a61a336f"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-10",
+         "source_sha": "6246c26b7d220354ef0a6c1ecebbb8888cb9540b",
+         "kind": "click",
+         "action": "후보 생성 · 저장된 생성 후보 열기",
+         "expected": "Generate from the selected completed model and reopen saved pending candidates.",
+         "observed": "Actual native generation used an explicit local CPU recipe with execution hash. Two candidates reopened after reload; generated pixels and source SHA were recorded. No region-widget persistence or semantic acceptance inferred.",
+         "reviewer": "Codex root exact native control review; human quality, license, device, independent and release acceptance pending",
+         "test": "scripts/e2e/gan-adoption-closure.spec.ts::native actual GAN generates masked candidates adopts only train and reopens full heldout A/B",
+         "receipt": "2026-10-07-app-execution-9ebe6b3e61ad1fa4bc14.json",
+         "receipt_sha256": "7cabca6779773e9a3943669fa9da29bf724db0800395fe13c05df9cac8e57884",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4c9736d928dba6ae3935a42200e4c475cce33ee4ee8fe1bd4f4719486f94ce48"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "8e99fd61363de07b507728e66342f8d492d806476994bf75f1385663a61a336f"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "gan-native-generation-package",
+     "label": "생성·검토 작업 패키지 내보내기",
+     "source": "src/renderer/components/training/DefectGANWorkbench.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-10",
+         "source_sha": "6246c26b7d220354ef0a6c1ecebbb8888cb9540b",
+         "kind": "click",
+         "action": "생성·검토 작업 패키지 내보내기",
+         "expected": "Create a separate generation package with the selected seed and source masks.",
+         "observed": "Actual native export button produced an independent generation package; its separate CPU runtime matched exact pixels. Package helper readback is separate from signed publication and target execution.",
+         "reviewer": "Codex root exact native control review; human quality, license, device, independent and release acceptance pending",
+         "test": "scripts/e2e/gan-adoption-closure.spec.ts::native actual GAN generates masked candidates adopts only train and reopens full heldout A/B",
+         "receipt": "2026-10-07-app-execution-9ebe6b3e61ad1fa4bc14.json",
+         "receipt_sha256": "7cabca6779773e9a3943669fa9da29bf724db0800395fe13c05df9cac8e57884",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4c9736d928dba6ae3935a42200e4c475cce33ee4ee8fe1bd4f4719486f94ce48"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "8e99fd61363de07b507728e66342f8d492d806476994bf75f1385663a61a336f"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-10",
+         "source_sha": "6246c26b7d220354ef0a6c1ecebbb8888cb9540b",
+         "kind": "click",
+         "action": "생성·검토 작업 패키지 내보내기",
+         "expected": "Create a separate generation package with the selected seed and source masks.",
+         "observed": "Actual native export button produced an independent generation package; its separate CPU runtime matched exact pixels. Package helper readback is separate from signed publication and target execution.",
+         "reviewer": "Codex root exact native control review; human quality, license, device, independent and release acceptance pending",
+         "test": "scripts/e2e/gan-adoption-closure.spec.ts::native actual GAN generates masked candidates adopts only train and reopens full heldout A/B",
+         "receipt": "2026-10-07-app-execution-9ebe6b3e61ad1fa4bc14.json",
+         "receipt_sha256": "7cabca6779773e9a3943669fa9da29bf724db0800395fe13c05df9cac8e57884",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4c9736d928dba6ae3935a42200e4c475cce33ee4ee8fe1bd4f4719486f94ce48"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "8e99fd61363de07b507728e66342f8d492d806476994bf75f1385663a61a336f"
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    {
+     "id": "gan-native-train-only-adoption",
+     "label": "검토 저장·학습 데이터 준비 · 채택 데이터로 학습 준비",
+     "source": "src/renderer/components/training/DefectGANWorkbench.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-10",
+         "source_sha": "6246c26b7d220354ef0a6c1ecebbb8888cb9540b",
+         "kind": "click",
+         "action": "검토 저장·학습 데이터 준비 · 채택 데이터로 학습 준비",
+         "expected": "Adopt one explicitly reviewed candidate and reject another only into training data.",
+         "observed": "Native controls saved1 adopt/1 reject, prepared12 real originals plus1 synthetic training sample and changed the current project to that isolated dataset. Heldout originals were unchanged. Synthetic reviewer entry, not human approval.",
+         "reviewer": "Codex root exact native control review; human quality, license, device, independent and release acceptance pending",
+         "test": "scripts/e2e/gan-adoption-closure.spec.ts::native actual GAN generates masked candidates adopts only train and reopens full heldout A/B",
+         "receipt": "2026-10-07-app-execution-9ebe6b3e61ad1fa4bc14.json",
+         "receipt_sha256": "7cabca6779773e9a3943669fa9da29bf724db0800395fe13c05df9cac8e57884",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4c9736d928dba6ae3935a42200e4c475cce33ee4ee8fe1bd4f4719486f94ce48"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "8e99fd61363de07b507728e66342f8d492d806476994bf75f1385663a61a336f"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-10",
+         "source_sha": "6246c26b7d220354ef0a6c1ecebbb8888cb9540b",
+         "kind": "click",
+         "action": "검토 저장·학습 데이터 준비 · 채택 데이터로 학습 준비",
+         "expected": "Adopt one explicitly reviewed candidate and reject another only into training data.",
+         "observed": "Native controls saved1 adopt/1 reject, prepared12 real originals plus1 synthetic training sample and changed the current project to that isolated dataset. Heldout originals were unchanged. Synthetic reviewer entry, not human approval.",
+         "reviewer": "Codex root exact native control review; human quality, license, device, independent and release acceptance pending",
+         "test": "scripts/e2e/gan-adoption-closure.spec.ts::native actual GAN generates masked candidates adopts only train and reopens full heldout A/B",
+         "receipt": "2026-10-07-app-execution-9ebe6b3e61ad1fa4bc14.json",
+         "receipt_sha256": "7cabca6779773e9a3943669fa9da29bf724db0800395fe13c05df9cac8e57884",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4c9736d928dba6ae3935a42200e4c475cce33ee4ee8fe1bd4f4719486f94ce48"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "8e99fd61363de07b507728e66342f8d492d806476994bf75f1385663a61a336f"
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    {
+     "id": "gan-native-heldout-comparison",
+     "label": "같은 원본 시험 데이터로 비교·저장",
+     "source": "src/renderer/components/training/DefectGANWorkbench.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-10",
+         "source_sha": "6246c26b7d220354ef0a6c1ecebbb8888cb9540b",
+         "kind": "click",
+         "action": "같은 원본 시험 데이터로 비교·저장",
+         "expected": "Compare actual before/after classifiers on the same original heldout cohort and reopen.",
+         "observed": "Native comparison returned3 original heldout images, full_test=true and quality_approved=false; after reload the saved comparison ID and API evidence hash matched. Both CPU classifiers actually trained.",
+         "reviewer": "Codex root exact native control review; human quality, license, device, independent and release acceptance pending",
+         "test": "scripts/e2e/gan-adoption-closure.spec.ts::native actual GAN generates masked candidates adopts only train and reopens full heldout A/B",
+         "receipt": "2026-10-07-app-execution-9ebe6b3e61ad1fa4bc14.json",
+         "receipt_sha256": "7cabca6779773e9a3943669fa9da29bf724db0800395fe13c05df9cac8e57884",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4c9736d928dba6ae3935a42200e4c475cce33ee4ee8fe1bd4f4719486f94ce48"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "8e99fd61363de07b507728e66342f8d492d806476994bf75f1385663a61a336f"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-10",
+         "source_sha": "6246c26b7d220354ef0a6c1ecebbb8888cb9540b",
+         "kind": "click",
+         "action": "같은 원본 시험 데이터로 비교·저장",
+         "expected": "Compare actual before/after classifiers on the same original heldout cohort and reopen.",
+         "observed": "Native comparison returned3 original heldout images, full_test=true and quality_approved=false; after reload the saved comparison ID and API evidence hash matched. Both CPU classifiers actually trained.",
+         "reviewer": "Codex root exact native control review; human quality, license, device, independent and release acceptance pending",
+         "test": "scripts/e2e/gan-adoption-closure.spec.ts::native actual GAN generates masked candidates adopts only train and reopens full heldout A/B",
+         "receipt": "2026-10-07-app-execution-9ebe6b3e61ad1fa4bc14.json",
+         "receipt_sha256": "7cabca6779773e9a3943669fa9da29bf724db0800395fe13c05df9cac8e57884",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4c9736d928dba6ae3935a42200e4c475cce33ee4ee8fe1bd4f4719486f94ce48"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "8e99fd61363de07b507728e66342f8d492d806476994bf75f1385663a61a336f"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    }
+   ],
+   "remaining": "Only exact listed controls and scenarios have executed. Unlisted actions, human quality, physical targets, licensing and whole-feature acceptance remain pending."
   },
   {
    "id": "F035",
@@ -3442,9 +4191,109 @@
        "state": "pending"
       }
      }
+    },
+    {
+     "id": "obb-native-fitted-roi-flow-save",
+     "label": "매핑 확인·새 초안으로 채택 · 플로우 저장",
+     "source": "src/renderer/components/flowchart/FlowchartStudio.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-05",
+         "source_sha": "6246c26b7d220354ef0a6c1ecebbb8888cb9540b",
+         "kind": "click",
+         "action": "매핑 확인·새 초안으로 채택 · 플로우 저장",
+         "expected": "Explicitly map the completed OBB model, save the fitted ROI graph and reopen.",
+         "observed": "Native mapping and change-reason save reopened with2/2 models connected. Actual CPU selected ROI count reached both alignment and inspection; separate independent package matched the saved graph. Package creation used a helper, not GUI export.",
+         "reviewer": "Codex root exact native control review; human quality, license, device, independent and release acceptance pending",
+         "test": "scripts/e2e/yolo-obb-closure.spec.ts::native authentic OBB actual axial detection and fitted original geometry survive offline recipe",
+         "receipt": "2026-10-07-app-execution-9515fb4d5dfa5d3ac25b.json",
+         "receipt_sha256": "327f4f47c4339269185aa30cc945151cf5f0fc9eec1124478b5b08e9f55ba8cf",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "46673151b672ca70a153e97db6d0c72510dbbafe85a854f4dc130e329f43228f"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "8b08ab7cc0287bbd803cae31b805921c7ab11a9236e78897e90e14798adf204f"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-05",
+         "source_sha": "6246c26b7d220354ef0a6c1ecebbb8888cb9540b",
+         "kind": "click",
+         "action": "매핑 확인·새 초안으로 채택 · 플로우 저장",
+         "expected": "Explicitly map the completed OBB model, save the fitted ROI graph and reopen.",
+         "observed": "Native mapping and change-reason save reopened with2/2 models connected. Actual CPU selected ROI count reached both alignment and inspection; separate independent package matched the saved graph. Package creation used a helper, not GUI export.",
+         "reviewer": "Codex root exact native control review; human quality, license, device, independent and release acceptance pending",
+         "test": "scripts/e2e/yolo-obb-closure.spec.ts::native authentic OBB actual axial detection and fitted original geometry survive offline recipe",
+         "receipt": "2026-10-07-app-execution-9515fb4d5dfa5d3ac25b.json",
+         "receipt_sha256": "327f4f47c4339269185aa30cc945151cf5f0fc9eec1124478b5b08e9f55ba8cf",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "46673151b672ca70a153e97db6d0c72510dbbafe85a854f4dc130e329f43228f"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "8b08ab7cc0287bbd803cae31b805921c7ab11a9236e78897e90e14798adf204f"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-05",
+         "source_sha": "6246c26b7d220354ef0a6c1ecebbb8888cb9540b",
+         "kind": "click",
+         "action": "매핑 확인·새 초안으로 채택 · 플로우 저장",
+         "expected": "Explicitly map the completed OBB model, save the fitted ROI graph and reopen.",
+         "observed": "Native mapping and change-reason save reopened with2/2 models connected. Actual CPU selected ROI count reached both alignment and inspection; separate independent package matched the saved graph. Package creation used a helper, not GUI export.",
+         "reviewer": "Codex root exact native control review; human quality, license, device, independent and release acceptance pending",
+         "test": "scripts/e2e/yolo-obb-closure.spec.ts::native authentic OBB actual axial detection and fitted original geometry survive offline recipe",
+         "receipt": "2026-10-07-app-execution-9515fb4d5dfa5d3ac25b.json",
+         "receipt_sha256": "327f4f47c4339269185aa30cc945151cf5f0fc9eec1124478b5b08e9f55ba8cf",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "46673151b672ca70a153e97db6d0c72510dbbafe85a854f4dc130e329f43228f"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "8b08ab7cc0287bbd803cae31b805921c7ab11a9236e78897e90e14798adf204f"
+          }
+         ]
+        }
+       ]
+      }
+     }
     }
    ],
-   "remaining": "Only exact listed controls and scenarios are executed. Other controls, semantic quality, unexecuted hardware, complete-feature and human acceptance remain pending."
+   "remaining": "Only exact listed controls and scenarios have executed. Unlisted actions, human quality, physical targets, licensing and whole-feature acceptance remain pending."
   },
   {
    "id": "F065",
@@ -3508,13 +4357,119 @@
   },
   {
    "id": "F077",
-   "actions": [],
-   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+   "actions": [
+    {
+     "id": "gan-native-region-coordinates",
+     "label": "좌표로 영역 추가",
+     "source": "src/renderer/components/training/GANCompositionEditor.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-10",
+         "source_sha": "6246c26b7d220354ef0a6c1ecebbb8888cb9540b",
+         "kind": "click",
+         "action": "좌표로 영역 추가",
+         "expected": "Enter original pixel coordinates while keeping the selected original bytes.",
+         "observed": "Native controls entered the first4,4,24,24 and second34,22,58,42 boxes; actual generation retained the selected source SHA. Saved candidate reopen is separate from coordinate-widget persistence.",
+         "reviewer": "Codex root exact native control review; human quality, license, device, independent and release acceptance pending",
+         "test": "scripts/e2e/gan-adoption-closure.spec.ts::native actual GAN generates masked candidates adopts only train and reopens full heldout A/B",
+         "receipt": "2026-10-07-app-execution-9ebe6b3e61ad1fa4bc14.json",
+         "receipt_sha256": "7cabca6779773e9a3943669fa9da29bf724db0800395fe13c05df9cac8e57884",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4c9736d928dba6ae3935a42200e4c475cce33ee4ee8fe1bd4f4719486f94ce48"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "8e99fd61363de07b507728e66342f8d492d806476994bf75f1385663a61a336f"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    }
+   ],
+   "remaining": "Only exact listed controls and scenarios have executed. Unlisted actions, human quality, physical targets, licensing and whole-feature acceptance remain pending."
   },
   {
    "id": "F078",
-   "actions": [],
-   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+   "actions": [
+    {
+     "id": "gan-native-multiple-masked-regions",
+     "label": "불투명도 · 경계 혼합 (px) · 합성 영역 2 외곽선",
+     "source": "src/renderer/components/training/GANCompositionEditor.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-10",
+         "source_sha": "6246c26b7d220354ef0a6c1ecebbb8888cb9540b",
+         "kind": "click",
+         "action": "불투명도 · 경계 혼합 (px) · 합성 영역 2 외곽선",
+         "expected": "Generate two regions with explicit polygon and blending inputs.",
+         "observed": "Native entered second-region opacity0.5, feather2 and triangle34,22;58,22;46,42. The actual generation request carried the exact polygon and returned2 candidates. Separate plain-generation package parity does not qualify composed-polygon quality.",
+         "reviewer": "Codex root exact native control review; human quality, license, device, independent and release acceptance pending",
+         "test": "scripts/e2e/gan-adoption-closure.spec.ts::native actual GAN generates masked candidates adopts only train and reopens full heldout A/B",
+         "receipt": "2026-10-07-app-execution-9ebe6b3e61ad1fa4bc14.json",
+         "receipt_sha256": "7cabca6779773e9a3943669fa9da29bf724db0800395fe13c05df9cac8e57884",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4c9736d928dba6ae3935a42200e4c475cce33ee4ee8fe1bd4f4719486f94ce48"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "8e99fd61363de07b507728e66342f8d492d806476994bf75f1385663a61a336f"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    }
+   ],
+   "remaining": "Only exact listed controls and scenarios have executed. Unlisted actions, human quality, physical targets, licensing and whole-feature acceptance remain pending."
   },
   {
    "id": "F079",

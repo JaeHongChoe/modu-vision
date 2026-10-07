@@ -82,11 +82,41 @@ def validate_local(root, scopes, path, journal):
         raise ValueError('Runtime session is live or uncertain; migration cannot adopt it as ended')
 
 
+def _validate_remote_epoch(root, output, journal):
+    """An optional received epoch state is archival only, never launch authority."""
+    checkpoint, receipt_path = output / 'latest_training_state.pt', output / 'training_state_receipt.json'
+    if not any(path.exists() or path.is_symlink() for path in (checkpoint, receipt_path)):
+        return  # Original workers may have no completed epoch or state protocol.
+    receipt, _ = _read(root, receipt_path)
+    checkpoint = _file(root, checkpoint)
+    from backend.remote.training_state_transfer import MAX_STATE_BYTES, STATE_ARTIFACT, identity_sha256
+    size = checkpoint.stat().st_size
+    if (type(receipt.get('protocol_version')) is not int or receipt['protocol_version'] != 1
+            or receipt.get('operation') != 'train' or receipt.get('job_id') != journal['job_id']
+            or receipt.get('input_manifest_sha256') != journal['input_manifest_sha256']
+            or receipt.get('path') != STATE_ARTIFACT or type(receipt.get('size')) is not int
+            or not 0 < size <= MAX_STATE_BYTES or receipt['size'] != size
+            or any(not re.fullmatch('[0-9a-f]{64}', str(receipt.get(key, '')))
+                   for key in ('sha256', 'identity_sha256'))):
+        raise ValueError('Remote training-state receipt differs from its original terminal run')
+    from backend.engine.training_resume import read_training_state
+    state = read_training_state(checkpoint)
+    if (state['_checkpoint_sha256'] != receipt['sha256']
+            or state['identity'].get('task') != journal['task']
+            or state['identity'].get('preset') != journal['preset']
+            or identity_sha256(state['identity']) != receipt['identity_sha256']
+            or any(type(receipt.get(key)) is not int or state[key] != receipt[key]
+                   for key in ('next_epoch', 'global_step'))):
+        raise ValueError('Remote training-state bytes or epoch identity differ from the received receipt')
+
+
 def validate_remote(root, scopes, path, journal):
     """Original confirmed exit and received bytes, never current SSH authority.
 
     This adapter supports the original current train manifest, not relocated
-    specialist aliases, optimizer resume or remote operation results. It reads
+    specialist aliases or remote operation results. Received optimizer epoch
+    states are retained only with their original hash-bound receipt; no resume
+    execution or live worker adoption is granted. It reads
     the coordinator's existing exit confirmation; it does not check a server's
     current process state or create authority to use that server again.
     """
@@ -129,6 +159,7 @@ def validate_remote(root, scopes, path, journal):
             or receipt.get('task') != journal['task'] or receipt.get('output_dir') != str(output)
             or receipt.get('compute_profile_id') != profile.id):
         raise ValueError('Remote terminal receipt differs from its original job/profile')
+    _validate_remote_epoch(root, output, journal)
     if state != 'completed':
         return
     manifest, _ = _read(root, output / 'remote_artifacts.json')

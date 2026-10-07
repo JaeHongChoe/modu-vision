@@ -1084,6 +1084,12 @@
      "result": "Ended remote protocol train history validated through drained cutover/forward recovery; 73 related cases passed, one explicitly deselected actual local training case already recorded separately.",
      "scope": "Root review only; synthetic functional authority is not manufacturing approval. Final handoff, target/device, signing and acceptance stay pending. Paired receipt SHA-256 ff0d51c4e6322dfb3ac6ff4ae30e5ab082393c7c17382331c9ad3961cf68cb3e",
      "platform": "macOS actual development Electron/CPU and exact prior Linux hosted source; Windows excluded by user."
+    },
+    {
+     "kind": "ended-remote-epoch-archive-validation",
+     "result": "Changed epoch bytes reproduced an accepted history preview. Optional state/receipt pair now validates bounded restricted payload, original job/input/path/size/hash, task/preset/identity and typed epoch/step. Final focused and related suite111 passed,0 skipped;3 actual previously received owned epoch states passed read-only checks with all original bytes unchanged.",
+     "scope": "Original confirmed ended current-protocol histories only; no live worker/lease/resume execution authority. Root review only. Receipt SHA256 df618e55973da65b74eaa21fe92f98f9b2c3cec67cfa4df2ef13bda0a69f1370. Full parent remains pending.",
+     "platform": "Actual private macOS filesystem/SQLite conversion controls and read-only prior remote output; no new GPU job, SSH connection or user-store migration"
     }
    ],
    "file_actions": {
@@ -1109,8 +1115,8 @@
    },
    "proposed_test_file": "backend/tests/test_service_s1_08.py",
    "remaining": [
-    "Live owned-worker and uncertain-lease adoption with proven identity/fence, ended remote recovery-index adapters and older unsupported schemas remain pending.",
-    "Current-protocol ended local indexes and immutable original launch/lease-owner bindings now survive owned drained cutover and forward recovery without creating worker or lease authority."
+    "Live owned-worker and uncertain-lease adoption with proven identity/fence and older unsupported schemas remain pending.",
+    "Current-protocol ended local/remote indexes and received optional optimizer epoch states now retain original launch, receipt and byte identities through owned drained cutover/forward recovery. Specialist relocation and remote operation history adapters remain pending."
    ]
   },
   {
@@ -6155,7 +6161,8 @@
     "src/renderer/components/training/TrainingController.tsx",
     "src/renderer/components/training/ModelFamilyCatalog.tsx",
     "backend/engine/automated_trials.py",
-    "scripts/verify-real-family-cpu.py"
+    "scripts/verify-real-family-cpu.py",
+    "src/renderer/components/training/RotatedDetectionPanel.tsx"
    ],
    "legacy_claim": {
     "implementation": "integrated",
@@ -6274,7 +6281,8 @@
     "src/renderer/components/training/TrainingController.tsx",
     "src/renderer/components/training/ModelFamilyCatalog.tsx",
     "backend/engine/automated_trials.py",
-    "scripts/verify-real-family-cpu.py"
+    "scripts/verify-real-family-cpu.py",
+    "src/renderer/components/training/DefectGANWorkbench.tsx"
    ],
    "legacy_claim": {
     "implementation": "integrated",

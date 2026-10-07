@@ -1,0 +1,52 @@
+{
+  "schema": "TerminalEpochArchiveVerification/v1",
+  "source_base_sha": "0d6801446aae410ce7bb451d5c0c15b73fe33a19",
+  "source_files": {
+    "backend/engine/terminal_runtime_history.py": "5017ef90493d6fd8bd154344006b64a85a301c9688a2f5d57bfc45d5cdc098a1",
+    "backend/tests/test_terminal_remote_epoch_history.py": "7aa0657a14b7549e1fb23cbb3b87e65bf4545d8636ca2953a3fdbf61577c9f52"
+  },
+  "suite": {
+    "cases": 111,
+    "passed": 111,
+    "skipped": 0,
+    "junit_sha256": "73cccc4d90cfff7956468077b659979f4c15d81c059fb3d70616433b0c06ebbb",
+    "selectors": [
+      "backend/tests/test_terminal_remote_epoch_history.py",
+      "backend/tests/test_terminal_remote_history.py",
+      "backend/tests/test_terminal_runtime_history.py",
+      "backend/tests/test_historical_job_binding.py",
+      "backend/tests/test_global_migration.py",
+      "backend/tests/test_global_restore_recovery.py"
+    ]
+  },
+  "actual_received_epoch_runs": [
+    {
+      "job_id": "job_1791275143_403a5c",
+      "state": "aborted",
+      "receipt_sha256": "43f0795689552894095cba9ea540bc67622173227b4d12f7df14631a8c8a9db6",
+      "checkpoint_sha256": "303f12aa2c2a6b8542c4a5560606d0113ce09b489ae114b2343652e57bf0893b",
+      "unchanged": true
+    },
+    {
+      "job_id": "job_1791275183_cff23f",
+      "state": "completed",
+      "receipt_sha256": "789fc6f9d83e3d347e1d164f97803b86b0de619969c39fa02b690946e082e389",
+      "checkpoint_sha256": "0568581f3b242578a602fe593f4d65ae1084a9e366b497e88f2dd2bdd5f9eb12",
+      "unchanged": true
+    },
+    {
+      "job_id": "job_1791275243_417fd6",
+      "state": "completed",
+      "receipt_sha256": "bb77efc32c3eb944268956eb235998176565ad30e13db5dc14083fcc8cf11277",
+      "checkpoint_sha256": "c49d02a175c62ed5b655c53b01bf45af6895b038dd905684481919d7555b5957",
+      "unchanged": true
+    }
+  ],
+  "actual_read_only": true,
+  "migrated_user_installation": false,
+  "submitted_compute": false,
+  "worker_authority_created": false,
+  "human_quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Validate optional original received epoch states during ended history conversion only; live/uncertain workers, unsupported schemas, remote operation/specialist relocation adapters remain pending"
+}
