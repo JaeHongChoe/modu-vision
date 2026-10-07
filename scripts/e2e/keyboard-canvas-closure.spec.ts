@@ -5,9 +5,9 @@ import { execFileSync } from 'node:child_process';
 import type { Page } from '@playwright/test';
 import { test, expect, type Workspace, type Evidence } from './fixtures/test';
 import { installDesktopHostShim } from './fixtures/desktop-host-shim';
+import { keyboardAction as key } from './fixtures/keyboard-action';
 const harness = require('./fixtures/harness.cjs');
 type Api = (route: string, body?: any) => Promise<any>;
-async function key(page: Page, target: any, value = 'Enter') { await target.focus(); await page.keyboard.press(value); }
 const ids = (page: Page) => page.locator('[data-flow-node-id]').evaluateAll(nodes => nodes.map(n => n.getAttribute('data-flow-node-id')!));
 async function exercise(page: Page, workspace: Workspace, evidence: Evidence, api: Api, resize: (width: number, height: number) => Promise<void>, url?: string) {
     const fixture = JSON.parse(execFileSync(harness.resolvePython(), [path.join(harness.REPO_ROOT, 'scripts/e2e/fixtures/canvas_source.py'), workspace.root], { encoding: 'utf8' }));
