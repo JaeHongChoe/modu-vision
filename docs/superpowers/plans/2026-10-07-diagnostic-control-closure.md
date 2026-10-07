@@ -2,7 +2,7 @@
 
 기존15개 미완료 부모 중 S7-01의 U025를 진행한다. 제품 기능과 새 권한은 추가하지 않는다.
 
-1. 격리한 프로젝트 없는 화면에서 설치·진단과 저장 controls가 노출되지 않는지 확인한다.
+1. 격리한 actual 프로젝트를 만든다. 앱은 시작할 때 Default Project를 자동 생성하므로 초기 화면을 프로젝트 없는 상태라고 가정하지 않는다. 최초071695f의 해당 가정 실패는 보존하고 empty-project 차원을 승격하지 않는다.
 2. 설치 조회의 명시적 transport503을 유지한 뒤 창 닫기·직접 재열기로 실제 backend metadata를 다시 읽는다.
 3. 실제 첫 packages bundle을 저장해 download와 persisted JSON을 비교한다. 미제출 section 변경·취소·재열기에 원래 bundle이 유지돼야 한다.
 4. 빈 section은 저장이 막힌다. 실제 diagnostics POST를 지연한 명시적503에서는 controls가 잠기며 기존 bundle과 source bytes가 유지돼야 한다.

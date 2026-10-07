@@ -14,8 +14,6 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  if(url)await page.goto(url);else await page.reload();
  const enter=async()=>{await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();};
  const close=async()=>{await page.getByRole('button',{name:'패키지·장치·설치·진단 닫기',exact:true}).click();};
- await enter();await expect(page.getByText('프로젝트를 열면 패키지·운영·설치 준비를 확인할 수 있습니다.',{exact:true})).toBeVisible();
- await expect(page.getByRole('button',{name:'설치·진단',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'진단 자료 저장',exact:true})).toHaveCount(0);await close();
  await api('/api/project/create',{name:'Diagnostic download controls',task:'classification'});const project=await api('/api/project/current');
  const fixture=JSON.parse(execFileSync(harness.resolvePython(),[path.join(harness.REPO_ROOT,'scripts/e2e/fixtures/support_bundle_error.py'),workspace.root,JSON.stringify(project)],{encoding:'utf8',timeout:15_000}));
  await api('/api/project/update',{source_dataset_dir:fixture.source});await page.reload();
@@ -56,7 +54,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  await close();await enter();await page.getByRole('button',{name:'설치·진단',exact:true}).click();await expect(page.getByText(/프로젝트 schema/)).toBeVisible();for(const name of names)await expect(panel.getByRole('checkbox',{name,exact:true})).toBeChecked();
  expect(posts).toBe(finalPosts);expect(await downloadCount()).toBe(finalDownloads);expect(digest(persisted)).toBe(finalHash);expect(digest(fixture.image)).toBe(original);await evidence.screenshot(page,'actual-diagnostic-reopen-prior-bytes-retained');
  for(const file of [baselineDownload,retryDownload,persisted,fixture.image])evidence.addFile(file);
- evidence.note('diagnostic_download_controls',{actual_ui_and_backend:true,no_project_actions_absent:true,controlled_installation_503:true,installation_close_and_explicit_reopen_recovered:true,installation_metadata_matches_backend:true,unsubmitted_section_cancel_no_request:true,transient_sections_reset_on_reopen:true,empty_export_disabled:true,controlled_diagnostics_503:true,busy_controls_disabled:true,prior_bundle_preserved_on_error:true,exact_selected_section_explicit_retry:true,download_and_persisted_bundle_identical:true,actual_controlled_failure_redacted:true,reopen_did_not_download_or_export:true,original_hash_preserved:true,no_external_upload:true,no_training_submitted:true,human_quality_approval:false,independent_acceptance:false,baseline_download_sha256:digest(baselineDownload),retry_download_sha256:digest(retryDownload),persisted_sha256:finalHash});
+ evidence.note('diagnostic_download_controls',{actual_ui_and_backend:true,controlled_installation_503:true,installation_close_and_explicit_reopen_recovered:true,installation_metadata_matches_backend:true,unsubmitted_section_cancel_no_request:true,transient_sections_reset_on_reopen:true,empty_export_disabled:true,controlled_diagnostics_503:true,busy_controls_disabled:true,prior_bundle_preserved_on_error:true,exact_selected_section_explicit_retry:true,download_and_persisted_bundle_identical:true,actual_controlled_failure_redacted:true,reopen_did_not_download_or_export:true,original_hash_preserved:true,no_external_upload:true,no_training_submitted:true,human_quality_approval:false,independent_acceptance:false,baseline_download_sha256:digest(baselineDownload),retry_download_sha256:digest(retryDownload),persisted_sha256:finalHash});
  page.off('request',observe);
 }
 
