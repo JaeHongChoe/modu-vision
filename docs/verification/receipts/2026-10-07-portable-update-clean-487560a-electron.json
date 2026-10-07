@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+  "source_dirty": false,
+  "test": "scripts/e2e/portable-update-review.spec.ts::native desktop refuses unprovisioned portable changes before opening a directory dialog",
+  "test_source_sha256": "c9a37fffc92b381e11703819348a76787eed61e4110e1a579ed38f909af41992",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "6e40bb3a8a6a1aa952548d5a0c2eb1872b59127c9227471294c23de955d9bfe6",
+  "harness_sha256": "eb8f279882530bda19729c2b36bf033c4699af62c1a548834eec9836542409e2",
+  "teardown_sha256": "f0683cfd07bfb79d4647321c5ac23e5562c1a65244b47f8d8c0ca97c3dca40b2",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "dd095e483424ccaf1a73c82a645f97b511932c387d25c4bf2e882a382b68c19f"
+    }
+  ],
+  "observed": {
+    "actual_electron_main_preload_renderer": true,
+    "unprovisioned_development_refused": true,
+    "directory_dialog_opened": false,
+    "installation_or_database_modified": false,
+    "real_signed_installation_qualified": false
+  },
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Controlled positive browser with actual main manager and source Python signed transaction; actual Electron unprovisioned negative path only. No real signed native positive installation, customer home, physical power loss, Windows, industrial model quality, independent or release acceptance."
+}

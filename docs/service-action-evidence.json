@@ -50,7 +50,8 @@
   "src/renderer/components/dataset/DatasetStudio.tsx": "0af008083c62fbfa1ebdaa4001987a2b0cafdabe712edd5e45a1b1cba5f2b13c",
   "src/renderer/components/evaluation/EvaluationHistoryPanel.tsx": "aa5325b16c0f836c038b286679b20d25812580cc0992880f287754995d8eebca",
   "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx": "9ab0454b4433afdd10fc9c6cbcc12e0ac4c71e3f43e0ed0aa829cd687d38672e",
-  "src/renderer/components/runtime/FleetPanel.tsx": "572144e60bbe38efc208ca2d2d19e87de58793da783269e5498970c1d97243ab"
+  "src/renderer/components/runtime/FleetPanel.tsx": "572144e60bbe38efc208ca2d2d19e87de58793da783269e5498970c1d97243ab",
+  "src/renderer/components/runtime/PortableUpdatePanel.tsx": "b14a02353deea057182c1094092b2339dd91b6d36d4ed0a484f465e88e2f52bf"
  },
  "records": [
   {
@@ -12623,9 +12624,617 @@
        "state": "pending"
       }
      }
+    },
+    {
+     "id": "portable-select-owned-home",
+     "label": "portable \uc124\uce58 \ud3f4\ub354 \uc120\ud0dd",
+     "source": "src/renderer/components/runtime/PortableUpdatePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "kind": "click",
+         "action": "portable \uc124\uce58 \ud3f4\ub354 \uc120\ud0dd",
+         "expected": "Select only an explicit separate owned home.",
+         "observed": "Actual manager inspected the selected controlled owned home; current Studio was untouched.",
+         "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+         "receipt": "2026-10-07-portable-update-clean-487560a-browser.json",
+         "receipt_sha256": "63decbd85111241f646a59e4db3d13173fec1ef62b581aeeb45b3ab87e4889bb",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2e5d446badd475f7af2ca06d0397aaff4feccff0b325319c379dc1b02ad2e14c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "kind": "click",
+         "action": "portable \uc124\uce58 \ud3f4\ub354 \uc120\ud0dd",
+         "expected": "An unprovisioned native app must refuse before opening the folder picker.",
+         "observed": "Actual Electron main/preload/renderer returned packaged-application refusal with no selected home or dialog.",
+         "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::native desktop refuses unprovisioned portable changes before opening a directory dialog",
+         "receipt": "2026-10-07-portable-update-clean-487560a-electron.json",
+         "receipt_sha256": "51a782f359077df4f3f7f875de5876adff5f575ec030507c5ec5d5acf980cd4c",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "dd095e483424ccaf1a73c82a645f97b511932c387d25c4bf2e882a382b68c19f"
+          }
+         ]
+        }
+       ]
+      },
+      "cancel": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "kind": "click",
+         "action": "portable \uc124\uce58 \ud3f4\ub354 \uc120\ud0dd",
+         "expected": "Cancelling the folder selection must not set a home.",
+         "observed": "Cancelled controlled host picker returned null; no selected installation appeared.",
+         "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+         "receipt": "2026-10-07-portable-update-clean-487560a-browser.json",
+         "receipt_sha256": "63decbd85111241f646a59e4db3d13173fec1ef62b581aeeb45b3ab87e4889bb",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2e5d446badd475f7af2ca06d0397aaff4feccff0b325319c379dc1b02ad2e14c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+          }
+         ]
+        }
+       ]
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "kind": "click",
+         "action": "portable \uc124\uce58 \ud3f4\ub354 \uc120\ud0dd",
+         "expected": "Re-select after reload must read the committed pair.",
+         "observed": "Reopening read1.0.0/fence2 and later1.1.0/fence3 from the actual owned store.",
+         "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+         "receipt": "2026-10-07-portable-update-clean-487560a-browser.json",
+         "receipt_sha256": "63decbd85111241f646a59e4db3d13173fec1ef62b581aeeb45b3ab87e4889bb",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2e5d446badd475f7af2ca06d0397aaff4feccff0b325319c379dc1b02ad2e14c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "portable-inspect-state",
+     "label": "portable \uc0c1\ud0dc \ub2e4\uc2dc \uc77d\uae30",
+     "source": "src/renderer/components/runtime/PortableUpdatePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "kind": "click",
+         "action": "portable \uc0c1\ud0dc \ub2e4\uc2dc \uc77d\uae30",
+         "expected": "Read pending or committed state without automatically retrying the update.",
+         "observed": "Explicit read after actual child exits displayed recovery-required state and the permitted controls.",
+         "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+         "receipt": "2026-10-07-portable-update-clean-487560a-browser.json",
+         "receipt_sha256": "63decbd85111241f646a59e4db3d13173fec1ef62b581aeeb45b3ab87e4889bb",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2e5d446badd475f7af2ca06d0397aaff4feccff0b325319c379dc1b02ad2e14c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "portable-release-channel",
+     "label": "portable \ub9b4\ub9ac\uc2a4 \ucc44\ub110",
+     "source": "src/renderer/components/runtime/PortableUpdatePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "pending"
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "portable-review-offline",
+     "label": "portable \ubcc0\uacbd \ub0b4\uc6a9 \ud655\uc778",
+     "source": "src/renderer/components/runtime/PortableUpdatePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "kind": "click",
+         "action": "portable \ubcc0\uacbd \ub0b4\uc6a9 \ud655\uc778",
+         "expected": "Display a review bound to the actual signed input and current source.",
+         "observed": "Actual main/Python review displayed0.0.0\u21921.0.0 and later1.0.0\u21921.1.0; no installation ran on review.",
+         "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+         "receipt": "2026-10-07-portable-update-clean-487560a-browser.json",
+         "receipt_sha256": "63decbd85111241f646a59e4db3d13173fec1ef62b581aeeb45b3ab87e4889bb",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2e5d446badd475f7af2ca06d0397aaff4feccff0b325319c379dc1b02ad2e14c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "portable-confirm-drained-backup",
+     "label": "\uc120\ud0dd\ud55c portable \uc124\uce58\uc758 \ud559\uc2b5\u00b7\uac80\uc0ac\uac00 \uc885\ub8cc\ub418\uace0 \ubc31\uc5c5\uc744 \ud655\uc778\ud588\uc2b5\ub2c8\ub2e4",
+     "source": "src/renderer/components/runtime/PortableUpdatePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "kind": "click",
+         "action": "\uc120\ud0dd\ud55c portable \uc124\uce58\uc758 \ud559\uc2b5\u00b7\uac80\uc0ac\uac00 \uc885\ub8cc\ub418\uace0 \ubc31\uc5c5\uc744 \ud655\uc778\ud588\uc2b5\ub2c8\ub2e4",
+         "expected": "Only explicit confirmation enables apply and recovery controls.",
+         "observed": "Apply and pre-database abort were disabled until the checkbox was checked; backend independently checked the actual source.",
+         "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+         "receipt": "2026-10-07-portable-update-clean-487560a-browser.json",
+         "receipt_sha256": "63decbd85111241f646a59e4db3d13173fec1ef62b581aeeb45b3ab87e4889bb",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2e5d446badd475f7af2ca06d0397aaff4feccff0b325319c379dc1b02ad2e14c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "portable-apply-reviewed",
+     "label": "\uac80\ud1a0\ud55c portable \uc5c5\ub370\uc774\ud2b8 \uc801\uc6a9",
+     "source": "src/renderer/components/runtime/PortableUpdatePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "kind": "click",
+         "action": "\uac80\ud1a0\ud55c portable \uc5c5\ub370\uc774\ud2b8 \uc801\uc6a9",
+         "expected": "Install exactly the reviewed app/database pair.",
+         "observed": "Actual signed source transaction committed version1.0.0/fence1 and read it through the panel.",
+         "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+         "receipt": "2026-10-07-portable-update-clean-487560a-browser.json",
+         "receipt_sha256": "63decbd85111241f646a59e4db3d13173fec1ef62b581aeeb45b3ab87e4889bb",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2e5d446badd475f7af2ca06d0397aaff4feccff0b325319c379dc1b02ad2e14c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "kind": "click",
+         "action": "\uac80\ud1a0\ud55c portable \uc5c5\ub370\uc774\ud2b8 \uc801\uc6a9",
+         "expected": "Changed source after review must refuse before staging.",
+         "observed": "Writing labels after preview caused review refusal and no application-active pointer; explicit re-review was required.",
+         "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+         "receipt": "2026-10-07-portable-update-clean-487560a-browser.json",
+         "receipt_sha256": "63decbd85111241f646a59e4db3d13173fec1ef62b581aeeb45b3ab87e4889bb",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2e5d446badd475f7af2ca06d0397aaff4feccff0b325319c379dc1b02ad2e14c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+          }
+         ]
+        }
+       ]
+      },
+      "error": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "kind": "click",
+         "action": "\uac80\ud1a0\ud55c portable \uc5c5\ub370\uc774\ud2b8 \uc801\uc6a9",
+         "expected": "An interrupted install must consume review and require a fresh state read.",
+         "observed": "Actual controlled child exits91 at before_database and after_database surfaced errors; explicit inspection enabled the appropriate recovery.",
+         "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+         "receipt": "2026-10-07-portable-update-clean-487560a-browser.json",
+         "receipt_sha256": "63decbd85111241f646a59e4db3d13173fec1ef62b581aeeb45b3ab87e4889bb",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2e5d446badd475f7af2ca06d0397aaff4feccff0b325319c379dc1b02ad2e14c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+          }
+         ]
+        }
+       ]
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "portable-recover-finish",
+     "label": "\uac19\uc740 \uc5c5\ub370\uc774\ud2b8 \ub9c8\ubb34\ub9ac",
+     "source": "src/renderer/components/runtime/PortableUpdatePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "kind": "click",
+         "action": "\uac19\uc740 \uc5c5\ub370\uc774\ud2b8 \ub9c8\ubb34\ub9ac",
+         "expected": "Finish the same interrupted app/database transaction, not a new install.",
+         "observed": "Post-database interruption finished1.1.0/fence3; an already committed finish was idempotent at fence2.",
+         "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+         "receipt": "2026-10-07-portable-update-clean-487560a-browser.json",
+         "receipt_sha256": "63decbd85111241f646a59e4db3d13173fec1ef62b581aeeb45b3ab87e4889bb",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2e5d446badd475f7af2ca06d0397aaff4feccff0b325319c379dc1b02ad2e14c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "kind": "click",
+         "action": "\uac19\uc740 \uc5c5\ub370\uc774\ud2b8 \ub9c8\ubb34\ub9ac",
+         "expected": "Reopen only after finish actually commits and releases the command.",
+         "observed": "Panel awaited committed status and enabled selection, then reloaded and inspected1.1.0/fence3.",
+         "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+         "receipt": "2026-10-07-portable-update-clean-487560a-browser.json",
+         "receipt_sha256": "63decbd85111241f646a59e4db3d13173fec1ef62b581aeeb45b3ab87e4889bb",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2e5d446badd475f7af2ca06d0397aaff4feccff0b325319c379dc1b02ad2e14c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "portable-recover-forward",
+     "label": "\uc0c8 \uc4f0\uae30 \ubcf4\uc874\ud558\uba70 \ubcf5\uad6c",
+     "source": "src/renderer/components/runtime/PortableUpdatePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "kind": "click",
+         "action": "\uc0c8 \uc4f0\uae30 \ubcf4\uc874\ud558\uba70 \ubcf5\uad6c",
+         "expected": "Forward recovery must preserve newer account and labels.",
+         "observed": "Actual current-schema forward recovery advanced fence1\u21922 and retained newly created account and labels.",
+         "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+         "receipt": "2026-10-07-portable-update-clean-487560a-browser.json",
+         "receipt_sha256": "63decbd85111241f646a59e4db3d13173fec1ef62b581aeeb45b3ab87e4889bb",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2e5d446badd475f7af2ca06d0397aaff4feccff0b325319c379dc1b02ad2e14c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "kind": "click",
+         "action": "\uc0c8 \uc4f0\uae30 \ubcf4\uc874\ud558\uba70 \ubcf5\uad6c",
+         "expected": "Reload and select the same home to read its current pair.",
+         "observed": "Browser reloaded and selected the owned home with version1.0.0/fence2.",
+         "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+         "receipt": "2026-10-07-portable-update-clean-487560a-browser.json",
+         "receipt_sha256": "63decbd85111241f646a59e4db3d13173fec1ef62b581aeeb45b3ab87e4889bb",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2e5d446badd475f7af2ca06d0397aaff4feccff0b325319c379dc1b02ad2e14c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "portable-abort-before-db",
+     "label": "\ub370\uc774\ud130 \uc804\ud658 \uc804 \uc124\uce58 \ucde8\uc18c",
+     "source": "src/renderer/components/runtime/PortableUpdatePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "kind": "click",
+         "action": "\ub370\uc774\ud130 \uc804\ud658 \uc804 \uc124\uce58 \ucde8\uc18c",
+         "expected": "A pre-database abort retains the previous committed pair; a post-database abort is absent.",
+         "observed": "Actual before_database interruption was aborted to version1.0.0/fence2. After database publication no abort button existed.",
+         "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+         "receipt": "2026-10-07-portable-update-clean-487560a-browser.json",
+         "receipt_sha256": "63decbd85111241f646a59e4db3d13173fec1ef62b581aeeb45b3ab87e4889bb",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2e5d446badd475f7af2ca06d0397aaff4feccff0b325319c379dc1b02ad2e14c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
     }
    ],
-   "remaining": "Only explicitly listed scenarios are executed; other actions, host pickers, cancellation, generated menus and shortcuts remain pending."
+   "remaining": "Explicit portable controls supplement the curated list. Channel changes, unexecuted scenarios, real signed native positive installation, other actions, host pickers, runtime menus and shortcuts remain pending."
   },
   {
    "id": "U026",

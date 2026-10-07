@@ -12,7 +12,7 @@
 | S6-04 | 오프라인 업데이트 | owned POSIX portable 앱·DB cutover, crash finish, 새 account/profile 보존 forward recovery; actual frozen CLI5회·별도 CPU known-image2회; 새 main/preload/renderer 검토·복구 연결, 관련Python125/Node40 및 UI2개 통과 | 실제 OS installer·설치된 home·native layout·실 publisher 서명·native positive 설치 및 installed-app known-image handoff |
 | S6-05 | 공개 CI | 이전 정확한 source의 complete hosted success; heartbeat 검사 수정·Mac58/Linux119 통과 | 최신 게시 source 전체 CI 완료; 기존 queue 및 실패 기록 보존 |
 | S6-06 | 서명·채널 | unsigned 상태와 checksum/source 연결 | 실제 publisher/서명 키·최종 artifact와 stable/beta 운영 정책 |
-| S7-01 | 전체 기능 행동 coverage | 168개 curated action, 304개 시나리오 검증; 기존 credential 2개 control 추가 | 872개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
+| S7-01 | 전체 기능 행동 coverage | 177개 curated action, 319개 시나리오 검증; portable 버튼9개/15개 근거 추가 | 920개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
 | S7-02 | 10개 모델군 시나리오 | 실제 family별 학습/추론·다중 checkpoint·flow/package control 기록 | 사람이 검토한 대표 분류/정상/OCR/OBB/향상/GAN truth와 품질 판정 |
 | S7-03 | Windows 실사용 | 기존 unsigned runner 결과 보존 | 사용자 면제. 신규 실기 테스트를 시작하지 않으며 pass로 바꾸지 않음 |
 | S7-04 | 동시 작업·장애 | 2개 계정/agent·actual CPU·재접속·권한/충돌 control; controlled signed portable 앱·DB cutover 및 crash recovery | 물리적 장애와 실제 publisher가 서명한 native 앱 업데이트 |
@@ -78,3 +78,10 @@
 - source41f6d0b의 resource327개를 커밋 원본과 독립 비교했다. Executable SHA-256 `d7ded7066805d6dbc3203e9648629cbb57119cca018557d4b2b062852d432db3`, build identity `eaa78cc4ca72061bd7c3e30d7a2b5d205a2309881bcd2d1f0b63f98849007bdd`. startup/restart와13회 actual CLI로 source-CAS 거절·1.0.0→1.1.0 전환·새 account/labels 보존 forward recovery·재열기를 확인했다. DB fence는1→2→3이다.
 - 같은 binary에서 별도 CPU 기준 이미지 검사2회가 완료됐다. Python270 component/336 license files/14 supplemental suppliers/missing0 및 원문 해시를 대조했다. 잘못 선택한9개 supplier의5개 누락 빌드와 preflight field 오류는 각각 기록으로 보존했다. 공개 배포나 native library 법률 승인은 포함하지 않는다.
 - 공개 receipt `2026-10-07-reviewed-frozen-portable-update-41f6d0b.json`. Native positive 서명·installed home/OS installer 및 실제 고객 앱의 기준 이미지 인수인계는 별도로 남아 있다.
+
+## 추가 실행: 깨끗한 소스의 portable 버튼별 근거
+
+- source487560a의 browser/Electron2 passed/0 retry를 확인했다. 원장에9개 버튼·입력 action과15개 실제 시나리오를 추가했다. 목록 범위가 늘어 현재 curated177 actions/319 verified/920 pending이며156개 기능 전체 수락0은 유지한다.
+- 실제 자식 프로세스를 before_database/after_database에서 각각 exit91시켰다. 전환 전 abort는1.0.0/fence2를 유지했고, 전환 후 abort는 제공되지 않았으며 finish 후 재열기가1.1.0/fence3를 읽었다. 실제 정전과 배포자 서명 검증으로 대체하지 않는다.
+- 최초 검사의 재열기는 아직 처리 중인 이전 문구를 완료로 읽어 실패했다. 실패 원본을 보존하고 committed 상태와 버튼 재활성화를 모두 기다리도록 교정했다. 소프트웨어의 fence/권한/복구 조건을 완화하지 않았다.
+- 공개 receipt `2026-10-07-portable-update-clean-487560a-browser.json`, `2026-10-07-portable-update-clean-487560a-electron.json`. 실행 후 owned backend/Electron 프로세스·포트 종료 및 escaped/unowned 참조0을 확인했다.

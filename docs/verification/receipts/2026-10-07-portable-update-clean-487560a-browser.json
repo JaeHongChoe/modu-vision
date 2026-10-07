@@ -1,0 +1,83 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+  "source_dirty": false,
+  "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+  "test_source_sha256": "c9a37fffc92b381e11703819348a76787eed61e4110e1a579ed38f909af41992",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "6e40bb3a8a6a1aa952548d5a0c2eb1872b59127c9227471294c23de955d9bfe6",
+  "harness_sha256": "76daeab283363a8f0e89d7b872341984c7d96e38f1f85625b3c235da88d8cba5",
+  "teardown_sha256": "f0683cfd07bfb79d4647321c5ac23e5562c1a65244b47f8d8c0ca97c3dca40b2",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "2e5d446badd475f7af2ca06d0397aaff4feccff0b325319c379dc1b02ad2e14c"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+    }
+  ],
+  "observed": {
+    "actual_main_manager": true,
+    "actual_python_signed_update_and_forward_recovery": true,
+    "commands": [
+      "inspect",
+      "preview",
+      "install",
+      "inspect",
+      "preview",
+      "install",
+      "inspect",
+      "inspect",
+      "recover",
+      "inspect",
+      "inspect",
+      "inspect",
+      "recover",
+      "inspect",
+      "preview",
+      "install",
+      "inspect",
+      "inspect",
+      "recover",
+      "inspect",
+      "preview",
+      "install",
+      "inspect",
+      "inspect",
+      "recover",
+      "inspect",
+      "inspect"
+    ],
+    "source_changed_after_review_refused": true,
+    "controlled_application_entrypoint_executed": true,
+    "new_user_preserved": true,
+    "labels_preserved": true,
+    "database_fence": 2,
+    "pre_database_abort_reopens_prior_pair": true,
+    "post_database_finish_reopens_new_pair": true,
+    "post_database_abort_absent": true,
+    "controlled_child_exit_boundaries": [
+      "before_database",
+      "after_database"
+    ],
+    "physical_power_loss": false,
+    "native_signatures": "controlled output only; not real publisher acceptance",
+    "renderer_host": "browser with controlled bridge",
+    "native_electron": false,
+    "windows": false
+  },
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Controlled positive browser with actual main manager and source Python signed transaction; actual Electron unprovisioned negative path only. No real signed native positive installation, customer home, physical power loss, Windows, industrial model quality, independent or release acceptance."
+}
