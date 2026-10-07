@@ -26,7 +26,7 @@
   "src/renderer/components/dataset/ExternalMaskExchangePanel.tsx": "6a5d0fd5e8b57d05ae7e91b47ba447eac694a5f7c37509da9d2fbe8d7924f7a4",
   "src/renderer/components/training/TaskCenter.tsx": "5bdf6719c5857d609adff29ce3e745ff4b9b59935ac726ca6cfb4ac4e85e623d",
   "src/renderer/components/labeling/SavedReviewQueuePanel.tsx": "2255668df8dbac83f05da5ede7d8b3a7647f8ddfe62e4addcc78090cec6f5588",
-  "src/renderer/components/common/EvidenceImageViewer.tsx": "4df4dd6416f8b18869d2104f60d78e418bfb91b450560d3b6a6fe2141d18cc87",
+  "src/renderer/components/common/EvidenceImageViewer.tsx": "99a32cf293009b767ea5e98922a44498c4a008580ea033a97aa7b25c179c8892",
   "src/renderer/components/labeling/EvidenceEditReturn.tsx": "50877ef333bb8fb32d024b9446241bc4ab270d93e4e31d674a260f1800406343",
   "src/renderer/components/labeling/CandidateProviderControls.tsx": "1f2512051cbd189893f925821f86b300eda4ed25d0b4d7e68b8fab10e0daf2b0",
   "src/renderer/components/labeling/ModelAssistPanel.tsx": "27d386e4f53e09159bbbdc3713c80abbbd5fa6ae9dd9a80dd44c5581ed59febc",

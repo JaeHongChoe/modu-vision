@@ -241,3 +241,8 @@ Owned qualification-key macOS fixture의 actual install→entrypoint→new profi
 - Cleaneec5df1 actual browser2/native Electron1 passed, retry0, owned teardown이다. Malformed/absent service job IDs의 실제409·index 미생성과 split hash 보존을 확인했다. 저장 revision1에서 selected2/skipped2, immutable replay와 index/policy hash 보존, revision2 뒤 old skips 유지·new REVIEW capture만 새 policy_ref·selected3/skipped2, actual reload·UNKNOWN/pending·각 snapshot sourceSHA를 확인했다. 모델 실행이나 새 version/source/training은 없다.
 - Native controlled signed layout에서는 미선택 read 비활성화·confirmation 해제·channel 변경 때 review/confirmation 폐기, signed stable release의 beta-target actual refusal·no install, 적용 전 화면 종료·reload 후 새 확인 필요, 실제 native fixture install/entrypoint·raw link 변조 거절·exact 복구·같은1.0.0/fence1 재열기를 확인했다. Real publisher 서명이나 OS installer를 대신하지 않는다.
 - 기존 pending10차원을 채워197 actions/506 verified/873 pending이다. 부모67/82·pending15/82·전체 수락0은 유지한다. Public receipt:native-sampling-control-closure-eec5df1. 새 수정본 전체 browser replay는 실행하지 않았으며 직전185-pass 전체 선택은 정확한 a53 source에만 연결했다.
+
+## 실행 중: 판정 근거 이미지 디코딩 오류·취소·재열기
+
+- 원래 decoder failure control의 red5와 StrictMode effect replay/이전 drag가 새 raster에 이어지는 red2를 보존했다. 실제 decoder 완료 전 조작을 잠그고 source/evidence identity에 연결된 오류를 표시하며 늦은 callback을 거절한다. Overlay 실패는 읽을 수 있는 base를 유지한다. 새로운 layer로 바뀌면 zoom/pan과 drag를 초기화한다.
+- Component12/renderer-main888 passed, 두 타입 검사 passed이다. 실행은 코드 커밋 전이며 GUI·대표 품질·독립 수락이 아니다. 실제 앱 transport fault fixture와 stored CPU report/원본 hash 보존·취소·재열기는 다음 clean source 검사에 연결한다. Curated197/506/873과 부모67/15·전체 수락0은 아직 유지한다.

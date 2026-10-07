@@ -1,0 +1,39 @@
+{
+  "schema": "modu-vision.evidence-viewer-decoder-components/v1",
+  "base_source_sha": "f0dd4388b0e01b9bafb2694d5b3253a9ef0b3eed",
+  "execution_before_code_commit": true,
+  "clean_gui_execution": false,
+  "product_source_sha256": "99a32cf293009b767ea5e98922a44498c4a008580ea033a97aa7b25c179c8892",
+  "selected_files": {
+    "src/renderer/components/common/EvidenceImageViewer.tsx": "99a32cf293009b767ea5e98922a44498c4a008580ea033a97aa7b25c179c8892",
+    "src/renderer/components/common/evidenceViewer.ts": "facc184e24a9312e4a33e8910e630cc8e90e7ffc825f886e1a2d04f66d11e1aa",
+    "src/renderer/components/common/EvidenceImageViewer.decode.test.cjs": "be438b9b005bb9dd4172593da69e0d5772c7498feb95eb312f97d95c06df7e02",
+    "scripts/e2e/evidence-viewer-safety.spec.ts": "26c8bc54087451400b1e63c175ccfd2f9f29d9fb1df08fc14726619e2ae7206b"
+  },
+  "results": {
+    "decoder_and_utility": {
+      "passed": 12,
+      "failed": 0
+    },
+    "renderer_and_main": {
+      "passed": 888,
+      "failed": 0,
+      "skipped": 0
+    },
+    "product_typecheck": "passed",
+    "e2e_typecheck": "passed"
+  },
+  "retained_logs": {
+    "evidence-decode-red.log": "419606e700626b017c90be6e77de62617c6903a30fbcbb2fe8aedcd1803f970e",
+    "evidence-decode-strict-drag-red.log": "4c011300d5d4b1c60d194dedfdccb33540cda2bd6f0a2af98895ca637cc34c4d",
+    "evidence-decode-final-green.log": "0c916ee3aadb4b707b6deb1d1eb654b64d2402ca891b67f59cde5699be3663e7",
+    "evidence-decode-renderer.log": "2c7bcb7623e341ac81c3fac91eb8b0b4de946daebc5701df1c354d1a4b388901",
+    "evidence-decode-types.log": "3cea01ca6731d254d8cb8265f4fb29f0abcddf05eb43593ffedb269501b44fad"
+  },
+  "red_cases": {
+    "original_decoder_handling": 5,
+    "strict_effect_replay_and_drag_change": 2
+  },
+  "fixture_correction": "The initial component harness settle function was corrected to render new props before rerunning. The separate StrictMode and captured-drag red cases were reproduced before their product fix.",
+  "scope": "Component decoder state, original-layer identity and stale callback checks only. Actual browser/Electron execution, quality, hardware, publisher and independent acceptance remain pending."
+}
