@@ -1,0 +1,167 @@
+{
+  "schema_version": 1,
+  "kind": "actual-separated-openvino-linux-cpu-pack-qualification",
+  "source_sha": "087b9278407bd9ee88f63d35e3308edd7ebdce2c",
+  "source_inputs": {
+    "files_independently_matched_to_commit": 723,
+    "checkout_dirty": true,
+    "binding_sha256": "552b4356acf593c970663aab4b4103bec620f18b172006123b05540c21ff558a"
+  },
+  "pack": {
+    "inventory_sha256": "935c8038c38d03cb877d8d54c32a3940ad5144ea28ec65ce1289a873d0226bb7",
+    "inventory_size": 2080,
+    "file_count": 12,
+    "payload_bytes": 76128570,
+    "dependency_versions": {
+      "openvino": "2026.4.1",
+      "numpy": "2.2.6",
+      "packaging": "24.2",
+      "openvino-telemetry": "2025.2.0"
+    },
+    "transfer_sha256": "f1facc1343c0356fb3c6ffa390de6eb7fadaf8217c90d0aa216fad9a08402871"
+  },
+  "actual_execution": {
+    "base_openvino_absent": true,
+    "actual_target_platform": "Linux-5.15.0-191-generic-x86_64-with-glibc2.35",
+    "actual_python_version": "3.11.11",
+    "observed": {
+      "backend": "openvino",
+      "version": "2026.4.1-22982-e213a147257-releases/2026/4",
+      "devices": [
+        "CPU"
+      ],
+      "names": {
+        "CPU": "Intel(R) Xeon(R) Gold 6426Y"
+      }
+    },
+    "unavailable_device_refused": true,
+    "qualified_runtime_environment": "owned disposable venv with base torch dependencies; selected VISION_OPENVINO_PYTHON points to its executable",
+    "installed_pack_activated": false,
+    "installed_payload_hashes_preserved": true,
+    "installation_replay_identical": true,
+    "dependency_versions": {
+      "openvino": "2026.4.1",
+      "numpy": "2.2.6",
+      "packaging": "24.2",
+      "openvino-telemetry": "2025.2.0"
+    },
+    "precision_controls": [
+      {
+        "schema_version": 1,
+        "precision": "fp32",
+        "device": "CPU",
+        "input_shape": [
+          1,
+          3,
+          16,
+          16
+        ],
+        "dynamic_spatial": false,
+        "output_tree": {
+          "type": "tensor",
+          "dtype": "float32"
+        },
+        "metrics": {
+          "calibration_count": 0,
+          "validation_count": 2,
+          "max_absolute_error": 1.4901161193847656e-08,
+          "mean_absolute_error": 3.725290298461914e-09,
+          "output_argmax_disagreement_fraction": 0.0,
+          "output_argmax_axis": -1,
+          "latency_mean_ms": 1.1889436282217503,
+          "latency_p95_ms": 2.0116609521210194,
+          "reference_latency_mean_ms": 0.5136539693921804,
+          "measured_speedup": 0.4320255033120701,
+          "artifact_bytes": 9215
+        },
+        "quality_approved": false,
+        "openvino_version": "2026.4.1-22982-e213a147257-releases/2026/4",
+        "quantized_operation_count": 0
+      },
+      {
+        "schema_version": 1,
+        "precision": "fp16",
+        "device": "CPU",
+        "input_shape": [
+          1,
+          3,
+          16,
+          16
+        ],
+        "dynamic_spatial": false,
+        "output_tree": {
+          "type": "tensor",
+          "dtype": "float32"
+        },
+        "metrics": {
+          "calibration_count": 0,
+          "validation_count": 2,
+          "max_absolute_error": 7.346272468566895e-05,
+          "mean_absolute_error": 3.9638951420783997e-05,
+          "output_argmax_disagreement_fraction": 0.0,
+          "output_argmax_axis": -1,
+          "latency_mean_ms": 0.43104588985443115,
+          "latency_p95_ms": 0.7210438139736652,
+          "reference_latency_mean_ms": 0.35247555933892727,
+          "measured_speedup": 0.8177216571023611,
+          "artifact_bytes": 11556
+        },
+        "quality_approved": false,
+        "openvino_version": "2026.4.1-22982-e213a147257-releases/2026/4",
+        "quantized_operation_count": 0
+      }
+    ],
+    "model_quality_approved": false,
+    "physical_acceptance": false,
+    "release_approved": false
+  },
+  "isolated_execution": {
+    "network": "none",
+    "gpu_access": false,
+    "ports_published": false,
+    "read_only_root": true,
+    "capabilities": "ALL dropped",
+    "no_new_privileges": true,
+    "cpus": 2,
+    "memory_bytes": 8589934592,
+    "container_exit_code": 0,
+    "owned_container_removed": true
+  },
+  "tests": {
+    "passed": 125,
+    "failed": 0,
+    "skipped": 0,
+    "seconds": 81.438,
+    "selectors": [
+      "portable_flow_history",
+      "terminal_operation_history",
+      "global_migration",
+      "global_restore_recovery",
+      "runtime_pack_inventory",
+      "runtime_pack_installation",
+      "openvino_runtime::test_real_ir_conversion_keeps_full_flow_and_saved_metrics"
+    ]
+  },
+  "retained_evidence": {
+    "run-binding.json": "3c9528324ae980de1babc4783f97cebdcbfcbf0a7762a2880702854e0c6dc968",
+    "results/receipt.json": "39537b6efc2a21a91f8f557bdce9d318a50bfa18b5ab963a940f5d13f9d2f44a",
+    "results/linux.xml": "e74b042c9daa2e93b0a9e95e9820a920cd788278e7c86e927129449f202bcf40",
+    "linux.log": "0d4633c5f452a9ed5ed67602d1f562cc9967634339d27573aaaee9f43be3a7b5",
+    "qualify.py": "efab768c2aa0e7dd906a0b1ac9cdfd903fadcaa0eee4c5a89abf25cf0a79975a",
+    "results/fp32/conversion.json": "54f895ee0784800f226bca59c6ea27cbff9566ac6175d5a2e81c64fac7e641c1",
+    "results/fp16/conversion.json": "9685f7e61125b382c68aaa2d66de9ba37c8c643dda03037d099afe9c1479ddaa"
+  },
+  "original_failures_retained": [
+    "First: 124 passed / 1 error; exact-source export omitted the two example clients used by the full-flow test.",
+    "Second: 124 passed / 1 failed; qualification pointed VISION_OPENVINO_PYTHON to the base interpreter instead of a complete owned optional environment. Production child trusted import-path boundaries were preserved."
+  ],
+  "limitations": [
+    "Only actual Xeon CPU; explicit unavailable NPU refusal. No iGPU/NPU/Jetson/MIG/Windows or INT8/NNCF qualification.",
+    "Controlled tiny model/two heldout tensors and a tiny full flow; no representative human-reviewed manufacturing truth or quality approval.",
+    "FP32 and FP16 controls were slower than Torch here; this receipt does not establish a speedup.",
+    "Offline pack remains inactive. Qualification explicitly installed dependencies in an owned disposable venv; no base image, current application or other jobs changed.",
+    "Exact wheel and license bytes are retained; aggregate LicenseRef is not native-library legal approval or publisher release approval.",
+    "Root review only; independent review is unavailable under the agent execution limit."
+  ],
+  "operations": "docs/operations/optional-openvino-runtime-pack.md"
+}

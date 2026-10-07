@@ -1106,6 +1106,14 @@
      "scope": "Root review only. No live ownership, specialist relocation migration, new remote/GPU launch or human quality acceptance. FakeRemote protocol transfers are bounded to51 bytes; actual pretrained qualification stays separate. Latest complete hosted CI required.",
      "receipt": "docs/verification/receipts/2026-10-07-remote-terminal-identity.json",
      "receipt_sha256": "7d37fcf47538495ba309ed7acc95da93895b3273e7ed20f854320fb3366ec845"
+    },
+    {
+     "kind": "owned-independent-portable-flow-history",
+     "source_sha": "087b9278407bd9ee88f63d35e3308edd7ebdce2c",
+     "result": "Actual producer-generated independent reports with mixed model sets and selected profiles are validated per original archive. 25 new portable-history cases plus30 operation archive cases pass;186 related cases pass without skips. Completed, failed and aborted received bytes remain archival; changed live/uncertain/namespace/spec/graph/result cases refuse cutover. No SSH or worker authority created.",
+     "receipt": "2026-10-07-portable-flow-history-087b927.json",
+     "receipt_sha256": "219f7276dc6d7fe754b80ac5759136f1277a6281c562e8d52546b2d49aaca277",
+     "scope": "Actual portable flow archive production via controlled local transport; read-only original binding validation through owned drained cutover/forward. No remote machine connected, learned quality granted or worker authority adopted."
     }
    ],
    "file_actions": {
@@ -1133,7 +1141,7 @@
    },
    "proposed_test_file": "backend/tests/test_service_s1_08.py",
    "remaining": [
-    "Live owned-worker and uncertain-lease adoption with proved identity/fence, older unsupported protocols and independent portable flow-report history adapters remain pending.",
+    "Live owned-worker and uncertain-lease adoption with proved identity/fence and older unsupported protocols remain pending. Independent portable flow-report history adapters are now implemented and executed against producer-generated original archives; no worker launch/adoption or quality grant occurs.",
     "Ended current-protocol local/remote training, label, epoch and six specialist task histories are byte-bound. Seven remote-operation archive types now preserve original per-run journals and received artifact manifests through owned drained cutover/forward recovery. A missing original journal, unknown launch ownership or changed output refuses migration."
    ]
   },
@@ -4476,6 +4484,13 @@
      "result": "PyPI pydicom3.0.2 wheel matches the existing hashed CPU lock and reviewed provider hash; whole license retained, inventory/install/repeat verified.52 affected backend cases and clean source90f6c7c browser/Electron2 pass, with unchanged synthetic DICOM source and stable owned PNG on reopen.",
      "scope": "macOS arm64 isolated development interpreter and uncompressed input only; inactive store is not activated. Remaining providers, compressed decoder/device matrix, frozen/publisher/distribution and independent approval remain pending.",
      "platform": "Actual macOS arm64 CPU and development Electron; no installed user environment change"
+    },
+    {
+     "kind": "actual-separated-openvino-linux-cpu-pack-qualification",
+     "source_sha": "087b9278407bd9ee88f63d35e3308edd7ebdce2c",
+     "result": "Actual separated OpenVINO2026.4.1 Linux x64 cp311 offline pack:12 payload files,76,128,570 bytes; exact upstream wheels/license bytes. Base image had no OpenVINO. Inactive installation/replay/hash preservation, real Xeon CPU FP32/FP16 conversion and tiny full-flow heldout execution passed;125 related cases passed/0 skipped.",
+     "scope": "Owned network-none read-only CPU container with selected disposable optional venv. No representative truth, INT8, other devices, publisher, native legal or independent acceptance. Both earlier qualification failures retained. Receipt SHA-256 d0776e853c062e2922d0c6444c6d0472847c0d91cdc7ac13c4fef8bf25460e40",
+     "receipt": "docs/verification/receipts/2026-10-07-openvino-offline-pack-087b927.json"
     }
    ],
    "file_actions": {
@@ -4500,7 +4515,7 @@
     "E07"
    ],
    "remaining": [
-    "Actual standalone optional-runtime pack distribution, supported hardware execution and representative heldout precision approval remain pending. Actual owned OpenVINO CPU/provider controls were qualified separately from the base frozen backend."
+    "Actual separate OpenVINO CPU offline pack distribution and controlled provider/precision/full-flow execution are now qualified. Other optional providers, supported hardware matrix, INT8/NNCF and representative heldout quality approval remain pending; this CPU control does not qualify native-library legal terms or the real publisher."
    ]
   },
   {
@@ -4546,6 +4561,25 @@
       "docs/verification/receipts/2026-10-07-linux-portable-update-ebba4cc.json"
      ],
      "operations": "docs/operations/offline-portable-update.md"
+    },
+    {
+     "kind": "explicit-owned-portable-desktop-review-and-recovery",
+     "source_sha": "41f6d0b101c062116f6105bb7eb001fbd5f3418e",
+     "result": "Added packaged POSIX main/preload/renderer review, inspected selected owned home, source-CAS install and pinned recovery. Related Python125 and Node40 passed; both types and two actual browser/native cases passed. Browser control preserves new writes across forward recovery and reopens fence2; native unprovisioned application refuses before a dialog.",
+     "scope": "Positive browser has controlled native-signature outputs and actual source Python transaction; native positive signed deployment remains pending. Dirty evidence documents at execution retained honestly. No full parent or feature acceptance.",
+     "receipts": [
+      "docs/verification/receipts/2026-10-07-portable-update-review-41f6d0b.json"
+     ],
+     "operations": "docs/operations/offline-portable-update.md"
+    },
+    {
+     "kind": "actual-source-bound-reviewed-frozen-update-cli",
+     "source_sha": "41f6d0b101c062116f6105bb7eb001fbd5f3418e",
+     "result": "Actual frozen backend made13 inspection/preview/CAS-install/recovery/launch-plan calls; changed reviewed source refused, 1.0.0 then1.1.0 installed from original intent version, new account and labels survived forward recovery and reopen at fences1/2/3. Same exact binary separately passed startup/restart plus two CPU known-image inspections.327 selected resource bytes match commit,270 components/336 license files/14 supplemental suppliers/missing0 rehashed.",
+     "scope": "Actual unsigned standalone backend and controlled Ed25519 portable entrypoint. Known-image CPU inspection is separate from launching the selected portable app. No real publisher, signed native positive installation, installed customer home, OS installer, Windows, physical power loss, human quality or independent acceptance.",
+     "receipts": [
+      "docs/verification/receipts/2026-10-07-reviewed-frozen-portable-update-41f6d0b.json"
+     ]
     }
    ],
    "file_actions": {
@@ -4568,7 +4602,7 @@
    },
    "proposed_test_file": "backend/tests/test_service_s6_04.py",
    "remaining": [
-    "Owned drained POSIX portable application plus database cutover, crash finish and recovery preserving new writes are implemented and executed. Complete actual OS installer/installed-home adoption, Electron update UI, symlink-bearing native application layout, and installed application known-image handoff remain pending.",
+    "Owned drained POSIX portable application/database transaction and explicit desktop review/recovery UI are implemented. Complete actual OS installer/installed-home adoption, symlink-bearing native layout, signed native positive installation, and installed application known-image handoff remain pending.",
     "Actual publisher keys and signed candidate bytes are not supplied. Controlled keys do not qualify the real publisher or release.",
     "Inverse/version rollback is unsupported without a separately reviewed conversion; current-schema forward recovery is supported and qualified separately."
    ]

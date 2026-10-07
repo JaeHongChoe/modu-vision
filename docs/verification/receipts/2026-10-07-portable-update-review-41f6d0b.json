@@ -1,0 +1,153 @@
+{
+  "schema": "modu-vision.portable-review-controls/v1",
+  "source_sha": "41f6d0b101c062116f6105bb7eb001fbd5f3418e",
+  "source_dirty": true,
+  "source_dirty_scope": "Uncommitted evidence documents only at execution; source bytes retained in the commit and the exact harness receipts. This is not a clean GUI action acceptance receipt.",
+  "source_files": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "324a57591f6803ecf7ef872b2dfb8d83de3c0c94b8bdcbd5c6b1646d2e0dbdd4"
+    },
+    {
+      "path": "backend/engine/runtime_update.py",
+      "sha256": "2741bc1c597628ed8596fd1883bb2640637afd4a9a535df779483fae1de1aaa0"
+    },
+    {
+      "path": "backend/tests/test_portable_update_review.py",
+      "sha256": "85d832d1f204bca27bd2fc90fbda03a565060e6a5bf7f57753f5c77a5daa4f09"
+    },
+    {
+      "path": "scripts/e2e/portable-update-review.spec.ts",
+      "sha256": "55201f7a479ce9e7b103ccda96fd41d95190cae730ebc32df769a62f42de7afd"
+    },
+    {
+      "path": "src/main/ipc.ts",
+      "sha256": "a6f4f7c8de2f42d7eca355b1a0b496a8ab1c40e33ecb24169b0399d4ab9d96a4"
+    },
+    {
+      "path": "src/main/portableUpdate.test.cjs",
+      "sha256": "b1624295b935acf91b6b3c5308447f794c1d56990f7af43852a1bf7b245bb1fc"
+    },
+    {
+      "path": "src/main/portableUpdate.ts",
+      "sha256": "d4f1be18899d37d0ba22c8a21398fa523a7e364c7feb0f1fb94c1d782cefa489"
+    },
+    {
+      "path": "src/preload/index.ts",
+      "sha256": "bdde828852b461a89606368e68627a936ef9e8faecda291f5151aa1869c86423"
+    },
+    {
+      "path": "src/renderer/components/runtime/DistributionSettingsPanel.tsx",
+      "sha256": "664ac18d555fd515171706a66fa84c49e8fbea2722aabc3984ac65c177a0e577"
+    },
+    {
+      "path": "src/renderer/components/runtime/PortableUpdatePanel.tsx",
+      "sha256": "b14a02353deea057182c1094092b2339dd91b6d36d4ed0a484f465e88e2f52bf"
+    },
+    {
+      "path": "src/renderer/services/hostAdapter.ts",
+      "sha256": "29f583f1ac9e6a2aabdb90da12ff76055288ed8de8b094db91bc5053bb666d05"
+    },
+    {
+      "path": "src/types/electron.d.ts",
+      "sha256": "e9083faf876eae48caafda064fb212c557274a818ef9095ec7f141f98bb17d92"
+    }
+  ],
+  "checks": {
+    "python_related": {
+      "passed": 125,
+      "failed": 0,
+      "skipped": 0,
+      "junit_sha256": "80efb58d2174e481c08b342e1693d39a8a4adcb19aab76320af32686acbd56ab"
+    },
+    "node_related": {
+      "passed": 40,
+      "failed": 0,
+      "skipped": 0,
+      "log_sha256": "c999298319a5d3e9d35ca596e6e149de8e816e30d36f7cacd74a63cc51fbbeb6"
+    },
+    "types": {
+      "passed": true,
+      "log_sha256": "43061f0198ddc9df7b6cca52961bc24babb1463048ae0bb2a1acefbee7ae8c8b"
+    },
+    "ui": {
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "retries": 0,
+      "report_sha256": "fa2105badc87aec0ca10c9e9959b3c2f0fa909d98cabd97a0841c0c4be7a68d5",
+      "teardown_sha256": "b1eb5cf15fe56e4ab07c92305cde8e8ee26a999185712ce79be87796ee0bc6a1",
+      "owned_processes_stopped": true,
+      "cases": [
+        {
+          "mode": "browser",
+          "harness_sha256": "f0301deea24876e4fe5c7305918827a59846195b42a747efed4d8477b6b90024",
+          "source_dirty": true,
+          "status": "passed",
+          "observed": {
+            "actual_main_manager": true,
+            "actual_python_signed_update_and_forward_recovery": true,
+            "commands": [
+              "inspect",
+              "preview",
+              "install",
+              "inspect",
+              "preview",
+              "install",
+              "inspect",
+              "inspect",
+              "recover",
+              "inspect",
+              "inspect"
+            ],
+            "source_changed_after_review_refused": true,
+            "controlled_application_entrypoint_executed": true,
+            "new_user_preserved": true,
+            "labels_preserved": true,
+            "database_fence": 2,
+            "native_signatures": "controlled output only; not real publisher acceptance",
+            "renderer_host": "browser with controlled bridge",
+            "native_electron": false,
+            "windows": false
+          },
+          "artifacts": [
+            {
+              "id": "browser-screenshot-0",
+              "sha256": "44456ce03a64cd75e77e6e9a6e33cffb000685580be7ef52f615d17af8aa2d6b"
+            }
+          ]
+        },
+        {
+          "mode": "electron",
+          "harness_sha256": "64db3f1f446eade5eb36dfb86468d7f9dc4e36216d40da83ff610a877ef8970a",
+          "source_dirty": true,
+          "status": "passed",
+          "observed": {
+            "actual_electron_main_preload_renderer": true,
+            "unprovisioned_development_refused": true,
+            "directory_dialog_opened": false,
+            "installation_or_database_modified": false,
+            "real_signed_installation_qualified": false
+          },
+          "artifacts": [
+            {
+              "id": "electron-screenshot-0",
+              "sha256": "f567bc948fa30511b550826029ac74e6e86cc4b37340bc53201e2e580d2eafe8"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "qualification_boundaries": [
+    "Browser positive path uses the actual main manager and Python signed transaction with controlled native-signature outputs.",
+    "Actual native Electron main/preload/renderer refuses an unprovisioned development application before opening a directory dialog.",
+    "No real publisher identity, installed customer home, OS installer, native signing, physical power loss, Windows or model-quality acceptance.",
+    "Root review only; independent review is unavailable."
+  ],
+  "parent_accounting": {
+    "implementation_verified": 67,
+    "pending": 15,
+    "accepted": 0
+  }
+}

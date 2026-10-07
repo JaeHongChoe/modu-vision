@@ -1,0 +1,44 @@
+{
+  "schema": "modu-vision.portable-flow-history-execution/v1",
+  "source_sha": "087b9278407bd9ee88f63d35e3308edd7ebdce2c",
+  "scope": "Actual portable flow archive production via controlled local transport; read-only original binding validation through owned drained cutover/forward. No remote machine connected, learned quality granted or worker authority adopted.",
+  "tests": [
+    {
+      "name": "portable-history-final",
+      "passed": 55,
+      "junit_sha256": "8ea31d703b1aea313d434bb25f55fe1db17ae521a740748ebeff71d72feef82c",
+      "log_sha256": "b82a221efe5ab44d8118237222876927daca4e6001328cedb2b2755c3427b21f"
+    },
+    {
+      "name": "portable-history-related-resumed",
+      "passed": 186,
+      "junit_sha256": "ccd4fe9b77432b9d43ca6f67428cb770decebf6faf65ec5741fa7bb1877c21da",
+      "log_sha256": "cac68c82a87c2c1aa2c065aff8e2f1c46ed628d9740602048d0f1c07c54c17ad"
+    }
+  ],
+  "portable_history_cases": 25,
+  "producer": "backend.remote.operations.run_verified_flowchart_on_compute",
+  "validated_originals": [
+    "registered project namespace and exact owned reports path",
+    "per-run original journal/index and spec bytes",
+    "confirmed terminal worker state and original launch handle",
+    "per-archive canonical model-list synthetic parent and original selected-profile digest",
+    "original graph model scope, selected image, device, comparison/debug bindings",
+    "received output hashes, sizes and exact membership",
+    "completed result image/model/device scope"
+  ],
+  "mixed_original_models_and_profiles_preserved": true,
+  "later_current_checkpoint_does_not_rewrite_old_archive": true,
+  "live_uncertain_or_changed_archives_refused": true,
+  "ssh_connection_during_migration": false,
+  "worker_authority_created": false,
+  "model_quality_approved": false,
+  "independent_review_accepted": false,
+  "release_approved": false,
+  "prior_failures_retained": [
+    "16 unsafe archive/project mutations were accepted before the validator existed; one positive fixture used an unavailable JobStore.list API and was corrected",
+    "linked archive refusal raised before returning a preview; fixture corrected to require that refusal",
+    "interrupted related run has no completed XML and is not counted as passing"
+  ],
+  "remaining": "Live worker/uncertain lease identity and fencing transfer plus older unsupported protocols remain pending."
+}

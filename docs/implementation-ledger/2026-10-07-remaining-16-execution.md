@@ -4,19 +4,19 @@
 
 | ID | 작업 | 실제 완료한 부분 | 남은 조건 |
 |---|---|---|---|
-| S1-08 | 이력·전역 마이그레이션 | 종료된 학습·라벨·epoch·6종 specialist 및 7종 원격 작업 원본 보존; 관련163개와 새 Linux 검사 통과 | 실행 중 worker/불확실 lease의 소유권·fence 이관, 구형 프로토콜 및 독립 flow report 어댑터 |
+| S1-08 | 이력·전역 마이그레이션 | 종료된 학습·라벨·epoch·6종 specialist 및 7종 원격 작업 원본 보존; 독립 flow report의 모델·서버별 원본 검증 추가, 관련186개 통과 | 실행 중 worker/불확실 lease의 소유권·fence 이관 및 구형 프로토콜 |
 | S5-01 | 독립 검사 서비스 | 독립 프로세스·CPU 검사·owned start/stop/restart 및 Linux 격리 실행 | 실제 전용 계정·재부팅·장비 권한·GPU/camera 서비스 운용; Windows 실기 QA는 면제 |
 | S5-10 | 서비스 보안 | 구현 검증 완료: HTTPS·인증·세션·권한·경로·외부 secret 저장소·원자적 이전·실제 앱 readback | 운영 인증서·계정 배치와 실제 target/독립 최종 승인 |
 | S6-02 | Windows 설치 | 설치 구성·unsigned packaged CPU/restart 검증 기록 보존 | Windows11 설치·제거 실기 QA는 사용자 면제이며 통과로 집계하지 않음 |
-| S6-03 | 선택 runtime pack | 실제 OpenVINO CPU/provider·정밀도 control 실행; 기본 backend와 구분 | 별도 pack 배포와 실제 지원 장치/대표 정답 cohort 검증 |
-| S6-04 | 오프라인 업데이트 | owned POSIX portable 앱·DB cutover, crash finish, 새 account/profile 보존 forward recovery; actual frozen CLI5회·재실행 및 별도 CPU known-image2회 | 실제 OS installer·설치된 home·Electron UI·native layout·publisher 서명 및 installed-app known-image handoff |
+| S6-03 | 선택 runtime pack | 별도 OpenVINO offline pack12파일 설치·재검증, 실제 Xeon CPU FP32/FP16·full flow 및 관련125개 통과 | 다른 provider/장치·INT8·대표 정답 cohort·native license/publisher 승인 |
+| S6-04 | 오프라인 업데이트 | owned POSIX portable 앱·DB cutover, crash finish, 새 account/profile 보존 forward recovery; actual frozen CLI5회·별도 CPU known-image2회; 새 main/preload/renderer 검토·복구 연결, 관련Python125/Node40 및 UI2개 통과 | 실제 OS installer·설치된 home·native layout·실 publisher 서명·native positive 설치 및 installed-app known-image handoff |
 | S6-05 | 공개 CI | 이전 정확한 source의 complete hosted success; heartbeat 검사 수정·Mac58/Linux119 통과 | 최신 게시 source 전체 CI 완료; 기존 queue 및 실패 기록 보존 |
 | S6-06 | 서명·채널 | unsigned 상태와 checksum/source 연결 | 실제 publisher/서명 키·최종 artifact와 stable/beta 운영 정책 |
 | S7-01 | 전체 기능 행동 coverage | 168개 curated action, 304개 시나리오 검증; 기존 credential 2개 control 추가 | 872개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
 | S7-02 | 10개 모델군 시나리오 | 실제 family별 학습/추론·다중 checkpoint·flow/package control 기록 | 사람이 검토한 대표 분류/정상/OCR/OBB/향상/GAN truth와 품질 판정 |
 | S7-03 | Windows 실사용 | 기존 unsigned runner 결과 보존 | 사용자 면제. 신규 실기 테스트를 시작하지 않으며 pass로 바꾸지 않음 |
 | S7-04 | 동시 작업·장애 | 2개 계정/agent·actual CPU·재접속·권한/충돌 control; controlled signed portable 앱·DB cutover 및 crash recovery | 물리적 장애와 실제 publisher가 서명한 native 앱 업데이트 |
-| S7-05 | 규모·72시간 운전 | 별도 연속 운전 진행 중: 11.49시간/688 cycles; 기존 실패와 합산하지 않음 | 72시간 종료 receipt 및 실제 target RAM/disk/p95/tact 측정 |
+| S7-05 | 규모·72시간 운전 | 별도 연속 운전 진행 중: 13.06시간/782 cycles; 기존 실패와 합산하지 않음 | 72시간 종료 receipt 및 실제 target RAM/disk/p95/tact 측정 |
 | S7-06 | 공정 품질·장비 | simulator 계약과 실행/품질 상태 구분 | 실제 camera/PLC/MES 및 제품/Lot별 정답·미검/과검 승인 기준 |
 | S7-07 | 공개 후보 판정 | 최신 standalone backend freeze·startup/restart 및270개 의존성 license bytes 누락0 | native library 조건·업데이트/coverage·실제 서명·독립 리뷰·pilot |
 | S7-08 | 사용자 pilot·운영 | feedback/지원/backup 절차 및 승인 경계 기록 | 실제 처음 쓰는 참여자 pilot과 유지보수 책임·SLA 결정 |
@@ -52,3 +52,29 @@
 - 새 freeze의 Python270 component/336 license files/14 supplemental suppliers/missing0를 확인했다. Native library 조건과 공개 승인 및 실 publisher는 미확인이다.
 - Linux export의 raw binding에 checkout_dirty=false가 잘못 기록됐다. 실제 checkout에는 관련 없는 untracked 문서가 있었다. 원본 binding을 보존하고 새 receipt에 정정했으며 선택된706개 source+15개 resource의 모든 bytes를 commit과 독립 대조했다. Clean checkout을 주장하지 않는다.
 - 공개 근거: `docs/verification/receipts/2026-10-07-frozen-portable-update-8bf877d.json`, `docs/verification/receipts/2026-10-07-linux-portable-update-ebba4cc.json`. S6-04 전체 구현·GUI·운영 수락은 아직 pending이며 부모 수는67/82, 미완료15/82를 유지한다.
+
+## 추가 실행: 독립 portable flow 보고서 이력
+
+- source087b927에서 기존 학습 부모가 없는 독립 `reports/remote_flow`를 원래 등록 프로젝트에 연결한다. 한 디렉터리의 서로 다른 모델 목록·서버 profile도 각 archive의 원본 spec/digest로 검증한다. 현재 checkpoint가 나중에 변경돼도 과거 보고서의 원래 binding을 바꾸지 않는다.
+- 실제 보고서 생성 경로와 controlled transport를 사용하는 신규25건 및 기존 원격 작업30건(55 passed), 전역 이전/복구/학습 이력/앱 업데이트 관련186 passed를 확인했다. 변조/미확인 종료/linked path를 거절하며 SSH 접속·worker 소유권·품질 승인을 생성하지 않는다.
+- 원래 red/fixture 교정/중단 검사 로그를 보존했다. 완료 XML이 없는 중단 검사를 pass로 세지 않는다. 공개 receipt: `docs/verification/receipts/2026-10-07-portable-flow-history-087b927.json`. 실행 중 worker의 fence 이관과 구형 프로토콜은 아직 남아 있으므로 S1-08 부모 전체는 pending이다.
+
+## 추가 실행: 별도 OpenVINO 오프라인 runtime pack
+
+- source087b927의 선택된723개 입력을 커밋과 독립 대조했다. 별도 pack12개 파일/76,128,570 bytes의 inventory SHA-256은 `935c8038c38d03cb877d8d54c32a3940ad5144ea28ec65ce1289a873d0226bb7`이다. OpenVINO2026.4.1·NumPy2.2.6·packaging24.2·telemetry2025.2.0의 정확한 원본 wheel·license bytes를 보존한다.
+- 기본 이미지에 OpenVINO가 없는42번 Xeon CPU에서 inactive pack 설치→복사 해시→동일 재설치를 확인했다. 검사용 전용 venv에서 실제 FP32/FP16 변환·두 heldout tensor 및 full-flow 검사를 실행했고125 passed/0 skipped이다. 실제 tiny control은 Torch보다 느렸으므로 속도 향상을 주장하지 않는다.
+- 최초 HTTP example export 누락(124 passed/1 error)과 두 번째 child Python 환경 선택 실패(124 passed/1 failed)를 보존했다. Production의 trusted child import 경계는 바꾸지 않았다. 최종 container exit0/owned removed, network none/GPU 없음/read-only root이다.
+- 공개 receipt `docs/verification/receipts/2026-10-07-openvino-offline-pack-087b927.json`. INT8/NNCF·다른 장치·대표 정답 품질·실제 publisher/native legal/독립 승인은 pending이다. 부모 수는67/82·미완료15/82를 유지한다.
+
+## 추가 실행: 명시적으로 선택한 portable 설치의 검토·복구 화면
+
+- source41f6d0b에서 current Studio/user home과 겹치지 않는 별도 owned portable 설치만 선택한다. packaged POSIX 앱·백엔드의 실제 배포자 서명과 고정 trust가 없으면 폴더 선택창 전에 거절한다. Renderer가 임의 명령·경로·새 authority를 제공할 수 없다.
+- 검토는 원본·앱 파일·팩·채널·배포자·이전 버전·DB fence에 묶인다. 검토 뒤 새 데이터가 쓰이면 적용을 거절한다. 응답 유실 시 자동 재설치하지 않으며 상태를 다시 읽는다. 복구는 화면에 표시한 installation/update ID와 현재 원본을 다시 대조한다.
+- Python 관련125 passed/Node40 passed, 두 타입 검사, browser 및 actual Electron 각1개 통과했다. Browser에서는 실제 main manager와 source Python signed transaction으로 새 account/labels 보존·forward recovery·재열기를 확인했다. 실제 Electron은 미준비 개발 앱의 거절 경로만 확인했다. Native positive 서명은 fixture로 대신 승인하지 않는다.
+- 당시 미커밋 근거 문서 때문에 harness의 source_dirty=true를 보존했다. 이 실행을 clean action acceptance receipt로 쓰지 않는다. 공개 receipt `2026-10-07-portable-update-review-41f6d0b.json`. 부모67/82·미완료15/82·전체 수락0은 유지한다.
+
+## 추가 실행: 검토 계약이 포함된 실제 standalone binary
+
+- source41f6d0b의 resource327개를 커밋 원본과 독립 비교했다. Executable SHA-256 `d7ded7066805d6dbc3203e9648629cbb57119cca018557d4b2b062852d432db3`, build identity `eaa78cc4ca72061bd7c3e30d7a2b5d205a2309881bcd2d1f0b63f98849007bdd`. startup/restart와13회 actual CLI로 source-CAS 거절·1.0.0→1.1.0 전환·새 account/labels 보존 forward recovery·재열기를 확인했다. DB fence는1→2→3이다.
+- 같은 binary에서 별도 CPU 기준 이미지 검사2회가 완료됐다. Python270 component/336 license files/14 supplemental suppliers/missing0 및 원문 해시를 대조했다. 잘못 선택한9개 supplier의5개 누락 빌드와 preflight field 오류는 각각 기록으로 보존했다. 공개 배포나 native library 법률 승인은 포함하지 않는다.
+- 공개 receipt `2026-10-07-reviewed-frozen-portable-update-41f6d0b.json`. Native positive 서명·installed home/OS installer 및 실제 고객 앱의 기준 이미지 인수인계는 별도로 남아 있다.

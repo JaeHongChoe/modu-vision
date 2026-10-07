@@ -19,9 +19,11 @@ test('portable review binds actual signed bytes and preserves new writes through
  const seeded=JSON.parse(execFileSync(python,['-c',`
 import json,sys,shutil
 from pathlib import Path
+from cryptography.hazmat.primitives import serialization
 from backend.tests.test_global_migration import owned
 from backend.tests.test_service_s6_04 import fixture
 temp=Path(sys.argv[1]);root,*_=owned(temp);value=fixture(temp)
+signing=temp/'fixture-signing-key.der';signing.write_bytes(value['key'].private_bytes(serialization.Encoding.DER,serialization.PrivateFormat.PKCS8,serialization.NoEncryption()));signing.chmod(0o600)
 release=temp/'release';release.mkdir();shutil.copytree(value['directory'],release/'artifacts')
 shutil.copyfile(value['envelope'],release/'release.json')
 print(json.dumps({'root':str(root),'authority':str(value['authority']),'manifest':str(release/'release.json')}))
@@ -31,16 +33,26 @@ print(json.dumps({'root':str(root),'authority':str(value['authority']),'manifest
  const binary=Buffer.from('controlled runtime binding; actual source CLI runner used only by this test'),hash=(b:Buffer)=>crypto.createHash('sha256').update(b).digest('hex');
  fs.writeFileSync(path.join(resources,'backend_bin/vision_ai_backend'),binary);
  fs.writeFileSync(path.join(resources,'backend_bin/backend-release.json'),JSON.stringify({executable:'vision_ai_backend',executable_sha256:hash(binary),inventory:{build_identity_sha256:'a'.repeat(64),platform:process.platform==='darwin'?'Darwin':'Linux',architecture:process.arch==='arm64'?'arm64':'x86_64'}}));
- const {PortableUpdateManager}=load();const commands:string[]=[];
+ const {PortableUpdateManager}=load();const commands:string[]=[];let interruptInstall:string|null=null,manifest=seeded.manifest;
  const manager=new PortableUpdateManager({packaged:true,platform:process.platform,arch:process.arch,resourcesPath:resources,userDataPath:workspace.userData,appPath:path.join(workspace.root,'Current.app'),
   // These are controlled native-signature outputs; no real publisher acceptance.
   signature:async()=>({status:'verified',publisher:'Qualification fixture'}),
-  runner:async(_file:string,args:string[])=>{commands.push(args[1]);return runFile(python,['-m','backend.engine.runtime_update',...args.slice(1)],{cwd:harness.REPO_ROOT,encoding:'utf8',timeout:30000});}});
+  runner:async(_file:string,args:string[])=>{commands.push(args[1]);
+   if(args[1]==='install'&&interruptInstall){const boundary=interruptInstall;interruptInstall=null;return runFile(python,['-c',`
+import os,sys
+from backend.engine import runtime_update as update
+boundary=sys.argv[1]
+def interrupt(point):
+ if point==boundary:os._exit(91)
+update._checkpoint=interrupt
+raise SystemExit(update.main(sys.argv[2:]))
+`,boundary,...args.slice(1)],{cwd:harness.REPO_ROOT,encoding:'utf8',timeout:30000});}
+   return runFile(python,['-m','backend.engine.runtime_update',...args.slice(1)],{cwd:harness.REPO_ROOT,encoding:'utf8',timeout:30000});}});
  let cancelled=true;
  await page.exposeFunction('__portableDispatch',async(operation:string,args:any[])=>{
   if(operation==='select'){if(cancelled){cancelled=false;return null;}return manager.select(seeded.root);}
   if(operation==='inspect')return manager.inspect();
-  if(operation==='preview')return manager.preview(seeded.manifest,args[0]);
+  if(operation==='preview')return manager.preview(manifest,args[0]);
   if(operation==='apply')return manager.apply(args[0]);
   if(operation==='recover')return manager.recover(args[0],args[1]);
   throw Error('Unknown controlled operation');
@@ -85,7 +97,30 @@ print(json.dumps({'user_ids':[u['id'] for u in AccountStore(root/'auth/accounts.
  expect(execFileSync(observed.launch_argv[0],[],{encoding:'utf8'})).toBe('portable-qualified\n');
  await page.reload();await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();await page.getByRole('button',{name:'설치·진단',exact:true}).click();await select.click();await expect(panel).toContainText('버전 1.0.0 · 데이터 세대 2');
  await page.setViewportSize({width:700,height:850});await panel.scrollIntoViewIfNeeded();await evidence.screenshot(page,'portable-update-reopen-new-writes');
- evidence.note('portable_update_review',{actual_main_manager:true,actual_python_signed_update_and_forward_recovery:true,commands,source_changed_after_review_refused:true,controlled_application_entrypoint_executed:true,new_user_preserved:true,labels_preserved:observed.labels_preserved,database_fence:observed.database_fence,native_signatures:'controlled output only; not real publisher acceptance',renderer_host:'browser with controlled bridge',native_electron:false,windows:false});
+ // A committed finish is idempotent, then two actual child exit boundaries
+ // exercise the explicit pre-database abort and post-database finish controls.
+ await confirm.check();await panel.getByRole('button',{name:'같은 업데이트 마무리',exact:true}).click();await expect(select).toBeEnabled();await expect(panel).toContainText('앱·데이터 전환 확인됨');await expect(panel).toContainText('데이터 세대 2');
+ const next=JSON.parse(execFileSync(python,['-c',`
+import json,sys,shutil
+from pathlib import Path
+from cryptography.hazmat.primitives.serialization import load_der_private_key
+from backend.tests.test_service_s6_04 import fixture
+temp=Path(sys.argv[1]);key=load_der_private_key((temp/'fixture-signing-key.der').read_bytes(),password=None)
+value=fixture(temp,version='1.1.0',key=key,authority=temp/'authority.json')
+release=temp/'release-next';release.mkdir();shutil.copytree(value['directory'],release/'artifacts');shutil.copyfile(value['envelope'],release/'release.json')
+print(json.dumps({'manifest':str(release/'release.json')}))
+`,folder],{cwd:harness.REPO_ROOT,encoding:'utf8'}));manifest=next.manifest;
+ for(const boundary of ['before_database','after_database']){
+  await panel.getByRole('button',{name:'portable 변경 내용 확인',exact:true}).click();await expect(panel).toContainText('1.0.0 → 1.1.0');await confirm.check();
+  interruptInstall=boundary;await apply.click();await expect(panel.getByRole('alert')).toBeVisible();
+  await panel.getByRole('button',{name:'portable 상태 다시 읽기',exact:true}).click();await expect(panel).toContainText('중단된 업데이트 · 복구 필요');
+  const abort=panel.getByRole('button',{name:'데이터 전환 전 설치 취소',exact:true});
+  if(boundary==='before_database'){await expect(abort).toBeVisible();await expect(abort).toBeDisabled();await confirm.check();await abort.click();await expect(panel).toContainText('버전 1.0.0 · 데이터 세대 2');}
+  else{await expect(abort).toHaveCount(0);await confirm.check();await panel.getByRole('button',{name:'같은 업데이트 마무리',exact:true}).click();await expect(panel).toContainText('앱·데이터 전환 확인됨');await expect(select).toBeEnabled();await expect(panel).toContainText('버전 1.1.0 · 데이터 세대 3');}
+ }
+ await page.reload();await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();await page.getByRole('button',{name:'설치·진단',exact:true}).click();await select.click();await expect(panel).toContainText('버전 1.1.0 · 데이터 세대 3');
+ await evidence.screenshot(page,'portable-update-interruption-finish-reopen');
+ evidence.note('portable_update_review',{actual_main_manager:true,actual_python_signed_update_and_forward_recovery:true,commands,source_changed_after_review_refused:true,controlled_application_entrypoint_executed:true,new_user_preserved:true,labels_preserved:observed.labels_preserved,database_fence:observed.database_fence,pre_database_abort_reopens_prior_pair:true,post_database_finish_reopens_new_pair:true,post_database_abort_absent:true,controlled_child_exit_boundaries:['before_database','after_database'],physical_power_loss:false,native_signatures:'controlled output only; not real publisher acceptance',renderer_host:'browser with controlled bridge',native_electron:false,windows:false});
 });
 
 test('native desktop refuses unprovisioned portable changes before opening a directory dialog',{tag:'@electron'},async({electronSession,evidence})=>{

@@ -1,0 +1,88 @@
+{
+  "schema": "modu-vision.reviewed-frozen-portable-update/v1",
+  "source_sha": "41f6d0b101c062116f6105bb7eb001fbd5f3418e",
+  "resource_binding": {
+    "selected_resources": 327,
+    "mismatches": 0,
+    "independent_git_bytes_compared": true,
+    "inventory_sha256": "795828a48f3ff27c6e5b5d75fe7052437603f7175d17df00e11ddb45be650c14",
+    "audit_sha256": "ecb67eac6f461bcfaa6fc02ba7681dede484f52c53c204b1847e247f97208a67"
+  },
+  "build_identity_sha256": "eaa78cc4ca72061bd7c3e30d7a2b5d205a2309881bcd2d1f0b63f98849007bdd",
+  "executable_sha256": "d7ded7066805d6dbc3203e9648629cbb57119cca018557d4b2b062852d432db3",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64"
+  },
+  "startup_restart": {
+    "status": "passed",
+    "health": "ok",
+    "restart_health": "ok",
+    "receipt_sha256": "23cd12e6f0090f70a7df02cfb069ac81a1c6538da626466970b992571dc0f728"
+  },
+  "actual_update_cli": {
+    "calls": 13,
+    "review_source_change_refused": true,
+    "second_version_from_owned_intent": true,
+    "new_account_preserved": true,
+    "labels_preserved": true,
+    "database_fences": [
+      1,
+      2,
+      3
+    ],
+    "controlled_entrypoint_stdout": "portable-qualified\n"
+  },
+  "cli_report_sha256": "6a3116133059856521ee7b1b3cae50df526b921410da99c97beacf83e39d2f25",
+  "probe_sha256": "f623f577fa602f29217c0f50d3c7ef26ab597e434bfa127db0a8ca18fbc24e00",
+  "known_image": {
+    "status": "passed",
+    "device": "cpu",
+    "executions": 2,
+    "manifest_sha256": "a2172268f53aca6c68357c8943e94f92388fde371ad1b787d5ca8f1548449fa8",
+    "image_sha256": "657b3f7ab29ed2b02f43f612bd2fd2c99b92bf3454158a896399aac0d4bf3514",
+    "results": [
+      {
+        "state": "completed",
+        "verdict": "NG",
+        "result_sha256": "712bb83f2490d0aad9f2841903f9e5340e0f5636bcc057bc791e988564d95342"
+      },
+      {
+        "state": "completed",
+        "verdict": "NG",
+        "result_sha256": "103ae7093a1fa1d207ca403b0f74112472e93aaa886b6f6d63e1ff0b261bc128"
+      }
+    ],
+    "receipt_sha256": "5362ff8cfd386a63bd6866d810ac5518298acb93c873a8174577135af91379c5"
+  },
+  "license_bytes": {
+    "components": 270,
+    "files": 336,
+    "suppliers": 14,
+    "missing": 0,
+    "rehash_errors": 0,
+    "supplier_manifest_sha256": "5a39f2eff216ea2ad395bbecb8b88572540b1c68d52e7bfddf7fc3660b0494f6",
+    "native_library_legal_review": "pending",
+    "public_distribution_approved": false
+  },
+  "prior_failures_retained": [
+    {
+      "kind": "wrong-nine-entry-supplier-selected",
+      "log_sha256": "8d55db295f7a586fb510da2d9df48bc60b268ae790c0745402db9b33a1628bf9",
+      "build_receipt_sha256": "694fc222e47481de9cbeab1bcfe402398fe2a4f5b137d105acccf7f0a6a0cfa9",
+      "missing_license_components": 5,
+      "qualified": false
+    },
+    {
+      "kind": "complete-supplier-preflight-wrong-field-key",
+      "log_sha256": "0719323cc4dfc57ce46cf8a30e23c4a033b388dd395b1b75a901dde4d247ccb5",
+      "compilation_started": false
+    }
+  ],
+  "scope": "Actual unsigned standalone backend and controlled Ed25519 portable entrypoint. Known-image CPU inspection is separate from launching the selected portable app. No real publisher, signed native positive installation, installed customer home, OS installer, Windows, physical power loss, human quality or independent acceptance.",
+  "parent_accounting": {
+    "implementation_verified": 67,
+    "pending": 15,
+    "accepted": 0
+  }
+}

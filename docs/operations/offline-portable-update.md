@@ -35,6 +35,13 @@ new empty directory; it must not be applied to an existing installed home.
 
 ## Installation and startup
 
+Run `preview` with the same inputs as `install` to obtain a read-only review.
+Pass its `plan_sha256` as `--expected-plan-sha256` when installing. The command
+recomputes the plan under exclusive admission and refuses changed application,
+authority, target, previous pointer or source database bytes. `--target-json`
+accepts the same bounded target object as `--target-file`; `--use-owned-version`
+derives the current version from the verified original installation intent.
+
 ```sh
 python -m backend.engine.runtime_update install \
   --root /path/to/owned-installation \
@@ -68,6 +75,13 @@ grant native publisher, known-image or model-quality acceptance.
 
 ## Interrupted installation and later writes
 
+`inspect --root ... --authority ... --pinned-authority-sha256 ...` reads the
+current application/database pair without repairing it. The external authority
+must match before inspection follows the intent's stored paths. The response
+distinguishes a ready installation, committed pair and interrupted transition,
+and lists the currently permitted recovery actions. An optional authority and
+pin on `recover` bind recovery to this same inspected intent.
+
 ```sh
 python -m backend.engine.runtime_update recover \
   --root /path/to/owned-installation --intent <update-id> --action finish
@@ -85,11 +99,33 @@ retains the original migration identities in recovery history. Interrupted
 forward recovery uses the same durable preparation path. An inverse or version
 rollback is unsupported here and requires a separately approved conversion.
 
+## Explicit desktop review
+
+The installation/diagnostics panel can select a separate owned POSIX portable
+home. It refuses the current application and current user home, including any
+overlapping parent or child. Before a native folder picker opens, the packaged
+host verifies both application and frozen-backend signatures against the fixed
+publisher authority in its resources. An unsigned development app is refused.
+The user cannot select a replacement trust authority through this panel.
+
+Review shows the versions, publisher, inventory sizes and hashes. Confirmation
+that the selected installation is drained and backed up enables the apply or
+recovery button; the backend still verifies drained state independently. A main
+process review ID is consumed before installation begins. Lost responses require
+an explicit state read, never an automatic retry. Recovery also rechecks the
+installation and update IDs shown in the selected view before it runs.
+
+This panel does not launch the updated application or adopt an installed home.
+The selected app must subsequently be started and qualified with a known image.
+
 ## Qualification boundaries
 
 Controlled Ed25519 keys, tiny portable executables and subprocess power-loss
-fixtures verify the software transaction. They do not qualify a real publisher,
-an installed customer home, Electron installer/update UI, physical power loss,
-native code signing, a model's quality, or Windows. Actual frozen CLI execution,
+fixtures verify the software transaction. Browser review/recovery uses the real
+main manager and Python transaction with controlled native-signature outputs;
+actual Electron verifies the unprovisioned development refusal. These controls
+do not qualify a real publisher, a signed native positive installation, an
+installed customer home, physical power loss, native code signing, a model's
+quality, or Windows. Actual frozen CLI execution,
 Linux CPU execution and the precise source/resource hashes are recorded
 separately. Those remaining requirements stay pending in the service program.
