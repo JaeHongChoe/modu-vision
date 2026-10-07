@@ -12,7 +12,7 @@
 | S6-04 | 오프라인 업데이트 | owned POSIX portable 앱·DB cutover, crash finish, 새 account/profile 보존 forward recovery; actual frozen CLI5회·별도 CPU known-image2회; 새 main/preload/renderer 검토·복구 연결, 관련Python125/Node40 및 UI2개 통과 | 실제 OS installer·설치된 home·native layout·실 publisher 서명·native positive 설치 및 installed-app known-image handoff |
 | S6-05 | 공개 CI | sourcec2e7b6 hosted workflow success 재확인; heartbeat 검사 수정·Mac58/Linux119 통과 | 최신 게시 source 전체 CI 완료; 기존 queue 및 실패 기록 보존 |
 | S6-06 | 서명·채널 | unsigned 상태와 checksum/source 연결 | 실제 publisher/서명 키·최종 artifact와 stable/beta 운영 정책 |
-| S7-01 | 전체 기능 행동 coverage | 187개 curated action, 348개 시나리오 검증; modal keyboard·saved queue 실제 browser/Electron 근거 추가 | 961개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
+| S7-01 | 전체 기능 행동 coverage | 192개 curated action, 369개 시나리오 검증; modal keyboard·saved queue 실제 browser/Electron 근거 추가 | 975개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
 | S7-02 | 10개 모델군 시나리오 | 실제 family별 학습/추론·다중 checkpoint·flow/package control 기록 | 사람이 검토한 대표 분류/정상/OCR/OBB/향상/GAN truth와 품질 판정 |
 | S7-03 | Windows 실사용 | 기존 unsigned runner 결과 보존 | 사용자 면제. 신규 실기 테스트를 시작하지 않으며 pass로 바꾸지 않음 |
 | S7-04 | 동시 작업·장애 | 2개 계정/agent·actual CPU·재접속·권한/충돌 control; controlled signed portable 앱·DB cutover 및 crash recovery | 물리적 장애와 실제 publisher가 서명한 native 앱 업데이트 |
@@ -119,3 +119,10 @@
 - 공개 receipt: `2026-10-07-live-local-control-f8b24e8.json`, `2026-10-07-live-remote-control-1326b2c.json`, `2026-10-07-nvidia-cuda12-offline-pack-dd163b7.json`, modal/queue f8b24e8 browser/electron 각각. Root 검토이며 독립 리뷰는 agent 실행 한도로 미실행이다.
 
 - 저장 검토 큐의 추가 source/queue 선택·margin422·원래 평가 복귀·미저장 라벨 guard·실제 검수 policy gate와 학습 미제출 경로는 exploratory browser/Electron 각1개에서 통과했다. 새 비교 수동 선택과 실제 CPU 비교 및 기존 파생 데이터 재학습은 exploratory browser2개 통과이다. 커밋된 소스로 별도 재실행하며 이 dirty 실행을 clean action 근거로 쓰지 않는다.
+
+## 추가 실행: source5743664의 실제 비교·검수 큐 인계
+
+- Clean committed source5743664에서 browser3/Electron3 passed,0 retry이다. 수동 비교 모델/비운 선택을 추천 갱신이 덮지 않고 실제 CPU 비교 요청과 두-image saved report가 정확한 선택 ID를 유지한다. 기존 파생 데이터의 실제 재학습·비교·원본 복귀도 각각 다시 통과했다.
+- 두 저장 평가로 만든 서로 다른 큐의 선택·재열기, invalid margin422와 correction, 최신 평가 대신 정확한 원래 평가로 복귀, 실제 미저장 bbox10,10,30,30 guard와 저장 content를 확인했다. 실제 approved-only readiness가 eligible0을 거절하며, 별도 permissive fixture policy만 학습 준비로 이동했다. 학습 제출이나 사람의 라벨 승인은 생성하지 않았다.
+- 원장에 기존 누락 action5개를 추가해192 actions/369 verified/975 pending이다. 목록 확장으로 pending 수가 늘었으며 검증된 시나리오는21개 늘었다. 현재 부모67/82·미완료15/82와 기능/전체 수락0은 유지한다. 모든 owned backend/port/Electron은 종료됐고 teardown leftovers/unowned references0이다.
+- 실제 CI 실패의 원본 두 ZIP member 해시와 causal red2/green54, clean UI6개를 별도 repair receipt에 연결했다. 전체 archive와 큰 trace는 검증하지 않았으며 최신 hosted 전체 CI 성공으로 바꾸지 않았다.

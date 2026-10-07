@@ -51,7 +51,8 @@
   "src/renderer/components/evaluation/EvaluationHistoryPanel.tsx": "aa5325b16c0f836c038b286679b20d25812580cc0992880f287754995d8eebca",
   "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx": "9ab0454b4433afdd10fc9c6cbcc12e0ac4c71e3f43e0ed0aa829cd687d38672e",
   "src/renderer/components/runtime/FleetPanel.tsx": "572144e60bbe38efc208ca2d2d19e87de58793da783269e5498970c1d97243ab",
-  "src/renderer/components/runtime/PortableUpdatePanel.tsx": "b14a02353deea057182c1094092b2339dd91b6d36d4ed0a484f465e88e2f52bf"
+  "src/renderer/components/runtime/PortableUpdatePanel.tsx": "b14a02353deea057182c1094092b2339dd91b6d36d4ed0a484f465e88e2f52bf",
+  "src/renderer/components/evaluation/ModelComparisonPanel.tsx": "cf0c49e1cb75377c37351424ba3f536db39b3c55bdd05c6c4e39aa45bcfac248"
  },
  "records": [
   {
@@ -6369,7 +6370,358 @@
   },
   {
    "id": "F057",
-   "actions": [],
+   "actions": [
+    {
+     "id": "comparison-manual-baseline",
+     "label": "비교 기준 모델",
+     "source": "src/renderer/components/evaluation/ModelComparisonPanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "비교 기준 모델",
+         "expected": "Manual baseline survives recommendation updates and reaches the exact comparison request/result.",
+         "observed": "browser: Operator chose fixture candidate as baseline and incumbent as candidate. Changing independent evaluation selection twice did not reverse the pair; actual CPU comparison request and saved two-image report retained exact job IDs.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/comparison-manual-selection.spec.ts::manual comparison pair and explicit empty survive evaluation model changes",
+         "receipt": "2026-10-07-comparison-manual-selection-5743664-browser.json",
+         "receipt_sha256": "e0eea9864306914c56fe5c8407731d40095754a60528b2b7dd9870f261930112",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c7a77af322125c9d2bb0c39a4ce1cb45aab0b39e60355517d42b63fa6d340639"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "비교 기준 모델",
+         "expected": "Manual baseline survives recommendation updates and reaches the exact comparison request/result.",
+         "observed": "electron: Operator chose fixture candidate as baseline and incumbent as candidate. Changing independent evaluation selection twice did not reverse the pair; actual CPU comparison request and saved two-image report retained exact job IDs.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/comparison-manual-selection.spec.ts::native manual comparison pair and explicit empty survive evaluation model changes",
+         "receipt": "2026-10-07-comparison-manual-selection-5743664-electron.json",
+         "receipt_sha256": "eb0f23a02604ff8c8ff930f33fc6dff433925d31c7fc28f4bf5ae6fdd43ec79d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "829d1904f6dd7f0037ed0a3c5307dfd37292d9d40b24e86edee852bc6b483de6"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "비교 기준 모델",
+         "expected": "Manual baseline survives recommendation updates and reaches the exact comparison request/result.",
+         "observed": "browser: Operator chose fixture candidate as baseline and incumbent as candidate. Changing independent evaluation selection twice did not reverse the pair; actual CPU comparison request and saved two-image report retained exact job IDs.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/comparison-manual-selection.spec.ts::manual comparison pair and explicit empty survive evaluation model changes",
+         "receipt": "2026-10-07-comparison-manual-selection-5743664-browser.json",
+         "receipt_sha256": "e0eea9864306914c56fe5c8407731d40095754a60528b2b7dd9870f261930112",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c7a77af322125c9d2bb0c39a4ce1cb45aab0b39e60355517d42b63fa6d340639"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "비교 기준 모델",
+         "expected": "Manual baseline survives recommendation updates and reaches the exact comparison request/result.",
+         "observed": "electron: Operator chose fixture candidate as baseline and incumbent as candidate. Changing independent evaluation selection twice did not reverse the pair; actual CPU comparison request and saved two-image report retained exact job IDs.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/comparison-manual-selection.spec.ts::native manual comparison pair and explicit empty survive evaluation model changes",
+         "receipt": "2026-10-07-comparison-manual-selection-5743664-electron.json",
+         "receipt_sha256": "eb0f23a02604ff8c8ff930f33fc6dff433925d31c7fc28f4bf5ae6fdd43ec79d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "829d1904f6dd7f0037ed0a3c5307dfd37292d9d40b24e86edee852bc6b483de6"
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    {
+     "id": "comparison-manual-candidate",
+     "label": "후보 모델",
+     "source": "src/renderer/components/evaluation/ModelComparisonPanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "후보 모델",
+         "expected": "Explicit empty candidate remains empty and disables submit; manual choice survives independent selection updates.",
+         "observed": "browser: Manually cleared candidate, changed evaluation selection and observed empty/disabled submit. Chose fixture incumbent, changed evaluation model again and observed exact pair. Real saved comparison retained request IDs; synthetic fixture weights do not prove trained quality.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/comparison-manual-selection.spec.ts::manual comparison pair and explicit empty survive evaluation model changes",
+         "receipt": "2026-10-07-comparison-manual-selection-5743664-browser.json",
+         "receipt_sha256": "e0eea9864306914c56fe5c8407731d40095754a60528b2b7dd9870f261930112",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c7a77af322125c9d2bb0c39a4ce1cb45aab0b39e60355517d42b63fa6d340639"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "후보 모델",
+         "expected": "Explicit empty candidate remains empty and disables submit; manual choice survives independent selection updates.",
+         "observed": "electron: Manually cleared candidate, changed evaluation selection and observed empty/disabled submit. Chose fixture incumbent, changed evaluation model again and observed exact pair. Real saved comparison retained request IDs; synthetic fixture weights do not prove trained quality.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/comparison-manual-selection.spec.ts::native manual comparison pair and explicit empty survive evaluation model changes",
+         "receipt": "2026-10-07-comparison-manual-selection-5743664-electron.json",
+         "receipt_sha256": "eb0f23a02604ff8c8ff930f33fc6dff433925d31c7fc28f4bf5ae6fdd43ec79d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "829d1904f6dd7f0037ed0a3c5307dfd37292d9d40b24e86edee852bc6b483de6"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "후보 모델",
+         "expected": "Explicit empty candidate remains empty and disables submit; manual choice survives independent selection updates.",
+         "observed": "browser: Manually cleared candidate, changed evaluation selection and observed empty/disabled submit. Chose fixture incumbent, changed evaluation model again and observed exact pair. Real saved comparison retained request IDs; synthetic fixture weights do not prove trained quality.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/comparison-manual-selection.spec.ts::manual comparison pair and explicit empty survive evaluation model changes",
+         "receipt": "2026-10-07-comparison-manual-selection-5743664-browser.json",
+         "receipt_sha256": "e0eea9864306914c56fe5c8407731d40095754a60528b2b7dd9870f261930112",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c7a77af322125c9d2bb0c39a4ce1cb45aab0b39e60355517d42b63fa6d340639"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "후보 모델",
+         "expected": "Explicit empty candidate remains empty and disables submit; manual choice survives independent selection updates.",
+         "observed": "electron: Manually cleared candidate, changed evaluation selection and observed empty/disabled submit. Chose fixture incumbent, changed evaluation model again and observed exact pair. Real saved comparison retained request IDs; synthetic fixture weights do not prove trained quality.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/comparison-manual-selection.spec.ts::native manual comparison pair and explicit empty survive evaluation model changes",
+         "receipt": "2026-10-07-comparison-manual-selection-5743664-electron.json",
+         "receipt_sha256": "eb0f23a02604ff8c8ff930f33fc6dff433925d31c7fc28f4bf5ae6fdd43ec79d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "829d1904f6dd7f0037ed0a3c5307dfd37292d9d40b24e86edee852bc6b483de6"
+          }
+         ]
+        }
+       ]
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "후보 모델",
+         "expected": "Explicit empty candidate remains empty and disables submit; manual choice survives independent selection updates.",
+         "observed": "browser: Manually cleared candidate, changed evaluation selection and observed empty/disabled submit. Chose fixture incumbent, changed evaluation model again and observed exact pair. Real saved comparison retained request IDs; synthetic fixture weights do not prove trained quality.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/comparison-manual-selection.spec.ts::manual comparison pair and explicit empty survive evaluation model changes",
+         "receipt": "2026-10-07-comparison-manual-selection-5743664-browser.json",
+         "receipt_sha256": "e0eea9864306914c56fe5c8407731d40095754a60528b2b7dd9870f261930112",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c7a77af322125c9d2bb0c39a4ce1cb45aab0b39e60355517d42b63fa6d340639"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "후보 모델",
+         "expected": "Explicit empty candidate remains empty and disables submit; manual choice survives independent selection updates.",
+         "observed": "electron: Manually cleared candidate, changed evaluation selection and observed empty/disabled submit. Chose fixture incumbent, changed evaluation model again and observed exact pair. Real saved comparison retained request IDs; synthetic fixture weights do not prove trained quality.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/comparison-manual-selection.spec.ts::native manual comparison pair and explicit empty survive evaluation model changes",
+         "receipt": "2026-10-07-comparison-manual-selection-5743664-electron.json",
+         "receipt_sha256": "eb0f23a02604ff8c8ff930f33fc6dff433925d31c7fc28f4bf5ae6fdd43ec79d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "829d1904f6dd7f0037ed0a3c5307dfd37292d9d40b24e86edee852bc6b483de6"
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    {
+     "id": "comparison-manual-submit",
+     "label": "동일 test 이미지로 비교",
+     "source": "src/renderer/components/evaluation/ModelComparisonPanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "동일 test 이미지로 비교",
+         "expected": "Submit the manually chosen pair on the same test cohort and refuse an empty pair.",
+         "observed": "browser: Empty candidate disabled submission. Actual CPU comparison completed two original test images with zero execution errors and exact submitted baseline/candidate; no active model deployment. Original image hashes retained.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/comparison-manual-selection.spec.ts::manual comparison pair and explicit empty survive evaluation model changes",
+         "receipt": "2026-10-07-comparison-manual-selection-5743664-browser.json",
+         "receipt_sha256": "e0eea9864306914c56fe5c8407731d40095754a60528b2b7dd9870f261930112",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c7a77af322125c9d2bb0c39a4ce1cb45aab0b39e60355517d42b63fa6d340639"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "동일 test 이미지로 비교",
+         "expected": "Submit the manually chosen pair on the same test cohort and refuse an empty pair.",
+         "observed": "electron: Empty candidate disabled submission. Actual CPU comparison completed two original test images with zero execution errors and exact submitted baseline/candidate; no active model deployment. Original image hashes retained.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/comparison-manual-selection.spec.ts::native manual comparison pair and explicit empty survive evaluation model changes",
+         "receipt": "2026-10-07-comparison-manual-selection-5743664-electron.json",
+         "receipt_sha256": "eb0f23a02604ff8c8ff930f33fc6dff433925d31c7fc28f4bf5ae6fdd43ec79d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "829d1904f6dd7f0037ed0a3c5307dfd37292d9d40b24e86edee852bc6b483de6"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "동일 test 이미지로 비교",
+         "expected": "Submit the manually chosen pair on the same test cohort and refuse an empty pair.",
+         "observed": "browser: Empty candidate disabled submission. Actual CPU comparison completed two original test images with zero execution errors and exact submitted baseline/candidate; no active model deployment. Original image hashes retained.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/comparison-manual-selection.spec.ts::manual comparison pair and explicit empty survive evaluation model changes",
+         "receipt": "2026-10-07-comparison-manual-selection-5743664-browser.json",
+         "receipt_sha256": "e0eea9864306914c56fe5c8407731d40095754a60528b2b7dd9870f261930112",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c7a77af322125c9d2bb0c39a4ce1cb45aab0b39e60355517d42b63fa6d340639"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "동일 test 이미지로 비교",
+         "expected": "Submit the manually chosen pair on the same test cohort and refuse an empty pair.",
+         "observed": "electron: Empty candidate disabled submission. Actual CPU comparison completed two original test images with zero execution errors and exact submitted baseline/candidate; no active model deployment. Original image hashes retained.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/comparison-manual-selection.spec.ts::native manual comparison pair and explicit empty survive evaluation model changes",
+         "receipt": "2026-10-07-comparison-manual-selection-5743664-electron.json",
+         "receipt_sha256": "eb0f23a02604ff8c8ff930f33fc6dff433925d31c7fc28f4bf5ae6fdd43ec79d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "829d1904f6dd7f0037ed0a3c5307dfd37292d9d40b24e86edee852bc6b483de6"
+          }
+         ]
+        }
+       ]
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    }
+   ],
    "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
   },
   {
@@ -12890,6 +13242,58 @@
            "sha256": "f17464511c44e61b713bdc8f9f8dc174c65d689dfd7dcd4d7dbb8139dcab6d9b"
           }
          ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "검토 완료 · 다음",
+         "expected": "Unsaved annotation content blocks advancing the queue.",
+         "observed": "browser: Actual canvas bbox10,10,30,30 made the editor dirty; Review disabled and saved cursor0/content remained exact. Label saved without approval.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-browser.json",
+         "receipt_sha256": "9d7d7c0b221a5cb057ebf3f8b05b48f0637a4132b7ddce6edbd3a1df747d2e5d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1a1a33c5348aa84387dc0f053d15a3a63e272c78fb0c4a83ce6961ace3d85765"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ab504a962f33ddbdedbb337c651eef4a0a86b6984cd8855d5a6af66e8b3acb5b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "86cacd22cb1b91c9ebd3798c4e1044d6bd4ebb3e0fd43a83b8a4dba2871c4c1a"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "검토 완료 · 다음",
+         "expected": "Unsaved annotation content blocks advancing the queue.",
+         "observed": "electron: Actual canvas bbox10,10,30,30 made the editor dirty; Review disabled and saved cursor0/content remained exact. Label saved without approval.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-electron.json",
+         "receipt_sha256": "165f68e43070e07475843d96d8e8bc453732c13b6b367279f10261fe772e8657",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "02c0e576d9b3c010c2cc85e93d9add3068ba2166bfd21c19ec2667184908e52e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "698e6202b12d79e46ee671ed874d5a73da45c7801368d958f4e767df6e5ceece"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "01d40b52d0757ed18bf9a3719b06d4c7de78c337b76dce7c89d12af166b00073"
+          }
+         ]
         }
        ]
       },
@@ -13033,7 +13437,61 @@
        ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "보류 · 다음",
+         "expected": "Unsaved annotation content blocks skipping the queue.",
+         "observed": "browser: Actual dirty canvas content disabled Skip; original queue cursor0/content unchanged.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-browser.json",
+         "receipt_sha256": "9d7d7c0b221a5cb057ebf3f8b05b48f0637a4132b7ddce6edbd3a1df747d2e5d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1a1a33c5348aa84387dc0f053d15a3a63e272c78fb0c4a83ce6961ace3d85765"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ab504a962f33ddbdedbb337c651eef4a0a86b6984cd8855d5a6af66e8b3acb5b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "86cacd22cb1b91c9ebd3798c4e1044d6bd4ebb3e0fd43a83b8a4dba2871c4c1a"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "보류 · 다음",
+         "expected": "Unsaved annotation content blocks skipping the queue.",
+         "observed": "electron: Actual dirty canvas content disabled Skip; original queue cursor0/content unchanged.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-electron.json",
+         "receipt_sha256": "165f68e43070e07475843d96d8e8bc453732c13b6b367279f10261fe772e8657",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "02c0e576d9b3c010c2cc85e93d9add3068ba2166bfd21c19ec2667184908e52e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "698e6202b12d79e46ee671ed874d5a73da45c7801368d958f4e767df6e5ceece"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "01d40b52d0757ed18bf9a3719b06d4c7de78c337b76dce7c89d12af166b00073"
+          }
+         ]
+        }
+       ]
       },
       "error": {
        "state": "pending"
@@ -13093,7 +13551,61 @@
      "source": "src/renderer/components/labeling/SavedReviewQueuePanel.tsx",
      "scenarios": {
       "success": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "저장 검토 큐 선택",
+         "expected": "Manual alternate queue choice persists its exact ID and cursor on reload.",
+         "observed": "browser: Manually switched first/second/first queues. Reload retained first0/3 and second0/2 respectively; neither saved queue content nor original report bytes changed.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-browser.json",
+         "receipt_sha256": "9d7d7c0b221a5cb057ebf3f8b05b48f0637a4132b7ddce6edbd3a1df747d2e5d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1a1a33c5348aa84387dc0f053d15a3a63e272c78fb0c4a83ce6961ace3d85765"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ab504a962f33ddbdedbb337c651eef4a0a86b6984cd8855d5a6af66e8b3acb5b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "86cacd22cb1b91c9ebd3798c4e1044d6bd4ebb3e0fd43a83b8a4dba2871c4c1a"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "저장 검토 큐 선택",
+         "expected": "Manual alternate queue choice persists its exact ID and cursor on reload.",
+         "observed": "electron: Manually switched first/second/first queues. Reload retained first0/3 and second0/2 respectively; neither saved queue content nor original report bytes changed.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-electron.json",
+         "receipt_sha256": "165f68e43070e07475843d96d8e8bc453732c13b6b367279f10261fe772e8657",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "02c0e576d9b3c010c2cc85e93d9add3068ba2166bfd21c19ec2667184908e52e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "698e6202b12d79e46ee671ed874d5a73da45c7801368d958f4e767df6e5ceece"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "01d40b52d0757ed18bf9a3719b06d4c7de78c337b76dce7c89d12af166b00073"
+          }
+         ]
+        }
+       ]
       },
       "empty": {
        "state": "pending"
@@ -13145,6 +13657,58 @@
            "sha256": "f17464511c44e61b713bdc8f9f8dc174c65d689dfd7dcd4d7dbb8139dcab6d9b"
           }
          ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "저장 검토 큐 선택",
+         "expected": "Manual alternate queue choice persists its exact ID and cursor on reload.",
+         "observed": "browser: Manually switched first/second/first queues. Reload retained first0/3 and second0/2 respectively; neither saved queue content nor original report bytes changed.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-browser.json",
+         "receipt_sha256": "9d7d7c0b221a5cb057ebf3f8b05b48f0637a4132b7ddce6edbd3a1df747d2e5d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1a1a33c5348aa84387dc0f053d15a3a63e272c78fb0c4a83ce6961ace3d85765"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ab504a962f33ddbdedbb337c651eef4a0a86b6984cd8855d5a6af66e8b3acb5b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "86cacd22cb1b91c9ebd3798c4e1044d6bd4ebb3e0fd43a83b8a4dba2871c4c1a"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "저장 검토 큐 선택",
+         "expected": "Manual alternate queue choice persists its exact ID and cursor on reload.",
+         "observed": "electron: Manually switched first/second/first queues. Reload retained first0/3 and second0/2 respectively; neither saved queue content nor original report bytes changed.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-electron.json",
+         "receipt_sha256": "165f68e43070e07475843d96d8e8bc453732c13b6b367279f10261fe772e8657",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "02c0e576d9b3c010c2cc85e93d9add3068ba2166bfd21c19ec2667184908e52e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "698e6202b12d79e46ee671ed874d5a73da45c7801368d958f4e767df6e5ceece"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "01d40b52d0757ed18bf9a3719b06d4c7de78c337b76dce7c89d12af166b00073"
+          }
+         ]
         }
        ]
       },
@@ -13159,7 +13723,61 @@
      "source": "src/renderer/components/labeling/SavedReviewQueuePanel.tsx",
      "scenarios": {
       "success": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "원래 평가·비교로 돌아가기",
+         "expected": "Return to the exact saved origin rather than the latest evaluation.",
+         "observed": "browser: Opened older queue item and clicked origin return; stage4 selected the older exact evaluation and retained it on reload despite a newer evaluation existing.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-browser.json",
+         "receipt_sha256": "9d7d7c0b221a5cb057ebf3f8b05b48f0637a4132b7ddce6edbd3a1df747d2e5d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1a1a33c5348aa84387dc0f053d15a3a63e272c78fb0c4a83ce6961ace3d85765"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ab504a962f33ddbdedbb337c651eef4a0a86b6984cd8855d5a6af66e8b3acb5b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "86cacd22cb1b91c9ebd3798c4e1044d6bd4ebb3e0fd43a83b8a4dba2871c4c1a"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "원래 평가·비교로 돌아가기",
+         "expected": "Return to the exact saved origin rather than the latest evaluation.",
+         "observed": "electron: Opened older queue item and clicked origin return; stage4 selected the older exact evaluation and retained it on reload despite a newer evaluation existing.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-electron.json",
+         "receipt_sha256": "165f68e43070e07475843d96d8e8bc453732c13b6b367279f10261fe772e8657",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "02c0e576d9b3c010c2cc85e93d9add3068ba2166bfd21c19ec2667184908e52e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "698e6202b12d79e46ee671ed874d5a73da45c7801368d958f4e767df6e5ceece"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "01d40b52d0757ed18bf9a3719b06d4c7de78c337b76dce7c89d12af166b00073"
+          }
+         ]
+        }
+       ]
       },
       "empty": {
        "state": "pending"
@@ -13212,10 +13830,118 @@
        "state": "pending"
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "원래 평가·비교로 돌아가기",
+         "expected": "Return to the exact saved origin rather than the latest evaluation.",
+         "observed": "browser: Opened older queue item and clicked origin return; stage4 selected the older exact evaluation and retained it on reload despite a newer evaluation existing.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-browser.json",
+         "receipt_sha256": "9d7d7c0b221a5cb057ebf3f8b05b48f0637a4132b7ddce6edbd3a1df747d2e5d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1a1a33c5348aa84387dc0f053d15a3a63e272c78fb0c4a83ce6961ace3d85765"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ab504a962f33ddbdedbb337c651eef4a0a86b6984cd8855d5a6af66e8b3acb5b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "86cacd22cb1b91c9ebd3798c4e1044d6bd4ebb3e0fd43a83b8a4dba2871c4c1a"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "원래 평가·비교로 돌아가기",
+         "expected": "Return to the exact saved origin rather than the latest evaluation.",
+         "observed": "electron: Opened older queue item and clicked origin return; stage4 selected the older exact evaluation and retained it on reload despite a newer evaluation existing.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-electron.json",
+         "receipt_sha256": "165f68e43070e07475843d96d8e8bc453732c13b6b367279f10261fe772e8657",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "02c0e576d9b3c010c2cc85e93d9add3068ba2166bfd21c19ec2667184908e52e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "698e6202b12d79e46ee671ed874d5a73da45c7801368d958f4e767df6e5ceece"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "01d40b52d0757ed18bf9a3719b06d4c7de78c337b76dce7c89d12af166b00073"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "원래 평가·비교로 돌아가기",
+         "expected": "Return to the exact saved origin rather than the latest evaluation.",
+         "observed": "browser: Opened older queue item and clicked origin return; stage4 selected the older exact evaluation and retained it on reload despite a newer evaluation existing.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-browser.json",
+         "receipt_sha256": "9d7d7c0b221a5cb057ebf3f8b05b48f0637a4132b7ddce6edbd3a1df747d2e5d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1a1a33c5348aa84387dc0f053d15a3a63e272c78fb0c4a83ce6961ace3d85765"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ab504a962f33ddbdedbb337c651eef4a0a86b6984cd8855d5a6af66e8b3acb5b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "86cacd22cb1b91c9ebd3798c4e1044d6bd4ebb3e0fd43a83b8a4dba2871c4c1a"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "원래 평가·비교로 돌아가기",
+         "expected": "Return to the exact saved origin rather than the latest evaluation.",
+         "observed": "electron: Opened older queue item and clicked origin return; stage4 selected the older exact evaluation and retained it on reload despite a newer evaluation existing.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-electron.json",
+         "receipt_sha256": "165f68e43070e07475843d96d8e8bc453732c13b6b367279f10261fe772e8657",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "02c0e576d9b3c010c2cc85e93d9add3068ba2166bfd21c19ec2667184908e52e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "698e6202b12d79e46ee671ed874d5a73da45c7801368d958f4e767df6e5ceece"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "01d40b52d0757ed18bf9a3719b06d4c7de78c337b76dce7c89d12af166b00073"
+          }
+         ]
+        }
+       ]
       }
      }
     },
@@ -13225,16 +13951,558 @@
      "source": "src/renderer/components/labeling/SavedReviewQueuePanel.tsx",
      "scenarios": {
       "success": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "수정·검수 데이터로 학습 준비",
+         "expected": "Only saved data satisfying the actual configured review policy can enter training preparation.",
+         "observed": "browser: Dirty canvas disabled Prepare. Saved unapproved bbox plus fixture approved-only policy yielded eligible0 and actual readiness blocker. Separate permissive fixture policy allowed stage3, then return retained queues. No training job submitted and no human approval created.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-browser.json",
+         "receipt_sha256": "9d7d7c0b221a5cb057ebf3f8b05b48f0637a4132b7ddce6edbd3a1df747d2e5d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1a1a33c5348aa84387dc0f053d15a3a63e272c78fb0c4a83ce6961ace3d85765"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ab504a962f33ddbdedbb337c651eef4a0a86b6984cd8855d5a6af66e8b3acb5b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "86cacd22cb1b91c9ebd3798c4e1044d6bd4ebb3e0fd43a83b8a4dba2871c4c1a"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "수정·검수 데이터로 학습 준비",
+         "expected": "Only saved data satisfying the actual configured review policy can enter training preparation.",
+         "observed": "electron: Dirty canvas disabled Prepare. Saved unapproved bbox plus fixture approved-only policy yielded eligible0 and actual readiness blocker. Separate permissive fixture policy allowed stage3, then return retained queues. No training job submitted and no human approval created.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-electron.json",
+         "receipt_sha256": "165f68e43070e07475843d96d8e8bc453732c13b6b367279f10261fe772e8657",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "02c0e576d9b3c010c2cc85e93d9add3068ba2166bfd21c19ec2667184908e52e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "698e6202b12d79e46ee671ed874d5a73da45c7801368d958f4e767df6e5ceece"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "01d40b52d0757ed18bf9a3719b06d4c7de78c337b76dce7c89d12af166b00073"
+          }
+         ]
+        }
+       ]
       },
       "empty": {
        "state": "pending"
+      },
+      "invalid": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "수정·검수 데이터로 학습 준비",
+         "expected": "Only saved data satisfying the actual configured review policy can enter training preparation.",
+         "observed": "browser: Dirty canvas disabled Prepare. Saved unapproved bbox plus fixture approved-only policy yielded eligible0 and actual readiness blocker. Separate permissive fixture policy allowed stage3, then return retained queues. No training job submitted and no human approval created.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-browser.json",
+         "receipt_sha256": "9d7d7c0b221a5cb057ebf3f8b05b48f0637a4132b7ddce6edbd3a1df747d2e5d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1a1a33c5348aa84387dc0f053d15a3a63e272c78fb0c4a83ce6961ace3d85765"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ab504a962f33ddbdedbb337c651eef4a0a86b6984cd8855d5a6af66e8b3acb5b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "86cacd22cb1b91c9ebd3798c4e1044d6bd4ebb3e0fd43a83b8a4dba2871c4c1a"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "수정·검수 데이터로 학습 준비",
+         "expected": "Only saved data satisfying the actual configured review policy can enter training preparation.",
+         "observed": "electron: Dirty canvas disabled Prepare. Saved unapproved bbox plus fixture approved-only policy yielded eligible0 and actual readiness blocker. Separate permissive fixture policy allowed stage3, then return retained queues. No training job submitted and no human approval created.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-electron.json",
+         "receipt_sha256": "165f68e43070e07475843d96d8e8bc453732c13b6b367279f10261fe772e8657",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "02c0e576d9b3c010c2cc85e93d9add3068ba2166bfd21c19ec2667184908e52e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "698e6202b12d79e46ee671ed874d5a73da45c7801368d958f4e767df6e5ceece"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "01d40b52d0757ed18bf9a3719b06d4c7de78c337b76dce7c89d12af166b00073"
+          }
+         ]
+        }
+       ]
+      },
+      "error": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "수정·검수 데이터로 학습 준비",
+         "expected": "Only saved data satisfying the actual configured review policy can enter training preparation.",
+         "observed": "browser: Dirty canvas disabled Prepare. Saved unapproved bbox plus fixture approved-only policy yielded eligible0 and actual readiness blocker. Separate permissive fixture policy allowed stage3, then return retained queues. No training job submitted and no human approval created.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-browser.json",
+         "receipt_sha256": "9d7d7c0b221a5cb057ebf3f8b05b48f0637a4132b7ddce6edbd3a1df747d2e5d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1a1a33c5348aa84387dc0f053d15a3a63e272c78fb0c4a83ce6961ace3d85765"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ab504a962f33ddbdedbb337c651eef4a0a86b6984cd8855d5a6af66e8b3acb5b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "86cacd22cb1b91c9ebd3798c4e1044d6bd4ebb3e0fd43a83b8a4dba2871c4c1a"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "수정·검수 데이터로 학습 준비",
+         "expected": "Only saved data satisfying the actual configured review policy can enter training preparation.",
+         "observed": "electron: Dirty canvas disabled Prepare. Saved unapproved bbox plus fixture approved-only policy yielded eligible0 and actual readiness blocker. Separate permissive fixture policy allowed stage3, then return retained queues. No training job submitted and no human approval created.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-electron.json",
+         "receipt_sha256": "165f68e43070e07475843d96d8e8bc453732c13b6b367279f10261fe772e8657",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "02c0e576d9b3c010c2cc85e93d9add3068ba2166bfd21c19ec2667184908e52e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "698e6202b12d79e46ee671ed874d5a73da45c7801368d958f4e767df6e5ceece"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "01d40b52d0757ed18bf9a3719b06d4c7de78c337b76dce7c89d12af166b00073"
+          }
+         ]
+        }
+       ]
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "수정·검수 데이터로 학습 준비",
+         "expected": "Only saved data satisfying the actual configured review policy can enter training preparation.",
+         "observed": "browser: Dirty canvas disabled Prepare. Saved unapproved bbox plus fixture approved-only policy yielded eligible0 and actual readiness blocker. Separate permissive fixture policy allowed stage3, then return retained queues. No training job submitted and no human approval created.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-browser.json",
+         "receipt_sha256": "9d7d7c0b221a5cb057ebf3f8b05b48f0637a4132b7ddce6edbd3a1df747d2e5d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1a1a33c5348aa84387dc0f053d15a3a63e272c78fb0c4a83ce6961ace3d85765"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ab504a962f33ddbdedbb337c651eef4a0a86b6984cd8855d5a6af66e8b3acb5b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "86cacd22cb1b91c9ebd3798c4e1044d6bd4ebb3e0fd43a83b8a4dba2871c4c1a"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "수정·검수 데이터로 학습 준비",
+         "expected": "Only saved data satisfying the actual configured review policy can enter training preparation.",
+         "observed": "electron: Dirty canvas disabled Prepare. Saved unapproved bbox plus fixture approved-only policy yielded eligible0 and actual readiness blocker. Separate permissive fixture policy allowed stage3, then return retained queues. No training job submitted and no human approval created.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-electron.json",
+         "receipt_sha256": "165f68e43070e07475843d96d8e8bc453732c13b6b367279f10261fe772e8657",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "02c0e576d9b3c010c2cc85e93d9add3068ba2166bfd21c19ec2667184908e52e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "698e6202b12d79e46ee671ed874d5a73da45c7801368d958f4e767df6e5ceece"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "01d40b52d0757ed18bf9a3719b06d4c7de78c337b76dce7c89d12af166b00073"
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    {
+     "id": "saved-queue-origin-choice",
+     "label": "검토 큐 원본 평가",
+     "source": "src/renderer/components/labeling/SavedReviewQueuePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "검토 큐 원본 평가",
+         "expected": "An explicitly selected saved evaluation binds the new queue; empty selection cannot submit.",
+         "observed": "browser: Empty disabled Create. Two distinct controlled original evaluations created different queues, retaining exact IDs, margin and priority content; no model inference or label approval claimed.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-browser.json",
+         "receipt_sha256": "9d7d7c0b221a5cb057ebf3f8b05b48f0637a4132b7ddce6edbd3a1df747d2e5d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1a1a33c5348aa84387dc0f053d15a3a63e272c78fb0c4a83ce6961ace3d85765"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ab504a962f33ddbdedbb337c651eef4a0a86b6984cd8855d5a6af66e8b3acb5b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "86cacd22cb1b91c9ebd3798c4e1044d6bd4ebb3e0fd43a83b8a4dba2871c4c1a"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "검토 큐 원본 평가",
+         "expected": "An explicitly selected saved evaluation binds the new queue; empty selection cannot submit.",
+         "observed": "electron: Empty disabled Create. Two distinct controlled original evaluations created different queues, retaining exact IDs, margin and priority content; no model inference or label approval claimed.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-electron.json",
+         "receipt_sha256": "165f68e43070e07475843d96d8e8bc453732c13b6b367279f10261fe772e8657",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "02c0e576d9b3c010c2cc85e93d9add3068ba2166bfd21c19ec2667184908e52e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "698e6202b12d79e46ee671ed874d5a73da45c7801368d958f4e767df6e5ceece"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "01d40b52d0757ed18bf9a3719b06d4c7de78c337b76dce7c89d12af166b00073"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "검토 큐 원본 평가",
+         "expected": "An explicitly selected saved evaluation binds the new queue; empty selection cannot submit.",
+         "observed": "browser: Empty disabled Create. Two distinct controlled original evaluations created different queues, retaining exact IDs, margin and priority content; no model inference or label approval claimed.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-browser.json",
+         "receipt_sha256": "9d7d7c0b221a5cb057ebf3f8b05b48f0637a4132b7ddce6edbd3a1df747d2e5d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1a1a33c5348aa84387dc0f053d15a3a63e272c78fb0c4a83ce6961ace3d85765"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ab504a962f33ddbdedbb337c651eef4a0a86b6984cd8855d5a6af66e8b3acb5b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "86cacd22cb1b91c9ebd3798c4e1044d6bd4ebb3e0fd43a83b8a4dba2871c4c1a"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "검토 큐 원본 평가",
+         "expected": "An explicitly selected saved evaluation binds the new queue; empty selection cannot submit.",
+         "observed": "electron: Empty disabled Create. Two distinct controlled original evaluations created different queues, retaining exact IDs, margin and priority content; no model inference or label approval claimed.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-electron.json",
+         "receipt_sha256": "165f68e43070e07475843d96d8e8bc453732c13b6b367279f10261fe772e8657",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "02c0e576d9b3c010c2cc85e93d9add3068ba2166bfd21c19ec2667184908e52e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "698e6202b12d79e46ee671ed874d5a73da45c7801368d958f4e767df6e5ceece"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "01d40b52d0757ed18bf9a3719b06d4c7de78c337b76dce7c89d12af166b00073"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
        "state": "pending"
       },
       "error": {
        "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "saved-queue-margin",
+     "label": "검토 큐 임계 주변 범위",
+     "source": "src/renderer/components/labeling/SavedReviewQueuePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "검토 큐 임계 주변 범위",
+         "expected": "Invalid margin is rejected without a queue and correction changes exact threshold-near membership.",
+         "observed": "browser: Margin2 returned actual422 with zero queues; .05 created three items, .01 created only error/disagreement; corrected request succeeded.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-browser.json",
+         "receipt_sha256": "9d7d7c0b221a5cb057ebf3f8b05b48f0637a4132b7ddce6edbd3a1df747d2e5d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1a1a33c5348aa84387dc0f053d15a3a63e272c78fb0c4a83ce6961ace3d85765"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ab504a962f33ddbdedbb337c651eef4a0a86b6984cd8855d5a6af66e8b3acb5b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "86cacd22cb1b91c9ebd3798c4e1044d6bd4ebb3e0fd43a83b8a4dba2871c4c1a"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "검토 큐 임계 주변 범위",
+         "expected": "Invalid margin is rejected without a queue and correction changes exact threshold-near membership.",
+         "observed": "electron: Margin2 returned actual422 with zero queues; .05 created three items, .01 created only error/disagreement; corrected request succeeded.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-electron.json",
+         "receipt_sha256": "165f68e43070e07475843d96d8e8bc453732c13b6b367279f10261fe772e8657",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "02c0e576d9b3c010c2cc85e93d9add3068ba2166bfd21c19ec2667184908e52e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "698e6202b12d79e46ee671ed874d5a73da45c7801368d958f4e767df6e5ceece"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "01d40b52d0757ed18bf9a3719b06d4c7de78c337b76dce7c89d12af166b00073"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "검토 큐 임계 주변 범위",
+         "expected": "Invalid margin is rejected without a queue and correction changes exact threshold-near membership.",
+         "observed": "browser: Margin2 returned actual422 with zero queues; .05 created three items, .01 created only error/disagreement; corrected request succeeded.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-browser.json",
+         "receipt_sha256": "9d7d7c0b221a5cb057ebf3f8b05b48f0637a4132b7ddce6edbd3a1df747d2e5d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1a1a33c5348aa84387dc0f053d15a3a63e272c78fb0c4a83ce6961ace3d85765"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ab504a962f33ddbdedbb337c651eef4a0a86b6984cd8855d5a6af66e8b3acb5b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "86cacd22cb1b91c9ebd3798c4e1044d6bd4ebb3e0fd43a83b8a4dba2871c4c1a"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "검토 큐 임계 주변 범위",
+         "expected": "Invalid margin is rejected without a queue and correction changes exact threshold-near membership.",
+         "observed": "electron: Margin2 returned actual422 with zero queues; .05 created three items, .01 created only error/disagreement; corrected request succeeded.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-electron.json",
+         "receipt_sha256": "165f68e43070e07475843d96d8e8bc453732c13b6b367279f10261fe772e8657",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "02c0e576d9b3c010c2cc85e93d9add3068ba2166bfd21c19ec2667184908e52e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "698e6202b12d79e46ee671ed874d5a73da45c7801368d958f4e767df6e5ceece"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "01d40b52d0757ed18bf9a3719b06d4c7de78c337b76dce7c89d12af166b00073"
+          }
+         ]
+        }
+       ]
+      },
+      "error": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "검토 큐 임계 주변 범위",
+         "expected": "Invalid margin is rejected without a queue and correction changes exact threshold-near membership.",
+         "observed": "browser: Margin2 returned actual422 with zero queues; .05 created three items, .01 created only error/disagreement; corrected request succeeded.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-browser.json",
+         "receipt_sha256": "9d7d7c0b221a5cb057ebf3f8b05b48f0637a4132b7ddce6edbd3a1df747d2e5d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1a1a33c5348aa84387dc0f053d15a3a63e272c78fb0c4a83ce6961ace3d85765"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ab504a962f33ddbdedbb337c651eef4a0a86b6984cd8855d5a6af66e8b3acb5b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "86cacd22cb1b91c9ebd3798c4e1044d6bd4ebb3e0fd43a83b8a4dba2871c4c1a"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+         "kind": "click",
+         "action": "검토 큐 임계 주변 범위",
+         "expected": "Invalid margin is rejected without a queue and correction changes exact threshold-near membership.",
+         "observed": "electron: Margin2 returned actual422 with zero queues; .05 created three items, .01 created only error/disagreement; corrected request succeeded.",
+         "reviewer": "Codex root exact clean-source request, saved content and owned teardown readback; independent and representative human quality acceptance pending",
+         "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
+         "receipt": "2026-10-07-review-queue-handoff-5743664-electron.json",
+         "receipt_sha256": "165f68e43070e07475843d96d8e8bc453732c13b6b367279f10261fe772e8657",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "02c0e576d9b3c010c2cc85e93d9add3068ba2166bfd21c19ec2667184908e52e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "698e6202b12d79e46ee671ed874d5a73da45c7801368d958f4e767df6e5ceece"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "01d40b52d0757ed18bf9a3719b06d4c7de78c337b76dce7c89d12af166b00073"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
        "state": "pending"

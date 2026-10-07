@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "kind": "hosted-ci-failure-causal-repair",
+  "failed_source_sha": "ec127afd2bafe4c26b640efa3e68daabb29b5fbe",
+  "failed_run_id": 37553319876,
+  "failed_artifact_id": 11464541278,
+  "original_selected_members": [
+    {
+      "name": "derived-error-context.md",
+      "bytes": 35905,
+      "sha256": "66242830675b666e71a94ee8ecc33014df05d5878982f6c8bc9d0c9604e4e697"
+    },
+    {
+      "name": "derived-test-failed-1.png",
+      "bytes": 210222,
+      "sha256": "090f17522b5de19cbf03589db6045904dbe89860bbfa04ce9138d50dd7fd6c49"
+    }
+  ],
+  "whole_archive_verified": false,
+  "large_trace_verified": false,
+  "hosted_run_cancelled": false,
+  "repair_source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+  "cause": "Late recommended-model updates overwrote the operator comparison pair; the failed original screenshot and error context show baseline/candidate reversed.",
+  "focused_regression": {
+    "red_failed": 2,
+    "final_related_renderer_passed": 54,
+    "skipped": 0,
+    "clean_browser_passed": 3,
+    "clean_development_electron_passed": 3,
+    "retries": 0
+  },
+  "latest_full_hosted_CI": "pending",
+  "parent_acceptance": "pending",
+  "independent_review_accepted": false
+}

@@ -4834,6 +4834,30 @@
      "result": "GitHub run37552989986 completed success, including source contracts/core CPU/browser lane/inventory/artifact steps. Observed exact sourcec2e7b6, not the newer unpublished optimization commits.",
      "scope": "Run/job/step API observation only; test counts and1.1GB artifact contents were not independently extracted. Newest published-source CI, authentic-weight/native cases, quality, signing and release acceptance remain pending. Receipt SHA-256 c26e40892a6307025c2dd645cebf02deca31c27c4d9b262cdbbbb33c6934ea1e",
      "receipt": "docs/verification/receipts/2026-10-07-hosted-source-ci-c2e7b6.json"
+    },
+    {
+     "kind": "clean-derived-workflow-ci-regression-browser",
+     "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+     "result": "Committed source actual derived labels/review/retraining/comparison and original source return passed.",
+     "scope": "Focused local GUI execution after causal preference overwrite repair, not a full latest hosted workflow result.",
+     "receipt": "docs/verification/receipts/2026-10-07-derived-workflow-closure-5743664-browser.json",
+     "receipt_sha256": "6b4296a2b507bab82cdcef0ac6f9476aa9f734824d987bd5e030556fe95615ac"
+    },
+    {
+     "kind": "clean-derived-workflow-ci-regression-electron",
+     "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+     "result": "Committed source actual derived labels/review/retraining/comparison and original source return passed.",
+     "scope": "Focused local GUI execution after causal preference overwrite repair, not a full latest hosted workflow result.",
+     "receipt": "docs/verification/receipts/2026-10-07-derived-workflow-closure-5743664-electron.json",
+     "receipt_sha256": "3b7b7789d7918bd8fa41867de6683fd502b14b78ff942172df99925641c4f8a1"
+    },
+    {
+     "kind": "hosted-failure-original-evidence-and-causal-repair",
+     "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+     "result": "Original CI sourceec127 failed browser165 pass/1 fail/1 skip. Selected original screenshot/context showed a reversed manual pair. Two red regressions reproduced it; repaired renderer54 pass and clean browser3/Electron3 pass.",
+     "scope": "Only selected ZIP members were verified; full archive/large trace not verified. Latest hosted CI pending and original run not cancelled.",
+     "receipt": "docs/verification/receipts/2026-10-07-ci-comparison-selection-repair-5743664.json",
+     "receipt_sha256": "bce7c5e105dd130eeb97111b4214982c827abc6ea317f9ac8a6498f1b146e1a3"
     }
    ],
    "file_actions": {
@@ -5218,6 +5242,38 @@
       "docs/verification/receipts/2026-10-07-saved-review-queue-f8b24e8-browser.json",
       "docs/verification/receipts/2026-10-07-saved-review-queue-f8b24e8-electron.json"
      ]
+    },
+    {
+     "kind": "actual-clean-saved-queue-handoff-browser",
+     "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+     "result": "Actual saved evaluation/queue/margin controls, alternate queue reload, exact older evaluation return, unsaved bbox guards and real review-policy readiness gates passed. No training submitted.",
+     "scope": "192 curated actions/369 verified/975 pending after expanding five previously unlisted actions. Native macOS development app only; controlled reports and policy fixtures are not human label or quality approval. Root review only.",
+     "receipt": "docs/verification/receipts/2026-10-07-review-queue-handoff-5743664-browser.json",
+     "receipt_sha256": "9d7d7c0b221a5cb057ebf3f8b05b48f0637a4132b7ddce6edbd3a1df747d2e5d"
+    },
+    {
+     "kind": "actual-clean-manual-comparison-choice-browser",
+     "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+     "result": "Manual baseline/candidate and explicit empty survive independent evaluation-model changes; actual CPU comparison saved exact submitted IDs on two images.",
+     "scope": "Synthetic fixture model weights; no training, active-model deployment, quality or independent acceptance.",
+     "receipt": "docs/verification/receipts/2026-10-07-comparison-manual-selection-5743664-browser.json",
+     "receipt_sha256": "e0eea9864306914c56fe5c8407731d40095754a60528b2b7dd9870f261930112"
+    },
+    {
+     "kind": "actual-clean-saved-queue-handoff-electron",
+     "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+     "result": "Actual saved evaluation/queue/margin controls, alternate queue reload, exact older evaluation return, unsaved bbox guards and real review-policy readiness gates passed. No training submitted.",
+     "scope": "192 curated actions/369 verified/975 pending after expanding five previously unlisted actions. Native macOS development app only; controlled reports and policy fixtures are not human label or quality approval. Root review only.",
+     "receipt": "docs/verification/receipts/2026-10-07-review-queue-handoff-5743664-electron.json",
+     "receipt_sha256": "165f68e43070e07475843d96d8e8bc453732c13b6b367279f10261fe772e8657"
+    },
+    {
+     "kind": "actual-clean-manual-comparison-choice-electron",
+     "source_sha": "5743664021f1bb4e89b181fada97c4929f963c55",
+     "result": "Manual baseline/candidate and explicit empty survive independent evaluation-model changes; actual CPU comparison saved exact submitted IDs on two images.",
+     "scope": "Synthetic fixture model weights; no training, active-model deployment, quality or independent acceptance.",
+     "receipt": "docs/verification/receipts/2026-10-07-comparison-manual-selection-5743664-electron.json",
+     "receipt_sha256": "eb0f23a02604ff8c8ff930f33fc6dff433925d31c7fc28f4bf5ae6fdd43ec79d"
     }
    ],
    "file_actions": {
