@@ -13,7 +13,7 @@
   "src/renderer/components/runtime/ProductDeliveryWorkspace.tsx": "8323b2de60c928431997a8ec2262372f7768da519198d95f53c4daab68500b5c",
   "src/renderer/components/wizard/ProjectWorkspaceDialog.tsx": "8be688631863ce99a0593aabb3d0a229c25389622615c338d8ee35bb17601464",
   "src/renderer/components/wizard/ArtifactRetentionPanel.tsx": "b892d9aa9aa0707ec5c58fc142d2b3ec4ecbffa15df8d513b4da20267c045dd4",
-  "src/renderer/components/common/ImagePickerModal.tsx": "6cde4dc76f927e9ed7469c1765ba6b9f84193f24caf2df3bda0b347466030966",
+  "src/renderer/components/common/ImagePickerModal.tsx": "4ad3777c3152c0204afc4f2d517b056f5720e0b4d2caa90c4ab383b5c994d966",
   "src/renderer/components/labeling/DerivedImagePanel.tsx": "f8a8053a1a2920471d9cee999957a3b417b97fabd0b274ee378d3fd6efee25b4",
   "src/renderer/components/dataset/DerivedDatasetPanel.tsx": "11263d7aa7052d4ede7782669f8976cbe4e5d0c9896404021acd5bd4299ccbcf",
   "src/renderer/components/dataset/DatasetWorkflowPanel.tsx": "11fe07f0e6453605b605265b2d6c55ea45d9b0dfe62d9db55123d14f298b740c",

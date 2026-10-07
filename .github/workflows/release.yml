@@ -1,0 +1,108 @@
+name: Protected manual release candidate validation
+
+# No push, tag, PR, schedule, signing or publication entry point.
+"on":
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: release-candidate-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    # Do not name an environment here. Reading the existing policy before the
+    # dependent job avoids silently creating an unprotected new environment.
+    outputs:
+      publisher: ${{ steps.guard.outputs.publisher }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24'
+      - name: Read existing approval policy and expected public publisher
+        id: guard
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_TEAM_ID: ${{ vars.RELEASE_TEAM_ID }}
+        run: node scripts/release_candidate_gate.cjs preflight
+
+  candidate:
+    needs: preflight
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    # This is an operator-provisioned native CPU runner, with reviewed signed
+    # artifacts and Python packaging dependencies already available locally.
+    runs-on: [self-hosted, macOS, ARM64, vision-release-candidate]
+    environment: release-candidate
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    env:
+      RELEASE_TEAM_ID: ${{ needs.preflight.outputs.publisher }}
+      RELEASE_CANDIDATE_DIR: ${{ vars.RELEASE_CANDIDATE_DIR }}
+      RELEASE_BINDING_SHA256: ${{ vars.RELEASE_BINDING_SHA256 }}
+      RELEASE_PYZ_TOC: ${{ vars.RELEASE_PYZ_TOC }}
+      RELEASE_LICENSE_REPORT: ${{ runner.temp }}/release-candidate-${{ github.run_id }}-${{ github.run_attempt }}/license-gate.json
+      RELEASE_CANDIDATE_OUTPUT: ${{ runner.temp }}/release-candidate-${{ github.run_id }}-${{ github.run_attempt }}/candidate-manifest.json
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      HF_HUB_OFFLINE: '1'
+      TRANSFORMERS_OFFLINE: '1'
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Recheck current policy after protected environment approval
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/release_candidate_gate.cjs preflight
+      - name: Require independently pinned prepared candidate before building
+        id: binding
+        run: node scripts/release_candidate_gate.cjs configuration
+      - name: Prepare exclusive diagnostics directory
+        run: mkdir "$(dirname "$RELEASE_CANDIDATE_OUTPUT")"
+      - name: Source types, renderer, build and readiness contract regressions
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run typecheck
+          npm run typecheck:e2e
+          npm run test:renderer
+          npm run build
+          node --test scripts/tests/release-candidate.test.cjs scripts/tests/release-readiness.test.cjs scripts/tests/package-license-texts.test.cjs
+          python3 scripts/check_service_plan.py
+          python3 scripts/check_action_evidence.py
+      - name: Existing fresh license decision gate for the exact frozen delivery
+        env:
+          PREPARED_BACKEND_DIR: ${{ steps.binding.outputs.backend_dir }}
+        run: |
+          set -euo pipefail
+          test -n "$RELEASE_PYZ_TOC"
+          test -f "$RELEASE_PYZ_TOC"
+          python3 scripts/distribution_release_gate.py --root "$GITHUB_WORKSPACE" --frozen-build "$PREPARED_BACKEND_DIR" --pyz-toc "$RELEASE_PYZ_TOC" > "$RELEASE_LICENSE_REPORT"
+      - name: Verify native prepared publishers and exact bytes without signing
+        run: node scripts/release_candidate_gate.cjs candidate
+      - name: Preserve candidate diagnostics only
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: release-candidate-diagnostics-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/release-candidate-${{ github.run_id }}-${{ github.run_attempt }}/*.json
+          retention-days: 14
+          if-no-files-found: warn

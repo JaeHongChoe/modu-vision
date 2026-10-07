@@ -4,12 +4,61 @@ Never opens JobStore/AccountStore constructors (which can migrate or reattach).
 Only counts/schema/hashes leave this module; credential values stay private.
 """
 from contextlib import closing,contextmanager
-import hashlib,json,sqlite3,tempfile
+import hashlib,json,os,sqlite3,stat,tempfile
 from pathlib import Path
 from backend.engine.project_archive import _sqlite_file,_sqlite_snapshot
 
 _TERMINAL={'completed','failed','aborted','cancelled','canceled','interrupted','error','expired','rejected','succeeded'}
 _EXCLUDED={'.migrations','runtime_lifecycle.lock','migration_admission.lock'}
+MAX_SNAPSHOT_BYTES=2*1024**3
+
+
+def _file_identity(node):
+    return (node.st_dev,node.st_ino,node.st_mode,node.st_uid,node.st_nlink,
+            node.st_size,node.st_mtime_ns,node.st_ctime_ns)
+
+
+def _copy_regular_snapshot(path,target,max_bytes):
+    descriptor=os.open(path,os.O_RDONLY|getattr(os,'O_NOFOLLOW',0)|getattr(os,'O_NONBLOCK',0))
+    try:
+        before=os.fstat(descriptor)
+        if not stat.S_ISREG(before.st_mode) or before.st_size>max_bytes:
+            raise ValueError('Migration file is not regular or exceeds its bounded snapshot size')
+        count=0
+        with target.open('xb') as writer:
+            target.chmod(0o600)
+            while block:=os.read(descriptor,1024*1024):
+                count+=len(block)
+                if count>before.st_size:raise ValueError('Migration source grew during bounded snapshot')
+                writer.write(block)
+        if (count!=before.st_size or _file_identity(before)!=_file_identity(os.fstat(descriptor))
+                or _file_identity(before)!=_file_identity(path.lstat())):
+            raise ValueError('Migration source identity or bytes changed during bounded snapshot')
+        return _file_identity(before)
+    finally:os.close(descriptor)
+
+
+@contextmanager
+def bounded_file_snapshot(path,*,max_bytes=MAX_SNAPSHOT_BYTES):
+    """A stable finite regular-file copy; callers never reopen the source."""
+    path=Path(path)
+    with tempfile.TemporaryDirectory(prefix='modu-bounded-read-') as temporary:
+        copied=Path(temporary)/path.name
+        identity=_copy_regular_snapshot(path,copied,max_bytes)
+        yield copied
+        if _file_identity(path.lstat())!=identity:
+            raise ValueError('Migration source changed while validating bounded snapshot')
+
+
+def bounded_file_bytes(path,*,max_bytes=MAX_SNAPSHOT_BYTES):
+    with bounded_file_snapshot(path,max_bytes=max_bytes) as copied:return copied.read_bytes()
+
+
+def bounded_file_digest(path,*,max_bytes=MAX_SNAPSHOT_BYTES,expected_size=None):
+    with bounded_file_snapshot(path,max_bytes=max_bytes) as copied:
+        if expected_size is not None and copied.stat().st_size!=expected_size:
+            raise ValueError('Migration artifact size differs from its recorded bytes')
+        with copied.open('rb') as stream:return hashlib.file_digest(stream,'sha256').hexdigest()
 
 
 def _canonical(value):
@@ -18,21 +67,21 @@ def _canonical(value):
 
 @contextmanager
 def owned_file_snapshot(path):
-    with tempfile.TemporaryDirectory(prefix='modu-migration-read-') as temporary:
-        if not _sqlite_file(path):
-            yield path
+    path=Path(path)
+    with bounded_file_snapshot(path) as staged:
+        if not _sqlite_file(staged):
+            yield staged
             return
         # Copy main+committed WAL before opening SQLite, so dry-run cannot create
         # coordination files in another installation's source directory.
-        staged=Path(temporary)/'source.sqlite3'
-        main=path.read_bytes();wal=path.with_name(path.name+'-wal')
-        wal_bytes=wal.read_bytes() if wal.exists() else None
-        staged.write_bytes(main)
-        if wal_bytes is not None:staged.with_name(staged.name+'-wal').write_bytes(wal_bytes)
-        if path.read_bytes()!=main or (wal.read_bytes() if wal.exists() else None)!=wal_bytes:
-            raise ValueError('SQLite source changed during read-only inventory; retry after writer drain')
+        wal=path.with_name(path.name+'-wal');wal_identity=None
+        if wal.exists() or wal.is_symlink():
+            wal_identity=_copy_regular_snapshot(wal,staged.with_name(staged.name+'-wal'),MAX_SNAPSHOT_BYTES)
         try:
-            yield _sqlite_snapshot(staged,Path(temporary))
+            yield _sqlite_snapshot(staged,staged.parent)
+            if (wal_identity is None and (wal.exists() or wal.is_symlink())
+                    or wal_identity is not None and _file_identity(wal.lstat())!=wal_identity):
+                raise ValueError('SQLite WAL changed during read-only inventory; retry after writer drain')
         except sqlite3.Error as exc:
             raise ValueError(f'Unsupported or unreadable SQLite migration source: {path.name}') from exc
 
@@ -47,7 +96,11 @@ def inventory(root, *, kind='project', paths=None, live_jobs=None):
         if any(part in _EXCLUDED for part in relative.parts):continue
         if path.is_symlink():raise ValueError(f'Migration cannot follow linked artifact {relative.as_posix()}')
         if not path.is_file():continue
-        if path.name.endswith(('-wal','-shm','-journal')) and _sqlite_file(path.with_name(path.name.rsplit('-',1)[0])):continue
+        if path.name.endswith(('-wal','-shm','-journal')):
+            main=path.with_name(path.name.rsplit('-',1)[0])
+            if main.is_file():
+                with bounded_file_snapshot(main) as copied:
+                    if _sqlite_file(copied):continue
         allowed=(live_jobs or {}).get(relative.as_posix(),frozenset())
         row={'path':relative.as_posix(),'bytes':path.stat().st_size}
         with owned_file_snapshot(path) as copied:

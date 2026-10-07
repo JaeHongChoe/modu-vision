@@ -9,8 +9,9 @@ from backend.engine.runtime_process_control import atomic_private_json
 class GlobalMigrationError(ValueError):pass
 
 _SCOPES={'ledger','leases','profiles','accounts','context','local_journals','remote_journals'}
-_EXCLUDED={OWNER_FILE,POINTER_FILE,'.global-generations','.global-migrations','.global-generation.json','migration_admission.lock'}
-_APPLICATION_CONTROL={'application-active.json','application-update-pending.json','.application-updates','.application-generations'}
+_EXCLUDED={OWNER_FILE,POINTER_FILE,'.global-generations','.global-migrations','.global-generation.json','migration_admission.lock', '.installed-home-adoption'}
+_APPLICATION_CONTROL={'application-active.json','application-update-pending.json','.application-updates','.application-generations',
+                      'application-launch-lease.json','.application-launches','application-database-ownership.lock'}
 
 def digest(value):return hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 
@@ -189,6 +190,8 @@ def advance(root,*,expected_source_sha256,on_prepared=None):
     """
     root,owner=_owner(root)
     with store_admission(root,exclusive=True):
+        from backend.engine.application_launch_lease import assert_quiescent
+        assert_quiescent(root)
         current=active_generation(root)
         if current is None:raise GlobalMigrationError('Forward migration requires an active owned generation')
         before=_forward_view(root,owner,*current)
@@ -319,6 +322,8 @@ def _resume_restore(root,owner,identifier,path,record,source):
 def apply(root,*,expected_source_sha256,on_prepared=None):
     root,owner=_owner(root)
     with store_admission(root,exclusive=True):
+        from backend.engine.application_launch_lease import assert_quiescent
+        assert_quiescent(root)
         if active_generation(root):raise GlobalMigrationError('An active generation exists; original-source reactivation is refused')
         before=preview(root)
         if before['source_sha256']!=expected_source_sha256:raise GlobalMigrationError('Global source changed since preview')
@@ -349,6 +354,8 @@ def apply(root,*,expected_source_sha256,on_prepared=None):
 def recover(root,identifier,*,action):
     root,owner=_owner(root)
     with store_admission(root,exclusive=True):
+        from backend.engine.application_launch_lease import assert_quiescent
+        assert_quiescent(root)
         path,record=_journal(root,identifier);current=active_generation(root)
         if record['installation_id']!=owner['installation_id']:raise GlobalMigrationError('Foreign migration journal')
         if record.get('kind')=='live':
@@ -424,18 +431,30 @@ def recover(root,identifier,*,action):
 
 
 def main(argv=None):
-    """Explicit offline CLI; never discovers or adopts an installed home."""
+    """Explicit offline CLI; installed adoption requires reviewed original ownership."""
     import argparse
     parser=argparse.ArgumentParser(description=__doc__)
     commands=parser.add_subparsers(dest='command',required=True)
-    for command in ('initialize','preview','apply','preview-forward','advance','preview-live','apply-live','recover'):
+    for command in ('initialize','preview-installed','adopt-installed','preview','apply','preview-forward','advance','preview-live','apply-live','recover'):
         item=commands.add_parser(command);item.add_argument('--root',required=True)
-        if command=='initialize':item.add_argument('--scopes-file',required=True)
+        if command in ('initialize','preview-installed','adopt-installed'):
+            item.add_argument('--scopes-file',required=True)
+            if command=='adopt-installed':
+                item.add_argument('--expected-preview-sha256',required=True)
+                item.add_argument('--attestation-file',required=True)
         elif command in ('apply','advance','apply-live'):item.add_argument('--expected-source-sha256',required=True)
         elif command=='recover':item.add_argument('--migration-id',required=True);item.add_argument('--action',choices=('finish','restore'),required=True)
     args=parser.parse_args(argv)
     try:
         if args.command=='initialize':result=initialize_owned(args.root,scopes=json.loads(Path(args.scopes_file).read_bytes()))
+        elif args.command in ('preview-installed','adopt-installed'):
+            from backend.engine.installed_home_adoption import preview_installed_home,adopt_installed_home,_json,_regular
+            scopes=_json(_regular(Path(args.scopes_file),limit=65536,capture=True)['data'])
+            if args.command=='preview-installed':result=preview_installed_home(args.root,scopes=scopes)
+            else:
+                attestation=_json(_regular(Path(args.attestation_file),limit=65536,capture=True)['data'])
+                result=adopt_installed_home(args.root,scopes=scopes,expected_preview_sha256=args.expected_preview_sha256,
+                    owned_quiescent_attestation=attestation)
         elif args.command=='preview':result=preview(args.root)
         elif args.command=='preview-forward':result=preview_forward(args.root)
         elif args.command=='apply':result=apply(args.root,expected_source_sha256=args.expected_source_sha256)

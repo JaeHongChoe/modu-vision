@@ -1,0 +1,83 @@
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import {execFileSync} from 'node:child_process';
+import type {Page} from '@playwright/test';
+import {test,expect,type Workspace,type Evidence} from './fixtures/test';
+import {installDesktopHostShim} from './fixtures/desktop-host-shim';
+const harness=require('./fixtures/harness.cjs');
+
+type Api=(route:string,body?:unknown,method?:string)=>Promise<any>;
+type Probe=(route:string)=>Promise<{status:number;body:string}>;
+const digest=(file:string)=>crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+const relative=(index:number)=>`metadata/entry-${String(index).padStart(6,'0')}.png`;
+
+async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,probe:Probe,native:boolean,url?:string){
+ const name='100k metadata-only library qualification';
+ await api('/api/project/create',{name,task:'classification'});
+ const current=await api('/api/project/current'),context=await api('/api/context');
+ const helper=path.join(harness.REPO_ROOT,'scripts/e2e/fixtures/scale_library_metadata.py');
+ expect(fs.existsSync(helper),'Owned scale metadata fixture helper is required').toBe(true);
+ const fixture=JSON.parse(execFileSync(harness.resolvePython(),[helper,workspace.root,JSON.stringify({...current,project_context:context.project_context})],{cwd:harness.REPO_ROOT,env:{...process.env,VISION_AI_STUDIO_USER_DATA_DIR:workspace.userData},encoding:'utf8',timeout:30_000}).trim());
+ expect(fixture.metadata_rows).toBe(100_000);expect(fixture.actual_images).toBe(3);expect(fixture.verified_all).toBe(false);
+ await api('/api/project/update',{source_dataset_dir:fixture.source_root},'PUT');
+ const original=[...workspace.images.map(row=>({path:row.path,sha256:row.sha256})),...fixture.source_hashes];
+ const pages:any[]=[],requests:any[]=[],pending:Promise<void>[]=[],prohibited:string[]=[],pageErrors:string[]=[];
+ page.on('pageerror',error=>pageErrors.push(error.message));
+ page.on('request',request=>{const u=new URL(request.url());if(u.pathname==='/api/dataset/library/images')requests.push({q:u.searchParams.get('q'),cursor:u.searchParams.get('cursor'),limit:Number(u.searchParams.get('limit'))});if(request.method()==='POST'&&/\/(training\/start|compute\/jobs|train)$/.test(u.pathname))prohibited.push(u.pathname);});
+ page.on('response',response=>{const u=new URL(response.url());if(u.pathname!=='/api/dataset/library/images')return;pending.push((async()=>{const body=await response.json();pages.push({q:u.searchParams.get('q'),state:u.searchParams.get('state'),cursor:u.searchParams.get('cursor'),limit:Number(u.searchParams.get('limit')),status:response.status(),...body});})());});
+ const navigate=async()=>{if(url)await page.goto(url);else await page.reload();await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(name);await page.getByRole('button',{name:/05.*플로우차트/}).click();await page.getByRole('button',{name:'이미지 변경...'}).click();};
+ await navigate();const picker=page.getByRole('dialog',{name:'검사 대상 이미지 선택'}),grid=picker.getByRole('list',{name:'데이터 버전 이미지'}),search=picker.getByLabel('이미지 검색',{exact:true});
+ await expect(grid.getByRole('listitem').first()).toBeVisible();
+ let maximumDom=0;
+ const observeDom=()=>grid.evaluate(element=>{const observed={maximum:0};(element as any).__scaleRows=observed;const update=()=>{observed.maximum=Math.max(observed.maximum,element.querySelectorAll('[role="listitem"]').length);};new MutationObserver(update).observe(element,{childList:true,subtree:true});update();});
+ await observeDom();
+ const unfiltered=()=>pages.filter(row=>row.q===null&&row.state===null);
+ await expect.poll(()=>unfiltered().length).toBeGreaterThanOrEqual(1);
+ for(let count=2;count<=3;count++){
+  await grid.evaluate(element=>{element.scrollTop=element.scrollHeight;element.dispatchEvent(new Event('scroll',{bubbles:true}));});
+  await expect.poll(()=>unfiltered().length,{timeout:15_000}).toBeGreaterThanOrEqual(count);
+  expect(await grid.getByRole('listitem').count()).toBeLessThanOrEqual(120);
+ }
+ const first=unfiltered().slice(0,3);expect(first).toHaveLength(3);
+ for(let index=0;index<3;index++){
+  expect(first[index].status).toBe(200);expect(first[index].items.map((row:any)=>row.relative_path)).toEqual(Array.from({length:120},(_,offset)=>relative(index*120+offset)));
+  expect(first[index].items).toHaveLength(120);expect(first[index].next_cursor).toBeTruthy();
+  if(index){expect(first[index].cursor).toBe(first[index-1].next_cursor);expect(first[index].items[0].relative_path>first[index-1].items.at(-1).relative_path).toBe(true);}
+ }
+ expect(new Set(first.flatMap(row=>row.items.map((item:any)=>item.image_uuid))).size).toBe(360);
+ await search.fill('entry-099999.png');await expect(grid.getByRole('listitem')).toHaveCount(1);await expect(grid).toContainText('entry-099999.png');
+ const tail=await api('/api/dataset/library/images?q=entry-099999.png&limit=120');expect(tail.items).toHaveLength(1);expect(tail.items[0].image_uuid).toBe(fixture.tail.image_uuid);expect(tail.items[0].sha256).toBe(fixture.tail.sha256);expect(tail.items[0].valid).toBe(true);
+ await search.fill('no-match-scale-qualification');await expect(grid.getByRole('listitem')).toHaveCount(0);await expect(picker).toContainText('조건에 맞는 이미지가 없습니다.');
+ await search.fill('entry-099999.png');await expect(grid.getByRole('listitem')).toHaveCount(1);await expect(grid.getByRole('listitem')).toBeEnabled();await grid.getByRole('listitem').click();maximumDom=await grid.evaluate(element=>(element as any).__scaleRows.maximum);await picker.getByRole('button',{name:'선택 확정'}).click();await expect(picker).toBeHidden();
+ await navigate();await observeDom();await expect(picker).toContainText('선택: metadata/entry-099999.png');await expect(picker.getByRole('button',{name:'선택 확정'})).toBeEnabled();
+ await search.fill('entry-099999.png');await expect(grid.getByRole('listitem')).toHaveCount(1);await expect(grid.getByRole('listitem')).toHaveAttribute('aria-pressed','true');
+ const saved=await page.evaluate(()=>Object.entries(localStorage).filter(([key])=>key.startsWith('modu.inspectionImage.v2:')).map(([key,value])=>({key,value:JSON.parse(value)})));expect(saved).toHaveLength(1);expect(saved[0].value.imageUuid).toBe(fixture.tail.image_uuid);expect(saved[0].value.sha256).toBe(fixture.tail.sha256);
+ await evidence.screenshot(page,`${native?'native':'browser'}-100k-tail-reopened`);
+ // No image is implied for metadata-only rows. Check actual filesystem/API failure independently.
+ await search.fill('entry-000001.png');await expect(grid.getByRole('listitem')).toHaveCount(1);await expect(grid).toContainText('READ_ERROR');
+ const missing=await api('/api/dataset/library/images?q=entry-000001.png&limit=120');expect(missing.items).toHaveLength(1);expect(missing.items[0].valid).toBe(false);expect(missing.items[0].sha256).toBeNull();expect(fs.existsSync(missing.items[0].file_path)).toBe(false);
+ const missingThumbnail=await probe(`/api/dataset/thumbnail/entry-000001.png?file_path=${encodeURIComponent(missing.items[0].file_path)}`);expect(missingThumbnail.status).toBe(404);expect(missingThumbnail.body).toContain('Image file not found');
+ await grid.getByRole('listitem').click();
+ evidence.note('missing_source_click_observation',{row:missing.items[0],actual_thumbnail:missingThumbnail,picker_text:await picker.textContent(),saved_tail:saved[0]});
+ await expect(picker).toContainText('선택: metadata/entry-099999.png');await expect(picker.getByRole('alert')).toContainText('검사 대상으로 선택할 수 없습니다.');
+ await evidence.screenshot(page,`${native?'native':'browser'}-100k-missing-source-refused`);
+ await Promise.all(pending);expect(pages.every(row=>row.items.length<=120&&row.limit<=120&&row.status===200)).toBe(true);expect(requests.every(row=>row.limit<=120)).toBe(true);
+ maximumDom=Math.max(maximumDom,await grid.evaluate(element=>(element as any).__scaleRows.maximum));expect(maximumDom).toBeLessThanOrEqual(120);
+ for(const row of original)expect(digest(row.path)).toBe(row.sha256);
+ expect(pageErrors).toEqual([]);expect(prohibited).toEqual([]);
+ evidence.note('scale_library_qualification',{metadata_only:true,metadata_rows:fixture.metadata_rows,actual_images:fixture.actual_images,fixture,three_keyset_pages:first.map(row=>({cursor:row.cursor,next_cursor:row.next_cursor,first:row.items[0].relative_path,last:row.items.at(-1).relative_path,rows:row.items.length})),maximum_dom_rows:maximumDom,maximum_response_rows:Math.max(...pages.map(row=>row.items.length)),requests,saved,missing_thumbnail:missingThumbnail,source_hashes:original,source_unchanged:true,page_errors:pageErrors,prohibited,actual_ui_and_backend:true,actual_model_inference:false,model_quality_approved:false,target_tact_qualified:false,soak_72h_completed:false});
+}
+
+test('100k metadata pages through the actual library picker and restores the exact tail image',async({page,request,renderer,workspace,evidence})=>{
+ await installDesktopHostShim(page,renderer.port);
+ const api:Api=async(route,body,method)=>{const response=await request.fetch(renderer.origin+route,{method:method||(body===undefined?'GET':'POST'),...(body===undefined?{}:{data:body})});expect(response.ok(),`Owned API ${route}: HTTP ${response.status()}`).toBe(true);return response.json();};
+ const probe:Probe=async(route)=>{const response=await request.get(renderer.origin+route);return {status:response.status(),body:await response.text()};};
+ await exercise(page,workspace,evidence,api,probe,false,renderer.url);
+});
+test('native 100k metadata picker preserves keyset progress and exact reopened identity',{tag:'@electron'},async({electronSession,workspace,evidence})=>{
+ const {window}=electronSession,backend=await electronSession.waitForBackend();
+ const raw=(route:string,body?:unknown,method?:string)=>window.evaluate(async({port,route,body,method})=>{const response=await fetch(`http://127.0.0.1:${port}${route}`,{method:method||(body===undefined?'GET':'POST'),...(body===undefined?{}:{headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})});return {status:response.status,body:await response.text()};},{port:backend.port,route,body,method});
+ const api:Api=async(route,body,method)=>{const response=await raw(route,body,method);expect(response.status,`Owned API ${route}`).toBeLessThan(400);return JSON.parse(response.body);};
+ await exercise(window,workspace,evidence,api,(route)=>raw(route),true);
+});

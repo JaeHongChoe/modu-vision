@@ -26,6 +26,13 @@ export interface ImagePickerModalProps {
   onClose: () => void;
 }
 
+const rejectedRevisionImage = '손상되었거나 내용 확인이 끝나지 않은 이미지는 검사 대상으로 선택할 수 없습니다.';
+const usableRevisionImage = (item: { valid?: boolean | number; sha256?: string | null; image_uuid?: string; relative_path?: string; file_path?: string } | null | undefined) =>
+  !!item && (item.valid === true || item.valid === 1) && typeof item.sha256 === 'string' && /^[0-9a-f]{64}$/.test(item.sha256)
+    && typeof item.image_uuid === 'string' && !!item.image_uuid.trim()
+    && typeof item.relative_path === 'string' && !!item.relative_path.trim()
+    && typeof item.file_path === 'string' && !!item.file_path.trim();
+
 export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onClose }) => {
   const dialogRef = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
@@ -47,8 +54,9 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
   const [libraryReason, setLibraryReason] = useState<string | null>(null);
   const [savedCheck, setSavedCheck] = useState<LibraryResolution | null>(null);
   const [resolveError, setResolveError] = useState<string | null>(null);
+  const [selectionError, setSelectionError] = useState<string | null>(null);
   const userPicked = useRef(false);
-  const pick = (selection: SelectedInspectionImage | null) => { userPicked.current = true; setTempSelected(selection); };
+  const pick = (selection: SelectedInspectionImage | null) => { userPicked.current = true; setSelectionError(null); setTempSelected(selection); };
 
   const [activeTab, setActiveTab] = useState<'dataset' | 'local'>('dataset');
   const [localPathInput, setLocalPathInput] = useState<string>(
@@ -89,6 +97,7 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
     const identity = identityOf(saved);
     userPicked.current = false;
     setResolveError(null);
+    setSelectionError(null);
     if (!saved || !identity) return;
     let cancelled = false;
     api.library.resolve([identity]).then(({ results }) => {
@@ -96,7 +105,10 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
       const [result] = results;
       setSavedCheck(result);
       // a choice the user made while the check ran is theirs; the answer only explains the saved one
-      if (!userPicked.current) setTempSelected(result.status === 'found' && result.current ? { ...saved, imagePath: result.current.file_path } : null);
+      const usable = result.status === 'found' && usableRevisionImage(result.current)
+        && result.current?.image_uuid === saved.imageUuid && result.current?.sha256 === saved.sha256;
+      if (result.status === 'found' && !usable) setResolveError(rejectedRevisionImage);
+      if (!userPicked.current) setTempSelected(usable && result.current ? { ...saved, imagePath: result.current.file_path } : null);
     }).catch((caught) => {
       if (cancelled || epoch !== getProjectContextGeneration() || (caught as { status?: number }).status === 409) return;
       setResolveError(`저장된 선택을 확인하지 못했습니다(${caught instanceof Error ? caught.message : String(caught)}). 확인되지 않은 경로는 쓰지 않으니 다시 선택하세요.`);
@@ -167,6 +179,10 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
 
   const handleConfirm = () => {
     if (epoch !== getProjectContextGeneration() || openedScope.current !== scope) return;
+    if (tempSelected?.imageUuid && (!tempSelected.relativePath?.trim() || !tempSelected.sha256 || !/^[0-9a-f]{64}$/.test(tempSelected.sha256))) {
+      setSelectionError(rejectedRevisionImage);
+      return;
+    }
     if (tempSelected) {
       setSelectedImage(tempSelected);
       if (projectId) rememberSelection(projectId, tempSelected);
@@ -248,11 +264,11 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
                   {savedCheck?.status === 'moved' && (
                     <div className="mt-1 flex flex-wrap gap-1.5">
                       {savedCheck.candidates.map((candidate) => (
-                        <button key={candidate.image_uuid} type="button" className="rounded border border-amber-500/60 px-2 py-0.5 font-mono text-[10px]"
-                          onClick={() => pick({ source: 'dataset', imagePath: candidate.file_path, imageId: candidate.image_uuid,
+                        <button key={candidate.image_uuid} type="button" disabled={!usableRevisionImage(candidate)} title={!usableRevisionImage(candidate) ? rejectedRevisionImage : undefined} className="rounded border border-amber-500/60 px-2 py-0.5 font-mono text-[10px]"
+                          onClick={() => { if (!usableRevisionImage(candidate)) { setSelectionError(rejectedRevisionImage); return; } pick({ source: 'dataset', imagePath: candidate.file_path, imageId: candidate.image_uuid,
                             imageUuid: candidate.image_uuid, sha256: candidate.sha256, relativePath: candidate.relative_path,
                             fileName: candidate.relative_path.split('/').pop() || candidate.relative_path,
-                            thumbnailUrl: `/api/dataset/thumbnail/preview?file_path=${encodeURIComponent(candidate.file_path)}` })}>
+                            thumbnailUrl: `/api/dataset/thumbnail/preview?file_path=${encodeURIComponent(candidate.file_path)}` }); }}>
                           {candidate.relative_path} 선택
                         </button>
                       ))}
@@ -263,9 +279,10 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
               {tempSelected?.source === 'dataset' && tempSelected.imageUuid && (
                 <div className="truncate text-[11px] text-slate-400">선택: <span className="font-mono text-slate-200">{tempSelected.relativePath}</span></div>
               )}
+              {selectionError && <div role="alert" className="rounded border border-red-800 bg-red-950/30 p-2 text-[11px] text-red-200">{selectionError}</div>}
               <ImageLibraryBrowser
                 selectedIds={new Set(tempSelected?.imageUuid ? [tempSelected.imageUuid] : [])}
-                onPick={(item) => pick(selectionFromImage(item))}
+                onPick={(item) => { if (!usableRevisionImage(item)) { setSelectionError(rejectedRevisionImage); return; } pick(selectionFromImage(item)); }}
                 onUnavailable={(reason) => { setLibrary('unavailable'); setLibraryReason(reason); }}
               />
             </div>

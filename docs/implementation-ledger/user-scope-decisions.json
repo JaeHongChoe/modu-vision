@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "kind": "requested_work_scope_only",
+  "authority": {
+    "kind": "direct_user_instruction",
+    "instruction": "원도우 테스트는 안해도 되니깐 남은 잡들 진행해죠",
+    "recorded_on": "2026-10-07"
+  },
+  "decisions": [
+    {
+      "id": "S6-02",
+      "decision": "waived_for_requested_work",
+      "scope": "windows_native_only",
+      "original_acceptance_preserved": true
+    },
+    {
+      "id": "S7-03",
+      "decision": "waived_for_requested_work",
+      "scope": "windows_native_only",
+      "original_acceptance_preserved": true
+    }
+  ]
+}

@@ -285,6 +285,8 @@ def apply_live(root,*,expected_source_sha256,on_prepared=None):
     from backend.engine import global_migration as migration
     root,owner=migration._owner(root)
     with store_admission(root,exclusive=True):
+        from backend.engine.application_launch_lease import assert_quiescent
+        assert_quiescent(root)
         before=_view(root,owner)
         if before['source_sha256']!=expected_source_sha256:raise ValueError('Live source changed since preview')
         if not before['can_apply']:raise ValueError('; '.join(before['blockers']))
@@ -315,6 +317,8 @@ def recover_live(root,identifier,*,action):
     from backend.engine import global_migration as migration
     root,owner=migration._owner(root)
     with store_admission(root,exclusive=True):
+        from backend.engine.application_launch_lease import assert_quiescent
+        assert_quiescent(root)
         path,record=migration._journal(root,identifier)
         if (record.get('kind')!='live' or record.get('schema_version')!=1 or record.get('installation_id')!=owner['installation_id']
                 or type(record.get('fence')) is not int or record['fence']!=1 or record.get('previous_pointer') is not None

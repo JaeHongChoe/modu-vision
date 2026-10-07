@@ -1,0 +1,384 @@
+"""Durable POSIX launch admission for one committed owned app/database pair.
+
+This foundation does not implement a native app handshake or model inference.
+Only an unspawned reservation can be cleared. A successful spawn, failed spawn
+attempt, supervisor crash or observed direct-child exit keeps update admission
+closed until a future verifiable process-tree reconciliation adapter exists.
+"""
+from contextlib import contextmanager
+import hashlib
+import math
+import os
+from pathlib import Path
+import re
+import stat
+import subprocess
+import uuid
+
+import psutil
+
+from backend.engine.global_store_paths import owned_root, store_admission
+
+ACTIVE_LEASE = 'application-launch-lease.json'
+LEASES = '.application-launches'
+DATABASE_LOCK = 'application-database-ownership.lock'
+CONTROL_PATHS = {ACTIVE_LEASE, LEASES, DATABASE_LOCK}
+STATES = {'reserved', 'starting', 'ready', 'exited', 'recovery_required'}
+
+
+class LaunchLeaseError(ValueError):
+    pass
+
+
+def _update():
+    from backend.engine import runtime_update
+    return runtime_update
+
+
+def _checkpoint(point):
+    """Durable fault boundaries; no application or process operation."""
+
+
+def _refuse(reason):
+    raise LaunchLeaseError('Application launch ownership requires recovery: '+reason)
+
+
+def _identity(pid):
+    process = psutil.Process(pid)
+    return {'pid': pid, 'created_at': process.create_time(),
+        'command_sha256': hashlib.sha256(_update()._canonical(process.cmdline())).hexdigest()}
+
+
+def _identity_shape(value):
+    return (isinstance(value, dict) and set(value) == {'pid', 'created_at', 'command_sha256'}
+        and type(value['pid']) is int and value['pid'] > 0
+        and type(value['created_at']) in (int, float) and math.isfinite(value['created_at']) and value['created_at'] > 0
+        and _update()._hex(value['command_sha256']))
+
+
+def _paths(root):
+    update = _update()
+    for name in CONTROL_PATHS: update._unlinked(root/name)
+
+
+def _record(root, nonce):
+    update = _update(); directory = update._unlinked(root/LEASES/nonce)
+    if not update._hex(nonce, 32) or not directory.is_dir(): _refuse('missing lease history')
+    record = update._json(update._read(directory/'journal.json'))
+    names = {'schema_version', 'protocol_version', 'nonce', 'revision', 'state', 'binding', 'supervisor', 'process',
+        'spawn_attempted', 'claimed', 'ready_receipt_sha256', 'exit_observation', 'known_image_receipt_sha256', 'reason'}
+    if (not isinstance(record, dict) or set(record) != names or type(record['schema_version']) is not int
+            or record['schema_version'] != 1 or type(record['protocol_version']) is not int or record['protocol_version'] != 1
+            or record['nonce'] != nonce or type(record['revision']) is not int or record['revision'] < 1
+            or record['state'] not in STATES or not _identity_shape(record['supervisor'])
+            or record['process'] is not None and not _identity_shape(record['process'])
+            or type(record['spawn_attempted']) is not bool or type(record['claimed']) is not bool
+            or record['reason'] is not None and (not isinstance(record['reason'], str) or len(record['reason']) > 500)):
+        _refuse('invalid lease journal')
+    binding = record['binding']; _, owner = owned_root(root)
+    fields = {'installation_id', 'update_id', 'application_generation', 'database_pointer', 'database_generation_path',
+        'executable', 'executable_sha256', 'application_manifest_sha256', 'source_sha256', 'envelope_sha256',
+        'authority_path', 'authority_sha256', 'version', 'runtime_packs'}
+    if (not isinstance(binding, dict) or set(binding) != fields or binding['installation_id'] != owner['installation_id']
+            or not update._hex(binding['update_id'], 32) or binding['application_generation'] != binding['update_id']
+            or any(not update._hex(binding[key]) for key in ('executable_sha256', 'application_manifest_sha256',
+                'source_sha256', 'envelope_sha256', 'authority_sha256'))): _refuse('foreign lease binding')
+    for key in ('ready_receipt_sha256', 'known_image_receipt_sha256'):
+        if record[key] is not None and not update._hex(record[key]): _refuse('invalid receipt identity')
+    intent = directory/'spawn-intent.json'; update._unlinked(intent)
+    if record['spawn_attempted']:
+        if not intent.exists(): _refuse('spawn ownership intent is missing')
+        expected = {'schema_version': 1, 'nonce': nonce, 'binding_sha256': update._sha(update._canonical(binding))}
+        if update._json(update._read(intent)) != expected: _refuse('spawn ownership intent changed')
+    elif intent.exists(): _refuse('unrecorded spawn intent')
+    if record['state'] in {'reserved', 'exited'} and (record['spawn_attempted'] or record['process'] is not None or record['claimed']):
+        _refuse('contradictory unspawned lease')
+    if record['state'] == 'exited' and record['exit_observation'] != {'never_spawned': True}: _refuse('unproved process-tree exit')
+    if record['state'] == 'reserved' and record['exit_observation'] is not None: _refuse('invalid reserved exit observation')
+    if record['state'] in {'starting', 'ready'} and not record['spawn_attempted']: _refuse('missing spawn admission')
+    if record['state'] == 'ready' and (not record['claimed'] or record['process'] is None or record['ready_receipt_sha256'] is None):
+        _refuse('unbound readiness receipt')
+    expected_members = {'journal.json'} | ({'spawn-intent.json'} if record['spawn_attempted'] else set())
+    if record['known_image_receipt_sha256'] is not None:
+        expected_members.add('known-image-receipt.json')
+        if update._sha(update._read(directory/'known-image-receipt.json')) != record['known_image_receipt_sha256']:
+            _refuse('known-image receipt changed')
+    if {p.name for p in directory.iterdir()} != expected_members: _refuse('unknown lease history member')
+    return record
+
+
+def _load(root):
+    update = _update(); _paths(root); pointer = root/ACTIVE_LEASE; history = root/LEASES
+    if not pointer.exists():
+        if history.exists() and (not history.is_dir() or any(history.iterdir())): _refuse('lease history has no ownership pointer')
+        return None
+    current = update._json(update._read(pointer)); _, owner = owned_root(root)
+    if (not isinstance(current, dict) or set(current) != {'schema_version', 'installation_id', 'nonce', 'revision', 'record_sha256'}
+            or type(current['schema_version']) is not int or current['schema_version'] != 1
+            or current['installation_id'] != owner['installation_id'] or not update._hex(current['nonce'], 32)
+            or type(current['revision']) is not int or not update._hex(current['record_sha256']) or not history.is_dir()):
+        _refuse('invalid ownership pointer')
+    active = None
+    for directory in history.iterdir():
+        update._unlinked(directory)
+        if not directory.is_dir() or not update._hex(directory.name, 32): _refuse('unknown ownership history')
+        record = _record(root, directory.name)
+        if directory.name == current['nonce']:
+            if record['revision'] != current['revision'] or update._sha(update._canonical(record)) != current['record_sha256']:
+                _refuse('ownership publication interrupted or changed')
+            active = record
+        elif record['state'] != 'exited': _refuse('another unresolved launch history')
+    if active is None: _refuse('current launch history is missing')
+    return active
+
+
+def _write(root, record, *, initial=False):
+    update = _update(); directory = root/LEASES/record['nonce']
+    if initial:
+        directory.mkdir(mode=0o700, parents=True, exist_ok=False)
+        update.migration._sync_directories(root/LEASES, recursive=False)
+    update._write(directory/'journal.json', record)
+    if initial: _checkpoint('after_reserved_journal')
+    update._write(root/ACTIVE_LEASE, {'schema_version': 1, 'installation_id': record['binding']['installation_id'],
+        'nonce': record['nonce'], 'revision': record['revision'], 'record_sha256': update._sha(update._canonical(record))})
+
+
+@contextmanager
+def _database_lock(root, *, create=True):
+    if os.name != 'posix': raise LaunchLeaseError('Application launch ownership currently requires POSIX native locks')
+    import fcntl
+    path = _update()._unlinked(root/DATABASE_LOCK)
+    if not create and not path.exists():
+        yield None; return
+    fd = os.open(path, os.O_RDWR | (os.O_CREAT if create else 0) | getattr(os, 'O_NOFOLLOW', 0) | getattr(os, 'O_NONBLOCK', 0), 0o600)
+    locked = False
+    try:
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1 or before.st_size > 1: _refuse('invalid database ownership lock')
+        try: fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as exc: raise LaunchLeaseError('Application launch ownership database lock remains held') from exc
+        locked = True; current = path.stat()
+        if (before.st_dev, before.st_ino) != (current.st_dev, current.st_ino): _refuse('database ownership lock changed')
+        yield fd
+    finally:
+        if locked: fcntl.flock(fd, fcntl.LOCK_UN)
+        os.close(fd)
+
+
+def assert_quiescent(root):
+    """Fail closed under the same reentrant exclusive cutover admission.
+
+    Suitable for owned migration/adoption mutation callers, including the
+    pre-owner admission phase. It never creates a lock on a pristine root.
+    """
+    root = _update()._unlinked(Path(root).absolute()); found, owner = owned_root(root)
+    if owner is None:
+        if any((root/name).exists() or (root/name).is_symlink() for name in CONTROL_PATHS): _refuse('unowned launch control')
+        return {'status': 'quiescent', 'nonce': None}
+    if found != root: _refuse('explicit installation root required')
+    with store_admission(root, exclusive=True):
+        row = _load(root)
+        if row is not None and row['state'] != 'exited': _refuse('durable '+row['state']+' lease')
+        with _database_lock(root, create=False): pass
+        return {'status': 'quiescent', 'nonce': row['nonce'] if row else None}
+
+
+def _public(row):
+    return {**row, 'native_app_handshake_verified': False, 'actual_application_inference_verified': False,
+        'known_image_execution_qualified': False, 'model_quality_approved': False, 'release_ready': False}
+
+
+def inspect_launch(root):
+    root, _ = _update()._root(root)
+    with store_admission(root, exclusive=True):
+        row = _load(root)
+        return _public(row) if row else {'state': 'absent', 'release_ready': False}
+
+
+class LaunchSupervisor:
+    """One local supervisor capability; durable state survives capability loss.
+
+    No API accepts arbitrary arguments, environment, executable or DB paths.
+    Readiness/claim are controller binding checks, not a native app handshake.
+    A reopened object cannot claim a lost OS child handle or clear its lease.
+    """
+    def __init__(self, root, nonce):
+        self.root, _ = _update()._root(root)
+        if not _update()._hex(nonce, 32): raise LaunchLeaseError('Invalid launch nonce')
+        self.nonce = nonce; self._process = None; self._lock = None
+
+    @classmethod
+    def reserve(cls, root, authority, *, pinned_authority_sha256):
+        update = _update(); root, _ = update._root(root)
+        with store_admission(root, exclusive=True):
+            assert_quiescent(root)
+            binding = update._launch_binding(root, authority, pinned_authority_sha256=pinned_authority_sha256)
+            nonce = uuid.uuid4().hex
+            row = {'schema_version': 1, 'protocol_version': 1, 'nonce': nonce, 'revision': 1, 'state': 'reserved',
+                'binding': binding, 'supervisor': _identity(os.getpid()), 'process': None, 'spawn_attempted': False,
+                'claimed': False, 'ready_receipt_sha256': None, 'exit_observation': None,
+                'known_image_receipt_sha256': None, 'reason': None}
+            _write(root, row, initial=True)
+            return cls(root, nonce)
+
+    def _owned(self):
+        row = _load(self.root)
+        if row is None or row['nonce'] != self.nonce: raise LaunchLeaseError('Launch nonce differs from active owner')
+        if row['supervisor'] != _identity(os.getpid()): raise LaunchLeaseError('Original supervisor process birth differs; recovery required')
+        return row
+
+    def _binding(self, row):
+        fresh = _update()._launch_binding(self.root, row['binding']['authority_path'], pinned_authority_sha256=row['binding']['authority_sha256'])
+        if fresh != row['binding']: raise LaunchLeaseError('Committed launch binding changed')
+
+    def _persist(self, row, **changes):
+        row = {**row, **changes, 'revision': row['revision']+1}; _write(self.root, row); return _public(row)
+
+    def cancel(self):
+        with store_admission(self.root, exclusive=True):
+            row = self._owned()
+            if row['state'] != 'reserved' or row['spawn_attempted']: raise LaunchLeaseError('A started or ambiguous launch cannot be cancelled')
+            self._binding(row)
+            return self._persist(row, state='exited', exit_observation={'never_spawned': True})
+
+    def start(self):
+        with store_admission(self.root, exclusive=True):
+            row = self._owned()
+            if row['state'] != 'reserved': raise LaunchLeaseError('Only an unspawned reservation can start')
+            self._binding(row)
+            self._lock = _database_lock(self.root); self._lock.__enter__()
+            directory = self.root/LEASES/self.nonce
+            _update()._write(directory/'spawn-intent.json', {'schema_version': 1, 'nonce': self.nonce,
+                'binding_sha256': _update()._sha(_update()._canonical(row['binding']))})
+            row = self._persist(row, state='starting', spawn_attempted=True)
+            # Persisted starting admission precedes the only spawn operation.
+            _checkpoint('before_spawn')
+            try:
+                environment = {'PATH': os.defpath, 'LANG': 'C.UTF-8', 'VISION_AI_STUDIO_USER_DATA_DIR': str(self.root),
+                    'VISION_APPLICATION_LAUNCH_NONCE': self.nonce, 'VISION_APPLICATION_GENERATION': row['binding']['application_generation'],
+                    'VISION_APPLICATION_DATABASE_GENERATION': row['binding']['database_generation_path']}
+                self._process = subprocess.Popen([row['binding']['executable']], env=environment,
+                    cwd=self.root, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                    close_fds=True, start_new_session=True)
+                _checkpoint('after_spawn')
+                identity = _identity(self._process.pid)
+                return self._persist(self._owned(), process=identity)
+            except BaseException as exc:
+                # Even a pre-exec error retains the intent; no false no-spawn proof.
+                current = self._owned()
+                self._persist(current, state='recovery_required', reason='Spawn/identity observation interrupted: '+type(exc).__name__)
+                if isinstance(exc, psutil.Error): return _public(self._owned())
+                raise
+
+    def _live(self, row, process):
+        if self._process is None: raise LaunchLeaseError('Original supervisor OS child handle is unavailable')
+        if (process is None or not _identity_shape(process)
+                or _update()._canonical(row['process']) != _update()._canonical(process) or self._process.pid != process['pid']):
+            raise LaunchLeaseError('Child process identity differs')
+        try: observed = _identity(self._process.pid)
+        except psutil.Error as exc: raise LaunchLeaseError('Child process ownership is ambiguous') from exc
+        if self._process.poll() is not None or observed != process: raise LaunchLeaseError('Child process birth or command changed')
+        if os.getsid(process['pid']) != process['pid'] or os.getpgid(process['pid']) != process['pid']:
+            raise LaunchLeaseError('Owned child process session changed')
+
+    def claim(self, process):
+        with store_admission(self.root, exclusive=True):
+            row = self._owned(); self._binding(row)
+            if row['state'] != 'starting': raise LaunchLeaseError('Claim requires starting admission')
+            self._live(row, process)
+            return self._persist(row, claimed=True)
+
+    def ready(self, binding, process):
+        with store_admission(self.root, exclusive=True):
+            row = self._owned(); self._binding(row)
+            if row['state'] != 'starting' or not row['claimed']: raise LaunchLeaseError('Readiness requires the claimed starting child')
+            if _update()._canonical(binding) != _update()._canonical(row['binding']): raise LaunchLeaseError('Readiness app/database binding differs')
+            self._live(row, process)
+            receipt = {'nonce': self.nonce, 'binding': binding, 'process': process, 'kind': 'controller_binding_only'}
+            return self._persist(row, state='ready', ready_receipt_sha256=_update()._sha(_update()._canonical(receipt)))
+
+    def observe_exit(self):
+        with store_admission(self.root, exclusive=True):
+            row = self._owned()
+            if self._process is None: raise LaunchLeaseError('Original supervisor OS child handle is unavailable')
+            returncode = self._process.poll()
+            if returncode is None: raise LaunchLeaseError('Direct child has not exited')
+            return self._persist(row, state='recovery_required', reason='Process-tree exit is unverified',
+                exit_observation={'direct_child_pid': self._process.pid, 'direct_child_returncode': returncode,
+                    'process_tree_exit_verified': False})
+
+    def known_image(self, receipt, *, expected):
+        """Bind a supplied receipt to exact local artifacts; never infer execution."""
+        update = _update()
+        with store_admission(self.root, exclusive=True):
+            row = self._owned(); self._binding(row)
+            if row['state'] != 'ready': raise LaunchLeaseError('Receipt binding requires ready controller admission')
+            receipt = update._json(update._canonical(receipt)); expected = update._json(update._canonical(expected))
+            fields = {'schema_version', 'status', 'nonce', 'binding', 'process', 'checkpoint', 'input', 'output'}
+            if (not isinstance(receipt, dict) or set(receipt) != fields or type(receipt['schema_version']) is not int
+                    or receipt['schema_version'] != 1 or receipt['status'] != 'succeeded' or receipt['nonce'] != self.nonce
+                    or update._canonical(receipt['binding']) != update._canonical(row['binding'])): raise LaunchLeaseError('Known-image receipt binding differs')
+            self._live(row, receipt['process'])
+            if not isinstance(expected, dict) or set(expected) != {name+'_sha256' for name in ('checkpoint', 'input', 'output')}:
+                raise LaunchLeaseError('Independent checkpoint/input/output pins are required')
+            for name in ('checkpoint', 'input', 'output'):
+                item = receipt[name]; digest = expected[name+'_sha256']
+                if not isinstance(item, dict) or set(item) != {'path', 'sha256'} or not update._hex(digest) or item['sha256'] != digest:
+                    raise LaunchLeaseError('Known-image '+name+' pin differs')
+                relative = update._safe_path(item['path']); file = update._unlinked(self.root/relative)
+                if not file.is_relative_to(self.root) or relative.split('/')[0] in CONTROL_PATHS:
+                    raise LaunchLeaseError('Known-image '+name+' path escapes owned artifacts')
+                with update._file(file, 1024**3) as (reader, before):
+                    hash_ = hashlib.sha256(); total = 0
+                    while chunk := reader.read(min(1024**2, before.st_size-total+1)):
+                        total += len(chunk)
+                        if total > before.st_size: raise LaunchLeaseError('Known-image '+name+' grew while reading')
+                        hash_.update(chunk)
+                    if total != before.st_size or hash_.hexdigest() != digest: raise LaunchLeaseError('Known-image '+name+' bytes differ')
+            raw = update._canonical(receipt)
+            if len(raw) > 65536: raise LaunchLeaseError('Known-image receipt is unbounded')
+            prior = row['known_image_receipt_sha256']; receipt_path = self.root/LEASES/self.nonce/'known-image-receipt.json'
+            if prior is not None:
+                existing = update._read(receipt_path)
+                if update._sha(existing) != prior or update._canonical(update._json(existing)) != raw:
+                    raise LaunchLeaseError('Another known-image receipt is already bound')
+                stored = prior
+            else:
+                update._write(receipt_path, receipt)
+                _checkpoint('after_known_image_receipt')
+                # Store actual serialized bytes; retries preserve that snapshot.
+                stored = update._sha(update._read(receipt_path))
+                self._persist(row, known_image_receipt_sha256=stored)
+            return {'status': 'artifact_binding_verified', 'nonce': self.nonce, 'receipt_sha256': stored,
+                'actual_application_inference_verified': False, 'known_image_execution_qualified': False,
+                'native_app_handshake_verified': False, 'model_quality_approved': False, 'release_ready': False}
+
+    def close(self):
+        """Release only this supervisor's OS lock; durable ownership remains blocked."""
+        try:
+            if self._process is not None:
+                with store_admission(self.root, exclusive=True):
+                    row = self._owned()
+                    if row['state'] != 'recovery_required': self._persist(row, state='recovery_required', reason='Supervisor handle released; process-tree ownership unverified')
+        finally:
+            if self._lock is not None:
+                self._lock.__exit__(None, None, None); self._lock = None
+
+
+def main(argv=None):
+    import argparse
+    import json
+    parser = argparse.ArgumentParser(description=__doc__)
+    # Reservation requires the persistent caller to retain its capability and
+    # OS handles. A short-lived CLI must not create an immediately orphaned lease.
+    parser.add_argument('command', choices=('inspect', 'assert-quiescent'))
+    parser.add_argument('--root', required=True)
+    args = parser.parse_args(argv)
+    try:
+        result = inspect_launch(args.root) if args.command == 'inspect' else assert_quiescent(args.root)
+        print(json.dumps(result)); return 0
+    except (ValueError, OSError, psutil.Error) as exc:
+        print(json.dumps({'status': 'refused', 'error': str(exc)})); return 2
+
+
+if __name__ == '__main__': raise SystemExit(main())

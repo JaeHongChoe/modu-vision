@@ -25,13 +25,90 @@ files. The portable descriptor has fields `schema_version: 1`, `version`,
 `sha256`, and boolean `executable`. The entrypoint is a declared executable.
 Links, special files, encryption, duplicate/case-conflicting names, traversal,
 undeclared files and excessive inventories are refused. ZIP archives are bounded
-to 1 GiB compressed, 4 GiB expanded and 10,000 application files. This format
-does not install NSIS, DMG or a macOS application requiring framework symlinks.
+to 1 GiB compressed, 4 GiB expanded and 10,000 application files. The separate
+schema2 darwin layout supports one canonical `.app/Contents` tree and its signed,
+bounded internal Framework links. Neither format invokes an NSIS or DMG installer.
 
 The destination already has an explicit owned global descriptor, all seven
 declared control scopes, matching account/context authority, and no active or
 uncertain jobs/leases. `global_migration.initialize_owned` only initializes a
 new empty directory; it must not be applied to an existing installed home.
+
+## Explicit original installed-home adoption
+
+An original current-schema macOS/Linux installation can acquire the owned
+descriptor through a separate reviewed adoption. Supply the canonical absolute
+root and a scopes file containing exactly:
+
+```json
+{
+  "ledger": "jobs/ledger.sqlite3",
+  "leases": "resource_leases.sqlite3",
+  "profiles": "compute_profiles.json",
+  "accounts": "auth/accounts.sqlite",
+  "context": "projects/.context.sqlite3",
+  "local_journals": "local_jobs",
+  "remote_journals": "remote_jobs"
+}
+```
+
+Read the source without creating source locks, changing schemas, rebinding
+accounts, clearing sessions or launching workers:
+
+```sh
+python -m backend.engine.global_migration preview-installed \
+  --root /explicit/original-installation --scopes-file /review/scopes.json
+```
+
+The preview binds root device/inode, original file bytes/inodes/modes, current
+schemas and account/context/project authority. Qualification is bounded to
+10,000 files/directories, 512 MiB per file, 2 GiB total and 10,000 records per
+scope table. Logical SQLite/history validation uses finite private snapshots
+read through stable, nonblocking, no-follow file descriptors; profile JSON is
+parsed from the captured bytes. Malformed project objects, duplicate semantic
+JSON keys, and changed identities/bytes refuse the preview.
+Registered projects and their model paths must remain under this
+same original root. Linked/hard-linked/shared-writable files, copied or existing
+ownership markers, unknown schemas, external project paths, live or uncertain
+jobs/leases/open attempts, and unverifiable ended journals refuse adoption.
+All original sessions and pending OIDC exchanges must first be drained through
+their original supported controls; adoption preserves their source bytes and
+does not activate copied authority.
+
+After independently establishing original ownership and stopping all writers,
+create a separate attestation file containing the exact preview `root_identity`
+and the literal booleans `owned_original: true` and `writers_quiescent: true`.
+An old unowned writer does not participate in the new global lock; this explicit
+operator attestation supplies quiescence, and no process is stopped or signalled.
+Writers that can replace ancestor directories are outside this attested-quiescent
+contract. Keep the entire original root and its ancestors under operator control.
+
+```sh
+python -m backend.engine.global_migration adopt-installed \
+  --root /explicit/original-installation --scopes-file /review/scopes.json \
+  --expected-preview-sha256 <independently-reviewed-preview-sha256> \
+  --attestation-file /review/owned-quiescent-attestation.json
+```
+
+Under exclusive admission, adoption rechecks the exact source, retains a private
+raw-byte backup and seal in `.installed-home-adoption`, then atomically publishes
+the root-bound owner descriptor without replacing another descriptor. The
+original stores and project files remain byte-identical. An interrupted backup
+copy or sealed publication can retry with the same preview and attestation;
+changed sources, foreign controls or altered backups refuse. A published exact
+retry retains the installation identity. The existing `preview`/`apply` global
+migration path then remains a separate explicit conversion.
+Adoption, global `apply`/`advance`/`recover`, and the live cutover/recovery APIs require the application
+launch lease guard to report quiescence; live or ambiguous application ownership
+refuses mutation. Installations without launch controls retain their existing
+offline behavior.
+
+The CLI never discovers a user home, provisions a publisher, installs an OS
+package or proves an old process has exited. This qualification uses disposable
+POSIX fixtures; Windows native, actual installed customer-home migration,
+publisher/native signatures, devices, model quality and independent acceptance
+remain separate. An unknown control or interrupted atomic-control temporary
+file is retained for explicit investigation rather than silently discarded.
 
 ## Installation and startup
 

@@ -10,6 +10,7 @@ import math
 from pathlib import Path, PurePosixPath
 import re
 import sqlite3
+from backend.engine.migration_inventory import bounded_file_bytes, bounded_file_digest, bounded_file_snapshot
 
 TERMINAL = {'completed', 'failed', 'aborted'}
 MAX_JSON_BYTES = 1024 * 1024
@@ -34,10 +35,7 @@ def _file(root, path):
 
 def _read(root, path):
     path = _file(root, path)
-    with path.open('rb') as handle:
-        raw = handle.read(MAX_JSON_BYTES + 1)
-    if len(raw) > MAX_JSON_BYTES:
-        raise ValueError('Runtime history exceeds the bounded JSON size')
+    raw = bounded_file_bytes(path, max_bytes=MAX_JSON_BYTES)
     value = json.loads(raw, object_pairs_hook=_unique)
     if not isinstance(value, dict):
         raise ValueError('Runtime history must be a JSON object')
@@ -100,7 +98,8 @@ def _validate_remote_epoch(root, output, journal):
                    for key in ('sha256', 'identity_sha256'))):
         raise ValueError('Remote training-state receipt differs from its original terminal run')
     from backend.engine.training_resume import read_training_state
-    state = read_training_state(checkpoint)
+    with bounded_file_snapshot(checkpoint, max_bytes=MAX_STATE_BYTES) as snapshot:
+        state = read_training_state(snapshot)
     if (state['_checkpoint_sha256'] != receipt['sha256']
             or state['identity'].get('task') != journal['task']
             or state['identity'].get('preset') != journal['preset']
@@ -173,9 +172,8 @@ def _validate_relocated_pair(root, output, journal, manifest, profile):
         if (type(row.get('size')) is not int or not 0 < row['size'] <= 2 * 1024**3
                 or original.stat().st_size != row['size'] or current[row['path']].get('received_sha256') != row.get('sha256')):
             raise ValueError('Original received artifact size or binding differs')
-        with original.open('rb') as stream:
-            if hashlib.file_digest(stream, 'sha256').hexdigest() != row.get('sha256'):
-                raise ValueError('Original received artifact bytes changed')
+        if bounded_file_digest(original, max_bytes=row['size'], expected_size=row['size']) != row.get('sha256'):
+            raise ValueError('Original received artifact bytes changed')
     before, _ = _read(root, output / 'remote_received' / 'model_meta.json')
     after, _ = _read(root, output / 'model_meta.json')
     original_checkpoint = next(row['sha256'] for row in rows if row['path'] == 'outputs/best_model.pt')
@@ -189,8 +187,11 @@ def _validate_relocated_pair(root, output, journal, manifest, profile):
         raise ValueError('Relocated metadata changed more than original paths/checkpoint checksum')
     import torch
     try:
-        original = torch.load(output / 'remote_received' / 'best_model.pt', map_location='cpu', weights_only=True)
-        relocated = torch.load(output / 'best_model.pt', map_location='cpu', weights_only=True)
+        original_size = next(row['size'] for row in rows if row['path'] == 'outputs/best_model.pt')
+        with (bounded_file_snapshot(output / 'remote_received' / 'best_model.pt', max_bytes=original_size) as original_path,
+              bounded_file_snapshot(output / 'best_model.pt', max_bytes=current['outputs/best_model.pt']['size']) as relocated_path):
+            original = torch.load(original_path, map_location='cpu', weights_only=True)
+            relocated = torch.load(relocated_path, map_location='cpu', weights_only=True)
     except Exception as exc:
         raise ValueError('Restricted original/relocated model archive is invalid') from exc
     if not matches_path_relocation(original, relocated, remote, local):
@@ -284,11 +285,10 @@ def validate_remote(root, scopes, path, journal):
         raise ValueError('Remote received artifact identities differ from the original operation manifest')
     for row in rows:
         file = _file(root, output / Path(row['path']).name)
-        if (type(row.get('size')) is not int or row['size'] < 1 or file.stat().st_size != row['size']
+        if (type(row.get('size')) is not int or not 0 < row['size'] <= 2 * 1024**3 or file.stat().st_size != row['size']
                 or not re.fullmatch('[0-9a-f]{64}', str(row.get('sha256', '')))):
             raise ValueError('Remote received artifact size or checksum is invalid')
-        with file.open('rb') as stream:
-            checksum = hashlib.file_digest(stream, 'sha256').hexdigest()
+        checksum = bounded_file_digest(file, max_bytes=row['size'], expected_size=row['size'])
         if checksum != row['sha256'] or (file.name == 'best_model.pt'
                 and (state == 'completed' or 'checkpoint_sha256' in receipt)
                 and receipt.get('checkpoint_sha256') != checksum):

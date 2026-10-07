@@ -1,8 +1,8 @@
 # Modu-vision 작업표
 
-확인일: 2026-10-07 · 구현 소스와 실제 실행 소스는 아래 각 receipt에 고정하며 현재 후속 구현은 `8093e08`다.
+확인일: 2026-10-07 · 각 실제 실행의 소스는 receipt에 고정한다. 현재 게시 원장은 `8184b75`, 마지막 Studio 팩 실행 소스는 `5284df6`이다. 아래 후속 기록은 당시 집계이며 최신 숫자는 `scripts/remaining_work_report.py`로 확인한다.
 
-**82개 중 소프트웨어 구현 확인66개, 구현 미완료16개.** 이번 실제 검증으로 원래25개 중9개를 추가 확인했다. Windows 실제 설치·사용 QA(S7-03)는 사용자 면제이므로 진행 대상은15개다. 최종 수용 승인은0개다.
+**82개 중 소프트웨어 구현 확인67개, 구현 pending15개.** Windows 전용 S6-02·S7-03은 사용자 요청 범위에서 면제하므로 계속 필요한 부모는13개다. 면제는 테스트 통과가 아니며 원래 수락 gate를 유지한다. 최종 수용 승인은0개다. 부모 pending에는 남은 코드와 서명·장비·사람 검증·실제 경과 시간 조건이 함께 들어 있다.
 
 ## 실행 순서
 
@@ -19,32 +19,31 @@
 | S2 | 10 | 10 | 0 |
 | S3 | 10 | 10 | 0 |
 | S4 | 14 | 14 | 0 |
-| S5 | 10 | 8 | 2 |
+| S5 | 10 | 9 | 1 |
 | S6 | 11 | 6 | 5 |
 | S7 | 8 | 0 | 8 |
 
-## 미완료16개
+## 원래 pending15개 · 요청 범위13개
 
 | ID | 작업 | 실제 남은 조건 |
 |---|---|---|
-| S1-08 | 기존 JSON과 DB migration | 종료된 로컬·remote 이력과 현재 recovery index의 cutover·forward recovery·새 manager 복구 검증됨. 정확한 기존 ledger/lease 두 schema의 원본 보존 변환·복구 112개 통과. 살아 있는 worker·불확실 lease·다른 구형 schema 이관 필요. |
+| S1-08 | 기존 JSON과 DB migration | 원본 이력 보존·forward recovery와 명시적으로 참여한 POSIX basic/SSH/specialist worker의 live cutover는 검증됨. 지원하지 않는 기존 worker는 종료 후 이관한다. 기존 설치 home의 명시적 인수와 native target 이관·독립 수락이 후속 조건이다. |
 | S5-01 | 독립 검사 서비스 | 독립 서비스의 SCM 등록·권한·Session0·재부팅과 실제 장치 검증 필요. |
-| S5-10 | 서비스 보안과 운영 설정 | HTTPS/credential/격리 계약과 별개로 실제 운영 비밀 저장·권한·감사 정책 검증 필요. |
 | S6-02 | Windows CPU 설치 프로그램 | 현재 Windows unsigned NSIS/portable 빌드·CPU 패키지 실행은 통과. non-admin 설치·제거·SCM 분리와 실제 설치 QA는 미검증/면제. |
-| S6-03 | 선택형 GPU와 runtime pack | 실제 pydicom3.0.2 배포 wheel·라이선스·해시 inventory·비활성 설치/재설치 확인. macOS arm64 CPU 및 깨끗한90f6c7c browser/Electron 영상 읽기·Window·오류·재열기 통과. 후속 clean browser/Electron에서 uncompressed/RLE 2-frame4건과 backend의 mono/RGB/multi RLE3건 통과. 표시 cache/source 변조·atomic 중단·dataset alias 재열기 수정. 다른 압축 decoder/provider·가속기·frozen 배포/서명 조합 검증 필요. |
-| S6-04 | 오프라인 설치와 업데이트 | offline checksum/authority 및 실제 frozen known-image은 통과. DB 복구 전·후 강제 종료/새 CLI 재시도·변조/새 쓰기 보존 관련116개 통과. app 설치와 DB의 통합 cutover·실제 publisher 신뢰 설정 필요. |
-| S6-05 | 공개 CI와 source 재현성 | a184b1e hosted CI 성공은 그 소스 범위에 한정. 1862f7c browser 2건, 16395a4 CPU 1건 실패 기록 보존. 자원 반환 전 종료 게시와 두 GUI 검사의 대기 조건을 수정하고 로컬 관련 88개·매핑 보호 25개·browser 2개 통과. 19dfb64 hosted run은 실행 job 없이 cancelled. 1352bff hosted 전체 job과 관측 step은 success로 완료. 06979c9 실행 중/0f3be05 pending이며 새 delta의 hosted 결과·skip 조건 확인 필요. |
+| S6-03 | 선택형 GPU와 runtime pack | pydicom·OpenVINO·CUDA12·CTC의 개별 범위 근거를 유지한다. Studio의 프로젝트별 비활성 설치·별도 pin·실제 변조 거절·재시도·재열기는 clean5284df6 browser2/native3, backend83, renderer907개로 검증했다. 자동 활성화·frozen/native 배포 조합·실 publisher·대표 품질은 별도 조건이다. |
+| S6-04 | 오프라인 설치와 업데이트 | owned drained POSIX 앱/DB 통합 cutover·복구 및 darwin schema2 app 구조는 구현됨. 기존 설치 home 인수, 업데이트 앱의 영속 실행 소유권·native caller·기준 이미지 인수인계와 OS installer adapter를 이어간다. 실 publisher 서명은 별도 조건이다. |
+| S6-05 | 공개 CI와 source 재현성 | 실제 이전 소스의 hosted 성공과 실패를 보존한다. 현재 게시8184b75 및 다음 변경의 전체 hosted 결과가 필요하다. 과거 소스 성공을 새 source에 넘겨 집계하지 않는다. |
 | S6-06 | 서명과 릴리스 채널 | 실제 Authenticode/publisher identity·서명 후 byte inventory·채널 승인 필요. |
-| S7-01 | 기존 기능 전체 coverage 계약 | 156개 ID의 action 원장과 엄격한 검사기 추가. 18개 기능의 action71개에144개 실제 시나리오 근거,353개 pending 시나리오 명시. native 기능별 근거78곳 연결. action 추가 시 미실행 시나리오도 모두 기록한다. 선언795개는 실행 근거로 세지 않음. 나머지138개 기능 및 완전한 action 수용 검증 필요. |
+| S7-01 | 기존 기능 전체 coverage 계약 | 원래156개 ID를 유지한다. 현재199개 curated action의545개 시나리오 검증,848개 pending이다. 누락 메뉴/shortcut·남은 행동 시나리오·전체 기능 수락을 이어간다. 이 숫자를 부모 완료 수에 더하지 않는다. |
 | S7-02 | 10모델군 실제 작업 시나리오 | 실제5 distinct learned chain은 완료. 10모델군 각각 사람이 검토한 정답과 대표 multi-task recipe 검증 필요. |
 | S7-03 | Windows 실제 설치와 사용 QA | Windows 실제 설치·사용 QA 사용자 면제. hosted Server2025 component 실행을 Win11 실사용 성공으로 세지 않음. |
-| S7-04 | 팀 동시 작업과 fault injection | 실제 HTTPS 두 사용자 충돌/권한 철회/재시작 2건과 10개 fault 시나리오 40건 통과. 실제 target 및 signed installer/DB cutover는 미완료. |
+| S7-04 | 팀 동시 작업과 fault injection | 실제 HTTPS 사용자 충돌·권한 철회·재시작과 로컬 장애 matrix, portable 앱/DB 복구는 범위별로 검증됨. 실제 target 물리 장애와 실 publisher 서명 native update는 미검증이다. |
 | S7-05 | 데이터 규모와 연속 운전 | 100k/큰 원본·queue component 검증됨. 내부 저장소 47회 실행은 disk reserve에서 종료됐고 기록 보존. a184b1e 고정 소스로 외장 APFS 저장소에서 새 72시간 실행 중. 이전 시간을 합산하지 않고 완주 receipt 필요. |
 | S7-06 | 공정 품질 승인과 장비 검증 | 사용자 지정 공정 미검/과검 정책·대표 truth·카메라/PLC/MES 실제 장비 승인 필요. |
 | S7-07 | 공개 후보와 릴리스 판정 | 실제 DICOM 지원 조합과 source-bound 개발 의존성590개/미해결53개·6개 배포 범위 hold 판정 기록. 실제 shipped source/SBOM/notices·서명·독립 검토·공정 품질·첫 사용자 파일럿은 미완료. 개발 환경 inventory로 배포 증거를 대신하지 않음. |
 | S7-08 | 파일럿 feedback과 지속 유지 | 첫 사용자의 설명 없는 파일럿 및 실제 운영 책임·지원/SLA/유지보수 주기 필요. |
 
-## 소프트웨어 구현 확인66개
+## 소프트웨어 구현 확인67개
 
 | ID | 작업 |
 |---|---|
@@ -107,6 +106,7 @@
 | S5-07 | 관측과 운영 알림 |
 | S5-08 | drift·검수·재학습·비교와 명시적 승인 후 후보 서비스 적용 |
 | S5-09 | 백업과 복구 및 보존기한 |
+| S5-10 | 서비스 보안과 운영 설정 |
 | S6-01 | 오픈소스와 모델 라이선스 정책 |
 | S6-07 | 외부 기여와 프로젝트 운영 |
 | S6-08 | SDK와 자동화 API |
@@ -115,7 +115,9 @@
 | S0-09 | 초기 UI와 Electron 검증 환경 |
 | S6-11 | 공개 배포 라이선스 결정 |
 
-## 이번 실행 근거
+## 이전 실행 근거와 후속 기록
+
+아래 각 기록의 숫자와 제약은 그때의 소스에 대한 이력이다. 최신 집계와 구분해 읽는다.
 
 - 실제 SAM2/텍스트·이미지 예시·few-label 업데이트, AutoDL 측정/재사용/재학습/중단 및 원격 exact resume를 확인했다.
 - 실제로 학습한DINO 모델5개, 동일 untouched test3장, native 비교/재열기/JSON export, 전체 flow 평가와 별도 package 프로세스 parity가 통과했다. 합성 fixture이므로 공정 품질은 승인하지 않았다.

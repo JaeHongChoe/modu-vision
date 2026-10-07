@@ -23,12 +23,13 @@ import zipfile
 from backend.engine import global_migration as migration
 from backend.engine.global_store_paths import active_generation, owned_root, store_admission
 from backend.engine.runtime_process_control import atomic_private_json
+from backend.engine.application_launch_lease import assert_quiescent
 
 ACTIVE='application-active.json'
 PENDING='application-update-pending.json'
 UPDATES='.application-updates'
 GENERATIONS='.application-generations'
-CONTROL_PATHS={ACTIVE,PENDING,UPDATES,GENERATIONS}
+CONTROL_PATHS={ACTIVE,PENDING,UPDATES,GENERATIONS,'application-launch-lease.json','.application-launches','application-database-ownership.lock'}
 MATRIX={'api_context','worker','runtime','dataset_index'}
 
 
@@ -624,6 +625,7 @@ def install_update(root,plan):
     root,owner=_root(root)
     if not isinstance(plan,UpdatePlan) or plan.root!=str(root):raise UpdateError('Update plan belongs to another installation')
     with store_admission(root,exclusive=True):
+        assert_quiescent(root)
         validate_attachment(root)
         fresh=plan_update(root,plan.bundle,plan.envelope,plan.authority,
             pinned_authority_sha256=plan.authority_sha256,target=plan.target)
@@ -651,6 +653,7 @@ def install_update(root,plan):
 def recover_update(root,intent,*,action='finish'):
     root,owner=_root(root)
     with store_admission(root,exclusive=True):
+        assert_quiescent(root)
         record,directory,_=_validated_intent(root,intent)
         if action=='abort':
             if record['migration_id'] is not None or record['status']!='staged':raise UpdateError('Database preparation already began; finish or forward recovery is required')
@@ -676,20 +679,37 @@ def recover_update(root,intent,*,action='finish'):
         return _finish(root,intent)
 
 
+def _launch_binding(root,authority,*,pinned_authority_sha256):
+    """Derive fixed launch identities under the caller's installation admission."""
+    root,owner=_root(root)
+    validate_attachment(root);pointer=_pointer(root)
+    if pointer is None:raise UpdateError('No owned portable application is installed')
+    record,directory,manifest=_validated_intent(root,pointer['update_id'])
+    if str(_unlinked(authority))!=record['authority_path'] or pinned_authority_sha256!=record['authority_sha256']:
+        raise UpdateError('Launch publisher authority differs from installed binding')
+    if record['status']!='committed' or record['database_pointer']!=pointer['database_pointer']:
+        raise UpdateError('Application update receipt differs from launch pair')
+    application=root/GENERATIONS/pointer['application_generation']/'application'
+    executable=application/manifest['entrypoint']
+    entrypoint=next(row for row in manifest['files'] if row['path']==manifest['entrypoint'])
+    current=active_generation(root)
+    return {'installation_id':owner['installation_id'],'update_id':pointer['update_id'],
+        'application_generation':pointer['application_generation'],'database_pointer':pointer['database_pointer'],
+        'database_generation_path':str(current[0]),'executable':str(executable),'executable_sha256':entrypoint['sha256'],
+        'application_manifest_sha256':_sha(_read(application/'portable-application.json',1024**2)),
+        'source_sha256':record['source_sha256'],'envelope_sha256':record['envelope_sha256'],
+        'authority_path':record['authority_path'],'authority_sha256':record['authority_sha256'],
+        'version':record['release']['version'],
+        'runtime_packs':[row['path'] for row in record['release']['artifacts'] if row['kind']=='runtime_pack']}
+
+
 def launch_plan(root,authority,*,pinned_authority_sha256):
     root,owner=_root(root)
     with store_admission(root):
-        validate_attachment(root);pointer=_pointer(root)
-        if pointer is None:raise UpdateError('No owned portable application is installed')
-        record,directory,manifest=_validated_intent(root,pointer['update_id'])
-        if str(_unlinked(authority))!=record['authority_path'] or pinned_authority_sha256!=record['authority_sha256']:
-            raise UpdateError('Launch publisher authority differs from installed binding')
-        if record['status']!='committed' or record['database_pointer']!=pointer['database_pointer']:
-            raise UpdateError('Application update receipt differs from launch pair')
-        executable=root/GENERATIONS/pointer['application_generation']/'application'/manifest['entrypoint']
-        return {'argv':[str(executable)],'environment':{'VISION_AI_STUDIO_USER_DATA_DIR':str(root)},
-            'version':record['release']['version'],'database_pointer':pointer['database_pointer'],
-            'runtime_packs':[row['path'] for row in record['release']['artifacts'] if row['kind']=='runtime_pack'],
+        binding=_launch_binding(root,authority,pinned_authority_sha256=pinned_authority_sha256)
+        return {'argv':[binding['executable']],'environment':{'VISION_AI_STUDIO_USER_DATA_DIR':str(root)},
+            'version':binding['version'],'database_pointer':binding['database_pointer'],
+            'runtime_packs':binding['runtime_packs'],
             'native_signature_acceptance':'unqualified','model_quality_acceptance':'required'}
 
 

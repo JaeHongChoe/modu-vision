@@ -1,10 +1,9 @@
 """Read-only ended operation archives; no transport, launch, adoption or quality grant."""
 import hashlib
 import json
-import os
 from pathlib import Path, PurePosixPath
 import re
-import stat
+from backend.engine.migration_inventory import bounded_file_digest
 
 OPERATIONS={'evaluate','infer','benchmark','flowchart_run','export','package_parity','flow_preflight'}
 
@@ -82,13 +81,8 @@ def validate_operations(root, output, parent):
             seen.add(name);total+=size
             if total>1024*1024*1024:raise ValueError('Remote operation archived output exceeds limits')
             file=_file(root,path/PurePosixPath(name))
-            with file.open('rb') as stream:
-                before=os.fstat(stream.fileno())
-                if not stat.S_ISREG(before.st_mode) or before.st_size!=size:raise ValueError('Remote operation artifact size differs')
-                found=hashlib.file_digest(stream,'sha256').hexdigest();after=os.fstat(stream.fileno())
-            current=_file(root,file).stat()
-            identity=lambda st:(st.st_dev,st.st_ino,st.st_size,st.st_mtime_ns)
-            if found!=checksum or identity(before)!=identity(after) or identity(before)!=identity(current):
+            found=bounded_file_digest(file,max_bytes=size,expected_size=size)
+            if found!=checksum:
                 raise ValueError('Remote operation archived artifact changed')
         if not outputs.is_dir() or outputs.is_symlink():raise ValueError('Remote operation output directory is unavailable')
         found={p.relative_to(path).as_posix() for p in outputs.rglob('*') if p.is_file() or p.is_symlink()}

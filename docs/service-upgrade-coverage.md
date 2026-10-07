@@ -5,8 +5,9 @@
 ## 범위와 상태
 
 - F001–F123: 123개, U001–U033: 33개, 합계 156개. 누락 0개.
-- 신규 계획: 8개 phase/82개 작업 묶음. in_progress 25개, planned 39개, verification_pending 18개. accepted 0개.
-- 부모 구현 근거 소스 `e376db11`: verified 24개/pending 58개. 최신 추가 코드 `5b2955749dd9a5dc6a621dd24a2b28441050f9ed`에서 E03/E04/E05/E07을 반영해 별도 게시 진척은 확장 구현 slice 16개와 데이터·라벨링 개선 영역 2개다. 이 slice 집계는 부모 작업과 겹치므로 더하지 않는다.
+- 신규 계획: 8개 phase/82개 작업 묶음. 현재 원장 기준 in_progress13개, planned8개, verification_pending61개, accepted0개다.
+- 현재 부모 구현은 verified67개/pending15개다. 사용자 요청 범위에서 Windows 전용2개를 면제하면 계속 필요한 부모는13개이며, 면제를 테스트 통과로 기록하지 않는다. [현재 집계 도구와 범위](implementation-ledger/2026-10-07-remaining-scope.md)를 통해 파일에서 다시 계산한다.
+- 과거 `e376db11`의24/58과 확장 구현 slice16개·추가 개선 영역2개는 별도 이력이다. 이 slice 집계는 부모 작업과 겹치므로 더하지 않는다.
 - 최신 구현 slice와 게시 근거는 [실행 기록](implementation-ledger/SERVICE-UPGRADE.md#gold-label-review-20261004)에 기록한다.
 - source registry: `docs/feature-program.json`, `docs/product-upgrade-program.json`.
 - source baseline: `03e8f6d142e6f8e7fa6bd80cb82a4a9ccf8d65e6`.
