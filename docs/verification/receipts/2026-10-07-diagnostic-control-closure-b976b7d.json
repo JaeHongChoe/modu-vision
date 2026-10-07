@@ -1,0 +1,45 @@
+{
+  "schema": "modu-vision.diagnostic-download-controls/v1",
+  "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+  "actual_gui": [
+    {
+      "mode": "browser",
+      "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
+      "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca"
+    },
+    {
+      "mode": "electron",
+      "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
+      "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576"
+    }
+  ],
+  "new_verified_scenarios": 11,
+  "observations": {
+    "diagnostic-sections": {
+      "error": "An explicit delayed503 on selected operator_errors disabled all section controls while pending, retained that exact selection after failure and preserved the original saved bundle. Removing the transport fixture and deliberately retrying sent the same selected section.",
+      "cancel": "Choosing an unsubmitted hardware section and closing the actual workspace emitted no new diagnostics POST or download and retained the previous persisted JSON hash.",
+      "reopen": "Closing then reopening reset all transient section controls to the default selection, removed the previous success notice and preserved the exact last stored bundle without a new export.",
+      "handoff": "The actual chosen packages/operator_errors sections were the exact respective POST bodies, downloaded JSON sections and persisted backend JSON sections; controlled private values and original image identity were excluded."
+    },
+    "diagnostic-download": {
+      "error": "An explicit503 retained the prior bundle bytes and produced no new actual download. The control was restored and a deliberate retry after fixture removal saved the selected sanitized response.",
+      "cancel": "Closing after unsubmitted section changes emitted no diagnostics POST, wrote no new bundle and triggered no browser/native download event.",
+      "reopen": "Reopening did not trigger another export or download; the final exact persisted bundle and original image hash were retained and transient notices cleared.",
+      "handoff": "The actual downloaded JSON parsed exactly to both the actual response bundle and persisted backend JSON. The chosen operator_errors alone contained a controlled failed inspection with null model verdict and redacted URL/private values; no image or authentication value was exported."
+    },
+    "installation-diagnostics-tab": {
+      "error": "Explicit transport503 on installation GET displayed the actual error and unready environment state and performed no diagnostics export. Removing the fixture and deliberately reopening read the actual host metadata.",
+      "cancel": "Closing the actual workspace with an unsubmitted section choice retained all stored diagnostic/source hashes and emitted no additional export or download.",
+      "handoff": "The actual reopened installation displayed the exact version, OS, architecture and Python from the actual backend response before a selected sanitized diagnostics download; unsupported publisher installation was not accepted."
+    }
+  },
+  "preserved_initial_failed_fixture": {
+    "source_sha": "071695fe53d4ec84a7e6492324460da69a262dad",
+    "report_sha256": "3109c6ce0e62a33417ef219460d573dbb56c2424bf052b56100d359c62291ca6",
+    "harness_sha256": "6deedf973bf7164a1f352c53997130245625b445146c1c57acb4441d906bf812",
+    "reason": "The initial test incorrectly assumed an unselected project at startup; the actual app automatically creates Default Project. The test was corrected to use an explicitly created owned project. The no-project empty dimension was not promoted; initial failure and clean teardown remain preserved."
+  },
+  "scope": "Actual browser/Electron transport-failure, unsubmitted cancellation, explicit correction/retry, selected sanitized local download/persisted JSON equality and reopening.503 is an explicit controlled transport fixture. No original images/private paths/authentication were exported, no external upload/training/human truth/publisher/Windows/independent acceptance was inferred.",
+  "review": "root_only",
+  "parent_acceptance": "pending"
+}

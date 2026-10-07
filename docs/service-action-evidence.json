@@ -16599,16 +16599,264 @@
        "state": "pending"
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-09",
+         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "kind": "click",
+         "action": "진단 자료 포함 항목 선택",
+         "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
+         "observed": "browser: An explicit delayed503 on selected operator_errors disabled all section controls while pending, retained that exact selection after failure and preserved the original saved bundle. Removing the transport fixture and deliberately retrying sent the same selected section.",
+         "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+         "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
+         "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "dfa628b49532a4733fac4c8cce8def2f0e874ba996dab80413ea07150be50c0c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "76c1840876ed09740cc560d779fe677dee0f366074584f70027769b7541dc2a7"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "ac3d9c2f894fc760abab302f0a7946104b5168a4e9edb2332259b958bbdcea34"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "adf86f5a1d5ed57f39e961f9e638ebccdb7574d600314f4eabadbc54fd47d755"
+          }
+         ]
+        },
+        {
+         "task": "S6-09",
+         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "kind": "click",
+         "action": "진단 자료 포함 항목 선택",
+         "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
+         "observed": "electron: An explicit delayed503 on selected operator_errors disabled all section controls while pending, retained that exact selection after failure and preserved the original saved bundle. Removing the transport fixture and deliberately retrying sent the same selected section.",
+         "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+         "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
+         "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "fa70f8d4278c39c54339c220a372bdfae93033714ffd1df64c0206b77aee38d0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a1cf6fb37232e7b0198f8ebe3456b22a6dbddfbca5402272e93bda4f9f016c2f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "81b192611d4cd40c5918c12b45138c286855f257008e26bc4cba357e6416eafa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "44b340f62b63ff60d9544b7dac860e835f73cc6990522af6358a14f2f6f13dcd"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-09",
+         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "kind": "click",
+         "action": "진단 자료 포함 항목 선택",
+         "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
+         "observed": "browser: Choosing an unsubmitted hardware section and closing the actual workspace emitted no new diagnostics POST or download and retained the previous persisted JSON hash.",
+         "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+         "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
+         "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "dfa628b49532a4733fac4c8cce8def2f0e874ba996dab80413ea07150be50c0c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "76c1840876ed09740cc560d779fe677dee0f366074584f70027769b7541dc2a7"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "ac3d9c2f894fc760abab302f0a7946104b5168a4e9edb2332259b958bbdcea34"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "adf86f5a1d5ed57f39e961f9e638ebccdb7574d600314f4eabadbc54fd47d755"
+          }
+         ]
+        },
+        {
+         "task": "S6-09",
+         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "kind": "click",
+         "action": "진단 자료 포함 항목 선택",
+         "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
+         "observed": "electron: Choosing an unsubmitted hardware section and closing the actual workspace emitted no new diagnostics POST or download and retained the previous persisted JSON hash.",
+         "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+         "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
+         "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "fa70f8d4278c39c54339c220a372bdfae93033714ffd1df64c0206b77aee38d0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a1cf6fb37232e7b0198f8ebe3456b22a6dbddfbca5402272e93bda4f9f016c2f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "81b192611d4cd40c5918c12b45138c286855f257008e26bc4cba357e6416eafa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "44b340f62b63ff60d9544b7dac860e835f73cc6990522af6358a14f2f6f13dcd"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-09",
+         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "kind": "click",
+         "action": "진단 자료 포함 항목 선택",
+         "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
+         "observed": "browser: Closing then reopening reset all transient section controls to the default selection, removed the previous success notice and preserved the exact last stored bundle without a new export.",
+         "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+         "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
+         "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "dfa628b49532a4733fac4c8cce8def2f0e874ba996dab80413ea07150be50c0c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "76c1840876ed09740cc560d779fe677dee0f366074584f70027769b7541dc2a7"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "ac3d9c2f894fc760abab302f0a7946104b5168a4e9edb2332259b958bbdcea34"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "adf86f5a1d5ed57f39e961f9e638ebccdb7574d600314f4eabadbc54fd47d755"
+          }
+         ]
+        },
+        {
+         "task": "S6-09",
+         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "kind": "click",
+         "action": "진단 자료 포함 항목 선택",
+         "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
+         "observed": "electron: Closing then reopening reset all transient section controls to the default selection, removed the previous success notice and preserved the exact last stored bundle without a new export.",
+         "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+         "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
+         "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "fa70f8d4278c39c54339c220a372bdfae93033714ffd1df64c0206b77aee38d0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a1cf6fb37232e7b0198f8ebe3456b22a6dbddfbca5402272e93bda4f9f016c2f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "81b192611d4cd40c5918c12b45138c286855f257008e26bc4cba357e6416eafa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "44b340f62b63ff60d9544b7dac860e835f73cc6990522af6358a14f2f6f13dcd"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-09",
+         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "kind": "click",
+         "action": "진단 자료 포함 항목 선택",
+         "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
+         "observed": "browser: The actual chosen packages/operator_errors sections were the exact respective POST bodies, downloaded JSON sections and persisted backend JSON sections; controlled private values and original image identity were excluded.",
+         "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+         "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
+         "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "dfa628b49532a4733fac4c8cce8def2f0e874ba996dab80413ea07150be50c0c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "76c1840876ed09740cc560d779fe677dee0f366074584f70027769b7541dc2a7"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "ac3d9c2f894fc760abab302f0a7946104b5168a4e9edb2332259b958bbdcea34"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "adf86f5a1d5ed57f39e961f9e638ebccdb7574d600314f4eabadbc54fd47d755"
+          }
+         ]
+        },
+        {
+         "task": "S6-09",
+         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "kind": "click",
+         "action": "진단 자료 포함 항목 선택",
+         "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
+         "observed": "electron: The actual chosen packages/operator_errors sections were the exact respective POST bodies, downloaded JSON sections and persisted backend JSON sections; controlled private values and original image identity were excluded.",
+         "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+         "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
+         "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "fa70f8d4278c39c54339c220a372bdfae93033714ffd1df64c0206b77aee38d0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a1cf6fb37232e7b0198f8ebe3456b22a6dbddfbca5402272e93bda4f9f016c2f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "81b192611d4cd40c5918c12b45138c286855f257008e26bc4cba357e6416eafa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "44b340f62b63ff60d9544b7dac860e835f73cc6990522af6358a14f2f6f13dcd"
+          }
+         ]
+        }
+       ]
       }
      }
     },
@@ -16667,16 +16915,264 @@
        "state": "pending"
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-09",
+         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "kind": "click",
+         "action": "진단 자료 저장",
+         "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
+         "observed": "browser: An explicit503 retained the prior bundle bytes and produced no new actual download. The control was restored and a deliberate retry after fixture removal saved the selected sanitized response.",
+         "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+         "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
+         "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "dfa628b49532a4733fac4c8cce8def2f0e874ba996dab80413ea07150be50c0c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "76c1840876ed09740cc560d779fe677dee0f366074584f70027769b7541dc2a7"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "ac3d9c2f894fc760abab302f0a7946104b5168a4e9edb2332259b958bbdcea34"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "adf86f5a1d5ed57f39e961f9e638ebccdb7574d600314f4eabadbc54fd47d755"
+          }
+         ]
+        },
+        {
+         "task": "S6-09",
+         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "kind": "click",
+         "action": "진단 자료 저장",
+         "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
+         "observed": "electron: An explicit503 retained the prior bundle bytes and produced no new actual download. The control was restored and a deliberate retry after fixture removal saved the selected sanitized response.",
+         "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+         "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
+         "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "fa70f8d4278c39c54339c220a372bdfae93033714ffd1df64c0206b77aee38d0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a1cf6fb37232e7b0198f8ebe3456b22a6dbddfbca5402272e93bda4f9f016c2f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "81b192611d4cd40c5918c12b45138c286855f257008e26bc4cba357e6416eafa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "44b340f62b63ff60d9544b7dac860e835f73cc6990522af6358a14f2f6f13dcd"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-09",
+         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "kind": "click",
+         "action": "진단 자료 저장",
+         "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
+         "observed": "browser: Closing after unsubmitted section changes emitted no diagnostics POST, wrote no new bundle and triggered no browser/native download event.",
+         "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+         "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
+         "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "dfa628b49532a4733fac4c8cce8def2f0e874ba996dab80413ea07150be50c0c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "76c1840876ed09740cc560d779fe677dee0f366074584f70027769b7541dc2a7"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "ac3d9c2f894fc760abab302f0a7946104b5168a4e9edb2332259b958bbdcea34"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "adf86f5a1d5ed57f39e961f9e638ebccdb7574d600314f4eabadbc54fd47d755"
+          }
+         ]
+        },
+        {
+         "task": "S6-09",
+         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "kind": "click",
+         "action": "진단 자료 저장",
+         "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
+         "observed": "electron: Closing after unsubmitted section changes emitted no diagnostics POST, wrote no new bundle and triggered no browser/native download event.",
+         "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+         "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
+         "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "fa70f8d4278c39c54339c220a372bdfae93033714ffd1df64c0206b77aee38d0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a1cf6fb37232e7b0198f8ebe3456b22a6dbddfbca5402272e93bda4f9f016c2f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "81b192611d4cd40c5918c12b45138c286855f257008e26bc4cba357e6416eafa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "44b340f62b63ff60d9544b7dac860e835f73cc6990522af6358a14f2f6f13dcd"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-09",
+         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "kind": "click",
+         "action": "진단 자료 저장",
+         "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
+         "observed": "browser: Reopening did not trigger another export or download; the final exact persisted bundle and original image hash were retained and transient notices cleared.",
+         "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+         "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
+         "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "dfa628b49532a4733fac4c8cce8def2f0e874ba996dab80413ea07150be50c0c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "76c1840876ed09740cc560d779fe677dee0f366074584f70027769b7541dc2a7"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "ac3d9c2f894fc760abab302f0a7946104b5168a4e9edb2332259b958bbdcea34"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "adf86f5a1d5ed57f39e961f9e638ebccdb7574d600314f4eabadbc54fd47d755"
+          }
+         ]
+        },
+        {
+         "task": "S6-09",
+         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "kind": "click",
+         "action": "진단 자료 저장",
+         "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
+         "observed": "electron: Reopening did not trigger another export or download; the final exact persisted bundle and original image hash were retained and transient notices cleared.",
+         "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+         "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
+         "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "fa70f8d4278c39c54339c220a372bdfae93033714ffd1df64c0206b77aee38d0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a1cf6fb37232e7b0198f8ebe3456b22a6dbddfbca5402272e93bda4f9f016c2f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "81b192611d4cd40c5918c12b45138c286855f257008e26bc4cba357e6416eafa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "44b340f62b63ff60d9544b7dac860e835f73cc6990522af6358a14f2f6f13dcd"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-09",
+         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "kind": "click",
+         "action": "진단 자료 저장",
+         "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
+         "observed": "browser: The actual downloaded JSON parsed exactly to both the actual response bundle and persisted backend JSON. The chosen operator_errors alone contained a controlled failed inspection with null model verdict and redacted URL/private values; no image or authentication value was exported.",
+         "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+         "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
+         "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "dfa628b49532a4733fac4c8cce8def2f0e874ba996dab80413ea07150be50c0c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "76c1840876ed09740cc560d779fe677dee0f366074584f70027769b7541dc2a7"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "ac3d9c2f894fc760abab302f0a7946104b5168a4e9edb2332259b958bbdcea34"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "adf86f5a1d5ed57f39e961f9e638ebccdb7574d600314f4eabadbc54fd47d755"
+          }
+         ]
+        },
+        {
+         "task": "S6-09",
+         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "kind": "click",
+         "action": "진단 자료 저장",
+         "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
+         "observed": "electron: The actual downloaded JSON parsed exactly to both the actual response bundle and persisted backend JSON. The chosen operator_errors alone contained a controlled failed inspection with null model verdict and redacted URL/private values; no image or authentication value was exported.",
+         "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+         "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
+         "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "fa70f8d4278c39c54339c220a372bdfae93033714ffd1df64c0206b77aee38d0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a1cf6fb37232e7b0198f8ebe3456b22a6dbddfbca5402272e93bda4f9f016c2f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "81b192611d4cd40c5918c12b45138c286855f257008e26bc4cba357e6416eafa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "44b340f62b63ff60d9544b7dac860e835f73cc6990522af6358a14f2f6f13dcd"
+          }
+         ]
+        }
+       ]
       }
      }
     },
@@ -16715,10 +17211,134 @@
        "state": "pending"
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "kind": "click",
+         "action": "설치·진단 재열기",
+         "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
+         "observed": "browser: Explicit transport503 on installation GET displayed the actual error and unready environment state and performed no diagnostics export. Removing the fixture and deliberately reopening read the actual host metadata.",
+         "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+         "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
+         "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "dfa628b49532a4733fac4c8cce8def2f0e874ba996dab80413ea07150be50c0c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "76c1840876ed09740cc560d779fe677dee0f366074584f70027769b7541dc2a7"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "ac3d9c2f894fc760abab302f0a7946104b5168a4e9edb2332259b958bbdcea34"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "adf86f5a1d5ed57f39e961f9e638ebccdb7574d600314f4eabadbc54fd47d755"
+          }
+         ]
+        },
+        {
+         "task": "S6-04",
+         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "kind": "click",
+         "action": "설치·진단 재열기",
+         "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
+         "observed": "electron: Explicit transport503 on installation GET displayed the actual error and unready environment state and performed no diagnostics export. Removing the fixture and deliberately reopening read the actual host metadata.",
+         "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+         "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
+         "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "fa70f8d4278c39c54339c220a372bdfae93033714ffd1df64c0206b77aee38d0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a1cf6fb37232e7b0198f8ebe3456b22a6dbddfbca5402272e93bda4f9f016c2f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "81b192611d4cd40c5918c12b45138c286855f257008e26bc4cba357e6416eafa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "44b340f62b63ff60d9544b7dac860e835f73cc6990522af6358a14f2f6f13dcd"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "kind": "click",
+         "action": "설치·진단 재열기",
+         "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
+         "observed": "browser: Closing the actual workspace with an unsubmitted section choice retained all stored diagnostic/source hashes and emitted no additional export or download.",
+         "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+         "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
+         "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "dfa628b49532a4733fac4c8cce8def2f0e874ba996dab80413ea07150be50c0c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "76c1840876ed09740cc560d779fe677dee0f366074584f70027769b7541dc2a7"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "ac3d9c2f894fc760abab302f0a7946104b5168a4e9edb2332259b958bbdcea34"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "adf86f5a1d5ed57f39e961f9e638ebccdb7574d600314f4eabadbc54fd47d755"
+          }
+         ]
+        },
+        {
+         "task": "S6-04",
+         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "kind": "click",
+         "action": "설치·진단 재열기",
+         "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
+         "observed": "electron: Closing the actual workspace with an unsubmitted section choice retained all stored diagnostic/source hashes and emitted no additional export or download.",
+         "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+         "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
+         "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "fa70f8d4278c39c54339c220a372bdfae93033714ffd1df64c0206b77aee38d0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a1cf6fb37232e7b0198f8ebe3456b22a6dbddfbca5402272e93bda4f9f016c2f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "81b192611d4cd40c5918c12b45138c286855f257008e26bc4cba357e6416eafa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "44b340f62b63ff60d9544b7dac860e835f73cc6990522af6358a14f2f6f13dcd"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
        "state": "verified",
@@ -16744,7 +17364,69 @@
        ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "kind": "click",
+         "action": "설치·진단 재열기",
+         "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
+         "observed": "browser: The actual reopened installation displayed the exact version, OS, architecture and Python from the actual backend response before a selected sanitized diagnostics download; unsupported publisher installation was not accepted.",
+         "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/diagnostic-download-controls.spec.ts::diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+         "receipt": "2026-10-07-diagnostic-controls-b976b7d-browser.json",
+         "receipt_sha256": "2478b80d9bcf1c944ce34f09e84817828964d75ef0b3128430ad382b014934ca",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "dfa628b49532a4733fac4c8cce8def2f0e874ba996dab80413ea07150be50c0c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "76c1840876ed09740cc560d779fe677dee0f366074584f70027769b7541dc2a7"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "ac3d9c2f894fc760abab302f0a7946104b5168a4e9edb2332259b958bbdcea34"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "adf86f5a1d5ed57f39e961f9e638ebccdb7574d600314f4eabadbc54fd47d755"
+          }
+         ]
+        },
+        {
+         "task": "S6-04",
+         "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+         "kind": "click",
+         "action": "설치·진단 재열기",
+         "expected": "Explicit installation/diagnostics controls preserve the selected project, prior saved bundle and original bytes across the named actual scenario; downloaded selected JSON matches persisted sanitized output.",
+         "observed": "electron: The actual reopened installation displayed the exact version, OS, architecture and Python from the actual backend response before a selected sanitized diagnostics download; unsupported publisher installation was not accepted.",
+         "reviewer": "Codex root actual clean-source UI, network body, disk hashes and native will-download readback; independent and human quality acceptance pending",
+         "test": "scripts/e2e/diagnostic-download-controls.spec.ts::native diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+         "receipt": "2026-10-07-diagnostic-controls-b976b7d-electron.json",
+         "receipt_sha256": "f1fdbd9fef6960d5190b7251f2c7fbc2cb1acda9f033e70a67fd5be6f2d46576",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "fa70f8d4278c39c54339c220a372bdfae93033714ffd1df64c0206b77aee38d0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a1cf6fb37232e7b0198f8ebe3456b22a6dbddfbca5402272e93bda4f9f016c2f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "81b192611d4cd40c5918c12b45138c286855f257008e26bc4cba357e6416eafa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "44b340f62b63ff60d9544b7dac860e835f73cc6990522af6358a14f2f6f13dcd"
+          }
+         ]
+        }
+       ]
       }
      }
     },

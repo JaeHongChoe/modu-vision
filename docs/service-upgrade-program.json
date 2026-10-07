@@ -4972,6 +4972,14 @@
      "receipt_sha256": "df495f2b87c674cfbc34d75bde2371f47c8fbbd97972d8fe3aa957a81c8a2c71",
      "result": "Older source6719d5b failed with reversed manual comparison identities; current704b685 browser/Electron derived flow retained the intended original/candidate and exact assessment checkpoint.",
      "scope": "Exact older hosted run failed after CPU success with browser166 passed/1 failed/1 skipped. Two failure-context/screenshot ZIP members were read and byte-verified; the whole ZIP and large trace were not verified. Current manual-model-scope repair already existed before this readback. Actual clean704b685 browser/Electron derived workflow reruns passed with exact incumbent/candidate/comparison/checkpoint identity and unsubmitted human attestation. This is not newest hosted CI success."
+    },
+    {
+     "kind": "actual-old-hosted-notice-failure",
+     "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+     "receipt": "docs/verification/receipts/2026-10-07-hosted-15b9043-notice-failure.json",
+     "receipt_sha256": "a45ec804d87fe73184562294b31d35c77fa90dde1d7b0360d2c879488a14588b",
+     "result": "Actual older hosted15b9043 CPU2564 pass/1 notice fail/7 skip; current generated notice bytes are the already qualified5e96e5e repair.",
+     "scope": "Preserved original old hosted failure only; no newest hosted success inferred."
     }
    ],
    "file_actions": {
@@ -5437,6 +5445,14 @@
      "receipt_sha256": "6b64ff1fb014eda4820429ea13cb54671661fca9f2bdf4aa8b51c64ad54164b5",
      "result": "Clean browser3/Electron3 passed. One invalid-selection dimension added and seven previous library control dimensions freshly rebound to current executed spec bytes.",
      "scope": "Actual replaced-original and exact recovery in browser/Electron. Seven previous control dimensions were rerun after the spec extension and rebound to current executed spec bytes; old receipts remain immutable historical evidence. Derived retraining/comparison/original return were separately rerun. No human quality, native installer, Windows, field or independent acceptance inferred."
+    },
+    {
+     "kind": "actual-clean-diagnostic-control-closure",
+     "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+     "receipt": "docs/verification/receipts/2026-10-07-diagnostic-control-closure-b976b7d.json",
+     "receipt_sha256": "194b5423c430229541721b9c72ffdc7d03fa9b5b639f9d8843f1baba59249104",
+     "result": "Actual browser1/Electron1 passed with no retry and owned teardown. Eleven pending diagnostic selection/download/installation dimensions are now separately evidenced.",
+     "scope": "Actual browser/Electron transport-failure, unsubmitted cancellation, explicit correction/retry, selected sanitized local download/persisted JSON equality and reopening.503 is an explicit controlled transport fixture. No original images/private paths/authentication were exported, no external upload/training/human truth/publisher/Windows/independent acceptance was inferred."
     }
    ],
    "file_actions": {
@@ -5461,7 +5477,7 @@
    },
    "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts",
    "remaining": [
-    "192 curated actions now have430 verified scenarios and914 pending scenarios. Retention, template, project archive and changed-original selection controls have explicit scenario records; other helpers/menus/shortcuts and all156-feature full acceptance remain pending."
+    "192 curated actions now have441 verified scenarios and903 pending scenarios. Other helpers/menus/shortcuts and all156-feature full acceptance remain pending."
    ]
   },
   {

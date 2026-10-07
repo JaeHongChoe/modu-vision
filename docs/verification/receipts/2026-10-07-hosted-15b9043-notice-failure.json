@@ -1,0 +1,15 @@
+{
+  "schema": "modu-vision.old-hosted-notice-failure/v1",
+  "source_sha": "b976b7df42d05ba5ea164555c5ba3f1ff8d1a1d6",
+  "hosted_source_sha": "15b9043e540ba5acf55ccd03d7594eea7c10c96c",
+  "run_id": 37567861177,
+  "status": "completed",
+  "conclusion": "failure",
+  "cpu_passed": 2564,
+  "cpu_failed": 1,
+  "cpu_skipped": 7,
+  "failed_test": "backend/tests/test_service_s6_01.py::test_committed_notices_cover_locked_npm_entries_and_declared_python_requirements",
+  "private_failure_log_sha256": "392b4b2e5fdeabdd489323c1cd605afab81d68703cae514231795567f2f4686b",
+  "reason": "Declared cryptography runtime lacked a generated notice row in this older hosted source. Current5e96e5e repair already regenerated actual cffi/cryptography/pycparser inventory and62 related checks passed; the exact current notice bytes remain unchanged. Browser phase was not executed by the failing old run.",
+  "scope": "Preserved original old hosted failure only; no newest hosted success inferred."
+}
