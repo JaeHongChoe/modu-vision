@@ -81,3 +81,80 @@ def test_archive_sanitization_removes_server_references_and_keeps_original_secre
     sanitize_fleet_database(copy);check_credentials(copy,'fleet/agents.sqlite3')
     with sqlite3.connect(copy) as db:assert db.execute('SELECT token FROM targets').fetchone()[0]==''
     assert item.secret(target['target_id'])=='controlled-private-test-token'
+
+
+def test_explicit_legacy_migration_is_atomic_idempotent_and_audited(tmp_path,monkeypatch):
+    item=registry(tmp_path,monkeypatch);identifier='d'*32;token='controlled-legacy-migration-token'
+    with item.connect() as db:db.execute('INSERT INTO targets VALUES(?,?,?,?)',(identifier,'Legacy','https://field.example.com',token))
+    result=item.migrate_legacy_credentials(identifier,reason='Move this configured target to owned server secret storage')
+    assert result['credential_storage']=='server_secret_v1' and item.secret(identifier)==token
+    assert token.encode() not in item.path.read_bytes()
+    files=list((tmp_path/'server/fleet_secrets').glob('*/*.secret'));assert len(files)==1
+    repeated=item.migrate_legacy_credentials(identifier,reason='Repeat the same explicit credential migration')
+    assert repeated==result and len(list((tmp_path/'server/fleet_secrets').glob('*/*.secret')))==1
+    with item.connect() as db:
+        events=db.execute('SELECT * FROM credential_events').fetchall()
+    assert len(events)==1 and events[0]['event']=='legacy_credential_migrated'
+    assert events[0]['reason'].startswith('Move this configured') and token not in json.dumps(dict(events[0]))
+
+
+def test_failed_legacy_migration_preserves_current_credentials_and_refuses_missing_secret(tmp_path,monkeypatch):
+    from backend.engine.fleet_secret_store import ServerSecretStore
+    item=registry(tmp_path,monkeypatch);identifier='e'*32;token='controlled-legacy-migration-token'
+    with item.connect() as db:db.execute('INSERT INTO targets VALUES(?,?,?,?)',(identifier,'Legacy','https://field.example.com',token))
+    save=ServerSecretStore.save
+    monkeypatch.setattr(ServerSecretStore,'save',lambda *a:(_ for _ in ()).throw(OSError('controlled write failure')))
+    with pytest.raises(OSError,match='write failure'):item.migrate_legacy_credentials(identifier,reason='Keep the prior credential if new storage fails')
+    assert item.secret(identifier)==token
+    with item.connect() as db:assert db.execute('SELECT count(*) FROM credential_events').fetchone()[0]==0
+    monkeypatch.setattr(ServerSecretStore,'save',save)
+    item.migrate_legacy_credentials(identifier,reason='Move the exact configured target after storage is available')
+    next((tmp_path/'server/fleet_secrets').glob('*/*.secret')).unlink()
+    with pytest.raises(ValueError,match='unavailable'):item.migrate_legacy_credentials(identifier,reason='An absent stored reference cannot qualify as successful migration')
+
+
+def test_server_secret_replacement_during_read_is_refused(tmp_path,monkeypatch):
+    item=registry(tmp_path,monkeypatch);target=item.save_target(name='Bound',url='https://field.example.com',token='controlled-replacement-token')
+    if os.name=='nt':return
+    file=next((tmp_path/'server/fleet_secrets').glob('*/*.secret'));other=file.with_name('replacement.secret')
+    other.write_bytes(file.read_bytes());other.chmod(0o600)
+    real=os.fstat;count=0
+    def replace(descriptor):
+        nonlocal count
+        result=real(descriptor);count+=1
+        if count==2:other.replace(file)
+        return result
+    monkeypatch.setattr(os,'fstat',replace)
+    with pytest.raises(ValueError,match='identity|changed'):item.secret(target['target_id'])
+
+
+def test_authenticated_owner_migration_refuses_reviewers_and_retains_session_actor(tmp_path,monkeypatch):
+    from backend.tests.test_fleet_emergency_rollback import _shared_sessions
+    from backend.tests.test_model_deployments import _fixture
+    from backend.engine.fleet import FleetRegistry
+    monkeypatch.setenv('VISION_AI_STUDIO_USER_DATA_DIR',str(tmp_path/'server'))
+    _,project,*_=_fixture(tmp_path);sessions,identities=_shared_sessions(tmp_path,project)
+    item=FleetRegistry(project['project_dir']);identifier='f'*32;token='controlled-shared-legacy-token'
+    with item.connect() as db:db.execute('INSERT INTO targets VALUES(?,?,?,?)',(identifier,'Shared','https://field.example.com',token))
+    url='/api/fleet/targets/'+identifier+'/credentials/migrate'
+    payload={'reason':'Move configured credentials to this server outside portable project bytes'}
+    for role in ('viewer','reviewer'):
+        response=sessions[role].post(url,json=payload);assert response.status_code==403,response.text
+    response=sessions['owner'].post(url,json={**payload,'actor_id':'forged'});assert response.status_code==422,response.text
+    response=sessions['owner'].post(url,json=payload);assert response.status_code==200,response.text
+    assert token not in response.text and response.json()['credential_storage']=='server_secret_v1'
+    with item.connect() as db:event=db.execute('SELECT * FROM credential_events').fetchone()
+    assert event['actor_id']==identities['owner']['id']
+
+
+def test_two_concurrent_legacy_migrations_publish_one_reference_and_one_audit(tmp_path,monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    from backend.engine.fleet import FleetRegistry
+    item=registry(tmp_path,monkeypatch);identifier='a'*32
+    with item.connect() as db:db.execute('INSERT INTO targets VALUES(?,?,?,?)',(identifier,'Legacy','https://field.example.com','controlled-concurrent-legacy-token'))
+    def move(_):
+        return FleetRegistry(item.root.parent).migrate_legacy_credentials(identifier,reason='Both callers migrate the same current owned target')
+    with ThreadPoolExecutor(max_workers=2) as pool:results=list(pool.map(move,range(2)))
+    assert results[0]==results[1]
+    assert len(list((tmp_path/'server/fleet_secrets').glob('*/*.secret')))==1
+    with item.connect() as db:assert db.execute('SELECT count(*) FROM credential_events').fetchone()[0]==1

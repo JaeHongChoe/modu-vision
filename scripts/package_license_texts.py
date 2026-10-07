@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import re
+import stat
 import tempfile
 
 LICENSE_NAME = re.compile(r'^(?:licen[cs]es?|copying|notices?|copyright)(?:[._-].*)?$', re.I)
@@ -18,10 +19,19 @@ def _read(path: Path, base: Path) -> bytes:
         raise ValueError('License input is linked or outside its package')
     if not path.is_file() or path.stat().st_size > MAX_LICENSE_BYTES:
         raise ValueError('License input is missing or unbounded')
-    with path.open('rb') as stream:
-        before=os.fstat(stream.fileno());data=stream.read(MAX_LICENSE_BYTES+1);after=os.fstat(stream.fileno())
+    descriptor=os.open(path,os.O_RDONLY|getattr(os,'O_NOFOLLOW',0)|getattr(os,'O_NONBLOCK',0))
+    with os.fdopen(descriptor,'rb') as stream:
+        before=os.fstat(stream.fileno())
+        if not stat.S_ISREG(before.st_mode) or before.st_size>MAX_LICENSE_BYTES:
+            raise ValueError('License input is not a bounded regular file')
+        data=stream.read(MAX_LICENSE_BYTES+1);after=os.fstat(stream.fileno())
     if len(data)>MAX_LICENSE_BYTES or (before.st_ino,before.st_size,before.st_mtime_ns)!=(after.st_ino,after.st_size,after.st_mtime_ns):
         raise ValueError('License input changed while collecting')
+    if any(p.is_symlink() for p in (path,*path.parents) if p==base or base in p.parents):
+        raise ValueError('License input identity changed while collecting')
+    current=path.stat(follow_symlinks=False)
+    if not stat.S_ISREG(current.st_mode) or (current.st_dev,current.st_ino,current.st_size,current.st_mtime_ns)!=(before.st_dev,before.st_ino,before.st_size,before.st_mtime_ns):
+        raise ValueError('License input identity changed while collecting')
     return data
 
 

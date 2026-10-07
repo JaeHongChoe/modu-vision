@@ -62,6 +62,9 @@ class FleetRegistry:
                 CREATE TRIGGER IF NOT EXISTS credential_events_no_update BEFORE UPDATE ON credential_events BEGIN SELECT RAISE(ABORT,'Credential audit is immutable'); END;
                 CREATE TRIGGER IF NOT EXISTS credential_events_no_delete BEFORE DELETE ON credential_events BEGIN SELECT RAISE(ABORT,'Credential audit is immutable'); END;
             """)
+            conn.execute('BEGIN IMMEDIATE')
+            if 'reason' not in {row[1] for row in conn.execute('PRAGMA table_info(credential_events)')}:
+                conn.execute("ALTER TABLE credential_events ADD COLUMN reason TEXT NOT NULL DEFAULT ''")
         self.path.chmod(0o600)
     def connect(self):
         conn=sqlite3.connect(self.path,timeout=30);conn.row_factory=sqlite3.Row;return conn
@@ -91,8 +94,30 @@ class FleetRegistry:
         with self.connect() as conn:
             conn.execute('PRAGMA secure_delete=ON')
             conn.execute('INSERT INTO targets VALUES(?,?,?,?) ON CONFLICT(target_id) DO UPDATE SET name=excluded.name,url=excluded.url,token=excluded.token',(identifier,name.strip(),url,reference))
-            conn.execute('INSERT INTO credential_events VALUES(?,?,?,?,?,?)',(uuid.uuid4().hex,identifier,
-                self.authority_user_id or 'local_developer',POLICY_VERSION,'server_secret_saved',time.time()))
+            conn.execute('INSERT INTO credential_events VALUES(?,?,?,?,?,?,?)',(uuid.uuid4().hex,identifier,
+                self.authority_user_id or 'local_developer',POLICY_VERSION,'server_secret_saved',time.time(),'Target credentials explicitly configured'))
+        return self.target(identifier)
+    def migrate_legacy_credentials(self,identifier,*,reason):
+        """Explicitly move one configured target without changing or contacting it.
+
+        The write lock spans the current credential read, private-file readback,
+        reference replacement and immutable audit. Failure keeps the old row;
+        an already migrated reference must still be readable before replay passes.
+        Historical backups are preserved, not claimed to be retroactively sanitized.
+        """
+        if not isinstance(reason,str) or not 10<=len(reason.strip())<=2000:
+            raise ValueError('Credential migration requires a reason of 10–2000 characters')
+        with self.connect() as conn:
+            conn.execute('PRAGMA secure_delete=ON');conn.execute('BEGIN IMMEDIATE')
+            row=conn.execute('SELECT token FROM targets WHERE target_id=?',(identifier,)).fetchone()
+            if not row:raise KeyError(identifier)
+            token=row['token'];store=ServerSecretStore(self.root.parent)
+            if token.startswith(PREFIX):store.read(identifier,token)
+            else:
+                validate_token(token);reference=store.save(identifier,token)
+                conn.execute('UPDATE targets SET token=? WHERE target_id=?',(reference,identifier))
+                conn.execute('INSERT INTO credential_events VALUES(?,?,?,?,?,?,?)',(uuid.uuid4().hex,identifier,
+                    self.authority_user_id or 'local_developer',POLICY_VERSION,'legacy_credential_migrated',time.time(),reason.strip()))
         return self.target(identifier)
     def ledger(self,identifier):
         self.target(identifier);return DeploymentLedger(self.root/identifier,project_dir=self.root.parent)

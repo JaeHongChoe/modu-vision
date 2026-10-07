@@ -70,3 +70,22 @@ def test_bundle_verifier_refuses_traversal_and_unlisted_license_bytes(tmp_path):
     manifest=destination/'manifest.json';receipt=json.loads(manifest.read_text());receipt['files'][0]['path']='../outside'
     manifest.write_text(json.dumps(receipt))
     with pytest.raises(ValueError,match='path'):verify_license_bundle(destination)
+
+
+def test_license_input_replacement_during_read_never_qualifies_original_bytes(tmp_path,monkeypatch):
+    import os
+    from scripts.package_license_texts import collect_frozen_licenses
+    build,original=frozen(tmp_path);toc=tmp_path/'PYZ-00.toc';toc.write_text('[]')
+    replacement=original.with_name('replacement');replacement.write_bytes(original.read_bytes())
+    real=os.fstat;count=0
+    def replace(descriptor):
+        nonlocal count
+        result=real(descriptor);count+=1
+        # Metadata is read first, then the license handle. Replace only the
+        # on-disk leaf while that exact original handle is still open.
+        if count==4:replacement.replace(original)
+        return result
+    monkeypatch.setattr(os,'fstat',replace)
+    with pytest.raises(ValueError,match='identity|changed'):
+        collect_frozen_licenses(build,toc,tmp_path/'licenses')
+    assert not (tmp_path/'licenses/manifest.json').exists()

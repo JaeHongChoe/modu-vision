@@ -23,6 +23,10 @@ class EmergencyRollbackRequest(BaseModel):
     deployment_id:str=Field(min_length=1,max_length=100)
     reason:str=Field(max_length=2000)
 
+class CredentialMigrationRequest(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    reason:str=Field(min_length=10,max_length=2000)
+
 class RolloutRequest(DeployRequest):
     model_config=ConfigDict(extra='forbid')
     target_ids:list[str]=Field(min_length=1,max_length=1000)
@@ -81,6 +85,13 @@ def targets(request:Request):
 @router.post('/targets')
 def target(payload:TargetRequest,request:Request):
     store,project=scope(request);return execute(lambda:store.save_target(**payload.model_dump()))
+@router.post('/targets/{target_id}/credentials/migrate')
+def migrate_credentials(target_id:str,payload:CredentialMigrationRequest,request:Request):
+    store,project=scope(request)
+    actor=rollback_capabilities(request,project)
+    if actor['actor_role'] not in {'owner','local_owner'}:
+        raise HTTPException(403,'Project owner permission required to migrate agent credentials')
+    return execute(lambda:store.migrate_legacy_credentials(target_id,reason=payload.reason))
 @router.get('/targets/{target_id}')
 def readback(target_id:str,request:Request):
     store,project=scope(request);return execute(lambda:{**store.readback(target_id),'history':store.ledger(target_id).history(),'release_failures':store.failures(target_id),'emergency_rollback_events':store.emergency_events(target_id)})

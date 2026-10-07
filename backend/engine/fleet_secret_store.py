@@ -101,6 +101,11 @@ class ServerSecretStore:
                 raise ValueError('Server secret file is not private to this owner')
             payload=stream.read(MAX_BYTES+1);after=os.fstat(stream.fileno())
         if (before.st_ino,before.st_size,before.st_mtime_ns)!=(after.st_ino,after.st_size,after.st_mtime_ns):raise ValueError('Server secret changed during readback')
+        _unlinked(file)
+        try:current=file.stat(follow_symlinks=False)
+        except OSError as exc:raise ValueError('Server secret identity changed during readback') from exc
+        if (current.st_dev,current.st_ino,current.st_size,current.st_mtime_ns,current.st_nlink,current.st_mode,current.st_uid)!=(before.st_dev,before.st_ino,before.st_size,before.st_mtime_ns,1,before.st_mode,before.st_uid):
+            raise ValueError('Server secret identity changed during readback')
         if os.name=='nt':
             if not payload.startswith(b'DPAPI1\0'):raise ValueError('Unprotected Windows server secret is refused')
             payload=_dpapi(payload[7:],self.scope,decrypt=True)

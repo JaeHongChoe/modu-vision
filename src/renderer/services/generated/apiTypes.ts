@@ -327,6 +327,10 @@ export type CreateRun = {
   project_id?: string | null;
 };
 
+export type CredentialMigrationRequest = {
+  reason: string;
+};
+
 export type Credentials = {
   username: string;
   password: string;
@@ -1900,6 +1904,7 @@ export interface ApiRequestBody {
   "POST /api/fleet/rollouts/{plan_id}/resume": RolloutActionRequest;
   "POST /api/fleet/rollouts/{plan_id}/rollback": RolloutActionRequest;
   "POST /api/fleet/targets": TargetRequest;
+  "POST /api/fleet/targets/{target_id}/credentials/migrate": CredentialMigrationRequest;
   "POST /api/fleet/targets/{target_id}/deploy": DeployRequest;
   "POST /api/fleet/targets/{target_id}/emergency-rollback": EmergencyRollbackRequest;
   "POST /api/fleet/targets/{target_id}/rollback": backend__api__routes_fleet__RollbackRequest;
