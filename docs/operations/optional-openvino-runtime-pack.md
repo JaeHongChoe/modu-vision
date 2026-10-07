@@ -69,7 +69,40 @@ receipts are checked after execution.
 
 Controlled FP32/FP16 tensors and a tiny full-flow reference/heldout image exercise
 real conversion, saved precision metrics, provider inference and the complete
-flow package. They do not approve industrial model accuracy, representative
-heldout quality, a physical camera/PLC/MES, NPU/iGPU/Jetson/MIG/Windows, INT8/NNCF,
-a real publisher or a release. Exact source, inventory, wheel, log and execution
+flow package. That first control does not qualify INT8/NNCF. Neither control
+approves industrial model accuracy, representative heldout quality, a physical
+camera/PLC/MES, NPU/iGPU/Jetson/MIG/Windows, a real publisher or a release.
+Exact source, inventory, wheel, log and execution
 receipt hashes identify each qualification separately.
+
+## Separate calibrated INT8 control
+
+The later control uses source `e1ebb1691548d0008236d88a02bd77ae4438d240` and
+a distinct `openvino-int8-cp311-linux-x64` pack. It contains 22 exact-version
+wheels, 40 original license/notice files and two binding/lock files: 64 payload
+files, 127,569,415 bytes. Its independently retained inventory SHA-256 is
+`6ee309f64fb50c69d6c959055656034adf96b96828babece76ddd8dddbec0add`.
+OpenVINO 2026.4.1 and NNCF 3.4.0 run together in an owned disposable CPython
+3.11 venv on the same actual Xeon CPU. Exact transitive versions and upstream
+wheel hashes are recorded in the receipt, not substituted with unbounded
+installation from the network.
+
+Every license is compared with its original member inside its pinned wheel.
+Metadata `License-File` declarations are honored, including pydot's `MIT.txt`
+and `Python-2.0.txt`; an SPDX identifier is not used instead of original bytes.
+The aggregate descriptor is `LicenseRef-OpenVINO-NNCF-Pack`, with native legal
+and public distribution approval still pending.
+
+The pack is installed inactive, explicitly qualified in the separate venv,
+and reverified/replayed unchanged after execution. The container retains the
+same network, GPU and privilege restrictions. The source's 725 selected inputs
+were independently matched to the exact commit. All 140 selected regressions
+passed without skips, including actual calibrated INT8 conversion, a saved
+INT8 whole-flow run and OCR height/width/letterbox checks.
+
+Two calibration tensors and two distinct validation tensors produced three
+quantized operations, maximum absolute error 0.000689812 and no output argmax
+disagreement in that tiny control. Its measured speedup was 0.556, so this is
+not a speedup claim. It does not establish manufacturing accuracy or suitable
+latency from two heldout samples. See
+`docs/verification/receipts/2026-10-07-openvino-int8-offline-pack-e1ebb16.json`.

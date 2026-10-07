@@ -30,7 +30,7 @@
   "src/renderer/components/labeling/EvidenceEditReturn.tsx": "50877ef333bb8fb32d024b9446241bc4ab270d93e4e31d674a260f1800406343",
   "src/renderer/components/labeling/CandidateProviderControls.tsx": "1f2512051cbd189893f925821f86b300eda4ed25d0b4d7e68b8fab10e0daf2b0",
   "src/renderer/components/labeling/ModelAssistPanel.tsx": "27d386e4f53e09159bbbdc3713c80abbbd5fa6ae9dd9a80dd44c5581ed59febc",
-  "src/renderer/components/inference/RuntimeOptimizationPanel.tsx": "e9e698083eefe2f89768e55a0bcd1fc9c7c4a93f67199333e49e9edbf0c9422f",
+  "src/renderer/components/inference/RuntimeOptimizationPanel.tsx": "37a2a77bb583ab60ff658b0a16b9292c000e3c135877f2b683a981b7ec5db6f7",
   "src/renderer/components/inference/PackageLibraryPanel.tsx": "f4e6397f52beacccd17120c9868560c5b789069fbf0a3f5a81b48541c6c75b59",
   "src/renderer/components/runtime/RuntimeServicePanel.tsx": "8e6f6defd490e4a055a09f143da98f3b2d1c8cd33c3e869ab08c49b8090d5144",
   "src/renderer/components/flowchart/FlowGraphNavigator.tsx": "656832c214f41742d5bc0f66c9f8983c5fb6892cfaf3b42b48ee353f282da20a",

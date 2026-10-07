@@ -25,6 +25,34 @@ test('requested optimization record B reopens despite newer per-package record A
  try{const render=()=>h.render(()=>m.RuntimeOptimizationPanel({packagePath:'/project/exports/flows/source',sourceFolder:'/source',task:'segmentation',initialJobId:'B'}));render();await settle();const tree=render();assert.ok(nodes(tree).some(node=>node.props['aria-label']==='선택한 최적화 작업'&&JSON.stringify(node.props.children).includes('B')));assert.equal(value,'B');}finally{if(oldStorage)Object.defineProperty(global,'localStorage',oldStorage);else delete global.localStorage;}
 });
 
+test('cached optimization from another dataset source is refused before candidate review',async t=>{
+ const old=Object.getOwnPropertyDescriptor(global,'localStorage');Object.defineProperty(global,'localStorage',{configurable:true,value:{getItem:()=> 'cached',setItem(){}}});t.after(()=>{if(old)Object.defineProperty(global,'localStorage',old);else delete global.localStorage;});
+ const h=harness(),record={job_id:'cached',status:'failed',options:{package_dir:'/package',input_receipt:{source_dataset_path:'/previous-source'}},error:'previous run',result:null};
+ const m=load('RuntimeOptimizationPanel.tsx',{...h.mocks,'../../stores/useProjectStore':{useProjectStore:fn=>fn({projectDir:'/project'})},'../../services/api':{api:{dataset:{getImages:async()=>({items:[]})}}},'../../services/runtimeDeploymentApi':{runtimeDeploymentApi:{capabilities:async()=>({openvino:{available:true,devices:['CPU']}}),job:async()=>record}}});
+ const render=()=>h.render(()=>m.RuntimeOptimizationPanel({packagePath:'/package',sourceFolder:'/current-source',task:'classification'}));render();await settle();const tree=render();
+ assert.equal(nodes(tree).filter(n=>n.props['aria-label']==='선택한 최적화 작업').length,0);
+ assert.ok(nodes(tree).some(n=>n.props.role==='alert'&&String(n.props.children).includes('소스')));
+});
+
+test('polling another optimization identity cannot expose its completion or approval prerequisites',async t=>{
+ const old=Object.getOwnPropertyDescriptor(global,'localStorage');Object.defineProperty(global,'localStorage',{configurable:true,value:{getItem:()=> 'owned',setItem(){}}});t.after(()=>{if(old)Object.defineProperty(global,'localStorage',old);else delete global.localStorage;});
+ const originalSet=global.setInterval,originalClear=global.clearInterval;let poll;global.setInterval=fn=>(poll=fn,1);global.clearInterval=()=>{};t.after(()=>{global.setInterval=originalSet;global.clearInterval=originalClear;});
+ const h=harness(),options={package_dir:'/package',input_receipt:{source_dataset_path:'/source'}};let reads=0,reviews=0;
+ const m=load('RuntimeOptimizationPanel.tsx',{...h.mocks,'../../stores/useProjectStore':{useProjectStore:fn=>fn({projectDir:'/project'})},'../../services/api':{api:{dataset:{getImages:async()=>({items:[]})}}},'../../services/runtimeDeploymentApi':{runtimeDeploymentApi:{capabilities:async()=>({openvino:{available:true,devices:['CPU']}}),job:async()=>({job_id:reads++?'foreign':'owned',status:reads===1?'running':'completed',options,error:null,result:null}),prerequisites:async()=>{reviews++;return{approval_revision_ids:{}};},heldout:async()=>{reviews++;return null;}}}});
+ const render=()=>h.render(()=>m.RuntimeOptimizationPanel({packagePath:'/package',sourceFolder:'/source',task:'classification'}));render();await settle();render();assert.equal(typeof poll,'function');poll();await settle();let tree=render();await settle();tree=render();
+ assert.equal(reviews,0);assert.ok(nodes(tree).some(n=>n.props.role==='alert'&&String(n.props.children).includes('ID')));
+ assert.ok(nodes(tree).some(n=>n.props['aria-label']==='선택한 최적화 작업'&&JSON.stringify(n.props.children).includes('owned')));
+});
+
+test('a late submitted optimization response cannot reappear after changing the dataset source',async t=>{
+ const old=Object.getOwnPropertyDescriptor(global,'localStorage');const writes=[];Object.defineProperty(global,'localStorage',{configurable:true,value:{getItem:()=>null,setItem:(...args)=>writes.push(args)}});t.after(()=>{if(old)Object.defineProperty(global,'localStorage',old);else delete global.localStorage;});
+ const h=harness();let resolve,source='/before';const pending=new Promise(done=>resolve=done);
+ const m=load('RuntimeOptimizationPanel.tsx',{...h.mocks,'../../stores/useProjectStore':{useProjectStore:fn=>fn({projectDir:'/project'})},'../../services/api':{api:{dataset:{getImages:async()=>({items:[{file_path:'/sample.png',file_name:'sample.png'}]})}}},'../../services/runtimeDeploymentApi':{runtimeDeploymentApi:{capabilities:async()=>({openvino:{available:true,devices:['CPU']}}),optimize:()=>pending}}});
+ const render=()=>h.render(()=>m.RuntimeOptimizationPanel({packagePath:'/package',sourceFolder:source,task:'classification'}));render();await settle();const tree=render();const submit=nodes(tree).find(n=>n.type==='button'&&n.props.children==='독립 후보 패키지 생성');assert.ok(submit);const action=submit.props.onClick();
+ source='/after';render();await settle();resolve({job_id:'old-request',status:'failed',options:{package_dir:'/package',input_receipt:{source_dataset_path:'/before'}},error:'old failure',result:null});await action;await settle();const after=render();
+ assert.equal(writes.length,0);assert.equal(nodes(after).filter(n=>n.props['aria-label']==='선택한 최적화 작업').length,0);
+});
+
 test('inspection handoff selects exact run B and rejects a missing run without newest fallback',async()=>{
  const m=load('inspectionHistorySelection.ts');assert.equal(typeof m.openSelectedInspectionRun,'function');const runs=[{run_id:'A'},{run_id:'B'}];
  const row=await m.openSelectedInspectionRun(runs,'B',async id=>({run_id:id,rows:[]}));assert.equal(row.run_id,'B');await assert.rejects(()=>m.openSelectedInspectionRun(runs,'missing',async id=>({run_id:id})),/찾지 못/);await assert.rejects(()=>m.openSelectedInspectionRun(runs,'B',async()=>({run_id:'A'})),/일치/);

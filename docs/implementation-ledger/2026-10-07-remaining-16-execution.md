@@ -8,7 +8,7 @@
 | S5-01 | 독립 검사 서비스 | 독립 프로세스·CPU 검사·owned start/stop/restart 및 Linux 격리 실행 | 실제 전용 계정·재부팅·장비 권한·GPU/camera 서비스 운용; Windows 실기 QA는 면제 |
 | S5-10 | 서비스 보안 | 구현 검증 완료: HTTPS·인증·세션·권한·경로·외부 secret 저장소·원자적 이전·실제 앱 readback | 운영 인증서·계정 배치와 실제 target/독립 최종 승인 |
 | S6-02 | Windows 설치 | 설치 구성·unsigned packaged CPU/restart 검증 기록 보존 | Windows11 설치·제거 실기 QA는 사용자 면제이며 통과로 집계하지 않음 |
-| S6-03 | 선택 runtime pack | 별도 OpenVINO offline pack12파일 설치·재검증, 실제 Xeon CPU FP32/FP16·full flow 및 관련125개 통과 | 다른 provider/장치·INT8·대표 정답 cohort·native license/publisher 승인 |
+| S6-03 | 선택 runtime pack | 별도 FP32/FP16 pack 및 OpenVINO/NNCF INT8 pack64파일 설치·재검증; 실제 Xeon CPU 양자화·full flow·OCR 및 관련140개 통과 | 다른 provider/장치·대표 정답 cohort·native license/publisher 승인 |
 | S6-04 | 오프라인 업데이트 | owned POSIX portable 앱·DB cutover, crash finish, 새 account/profile 보존 forward recovery; actual frozen CLI5회·별도 CPU known-image2회; 새 main/preload/renderer 검토·복구 연결, 관련Python125/Node40 및 UI2개 통과 | 실제 OS installer·설치된 home·native layout·실 publisher 서명·native positive 설치 및 installed-app known-image handoff |
 | S6-05 | 공개 CI | 이전 정확한 source의 complete hosted success; heartbeat 검사 수정·Mac58/Linux119 통과 | 최신 게시 source 전체 CI 완료; 기존 queue 및 실패 기록 보존 |
 | S6-06 | 서명·채널 | unsigned 상태와 checksum/source 연결 | 실제 publisher/서명 키·최종 artifact와 stable/beta 운영 정책 |
@@ -85,3 +85,12 @@
 - 실제 자식 프로세스를 before_database/after_database에서 각각 exit91시켰다. 전환 전 abort는1.0.0/fence2를 유지했고, 전환 후 abort는 제공되지 않았으며 finish 후 재열기가1.1.0/fence3를 읽었다. 실제 정전과 배포자 서명 검증으로 대체하지 않는다.
 - 최초 검사의 재열기는 아직 처리 중인 이전 문구를 완료로 읽어 실패했다. 실패 원본을 보존하고 committed 상태와 버튼 재활성화를 모두 기다리도록 교정했다. 소프트웨어의 fence/권한/복구 조건을 완화하지 않았다.
 - 공개 receipt `2026-10-07-portable-update-clean-487560a-browser.json`, `2026-10-07-portable-update-clean-487560a-electron.json`. 실행 후 owned backend/Electron 프로세스·포트 종료 및 escaped/unowned 참조0을 확인했다.
+
+## 추가 실행: 별도 INT8 pack과 최적화 응답의 원본 연결
+
+- sourcee1ebb16의725개 입력을 커밋 원본과 다시 대조했다. OpenVINO2026.4.1/NNCF3.4.0 및 전체22개 pinned wheel의 원본40개 license/notice를 해당 archive member와 독립 대조했다. 별도 pack64파일/127,569,415 bytes, inventory SHA-256 `6ee309f64fb50c69d6c959055656034adf96b96828babece76ddd8dddbec0add`이다.
+- 실제42번 Xeon CPU의 network-none/no-GPU 격리 환경에서 inactive pack 설치·재설치 및 payload 원본 보존을 확인했다. 별도 venv에서 FP32/FP16/INT8, saved whole-flow INT8, OCR geometry 및 이력/업데이트 회귀140 passed/0 skipped이다. Container exit0/owned removed이다.
+- INT8의 실제 quantized operation3개, 보정2개/별도 검증2개, 최대 절대 오차0.000689812, argmax 불일치0을 기록했다. Tiny control 속도비0.556으로 Torch보다 느렸으므로 속도 향상을 주장하지 않는다. 대표 현장 품질 승인은 아니다. 공개 receipt `2026-10-07-openvino-int8-offline-pack-e1ebb16.json`.
+- 최초 준비 스크립트가 pydot의 `MIT.txt`/`Python-2.0.txt`를 놓쳤다. Wheel의 정확한 METADATA License-File 경로로 원문을 확인했으며 라이선스 라벨이나 다른 원문으로 대체하지 않았다. 별도 byte-audit의 필수 저장 공간 인수 누락도 실패 원본을 남긴 뒤 실제 여유 공간 값으로 교정했다.
+- 최적화 화면의 다른 source 캐시, foreign job poll, source 변경 뒤 늦은 제출 응답을 세 회귀 검사로 재현했다. Cache key에 source/task를 포함하고 모든 작업 응답의 ID·package·source를 확인했다. 기존 명시적 작업 재열기도 유지되며 관련 renderer110 passed이다. Browser1 passed에서는 controlled HTTP 응답을 사용해 잘못된 이력·조회 거절과 정상 조회 재개를 확인했다. 이 UI control을 실제 INT8 실행 근거와 합쳐 native/품질 승인으로 쓰지 않는다.
+- 부모 구현67/82·미완료15/82·전체 수락0을 유지한다. S1-08의 살아 있는 worker 인계는 store/lease/journal을 함께 전환해야 하며, 현재 drain 요건을 제거하는 방식으로 처리하지 않았다.
