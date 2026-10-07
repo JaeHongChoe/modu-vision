@@ -45,7 +45,8 @@ export const ArtifactRetentionPanel: React.FC<{ projectId: string }> = ({ projec
   const policyValid = Number.isInteger(days) && days >= 0 && days <= 3650
     && Number.isInteger(trashDays) && trashDays >= 0 && trashDays <= 3650
     && (quotaMB === '' || (Number.isFinite(Number(quotaMB)) && Number(quotaMB) > 0));
-  const canMove = preview?.input === paths && preview.result.eligible.length > 0;
+  const canMove = preview?.input === paths && preview.result.eligible.length > 0
+    && /^[0-9a-f]{64}$/.test(preview.result.preview_sha256);
 
   return <section className="space-y-4" aria-label="프로젝트 보존기한과 복구 보관함">
     <h3 className="text-sm font-semibold text-slate-100">보존기한과 복구 보관함</h3>
@@ -55,7 +56,7 @@ export const ArtifactRetentionPanel: React.FC<{ projectId: string }> = ({ projec
       <div className="grid grid-cols-2 gap-3 text-xs text-slate-300">
         <label>미보호 파일 보존일<input aria-label="파일 보존일" type="number" min="0" max="3650" value={days} onChange={(event) => { setDays(Number(event.target.value)); setPreview(null); }} className={input} /></label>
         <label>복구 보관함 기준일<input aria-label="복구 보관함 기준일" type="number" min="0" max="3650" value={trashDays} onChange={(event) => { setTrashDays(Number(event.target.value)); setPreview(null); }} className={input} /></label>
-        <label className="col-span-2">용량 기준 MB · 비우면 제한 없음<input aria-label="프로젝트 용량 기준 MB" type="number" min="1" value={quotaMB} onChange={(event) => setQuotaMB(event.target.value)} className={input} /></label>
+        <label className="col-span-2">용량 기준 MB · 비우면 제한 없음<input aria-label="프로젝트 용량 기준 MB" type="number" min="1" value={quotaMB} onChange={(event) => { setQuotaMB(event.target.value); setPreview(null); }} className={input} /></label>
       </div>
       <button disabled={busy || !policyValid} onClick={() => void run(async () => {
         const current = generation.current;
@@ -74,7 +75,7 @@ export const ArtifactRetentionPanel: React.FC<{ projectId: string }> = ({ projec
         {preview.result.eligible.map((item) => <p className="break-all" key={item.relative_path}>{item.relative_path} · {size(item.size_bytes)}</p>)}
         <button disabled={busy || !canMove} onClick={() => void run(async () => {
           const current = generation.current;
-          const result = await artifactRetention.move(preview.result.eligible.map((item) => item.relative_path));
+          const result = await artifactRetention.move(preview.result.eligible.map((item) => item.relative_path), preview.result.preview_sha256);
           await reload(current);
           if (current === generation.current) { setPreview(null); setMessage(`${result.trashed.length}개 경로를 복구 보관함으로 이동했습니다.`); }
         })} className={button}>확인한 경로를 복구 보관함으로 이동</button>

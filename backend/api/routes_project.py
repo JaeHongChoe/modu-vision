@@ -252,6 +252,7 @@ class RetentionPinRequest(BaseModel):
 class RetentionTrashRequest(BaseModel):
     paths: list[str] = Field(min_length=1, max_length=1000)
     dry_run: bool = True
+    expected_preview_sha256: str | None = Field(default=None,strict=True,pattern='^[0-9a-f]{64}$')
 
 
 class RetentionRestoreRequest(BaseModel):
@@ -540,7 +541,7 @@ def retention_pin(req: RetentionPinRequest,request: Request):
 
 @router.post('/retention/trash')
 def retention_trash(req: RetentionTrashRequest,request: Request):
-    return _retention_action(request,lambda store,project:store.move_to_trash(req.paths,project=project,dry_run=req.dry_run))
+    return _retention_action(request,lambda store,project:store.move_to_trash(req.paths,project=project,dry_run=req.dry_run,expected_preview_sha256=req.expected_preview_sha256))
 
 
 @router.post('/retention/restore-trash')

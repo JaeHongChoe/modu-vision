@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "kind": "positively-proven-posix-specialist-live-control-cutover",
+  "source_sha": "9bf7f1ecf19c865e69d5493966aed44964ca834e",
+  "checkout_dirty_at_execution": false,
+  "verification": {
+    "darwin_related": {
+      "tests": 190,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "xml_sha256": "91003946817d81439c98cb1c136913b452429f650a8f353df632a956698253e5"
+    },
+    "linux_specialist": {
+      "tests": 40,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "xml_sha256": "134cf0c92789b0c734bf5dbc4b59da0419d5fe76f29b62627a2420ada00a4815"
+    }
+  },
+  "actual_training": [
+    {
+      "os": "darwin",
+      "actual_cpu_ocr_training": true,
+      "epochs_completed": 2,
+      "attempt_count": 1,
+      "worker_relaunches": 0,
+      "model_sha256": "03116805ce407198ef82a2d9d33b0ab5ab155f07ad33e8f9033eef93d68aea9f",
+      "original_inputs_preserved": true,
+      "original_ledger_bytes_preserved": true,
+      "same_backend_thread_and_attempt_fence": true,
+      "reservation_released_after_completion": true,
+      "private_control_endpoint_removed": true,
+      "execution_record_sha256": "dad47ec0335ef874ce79fb137dc898c69411a51a2e813526f98c3e39d46a9716",
+      "original_job_receipt_sha256": "b9c885d2c30cf973c54e043b387d3444f06f4d2c7fe3c02454ef4f242d471d13",
+      "quality_approved": false
+    },
+    {
+      "os": "linux",
+      "actual_cpu_ocr_training": true,
+      "epochs_completed": 2,
+      "attempt_count": 1,
+      "worker_relaunches": 0,
+      "model_sha256": "191b2551010befb829a154645b3841f16a79fbc39ca9fefc57fe177813535abd",
+      "original_inputs_preserved": true,
+      "original_ledger_bytes_preserved": true,
+      "same_backend_thread_and_attempt_fence": true,
+      "reservation_released_after_completion": true,
+      "private_control_endpoint_removed": true,
+      "execution_record_sha256": "45dfffab8296f8e16eba6dff127f8657e060aa6dc9c2eb438f971ae9dfa4b93f",
+      "original_job_receipt_sha256": "29c8924b6c54e26f9b7d4791d77765bd302ad88aeac4ad069a1ac444a12629f8",
+      "quality_approved": false
+    }
+  ],
+  "source_binding": {
+    "selected_files": 716,
+    "source_inputs_match_commit": true,
+    "source_binding_sha256": "45348d5515f149a8baee03c139376d376c71b332240fbebe9aa8ee1026c0fdc8"
+  },
+  "protocol": {
+    "generation_descriptor": 3,
+    "native_acknowledgment": 1,
+    "kernel_peer_pid_verified": true,
+    "exact_original_namespace_spec_lease_and_fence": true,
+    "private_read_only_challenge": true,
+    "bounded_frame_bytes": 8192,
+    "numeric_boolean_substitution_refused": true,
+    "fresh_cli_probes_original_backend": true,
+    "different_socket_process_refused": true,
+    "uncertain_reservations_preserved": true,
+    "later_fence_blocks_original_publication": true,
+    "exact_cancel_uses_original_event_and_current_ledger": true,
+    "prepared_interruption_forward_finish_verified": true
+  },
+  "linux_isolation": {
+    "network": "none",
+    "gpu_devices": 0,
+    "cpu_limit": 2,
+    "memory_bytes": 8589934592,
+    "read_only_root": true,
+    "non_root": true,
+    "capabilities_dropped": true,
+    "owned_container_removed": true,
+    "image_sha256": "e8fdbc13b6fcda4523c5fd93d3c8177588d1346e09df39ff60c87346f327c46b"
+  },
+  "retained_failures": {
+    "original_native_contract": {
+      "failed": 16,
+      "log_sha256": "fe12e2a791ec7bd485c3b8e7ee864ba8ae3cb47726d417deb82de67b367ae8f5"
+    },
+    "strict_descriptor": {
+      "failed": 15,
+      "log_sha256": "75fba02ae2535eb019cdd1d00d6bcfb597496ff4f6f0251aeed58ab9b0789a8a"
+    },
+    "linux_missing_harness_uvicorn": {
+      "failed": 1,
+      "passed": 39,
+      "log_sha256": "93524a654e0592a61ba3f15ddd2e874d62a0722c406dba9e9f89052454c33318"
+    },
+    "scope": "Collection and fixture-account setup failures are also retained privately; no executed training was counted for those failures."
+  },
+  "scope": "Current opted-in original native specialist closures in one owned POSIX installation. Controlled lifecycle and actual tiny CPU OCR are distinct; no old protocol retrofit, Windows, installed-user-store, industrial quality, publisher or independent approval.",
+  "parent_acceptance": "pending",
+  "independent_review_accepted": false,
+  "quality_approved": false
+}

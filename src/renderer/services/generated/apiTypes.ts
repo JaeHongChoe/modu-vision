@@ -1324,6 +1324,7 @@ export type RetentionRestoreRequest = {
 export type RetentionTrashRequest = {
   paths: Array<string>;
   dry_run?: boolean;
+  expected_preview_sha256?: string | null;
 };
 
 export type ReviewRow = {

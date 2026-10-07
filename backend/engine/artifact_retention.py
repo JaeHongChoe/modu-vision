@@ -57,6 +57,21 @@ def _size(path):
     return total
 
 
+def _review_identity(path):
+    """Bind empty directories, replacements and ages as well as file bytes."""
+    items = [path, *sorted(path.rglob('*'))] if path.is_dir() else [path]
+    rows = []
+    for item in items:
+        if item.is_symlink(): raise ValueError('Retention cannot inspect symbolic links')
+        stat = item.stat()
+        if not item.is_file() and not item.is_dir():
+            raise ValueError('Retention artifact contains an unsupported file')
+        rows.append({'path': '.' if item == path else item.relative_to(path).as_posix(),
+                     'kind': 'directory' if item.is_dir() else 'file',
+                     'device': stat.st_dev, 'inode': stat.st_ino, 'mtime_ns': stat.st_mtime_ns})
+    return rows
+
+
 class ArtifactRetention:
     def __init__(self, project_dir):
         root = Path(project_dir).expanduser()
@@ -212,14 +227,19 @@ class ArtifactRetention:
                 elif row['state']=='restoring' and payload.exists() and not original.exists():db.execute("UPDATE trash SET state='trashed' WHERE trash_id=?",(row['trash_id'],))
                 else:raise ValueError('Trash recovery state is ambiguous; preserve both paths for review')
 
-    def move_to_trash(self, paths, *, project, retention_days=None, dry_run=False):
+    def move_to_trash(self, paths, *, project, retention_days=None, dry_run=False, expected_preview_sha256=None):
         if not paths or len(paths)>1000:raise ValueError('Choose 1–1000 managed artifacts')
+        if expected_preview_sha256 is not None and (not isinstance(expected_preview_sha256,str)
+                or not re.fullmatch('[0-9a-f]{64}',expected_preview_sha256)):
+            raise ValueError('Invalid retention preview identity')
         with self.lock():
             self.refresh_references(project);self._reconcile_trash()
-            with self.connect() as db:policy=dict(db.execute('SELECT * FROM policy').fetchone())
+            with self.connect() as db:
+                policy=dict(db.execute('SELECT * FROM policy').fetchone())
+                pins=[dict(row) for row in db.execute('SELECT owner,relative_path,reason FROM pins ORDER BY owner,relative_path')]
             days=policy['retention_days'] if retention_days is None else retention_days
             if type(days)is not int or not 0<=days<=3650:raise ValueError('Retention period must be bounded integer days')
-            selected=[]
+            selected=[];identities={}
             for path in paths:
                 relative=self._relative(path,managed=True);owned=self.root/relative
                 protected_roots=[self.root/'annotations',self.root/'labelsets']
@@ -236,22 +256,33 @@ class ArtifactRetention:
                         if journal.is_file() and json.loads(journal.read_text(encoding='utf-8')).get('status') in ('queued','preparing','running','stopping','disconnected'):
                             raise ValueError('Active or unresolved training artifact is protected')
                 inventory=_inventory(owned)
-                latest=max([owned.stat().st_mtime,*[item.stat().st_mtime for item in owned.rglob('*')]]) if owned.is_dir() else owned.stat().st_mtime
+                identity=_review_identity(owned)
+                latest=max(row['mtime_ns'] for row in identity)/1_000_000_000
                 if time.time()-latest<days*86400:raise ValueError('Artifact is still within its configured retention period')
                 selected.append((relative,inventory))
+                identities[relative]=identity
             if len({relative for relative,_ in selected})!=len(selected) or any(Path(a).is_relative_to(Path(b)) for a,_ in selected for b,_ in selected if a!=b):
                 raise ValueError('Retention candidates cannot duplicate or overlap')
-            if dry_run:return {'dry_run':True,'eligible':[{'relative_path':relative,'size_bytes':sum(row['size'] for row in rows)} for relative,rows in selected],'trashed':[]}
+            stat=self.root.stat()
+            subject={'schema_version':1,'root':{'path':str(self.root),'device':stat.st_dev,'inode':stat.st_ino},
+                'project':{key:project.get(key) for key in ('id','project_dir','task','source_dataset_dir','annotations_dir')},
+                'policy':policy,'effective_retention_days':days,'pins':pins,
+                'artifacts':[{'relative_path':relative,'inventory':rows,'identity':identities[relative]} for relative,rows in sorted(selected)]}
+            preview_sha256=hashlib.sha256(json.dumps(subject,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
+            if expected_preview_sha256 is not None and expected_preview_sha256!=preview_sha256:
+                raise ValueError('Retention preview changed; review a new preview before moving artifacts')
+            if dry_run:return {'dry_run':True,'preview_sha256':preview_sha256,'eligible':[{'relative_path':relative,'size_bytes':sum(row['size'] for row in rows)} for relative,rows in selected],'trashed':[]}
             moved=[]
             for relative,rows in selected:
                 identifier=uuid.uuid4().hex;target=self.directory/'trash'/identifier;target.mkdir(parents=True)
                 with self.connect() as db:db.execute('INSERT INTO trash VALUES(?,?,?,?,?,?,NULL)',(identifier,relative,'moving',json.dumps(rows),sum(row['size'] for row in rows),time.time()))
                 # Recheck all bytes immediately before moving the recoverable object.
-                if _inventory(self.root/relative)!=rows:raise ValueError('Artifact changed during retention; preserved original')
+                if _inventory(self.root/relative)!=rows or _review_identity(self.root/relative)!=identities[relative]:
+                    raise ValueError('Artifact changed during retention; preserved original')
                 os.replace(self.root/relative,target/'payload')
                 with self.connect() as db:db.execute("UPDATE trash SET state='trashed' WHERE trash_id=?",(identifier,))
                 moved.append({'trash_id':identifier,'relative_path':relative,'size_bytes':sum(row['size'] for row in rows)})
-            return {'dry_run':False,'trashed':moved}
+            return {'dry_run':False,'preview_sha256':preview_sha256,'trashed':moved}
 
     def restore_trash(self, identifier):
         if not re.fullmatch('[0-9a-f]{32}',identifier):raise ValueError('Invalid trash identity')

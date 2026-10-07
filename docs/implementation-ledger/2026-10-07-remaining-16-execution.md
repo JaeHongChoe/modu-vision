@@ -4,7 +4,7 @@
 
 | ID | 작업 | 실제 완료한 부분 | 남은 조건 |
 |---|---|---|---|
-| S1-08 | 이력·전역 마이그레이션 | 종료된 학습·라벨·epoch·6종 specialist 및 7종 원격 작업 원본 보존; 독립 flow report의 모델·서버별 원본 검증 추가, 관련186개 통과 | 현재 local 기본 worker와 원격 학습 worker의 실제 live 이관 완료; specialist live·구형 프로토콜·native target 검증은 남음 |
+| S1-08 | 이력·전역 마이그레이션 | 종료된 학습·라벨·epoch·6종 specialist 및 7종 원격 작업 원본 보존; 독립 flow report의 모델·서버별 원본 검증 추가, 관련186개 통과 | 현재 local 기본·원격 학습·native specialist worker의 실제 POSIX live 이관 완료; 구형 프로토콜·native target·독립 수락 검증은 남음 |
 | S5-01 | 독립 검사 서비스 | 독립 프로세스·CPU 검사·owned start/stop/restart 및 Linux 격리 실행 | 실제 전용 계정·재부팅·장비 권한·GPU/camera 서비스 운용; Windows 실기 QA는 면제 |
 | S5-10 | 서비스 보안 | 구현 검증 완료: HTTPS·인증·세션·권한·경로·외부 secret 저장소·원자적 이전·실제 앱 readback | 운영 인증서·계정 배치와 실제 target/독립 최종 승인 |
 | S6-02 | Windows 설치 | 설치 구성·unsigned packaged CPU/restart 검증 기록 보존 | Windows11 설치·제거 실기 QA는 사용자 면제이며 통과로 집계하지 않음 |
@@ -126,3 +126,10 @@
 - 두 저장 평가로 만든 서로 다른 큐의 선택·재열기, invalid margin422와 correction, 최신 평가 대신 정확한 원래 평가로 복귀, 실제 미저장 bbox10,10,30,30 guard와 저장 content를 확인했다. 실제 approved-only readiness가 eligible0을 거절하며, 별도 permissive fixture policy만 학습 준비로 이동했다. 학습 제출이나 사람의 라벨 승인은 생성하지 않았다.
 - 원장에 기존 누락 action5개를 추가해192 actions/369 verified/975 pending이다. 목록 확장으로 pending 수가 늘었으며 검증된 시나리오는21개 늘었다. 현재 부모67/82·미완료15/82와 기능/전체 수락0은 유지한다. 모든 owned backend/port/Electron은 종료됐고 teardown leftovers/unowned references0이다.
 - 실제 CI 실패의 원본 두 ZIP member 해시와 causal red2/green54, clean UI6개를 별도 repair receipt에 연결했다. 전체 archive와 큰 trace는 검증하지 않았으며 최신 hosted 전체 CI 성공으로 바꾸지 않았다.
+
+## 추가 실행: 전문 모델 원래 실행의 POSIX live 이관
+
+- Clean source9bf7f1e에서 macOS 관련190 passed/0 skipped와42번 Linux40 passed/0 skipped이다. 각 OS에서 실제 CPU OCR 학습2epoch가 같은 원래 backend thread·attempt·fence로 한 번 완료됐고, 원본 이미지·기존 ledger bytes·새 모델 receipt SHA를 확인했다. 원래 private endpoint와 예약은 완료 후 해제됐다.
+- Kernel peer PID와 immutable spec/namespace/lease/fence acknowledgment를 함께 확인한다. 다른 process의 가짜 응답·숫자1을 참으로 둔 응답·끝난 closure·변조된 원본을 거절한다. 현재 ledger의 취소는 원래 event를 사용하고, 후속 fence는 원래 publisher를 차단하며 준비 중 중단은 재실행 없이 forward finish한다.
+- Linux 첫39 passed/1 failed는 검사용 uvicorn 부재로 실제 학습 전 실패했다. 원본을 보존하고 보관 중인 정확한 offline wheel로 별도 검사용 venv를 보완했다. 최종 network-none/read-only/non-root/no-GPU container는 exit0/owned removed이며716개 선택 source bytes를 commit과 독립 대조했다.
+- 공개 receipt `2026-10-07-live-specialist-control-9bf7f1e.json`. 구형 실행에 원래 protocol acknowledgment를 만들어 주지 않으며 drain 요건을 유지한다. 실제 설치 대상·현장 품질·독립 수락은 pending이고 부모67/82·미완료15/82를 유지한다.
