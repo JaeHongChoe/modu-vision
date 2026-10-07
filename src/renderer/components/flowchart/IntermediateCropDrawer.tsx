@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useFlowchartStore } from '../../stores/useFlowchartStore';
 import type { FlowchartCrop } from '../../types';
+import {inspectionPreview} from '../inference/inspectionImage';
 
 export const IntermediateCropDrawer: React.FC<{onSelectNode?:(id:string)=>void}> = ({onSelectNode}) => {
   const { pipeline, executionResult, setInspectedCrop } = useFlowchartStore();
@@ -29,6 +30,7 @@ export const IntermediateCropDrawer: React.FC<{onSelectNode?:(id:string)=>void}>
   const crops: FlowchartCrop[] = executionResult?.crops ?? [];
   const executionSteps = executionResult?.execution_steps ?? [];
   const totalLatencyMs = executionResult?.total_latency_ms ?? 0;
+  const masterImage = inspectionPreview(executionResult?.annotated_image, undefined);
   const isOk = executionResult?.is_ok;
   const isReview = executionResult?.final_verdict === 'REVIEW';
   const isSegmentation = pipeline?.nodes.some((node) =>
@@ -121,10 +123,10 @@ export const IntermediateCropDrawer: React.FC<{onSelectNode?:(id:string)=>void}>
 
         {/* Annotated image returned by the executed pipeline */}
         <div className="flex-1 bg-[#0B0E14] rounded border border-[#2B3547] mt-3 relative overflow-hidden flex items-center justify-center min-h-[340px]">
-          {executionResult.annotated_image ? (
-            <img src={executionResult.annotated_image} alt="실제 검사 결과" className="max-w-full max-h-full object-contain" />
+          {masterImage ? (
+            <img src={masterImage} alt="실제 검사 결과" className="max-w-full max-h-full object-contain" />
           ) : (
-            <span className="text-slate-400 text-xs">결과 이미지가 없습니다.</span>
+            <span className="text-slate-400 text-xs">{executionResult.annotated_image ? '결과 이미지를 읽을 수 없습니다.' : '결과 이미지가 없습니다.'}</span>
           )}
           <div className="absolute top-2 right-2 bg-[#0B0E14]/90 border border-[#2B3547] px-2 py-1 rounded text-[10px] font-mono text-slate-300">
             {executionResult.roi_count}개 영역 검사 결과
@@ -326,6 +328,7 @@ export const IntermediateCropDrawer: React.FC<{onSelectNode?:(id:string)=>void}>
               const [x1, y1, x2, y2] = crop.bbox;
               const w = x2 - x1;
               const h = y2 - y1;
+              const cropImage = inspectionPreview(crop.crop_thumbnail,undefined);
 
               return (
                 <div
@@ -341,11 +344,11 @@ export const IntermediateCropDrawer: React.FC<{onSelectNode?:(id:string)=>void}>
                 >
                   {/* Thumbnail Frame */}
                   <div className="w-16 h-16 rounded bg-[#0B0E14] border border-[#2B3547] overflow-hidden flex items-center justify-center flex-shrink-0 relative">
-                    <img
-                      src={crop.crop_thumbnail}
+                    {cropImage ? <img
+                      src={cropImage}
                       alt={crop.label}
                       className="w-full h-full object-cover"
-                    />
+                    /> : <span className="text-[10px] text-slate-400">ROI 이미지를 읽을 수 없습니다.</span>}
                     <div className="absolute bottom-0 right-0 bg-[#0B0E14]/90 px-1 text-[8px] font-mono text-slate-300">
                       {w}×{h}
                     </div>
