@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/provenance-closure.spec.ts::native provenance displays frozen lineage separately from current review eligibility",
+  "test_source_sha256": "1079b8a87771e793ee7fb5a69e8fe4a648f70f956860adb59b419fc83e3d2f6e",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "09e7b2101f47d3725596ded395221ea38d63f44cee94842e6431488eb47c935c",
+  "harness_sha256": "9d30d234bfcdc92d9fa202dc196c0029be1dd6c002dfc5b43c309d4dfe6c500e",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "238e64e1013e78e740f7897ee101f65f0f56953bd6348e4b732d530dc615df4d"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "f9ac7f24802fc870e5e63c584deb38e30f082ac363a502429f2f93e663339e72"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "e5188b182056a11a5ab2a99aa2d10958dc1866d5f9be705e3477013be0ca3bb1"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

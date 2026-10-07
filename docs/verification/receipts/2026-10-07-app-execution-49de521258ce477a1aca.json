@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/project-lifecycle.spec.ts::native lifecycle creates clean setup and reopens relocated actual CPU candidate",
+  "test_source_sha256": "ca4c793bf28ecd1a01bc1a9c804221a29c98d249fbd6fd10de690ffdbca7a9be",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "09e7b2101f47d3725596ded395221ea38d63f44cee94842e6431488eb47c935c",
+  "harness_sha256": "88a2113d4a0fe3f73817261099454ac3a6cff2acdce2208f06b022f1f56ceaae",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "56a1eed3726d5625f3179d3652db98de867a1cc8540c3bdfd71c1719e0c88f78"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "580bae0e0b5e3e31e8b1ab510e15391b1e09a43f064f576884df02ed83415130"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "8c6018b9b60867ec9b8739e93dbcb81a969c9afb383d01b869cf1635924803a3"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "5e88b70b21ad941ffcce4db5fe2dae7b99ce30192b31744dec97a163359aebba"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

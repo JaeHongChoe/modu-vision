@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/camera-input-identity.spec.ts::native camera input identity persistence and explicit manual clear",
+  "test_source_sha256": "1f5919b05133e7c386ae7f6cb9ae5fb90e3816b2eee959e4d1d0934031a54ab1",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "09e7b2101f47d3725596ded395221ea38d63f44cee94842e6431488eb47c935c",
+  "harness_sha256": "d2cc73ef5c0508e5692b657d04d914f4b946a513e76cf81bddbad1379207b65c",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "b09679177533a6d15af6129b3f1e1409f3ca51c304cf14a66a3adcef6e97916c"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

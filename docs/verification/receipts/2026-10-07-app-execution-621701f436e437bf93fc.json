@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/service-s2-07-operator-choice.spec.ts::operator choice restores exact identity, blocks changed content and remains empty after clearing",
+  "test_source_sha256": "052c093d6ab5803ab32edc3139864a54eb5cca56395f73a37528dfbcbb8bb523",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "be7d1290ebfba019559162760aed20dc7716e29d02ba7fa48079733c323aeebf",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "e936699217ba30cddff2988e2f9ed5017ff433e27c66cd9aaa868480382b115d"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "2846570182565d1531937408e495ef3fdfb4c0952f769891f27af9e6faeed980"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

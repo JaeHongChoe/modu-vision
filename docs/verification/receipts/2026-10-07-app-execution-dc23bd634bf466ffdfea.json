@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/service-s2-02.spec.ts::impact workspace uses accessible shared controls at 1366x768",
+  "test_source_sha256": "239647c42ffdd122f41b1d9f43ebba9dcb8be857b3f115c94ccc52863b5a3c9c",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "738e2808aaa0a58ca4b28f343a365cdc77a0e5181e07628684ff8176c220c66b",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "8377261aee175def21b049e66f83683772e80f614ef69670cfc2f370749f7d5f"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "1a041b237cb353f020f2b517edc89422ab816428cf64c69978afab9aff88beec"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

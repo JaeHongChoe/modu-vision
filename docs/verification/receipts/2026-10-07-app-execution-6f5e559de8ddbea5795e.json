@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/flow-navigation-record-bounds.spec.ts::actual graph search and minimap preserve graph on navigation and reopen",
+  "test_source_sha256": "e26059913ae2bd5c4dbce188879c078e5e1ae49ad1f2271bc03277a0ec20198d",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "dccbb1d33c46554791e0115c53f2a5f124bdd29ca6bbe81290ca05b5900c3135",
+  "harness_sha256": "62f93264a51eb3b892d8c5db6741606c8c0b25141dd7929278c8f29e965905d4",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "9f645e80eafcb4b8a6e3f1b35d49a45273eae21f8ead0f93ffdae5ffc4854292"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "90040c0637b28da8cc9af96fee3e92ebab71d249fba1bce4aa30c3f03810a558"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "b3346b17b9b8c01ff135fef018bf52eae405116d31ee96a0a389a62d05e3861c"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

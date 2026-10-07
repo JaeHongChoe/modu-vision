@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/service-s1-05.spec.ts::S1-05: a CPU preflight from the model hub moves the classification stages from unverified to verified",
+  "test_source_sha256": "6e85d6dcb34712af4e2847ae9032dd9f4c750c34068b8a873f3ba79863370e5b",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "840548a472065e341f6c3241f9925753841caaeb263c7c13cc7c4aacfed82456",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "15705fc318a04fe5d8e153da3e0e4ab82340dbbdb1822f23d456d8b81795f4d4"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "aedff15b9b8655430d421e486fbfb94ce6e286abd405a8a448e0362af95a5363"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

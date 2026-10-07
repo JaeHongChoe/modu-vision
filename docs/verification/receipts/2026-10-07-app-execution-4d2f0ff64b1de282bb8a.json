@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "7e183c908bd0fe66b59fb89d8ffdca3bb7bb9292",
+  "source_dirty": false,
+  "test": "scripts/e2e/dino-classification-closure.spec.ts::authentic three-class DINO classification app training heldout confusion reopen flow offline candidate",
+  "test_source_sha256": "3a78ea8d0e194d66b555c2d482f54978634615d7e778fb0ec8f89c983c151ce3",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "38bd3eb469b8b5940ac4c9d5286ed8df4e19ec1fdbde0e67d197e82786213076",
+  "harness_sha256": "834cbe59b13920f49df895f8d82ee813cae8720764262da91835e82b56924f45",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "f279c2b02ee1b0b0a9d3d0fb5283d258a67ec41588a1bc0677cea36be2893a72"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "9bb432b430c589725c568834b5084022c4e086e9be11692610f26927d56f2e82"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

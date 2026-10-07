@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
+  "test_source_sha256": "1096bd32b43281c4d2c53ae95c220ef2fca00a8f85f449e959a176e75c3f15c6",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "09e7b2101f47d3725596ded395221ea38d63f44cee94842e6431488eb47c935c",
+  "harness_sha256": "6e59781e9eb858f408b02219a2b420a2dd64a5d87202b156adb21be04c9524ab",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "5a47b995976aa97cf46f8de612c11c54fa9222d625c5cdc4a9bac3ca9ee62b0b"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

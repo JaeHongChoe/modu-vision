@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/flow-inspector-large-dag.spec.ts::supported large DAG inspector resize collapse and reopen preserve graph",
+  "test_source_sha256": "f0f72b832c3522a8b392ce1e40f8d3f44034595db538e9c5a96ba43410f0cc0f",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "dccbb1d33c46554791e0115c53f2a5f124bdd29ca6bbe81290ca05b5900c3135",
+  "harness_sha256": "ef0755755620fe4102515346fade65b45e37986a7bfa2b3ca07a5947b5b9b3a2",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "844fe61214603f290beb44c30375cfd0fdf82caf96a237a977618f82707b4f09"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "2b70029271a4ad2bbb7d29492f600b1eaa369bc13db817f6e5b5594d3ba1244b"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

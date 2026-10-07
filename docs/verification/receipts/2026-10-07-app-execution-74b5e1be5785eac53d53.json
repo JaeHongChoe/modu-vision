@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "7e183c908bd0fe66b59fb89d8ffdca3bb7bb9292",
+  "source_dirty": false,
+  "test": "scripts/e2e/fleet-emergency-rollback.spec.ts::emergency rollback requires reason and authenticated capability (readback)",
+  "test_source_sha256": "e2b3790853817bbdc5f75a75fd68c2db8d294f1bc65782c8bb60baedd6298dcd",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "38bd3eb469b8b5940ac4c9d5286ed8df4e19ec1fdbde0e67d197e82786213076",
+  "harness_sha256": "0644cf75f1f876fb6a2f4e97a385489d526c7ff65a9830f997a5f12af5f94548",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "b8b6fa749133ff0747ba9b3f589bc832cb52ce56c728c35c8b34c2d1afbbe79e"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/dino-segmentation-closure.spec.ts::native authentic DINO dense masks train evaluate tile Blob reopen and export",
+  "test_source_sha256": "c60f620659c93aa73425ca7dc01fc90df7cb18e6d4ea3b507d8e927661897509",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "09e7b2101f47d3725596ded395221ea38d63f44cee94842e6431488eb47c935c",
+  "harness_sha256": "2ba23b911e22f263060f5ad9e88814032d70623234598c392cae76fb8143024c",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "cedf6f4d99219642f8f3bed251c0c976bb541bfefaf6bf760036568c7f7be098"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "98043c5c215699d1a082ebb1b80e23619aca4bffdc4309bd05a46a0874f733ca"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

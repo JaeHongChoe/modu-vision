@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/service-e05-native-review.spec.ts::native E05 creates and reopens a placed gold review report and refuses stale approval evidence",
+  "test_source_sha256": "2cf274a6434f1efd43890dc3c0e94e6d366efca792331a50252c6f677faf8da0",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "09e7b2101f47d3725596ded395221ea38d63f44cee94842e6431488eb47c935c",
+  "harness_sha256": "80dca45e8e022ec2a47d63a1a85cf1742b04b2fded854446751d4b858c9679e1",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "fa311625fc94f4b975f12d0bf880c9ea26eeb49cf7c4130c667168ff262aa222"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "3aa01b11906c43aeb907aa3cd9057fb3f254dee504fb62b4e187685a81642753"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

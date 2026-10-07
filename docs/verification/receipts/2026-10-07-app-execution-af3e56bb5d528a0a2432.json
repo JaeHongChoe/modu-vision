@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/service-s2-09.spec.ts::\ud68c\uc804 \uac1d\uccb4 \uac80\ucd9c: a disconnected server job is reopened and, reconnect first, handled through the server job API",
+  "test_source_sha256": "5b66c7febe46cbb60d11a94f8f23b861abbae7c3724dd774b2f3bd5a746c4cbc",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "223a9da1bf982678b622d7546237d63effef1026513f4e1b24b8a0a150d661ec",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "8713c35d264e8af6278bf76cf79af035800d6b773321a7c2b7be37433af618bf"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

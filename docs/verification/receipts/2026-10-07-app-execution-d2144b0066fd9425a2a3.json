@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/service-e05-image-open.spec.ts::gold result outside the gallery stays selected while labels load and opens the actual canvas",
+  "test_source_sha256": "f1fab6dae8bda7512725ca38e189e552f8a897d71519d05ed09bafade18ed490",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "7de792eed5fb9bbe35a6875e1dad5e86c121e9ea9d12b383f2c3daf4de065697",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "9dbea75e899f23010dc02213bf451bf36e63648193ea6425f0ec01d92d2586a6"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

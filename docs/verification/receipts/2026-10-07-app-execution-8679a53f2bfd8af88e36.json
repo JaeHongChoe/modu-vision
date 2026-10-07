@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/offline-release-boundary.spec.ts::development Electron refuses offline handoff before a native picker or installation",
+  "test_source_sha256": "a5e09f6905d18290e6a75250155587ec7a2b64c19cd37e09dd4ad58bbe830b88",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "09e7b2101f47d3725596ded395221ea38d63f44cee94842e6431488eb47c935c",
+  "harness_sha256": "d11ac691feb447a10588f140db2d2d61314633373527228d860687c568df9555",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "9e8a24f0b3983b122948a8ec583f05d9121c70e685e9b58e6de1d37a9e5c7515"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

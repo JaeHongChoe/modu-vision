@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/service-s0-05.spec.ts::S0-02: a raw distance threshold of 8 is saved, reopened and used for the run",
+  "test_source_sha256": "df3d961ee5460a3c5e8ef4e932c0744c61a4f77d6cc56215e2ab56cb6ff9d4f8",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "b5dec677dfe1606ed43111d945a80a9e27ab3c7ebadd91996b5de60c31452fff",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "2f4ab2d96ae229d4b50cbd4aaae8183be31bece994c097ac465810f7df18ce4d"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "24dd822daba440a0750164637b5b4c025b38155510eedbfa84d4c3e2cb96c41e"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "81b8eefe69ebdeb71d58ce429e67665eeb2531cf0a7bd7ca1a9d15755a92af30"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

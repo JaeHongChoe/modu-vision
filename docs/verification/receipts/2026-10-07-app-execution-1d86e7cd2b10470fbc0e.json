@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/service-e04-change-record.spec.ts::a rule change is saved with its difference and reason, and the record shows the running release",
+  "test_source_sha256": "480bf89c4a78344a2fc2bcf6aac86db1da3cd13262ab6d1eaef5ccb987d0834f",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "3fdd11d17d156d59535150baa0098550e7057a701cfc4668246c96daec15245e",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "e5633712cdd2f1d8cb0634bcffa3ea866ed3d2fcd08bc0c444c9c0fb6034ee82"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "34219ebcea7a47384fbed8ac4fbf8ceca44ce2a93aa88e7eee40fd98ffc91719"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

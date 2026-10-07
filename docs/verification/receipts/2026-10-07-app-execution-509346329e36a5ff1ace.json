@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/flow-inspector-large-dag.spec.ts::native supported large DAG inspector keyboard pointer and persisted layout",
+  "test_source_sha256": "f0f72b832c3522a8b392ce1e40f8d3f44034595db538e9c5a96ba43410f0cc0f",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "09e7b2101f47d3725596ded395221ea38d63f44cee94842e6431488eb47c935c",
+  "harness_sha256": "d6a087962851905c06f759375d80d35c02c8ddda1362dee401d3f8035541b155",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "062cdb6c48f55d85c4222c59ffc6674499eae9467e6a00a9f7fd88fdb06a5e70"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "8f6a4afea7b598dfc7dc04d949d6ba1a6aa0ac6fd53d056d1b4dbde179068817"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

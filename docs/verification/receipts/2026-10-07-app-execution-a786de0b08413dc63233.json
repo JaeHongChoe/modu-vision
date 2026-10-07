@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/team-recovery.spec.ts::independent HTTPS team clients conflict, lose revoked authority and reopen preserved edits after backend restart",
+  "test_source_sha256": "558a13257fee4d66795f4cc52217049cbfabf50eb36561a9a479f9af4ae051b1",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "9c1df71b9720ae116b789fda38c7377309f6d7cee470824276ad18681f130622",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "d43f70fab5db45e23ac4a248fa542f3c4ddf8e311320ee463b582ab2e051c50d"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

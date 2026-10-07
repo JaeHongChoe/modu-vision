@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/service-s2-09-parent-summary.spec.ts::ocr parent selection displays saved context without inventing missing completion",
+  "test_source_sha256": "41925364f341b031c5b434e828cd26a7ed47cdd7666818eee6c1d620c86ee5c9",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "ce5a874f878285cfa9fee34541bb5c2dc852dc3f2f1dfceeebca7112fed253e4",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "0c24b72102704d02418685b4b0c75fb362b000a9a0980b2cddebb5a6bcf133e1"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

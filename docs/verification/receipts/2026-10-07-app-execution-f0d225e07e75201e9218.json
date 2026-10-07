@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "7e183c908bd0fe66b59fb89d8ffdca3bb7bb9292",
+  "source_dirty": false,
+  "test": "scripts/e2e/enhancement-pair-closure.spec.ts::explicit paired enhancement validates imports trains measures compares reopens and exports actual flow",
+  "test_source_sha256": "f321fd736c62e0ac40aae07df586f82388f28c29c8247141a1ba21b73105853b",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "38bd3eb469b8b5940ac4c9d5286ed8df4e19ec1fdbde0e67d197e82786213076",
+  "harness_sha256": "7c5457603a92fbbd198f4910d33f6032dd9eeeaa242d7233821b526d7c390d57",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "1f45cb5f8fbe48ea3304945a683229ed4ae1b56276d98ff0b465b1b24b50a02b"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "8eaf92b8421662bb1fc067cbe6f31e7234ca3439ed2e7b4e79f61e3839ea727b"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/service-s2-03.spec.ts::model family choice uses the same cancellable task impact preview",
+  "test_source_sha256": "061b9a57b40d1db4579c7441ed12675b51af7aa9058fdea342d4fddc3e8eefeb",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "20bb788f2e06daa2c9fb9bbe71b0cc62c609f51430c536a546da8a0f1ba9e9dc",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "525344cad580da658554f01950b29394036d3934982c7c45a688e1abf0b99a93"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/drift-feedback-model-bindings.spec.ts::native drift preserves frozen feedback and displays current review model bindings",
+  "test_source_sha256": "80bfb2627836a318eb446454bb40fbfaa64c37bc5a4800ca2d22f9f474f994fd",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "09e7b2101f47d3725596ded395221ea38d63f44cee94842e6431488eb47c935c",
+  "harness_sha256": "e871613d692cd9bd05db013e51cd9506e3ab74267b916509e9d993f72ec5bc04",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "477f81df8e49e29f561990acd5f6d678cd285010f518be55f30b18723538acde"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

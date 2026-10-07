@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/service-s2-04.spec.ts::four work areas preserve their identities at 1366x768",
+  "test_source_sha256": "202e5e314eaccc2252948e6692a647fabc4ac64f6b3a12ec7859bad8d26c1b90",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "e65aeff854c574586452086ff6e244acd705a0acc4293f6c65dbf5a1b7dd9439",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "ed926a806e874a087f2b14b3dc5f5a2766c3e2c796bdaa368c7af68381606f5e"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "d08f5e9799ebf77db6088d728cb46ef414ce911ccc2d4035ecc2751564102083"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

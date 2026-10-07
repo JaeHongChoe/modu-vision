@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/service-s2-10.spec.ts::operator executes owned CPU service, keeps review and locale on restart and refuses keyboard edits",
+  "test_source_sha256": "283c9a0a20877d85e22bc94249e04efd49d06c3dd3a7445ef4bf6d3f1098fbd7",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "8c5f356324bc92af7e0545667347daff51710293f305f8d696ac6b8e6a987bf9",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "43653a5dfc0216932e06e037b7312a8f9194e793f4ed303b4a5f1f086b6ed914"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "a00e4cf6d4772306a7e5b5bb27d5f9d1a8feaf006a378132e1fddfafcfdc7494"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

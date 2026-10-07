@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/field-protocols.spec.ts::native field mapping persistence and explicit same-job ACK retry",
+  "test_source_sha256": "3fa5738f723c5988ca35f2c97212c158aba83634dc6348da944716502620cd5f",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "09e7b2101f47d3725596ded395221ea38d63f44cee94842e6431488eb47c935c",
+  "harness_sha256": "ca9b00cc6e1cc8ac0dd6b0bc405fcb821b63558fef513b41b2356c80ba463ea6",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "4176071a96ec819a325b41f7217f57e649994c3528bf18d422e92ac91a32b8bb"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "e520d58cb5fd9c7375b394a085c0ec1df7d4669bc2ec5f720792ab2ad198a4f8"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

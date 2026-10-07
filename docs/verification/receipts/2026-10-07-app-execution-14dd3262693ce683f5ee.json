@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "6246c26b7d220354ef0a6c1ecebbb8888cb9540b",
+  "source_dirty": false,
+  "test": "scripts/e2e/autodl-actual-lifecycle.spec.ts::native AutoDL measures reopens reuses exact snapshot and stops its active trial",
+  "test_source_sha256": "aaf3ca66d22659c60f8d284492296ba5437b8df415a4ca34ab46cdbcf122dfa9",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "3b8137447b61821455ad56a51498b24317dbf5031ddda5ef6f5f6f074f1b65b5",
+  "harness_sha256": "28e59b4a218bd7e100b0aed4e51433414cac8d0676d193690463e55c42288e3a",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "7d653eb642ffdf995c9300e2f8e07e27c7a512f56db619a7af0bc16ff37a36ec"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "71bc519eff1e5a057a760a2d00fbdbadd6b9471a552b5596d9504313c5e130c1"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "55f49edeb6eefcbabbcc09c3df7f1ada3d6850abe77713c9e5398e5f734ce21e"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

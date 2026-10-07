@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "7e183c908bd0fe66b59fb89d8ffdca3bb7bb9292",
+  "source_dirty": false,
+  "test": "scripts/e2e/capture-intake-closure.spec.ts::captured evidence routes through human review owned adoption and verified original return",
+  "test_source_sha256": "61bc646b5b7115958781d0caa897af2d5db7032def8e3dbb586b658cb11540bf",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "3c86d9645815baf3ecdb10f3ac86fe3e95c67958ea2a2624d9c6acec7822ed65",
+  "harness_sha256": "2694be1535455bd85ade260f9f70f6df64fe89c1132b03285e3a5b53f42f3ac0",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "aeb9c3be6dfb1a8f22c4b2df2628e53f593879845fdad7719e91dc6499eae13f"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "76d0d382c6a35f5b13d31af8a2beea63d75874e8f4797650f959725b046fef82"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "fe616ae3d08e9f17dde49166064a096dacae27235a4e105ddc2231c2e5c51194"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "6526a4e0fdd02f827676d5bee354f07f5f79269a2e3d8ca40210e9a9339e610c"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

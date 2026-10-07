@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/enhancement-pair-closure.spec.ts::native paired enhancement executes actual CPU candidate and portable whole-flow parity",
+  "test_source_sha256": "f321fd736c62e0ac40aae07df586f82388f28c29c8247141a1ba21b73105853b",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "09e7b2101f47d3725596ded395221ea38d63f44cee94842e6431488eb47c935c",
+  "harness_sha256": "c438cf2e0061f5d4c8c349ae759a0d08676327a6bac89b64a047db5622b9c54c",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "f1623e7296fc0c36854d3a41d8f78e21153708ddb41451675f3a80138f56741c"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "fdce90411e4b0d99fd0ed86bd7fd9723db9bd41938627e3e91e29fb9bbc2057e"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

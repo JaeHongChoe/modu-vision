@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/service-labeling-focus.spec.ts::focus editing gives the labeling canvas the window height, refits the image and is remembered",
+  "test_source_sha256": "77e65a78eb7fe27b4d870516a15e1d5b1bad2a1ed70aed69f31890b1636c40b1",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "3e5d831855a855b814698c53034048685d7f911e11a3f47049bf54c32c3d99e1",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "83e87a06380abc680b86f19004437b76a492b6beb81d4056ed28ca9367221480"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "80a99d28844e8d618fc708b70531f4aa9fafb06b4e4d10b1699d44f33bc31051"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

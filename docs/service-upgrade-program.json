@@ -5512,7 +5512,8 @@
     "backend/engine/label_candidate_providers.py",
     "backend/api/routes_label_candidates.py",
     "src/renderer/components/labeling/CandidateProviderControls.tsx",
-    "src/renderer/services/foundationLabelingApi.ts"
+    "src/renderer/services/foundationLabelingApi.ts",
+    "src/renderer/components/labeling/ModelAssistPanel.tsx"
    ],
    "legacy_claim": {
     "implementation": "integrated",
@@ -5579,7 +5580,8 @@
     "backend/api/routes_label_candidates.py",
     "backend/engine/label_candidate_providers.py",
     "src/renderer/components/labeling/CandidateProviderControls.tsx",
-    "src/renderer/services/foundationLabelingApi.ts"
+    "src/renderer/services/foundationLabelingApi.ts",
+    "src/renderer/components/labeling/ModelAssistPanel.tsx"
    ],
    "legacy_claim": {
     "implementation": "integrated",
@@ -6055,7 +6057,9 @@
     "src/renderer/components/training/TrainingController.tsx",
     "src/renderer/components/training/ModelFamilyCatalog.tsx",
     "backend/engine/automated_trials.py",
-    "scripts/verify-real-family-cpu.py"
+    "scripts/verify-real-family-cpu.py",
+    "src/renderer/components/wizard/WizardHeader.tsx",
+    "src/renderer/components/flowchart/FlowchartStudio.tsx"
    ],
    "legacy_claim": {
     "implementation": "integrated",
@@ -6078,7 +6082,9 @@
     "src/renderer/components/training/ModelFamilyCatalog.tsx",
     "src/renderer/components/training/TrainingController.tsx",
     "backend/engine/automated_trials.py",
-    "scripts/verify-real-family-cpu.py"
+    "scripts/verify-real-family-cpu.py",
+    "src/renderer/components/training/PatchClassificationWorkbench.tsx",
+    "src/renderer/components/training/PatchRecipePreview.tsx"
    ],
    "legacy_claim": {
     "implementation": "integrated",
@@ -6101,7 +6107,9 @@
     "backend/engine/grouped_dataset_views.py",
     "backend/engine/rule_evaluation.py",
     "backend/engine/segmentation_evidence.py",
-    "backend/engine/trainer.py"
+    "backend/engine/trainer.py",
+    "src/renderer/components/training/TrainingController.tsx",
+    "src/renderer/components/flowchart/FlowchartStudio.tsx"
    ],
    "legacy_claim": {
     "implementation": "integrated",
@@ -6289,7 +6297,8 @@
     "src/renderer/components/training/TrainingController.tsx",
     "src/renderer/components/training/ModelFamilyCatalog.tsx",
     "backend/engine/automated_trials.py",
-    "scripts/verify-real-family-cpu.py"
+    "scripts/verify-real-family-cpu.py",
+    "src/renderer/components/training/EnhancementWorkbench.tsx"
    ],
    "legacy_claim": {
     "implementation": "integrated",
@@ -7015,7 +7024,9 @@
    "source_registry": "docs/feature-program.json",
    "source_files": [
     "src/renderer/components/flowchart/FlowchartStudio.tsx",
-    "backend/engine/flowchart_engine.py"
+    "backend/engine/flowchart_engine.py",
+    "src/renderer/components/flowchart/FlowWorkspacePanel.tsx",
+    "src/renderer/components/flowchart/FlowGraphNavigator.tsx"
    ],
    "legacy_claim": {
     "implementation": "integrated",
@@ -7834,7 +7845,9 @@
     "backend/api/routes_export.py",
     "native_runtime/vision_runtime.cpp",
     "native_runtime/VisionRuntime.cs",
-    "src/renderer/components/inference/RuntimeOptimizationPanel.tsx"
+    "src/renderer/components/inference/RuntimeOptimizationPanel.tsx",
+    "src/renderer/components/inference/PackageLibraryPanel.tsx",
+    "src/renderer/components/runtime/RuntimeServicePanel.tsx"
    ],
    "legacy_claim": {
     "implementation": "integrated",

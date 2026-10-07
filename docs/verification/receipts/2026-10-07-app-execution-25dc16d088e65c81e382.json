@@ -1,0 +1,64 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/training-center-ten-family.spec.ts::all ten families reopen the same persisted interruption and use preparation and budget controls",
+  "test_source_sha256": "857d42b08217e52bd9c9ba8fe5daf322b0c1be92d34f480b24cf20457399c129",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "1e68e0134af452ddd449a0a61317fd0665a59b372193225b0cb8e965d3013046",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "cde585f2bc2bf3f13cb7c47f7a1be63c86c1ab392df946f21062468a01876c0e"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "f97b61a271f4767170509a8150640a45921f317c571153dce0d9f9a7d052eeea"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "1f6ec34a19b0b54e6ca16e01b91381e73a68f915829a0982c4ad6ba04970223c"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "ba9972bfbdaa3570530ea0762a5a01a9b86fa76ed4b211f80079d143b28388a4"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "17a56760a25299d986581f360c91bca38c13d13f52fb332da834d75e11070404"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "6836c27f1300967258bed191ac1448ea62bd09c061cb64c34e1e5e9f5af395ad"
+    },
+    {
+      "id": "screenshot-6",
+      "sha256": "3ee1fa1f8562db7dff55c6ea42a473fe3f6118316ca9c7b36c9ee77e4408bfcb"
+    },
+    {
+      "id": "screenshot-7",
+      "sha256": "7631fa6ae4c3fe61e6e5fa2eaa8aaca9196a0eb28c23e374035e1bbca1828829"
+    },
+    {
+      "id": "screenshot-8",
+      "sha256": "558e680b4df09ad4c7104278e8ec2d78732fe19abb9924a8a55dd27b32f37e4e"
+    },
+    {
+      "id": "screenshot-9",
+      "sha256": "75a6cea103a20e8f2211cb200be3fc0d671a5df0fc7a80722a9bcf2c3c2858a1"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

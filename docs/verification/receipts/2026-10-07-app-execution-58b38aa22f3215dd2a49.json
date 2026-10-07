@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/flow-comparison-integrity.spec.ts::native A B history shows legacy limits and refuses altered envelopes",
+  "test_source_sha256": "9b9bac5d97ed35e50831e10b5e7c1aef3edb7a2ee07f71f64b9b92bbeebe5002",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "09e7b2101f47d3725596ded395221ea38d63f44cee94842e6431488eb47c935c",
+  "harness_sha256": "77a043bcb1f57f3ed27757d0c24c985a8ff4dc40e6533275499b49e3fd5623ca",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "2f87cc1ee04cb6ba99748b8542058ea3395c2400f6c87040b826b6a206caca83"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "b1d2346dfd0c7b85d8980aa188f9907c1fc0dfea2dd1467892f29b610ccf3bff"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "8e303f22a0f4397ba68fdd2a81b2192468411761685eb1e96a6fd02284c0e42f"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

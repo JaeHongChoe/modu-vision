@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/service-e04-activation-race.spec.ts::late activation resolve cannot change the current editor after transportRoundTrip",
+  "test_source_sha256": "b254898c1e5eee3c7cf6e45ac6227553ec418bb9225cfbb689937111508c6900",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "a290a0e4c0482aff5084bfce3e09bc6ea1bec16d2c1fc6bf7da5df593a3e5667",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "f17562f232d7f6b8e37703834e197d28b14f78c2432e55db02597dc8f22e9634"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

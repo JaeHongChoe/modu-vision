@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "6246c26b7d220354ef0a6c1ecebbb8888cb9540b",
+  "source_dirty": false,
+  "test": "scripts/e2e/remote-resume-selection.spec.ts::native selects the actually received terminal remote epoch state without submitting compute",
+  "test_source_sha256": "6a44125d467f477b6ae2ddf79ae69e5c213918379f05520c5fdd25a14b9fafef",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "fe5ebeddb11da86234a396bfcded87be1c56e359bc4a544587970a307298a0a0",
+  "harness_sha256": "53b1300ab1eb4aeff3168401283624f85531c20696384d8eedb6a7c19d7a82c1",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "7e9a2e5560f30ad1504d5a05a37f69294eb8b345424dbc929c48c4c20a9e9e2c"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/selected-preflight-target.spec.ts::native saved flow preflight uses selected target and refuses fallback",
+  "test_source_sha256": "a8dd33923ce5e7b4726ae1517d6ff3e06d54383f1b78cf20354e855d9d7d091f",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "09e7b2101f47d3725596ded395221ea38d63f44cee94842e6431488eb47c935c",
+  "harness_sha256": "e89c29091595756c93d21e7352262802e1641320c44eb290ba296cf2d816caea",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "743e5a7d1e3587af0f0c4d110654b421983af09057f0ba784e86669d39dcde07"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "7f899da858ed5161dec5eb4d3c09d56818a1acde4af8bb2364f5eeb42a7c7bfe"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

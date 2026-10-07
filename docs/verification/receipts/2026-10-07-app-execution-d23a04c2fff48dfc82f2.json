@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "7e183c908bd0fe66b59fb89d8ffdca3bb7bb9292",
+  "source_dirty": false,
+  "test": "scripts/e2e/dicom-integrity-rle.spec.ts::DICOM built-in RLE view selects distinct frames and refuses an unavailable frame",
+  "test_source_sha256": "caeed6425b78960993092ab409ce4f74ba2fea545399d9be7b2d90c2fc47b8ce",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "38bd3eb469b8b5940ac4c9d5286ed8df4e19ec1fdbde0e67d197e82786213076",
+  "harness_sha256": "b39384ac18f91a0be648ae695b8bd9d593ba6c443b9000dff124073f5e4fb391",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "da4f57551f2892b26fa775bc6fb9efbd2e760c719be55de167450a7e527a27e7"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "da4f57551f2892b26fa775bc6fb9efbd2e760c719be55de167450a7e527a27e7"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "0045d0c148205dc5328239d32d301a9a6d21fef7bb7c3fccf1a5508972556f5b"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "da4f57551f2892b26fa775bc6fb9efbd2e760c719be55de167450a7e527a27e7"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

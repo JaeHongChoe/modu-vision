@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/trained-cohort-comparison.spec.ts::native genuine learned models compare heldout cohort and five-checkpoint whole flow",
+  "test_source_sha256": "37ff5560257e9d133112eba0f18bce89ef50121d3847152fdcd764632dd4f5c8",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "09e7b2101f47d3725596ded395221ea38d63f44cee94842e6431488eb47c935c",
+  "harness_sha256": "d500c6a6e6538a02965b19d64cf2764bf6093c9b9c2f2f135b6f9cd69e396434",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "095fe11463bc199e8c409b0311de8059394692f96d59ea2d936bfd65323dd16f"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "6abdeb18694df1acd77e8614ccab2471d493dab9940b434cd4ff4a83046fa304"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "d0871bce977a9807284be8b730926b40af2d8be806cf31a7860356f46224e304"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

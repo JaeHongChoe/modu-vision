@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/model-execution-target.spec.ts::browser native action preserves CPU receipt and fails selected server without local fallback",
+  "test_source_sha256": "6af6ebdb6c6fc1f68693bfec022b6b3256180b093a5d7cc2dd889d1a81524921",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "f18c2ff45866a3f79fd602df0f8c72ce2a087c445a0bff4ad5055600c1d5d647",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "99c397bdaf20e7bfac15c97f6a3d8b0418c7654cda320c17052145224c1d3a60"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "948b2d4752ced74db16781dc62a9c82c2ee695dcac21d9d6e03a61b366cf6d65"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

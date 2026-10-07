@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/service-e05-gold-review.spec.ts::a labeler set compared with approved gold images gives placed conflicts, stales when gold changes, and keeps gold out of training",
+  "test_source_sha256": "09ef970c2e134e9e95bec81a5942f5621c6207f22a0fc787f13ae639d1eb4063",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "5fd0f84d9c3302943bd4b37db739e20d431d649b05974d2e3b3aaf0d3805b942",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "f88eab9169910a0bfa460edddebc81ef3b04fe51c32a4ceb3f04f98fd093354b"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "2ea3e623e19d5161e9e129b920fb1472e099e362c3946832af06fcc1cd706a30"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

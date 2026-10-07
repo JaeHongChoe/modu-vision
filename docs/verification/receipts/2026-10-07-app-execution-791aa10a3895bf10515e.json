@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/patch-evaluation-target.spec.ts::native patch evaluation reopens receipt and refuses selected fallback",
+  "test_source_sha256": "ccb5da385fc2b22499ec2388bb2d0cb95eb2616708dff8d451357a6d96a2844e",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "09e7b2101f47d3725596ded395221ea38d63f44cee94842e6431488eb47c935c",
+  "harness_sha256": "b5cd96d4a40c5596224d09ab04f606ec475b8fab1ecf799611938fad9f9581e6",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "17c0067fd23946502d07695bf41a3726fbeebdbc0a55693ffa33f690f7155bcc"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "6a71ef8a785a368ec1721382051a5d2522ddf3b972148b00c14a3e1e663f90ce"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

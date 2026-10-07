@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/service-s2-09-patch-scheduling.spec.ts::refused scheduling keeps prepared patch input and forwards a bounded runtime without launching training",
+  "test_source_sha256": "d320d432088c8bd14aeaf5a4a34d5bc7760dc7409f56a62b5dac95cce4807ec7",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "bd3cc2eff531dc04fce77169154dcc6c70623d633f6df883e382945ea2b4cbee",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "49bd3582073bd08a5373f84f1af80c593a31a526380e517f7ff62d27203a74ba"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

@@ -1,0 +1,48 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "7e183c908bd0fe66b59fb89d8ffdca3bb7bb9292",
+  "source_dirty": false,
+  "test": "scripts/e2e/anomaly-calibration-closure.spec.ts::all anomaly methods learn from normals fix val calibration evaluate test reopen and export",
+  "test_source_sha256": "0250dccad94abffddd595e524f7008aa5af4b979857afb0541007694c650b10d",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "3c86d9645815baf3ecdb10f3ac86fe3e95c67958ea2a2624d9c6acec7822ed65",
+  "harness_sha256": "2f4fbc398aefa90b2441da7b0d5c916c780b00247595e5b96e7b495ff25a0605",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "30a350ad6824abb48a44c32f4d3ce19a2e6a89628375ba9320fd8f2bcee28127"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "f0d28ae0e5cafa29e23b8e2e92b2048173e9b8fdde8a5908ee75b1a94b4707c6"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "771a43879ad59fa0d4f91244d29212533286af4afc190461e74e974f12f339f4"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "225acf81a1e5008c822173ce0ad439ca67d6934328678330c95a24b6db48f777"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "63f0c5ef9c23e9642351d4082705bb06ab05f2787934911f760e1858c9697fa3"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "3d26cc97bb9faaae8d238ce0c418a2179c499459e87205ffe2fb8cd07c6eb50b"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/dino-patch-recipe-closure.spec.ts::native authentic DINOv3 patch preserves original coordinates recipes reopen and offline parity",
+  "test_source_sha256": "370c00e5d0b75fcd08a153bc9839c4221a86d9993d0efa85767a4bee3dc26907",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "09e7b2101f47d3725596ded395221ea38d63f44cee94842e6431488eb47c935c",
+  "harness_sha256": "599086a964fee47ef3589ff0860ad0c46ad05c0804763129e2a1d5e8f3d8e57a",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "0e5060fc5a595db0852abbb837b5dd71d4ce60601ce8d11698ae64a171300323"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "8806225e59c14a7ec3d6114a58e39d6abf4b9151b9c7a8297ae070d1bdb6af97"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

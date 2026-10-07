@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/service-s2-09-specialist-runtime-native.spec.ts::native rotation runs CPU optimization then acknowledges its runtime budget without a manual stop",
+  "test_source_sha256": "da6d34e8f4e928f902d0af83027d47c9cc1d1ae26f05b616d9ee605959d0bcc8",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "09e7b2101f47d3725596ded395221ea38d63f44cee94842e6431488eb47c935c",
+  "harness_sha256": "b88f77fa760c9afa85a3bb4f027dbab36f08a887250db271fab09312e2d0a1c5",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "8c2b4cae0f1e77c0334f687c6c70ca6632cdbad2ee77f769133c3811121682f1"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

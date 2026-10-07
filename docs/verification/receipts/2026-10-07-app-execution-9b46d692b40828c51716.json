@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/foundation-actual-lifecycle.spec.ts::native authentic SAM2 grounding and DINO examples generate reject reopen and cancel",
+  "test_source_sha256": "2991c1d2ae7e8e70b3aa622372838f64dd9370c55bb36f98acc14e31c3538ca5",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "96c8a18f10a15eb6d562e9bc6a353de3b1ce7ed4a6a354cb51b05f9b7bcf0a2d",
+  "harness_sha256": "0e8275d9f759d4bf14e35f247cd3c5074b43f5e228d02ae80f73477ffa99a78b",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "0f7c9e4695f304bb910fc4c823596000f85d2a1191492b69dcc61f535e9eefbf"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "aa1d8111a01c87607572c12438d854e8cf4fef2eb6127a37f7f2c02cea90ce9b"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "f0da3d20c668cc2a545f9c414333d4a93db0df457dc3627194efbef8391746ff"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

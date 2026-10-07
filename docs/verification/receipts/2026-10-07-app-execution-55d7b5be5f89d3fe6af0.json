@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "7e183c908bd0fe66b59fb89d8ffdca3bb7bb9292",
+  "source_dirty": false,
+  "test": "scripts/e2e/dino-segmentation-closure.spec.ts::authentic DINO dense masks pixel metrics original tiles Blob and offline candidate",
+  "test_source_sha256": "c60f620659c93aa73425ca7dc01fc90df7cb18e6d4ea3b507d8e927661897509",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "38bd3eb469b8b5940ac4c9d5286ed8df4e19ec1fdbde0e67d197e82786213076",
+  "harness_sha256": "3c636dfff824b8bd121fa7810c1cf8100add5de22047e1f99e12cd7f52f9defb",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "3b5d2f70a4c94886e81c07ae46b01d9cbf4a8346184e2e2fe0baa2e97948eb4f"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "0a65ddf789c8d8b82768457a803177af3d421a3191eb5d37967037049fcfc793"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

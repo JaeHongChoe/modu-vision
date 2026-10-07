@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "7e183c908bd0fe66b59fb89d8ffdca3bb7bb9292",
+  "source_dirty": false,
+  "test": "scripts/e2e/browser-team-session.spec.ts::browser HTTPS cookie login opens authorized flow and role revocation refuses writes",
+  "test_source_sha256": "cd6d185db3587896517be96aa0a94db39ee3270f49eca74544af664c4265e2d8",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "3c86d9645815baf3ecdb10f3ac86fe3e95c67958ea2a2624d9c6acec7822ed65",
+  "harness_sha256": "e0e45ab739f0223ceda565d2763f86e6e12acf8d95d1f373c6d1fdc76fb76cd9",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "d2433bd25acb2e83e20fcb569c5b380d9ca8c7e9d971e555af1b5f4ba80e0047"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

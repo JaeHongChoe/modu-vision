@@ -1,0 +1,48 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "7e183c908bd0fe66b59fb89d8ffdca3bb7bb9292",
+  "source_dirty": false,
+  "test": "scripts/e2e/comparison-task-center.spec.ts::CPU comparison reopens the exact completed job from Task Center and after refresh",
+  "test_source_sha256": "cac2c8bffa0a1c81423db59ad7edca6013695b4c76e1631a32aef4159c43bc8b",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "3c86d9645815baf3ecdb10f3ac86fe3e95c67958ea2a2624d9c6acec7822ed65",
+  "harness_sha256": "6ec2758de59c11987f9a061a1f4035af8acdb4ca08170dbd7b2df4a80e68e064",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "381133120a399015ae6c611ecf20d52a5bd5dd8fae389c7c2f673da91ca5f60b"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "b37f12ac404396c2b1f1353d969ce124845e8d44d18fcce37b7359bd325d3fbc"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "153e4f5fd394ff1e657e853990dc6d76d5c0e3b464ff71565e8dc775249bc2c2"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "2cb18ce4917461855efefeede64bc1d21326734895e79814afd529610389895f"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "e258fff6fc244c48fe02d723f7f2352b721241af46bb4e4d1b85da21b5c36921"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "a702195966fea2da95cc2fefe64a763288aedd22b655ded1ee2d672287b0c492"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

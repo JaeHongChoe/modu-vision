@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/service-s2-09-patch-scheduling-native.spec.ts::native patch scheduling validates the budget and retains the prepared input on admission refusal",
+  "test_source_sha256": "85028a7b7f7840644d2b5317bf49cc9635358d10a6ae7706d2f8973e4b0b7bf6",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "09e7b2101f47d3725596ded395221ea38d63f44cee94842e6431488eb47c935c",
+  "harness_sha256": "f8a3d7ace79687b65f6127ed7c32d9ab9151259b32d667d066e682506751279b",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "ed9716defa05eb07055b163156cef9f61b789dadaf0971cdff5ee2b27bcdf5da"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

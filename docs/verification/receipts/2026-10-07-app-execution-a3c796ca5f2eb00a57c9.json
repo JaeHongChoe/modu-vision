@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/model-execution-target.spec.ts::native application preserves CPU receipt and fails selected server without local fallback",
+  "test_source_sha256": "6af6ebdb6c6fc1f68693bfec022b6b3256180b093a5d7cc2dd889d1a81524921",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "09e7b2101f47d3725596ded395221ea38d63f44cee94842e6431488eb47c935c",
+  "harness_sha256": "bfcfe3d2630dcdb33be7cb6e83a2119181f29060cd849c994e00a57b0eb054e2",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "24547fb2ce87c4a9b135e7dc86c5b02eb96d317fec1f3c211f4cba60366efe76"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "ac29b0301393c30614e45c444a0ad6849ffd1e7d5c394248ddf0844455c279a2"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

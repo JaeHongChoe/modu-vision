@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "7e183c908bd0fe66b59fb89d8ffdca3bb7bb9292",
+  "source_dirty": false,
+  "test": "scripts/e2e/dino-patch-recipe-closure.spec.ts::authentic DINOv3 patch CPU candidate previews three decision recipes and portable flow parity",
+  "test_source_sha256": "370c00e5d0b75fcd08a153bc9839c4221a86d9993d0efa85767a4bee3dc26907",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "38bd3eb469b8b5940ac4c9d5286ed8df4e19ec1fdbde0e67d197e82786213076",
+  "harness_sha256": "29fcc05ef0553a6bcef04b5a6891e227445370e92cef546783575ea7778fc315",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "1e68cd313a1a16f24ecc3c8f67e390318ac4c076ca93cc0edbf5fcd1690b13cd"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "179c922b5a1010024b6068ee62627d44676ef051af0c3f4e7e2be7bf6d440619"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/service-s2-10.spec.ts::native operator CPU service review locale restart and keyboard permission refusal",
+  "test_source_sha256": "283c9a0a20877d85e22bc94249e04efd49d06c3dd3a7445ef4bf6d3f1098fbd7",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "09e7b2101f47d3725596ded395221ea38d63f44cee94842e6431488eb47c935c",
+  "harness_sha256": "6e70af4d66c959d6bb4f7b71acc9fd30d3b801b74212a0695248b06d41fde62d",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "253b0ec6df5a0104b389b66ffe517f4e403bd82723ce120de4691692b2a73bd7"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "d77452f8902b64610bf8cdd0a0a1b54563e3493cf2bbdc819c9b371dbbea97ec"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

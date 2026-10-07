@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/service-s2-09-specialist-runtime.spec.ts::ocr local runtime is validated and sent with its prepared input",
+  "test_source_sha256": "d78c3fb2cab0f96b1637e53c15b6934e792f0c1c69a7ce928fefa77e54290458",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "a617416707a018df77583328c2b2f94c7631a1fe9fb978346cf9fc1f3fb12f5e",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "0ccc507f8883cee69e3bea920c253ae757de0847619605c4a737022ce7fcf032"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

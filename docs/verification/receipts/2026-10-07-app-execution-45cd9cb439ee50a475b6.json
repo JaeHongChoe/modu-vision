@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/flow-navigation-record-bounds.spec.ts::native minimap keyboard navigation and duplicate history quarantine",
+  "test_source_sha256": "e26059913ae2bd5c4dbce188879c078e5e1ae49ad1f2271bc03277a0ec20198d",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "09e7b2101f47d3725596ded395221ea38d63f44cee94842e6431488eb47c935c",
+  "harness_sha256": "37eda646830ee9d754dc7a17fa25b9ed3dd0ffc0bfecd344cfeda3e6f93b4f84",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "7fbbf179a9d9e42b40c69e01a1d6ed5f3156d7aee87b803bb5512cac4b414f2d"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "98491f7cc01a5d54f15b4459ef77448ae5b56dbe76ed545c98f64dfa8541c55e"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "d65c85fe7eb48552d39aa4a8a27a752d28ec247c6471be134b17911e33f55ba2"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

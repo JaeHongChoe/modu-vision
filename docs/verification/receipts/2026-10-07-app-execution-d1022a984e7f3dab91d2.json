@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/capture-intake-closure.spec.ts::native captured evidence review adoption and verified original return",
+  "test_source_sha256": "61bc646b5b7115958781d0caa897af2d5db7032def8e3dbb586b658cb11540bf",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "09e7b2101f47d3725596ded395221ea38d63f44cee94842e6431488eb47c935c",
+  "harness_sha256": "c8aa519bda4b9c4b08ce7130703a9419360f473e7a1641b49d7028ee2356f995",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "021c7a3234c8b59a13444600ada8082e559eb2728b5d11cb3b489a4ef6229a7f"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "374ed73717f271297394d92c09105c65ed115fcf775893c5eefcaf4df6fa53df"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "a2b8276c6c2273b1625714ff23ce6ea6751d0f0b0edb8d3240f3204a9d1ffeff"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "6f200115f070d898a4a76aead342bb9266c312d319ceb80aebaee8a06c6d48a8"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

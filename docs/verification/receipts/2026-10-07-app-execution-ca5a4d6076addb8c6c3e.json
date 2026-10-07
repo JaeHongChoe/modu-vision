@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/patch-evaluation-target.spec.ts::authentic DINOv3 patch heldout evaluation keeps explicit target and receipt",
+  "test_source_sha256": "ccb5da385fc2b22499ec2388bb2d0cb95eb2616708dff8d451357a6d96a2844e",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "c146824fb72f54c1ef1d5088aec8ea5a9ab7e7d59c84772519ee06e7c1b58456",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "1c53a985fb9b8ac97a82f830ce0e82df6809a7464159df0f9f082f39a81002a3"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "d78b8b36a16062e871a2866f3855458e52084f78ad43355a991748f7d4e57e90"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

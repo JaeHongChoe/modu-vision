@@ -17,13 +17,97 @@
     "state": "pending"
    },
    "gui": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-06",
+      "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+      "kind": "click",
+      "action": "현재 이미지 SAM2 후보 생성",
+      "expected": "Send the exact entered prompt to explicitly supplied actual SAM2 and Grounding DINO.",
+      "observed": "Actual native request preserved the full Korean/English prompt, produced nonempty pending candidates and bound authentic DINO SHA. Korean semantic correctness and manufacturing quality were not evaluated.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/foundation-actual-lifecycle.spec.ts::native authentic SAM2 grounding and DINO examples generate reject reopen and cancel",
+      "receipt": "2026-10-07-app-execution-9b46d692b40828c51716.json",
+      "receipt_sha256": "46df6e0467aaa7351e582e16b5ee6be775c55538635c04117650802673986de8",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "0f7c9e4695f304bb910fc4c823596000f85d2a1191492b69dcc61f535e9eefbf"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "aa1d8111a01c87607572c12438d854e8cf4fef2eb6127a37f7f2c02cea90ce9b"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "f0da3d20c668cc2a545f9c414333d4a93db0df457dc3627194efbef8391746ff"
+       }
+      ]
+     }
+    ]
    },
    "persist": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-06",
+      "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+      "kind": "click",
+      "action": "거절",
+      "expected": "Explicitly reject generated candidates and reopen their saved review state.",
+      "observed": "Native reviewer-name entry and rejection saved rejected status; reload and opening the same image retained rejection. Original source/labels stayed unchanged. This is a control rejection, not semantic quality approval.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/foundation-actual-lifecycle.spec.ts::native authentic SAM2 grounding and DINO examples generate reject reopen and cancel",
+      "receipt": "2026-10-07-app-execution-9b46d692b40828c51716.json",
+      "receipt_sha256": "46df6e0467aaa7351e582e16b5ee6be775c55538635c04117650802673986de8",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "0f7c9e4695f304bb910fc4c823596000f85d2a1191492b69dcc61f535e9eefbf"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "aa1d8111a01c87607572c12438d854e8cf4fef2eb6127a37f7f2c02cea90ce9b"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "f0da3d20c668cc2a545f9c414333d4a93db0df457dc3627194efbef8391746ff"
+       }
+      ]
+     }
+    ]
    },
    "reopen": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-06",
+      "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+      "kind": "click",
+      "action": "거절",
+      "expected": "Explicitly reject generated candidates and reopen their saved review state.",
+      "observed": "Native reviewer-name entry and rejection saved rejected status; reload and opening the same image retained rejection. Original source/labels stayed unchanged. This is a control rejection, not semantic quality approval.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/foundation-actual-lifecycle.spec.ts::native authentic SAM2 grounding and DINO examples generate reject reopen and cancel",
+      "receipt": "2026-10-07-app-execution-9b46d692b40828c51716.json",
+      "receipt_sha256": "46df6e0467aaa7351e582e16b5ee6be775c55538635c04117650802673986de8",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "0f7c9e4695f304bb910fc4c823596000f85d2a1191492b69dcc61f535e9eefbf"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "aa1d8111a01c87607572c12438d854e8cf4fef2eb6127a37f7f2c02cea90ce9b"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "f0da3d20c668cc2a545f9c414333d4a93db0df457dc3627194efbef8391746ff"
+       }
+      ]
+     }
+    ]
    },
    "failure": {
     "state": "pending"
@@ -47,7 +131,35 @@
     "state": "pending"
    },
    "gui": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-06",
+      "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+      "kind": "click",
+      "action": "positive 예시 추가",
+      "expected": "Include one selected positive image and its explicit source rectangle.",
+      "observed": "Actual native selected image and50,35,190,160 rectangle reached positive_examples; authentic providers generated pending candidates. Example controls were entered again after reload; selection persistence is not claimed.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/foundation-actual-lifecycle.spec.ts::native authentic SAM2 grounding and DINO examples generate reject reopen and cancel",
+      "receipt": "2026-10-07-app-execution-9b46d692b40828c51716.json",
+      "receipt_sha256": "46df6e0467aaa7351e582e16b5ee6be775c55538635c04117650802673986de8",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "0f7c9e4695f304bb910fc4c823596000f85d2a1191492b69dcc61f535e9eefbf"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "aa1d8111a01c87607572c12438d854e8cf4fef2eb6127a37f7f2c02cea90ce9b"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "f0da3d20c668cc2a545f9c414333d4a93db0df457dc3627194efbef8391746ff"
+       }
+      ]
+     }
+    ]
    },
    "persist": {
     "state": "pending"
@@ -77,7 +189,35 @@
     "state": "pending"
    },
    "gui": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-06",
+      "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+      "kind": "click",
+      "action": "negative 예시 추가",
+      "expected": "Include one selected negative image region without modifying source labels.",
+      "observed": "Actual native selected image and0,0,40,30 region reached negative_examples; original image and label bytes stayed unchanged. Per-image exclusion drawing and semantic exclusion quality remain pending.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/foundation-actual-lifecycle.spec.ts::native authentic SAM2 grounding and DINO examples generate reject reopen and cancel",
+      "receipt": "2026-10-07-app-execution-9b46d692b40828c51716.json",
+      "receipt_sha256": "46df6e0467aaa7351e582e16b5ee6be775c55538635c04117650802673986de8",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "0f7c9e4695f304bb910fc4c823596000f85d2a1191492b69dcc61f535e9eefbf"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "aa1d8111a01c87607572c12438d854e8cf4fef2eb6127a37f7f2c02cea90ce9b"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "f0da3d20c668cc2a545f9c414333d4a93db0df457dc3627194efbef8391746ff"
+       }
+      ]
+     }
+    ]
    },
    "persist": {
     "state": "pending"
@@ -107,13 +247,97 @@
     "state": "pending"
    },
    "gui": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-06",
+      "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+      "kind": "click",
+      "action": "현재 이미지 SAM2 후보 생성",
+      "expected": "Combine the entered prompt with positive and negative image examples.",
+      "observed": "One actual native generation request contained the exact long prompt and one positive and one negative example. Nonempty real candidates were pending until explicitly rejected; quality was not accepted.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/foundation-actual-lifecycle.spec.ts::native authentic SAM2 grounding and DINO examples generate reject reopen and cancel",
+      "receipt": "2026-10-07-app-execution-9b46d692b40828c51716.json",
+      "receipt_sha256": "46df6e0467aaa7351e582e16b5ee6be775c55538635c04117650802673986de8",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "0f7c9e4695f304bb910fc4c823596000f85d2a1191492b69dcc61f535e9eefbf"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "aa1d8111a01c87607572c12438d854e8cf4fef2eb6127a37f7f2c02cea90ce9b"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "f0da3d20c668cc2a545f9c414333d4a93db0df457dc3627194efbef8391746ff"
+       }
+      ]
+     }
+    ]
    },
    "persist": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-06",
+      "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+      "kind": "click",
+      "action": "거절",
+      "expected": "Explicitly reject generated candidates and reopen their saved review state.",
+      "observed": "Native reviewer-name entry and rejection saved rejected status; reload and opening the same image retained rejection. Original source/labels stayed unchanged. This is a control rejection, not semantic quality approval.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/foundation-actual-lifecycle.spec.ts::native authentic SAM2 grounding and DINO examples generate reject reopen and cancel",
+      "receipt": "2026-10-07-app-execution-9b46d692b40828c51716.json",
+      "receipt_sha256": "46df6e0467aaa7351e582e16b5ee6be775c55538635c04117650802673986de8",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "0f7c9e4695f304bb910fc4c823596000f85d2a1191492b69dcc61f535e9eefbf"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "aa1d8111a01c87607572c12438d854e8cf4fef2eb6127a37f7f2c02cea90ce9b"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "f0da3d20c668cc2a545f9c414333d4a93db0df457dc3627194efbef8391746ff"
+       }
+      ]
+     }
+    ]
    },
    "reopen": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-06",
+      "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+      "kind": "click",
+      "action": "거절",
+      "expected": "Explicitly reject generated candidates and reopen their saved review state.",
+      "observed": "Native reviewer-name entry and rejection saved rejected status; reload and opening the same image retained rejection. Original source/labels stayed unchanged. This is a control rejection, not semantic quality approval.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/foundation-actual-lifecycle.spec.ts::native authentic SAM2 grounding and DINO examples generate reject reopen and cancel",
+      "receipt": "2026-10-07-app-execution-9b46d692b40828c51716.json",
+      "receipt_sha256": "46df6e0467aaa7351e582e16b5ee6be775c55538635c04117650802673986de8",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "0f7c9e4695f304bb910fc4c823596000f85d2a1191492b69dcc61f535e9eefbf"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "aa1d8111a01c87607572c12438d854e8cf4fef2eb6127a37f7f2c02cea90ce9b"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "f0da3d20c668cc2a545f9c414333d4a93db0df457dc3627194efbef8391746ff"
+       }
+      ]
+     }
+    ]
    },
    "failure": {
     "state": "pending"
@@ -137,7 +361,35 @@
     "state": "pending"
    },
    "gui": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-06",
+      "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+      "kind": "click",
+      "action": "텍스트 검출 프롬프트",
+      "expected": "Preserve the complete long Korean/English input through the actual generation request.",
+      "observed": "Actual native postData.prompt equaled the original long string byte-for-character. Provider inference succeeded; downstream tokenizer truncation and Korean semantic accuracy were not asserted.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/foundation-actual-lifecycle.spec.ts::native authentic SAM2 grounding and DINO examples generate reject reopen and cancel",
+      "receipt": "2026-10-07-app-execution-9b46d692b40828c51716.json",
+      "receipt_sha256": "46df6e0467aaa7351e582e16b5ee6be775c55538635c04117650802673986de8",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "0f7c9e4695f304bb910fc4c823596000f85d2a1191492b69dcc61f535e9eefbf"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "aa1d8111a01c87607572c12438d854e8cf4fef2eb6127a37f7f2c02cea90ce9b"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "f0da3d20c668cc2a545f9c414333d4a93db0df457dc3627194efbef8391746ff"
+       }
+      ]
+     }
+    ]
    },
    "persist": {
     "state": "pending"
@@ -287,10 +539,118 @@
     "state": "pending"
    },
    "gui": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-06",
+      "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+      "kind": "click",
+      "action": "새 분류기 학습",
+      "expected": "Fit an actual classifier from saved synthetic reviewed class examples.",
+      "observed": "Actual native two-epoch training completed with background and defect classes and the exact authentic DINO hash; model selection changed to its returned ID. Human labels and manufacturing quality are unapproved.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/foundation-actual-lifecycle.spec.ts::native authentic SAM2 grounding and DINO examples generate reject reopen and cancel",
+      "receipt": "2026-10-07-app-execution-9b46d692b40828c51716.json",
+      "receipt_sha256": "46df6e0467aaa7351e582e16b5ee6be775c55538635c04117650802673986de8",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "0f7c9e4695f304bb910fc4c823596000f85d2a1191492b69dcc61f535e9eefbf"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "aa1d8111a01c87607572c12438d854e8cf4fef2eb6127a37f7f2c02cea90ce9b"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "f0da3d20c668cc2a545f9c414333d4a93db0df457dc3627194efbef8391746ff"
+       }
+      ]
+     },
+     {
+      "task": "S3-06",
+      "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+      "kind": "click",
+      "action": "선택 모델 refine",
+      "expected": "Refine into a new classifier retaining the original model and parent lineage.",
+      "observed": "Actual native refine completed as a second model, selected the returned ID and retained parent_model_id. Original classifier and source/label hashes stayed identical; post-refine reload was not tested.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/foundation-actual-lifecycle.spec.ts::native authentic SAM2 grounding and DINO examples generate reject reopen and cancel",
+      "receipt": "2026-10-07-app-execution-9b46d692b40828c51716.json",
+      "receipt_sha256": "46df6e0467aaa7351e582e16b5ee6be775c55538635c04117650802673986de8",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "0f7c9e4695f304bb910fc4c823596000f85d2a1191492b69dcc61f535e9eefbf"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "aa1d8111a01c87607572c12438d854e8cf4fef2eb6127a37f7f2c02cea90ce9b"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "f0da3d20c668cc2a545f9c414333d4a93db0df457dc3627194efbef8391746ff"
+       }
+      ]
+     }
+    ]
    },
    "persist": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-06",
+      "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+      "kind": "click",
+      "action": "새 분류기 학습",
+      "expected": "Fit an actual classifier from saved synthetic reviewed class examples.",
+      "observed": "Actual native two-epoch training completed with background and defect classes and the exact authentic DINO hash; model selection changed to its returned ID. Human labels and manufacturing quality are unapproved.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/foundation-actual-lifecycle.spec.ts::native authentic SAM2 grounding and DINO examples generate reject reopen and cancel",
+      "receipt": "2026-10-07-app-execution-9b46d692b40828c51716.json",
+      "receipt_sha256": "46df6e0467aaa7351e582e16b5ee6be775c55538635c04117650802673986de8",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "0f7c9e4695f304bb910fc4c823596000f85d2a1191492b69dcc61f535e9eefbf"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "aa1d8111a01c87607572c12438d854e8cf4fef2eb6127a37f7f2c02cea90ce9b"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "f0da3d20c668cc2a545f9c414333d4a93db0df457dc3627194efbef8391746ff"
+       }
+      ]
+     },
+     {
+      "task": "S3-06",
+      "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+      "kind": "click",
+      "action": "선택 모델 refine",
+      "expected": "Refine into a new classifier retaining the original model and parent lineage.",
+      "observed": "Actual native refine completed as a second model, selected the returned ID and retained parent_model_id. Original classifier and source/label hashes stayed identical; post-refine reload was not tested.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/foundation-actual-lifecycle.spec.ts::native authentic SAM2 grounding and DINO examples generate reject reopen and cancel",
+      "receipt": "2026-10-07-app-execution-9b46d692b40828c51716.json",
+      "receipt_sha256": "46df6e0467aaa7351e582e16b5ee6be775c55538635c04117650802673986de8",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "0f7c9e4695f304bb910fc4c823596000f85d2a1191492b69dcc61f535e9eefbf"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "aa1d8111a01c87607572c12438d854e8cf4fef2eb6127a37f7f2c02cea90ce9b"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "f0da3d20c668cc2a545f9c414333d4a93db0df457dc3627194efbef8391746ff"
+       }
+      ]
+     }
+    ]
    },
    "reopen": {
     "state": "pending"
@@ -299,7 +659,61 @@
     "state": "pending"
    },
    "handoff": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-06",
+      "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+      "kind": "click",
+      "action": "새 분류기 학습",
+      "expected": "Fit an actual classifier from saved synthetic reviewed class examples.",
+      "observed": "Actual native two-epoch training completed with background and defect classes and the exact authentic DINO hash; model selection changed to its returned ID. Human labels and manufacturing quality are unapproved.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/foundation-actual-lifecycle.spec.ts::native authentic SAM2 grounding and DINO examples generate reject reopen and cancel",
+      "receipt": "2026-10-07-app-execution-9b46d692b40828c51716.json",
+      "receipt_sha256": "46df6e0467aaa7351e582e16b5ee6be775c55538635c04117650802673986de8",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "0f7c9e4695f304bb910fc4c823596000f85d2a1191492b69dcc61f535e9eefbf"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "aa1d8111a01c87607572c12438d854e8cf4fef2eb6127a37f7f2c02cea90ce9b"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "f0da3d20c668cc2a545f9c414333d4a93db0df457dc3627194efbef8391746ff"
+       }
+      ]
+     },
+     {
+      "task": "S3-06",
+      "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+      "kind": "click",
+      "action": "선택 모델 refine",
+      "expected": "Refine into a new classifier retaining the original model and parent lineage.",
+      "observed": "Actual native refine completed as a second model, selected the returned ID and retained parent_model_id. Original classifier and source/label hashes stayed identical; post-refine reload was not tested.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/foundation-actual-lifecycle.spec.ts::native authentic SAM2 grounding and DINO examples generate reject reopen and cancel",
+      "receipt": "2026-10-07-app-execution-9b46d692b40828c51716.json",
+      "receipt_sha256": "46df6e0467aaa7351e582e16b5ee6be775c55538635c04117650802673986de8",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "0f7c9e4695f304bb910fc4c823596000f85d2a1191492b69dcc61f535e9eefbf"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "aa1d8111a01c87607572c12438d854e8cf4fef2eb6127a37f7f2c02cea90ce9b"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "f0da3d20c668cc2a545f9c414333d4a93db0df457dc3627194efbef8391746ff"
+       }
+      ]
+     }
+    ]
    },
    "target": {
     "state": "pending"
@@ -347,7 +761,35 @@
     "state": "pending"
    },
    "gui": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S3-06",
+      "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+      "kind": "click",
+      "action": "비동기 일괄 후보 시작 · 배치 취소",
+      "expected": "Submit an owned batch then explicitly stop it through native controls.",
+      "observed": "Native all-image selection submitted a real batch; cancel reached stopped and the panel showed cancellation. Completion of all images, saved batch reopen and semantic quality remain pending.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/foundation-actual-lifecycle.spec.ts::native authentic SAM2 grounding and DINO examples generate reject reopen and cancel",
+      "receipt": "2026-10-07-app-execution-9b46d692b40828c51716.json",
+      "receipt_sha256": "46df6e0467aaa7351e582e16b5ee6be775c55538635c04117650802673986de8",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "0f7c9e4695f304bb910fc4c823596000f85d2a1191492b69dcc61f535e9eefbf"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "aa1d8111a01c87607572c12438d854e8cf4fef2eb6127a37f7f2c02cea90ce9b"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "f0da3d20c668cc2a545f9c414333d4a93db0df457dc3627194efbef8391746ff"
+       }
+      ]
+     }
+    ]
    },
    "persist": {
     "state": "pending"
@@ -2439,13 +2881,203 @@
     "state": "pending"
    },
    "gui": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S2-05",
+      "source_sha": "3ab27ae5353dc6d3c25a3061b705be05270c9e89",
+      "kind": "click",
+      "action": "선택 노드까지 실행",
+      "expected": "Execute the selected node and upstream work on explicit local CPU, reusing only identical debug evidence.",
+      "observed": "Two actual native clicks returned miss then hit with the same debug identity. Both partial results remained REVIEW/is_ok false; changed ROI invalidated cache through API. No final inspection acceptance is inferred.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/flow-debug-model-freeze.spec.ts::native CPU debug cache and model hash history reopen",
+      "receipt": "2026-10-07-app-execution-32ce71c24472565c8fbb.json",
+      "receipt_sha256": "42c4c95ab945e6c26518e25aff977c51bb5f81d0c7b41323f38f1ce520ccf2b3",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "2ce521351e66cd6f8280b3b98f07a7c8c843fb403468fb08f4c732c2e080b720"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "f5018f4eb3e3fc625260218e1c42daa8d812741203ca343ce19afd8484104873"
+       }
+      ]
+     },
+     {
+      "task": "S2-05",
+      "source_sha": "3ab27ae5353dc6d3c25a3061b705be05270c9e89",
+      "kind": "click",
+      "action": "저장 비교 결과 · 고정 모델·입력 근거",
+      "expected": "Reopen a stored whole-flow comparison with frozen model/input hashes.",
+      "observed": "Actual native history selected exact stored comparison and displayed cohort SHA plus both checkpoint SHAs. Actual CPU comparison detected OK/NG difference; submission was API setup and is not called a GUI comparison-button execution. Active graph and source bytes remained unchanged.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/flow-debug-model-freeze.spec.ts::native CPU debug cache and model hash history reopen",
+      "receipt": "2026-10-07-app-execution-32ce71c24472565c8fbb.json",
+      "receipt_sha256": "42c4c95ab945e6c26518e25aff977c51bb5f81d0c7b41323f38f1ce520ccf2b3",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "2ce521351e66cd6f8280b3b98f07a7c8c843fb403468fb08f4c732c2e080b720"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "f5018f4eb3e3fc625260218e1c42daa8d812741203ca343ce19afd8484104873"
+       }
+      ]
+     },
+     {
+      "task": "S2-05",
+      "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+      "kind": "click",
+      "action": "속성 패널 크기 조절 · 접기 · 펼치기",
+      "expected": "Resize and collapse the inspector without changing a saved supported46-node graph.",
+      "observed": "Actual browser keyboard/pointer width260/280/360, collapse44 and reload restored layout; unsaved name survived collapse and explicit undo restored saved name. Eight model-node threshold selections and all46nodes/52edges retained source graph/hash. Native counterpart is separate.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/flow-inspector-large-dag.spec.ts::supported large DAG inspector resize collapse and reopen preserve graph",
+      "receipt": "2026-10-07-app-execution-185017c027fb2cc12078.json",
+      "receipt_sha256": "f09c54c3410739e9b7032632a09bf8d0571a092cc4a7bbfcd67a6639b9b18eb2",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "844fe61214603f290beb44c30375cfd0fdf82caf96a237a977618f82707b4f09"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "2b70029271a4ad2bbb7d29492f600b1eaa369bc13db817f6e5b5594d3ba1244b"
+       }
+      ]
+     },
+     {
+      "task": "S2-05",
+      "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+      "kind": "click",
+      "action": "플로우 노드 검색 · 플로우 미니맵 · 플로우 전체 맞춤",
+      "expected": "Navigate to an actual distant node using search and keyboard minimap while preserving graph/source bytes.",
+      "observed": "Actual browser search selected distant node; minimap keyboard and fit changed viewport only. Reload and selecting the same result retained navigation functionality with byte-equal saved graph. A duplicate-key comparison was quarantined, not promoted.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/flow-navigation-record-bounds.spec.ts::actual graph search and minimap preserve graph on navigation and reopen",
+      "receipt": "2026-10-07-app-execution-6f5e559de8ddbea5795e.json",
+      "receipt_sha256": "0819f19680882a0d2b4ce147be6d07fa688164beb36aaf96b98d44c519955df5",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "9f645e80eafcb4b8a6e3f1b35d49a45273eae21f8ead0f93ffdae5ffc4854292"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "90040c0637b28da8cc9af96fee3e92ebab71d249fba1bce4aa30c3f03810a558"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "b3346b17b9b8c01ff135fef018bf52eae405116d31ee96a0a389a62d05e3861c"
+       }
+      ]
+     }
+    ]
    },
    "persist": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S2-05",
+      "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+      "kind": "click",
+      "action": "속성 패널 크기 조절 · 접기 · 펼치기",
+      "expected": "Resize and collapse the inspector without changing a saved supported46-node graph.",
+      "observed": "Actual browser keyboard/pointer width260/280/360, collapse44 and reload restored layout; unsaved name survived collapse and explicit undo restored saved name. Eight model-node threshold selections and all46nodes/52edges retained source graph/hash. Native counterpart is separate.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/flow-inspector-large-dag.spec.ts::supported large DAG inspector resize collapse and reopen preserve graph",
+      "receipt": "2026-10-07-app-execution-185017c027fb2cc12078.json",
+      "receipt_sha256": "f09c54c3410739e9b7032632a09bf8d0571a092cc4a7bbfcd67a6639b9b18eb2",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "844fe61214603f290beb44c30375cfd0fdf82caf96a237a977618f82707b4f09"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "2b70029271a4ad2bbb7d29492f600b1eaa369bc13db817f6e5b5594d3ba1244b"
+       }
+      ]
+     }
+    ]
    },
    "reopen": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S2-05",
+      "source_sha": "3ab27ae5353dc6d3c25a3061b705be05270c9e89",
+      "kind": "click",
+      "action": "저장 비교 결과 · 고정 모델·입력 근거",
+      "expected": "Reopen a stored whole-flow comparison with frozen model/input hashes.",
+      "observed": "Actual native history selected exact stored comparison and displayed cohort SHA plus both checkpoint SHAs. Actual CPU comparison detected OK/NG difference; submission was API setup and is not called a GUI comparison-button execution. Active graph and source bytes remained unchanged.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/flow-debug-model-freeze.spec.ts::native CPU debug cache and model hash history reopen",
+      "receipt": "2026-10-07-app-execution-32ce71c24472565c8fbb.json",
+      "receipt_sha256": "42c4c95ab945e6c26518e25aff977c51bb5f81d0c7b41323f38f1ce520ccf2b3",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "2ce521351e66cd6f8280b3b98f07a7c8c843fb403468fb08f4c732c2e080b720"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "f5018f4eb3e3fc625260218e1c42daa8d812741203ca343ce19afd8484104873"
+       }
+      ]
+     },
+     {
+      "task": "S2-05",
+      "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+      "kind": "click",
+      "action": "속성 패널 크기 조절 · 접기 · 펼치기",
+      "expected": "Resize and collapse the inspector without changing a saved supported46-node graph.",
+      "observed": "Actual browser keyboard/pointer width260/280/360, collapse44 and reload restored layout; unsaved name survived collapse and explicit undo restored saved name. Eight model-node threshold selections and all46nodes/52edges retained source graph/hash. Native counterpart is separate.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/flow-inspector-large-dag.spec.ts::supported large DAG inspector resize collapse and reopen preserve graph",
+      "receipt": "2026-10-07-app-execution-185017c027fb2cc12078.json",
+      "receipt_sha256": "f09c54c3410739e9b7032632a09bf8d0571a092cc4a7bbfcd67a6639b9b18eb2",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "844fe61214603f290beb44c30375cfd0fdf82caf96a237a977618f82707b4f09"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "2b70029271a4ad2bbb7d29492f600b1eaa369bc13db817f6e5b5594d3ba1244b"
+       }
+      ]
+     },
+     {
+      "task": "S2-05",
+      "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+      "kind": "click",
+      "action": "플로우 노드 검색 · 플로우 미니맵 · 플로우 전체 맞춤",
+      "expected": "Navigate to an actual distant node using search and keyboard minimap while preserving graph/source bytes.",
+      "observed": "Actual browser search selected distant node; minimap keyboard and fit changed viewport only. Reload and selecting the same result retained navigation functionality with byte-equal saved graph. A duplicate-key comparison was quarantined, not promoted.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/flow-navigation-record-bounds.spec.ts::actual graph search and minimap preserve graph on navigation and reopen",
+      "receipt": "2026-10-07-app-execution-6f5e559de8ddbea5795e.json",
+      "receipt_sha256": "0819f19680882a0d2b4ce147be6d07fa688164beb36aaf96b98d44c519955df5",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "9f645e80eafcb4b8a6e3f1b35d49a45273eae21f8ead0f93ffdae5ffc4854292"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "90040c0637b28da8cc9af96fee3e92ebab71d249fba1bce4aa30c3f03810a558"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "b3346b17b9b8c01ff135fef018bf52eae405116d31ee96a0a389a62d05e3861c"
+       }
+      ]
+     }
+    ]
    },
    "failure": {
     "state": "pending"
@@ -3889,19 +4521,209 @@
     "state": "pending"
    },
    "gui": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S6-03",
+      "source_sha": "3ab27ae5353dc6d3c25a3061b705be05270c9e89",
+      "kind": "click",
+      "action": "독립 후보 패키지 생성",
+      "expected": "Convert an independent package with two explicitly selected synthetic OK/NG inputs.",
+      "observed": "Actual CPU-to-IR conversion completed with2/2 spatial/verdict parity. The intentionally all-OK fixture misses NG, so parity supplies no manufacturing quality approval. Original package/model/input hashes were preserved.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/converted-flow-review.spec.ts::native actual converted flow review, library reopen and managed IR execution",
+      "receipt": "2026-10-07-app-execution-c47766b854fd038ec891.json",
+      "receipt_sha256": "862c8be88250e5825b51422219940bbb1ca1c3e1bba320482501895bc14ec028",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "ea37d2a8218d35e043e6548df025b3628139dec21de4e956da3145a52340ca32"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "7d836d0288d34af92b16d089b251c5c3e4240c9c87fa42cea9b8ffb14e97cb5f"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "b74acd2a31814141fcd0a7bb3c6dd973e30bcafcdee38725f181ff0f59a96296"
+       }
+      ]
+     },
+     {
+      "task": "S6-03",
+      "source_sha": "3ab27ae5353dc6d3c25a3061b705be05270c9e89",
+      "kind": "click",
+      "action": "새로고침 · 다시 열기",
+      "expected": "Reopen the exact saved converted package and matching review.",
+      "observed": "Actual native library refreshed, reopened approved_runtime package and after reload displayed the saved review as current; API manifest and review hashes matched. No frozen distribution, signing or other Intel hardware acceptance is inferred.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/converted-flow-review.spec.ts::native actual converted flow review, library reopen and managed IR execution",
+      "receipt": "2026-10-07-app-execution-c47766b854fd038ec891.json",
+      "receipt_sha256": "862c8be88250e5825b51422219940bbb1ca1c3e1bba320482501895bc14ec028",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "ea37d2a8218d35e043e6548df025b3628139dec21de4e956da3145a52340ca32"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "7d836d0288d34af92b16d089b251c5c3e4240c9c87fa42cea9b8ffb14e97cb5f"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "b74acd2a31814141fcd0a7bb3c6dd973e30bcafcdee38725f181ff0f59a96296"
+       }
+      ]
+     },
+     {
+      "task": "S6-03",
+      "source_sha": "3ab27ae5353dc6d3c25a3061b705be05270c9e89",
+      "kind": "click",
+      "action": "배포 준비 · 승인 패키지 적용",
+      "expected": "Apply the reviewed converted package to an owned OpenVINO CPU service.",
+      "observed": "Actual native service selected exact package and openvino:CPU, reached ready with matching manifest and separately submitted real image upload/inference completed. Original package/model/source files were immutable; owned service was stopped. GPU/iGPU/NPU, OS auto-start and physical deployment are unverified.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/converted-flow-review.spec.ts::native actual converted flow review, library reopen and managed IR execution",
+      "receipt": "2026-10-07-app-execution-c47766b854fd038ec891.json",
+      "receipt_sha256": "862c8be88250e5825b51422219940bbb1ca1c3e1bba320482501895bc14ec028",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "ea37d2a8218d35e043e6548df025b3628139dec21de4e956da3145a52340ca32"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "7d836d0288d34af92b16d089b251c5c3e4240c9c87fa42cea9b8ffb14e97cb5f"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "b74acd2a31814141fcd0a7bb3c6dd973e30bcafcdee38725f181ff0f59a96296"
+       }
+      ]
+     }
+    ]
    },
    "persist": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S6-03",
+      "source_sha": "3ab27ae5353dc6d3c25a3061b705be05270c9e89",
+      "kind": "click",
+      "action": "검토 후 새 승인 패키지 생성 · 변환 전체 흐름 검토 저장",
+      "expected": "Save separate precision and whole-flow reviews with explicit synthetic reviewer entries.",
+      "observed": "Actual native inputs and checkboxes generated separate runtime and flow review records for the same frozen two-image cohort. Synthetic permissive policy is control evidence, not human authority or manufacturing acceptance.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/converted-flow-review.spec.ts::native actual converted flow review, library reopen and managed IR execution",
+      "receipt": "2026-10-07-app-execution-c47766b854fd038ec891.json",
+      "receipt_sha256": "862c8be88250e5825b51422219940bbb1ca1c3e1bba320482501895bc14ec028",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "ea37d2a8218d35e043e6548df025b3628139dec21de4e956da3145a52340ca32"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "7d836d0288d34af92b16d089b251c5c3e4240c9c87fa42cea9b8ffb14e97cb5f"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "b74acd2a31814141fcd0a7bb3c6dd973e30bcafcdee38725f181ff0f59a96296"
+       }
+      ]
+     }
+    ]
    },
    "reopen": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S6-03",
+      "source_sha": "3ab27ae5353dc6d3c25a3061b705be05270c9e89",
+      "kind": "click",
+      "action": "새로고침 · 다시 열기",
+      "expected": "Reopen the exact saved converted package and matching review.",
+      "observed": "Actual native library refreshed, reopened approved_runtime package and after reload displayed the saved review as current; API manifest and review hashes matched. No frozen distribution, signing or other Intel hardware acceptance is inferred.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/converted-flow-review.spec.ts::native actual converted flow review, library reopen and managed IR execution",
+      "receipt": "2026-10-07-app-execution-c47766b854fd038ec891.json",
+      "receipt_sha256": "862c8be88250e5825b51422219940bbb1ca1c3e1bba320482501895bc14ec028",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "ea37d2a8218d35e043e6548df025b3628139dec21de4e956da3145a52340ca32"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "7d836d0288d34af92b16d089b251c5c3e4240c9c87fa42cea9b8ffb14e97cb5f"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "b74acd2a31814141fcd0a7bb3c6dd973e30bcafcdee38725f181ff0f59a96296"
+       }
+      ]
+     }
+    ]
    },
    "failure": {
     "state": "pending"
    },
    "handoff": {
-    "state": "pending"
+    "state": "verified",
+    "evidence": [
+     {
+      "task": "S6-03",
+      "source_sha": "3ab27ae5353dc6d3c25a3061b705be05270c9e89",
+      "kind": "click",
+      "action": "검토 후 새 승인 패키지 생성 · 변환 전체 흐름 검토 저장",
+      "expected": "Save separate precision and whole-flow reviews with explicit synthetic reviewer entries.",
+      "observed": "Actual native inputs and checkboxes generated separate runtime and flow review records for the same frozen two-image cohort. Synthetic permissive policy is control evidence, not human authority or manufacturing acceptance.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/converted-flow-review.spec.ts::native actual converted flow review, library reopen and managed IR execution",
+      "receipt": "2026-10-07-app-execution-c47766b854fd038ec891.json",
+      "receipt_sha256": "862c8be88250e5825b51422219940bbb1ca1c3e1bba320482501895bc14ec028",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "ea37d2a8218d35e043e6548df025b3628139dec21de4e956da3145a52340ca32"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "7d836d0288d34af92b16d089b251c5c3e4240c9c87fa42cea9b8ffb14e97cb5f"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "b74acd2a31814141fcd0a7bb3c6dd973e30bcafcdee38725f181ff0f59a96296"
+       }
+      ]
+     },
+     {
+      "task": "S6-03",
+      "source_sha": "3ab27ae5353dc6d3c25a3061b705be05270c9e89",
+      "kind": "click",
+      "action": "배포 준비 · 승인 패키지 적용",
+      "expected": "Apply the reviewed converted package to an owned OpenVINO CPU service.",
+      "observed": "Actual native service selected exact package and openvino:CPU, reached ready with matching manifest and separately submitted real image upload/inference completed. Original package/model/source files were immutable; owned service was stopped. GPU/iGPU/NPU, OS auto-start and physical deployment are unverified.",
+      "reviewer": "Codex root exact source and actual clean execution review; human quality, independent, device and release acceptance pending",
+      "test": "scripts/e2e/converted-flow-review.spec.ts::native actual converted flow review, library reopen and managed IR execution",
+      "receipt": "2026-10-07-app-execution-c47766b854fd038ec891.json",
+      "receipt_sha256": "862c8be88250e5825b51422219940bbb1ca1c3e1bba320482501895bc14ec028",
+      "artifacts": [
+       {
+        "id": "screenshot-0",
+        "sha256": "ea37d2a8218d35e043e6548df025b3628139dec21de4e956da3145a52340ca32"
+       },
+       {
+        "id": "screenshot-1",
+        "sha256": "7d836d0288d34af92b16d089b251c5c3e4240c9c87fa42cea9b8ffb14e97cb5f"
+       },
+       {
+        "id": "screenshot-2",
+        "sha256": "b74acd2a31814141fcd0a7bb3c6dd973e30bcafcdee38725f181ff0f59a96296"
+       }
+      ]
+     }
+    ]
    },
    "target": {
     "state": "pending"

@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/core-model-target.spec.ts::native core CPU trials reopen and refuse unavailable selected target",
+  "test_source_sha256": "f0af4623ac82ad2b5792901f8978eccfdf9b9aecbcbe465a133e353180952e03",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "09e7b2101f47d3725596ded395221ea38d63f44cee94842e6431488eb47c935c",
+  "harness_sha256": "f445b7774821823fe6f6ec11704e3b3ad11cc3516c4076fafcf1f573f7489a22",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "d54d6d816a5e2ea940ba156799ee73cb259799abb38e75628dc1b3fe50934e52"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "9e91774a8777e9e93e0dfa7835a261418060112e16a6679f4aa7657745c6ebb4"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/service-s2-04.spec.ts::recipe cancel preserves current DAG; explicit mapping adopts raw-distance model as unsaved draft",
+  "test_source_sha256": "202e5e314eaccc2252948e6692a647fabc4ac64f6b3a12ec7859bad8d26c1b90",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "29b91b534e66de7eefa536a19bb296b0fa01a34d308c7cd8b1a8629b8c51f6e2",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "f3078f84f10ea523dc59d94a1a4104b125bbec68298ebd2525c9a59755e9eda8"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "7e7938f329c8eaedb0eae5e596162ef0cd9e456a161466ad1addcc4e53f63b58"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

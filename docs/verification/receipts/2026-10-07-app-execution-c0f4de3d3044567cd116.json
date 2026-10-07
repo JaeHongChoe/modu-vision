@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/label-prompt-exclusions.spec.ts::native exclusion controls and honest unavailable-provider gate",
+  "test_source_sha256": "84d4793318a300cca8266ade32bac27ac0c04b778945394bfea6256e5f70bc23",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "09e7b2101f47d3725596ded395221ea38d63f44cee94842e6431488eb47c935c",
+  "harness_sha256": "36b3d6e173c2b01560e706e294530d3ce55ab551db047c3816eeecf792994e72",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "84b4eccc395c1bc8473bf22819f7dbdcfa88f04a0007ff6a4027b7c008e3c85f"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/service-labeling-focus.spec.ts::the shared editing lock is taken, renewed and kept in focus editing, and a remembered focus layout can save",
+  "test_source_sha256": "77e65a78eb7fe27b4d870516a15e1d5b1bad2a1ed70aed69f31890b1636c40b1",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "e2c7e961ef69a50e6d3a969c2c7f107bdffc286b7765af034fdf774d547c5577",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "bf403d0c266ba2ed8d1aed4cec0da2a486e692a3431c874f4cbf22ef2754bbb1"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

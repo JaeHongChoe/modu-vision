@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "7e183c908bd0fe66b59fb89d8ffdca3bb7bb9292",
+  "source_dirty": false,
+  "test": "scripts/e2e/field-protocols.spec.ts::field mappings and explicit rejected-to-ACK retry on actual sockets",
+  "test_source_sha256": "3fa5738f723c5988ca35f2c97212c158aba83634dc6348da944716502620cd5f",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "38bd3eb469b8b5940ac4c9d5286ed8df4e19ec1fdbde0e67d197e82786213076",
+  "harness_sha256": "1aebddc4f99acb310bac9f4625b59ffa4488592fed3e5817dcc6ec5469bbae51",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "9c7f9de17be431d74682dfb9708dca9a56aa02c01de3a5f7a32f3aa29f1312cd"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "ac7aabfdece9d7d8c13e1baeef7d0ca6c21f2fb38f0f1e95dfdae03d62615f74"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

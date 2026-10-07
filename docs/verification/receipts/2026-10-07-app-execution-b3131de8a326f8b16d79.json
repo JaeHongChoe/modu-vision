@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/service-s0-08.spec.ts::S0-08: a model trained on the actual backend carries its calibrated threshold into the flow; a saved raw threshold of 8 is reopened, kept by an earlier version and used by actual runs; an unsaved flow refuses a task change",
+  "test_source_sha256": "d239edd0dfdd2c2df1e44c18b4bdcac3add82aaadc4400070e23aae26090cebc",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "a25cdb2c6cd91265e74c60708cf85e38a833a2095d3e6cb1fee17cecb699ba8c",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "5f85f64388e5a96e69a0663c6974eee9504efa01a1dddd678ce08274cbb1418c"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "f9906a912c878187598d8328b57b46a4ef92e20f7af84a68b3974b10517697ef"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "ad248efb45394547a2633e7317bf822c5cfee713fd90a43524c9ca582dea9a0b"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "f736e9c34ecf0655ec6f76d969f8771473b2b8305617800792846d30d96b5f10"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

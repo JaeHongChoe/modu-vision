@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/rotation-actual-training.spec.ts::native actual rotation screen completes CPU learned direction and offline export",
+  "test_source_sha256": "adc669bc7974d7fadd244266a283de1a7ded656e210c498eca4a589fcc549ff9",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "09e7b2101f47d3725596ded395221ea38d63f44cee94842e6431488eb47c935c",
+  "harness_sha256": "94ed179af66163c9f3a4321533a9a9380ac3733bcf844ddf08e33ac538fd80b0",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "1eb4541505e94234756797da380eb205a7407bfd90a2960007ca80f6319282db"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "246fdb33628681d470f5cbefb948040eedbdba2281444ccbee10207de887d9f4"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

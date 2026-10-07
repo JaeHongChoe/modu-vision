@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/service-s3-01.spec.ts::a validated revision reads every image, a reject policy holds it, and only an explicit accept activates one",
+  "test_source_sha256": "1f5e1a5c680fb5898b7142cc4046ca57b173d17a28a380e4e559d1634b2594e6",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "54d1c45153f8f909077cae3e0005a9c8664ea19124e99833e72bd285bc84bca0",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "b4830bb1d4a70ce8e00db9202291ebac0bd73e6aecfa8a8ecf7893889cfe55af"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "5002beb52fc2a4fef9e2f066133310fbeb2d8593ea4f1a63a9e0554d4dd24449"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

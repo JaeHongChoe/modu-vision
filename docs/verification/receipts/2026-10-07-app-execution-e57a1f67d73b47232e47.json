@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/service-s2-09.spec.ts::a job left running by a restart reads as interrupted in the task center and in its workbench, with the same next action",
+  "test_source_sha256": "5b66c7febe46cbb60d11a94f8f23b861abbae7c3724dd774b2f3bd5a746c4cbc",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "9bc7ea88e4488836ce3092b3db4f84c3ed863115df4ce2643df0d76360409ddb",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "e65f2ae52826a39d06987ee041aa2c2da76b39f7811b1e2e6da2bc765cec8f6e"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "a357b6c2265407668fe5d402a132bf8d86d5f5ddd09729f79096ee5bf92404e2"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

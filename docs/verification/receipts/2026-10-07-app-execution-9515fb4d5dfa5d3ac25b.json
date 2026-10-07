@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "6246c26b7d220354ef0a6c1ecebbb8888cb9540b",
+  "source_dirty": false,
+  "test": "scripts/e2e/yolo-obb-closure.spec.ts::native authentic OBB actual axial detection and fitted original geometry survive offline recipe",
+  "test_source_sha256": "103cb50ad44e76b85a1f26a5d66eb2e646ae1eb732165b22028c06a8bfa0efb4",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "3b8137447b61821455ad56a51498b24317dbf5031ddda5ef6f5f6f074f1b65b5",
+  "harness_sha256": "51c6d76bc93ae69c30181befeeed3af49c8423e5d3495f3001ec9b0a710c4ae1",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "46673151b672ca70a153e97db6d0c72510dbbafe85a854f4dc130e329f43228f"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "8b08ab7cc0287bbd803cae31b805921c7ab11a9236e78897e90e14798adf204f"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

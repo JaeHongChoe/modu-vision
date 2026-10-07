@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/rotation-actual-training.spec.ts::actual rotation screen labels trains evaluates aligns exports and reopens exact learned direction",
+  "test_source_sha256": "adc669bc7974d7fadd244266a283de1a7ded656e210c498eca4a589fcc549ff9",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "1bdea1d770eca29e8a651a5e3515864b7a1a1185e87fa8db9fc4ca67ab28db9e",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "4ab819fdd7d12abf9f92a42730e0cea36c38ee1d167c4e5fc06c65a01938c6c5"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "b3f4e3ba610885729aee2df728d212ca69046c70b38bdab26945c8b0cbb7e388"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

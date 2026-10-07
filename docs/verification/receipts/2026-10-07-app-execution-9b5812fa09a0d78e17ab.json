@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/inspection-input-queue.spec.ts::folder inputs persist a paged queue, retry and explicit replay lineage with exports",
+  "test_source_sha256": "36ba528782b9e0994b28a4c68aa4c316ba3791dc273e8a9643413b674e48587b",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "77a612108112da53030d7ff4c33cd426c49957e36be8ae4378f3b6b098b6bf2e",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "6ba0607c409fe4882a6f2365d29e57c8253f22e5078fd6537da8d8ef663623c7"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

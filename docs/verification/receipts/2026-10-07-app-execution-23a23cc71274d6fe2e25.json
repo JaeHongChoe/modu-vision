@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/service-s2-09-runtime-budget.spec.ts::the app submits runtime seconds and the owned CPU job reaches budget cancellation with its reservation returned",
+  "test_source_sha256": "14f96672cab6e0f1f35685b23635658dde8e0ac866c76f3e9f44189d6ae36c7b",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "c952dabf3405a3fe79e59697fda3e90805b52d0c57f169325f924b281a0725cd",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "e09c30f8a4dafff70b48f579ac5aa3a761fd1c7bfc58cf19fb120f132659234c"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "0ee0028646d831fe798189d38c721eada9a109feacd6156dcc3786bcf184b62c"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

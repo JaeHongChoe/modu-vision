@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/service-s0-05.spec.ts::a refused model family change keeps the active family and says why",
+  "test_source_sha256": "df3d961ee5460a3c5e8ef4e932c0744c61a4f77d6cc56215e2ab56cb6ff9d4f8",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "82d6d427b728389606d2dbe13b6438f999b0e38a46229479a6359ae6ce2a0b84",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "5d74bffd6349811eb3d9cf04b9e8e85f36fc1772d1c2363cf11b3ed04a595cfc"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

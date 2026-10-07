@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/service-s1-10.spec.ts::a plain browser explains that it cannot open a folder dialog, and paths are typed in",
+  "test_source_sha256": "7a33ebc171aef8f2c826b7fbb7d81325225a21ec1481be828b7a7b4bb608c1e2",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "ec5bc8b094a817250225b56afe147f0eaffa254266ddd322cd8d09df4b83b418",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "8ba79bf30b0260c2ccfba171b340045eebbe6314656f17b985a7519a7939beb9"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

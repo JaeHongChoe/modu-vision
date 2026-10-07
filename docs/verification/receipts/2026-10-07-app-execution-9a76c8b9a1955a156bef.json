@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+  "source_dirty": false,
+  "test": "scripts/e2e/ocr-actual-training.spec.ts::actual OCR screen rejects unknown Korean charset and trains evaluates reads multiline and exports exact rules",
+  "test_source_sha256": "86caedc34dbc6ed8a6b7f7d812d0668b4056c096955effd9c2a004dff9e9c0b9",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "402a83beb1e5e86f651fc1bf14d881220652ccbe35dc7ee6f88306b06e8c25c4",
+  "harness_sha256": "04437d0b734a280c647fea73385ac21a884be5066194122f03bf6c7be487109a",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "6f344ae3b355b617cb1f429c6185187fb6d30759bbaba945a5e0fd8e5e7546d7"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "3aea9260a03b9e5ecb93ee96df68da60707695a0444efd1aa3a78e91fa9960d8"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "3ab27ae5353dc6d3c25a3061b705be05270c9e89",
+  "source_dirty": false,
+  "test": "scripts/e2e/flow-debug-model-freeze.spec.ts::actual CPU debug cache and frozen model A B survive history reopen",
+  "test_source_sha256": "155708aac056bf6a57269a44be553d3eb068d37bf705cd40f73f32deccaced8c",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "3a7118f2db343fe3dc5303a054107f920dc67a46d90229f60fafd578adb0747f",
+  "harness_sha256": "f79152a5e5532dd9a6f37ed2b256574fbd4e7dcf1a19e9dc6c1755d8e86955c7",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "13ad2d7716ce583870cc894e8971c446ee65115940bbca2215d70c309778c76f"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "508129ec64d58be2a00def96eb2f123e215dc917c88e679c70f69b3e268fdf7d"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}
