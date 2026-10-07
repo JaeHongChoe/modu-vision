@@ -1,0 +1,1043 @@
+{
+  "schema": "modu-vision.evidence-edit-authority-closure/v1",
+  "source_sha": "6d782fbf7e6b81dd5f22c6f7c3efa22ca649f290",
+  "selected_source_sha256": {
+    "src/renderer/components/labeling/EvidenceEditReturn.tsx": "485980f5f259f304f3b836c64c83fc2ae14f3ccb20a9273354cc738b52048ac9",
+    "src/renderer/components/labeling/EvidenceEditReturn.test.cjs": "14988992cb139c5a3514255aac06ebf2e1daca49b84d4a7ba78094cedc94c9be",
+    "scripts/e2e/comparison-task-center.spec.ts": "88e9cce01cb81d5d4f5dbeaa62f83280e28c4169f1d0221e8e9eff6169a894a4"
+  },
+  "actual_gui_cases": 2,
+  "red_product_assertions": 4,
+  "focused_passed": 26,
+  "renderer_main_passed": 903,
+  "renderer_main_failed": 0,
+  "renderer_main_skipped": 0,
+  "types": "product and e2e passed",
+  "unit_lineage": "Executed immediately before source commit against exact selected committed bytes, independently compared here. GUI cases ran from clean exact6d782fb with no retries.",
+  "log_sha256": {
+    "evidence-edit-authority-red.log": "845ba57686efa4b12b7428951bce927167a3414332d52f96c242a3774824ab0f",
+    "evidence-edit-unmount-red.log": "84479c4e8c8e95955efdb5283ee8ebdca4938e690c722b1925abcb4f1cc5f8a7",
+    "evidence-edit-final-focused.log": "60780b5db565478eeb3406c6b65cf721f997b6535e08c3ecf9b3f2549b9168c2",
+    "evidence-edit-full-renderer.log": "219c91aff74286172f8a076aa16af273293dbc3c4d7fd3022f1d7cd827d0485d",
+    "evidence-edit-product-types.log": "3cea01ca6731d254d8cb8265f4fb29f0abcddf05eb43593ffedb269501b44fad",
+    "evidence-edit-e2e-types.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "gui_receipts": [
+    {
+      "mode": "browser",
+      "receipt": "2026-10-07-evidence-edit-6d782fb-browser.json",
+      "receipt_sha256": "5d89b8dd51c81b9ccdae2ea4d0f32a5f39b1a2c06de085430248861813d8e328"
+    },
+    {
+      "mode": "electron",
+      "receipt": "2026-10-07-evidence-edit-6d782fb-electron.json",
+      "receipt_sha256": "9e91c644c6d0737c1c593c488dcba68ba7d96c779d12b063b97ba72e3541785f"
+    }
+  ],
+  "observed": [
+    "Old metadata responses cannot keep a newer authority/editor busy, erase a newly saved origin or publish a late old error.",
+    "Leaving the label editor cancels late navigation even after the same stage is entered again. The pending HTTP response completes but causes zero late annotation reads.",
+    "Actual browser/native metadata503 retained the captured origin and saved labels; only deliberate retry reopened the current revision.",
+    "Actual current label save/reload/return kept the historic comparison JSON hash, exact image/product/Lot filters and original file hashes unchanged.",
+    "No-origin controls absent before the first handoff and after the successful return."
+  ],
+  "root_native_visual_readback": true,
+  "actions": 198,
+  "verified_scenarios": 538,
+  "pending_scenarios": 848,
+  "parent_pending": 15,
+  "scope": "Owned generated classification images, untrained checkpoint actual CPU comparisons/inspection and functional label fixture. No representative human truth, training, Windows/physical devices, real publisher update, independent or parent acceptance.",
+  "prior_gui_reference_lineage": [
+    {
+      "registry": "docs/service-action-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-upgrade-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-upgrade-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-upgrade-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-upgrade-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-upgrade-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-upgrade-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-upgrade-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-upgrade-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-upgrade-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-upgrade-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-upgrade-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-upgrade-evidence.json",
+      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
+      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        }
+      ]
+    }
+  ],
+  "historical_reference_revalidation": "Exact clean6d782fb executed the entire comparison Task Center case with all pre-existing assertions as well as new boundaries. Registry links use fresh passing receipts; original historic receipt files and referenced artifacts are retained unchanged."
+}

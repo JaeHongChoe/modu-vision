@@ -6617,39 +6617,47 @@
     "evidence": [
      {
       "task": "S2-09",
-      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "source_sha": "6d782fbf7e6b81dd5f22c6f7c3efa22ca649f290",
       "kind": "click",
       "action": "저장 작업 다시 열기 · 비교 작업·결과 열기",
       "expected": "Open the selected exact completed comparison without new submission.",
       "observed": "Actual native Task Center selection restored exact job/report after reload; later manual saved-report choice took priority until a fresh task-center handoff. No cancel/resource proof is inferred.",
       "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
       "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
-      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
-      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "receipt": "2026-10-07-evidence-edit-6d782fb-electron.json",
+      "receipt_sha256": "9e91c644c6d0737c1c593c488dcba68ba7d96c779d12b063b97ba72e3541785f",
       "artifacts": [
        {
         "id": "screenshot-0",
-        "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        "sha256": "96a27f9995394ef809d2a405fabbc446b75c8e8f9429dfaebb730739e064fa04"
        },
        {
         "id": "screenshot-1",
-        "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        "sha256": "10d0e8991cad88382b2c16a91f020c2a5918045e63cead73d01c870dcae34dfe"
        },
        {
         "id": "screenshot-2",
-        "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        "sha256": "80bb2d51528842d4cc6e872343b55b2bdeb728f5c0429392304b22cd137bf1cc"
        },
        {
         "id": "screenshot-3",
-        "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        "sha256": "fc89f9df3c1a777191b516f020aa33a9cf0d43e617a0fb0ba71411b02bd3447d"
        },
        {
         "id": "screenshot-4",
-        "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        "sha256": "6954e27132cce80efc8cae44b0dd4d72824f6648daa8101cd5ad4165ac433da8"
        },
        {
         "id": "screenshot-5",
-        "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        "sha256": "225cc5dd7a4bc46b9f3cef3a72c617d659ea11962e5bf5fd0d384739a2ec55bd"
+       },
+       {
+        "id": "screenshot-6",
+        "sha256": "fdba232d2390a88843ce0974037253fe5ddce4225fb54b91f4707616a28e5e6d"
+       },
+       {
+        "id": "screenshot-7",
+        "sha256": "46e8dce0fa114b4b96f678d93c1630c87b70929086bf2ef29f74523542532070"
        }
       ]
      }
@@ -6660,39 +6668,47 @@
     "evidence": [
      {
       "task": "S2-09",
-      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "source_sha": "6d782fbf7e6b81dd5f22c6f7c3efa22ca649f290",
       "kind": "click",
       "action": "저장 작업 다시 열기 · 비교 작업·결과 열기",
       "expected": "Open the selected exact completed comparison without new submission.",
       "observed": "Actual native Task Center selection restored exact job/report after reload; later manual saved-report choice took priority until a fresh task-center handoff. No cancel/resource proof is inferred.",
       "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
       "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
-      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
-      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "receipt": "2026-10-07-evidence-edit-6d782fb-electron.json",
+      "receipt_sha256": "9e91c644c6d0737c1c593c488dcba68ba7d96c779d12b063b97ba72e3541785f",
       "artifacts": [
        {
         "id": "screenshot-0",
-        "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        "sha256": "96a27f9995394ef809d2a405fabbc446b75c8e8f9429dfaebb730739e064fa04"
        },
        {
         "id": "screenshot-1",
-        "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        "sha256": "10d0e8991cad88382b2c16a91f020c2a5918045e63cead73d01c870dcae34dfe"
        },
        {
         "id": "screenshot-2",
-        "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        "sha256": "80bb2d51528842d4cc6e872343b55b2bdeb728f5c0429392304b22cd137bf1cc"
        },
        {
         "id": "screenshot-3",
-        "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        "sha256": "fc89f9df3c1a777191b516f020aa33a9cf0d43e617a0fb0ba71411b02bd3447d"
        },
        {
         "id": "screenshot-4",
-        "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        "sha256": "6954e27132cce80efc8cae44b0dd4d72824f6648daa8101cd5ad4165ac433da8"
        },
        {
         "id": "screenshot-5",
-        "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        "sha256": "225cc5dd7a4bc46b9f3cef3a72c617d659ea11962e5bf5fd0d384739a2ec55bd"
+       },
+       {
+        "id": "screenshot-6",
+        "sha256": "fdba232d2390a88843ce0974037253fe5ddce4225fb54b91f4707616a28e5e6d"
+       },
+       {
+        "id": "screenshot-7",
+        "sha256": "46e8dce0fa114b4b96f678d93c1630c87b70929086bf2ef29f74523542532070"
        }
       ]
      }
@@ -6703,39 +6719,47 @@
     "evidence": [
      {
       "task": "S2-09",
-      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "source_sha": "6d782fbf7e6b81dd5f22c6f7c3efa22ca649f290",
       "kind": "click",
       "action": "저장 작업 다시 열기 · 비교 작업·결과 열기",
       "expected": "Open the selected exact completed comparison without new submission.",
       "observed": "Actual native Task Center selection restored exact job/report after reload; later manual saved-report choice took priority until a fresh task-center handoff. No cancel/resource proof is inferred.",
       "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
       "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
-      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
-      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "receipt": "2026-10-07-evidence-edit-6d782fb-electron.json",
+      "receipt_sha256": "9e91c644c6d0737c1c593c488dcba68ba7d96c779d12b063b97ba72e3541785f",
       "artifacts": [
        {
         "id": "screenshot-0",
-        "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        "sha256": "96a27f9995394ef809d2a405fabbc446b75c8e8f9429dfaebb730739e064fa04"
        },
        {
         "id": "screenshot-1",
-        "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        "sha256": "10d0e8991cad88382b2c16a91f020c2a5918045e63cead73d01c870dcae34dfe"
        },
        {
         "id": "screenshot-2",
-        "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        "sha256": "80bb2d51528842d4cc6e872343b55b2bdeb728f5c0429392304b22cd137bf1cc"
        },
        {
         "id": "screenshot-3",
-        "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        "sha256": "fc89f9df3c1a777191b516f020aa33a9cf0d43e617a0fb0ba71411b02bd3447d"
        },
        {
         "id": "screenshot-4",
-        "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        "sha256": "6954e27132cce80efc8cae44b0dd4d72824f6648daa8101cd5ad4165ac433da8"
        },
        {
         "id": "screenshot-5",
-        "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        "sha256": "225cc5dd7a4bc46b9f3cef3a72c617d659ea11962e5bf5fd0d384739a2ec55bd"
+       },
+       {
+        "id": "screenshot-6",
+        "sha256": "fdba232d2390a88843ce0974037253fe5ddce4225fb54b91f4707616a28e5e6d"
+       },
+       {
+        "id": "screenshot-7",
+        "sha256": "46e8dce0fa114b4b96f678d93c1630c87b70929086bf2ef29f74523542532070"
        }
       ]
      }
@@ -6749,39 +6773,47 @@
     "evidence": [
      {
       "task": "S2-09",
-      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "source_sha": "6d782fbf7e6b81dd5f22c6f7c3efa22ca649f290",
       "kind": "click",
       "action": "저장 작업 다시 열기 · 비교 작업·결과 열기",
       "expected": "Open the selected exact completed comparison without new submission.",
       "observed": "Actual native Task Center selection restored exact job/report after reload; later manual saved-report choice took priority until a fresh task-center handoff. No cancel/resource proof is inferred.",
       "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
       "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
-      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
-      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "receipt": "2026-10-07-evidence-edit-6d782fb-electron.json",
+      "receipt_sha256": "9e91c644c6d0737c1c593c488dcba68ba7d96c779d12b063b97ba72e3541785f",
       "artifacts": [
        {
         "id": "screenshot-0",
-        "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        "sha256": "96a27f9995394ef809d2a405fabbc446b75c8e8f9429dfaebb730739e064fa04"
        },
        {
         "id": "screenshot-1",
-        "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        "sha256": "10d0e8991cad88382b2c16a91f020c2a5918045e63cead73d01c870dcae34dfe"
        },
        {
         "id": "screenshot-2",
-        "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        "sha256": "80bb2d51528842d4cc6e872343b55b2bdeb728f5c0429392304b22cd137bf1cc"
        },
        {
         "id": "screenshot-3",
-        "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        "sha256": "fc89f9df3c1a777191b516f020aa33a9cf0d43e617a0fb0ba71411b02bd3447d"
        },
        {
         "id": "screenshot-4",
-        "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        "sha256": "6954e27132cce80efc8cae44b0dd4d72824f6648daa8101cd5ad4165ac433da8"
        },
        {
         "id": "screenshot-5",
-        "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        "sha256": "225cc5dd7a4bc46b9f3cef3a72c617d659ea11962e5bf5fd0d384739a2ec55bd"
+       },
+       {
+        "id": "screenshot-6",
+        "sha256": "fdba232d2390a88843ce0974037253fe5ddce4225fb54b91f4707616a28e5e6d"
+       },
+       {
+        "id": "screenshot-7",
+        "sha256": "46e8dce0fa114b4b96f678d93c1630c87b70929086bf2ef29f74523542532070"
        }
       ]
      }
@@ -7687,77 +7719,93 @@
     "evidence": [
      {
       "task": "S3-09",
-      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "source_sha": "6d782fbf7e6b81dd5f22c6f7c3efa22ca649f290",
       "kind": "click",
       "action": "현재 항목 열기",
       "expected": "Return to the saved original report and image without rewriting historic results.",
       "observed": "Actual native saved queue selection opened its exact current image and enabled review-next; next/skip cursor advancement itself was not executed.",
       "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
       "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
-      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
-      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "receipt": "2026-10-07-evidence-edit-6d782fb-electron.json",
+      "receipt_sha256": "9e91c644c6d0737c1c593c488dcba68ba7d96c779d12b063b97ba72e3541785f",
       "artifacts": [
        {
         "id": "screenshot-0",
-        "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        "sha256": "96a27f9995394ef809d2a405fabbc446b75c8e8f9429dfaebb730739e064fa04"
        },
        {
         "id": "screenshot-1",
-        "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        "sha256": "10d0e8991cad88382b2c16a91f020c2a5918045e63cead73d01c870dcae34dfe"
        },
        {
         "id": "screenshot-2",
-        "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        "sha256": "80bb2d51528842d4cc6e872343b55b2bdeb728f5c0429392304b22cd137bf1cc"
        },
        {
         "id": "screenshot-3",
-        "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        "sha256": "fc89f9df3c1a777191b516f020aa33a9cf0d43e617a0fb0ba71411b02bd3447d"
        },
        {
         "id": "screenshot-4",
-        "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        "sha256": "6954e27132cce80efc8cae44b0dd4d72824f6648daa8101cd5ad4165ac433da8"
        },
        {
         "id": "screenshot-5",
-        "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        "sha256": "225cc5dd7a4bc46b9f3cef3a72c617d659ea11962e5bf5fd0d384739a2ec55bd"
+       },
+       {
+        "id": "screenshot-6",
+        "sha256": "fdba232d2390a88843ce0974037253fe5ddce4225fb54b91f4707616a28e5e6d"
+       },
+       {
+        "id": "screenshot-7",
+        "sha256": "46e8dce0fa114b4b96f678d93c1630c87b70929086bf2ef29f74523542532070"
        }
       ]
      },
      {
       "task": "S3-09",
-      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "source_sha": "6d782fbf7e6b81dd5f22c6f7c3efa22ca649f290",
       "kind": "click",
       "action": "원래 평가·비교로 돌아가기",
       "expected": "Return to the saved original report and image without rewriting historic results.",
       "observed": "Actual native return reopened the exact comparison/report and highlighted the queue image; reload retained that report without resubmitting comparison.",
       "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
       "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
-      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
-      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "receipt": "2026-10-07-evidence-edit-6d782fb-electron.json",
+      "receipt_sha256": "9e91c644c6d0737c1c593c488dcba68ba7d96c779d12b063b97ba72e3541785f",
       "artifacts": [
        {
         "id": "screenshot-0",
-        "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        "sha256": "96a27f9995394ef809d2a405fabbc446b75c8e8f9429dfaebb730739e064fa04"
        },
        {
         "id": "screenshot-1",
-        "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        "sha256": "10d0e8991cad88382b2c16a91f020c2a5918045e63cead73d01c870dcae34dfe"
        },
        {
         "id": "screenshot-2",
-        "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        "sha256": "80bb2d51528842d4cc6e872343b55b2bdeb728f5c0429392304b22cd137bf1cc"
        },
        {
         "id": "screenshot-3",
-        "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        "sha256": "fc89f9df3c1a777191b516f020aa33a9cf0d43e617a0fb0ba71411b02bd3447d"
        },
        {
         "id": "screenshot-4",
-        "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        "sha256": "6954e27132cce80efc8cae44b0dd4d72824f6648daa8101cd5ad4165ac433da8"
        },
        {
         "id": "screenshot-5",
-        "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        "sha256": "225cc5dd7a4bc46b9f3cef3a72c617d659ea11962e5bf5fd0d384739a2ec55bd"
+       },
+       {
+        "id": "screenshot-6",
+        "sha256": "fdba232d2390a88843ce0974037253fe5ddce4225fb54b91f4707616a28e5e6d"
+       },
+       {
+        "id": "screenshot-7",
+        "sha256": "46e8dce0fa114b4b96f678d93c1630c87b70929086bf2ef29f74523542532070"
        }
       ]
      }
@@ -7768,77 +7816,93 @@
     "evidence": [
      {
       "task": "S3-09",
-      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "source_sha": "6d782fbf7e6b81dd5f22c6f7c3efa22ca649f290",
       "kind": "click",
       "action": "현재 항목 열기",
       "expected": "Return to the saved original report and image without rewriting historic results.",
       "observed": "Actual native saved queue selection opened its exact current image and enabled review-next; next/skip cursor advancement itself was not executed.",
       "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
       "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
-      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
-      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "receipt": "2026-10-07-evidence-edit-6d782fb-electron.json",
+      "receipt_sha256": "9e91c644c6d0737c1c593c488dcba68ba7d96c779d12b063b97ba72e3541785f",
       "artifacts": [
        {
         "id": "screenshot-0",
-        "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        "sha256": "96a27f9995394ef809d2a405fabbc446b75c8e8f9429dfaebb730739e064fa04"
        },
        {
         "id": "screenshot-1",
-        "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        "sha256": "10d0e8991cad88382b2c16a91f020c2a5918045e63cead73d01c870dcae34dfe"
        },
        {
         "id": "screenshot-2",
-        "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        "sha256": "80bb2d51528842d4cc6e872343b55b2bdeb728f5c0429392304b22cd137bf1cc"
        },
        {
         "id": "screenshot-3",
-        "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        "sha256": "fc89f9df3c1a777191b516f020aa33a9cf0d43e617a0fb0ba71411b02bd3447d"
        },
        {
         "id": "screenshot-4",
-        "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        "sha256": "6954e27132cce80efc8cae44b0dd4d72824f6648daa8101cd5ad4165ac433da8"
        },
        {
         "id": "screenshot-5",
-        "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        "sha256": "225cc5dd7a4bc46b9f3cef3a72c617d659ea11962e5bf5fd0d384739a2ec55bd"
+       },
+       {
+        "id": "screenshot-6",
+        "sha256": "fdba232d2390a88843ce0974037253fe5ddce4225fb54b91f4707616a28e5e6d"
+       },
+       {
+        "id": "screenshot-7",
+        "sha256": "46e8dce0fa114b4b96f678d93c1630c87b70929086bf2ef29f74523542532070"
        }
       ]
      },
      {
       "task": "S3-09",
-      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "source_sha": "6d782fbf7e6b81dd5f22c6f7c3efa22ca649f290",
       "kind": "click",
       "action": "원래 평가·비교로 돌아가기",
       "expected": "Return to the saved original report and image without rewriting historic results.",
       "observed": "Actual native return reopened the exact comparison/report and highlighted the queue image; reload retained that report without resubmitting comparison.",
       "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
       "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
-      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
-      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "receipt": "2026-10-07-evidence-edit-6d782fb-electron.json",
+      "receipt_sha256": "9e91c644c6d0737c1c593c488dcba68ba7d96c779d12b063b97ba72e3541785f",
       "artifacts": [
        {
         "id": "screenshot-0",
-        "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        "sha256": "96a27f9995394ef809d2a405fabbc446b75c8e8f9429dfaebb730739e064fa04"
        },
        {
         "id": "screenshot-1",
-        "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        "sha256": "10d0e8991cad88382b2c16a91f020c2a5918045e63cead73d01c870dcae34dfe"
        },
        {
         "id": "screenshot-2",
-        "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        "sha256": "80bb2d51528842d4cc6e872343b55b2bdeb728f5c0429392304b22cd137bf1cc"
        },
        {
         "id": "screenshot-3",
-        "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        "sha256": "fc89f9df3c1a777191b516f020aa33a9cf0d43e617a0fb0ba71411b02bd3447d"
        },
        {
         "id": "screenshot-4",
-        "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        "sha256": "6954e27132cce80efc8cae44b0dd4d72824f6648daa8101cd5ad4165ac433da8"
        },
        {
         "id": "screenshot-5",
-        "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        "sha256": "225cc5dd7a4bc46b9f3cef3a72c617d659ea11962e5bf5fd0d384739a2ec55bd"
+       },
+       {
+        "id": "screenshot-6",
+        "sha256": "fdba232d2390a88843ce0974037253fe5ddce4225fb54b91f4707616a28e5e6d"
+       },
+       {
+        "id": "screenshot-7",
+        "sha256": "46e8dce0fa114b4b96f678d93c1630c87b70929086bf2ef29f74523542532070"
        }
       ]
      }
@@ -7849,77 +7913,93 @@
     "evidence": [
      {
       "task": "S3-09",
-      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "source_sha": "6d782fbf7e6b81dd5f22c6f7c3efa22ca649f290",
       "kind": "click",
       "action": "현재 항목 열기",
       "expected": "Return to the saved original report and image without rewriting historic results.",
       "observed": "Actual native saved queue selection opened its exact current image and enabled review-next; next/skip cursor advancement itself was not executed.",
       "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
       "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
-      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
-      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "receipt": "2026-10-07-evidence-edit-6d782fb-electron.json",
+      "receipt_sha256": "9e91c644c6d0737c1c593c488dcba68ba7d96c779d12b063b97ba72e3541785f",
       "artifacts": [
        {
         "id": "screenshot-0",
-        "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        "sha256": "96a27f9995394ef809d2a405fabbc446b75c8e8f9429dfaebb730739e064fa04"
        },
        {
         "id": "screenshot-1",
-        "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        "sha256": "10d0e8991cad88382b2c16a91f020c2a5918045e63cead73d01c870dcae34dfe"
        },
        {
         "id": "screenshot-2",
-        "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        "sha256": "80bb2d51528842d4cc6e872343b55b2bdeb728f5c0429392304b22cd137bf1cc"
        },
        {
         "id": "screenshot-3",
-        "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        "sha256": "fc89f9df3c1a777191b516f020aa33a9cf0d43e617a0fb0ba71411b02bd3447d"
        },
        {
         "id": "screenshot-4",
-        "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        "sha256": "6954e27132cce80efc8cae44b0dd4d72824f6648daa8101cd5ad4165ac433da8"
        },
        {
         "id": "screenshot-5",
-        "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        "sha256": "225cc5dd7a4bc46b9f3cef3a72c617d659ea11962e5bf5fd0d384739a2ec55bd"
+       },
+       {
+        "id": "screenshot-6",
+        "sha256": "fdba232d2390a88843ce0974037253fe5ddce4225fb54b91f4707616a28e5e6d"
+       },
+       {
+        "id": "screenshot-7",
+        "sha256": "46e8dce0fa114b4b96f678d93c1630c87b70929086bf2ef29f74523542532070"
        }
       ]
      },
      {
       "task": "S3-09",
-      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "source_sha": "6d782fbf7e6b81dd5f22c6f7c3efa22ca649f290",
       "kind": "click",
       "action": "원래 평가·비교로 돌아가기",
       "expected": "Return to the saved original report and image without rewriting historic results.",
       "observed": "Actual native return reopened the exact comparison/report and highlighted the queue image; reload retained that report without resubmitting comparison.",
       "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
       "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
-      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
-      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "receipt": "2026-10-07-evidence-edit-6d782fb-electron.json",
+      "receipt_sha256": "9e91c644c6d0737c1c593c488dcba68ba7d96c779d12b063b97ba72e3541785f",
       "artifacts": [
        {
         "id": "screenshot-0",
-        "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        "sha256": "96a27f9995394ef809d2a405fabbc446b75c8e8f9429dfaebb730739e064fa04"
        },
        {
         "id": "screenshot-1",
-        "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        "sha256": "10d0e8991cad88382b2c16a91f020c2a5918045e63cead73d01c870dcae34dfe"
        },
        {
         "id": "screenshot-2",
-        "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        "sha256": "80bb2d51528842d4cc6e872343b55b2bdeb728f5c0429392304b22cd137bf1cc"
        },
        {
         "id": "screenshot-3",
-        "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        "sha256": "fc89f9df3c1a777191b516f020aa33a9cf0d43e617a0fb0ba71411b02bd3447d"
        },
        {
         "id": "screenshot-4",
-        "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        "sha256": "6954e27132cce80efc8cae44b0dd4d72824f6648daa8101cd5ad4165ac433da8"
        },
        {
         "id": "screenshot-5",
-        "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        "sha256": "225cc5dd7a4bc46b9f3cef3a72c617d659ea11962e5bf5fd0d384739a2ec55bd"
+       },
+       {
+        "id": "screenshot-6",
+        "sha256": "fdba232d2390a88843ce0974037253fe5ddce4225fb54b91f4707616a28e5e6d"
+       },
+       {
+        "id": "screenshot-7",
+        "sha256": "46e8dce0fa114b4b96f678d93c1630c87b70929086bf2ef29f74523542532070"
        }
       ]
      }
@@ -7933,77 +8013,93 @@
     "evidence": [
      {
       "task": "S3-09",
-      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "source_sha": "6d782fbf7e6b81dd5f22c6f7c3efa22ca649f290",
       "kind": "click",
       "action": "현재 항목 열기",
       "expected": "Return to the saved original report and image without rewriting historic results.",
       "observed": "Actual native saved queue selection opened its exact current image and enabled review-next; next/skip cursor advancement itself was not executed.",
       "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
       "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
-      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
-      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "receipt": "2026-10-07-evidence-edit-6d782fb-electron.json",
+      "receipt_sha256": "9e91c644c6d0737c1c593c488dcba68ba7d96c779d12b063b97ba72e3541785f",
       "artifacts": [
        {
         "id": "screenshot-0",
-        "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        "sha256": "96a27f9995394ef809d2a405fabbc446b75c8e8f9429dfaebb730739e064fa04"
        },
        {
         "id": "screenshot-1",
-        "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        "sha256": "10d0e8991cad88382b2c16a91f020c2a5918045e63cead73d01c870dcae34dfe"
        },
        {
         "id": "screenshot-2",
-        "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        "sha256": "80bb2d51528842d4cc6e872343b55b2bdeb728f5c0429392304b22cd137bf1cc"
        },
        {
         "id": "screenshot-3",
-        "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        "sha256": "fc89f9df3c1a777191b516f020aa33a9cf0d43e617a0fb0ba71411b02bd3447d"
        },
        {
         "id": "screenshot-4",
-        "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        "sha256": "6954e27132cce80efc8cae44b0dd4d72824f6648daa8101cd5ad4165ac433da8"
        },
        {
         "id": "screenshot-5",
-        "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        "sha256": "225cc5dd7a4bc46b9f3cef3a72c617d659ea11962e5bf5fd0d384739a2ec55bd"
+       },
+       {
+        "id": "screenshot-6",
+        "sha256": "fdba232d2390a88843ce0974037253fe5ddce4225fb54b91f4707616a28e5e6d"
+       },
+       {
+        "id": "screenshot-7",
+        "sha256": "46e8dce0fa114b4b96f678d93c1630c87b70929086bf2ef29f74523542532070"
        }
       ]
      },
      {
       "task": "S3-09",
-      "source_sha": "964e03294893400b4cc9ae82867404c7e1e160eb",
+      "source_sha": "6d782fbf7e6b81dd5f22c6f7c3efa22ca649f290",
       "kind": "click",
       "action": "원래 평가·비교로 돌아가기",
       "expected": "Return to the saved original report and image without rewriting historic results.",
       "observed": "Actual native return reopened the exact comparison/report and highlighted the queue image; reload retained that report without resubmitting comparison.",
       "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
       "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
-      "receipt": "2026-10-07-app-comparison-task-center-electron.json",
-      "receipt_sha256": "56b60727d0c795919432cec80fd9274b8c5e06f323702c30a642e2b2701d906f",
+      "receipt": "2026-10-07-evidence-edit-6d782fb-electron.json",
+      "receipt_sha256": "9e91c644c6d0737c1c593c488dcba68ba7d96c779d12b063b97ba72e3541785f",
       "artifacts": [
        {
         "id": "screenshot-0",
-        "sha256": "623203c59b411db7f715915f3d79963b0cbfa9f009c09a0abae6a8d4304e872f"
+        "sha256": "96a27f9995394ef809d2a405fabbc446b75c8e8f9429dfaebb730739e064fa04"
        },
        {
         "id": "screenshot-1",
-        "sha256": "aad0722f9163ebab598174b4eccde4d012ec13e2e38edf43323edebc157341b6"
+        "sha256": "10d0e8991cad88382b2c16a91f020c2a5918045e63cead73d01c870dcae34dfe"
        },
        {
         "id": "screenshot-2",
-        "sha256": "e9411c533be2d5f8222fd2e1e92687fe1e7a8dcf5dee435a65a3bb1ae8534ad7"
+        "sha256": "80bb2d51528842d4cc6e872343b55b2bdeb728f5c0429392304b22cd137bf1cc"
        },
        {
         "id": "screenshot-3",
-        "sha256": "94067dd24405be02203463f6fcb85db4431488de67c7d4165b547be9bce302df"
+        "sha256": "fc89f9df3c1a777191b516f020aa33a9cf0d43e617a0fb0ba71411b02bd3447d"
        },
        {
         "id": "screenshot-4",
-        "sha256": "a19b8c4f801a1ca287aba38270821b871079b99d712f6c4ea0b5bba31ccc0fa3"
+        "sha256": "6954e27132cce80efc8cae44b0dd4d72824f6648daa8101cd5ad4165ac433da8"
        },
        {
         "id": "screenshot-5",
-        "sha256": "b0e2cf585badb5b436eed46249d01941b894b4f344763f793c8f9148c6719f2e"
+        "sha256": "225cc5dd7a4bc46b9f3cef3a72c617d659ea11962e5bf5fd0d384739a2ec55bd"
+       },
+       {
+        "id": "screenshot-6",
+        "sha256": "fdba232d2390a88843ce0974037253fe5ddce4225fb54b91f4707616a28e5e6d"
+       },
+       {
+        "id": "screenshot-7",
+        "sha256": "46e8dce0fa114b4b96f678d93c1630c87b70929086bf2ef29f74523542532070"
        }
       ]
      }

@@ -12,7 +12,7 @@
 | S6-04 | 오프라인 업데이트 | owned POSIX portable 앱·DB cutover, crash finish, 새 account/profile 보존 forward recovery; actual frozen CLI5회·별도 CPU known-image2회; 새 main/preload/renderer 검토·복구 연결, 관련Python125/Node40 및 UI2개 통과 | 실제 OS installer·설치된 home·실 publisher 서명·native positive 설치 및 installed-app known-image handoff |
 | S6-05 | 공개 CI | 기존 hosted success 보존; 전체 CPU2706 pass/고지 누락1 fail·고지62 및 optional27 repair pass | 최신 게시 source 전체 CI 완료; 기존 queue 및 실패 기록 보존 |
 | S6-06 | 서명·채널 | unsigned 상태와 checksum/source 연결 | 실제 publisher/서명 키·최종 artifact와 stable/beta 운영 정책 |
-| S7-01 | 전체 기능 행동 coverage | 197개 curated action, 530개 시나리오 검증; retention·template 실제 browser/Electron 근거 추가 | 849개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
+| S7-01 | 전체 기능 행동 coverage | 198개 curated action, 538개 시나리오 검증; retention·template 실제 browser/Electron 근거 추가 | 848개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
 | S7-02 | 10개 모델군 시나리오 | 실제 family별 학습/추론·다중 checkpoint·flow/package control 기록 | 사람이 검토한 대표 분류/정상/OCR/OBB/향상/GAN truth와 품질 판정 |
 | S7-03 | Windows 실사용 | 기존 unsigned runner 결과 보존 | 사용자 면제. 신규 실기 테스트를 시작하지 않으며 pass로 바꾸지 않음 |
 | S7-04 | 동시 작업·장애 | 2개 계정/agent·actual CPU·재접속·권한/충돌 control; controlled signed portable 앱·DB cutover 및 crash recovery | 물리적 장애와 실제 publisher가 서명한 native 앱 업데이트 |
@@ -276,3 +276,10 @@ Owned qualification-key macOS fixture의 actual install→entrypoint→new profi
 
 - GitHub workflow37609087737은 sourcee481810에서 completed/success이다. 실제 run/job/step API 원문과 해시를 보존했고 source gate·type/build·CPU·core baseline·browser·license inventory·evidence preservation 단계가 모두 success임을 읽었다.
 - 이 API 관찰은 테스트 수나 큰 artifact 내부 bytes를 새로 추출하지 않았다. 현재560f44e 및 이후 변경의 전체 CI 성공으로 바꾸지 않는다. 신규 published source gate는 별도이며 부모15건을 완료 처리하지 않았다. Public receipt:2026-10-07-hosted-source-ci-e481810.json.
+
+## 추가 실행: 현재 라벨 편집의 authority·화면 수명 경계
+
+- 늦은 이전 metadata 요청이 새 화면 버튼을 잠금, 이전 복귀가 새 origin을 삭제, 이전 오류가 새 editor에 표시, 화면을 떠났다가 재진입한 뒤 늦은 요청이 다시 라벨을 여는 실제 component 오류4개를 재현했다. 정확한 actor/project/API generation/transport/origin snapshot과 editor 수명을 확인하도록 고쳤다.
+- 관련26 passed/전체 renderer-main903 passed/0skip, product/e2e 타입 검사를 통과했다. Clean source6d782fb에서 actual browser/native 각1회가 retry0으로 통과했다. Metadata503·deliberate retry·늦은 응답을 보류한 상태에서 화면 이동/재진입·정확한 origin 보존·늦은 annotation read0을 확인했다. 원래 red 로그와 screenshot/API/teardown을 보존했다.
+- 새 실제 reopen action7차원 및 기존 return empty1차원만 채워198 actions/538 verified/848 pending이다. Return error/cancel은 이 metadata reopen 근거로 채우지 않았다. Historical report JSON hash와 원본 SHA, 정확한 report/image/product/Lot 복귀가 유지됐다. 합성 normal 라벨은 사람의 품질 승인이나 training으로 집계하지 않는다.
+- Public receipt:2026-10-07-evidence-edit-closure-6d782fb.json. 부모67/82·미완료15/82·전체 수락0을 유지한다.

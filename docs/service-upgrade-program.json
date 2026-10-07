@@ -5597,6 +5597,14 @@
      "receipt_sha256": "1012abdef68116ac5b539c2770e1c9752d09f8a3d1c94b904dde8f4f5d1d3e77",
      "result": "33 focused/896 full renderer-main passed and actual browser/native origin controls plus raster regressions each2 pass; exact source lineage and prior fixture failure retained.",
      "scope": "Owned generated images and untrained PaDiM feature fixture only; no app training, representative human quality, Windows/hardware, signed release, full feature or independent acceptance."
+    },
+    {
+     "kind": "actual-evidence-editor-authority-controls",
+     "source_sha": "6d782fbf7e6b81dd5f22c6f7c3efa22ca649f290",
+     "receipt": "docs/verification/receipts/2026-10-07-evidence-edit-closure-6d782fb.json",
+     "receipt_sha256": "cb6456a25c6f4a6044655508b30862c91b88626936dbc81f2280da0f7cc18eb7",
+     "result": "Four reproduced product races repaired;26 focused/903 renderer-main passed, both types and actual clean browser/native cases passed.",
+     "scope": "Owned generated classification images, untrained checkpoint actual CPU comparisons/inspection and functional label fixture. No representative human truth, training, Windows/physical devices, real publisher update, independent or parent acceptance."
     }
    ],
    "file_actions": {
@@ -5621,7 +5629,7 @@
    },
    "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts",
    "remaining": [
-    "197 curated actions have530 verified scenarios and849 pending scenarios. Other helpers/menus/shortcuts and all156-feature full acceptance remain pending."
+    "198 curated actions have538 verified scenarios and848 pending scenarios. Other helpers/menus/shortcuts and all156-feature full acceptance remain pending."
    ]
   },
   {
@@ -5821,6 +5829,14 @@
      "receipt_sha256": "1012abdef68116ac5b539c2770e1c9752d09f8a3d1c94b904dde8f4f5d1d3e77",
      "result": "33 focused/896 full renderer-main passed and actual browser/native origin controls plus raster regressions each2 pass; exact source lineage and prior fixture failure retained.",
      "scope": "Owned generated images and untrained PaDiM feature fixture only; no app training, representative human quality, Windows/hardware, signed release, full feature or independent acceptance."
+    },
+    {
+     "kind": "actual-evidence-editor-authority-controls",
+     "source_sha": "6d782fbf7e6b81dd5f22c6f7c3efa22ca649f290",
+     "receipt": "docs/verification/receipts/2026-10-07-evidence-edit-closure-6d782fb.json",
+     "receipt_sha256": "cb6456a25c6f4a6044655508b30862c91b88626936dbc81f2280da0f7cc18eb7",
+     "result": "Four reproduced product races repaired;26 focused/903 renderer-main passed, both types and actual clean browser/native cases passed.",
+     "scope": "Owned generated classification images, untrained checkpoint actual CPU comparisons/inspection and functional label fixture. No representative human truth, training, Windows/physical devices, real publisher update, independent or parent acceptance."
     }
    ],
    "file_actions": {
