@@ -41,6 +41,8 @@ def test_build_binary_does_not_send_unbounded_compiler_arguments_to_createproces
             folder = output / 'vision_ai_backend'
             folder.mkdir()
             (folder / 'vision_ai_backend.exe').write_bytes(b'fixture delivered binary')
+            toc=output/'.build/work/vision_ai_backend/PYZ-00.toc'
+            toc.parent.mkdir(parents=True,exist_ok=True);toc.write_text('[]')
         return subprocess.CompletedProcess(command, 0)
     monkeypatch.setattr(build.subprocess, 'run', boundary)
     build.build_binary(output, accept=True)
@@ -73,7 +75,9 @@ def test_full_build_child_public_api_receives_exact_utf8_arguments(tmp_path, mon
         "    output = Path(next(value.split('=', 1)[1] for value in arguments if value.startswith('--distpath=')))\n"
         "    folder = output / 'vision_ai_backend'\n"
         "    folder.mkdir()\n"
-        "    (folder / 'vision_ai_backend.exe').write_bytes(b'isolated compiler fixture')\n", encoding='utf-8')
+        "    (folder / 'vision_ai_backend.exe').write_bytes(b'isolated compiler fixture')\n"
+        "    toc = output / '.build/work/vision_ai_backend/PYZ-00.toc'\n"
+        "    toc.parent.mkdir(parents=True, exist_ok=True); toc.write_text('[]')\n", encoding='utf-8')
     real_run = subprocess.run
     calls = []
     def execute(command, **kwargs):

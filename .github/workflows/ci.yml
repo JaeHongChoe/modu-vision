@@ -53,7 +53,7 @@ jobs:
           npm run test:renderer
           npm run build
           npm run test:e2e:harness
-          node --test scripts/tests/release-readiness.test.cjs scripts/verify-release-recovery.cjs
+          node --test scripts/tests/release-readiness.test.cjs scripts/tests/package-license-texts.test.cjs scripts/verify-release-recovery.cjs
       - name: CPU contract and recovery regressions
         env:
           MV_CI_RECORD_DIR: ${{ runner.temp }}/modu-ci-manifests
@@ -204,6 +204,8 @@ jobs:
           backend/tests/test_terminal_remote_label_history.py
           backend/tests/test_terminal_specialist_history.py
           backend/tests/test_service_listener_security.py
+          backend/tests/test_packaged_license_texts.py
+          backend/tests/test_fleet_secret_store.py
           backend/tests/test_historical_control_schema.py
           backend/tests/test_migration_sqlite_lifetime.py
           backend/tests/test_anomaly_folder_case.py

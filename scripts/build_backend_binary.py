@@ -80,7 +80,8 @@ def dependency_inventory(root: Path) -> dict:
     sources = sorted(path for path in (root / 'backend').rglob('*.py')
                      if not {'tests', '__pycache__', '.pytest_cache'}.intersection(path.parts))
     resources = sorted(set(path for path, _ in export_resource_files(root)) | set(sources)
-                       | {root / 'scripts' / 'frozen_backend_entry.py',root/'requirements.txt'})
+                       | {root / 'scripts' / 'frozen_backend_entry.py',root/'requirements.txt',
+                          root/'scripts/package_license_texts.py',root/'scripts/license_inventory.py'})
     inventory = {'schema_version': 1, 'platform': platform.system(), 'architecture': platform.machine(),
                  'python_version': platform.python_version(), 'dependencies': dependencies,
                  'compiler': {'name': 'PyInstaller', 'version': importlib.metadata.version('pyinstaller') if check_pyinstaller() else None},
@@ -237,9 +238,14 @@ def build_binary(output=OUTPUT_DIR, *, accept=True):
         sys.exit(res.returncode)
 
     binary_dir = output / 'vision_ai_backend'
+    if str(ROOT_DIR) not in sys.path:sys.path.insert(0,str(ROOT_DIR))
+    from scripts.package_license_texts import collect_frozen_licenses
+    license_texts = collect_frozen_licenses(binary_dir, output/'.build/work/vision_ai_backend/PYZ-00.toc',
+                                          binary_dir/'third_party_licenses')
     executable = binary_dir / ('vision_ai_backend.exe' if platform.system() == 'Windows' else 'vision_ai_backend')
     release = {'schema_version': 1, 'executable': executable.name, 'executable_sha256': sha256(executable),
                'inventory': inventory, 'signature_status': 'unverified', 'acceptance': None}
+    release['license_texts'] = license_texts
     release['files'] = [{'path': str(path.relative_to(binary_dir)), 'sha256': sha256(path)}
                         for path in sorted(binary_dir.rglob('*')) if path.is_file()]
     receipt_path = binary_dir / 'backend-release.json'

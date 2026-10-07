@@ -24,6 +24,12 @@ files:
 
 # Extract Python backend into resourcesPath (unpacked from ASAR so Python interpreter can read it)
 extraResources:
+  - from: "THIRD_PARTY_NOTICES.md"
+    to: "THIRD_PARTY_NOTICES.md"
+  - from: "LICENSE"
+    to: "LICENSE"
+  - from: "docs/model-license-matrix.md"
+    to: "model-license-matrix.md"
   - from: "dist-backend/vision_ai_backend"
     to: "backend_bin"
     filter:

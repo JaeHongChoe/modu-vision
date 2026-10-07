@@ -623,8 +623,9 @@ CONDITIONS = [
     'workspace import records the file hash, stored path and task/model, but not the origin or license.',
     'Python dependencies are not locked. The Python section reflects the inventory interpreter and platform and must be '
     'regenerated from the locked release build environment, including platform-specific wheels.',
-    'The notices and every component\'s license text must ship with the installer; the current packaging does not yet '
-    'do so (electron-builder removes Electron\'s LICENSE files on macOS and the notices file is not packaged).',
+    'Packaging preserves collected Python dependency license bytes and the locked desktop dependencies, including '
+    'Electron LICENSE and Chromium notices. Missing or unmapped license texts, native-library terms and the final '
+    'delivered artifact still require review; a collected text bundle does not grant distribution approval.',
     'LICENSE is unchanged by this inventory; the public distribution license is decided in S6-11.',
 ]
 
@@ -711,8 +712,9 @@ def render_notices(receipt: dict) -> str:
         'This file lists third-party components that the desktop application distributes and their declared licenses. '
         'It is review input, not a legal compatibility determination; the public distribution decision is tracked '
         'separately. Each component\'s full license text must ship with the installer (npm package `LICENSE` files, '
-        'Python package license files, Electron `LICENSE` and `LICENSES.chromium.html`); the current packaging does not '
-        'yet include them, which is recorded as an open item below.', '',
+        'Python package license files, Electron `LICENSE` and `LICENSES.chromium.html`). The build records collected '
+        'bytes and missing texts; the desktop packaging hook verifies and ships these bundles with this notice file. '
+        'The final artifact and unresolved native-library terms remain release gates.', '',
         '## Project', '', '- modu-vision: MIT (see `LICENSE`)', '',
         '## Electron runtime', '', *_table(by('electron_runtime')), '',
         '## Renderer runtime (npm)', '', *_table(by('npm_runtime')), '',

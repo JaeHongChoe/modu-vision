@@ -1,6 +1,7 @@
 """Precision acceptance binds measured heldout evidence and creates a new release."""
 import asyncio
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
 
@@ -30,7 +31,11 @@ def test_runtime_refuses_unconverted_openvino_package_before_ready(real_package,
 
 @pytest.fixture
 def measured_candidate(real_package,tmp_path):
-    pytest.importorskip('openvino')
+    # Production conversion and inference use owned workers. Importing this
+    # native library in the API process defeats that boundary and can crash
+    # macOS scientific environments before a test can report a failure.
+    if importlib.util.find_spec('openvino') is None:
+        pytest.skip('OpenVINO is not installed in this qualification interpreter')
     from backend.api.routes_export import _optimization_input_receipt
     from backend.engine.openvino_runtime import optimize_flow_package
     from backend.engine.flow_package_runtime import _sha256

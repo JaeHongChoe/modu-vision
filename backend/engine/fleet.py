@@ -10,6 +10,7 @@ from urllib.parse import urlsplit,urlunsplit
 import zipfile
 import httpx
 from backend.engine.runtime_deployment import DeploymentLedger
+from backend.engine.fleet_secret_store import ServerSecretStore,PREFIX,POLICY_VERSION,validate_token
 
 
 def validate_target_url(value):
@@ -56,17 +57,26 @@ class FleetRegistry:
                 CREATE TABLE IF NOT EXISTS rollout_events(event_id TEXT PRIMARY KEY,plan_id TEXT NOT NULL,revision INTEGER NOT NULL,event TEXT NOT NULL,reviewer TEXT NOT NULL,created_at REAL NOT NULL);
                 CREATE TRIGGER IF NOT EXISTS rollout_events_no_update BEFORE UPDATE ON rollout_events BEGIN SELECT RAISE(ABORT,'Rollout audit is immutable'); END;
                 CREATE TRIGGER IF NOT EXISTS rollout_events_no_delete BEFORE DELETE ON rollout_events BEGIN SELECT RAISE(ABORT,'Rollout audit is immutable'); END;
+                CREATE TABLE IF NOT EXISTS credential_events(event_id TEXT PRIMARY KEY,target_id TEXT NOT NULL,
+                    actor_id TEXT NOT NULL,policy_version INTEGER NOT NULL,event TEXT NOT NULL,created_at REAL NOT NULL);
+                CREATE TRIGGER IF NOT EXISTS credential_events_no_update BEFORE UPDATE ON credential_events BEGIN SELECT RAISE(ABORT,'Credential audit is immutable'); END;
+                CREATE TRIGGER IF NOT EXISTS credential_events_no_delete BEFORE DELETE ON credential_events BEGIN SELECT RAISE(ABORT,'Credential audit is immutable'); END;
             """)
         self.path.chmod(0o600)
     def connect(self):
         conn=sqlite3.connect(self.path,timeout=30);conn.row_factory=sqlite3.Row;return conn
     def targets(self):
         with self.connect() as conn:rows=conn.execute('SELECT * FROM targets ORDER BY name').fetchall()
-        return [{key:row[key] for key in ('target_id','name','url')}|{'token_set':bool(row['token'])} for row in rows]
+        return [{key:row[key] for key in ('target_id','name','url')}|{'token_set':bool(row['token']),
+                'credential_storage':'server_secret_v1' if row['token'].startswith(PREFIX) else 'legacy_project_database' if row['token'] else 'unconfigured'} for row in rows]
     def secret(self,identifier):
         with self.connect() as conn:row=conn.execute('SELECT token FROM targets WHERE target_id=?',(identifier,)).fetchone()
         if not row:raise KeyError(identifier)
         if not row[0]:raise ValueError('Agent credentials are unavailable; configure this target before connecting')
+        if row[0].startswith(PREFIX):return ServerSecretStore(self.root.parent).read(identifier,row[0])
+        # Existing owned configurations are unchanged until an explicit save.
+        # The API reports their legacy storage; copying them is still refused by
+        # the archive credential guard. This does not silently promote legacy security.
         return row[0]
     def target(self,identifier):
         row=next((r for r in self.targets() if r['target_id']==identifier),None)
@@ -76,7 +86,13 @@ class FleetRegistry:
         if not name.strip() or len(name)>100 or not token or len(token)>4096:raise ValueError('Agent name and access token are required')
         url=validate_target_url(url);identifier=target_id or uuid.uuid4().hex
         if len(identifier)!=32 or any(c not in '0123456789abcdef' for c in identifier):raise ValueError('Invalid agent ID')
-        with self.connect() as conn:conn.execute('INSERT INTO targets VALUES(?,?,?,?) ON CONFLICT(target_id) DO UPDATE SET name=excluded.name,url=excluded.url,token=excluded.token',(identifier,name.strip(),url,token))
+        validate_token(token)
+        reference=ServerSecretStore(self.root.parent).save(identifier,token)
+        with self.connect() as conn:
+            conn.execute('PRAGMA secure_delete=ON')
+            conn.execute('INSERT INTO targets VALUES(?,?,?,?) ON CONFLICT(target_id) DO UPDATE SET name=excluded.name,url=excluded.url,token=excluded.token',(identifier,name.strip(),url,reference))
+            conn.execute('INSERT INTO credential_events VALUES(?,?,?,?,?,?)',(uuid.uuid4().hex,identifier,
+                self.authority_user_id or 'local_developer',POLICY_VERSION,'server_secret_saved',time.time()))
         return self.target(identifier)
     def ledger(self,identifier):
         self.target(identifier);return DeploymentLedger(self.root/identifier,project_dir=self.root.parent)
