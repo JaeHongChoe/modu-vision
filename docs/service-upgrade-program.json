@@ -4526,7 +4526,7 @@
     "S6-03",
     "S5-07"
    ],
-   "status": "planned",
+   "status": "in_progress",
    "evidence": [
     {
      "kind": "source-bound-unsigned-frozen-package-execution",
@@ -4534,6 +4534,18 @@
      "result": "Hosted Windows run37438929535 passed unsigned NSIS/portable build plus actual packaged/frozen CPU train/evaluate/infer/export and identical restart. Downloaded installer/portable SHA-256 and1533 source checkout hashes match. macOS frozen known-image service and packaged CPU application also pass twice on their recorded exact freeze.",
      "scope": "No system installation/uninstall, signed trust/update cutover, Windows11, SCM, human quality or latest-history-module packaged claim. Exact receipts and test artifacts retained separately. Windows readback SHA-256 1433f1db7b49313ba1e3af99a30c5d0cf0310af28cc4d3000802b0cf49114b8b.",
      "platform": "Windows Server2025 hosted and actual macOS frozen controls; unsigned development artifacts only"
+    },
+    {
+     "kind": "owned-posix-portable-application-database-transaction",
+     "source_sha": "8bf877d5e21894d967306b4ec9488cdb8faf517f",
+     "test_harness_source_sha": "ebba4cc2d8f91fa5030921421b446eb60d8687f2",
+     "result": "Implemented explicit signed UpdatePlan, durable app/DB paired cutover, crash finish and post-write forward recovery. Mac42 includes12 actual Node/Python trust conformance cases; related110 passed. Isolated Linux108 passed/12 skipped (Node absent). Actual frozen binary made5 update/launch/recovery CLI calls, launched the controlled portable entrypoint, and preserved new account/profile writes. Same binary separately passed two known-image CPU inspections around restart.",
+     "scope": "Owned drained POSIX installation and controlled publisher/portable fixture only. No installed-home adoption, NSIS/DMG installer, Electron update UI, macOS framework symlinks, real publisher/native signature, physical power loss, Windows, human quality or release acceptance. Original failed checks remain retained. Exact committed resource bytes verified independently of the untracked documentation.",
+     "receipts": [
+      "docs/verification/receipts/2026-10-07-frozen-portable-update-8bf877d.json",
+      "docs/verification/receipts/2026-10-07-linux-portable-update-ebba4cc.json"
+     ],
+     "operations": "docs/operations/offline-portable-update.md"
     }
    ],
    "file_actions": {
@@ -4556,8 +4568,9 @@
    },
    "proposed_test_file": "backend/tests/test_service_s6_04.py",
    "remaining": [
-    "Pinned update authority, tamper/downgrade/offline delivery and runtime-package crash recovery are implemented; a complete application installer plus database cutover/recovery after new writes still requires implementation and execution.",
-    "Actual publisher keys and signed candidate bytes are not supplied. Developer control keys do not qualify the real publisher or release."
+    "Owned drained POSIX portable application plus database cutover, crash finish and recovery preserving new writes are implemented and executed. Complete actual OS installer/installed-home adoption, Electron update UI, symlink-bearing native application layout, and installed application known-image handoff remain pending.",
+    "Actual publisher keys and signed candidate bytes are not supplied. Controlled keys do not qualify the real publisher or release.",
+    "Inverse/version rollback is unsupported without a separately reviewed conversion; current-schema forward recovery is supported and qualified separately."
    ]
   },
   {
@@ -9952,8 +9965,8 @@
    },
    "parent_status": {
     "verification_pending": 61,
-    "in_progress": 12,
-    "planned": 9
+    "in_progress": 13,
+    "planned": 8
    },
    "merged_extension_slices": 16,
    "additional_improved_parent_areas": 2,

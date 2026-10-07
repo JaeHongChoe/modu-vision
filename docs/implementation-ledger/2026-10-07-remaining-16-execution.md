@@ -9,13 +9,13 @@
 | S5-10 | 서비스 보안 | 구현 검증 완료: HTTPS·인증·세션·권한·경로·외부 secret 저장소·원자적 이전·실제 앱 readback | 운영 인증서·계정 배치와 실제 target/독립 최종 승인 |
 | S6-02 | Windows 설치 | 설치 구성·unsigned packaged CPU/restart 검증 기록 보존 | Windows11 설치·제거 실기 QA는 사용자 면제이며 통과로 집계하지 않음 |
 | S6-03 | 선택 runtime pack | 실제 OpenVINO CPU/provider·정밀도 control 실행; 기본 backend와 구분 | 별도 pack 배포와 실제 지원 장치/대표 정답 cohort 검증 |
-| S6-04 | 오프라인 업데이트 | 고정 trust·변조/다운그레이드 거절·수동 전달·runtime package 장애 복구 | 앱 설치와 DB를 묶은 cutover/새 쓰기 후 복구 구현 및 실제 publisher bytes |
+| S6-04 | 오프라인 업데이트 | owned POSIX portable 앱·DB cutover, crash finish, 새 account/profile 보존 forward recovery; actual frozen CLI5회·재실행 및 별도 CPU known-image2회 | 실제 OS installer·설치된 home·Electron UI·native layout·publisher 서명 및 installed-app known-image handoff |
 | S6-05 | 공개 CI | 이전 정확한 source의 complete hosted success; heartbeat 검사 수정·Mac58/Linux119 통과 | 최신 게시 source 전체 CI 완료; 기존 queue 및 실패 기록 보존 |
 | S6-06 | 서명·채널 | unsigned 상태와 checksum/source 연결 | 실제 publisher/서명 키·최종 artifact와 stable/beta 운영 정책 |
 | S7-01 | 전체 기능 행동 coverage | 168개 curated action, 304개 시나리오 검증; 기존 credential 2개 control 추가 | 872개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
 | S7-02 | 10개 모델군 시나리오 | 실제 family별 학습/추론·다중 checkpoint·flow/package control 기록 | 사람이 검토한 대표 분류/정상/OCR/OBB/향상/GAN truth와 품질 판정 |
 | S7-03 | Windows 실사용 | 기존 unsigned runner 결과 보존 | 사용자 면제. 신규 실기 테스트를 시작하지 않으며 pass로 바꾸지 않음 |
-| S7-04 | 동시 작업·장애 | 2개 계정/agent·actual CPU·재접속·rollback·권한/충돌 control | 물리적 장애와 서명된 앱/DB 업데이트 cutover |
+| S7-04 | 동시 작업·장애 | 2개 계정/agent·actual CPU·재접속·권한/충돌 control; controlled signed portable 앱·DB cutover 및 crash recovery | 물리적 장애와 실제 publisher가 서명한 native 앱 업데이트 |
 | S7-05 | 규모·72시간 운전 | 별도 연속 운전 진행 중: 11.49시간/688 cycles; 기존 실패와 합산하지 않음 | 72시간 종료 receipt 및 실제 target RAM/disk/p95/tact 측정 |
 | S7-06 | 공정 품질·장비 | simulator 계약과 실행/품질 상태 구분 | 실제 camera/PLC/MES 및 제품/Lot별 정답·미검/과검 승인 기준 |
 | S7-07 | 공개 후보 판정 | 최신 standalone backend freeze·startup/restart 및270개 의존성 license bytes 누락0 | native library 조건·업데이트/coverage·실제 서명·독립 리뷰·pilot |
@@ -43,3 +43,12 @@
 `2026-10-07-remaining-contract-execution.json`, `2026-10-07-linux-qualification-final.json`, `2026-10-07-latest-frozen-backend-177b233.json`을 `docs/verification/receipts/`에서 확인한다. 원본 logs/XMLs/screenshots/vendor archives는 소유한 비공개 외장 scratch에 보존한다. 기존 source trees/영수증/soak 프로세스를 삭제하거나 중단하지 않았다.
 
 독립 리뷰는 subagent 실행 한도로 미실행이다. Root 검토를 독립 승인으로 기록하지 않는다. 서명 키·실제 장비·참여자·대표 품질 정답·72시간 경과를 대신 만들어 완료 처리하지 않는다.
+
+## 추가 실행: portable 앱과 DB의 업데이트 transaction
+
+- source8bf877d의 standalone binary SHA-256 `1acb6e4777c7453a517259ed8d98d1dd028f012e397acdbe8561c43b4c453330`, build identity `81f4ac434219be3c939e8fe40fc24460f3c58594f0d21a0086838aeafaa3fb93`. 326개 runtime resource를 source8bf877d 및 test-only sourceebba4cc와 각각 대조했다. 기존 freeze 기록은 바꾸지 않는다.
+- Mac42 passed에는 실제 Node/Python trust 계약 비교12건이 포함된다. 관련110 passed, license/compiler33 passed. Linux108 passed/12 skipped(Node 부재); Linux skip을 통과로 집계하지 않는다. 최초 dependency 부재 및 child PYTHONPATH 손실 실패는 수정 전 기록으로 보존한다.
+- 실제 frozen CLI5회로 1.0.0 설치→1.1.0 업데이트→새 account/profile 쓰기→forward recovery→재열기를 실행했다. DB fence는1→2→3이며 새 데이터가 유지됐다. 동일 binary의 CPU known-image 검사2회는 별도로 통과했다. 실제 Electron 설치 앱에서 이미지가 실행됐다는 근거로 사용하지 않는다.
+- 새 freeze의 Python270 component/336 license files/14 supplemental suppliers/missing0를 확인했다. Native library 조건과 공개 승인 및 실 publisher는 미확인이다.
+- Linux export의 raw binding에 checkout_dirty=false가 잘못 기록됐다. 실제 checkout에는 관련 없는 untracked 문서가 있었다. 원본 binding을 보존하고 새 receipt에 정정했으며 선택된706개 source+15개 resource의 모든 bytes를 commit과 독립 대조했다. Clean checkout을 주장하지 않는다.
+- 공개 근거: `docs/verification/receipts/2026-10-07-frozen-portable-update-8bf877d.json`, `docs/verification/receipts/2026-10-07-linux-portable-update-ebba4cc.json`. S6-04 전체 구현·GUI·운영 수락은 아직 pending이며 부모 수는67/82, 미완료15/82를 유지한다.

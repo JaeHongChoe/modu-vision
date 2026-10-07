@@ -1,0 +1,104 @@
+{
+  "schema": "modu-vision.frozen-portable-update-execution/v1",
+  "source_sha": "8bf877d5e21894d967306b4ec9488cdb8faf517f",
+  "test_harness_source_sha": "ebba4cc2d8f91fa5030921421b446eb60d8687f2",
+  "source_inputs_match_commit": true,
+  "production_resources_identical_at_test_harness_commit": true,
+  "platform": "Darwin",
+  "architecture": "arm64",
+  "compiler": {
+    "name": "PyInstaller",
+    "version": "6.22.3"
+  },
+  "build_identity_sha256": "81f4ac434219be3c939e8fe40fc24460f3c58594f0d21a0086838aeafaa3fb93",
+  "executable_sha256": "1acb6e4777c7453a517259ed8d98d1dd028f012e397acdbe8561c43b4c453330",
+  "release_inventory_sha256": "386767d754b79d070683dbf9e911ea9fa25ded4385ca2360c964bd59a3184d66",
+  "resource_count": 326,
+  "frozen_file_count": 11810,
+  "startup_and_restart_passed": true,
+  "actual_cli_calls": 5,
+  "probe_receipt_sha256": "00b4b3f50eb128d24c676fcecfae071c39fc0f5068f47352dd6e0b87f3fbdb82",
+  "post_cutover_account_preserved": true,
+  "post_cutover_profile_preserved": true,
+  "application_reopen_version": "1.1.0",
+  "actual_controlled_entrypoint_exit_code": 0,
+  "update_transactions": [
+    {
+      "status": "committed",
+      "update_id": "d56f860987d54683b3941f11548f6a12",
+      "version": "1.0.0",
+      "database_pointer": {
+        "schema_version": 1,
+        "installation_id": "72a87de3d37341ec8cdc114d2a2300ed",
+        "generation_id": "99512e557e23498d8750de6e66273c7a",
+        "sealed_sha256": "abba540b8167dfa24cd8988e8549bbfd5386c1eee66c30980c05dc8f04d2d0c1",
+        "fence": 1
+      }
+    },
+    {
+      "status": "committed",
+      "update_id": "93a20c3044484a5aaaf521ef64a8cd03",
+      "version": "1.1.0",
+      "database_pointer": {
+        "schema_version": 1,
+        "installation_id": "72a87de3d37341ec8cdc114d2a2300ed",
+        "generation_id": "09834aad6db14337a802f287e74adbb1",
+        "sealed_sha256": "40bbf41a065abf5c14513f2031a9bd9ded02da8e8574b4fe39f1db24387fc6cf",
+        "fence": 2
+      }
+    },
+    {
+      "status": "committed",
+      "update_id": "93a20c3044484a5aaaf521ef64a8cd03",
+      "version": "1.1.0",
+      "database_pointer": {
+        "schema_version": 1,
+        "installation_id": "72a87de3d37341ec8cdc114d2a2300ed",
+        "generation_id": "832c82e5037744daa0517e14d2380bfc",
+        "sealed_sha256": "ece5d3ed60ca03195655446bc1bd2d9d9a34e44738d451d0122d022dcd035f84",
+        "fence": 3
+      }
+    }
+  ],
+  "license_texts": {
+    "status": "collected",
+    "component_count": 270,
+    "file_count": 336,
+    "supplemental_supplier_count": 14,
+    "all_license_bytes_rehashed": true,
+    "missing": [],
+    "public_distribution_approved": false,
+    "native_library_terms": "separate_inventory_review_required"
+  },
+  "signature_status": "unverified",
+  "optional_features_unavailable": [
+    "transformers",
+    "pydicom",
+    "openvino",
+    "nncf",
+    "pynvml"
+  ],
+  "inspection": {
+    "receipt_sha256": "f10b73b2591e3e7074e49622ec6254d152c2d6a79c6aa0e2e434c19fa18ddb6e",
+    "manifest_sha256": "a2172268f53aca6c68357c8943e94f92388fde371ad1b787d5ca8f1548449fa8",
+    "image_sha256": "657b3f7ab29ed2b02f43f612bd2fd2c99b92bf3454158a896399aac0d4bf3514",
+    "device": "cpu",
+    "executions": [
+      {
+        "job_id": "331a28729fde48b98a55bf98f0832f98",
+        "state": "completed",
+        "verdict": "NG",
+        "result_sha256": "30857697aa2d3ac9c5220e464b5e4c687c530e64c29b26915f3188ff7a80e606"
+      },
+      {
+        "job_id": "bdd99d2119f546348672ea3525ad4d99",
+        "state": "completed",
+        "verdict": "NG",
+        "result_sha256": "f6f0c34c811707624e5d1b2033d4e903691d26e81b22ecea9d8200d212b2d8d5"
+      }
+    ],
+    "model_quality_approval": "unverified",
+    "physical_acceptance": "unverified"
+  },
+  "scope": "Actual frozen CLI and SQLite transaction with controlled Ed25519 authority and tiny portable executable; known-image checks are separately executed on the same frozen binary, not a signed installed Electron application. No OS installer, installed customer home, real publisher, physical fault, Windows, human quality, independent review or operating release acceptance."
+}
