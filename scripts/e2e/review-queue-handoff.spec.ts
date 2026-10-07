@@ -35,7 +35,12 @@ async function exercise(page:Page,w:Workspace,e:Evidence,api:Api,native:boolean,
  await page.reload();await expect(page.getByRole('combobox',{name:'모델별 저장 평가',exact:true})).toHaveValue(original.record.evaluation_id);await e.screenshot(page,`${native?'native':'browser'}-queue-exact-evaluation-return`);
  await navigate();await expect(choice).toHaveValue(first.id);await panel.getByRole('button',{name:'현재 항목 열기',exact:true}).click();
  // Real unsaved canvas content must block advancing or leaving for training.
- await page.getByRole('button',{name:'집중 편집',exact:true}).click();await page.getByTitle('100% Zoom (1:1)',{exact:true}).click();await expect(page.getByTestId('canvas-hud')).toContainText('100%');await page.getByTitle('바운딩 박스 (BBox - 2)',{exact:true}).click();
+ await page.getByRole('button',{name:'집중 편집',exact:true}).click();
+ // Exact pointer geometry requires the current image to finish its initial Fit.
+ // The original whole-suite trace retained the100% click before raw decoding;
+ // onload then completed Fit at250% before the drag. Keep the exact bbox check.
+ await expect.poll(async()=>Number((await page.getByTestId('canvas-hud').innerText()).match(/scale\s*([\d.]+)\s*%/)?.[1]||0)).toBeGreaterThan(100);
+ await page.getByTitle('100% Zoom (1:1)',{exact:true}).click();await expect(page.getByTestId('canvas-hud')).toContainText('100%');await page.getByTitle('바운딩 박스 (BBox - 2)',{exact:true}).click();
  const bounds=(await page.locator('[data-canvas-container]').boundingBox())!,pt=(v:number)=>({x:bounds.x+(bounds.width-64)/2+v,y:bounds.y+(bounds.height-64)/2+v});const a=pt(10),b=pt(30);
  await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(b.x,b.y,{steps:6});await page.mouse.up();await expect(page.getByRole('button',{name:'Save Changes',exact:true})).toBeVisible();await page.getByRole('button',{name:'집중 편집',exact:true}).click();await page.locator('summary').filter({hasText:'저장 검토 큐 · 오류·불일치·임계값 우선'}).click();await expect(choice).toHaveValue(first.id);
  const review=panel.getByRole('button',{name:'검토 완료 · 다음',exact:true}),skip=panel.getByRole('button',{name:'보류 · 다음',exact:true}),prepare=panel.getByRole('button',{name:'수정·검수 데이터로 학습 준비',exact:true});
