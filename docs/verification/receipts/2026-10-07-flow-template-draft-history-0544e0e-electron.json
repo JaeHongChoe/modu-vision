@@ -1,0 +1,44 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0544e0ee84611e39cf67cf3ca76dc1010e15ccd4",
+  "source_dirty": false,
+  "test": "scripts/e2e/flow-template-draft-history.spec.ts::native cross-project mapping undo redo and persistent draft recovery",
+  "test_source_sha256": "a9a1e640a5d660773a4aedf8a9923ab06573ec2cd395a07ce569be5be6e358ba",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "766c91016b4e47e65d0762fe6b6de44bd0ae98b07dfb8f25260aaed76a2cde2d",
+  "harness_sha256": "50102d53021a81714d93415cde0f967daf07660f2e090269cc9975a4c3d0f199",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "66bec4179c96c4863e042b585a1757f0f994187448ea0d91ae0cf8bfb00a0548"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "58514f27e9490b2fd96436c5e1c015b0931b39bdbcfa90562dfa1b92f82d6e4c"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "f8f19225580260e0452335b809285e6833992360c28ff78caea9a985cf958ffd"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "4d532f9ff89af6d75204a6913889be6569c0754074aa9a83aee1cab2edba0edc"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "f68bd4c75f5faad2139c13998979a33c023a4bf7a186b0db22eca1e8a86d0964"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

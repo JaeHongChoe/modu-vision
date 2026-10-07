@@ -1926,7 +1926,9 @@
     "src/renderer/components/flowchart/FlowInspectorPanel.tsx",
     "src/renderer/components/flowchart/FlowInspectorPanel.test.cjs",
     "scripts/e2e/fixtures/flow_large_dag_control.py",
-    "scripts/e2e/flow-inspector-large-dag.spec.ts"
+    "scripts/e2e/flow-inspector-large-dag.spec.ts",
+    "backend/tests/test_template_checkpoint_classes.py",
+    "scripts/e2e/flow-template-safety.spec.ts"
    ],
    "proposed_contract": "RunTrace / FlowVersionDiff / FixedCohortComparison",
    "acceptance": [
@@ -1971,6 +1973,14 @@
      "reference": "docs/implementation-ledger/2026-10-06-remaining-parent-execution.md",
      "result": "Task134: whole/subgraph template save, explicit cross-project model/class mapping, draft/reopen/Undo/Redo actual Chrome/Electron2pass; exact graph/input/model cache identity, frozen A/B, branch reasons, version differences and large DAG navigation/inspector records from Tasks125-128 retained.",
      "scope": "All software assertions exercised across retained precise source slices and current tests; selected templates expose unconnected boundary ports rather than auto-activating. Synthetic and trained controls are not representative quality approval or independent review."
+    },
+    {
+     "kind": "actual-template-checkpoint-class-and-app-controls",
+     "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+     "receipt": "docs/verification/receipts/2026-10-07-template-checkpoint-controls-42edae7.json",
+     "receipt_sha256": "321011772ea712e95e87c2fd9ce6aff2df8856ebfc41b018eaee60976cd9370c",
+     "result": "106 related checks with equal production bytes and four actual source-bound browser/macOS cases.23 new curated dimensions were executed; whole/subset saved records, original model/version/images and reopened draft were preserved.",
+     "scope": "Four curated template actions only. Final safety cases run on42edae7; cross-project regression cases run on0544e0e; backend106 runs on481ebfb with equal relevant production bytes. HTTP503 is explicitly simulated transport. Abandoned save inputs were never submitted. No training, activation, model quality, release or full feature/parent acceptance."
     }
    ],
    "file_actions": {
@@ -2001,7 +2011,9 @@
     "src/renderer/components/flowchart/FlowInspectorPanel.tsx": "Create",
     "src/renderer/components/flowchart/FlowInspectorPanel.test.cjs": "Create",
     "scripts/e2e/fixtures/flow_large_dag_control.py": "Create",
-    "scripts/e2e/flow-inspector-large-dag.spec.ts": "Create"
+    "scripts/e2e/flow-inspector-large-dag.spec.ts": "Create",
+    "backend/tests/test_template_checkpoint_classes.py": "Create",
+    "scripts/e2e/flow-template-safety.spec.ts": "Create"
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-2-studio.md",
    "acceptance_state": {
@@ -5314,6 +5326,14 @@
      "receipt_sha256": "069cb81e493c4c9a4fb0581c72115df7850bc0079f0e7cdb3381323b60c0cc0b",
      "result": "70 related checks plus browser2/Electron2 actual cases passed on exact clean source. App binds selected content to preview; stale409, protected originals, controlled503, cancellation, occupied target refusal, exact restore/reopen and original archive regression were executed.",
      "scope": "Project-owned reviewed movement and recoverable restoration; controlled HTTP503 is a simulated transport failure, not backend/model failure. No permanent deletion, model quality or full feature/parent acceptance."
+    },
+    {
+     "kind": "actual-template-checkpoint-class-and-app-controls",
+     "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+     "receipt": "docs/verification/receipts/2026-10-07-template-checkpoint-controls-42edae7.json",
+     "receipt_sha256": "321011772ea712e95e87c2fd9ce6aff2df8856ebfc41b018eaee60976cd9370c",
+     "result": "106 related checks with equal production bytes and four actual source-bound browser/macOS cases.23 new curated dimensions were executed; whole/subset saved records, original model/version/images and reopened draft were preserved.",
+     "scope": "Four curated template actions only. Final safety cases run on42edae7; cross-project regression cases run on0544e0e; backend106 runs on481ebfb with equal relevant production bytes. HTTP503 is explicitly simulated transport. Abandoned save inputs were never submitted. No training, activation, model quality, release or full feature/parent acceptance."
     }
    ],
    "file_actions": {
@@ -5336,8 +5356,7 @@
    },
    "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts",
    "remaining": [
-    "Curated187 actions have348 verified and961 pending individual scenarios with zero accepted features. Separate AST inventory finds1369 UI declarations across274 source files; declaration counts are not clicked behavior or full156-feature acceptance.",
-    "Complete every unlisted/runtime-generated action and remaining success/empty/invalid/error/cancel/reopen/handoff scenario with actual source-bound execution; retain independent review, human truth and target qualifications separately."
+    "192 curated actions now have413 verified scenarios and931 pending scenarios. Template4-action dimensions are executed; other helpers/menus/shortcuts and all156-feature full acceptance remain pending."
    ]
   },
   {
@@ -5519,6 +5538,14 @@
      "result": "Earlier internal attempt ended after47 cycles at the disk reserve. New independent72-hour run begins on owned external APFS scratch with exact a184b1e source, mount/process identity and disk reserve supervision; no elapsed time is combined.",
      "scope": "Root review only; synthetic functional authority is not manufacturing approval. Final handoff, target/device, signing and acceptance stay pending. Paired receipt SHA-256 ff0d51c4e6322dfb3ac6ff4ae30e5ab082393c7c17382331c9ad3961cf68cb3e",
      "platform": "macOS actual development Electron/CPU and exact prior Linux hosted source; Windows excluded by user."
+    },
+    {
+     "kind": "actual-local-and-linux-capacity-controls",
+     "source_sha": "0544e0ee84611e39cf67cf3ca76dc1010e15ccd4",
+     "receipt": "docs/verification/receipts/2026-10-07-local-linux-capacity-0544e0e.json",
+     "receipt_sha256": "664cf27b9cb0309dac4984f69966729accd601c9a7503972660cb04510ae41e1",
+     "result": "Per host10k/100k metadata paging/searches,80MP source-preserving decode, two5000-record REVIEW queue controls with duplicate/backpressure/reopen.313 selected source files independently match commit. No actual model inference in these short controls; same separate72h attempt remains live.",
+     "scope": "Actual synthetic metadata search/paging, per-host generated uniform80MP original decode and durable non-model REVIEW queue controls. Mac workstation and isolated Linux CPU measurements only. Numeric timing is not industrial tact, throughput promise, human quality, GUI-scale or72h acceptance. Host total RAM differs from the explicit8GiB Linux container cap. Source images generated separately per host are not claimed byte-identical across hosts. Other workloads and the existing soak were preserved."
     }
    ],
    "file_actions": {
@@ -5539,8 +5566,9 @@
    },
    "proposed_test_file": "scripts/e2e/service-s7-05.spec.ts",
    "remaining": [
-    "Independent72-hour attempt is running at41346.66 seconds/688 cycles on frozena184b1e. Terminal72-hour success and actual target scale/tact qualification remain pending.",
-    "Previous disk-reserve failure at50 cycles/3007.65 seconds is retained; no prior or interrupted elapsed time is combined."
+    "Same independent72h attempt observed at61704.03 seconds/1026 cycles. No restart or prior-duration sum; terminal72h receipt remains pending.",
+    "Actual Mac and isolated LinuxCPU10k/100k metadata and80MP decode metrics are recorded. Representative image inventory, full GUI paging and physical target RAM/disk/tact/quality remain unqualified.",
+    "Previous disk-reserve failure at50 cycles/3007.65 seconds is retained and excluded from current elapsed duration."
    ]
   },
   {

@@ -1,0 +1,80 @@
+{
+  "schema": "modu-vision.template-checkpoint-and-app-controls/v1",
+  "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+  "source_dirty": false,
+  "production_verification": {
+    "source_sha": "481ebfb634613cf75fd07618261f19ec2b96ecf1",
+    "related_tests": 106,
+    "failed": 0,
+    "skipped": 0,
+    "production_code_byte_equal_to_final_source": true,
+    "junit_sha256": "85886185e1192d4229c6b17b79ff6562b044bf787c6f480171db568528628bb7",
+    "log_sha256": "82643f3d7a66e1142fb2a4fa3ed4f11d3df5221c432d84a083df74fc888c5e1c"
+  },
+  "gui_cases": [
+    {
+      "case": "flow-template-safety",
+      "mode": "browser",
+      "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+      "receipt": "2026-10-07-flow-template-safety-42edae7-browser.json",
+      "receipt_sha256": "bf43198e825f3616fe58f80648af0f62fc0e49ee5ad7ebf35ff6afbdddda51d8"
+    },
+    {
+      "case": "flow-template-draft-history",
+      "mode": "browser",
+      "source_sha": "0544e0ee84611e39cf67cf3ca76dc1010e15ccd4",
+      "receipt": "2026-10-07-flow-template-draft-history-0544e0e-browser.json",
+      "receipt_sha256": "a0af134aa13a691a23bcb073b5b602fe1f7da22aa59591199f3aab5c17a19078"
+    },
+    {
+      "case": "flow-template-safety",
+      "mode": "electron",
+      "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+      "receipt": "2026-10-07-flow-template-safety-42edae7-electron.json",
+      "receipt_sha256": "0310f984333fd6dda1a4a9de644818a094a4221fc0b8849fdb11d6eb52c66c53"
+    },
+    {
+      "case": "flow-template-draft-history",
+      "mode": "electron",
+      "source_sha": "0544e0ee84611e39cf67cf3ca76dc1010e15ccd4",
+      "receipt": "2026-10-07-flow-template-draft-history-0544e0e-electron.json",
+      "receipt_sha256": "16de6d4aee774158ba84b8111c97f279507721a37fd742e77c5fac15409b8564"
+    }
+  ],
+  "guard": {
+    "original_checkpoint_class_vocabulary": true,
+    "original_sidecar_consistency": true,
+    "restricted_cpu_checkpoint_reader_only": true,
+    "no_unsafe_retry": true,
+    "unknown_class_status": 422,
+    "original_checkpoint_and_version_bytes_preserved": true,
+    "exact_library_files_in_owned_store": true,
+    "actual_reopened_graph_selected": true
+  },
+  "retained_failures": {
+    "absent_class_originally_returned_200": {
+      "backend_failed": 7,
+      "backend_log_sha256": "358eecae42bd5e1b25b55d81997ba3746d58743f9bfa1e44c1e5550f7d5c1234"
+    },
+    "native_shared_template_store": {
+      "report_sha256": "7c819c71b46c1ffbe27a16ab9faf5a5426b2af4e605360c4bea32db9c25527ca",
+      "excluded_from_isolated_coverage": true,
+      "existing_files_preserved": true
+    },
+    "harness_fixture_missing_home_corrected": true,
+    "prior_post_reload_screenshot_loading_not_used_for_final_reopen_visual_proof": true
+  },
+  "scope": "Four curated template actions only. Final safety cases run on42edae7; cross-project regression cases run on0544e0e; backend106 runs on481ebfb with equal relevant production bytes. HTTP503 is explicitly simulated transport. Abandoned save inputs were never submitted. No training, activation, model quality, release or full feature/parent acceptance.",
+  "curated_action_ids": [
+    "save-whole-template",
+    "save-subgraph",
+    "map-target",
+    "class-map"
+  ],
+  "newly_verified_scenarios": 23,
+  "visual_review": "root actual final browser and macOS screenshots; restored model node and saved draft visible",
+  "review": "root_only",
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "parent_acceptance": "pending"
+}

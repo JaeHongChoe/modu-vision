@@ -12,11 +12,11 @@
 | S6-04 | 오프라인 업데이트 | owned POSIX portable 앱·DB cutover, crash finish, 새 account/profile 보존 forward recovery; actual frozen CLI5회·별도 CPU known-image2회; 새 main/preload/renderer 검토·복구 연결, 관련Python125/Node40 및 UI2개 통과 | 실제 OS installer·설치된 home·native layout·실 publisher 서명·native positive 설치 및 installed-app known-image handoff |
 | S6-05 | 공개 CI | sourcec2e7b6 hosted workflow success 재확인; heartbeat 검사 수정·Mac58/Linux119 통과 | 최신 게시 source 전체 CI 완료; 기존 queue 및 실패 기록 보존 |
 | S6-06 | 서명·채널 | unsigned 상태와 checksum/source 연결 | 실제 publisher/서명 키·최종 artifact와 stable/beta 운영 정책 |
-| S7-01 | 전체 기능 행동 coverage | 192개 curated action, 369개 시나리오 검증; modal keyboard·saved queue 실제 browser/Electron 근거 추가 | 975개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
+| S7-01 | 전체 기능 행동 coverage | 192개 curated action, 413개 시나리오 검증; retention·template 실제 browser/Electron 근거 추가 | 931개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
 | S7-02 | 10개 모델군 시나리오 | 실제 family별 학습/추론·다중 checkpoint·flow/package control 기록 | 사람이 검토한 대표 분류/정상/OCR/OBB/향상/GAN truth와 품질 판정 |
 | S7-03 | Windows 실사용 | 기존 unsigned runner 결과 보존 | 사용자 면제. 신규 실기 테스트를 시작하지 않으며 pass로 바꾸지 않음 |
 | S7-04 | 동시 작업·장애 | 2개 계정/agent·actual CPU·재접속·권한/충돌 control; controlled signed portable 앱·DB cutover 및 crash recovery | 물리적 장애와 실제 publisher가 서명한 native 앱 업데이트 |
-| S7-05 | 규모·72시간 운전 | 별도 연속 운전 진행 중: 15.55시간/931 cycles (2026-10-07 관찰); 기존 실패와 합산하지 않음 | 72시간 종료 receipt 및 실제 target RAM/disk/p95/tact 측정 |
+| S7-05 | 규모·72시간 운전 | 같은 연속 운전 17.14시간/1026 cycles; Mac/Linux10k·100k metadata와80MP decode 측정 완료 | 72시간 종료 receipt 및 실제 target RAM/disk/p95/tact 측정 |
 | S7-06 | 공정 품질·장비 | simulator 계약과 실행/품질 상태 구분 | 실제 camera/PLC/MES 및 제품/Lot별 정답·미검/과검 승인 기준 |
 | S7-07 | 공개 후보 판정 | 최신 standalone backend freeze·startup/restart 및270개 의존성 license bytes 누락0 | native library 조건·업데이트/coverage·실제 서명·독립 리뷰·pilot |
 | S7-08 | 사용자 pilot·운영 | feedback/지원/backup 절차 및 승인 경계 기록 | 실제 처음 쓰는 참여자 pilot과 유지보수 책임·SLA 결정 |
@@ -139,3 +139,17 @@
 - Clean source483ddd9에서70 related checks와 browser2/Electron2 actual cases passed이다. 미리 확인한 내용·경로·root identity·현재 보호 목록·정책·mtime을 묶어 변경 시 이동 전 actual409로 거절한다. 직접 API의 기존 명시 요청은 호환되며 앱은 반드시 미리 확인한 SHA를 보낸다.
 - 빈 입력·잘못된 정책·원본 보호·저장 전 취소·재열기·기존 복원 대상 거절을 확인했다. 통신 오류503은 명시적 test fixture이며 실제 서버 정책과 원본 bytes가 바뀌지 않음을 확인한 뒤 직접 재시도했다. 새 미리 확인 뒤 정확한 payload를 이동·복원했고 기존 archive/fresh restore 회귀도 각각 통과했다.
 - 기존4 actions의 미검증21 scenarios를 근거와 연결해192 actions/390 verified/954 pending이다. 실제 source image hashes와 occupied target을 보존했고 영구 삭제나 quality approval을 수행하지 않았다. 부모67/82·미완료15/82·전체 수락0을 유지한다.
+
+## 추가 실행: 템플릿 클래스 원본과 실제 앱 저장·취소·재열기
+
+- Original checkpoint의 클래스와 기존 sidecar의 일치를 읽고 없는 클래스를 actual422로 거절한다. CPU restricted reader만 사용하며 unsafe retry·metadata 작성·학습은 하지 않는다. Clean481ebfb의 관련106 passed이고 최종42edae7의 해당 production bytes와 같다.
+- Final42edae7 browser1/Electron1 safety cases와 기존0544e0e browser1/Electron1 cross-project regressions는 각각 정확한 source에 연결했다. 전체·부분 저장, 빈/121자 이름, 명시적 fixture503, 미제출 저장 취소, populated class 취소, 실제 모델/class 매핑, JSON·원본 hash·실제 재열린 node 선택을 확인했다.
+- Native 초기 실패는 real HOME 아래의 기존 template store를 읽던 harness 문제다. 기존 파일을 보존하고 명시적 owned store로 바꿨다. 초기 공유-store 실행을 격리 coverage로 세지 않으며, 로딩 중의 옛 재열기 screenshot 대신 실제 선택된 모델 node를 다시 확인했다.
+- 기존4 template actions의 미검증23 scenarios를 채워192 actions/413 verified/931 pending이다. 전체 feature 수락0과 부모67/82·미완료15/82는 유지한다. Public receipt:2026-10-07-template-checkpoint-controls-42edae7.json.
+
+## 추가 실행: Mac과42번 격리 LinuxCPU의 규모 측정
+
+- Clean0544e0e의 선택313개 source files를 commit과 독립 byte 대조했다. Mac과 network-none/no-GPU/non-root/read-only Linux container에서 각각1만·10만 metadata의 전 행을 중복 없이 읽고30회 search timing을 측정했다. 각80MP uniform original의 hash를 유지했다. 사진10만장·GUI성능·품질·현장 택트 증거로 쓰지 않는다.
+- 10만 행 paging p95는 Mac1.709ms/Linux2.817ms, test-filter search p95는 Mac14.131ms/Linux17.954ms였다. Mac10만 case peak RSS904,249,344 bytes, Linux1,091,051,520 bytes이며 Linux는 별도2CPU/8GiB 제한이다. 정확한 출력 file inventory와 logical/allocated bytes를 기록했고 shared filesystem free delta를 소유 파일 사용량과 구분했다.
+- 각 호스트의 두 queue controls에서 원래5000 REVIEW rows·duplicate5000·backpressure100·재조회5000을 확인했다. 실제 모델 inference나72시간 경과는 이 짧은 검사에 포함하지 않는다. Linux owned container는 exit0/removed이며 다른 작업을 중단하지 않았다.
+- 같은 independent72h process/observer/caffeinate의 create time을 다시 읽었고 기존 운전을 유지했다. Public receipt:2026-10-07-local-linux-capacity-0544e0e.json. 부모67/82·미완료15/82·수락0을 유지한다.

@@ -1,0 +1,44 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0544e0ee84611e39cf67cf3ca76dc1010e15ccd4",
+  "source_dirty": false,
+  "test": "scripts/e2e/flow-template-draft-history.spec.ts::cross-project model class mapping preserves source and recovers draft",
+  "test_source_sha256": "a9a1e640a5d660773a4aedf8a9923ab06573ec2cd395a07ce569be5be6e358ba",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "f0f2f335645eb6bdc0ca8ff182dcae30f9c7fc3c50deb4b4a502e2cd0ff7c331",
+  "harness_sha256": "0ace1f84b27e532c0ef881629310e5245139c8b824b71f4f2805a3c0c9c92387",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "8c96228f7d3d94b8e9e9050c2d0e5487f045245b46e24fea80d40a2094f4458f"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "0f881606abfade728d1cd0dd987b080cf1b0b286031545d426b041beb97854e7"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "10297aafdfd84597a98500006ef76aab0e8673101ed08c57b9ec80be24034ad7"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "ff94bec911a233a240182330c039b7b4387c2904a9da273390dd760cc1ce7ed5"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "ef7a647a03b439f88ff97e1f3c9c1ed961cd3f097c0ba174554f933cc2efffec"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

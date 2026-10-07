@@ -1,0 +1,368 @@
+{
+  "schema": "modu-vision.local-linux-capacity/v1",
+  "source_sha": "0544e0ee84611e39cf67cf3ca76dc1010e15ccd4",
+  "selected_source_files": 313,
+  "selected_source_independently_git_byte_verified": true,
+  "source_binding_sha256": "bd93aa96d3d3c998f1ada59ed3100514659653805dbf4791e14523e5a6225e97",
+  "source_tar_sha256": "50ff9617c16cbb8ba6d115550290cdcb0c2a685c2122d8c24583355f0d0d17a4",
+  "macos_log_sha256": "becb494ba298a6875c6f85b11cdc62bb9d249a971981cbaac43585bf4b86e14c",
+  "linux_log_sha256": "5aa6216844f87685c5b97a31082ee755cc8aadbc43b9c29f39939a7703778d38",
+  "linux_isolation": {
+    "image": "sha256:e8fdbc13b6fcda4523c5fd93d3c8177588d1346e09df39ff60c87346f327c46b",
+    "cpu_limit": 2,
+    "memory_limit_bytes": 8589934592,
+    "network": "none",
+    "gpu_access": false,
+    "ports_published": false,
+    "owned_root_only": true,
+    "container_exit_code": 0,
+    "owned_container_removed": true
+  },
+  "runs": [
+    {
+      "host": "macos",
+      "rows": 10000,
+      "receipt_sha256": "c278022836ac72828bbf7d0ec49b8a5618fab76ca6424edcfa0855410c2122e8",
+      "host_observed": {
+        "platform": "Darwin",
+        "architecture": "arm64",
+        "logical_cpus": 11,
+        "ram_total_bytes": 19327352832,
+        "process_rss_bytes": 475758592
+      },
+      "metadata": {
+        "fixture_kind": "metadata_only_not_image_inventory",
+        "rows": 10000,
+        "paged_rows": 10000,
+        "unique_ordered_rows": true,
+        "paged_paths_sha256": "35f005bdd36c135d56f7da7fcab7102738ce7db2d7e6c880aff25c9c94c33fd2",
+        "paging": {
+          "samples": 50,
+          "p95_ms": 1.5612500137649477,
+          "max_ms": 2.0394169841893017,
+          "min_ms": 1.0804999619722366
+        },
+        "searches": {
+          "ng": {
+            "samples": 30,
+            "p95_ms": 1.2761249672621489,
+            "max_ms": 2.1609170362353325,
+            "min_ms": 1.1803750530816615,
+            "returned": 100
+          },
+          "missing": {
+            "samples": 30,
+            "p95_ms": 0.8253750274889171,
+            "max_ms": 0.8565839962102473,
+            "min_ms": 0.7650000043213367,
+            "returned": 0
+          },
+          "test": {
+            "samples": 30,
+            "p95_ms": 4.297041974496096,
+            "max_ms": 13.128624996170402,
+            "min_ms": 2.642375009600073,
+            "returned": 100
+          }
+        },
+        "sqlite_bytes": 5021696
+      },
+      "large_image": {
+        "dimensions": [
+          10000,
+          8000
+        ],
+        "decoded": true,
+        "decode_ms": 151.30383300129324,
+        "file_bytes": 252593,
+        "sha256": "62feaf294c58c6a601c90686ff82ce4c0f5b80dea29fb73bdbdffffcb1a761e7",
+        "source_unchanged": true
+      },
+      "process_peak_rss_bytes": 868564992,
+      "owned_output_files": 7,
+      "owned_output_logical_bytes": 10101843,
+      "owned_output_allocated_bytes": 10625024,
+      "owned_output_inventory_sha256": "317992b15c6ce09750cce7c6048f664da674051883c1d59fa32ff32efdd659bc",
+      "filesystem_free_delta_bytes": 5312512,
+      "filesystem_free_delta_is_not_owned_usage": true,
+      "queue": {
+        "fixture_kind": "queue_control_without_model_or_target",
+        "capacity": 50,
+        "cycles": 100,
+        "completed": 5000,
+        "duplicate_requests": 5000,
+        "backpressure_refusals": 100,
+        "reopened_completed": 5000,
+        "source_unchanged": true,
+        "elapsed_seconds": 53.52743362495676,
+        "actual_model_inference": false,
+        "soak_72h_completed": false,
+        "target_support_approved": false
+      }
+    },
+    {
+      "host": "macos",
+      "rows": 100000,
+      "receipt_sha256": "e85f2ab487a5b8aa19e5b9a5fe761547240223d5633881c652b0d6e3d9a9984f",
+      "host_observed": {
+        "platform": "Darwin",
+        "architecture": "arm64",
+        "logical_cpus": 11,
+        "ram_total_bytes": 19327352832,
+        "process_rss_bytes": 427393024
+      },
+      "metadata": {
+        "fixture_kind": "metadata_only_not_image_inventory",
+        "rows": 100000,
+        "paged_rows": 100000,
+        "unique_ordered_rows": true,
+        "paged_paths_sha256": "dd6d012a69477af45a503ff013d741294e787a705967e465bbb72d44243ed31b",
+        "paging": {
+          "samples": 500,
+          "p95_ms": 1.7086660373024642,
+          "max_ms": 6.429208035115153,
+          "min_ms": 1.0170419700443745
+        },
+        "searches": {
+          "ng": {
+            "samples": 30,
+            "p95_ms": 1.3616670039482415,
+            "max_ms": 1.5649580163881183,
+            "min_ms": 1.1528749600984156,
+            "returned": 100
+          },
+          "missing": {
+            "samples": 30,
+            "p95_ms": 7.918874965980649,
+            "max_ms": 8.541166025679559,
+            "min_ms": 6.257708999328315,
+            "returned": 0
+          },
+          "test": {
+            "samples": 30,
+            "p95_ms": 14.131416974123567,
+            "max_ms": 15.571374970022589,
+            "min_ms": 13.255875033792108,
+            "returned": 100
+          }
+        },
+        "sqlite_bytes": 49381376
+      },
+      "large_image": {
+        "dimensions": [
+          10000,
+          8000
+        ],
+        "decoded": true,
+        "decode_ms": 164.40650000004098,
+        "file_bytes": 252593,
+        "sha256": "62feaf294c58c6a601c90686ff82ce4c0f5b80dea29fb73bdbdffffcb1a761e7",
+        "source_unchanged": true
+      },
+      "process_peak_rss_bytes": 904249344,
+      "owned_output_files": 7,
+      "owned_output_logical_bytes": 54580311,
+      "owned_output_allocated_bytes": 56078336,
+      "owned_output_inventory_sha256": "fffb8246debac29da6298e5ed52d9de22aa60e445d5202ed7cceac90385dc414",
+      "filesystem_free_delta_bytes": 50765824,
+      "filesystem_free_delta_is_not_owned_usage": true,
+      "queue": {
+        "fixture_kind": "queue_control_without_model_or_target",
+        "capacity": 50,
+        "cycles": 100,
+        "completed": 5000,
+        "duplicate_requests": 5000,
+        "backpressure_refusals": 100,
+        "reopened_completed": 5000,
+        "source_unchanged": true,
+        "elapsed_seconds": 51.949533833016176,
+        "actual_model_inference": false,
+        "soak_72h_completed": false,
+        "target_support_approved": false
+      }
+    },
+    {
+      "host": "linux",
+      "rows": 10000,
+      "receipt_sha256": "642587af2f595427c1d6d43719aa244210fa94dbf55285bbae0202db9c98157d",
+      "host_observed": {
+        "platform": "Linux",
+        "architecture": "x86_64",
+        "logical_cpus": 64,
+        "ram_total_bytes": 404423852032,
+        "process_rss_bytes": 678965248
+      },
+      "metadata": {
+        "fixture_kind": "metadata_only_not_image_inventory",
+        "rows": 10000,
+        "paged_rows": 10000,
+        "unique_ordered_rows": true,
+        "paged_paths_sha256": "35f005bdd36c135d56f7da7fcab7102738ce7db2d7e6c880aff25c9c94c33fd2",
+        "paging": {
+          "samples": 50,
+          "p95_ms": 2.7927160263061523,
+          "max_ms": 2.884205896407366,
+          "min_ms": 1.7787250690162182
+        },
+        "searches": {
+          "ng": {
+            "samples": 30,
+            "p95_ms": 1.879122108221054,
+            "max_ms": 1.9031660631299019,
+            "min_ms": 1.5813088975846767,
+            "returned": 100
+          },
+          "missing": {
+            "samples": 30,
+            "p95_ms": 1.0727052576839924,
+            "max_ms": 1.1161821894347668,
+            "min_ms": 0.933667179197073,
+            "returned": 0
+          },
+          "test": {
+            "samples": 30,
+            "p95_ms": 5.6915911845862865,
+            "max_ms": 6.770695094019175,
+            "min_ms": 3.2605701126158237,
+            "returned": 100
+          }
+        },
+        "sqlite_bytes": 5021696
+      },
+      "large_image": {
+        "dimensions": [
+          10000,
+          8000
+        ],
+        "decoded": true,
+        "decode_ms": 984.6350383013487,
+        "file_bytes": 252591,
+        "sha256": "8c7bbe0b39eb447f77f2aa29dab58f2ad0dab83c5167e35ac719d95279545cfe",
+        "source_unchanged": true
+      },
+      "process_peak_rss_bytes": 1030041600,
+      "owned_output_files": 7,
+      "owned_output_logical_bytes": 9557060,
+      "owned_output_allocated_bytes": 9564160,
+      "owned_output_inventory_sha256": "725c85a8a7148820a8b94fb0c965d91400d6b7e722bfca8689fbcea1397aa194",
+      "filesystem_free_delta_bytes": 5328896,
+      "filesystem_free_delta_is_not_owned_usage": true,
+      "queue": {
+        "fixture_kind": "queue_control_without_model_or_target",
+        "capacity": 50,
+        "cycles": 100,
+        "completed": 5000,
+        "duplicate_requests": 5000,
+        "backpressure_refusals": 100,
+        "reopened_completed": 5000,
+        "source_unchanged": true,
+        "elapsed_seconds": 15.212927108164877,
+        "actual_model_inference": false,
+        "soak_72h_completed": false,
+        "target_support_approved": false
+      }
+    },
+    {
+      "host": "linux",
+      "rows": 100000,
+      "receipt_sha256": "0ad6a365015e5bd4834410e3831e5a4d1ce627d603eb7911673f9cc4a2fe8b41",
+      "host_observed": {
+        "platform": "Linux",
+        "architecture": "x86_64",
+        "logical_cpus": 64,
+        "ram_total_bytes": 404423852032,
+        "process_rss_bytes": 679256064
+      },
+      "metadata": {
+        "fixture_kind": "metadata_only_not_image_inventory",
+        "rows": 100000,
+        "paged_rows": 100000,
+        "unique_ordered_rows": true,
+        "paged_paths_sha256": "dd6d012a69477af45a503ff013d741294e787a705967e465bbb72d44243ed31b",
+        "paging": {
+          "samples": 500,
+          "p95_ms": 2.8173839673399925,
+          "max_ms": 17.10254792124033,
+          "min_ms": 1.8678721971809864
+        },
+        "searches": {
+          "ng": {
+            "samples": 30,
+            "p95_ms": 1.965672243386507,
+            "max_ms": 2.2508520632982254,
+            "min_ms": 1.6070478595793247,
+            "returned": 100
+          },
+          "missing": {
+            "samples": 30,
+            "p95_ms": 7.955702021718025,
+            "max_ms": 8.039420004934072,
+            "min_ms": 7.581701967865229,
+            "returned": 0
+          },
+          "test": {
+            "samples": 30,
+            "p95_ms": 17.95389922335744,
+            "max_ms": 20.41080640628934,
+            "min_ms": 15.745833981782198,
+            "returned": 100
+          }
+        },
+        "sqlite_bytes": 49381376
+      },
+      "large_image": {
+        "dimensions": [
+          10000,
+          8000
+        ],
+        "decoded": true,
+        "decode_ms": 981.5669250674546,
+        "file_bytes": 252591,
+        "sha256": "8c7bbe0b39eb447f77f2aa29dab58f2ad0dab83c5167e35ac719d95279545cfe",
+        "source_unchanged": true
+      },
+      "process_peak_rss_bytes": 1091051520,
+      "owned_output_files": 7,
+      "owned_output_logical_bytes": 53982278,
+      "owned_output_allocated_bytes": 54890496,
+      "owned_output_inventory_sha256": "c57224327be46c90653ca5c79bc66b492c1bba216d0698641e06c37cadd4d1ae",
+      "filesystem_free_delta_bytes": 66719744,
+      "filesystem_free_delta_is_not_owned_usage": true,
+      "queue": {
+        "fixture_kind": "queue_control_without_model_or_target",
+        "capacity": 50,
+        "cycles": 100,
+        "completed": 5000,
+        "duplicate_requests": 5000,
+        "backpressure_refusals": 100,
+        "reopened_completed": 5000,
+        "source_unchanged": true,
+        "elapsed_seconds": 15.167672471143305,
+        "actual_model_inference": false,
+        "soak_72h_completed": false,
+        "target_support_approved": false
+      }
+    }
+  ],
+  "scope": "Actual synthetic metadata search/paging, per-host generated uniform80MP original decode and durable non-model REVIEW queue controls. Mac workstation and isolated Linux CPU measurements only. Numeric timing is not industrial tact, throughput promise, human quality, GUI-scale or72h acceptance. Host total RAM differs from the explicit8GiB Linux container cap. Source images generated separately per host are not claimed byte-identical across hosts. Other workloads and the existing soak were preserved.",
+  "ongoing_independent_soak": {
+    "observed_utc": "2026-10-07T08:36:51.599973+00:00",
+    "started_utc": "2026-10-06T15:28:02Z",
+    "elapsed_seconds": 61704.02891529101,
+    "cycles": 1026,
+    "completed": 1026,
+    "duplicate_requests": 1026,
+    "backpressure_refusals": 1026,
+    "same_process_identities_verified": true,
+    "restarted": false,
+    "previous_elapsed_combined": false,
+    "requested_seconds": 259200,
+    "soak_72h_completed": false
+  },
+  "review": "root_only",
+  "quality_approved": false,
+  "field_tact_measured": false,
+  "target_support_approved": false,
+  "independent_review_accepted": false,
+  "parent_acceptance": "pending"
+}

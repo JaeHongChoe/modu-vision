@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+  "source_dirty": false,
+  "test": "scripts/e2e/flow-template-safety.spec.ts::native template safety preserves saved versions and reopens explicitly mapped draft",
+  "test_source_sha256": "1774c498e87dc0248b2592ee3bdcfa8ccc39ada24a47350353f8a630cff80f74",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "6f7dac365fd1d1723f1fb6023b35990ea5c6f4fe7a4225175f9886d1efd11104",
+  "harness_sha256": "40bbc13ebedb3be2272343a233fb8f5e7023696a9738aa2e5beac21ec08c91d4",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "3feadce97c901561258f0e5477d07a9e01da6768aec2d4cfc329b2523aaf1ed0"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "3b6f2670f9f074652389c480877dd4ee22eb2ca383c39a12b10bb0f35bc410c4"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

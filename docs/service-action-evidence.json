@@ -11210,26 +11210,370 @@
            "sha256": "68365f4acca61f54d31ae9cca5c9673adf3036b65460b42a599329ddf97c9a04"
           }
          ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "전체 흐름 저장",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "browser: Explicit corrected full-flow save returned200 and its exact record persisted.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::template save and explicit mapping preserve originals across errors cancellation and reopen",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-browser.json",
+         "receipt_sha256": "bf43198e825f3616fe58f80648af0f62fc0e49ee5ad7ebf35ff6afbdddda51d8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "df036b699e03b0f8f8fa373439104bd19fa3572a019c6977b4d1cf245eb6d767"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "90ca9458f342f9366536347a97a62b33fa542144e74f82883d6bfe9f0290ab25"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "전체 흐름 저장",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "electron: Explicit corrected full-flow save returned200 and its exact record persisted.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::native template safety preserves saved versions and reopens explicitly mapped draft",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-electron.json",
+         "receipt_sha256": "0310f984333fd6dda1a4a9de644818a094a4221fc0b8849fdb11d6eb52c66c53",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3feadce97c901561258f0e5477d07a9e01da6768aec2d4cfc329b2523aaf1ed0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3b6f2670f9f074652389c480877dd4ee22eb2ca383c39a12b10bb0f35bc410c4"
+          }
+         ]
         }
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "전체 흐름 저장",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "browser: Empty name returned422 and added no record.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::template save and explicit mapping preserve originals across errors cancellation and reopen",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-browser.json",
+         "receipt_sha256": "bf43198e825f3616fe58f80648af0f62fc0e49ee5ad7ebf35ff6afbdddda51d8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "df036b699e03b0f8f8fa373439104bd19fa3572a019c6977b4d1cf245eb6d767"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "90ca9458f342f9366536347a97a62b33fa542144e74f82883d6bfe9f0290ab25"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "전체 흐름 저장",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "electron: Empty name returned422 and added no record.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::native template safety preserves saved versions and reopens explicitly mapped draft",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-electron.json",
+         "receipt_sha256": "0310f984333fd6dda1a4a9de644818a094a4221fc0b8849fdb11d6eb52c66c53",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3feadce97c901561258f0e5477d07a9e01da6768aec2d4cfc329b2523aaf1ed0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3b6f2670f9f074652389c480877dd4ee22eb2ca383c39a12b10bb0f35bc410c4"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "전체 흐름 저장",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "browser: A121-character name returned422 without changing source version or library.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::template save and explicit mapping preserve originals across errors cancellation and reopen",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-browser.json",
+         "receipt_sha256": "bf43198e825f3616fe58f80648af0f62fc0e49ee5ad7ebf35ff6afbdddda51d8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "df036b699e03b0f8f8fa373439104bd19fa3572a019c6977b4d1cf245eb6d767"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "90ca9458f342f9366536347a97a62b33fa542144e74f82883d6bfe9f0290ab25"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "전체 흐름 저장",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "electron: A121-character name returned422 without changing source version or library.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::native template safety preserves saved versions and reopens explicitly mapped draft",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-electron.json",
+         "receipt_sha256": "0310f984333fd6dda1a4a9de644818a094a4221fc0b8849fdb11d6eb52c66c53",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3feadce97c901561258f0e5477d07a9e01da6768aec2d4cfc329b2523aaf1ed0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3b6f2670f9f074652389c480877dd4ee22eb2ca383c39a12b10bb0f35bc410c4"
+          }
+         ]
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "전체 흐름 저장",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "browser: Explicit controlled503 added no record; a deliberate retry saved the record.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::template save and explicit mapping preserve originals across errors cancellation and reopen",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-browser.json",
+         "receipt_sha256": "bf43198e825f3616fe58f80648af0f62fc0e49ee5ad7ebf35ff6afbdddda51d8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "df036b699e03b0f8f8fa373439104bd19fa3572a019c6977b4d1cf245eb6d767"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "90ca9458f342f9366536347a97a62b33fa542144e74f82883d6bfe9f0290ab25"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "전체 흐름 저장",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "electron: Explicit controlled503 added no record; a deliberate retry saved the record.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::native template safety preserves saved versions and reopens explicitly mapped draft",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-electron.json",
+         "receipt_sha256": "0310f984333fd6dda1a4a9de644818a094a4221fc0b8849fdb11d6eb52c66c53",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3feadce97c901561258f0e5477d07a9e01da6768aec2d4cfc329b2523aaf1ed0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3b6f2670f9f074652389c480877dd4ee22eb2ca383c39a12b10bb0f35bc410c4"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "전체 흐름 저장",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "browser: Unsubmitted whole-flow name was abandoned through reopen; no record was added.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::template save and explicit mapping preserve originals across errors cancellation and reopen",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-browser.json",
+         "receipt_sha256": "bf43198e825f3616fe58f80648af0f62fc0e49ee5ad7ebf35ff6afbdddda51d8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "df036b699e03b0f8f8fa373439104bd19fa3572a019c6977b4d1cf245eb6d767"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "90ca9458f342f9366536347a97a62b33fa542144e74f82883d6bfe9f0290ab25"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "전체 흐름 저장",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "electron: Unsubmitted whole-flow name was abandoned through reopen; no record was added.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::native template safety preserves saved versions and reopens explicitly mapped draft",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-electron.json",
+         "receipt_sha256": "0310f984333fd6dda1a4a9de644818a094a4221fc0b8849fdb11d6eb52c66c53",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3feadce97c901561258f0e5477d07a9e01da6768aec2d4cfc329b2523aaf1ed0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3b6f2670f9f074652389c480877dd4ee22eb2ca383c39a12b10bb0f35bc410c4"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "전체 흐름 저장",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "browser: Both saved records reopened exactly and their owned JSON bytes stayed unchanged.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::template save and explicit mapping preserve originals across errors cancellation and reopen",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-browser.json",
+         "receipt_sha256": "bf43198e825f3616fe58f80648af0f62fc0e49ee5ad7ebf35ff6afbdddda51d8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "df036b699e03b0f8f8fa373439104bd19fa3572a019c6977b4d1cf245eb6d767"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "90ca9458f342f9366536347a97a62b33fa542144e74f82883d6bfe9f0290ab25"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "전체 흐름 저장",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "electron: Both saved records reopened exactly and their owned JSON bytes stayed unchanged.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::native template safety preserves saved versions and reopens explicitly mapped draft",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-electron.json",
+         "receipt_sha256": "0310f984333fd6dda1a4a9de644818a094a4221fc0b8849fdb11d6eb52c66c53",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3feadce97c901561258f0e5477d07a9e01da6768aec2d4cfc329b2523aaf1ed0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3b6f2670f9f074652389c480877dd4ee22eb2ca383c39a12b10bb0f35bc410c4"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "0544e0ee84611e39cf67cf3ca76dc1010e15ccd4",
+         "kind": "click",
+         "action": "전체 흐름 저장",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "browser: Actual separate project explicitly mapped its compatible model and NG→scratch class without changing source checkpoint/images.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-draft-history.spec.ts::cross-project model class mapping preserves source and recovers draft",
+         "receipt": "2026-10-07-flow-template-draft-history-0544e0e-browser.json",
+         "receipt_sha256": "a0af134aa13a691a23bcb073b5b602fe1f7da22aa59591199f3aab5c17a19078",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8c96228f7d3d94b8e9e9050c2d0e5487f045245b46e24fea80d40a2094f4458f"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0f881606abfade728d1cd0dd987b080cf1b0b286031545d426b041beb97854e7"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "10297aafdfd84597a98500006ef76aab0e8673101ed08c57b9ec80be24034ad7"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "ff94bec911a233a240182330c039b7b4387c2904a9da273390dd760cc1ce7ed5"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "ef7a647a03b439f88ff97e1f3c9c1ed961cd3f097c0ba174554f933cc2efffec"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "0544e0ee84611e39cf67cf3ca76dc1010e15ccd4",
+         "kind": "click",
+         "action": "전체 흐름 저장",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "electron: Actual separate project explicitly mapped its compatible model and NG→scratch class without changing source checkpoint/images.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-draft-history.spec.ts::native cross-project mapping undo redo and persistent draft recovery",
+         "receipt": "2026-10-07-flow-template-draft-history-0544e0e-electron.json",
+         "receipt_sha256": "16de6d4aee774158ba84b8111c97f279507721a37fd742e77c5fac15409b8564",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "66bec4179c96c4863e042b585a1757f0f994187448ea0d91ae0cf8bfb00a0548"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "58514f27e9490b2fd96436c5e1c015b0931b39bdbcfa90562dfa1b92f82d6e4c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f8f19225580260e0452335b809285e6833992360c28ff78caea9a985cf958ffd"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "4d532f9ff89af6d75204a6913889be6569c0754074aa9a83aee1cab2edba0edc"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "f68bd4c75f5faad2139c13998979a33c023a4bf7a186b0db22eca1e8a86d0964"
+          }
+         ]
+        }
+       ]
       }
      }
     },
@@ -11274,26 +11618,370 @@
            "sha256": "68365f4acca61f54d31ae9cca5c9673adf3036b65460b42a599329ddf97c9a04"
           }
          ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "선택 노드 저장",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "browser: Explicit two-node selected subset saved with exact nodes and one input/one output.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::template save and explicit mapping preserve originals across errors cancellation and reopen",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-browser.json",
+         "receipt_sha256": "bf43198e825f3616fe58f80648af0f62fc0e49ee5ad7ebf35ff6afbdddda51d8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "df036b699e03b0f8f8fa373439104bd19fa3572a019c6977b4d1cf245eb6d767"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "90ca9458f342f9366536347a97a62b33fa542144e74f82883d6bfe9f0290ab25"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "선택 노드 저장",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "electron: Explicit two-node selected subset saved with exact nodes and one input/one output.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::native template safety preserves saved versions and reopens explicitly mapped draft",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-electron.json",
+         "receipt_sha256": "0310f984333fd6dda1a4a9de644818a094a4221fc0b8849fdb11d6eb52c66c53",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3feadce97c901561258f0e5477d07a9e01da6768aec2d4cfc329b2523aaf1ed0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3b6f2670f9f074652389c480877dd4ee22eb2ca383c39a12b10bb0f35bc410c4"
+          }
+         ]
         }
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "선택 노드 저장",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "browser: Empty subset name returned422 while the single prior full template was preserved.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::template save and explicit mapping preserve originals across errors cancellation and reopen",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-browser.json",
+         "receipt_sha256": "bf43198e825f3616fe58f80648af0f62fc0e49ee5ad7ebf35ff6afbdddda51d8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "df036b699e03b0f8f8fa373439104bd19fa3572a019c6977b4d1cf245eb6d767"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "90ca9458f342f9366536347a97a62b33fa542144e74f82883d6bfe9f0290ab25"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "선택 노드 저장",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "electron: Empty subset name returned422 while the single prior full template was preserved.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::native template safety preserves saved versions and reopens explicitly mapped draft",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-electron.json",
+         "receipt_sha256": "0310f984333fd6dda1a4a9de644818a094a4221fc0b8849fdb11d6eb52c66c53",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3feadce97c901561258f0e5477d07a9e01da6768aec2d4cfc329b2523aaf1ed0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3b6f2670f9f074652389c480877dd4ee22eb2ca383c39a12b10bb0f35bc410c4"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "선택 노드 저장",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "browser: A121-character subset name returned422 without adding a record.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::template save and explicit mapping preserve originals across errors cancellation and reopen",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-browser.json",
+         "receipt_sha256": "bf43198e825f3616fe58f80648af0f62fc0e49ee5ad7ebf35ff6afbdddda51d8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "df036b699e03b0f8f8fa373439104bd19fa3572a019c6977b4d1cf245eb6d767"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "90ca9458f342f9366536347a97a62b33fa542144e74f82883d6bfe9f0290ab25"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "선택 노드 저장",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "electron: A121-character subset name returned422 without adding a record.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::native template safety preserves saved versions and reopens explicitly mapped draft",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-electron.json",
+         "receipt_sha256": "0310f984333fd6dda1a4a9de644818a094a4221fc0b8849fdb11d6eb52c66c53",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3feadce97c901561258f0e5477d07a9e01da6768aec2d4cfc329b2523aaf1ed0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3b6f2670f9f074652389c480877dd4ee22eb2ca383c39a12b10bb0f35bc410c4"
+          }
+         ]
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "선택 노드 저장",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "browser: Explicit controlled503 preserved the full template; deliberate retry saved only selected processing nodes.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::template save and explicit mapping preserve originals across errors cancellation and reopen",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-browser.json",
+         "receipt_sha256": "bf43198e825f3616fe58f80648af0f62fc0e49ee5ad7ebf35ff6afbdddda51d8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "df036b699e03b0f8f8fa373439104bd19fa3572a019c6977b4d1cf245eb6d767"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "90ca9458f342f9366536347a97a62b33fa542144e74f82883d6bfe9f0290ab25"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "선택 노드 저장",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "electron: Explicit controlled503 preserved the full template; deliberate retry saved only selected processing nodes.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::native template safety preserves saved versions and reopens explicitly mapped draft",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-electron.json",
+         "receipt_sha256": "0310f984333fd6dda1a4a9de644818a094a4221fc0b8849fdb11d6eb52c66c53",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3feadce97c901561258f0e5477d07a9e01da6768aec2d4cfc329b2523aaf1ed0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3b6f2670f9f074652389c480877dd4ee22eb2ca383c39a12b10bb0f35bc410c4"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "선택 노드 저장",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "browser: Unsubmitted subset name was abandoned through reopen; the saved two-record library was unchanged.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::template save and explicit mapping preserve originals across errors cancellation and reopen",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-browser.json",
+         "receipt_sha256": "bf43198e825f3616fe58f80648af0f62fc0e49ee5ad7ebf35ff6afbdddda51d8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "df036b699e03b0f8f8fa373439104bd19fa3572a019c6977b4d1cf245eb6d767"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "90ca9458f342f9366536347a97a62b33fa542144e74f82883d6bfe9f0290ab25"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "선택 노드 저장",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "electron: Unsubmitted subset name was abandoned through reopen; the saved two-record library was unchanged.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::native template safety preserves saved versions and reopens explicitly mapped draft",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-electron.json",
+         "receipt_sha256": "0310f984333fd6dda1a4a9de644818a094a4221fc0b8849fdb11d6eb52c66c53",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3feadce97c901561258f0e5477d07a9e01da6768aec2d4cfc329b2523aaf1ed0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3b6f2670f9f074652389c480877dd4ee22eb2ca383c39a12b10bb0f35bc410c4"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "선택 노드 저장",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "browser: Exact selected module record remained in the reopened library with unchanged owned file SHA.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::template save and explicit mapping preserve originals across errors cancellation and reopen",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-browser.json",
+         "receipt_sha256": "bf43198e825f3616fe58f80648af0f62fc0e49ee5ad7ebf35ff6afbdddda51d8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "df036b699e03b0f8f8fa373439104bd19fa3572a019c6977b4d1cf245eb6d767"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "90ca9458f342f9366536347a97a62b33fa542144e74f82883d6bfe9f0290ab25"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "선택 노드 저장",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "electron: Exact selected module record remained in the reopened library with unchanged owned file SHA.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::native template safety preserves saved versions and reopens explicitly mapped draft",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-electron.json",
+         "receipt_sha256": "0310f984333fd6dda1a4a9de644818a094a4221fc0b8849fdb11d6eb52c66c53",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3feadce97c901561258f0e5477d07a9e01da6768aec2d4cfc329b2523aaf1ed0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3b6f2670f9f074652389c480877dd4ee22eb2ca383c39a12b10bb0f35bc410c4"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "0544e0ee84611e39cf67cf3ca76dc1010e15ccd4",
+         "kind": "click",
+         "action": "선택 노드 저장",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "browser: Actual cross-project subset reuse required explicit target model and preserved one input/one output boundary ports.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-draft-history.spec.ts::cross-project model class mapping preserves source and recovers draft",
+         "receipt": "2026-10-07-flow-template-draft-history-0544e0e-browser.json",
+         "receipt_sha256": "a0af134aa13a691a23bcb073b5b602fe1f7da22aa59591199f3aab5c17a19078",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8c96228f7d3d94b8e9e9050c2d0e5487f045245b46e24fea80d40a2094f4458f"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0f881606abfade728d1cd0dd987b080cf1b0b286031545d426b041beb97854e7"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "10297aafdfd84597a98500006ef76aab0e8673101ed08c57b9ec80be24034ad7"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "ff94bec911a233a240182330c039b7b4387c2904a9da273390dd760cc1ce7ed5"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "ef7a647a03b439f88ff97e1f3c9c1ed961cd3f097c0ba174554f933cc2efffec"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "0544e0ee84611e39cf67cf3ca76dc1010e15ccd4",
+         "kind": "click",
+         "action": "선택 노드 저장",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "electron: Actual cross-project subset reuse required explicit target model and preserved one input/one output boundary ports.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-draft-history.spec.ts::native cross-project mapping undo redo and persistent draft recovery",
+         "receipt": "2026-10-07-flow-template-draft-history-0544e0e-electron.json",
+         "receipt_sha256": "16de6d4aee774158ba84b8111c97f279507721a37fd742e77c5fac15409b8564",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "66bec4179c96c4863e042b585a1757f0f994187448ea0d91ae0cf8bfb00a0548"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "58514f27e9490b2fd96436c5e1c015b0931b39bdbcfa90562dfa1b92f82d6e4c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f8f19225580260e0452335b809285e6833992360c28ff78caea9a985cf958ffd"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "4d532f9ff89af6d75204a6913889be6569c0754074aa9a83aee1cab2edba0edc"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "f68bd4c75f5faad2139c13998979a33c023a4bf7a186b0db22eca1e8a86d0964"
+          }
+         ]
+        }
+       ]
       }
      }
     },
@@ -11338,11 +12026,101 @@
            "sha256": "68365f4acca61f54d31ae9cca5c9673adf3036b65460b42a599329ddf97c9a04"
           }
          ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "모델·클래스 매핑 후 초안으로 열기",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "browser: Actual200 request contained the explicitly selected current-project completed model; draft persisted.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::template save and explicit mapping preserve originals across errors cancellation and reopen",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-browser.json",
+         "receipt_sha256": "bf43198e825f3616fe58f80648af0f62fc0e49ee5ad7ebf35ff6afbdddda51d8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "df036b699e03b0f8f8fa373439104bd19fa3572a019c6977b4d1cf245eb6d767"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "90ca9458f342f9366536347a97a62b33fa542144e74f82883d6bfe9f0290ab25"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "모델·클래스 매핑 후 초안으로 열기",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "electron: Actual200 request contained the explicitly selected current-project completed model; draft persisted.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::native template safety preserves saved versions and reopens explicitly mapped draft",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-electron.json",
+         "receipt_sha256": "0310f984333fd6dda1a4a9de644818a094a4221fc0b8849fdb11d6eb52c66c53",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3feadce97c901561258f0e5477d07a9e01da6768aec2d4cfc329b2523aaf1ed0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3b6f2670f9f074652389c480877dd4ee22eb2ca383c39a12b10bb0f35bc410c4"
+          }
+         ]
         }
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "모델·클래스 매핑 후 초안으로 열기",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "browser: Empty target-model mapping returned422 and did not replace the saved draft.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::template save and explicit mapping preserve originals across errors cancellation and reopen",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-browser.json",
+         "receipt_sha256": "bf43198e825f3616fe58f80648af0f62fc0e49ee5ad7ebf35ff6afbdddda51d8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "df036b699e03b0f8f8fa373439104bd19fa3572a019c6977b4d1cf245eb6d767"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "90ca9458f342f9366536347a97a62b33fa542144e74f82883d6bfe9f0290ab25"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "모델·클래스 매핑 후 초안으로 열기",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "electron: Empty target-model mapping returned422 and did not replace the saved draft.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::native template safety preserves saved versions and reopens explicitly mapped draft",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-electron.json",
+         "receipt_sha256": "0310f984333fd6dda1a4a9de644818a094a4221fc0b8849fdb11d6eb52c66c53",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3feadce97c901561258f0e5477d07a9e01da6768aec2d4cfc329b2523aaf1ed0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3b6f2670f9f074652389c480877dd4ee22eb2ca383c39a12b10bb0f35bc410c4"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
        "state": "verified",
@@ -11380,20 +12158,272 @@
            "sha256": "68365f4acca61f54d31ae9cca5c9673adf3036b65460b42a599329ddf97c9a04"
           }
          ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "모델·클래스 매핑 후 초안으로 열기",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "browser: Absent checkpoint class returned422 before returning a mapped graph.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::template save and explicit mapping preserve originals across errors cancellation and reopen",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-browser.json",
+         "receipt_sha256": "bf43198e825f3616fe58f80648af0f62fc0e49ee5ad7ebf35ff6afbdddda51d8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "df036b699e03b0f8f8fa373439104bd19fa3572a019c6977b4d1cf245eb6d767"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "90ca9458f342f9366536347a97a62b33fa542144e74f82883d6bfe9f0290ab25"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "모델·클래스 매핑 후 초안으로 열기",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "electron: Absent checkpoint class returned422 before returning a mapped graph.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::native template safety preserves saved versions and reopens explicitly mapped draft",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-electron.json",
+         "receipt_sha256": "0310f984333fd6dda1a4a9de644818a094a4221fc0b8849fdb11d6eb52c66c53",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3feadce97c901561258f0e5477d07a9e01da6768aec2d4cfc329b2523aaf1ed0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3b6f2670f9f074652389c480877dd4ee22eb2ca383c39a12b10bb0f35bc410c4"
+          }
+         ]
         }
        ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "모델·클래스 매핑 후 초안으로 열기",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "browser: Explicit controlled503 preserved the saved draft hash; deliberate retry mapped the exact model.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::template save and explicit mapping preserve originals across errors cancellation and reopen",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-browser.json",
+         "receipt_sha256": "bf43198e825f3616fe58f80648af0f62fc0e49ee5ad7ebf35ff6afbdddda51d8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "df036b699e03b0f8f8fa373439104bd19fa3572a019c6977b4d1cf245eb6d767"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "90ca9458f342f9366536347a97a62b33fa542144e74f82883d6bfe9f0290ab25"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "모델·클래스 매핑 후 초안으로 열기",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "electron: Explicit controlled503 preserved the saved draft hash; deliberate retry mapped the exact model.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::native template safety preserves saved versions and reopens explicitly mapped draft",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-electron.json",
+         "receipt_sha256": "0310f984333fd6dda1a4a9de644818a094a4221fc0b8849fdb11d6eb52c66c53",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3feadce97c901561258f0e5477d07a9e01da6768aec2d4cfc329b2523aaf1ed0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3b6f2670f9f074652389c480877dd4ee22eb2ca383c39a12b10bb0f35bc410c4"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "모델·클래스 매핑 후 초안으로 열기",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "browser: Replacement confirmation was dismissed without a map request or saved draft change.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::template save and explicit mapping preserve originals across errors cancellation and reopen",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-browser.json",
+         "receipt_sha256": "bf43198e825f3616fe58f80648af0f62fc0e49ee5ad7ebf35ff6afbdddda51d8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "df036b699e03b0f8f8fa373439104bd19fa3572a019c6977b4d1cf245eb6d767"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "90ca9458f342f9366536347a97a62b33fa542144e74f82883d6bfe9f0290ab25"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "모델·클래스 매핑 후 초안으로 열기",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "electron: Replacement confirmation was dismissed without a map request or saved draft change.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::native template safety preserves saved versions and reopens explicitly mapped draft",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-electron.json",
+         "receipt_sha256": "0310f984333fd6dda1a4a9de644818a094a4221fc0b8849fdb11d6eb52c66c53",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3feadce97c901561258f0e5477d07a9e01da6768aec2d4cfc329b2523aaf1ed0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3b6f2670f9f074652389c480877dd4ee22eb2ca383c39a12b10bb0f35bc410c4"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "모델·클래스 매핑 후 초안으로 열기",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "browser: Actual node search selected the restored model node in the reopened editor, and saved draft SHA matched.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::template save and explicit mapping preserve originals across errors cancellation and reopen",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-browser.json",
+         "receipt_sha256": "bf43198e825f3616fe58f80648af0f62fc0e49ee5ad7ebf35ff6afbdddda51d8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "df036b699e03b0f8f8fa373439104bd19fa3572a019c6977b4d1cf245eb6d767"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "90ca9458f342f9366536347a97a62b33fa542144e74f82883d6bfe9f0290ab25"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "모델·클래스 매핑 후 초안으로 열기",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "electron: Actual node search selected the restored model node in the reopened editor, and saved draft SHA matched.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::native template safety preserves saved versions and reopens explicitly mapped draft",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-electron.json",
+         "receipt_sha256": "0310f984333fd6dda1a4a9de644818a094a4221fc0b8849fdb11d6eb52c66c53",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3feadce97c901561258f0e5477d07a9e01da6768aec2d4cfc329b2523aaf1ed0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3b6f2670f9f074652389c480877dd4ee22eb2ca383c39a12b10bb0f35bc410c4"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "0544e0ee84611e39cf67cf3ca76dc1010e15ccd4",
+         "kind": "click",
+         "action": "모델·클래스 매핑 후 초안으로 열기",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "browser: Actual different project selected its own target model and reopened its saved mapped draft.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-draft-history.spec.ts::cross-project model class mapping preserves source and recovers draft",
+         "receipt": "2026-10-07-flow-template-draft-history-0544e0e-browser.json",
+         "receipt_sha256": "a0af134aa13a691a23bcb073b5b602fe1f7da22aa59591199f3aab5c17a19078",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8c96228f7d3d94b8e9e9050c2d0e5487f045245b46e24fea80d40a2094f4458f"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0f881606abfade728d1cd0dd987b080cf1b0b286031545d426b041beb97854e7"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "10297aafdfd84597a98500006ef76aab0e8673101ed08c57b9ec80be24034ad7"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "ff94bec911a233a240182330c039b7b4387c2904a9da273390dd760cc1ce7ed5"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "ef7a647a03b439f88ff97e1f3c9c1ed961cd3f097c0ba174554f933cc2efffec"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "0544e0ee84611e39cf67cf3ca76dc1010e15ccd4",
+         "kind": "click",
+         "action": "모델·클래스 매핑 후 초안으로 열기",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "electron: Actual different project selected its own target model and reopened its saved mapped draft.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-draft-history.spec.ts::native cross-project mapping undo redo and persistent draft recovery",
+         "receipt": "2026-10-07-flow-template-draft-history-0544e0e-electron.json",
+         "receipt_sha256": "16de6d4aee774158ba84b8111c97f279507721a37fd742e77c5fac15409b8564",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "66bec4179c96c4863e042b585a1757f0f994187448ea0d91ae0cf8bfb00a0548"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "58514f27e9490b2fd96436c5e1c015b0931b39bdbcfa90562dfa1b92f82d6e4c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f8f19225580260e0452335b809285e6833992360c28ff78caea9a985cf958ffd"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "4d532f9ff89af6d75204a6913889be6569c0754074aa9a83aee1cab2edba0edc"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "f68bd4c75f5faad2139c13998979a33c023a4bf7a186b0db22eca1e8a86d0964"
+          }
+         ]
+        }
+       ]
       }
      }
     },
@@ -11438,26 +12468,370 @@
            "sha256": "68365f4acca61f54d31ae9cca5c9673adf3036b65460b42a599329ddf97c9a04"
           }
          ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "ROI 결함 검사 · 이름 NG 매핑",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "browser: Explicit NG class and selected model round-tripped in the actual request and returned predicate.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::template save and explicit mapping preserve originals across errors cancellation and reopen",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-browser.json",
+         "receipt_sha256": "bf43198e825f3616fe58f80648af0f62fc0e49ee5ad7ebf35ff6afbdddda51d8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "df036b699e03b0f8f8fa373439104bd19fa3572a019c6977b4d1cf245eb6d767"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "90ca9458f342f9366536347a97a62b33fa542144e74f82883d6bfe9f0290ab25"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "ROI 결함 검사 · 이름 NG 매핑",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "electron: Explicit NG class and selected model round-tripped in the actual request and returned predicate.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::native template safety preserves saved versions and reopens explicitly mapped draft",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-electron.json",
+         "receipt_sha256": "0310f984333fd6dda1a4a9de644818a094a4221fc0b8849fdb11d6eb52c66c53",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3feadce97c901561258f0e5477d07a9e01da6768aec2d4cfc329b2523aaf1ed0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3b6f2670f9f074652389c480877dd4ee22eb2ca383c39a12b10bb0f35bc410c4"
+          }
+         ]
         }
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "ROI 결함 검사 · 이름 NG 매핑",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "browser: Empty class mapping returned422 with the selected model already populated.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::template save and explicit mapping preserve originals across errors cancellation and reopen",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-browser.json",
+         "receipt_sha256": "bf43198e825f3616fe58f80648af0f62fc0e49ee5ad7ebf35ff6afbdddda51d8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "df036b699e03b0f8f8fa373439104bd19fa3572a019c6977b4d1cf245eb6d767"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "90ca9458f342f9366536347a97a62b33fa542144e74f82883d6bfe9f0290ab25"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "ROI 결함 검사 · 이름 NG 매핑",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "electron: Empty class mapping returned422 with the selected model already populated.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::native template safety preserves saved versions and reopens explicitly mapped draft",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-electron.json",
+         "receipt_sha256": "0310f984333fd6dda1a4a9de644818a094a4221fc0b8849fdb11d6eb52c66c53",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3feadce97c901561258f0e5477d07a9e01da6768aec2d4cfc329b2523aaf1ed0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3b6f2670f9f074652389c480877dd4ee22eb2ca383c39a12b10bb0f35bc410c4"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "ROI 결함 검사 · 이름 NG 매핑",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "browser: Nonexistent class identity returned422 based on original checkpoint vocabulary; originals were unchanged.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::template save and explicit mapping preserve originals across errors cancellation and reopen",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-browser.json",
+         "receipt_sha256": "bf43198e825f3616fe58f80648af0f62fc0e49ee5ad7ebf35ff6afbdddda51d8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "df036b699e03b0f8f8fa373439104bd19fa3572a019c6977b4d1cf245eb6d767"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "90ca9458f342f9366536347a97a62b33fa542144e74f82883d6bfe9f0290ab25"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "ROI 결함 검사 · 이름 NG 매핑",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "electron: Nonexistent class identity returned422 based on original checkpoint vocabulary; originals were unchanged.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::native template safety preserves saved versions and reopens explicitly mapped draft",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-electron.json",
+         "receipt_sha256": "0310f984333fd6dda1a4a9de644818a094a4221fc0b8849fdb11d6eb52c66c53",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3feadce97c901561258f0e5477d07a9e01da6768aec2d4cfc329b2523aaf1ed0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3b6f2670f9f074652389c480877dd4ee22eb2ca383c39a12b10bb0f35bc410c4"
+          }
+         ]
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "ROI 결함 검사 · 이름 NG 매핑",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "browser: Explicit controlled503 preserved the original saved draft; deliberate corrected NG mapping succeeded.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::template save and explicit mapping preserve originals across errors cancellation and reopen",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-browser.json",
+         "receipt_sha256": "bf43198e825f3616fe58f80648af0f62fc0e49ee5ad7ebf35ff6afbdddda51d8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "df036b699e03b0f8f8fa373439104bd19fa3572a019c6977b4d1cf245eb6d767"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "90ca9458f342f9366536347a97a62b33fa542144e74f82883d6bfe9f0290ab25"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "ROI 결함 검사 · 이름 NG 매핑",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "electron: Explicit controlled503 preserved the original saved draft; deliberate corrected NG mapping succeeded.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::native template safety preserves saved versions and reopens explicitly mapped draft",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-electron.json",
+         "receipt_sha256": "0310f984333fd6dda1a4a9de644818a094a4221fc0b8849fdb11d6eb52c66c53",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3feadce97c901561258f0e5477d07a9e01da6768aec2d4cfc329b2523aaf1ed0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3b6f2670f9f074652389c480877dd4ee22eb2ca383c39a12b10bb0f35bc410c4"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "ROI 결함 검사 · 이름 NG 매핑",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "browser: Populated NG mapping replacement was dismissed without another request; visible input and saved draft SHA were preserved.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::template save and explicit mapping preserve originals across errors cancellation and reopen",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-browser.json",
+         "receipt_sha256": "bf43198e825f3616fe58f80648af0f62fc0e49ee5ad7ebf35ff6afbdddda51d8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "df036b699e03b0f8f8fa373439104bd19fa3572a019c6977b4d1cf245eb6d767"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "90ca9458f342f9366536347a97a62b33fa542144e74f82883d6bfe9f0290ab25"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "ROI 결함 검사 · 이름 NG 매핑",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "electron: Populated NG mapping replacement was dismissed without another request; visible input and saved draft SHA were preserved.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::native template safety preserves saved versions and reopens explicitly mapped draft",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-electron.json",
+         "receipt_sha256": "0310f984333fd6dda1a4a9de644818a094a4221fc0b8849fdb11d6eb52c66c53",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3feadce97c901561258f0e5477d07a9e01da6768aec2d4cfc329b2523aaf1ed0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3b6f2670f9f074652389c480877dd4ee22eb2ca383c39a12b10bb0f35bc410c4"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "ROI 결함 검사 · 이름 NG 매핑",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "browser: Exact persisted NG graph reopened and its actual model node was selected before screenshot.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::template save and explicit mapping preserve originals across errors cancellation and reopen",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-browser.json",
+         "receipt_sha256": "bf43198e825f3616fe58f80648af0f62fc0e49ee5ad7ebf35ff6afbdddda51d8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "df036b699e03b0f8f8fa373439104bd19fa3572a019c6977b4d1cf245eb6d767"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "90ca9458f342f9366536347a97a62b33fa542144e74f82883d6bfe9f0290ab25"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+         "kind": "click",
+         "action": "ROI 결함 검사 · 이름 NG 매핑",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "electron: Exact persisted NG graph reopened and its actual model node was selected before screenshot.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-safety.spec.ts::native template safety preserves saved versions and reopens explicitly mapped draft",
+         "receipt": "2026-10-07-flow-template-safety-42edae7-electron.json",
+         "receipt_sha256": "0310f984333fd6dda1a4a9de644818a094a4221fc0b8849fdb11d6eb52c66c53",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3feadce97c901561258f0e5477d07a9e01da6768aec2d4cfc329b2523aaf1ed0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3b6f2670f9f074652389c480877dd4ee22eb2ca383c39a12b10bb0f35bc410c4"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "0544e0ee84611e39cf67cf3ca76dc1010e15ccd4",
+         "kind": "click",
+         "action": "ROI 결함 검사 · 이름 NG 매핑",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "browser: Actual NG→scratch mapping used the target checkpoint class set in a different project and persisted its mapped draft.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-draft-history.spec.ts::cross-project model class mapping preserves source and recovers draft",
+         "receipt": "2026-10-07-flow-template-draft-history-0544e0e-browser.json",
+         "receipt_sha256": "a0af134aa13a691a23bcb073b5b602fe1f7da22aa59591199f3aab5c17a19078",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8c96228f7d3d94b8e9e9050c2d0e5487f045245b46e24fea80d40a2094f4458f"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0f881606abfade728d1cd0dd987b080cf1b0b286031545d426b041beb97854e7"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "10297aafdfd84597a98500006ef76aab0e8673101ed08c57b9ec80be24034ad7"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "ff94bec911a233a240182330c039b7b4387c2904a9da273390dd760cc1ce7ed5"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "ef7a647a03b439f88ff97e1f3c9c1ed961cd3f097c0ba174554f933cc2efffec"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "0544e0ee84611e39cf67cf3ca76dc1010e15ccd4",
+         "kind": "click",
+         "action": "ROI 결함 검사 · 이름 NG 매핑",
+         "expected": "Explicit template save/mapping preserves source records and only adopts the reviewed current-project target.",
+         "observed": "electron: Actual NG→scratch mapping used the target checkpoint class set in a different project and persisted its mapped draft.",
+         "reviewer": "Codex root actual clean-source request, disk hashes, final rendered controls and owned teardown readback; independent acceptance pending",
+         "test": "scripts/e2e/flow-template-draft-history.spec.ts::native cross-project mapping undo redo and persistent draft recovery",
+         "receipt": "2026-10-07-flow-template-draft-history-0544e0e-electron.json",
+         "receipt_sha256": "16de6d4aee774158ba84b8111c97f279507721a37fd742e77c5fac15409b8564",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "66bec4179c96c4863e042b585a1757f0f994187448ea0d91ae0cf8bfb00a0548"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "58514f27e9490b2fd96436c5e1c015b0931b39bdbcfa90562dfa1b92f82d6e4c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f8f19225580260e0452335b809285e6833992360c28ff78caea9a985cf958ffd"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "4d532f9ff89af6d75204a6913889be6569c0754074aa9a83aee1cab2edba0edc"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "f68bd4c75f5faad2139c13998979a33c023a4bf7a186b0db22eca1e8a86d0964"
+          }
+         ]
+        }
+       ]
       }
      }
     }

@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+  "source_dirty": false,
+  "test": "scripts/e2e/flow-template-safety.spec.ts::template save and explicit mapping preserve originals across errors cancellation and reopen",
+  "test_source_sha256": "1774c498e87dc0248b2592ee3bdcfa8ccc39ada24a47350353f8a630cff80f74",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "62dfeb0b83a8e27d9f3c20c1768047d66d45adefdb812ec3b43b6adbc5dbcede",
+  "harness_sha256": "bfba1d95f60d2914ad913f67d61831224aa6a1af674892c9ce7368b5c6754463",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "df036b699e03b0f8f8fa373439104bd19fa3572a019c6977b4d1cf245eb6d767"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "90ca9458f342f9366536347a97a62b33fa542144e74f82883d6bfe9f0290ab25"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}
