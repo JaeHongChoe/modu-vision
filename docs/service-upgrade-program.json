@@ -2577,6 +2577,14 @@
           "receipt_sha256": "71b2595a4b3e8e101a2221297a2fb347dc8e50962b5107f29548277cd759d217",
           "result": "Root browser2/sourceElectron2 passed119.44s/retry0 with2148 same sources. Exact book5 and unsent assignment close1 qualified; actual original/warm-start CPU training and same16test comparison/source return requalified.",
           "scope": "Synthetic controlled software verification only. Human truth/quality, publisher/installed/OS registration/hardware/whole parent/hosted CI success are false."
+        },
+        {
+          "kind": "clean-team-queue-reopen-exact-labeling-handoff",
+          "source_sha": "7d2e47821b1ed86b2eadb22258a893942397c36d",
+          "receipt": "docs/verification/receipts/2026-10-08-team-queue-handoff-7d2e478.json",
+          "receipt_sha256": "88aee7bb6282096fe8473b54d4ec0f75da17ed7ee7e38fd5a9332f57dd769574",
+          "result": "Root clean browser1/sourceElectron1 passed40.77s/retry0 with2157 same inputs. Actual refreshed one-row queue and annotation UUID/path/hash delivery verified without mutation.",
+          "scope": "Two curated scenarios only. Durable filters, model/human quality, publisher/installed target and whole-parent acceptance are not claimed."
         }
       ],
       "file_actions": {
@@ -5930,6 +5938,14 @@
           "receipt_sha256": "71b2595a4b3e8e101a2221297a2fb347dc8e50962b5107f29548277cd759d217",
           "result": "Root browser2/sourceElectron2 passed119.44s/retry0 with2148 same sources. Exact book5 and unsent assignment close1 qualified; actual original/warm-start CPU training and same16test comparison/source return requalified.",
           "scope": "Synthetic controlled software verification only. Human truth/quality, publisher/installed/OS registration/hardware/whole parent/hosted CI success are false."
+        },
+        {
+          "kind": "clean-team-queue-reopen-exact-labeling-handoff",
+          "source_sha": "7d2e47821b1ed86b2eadb22258a893942397c36d",
+          "receipt": "docs/verification/receipts/2026-10-08-team-queue-handoff-7d2e478.json",
+          "receipt_sha256": "88aee7bb6282096fe8473b54d4ec0f75da17ed7ee7e38fd5a9332f57dd769574",
+          "result": "Root clean browser1/sourceElectron1 passed40.77s/retry0 with2157 same inputs. Actual refreshed one-row queue and annotation UUID/path/hash delivery verified without mutation.",
+          "scope": "Two curated scenarios only. Durable filters, model/human quality, publisher/installed target and whole-parent acceptance are not claimed."
         }
       ],
       "file_actions": {
@@ -5954,7 +5970,7 @@
       },
       "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts",
       "remaining": [
-        "207 curated actions have592 verified and857 pending scenarios. Metadata picker error/cancel/handoff now exercised in clean browser and native Electron at fe92877. Omitted menus/shortcuts, unexecuted dimensions and full156-feature target acceptance remain pending."
+        "207 curated actions have594 verified and855 pending scenarios. Metadata picker error/cancel/handoff now exercised in clean browser and native Electron at fe92877. Omitted menus/shortcuts, unexecuted dimensions and full156-feature target acceptance remain pending."
       ]
     },
     {

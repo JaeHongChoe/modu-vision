@@ -1,0 +1,100 @@
+{
+  "schema": "modu-vision.team-queue-clean-controls/v1",
+  "source_sha": "7d2e47821b1ed86b2eadb22258a893942397c36d",
+  "source_file_sha256": "1c77f652253faf27c630d510fc30b11d0de4bcd4593633d64c886c73c5f4c890",
+  "results": {
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0,
+    "retries": 0,
+    "elapsed_seconds": 40.77340441697743,
+    "source_inputs": 2157,
+    "source_unchanged": true,
+    "clean_before_and_after": true
+  },
+  "cases": [
+    {
+      "mode": "browser",
+      "receipt": "docs/verification/receipts/2026-10-08-team-queue-handoff-7d2e478-browser.json",
+      "receipt_sha256": "99601f6ef21e3b830906106d781888d4bcfd9b01a227a0a458787eb6c44f2c89",
+      "same_context_reopen": true,
+      "exact_actual_annotation_metadata_handoff": true,
+      "selected_image_uuid": "98e9d6c2-f7c9-5140-9207-e52319c08789",
+      "selected_content_hash": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e",
+      "source_path_exactly_verified_without_public_private_path": true,
+      "ui_mutations": [],
+      "owned_cleanup": {
+        "exited": true,
+        "exitCode": 0,
+        "signal": null,
+        "exitedBeforeStop": false,
+        "forced": false,
+        "forcedReason": null,
+        "groupAlive": false,
+        "escaped": [],
+        "unownedReferences": [],
+        "scanError": null,
+        "durationMs": 1066,
+        "stoppedAt": "2026-10-07T22:46:37.335Z",
+        "healthy_at_end": true,
+        "port_closed": true,
+        "pid_alive": false
+      }
+    },
+    {
+      "mode": "electron",
+      "receipt": "docs/verification/receipts/2026-10-08-team-queue-handoff-7d2e478-electron.json",
+      "receipt_sha256": "f8ae5004c6d2a994f9a02e6bee766eb42a2d0f0775d682726e00c36dde38f619",
+      "same_context_reopen": true,
+      "exact_actual_annotation_metadata_handoff": true,
+      "selected_image_uuid": "3df4a838-4d2b-537c-878f-bb0afb242c82",
+      "selected_content_hash": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e",
+      "source_path_exactly_verified_without_public_private_path": true,
+      "ui_mutations": [],
+      "owned_cleanup": {
+        "electron_alive": false,
+        "backends": [
+          {
+            "port": 58629,
+            "pid": 50067,
+            "port_closed": true,
+            "pid_alive": false
+          }
+        ],
+        "logged_backend_pids": [
+          50067
+        ],
+        "logged_backend_pids_alive": [],
+        "backend_restarted": false,
+        "escaped": [],
+        "unowned_references": [],
+        "scan_error": null,
+        "close_timed_out": false
+      }
+    }
+  ],
+  "proof_hashes": {
+    "command.json": "6c194cd21dab3998be4852bc221e1755b6de4165352c7ccc86e27e4e93eff9f5",
+    "result.log": "a8ccccc26e1722d0b70f7e966213f9eb7daa3f717aa1607d4fa1ed232855ebdd",
+    "source-before.json": "ece521047ec832ab64db549d9e24eff8bac3428237d3c02e4f9ae4eda507d307",
+    "source-after.json": "ece521047ec832ab64db549d9e24eff8bac3428237d3c02e4f9ae4eda507d307"
+  },
+  "report_sha256": "f688dd564327849c5f5895e0a59586c65c935e4d7b5c09c77edea3a32a00f681",
+  "global_teardown_sha256": "94a12e54f205d23555ea304bb973c7eb6032534bdf6ed9d526637f9ae6cffce5",
+  "independent_review_sha256": "c9c8758e84d28ed12e44e05e6fd1e85452e0f1249950703323255961379eb4b8",
+  "limitations": [
+    "Explicit dialog close/reopen retains filters within the same mounted project; no durable filter reload persistence.",
+    "Only actual selected UUID/path/hash and annotation metadata delivery is qualified; no label write or review vote.",
+    "Controlled assignment is fixture metadata, not human truth.",
+    "Invalid filter remains pending; no invalid request dimension fabricated."
+  ],
+  "acceptance": {
+    "new_curated_scenarios": 2,
+    "model_inference": false,
+    "human_truth_or_quality": false,
+    "installed_target_or_OS_registration": false,
+    "publisher_or_release": false,
+    "hardware_or_whole_process_tree": false,
+    "whole_parent_accepted": false
+  }
+}

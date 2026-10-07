@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "7d2e47821b1ed86b2eadb22258a893942397c36d",
+  "source_dirty": false,
+  "test": "scripts/e2e/team-queue-handoff-controls.spec.ts::native team queue filter reopens retained controls and hands exact UUID source and hash to labeling",
+  "test_source_sha256": "1c77f652253faf27c630d510fc30b11d0de4bcd4593633d64c886c73c5f4c890",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "f688dd564327849c5f5895e0a59586c65c935e4d7b5c09c77edea3a32a00f681",
+  "harness_sha256": "3d2746632f62f233b3383a5134e624df5b9b41119137cc82e434cce6873ba605",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "bef0203482fd0a2dba03ab5978b82ee8c4fe29d71ea21b9caf2adbe87c3ea2ba"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "01451281830914223527f46f44bc1ec917f58f47d463c80597dcc7654ad320e4"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "922d039c280ed180656296e899d5c9360b92881bb325b3f05a71c8a845615a37"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

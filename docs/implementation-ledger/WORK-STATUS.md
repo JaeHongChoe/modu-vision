@@ -32,7 +32,7 @@
 | S6-04 | 오프라인 설치와 업데이트 | POSIX 앱/DB cutover·복구·기존 home 인수, 영속 controller와 main/backend 인증 handshake를 구현하고 검증했다. 원래 backend epoch의 source CPU 기준 이미지 실행과 source candidate 활성 pointer 변경 전 검사·복구를 추가 검증했다. 실제 compiled candidate adapter, 전체 process-tree 종료 확인, OS installer adapter와 native packaged positive startup을 이어간다. 실 publisher 서명은 별도 조건이다. |
 | S6-05 | 공개 CI와 source 재현성 | 이전 소스의 hosted 성공·실패를 보존한다. 보호된 수동 candidate 검증 workflow와 source/artifact/환경 정책 gate를 추가했다. 실제 workflow 실행·서명·배포는 하지 않았고, 새 게시 소스의 전체 hosted 결과가 필요하다. |
 | S6-06 | 서명과 릴리스 채널 | 실제 Authenticode/publisher identity·서명 후 byte inventory·채널 승인 필요. |
-| S7-01 | 기존 기능 전체 coverage 계약 | 원래156개 ID를 유지한다. 현재207개 curated action의592개 시나리오 검증,857개 pending이다. 알려진 누락 메뉴/shortcut·남은 시나리오·전체 기능 수락을 이어간다. 행동 수와 전체 기능 완료 수는 다르다. |
+| S7-01 | 기존 기능 전체 coverage 계약 | 원래156개 ID를 유지한다. 현재207개 curated action의594개 시나리오 검증,855개 pending이다. 알려진 누락 메뉴/shortcut·남은 시나리오·전체 기능 수락을 이어간다. 행동 수와 전체 기능 완료 수는 다르다. |
 | S7-02 | 10모델군 실제 작업 시나리오 | 실제5 distinct learned chain은 완료. 10모델군 각각 사람이 검토한 정답과 대표 multi-task recipe 검증 필요. |
 | S7-03 | Windows 실제 설치와 사용 QA | Windows 실제 설치·사용 QA 사용자 면제. hosted Server2025 component 실행을 Win11 실사용 성공으로 세지 않음. |
 | S7-05 | 데이터 규모와 연속 운전 | 실제 browser/native에서10만 메타데이터·실제 이미지3장,3×120 keyset page·최대DOM32·응답120·tail UUID/SHA 재열기·파일 없는 항목 선택 거절을 검증했다. 10만 실제 사진 decode나 target 자원/택트 수락은 아니다. a184b1e의 동일 외장72시간 실행은 유지 중이며 이전 시간을 합산하지 않고 terminal receipt가 필요하다. |
@@ -355,3 +355,9 @@ compiled canary의 닫힌 protocol2/worker8개 필드를 화면 bridge에서 검
 - 고정 compiled worker의 인증·단회 anonymous transport·입력 및 runtime/resource hash를 활성화 pointer 변경 전에 확인하고, 불확실한 실행은 원래 intent와 ownership을 남긴다. source229개 및 CI selector 계약20개가 통과했다. 명시적 source selector21개를 공개 CPU CI에 추가했다.
 - 이전 exact compiled artifact에서는 실제 A/OK 기준 이미지1개와 거절4개가 통과했다. 최초 pointer가 비어 있던 합성 검증이며, 기존 설치 앱의 업그레이드·전체 process-tree 종료·품질 수락이 아니다.
 - 실제 Electron Helper(GPU/Plugin/Renderer)의 정상 괄호 resource 경로9개가 거절된 원인을 확인해 경로 parser만 좁게 보정했다. traversal·reserved name·namespace·link/hash 검사는 유지했다. 보정된 compiled artifact와 실제 native positive 실행은 후속 receipt로 구분한다.
+
+
+## 2026-10-08 팀 목록 재열기·정확한 이미지 전달2개
+
+- clean `7d2e478` browser1/source Electron1이40.77초, retry 없이 통과하고2157개 입력이 동일했다. 같은 프로젝트에서 dialog를 명시적으로 닫고 다시 열어 유지된 담당·상태 필터로 실제 queue GET200을 갱신했다. 기존 이미지와 다른 row를 클릭한 뒤 실제 annotation GET200과 화면의 UUID·경로·내용 hash가 정확히 일치했다.
+- 원본·라벨·검수 기록 hash를 보존하고 UI mutation은 없었다. 같은 context의 재열기이며 앱 재시작 후 필터 영속화나 사람 정답 승인이 아니다. invalid filter는 계속 pending이다. 집계594verified/855pending, 원래82/156ID와 부모 구현69/13 및 전체 수락0을 유지한다.

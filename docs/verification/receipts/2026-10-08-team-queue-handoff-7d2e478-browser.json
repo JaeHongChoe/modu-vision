@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "7d2e47821b1ed86b2eadb22258a893942397c36d",
+  "source_dirty": false,
+  "test": "scripts/e2e/team-queue-handoff-controls.spec.ts::team queue filter retains same-context reopened controls and hands the exact image to labeling",
+  "test_source_sha256": "1c77f652253faf27c630d510fc30b11d0de4bcd4593633d64c886c73c5f4c890",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "f688dd564327849c5f5895e0a59586c65c935e4d7b5c09c77edea3a32a00f681",
+  "harness_sha256": "66a4c0f36452b51cae771e3affc0a838b7883970404cea7031517844179bb278",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "0e8f3c9d133a96fdee93713079312b30ea46edbc6bf6874ed1db63bf610e90a4"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "1e000eac5705005412bfa16fe64377c7a04afedd1bd18bb2a94d21677c2c321e"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "30ce397fcb8f7db3083f1486408935a043d6b60222362a6b2fa58d402a24e8cb"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}
