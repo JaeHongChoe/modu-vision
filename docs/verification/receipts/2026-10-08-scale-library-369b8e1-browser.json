@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+  "source_dirty": false,
+  "test": "scripts/e2e/scale-library-controls.spec.ts::100k metadata pages through the actual library picker and restores the exact tail image",
+  "test_source_sha256": "9ba76a094298c9cb796f7ed67490b2a681a73031eb6725a951a14c97a0b57a8e",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "e2139df3880e993fe936d6c5dd5d5cd47391ee4de67cde0668e8bafd067d663b",
+  "harness_sha256": "4b8378771740f84e70f3ba3a86c66fec4fc987b628031aa9d5adddf3da4db2ac",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "2b039917d7a1abab5d2a64f0cdaef71ad6c9ec330077a060383fd7ae22cd4bff"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "11c5202bffabf798857c6e73f2d60a528400ca029178bfaf1dc10acf431a02c2"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

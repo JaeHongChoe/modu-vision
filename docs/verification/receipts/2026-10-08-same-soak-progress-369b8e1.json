@@ -1,0 +1,51 @@
+{
+  "schema": "modu-vision.same-endurance-progress/v1",
+  "observed_at": "2026-10-07T15:13:41.406053+00:00",
+  "frozen_source_sha": "a184b1e254e881c0af09f0f788c993b35da92c89",
+  "raw_receipt_sha256": "2cca91de5478446cec075787ba49711ee2dd46109a4fe4bc34d814f635fc3271",
+  "original_process_identities": [
+    {
+      "pid": 96648,
+      "create_time": 1791300478.197693,
+      "status": "running"
+    },
+    {
+      "pid": 96637,
+      "create_time": 1791300478.132385,
+      "status": "sleeping"
+    },
+    {
+      "pid": 96873,
+      "create_time": 1791300601.228116,
+      "status": "sleeping"
+    }
+  ],
+  "metrics": {
+    "schema_version": 1,
+    "status": "running",
+    "pid": 96648,
+    "started_utc": "2026-10-06T15:28:02Z",
+    "requested_seconds": 259200.0,
+    "interval_seconds": 60.0,
+    "checkpoint_sha256": "e7512480de1bae33b903319f21f7e24ea2c9f9b65753239228570be3afe146b1",
+    "actual_cpu_inference": true,
+    "model_quality_approved": false,
+    "approved_field_service": false,
+    "hardware_delivery_exercised": false,
+    "soak_72h_completed": false,
+    "quota_bytes": 536870912,
+    "minimum_free_bytes": 67108864,
+    "elapsed_seconds": 85495.97882658301,
+    "cycles": 1421,
+    "completed": 1421,
+    "duplicate_requests": 1421,
+    "backpressure_refusals": 1421,
+    "process_peak_rss_bytes": 517144576
+  },
+  "prior_source_binding_reference": {
+    "receipt": "2026-10-07-same-soak-progress-4a4b4d7.json",
+    "receipt_sha256": "6ac3b843d874e045fc6750d44c2a805c39c7ae7ec19255487b6086a35b9ff194",
+    "source_binding_sha256": "fd68736a9f34c6096711b5b217b9ddea6e65dc813ba0ceaae79822cfcfc0a36d"
+  },
+  "scope": "Read-only progress of the same original worker/observer/caffeinate with matching create times/start/checkpoint and preserved original source freeze. No restart, cancellation, aggregation, target hardware or72h completion inferred."
+}

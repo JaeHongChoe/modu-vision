@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+  "source_dirty": false,
+  "test": "scripts/e2e/image-library-closure.spec.ts::metadata and error filters find an image outside the first 200 and preserve its reopened identity",
+  "test_source_sha256": "3190a15443e46f2c453659665b1a466875a15de1537051003dbe534314a120f8",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "e2139df3880e993fe936d6c5dd5d5cd47391ee4de67cde0668e8bafd067d663b",
+  "harness_sha256": "ad0ab9328a74b95131a94fc969c1ed77179633b189d3492cac6442edaec461aa",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "0b083936d89b1efb3ea738bca7b77dbb83dba96a69cb5587729d8301fc7dd2ab"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "fab871daa9a618ed2cbf9c9cd6036efcb91b4d084a8e642b33fb59b82a2dd19a"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

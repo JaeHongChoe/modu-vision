@@ -7488,8 +7488,179 @@
   },
   {
    "id": "F049",
-   "actions": [],
-   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+   "actions": [
+    {
+     "id": "saved-class-metrics",
+     "label": "완료된 평가 결과 다시 불러오기 · 클래스별 지표",
+     "source": "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "완료된 평가 결과 다시 불러오기 · 클래스별 지표",
+         "expected": "Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Scratch TP1/FN1/FP2 and Crack TP1/FN0/FP0 displayed.",
+         "observed": "browser: Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Scratch TP1/FN1/FP2 and Crack TP1/FN0/FP0 displayed. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
+         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "완료된 평가 결과 다시 불러오기 · 클래스별 지표",
+         "expected": "Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Scratch TP1/FN1/FP2 and Crack TP1/FN0/FP0 displayed.",
+         "observed": "electron: Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Scratch TP1/FN1/FP2 and Crack TP1/FN0/FP0 displayed. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
+         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "완료된 평가 결과 다시 불러오기 · 클래스별 지표",
+         "expected": "The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes.",
+         "observed": "browser: The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
+         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "완료된 평가 결과 다시 불러오기 · 클래스별 지표",
+         "expected": "The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes.",
+         "observed": "electron: The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
+         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+          }
+         ]
+        }
+       ]
+      },
+      "invalid": {
+       "state": "pending",
+       "reason": "This dimension has not been exercised by the retained exact GUI case."
+      },
+      "error": {
+       "state": "pending",
+       "reason": "This dimension has not been exercised by the retained exact GUI case."
+      },
+      "cancel": {
+       "state": "pending",
+       "reason": "This dimension has not been exercised by the retained exact GUI case."
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "완료된 평가 결과 다시 불러오기 · 클래스별 지표",
+         "expected": "Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds.",
+         "observed": "browser: Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
+         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "완료된 평가 결과 다시 불러오기 · 클래스별 지표",
+         "expected": "Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds.",
+         "observed": "electron: Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
+         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending",
+       "reason": "This dimension has not been exercised by the retained exact GUI case."
+      }
+     }
+    }
+   ],
+   "remaining": "Only retained exact GUI dimensions are verified; omitted controls and unexecuted dimensions, representative model truth, target hardware and full independent acceptance remain pending."
   },
   {
    "id": "F050",
@@ -7704,8 +7875,179 @@
   },
   {
    "id": "F052",
-   "actions": [],
-   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+   "actions": [
+    {
+     "id": "class-fn-fp-filter",
+     "label": "클래스별 누락 FN·추가 FP 이미지",
+     "source": "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "클래스별 누락 FN·추가 FP 이미지",
+         "expected": "Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Scratch FN exactly case1, FP exactly case2/case5; Crack FN0 is empty.",
+         "observed": "browser: Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Scratch FN exactly case1, FP exactly case2/case5; Crack FN0 is empty. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
+         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "클래스별 누락 FN·추가 FP 이미지",
+         "expected": "Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Scratch FN exactly case1, FP exactly case2/case5; Crack FN0 is empty.",
+         "observed": "electron: Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Scratch FN exactly case1, FP exactly case2/case5; Crack FN0 is empty. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
+         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "클래스별 누락 FN·추가 FP 이미지",
+         "expected": "The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes.",
+         "observed": "browser: The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
+         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "클래스별 누락 FN·추가 FP 이미지",
+         "expected": "The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes.",
+         "observed": "electron: The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
+         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+          }
+         ]
+        }
+       ]
+      },
+      "invalid": {
+       "state": "pending",
+       "reason": "This dimension has not been exercised by the retained exact GUI case."
+      },
+      "error": {
+       "state": "pending",
+       "reason": "This dimension has not been exercised by the retained exact GUI case."
+      },
+      "cancel": {
+       "state": "pending",
+       "reason": "This dimension has not been exercised by the retained exact GUI case."
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "클래스별 누락 FN·추가 FP 이미지",
+         "expected": "Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds.",
+         "observed": "browser: Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
+         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "클래스별 누락 FN·추가 FP 이미지",
+         "expected": "Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds.",
+         "observed": "electron: Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
+         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending",
+       "reason": "This dimension has not been exercised by the retained exact GUI case."
+      }
+     }
+    }
+   ],
+   "remaining": "Only retained exact GUI dimensions are verified; omitted controls and unexecuted dimensions, representative model truth, target hardware and full independent acceptance remain pending."
   },
   {
    "id": "F053",
@@ -7714,18 +8056,531 @@
   },
   {
    "id": "F054",
-   "actions": [],
-   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+   "actions": [
+    {
+     "id": "score-bin-filter",
+     "label": "결과 확률 분포 · 구간 선택",
+     "source": "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "결과 확률 분포 · 구간 선택",
+         "expected": "Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Score bins [0,1,0,1,0,0,1,1,1,1]; half-open upper endpoint and empty0.2–0.3 verified.",
+         "observed": "browser: Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Score bins [0,1,0,1,0,0,1,1,1,1]; half-open upper endpoint and empty0.2–0.3 verified. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
+         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "결과 확률 분포 · 구간 선택",
+         "expected": "Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Score bins [0,1,0,1,0,0,1,1,1,1]; half-open upper endpoint and empty0.2–0.3 verified.",
+         "observed": "electron: Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Score bins [0,1,0,1,0,0,1,1,1,1]; half-open upper endpoint and empty0.2–0.3 verified. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
+         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "결과 확률 분포 · 구간 선택",
+         "expected": "The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes.",
+         "observed": "browser: The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
+         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "결과 확률 분포 · 구간 선택",
+         "expected": "The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes.",
+         "observed": "electron: The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
+         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+          }
+         ]
+        }
+       ]
+      },
+      "invalid": {
+       "state": "pending",
+       "reason": "This dimension has not been exercised by the retained exact GUI case."
+      },
+      "error": {
+       "state": "pending",
+       "reason": "This dimension has not been exercised by the retained exact GUI case."
+      },
+      "cancel": {
+       "state": "pending",
+       "reason": "This dimension has not been exercised by the retained exact GUI case."
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "결과 확률 분포 · 구간 선택",
+         "expected": "Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds.",
+         "observed": "browser: Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
+         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "결과 확률 분포 · 구간 선택",
+         "expected": "Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds.",
+         "observed": "electron: Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
+         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending",
+       "reason": "This dimension has not been exercised by the retained exact GUI case."
+      }
+     }
+    }
+   ],
+   "remaining": "Only retained exact GUI dimensions are verified; omitted controls and unexecuted dimensions, representative model truth, target hardware and full independent acceptance remain pending."
   },
   {
    "id": "F055",
-   "actions": [],
-   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+   "actions": [
+    {
+     "id": "area-bin-filter",
+     "label": "결함 크기 분포 · 구간 선택",
+     "source": "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "결함 크기 분포 · 구간 선택",
+         "expected": "Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Original-pixel predicted areas4/16/36/49 and bins [1,0,0,1,0,0,0,1,0,1] verified.",
+         "observed": "browser: Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Original-pixel predicted areas4/16/36/49 and bins [1,0,0,1,0,0,0,1,0,1] verified. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
+         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "결함 크기 분포 · 구간 선택",
+         "expected": "Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Original-pixel predicted areas4/16/36/49 and bins [1,0,0,1,0,0,0,1,0,1] verified.",
+         "observed": "electron: Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Original-pixel predicted areas4/16/36/49 and bins [1,0,0,1,0,0,0,1,0,1] verified. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
+         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "결함 크기 분포 · 구간 선택",
+         "expected": "The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes.",
+         "observed": "browser: The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
+         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "결함 크기 분포 · 구간 선택",
+         "expected": "The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes.",
+         "observed": "electron: The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
+         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+          }
+         ]
+        }
+       ]
+      },
+      "invalid": {
+       "state": "pending",
+       "reason": "This dimension has not been exercised by the retained exact GUI case."
+      },
+      "error": {
+       "state": "pending",
+       "reason": "This dimension has not been exercised by the retained exact GUI case."
+      },
+      "cancel": {
+       "state": "pending",
+       "reason": "This dimension has not been exercised by the retained exact GUI case."
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "결함 크기 분포 · 구간 선택",
+         "expected": "Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds.",
+         "observed": "browser: Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
+         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "결함 크기 분포 · 구간 선택",
+         "expected": "Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds.",
+         "observed": "electron: Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
+         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending",
+       "reason": "This dimension has not been exercised by the retained exact GUI case."
+      }
+     }
+    }
+   ],
+   "remaining": "Only retained exact GUI dimensions are verified; omitted controls and unexecuted dimensions, representative model truth, target hardware and full independent acceptance remain pending."
   },
   {
    "id": "F056",
-   "actions": [],
-   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+   "actions": [
+    {
+     "id": "saved-roc-threshold",
+     "label": "ROC 검토 임계값",
+     "source": "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "ROC 검토 임계값",
+         "expected": "Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. AUC5/6; at0.75 TP2/FN1/FP0/TN2, at0 TP3/FN0/FP2/TN0, at1 TP0/FN3/FP0/TN2; unknown truth is excluded and unavailable binary truth has no slider.",
+         "observed": "browser: Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. AUC5/6; at0.75 TP2/FN1/FP0/TN2, at0 TP3/FN0/FP2/TN0, at1 TP0/FN3/FP0/TN2; unknown truth is excluded and unavailable binary truth has no slider. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
+         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "ROC 검토 임계값",
+         "expected": "Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. AUC5/6; at0.75 TP2/FN1/FP0/TN2, at0 TP3/FN0/FP2/TN0, at1 TP0/FN3/FP0/TN2; unknown truth is excluded and unavailable binary truth has no slider.",
+         "observed": "electron: Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. AUC5/6; at0.75 TP2/FN1/FP0/TN2, at0 TP3/FN0/FP2/TN0, at1 TP0/FN3/FP0/TN2; unknown truth is excluded and unavailable binary truth has no slider. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
+         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "ROC 검토 임계값",
+         "expected": "The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes.",
+         "observed": "browser: The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
+         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "ROC 검토 임계값",
+         "expected": "The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes.",
+         "observed": "electron: The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
+         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+          }
+         ]
+        }
+       ]
+      },
+      "invalid": {
+       "state": "pending",
+       "reason": "This dimension has not been exercised by the retained exact GUI case."
+      },
+      "error": {
+       "state": "pending",
+       "reason": "This dimension has not been exercised by the retained exact GUI case."
+      },
+      "cancel": {
+       "state": "pending",
+       "reason": "This dimension has not been exercised by the retained exact GUI case."
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "ROC 검토 임계값",
+         "expected": "Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds.",
+         "observed": "browser: Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
+         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "ROC 검토 임계값",
+         "expected": "Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds.",
+         "observed": "electron: Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
+         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending",
+       "reason": "This dimension has not been exercised by the retained exact GUI case."
+      }
+     }
+    }
+   ],
+   "remaining": "Only retained exact GUI dimensions are verified; omitted controls and unexecuted dimensions, representative model truth, target hardware and full independent acceptance remain pending."
   },
   {
    "id": "F057",
@@ -8917,19 +9772,19 @@
        "evidence": [
         {
          "task": "S2-05",
-         "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
          "kind": "click",
          "action": "빠른 노드 추가 · 검사 모델 · Space 선택",
          "expected": "Add one inspection node through keyboard activation and focus/select that new node.",
          "observed": "Actual native Enter added exactly one inspection node; its focusable node became focused and Space retained the selected aria-label. No completed model was bound or executed by this geometry case.",
          "reviewer": "Codex root exact clean native keyboard case, source and saved-byte review; independent, human quality, device and release acceptance pending",
          "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
-         "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
-         "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef",
+         "receipt": "2026-10-08-keyboard-canvas-369b8e1-electron.json",
+         "receipt_sha256": "111cc23574311acf8e9ac790c3e262feac595a6d0176f2845f2a856e4c4fce39",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "9b0ef9c65f2cfd876437f58ac9907f2172f8aa15bb22eb3b94a1341c03434a28"
+           "sha256": "e18e2cd0f89deba5c45d675b6203720d274ca01738e08d99cc76228ab9ad17ba"
           }
          ]
         }
@@ -8965,19 +9820,19 @@
        "evidence": [
         {
          "task": "S2-05",
-         "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
          "kind": "click",
          "action": "RESULT OUT · IMAGE/ROI OUT · IMAGE/ROI IN",
          "expected": "Refuse an incompatible result-to-image port and accept the correct image-to-image connection.",
          "observed": "Actual native keyboard RESULT OUT to IMAGE/ROI IN displayed the incompatibility error. IMAGE/ROI OUT to that input then added exactly one edge. This edits the graph; it does not execute the model.",
          "reviewer": "Codex root exact clean native keyboard case, source and saved-byte review; independent, human quality, device and release acceptance pending",
          "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
-         "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
-         "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef",
+         "receipt": "2026-10-08-keyboard-canvas-369b8e1-electron.json",
+         "receipt_sha256": "111cc23574311acf8e9ac790c3e262feac595a6d0176f2845f2a856e4c4fce39",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "9b0ef9c65f2cfd876437f58ac9907f2172f8aa15bb22eb3b94a1341c03434a28"
+           "sha256": "e18e2cd0f89deba5c45d675b6203720d274ca01738e08d99cc76228ab9ad17ba"
           }
          ]
         }
@@ -8991,19 +9846,19 @@
        "evidence": [
         {
          "task": "S2-05",
-         "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
          "kind": "click",
          "action": "RESULT OUT · IMAGE/ROI OUT · IMAGE/ROI IN",
          "expected": "Refuse an incompatible result-to-image port and accept the correct image-to-image connection.",
          "observed": "Actual native keyboard RESULT OUT to IMAGE/ROI IN displayed the incompatibility error. IMAGE/ROI OUT to that input then added exactly one edge. This edits the graph; it does not execute the model.",
          "reviewer": "Codex root exact clean native keyboard case, source and saved-byte review; independent, human quality, device and release acceptance pending",
          "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
-         "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
-         "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef",
+         "receipt": "2026-10-08-keyboard-canvas-369b8e1-electron.json",
+         "receipt_sha256": "111cc23574311acf8e9ac790c3e262feac595a6d0176f2845f2a856e4c4fce39",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "9b0ef9c65f2cfd876437f58ac9907f2172f8aa15bb22eb3b94a1341c03434a28"
+           "sha256": "e18e2cd0f89deba5c45d675b6203720d274ca01738e08d99cc76228ab9ad17ba"
           }
          ]
         }
@@ -9033,19 +9888,19 @@
        "evidence": [
         {
          "task": "S2-05",
-         "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
          "kind": "click",
          "action": "Delete · Ctrl+Z · Ctrl+Shift+Z",
          "expected": "Delete the selected node with focus recovery and preserve graph history.",
          "observed": "Native Delete removed the added node and focused a remaining node. Ctrl+Z restored that node and its edge; Ctrl+Shift+Z removed it again; a final Ctrl+Z restored it before the saved draft. The restored graph reopened with identical draft SHA.",
          "reviewer": "Codex root exact clean native keyboard case, source and saved-byte review; independent, human quality, device and release acceptance pending",
          "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
-         "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
-         "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef",
+         "receipt": "2026-10-08-keyboard-canvas-369b8e1-electron.json",
+         "receipt_sha256": "111cc23574311acf8e9ac790c3e262feac595a6d0176f2845f2a856e4c4fce39",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "9b0ef9c65f2cfd876437f58ac9907f2172f8aa15bb22eb3b94a1341c03434a28"
+           "sha256": "e18e2cd0f89deba5c45d675b6203720d274ca01738e08d99cc76228ab9ad17ba"
           }
          ]
         }
@@ -9068,19 +9923,19 @@
        "evidence": [
         {
          "task": "S2-05",
-         "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
          "kind": "click",
          "action": "Delete · Ctrl+Z · Ctrl+Shift+Z",
          "expected": "Delete the selected node with focus recovery and preserve graph history.",
          "observed": "Native Delete removed the added node and focused a remaining node. Ctrl+Z restored that node and its edge; Ctrl+Shift+Z removed it again; a final Ctrl+Z restored it before the saved draft. The restored graph reopened with identical draft SHA.",
          "reviewer": "Codex root exact clean native keyboard case, source and saved-byte review; independent, human quality, device and release acceptance pending",
          "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
-         "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
-         "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef",
+         "receipt": "2026-10-08-keyboard-canvas-369b8e1-electron.json",
+         "receipt_sha256": "111cc23574311acf8e9ac790c3e262feac595a6d0176f2845f2a856e4c4fce39",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "9b0ef9c65f2cfd876437f58ac9907f2172f8aa15bb22eb3b94a1341c03434a28"
+           "sha256": "e18e2cd0f89deba5c45d675b6203720d274ca01738e08d99cc76228ab9ad17ba"
           }
          ]
         }
@@ -9101,19 +9956,19 @@
        "evidence": [
         {
          "task": "S2-05",
-         "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
          "kind": "click",
          "action": "이미지 변경 · Shift+Tab · Tab · Escape · 로컬 파일 · 선택 확정",
          "expected": "Trap dialog keyboard focus, cancel without stranding focus and confirm the explicit original file.",
          "observed": "Native dialog opened with close-button focus, Shift+Tab reached Cancel and Tab returned to Close. Escape closed it and focused the original opener. Reopening, local-path entry and Enter confirmation closed it with opener focus and the exact unchanged source image hash.",
          "reviewer": "Codex root exact clean native keyboard case, source and saved-byte review; independent, human quality, device and release acceptance pending",
          "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
-         "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
-         "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef",
+         "receipt": "2026-10-08-keyboard-canvas-369b8e1-electron.json",
+         "receipt_sha256": "111cc23574311acf8e9ac790c3e262feac595a6d0176f2845f2a856e4c4fce39",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "9b0ef9c65f2cfd876437f58ac9907f2172f8aa15bb22eb3b94a1341c03434a28"
+           "sha256": "e18e2cd0f89deba5c45d675b6203720d274ca01738e08d99cc76228ab9ad17ba"
           }
          ]
         }
@@ -9133,19 +9988,19 @@
        "evidence": [
         {
          "task": "S2-05",
-         "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
          "kind": "click",
          "action": "이미지 변경 · Shift+Tab · Tab · Escape · 로컬 파일 · 선택 확정",
          "expected": "Trap dialog keyboard focus, cancel without stranding focus and confirm the explicit original file.",
          "observed": "Native dialog opened with close-button focus, Shift+Tab reached Cancel and Tab returned to Close. Escape closed it and focused the original opener. Reopening, local-path entry and Enter confirmation closed it with opener focus and the exact unchanged source image hash.",
          "reviewer": "Codex root exact clean native keyboard case, source and saved-byte review; independent, human quality, device and release acceptance pending",
          "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
-         "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
-         "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef",
+         "receipt": "2026-10-08-keyboard-canvas-369b8e1-electron.json",
+         "receipt_sha256": "111cc23574311acf8e9ac790c3e262feac595a6d0176f2845f2a856e4c4fce39",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "9b0ef9c65f2cfd876437f58ac9907f2172f8aa15bb22eb3b94a1341c03434a28"
+           "sha256": "e18e2cd0f89deba5c45d675b6203720d274ca01738e08d99cc76228ab9ad17ba"
           }
          ]
         }
@@ -9169,19 +10024,19 @@
        "evidence": [
         {
          "task": "S2-05",
-         "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
          "kind": "click",
          "action": "빠른 노드 추가 · 고정 ROI",
          "expected": "Add exactly one fixed-ROI node after the saving gate permits editing.",
          "observed": "Actual native Enter added one fixed-ROI node and focused it. The screen displayed the original512x256-pixel ROI editor. The separately retained controlled helper case checks saving-disabled focus; this native case does not claim an intentionally delayed network save.",
          "reviewer": "Codex root exact clean native keyboard case, source and saved-byte review; independent, human quality, device and release acceptance pending",
          "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
-         "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
-         "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef",
+         "receipt": "2026-10-08-keyboard-canvas-369b8e1-electron.json",
+         "receipt_sha256": "111cc23574311acf8e9ac790c3e262feac595a6d0176f2845f2a856e4c4fce39",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "9b0ef9c65f2cfd876437f58ac9907f2172f8aa15bb22eb3b94a1341c03434a28"
+           "sha256": "e18e2cd0f89deba5c45d675b6203720d274ca01738e08d99cc76228ab9ad17ba"
           }
          ]
         }
@@ -9217,19 +10072,19 @@
        "evidence": [
         {
          "task": "S2-05",
-         "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
          "kind": "click",
          "action": "고정 ROI 노드 제목 끌기",
          "expected": "Convert delivered pointer movement to node coordinates at each tested display scale.",
          "observed": "Actual native title-bar drags changed node position by exactly40/30 at two window sizes and four CSS zoom scales. Final node coordinates persisted in the saved draft and its identical reopened hash. Windows native DPI was not tested.",
          "reviewer": "Codex root exact clean native keyboard case, source and saved-byte review; independent, human quality, device and release acceptance pending",
          "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
-         "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
-         "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef",
+         "receipt": "2026-10-08-keyboard-canvas-369b8e1-electron.json",
+         "receipt_sha256": "111cc23574311acf8e9ac790c3e262feac595a6d0176f2845f2a856e4c4fce39",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "9b0ef9c65f2cfd876437f58ac9907f2172f8aa15bb22eb3b94a1341c03434a28"
+           "sha256": "e18e2cd0f89deba5c45d675b6203720d274ca01738e08d99cc76228ab9ad17ba"
           }
          ]
         }
@@ -9252,19 +10107,19 @@
        "evidence": [
         {
          "task": "S2-05",
-         "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
          "kind": "click",
          "action": "고정 ROI 노드 제목 끌기",
          "expected": "Convert delivered pointer movement to node coordinates at each tested display scale.",
          "observed": "Actual native title-bar drags changed node position by exactly40/30 at two window sizes and four CSS zoom scales. Final node coordinates persisted in the saved draft and its identical reopened hash. Windows native DPI was not tested.",
          "reviewer": "Codex root exact clean native keyboard case, source and saved-byte review; independent, human quality, device and release acceptance pending",
          "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
-         "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
-         "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef",
+         "receipt": "2026-10-08-keyboard-canvas-369b8e1-electron.json",
+         "receipt_sha256": "111cc23574311acf8e9ac790c3e262feac595a6d0176f2845f2a856e4c4fce39",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "9b0ef9c65f2cfd876437f58ac9907f2172f8aa15bb22eb3b94a1341c03434a28"
+           "sha256": "e18e2cd0f89deba5c45d675b6203720d274ca01738e08d99cc76228ab9ad17ba"
           }
          ]
         }
@@ -9285,19 +10140,19 @@
        "evidence": [
         {
          "task": "S2-05",
-         "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
          "kind": "click",
          "action": "초안 저장 · 새로 열기",
          "expected": "Save the edited graph as a draft and reopen the exact same content.",
          "observed": "Native keyboard save observed the actual successful PUT, retained ROI[65,32,258,162], reloaded the app and selected the same node. The backend reopened draft SHA exactly matched the saved draft. Model-free draft save is not execution-version activation.",
          "reviewer": "Codex root exact clean native keyboard case, source and saved-byte review; independent, human quality, device and release acceptance pending",
          "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
-         "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
-         "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef",
+         "receipt": "2026-10-08-keyboard-canvas-369b8e1-electron.json",
+         "receipt_sha256": "111cc23574311acf8e9ac790c3e262feac595a6d0176f2845f2a856e4c4fce39",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "9b0ef9c65f2cfd876437f58ac9907f2172f8aa15bb22eb3b94a1341c03434a28"
+           "sha256": "e18e2cd0f89deba5c45d675b6203720d274ca01738e08d99cc76228ab9ad17ba"
           }
          ]
         }
@@ -9320,19 +10175,19 @@
        "evidence": [
         {
          "task": "S2-05",
-         "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
          "kind": "click",
          "action": "초안 저장 · 새로 열기",
          "expected": "Save the edited graph as a draft and reopen the exact same content.",
          "observed": "Native keyboard save observed the actual successful PUT, retained ROI[65,32,258,162], reloaded the app and selected the same node. The backend reopened draft SHA exactly matched the saved draft. Model-free draft save is not execution-version activation.",
          "reviewer": "Codex root exact clean native keyboard case, source and saved-byte review; independent, human quality, device and release acceptance pending",
          "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
-         "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
-         "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef",
+         "receipt": "2026-10-08-keyboard-canvas-369b8e1-electron.json",
+         "receipt_sha256": "111cc23574311acf8e9ac790c3e262feac595a6d0176f2845f2a856e4c4fce39",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "9b0ef9c65f2cfd876437f58ac9907f2172f8aa15bb22eb3b94a1341c03434a28"
+           "sha256": "e18e2cd0f89deba5c45d675b6203720d274ca01738e08d99cc76228ab9ad17ba"
           }
          ]
         }
@@ -13152,19 +14007,19 @@
        "evidence": [
         {
          "task": "S2-05",
-         "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
          "kind": "click",
          "action": "원본 이미지 ROI 편집 · 원본 좌표 끌기",
          "expected": "Keep original pixel geometry at each tested window and display scale.",
          "observed": "Native delivered drags used the actual SVG screen transform on the unchanged512x256 original. At each of eight size/scale combinations, rectangle x64/y32/width193/height129 matched independently specified original coordinates; later keyboard edits persisted and reopened. No downstream inspection or Windows physical DPI is inferred.",
          "reviewer": "Codex root exact clean native keyboard case, source and saved-byte review; independent, human quality, device and release acceptance pending",
          "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
-         "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
-         "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef",
+         "receipt": "2026-10-08-keyboard-canvas-369b8e1-electron.json",
+         "receipt_sha256": "111cc23574311acf8e9ac790c3e262feac595a6d0176f2845f2a856e4c4fce39",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "9b0ef9c65f2cfd876437f58ac9907f2172f8aa15bb22eb3b94a1341c03434a28"
+           "sha256": "e18e2cd0f89deba5c45d675b6203720d274ca01738e08d99cc76228ab9ad17ba"
           }
          ]
         }
@@ -13187,19 +14042,19 @@
        "evidence": [
         {
          "task": "S2-05",
-         "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
          "kind": "click",
          "action": "원본 이미지 ROI 편집 · 원본 좌표 끌기",
          "expected": "Keep original pixel geometry at each tested window and display scale.",
          "observed": "Native delivered drags used the actual SVG screen transform on the unchanged512x256 original. At each of eight size/scale combinations, rectangle x64/y32/width193/height129 matched independently specified original coordinates; later keyboard edits persisted and reopened. No downstream inspection or Windows physical DPI is inferred.",
          "reviewer": "Codex root exact clean native keyboard case, source and saved-byte review; independent, human quality, device and release acceptance pending",
          "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
-         "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
-         "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef",
+         "receipt": "2026-10-08-keyboard-canvas-369b8e1-electron.json",
+         "receipt_sha256": "111cc23574311acf8e9ac790c3e262feac595a6d0176f2845f2a856e4c4fce39",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "9b0ef9c65f2cfd876437f58ac9907f2172f8aa15bb22eb3b94a1341c03434a28"
+           "sha256": "e18e2cd0f89deba5c45d675b6203720d274ca01738e08d99cc76228ab9ad17ba"
           }
          ]
         }
@@ -13220,19 +14075,19 @@
        "evidence": [
         {
          "task": "S2-05",
-         "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
          "kind": "click",
          "action": "ArrowRight · Shift+ArrowDown",
          "expected": "Move and resize the selected original ROI by the stated original-pixel amount.",
          "observed": "Native ROI focus had a visible outline. ArrowRight moved x64 to65; Shift+ArrowDown changed height129 to130 at all eight combinations. Final original bbox[65,32,258,162] survived draft save/reopen; source SHA stayed unchanged.",
          "reviewer": "Codex root exact clean native keyboard case, source and saved-byte review; independent, human quality, device and release acceptance pending",
          "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
-         "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
-         "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef",
+         "receipt": "2026-10-08-keyboard-canvas-369b8e1-electron.json",
+         "receipt_sha256": "111cc23574311acf8e9ac790c3e262feac595a6d0176f2845f2a856e4c4fce39",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "9b0ef9c65f2cfd876437f58ac9907f2172f8aa15bb22eb3b94a1341c03434a28"
+           "sha256": "e18e2cd0f89deba5c45d675b6203720d274ca01738e08d99cc76228ab9ad17ba"
           }
          ]
         }
@@ -13255,19 +14110,19 @@
        "evidence": [
         {
          "task": "S2-05",
-         "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
          "kind": "click",
          "action": "ArrowRight · Shift+ArrowDown",
          "expected": "Move and resize the selected original ROI by the stated original-pixel amount.",
          "observed": "Native ROI focus had a visible outline. ArrowRight moved x64 to65; Shift+ArrowDown changed height129 to130 at all eight combinations. Final original bbox[65,32,258,162] survived draft save/reopen; source SHA stayed unchanged.",
          "reviewer": "Codex root exact clean native keyboard case, source and saved-byte review; independent, human quality, device and release acceptance pending",
          "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
-         "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
-         "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef",
+         "receipt": "2026-10-08-keyboard-canvas-369b8e1-electron.json",
+         "receipt_sha256": "111cc23574311acf8e9ac790c3e262feac595a6d0176f2845f2a856e4c4fce39",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "9b0ef9c65f2cfd876437f58ac9907f2172f8aa15bb22eb3b94a1341c03434a28"
+           "sha256": "e18e2cd0f89deba5c45d675b6203720d274ca01738e08d99cc76228ab9ad17ba"
           }
          ]
         }
@@ -24300,23 +25155,23 @@
        "evidence": [
         {
          "task": "S7-01",
-         "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
          "kind": "click",
          "action": "태그·제품·Lot·오류 필터",
          "expected": "Bounded metadata filters find images beyond the initial page and show an empty result honestly.",
          "observed": "Actual native combined filters found part244 among248 items; missing Lot returned zero; errors distinguished damaged source and annotation failures without source mutation.",
          "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
          "test": "scripts/e2e/image-library-closure.spec.ts::native metadata and error filters find an image outside the first 200 and preserve its reopened identity",
-         "receipt": "2026-10-07-app-image-library-closure.spec-electron.json",
-         "receipt_sha256": "ff03371f3afee03d0047cd46b6b5b63c47606ce7ba277bd27239cc0f975a971a",
+         "receipt": "2026-10-08-image-library-369b8e1-electron.json",
+         "receipt_sha256": "867732e1ae1ba8522709f4fd590e0f728a054b1249879e0b42c3a9508a2880b8",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "348aab90f11cdd049d9600cf422a053c778e75b44324f6b797df57a53e5fce0c"
+           "sha256": "84caf182214edc7b793ce9b92e29a5e9204fd006645d8f4dbc13406bab01edd0"
           },
           {
            "id": "screenshot-1",
-           "sha256": "fa3042cd63e8878527dcb0e0ad3b438508cb328668a6649050df544120756abf"
+           "sha256": "f645ae1260288ccee2a39413801ef6c42bb7f4b663e71403993e8296451edac8"
           }
          ]
         }
@@ -24327,23 +25182,23 @@
        "evidence": [
         {
          "task": "S7-01",
-         "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
          "kind": "click",
          "action": "태그·제품·Lot·오류 필터",
          "expected": "Bounded metadata filters find images beyond the initial page and show an empty result honestly.",
          "observed": "Actual native combined filters found part244 among248 items; missing Lot returned zero; errors distinguished damaged source and annotation failures without source mutation.",
          "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
          "test": "scripts/e2e/image-library-closure.spec.ts::native metadata and error filters find an image outside the first 200 and preserve its reopened identity",
-         "receipt": "2026-10-07-app-image-library-closure.spec-electron.json",
-         "receipt_sha256": "ff03371f3afee03d0047cd46b6b5b63c47606ce7ba277bd27239cc0f975a971a",
+         "receipt": "2026-10-08-image-library-369b8e1-electron.json",
+         "receipt_sha256": "867732e1ae1ba8522709f4fd590e0f728a054b1249879e0b42c3a9508a2880b8",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "348aab90f11cdd049d9600cf422a053c778e75b44324f6b797df57a53e5fce0c"
+           "sha256": "84caf182214edc7b793ce9b92e29a5e9204fd006645d8f4dbc13406bab01edd0"
           },
           {
            "id": "screenshot-1",
-           "sha256": "fa3042cd63e8878527dcb0e0ad3b438508cb328668a6649050df544120756abf"
+           "sha256": "f645ae1260288ccee2a39413801ef6c42bb7f4b663e71403993e8296451edac8"
           }
          ]
         }
@@ -24624,23 +25479,23 @@
        "evidence": [
         {
          "task": "S7-01",
-         "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
          "kind": "click",
          "action": "선택 확정",
          "expected": "Selection follows source UUID/hash through native reload rather than list position.",
          "observed": "Actual native confirmation and reopen retained part244 UUID/hash, selected state and enabled confirmation; no training request was sent.",
          "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
          "test": "scripts/e2e/image-library-closure.spec.ts::native metadata and error filters find an image outside the first 200 and preserve its reopened identity",
-         "receipt": "2026-10-07-app-image-library-closure.spec-electron.json",
-         "receipt_sha256": "ff03371f3afee03d0047cd46b6b5b63c47606ce7ba277bd27239cc0f975a971a",
+         "receipt": "2026-10-08-image-library-369b8e1-electron.json",
+         "receipt_sha256": "867732e1ae1ba8522709f4fd590e0f728a054b1249879e0b42c3a9508a2880b8",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "348aab90f11cdd049d9600cf422a053c778e75b44324f6b797df57a53e5fce0c"
+           "sha256": "84caf182214edc7b793ce9b92e29a5e9204fd006645d8f4dbc13406bab01edd0"
           },
           {
            "id": "screenshot-1",
-           "sha256": "fa3042cd63e8878527dcb0e0ad3b438508cb328668a6649050df544120756abf"
+           "sha256": "f645ae1260288ccee2a39413801ef6c42bb7f4b663e71403993e8296451edac8"
           }
          ]
         }
@@ -24895,23 +25750,23 @@
        "evidence": [
         {
          "task": "S7-01",
-         "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
          "kind": "click",
          "action": "선택 확정",
          "expected": "Selection follows source UUID/hash through native reload rather than list position.",
          "observed": "Actual native confirmation and reopen retained part244 UUID/hash, selected state and enabled confirmation; no training request was sent.",
          "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
          "test": "scripts/e2e/image-library-closure.spec.ts::native metadata and error filters find an image outside the first 200 and preserve its reopened identity",
-         "receipt": "2026-10-07-app-image-library-closure.spec-electron.json",
-         "receipt_sha256": "ff03371f3afee03d0047cd46b6b5b63c47606ce7ba277bd27239cc0f975a971a",
+         "receipt": "2026-10-08-image-library-369b8e1-electron.json",
+         "receipt_sha256": "867732e1ae1ba8522709f4fd590e0f728a054b1249879e0b42c3a9508a2880b8",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "348aab90f11cdd049d9600cf422a053c778e75b44324f6b797df57a53e5fce0c"
+           "sha256": "84caf182214edc7b793ce9b92e29a5e9204fd006645d8f4dbc13406bab01edd0"
           },
           {
            "id": "screenshot-1",
-           "sha256": "fa3042cd63e8878527dcb0e0ad3b438508cb328668a6649050df544120756abf"
+           "sha256": "f645ae1260288ccee2a39413801ef6c42bb7f4b663e71403993e8296451edac8"
           }
          ]
         }
@@ -24922,23 +25777,23 @@
        "evidence": [
         {
          "task": "S7-01",
-         "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
          "kind": "click",
          "action": "선택 확정",
          "expected": "Selection follows source UUID/hash through native reload rather than list position.",
          "observed": "Actual native confirmation and reopen retained part244 UUID/hash, selected state and enabled confirmation; no training request was sent.",
          "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
          "test": "scripts/e2e/image-library-closure.spec.ts::native metadata and error filters find an image outside the first 200 and preserve its reopened identity",
-         "receipt": "2026-10-07-app-image-library-closure.spec-electron.json",
-         "receipt_sha256": "ff03371f3afee03d0047cd46b6b5b63c47606ce7ba277bd27239cc0f975a971a",
+         "receipt": "2026-10-08-image-library-369b8e1-electron.json",
+         "receipt_sha256": "867732e1ae1ba8522709f4fd590e0f728a054b1249879e0b42c3a9508a2880b8",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "348aab90f11cdd049d9600cf422a053c778e75b44324f6b797df57a53e5fce0c"
+           "sha256": "84caf182214edc7b793ce9b92e29a5e9204fd006645d8f4dbc13406bab01edd0"
           },
           {
            "id": "screenshot-1",
-           "sha256": "fa3042cd63e8878527dcb0e0ad3b438508cb328668a6649050df544120756abf"
+           "sha256": "f645ae1260288ccee2a39413801ef6c42bb7f4b663e71403993e8296451edac8"
           }
          ]
         }
@@ -28819,9 +29674,224 @@
        ]
       }
      }
+    },
+    {
+     "id": "metadata-scale-picker",
+     "label": "10만 메타데이터 스크롤·검색·검증된 이미지 선택",
+     "source": "src/renderer/components/common/ImagePickerModal.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "10만 메타데이터 스크롤·검색·검증된 이미지 선택",
+         "expected": "Three actual ordered120-row keyset pages produce360 distinct UUIDs; DOM maximum32 and response maximum120; exact tail search selects the owned verified image.",
+         "observed": "browser: Three actual ordered120-row keyset pages produce360 distinct UUIDs; DOM maximum32 and response maximum120; exact tail search selects the owned verified image. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/scale-library-controls.spec.ts::100k metadata pages through the actual library picker and restores the exact tail image",
+         "receipt": "2026-10-08-scale-library-369b8e1-browser.json",
+         "receipt_sha256": "5eec47ca4f195dcfd90d941e1ee09a6847f69911d781b4a41b579b63d7ae0886",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2b039917d7a1abab5d2a64f0cdaef71ad6c9ec330077a060383fd7ae22cd4bff"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "11c5202bffabf798857c6e73f2d60a528400ca029178bfaf1dc10acf431a02c2"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "10만 메타데이터 스크롤·검색·검증된 이미지 선택",
+         "expected": "Three actual ordered120-row keyset pages produce360 distinct UUIDs; DOM maximum32 and response maximum120; exact tail search selects the owned verified image.",
+         "observed": "electron: Three actual ordered120-row keyset pages produce360 distinct UUIDs; DOM maximum32 and response maximum120; exact tail search selects the owned verified image. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/scale-library-controls.spec.ts::native 100k metadata picker preserves keyset progress and exact reopened identity",
+         "receipt": "2026-10-08-scale-library-369b8e1-electron.json",
+         "receipt_sha256": "07b46cc6581329bee48e9229c149f0291a25fed7e2f7b98e784408c0d1715a1a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "94f0de8de4ad7a870a7f0f38ba9fee4f16bda3d52a4d8ef2ef7aa259e6ba2feb"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "06cec9654b306a85481cf5b44631e433385b36e6e532435616a03fac0d8ba6fe"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "10만 메타데이터 스크롤·검색·검증된 이미지 선택",
+         "expected": "Searching a nonexistent name returns explicit no-match with zero rows.",
+         "observed": "browser: Searching a nonexistent name returns explicit no-match with zero rows. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/scale-library-controls.spec.ts::100k metadata pages through the actual library picker and restores the exact tail image",
+         "receipt": "2026-10-08-scale-library-369b8e1-browser.json",
+         "receipt_sha256": "5eec47ca4f195dcfd90d941e1ee09a6847f69911d781b4a41b579b63d7ae0886",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2b039917d7a1abab5d2a64f0cdaef71ad6c9ec330077a060383fd7ae22cd4bff"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "11c5202bffabf798857c6e73f2d60a528400ca029178bfaf1dc10acf431a02c2"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "10만 메타데이터 스크롤·검색·검증된 이미지 선택",
+         "expected": "Searching a nonexistent name returns explicit no-match with zero rows.",
+         "observed": "electron: Searching a nonexistent name returns explicit no-match with zero rows. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/scale-library-controls.spec.ts::native 100k metadata picker preserves keyset progress and exact reopened identity",
+         "receipt": "2026-10-08-scale-library-369b8e1-electron.json",
+         "receipt_sha256": "07b46cc6581329bee48e9229c149f0291a25fed7e2f7b98e784408c0d1715a1a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "94f0de8de4ad7a870a7f0f38ba9fee4f16bda3d52a4d8ef2ef7aa259e6ba2feb"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "06cec9654b306a85481cf5b44631e433385b36e6e532435616a03fac0d8ba6fe"
+          }
+         ]
+        }
+       ]
+      },
+      "invalid": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "10만 메타데이터 스크롤·검색·검증된 이미지 선택",
+         "expected": "Missing/unverified metadata row has no file/hash and actual thumbnail404; clicking it shows refusal and preserves the previous validated tail identity.",
+         "observed": "browser: Missing/unverified metadata row has no file/hash and actual thumbnail404; clicking it shows refusal and preserves the previous validated tail identity. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/scale-library-controls.spec.ts::100k metadata pages through the actual library picker and restores the exact tail image",
+         "receipt": "2026-10-08-scale-library-369b8e1-browser.json",
+         "receipt_sha256": "5eec47ca4f195dcfd90d941e1ee09a6847f69911d781b4a41b579b63d7ae0886",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2b039917d7a1abab5d2a64f0cdaef71ad6c9ec330077a060383fd7ae22cd4bff"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "11c5202bffabf798857c6e73f2d60a528400ca029178bfaf1dc10acf431a02c2"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "10만 메타데이터 스크롤·검색·검증된 이미지 선택",
+         "expected": "Missing/unverified metadata row has no file/hash and actual thumbnail404; clicking it shows refusal and preserves the previous validated tail identity.",
+         "observed": "electron: Missing/unverified metadata row has no file/hash and actual thumbnail404; clicking it shows refusal and preserves the previous validated tail identity. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/scale-library-controls.spec.ts::native 100k metadata picker preserves keyset progress and exact reopened identity",
+         "receipt": "2026-10-08-scale-library-369b8e1-electron.json",
+         "receipt_sha256": "07b46cc6581329bee48e9229c149f0291a25fed7e2f7b98e784408c0d1715a1a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "94f0de8de4ad7a870a7f0f38ba9fee4f16bda3d52a4d8ef2ef7aa259e6ba2feb"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "06cec9654b306a85481cf5b44631e433385b36e6e532435616a03fac0d8ba6fe"
+          }
+         ]
+        }
+       ]
+      },
+      "error": {
+       "state": "pending",
+       "reason": "This dimension has not been exercised by the retained exact GUI case."
+      },
+      "cancel": {
+       "state": "pending",
+       "reason": "This dimension has not been exercised by the retained exact GUI case."
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "10만 메타데이터 스크롤·검색·검증된 이미지 선택",
+         "expected": "Reopen restores exactly the previously saved tail UUID/SHA/path without depending on row position; all real source bytes remain unchanged.",
+         "observed": "browser: Reopen restores exactly the previously saved tail UUID/SHA/path without depending on row position; all real source bytes remain unchanged. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/scale-library-controls.spec.ts::100k metadata pages through the actual library picker and restores the exact tail image",
+         "receipt": "2026-10-08-scale-library-369b8e1-browser.json",
+         "receipt_sha256": "5eec47ca4f195dcfd90d941e1ee09a6847f69911d781b4a41b579b63d7ae0886",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2b039917d7a1abab5d2a64f0cdaef71ad6c9ec330077a060383fd7ae22cd4bff"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "11c5202bffabf798857c6e73f2d60a528400ca029178bfaf1dc10acf431a02c2"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "kind": "click",
+         "action": "10만 메타데이터 스크롤·검색·검증된 이미지 선택",
+         "expected": "Reopen restores exactly the previously saved tail UUID/SHA/path without depending on row position; all real source bytes remain unchanged.",
+         "observed": "electron: Reopen restores exactly the previously saved tail UUID/SHA/path without depending on row position; all real source bytes remain unchanged. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
+         "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
+         "test": "scripts/e2e/scale-library-controls.spec.ts::native 100k metadata picker preserves keyset progress and exact reopened identity",
+         "receipt": "2026-10-08-scale-library-369b8e1-electron.json",
+         "receipt_sha256": "07b46cc6581329bee48e9229c149f0291a25fed7e2f7b98e784408c0d1715a1a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "94f0de8de4ad7a870a7f0f38ba9fee4f16bda3d52a4d8ef2ef7aa259e6ba2feb"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "06cec9654b306a85481cf5b44631e433385b36e6e532435616a03fac0d8ba6fe"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending",
+       "reason": "This dimension has not been exercised by the retained exact GUI case."
+      }
+     }
     }
    ],
-   "remaining": "Only the explicitly executed actions and scenarios below are qualified. Other controls, generated menus, shortcuts, cancellation and full feature acceptance remain pending."
+   "remaining": "Only retained exact GUI dimensions are verified; omitted controls and unexecuted dimensions, representative model truth, target hardware and full independent acceptance remain pending."
   },
   {
    "id": "U031",

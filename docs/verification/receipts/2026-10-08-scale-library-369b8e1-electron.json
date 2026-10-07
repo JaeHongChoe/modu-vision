@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+  "source_dirty": false,
+  "test": "scripts/e2e/scale-library-controls.spec.ts::native 100k metadata picker preserves keyset progress and exact reopened identity",
+  "test_source_sha256": "9ba76a094298c9cb796f7ed67490b2a681a73031eb6725a951a14c97a0b57a8e",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "dc9d2ab04746035c09dd95a416a16642ca79232210180aa72bd8d260abc60caf",
+  "harness_sha256": "de664d347e38201516ba84b844377dac7f8cff1aa9794e85c9f6aa3f9c6c014e",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "94f0de8de4ad7a870a7f0f38ba9fee4f16bda3d52a4d8ef2ef7aa259e6ba2feb"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "06cec9654b306a85481cf5b44631e433385b36e6e532435616a03fac0d8ba6fe"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

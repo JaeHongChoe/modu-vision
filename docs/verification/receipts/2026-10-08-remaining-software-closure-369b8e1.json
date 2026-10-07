@@ -1,0 +1,541 @@
+{
+  "schema": "modu-vision.remaining-software-closure/v1",
+  "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+  "actual_gui_cases": 7,
+  "attempts_each": 1,
+  "integrated_backend": {
+    "passed": 412,
+    "failed": 0,
+    "skipped": 0,
+    "log_sha256": "97d77dfceaa687e20544444741f3a4868c42f17300bf74b2b9b809b8fc14f330",
+    "xml_sha256": "9323206dd17a2b42bb2b02214e02fb651f563935c7aa929b33c2d7a62d884dd9",
+    "selector": [
+      "backend/tests/test_installed_home_adoption.py",
+      "backend/tests/test_global_migration.py",
+      "backend/tests/test_migration_sqlite_lifetime.py",
+      "backend/tests/test_project_migration.py",
+      "backend/tests/test_runtime_update_recovery.py",
+      "backend/tests/test_service_s6_04.py",
+      "backend/tests/test_terminal_runtime_history.py",
+      "backend/tests/test_terminal_remote_history.py",
+      "backend/tests/test_terminal_specialist_history.py",
+      "backend/tests/test_terminal_remote_label_history.py",
+      "backend/tests/test_terminal_remote_epoch_history.py",
+      "backend/tests/test_terminal_failed_artifact_history.py",
+      "backend/tests/test_terminal_operation_history.py",
+      "backend/tests/test_portable_flow_history.py",
+      "backend/tests/test_live_control_migration.py",
+      "backend/tests/test_application_launch_lease.py",
+      "backend/tests/test_native_update_layout.py",
+      "backend/tests/test_portable_update_review.py"
+    ],
+    "bound_source_files_unchanged": true
+  },
+  "renderer_main": {
+    "passed": 922,
+    "failed": 0,
+    "skipped": 0,
+    "log_sha256": "46ebedc8fe8b7cbcd4609673ba6ea53704f282a57ed610c519464c1e4444dca0"
+  },
+  "scope_report_regressions": {
+    "passed": 39,
+    "failed": 0,
+    "skipped": 0,
+    "xml_sha256": "a7412802d5be941c2e977a28ef739fdedfdd2ba7f95702c387e3591815f1c62b"
+  },
+  "release_candidate_regressions": {
+    "passed": 29,
+    "failed": 0,
+    "skipped": 0,
+    "log_sha256": "a5a699b5c2389f39a70b13239a20fd022677d895d81292285d4f27725b220692"
+  },
+  "types_log_sha256": "3cea01ca6731d254d8cb8265f4fb29f0abcddf05eb43593ffedb269501b44fad",
+  "source_files": {
+    "backend/engine/global_migration.py": "348949288c265cddc527ffd16d10aefc35038d5ddf64f6a7df2dd6db40571ee2",
+    "backend/engine/live_control_migration.py": "3fd92b984427d3c7fd87014fe67db938e773d7fef2b5f3f7dbd29f4a33beceba",
+    "backend/engine/migration_inventory.py": "aeffc59718dcbaf945ef5f9f2882f8e504cce07e2fced11580f5fb837ddc99e5",
+    "backend/engine/runtime_update.py": "07b16c53a46f80dc017eaec19d8522ba31652cb8dcfb8241e39e0d2df0cbe444",
+    "backend/engine/terminal_operation_history.py": "d2e9cf73d541f6c77361efeddb23867a0acff0ae64cead8448a8370bb137fcff",
+    "backend/engine/terminal_runtime_history.py": "97a5739648e39162ecb3b7e32d9443b82e90361d1c8a94b92ecd31babb6a53fc",
+    "backend/engine/application_launch_lease.py": "d3ee00e4e0ddfae9d3bca7100d374d29eb215563d90c846171b8fc7583f47045",
+    "backend/engine/installed_home_adoption.py": "046ae5e76ba7fd80a8576a8ab59fcc796e47598eb51e6f0fca2e16df7caf0844",
+    "backend/tests/test_application_launch_lease.py": "b00232be685e15fd38d94459404943c7076e021ef889f009e2f05ec57879e510",
+    "backend/tests/test_installed_home_adoption.py": "48ebd9a6915aa6a795236568067b30ff63b86ad0467d7e0eedbeaf12940a928d",
+    "backend/tests/test_remaining_work_report.py": "71e86eb18defdce65545bd1dd83f9b71e39f9eda14191604f025dbe8be836340",
+    "docs/operations/offline-portable-update.md": "418e62d5700d31619cdf55905afb4ca4d76928cf351a3acbff3db511278e3e70",
+    "docs/implementation-ledger/WORK-STATUS.md": "b90742acad7bd3c218f87ecb98d6395d75ea0b78e0119472e94bd3ebda0a91fd",
+    "docs/service-action-evidence.json": "34ac1216e5d36c310607e3d90c289a0e8527498387a1911c7a0415165bd52e38",
+    "docs/service-upgrade-coverage.md": "3ba59afa3db2b7976731d43d34bb07684422a31015e74042b23a36a8caaa4277",
+    "docs/implementation-ledger/2026-10-07-remaining-scope.md": "f78fe577318f0162df8121de54fbe396c77e3686efef240925279239bdafa5c0",
+    "docs/implementation-ledger/user-scope-decisions.json": "9e9035a32ea6352dc9bc0efb0116ae10b7606ac1f0623778b6c17119d3040925",
+    "scripts/e2e/evaluation-filter-controls.spec.ts": "9e11518d8359299c61cefe89e885c50e2f5b195560df4fbea3026f56f59136e0",
+    "scripts/e2e/fixtures/evaluation_filter_reports.py": "4ebf4189b527898ff05363d18fbd5605f4d4a80d460c280896abfcefe951ee46",
+    "scripts/e2e/fixtures/scale_library_metadata.py": "33b6170fe2fa1f1c915e2b7b558eed63fe232309a69ea77a5621fbba70e4f6b4",
+    "scripts/e2e/scale-library-controls.spec.ts": "9ba76a094298c9cb796f7ed67490b2a681a73031eb6725a951a14c97a0b57a8e",
+    "scripts/release_candidate_gate.cjs": "0f4bae88c4492a248da645d4b1e87ee84a451723087fadad4e1ddef99ea77246",
+    "scripts/remaining_work_report.py": "e26307d48b2fe8dc8f134d89e049e6a4cf8c221f40a26c602d9853db800adfe0",
+    "scripts/tests/release-candidate.test.cjs": "7136ad4237879319cf4373093b2964f21df48bbde83b8cda5e38a06c89906983",
+    ".github/workflows/release.yml": "3bbe6fbe4004215434ea1ea4c402491754cf8361efac2268e4a4422e7e543bcb",
+    "src/renderer/components/common/ImagePickerModal.pending.test.cjs": "39c89095e33bdd99c3a75170735c8e1d39f35d290038aac751e73b6e802f98c6",
+    "src/renderer/components/common/ImagePickerModal.tsx": "4ad3777c3152c0204afc4f2d517b056f5720e0b4d2caa90c4ab383b5c994d966"
+  },
+  "gui_observations": [
+    {
+      "mode": "browser",
+      "kind": "evaluation",
+      "observations": [
+        {
+          "control": "class-error-cells",
+          "fn": [
+            "case-1.png"
+          ],
+          "fp": [
+            "case-2.png",
+            "case-5.png"
+          ]
+        },
+        {
+          "control": "score-bins",
+          "counts": [
+            0,
+            1,
+            0,
+            1,
+            0,
+            0,
+            1,
+            1,
+            1,
+            1
+          ],
+          "empty_range": [
+            0.2,
+            0.3
+          ],
+          "half_open_upper_boundary": true
+        },
+        {
+          "control": "roc-threshold",
+          "value": "0.75",
+          "counts": "TP 2 \u00b7 \ubbf8\uac80 FN 1 \u00b7 \uacfc\uac80 FP 0 \u00b7 TN 2."
+        },
+        {
+          "control": "roc-threshold",
+          "value": "0",
+          "counts": "TP 3 \u00b7 \ubbf8\uac80 FN 0 \u00b7 \uacfc\uac80 FP 2 \u00b7 TN 0."
+        },
+        {
+          "control": "roc-threshold",
+          "value": "1",
+          "counts": "TP 0 \u00b7 \ubbf8\uac80 FN 3 \u00b7 \uacfc\uac80 FP 0 \u00b7 TN 2."
+        },
+        {
+          "control": "area-bins",
+          "predicted_areas": [
+            4,
+            16,
+            36,
+            49
+          ],
+          "counts": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            1
+          ]
+        }
+      ],
+      "same_record_and_group_reopened": true,
+      "saved_result_json_exact": true,
+      "actual_model_inference": false
+    },
+    {
+      "mode": "browser",
+      "kind": "scale",
+      "metadata_rows": 100000,
+      "actual_images": 3,
+      "maximum_dom_rows": 32,
+      "maximum_response_rows": 120,
+      "three_keyset_pages": [
+        {
+          "cursor": null,
+          "next_cursor": "WyI0M2Y5YjFiODk1MmIwYjA3IiwgIm1ldGFkYXRhL2VudHJ5LTAwMDExOS5wbmciXQ==",
+          "first": "metadata/entry-000000.png",
+          "last": "metadata/entry-000119.png",
+          "rows": 120
+        },
+        {
+          "cursor": "WyI0M2Y5YjFiODk1MmIwYjA3IiwgIm1ldGFkYXRhL2VudHJ5LTAwMDExOS5wbmciXQ==",
+          "next_cursor": "WyI0M2Y5YjFiODk1MmIwYjA3IiwgIm1ldGFkYXRhL2VudHJ5LTAwMDIzOS5wbmciXQ==",
+          "first": "metadata/entry-000120.png",
+          "last": "metadata/entry-000239.png",
+          "rows": 120
+        },
+        {
+          "cursor": "WyI0M2Y5YjFiODk1MmIwYjA3IiwgIm1ldGFkYXRhL2VudHJ5LTAwMDIzOS5wbmciXQ==",
+          "next_cursor": "WyI0M2Y5YjFiODk1MmIwYjA3IiwgIm1ldGFkYXRhL2VudHJ5LTAwMDM1OS5wbmciXQ==",
+          "first": "metadata/entry-000240.png",
+          "last": "metadata/entry-000359.png",
+          "rows": 120
+        }
+      ],
+      "missing_thumbnail_status": 404,
+      "exact_saved_uuid_and_sha_reopened": true,
+      "invalid_missing_row_refused": true,
+      "source_unchanged": true,
+      "actual_model_inference": false
+    },
+    {
+      "mode": "electron",
+      "kind": "evaluation",
+      "observations": [
+        {
+          "control": "class-error-cells",
+          "fn": [
+            "case-1.png"
+          ],
+          "fp": [
+            "case-2.png",
+            "case-5.png"
+          ]
+        },
+        {
+          "control": "score-bins",
+          "counts": [
+            0,
+            1,
+            0,
+            1,
+            0,
+            0,
+            1,
+            1,
+            1,
+            1
+          ],
+          "empty_range": [
+            0.2,
+            0.3
+          ],
+          "half_open_upper_boundary": true
+        },
+        {
+          "control": "roc-threshold",
+          "value": "0.75",
+          "counts": "TP 2 \u00b7 \ubbf8\uac80 FN 1 \u00b7 \uacfc\uac80 FP 0 \u00b7 TN 2."
+        },
+        {
+          "control": "roc-threshold",
+          "value": "0",
+          "counts": "TP 3 \u00b7 \ubbf8\uac80 FN 0 \u00b7 \uacfc\uac80 FP 2 \u00b7 TN 0."
+        },
+        {
+          "control": "roc-threshold",
+          "value": "1",
+          "counts": "TP 0 \u00b7 \ubbf8\uac80 FN 3 \u00b7 \uacfc\uac80 FP 0 \u00b7 TN 2."
+        },
+        {
+          "control": "area-bins",
+          "predicted_areas": [
+            4,
+            16,
+            36,
+            49
+          ],
+          "counts": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            1
+          ]
+        }
+      ],
+      "same_record_and_group_reopened": true,
+      "saved_result_json_exact": true,
+      "actual_model_inference": false
+    },
+    {
+      "mode": "electron",
+      "kind": "scale",
+      "metadata_rows": 100000,
+      "actual_images": 3,
+      "maximum_dom_rows": 32,
+      "maximum_response_rows": 120,
+      "three_keyset_pages": [
+        {
+          "cursor": null,
+          "next_cursor": "WyI5NjQ1YzIzODQ0Y2VkMDVmIiwgIm1ldGFkYXRhL2VudHJ5LTAwMDExOS5wbmciXQ==",
+          "first": "metadata/entry-000000.png",
+          "last": "metadata/entry-000119.png",
+          "rows": 120
+        },
+        {
+          "cursor": "WyI5NjQ1YzIzODQ0Y2VkMDVmIiwgIm1ldGFkYXRhL2VudHJ5LTAwMDExOS5wbmciXQ==",
+          "next_cursor": "WyI5NjQ1YzIzODQ0Y2VkMDVmIiwgIm1ldGFkYXRhL2VudHJ5LTAwMDIzOS5wbmciXQ==",
+          "first": "metadata/entry-000120.png",
+          "last": "metadata/entry-000239.png",
+          "rows": 120
+        },
+        {
+          "cursor": "WyI5NjQ1YzIzODQ0Y2VkMDVmIiwgIm1ldGFkYXRhL2VudHJ5LTAwMDIzOS5wbmciXQ==",
+          "next_cursor": "WyI5NjQ1YzIzODQ0Y2VkMDVmIiwgIm1ldGFkYXRhL2VudHJ5LTAwMDM1OS5wbmciXQ==",
+          "first": "metadata/entry-000240.png",
+          "last": "metadata/entry-000359.png",
+          "rows": 120
+        }
+      ],
+      "missing_thumbnail_status": 404,
+      "exact_saved_uuid_and_sha_reopened": true,
+      "invalid_missing_row_refused": true,
+      "source_unchanged": true,
+      "actual_model_inference": false
+    }
+  ],
+  "independent_defects_reproduced_and_fixed": [
+    "original checked JSON reopened as FIFO",
+    "checked SQLite header reopened as FIFO",
+    "source growth during backup",
+    "foreign backup-root link",
+    "malformed project manifest",
+    "duplicate CLI scopes/attestation keys",
+    "live apply/recovery omitted launch guard",
+    "known-image receipt idempotence mismatch",
+    "dead supervisor created by standalone reserve CLI",
+    "missing/unverified image selection replaces verified choice"
+  ],
+  "scope": "Explicit POSIX owned installed-home adoption, finite immutable logical snapshots, update/migration launch guards, fail-closed persistent launch foundation, protected manual candidate validation workflow, actual saved evaluation and100k-metadata GUI controls. Only controlled software fixtures; no actual user installed-home adoption or native authenticated updated-app launch.",
+  "known_remaining_code": [
+    "Admission-compatible live-backend lease transition prerequisite is being implemented separately",
+    "Persistent frozen native controller and trusted main/backend generation handshake",
+    "Process-tree reconciliation and actual known-image execution",
+    "OS installer adapter and remaining unexecuted controls/scenarios"
+  ],
+  "native_app_handshake_verified": false,
+  "actual_updated_application_inference_verified": false,
+  "publisher_signature_verified": false,
+  "notarization_verified": false,
+  "installer_contains_app_verified": false,
+  "model_quality_approved": false,
+  "target_hardware_accepted": false,
+  "release_ready": false,
+  "soak_72h_completed": false,
+  "parent_implementation_verified": 67,
+  "original_parent_pending": 15,
+  "windows_only_requested_scope_waived": 2,
+  "requested_required_pending": 13,
+  "actions": 205,
+  "verified_scenarios": 564,
+  "pending_scenarios": 871,
+  "receipts": [
+    {
+      "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
+      "sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+      "mode": "browser",
+      "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic"
+    },
+    {
+      "receipt": "2026-10-08-image-library-369b8e1-browser.json",
+      "sha256": "654af699539bdceb5bbbfe37b9294c3d17fce30c48b38c56465bf92a0833f455",
+      "mode": "browser",
+      "test": "scripts/e2e/image-library-closure.spec.ts::metadata and error filters find an image outside the first 200 and preserve its reopened identity"
+    },
+    {
+      "receipt": "2026-10-08-scale-library-369b8e1-browser.json",
+      "sha256": "5eec47ca4f195dcfd90d941e1ee09a6847f69911d781b4a41b579b63d7ae0886",
+      "mode": "browser",
+      "test": "scripts/e2e/scale-library-controls.spec.ts::100k metadata pages through the actual library picker and restores the exact tail image"
+    },
+    {
+      "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
+      "sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+      "mode": "electron",
+      "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic"
+    },
+    {
+      "receipt": "2026-10-08-image-library-369b8e1-electron.json",
+      "sha256": "867732e1ae1ba8522709f4fd590e0f728a054b1249879e0b42c3a9508a2880b8",
+      "mode": "electron",
+      "test": "scripts/e2e/image-library-closure.spec.ts::native metadata and error filters find an image outside the first 200 and preserve its reopened identity"
+    },
+    {
+      "receipt": "2026-10-08-keyboard-canvas-369b8e1-electron.json",
+      "sha256": "111cc23574311acf8e9ac790c3e262feac595a6d0176f2845f2a856e4c4fce39",
+      "mode": "electron",
+      "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus"
+    },
+    {
+      "receipt": "2026-10-08-scale-library-369b8e1-electron.json",
+      "sha256": "07b46cc6581329bee48e9229c149f0291a25fed7e2f7b98e784408c0d1715a1a",
+      "mode": "electron",
+      "test": "scripts/e2e/scale-library-controls.spec.ts::native 100k metadata picker preserves keyset progress and exact reopened identity"
+    }
+  ],
+  "previous_gui_reference_lineage": [
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
+      "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+      "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
+      "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
+      "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+      "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
+      "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
+      "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+      "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
+      "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
+      "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+      "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
+      "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
+      "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+      "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
+      "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
+      "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+      "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
+      "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
+      "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+      "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
+      "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
+      "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+      "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
+      "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
+      "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+      "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
+      "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
+      "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+      "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
+      "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
+      "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+      "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
+      "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
+      "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+      "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
+      "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
+      "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+      "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
+      "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
+      "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+      "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
+      "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
+      "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+      "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
+      "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
+      "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+      "receipt": "2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
+      "receipt_sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/image-library-closure.spec.ts::native metadata and error filters find an image outside the first 200 and preserve its reopened identity",
+      "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+      "receipt": "2026-10-07-app-image-library-closure.spec-electron.json",
+      "receipt_sha256": "ff03371f3afee03d0047cd46b6b5b63c47606ce7ba277bd27239cc0f975a971a"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/image-library-closure.spec.ts::native metadata and error filters find an image outside the first 200 and preserve its reopened identity",
+      "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+      "receipt": "2026-10-07-app-image-library-closure.spec-electron.json",
+      "receipt_sha256": "ff03371f3afee03d0047cd46b6b5b63c47606ce7ba277bd27239cc0f975a971a"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/image-library-closure.spec.ts::native metadata and error filters find an image outside the first 200 and preserve its reopened identity",
+      "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+      "receipt": "2026-10-07-app-image-library-closure.spec-electron.json",
+      "receipt_sha256": "ff03371f3afee03d0047cd46b6b5b63c47606ce7ba277bd27239cc0f975a971a"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/image-library-closure.spec.ts::native metadata and error filters find an image outside the first 200 and preserve its reopened identity",
+      "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+      "receipt": "2026-10-07-app-image-library-closure.spec-electron.json",
+      "receipt_sha256": "ff03371f3afee03d0047cd46b6b5b63c47606ce7ba277bd27239cc0f975a971a"
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/image-library-closure.spec.ts::native metadata and error filters find an image outside the first 200 and preserve its reopened identity",
+      "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+      "receipt": "2026-10-07-app-image-library-closure.spec-electron.json",
+      "receipt_sha256": "ff03371f3afee03d0047cd46b6b5b63c47606ce7ba277bd27239cc0f975a971a"
+    }
+  ],
+  "previous_picker_source_map": {
+    "source": "src/renderer/components/common/ImagePickerModal.tsx",
+    "previous_sha256": "6cde4dc76f927e9ed7469c1765ba6b9f84193f24caf2df3bda0b347466030966",
+    "new_sha256": "4ad3777c3152c0204afc4f2d517b056f5720e0b4d2caa90c4ab383b5c994d966",
+    "scope": "Source map refresh only; existing observed GUI receipts remain historical until clean exact-source rerun"
+  },
+  "root_native_visual_readback": true
+}

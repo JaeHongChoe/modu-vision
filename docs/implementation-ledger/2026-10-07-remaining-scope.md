@@ -6,7 +6,7 @@
 
 `python3 scripts/remaining_work_report.py`는 원장과 행동 registry의 실제 파일을 읽고 입력 SHA-256과 현재 수를 출력한다. 저장된 부모 수가 실제 행과 다르거나 bool로 기록됐으면 실패한다. 면제의 직접 지시·대상·상태가 확대되거나 pass로 바뀐 기록도 거절한다. 보고서는 원래 program이나 수락 gate를 쓰지 않는다. 이후 수는 이 명령으로 다시 읽으며 이 문서의 snapshot을 최신 실행 증거로 사용하지 않는다.
 
-현재 curated 행동은 **199개·검증 545개·pending 848개·not_required 0개**다. 이 시나리오 수는 부모나 전체 기능 수락 수에 더하지 않는다. 실제 slice 기록은 18개이며 원장의 별도 요약은 병합 slice 16개·추가 개선 영역 2개다. 이 기록들은 부모와 겹치는 구현 주장으로, 독립 수락이나 서로 더할 수 있는 진척 수가 아니다.
+2026-10-08 소스369b8e1의 추가 실행 뒤 curated 행동은 **205개·검증 564개·pending 871개·not_required 0개**다. 새6개 action에42차원을 추가하고 실제19개만 검증했다. 이 수는 부모나 전체 기능 수락 수에 더하지 않는다. 실제 slice 기록은18개이며 원장의 별도 요약은 병합 slice16개·추가 개선 영역2개다. 부모와 겹치는 구현 기록으로 독립 수락이나 서로 더할 수 있는 진척 수가 아니다.
 
 S6-03의 inert runtime pack API/GUI는 source `5284df6e979d4d4ceadc0a8256b5a90176adbbe6`에 연결된 근거가 이미 있다. 깨끗한 browser/native 검사 5개에 pack 설치·pin·integrity readback과 진단·지원 동선이 포함되며 공개 receipt는 `2026-10-07-runtime-pack-studio-closure-5284df6.json`이다. 이 동선을 미작성 API로 취급하지 않는다. S6-04의 portable 앱/DB cutover·검토·복구도 구현되어 있다. 별도로 남은 durable updated-app ownership/supervisor/native caller·기준 이미지 handoff 및 OS installer adapter를 추적한다.
 
@@ -21,7 +21,7 @@ S6-03의 inert runtime pack API/GUI는 source `5284df6e979d4d4ceadc0a8256b5a9017
 | S7-01 | 남은 행동 시나리오·누락 메뉴/shortcut 실행 | 전체 기능 target 수락 |
 | S7-02 | 모델 lifecycle·저장된 multi-model package 근거 | 사람이 검토한 대표 task별 truth·품질 판정 |
 | S7-04 | 로컬 장애 matrix·별도 팀 계정 충돌/재시작 | 물리 target 장애·실제 서명 native update |
-| S7-05 | GUI metadata paging/검색 측정 | 같은 72시간 운전의 terminal receipt·target 자원/택트 |
+| S7-05 | 소스369b8e1의10만 metadata/실제 이미지3장 GUI paging·검색·선택 복원 근거 보존 | 실제 사진 규모·같은72시간 운전 terminal receipt·target 자원/택트 |
 | S7-06 | simulator·stale truth/권한 gate 보존 | 실제 camera/PLC/MES·제품/Lot 정답·공정 품질 승인 |
 | S7-07 | exact source/artifact/coverage/복구 검토 | 서명·native 사용 조건·supported target·독립 최종 리뷰·pilot |
 | S7-08 | 실제 관찰을 기록할 pilot/지원/backup 절차 | 처음 쓰는 참여자 pilot·운영 책임·측정된 SLA |
