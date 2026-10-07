@@ -208,6 +208,7 @@ jobs:
           backend/tests/test_packaged_license_texts.py
           backend/tests/test_offline_license_wheels.py
           backend/tests/test_terminal_operation_history.py
+          backend/tests/test_portable_flow_history.py
           backend/tests/test_fleet_secret_store.py
           backend/tests/test_historical_control_schema.py
           backend/tests/test_migration_sqlite_lifetime.py

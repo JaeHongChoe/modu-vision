@@ -128,6 +128,8 @@ def _authority_blockers(root,scopes,*,installation_root=None,history_jobs=frozen
         p=Path(path)
         if not p.is_absolute() or not p.is_dir() or any(x.is_symlink() for x in (p,*p.parents)) or not p.resolve().is_relative_to(installation_root or root):
             blockers.append('External or unavailable registered project references are unsupported in this phase')
+    from backend.engine.portable_flow_history import project_blockers
+    blockers.extend(project_blockers(installation_root or root,locations))
     known={(w,p,k) for k,w,p,_ in locations}
     with _read_db(root/scopes['ledger']) as db:
         for identifier,workspace,project,key,actor,mode in db.execute('SELECT id,workspace_id,project_id,project_key,actor_id,mode FROM jobs'):
