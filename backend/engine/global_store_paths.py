@@ -3,7 +3,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 import json,os
 from pathlib import Path
-from backend.engine.migration_guard import maintenance_guard
+from backend.engine.migration_guard import maintenance_guard,exclusive_admitted
 
 OWNER_FILE='.global-migration-owner.json'
 POINTER_FILE='global-active.json'
@@ -32,7 +32,8 @@ def owned_root(path):
             st=root.stat()
             if identity!={'path':str(root.resolve()),'device':st.st_dev,'inode':st.st_ino}:
                 raise ValueError('Global installation ownership differs from original directory')
-            for name in ('.global-generations','.global-migrations','migration_admission.lock',POINTER_FILE):
+            for name in ('.global-generations','.global-migrations','migration_admission.lock',POINTER_FILE,
+                         'application-active.json','application-update-pending.json','.application-updates','.application-generations'):
                 if (root/name).is_symlink():raise ValueError('Global control paths cannot follow links')
             return root.resolve(),data
     return None,None
@@ -103,7 +104,13 @@ def store_admission(path,*,exclusive=False):
         yield
     else:
         with maintenance_guard(root,exclusive=exclusive):
-            if not exclusive:_assert_current_store(root,owner,path)
+            if not exclusive:
+                # Recovery owns exclusive admission. Ordinary constructors and
+                # writers cannot attach a partially switched app/DB pair.
+                if not exclusive_admitted(root) and ((root/'application-update-pending.json').exists() or (root/'application-active.json').exists()):
+                    from backend.engine.runtime_update import validate_attachment
+                    validate_attachment(root)
+                _assert_current_store(root,owner,path)
             yield
 
 

@@ -10,6 +10,7 @@ class GlobalMigrationError(ValueError):pass
 
 _SCOPES={'ledger','leases','profiles','accounts','context','local_journals','remote_journals'}
 _EXCLUDED={OWNER_FILE,POINTER_FILE,'.global-generations','.global-migrations','.global-generation.json','migration_admission.lock'}
+_APPLICATION_CONTROL={'application-active.json','application-update-pending.json','.application-updates','.application-generations'}
 
 def digest(value):return hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 
@@ -36,7 +37,8 @@ def _owner(root):
 
 
 def _files(root):
-    return [p for p in sorted(Path(root).rglob('*')) if not any(part in _EXCLUDED for part in p.relative_to(root).parts)]
+    return [p for p in sorted(Path(root).rglob('*')) if p.relative_to(root).parts[0] not in _APPLICATION_CONTROL
+            and not any(part in _EXCLUDED for part in p.relative_to(root).parts)]
 
 
 def _schema(path):
@@ -177,7 +179,7 @@ def preview_forward(root):
         return _forward_view(root,owner,*current)
 
 
-def advance(root,*,expected_source_sha256):
+def advance(root,*,expected_source_sha256,on_prepared=None):
     """Preserve post-cutover writes in another drained current-schema generation.
 
     This is forward recovery, not a historical schema converter or live adoption.
@@ -205,6 +207,7 @@ def advance(root,*,expected_source_sha256):
             'backup_inventory':_snapshot(backup)['inventory'],'previous_pointer':current[1],
             'fence':fence,'scopes':owner['scopes']}
         atomic_private_json(directory/'journal.json',record);_sync_directories(directory)
+        if on_prepared is not None:on_prepared(dict(record))
         _publish(root,owner,identifier,seal,fence=fence)
         record['status']='applied';atomic_private_json(directory/'journal.json',record)
         return {'status':'applied','migration_id':identifier,'fence':fence,'kind':'forward',
@@ -311,7 +314,7 @@ def _resume_restore(root,owner,identifier,path,record,source):
     return {'status':'restored','generation_id':restored_id,'fence':fence}
 
 
-def apply(root,*,expected_source_sha256):
+def apply(root,*,expected_source_sha256,on_prepared=None):
     root,owner=_owner(root)
     with store_admission(root,exclusive=True):
         if active_generation(root):raise GlobalMigrationError('An active generation exists; original-source reactivation is refused')
@@ -335,6 +338,7 @@ def apply(root,*,expected_source_sha256):
             'backup_inventory':backup_view['inventory'],'schema_conversions':before['schema_conversions'],
             'previous_pointer':previous[1] if previous else None,'fence':fence,'scopes':owner['scopes']}
         atomic_private_json(directory/'journal.json',journal);_sync_directories(directory)
+        if on_prepared is not None:on_prepared(dict(journal))
         _publish(root,owner,identifier,seal,fence=fence)
         journal['status']='applied';atomic_private_json(directory/'journal.json',journal)
         return {'status':'applied','migration_id':identifier,'fence':fence,'session_policy':'copied sessions and OIDC pending revoked'}

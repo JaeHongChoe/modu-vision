@@ -8,6 +8,12 @@ from pathlib import Path
 _HELD=ContextVar("project_maintenance_admission",default=())
 
 
+def exclusive_admitted(root):
+    """Internal reentrant capability; fresh HTTP requests clear this context."""
+    key=str(Path(root).resolve())
+    return any(item['key']==key and item['active'] and item['exclusive'] for item in _HELD.get())
+
+
 def _windows_admission(handle, exclusive):
     # The CRT locking API has no shared mode. LockFileEx permits overlapping
     # ordinary admissions while an exclusive migration still refuses them.

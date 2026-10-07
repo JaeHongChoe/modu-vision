@@ -39,6 +39,7 @@ DEPENDENCIES = (
     ('fastapi', 'fastapi', True), ('uvicorn', 'uvicorn', True),
     ('pydantic', 'pydantic', True), ('python-multipart', 'python_multipart', True),
     ('httpx', 'httpx', True), ('psutil', 'psutil', True), ('numpy', 'numpy', True),
+    ('cryptography','cryptography',True),
     ('Pillow', 'PIL', True), ('opencv-python-headless', 'cv2', True),
     ('scikit-learn', 'sklearn', True), ('torch', 'torch', True),
     ('torchvision', 'torchvision', True), ('timm', 'timm', True),

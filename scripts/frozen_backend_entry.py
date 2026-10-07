@@ -99,4 +99,7 @@ if __name__ == '__main__':
         del sys.argv[1]
         runpy.run_module('backend.training_cli',run_name='__main__')
         raise SystemExit(0)
+    if len(sys.argv)>1 and sys.argv[1]=='--offline-application-update':
+        from backend.engine.runtime_update import main
+        raise SystemExit(main(sys.argv[2:]))
     runpy.run_module('backend.main', run_name='__main__')

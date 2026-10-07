@@ -73,7 +73,14 @@ def inventory(root, *, kind='project', paths=None):
                             blockers.append(f'Reconcile open fenced job attempts in {relative.as_posix()} before migration')
             elif path.suffix=='.json':
                 try:value=json.loads(copied.read_bytes())
-                except (ValueError,UnicodeError):continue # arbitrary label/artifact content is preserved
+                except (ValueError,UnicodeError):
+                    # Arbitrary label/artifact bytes still belong in the source
+                    # CAS inventory. Only their optional JSON metadata is absent.
+                    value=None
+                    if (path.name in {'local_jobs.json','remote_jobs.json','local_job.json','remote_job.json',
+                                      'runtime-state.json','service.json','worker.json','runtime_process.json'}
+                            or relative.parts[0] in {'local_jobs','remote_jobs'}):
+                        blockers.append(f'Unreadable runtime/job control journal in {relative.as_posix()}')
                 row['structure']='object' if isinstance(value,dict) else 'array' if isinstance(value,list) else 'scalar'
                 if isinstance(value,(dict,list)):row['record_count']=len(value)
                 if isinstance(value,dict):
