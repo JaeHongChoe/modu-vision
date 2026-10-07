@@ -53,6 +53,7 @@ jobs:
           npm run test:renderer
           npm run build
           npm run test:e2e:harness
+          node --test scripts/acceptance/action_inventory.test.cjs
           node --test scripts/tests/release-readiness.test.cjs scripts/tests/package-license-texts.test.cjs scripts/verify-release-recovery.cjs
       - name: CPU contract and recovery regressions
         env:
@@ -196,6 +197,8 @@ jobs:
           backend/tests/test_fixture_pose_json_parity.py
           backend/tests/test_service_s1_08.py
           backend/tests/test_global_migration.py
+          backend/tests/test_live_control_migration.py
+          backend/tests/test_local_training_process.py
           backend/tests/test_service_s6_04.py
           backend/tests/test_portable_update_review.py
           backend/tests/test_global_restore_recovery.py
