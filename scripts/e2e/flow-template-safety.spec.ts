@@ -33,6 +33,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
     await name.fill(input);const waiting=saveResponse();await whole.click();expect((await waiting).status()).toBe(422);
     await expect(page.getByRole('alert')).toBeVisible();expect((await api(library)).templates).toHaveLength(0);expect(sha(fs.readFileSync(versionFile))).toBe(versionSha);
   }
+  await name.fill('Abandoned unsubmitted whole');await open();expect((await api(library)).templates).toHaveLength(0);await expect(name).not.toHaveValue('Abandoned unsubmitted whole');
   await name.fill('Owned reviewed whole');
   await page.route('**/api/flow-workspace/templates',r=>r.request().method()==='POST'?r.fulfill({status:503,contentType:'application/json',body:JSON.stringify({detail:'Owned template transport unavailable'})}):r.continue());
   await whole.click();await expect(page.getByRole('alert')).toContainText('Owned template transport unavailable');expect((await api(library)).templates).toHaveLength(0);
@@ -41,7 +42,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   const nodes=graph.pipeline.nodes.filter((n:any)=>['fixed_roi','inspection'].includes(n.data.node_type));
   for(const node of nodes)await subset.getByRole('checkbox',{name:node.data.label,exact:true}).check();
   const partial=page.getByRole('button',{name:'선택 노드 저장',exact:true});
-  await name.fill('');waiting=saveResponse();await partial.click();expect((await waiting).status()).toBe(422);expect((await api(library)).templates).toHaveLength(1);
+  for(const input of ['', 'X'.repeat(121)]){await name.fill(input);waiting=saveResponse();await partial.click();expect((await waiting).status()).toBe(422);expect((await api(library)).templates).toHaveLength(1);}
   await name.fill('Owned reviewed subset');
   await page.route('**/api/flow-workspace/templates',r=>r.request().method()==='POST'?r.fulfill({status:503,contentType:'application/json',body:JSON.stringify({detail:'Owned subset transport unavailable'})}):r.continue());
   await partial.click();await expect(page.getByRole('alert')).toContainText('Owned subset transport unavailable');expect((await api(library)).templates).toHaveLength(1);
@@ -68,6 +69,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   await model.selectOption(graph.job_id);mapped=await mappingAttempt();expect(mapped.status()).toBe(422);await expect(page.getByRole('alert')).toContainText('mapping');
   await className.fill('class-not-in-target');mapped=await mappingAttempt();expect(mapped.status()).toBe(422);expect((await api('/api/flowchart/draft')).draft_sha256).toBe(beforeDraft.draft_sha256);
   await className.fill('NG');
+  const requestsBeforeClassCancel=mapRequests;page.once('dialog',dialog=>dialog.dismiss());await apply.click();await expect(apply).toBeEnabled();expect(mapRequests).toBe(requestsBeforeClassCancel);await expect(className).toHaveValue('NG');expect((await api('/api/flowchart/draft')).draft_sha256).toBe(beforeDraft.draft_sha256);
   await page.route('**/api/flow-workspace/templates/*/map',r=>r.fulfill({status:503,contentType:'application/json',body:JSON.stringify({detail:'Owned mapping transport unavailable'})}));
   mapped=await mappingAttempt();expect(mapped.status()).toBe(503);await expect(page.getByRole('alert')).toContainText('Owned mapping transport unavailable');expect((await api('/api/flowchart/draft')).draft_sha256).toBe(beforeDraft.draft_sha256);
   await page.unroute('**/api/flow-workspace/templates/*/map');
@@ -85,7 +87,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   for(const row of fixture.files){expect(sha(fs.readFileSync(row.path))).toBe(row.sha256);evidence.addFile(row.path);}evidence.addFile(checkpoint);evidence.addFile(versionFile);
   await evidence.screenshot(page,`${prefix}-mapped-draft-reopened-and-saved-source-version-preserved`);page.off('request',listener);
   evidence.note('template_safety',{project,graph,template,module,savedLibrary,beforeDraft,finalDraft,mappedRequest,mappedBody,owned_template_root:ownedLibrary,owned_template_files:templateHashes,owned_template_store_verified:true,checkpoint_sha256:checkpointSha,source_version_sha256:versionSha,
-    actual_ui_and_backend:true,empty_and_oversize_name_422:true,subset_empty_name_422:true,controlled_save_subset_map_503:true,corrected_whole_and_subset_saved:true,abandoned_unsubmitted_save_preserved:true,
+    actual_ui_and_backend:true,empty_and_oversize_name_422:true,subset_empty_name_422:true,subset_oversize_name_422:true,controlled_save_subset_map_503:true,corrected_whole_and_subset_saved:true,abandoned_unsubmitted_save_preserved:true,abandoned_whole_save_preserved:true,populated_class_mapping_cancelled:true,
     template_library_reopened_exact:true,replacement_cancelled_without_map_request:true,empty_model_and_class_422:true,unknown_class_422:true,failed_mapping_preserved_draft:true,explicit_mapping_round_trip:true,
     mapped_draft_reopened_exact:true,source_images_and_checkpoint_preserved:true,saved_source_version_preserved:true,no_active_version:true,no_training:true,quality_approved:false,independent_acceptance:false});
 }
