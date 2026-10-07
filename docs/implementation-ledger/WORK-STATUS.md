@@ -236,3 +236,12 @@ independent/human/physical/release acceptance.
 추가 clean964e032 browser5/Electron3, 총8건/38개 스크린샷이 통과했다. 외부 multiclass mask의 palette/빈 클래스/구멍·preview 변경/merge 충돌 거부·backup·실제 download/reimport, 이름 있는 labelset와 개별 flags/tag color, class 통계에서 gallery filter, completed comparison 작업의 재열기·현재 검수 이미지/원래 비교로 복귀·현재 라벨 편집과 역사적 report 불변을 실행했다. 저장 mask8개는 원본 reference와 모든 픽셀/class ID가 일치했다.
 
 원장은18개 feature의71action/144verified/353pending이며 최종 feature 수용은0이다. 새 action의 미실행 시나리오도 전부 기록하여 pending 시나리오 수가 늘었다.1352bff hosted log는 CPU2283pass/7skip, browser162pass/1skip을 보여 준다. 최신 소스CI 완료나 authentic weights/skip 조건 전체 검토로 세지 않는다.
+
+
+## 실행 중 백엔드의 업데이트 잠금과 workflow 문법 수정
+
+소스 `e3c4d7c40c74ea827bdd2b8782d69c7658b22de3`에서 실제 별도 프로세스의 shared admission 때문에 lease claim/ready가 거부되는 문제를 재현했다. 설치 shared admission과 nonce별 mutex, 기록의 정확한 CAS로 수정했다. bool/float로 손상된 상태를 정상으로 받아들이던7건도 거절하며, 관련228건이 실패·skip 없이 통과했다. 실제 spawn 뒤의 불확실 종료는 여전히 recovery_required로 남는다.
+
+GitHub run37642522031은 release workflow 파일 검증 단계에서 실패했고 실행 job은0개였다. 두 runner.temp 경로를 job env에서 step env로 옮겨 실제 actionlint 문법·context 검사와 관련30개 회귀가 통과했다. 수동 protected main 후보 검사이며 실제 실행·서명·배포는 하지 않았다. 새 소스 hosted CI 완료는 아직 확인하지 않았다.
+
+원래 부모67verified/15pending, 요청 범위13pending은 유지한다. persistent native controller·authenticated handshake·process-tree reconciliation·known-image execution·OS installer adapter를 다음 구현으로 계속한다. 이전7개 실제 GUI는 소스369b8e1의 근거이며 최신 소스의 전체 GUI 완료로 바꾸지 않는다. 근거: `../verification/receipts/2026-10-08-launch-transition-workflow-e3c4d7c4.json`.

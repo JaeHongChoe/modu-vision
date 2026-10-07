@@ -1,0 +1,107 @@
+{
+  "schema": "modu-vision.launch-transition-workflow/v1",
+  "source_sha": "e3c4d7c40c74ea827bdd2b8782d69c7658b22de3",
+  "recorded_at": "2026-10-07T15:36:32.953583+00:00",
+  "source_files": {
+    ".github/workflows/release.yml": "4bf692a77df8f2c668db953c3d0ff152c3b16e9c348587c540dbb91537652a3c",
+    ".github/actionlint.yaml": "f46b4b1128eb5ef2bb6a6d4f7232a7638e97bc5626975f861ae758207cbdbe9d",
+    "scripts/tests/release-candidate.test.cjs": "507d7670755ab5cf05131c1d95ca83bb7056d9ea96ef067e7ddf41d0b6f51345",
+    "backend/engine/application_launch_lease.py": "57fa4a2b53a5401ffcde09ea625c61b767a38da0be4edee27d962b4465d9be7c",
+    "backend/tests/test_application_launch_lease.py": "c49a8dd2b454213ef330bf7991aff52a4af3bbd2d1609a433f8701a61751969c"
+  },
+  "launch_transition": {
+    "passed": 228,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "log_sha256": "40d2c40562da57dd770566a83d32cbf9d8125abcb429ed46616d191d44615fea",
+    "xml_sha256": "d6e7f83352fef535ce62db83d0e73bbe0bc5bd34b194f00eb301339e275ecc8c",
+    "handoff_sha256": "a4706f58c115288aa1319fa6d18acb34c8ef5f86c552b56f3197ac14d2a73bfa",
+    "source_inputs_unchanged": 741,
+    "composed_bytes_exact": true,
+    "scope": [
+      "application launch lease",
+      "runtime update cutover/recovery",
+      "global migration",
+      "project compatibility",
+      "installed home adoption",
+      "portable flow history",
+      "historical control schema"
+    ],
+    "fixes": [
+      "Per-nonce mutex is inside already excluded .application-launches; no new root control/exclusion/shared-file edit.",
+      "Protocol2 pins regular nlink1zero-size mode0600 own-uid lock device/inode and checks descriptor/named stability before/after. Missing/replaced/linked/FIFO/legacy protocol controls refuse.",
+      "Live transitions/readback use shared installation admission then nonblocking lease mutex; reserve/start/cancel and mutation/cutover remain exclusive.",
+      "Exact validated journal and pointer byte snapshots are compare-and-swapped; next exact member set validates only the operation bound sidecar. Interrupted publications are never repaired.",
+      "Busy close preserves original database handle; admitted ambiguity releases only own OS handle and retains unresolved durable ownership.",
+      "Only never-spawned booleanTrue reservations reach exited. Spawn/exit/controller-loss stays recovery_required; exact comparisons reject bool/float coercion."
+    ],
+    "independent_review": "Read-only final review found no additional blocker after seven reproduced strict-value coercions were fixed."
+  },
+  "retained_failures": {
+    "live_backend_shared_admission": {
+      "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+      "failed": 1,
+      "xml_sha256": "1239d885f9f0428ecadb78347c8968ca9cf34bd7beaacee29925fd03983ce43d"
+    },
+    "strict_bool_float_values": {
+      "failed": 7,
+      "xml_sha256": "9276d7999092b3c640e948a0752c16dfe546383db6f4949355044199ff4a6248"
+    },
+    "missing_typescript_in_detached_checkout": {
+      "failed": 12,
+      "xml_sha256": "46a4d157d21be517c4b12f1696a90df787d91cc12cb0b3a540a1ba4eaaf299ca",
+      "resolved_by": "Existing dependency directory read through NODE_PATH; no dependency/source installation."
+    }
+  },
+  "workflow_repair": {
+    "upstream_failed_run": {
+      "id": 37642522031,
+      "head_sha": "de6742c4fcbabf80a2ff503a01e1ad42dc60285b",
+      "event": "push",
+      "name": ".github/workflows/release.yml",
+      "path": ".github/workflows/release.yml",
+      "status": "completed",
+      "conclusion": "failure",
+      "html_url": "https://github.com/JaeHongChoe/modu-vision/actions/runs/37642522031"
+    },
+    "upstream_failed_jobs": 0,
+    "local_first_red_log_sha256": "cc12c703e482a3bb4c4c59f2afefe347125da07076d9fe91eda15f81c4fe64ad",
+    "local_final_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "local_validator": {
+      "version": "1.7.12",
+      "source": "https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_darwin_arm64.tar.gz",
+      "archive_sha256": "aba9ced2dee8d27fecca3dc7feb1a7f9a52caefa1eb46f3271ea66b6e0e6953f",
+      "binary_sha256": "8db11704dc296f096216db4db65d86cd7f0ebfdf4c38453a1da276b137b88388",
+      "scope": "Read-only local workflow schema/expression validation, verified upstream asset digest; shellcheck/pyflakes unavailable and separately disabled; no actual dispatch"
+    },
+    "contract_tests": {
+      "passed": 30,
+      "failed": 0,
+      "skipped": 0,
+      "log_sha256": "14bdb4fbd5902e75e2840b2b016f09e1a45e96ca3a08ce62983e5c04d6dfccf2"
+    },
+    "fix": "Two diagnostic runner.temp paths are evaluated in step env after policy recheck, exported through quoted GITHUB_ENV, before binding and source work. Custom runner label is declared only for the linter.",
+    "independent_review": "Read-only review found no concrete blocker; manual main-only trigger, existing protected environment and read-only policy checks remain required.",
+    "actual_workflow_dispatched": false,
+    "current_source_hosted_ci_complete": false
+  },
+  "known_remaining_code": [
+    "Persistent frozen native controller, trusted caller and authenticated main/backend generation handshake",
+    "Verifiable process-tree reconciliation and actual known-image execution",
+    "OS installer adapter and remaining unexecuted curated controls"
+  ],
+  "previous_gui_source": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+  "native_app_handshake_verified": false,
+  "actual_updated_application_inference_verified": false,
+  "process_tree_exit_verified": false,
+  "publisher_signature_verified": false,
+  "release_ready": false,
+  "whole_project_test_suite_executed": false,
+  "soak_72h_completed": false,
+  "windows_native": "waived_by_user_not_passed",
+  "parent_implementation_verified": 67,
+  "original_parent_pending": 15,
+  "requested_required_pending": 13,
+  "scope": "POSIX software lock/journal prerequisite and local workflow syntax/control regression only. No actual installed user-home launch, installer, account/runner settings, signing, deployment, GPU or original endurance process operation."
+}
