@@ -199,6 +199,7 @@ jobs:
           backend/tests/test_global_migration.py
           backend/tests/test_live_control_migration.py
           backend/tests/test_live_remote_control.py
+          backend/tests/test_live_specialist_control.py
           backend/tests/test_local_training_process.py
           backend/tests/test_service_s6_04.py
           backend/tests/test_portable_update_review.py

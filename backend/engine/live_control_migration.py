@@ -23,23 +23,29 @@ def validate_adoptions(value,installation_id):
     fields={'job_id','lease_owner','attempt_fence','attempt_number','owner_pid','owner_created_at',
         'owner_command_sha256','spec_sha256','output_dir','reserved','uncertain'}
     if (not isinstance(value,dict) or set(value)!={'protocol_version','installation_id','workers'}
-            or type(value['protocol_version']) is not int or value['protocol_version'] not in (1,2)
+            or type(value['protocol_version']) is not int or value['protocol_version'] not in (1,2,3)
             or value['installation_id']!=installation_id or not isinstance(value['workers'],list)
             or not 1<=len(value['workers'])<=1000):raise ValueError('Invalid live adoption descriptor')
     seen=set()
     for row in value['workers']:
         expected=fields
-        if value['protocol_version']==2:
+        if value['protocol_version'] in (2,3):
             kind=row.get('worker_kind') if isinstance(row,dict) else None
-            if kind not in {'local_basic','remote_training'}:raise ValueError('Invalid live control worker kind')
+            kinds={'local_basic','remote_training'}|({'local_specialist'} if value['protocol_version']==3 else set())
+            if kind not in kinds:raise ValueError('Invalid live control worker kind')
             expected=fields|{'worker_kind'}
             if kind=='remote_training':
                 expected|={'remote_profile_sha256','remote_handle_sha256'}
                 if any(not isinstance(row.get(key),str) or not re.fullmatch('[a-f0-9]{64}',row[key])
                        for key in ('remote_profile_sha256','remote_handle_sha256')):
                     raise ValueError('Invalid remote live launch binding')
+            if kind=='local_specialist':
+                expected|={'native_control_sha256'}
+                if not isinstance(row.get('native_control_sha256'),str) or not re.fullmatch('[a-f0-9]{64}',row['native_control_sha256']):
+                    raise ValueError('Invalid native live closure binding')
+        native=value['protocol_version']==3 and isinstance(row,dict) and row.get('worker_kind')=='local_specialist'
         if (not isinstance(row,dict) or set(row)!=expected or not isinstance(row.get('job_id'),str)
-                or not re.fullmatch(r'job_[A-Za-z0-9_-]{1,123}',row['job_id']) or row['job_id'] in seen
+                or not re.fullmatch(r'[a-f0-9]{32}' if native else r'job_[A-Za-z0-9_-]{1,123}',row['job_id']) or row['job_id'] in seen
                 or not isinstance(row['lease_owner'],str) or not 1<=len(row['lease_owner'])<=256
                 or any(type(row[key]) is not int or row[key]<1 for key in ('attempt_fence','attempt_number','owner_pid'))
                 or type(row['owner_created_at']) not in (int,float) or not math.isfinite(row['owner_created_at']) or row['owner_created_at']<=0
@@ -111,11 +117,11 @@ class _ObserverStore:
                     carried=next((r for r in (adoptions or {}).get('workers',[]) if r['job_id']==self._job_id),None)
                     if carried is None or carried['attempt_fence']!=self._fence():
                         raise ValueError('Job observer has no matching live adoption fence')
-                    from backend.engine.job_store import JobStore
+                    from backend.engine.job_store import JobStore,StaleFencingToken
                     fresh=JobStore(target)
                     attempts=fresh.attempts(self._job_id)
                     if not attempts or attempts[-1]['fencing_token']!=self._fence():
-                        raise ValueError('A newer job attempt owns this generation')
+                        raise StaleFencingToken('A newer job attempt owns this generation')
                     self._store=fresh
                 return getattr(self._store,name)(*args,**kwargs)
         return call
@@ -144,6 +150,13 @@ def _inspect_workers(root,owner):
     for row in jobs:
         try:
             identifier=row['id']
+            if row['kind']=='specialist_training':
+                active=[a for a in attempts if a['job_id']==identifier]
+                if len(active)!=1:raise ValueError('Native live worker must have one open original attempt')
+                claims=[r for r in reservations if r['job_id']==identifier]
+                from backend.engine.live_specialist_control import inspect_native_worker
+                workers.append(inspect_native_worker(root,owner,row,active[0],claims,locations))
+                continue
             if not isinstance(identifier,str) or not re.fullmatch(r'job_[A-Za-z0-9_-]{1,123}',identifier):
                 raise ValueError('Live job identity is not canonical')
             if row['kind']!='training' or row['state'] not in {'running','stopping','detached','disconnected'} or row['source']!='api':
@@ -220,7 +233,8 @@ def _view(root,owner):
     selected={r['job_id'] for r in workers};scopes=owner['scopes']
     live={scopes['ledger']:selected,scopes['leases']:selected}
     remote={r['job_id'] for r in workers if r.get('worker_kind')=='remote_training'}
-    local=selected-remote
+    native={r['job_id'] for r in workers if r.get('worker_kind')=='local_specialist'}
+    local=selected-remote-native
     live.update({scopes['local_journals']+'/'+identifier+'.json':{identifier} for identifier in local})
     live.update({scopes['remote_journals']+'/'+identifier+'.json':{identifier} for identifier in remote})
     outputs=[Path(r['output_dir']) for r in workers]
@@ -241,9 +255,9 @@ def _view(root,owner):
     if active_generation(root):errors.append('Initial live cutover only; an active generation must be drained before forward migration')
     if any((root/name).exists() for name in ('application-active.json','application-update-pending.json')):
         errors.append('App/DB paired installations require their own drained update transaction')
-    if remote:
-        workers=[r if r['job_id'] in remote else {**r,'worker_kind':'local_basic'} for r in workers]
-    adoption={'protocol_version':2 if remote else 1,'installation_id':owner['installation_id'],'workers':workers}
+    if remote or native:
+        workers=[r if r['job_id'] in remote|native else {**r,'worker_kind':'local_basic'} for r in workers]
+    adoption={'protocol_version':3 if native else 2 if remote else 1,'installation_id':owner['installation_id'],'workers':workers}
     if not errors:validate_adoptions(adoption,owner['installation_id'])
     source_hash=migration.digest({'inventory':view['source_snapshot']['sha256'],
         'owner_sha256':hashlib.sha256((root/migration.OWNER_FILE).read_bytes()).hexdigest(),'adoption':adoption})

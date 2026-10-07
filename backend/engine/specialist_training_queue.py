@@ -41,14 +41,21 @@ class NativeAdmission:
         self._entered = False
         self._heartbeat_error = None
         self._ownership_lock = threading.RLock()
+        self._native_control = None
+        from backend.engine.global_store_paths import owned_root
+        self._control_root,self._control_owner=owned_root(store.path)
         self.identity = {'native_worker': True, 'owner_pid': os.getpid(),
                          'owner_created_at': psutil.Process().create_time(), 'owner_instance': _INSTANCE}
 
     def request_cancel(self, reason='user requested cancellation'):
-        self.store.request_cancel(self.job_id, self.actor, reason)
-        self.event.set()
+        with self._control_scope():
+            self.store.request_cancel(self.job_id, self.actor, reason)
+            self.event.set()
 
     def check(self):
+        with self._control_scope():return self._check()
+
+    def _check(self):
         if self._heartbeat_error is not None:
             raise RuntimeError('Specialist ownership heartbeat failed') from self._heartbeat_error
         if self.store.cancel_intent(self.job_id):
@@ -59,7 +66,7 @@ class NativeAdmission:
             self.store.checkpoint(self.job_id, self.identity, self.lease.fence, require_uncancelled=True)
 
     def complete(self, publish):
-        with self._ownership_lock:
+        with self._control_scope(),self._ownership_lock:
             return self._complete(publish)
 
     def _complete(self,publish):
@@ -80,7 +87,7 @@ class NativeAdmission:
                 'cancel_acknowledged_at': time.time() if intent else None}
 
     def abandon(self, error):
-        with _LOCK:
+        with self._control_scope(),_LOCK:
             try:
                 if self.store.get(self.job_id).state in ACTIVE:
                     if self.lease is not None:
@@ -91,7 +98,7 @@ class NativeAdmission:
                 _READY.pop(self.key, None)
 
     def finish_error(self, error):
-        with self._ownership_lock:
+        with self._control_scope(),self._ownership_lock:
             return self._finish_error(error)
 
     def _finish_error(self,error):
@@ -107,6 +114,13 @@ class NativeAdmission:
                 self.scheduler.publish_result(self.lease, outcome, payload)
             else:
                 self.store.finish(self.job_id, 'abort' if outcome == 'aborted' else 'fail', payload)
+
+    @contextmanager
+    def _control_scope(self):
+        if self._control_root is None or os.name=='nt':yield
+        else:
+            from backend.engine.migration_guard import maintenance_guard
+            with maintenance_guard(self._control_root,wait=True):yield
 
     @contextmanager
     def scope(self):
@@ -125,7 +139,7 @@ class NativeAdmission:
             def refresh():
                 while not done.wait(max(.01, min(5, self.scheduler.lease_seconds/3))):
                     try:
-                        with self._ownership_lock:
+                        with self._control_scope(),self._ownership_lock:
                             if self.store.get(self.job_id).state not in ACTIVE:return
                             self.lease = self.scheduler.heartbeat(self.lease)
                             if self.store.cancel_intent(self.job_id): self.event.set()
@@ -137,6 +151,16 @@ class NativeAdmission:
             heartbeat.start()
             self._entered = True
             self.identity['native_execution_started'] = True
+            if self._control_root is not None:
+                from backend.engine.live_specialist_control import NativeControl,supported
+                if supported():
+                    from backend.engine.live_control_migration import cooperative_observer_store
+                    with self._control_scope():
+                        control=NativeControl(self,self._control_root,self._control_owner)
+                        self._native_control=control
+                        self.identity['native_control_sha256']=control.sha256
+                        self.store=cooperative_observer_store(self.store,self.job_id,lambda:self.lease.fence)
+                        self.scheduler.store=self.store
             self.check()
             yield self
             if self.store.get(self.job_id).state in ACTIVE:
@@ -149,6 +173,9 @@ class NativeAdmission:
         finally:
             done.set()
             if heartbeat is not None: heartbeat.join()
+            if self._native_control is not None:
+                self._native_control.close();self._native_control=None
+            self._entered=False
             with _LOCK:
                 _READY.pop(self.key, None)
 
@@ -275,7 +302,8 @@ def _observation(store, row):
 
 def cancel_owned(output):
     with _LOCK:
-        admission = _READY.get((str(ledger().path), Path(output).name))
+        admission = next((value for value in _READY.values() if value.job_id==Path(output).name
+            and value.output==Path(output).resolve()),None)
         if admission is not None and admission.output == Path(output).resolve():
             admission.request_cancel()
         else:
