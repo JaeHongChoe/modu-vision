@@ -255,3 +255,7 @@ GitHub run37642522031은 release workflow 파일 검증 단계에서 실패했�
 ## 추가 실제 이미지 선택 화면 검증 · fe92877
 
 브라우저·네이티브 Electron에서 각각 retry0으로 통과했다. 제어된503 오류 후 재시도, 취소 뒤 늦은409 응답, UUID/SHA/path의 테스트 미리보기 전달3차원을 추가 검증했다. 현재 curated action207개·verified572개·pending877개다.10만 metadata와 실제 이미지3장만 사용했으며 모델 추론·10만 사진·72시간·전체 기능 수락은 완료로 바꾸지 않는다. 이전 setup timeout과 native 검사 클라이언트의 인증 실패는 실패로 보존하고, 실제 renderer session으로 수정해 두 mode를 모두 다시 실행했다. 근거: `../verification/receipts/2026-10-08-metadata-picker-closure-fe92877.json`.
+
+## 공개 CI 실패 원인 수정과 로컬 재검증 · 52d3c3a
+
+이전 공개 CI0c84e66의2건 및 c15df8d의6건 실패를 보존했다. retry 시험의 전역 mock 간섭, preparation 정리 중 lease 유지에 대한 오래된 시험 기대, child session 공통 규약, runtime pack API 자동 생성 타입 누락을 수정했다. 실제 현재 소스의 관련152건과 타입 생성7건, renderer/main 타입 검사가 통과했다. Windows native2건 skip은 통과가 아니다. 관련154-outcome 실행 소스4b66d9b 뒤의 유일한 코드는 자동 생성 타입7줄이며 backend/test hash는 동일하다. 전체 hosted CI 최신 HEAD 성공이나 release 완료로 바꾸지 않는다. 근거: `../verification/receipts/2026-10-08-current-source-ci-remediation-52d3c3a.json`.

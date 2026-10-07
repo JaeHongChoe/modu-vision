@@ -5129,6 +5129,14 @@
           "receipt_sha256": "95b727fd095728f0484df62e90e3b576f1981191a8bc13e3b1f7e5f969adfab6",
           "result": "228 affected backend controls and30 release candidate contracts passed with zero failures/skips; actual shared-admission conflict and seven typed corruption cases reproduced then rejected. Upstream actionlint syntax/context validation passes after illegal job env context repair.",
           "scope": "Software prerequisite only. Durable spawned ambiguity stays recovery_required; authenticated native controller/process-tree reconciliation, actual installer and current source hosted CI remain pending. No original soak or user-home operation."
+        },
+        {
+          "kind": "current-source-ci-remediation",
+          "source_sha": "52d3c3a86293f517c74b125319b87f7925659f3b",
+          "receipt": "docs/verification/receipts/2026-10-08-current-source-ci-remediation-52d3c3a.json",
+          "receipt_sha256": "fc0cb93686d4d83e26b6734d72334ac3962888119165dc8eb7562bc2c1a942df",
+          "result": "152 related outcomes passed with2 existing Windows-native skips;7 generated schema contracts and renderer/main type checks passed. Earlier full hosted failures retained.",
+          "scope": "Local exact source and unchanged backend lineage only; newest published full hosted CI remains pending."
         }
       ],
       "file_actions": {
@@ -5746,7 +5754,7 @@
       },
       "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts",
       "remaining": [
-        "207 curated actions have569 verified and880 pending scenarios. Two launch lifecycle actions add14 dimensions,5 verified with controlled CLI/signature responses through actual GUI and9 pending. Omitted menus/shortcuts and full156-feature target acceptance remain pending."
+        "207 curated actions have572 verified and877 pending scenarios. Metadata picker error/cancel/handoff now exercised in clean browser and native Electron at fe92877. Omitted menus/shortcuts, unexecuted dimensions and full156-feature target acceptance remain pending."
       ]
     },
     {
@@ -6116,7 +6124,7 @@
       },
       "proposed_test_file": "scripts/e2e/service-s7-05.spec.ts",
       "remaining": [
-        "Actual clean browser/native GUI at source369b8e1 qualified100000 metadata rows with3 real32px fixture images:3 ordered120-row pages, maxDOM32, maxresponse120, exact tail search/reopen and missing-file refusal. This is not100000 actual-photo decode, target-RAM/p95/tact or completed72h acceptance. Preserve the same original endurance worker and wait for its terminal receipt."
+        "Clean browser/native GUI at sourcefe92877 qualified100000 metadata rows with3 real32px images:3 ordered120-row pages, bounded DOM/response, exact tail search/reopen, missing-file refusal, controlled transport error/retry, cancel/late-response guard and exact test-preview identity handoff. This is not100000 actual-photo decode, target-RAM/p95/tact or completed72h acceptance. Preserve the same original endurance worker and wait for its terminal receipt."
       ]
     },
     {

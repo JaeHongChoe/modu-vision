@@ -1,0 +1,77 @@
+{
+  "schema": "modu-vision.current-source-ci-remediation/v1",
+  "source_sha": "52d3c3a86293f517c74b125319b87f7925659f3b",
+  "related_source_sha": "4b66d9ba5299ac75f16f997f747c6a3a5dc37d01",
+  "related_gate": {
+    "outcomes": 154,
+    "passed": 152,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 2
+  },
+  "generated_type_gate": {
+    "outcomes": 7,
+    "passed": 7,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "renderer_and_main_types": {
+    "status": "passed",
+    "log_sha256": "3cea01ca6731d254d8cb8265f4fb29f0abcddf05eb43593ffedb269501b44fad"
+  },
+  "source_bindings": {
+    "backend/engine/application_launch_lease.py": "1525786f4315dfa9fa486769c1620e21206ba3b09251e024a555decfc8dab098",
+    "backend/tests/test_local_training_process.py": "a47c462dce3f64a38a084feb01f2e99f1c689f1d6c5f08439c65372574635bd6",
+    "backend/tests/test_service_s1_09.py": "c3928dabb90219057ef86a21dab70840c6eb2bc6af74213d7c5ea25596945ed8",
+    "backend/api/routes_product_delivery.py": "484645e6a99da5016cd5b7aaa5ecb9220c113a0d5e998a674f5fa49e75121536",
+    "src/renderer/services/generated/apiTypes.ts": "07b90ee48e8f528bf7c80989c567069b665ec2be3d22a3d7268c0df2df5ceb17",
+    "scripts/generate_api_types.py": "2c8b65f94195491666926a483e6b0e91f29bb084f51ac355cf6936af5befb35f",
+    "backend/tests/test_service_s1_10_types.py": "5a4b7608dea53b17f4fa4bdbcb876fa442afdf894bb63038a3c8f83845e2ebdf"
+  },
+  "unchanged_related_source_inputs": 2103,
+  "only_later_delta": "Generated API request types; all backend and test bytes from the154-outcome gate remain identical. No later full-suite rerun claimed.",
+  "independent_freeze_sha256": "90a2520728031f39392031f6fca300904952d280c31fe0a82be48fd888d6030e",
+  "retained_primary": {
+    "related_xml_sha256": "12b3f092625b0987b9dcb46990f6ffecabd431d3216f420594e0fc4fade70537",
+    "related_log_sha256": "3992c370669984fbfe9a94364a30df2edd2b2529690038c9d3a7abb1597768d8",
+    "type_red_log_sha256": "e6a4938b1f7680321abaa1d1bc9dc7515686c804a2aa4e0086a1062907533545",
+    "type_green_xml_sha256": "9e264bc3f5b3cecb157a0a2088de4016eabe18a3236db2a076f9fd3b9e90d0bf",
+    "type_green_log_sha256": "e16320b5524ee294e86fa60f99389f042768ee6a4e50bacb40826d0b5a20eeb6",
+    "source_before_sha256": "ed1536c93f043a8996efe603181ac6b201e46a95df13bd1494cca3cd27269ba4",
+    "source_after_sha256": "ed1536c93f043a8996efe603181ac6b201e46a95df13bd1494cca3cd27269ba4"
+  },
+  "hosted_failures": [
+    {
+      "run_id": 37628168456,
+      "source_sha": "0c84e66307c36f919af22f29508fa549e0684ea9",
+      "passed": 2752,
+      "failed": 2,
+      "skipped": 17,
+      "scope": "Older source full CPU contract step; never reassigned to the current source."
+    },
+    {
+      "run_id": 37645348112,
+      "source_sha": "c15df8ddf744f93788938fc66a950daa519e0d77",
+      "passed": 2750,
+      "failed": 6,
+      "skipped": 17,
+      "log_sha256": "945bd065d336b8c5d084461f939b108a33d2dfb92f9939602d484c22d2aae2c9",
+      "scope": "Session isolation contract, generated request types and preparation cleanup timing failures retained."
+    }
+  ],
+  "repairs": [
+    "Retry fixture substitutes module-local namespace adapters; unrelated real writer/thread are no longer intercepted by global os.replace/time.sleep monkeypatches.",
+    "Preparation exception fixture holds the real cleanup boundary with events and verifies running/reservation retention until owned thread exits; production cleanup semantics unchanged.",
+    "Launch subprocess uses centralized session_isolation helper with the same supported POSIX start_new_session behavior.",
+    "Regenerate the missing RuntimePackInput and POST runtime-packs/install request type from actual Pydantic schema."
+  ],
+  "hosted_current_source_passed": false,
+  "windows_native_passed": false,
+  "release_ready": false,
+  "limitations": [
+    "Two existing Windows-native skips retained as unavailable, not passed.",
+    "Only exact local related/type contracts rerun. Current full hosted CI must complete separately.",
+    "No protected release dispatch, native installer, signing or device acceptance."
+  ]
+}
