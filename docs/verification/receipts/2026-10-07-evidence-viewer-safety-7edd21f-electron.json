@@ -1,0 +1,48 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+  "source_dirty": false,
+  "test": "scripts/e2e/evidence-viewer-safety.spec.ts::native saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+  "test_source_sha256": "95365f9880adb683e5d7ebc59b92e5ef3c40f52980569a48bce2028c27296c72",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "1e4f2fe7752476b4427d6121da3319cdf4442f43a40f3ef887253585b3ec7a50",
+  "harness_sha256": "e2c2e60e45c0309ef081ea3b3847d9ea94bc42f76a7f094f57756189d3e2c5d9",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "541f85a95afabcb7c758a65f190bef0f9ad08d635517a14e2f23e2b2f4f95413"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "2e898bb896968d9d37af2947b0b76956172993024620f7f5b2ec939f19ed42f6"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "8e854607ee2ed1818fe12d2a311e19186089aaaf3ee64133ebd6a9d5d0c546ea"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "430ab034e9a3d73fdb4064a67a6d1b3724d157e951394e848d7a09d153184d8c"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "e261d91e9b317c66f54e608656db52874ebf4cbf32f4edada3158725e6543ed9"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "b8962ba250800ee14a1257254ea6e81302025eff140b9b2c93ffd587c960604d"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

@@ -1,0 +1,86 @@
+{
+  "schema": "modu-vision.evidence-viewer-safety-closure/v1",
+  "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+  "actual_gui_cases": 2,
+  "actual_modes": [
+    "browser",
+    "electron"
+  ],
+  "retry_count": 0,
+  "existing_pending_dimensions_verified": 14,
+  "actions": 197,
+  "verified_scenarios": 520,
+  "pending_scenarios": 859,
+  "observed": {
+    "evidence-zoom-pan-fit": {
+      "empty": "An empty controlled response yielded no admitted saved raster or img. Zoom/Fit were disabled; keyboard plus left100% with no displacement. Escape returned to the same saved run without writes.",
+      "invalid": "External-address response bytes were rejected by the actual viewer and all background report thumbnails/previews/ROI cards. No external image request occurred. Zoom/Fit were disabled and keyboard manipulation did nothing.",
+      "error": "Actual browser/native decoder failure for an inline corrupt PNG displayed the scoped Korean error and disabled zoom/Fit/pan. Selecting the actual saved heatmap recovered decoder readiness, removed the error and enabled125% zoom.",
+      "cancel": "Closing with Escape after deliberately zooming the selected saved heatmap returned to the same saved version. The original authoritative run and all source hashes stayed exact and no inspection/training/write was submitted.",
+      "reopen": "Actual close/reopen reset100% and zero pan, showing the exact captured original source bytes and same run/version/image SHA without a stale failure. Actual keyboard bounds25\u2013800%, pointer pan45/25 and explicit Fit reset were verified.",
+      "handoff": "The viewer returned to the exact saved run/version after reading its generated actual CPU inspection. Authenticated authoritative report/original readback after all UI operations matched the original JSON hashes and every source-image SHA."
+    },
+    "evidence-overlay-opacity": {
+      "empty": "Without any admitted saved raster overlay selection, opacity and ROI controls were disabled; no image was drawn or write issued.",
+      "invalid": "The external overlay/crop/thumbnail fixture was not admitted or fetched. Overlay/opacity remained disabled in the empty viewer. The test observed zero external image requests across the entire actual page.",
+      "error": "Selecting a corrupt inline overlay triggered the actual decoder, displayed its separate Korean warning, disabled opacity and preserved the exact readable base with zoom still enabled. Selecting none cleared the warning.",
+      "cancel": "Explicitly clearing a failed overlay discarded its warning. Closing a valid opacity0.25/ROI-label-hidden view without any write preserved authoritative report/source hashes; reopening restored no overlay/default opacity0.5/ROI labels.",
+      "reopen": "After explicit close/reopen the actual controls reset overlay none, opacity0.5, ROI checked and100% zoom with the same authenticated original and saved version. No stale overlay failure survived.",
+      "handoff": "Actual displayed source original and stored source-coordinate overlay used the same saved CPU report identity. Read-only controls preserved the original run JSON and source hashes, and no deployment, approval or retraining was submitted."
+    },
+    "evidence-close-reopen": {
+      "empty": "Escape closed the actual empty saved-evidence dialog and left the saved inspection accessible; a subsequent valid open showed the original run/version/hash and bytes.",
+      "invalid": "Escape closed the external-address-refused empty dialog; the actual valid reopen recovered its same original identity with no admitted external address or external request."
+    }
+  },
+  "receipts": [
+    {
+      "case": "evidence-viewer-safety",
+      "mode": "browser",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-browser.json",
+      "receipt_sha256": "89e1815fd7ccf2eeb78726e437e35f067a8fb6e0fb06183cb8eb86e4f13f7de5"
+    },
+    {
+      "case": "evidence-viewer-safety",
+      "mode": "electron",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-electron.json",
+      "receipt_sha256": "cd646bfd26372ce99af39ef9eeeaf06a9ecefa8b4cb67a5d235a516d5606b124"
+    },
+    {
+      "case": "raster-evidence",
+      "mode": "browser",
+      "receipt": "2026-10-07-raster-evidence-925b48c-browser.json",
+      "receipt_sha256": "9db4900111b2cf1a542684d99200a932a25844a1828e56e504c77323fe99b92a"
+    },
+    {
+      "case": "raster-evidence",
+      "mode": "electron",
+      "receipt": "2026-10-07-raster-evidence-925b48c-electron.json",
+      "receipt_sha256": "1a7142b7a56da28654bd4e12db2d81bd430c9f2c31630eed1a06aa146febdda6"
+    }
+  ],
+  "retained_crop_boundary_failures": [
+    {
+      "source_sha": "925b48c4e3d7cc2842bab0587f9b01caba984aa5",
+      "mode": "browser",
+      "report_sha256": "546fee71ed4df562972e3029d8853da6c18f2d721da8d51619f92456222e2ca0",
+      "teardown_sha256": "71b9fc1d99cc48e557ffd10b146e354ccc54bd7898267cb0548e25d9ee98ea78",
+      "cause": "Actual external crop_thumbnail IMG Full image request remained after main preview/thumbnail repair. Original failed screenshots and trace retained; the ROI card boundary was then fixed in7edd21f."
+    },
+    {
+      "source_sha": "925b48c4e3d7cc2842bab0587f9b01caba984aa5",
+      "mode": "electron",
+      "report_sha256": "ef50cf95a2364f7f3e274054c072d7aa7a81afc9ab4d025b166aead58fdd6525",
+      "teardown_sha256": "a7de33211bc65046fd05d86e072ad00aa00d8febd5ae3db2fd2cffaa62a9d1a4",
+      "cause": "Actual external crop_thumbnail IMG Full image request remained after main preview/thumbnail repair. Original failed screenshots and trace retained; the ROI card boundary was then fixed in7edd21f."
+    }
+  ],
+  "root_visual_readback": [
+    "native bad-base disabled controls and scoped warning",
+    "native corrupt overlay with readable base and disabled opacity",
+    "native exact original reopened with no stale warning"
+  ],
+  "component_lineage": "Original decoder red5 and StrictMode/drag red2; production decoder/utility12 passed. Full renderer/main890 and types passed before the last ROI-card admission. Final changed ROI-card source has focused14 and types passed plus this actual GUI; the890 result is not rebound to7edd21f.",
+  "scope": "Owned generated images, controlled untrained-feature PaDiM statistics, actual one-image CPU inspection; explicit corruption of authenticated captured response only. Backend stored run and original files were never changed by the fault fixture. No representative human quality, publisher, physical device/Windows, whole feature or independent acceptance.",
+  "parent_pending": 15
+}

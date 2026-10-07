@@ -1769,6 +1769,14 @@
      "scope": "Software implementation and named functional dimensions only. Synthetic untrained/statistics checkpoints establish execution wiring, not representative model/annotation/field quality. Root review only; independent review unavailable.",
      "platform": "Actual Chrome and macOS development Electron/main/preload/owned backend; Windows tests excluded. No new SSH/GPU or app training.",
      "reference": "docs/verification/2026-10-04-remaining-integration-evidence.md"
+    },
+    {
+     "kind": "actual-evidence-decoder-origin-controls",
+     "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+     "receipt": "docs/verification/receipts/2026-10-07-evidence-viewer-safety-closure-7edd21f.json",
+     "receipt_sha256": "88d5a8b5daa926da0c6b93872a1b2e245001e774deff16b5f320cbf969eded6c",
+     "result": "Clean browser1/native Electron1 passed retry0;14 existing pending dimensions executed with exact authenticated run/original hashes, actual decoder errors and zero foreign image requests.",
+     "scope": "Owned generated images, controlled untrained-feature PaDiM statistics, actual one-image CPU inspection; explicit corruption of authenticated captured response only. Backend stored run and original files were never changed by the fault fixture. No representative human quality, publisher, physical device/Windows, whole feature or independent acceptance."
     }
    ],
    "file_actions": {
@@ -5549,6 +5557,14 @@
      "receipt_sha256": "6dfe77590608bf62d649dbf9fbc2587f5e630a56d073aa3841005a8791db9c90",
      "result": "Focused Python110 passed; clean browser2/native Electron1 passed retries0 with owned teardown. Ten existing pending action dimensions executed; no new action or parent acceptance.",
      "scope": "Generated source images, persisted synthetic service events, controlled Ed25519 authority and native-signature output fixture, source CLI/native layout fixture only. No representative model quality, automatic truth, full offline base activation, real publisher/OS installer/installed product, Windows/device or independent acceptance."
+    },
+    {
+     "kind": "actual-evidence-decoder-origin-controls",
+     "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+     "receipt": "docs/verification/receipts/2026-10-07-evidence-viewer-safety-closure-7edd21f.json",
+     "receipt_sha256": "88d5a8b5daa926da0c6b93872a1b2e245001e774deff16b5f320cbf969eded6c",
+     "result": "Clean browser1/native Electron1 passed retry0;14 existing pending dimensions executed with exact authenticated run/original hashes, actual decoder errors and zero foreign image requests.",
+     "scope": "Owned generated images, controlled untrained-feature PaDiM statistics, actual one-image CPU inspection; explicit corruption of authenticated captured response only. Backend stored run and original files were never changed by the fault fixture. No representative human quality, publisher, physical device/Windows, whole feature or independent acceptance."
     }
    ],
    "file_actions": {
@@ -5573,7 +5589,7 @@
    },
    "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts",
    "remaining": [
-    "197 curated actions have506 verified scenarios and873 pending scenarios. Other helpers/menus/shortcuts and all156-feature full acceptance remain pending."
+    "197 curated actions have520 verified scenarios and859 pending scenarios. Other helpers/menus/shortcuts and all156-feature full acceptance remain pending."
    ]
   },
   {
@@ -5749,6 +5765,14 @@
      "receipt_sha256": "6dfe77590608bf62d649dbf9fbc2587f5e630a56d073aa3841005a8791db9c90",
      "result": "Focused Python110 passed; clean browser2/native Electron1 passed retries0 with owned teardown. Ten existing pending action dimensions executed; no new action or parent acceptance.",
      "scope": "Generated source images, persisted synthetic service events, controlled Ed25519 authority and native-signature output fixture, source CLI/native layout fixture only. No representative model quality, automatic truth, full offline base activation, real publisher/OS installer/installed product, Windows/device or independent acceptance."
+    },
+    {
+     "kind": "actual-evidence-decoder-origin-controls",
+     "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+     "receipt": "docs/verification/receipts/2026-10-07-evidence-viewer-safety-closure-7edd21f.json",
+     "receipt_sha256": "88d5a8b5daa926da0c6b93872a1b2e245001e774deff16b5f320cbf969eded6c",
+     "result": "Clean browser1/native Electron1 passed retry0;14 existing pending dimensions executed with exact authenticated run/original hashes, actual decoder errors and zero foreign image requests.",
+     "scope": "Owned generated images, controlled untrained-feature PaDiM statistics, actual one-image CPU inspection; explicit corruption of authenticated captured response only. Backend stored run and original files were never changed by the fault fixture. No representative human quality, publisher, physical device/Windows, whole feature or independent acceptance."
     }
    ],
    "file_actions": {

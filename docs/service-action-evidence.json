@@ -25175,22 +25175,490 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+         "kind": "click",
+         "action": "근거 이미지 확대·축소·이동·전체 맞춤",
+         "expected": "The exact saved evidence control rejects absent/invalid/unreadable raster input, confines manipulation to decoded images, and preserves stored run/source identity through the executed scenario.",
+         "observed": "browser: An empty controlled response yielded no admitted saved raster or img. Zoom/Fit were disabled; keyboard plus left100% with no displacement. Escape returned to the same saved run without writes.",
+         "reviewer": "Codex root actual clean-source UI, source/report hashes, network readback and native screenshots; independent/human quality acceptance pending",
+         "test": "scripts/e2e/evidence-viewer-safety.spec.ts::saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+         "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-browser.json",
+         "receipt_sha256": "89e1815fd7ccf2eeb78726e437e35f067a8fb6e0fb06183cb8eb86e4f13f7de5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "921080822c0965ebc36586760a1e23348e6ecf6865a06d913a3d0bb4799552ee"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "87d8e7076632ad972d8c657cc71235bd0b0710aa500295ea39f524d18e347015"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "794284db177c4483176425cf9fe9a9bfb66230e060eeef688c1734cf4d2d9510"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "81ee3be45180bdbbbe53a799a7b30cbd23834668433c554d391c1e56f3670e7d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "f2c788b0b1b50e1d813d7c9a53f2af5457af74a1c7f885acca2e78afd87ba0a6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "fa23138c5f42f5b90b4ccfc0df99069da7ff05b3ac8830a54e3d8a82acb2bbcc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+         "kind": "click",
+         "action": "근거 이미지 확대·축소·이동·전체 맞춤",
+         "expected": "The exact saved evidence control rejects absent/invalid/unreadable raster input, confines manipulation to decoded images, and preserves stored run/source identity through the executed scenario.",
+         "observed": "electron: An empty controlled response yielded no admitted saved raster or img. Zoom/Fit were disabled; keyboard plus left100% with no displacement. Escape returned to the same saved run without writes.",
+         "reviewer": "Codex root actual clean-source UI, source/report hashes, network readback and native screenshots; independent/human quality acceptance pending",
+         "test": "scripts/e2e/evidence-viewer-safety.spec.ts::native saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+         "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-electron.json",
+         "receipt_sha256": "cd646bfd26372ce99af39ef9eeeaf06a9ecefa8b4cb67a5d235a516d5606b124",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "541f85a95afabcb7c758a65f190bef0f9ad08d635517a14e2f23e2b2f4f95413"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "2e898bb896968d9d37af2947b0b76956172993024620f7f5b2ec939f19ed42f6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8e854607ee2ed1818fe12d2a311e19186089aaaf3ee64133ebd6a9d5d0c546ea"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "430ab034e9a3d73fdb4064a67a6d1b3724d157e951394e848d7a09d153184d8c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "e261d91e9b317c66f54e608656db52874ebf4cbf32f4edada3158725e6543ed9"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "b8962ba250800ee14a1257254ea6e81302025eff140b9b2c93ffd587c960604d"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+         "kind": "click",
+         "action": "근거 이미지 확대·축소·이동·전체 맞춤",
+         "expected": "The exact saved evidence control rejects absent/invalid/unreadable raster input, confines manipulation to decoded images, and preserves stored run/source identity through the executed scenario.",
+         "observed": "browser: External-address response bytes were rejected by the actual viewer and all background report thumbnails/previews/ROI cards. No external image request occurred. Zoom/Fit were disabled and keyboard manipulation did nothing.",
+         "reviewer": "Codex root actual clean-source UI, source/report hashes, network readback and native screenshots; independent/human quality acceptance pending",
+         "test": "scripts/e2e/evidence-viewer-safety.spec.ts::saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+         "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-browser.json",
+         "receipt_sha256": "89e1815fd7ccf2eeb78726e437e35f067a8fb6e0fb06183cb8eb86e4f13f7de5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "921080822c0965ebc36586760a1e23348e6ecf6865a06d913a3d0bb4799552ee"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "87d8e7076632ad972d8c657cc71235bd0b0710aa500295ea39f524d18e347015"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "794284db177c4483176425cf9fe9a9bfb66230e060eeef688c1734cf4d2d9510"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "81ee3be45180bdbbbe53a799a7b30cbd23834668433c554d391c1e56f3670e7d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "f2c788b0b1b50e1d813d7c9a53f2af5457af74a1c7f885acca2e78afd87ba0a6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "fa23138c5f42f5b90b4ccfc0df99069da7ff05b3ac8830a54e3d8a82acb2bbcc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+         "kind": "click",
+         "action": "근거 이미지 확대·축소·이동·전체 맞춤",
+         "expected": "The exact saved evidence control rejects absent/invalid/unreadable raster input, confines manipulation to decoded images, and preserves stored run/source identity through the executed scenario.",
+         "observed": "electron: External-address response bytes were rejected by the actual viewer and all background report thumbnails/previews/ROI cards. No external image request occurred. Zoom/Fit were disabled and keyboard manipulation did nothing.",
+         "reviewer": "Codex root actual clean-source UI, source/report hashes, network readback and native screenshots; independent/human quality acceptance pending",
+         "test": "scripts/e2e/evidence-viewer-safety.spec.ts::native saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+         "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-electron.json",
+         "receipt_sha256": "cd646bfd26372ce99af39ef9eeeaf06a9ecefa8b4cb67a5d235a516d5606b124",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "541f85a95afabcb7c758a65f190bef0f9ad08d635517a14e2f23e2b2f4f95413"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "2e898bb896968d9d37af2947b0b76956172993024620f7f5b2ec939f19ed42f6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8e854607ee2ed1818fe12d2a311e19186089aaaf3ee64133ebd6a9d5d0c546ea"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "430ab034e9a3d73fdb4064a67a6d1b3724d157e951394e848d7a09d153184d8c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "e261d91e9b317c66f54e608656db52874ebf4cbf32f4edada3158725e6543ed9"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "b8962ba250800ee14a1257254ea6e81302025eff140b9b2c93ffd587c960604d"
+          }
+         ]
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+         "kind": "click",
+         "action": "근거 이미지 확대·축소·이동·전체 맞춤",
+         "expected": "The exact saved evidence control rejects absent/invalid/unreadable raster input, confines manipulation to decoded images, and preserves stored run/source identity through the executed scenario.",
+         "observed": "browser: Actual browser/native decoder failure for an inline corrupt PNG displayed the scoped Korean error and disabled zoom/Fit/pan. Selecting the actual saved heatmap recovered decoder readiness, removed the error and enabled125% zoom.",
+         "reviewer": "Codex root actual clean-source UI, source/report hashes, network readback and native screenshots; independent/human quality acceptance pending",
+         "test": "scripts/e2e/evidence-viewer-safety.spec.ts::saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+         "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-browser.json",
+         "receipt_sha256": "89e1815fd7ccf2eeb78726e437e35f067a8fb6e0fb06183cb8eb86e4f13f7de5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "921080822c0965ebc36586760a1e23348e6ecf6865a06d913a3d0bb4799552ee"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "87d8e7076632ad972d8c657cc71235bd0b0710aa500295ea39f524d18e347015"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "794284db177c4483176425cf9fe9a9bfb66230e060eeef688c1734cf4d2d9510"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "81ee3be45180bdbbbe53a799a7b30cbd23834668433c554d391c1e56f3670e7d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "f2c788b0b1b50e1d813d7c9a53f2af5457af74a1c7f885acca2e78afd87ba0a6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "fa23138c5f42f5b90b4ccfc0df99069da7ff05b3ac8830a54e3d8a82acb2bbcc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+         "kind": "click",
+         "action": "근거 이미지 확대·축소·이동·전체 맞춤",
+         "expected": "The exact saved evidence control rejects absent/invalid/unreadable raster input, confines manipulation to decoded images, and preserves stored run/source identity through the executed scenario.",
+         "observed": "electron: Actual browser/native decoder failure for an inline corrupt PNG displayed the scoped Korean error and disabled zoom/Fit/pan. Selecting the actual saved heatmap recovered decoder readiness, removed the error and enabled125% zoom.",
+         "reviewer": "Codex root actual clean-source UI, source/report hashes, network readback and native screenshots; independent/human quality acceptance pending",
+         "test": "scripts/e2e/evidence-viewer-safety.spec.ts::native saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+         "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-electron.json",
+         "receipt_sha256": "cd646bfd26372ce99af39ef9eeeaf06a9ecefa8b4cb67a5d235a516d5606b124",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "541f85a95afabcb7c758a65f190bef0f9ad08d635517a14e2f23e2b2f4f95413"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "2e898bb896968d9d37af2947b0b76956172993024620f7f5b2ec939f19ed42f6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8e854607ee2ed1818fe12d2a311e19186089aaaf3ee64133ebd6a9d5d0c546ea"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "430ab034e9a3d73fdb4064a67a6d1b3724d157e951394e848d7a09d153184d8c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "e261d91e9b317c66f54e608656db52874ebf4cbf32f4edada3158725e6543ed9"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "b8962ba250800ee14a1257254ea6e81302025eff140b9b2c93ffd587c960604d"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+         "kind": "click",
+         "action": "근거 이미지 확대·축소·이동·전체 맞춤",
+         "expected": "The exact saved evidence control rejects absent/invalid/unreadable raster input, confines manipulation to decoded images, and preserves stored run/source identity through the executed scenario.",
+         "observed": "browser: Closing with Escape after deliberately zooming the selected saved heatmap returned to the same saved version. The original authoritative run and all source hashes stayed exact and no inspection/training/write was submitted.",
+         "reviewer": "Codex root actual clean-source UI, source/report hashes, network readback and native screenshots; independent/human quality acceptance pending",
+         "test": "scripts/e2e/evidence-viewer-safety.spec.ts::saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+         "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-browser.json",
+         "receipt_sha256": "89e1815fd7ccf2eeb78726e437e35f067a8fb6e0fb06183cb8eb86e4f13f7de5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "921080822c0965ebc36586760a1e23348e6ecf6865a06d913a3d0bb4799552ee"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "87d8e7076632ad972d8c657cc71235bd0b0710aa500295ea39f524d18e347015"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "794284db177c4483176425cf9fe9a9bfb66230e060eeef688c1734cf4d2d9510"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "81ee3be45180bdbbbe53a799a7b30cbd23834668433c554d391c1e56f3670e7d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "f2c788b0b1b50e1d813d7c9a53f2af5457af74a1c7f885acca2e78afd87ba0a6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "fa23138c5f42f5b90b4ccfc0df99069da7ff05b3ac8830a54e3d8a82acb2bbcc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+         "kind": "click",
+         "action": "근거 이미지 확대·축소·이동·전체 맞춤",
+         "expected": "The exact saved evidence control rejects absent/invalid/unreadable raster input, confines manipulation to decoded images, and preserves stored run/source identity through the executed scenario.",
+         "observed": "electron: Closing with Escape after deliberately zooming the selected saved heatmap returned to the same saved version. The original authoritative run and all source hashes stayed exact and no inspection/training/write was submitted.",
+         "reviewer": "Codex root actual clean-source UI, source/report hashes, network readback and native screenshots; independent/human quality acceptance pending",
+         "test": "scripts/e2e/evidence-viewer-safety.spec.ts::native saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+         "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-electron.json",
+         "receipt_sha256": "cd646bfd26372ce99af39ef9eeeaf06a9ecefa8b4cb67a5d235a516d5606b124",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "541f85a95afabcb7c758a65f190bef0f9ad08d635517a14e2f23e2b2f4f95413"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "2e898bb896968d9d37af2947b0b76956172993024620f7f5b2ec939f19ed42f6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8e854607ee2ed1818fe12d2a311e19186089aaaf3ee64133ebd6a9d5d0c546ea"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "430ab034e9a3d73fdb4064a67a6d1b3724d157e951394e848d7a09d153184d8c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "e261d91e9b317c66f54e608656db52874ebf4cbf32f4edada3158725e6543ed9"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "b8962ba250800ee14a1257254ea6e81302025eff140b9b2c93ffd587c960604d"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+         "kind": "click",
+         "action": "근거 이미지 확대·축소·이동·전체 맞춤",
+         "expected": "The exact saved evidence control rejects absent/invalid/unreadable raster input, confines manipulation to decoded images, and preserves stored run/source identity through the executed scenario.",
+         "observed": "browser: Actual close/reopen reset100% and zero pan, showing the exact captured original source bytes and same run/version/image SHA without a stale failure. Actual keyboard bounds25–800%, pointer pan45/25 and explicit Fit reset were verified.",
+         "reviewer": "Codex root actual clean-source UI, source/report hashes, network readback and native screenshots; independent/human quality acceptance pending",
+         "test": "scripts/e2e/evidence-viewer-safety.spec.ts::saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+         "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-browser.json",
+         "receipt_sha256": "89e1815fd7ccf2eeb78726e437e35f067a8fb6e0fb06183cb8eb86e4f13f7de5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "921080822c0965ebc36586760a1e23348e6ecf6865a06d913a3d0bb4799552ee"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "87d8e7076632ad972d8c657cc71235bd0b0710aa500295ea39f524d18e347015"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "794284db177c4483176425cf9fe9a9bfb66230e060eeef688c1734cf4d2d9510"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "81ee3be45180bdbbbe53a799a7b30cbd23834668433c554d391c1e56f3670e7d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "f2c788b0b1b50e1d813d7c9a53f2af5457af74a1c7f885acca2e78afd87ba0a6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "fa23138c5f42f5b90b4ccfc0df99069da7ff05b3ac8830a54e3d8a82acb2bbcc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+         "kind": "click",
+         "action": "근거 이미지 확대·축소·이동·전체 맞춤",
+         "expected": "The exact saved evidence control rejects absent/invalid/unreadable raster input, confines manipulation to decoded images, and preserves stored run/source identity through the executed scenario.",
+         "observed": "electron: Actual close/reopen reset100% and zero pan, showing the exact captured original source bytes and same run/version/image SHA without a stale failure. Actual keyboard bounds25–800%, pointer pan45/25 and explicit Fit reset were verified.",
+         "reviewer": "Codex root actual clean-source UI, source/report hashes, network readback and native screenshots; independent/human quality acceptance pending",
+         "test": "scripts/e2e/evidence-viewer-safety.spec.ts::native saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+         "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-electron.json",
+         "receipt_sha256": "cd646bfd26372ce99af39ef9eeeaf06a9ecefa8b4cb67a5d235a516d5606b124",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "541f85a95afabcb7c758a65f190bef0f9ad08d635517a14e2f23e2b2f4f95413"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "2e898bb896968d9d37af2947b0b76956172993024620f7f5b2ec939f19ed42f6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8e854607ee2ed1818fe12d2a311e19186089aaaf3ee64133ebd6a9d5d0c546ea"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "430ab034e9a3d73fdb4064a67a6d1b3724d157e951394e848d7a09d153184d8c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "e261d91e9b317c66f54e608656db52874ebf4cbf32f4edada3158725e6543ed9"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "b8962ba250800ee14a1257254ea6e81302025eff140b9b2c93ffd587c960604d"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+         "kind": "click",
+         "action": "근거 이미지 확대·축소·이동·전체 맞춤",
+         "expected": "The exact saved evidence control rejects absent/invalid/unreadable raster input, confines manipulation to decoded images, and preserves stored run/source identity through the executed scenario.",
+         "observed": "browser: The viewer returned to the exact saved run/version after reading its generated actual CPU inspection. Authenticated authoritative report/original readback after all UI operations matched the original JSON hashes and every source-image SHA.",
+         "reviewer": "Codex root actual clean-source UI, source/report hashes, network readback and native screenshots; independent/human quality acceptance pending",
+         "test": "scripts/e2e/evidence-viewer-safety.spec.ts::saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+         "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-browser.json",
+         "receipt_sha256": "89e1815fd7ccf2eeb78726e437e35f067a8fb6e0fb06183cb8eb86e4f13f7de5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "921080822c0965ebc36586760a1e23348e6ecf6865a06d913a3d0bb4799552ee"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "87d8e7076632ad972d8c657cc71235bd0b0710aa500295ea39f524d18e347015"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "794284db177c4483176425cf9fe9a9bfb66230e060eeef688c1734cf4d2d9510"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "81ee3be45180bdbbbe53a799a7b30cbd23834668433c554d391c1e56f3670e7d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "f2c788b0b1b50e1d813d7c9a53f2af5457af74a1c7f885acca2e78afd87ba0a6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "fa23138c5f42f5b90b4ccfc0df99069da7ff05b3ac8830a54e3d8a82acb2bbcc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+         "kind": "click",
+         "action": "근거 이미지 확대·축소·이동·전체 맞춤",
+         "expected": "The exact saved evidence control rejects absent/invalid/unreadable raster input, confines manipulation to decoded images, and preserves stored run/source identity through the executed scenario.",
+         "observed": "electron: The viewer returned to the exact saved run/version after reading its generated actual CPU inspection. Authenticated authoritative report/original readback after all UI operations matched the original JSON hashes and every source-image SHA.",
+         "reviewer": "Codex root actual clean-source UI, source/report hashes, network readback and native screenshots; independent/human quality acceptance pending",
+         "test": "scripts/e2e/evidence-viewer-safety.spec.ts::native saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+         "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-electron.json",
+         "receipt_sha256": "cd646bfd26372ce99af39ef9eeeaf06a9ecefa8b4cb67a5d235a516d5606b124",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "541f85a95afabcb7c758a65f190bef0f9ad08d635517a14e2f23e2b2f4f95413"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "2e898bb896968d9d37af2947b0b76956172993024620f7f5b2ec939f19ed42f6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8e854607ee2ed1818fe12d2a311e19186089aaaf3ee64133ebd6a9d5d0c546ea"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "430ab034e9a3d73fdb4064a67a6d1b3724d157e951394e848d7a09d153184d8c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "e261d91e9b317c66f54e608656db52874ebf4cbf32f4edada3158725e6543ed9"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "b8962ba250800ee14a1257254ea6e81302025eff140b9b2c93ffd587c960604d"
+          }
+         ]
+        }
+       ]
       }
      }
     },
@@ -25243,22 +25711,490 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+         "kind": "click",
+         "action": "근거 겹침 이미지·투명도·ROI",
+         "expected": "The exact saved evidence control rejects absent/invalid/unreadable raster input, confines manipulation to decoded images, and preserves stored run/source identity through the executed scenario.",
+         "observed": "browser: Without any admitted saved raster overlay selection, opacity and ROI controls were disabled; no image was drawn or write issued.",
+         "reviewer": "Codex root actual clean-source UI, source/report hashes, network readback and native screenshots; independent/human quality acceptance pending",
+         "test": "scripts/e2e/evidence-viewer-safety.spec.ts::saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+         "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-browser.json",
+         "receipt_sha256": "89e1815fd7ccf2eeb78726e437e35f067a8fb6e0fb06183cb8eb86e4f13f7de5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "921080822c0965ebc36586760a1e23348e6ecf6865a06d913a3d0bb4799552ee"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "87d8e7076632ad972d8c657cc71235bd0b0710aa500295ea39f524d18e347015"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "794284db177c4483176425cf9fe9a9bfb66230e060eeef688c1734cf4d2d9510"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "81ee3be45180bdbbbe53a799a7b30cbd23834668433c554d391c1e56f3670e7d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "f2c788b0b1b50e1d813d7c9a53f2af5457af74a1c7f885acca2e78afd87ba0a6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "fa23138c5f42f5b90b4ccfc0df99069da7ff05b3ac8830a54e3d8a82acb2bbcc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+         "kind": "click",
+         "action": "근거 겹침 이미지·투명도·ROI",
+         "expected": "The exact saved evidence control rejects absent/invalid/unreadable raster input, confines manipulation to decoded images, and preserves stored run/source identity through the executed scenario.",
+         "observed": "electron: Without any admitted saved raster overlay selection, opacity and ROI controls were disabled; no image was drawn or write issued.",
+         "reviewer": "Codex root actual clean-source UI, source/report hashes, network readback and native screenshots; independent/human quality acceptance pending",
+         "test": "scripts/e2e/evidence-viewer-safety.spec.ts::native saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+         "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-electron.json",
+         "receipt_sha256": "cd646bfd26372ce99af39ef9eeeaf06a9ecefa8b4cb67a5d235a516d5606b124",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "541f85a95afabcb7c758a65f190bef0f9ad08d635517a14e2f23e2b2f4f95413"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "2e898bb896968d9d37af2947b0b76956172993024620f7f5b2ec939f19ed42f6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8e854607ee2ed1818fe12d2a311e19186089aaaf3ee64133ebd6a9d5d0c546ea"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "430ab034e9a3d73fdb4064a67a6d1b3724d157e951394e848d7a09d153184d8c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "e261d91e9b317c66f54e608656db52874ebf4cbf32f4edada3158725e6543ed9"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "b8962ba250800ee14a1257254ea6e81302025eff140b9b2c93ffd587c960604d"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+         "kind": "click",
+         "action": "근거 겹침 이미지·투명도·ROI",
+         "expected": "The exact saved evidence control rejects absent/invalid/unreadable raster input, confines manipulation to decoded images, and preserves stored run/source identity through the executed scenario.",
+         "observed": "browser: The external overlay/crop/thumbnail fixture was not admitted or fetched. Overlay/opacity remained disabled in the empty viewer. The test observed zero external image requests across the entire actual page.",
+         "reviewer": "Codex root actual clean-source UI, source/report hashes, network readback and native screenshots; independent/human quality acceptance pending",
+         "test": "scripts/e2e/evidence-viewer-safety.spec.ts::saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+         "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-browser.json",
+         "receipt_sha256": "89e1815fd7ccf2eeb78726e437e35f067a8fb6e0fb06183cb8eb86e4f13f7de5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "921080822c0965ebc36586760a1e23348e6ecf6865a06d913a3d0bb4799552ee"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "87d8e7076632ad972d8c657cc71235bd0b0710aa500295ea39f524d18e347015"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "794284db177c4483176425cf9fe9a9bfb66230e060eeef688c1734cf4d2d9510"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "81ee3be45180bdbbbe53a799a7b30cbd23834668433c554d391c1e56f3670e7d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "f2c788b0b1b50e1d813d7c9a53f2af5457af74a1c7f885acca2e78afd87ba0a6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "fa23138c5f42f5b90b4ccfc0df99069da7ff05b3ac8830a54e3d8a82acb2bbcc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+         "kind": "click",
+         "action": "근거 겹침 이미지·투명도·ROI",
+         "expected": "The exact saved evidence control rejects absent/invalid/unreadable raster input, confines manipulation to decoded images, and preserves stored run/source identity through the executed scenario.",
+         "observed": "electron: The external overlay/crop/thumbnail fixture was not admitted or fetched. Overlay/opacity remained disabled in the empty viewer. The test observed zero external image requests across the entire actual page.",
+         "reviewer": "Codex root actual clean-source UI, source/report hashes, network readback and native screenshots; independent/human quality acceptance pending",
+         "test": "scripts/e2e/evidence-viewer-safety.spec.ts::native saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+         "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-electron.json",
+         "receipt_sha256": "cd646bfd26372ce99af39ef9eeeaf06a9ecefa8b4cb67a5d235a516d5606b124",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "541f85a95afabcb7c758a65f190bef0f9ad08d635517a14e2f23e2b2f4f95413"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "2e898bb896968d9d37af2947b0b76956172993024620f7f5b2ec939f19ed42f6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8e854607ee2ed1818fe12d2a311e19186089aaaf3ee64133ebd6a9d5d0c546ea"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "430ab034e9a3d73fdb4064a67a6d1b3724d157e951394e848d7a09d153184d8c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "e261d91e9b317c66f54e608656db52874ebf4cbf32f4edada3158725e6543ed9"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "b8962ba250800ee14a1257254ea6e81302025eff140b9b2c93ffd587c960604d"
+          }
+         ]
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+         "kind": "click",
+         "action": "근거 겹침 이미지·투명도·ROI",
+         "expected": "The exact saved evidence control rejects absent/invalid/unreadable raster input, confines manipulation to decoded images, and preserves stored run/source identity through the executed scenario.",
+         "observed": "browser: Selecting a corrupt inline overlay triggered the actual decoder, displayed its separate Korean warning, disabled opacity and preserved the exact readable base with zoom still enabled. Selecting none cleared the warning.",
+         "reviewer": "Codex root actual clean-source UI, source/report hashes, network readback and native screenshots; independent/human quality acceptance pending",
+         "test": "scripts/e2e/evidence-viewer-safety.spec.ts::saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+         "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-browser.json",
+         "receipt_sha256": "89e1815fd7ccf2eeb78726e437e35f067a8fb6e0fb06183cb8eb86e4f13f7de5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "921080822c0965ebc36586760a1e23348e6ecf6865a06d913a3d0bb4799552ee"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "87d8e7076632ad972d8c657cc71235bd0b0710aa500295ea39f524d18e347015"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "794284db177c4483176425cf9fe9a9bfb66230e060eeef688c1734cf4d2d9510"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "81ee3be45180bdbbbe53a799a7b30cbd23834668433c554d391c1e56f3670e7d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "f2c788b0b1b50e1d813d7c9a53f2af5457af74a1c7f885acca2e78afd87ba0a6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "fa23138c5f42f5b90b4ccfc0df99069da7ff05b3ac8830a54e3d8a82acb2bbcc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+         "kind": "click",
+         "action": "근거 겹침 이미지·투명도·ROI",
+         "expected": "The exact saved evidence control rejects absent/invalid/unreadable raster input, confines manipulation to decoded images, and preserves stored run/source identity through the executed scenario.",
+         "observed": "electron: Selecting a corrupt inline overlay triggered the actual decoder, displayed its separate Korean warning, disabled opacity and preserved the exact readable base with zoom still enabled. Selecting none cleared the warning.",
+         "reviewer": "Codex root actual clean-source UI, source/report hashes, network readback and native screenshots; independent/human quality acceptance pending",
+         "test": "scripts/e2e/evidence-viewer-safety.spec.ts::native saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+         "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-electron.json",
+         "receipt_sha256": "cd646bfd26372ce99af39ef9eeeaf06a9ecefa8b4cb67a5d235a516d5606b124",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "541f85a95afabcb7c758a65f190bef0f9ad08d635517a14e2f23e2b2f4f95413"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "2e898bb896968d9d37af2947b0b76956172993024620f7f5b2ec939f19ed42f6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8e854607ee2ed1818fe12d2a311e19186089aaaf3ee64133ebd6a9d5d0c546ea"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "430ab034e9a3d73fdb4064a67a6d1b3724d157e951394e848d7a09d153184d8c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "e261d91e9b317c66f54e608656db52874ebf4cbf32f4edada3158725e6543ed9"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "b8962ba250800ee14a1257254ea6e81302025eff140b9b2c93ffd587c960604d"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+         "kind": "click",
+         "action": "근거 겹침 이미지·투명도·ROI",
+         "expected": "The exact saved evidence control rejects absent/invalid/unreadable raster input, confines manipulation to decoded images, and preserves stored run/source identity through the executed scenario.",
+         "observed": "browser: Explicitly clearing a failed overlay discarded its warning. Closing a valid opacity0.25/ROI-label-hidden view without any write preserved authoritative report/source hashes; reopening restored no overlay/default opacity0.5/ROI labels.",
+         "reviewer": "Codex root actual clean-source UI, source/report hashes, network readback and native screenshots; independent/human quality acceptance pending",
+         "test": "scripts/e2e/evidence-viewer-safety.spec.ts::saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+         "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-browser.json",
+         "receipt_sha256": "89e1815fd7ccf2eeb78726e437e35f067a8fb6e0fb06183cb8eb86e4f13f7de5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "921080822c0965ebc36586760a1e23348e6ecf6865a06d913a3d0bb4799552ee"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "87d8e7076632ad972d8c657cc71235bd0b0710aa500295ea39f524d18e347015"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "794284db177c4483176425cf9fe9a9bfb66230e060eeef688c1734cf4d2d9510"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "81ee3be45180bdbbbe53a799a7b30cbd23834668433c554d391c1e56f3670e7d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "f2c788b0b1b50e1d813d7c9a53f2af5457af74a1c7f885acca2e78afd87ba0a6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "fa23138c5f42f5b90b4ccfc0df99069da7ff05b3ac8830a54e3d8a82acb2bbcc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+         "kind": "click",
+         "action": "근거 겹침 이미지·투명도·ROI",
+         "expected": "The exact saved evidence control rejects absent/invalid/unreadable raster input, confines manipulation to decoded images, and preserves stored run/source identity through the executed scenario.",
+         "observed": "electron: Explicitly clearing a failed overlay discarded its warning. Closing a valid opacity0.25/ROI-label-hidden view without any write preserved authoritative report/source hashes; reopening restored no overlay/default opacity0.5/ROI labels.",
+         "reviewer": "Codex root actual clean-source UI, source/report hashes, network readback and native screenshots; independent/human quality acceptance pending",
+         "test": "scripts/e2e/evidence-viewer-safety.spec.ts::native saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+         "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-electron.json",
+         "receipt_sha256": "cd646bfd26372ce99af39ef9eeeaf06a9ecefa8b4cb67a5d235a516d5606b124",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "541f85a95afabcb7c758a65f190bef0f9ad08d635517a14e2f23e2b2f4f95413"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "2e898bb896968d9d37af2947b0b76956172993024620f7f5b2ec939f19ed42f6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8e854607ee2ed1818fe12d2a311e19186089aaaf3ee64133ebd6a9d5d0c546ea"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "430ab034e9a3d73fdb4064a67a6d1b3724d157e951394e848d7a09d153184d8c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "e261d91e9b317c66f54e608656db52874ebf4cbf32f4edada3158725e6543ed9"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "b8962ba250800ee14a1257254ea6e81302025eff140b9b2c93ffd587c960604d"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+         "kind": "click",
+         "action": "근거 겹침 이미지·투명도·ROI",
+         "expected": "The exact saved evidence control rejects absent/invalid/unreadable raster input, confines manipulation to decoded images, and preserves stored run/source identity through the executed scenario.",
+         "observed": "browser: After explicit close/reopen the actual controls reset overlay none, opacity0.5, ROI checked and100% zoom with the same authenticated original and saved version. No stale overlay failure survived.",
+         "reviewer": "Codex root actual clean-source UI, source/report hashes, network readback and native screenshots; independent/human quality acceptance pending",
+         "test": "scripts/e2e/evidence-viewer-safety.spec.ts::saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+         "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-browser.json",
+         "receipt_sha256": "89e1815fd7ccf2eeb78726e437e35f067a8fb6e0fb06183cb8eb86e4f13f7de5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "921080822c0965ebc36586760a1e23348e6ecf6865a06d913a3d0bb4799552ee"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "87d8e7076632ad972d8c657cc71235bd0b0710aa500295ea39f524d18e347015"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "794284db177c4483176425cf9fe9a9bfb66230e060eeef688c1734cf4d2d9510"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "81ee3be45180bdbbbe53a799a7b30cbd23834668433c554d391c1e56f3670e7d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "f2c788b0b1b50e1d813d7c9a53f2af5457af74a1c7f885acca2e78afd87ba0a6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "fa23138c5f42f5b90b4ccfc0df99069da7ff05b3ac8830a54e3d8a82acb2bbcc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+         "kind": "click",
+         "action": "근거 겹침 이미지·투명도·ROI",
+         "expected": "The exact saved evidence control rejects absent/invalid/unreadable raster input, confines manipulation to decoded images, and preserves stored run/source identity through the executed scenario.",
+         "observed": "electron: After explicit close/reopen the actual controls reset overlay none, opacity0.5, ROI checked and100% zoom with the same authenticated original and saved version. No stale overlay failure survived.",
+         "reviewer": "Codex root actual clean-source UI, source/report hashes, network readback and native screenshots; independent/human quality acceptance pending",
+         "test": "scripts/e2e/evidence-viewer-safety.spec.ts::native saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+         "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-electron.json",
+         "receipt_sha256": "cd646bfd26372ce99af39ef9eeeaf06a9ecefa8b4cb67a5d235a516d5606b124",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "541f85a95afabcb7c758a65f190bef0f9ad08d635517a14e2f23e2b2f4f95413"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "2e898bb896968d9d37af2947b0b76956172993024620f7f5b2ec939f19ed42f6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8e854607ee2ed1818fe12d2a311e19186089aaaf3ee64133ebd6a9d5d0c546ea"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "430ab034e9a3d73fdb4064a67a6d1b3724d157e951394e848d7a09d153184d8c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "e261d91e9b317c66f54e608656db52874ebf4cbf32f4edada3158725e6543ed9"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "b8962ba250800ee14a1257254ea6e81302025eff140b9b2c93ffd587c960604d"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+         "kind": "click",
+         "action": "근거 겹침 이미지·투명도·ROI",
+         "expected": "The exact saved evidence control rejects absent/invalid/unreadable raster input, confines manipulation to decoded images, and preserves stored run/source identity through the executed scenario.",
+         "observed": "browser: Actual displayed source original and stored source-coordinate overlay used the same saved CPU report identity. Read-only controls preserved the original run JSON and source hashes, and no deployment, approval or retraining was submitted.",
+         "reviewer": "Codex root actual clean-source UI, source/report hashes, network readback and native screenshots; independent/human quality acceptance pending",
+         "test": "scripts/e2e/evidence-viewer-safety.spec.ts::saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+         "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-browser.json",
+         "receipt_sha256": "89e1815fd7ccf2eeb78726e437e35f067a8fb6e0fb06183cb8eb86e4f13f7de5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "921080822c0965ebc36586760a1e23348e6ecf6865a06d913a3d0bb4799552ee"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "87d8e7076632ad972d8c657cc71235bd0b0710aa500295ea39f524d18e347015"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "794284db177c4483176425cf9fe9a9bfb66230e060eeef688c1734cf4d2d9510"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "81ee3be45180bdbbbe53a799a7b30cbd23834668433c554d391c1e56f3670e7d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "f2c788b0b1b50e1d813d7c9a53f2af5457af74a1c7f885acca2e78afd87ba0a6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "fa23138c5f42f5b90b4ccfc0df99069da7ff05b3ac8830a54e3d8a82acb2bbcc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+         "kind": "click",
+         "action": "근거 겹침 이미지·투명도·ROI",
+         "expected": "The exact saved evidence control rejects absent/invalid/unreadable raster input, confines manipulation to decoded images, and preserves stored run/source identity through the executed scenario.",
+         "observed": "electron: Actual displayed source original and stored source-coordinate overlay used the same saved CPU report identity. Read-only controls preserved the original run JSON and source hashes, and no deployment, approval or retraining was submitted.",
+         "reviewer": "Codex root actual clean-source UI, source/report hashes, network readback and native screenshots; independent/human quality acceptance pending",
+         "test": "scripts/e2e/evidence-viewer-safety.spec.ts::native saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+         "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-electron.json",
+         "receipt_sha256": "cd646bfd26372ce99af39ef9eeeaf06a9ecefa8b4cb67a5d235a516d5606b124",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "541f85a95afabcb7c758a65f190bef0f9ad08d635517a14e2f23e2b2f4f95413"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "2e898bb896968d9d37af2947b0b76956172993024620f7f5b2ec939f19ed42f6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8e854607ee2ed1818fe12d2a311e19186089aaaf3ee64133ebd6a9d5d0c546ea"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "430ab034e9a3d73fdb4064a67a6d1b3724d157e951394e848d7a09d153184d8c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "e261d91e9b317c66f54e608656db52874ebf4cbf32f4edada3158725e6543ed9"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "b8962ba250800ee14a1257254ea6e81302025eff140b9b2c93ffd587c960604d"
+          }
+         ]
+        }
+       ]
       }
      }
     },
@@ -25311,10 +26247,166 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+         "kind": "click",
+         "action": "검사 결과로 돌아가기·Escape",
+         "expected": "The exact saved evidence control rejects absent/invalid/unreadable raster input, confines manipulation to decoded images, and preserves stored run/source identity through the executed scenario.",
+         "observed": "browser: Escape closed the actual empty saved-evidence dialog and left the saved inspection accessible; a subsequent valid open showed the original run/version/hash and bytes.",
+         "reviewer": "Codex root actual clean-source UI, source/report hashes, network readback and native screenshots; independent/human quality acceptance pending",
+         "test": "scripts/e2e/evidence-viewer-safety.spec.ts::saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+         "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-browser.json",
+         "receipt_sha256": "89e1815fd7ccf2eeb78726e437e35f067a8fb6e0fb06183cb8eb86e4f13f7de5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "921080822c0965ebc36586760a1e23348e6ecf6865a06d913a3d0bb4799552ee"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "87d8e7076632ad972d8c657cc71235bd0b0710aa500295ea39f524d18e347015"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "794284db177c4483176425cf9fe9a9bfb66230e060eeef688c1734cf4d2d9510"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "81ee3be45180bdbbbe53a799a7b30cbd23834668433c554d391c1e56f3670e7d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "f2c788b0b1b50e1d813d7c9a53f2af5457af74a1c7f885acca2e78afd87ba0a6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "fa23138c5f42f5b90b4ccfc0df99069da7ff05b3ac8830a54e3d8a82acb2bbcc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+         "kind": "click",
+         "action": "검사 결과로 돌아가기·Escape",
+         "expected": "The exact saved evidence control rejects absent/invalid/unreadable raster input, confines manipulation to decoded images, and preserves stored run/source identity through the executed scenario.",
+         "observed": "electron: Escape closed the actual empty saved-evidence dialog and left the saved inspection accessible; a subsequent valid open showed the original run/version/hash and bytes.",
+         "reviewer": "Codex root actual clean-source UI, source/report hashes, network readback and native screenshots; independent/human quality acceptance pending",
+         "test": "scripts/e2e/evidence-viewer-safety.spec.ts::native saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+         "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-electron.json",
+         "receipt_sha256": "cd646bfd26372ce99af39ef9eeeaf06a9ecefa8b4cb67a5d235a516d5606b124",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "541f85a95afabcb7c758a65f190bef0f9ad08d635517a14e2f23e2b2f4f95413"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "2e898bb896968d9d37af2947b0b76956172993024620f7f5b2ec939f19ed42f6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8e854607ee2ed1818fe12d2a311e19186089aaaf3ee64133ebd6a9d5d0c546ea"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "430ab034e9a3d73fdb4064a67a6d1b3724d157e951394e848d7a09d153184d8c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "e261d91e9b317c66f54e608656db52874ebf4cbf32f4edada3158725e6543ed9"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "b8962ba250800ee14a1257254ea6e81302025eff140b9b2c93ffd587c960604d"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+         "kind": "click",
+         "action": "검사 결과로 돌아가기·Escape",
+         "expected": "The exact saved evidence control rejects absent/invalid/unreadable raster input, confines manipulation to decoded images, and preserves stored run/source identity through the executed scenario.",
+         "observed": "browser: Escape closed the external-address-refused empty dialog; the actual valid reopen recovered its same original identity with no admitted external address or external request.",
+         "reviewer": "Codex root actual clean-source UI, source/report hashes, network readback and native screenshots; independent/human quality acceptance pending",
+         "test": "scripts/e2e/evidence-viewer-safety.spec.ts::saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+         "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-browser.json",
+         "receipt_sha256": "89e1815fd7ccf2eeb78726e437e35f067a8fb6e0fb06183cb8eb86e4f13f7de5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "921080822c0965ebc36586760a1e23348e6ecf6865a06d913a3d0bb4799552ee"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "87d8e7076632ad972d8c657cc71235bd0b0710aa500295ea39f524d18e347015"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "794284db177c4483176425cf9fe9a9bfb66230e060eeef688c1734cf4d2d9510"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "81ee3be45180bdbbbe53a799a7b30cbd23834668433c554d391c1e56f3670e7d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "f2c788b0b1b50e1d813d7c9a53f2af5457af74a1c7f885acca2e78afd87ba0a6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "fa23138c5f42f5b90b4ccfc0df99069da7ff05b3ac8830a54e3d8a82acb2bbcc"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+         "kind": "click",
+         "action": "검사 결과로 돌아가기·Escape",
+         "expected": "The exact saved evidence control rejects absent/invalid/unreadable raster input, confines manipulation to decoded images, and preserves stored run/source identity through the executed scenario.",
+         "observed": "electron: Escape closed the external-address-refused empty dialog; the actual valid reopen recovered its same original identity with no admitted external address or external request.",
+         "reviewer": "Codex root actual clean-source UI, source/report hashes, network readback and native screenshots; independent/human quality acceptance pending",
+         "test": "scripts/e2e/evidence-viewer-safety.spec.ts::native saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+         "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-electron.json",
+         "receipt_sha256": "cd646bfd26372ce99af39ef9eeeaf06a9ecefa8b4cb67a5d235a516d5606b124",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "541f85a95afabcb7c758a65f190bef0f9ad08d635517a14e2f23e2b2f4f95413"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "2e898bb896968d9d37af2947b0b76956172993024620f7f5b2ec939f19ed42f6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8e854607ee2ed1818fe12d2a311e19186089aaaf3ee64133ebd6a9d5d0c546ea"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "430ab034e9a3d73fdb4064a67a6d1b3724d157e951394e848d7a09d153184d8c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "e261d91e9b317c66f54e608656db52874ebf4cbf32f4edada3158725e6543ed9"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "b8962ba250800ee14a1257254ea6e81302025eff140b9b2c93ffd587c960604d"
+          }
+         ]
+        }
+       ]
       },
       "error": {
        "state": "pending"
