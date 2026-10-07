@@ -89,6 +89,8 @@ jobs:
           backend/tests/test_specialist_training_queue.py
           backend/tests/test_specialist_cancel_observation.py
           backend/tests/test_remote_training_controls.py
+          backend/tests/test_remote_terminal_receipt_identity.py
+          backend/tests/test_remote_source_aliases.py
           backend/tests/test_remote_coordinator.py
           backend/tests/test_remote_training_state_transfer.py
           backend/tests/test_remote_compute_reliability.py

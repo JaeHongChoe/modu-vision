@@ -79,3 +79,22 @@ def test_actual_loopback_coordinator_transfers_source_then_reopens_relocated_fam
     from backend.engine.specialized_warm_start import resolve_family_parent
     parent=resolve_family_parent(tmp_path/'models',local_id,'rotation',source,prepared,{'width':8,'image_size':32})
     assert parent.job_id==local_id
+    # The actual receipt has a native model ID and a different remote job ID.
+    # A restart must preserve its observed epoch/metrics without retraining.
+    from types import SimpleNamespace
+    from backend.remote import coordinator
+    from backend.remote.ssh_transport import SSHTransport
+    from backend.engine.shared_scheduler import ResourceLeases
+    assert receipt['current_epoch']==1 and receipt['total_epochs']==1
+    retained={p:coordinator._sha256(p) for p in output.iterdir() if p.is_file()}
+    restored=[]
+    monkeypatch.setattr(SSHTransport,'exec',lambda *_a,**_k:pytest.fail('Ended CPU readback must not connect'))
+    monkeypatch.setattr(coordinator,'make_remote_runner',lambda *_a,**_k:pytest.fail('Ended CPU readback must not create a runner'))
+    coordinator.recover_remote_jobs(SimpleNamespace(get_job=lambda _:None,restore_terminal_job=restored.append,
+        start_remote_job=lambda **_:pytest.fail('Ended CPU readback must not launch')))
+    assert len(restored)==1 and restored[0].job_id==remote_id and restored[0].thread is None
+    assert restored[0].current_epoch==receipt['current_epoch'] and restored[0].total_epochs==receipt['total_epochs']
+    assert restored[0].train_loss==receipt['current_train_loss'] and restored[0].val_loss==receipt['current_val_loss']
+    assert restored[0].metrics==receipt['metrics'] and restored[0].loss_history==receipt['loss_history']
+    assert ResourceLeases(tmp_path/'user'/'resource_leases.sqlite3').list()==[]
+    assert {p:coordinator._sha256(p) for p in retained}==retained

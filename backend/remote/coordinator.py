@@ -636,6 +636,7 @@ def run_remote_training(
                     "dataset_path": record.dataset_path,
                     "source_dataset_path": record.source_dataset_path,
                     "dataset_fingerprint": record.dataset_fingerprint,
+                    "launch_spec": getattr(record, 'launch_spec', None) or {},
                 }
             journal["state"] = "preparing"
             _save_journal(journal)
@@ -845,6 +846,34 @@ def mark_remote_journal_terminal(output_dir: Path, job_id: str, status: str) -> 
     _save_journal(journal)
 
 
+def _terminal_receipt_matches_record(saved: Any, record: Any) -> bool:
+    """Bind saved metrics to the original job; this grants no worker authority."""
+    if not isinstance(saved, dict):
+        return False
+    launch = record.launch_spec or {}
+    if not isinstance(launch, dict):
+        return False
+    local_id = launch.get('local_model_id')
+    if local_id is not None:
+        if (record.task not in {'rotation', 'ocr', 'rotated_detection', 'enhancement', 'defect_gan'}
+                or not isinstance(local_id, str) or re.fullmatch('[0-9a-f]{32}', local_id) is None
+                or record.job_id != 'job_' + local_id or Path(record.output_dir).name != local_id
+                or saved.get('job_id') != local_id or saved.get('remote_job_id') != record.job_id):
+            return False
+    elif saved.get('job_id') != record.job_id or 'remote_job_id' in saved:
+        return False
+    if (saved.get('status') != record.status or saved.get('task') != record.task
+            or saved.get('output_dir') != record.output_dir or saved.get('dataset_path') != record.dataset_path
+            or saved.get('compute_profile_id') != record.remote_profile_id):
+        return False
+    if record.source_dataset_path and record.dataset_fingerprint:
+        if (saved.get('source_dataset_path') != record.source_dataset_path
+                or saved.get('dataset_fingerprint') != record.dataset_fingerprint):
+            return False
+    binding = launch.get('dataset_binding')
+    return not binding or saved.get('training_provenance') == binding
+
+
 def recover_remote_jobs(manager: Any) -> None:
     """Reattach launched runs first, then reclaim queued launch intents."""
     index = _journal_index()
@@ -855,6 +884,8 @@ def recover_remote_jobs(manager: Any) -> None:
     for path in paths:
         try:
             journal = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(journal, dict):
+                raise ValueError('Remote training journal must be a JSON object')
             if journal.get("operation") in {'train','label'}:
                 journals.append((path, journal))
         except (OSError, ValueError):
@@ -863,7 +894,8 @@ def recover_remote_jobs(manager: Any) -> None:
         enqueued_at = item[1].get("enqueued_at")
         if not isinstance(enqueued_at, (int, float)):
             enqueued_at = 0
-        priority=(item[1].get('launch_spec') or {}).get('priority',0)
+        launch = item[1].get('launch_spec')
+        priority = launch.get('priority', 0) if isinstance(launch, dict) else 0
         if type(priority) is not int or not -10 <= priority <= 10:priority=0
         return (item[1].get("state") == "queued", -priority, enqueued_at, str(item[0]))
 
@@ -900,7 +932,7 @@ def recover_remote_jobs(manager: Any) -> None:
                 )
                 if receipt_exists:
                     saved = json.loads((output / "job_receipt.json").read_text(encoding='utf-8'))
-                    if saved.get("job_id") == record.job_id:
+                    if _terminal_receipt_matches_record(saved, record):
                         for key in ("current_epoch", "total_epochs", "current_step", "total_steps", "best_metric", "metrics", "loss_history", "error"):
                             if key in saved: setattr(record, key, saved[key])
                         record.train_loss = saved.get("current_train_loss")

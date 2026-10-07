@@ -13,6 +13,9 @@ import pytest
 from backend.remote import coordinator, worker
 from backend.remote.profiles import ComputeProfile
 from backend.remote.ssh_transport import SSHTransport
+# These FakeRemote lifecycle controls do not execute pretrained weights.
+# Reuse the bounded transfer fixture; actual model execution is qualified separately.
+from backend.tests.test_remote_coordinator import bounded_fake_foundation
 
 
 @pytest.fixture

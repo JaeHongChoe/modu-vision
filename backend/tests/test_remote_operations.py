@@ -18,7 +18,7 @@ from backend.remote.operations import (
     remote_job_context, run_remote_benchmark, run_remote_evaluation,
     run_remote_export, run_remote_flowchart, run_remote_inference,
 )
-from backend.tests.test_remote_coordinator import FakeRemote, _digest, _setup
+from backend.tests.test_remote_coordinator import FakeRemote, _digest, _setup, bounded_fake_foundation
 
 
 class FakeEvaluationRemote(FakeRemote):
