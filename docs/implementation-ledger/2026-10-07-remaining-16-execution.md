@@ -10,13 +10,13 @@
 | S6-02 | Windows 설치 | 설치 구성·unsigned packaged CPU/restart 검증 기록 보존 | Windows11 설치·제거 실기 QA는 사용자 면제이며 통과로 집계하지 않음 |
 | S6-03 | 선택 runtime pack | 별도 FP32/FP16 pack 및 OpenVINO/NNCF INT8 pack64파일 설치·재검증; 실제 Xeon CPU 양자화·full flow·OCR 및 관련140개 통과 | 다른 provider/장치·대표 정답 cohort·native license/publisher 승인 |
 | S6-04 | 오프라인 업데이트 | owned POSIX portable 앱·DB cutover, crash finish, 새 account/profile 보존 forward recovery; actual frozen CLI5회·별도 CPU known-image2회; 새 main/preload/renderer 검토·복구 연결, 관련Python125/Node40 및 UI2개 통과 | 실제 OS installer·설치된 home·native layout·실 publisher 서명·native positive 설치 및 installed-app known-image handoff |
-| S6-05 | 공개 CI | 이전 정확한 source의 complete hosted success; heartbeat 검사 수정·Mac58/Linux119 통과 | 최신 게시 source 전체 CI 완료; 기존 queue 및 실패 기록 보존 |
+| S6-05 | 공개 CI | sourcec2e7b6 hosted workflow success 재확인; heartbeat 검사 수정·Mac58/Linux119 통과 | 최신 게시 source 전체 CI 완료; 기존 queue 및 실패 기록 보존 |
 | S6-06 | 서명·채널 | unsigned 상태와 checksum/source 연결 | 실제 publisher/서명 키·최종 artifact와 stable/beta 운영 정책 |
-| S7-01 | 전체 기능 행동 coverage | 177개 curated action, 319개 시나리오 검증; portable 버튼9개/15개 근거 추가 | 920개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
+| S7-01 | 전체 기능 행동 coverage | 178개 curated action, 327개 시나리오 검증; 최적화 입력·오류·취소·재열기8개 근거 추가 | 919개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
 | S7-02 | 10개 모델군 시나리오 | 실제 family별 학습/추론·다중 checkpoint·flow/package control 기록 | 사람이 검토한 대표 분류/정상/OCR/OBB/향상/GAN truth와 품질 판정 |
 | S7-03 | Windows 실사용 | 기존 unsigned runner 결과 보존 | 사용자 면제. 신규 실기 테스트를 시작하지 않으며 pass로 바꾸지 않음 |
 | S7-04 | 동시 작업·장애 | 2개 계정/agent·actual CPU·재접속·권한/충돌 control; controlled signed portable 앱·DB cutover 및 crash recovery | 물리적 장애와 실제 publisher가 서명한 native 앱 업데이트 |
-| S7-05 | 규모·72시간 운전 | 별도 연속 운전 진행 중: 13.06시간/782 cycles; 기존 실패와 합산하지 않음 | 72시간 종료 receipt 및 실제 target RAM/disk/p95/tact 측정 |
+| S7-05 | 규모·72시간 운전 | 별도 연속 운전 진행 중: 13.81시간/827 cycles; 기존 실패와 합산하지 않음 | 72시간 종료 receipt 및 실제 target RAM/disk/p95/tact 측정 |
 | S7-06 | 공정 품질·장비 | simulator 계약과 실행/품질 상태 구분 | 실제 camera/PLC/MES 및 제품/Lot별 정답·미검/과검 승인 기준 |
 | S7-07 | 공개 후보 판정 | 최신 standalone backend freeze·startup/restart 및270개 의존성 license bytes 누락0 | native library 조건·업데이트/coverage·실제 서명·독립 리뷰·pilot |
 | S7-08 | 사용자 pilot·운영 | feedback/지원/backup 절차 및 승인 경계 기록 | 실제 처음 쓰는 참여자 pilot과 유지보수 책임·SLA 결정 |
@@ -102,3 +102,7 @@
 - 합성 모델은 정상으로만 분류해 NG를 놓친다. 두 이미지의 원본/변환 일치와 permissive fixture review를 현장 품질·사람의 승인으로 사용하지 않는다. 공개 receipt `2026-10-07-optimization-binding-32160f4-{browser,electron}.json`이며 기존3ab27ae 기록을 덮지 않고 새 source 실행 근거를 함께 보존한다.
 - 정상 poll 복구 뒤 남는 이전 ID 오류와 취소 재시도 성공 뒤 남는 오류를 실제 red 검사로 재현했다. 해결된 poll 오류만 지우며 별도 취소 실패는 보존한다. 새 명시적 취소 요청은 이전 요청 오류를 정리한다. 관련 inference renderer37 passed/0 skipped, 두 타입 검사 통과이다.
 - 추가 controlled browser lifecycle에서는 unavailable/empty·보정/검증 선택 해제·422 제출 실패·foreign cancel 거절·정확한 취소와 cache 재열기를 확인했다. 실제 worker 취소나 model 실행으로 대체하지 않는다. 첫 dirty 실행 기록을 보존하고 버튼별 원장에는 별도 clean 실행만 연결한다.
+
+- clean source62b20cc의 browser2 passed/0 skipped/0 retry를 원장에 연결했다. 독립 후보4개·별도 취소4개 시나리오를 추가했으며, 새 취소 action도 목록에 포함해178 actions/327 verified/919 pending이다. Intentional422 외 page error/blocked loopback0, owned backend/port 종료 및 teardown leftovers0이다. 전체156개 기능 수락0과 부모67/82·미완료15/82는 유지한다.
+
+- GitHub hosted run37552989986은 exact sourcec2e7b6에서 전체 workflow success로 종료됐다. Run/job/step API 원본 해시를 보존했다. 이 API 관찰에서 테스트 수나1.1GB artifact 내부를 다시 추출하지 않았으며 최신62b20cc 및 이후 게시 소스의 CI 성공으로 옮겨 쓰지 않는다. 공개 receipt `2026-10-07-hosted-source-ci-c2e7b6.json`.

@@ -7956,19 +7956,127 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "62b20ccdb0e8106c50f31c0656e4f4507923db47",
+         "kind": "click",
+         "action": "\ub3c5\ub9bd \ud6c4\ubcf4 \ud328\ud0a4\uc9c0 \uc0dd\uc131",
+         "expected": "Refuse independent candidate creation without an available optional runtime or heldout input.",
+         "observed": "Actual built renderer kept candidate creation disabled for unavailable CPU provider and empty test/val. No optimization submission occurred. Controlled capability and image HTTP responses; no actual model execution.",
+         "reviewer": "Codex root exact source, controlled transport and retained screen review; independent, human quality, physical and release acceptance pending",
+         "test": "scripts/e2e/runtime-optimization-binding.spec.ts::optimization lifecycle refuses missing input and failed submission, cancels exact job and reopens",
+         "receipt": "2026-10-07-optimization-lifecycle-62b20cc-browser.json",
+         "receipt_sha256": "f58f3117ef274af9e8dce8a992099cbb5ca77876e472bd348435096bcda6d0ec",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "7aecc98ef20c81198fd68b441a33b6fb4e2d0771b72fb9c9ab7d42b05040c702"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e0f35b7e6cb7b9ac9eec51507d5f4c4134bf99a254483599ea4602351c6bcd7d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "85f5f4d14c74add0c194715bab49c789fece08944d74163aa1cb80dc22f05ea6"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "62b20ccdb0e8106c50f31c0656e4f4507923db47",
+         "kind": "click",
+         "action": "\ub3c5\ub9bd \ud6c4\ubcf4 \ud328\ud0a4\uc9c0 \uc0dd\uc131",
+         "expected": "Keep a foreign source cache and a foreign completion outside the selected optimization and its review.",
+         "observed": "Clicked optimization workspace and candidate generation; another source cache was refused. Foreign completed poll did not replace owned job or request heldout/review. Matching poll resumed and cleared only the resolved polling alert; no conversion or quality approval.",
+         "reviewer": "Codex root exact source, controlled transport and retained screen review; independent, human quality, physical and release acceptance pending",
+         "test": "scripts/e2e/runtime-optimization-binding.spec.ts::optimization renderer refuses cached source and foreign poll responses before review",
+         "receipt": "2026-10-07-optimization-recovery-62b20cc-browser.json",
+         "receipt_sha256": "19fb9f583ba79dbceda6f3e882d0e2fab49f858c3da605ccfb150cf0bb347724",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "ea604d0067f873888984e8d4790b6d0242f3aad0a887fd63aae4be0d933f393b"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f8dc5cf2084743cd8ec51687fa2523b0d576902f1bc3540eccc2dd9e209cb6b1"
+          }
+         ]
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "62b20ccdb0e8106c50f31c0656e4f4507923db47",
+         "kind": "click",
+         "action": "\ub3c5\ub9bd \ud6c4\ubcf4 \ud328\ud0a4\uc9c0 \uc0dd\uc131",
+         "expected": "Show submission refusal without losing distinct selected calibration and validation inputs.",
+         "observed": "Clicked independent candidate creation and received intentional controlled422; no job appeared, selections remained and retry stayed enabled. Expected422 browser console entry is retained.",
+         "reviewer": "Codex root exact source, controlled transport and retained screen review; independent, human quality, physical and release acceptance pending",
+         "test": "scripts/e2e/runtime-optimization-binding.spec.ts::optimization lifecycle refuses missing input and failed submission, cancels exact job and reopens",
+         "receipt": "2026-10-07-optimization-lifecycle-62b20cc-browser.json",
+         "receipt_sha256": "f58f3117ef274af9e8dce8a992099cbb5ca77876e472bd348435096bcda6d0ec",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "7aecc98ef20c81198fd68b441a33b6fb4e2d0771b72fb9c9ab7d42b05040c702"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e0f35b7e6cb7b9ac9eec51507d5f4c4134bf99a254483599ea4602351c6bcd7d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "85f5f4d14c74add0c194715bab49c789fece08944d74163aa1cb80dc22f05ea6"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
        "state": "pending"
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "62b20ccdb0e8106c50f31c0656e4f4507923db47",
+         "kind": "click",
+         "action": "\ub3c5\ub9bd \ud6c4\ubcf4 \ud328\ud0a4\uc9c0 \uc0dd\uc131",
+         "expected": "Reopen the same package/source cancelled optimization without selecting a newer or unrelated job.",
+         "observed": "After exact-job cancellation, reloaded the actual renderer and clicked the same package optimization control. Cached owned-lifecycle/cancelled reopened with zero review requests. Responses are controlled; no actual worker cancellation.",
+         "reviewer": "Codex root exact source, controlled transport and retained screen review; independent, human quality, physical and release acceptance pending",
+         "test": "scripts/e2e/runtime-optimization-binding.spec.ts::optimization lifecycle refuses missing input and failed submission, cancels exact job and reopens",
+         "receipt": "2026-10-07-optimization-lifecycle-62b20cc-browser.json",
+         "receipt_sha256": "f58f3117ef274af9e8dce8a992099cbb5ca77876e472bd348435096bcda6d0ec",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "7aecc98ef20c81198fd68b441a33b6fb4e2d0771b72fb9c9ab7d42b05040c702"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e0f35b7e6cb7b9ac9eec51507d5f4c4134bf99a254483599ea4602351c6bcd7d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "85f5f4d14c74add0c194715bab49c789fece08944d74163aa1cb80dc22f05ea6"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
        "state": "pending"
@@ -8380,6 +8488,146 @@
          ]
         }
        ]
+      }
+     }
+    },
+    {
+     "id": "optimization-exact-job-cancel",
+     "label": "\ubcc0\ud658 \uc911\ub2e8",
+     "source": "src/renderer/components/inference/RuntimeOptimizationPanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "62b20ccdb0e8106c50f31c0656e4f4507923db47",
+         "kind": "click",
+         "action": "\ubcc0\ud658 \uc911\ub2e8",
+         "expected": "Cancel only the displayed source-bound optimization ID.",
+         "observed": "Actual cancel click sent owned-lifecycle/cancel twice; correct response displayed cancelled and removed the active cancel button. This is a controlled HTTP contract, not an actual worker interruption.",
+         "reviewer": "Codex root exact source, controlled transport and retained screen review; independent, human quality, physical and release acceptance pending",
+         "test": "scripts/e2e/runtime-optimization-binding.spec.ts::optimization lifecycle refuses missing input and failed submission, cancels exact job and reopens",
+         "receipt": "2026-10-07-optimization-lifecycle-62b20cc-browser.json",
+         "receipt_sha256": "f58f3117ef274af9e8dce8a992099cbb5ca77876e472bd348435096bcda6d0ec",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "7aecc98ef20c81198fd68b441a33b6fb4e2d0771b72fb9c9ab7d42b05040c702"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e0f35b7e6cb7b9ac9eec51507d5f4c4134bf99a254483599ea4602351c6bcd7d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "85f5f4d14c74add0c194715bab49c789fece08944d74163aa1cb80dc22f05ea6"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "62b20ccdb0e8106c50f31c0656e4f4507923db47",
+         "kind": "click",
+         "action": "\ubcc0\ud658 \uc911\ub2e8",
+         "expected": "Refuse a foreign cancellation receipt and retain the current running job.",
+         "observed": "First actual cancel click received foreign-cancel/cancelled; ID alert appeared, owned-lifecycle remained running, no foreign job or review became selected. Subsequent explicit retry matched owned job and cleared the request fault.",
+         "reviewer": "Codex root exact source, controlled transport and retained screen review; independent, human quality, physical and release acceptance pending",
+         "test": "scripts/e2e/runtime-optimization-binding.spec.ts::optimization lifecycle refuses missing input and failed submission, cancels exact job and reopens",
+         "receipt": "2026-10-07-optimization-lifecycle-62b20cc-browser.json",
+         "receipt_sha256": "f58f3117ef274af9e8dce8a992099cbb5ca77876e472bd348435096bcda6d0ec",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "7aecc98ef20c81198fd68b441a33b6fb4e2d0771b72fb9c9ab7d42b05040c702"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e0f35b7e6cb7b9ac9eec51507d5f4c4134bf99a254483599ea4602351c6bcd7d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "85f5f4d14c74add0c194715bab49c789fece08944d74163aa1cb80dc22f05ea6"
+          }
+         ]
+        }
+       ]
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "62b20ccdb0e8106c50f31c0656e4f4507923db47",
+         "kind": "click",
+         "action": "\ubcc0\ud658 \uc911\ub2e8",
+         "expected": "Represent the matching cancellation receipt without promoting completion or approval.",
+         "observed": "Matching exact-ID cancel response displayed cancelled, hid the active cancel control and never offered runtime review. No actual conversion or worker cancellation was run.",
+         "reviewer": "Codex root exact source, controlled transport and retained screen review; independent, human quality, physical and release acceptance pending",
+         "test": "scripts/e2e/runtime-optimization-binding.spec.ts::optimization lifecycle refuses missing input and failed submission, cancels exact job and reopens",
+         "receipt": "2026-10-07-optimization-lifecycle-62b20cc-browser.json",
+         "receipt_sha256": "f58f3117ef274af9e8dce8a992099cbb5ca77876e472bd348435096bcda6d0ec",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "7aecc98ef20c81198fd68b441a33b6fb4e2d0771b72fb9c9ab7d42b05040c702"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e0f35b7e6cb7b9ac9eec51507d5f4c4134bf99a254483599ea4602351c6bcd7d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "85f5f4d14c74add0c194715bab49c789fece08944d74163aa1cb80dc22f05ea6"
+          }
+         ]
+        }
+       ]
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "62b20ccdb0e8106c50f31c0656e4f4507923db47",
+         "kind": "click",
+         "action": "\ubcc0\ud658 \uc911\ub2e8",
+         "expected": "Preserve the exact cancelled ID across reload in its package/source scope.",
+         "observed": "Reloaded actual renderer and clicked optimization entry; owned-lifecycle/cancelled was read from the same scoped cache, with no completed-candidate review requests.",
+         "reviewer": "Codex root exact source, controlled transport and retained screen review; independent, human quality, physical and release acceptance pending",
+         "test": "scripts/e2e/runtime-optimization-binding.spec.ts::optimization lifecycle refuses missing input and failed submission, cancels exact job and reopens",
+         "receipt": "2026-10-07-optimization-lifecycle-62b20cc-browser.json",
+         "receipt_sha256": "f58f3117ef274af9e8dce8a992099cbb5ca77876e472bd348435096bcda6d0ec",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "7aecc98ef20c81198fd68b441a33b6fb4e2d0771b72fb9c9ab7d42b05040c702"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e0f35b7e6cb7b9ac9eec51507d5f4c4134bf99a254483599ea4602351c6bcd7d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "85f5f4d14c74add0c194715bab49c789fece08944d74163aa1cb80dc22f05ea6"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
       }
      }
     }

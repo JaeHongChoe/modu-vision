@@ -1,0 +1,55 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "62b20ccdb0e8106c50f31c0656e4f4507923db47",
+  "source_dirty": false,
+  "test": "scripts/e2e/runtime-optimization-binding.spec.ts::optimization lifecycle refuses missing input and failed submission, cancels exact job and reopens",
+  "test_source_sha256": "f9f75f5dc2ff8e9d4b5d35d14d5c5cb4c079cf031da4c6ee26c7a15e042a8edc",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "d8f36d112a11e5428e7addb61bfde399ea15931802d618099b6026a4aef8f4db",
+  "harness_sha256": "f437a9f7821310729d88c788643d372e4663b81ae5fe21244ed8db36a7340655",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "7aecc98ef20c81198fd68b441a33b6fb4e2d0771b72fb9c9ab7d42b05040c702"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "e0f35b7e6cb7b9ac9eec51507d5f4c4134bf99a254483599ea4602351c6bcd7d"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "85f5f4d14c74add0c194715bab49c789fece08944d74163aa1cb80dc22f05ea6"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Actual built renderer and owned project backend; optimization and cancel responses are controlled HTTP. One intentional422 submission error is retained, not an unexpected console failure. No actual conversion, worker cancellation, native Electron, industrial quality, human, independent, physical or release acceptance.",
+  "teardown_sha256": "e50fc0d562ea1372d403abfb1e1e081f6b3b21ff30ac826e8f81a9ed4e2397be",
+  "observed": {
+    "actual_renderer": true,
+    "owned_project_backend": true,
+    "optimization_transport": "controlled HTTP; no model execution or actual worker cancellation",
+    "empty_and_unavailable_blocked": true,
+    "unselected_calibration_or_validation_blocked": true,
+    "failed_submission_kept_selection": true,
+    "foreign_cancel_refused": true,
+    "cancel_requested_job": "owned-lifecycle",
+    "matching_cancel_reopened": true,
+    "foreign_review_requests": 0,
+    "actual_conversion": false,
+    "native_electron": false,
+    "quality_accepted": false,
+    "expected_console_errors": [
+      "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+    ]
+  }
+}

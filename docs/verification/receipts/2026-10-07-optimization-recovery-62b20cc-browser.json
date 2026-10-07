@@ -1,0 +1,45 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "62b20ccdb0e8106c50f31c0656e4f4507923db47",
+  "source_dirty": false,
+  "test": "scripts/e2e/runtime-optimization-binding.spec.ts::optimization renderer refuses cached source and foreign poll responses before review",
+  "test_source_sha256": "f9f75f5dc2ff8e9d4b5d35d14d5c5cb4c079cf031da4c6ee26c7a15e042a8edc",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "d8f36d112a11e5428e7addb61bfde399ea15931802d618099b6026a4aef8f4db",
+  "harness_sha256": "f5ad5c7da15dd6f7b3729db82541ab0d6c8d9116f2769f44e5d0ccd9b3762142",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "ea604d0067f873888984e8d4790b6d0242f3aad0a887fd63aae4be0d933f393b"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "f8dc5cf2084743cd8ec51687fa2523b0d576902f1bc3540eccc2dd9e209cb6b1"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Actual built renderer and owned project backend. Optimization submissions, polls and cancel responses are controlled HTTP; no actual model conversion or worker cancellation. No native Electron, representative quality, human, independent, physical target or release acceptance.",
+  "teardown_sha256": "e50fc0d562ea1372d403abfb1e1e081f6b3b21ff30ac826e8f81a9ed4e2397be",
+  "observed": {
+    "actual_renderer": true,
+    "owned_project_backend": true,
+    "optimization_transport": "controlled responses; no model conversion or quality approval",
+    "cached_other_source_refused": true,
+    "foreign_poll_job_refused": true,
+    "foreign_review_requests": 0,
+    "matching_poll_resumed": true,
+    "distinct_calibration_validation_paths": true,
+    "actual_int8_execution": false,
+    "native_electron": false
+  }
+}
