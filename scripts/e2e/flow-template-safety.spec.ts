@@ -77,10 +77,13 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   mapped=await mappingAttempt();expect(mapped.status()).toBe(200);const mappedBody=await mapped.json(),mappedRequest=mapped.request().postDataJSON();
   expect(mappedRequest).toMatchObject({project_id:project.id,models:{[graph.model_id]:graph.job_id},classes:{[graph.model_id+':name:NG']:'NG'}});
   expect(mappedBody.pipeline.nodes.find((n:any)=>n.id===graph.model_id).data.model_job_id).toBe(graph.job_id);
+  expect(mappedBody.pipeline.edges.find((edge:any)=>edge.predicate?.class_name).predicate.class_name).toBe('NG');
   await expect(page.getByText('모델·클래스를 매핑한 초안으로 열었습니다. 연결을 확인하고 저장하세요.',{exact:true})).toBeVisible();
   const saveDraft=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/flowchart/draft'&&r.request().method()==='PUT');await page.getByRole('button',{name:'초안 저장',exact:true}).click();expect((await saveDraft).status()).toBe(200);
   await expect(page.getByRole('status').filter({hasText:'✓ 편집 초안이 저장되었습니다.'})).toBeVisible();const finalDraft=await api('/api/flowchart/draft');
   await page.reload();await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(4).click();await page.getByRole('tab',{name:'편집',exact:true}).click();
+  await page.getByLabel('플로우 노드 검색',{exact:true}).fill(graph.model_id);await page.getByRole('list',{name:'노드 검색 결과'}).getByRole('button').click();
+  await expect(page.getByRole('textbox',{name:'노드 명칭',exact:true})).toHaveValue(mappedBody.pipeline.nodes.find((node:any)=>node.id===graph.model_id).data.label);
   expect((await api('/api/flowchart/draft')).draft_sha256).toBe(finalDraft.draft_sha256);expect((await api(library)).templates).toEqual(savedLibrary);
   expect(sha(fs.readFileSync(versionFile))).toBe(versionSha);expect(sha(fs.readFileSync(checkpoint))).toBe(checkpointSha);expect(fs.existsSync(path.join(project.project_dir,'flowcharts/active.json'))).toBe(false);
   for(const record of templateHashes){expect(sha(fs.readFileSync(record.path))).toBe(record.sha256);evidence.addFile(record.path);}
@@ -89,7 +92,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   evidence.note('template_safety',{project,graph,template,module,savedLibrary,beforeDraft,finalDraft,mappedRequest,mappedBody,owned_template_root:ownedLibrary,owned_template_files:templateHashes,owned_template_store_verified:true,checkpoint_sha256:checkpointSha,source_version_sha256:versionSha,
     actual_ui_and_backend:true,empty_and_oversize_name_422:true,subset_empty_name_422:true,subset_oversize_name_422:true,controlled_save_subset_map_503:true,corrected_whole_and_subset_saved:true,abandoned_unsubmitted_save_preserved:true,abandoned_whole_save_preserved:true,populated_class_mapping_cancelled:true,
     template_library_reopened_exact:true,replacement_cancelled_without_map_request:true,empty_model_and_class_422:true,unknown_class_422:true,failed_mapping_preserved_draft:true,explicit_mapping_round_trip:true,
-    mapped_draft_reopened_exact:true,source_images_and_checkpoint_preserved:true,saved_source_version_preserved:true,no_active_version:true,no_training:true,quality_approved:false,independent_acceptance:false});
+    mapped_draft_reopened_exact:true,reopened_graph_selected_in_actual_ui:true,source_images_and_checkpoint_preserved:true,saved_source_version_preserved:true,no_active_version:true,no_training:true,quality_approved:false,independent_acceptance:false});
 }
 test('template save and explicit mapping preserve originals across errors cancellation and reopen',async({page,request,renderer,workspace,evidence})=>{
   await installDesktopHostShim(page,renderer.port);const api:Api=async(route,body)=>{const r=body===undefined?await request.get(renderer.origin+route):route.endsWith('/update')?await request.put(renderer.origin+route,{data:body}):await request.post(renderer.origin+route,{data:body});expect(r.ok(),await r.text()).toBe(true);return r.json();};await exercise(page,workspace,evidence,api,false,renderer.url);
