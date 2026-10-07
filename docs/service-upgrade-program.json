@@ -6672,7 +6672,8 @@
     "backend/engine/evaluation_evidence.py",
     "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx",
     "src/renderer/components/evaluation/EvaluationStudio.tsx",
-    "src/renderer/components/evaluation/ModelComparisonPanel.tsx"
+    "src/renderer/components/evaluation/ModelComparisonPanel.tsx",
+    "src/renderer/components/common/EvidenceImageViewer.tsx"
    ],
    "legacy_claim": {
     "implementation": "integrated",
@@ -6770,7 +6771,8 @@
     "backend/engine/evaluation_evidence.py",
     "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx",
     "src/renderer/components/evaluation/EvaluationStudio.tsx",
-    "src/renderer/components/evaluation/ModelComparisonPanel.tsx"
+    "src/renderer/components/evaluation/ModelComparisonPanel.tsx",
+    "src/renderer/components/common/EvidenceImageViewer.tsx"
    ],
    "legacy_claim": {
     "implementation": "integrated",
@@ -8787,7 +8789,8 @@
    "title": "Human-readable decision evidence",
    "source_registry": "docs/product-upgrade-program.json",
    "source_files": [
-    "src/renderer/components/flowchart/flowWorkspace.ts"
+    "src/renderer/components/flowchart/flowWorkspace.ts",
+    "src/renderer/components/common/EvidenceImageViewer.tsx"
    ],
    "legacy_claim": {
     "status": "integration_verified",
@@ -9241,7 +9244,8 @@
    "source_files": [
     "src/renderer/components/common/WorkspaceDialog.tsx",
     "src/renderer/components/common/ImagePickerModal.tsx",
-    "src/renderer/index.css"
+    "src/renderer/index.css",
+    "src/renderer/components/common/EvidenceImageViewer.tsx"
    ],
    "legacy_claim": {
     "status": "integration_verified",

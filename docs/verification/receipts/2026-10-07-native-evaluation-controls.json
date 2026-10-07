@@ -1,0 +1,382 @@
+{
+  "schema": "NativeSavedEvaluationControls/v1",
+  "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+  "source_dirty": false,
+  "gui_cases_passed": 3,
+  "gui_cases_failed": 0,
+  "gui_cases_skipped": 0,
+  "gui_retries": 0,
+  "retained_screenshots": 15,
+  "executed_overlay_rgba_comparisons": 18,
+  "new_actions": 20,
+  "new_verified_scenarios": 32,
+  "cohort_totals": [
+    6,
+    4,
+    2,
+    2
+  ],
+  "cohort_partitions": [
+    {
+      "train": 3,
+      "val": 2,
+      "test": 1
+    },
+    {
+      "train": 2,
+      "val": 2,
+      "test": 0
+    },
+    {
+      "train": 2,
+      "val": 0,
+      "test": 0
+    },
+    {
+      "train": 0,
+      "val": 1,
+      "test": 1
+    }
+  ],
+  "evaluation_source_sha256": "642d4bc477afaf140dabd6373b03f33e0c61f447706873aa3490cb61e754b7d9",
+  "overlay_source_sha256": "594e9da7d4161255494d5a0aad76a42a37657648806e253ecd781311ebe83522",
+  "overlay_source_size": [
+    160,
+    96
+  ],
+  "overlay_hashes": [
+    {
+      "labelset_id": "default",
+      "className": "all",
+      "view": "truth",
+      "sha256": "40f0fdbb8f68e48dcc11ff4b891601dc7c0099e1f51aef676a259c878879293c",
+      "rgba_sha256": "34fe50cd75372ed1727a93aed6e90b02558d8d44a69cd8a08c024dfc6a3fa68c"
+    },
+    {
+      "labelset_id": "default",
+      "className": "all",
+      "view": "prediction",
+      "sha256": "9bc73a6541b0abdaf305ca33083f5eabe7882f34d2d4855fcca44dd559c5b364",
+      "rgba_sha256": "a28535ef15df33dfb621162e5f4cbdb3f0eb38412abf2525d10b29dd57d36133"
+    },
+    {
+      "labelset_id": "default",
+      "className": "all",
+      "view": "error",
+      "sha256": "06a9f534408d5511e531d51246fb474e5eebddcc9669a00b61ec51290b1e9d97",
+      "rgba_sha256": "ea6274daa5d1fba32c92fad8752c310d7a4cbd5fcb527782e519bcb90c327e63"
+    },
+    {
+      "labelset_id": "default",
+      "className": "Scratch",
+      "view": "truth",
+      "sha256": "3f98ed35e8d4d49b825a8ba9bed49c4c9cc39089f188b7efba9b52a2297e0891",
+      "rgba_sha256": "3386a1af922e101cc08503e43ba26d5fcdbc5edeb69aa82eaaf7460322616390"
+    },
+    {
+      "labelset_id": "default",
+      "className": "Scratch",
+      "view": "prediction",
+      "sha256": "5a8064cb1c806db347ffc872acbf5f9e6bd2ec706b9dd0c01d3d90cd75013c2b",
+      "rgba_sha256": "1a5b9303d28b12aea94582737b5291f174a4dd6f2193f533c65b32eaa9f3faa3"
+    },
+    {
+      "labelset_id": "default",
+      "className": "Scratch",
+      "view": "error",
+      "sha256": "3e5cdc7d5175c5a0c304fa1a79d25916b5a061c24cde56e331808afaa64c8bef",
+      "rgba_sha256": "c0611bf38ecb0af0cccfe4ac76510788568c20b81aedf7ce485c0a098c58748a"
+    },
+    {
+      "labelset_id": "default",
+      "className": "Crack",
+      "view": "truth",
+      "sha256": "7ae516fa289065f2ac390a0ffce4bb0e5cc10d23219987bbcdda030654cc3f68",
+      "rgba_sha256": "4cf4c413b57cc19cecc279f8f0b68e640ddf46b2ab6505b4e498b948505b62ef"
+    },
+    {
+      "labelset_id": "default",
+      "className": "Crack",
+      "view": "prediction",
+      "sha256": "c10d3600b06c45870b79e435fd2d141e5992d278d5855ad492066148a3f30f91",
+      "rgba_sha256": "f90a866b3da3f51eb82de6d920b82eaf699ad2068c162befb690398e0fc535ae"
+    },
+    {
+      "labelset_id": "default",
+      "className": "Crack",
+      "view": "error",
+      "sha256": "2da31507c5277dd54865841974f3d4d2efcdcc8c987efa810dbf8a9775682a5a",
+      "rgba_sha256": "4934dc8bc9259daafb86e83f303509a247cb52da5ccc66d14699ba2ce12c58ea"
+    },
+    {
+      "labelset_id": "ls_fca4bb3a6207",
+      "className": "all",
+      "view": "truth",
+      "sha256": "11b17df8c30f9c2d1ff5f043f89fb749f9d97ee66ed20fff3b5ae70faaeb72be",
+      "rgba_sha256": "99c185a14fd14e31927f811a182d725bbe5ff64aa8ebbad2a17eb5918201f233"
+    },
+    {
+      "labelset_id": "ls_fca4bb3a6207",
+      "className": "all",
+      "view": "prediction",
+      "sha256": "98fd4cca803dd287fd9364d0c1e144859627a345ea42759018a169647170a5dd",
+      "rgba_sha256": "11ec2fcd4a66fbc733d943d0913a27000db1e45bdb572223b327392927cad9b0"
+    },
+    {
+      "labelset_id": "ls_fca4bb3a6207",
+      "className": "all",
+      "view": "error",
+      "sha256": "07b31b7445e113982cafaf6c4bcb3bbdf60d50203f1127d3f05d86a219998b27",
+      "rgba_sha256": "f945531c4aaadcdfd7a5893e03b6d714b51a261ef26510f1001c009a536ac00a"
+    },
+    {
+      "labelset_id": "ls_fca4bb3a6207",
+      "className": "Scratch",
+      "view": "truth",
+      "sha256": "11d8c60437ee3703ab270530c4e22f49cebbaf7c6785fe22c177f4acc3fefa68",
+      "rgba_sha256": "0890fc72627185344bc5f9b2d53b855e10968a46009f1ab0da16cb23a372ad3c"
+    },
+    {
+      "labelset_id": "ls_fca4bb3a6207",
+      "className": "Scratch",
+      "view": "prediction",
+      "sha256": "6a6d3222285187ef6395f9d246ac9dcfe2deacd26226347e9eb8c253f16bf9fe",
+      "rgba_sha256": "2bbbb004adefec9491d1a79a78da9548cc90ecdaaddeadd7c621efd87bfcc8f3"
+    },
+    {
+      "labelset_id": "ls_fca4bb3a6207",
+      "className": "Scratch",
+      "view": "error",
+      "sha256": "9bf7a1bce8eb65f2e70f5c61d219d7ba4b8d9028da343cd65c2bb03b3e9272c2",
+      "rgba_sha256": "1ac31dd473e2a4c1d583058a451ce5deb68cb27ed76550abf64663d333593c1d"
+    },
+    {
+      "labelset_id": "ls_fca4bb3a6207",
+      "className": "Crack",
+      "view": "truth",
+      "sha256": "4b9724971c513466e105ecd1a5c6652538120c0ba87f5f3ddd2d7d4e947dc9e2",
+      "rgba_sha256": "64c17628db20e2118c6a1b3ce1b346680de641dd32d47ed4d6728ce290a401b9"
+    },
+    {
+      "labelset_id": "ls_fca4bb3a6207",
+      "className": "Crack",
+      "view": "prediction",
+      "sha256": "8588a7c7b4c8ca9ccf353fc67af02db40779ef2857bf10b72719737ffb9d303d",
+      "rgba_sha256": "96fa91dc088c962ac2c5e07ebfaddb54ac430de53bdebc5ba955e65a087798af"
+    },
+    {
+      "labelset_id": "ls_fca4bb3a6207",
+      "className": "Crack",
+      "view": "error",
+      "sha256": "97eff71b76d14aad58b555c0ea6a6527a2b89ebf1d8996f855b38fe1abd6abfc",
+      "rgba_sha256": "a322ea14064841f18cf34ecccc418a95b2834892197dd19b80382e5ea639771f"
+    }
+  ],
+  "receipts": [
+    {
+      "name": "2026-10-07-evaluation-controls-d96b67b7e25949608101.json",
+      "sha256": "e7601731b8419b425c97eb0b84bc02b2a7554cdad88705ec9ed421fbe20146e7",
+      "test": "scripts/e2e/classification-summary.spec.ts::native classification import summary matches eligible default loader partitions and reopens",
+      "test_source_sha256": "47fbb7191413bb93183d2b0c609eb1f993531ca39eb57196dc0ad75569189f50",
+      "harness_sha256": "1f69a65b2c5c91b0aca78a1ced40aac9ef238f089aece6a2ef2e7410cbdac223",
+      "report_sha256": "d5b36544ea6002c62d846ebd6bd5c672ea6615ff9e5a4fb81723befcec825648"
+    },
+    {
+      "name": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json",
+      "sha256": "b13078cb12e4b0ebce46f9ae53677f29bb6ff4510547b58c0ed87e174f8de220",
+      "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
+      "test_source_sha256": "89b240537642910ab6fa0d5e0849eb7d2002bf9305b6e36da38a65b307726174",
+      "harness_sha256": "64da42dcc9dc8845c9358e87788d96df62601e6cf9880d86289fbb9860e70aca",
+      "report_sha256": "d5b36544ea6002c62d846ebd6bd5c672ea6615ff9e5a4fb81723befcec825648"
+    },
+    {
+      "name": "2026-10-07-evaluation-controls-4302f0f5735b75199045.json",
+      "sha256": "8a16aed5b79384dcc0865de9cfc13874f8cea51d5bf0539f092d9fe1d52bc73d",
+      "test": "scripts/e2e/evaluation-source-overlay.spec.ts::native saved segmentation overlays bind non-square source bytes and refuse missing or changed provenance",
+      "test_source_sha256": "8c8ba033a96b2bc3227cf116c41576cd6b76846da5ef52203d25576592f14c1c",
+      "harness_sha256": "67d592a45b43d7062d66b4c5a2ba13b6dd1b952d49d18a1b012521e62170fd11",
+      "report_sha256": "d5b36544ea6002c62d846ebd6bd5c672ea6615ff9e5a4fb81723befcec825648"
+    }
+  ],
+  "case_bindings": [
+    {
+      "feature": "F019",
+      "id": "native-classification-import-label-summary",
+      "scenarios": [
+        "success",
+        "reopen"
+      ],
+      "receipt": "2026-10-07-evaluation-controls-d96b67b7e25949608101.json"
+    },
+    {
+      "feature": "F022",
+      "id": "native-classification-partitions-import-reopen",
+      "scenarios": [
+        "success",
+        "reopen"
+      ],
+      "receipt": "2026-10-07-evaluation-controls-d96b67b7e25949608101.json"
+    },
+    {
+      "feature": "F023",
+      "id": "native-saved-evaluation-exact-record",
+      "scenarios": [
+        "success",
+        "reopen"
+      ],
+      "receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json"
+    },
+    {
+      "feature": "F023",
+      "id": "native-saved-evaluation-labelset",
+      "scenarios": [
+        "success",
+        "reopen"
+      ],
+      "receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json"
+    },
+    {
+      "feature": "F059",
+      "id": "native-saved-evaluation-family",
+      "scenarios": [
+        "success",
+        "empty",
+        "reopen"
+      ],
+      "receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json"
+    },
+    {
+      "feature": "F059",
+      "id": "native-saved-evaluation-group",
+      "scenarios": [
+        "success",
+        "reopen"
+      ],
+      "receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json"
+    },
+    {
+      "feature": "F059",
+      "id": "native-saved-evaluation-refresh",
+      "scenarios": [
+        "success",
+        "invalid"
+      ],
+      "receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json"
+    },
+    {
+      "feature": "F023",
+      "id": "native-evaluation-late-labelset-selection",
+      "scenarios": [
+        "success"
+      ],
+      "receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json"
+    },
+    {
+      "feature": "F047",
+      "id": "native-saved-overlay-truth",
+      "scenarios": [
+        "success",
+        "reopen"
+      ],
+      "receipt": "2026-10-07-evaluation-controls-4302f0f5735b75199045.json"
+    },
+    {
+      "feature": "F047",
+      "id": "native-saved-overlay-prediction",
+      "scenarios": [
+        "success",
+        "reopen"
+      ],
+      "receipt": "2026-10-07-evaluation-controls-4302f0f5735b75199045.json"
+    },
+    {
+      "feature": "F051",
+      "id": "native-saved-overlay-error",
+      "scenarios": [
+        "success",
+        "reopen"
+      ],
+      "receipt": "2026-10-07-evaluation-controls-4302f0f5735b75199045.json"
+    },
+    {
+      "feature": "F051",
+      "id": "native-saved-overlay-class-selector",
+      "scenarios": [
+        "success"
+      ],
+      "receipt": "2026-10-07-evaluation-controls-4302f0f5735b75199045.json"
+    },
+    {
+      "feature": "F047",
+      "id": "native-saved-overlay-refuse-missing-source-hash",
+      "scenarios": [
+        "invalid"
+      ],
+      "receipt": "2026-10-07-evaluation-controls-4302f0f5735b75199045.json"
+    },
+    {
+      "feature": "F047",
+      "id": "native-saved-overlay-refuse-unsupported-mapping",
+      "scenarios": [
+        "invalid"
+      ],
+      "receipt": "2026-10-07-evaluation-controls-4302f0f5735b75199045.json"
+    },
+    {
+      "feature": "F047",
+      "id": "native-saved-overlay-refuse-changed-source",
+      "scenarios": [
+        "invalid"
+      ],
+      "receipt": "2026-10-07-evaluation-controls-4302f0f5735b75199045.json"
+    },
+    {
+      "feature": "F047",
+      "id": "native-saved-overlay-late-source-fence",
+      "scenarios": [
+        "success"
+      ],
+      "receipt": "2026-10-07-evaluation-controls-4302f0f5735b75199045.json"
+    },
+    {
+      "feature": "U029",
+      "id": "native-saved-overlay-close-return-focus",
+      "scenarios": [
+        "success",
+        "cancel"
+      ],
+      "receipt": "2026-10-07-evaluation-controls-4302f0f5735b75199045.json"
+    },
+    {
+      "feature": "U011",
+      "id": "native-saved-overlay-opacity",
+      "scenarios": [
+        "success"
+      ],
+      "receipt": "2026-10-07-evaluation-controls-4302f0f5735b75199045.json"
+    },
+    {
+      "feature": "U011",
+      "id": "native-saved-overlay-zoom",
+      "scenarios": [
+        "success"
+      ],
+      "receipt": "2026-10-07-evaluation-controls-4302f0f5735b75199045.json"
+    },
+    {
+      "feature": "U011",
+      "id": "native-saved-overlay-mouse-pan",
+      "scenarios": [
+        "success"
+      ],
+      "receipt": "2026-10-07-evaluation-controls-4302f0f5735b75199045.json"
+    }
+  ],
+  "controlled_saved_reports": true,
+  "model_inference_in_display_cases": false,
+  "os_file_picker_interaction": false,
+  "human_quality_approved": false,
+  "independent_review_accepted": false,
+  "parent_states_changed": false,
+  "scope": "Actual native display, source-coordinate pixels, selection persistence and refusal controls only; parent model, deployment, devices and quality acceptance remain pending."
+}

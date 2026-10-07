@@ -46,7 +46,10 @@
   "src/renderer/components/training/RotationWorkbench.tsx": "196db2fe456d37b264fcda1ac600f9d61480487e873a1cf4200d1bc5b0a14dd1",
   "src/renderer/components/training/RotatedBoxFitting.tsx": "5b27de4bda68f1629261bc4dab546cc1f3c254af4f516c87fdbef1fbc69d9b50",
   "src/renderer/components/flowchart/CustomNode.tsx": "c0219bf9a011c5a86c7122bd100f5e88259b425164cee6d6a3e93548482e7fad",
-  "src/renderer/components/flowchart/ImageRoiEditor.tsx": "498b466db43f32795b63f7f5cabb5bed5549c67d7be5d3d1e611b037dbe0016c"
+  "src/renderer/components/flowchart/ImageRoiEditor.tsx": "498b466db43f32795b63f7f5cabb5bed5549c67d7be5d3d1e611b037dbe0016c",
+  "src/renderer/components/dataset/DatasetStudio.tsx": "0af008083c62fbfa1ebdaa4001987a2b0cafdabe712edd5e45a1b1cba5f2b13c",
+  "src/renderer/components/evaluation/EvaluationHistoryPanel.tsx": "aa5325b16c0f836c038b286679b20d25812580cc0992880f287754995d8eebca",
+  "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx": "9ab0454b4433afdd10fc9c6cbcc12e0ac4c71e3f43e0ed0aa829cd687d38672e"
  },
  "records": [
   {
@@ -1191,8 +1194,101 @@
   },
   {
    "id": "F019",
-   "actions": [],
-   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+   "actions": [
+    {
+     "id": "native-classification-import-label-summary",
+     "label": "데이터셋 폴더 열기 · 라벨 완료·미완료 집계",
+     "source": "src/renderer/components/dataset/DatasetStudio.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-03",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "데이터셋 폴더 열기 · 라벨 완료·미완료 집계",
+         "expected": "After the actual import click, show only eligible default-loader images and preserve original files.",
+         "observed": "Native import and reload showed6/4/2/2 eligible images, matching OK/NG classes and zero unlabeled images. Hidden/NAS thumbnails stayed excluded and all original hashes matched. Folder-dialog response was controlled; no real OS file-picker interaction, training or nonzero unlabeled population was qualified.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/classification-summary.spec.ts::native classification import summary matches eligible default loader partitions and reopens",
+         "receipt": "2026-10-07-evaluation-controls-d96b67b7e25949608101.json",
+         "receipt_sha256": "e7601731b8419b425c97eb0b84bc02b2a7554cdad88705ec9ed421fbe20146e7",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f79b7ace72396e17f8353fbee7844b286bd5bd44193dd54d3af98179830a20f4"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "250c0ac4389ec6a3cf86b4001791e4d36d007fc049798de8031397de149997bb"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "c54f28e800dbffea5dd3ae42f80f6da85652f1d2f45065ec5775bba9aad694fb"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "ded318f5dc1d662c3708de2443e9ef9d8e8620e2b31dd2ad4f5db141b1242a0e"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-03",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "데이터셋 폴더 열기 · 라벨 완료·미완료 집계",
+         "expected": "After the actual import click, show only eligible default-loader images and preserve original files.",
+         "observed": "Native import and reload showed6/4/2/2 eligible images, matching OK/NG classes and zero unlabeled images. Hidden/NAS thumbnails stayed excluded and all original hashes matched. Folder-dialog response was controlled; no real OS file-picker interaction, training or nonzero unlabeled population was qualified.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/classification-summary.spec.ts::native classification import summary matches eligible default loader partitions and reopens",
+         "receipt": "2026-10-07-evaluation-controls-d96b67b7e25949608101.json",
+         "receipt_sha256": "e7601731b8419b425c97eb0b84bc02b2a7554cdad88705ec9ed421fbe20146e7",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f79b7ace72396e17f8353fbee7844b286bd5bd44193dd54d3af98179830a20f4"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "250c0ac4389ec6a3cf86b4001791e4d36d007fc049798de8031397de149997bb"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "c54f28e800dbffea5dd3ae42f80f6da85652f1d2f45065ec5775bba9aad694fb"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "ded318f5dc1d662c3708de2443e9ef9d8e8620e2b31dd2ad4f5db141b1242a0e"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    }
+   ],
+   "remaining": "Only listed exact controls are qualified. Controlled saved reports verify display, selection and source pixels; they do not verify model inference. Unlisted controls, independent review and whole-feature acceptance remain pending."
   },
   {
    "id": "F020",
@@ -1299,13 +1395,331 @@
   },
   {
    "id": "F022",
-   "actions": [],
-   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+   "actions": [
+    {
+     "id": "native-classification-partitions-import-reopen",
+     "label": "데이터셋 폴더 열기 · Train·Val·Test 표시",
+     "source": "src/renderer/components/dataset/DatasetStudio.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-07",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "데이터셋 폴더 열기 · Train·Val·Test 표시",
+         "expected": "Show the exact default-loader partition cohort after import and reopening without repartition writes.",
+         "observed": "Native import/reopen preserved train/val/test3/2/1,2/2/0,2/0/0 and0/1/1 across four owned cohorts. Actual loader row identities and counts matched without hidden thumbnails, duplicate membership, training or split POSTs. Unused/unassigned and split-filter clicks were not exercised.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/classification-summary.spec.ts::native classification import summary matches eligible default loader partitions and reopens",
+         "receipt": "2026-10-07-evaluation-controls-d96b67b7e25949608101.json",
+         "receipt_sha256": "e7601731b8419b425c97eb0b84bc02b2a7554cdad88705ec9ed421fbe20146e7",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f79b7ace72396e17f8353fbee7844b286bd5bd44193dd54d3af98179830a20f4"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "250c0ac4389ec6a3cf86b4001791e4d36d007fc049798de8031397de149997bb"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "c54f28e800dbffea5dd3ae42f80f6da85652f1d2f45065ec5775bba9aad694fb"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "ded318f5dc1d662c3708de2443e9ef9d8e8620e2b31dd2ad4f5db141b1242a0e"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-07",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "데이터셋 폴더 열기 · Train·Val·Test 표시",
+         "expected": "Show the exact default-loader partition cohort after import and reopening without repartition writes.",
+         "observed": "Native import/reopen preserved train/val/test3/2/1,2/2/0,2/0/0 and0/1/1 across four owned cohorts. Actual loader row identities and counts matched without hidden thumbnails, duplicate membership, training or split POSTs. Unused/unassigned and split-filter clicks were not exercised.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/classification-summary.spec.ts::native classification import summary matches eligible default loader partitions and reopens",
+         "receipt": "2026-10-07-evaluation-controls-d96b67b7e25949608101.json",
+         "receipt_sha256": "e7601731b8419b425c97eb0b84bc02b2a7554cdad88705ec9ed421fbe20146e7",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f79b7ace72396e17f8353fbee7844b286bd5bd44193dd54d3af98179830a20f4"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "250c0ac4389ec6a3cf86b4001791e4d36d007fc049798de8031397de149997bb"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "c54f28e800dbffea5dd3ae42f80f6da85652f1d2f45065ec5775bba9aad694fb"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "ded318f5dc1d662c3708de2443e9ef9d8e8620e2b31dd2ad4f5db141b1242a0e"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    }
+   ],
+   "remaining": "Only listed exact controls are qualified. Controlled saved reports verify display, selection and source pixels; they do not verify model inference. Unlisted controls, independent review and whole-feature acceptance remain pending."
   },
   {
    "id": "F023",
-   "actions": [],
-   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+   "actions": [
+    {
+     "id": "native-saved-evaluation-exact-record",
+     "label": "모델별 저장 평가",
+     "source": "src/renderer/components/evaluation/EvaluationHistoryPanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "모델별 저장 평가",
+         "expected": "Retain the exact chosen historical evaluation ID and evidence hash across refresh and reload.",
+         "observed": "Native model-history selector kept the same controlled saved record and evidence hash; corrected screenshots show the selector inside the viewport. These seeded saved reports were not produced by model inference in this case.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
+         "receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json",
+         "receipt_sha256": "b13078cb12e4b0ebce46f9ae53677f29bb6ff4510547b58c0ed87e174f8de220",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "cee8629e73636038d3b206846c7aa2d13a0d450f0bbcae41fec328467d720dd6"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0b0efb91b4227c1685f311d5eb93d836f0ce125237966bf11c6e8b43f4039d3d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "7cef110483ad9439f67fd967922154197a30d2ba59b7245ee2299e753bf61991"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "모델별 저장 평가",
+         "expected": "Retain the exact chosen historical evaluation ID and evidence hash across refresh and reload.",
+         "observed": "Native model-history selector kept the same controlled saved record and evidence hash; corrected screenshots show the selector inside the viewport. These seeded saved reports were not produced by model inference in this case.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
+         "receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json",
+         "receipt_sha256": "b13078cb12e4b0ebce46f9ae53677f29bb6ff4510547b58c0ed87e174f8de220",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "cee8629e73636038d3b206846c7aa2d13a0d450f0bbcae41fec328467d720dd6"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0b0efb91b4227c1685f311d5eb93d836f0ce125237966bf11c6e8b43f4039d3d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "7cef110483ad9439f67fd967922154197a30d2ba59b7245ee2299e753bf61991"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "native-saved-evaluation-labelset",
+     "label": "평가 라벨 세트",
+     "source": "src/renderer/components/evaluation/EvaluationHistoryPanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "평가 라벨 세트",
+         "expected": "Keep explicit historical labelset selection and only its scoped evaluation records.",
+         "observed": "Native default and second-labelset choices survived actual refresh, stage return and reload with the exact selected ID. Controlled record bytes remained unchanged; no current labels were edited.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
+         "receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json",
+         "receipt_sha256": "b13078cb12e4b0ebce46f9ae53677f29bb6ff4510547b58c0ed87e174f8de220",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "cee8629e73636038d3b206846c7aa2d13a0d450f0bbcae41fec328467d720dd6"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0b0efb91b4227c1685f311d5eb93d836f0ce125237966bf11c6e8b43f4039d3d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "7cef110483ad9439f67fd967922154197a30d2ba59b7245ee2299e753bf61991"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "평가 라벨 세트",
+         "expected": "Keep explicit historical labelset selection and only its scoped evaluation records.",
+         "observed": "Native default and second-labelset choices survived actual refresh, stage return and reload with the exact selected ID. Controlled record bytes remained unchanged; no current labels were edited.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
+         "receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json",
+         "receipt_sha256": "b13078cb12e4b0ebce46f9ae53677f29bb6ff4510547b58c0ed87e174f8de220",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "cee8629e73636038d3b206846c7aa2d13a0d450f0bbcae41fec328467d720dd6"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0b0efb91b4227c1685f311d5eb93d836f0ce125237966bf11c6e8b43f4039d3d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "7cef110483ad9439f67fd967922154197a30d2ba59b7245ee2299e753bf61991"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "native-evaluation-late-labelset-selection",
+     "label": "평가 라벨 세트 · 늦은 조회 응답",
+     "source": "src/renderer/components/evaluation/EvaluationHistoryPanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "평가 라벨 세트 · 늦은 조회 응답",
+         "expected": "Fence a previously selected labelset response after a newer explicit choice.",
+         "observed": "The actual second-labelset GET was delayed unchanged, a default record was selected in the native app, then the old response completed200 without replacing the new labelset/ID. No mock result body was substituted.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
+         "receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json",
+         "receipt_sha256": "b13078cb12e4b0ebce46f9ae53677f29bb6ff4510547b58c0ed87e174f8de220",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "cee8629e73636038d3b206846c7aa2d13a0d450f0bbcae41fec328467d720dd6"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0b0efb91b4227c1685f311d5eb93d836f0ce125237966bf11c6e8b43f4039d3d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "7cef110483ad9439f67fd967922154197a30d2ba59b7245ee2299e753bf61991"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    }
+   ],
+   "remaining": "Only listed exact controls are qualified. Controlled saved reports verify display, selection and source pixels; they do not verify model inference. Unlisted controls, independent review and whole-feature acceptance remain pending."
   },
   {
    "id": "F024",
@@ -5149,8 +5563,561 @@
   },
   {
    "id": "F047",
-   "actions": [],
-   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+   "actions": [
+    {
+     "id": "native-saved-overlay-truth",
+     "label": "원본 위에 평가 마스크 보기 · 정답 마스크",
+     "source": "src/renderer/components/common/EvidenceImageViewer.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-06",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "원본 위에 평가 마스크 보기 · 정답 마스크",
+         "expected": "Display the original hash-bound160x96 source and its saved64x64 mask with exact nearest-neighbor coordinate mapping.",
+         "observed": "Actual native overlay selection covered both labelsets and all/Scratch/Crack classes. The retained18 overlays matched an independently recomputed160x96 RGBA formula byte for byte; same-record reopen succeeded. These are controlled saved masks, not learned segmentation results.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/evaluation-source-overlay.spec.ts::native saved segmentation overlays bind non-square source bytes and refuse missing or changed provenance",
+         "receipt": "2026-10-07-evaluation-controls-4302f0f5735b75199045.json",
+         "receipt_sha256": "8a16aed5b79384dcc0865de9cfc13874f8cea51d5bf0539f092d9fe1d52bc73d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "ea69be2d8ef969af3ef64dc316451def9edcdf5d8a5546da456ddf7607f351ce"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0c24ab167314cc210f4628ea7b0c70f5ddda205b348cef6fdb82470c86be29a6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "54a386dff7c376a451cf76685dd1480aca6b616cb08bf40715307252a129bb1f"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "48750f57c0472b0b22afe71017f07c62e5b0a80345b03b1dccefbf886013f5ad"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "77f4f36482ba805883c95e8af98cd4156614723baa406245aee769cd964222f7"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "d99d7db4f13b05936a1e9ce4f329c6ecdd7eff2c239a17aa0c677b83c1c0e28d"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e4818c0172f8ef71f0a8d8f94649ce8e68c60cc2c5f904082fdfcfc34f2f7a56"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "12856b674db11b7c88cb050359a936821ccfc0a07888c891a09b892c05575c98"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-06",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "원본 위에 평가 마스크 보기 · 정답 마스크",
+         "expected": "Display the original hash-bound160x96 source and its saved64x64 mask with exact nearest-neighbor coordinate mapping.",
+         "observed": "Actual native overlay selection covered both labelsets and all/Scratch/Crack classes. The retained18 overlays matched an independently recomputed160x96 RGBA formula byte for byte; same-record reopen succeeded. These are controlled saved masks, not learned segmentation results.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/evaluation-source-overlay.spec.ts::native saved segmentation overlays bind non-square source bytes and refuse missing or changed provenance",
+         "receipt": "2026-10-07-evaluation-controls-4302f0f5735b75199045.json",
+         "receipt_sha256": "8a16aed5b79384dcc0865de9cfc13874f8cea51d5bf0539f092d9fe1d52bc73d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "ea69be2d8ef969af3ef64dc316451def9edcdf5d8a5546da456ddf7607f351ce"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0c24ab167314cc210f4628ea7b0c70f5ddda205b348cef6fdb82470c86be29a6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "54a386dff7c376a451cf76685dd1480aca6b616cb08bf40715307252a129bb1f"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "48750f57c0472b0b22afe71017f07c62e5b0a80345b03b1dccefbf886013f5ad"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "77f4f36482ba805883c95e8af98cd4156614723baa406245aee769cd964222f7"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "d99d7db4f13b05936a1e9ce4f329c6ecdd7eff2c239a17aa0c677b83c1c0e28d"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e4818c0172f8ef71f0a8d8f94649ce8e68c60cc2c5f904082fdfcfc34f2f7a56"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "12856b674db11b7c88cb050359a936821ccfc0a07888c891a09b892c05575c98"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "native-saved-overlay-prediction",
+     "label": "원본 위에 평가 마스크 보기 · 예측 마스크",
+     "source": "src/renderer/components/common/EvidenceImageViewer.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-06",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "원본 위에 평가 마스크 보기 · 예측 마스크",
+         "expected": "Display the original hash-bound160x96 source and its saved64x64 mask with exact nearest-neighbor coordinate mapping.",
+         "observed": "Actual native overlay selection covered both labelsets and all/Scratch/Crack classes. The retained18 overlays matched an independently recomputed160x96 RGBA formula byte for byte; same-record reopen succeeded. These are controlled saved masks, not learned segmentation results.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/evaluation-source-overlay.spec.ts::native saved segmentation overlays bind non-square source bytes and refuse missing or changed provenance",
+         "receipt": "2026-10-07-evaluation-controls-4302f0f5735b75199045.json",
+         "receipt_sha256": "8a16aed5b79384dcc0865de9cfc13874f8cea51d5bf0539f092d9fe1d52bc73d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "ea69be2d8ef969af3ef64dc316451def9edcdf5d8a5546da456ddf7607f351ce"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0c24ab167314cc210f4628ea7b0c70f5ddda205b348cef6fdb82470c86be29a6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "54a386dff7c376a451cf76685dd1480aca6b616cb08bf40715307252a129bb1f"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "48750f57c0472b0b22afe71017f07c62e5b0a80345b03b1dccefbf886013f5ad"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "77f4f36482ba805883c95e8af98cd4156614723baa406245aee769cd964222f7"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "d99d7db4f13b05936a1e9ce4f329c6ecdd7eff2c239a17aa0c677b83c1c0e28d"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e4818c0172f8ef71f0a8d8f94649ce8e68c60cc2c5f904082fdfcfc34f2f7a56"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "12856b674db11b7c88cb050359a936821ccfc0a07888c891a09b892c05575c98"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-06",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "원본 위에 평가 마스크 보기 · 예측 마스크",
+         "expected": "Display the original hash-bound160x96 source and its saved64x64 mask with exact nearest-neighbor coordinate mapping.",
+         "observed": "Actual native overlay selection covered both labelsets and all/Scratch/Crack classes. The retained18 overlays matched an independently recomputed160x96 RGBA formula byte for byte; same-record reopen succeeded. These are controlled saved masks, not learned segmentation results.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/evaluation-source-overlay.spec.ts::native saved segmentation overlays bind non-square source bytes and refuse missing or changed provenance",
+         "receipt": "2026-10-07-evaluation-controls-4302f0f5735b75199045.json",
+         "receipt_sha256": "8a16aed5b79384dcc0865de9cfc13874f8cea51d5bf0539f092d9fe1d52bc73d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "ea69be2d8ef969af3ef64dc316451def9edcdf5d8a5546da456ddf7607f351ce"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0c24ab167314cc210f4628ea7b0c70f5ddda205b348cef6fdb82470c86be29a6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "54a386dff7c376a451cf76685dd1480aca6b616cb08bf40715307252a129bb1f"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "48750f57c0472b0b22afe71017f07c62e5b0a80345b03b1dccefbf886013f5ad"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "77f4f36482ba805883c95e8af98cd4156614723baa406245aee769cd964222f7"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "d99d7db4f13b05936a1e9ce4f329c6ecdd7eff2c239a17aa0c677b83c1c0e28d"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e4818c0172f8ef71f0a8d8f94649ce8e68c60cc2c5f904082fdfcfc34f2f7a56"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "12856b674db11b7c88cb050359a936821ccfc0a07888c891a09b892c05575c98"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "native-saved-overlay-refuse-missing-source-hash",
+     "label": "원본 위에 평가 마스크 보기 · 원본 해시 없음",
+     "source": "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "pending"
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-06",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "원본 위에 평가 마스크 보기 · 원본 해시 없음",
+         "expected": "Refuse an original overlay whose saved identity or coordinate proof is missing or changed.",
+         "observed": "Actual native source-overlay click: Missing original-source SHA refused the modal and retained the standalone64x64 saved mask. These are controlled display faults; no model inference or annotation rewrite occurred.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/evaluation-source-overlay.spec.ts::native saved segmentation overlays bind non-square source bytes and refuse missing or changed provenance",
+         "receipt": "2026-10-07-evaluation-controls-4302f0f5735b75199045.json",
+         "receipt_sha256": "8a16aed5b79384dcc0865de9cfc13874f8cea51d5bf0539f092d9fe1d52bc73d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "ea69be2d8ef969af3ef64dc316451def9edcdf5d8a5546da456ddf7607f351ce"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0c24ab167314cc210f4628ea7b0c70f5ddda205b348cef6fdb82470c86be29a6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "54a386dff7c376a451cf76685dd1480aca6b616cb08bf40715307252a129bb1f"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "48750f57c0472b0b22afe71017f07c62e5b0a80345b03b1dccefbf886013f5ad"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "77f4f36482ba805883c95e8af98cd4156614723baa406245aee769cd964222f7"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "d99d7db4f13b05936a1e9ce4f329c6ecdd7eff2c239a17aa0c677b83c1c0e28d"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e4818c0172f8ef71f0a8d8f94649ce8e68c60cc2c5f904082fdfcfc34f2f7a56"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "12856b674db11b7c88cb050359a936821ccfc0a07888c891a09b892c05575c98"
+          }
+         ]
+        }
+       ]
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "native-saved-overlay-refuse-unsupported-mapping",
+     "label": "원본 위에 평가 마스크 보기 · 원본 좌표 변환 없음",
+     "source": "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "pending"
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-06",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "원본 위에 평가 마스크 보기 · 원본 좌표 변환 없음",
+         "expected": "Refuse an original overlay whose saved identity or coordinate proof is missing or changed.",
+         "observed": "Actual native source-overlay click: Unsupported original-coordinate mapping refused the modal with the visible coordinate alert and retained the standalone saved mask. These are controlled display faults; no model inference or annotation rewrite occurred.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/evaluation-source-overlay.spec.ts::native saved segmentation overlays bind non-square source bytes and refuse missing or changed provenance",
+         "receipt": "2026-10-07-evaluation-controls-4302f0f5735b75199045.json",
+         "receipt_sha256": "8a16aed5b79384dcc0865de9cfc13874f8cea51d5bf0539f092d9fe1d52bc73d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "ea69be2d8ef969af3ef64dc316451def9edcdf5d8a5546da456ddf7607f351ce"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0c24ab167314cc210f4628ea7b0c70f5ddda205b348cef6fdb82470c86be29a6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "54a386dff7c376a451cf76685dd1480aca6b616cb08bf40715307252a129bb1f"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "48750f57c0472b0b22afe71017f07c62e5b0a80345b03b1dccefbf886013f5ad"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "77f4f36482ba805883c95e8af98cd4156614723baa406245aee769cd964222f7"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "d99d7db4f13b05936a1e9ce4f329c6ecdd7eff2c239a17aa0c677b83c1c0e28d"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e4818c0172f8ef71f0a8d8f94649ce8e68c60cc2c5f904082fdfcfc34f2f7a56"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "12856b674db11b7c88cb050359a936821ccfc0a07888c891a09b892c05575c98"
+          }
+         ]
+        }
+       ]
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "native-saved-overlay-refuse-changed-source",
+     "label": "원본 위에 평가 마스크 보기 · 원본 바이트 변경",
+     "source": "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "pending"
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-06",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "원본 위에 평가 마스크 보기 · 원본 바이트 변경",
+         "expected": "Refuse an original overlay whose saved identity or coordinate proof is missing or changed.",
+         "observed": "Actual native source-overlay click: Temporarily changing the owned original bytes refused the modal with a changed-source alert. The original was restored and its final SHA matched. These are controlled display faults; no model inference or annotation rewrite occurred.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/evaluation-source-overlay.spec.ts::native saved segmentation overlays bind non-square source bytes and refuse missing or changed provenance",
+         "receipt": "2026-10-07-evaluation-controls-4302f0f5735b75199045.json",
+         "receipt_sha256": "8a16aed5b79384dcc0865de9cfc13874f8cea51d5bf0539f092d9fe1d52bc73d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "ea69be2d8ef969af3ef64dc316451def9edcdf5d8a5546da456ddf7607f351ce"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0c24ab167314cc210f4628ea7b0c70f5ddda205b348cef6fdb82470c86be29a6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "54a386dff7c376a451cf76685dd1480aca6b616cb08bf40715307252a129bb1f"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "48750f57c0472b0b22afe71017f07c62e5b0a80345b03b1dccefbf886013f5ad"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "77f4f36482ba805883c95e8af98cd4156614723baa406245aee769cd964222f7"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "d99d7db4f13b05936a1e9ce4f329c6ecdd7eff2c239a17aa0c677b83c1c0e28d"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e4818c0172f8ef71f0a8d8f94649ce8e68c60cc2c5f904082fdfcfc34f2f7a56"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "12856b674db11b7c88cb050359a936821ccfc0a07888c891a09b892c05575c98"
+          }
+         ]
+        }
+       ]
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "native-saved-overlay-late-source-fence",
+     "label": "원본 위에 평가 마스크 보기 · 늦은 원본 응답",
+     "source": "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-06",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "원본 위에 평가 마스크 보기 · 늦은 원본 응답",
+         "expected": "Do not open an old evaluation source after a new labelset/record has been selected.",
+         "observed": "The real original-source GET was delayed unchanged; a second-labelset record was selected; the old200 response completed; opening again displayed only the new ID. Original files and reports stayed byte-identical.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/evaluation-source-overlay.spec.ts::native saved segmentation overlays bind non-square source bytes and refuse missing or changed provenance",
+         "receipt": "2026-10-07-evaluation-controls-4302f0f5735b75199045.json",
+         "receipt_sha256": "8a16aed5b79384dcc0865de9cfc13874f8cea51d5bf0539f092d9fe1d52bc73d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "ea69be2d8ef969af3ef64dc316451def9edcdf5d8a5546da456ddf7607f351ce"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0c24ab167314cc210f4628ea7b0c70f5ddda205b348cef6fdb82470c86be29a6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "54a386dff7c376a451cf76685dd1480aca6b616cb08bf40715307252a129bb1f"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "48750f57c0472b0b22afe71017f07c62e5b0a80345b03b1dccefbf886013f5ad"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "77f4f36482ba805883c95e8af98cd4156614723baa406245aee769cd964222f7"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "d99d7db4f13b05936a1e9ce4f329c6ecdd7eff2c239a17aa0c677b83c1c0e28d"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e4818c0172f8ef71f0a8d8f94649ce8e68c60cc2c5f904082fdfcfc34f2f7a56"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "12856b674db11b7c88cb050359a936821ccfc0a07888c891a09b892c05575c98"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    }
+   ],
+   "remaining": "Only listed exact controls are qualified. Controlled saved reports verify display, selection and source pixels; they do not verify model inference. Unlisted controls, independent review and whole-feature acceptance remain pending."
   },
   {
    "id": "F048",
@@ -5169,8 +6136,209 @@
   },
   {
    "id": "F051",
-   "actions": [],
-   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+   "actions": [
+    {
+     "id": "native-saved-overlay-error",
+     "label": "원본 위에 평가 마스크 보기 · 미검·과검 마스크",
+     "source": "src/renderer/components/common/EvidenceImageViewer.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-06",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "원본 위에 평가 마스크 보기 · 미검·과검 마스크",
+         "expected": "Display the original hash-bound160x96 source and its saved64x64 mask with exact nearest-neighbor coordinate mapping.",
+         "observed": "Actual native overlay selection covered both labelsets and all/Scratch/Crack classes. The retained18 overlays matched an independently recomputed160x96 RGBA formula byte for byte; same-record reopen succeeded. These are controlled saved masks, not learned segmentation results.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/evaluation-source-overlay.spec.ts::native saved segmentation overlays bind non-square source bytes and refuse missing or changed provenance",
+         "receipt": "2026-10-07-evaluation-controls-4302f0f5735b75199045.json",
+         "receipt_sha256": "8a16aed5b79384dcc0865de9cfc13874f8cea51d5bf0539f092d9fe1d52bc73d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "ea69be2d8ef969af3ef64dc316451def9edcdf5d8a5546da456ddf7607f351ce"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0c24ab167314cc210f4628ea7b0c70f5ddda205b348cef6fdb82470c86be29a6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "54a386dff7c376a451cf76685dd1480aca6b616cb08bf40715307252a129bb1f"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "48750f57c0472b0b22afe71017f07c62e5b0a80345b03b1dccefbf886013f5ad"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "77f4f36482ba805883c95e8af98cd4156614723baa406245aee769cd964222f7"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "d99d7db4f13b05936a1e9ce4f329c6ecdd7eff2c239a17aa0c677b83c1c0e28d"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e4818c0172f8ef71f0a8d8f94649ce8e68c60cc2c5f904082fdfcfc34f2f7a56"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "12856b674db11b7c88cb050359a936821ccfc0a07888c891a09b892c05575c98"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-06",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "원본 위에 평가 마스크 보기 · 미검·과검 마스크",
+         "expected": "Display the original hash-bound160x96 source and its saved64x64 mask with exact nearest-neighbor coordinate mapping.",
+         "observed": "Actual native overlay selection covered both labelsets and all/Scratch/Crack classes. The retained18 overlays matched an independently recomputed160x96 RGBA formula byte for byte; same-record reopen succeeded. These are controlled saved masks, not learned segmentation results.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/evaluation-source-overlay.spec.ts::native saved segmentation overlays bind non-square source bytes and refuse missing or changed provenance",
+         "receipt": "2026-10-07-evaluation-controls-4302f0f5735b75199045.json",
+         "receipt_sha256": "8a16aed5b79384dcc0865de9cfc13874f8cea51d5bf0539f092d9fe1d52bc73d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "ea69be2d8ef969af3ef64dc316451def9edcdf5d8a5546da456ddf7607f351ce"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0c24ab167314cc210f4628ea7b0c70f5ddda205b348cef6fdb82470c86be29a6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "54a386dff7c376a451cf76685dd1480aca6b616cb08bf40715307252a129bb1f"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "48750f57c0472b0b22afe71017f07c62e5b0a80345b03b1dccefbf886013f5ad"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "77f4f36482ba805883c95e8af98cd4156614723baa406245aee769cd964222f7"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "d99d7db4f13b05936a1e9ce4f329c6ecdd7eff2c239a17aa0c677b83c1c0e28d"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e4818c0172f8ef71f0a8d8f94649ce8e68c60cc2c5f904082fdfcfc34f2f7a56"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "12856b674db11b7c88cb050359a936821ccfc0a07888c891a09b892c05575c98"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "native-saved-overlay-class-selector",
+     "label": "평가 증거 클래스",
+     "source": "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "평가 증거 클래스",
+         "expected": "Select only the requested class from the saved truth/prediction/error mask.",
+         "observed": "Native all/Scratch/Crack selectors produced exact18 original-coordinate overlay rasters across two labelsets and three views. Class IDs7/23 were explicitly verified; FN/FP table-button filtering was not exercised.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/evaluation-source-overlay.spec.ts::native saved segmentation overlays bind non-square source bytes and refuse missing or changed provenance",
+         "receipt": "2026-10-07-evaluation-controls-4302f0f5735b75199045.json",
+         "receipt_sha256": "8a16aed5b79384dcc0865de9cfc13874f8cea51d5bf0539f092d9fe1d52bc73d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "ea69be2d8ef969af3ef64dc316451def9edcdf5d8a5546da456ddf7607f351ce"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0c24ab167314cc210f4628ea7b0c70f5ddda205b348cef6fdb82470c86be29a6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "54a386dff7c376a451cf76685dd1480aca6b616cb08bf40715307252a129bb1f"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "48750f57c0472b0b22afe71017f07c62e5b0a80345b03b1dccefbf886013f5ad"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "77f4f36482ba805883c95e8af98cd4156614723baa406245aee769cd964222f7"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "d99d7db4f13b05936a1e9ce4f329c6ecdd7eff2c239a17aa0c677b83c1c0e28d"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e4818c0172f8ef71f0a8d8f94649ce8e68c60cc2c5f904082fdfcfc34f2f7a56"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "12856b674db11b7c88cb050359a936821ccfc0a07888c891a09b892c05575c98"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    }
+   ],
+   "remaining": "Only listed exact controls are qualified. Controlled saved reports verify display, selection and source pixels; they do not verify model inference. Unlisted controls, independent review and whole-feature acceptance remain pending."
   },
   {
    "id": "F052",
@@ -5209,8 +6377,289 @@
   },
   {
    "id": "F059",
-   "actions": [],
-   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+   "actions": [
+    {
+     "id": "native-saved-evaluation-family",
+     "label": "평가 이력 모델 종류",
+     "source": "src/renderer/components/evaluation/EvaluationHistoryPanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "평가 이력 모델 종류",
+         "expected": "Keep the explicitly selected evaluation family separately from the current project task.",
+         "observed": "Native segmentation/classification choices and exact selected controlled report survived reload and return to the original project. New project context started without the prior choice; context changes were initialized through owned helper API calls.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
+         "receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json",
+         "receipt_sha256": "b13078cb12e4b0ebce46f9ae53677f29bb6ff4510547b58c0ed87e174f8de220",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "cee8629e73636038d3b206846c7aa2d13a0d450f0bbcae41fec328467d720dd6"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0b0efb91b4227c1685f311d5eb93d836f0ce125237966bf11c6e8b43f4039d3d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "7cef110483ad9439f67fd967922154197a30d2ba59b7245ee2299e753bf61991"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "평가 이력 모델 종류",
+         "expected": "Keep the explicitly selected evaluation family separately from the current project task.",
+         "observed": "Native segmentation/classification choices and exact selected controlled report survived reload and return to the original project. New project context started without the prior choice; context changes were initialized through owned helper API calls.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
+         "receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json",
+         "receipt_sha256": "b13078cb12e4b0ebce46f9ae53677f29bb6ff4510547b58c0ed87e174f8de220",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "cee8629e73636038d3b206846c7aa2d13a0d450f0bbcae41fec328467d720dd6"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0b0efb91b4227c1685f311d5eb93d836f0ce125237966bf11c6e8b43f4039d3d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "7cef110483ad9439f67fd967922154197a30d2ba59b7245ee2299e753bf61991"
+          }
+         ]
+        }
+       ]
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "평가 이력 모델 종류",
+         "expected": "Keep the explicitly selected evaluation family separately from the current project task.",
+         "observed": "Native segmentation/classification choices and exact selected controlled report survived reload and return to the original project. New project context started without the prior choice; context changes were initialized through owned helper API calls.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
+         "receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json",
+         "receipt_sha256": "b13078cb12e4b0ebce46f9ae53677f29bb6ff4510547b58c0ed87e174f8de220",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "cee8629e73636038d3b206846c7aa2d13a0d450f0bbcae41fec328467d720dd6"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0b0efb91b4227c1685f311d5eb93d836f0ce125237966bf11c6e8b43f4039d3d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "7cef110483ad9439f67fd967922154197a30d2ba59b7245ee2299e753bf61991"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "native-saved-evaluation-group",
+     "label": "평가 오류 집계 기준",
+     "source": "src/renderer/components/evaluation/EvaluationHistoryPanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "평가 오류 집계 기준",
+         "expected": "Persist the explicit historical error grouping without overwriting results.",
+         "observed": "Native Lot and ground-truth grouping choices survived reload and project return. Saved report and input hashes were unchanged, and no evaluation/training/job writes occurred.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
+         "receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json",
+         "receipt_sha256": "b13078cb12e4b0ebce46f9ae53677f29bb6ff4510547b58c0ed87e174f8de220",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "cee8629e73636038d3b206846c7aa2d13a0d450f0bbcae41fec328467d720dd6"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0b0efb91b4227c1685f311d5eb93d836f0ce125237966bf11c6e8b43f4039d3d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "7cef110483ad9439f67fd967922154197a30d2ba59b7245ee2299e753bf61991"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "평가 오류 집계 기준",
+         "expected": "Persist the explicit historical error grouping without overwriting results.",
+         "observed": "Native Lot and ground-truth grouping choices survived reload and project return. Saved report and input hashes were unchanged, and no evaluation/training/job writes occurred.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
+         "receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json",
+         "receipt_sha256": "b13078cb12e4b0ebce46f9ae53677f29bb6ff4510547b58c0ed87e174f8de220",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "cee8629e73636038d3b206846c7aa2d13a0d450f0bbcae41fec328467d720dd6"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0b0efb91b4227c1685f311d5eb93d836f0ce125237966bf11c6e8b43f4039d3d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "7cef110483ad9439f67fd967922154197a30d2ba59b7245ee2299e753bf61991"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "native-saved-evaluation-refresh",
+     "label": "평가 이력 새로고침",
+     "source": "src/renderer/components/evaluation/EvaluationHistoryPanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "평가 이력 새로고침",
+         "expected": "Refresh real scoped history without silently replacing the chosen evaluation.",
+         "observed": "Native refresh returned200 and retained the exact ID/labelset. Temporarily removing the selected owned report showed its exact missing-ID alert and blank selector; replacement required another explicit choice. This was a controlled owned file-absence fault.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
+         "receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json",
+         "receipt_sha256": "b13078cb12e4b0ebce46f9ae53677f29bb6ff4510547b58c0ed87e174f8de220",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "cee8629e73636038d3b206846c7aa2d13a0d450f0bbcae41fec328467d720dd6"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0b0efb91b4227c1685f311d5eb93d836f0ce125237966bf11c6e8b43f4039d3d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "7cef110483ad9439f67fd967922154197a30d2ba59b7245ee2299e753bf61991"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "평가 이력 새로고침",
+         "expected": "Refresh real scoped history without silently replacing the chosen evaluation.",
+         "observed": "Native refresh returned200 and retained the exact ID/labelset. Temporarily removing the selected owned report showed its exact missing-ID alert and blank selector; replacement required another explicit choice. This was a controlled owned file-absence fault.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
+         "receipt": "2026-10-07-evaluation-controls-dccb84b4d9a73433bcdc.json",
+         "receipt_sha256": "b13078cb12e4b0ebce46f9ae53677f29bb6ff4510547b58c0ed87e174f8de220",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "cee8629e73636038d3b206846c7aa2d13a0d450f0bbcae41fec328467d720dd6"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0b0efb91b4227c1685f311d5eb93d836f0ce125237966bf11c6e8b43f4039d3d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "7cef110483ad9439f67fd967922154197a30d2ba59b7245ee2299e753bf61991"
+          }
+         ]
+        }
+       ]
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    }
+   ],
+   "remaining": "Only listed exact controls are qualified. Controlled saved reports verify display, selection and source pixels; they do not verify model inference. Unlisted controls, independent review and whole-feature acceptance remain pending."
   },
   {
    "id": "F060",
@@ -9016,8 +10465,237 @@
   },
   {
    "id": "U011",
-   "actions": [],
-   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+   "actions": [
+    {
+     "id": "native-saved-overlay-opacity",
+     "label": "근거 겹침 투명도",
+     "source": "src/renderer/components/common/EvidenceImageViewer.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-06",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "근거 겹침 투명도",
+         "expected": "Change only the visual blending of saved evidence.",
+         "observed": "Actual native slider focus and three ArrowRight inputs yielded0.65; stored report/input SHA remained unchanged. This does not verify other opacity values or editing.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/evaluation-source-overlay.spec.ts::native saved segmentation overlays bind non-square source bytes and refuse missing or changed provenance",
+         "receipt": "2026-10-07-evaluation-controls-4302f0f5735b75199045.json",
+         "receipt_sha256": "8a16aed5b79384dcc0865de9cfc13874f8cea51d5bf0539f092d9fe1d52bc73d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "ea69be2d8ef969af3ef64dc316451def9edcdf5d8a5546da456ddf7607f351ce"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0c24ab167314cc210f4628ea7b0c70f5ddda205b348cef6fdb82470c86be29a6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "54a386dff7c376a451cf76685dd1480aca6b616cb08bf40715307252a129bb1f"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "48750f57c0472b0b22afe71017f07c62e5b0a80345b03b1dccefbf886013f5ad"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "77f4f36482ba805883c95e8af98cd4156614723baa406245aee769cd964222f7"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "d99d7db4f13b05936a1e9ce4f329c6ecdd7eff2c239a17aa0c677b83c1c0e28d"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e4818c0172f8ef71f0a8d8f94649ce8e68c60cc2c5f904082fdfcfc34f2f7a56"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "12856b674db11b7c88cb050359a936821ccfc0a07888c891a09b892c05575c98"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "native-saved-overlay-zoom",
+     "label": "근거 이미지 확대",
+     "source": "src/renderer/components/common/EvidenceImageViewer.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-06",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "근거 이미지 확대",
+         "expected": "Zoom the saved evidence without changing its original coordinates or files.",
+         "observed": "Actual native enlarge click showed125 percent and retained the raster/record hashes. Other zoom limits, physical DPI and field display devices were not qualified.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/evaluation-source-overlay.spec.ts::native saved segmentation overlays bind non-square source bytes and refuse missing or changed provenance",
+         "receipt": "2026-10-07-evaluation-controls-4302f0f5735b75199045.json",
+         "receipt_sha256": "8a16aed5b79384dcc0865de9cfc13874f8cea51d5bf0539f092d9fe1d52bc73d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "ea69be2d8ef969af3ef64dc316451def9edcdf5d8a5546da456ddf7607f351ce"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0c24ab167314cc210f4628ea7b0c70f5ddda205b348cef6fdb82470c86be29a6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "54a386dff7c376a451cf76685dd1480aca6b616cb08bf40715307252a129bb1f"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "48750f57c0472b0b22afe71017f07c62e5b0a80345b03b1dccefbf886013f5ad"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "77f4f36482ba805883c95e8af98cd4156614723baa406245aee769cd964222f7"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "d99d7db4f13b05936a1e9ce4f329c6ecdd7eff2c239a17aa0c677b83c1c0e28d"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e4818c0172f8ef71f0a8d8f94649ce8e68c60cc2c5f904082fdfcfc34f2f7a56"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "12856b674db11b7c88cb050359a936821ccfc0a07888c891a09b892c05575c98"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "native-saved-overlay-mouse-pan",
+     "label": "근거 이미지 이동 영역",
+     "source": "src/renderer/components/common/EvidenceImageViewer.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-06",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "근거 이미지 이동 영역",
+         "expected": "Keep native pointer pan separate from saved image/mask coordinates.",
+         "observed": "Actual native mouse drag changed the viewport transform to translate40px,25px at scale1.25;18 original-coordinate overlay rasters and original/report files retained their hashes. This is display interaction, not annotation geometry editing.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/evaluation-source-overlay.spec.ts::native saved segmentation overlays bind non-square source bytes and refuse missing or changed provenance",
+         "receipt": "2026-10-07-evaluation-controls-4302f0f5735b75199045.json",
+         "receipt_sha256": "8a16aed5b79384dcc0865de9cfc13874f8cea51d5bf0539f092d9fe1d52bc73d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "ea69be2d8ef969af3ef64dc316451def9edcdf5d8a5546da456ddf7607f351ce"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0c24ab167314cc210f4628ea7b0c70f5ddda205b348cef6fdb82470c86be29a6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "54a386dff7c376a451cf76685dd1480aca6b616cb08bf40715307252a129bb1f"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "48750f57c0472b0b22afe71017f07c62e5b0a80345b03b1dccefbf886013f5ad"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "77f4f36482ba805883c95e8af98cd4156614723baa406245aee769cd964222f7"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "d99d7db4f13b05936a1e9ce4f329c6ecdd7eff2c239a17aa0c677b83c1c0e28d"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e4818c0172f8ef71f0a8d8f94649ce8e68c60cc2c5f904082fdfcfc34f2f7a56"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "12856b674db11b7c88cb050359a936821ccfc0a07888c891a09b892c05575c98"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    }
+   ],
+   "remaining": "Only listed exact controls are qualified. Controlled saved reports verify display, selection and source pixels; they do not verify model inference. Unlisted controls, independent review and whole-feature acceptance remain pending."
   },
   {
    "id": "U012",
@@ -10748,8 +12426,133 @@
   },
   {
    "id": "U029",
-   "actions": [],
-   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+   "actions": [
+    {
+     "id": "native-saved-overlay-close-return-focus",
+     "label": "저장 평가로 돌아가기 · Escape",
+     "source": "src/renderer/components/common/EvidenceImageViewer.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-02",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "저장 평가로 돌아가기 · Escape",
+         "expected": "Close the read-only evidence dialog and return keyboard focus to its opener.",
+         "observed": "Actual native Escape closed the viewer after each class; the original-mask opener regained focus. Explicit return buttons also closed later viewers. No write API calls or stored evidence changes occurred; general keyboard traps/navigation remain unreviewed.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/evaluation-source-overlay.spec.ts::native saved segmentation overlays bind non-square source bytes and refuse missing or changed provenance",
+         "receipt": "2026-10-07-evaluation-controls-4302f0f5735b75199045.json",
+         "receipt_sha256": "8a16aed5b79384dcc0865de9cfc13874f8cea51d5bf0539f092d9fe1d52bc73d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "ea69be2d8ef969af3ef64dc316451def9edcdf5d8a5546da456ddf7607f351ce"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0c24ab167314cc210f4628ea7b0c70f5ddda205b348cef6fdb82470c86be29a6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "54a386dff7c376a451cf76685dd1480aca6b616cb08bf40715307252a129bb1f"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "48750f57c0472b0b22afe71017f07c62e5b0a80345b03b1dccefbf886013f5ad"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "77f4f36482ba805883c95e8af98cd4156614723baa406245aee769cd964222f7"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "d99d7db4f13b05936a1e9ce4f329c6ecdd7eff2c239a17aa0c677b83c1c0e28d"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e4818c0172f8ef71f0a8d8f94649ce8e68c60cc2c5f904082fdfcfc34f2f7a56"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "12856b674db11b7c88cb050359a936821ccfc0a07888c891a09b892c05575c98"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-02",
+         "source_sha": "f7ac7b80d5f1d6497ed4a7afc96336a84d2d0acd",
+         "kind": "click",
+         "action": "저장 평가로 돌아가기 · Escape",
+         "expected": "Close the read-only evidence dialog and return keyboard focus to its opener.",
+         "observed": "Actual native Escape closed the viewer after each class; the original-mask opener regained focus. Explicit return buttons also closed later viewers. No write API calls or stored evidence changes occurred; general keyboard traps/navigation remain unreviewed.",
+         "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
+         "test": "scripts/e2e/evaluation-source-overlay.spec.ts::native saved segmentation overlays bind non-square source bytes and refuse missing or changed provenance",
+         "receipt": "2026-10-07-evaluation-controls-4302f0f5735b75199045.json",
+         "receipt_sha256": "8a16aed5b79384dcc0865de9cfc13874f8cea51d5bf0539f092d9fe1d52bc73d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "ea69be2d8ef969af3ef64dc316451def9edcdf5d8a5546da456ddf7607f351ce"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0c24ab167314cc210f4628ea7b0c70f5ddda205b348cef6fdb82470c86be29a6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "54a386dff7c376a451cf76685dd1480aca6b616cb08bf40715307252a129bb1f"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "48750f57c0472b0b22afe71017f07c62e5b0a80345b03b1dccefbf886013f5ad"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "77f4f36482ba805883c95e8af98cd4156614723baa406245aee769cd964222f7"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "d99d7db4f13b05936a1e9ce4f329c6ecdd7eff2c239a17aa0c677b83c1c0e28d"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e4818c0172f8ef71f0a8d8f94649ce8e68c60cc2c5f904082fdfcfc34f2f7a56"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "12856b674db11b7c88cb050359a936821ccfc0a07888c891a09b892c05575c98"
+          }
+         ]
+        }
+       ]
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    }
+   ],
+   "remaining": "Only listed exact controls are qualified. Controlled saved reports verify display, selection and source pixels; they do not verify model inference. Unlisted controls, independent review and whole-feature acceptance remain pending."
   },
   {
    "id": "U030",
