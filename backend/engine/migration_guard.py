@@ -1,7 +1,9 @@
 """Cooperative project mutation admission, held through ASGI response completion."""
 from contextlib import contextmanager
 from contextvars import ContextVar
+import asyncio
 import os
+import threading
 import time
 from pathlib import Path
 
@@ -9,10 +11,22 @@ from pathlib import Path
 _HELD=ContextVar("project_maintenance_admission",default=())
 
 
+def _execution_owner():
+    # Contexts may be copied into another thread, task, or fork. Only the
+    # original execution owner can reenter its live OS admission; every other
+    # writer must acquire and retain its own lock through its critical section.
+    try:task=asyncio.current_task()
+    except RuntimeError:task=None
+    # Retain the actual Thread object: numeric thread identifiers can be
+    # recycled while a copied context still holds an older live capability.
+    return os.getpid(),threading.current_thread(),task
+
+
 def exclusive_admitted(root):
-    """Internal reentrant capability; fresh HTTP requests clear this context."""
+    """Exclusive reentrancy belongs to the original process/thread/async task."""
     key=str(Path(root).resolve())
-    return any(item['key']==key and item['active'] and item['exclusive'] for item in _HELD.get())
+    owner=_execution_owner()
+    return any(item['key']==key and item['active'] and item['exclusive'] and item['owner']==owner for item in _HELD.get())
 
 
 def _windows_admission(handle, exclusive):
@@ -49,8 +63,9 @@ def maintenance_guard(root, *, exclusive=False, wait=False):
     if wait and (exclusive or os.name=='nt'):
         raise ValueError('Cooperative waiting supports only POSIX shared writer admission')
     key=str(root.resolve())
+    owner=_execution_owner()
     for prior in _HELD.get():
-        if prior['key']==key and prior['active'] and (not exclusive or prior['exclusive']):
+        if prior['key']==key and prior['active'] and prior['owner']==owner and (not exclusive or prior['exclusive']):
             yield
             return
     path=root/'migration_admission.lock'
@@ -73,7 +88,7 @@ def maintenance_guard(root, *, exclusive=False, wait=False):
                         time.sleep(.01)
             held=True
         except OSError as exc:raise ValueError('Project writers or migration hold maintenance admission; retry after drain') from exc
-        ownership={'key':key,'active':True,'exclusive':exclusive}
+        ownership={'key':key,'active':True,'exclusive':exclusive,'owner':owner}
         token=_HELD.set((*_HELD.get(),ownership))
         yield
     finally:
