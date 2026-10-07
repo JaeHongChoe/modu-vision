@@ -1,0 +1,46 @@
+{
+  "schema": "modu-vision.project-display-controls/v1",
+  "source_sha": "c1446e45c417d59f0ebc425b4ac0e01b3ceb53d0",
+  "actual_gui": [
+    {
+      "mode": "browser",
+      "receipt": "2026-10-07-project-display-controls-c1446e4-browser.json",
+      "receipt_sha256": "7b3f5f4b6cbf40b51038c2f8dd4bc3d80989776941d85230ea02957d3232e618"
+    },
+    {
+      "mode": "electron",
+      "receipt": "2026-10-07-project-display-controls-c1446e4-electron.json",
+      "receipt_sha256": "24165e7d14eb49293e84b295cf06a0d847ec0b09ccf0d4c703e00c9167f5fa02"
+    }
+  ],
+  "new_verified_scenarios": 12,
+  "observations": {
+    "named-labelset-copy": {
+      "empty": "Blank and whitespace-only new-labelset names disabled the actual copy button. The existing active labelset and saved annotations were retained.",
+      "error": "A controlled503 before POST acceptance retained the exact label registry and default annotation bytes with no new clone. Removing the transport fixture and deliberately clicking again created exactly one new set and activated its returned identity.",
+      "cancel": "Entering an unsubmitted review name then leaving the stage emitted no copy POST and retained the original registry hash. Returning showed an empty new-name field."
+    },
+    "project-tag-color-save": {
+      "empty": "Blank and whitespace-only tag names disabled the actual save button without writing preferences.",
+      "invalid": "A valid tag/color with no operator name produced the actual missing-actor error before any PATCH or preference file was created. Entering the fixture actor in the review panel allowed an explicit save.",
+      "error": "A delayed explicit503 locked controls and retained previous preference bytes. A separate actual backend writer then advanced the revision; the stale UI save was rejected with actual409 and preserved that writer bytes. Explicit refresh and retry preserved its unrelated tag.",
+      "cancel": "Unsubmitted tag/color changes were abandoned by leaving the stage; no PATCH was sent, saved preference SHA stayed unchanged and the transient tag did not appear on return.",
+      "handoff": "Actual UI writes were read back from preferences.json and the actual API. Reload retained both the updated color and the separate fixture actor tag; the reopened swatch CSS matched the stored#22d3ee exactly."
+    },
+    "labelset-specific-flag-save": {
+      "empty": "An explicitly submitted empty flag input cleared only the active default set to an empty list; persisted JSON and the actual API agreed. A newly copied set started without flags and retained separate named flags after save.",
+      "invalid": "A41-character flag reached the actual backend and returned422. Previous preference bytes remained exact; valid duplicate/whitespace-separated names were normalized to distinct saved names.",
+      "error": "An explicit503 when submitting flags retained previous preference bytes. Removing the fixture and deliberately retrying saved the typed flag. Default and copied-set flags remained distinct and reopened.",
+      "cancel": "Unsubmitted flags were abandoned by leaving the stage without a PATCH; the previous file hash and saved default flags were retained on return."
+    }
+  },
+  "preserved_initial_failed_fixture": {
+    "source_sha": "39e62204880f4f9028566e3a50c7e2bcd8fe55b1",
+    "report_sha256": "c9e0d9425b5ca61df7c65d034de07dabceeb2b0d6c4b2d8be0e58d82d65fe407",
+    "harness_sha256": "5062f45c6afb72e9cf7385f7d7823120066bd740a90567af30d968c8adcbb9fe",
+    "reason": "Initial test froze metadata before normal UI reads registered the other image and default team settings. The unchanged original label JSON and normal registered row were inspected. The fixture now explicitly reads both owned records before freezing all annotation bytes, and both final modes independently passed. Original failure/report/teardown remain preserved; no production behavior was altered."
+  },
+  "scope": "Actual browser/Electron existing tag/flag/copy controls with source and full saved annotation byte preservation,422 flag refusal,409 concurrent preference refusal, explicit controlled503 transport failure/cancellation/correction/retry and reopened identity/CSS/JSON. No models were trained and fixture labels or actors are not human quality truth. No installer/publisher/Windows/physical device/independent acceptance was inferred.",
+  "review": "root_only",
+  "parent_acceptance": "pending"
+}

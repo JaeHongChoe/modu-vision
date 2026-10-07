@@ -1,0 +1,44 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "c1446e45c417d59f0ebc425b4ac0e01b3ceb53d0",
+  "source_dirty": false,
+  "test": "scripts/e2e/project-display-controls.spec.ts::native project display controls preserve labels and concurrent preferences through errors cancel and retry",
+  "test_source_sha256": "7c0ed1ef8f4bdc6f5ae338abd6199d9e3cf4a909b1e2c28124492f3b1126fc0b",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "1cdc8fcd047ce42e4cbf538f1bac671e53161a86637548f2776b7a912196b13a",
+  "harness_sha256": "edf8301aa5972ae3c1685d287f8fa54fcba0c2f91d6e469c6186c06c6f12d1fd",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "69a570ce73f31835f07ab440571853b86d60b07b0f56b4c00a912738ec282db9"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "08557fd2453109458e593cf60005882656d4e940ebab07ed519c043c07fa8d7d"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "5eef83f4f1ff241673328140bc6099402eecbc4750d45fe7667763ffa8ce920f"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "3b71064164ce8e7ec71a2526d38d47a7854377696ed6763c83212bafe4495780"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "02c86d97cc21a3701b777f9ba7181944a286cb05856b22022030835b4442c921"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}
