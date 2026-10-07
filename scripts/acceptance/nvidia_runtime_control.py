@@ -68,7 +68,14 @@ def main():
         options.enable_profiling=True;options.profile_file_prefix=str(args.output/(precision+'-profile'))
         session=ort.InferenceSession(str(path),sess_options=options,providers=[('CUDAExecutionProvider',
             {'device_id':0,'gpu_mem_limit':256*1024**2,'use_tf32':0,'cudnn_conv_algo_search':'HEURISTIC'})])
-        if session.get_providers()!=['CUDAExecutionProvider']:raise ValueError('Session enabled a CPU fallback provider')
+        # ORT implicitly registers CPU even when node assignment to it is
+        # forbidden. Check the configuration and actual profile separately.
+        registered=session.get_providers()
+        if registered not in (['CUDAExecutionProvider'],['CUDAExecutionProvider','CPUExecutionProvider']):
+            raise ValueError('The requested CUDA provider was not initialized')
+        if session.get_session_options().get_session_config_entry('session.disable_cpu_ep_fallback')!='1':
+            raise ValueError('CPU graph-node fallback was not disabled')
+        session.disable_fallback()  # Also forbid Python EPFail retries on CPU.
         reference=model if precision=='fp32' else __import__('copy').deepcopy(model).half().cuda()
         errors=[];mismatches=0
         for sample in samples:
@@ -93,7 +100,7 @@ def main():
             raise ValueError('Actual node execution was not exclusively CUDA')
         precisions.append({'precision':precision,'heldout_tensor_count':2,'known_image_count':1,
             'max_absolute_error':max(errors),'argmax_mismatch_count':mismatches,
-            'node_execution_providers':providers,'profile_kernel_count':len(kernels),
+            'registered_providers':registered,'node_execution_providers':providers,'profile_kernel_count':len(kernels),
             'profile_sha256':hashlib.sha256(profile.read_bytes()).hexdigest(),
             'artifact_sha256':original_files[path.name],'warmup_count':3,'timing_iterations':10,
             'median_seconds':float(np.median(durations)),'p95_seconds':float(np.quantile(durations,.95)),
