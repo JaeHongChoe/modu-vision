@@ -1,0 +1,117 @@
+{
+  "schema": "modu-vision.source-service-lifecycle/v1",
+  "source_sha": "9c1e717971f7d0318cdc94e7b412b3bc224b0a7c",
+  "test_source_sha256": "ced1f30c12c63c2fc44a6b78a05c437dc8d0684feb17ee29f2935939962decc3",
+  "results": {
+    "passed": 2,
+    "retries": 0,
+    "elapsed_seconds": 176.52972641703673,
+    "source_files": 2130,
+    "source_unchanged": true,
+    "clean_before_and_after": true
+  },
+  "cases": [
+    {
+      "mode": "electron",
+      "execution_receipt": "docs/verification/receipts/2026-10-08-service-lifecycle-9c1e717-electron.json",
+      "execution_receipt_sha256": "b8640b736200baaa19547d15d12370dd4163da5b941984a55960a7538de0fb21",
+      "screenshots": 6,
+      "same_active_release_preserved": true,
+      "owned_start_stop_restart_observed": true,
+      "new_start_birth_after_stop": true,
+      "actual_missing_package_http_status": 409,
+      "controlled_status_transport_failure": 503,
+      "view_closed_and_real_empty_project_opened": true,
+      "original_readonly_request_completed": true,
+      "native_original_delayed_http200_provenance": false,
+      "same_owned_epoch_after_reopen": true,
+      "source_electron_closed_and_independent_daemon_ready": true,
+      "model_inference_in_this_case": false,
+      "owned_cleanup": {
+        "electron_alive": false,
+        "backends": [
+          {
+            "port": 51023,
+            "pid": 15440,
+            "port_closed": true,
+            "pid_alive": false
+          }
+        ],
+        "logged_backend_pids": [
+          15440
+        ],
+        "logged_backend_pids_alive": [],
+        "backend_restarted": false,
+        "escaped": [],
+        "unowned_references": [],
+        "scan_error": null,
+        "close_timed_out": false
+      },
+      "expected_console_failures_retained": []
+    },
+    {
+      "mode": "browser",
+      "execution_receipt": "docs/verification/receipts/2026-10-08-service-lifecycle-9c1e717-browser.json",
+      "execution_receipt_sha256": "ee0f638aef5b17a8758dfb24db8d608c518d7eeb8dbd169d7640943901a3e398",
+      "screenshots": 6,
+      "same_active_release_preserved": true,
+      "owned_start_stop_restart_observed": true,
+      "new_start_birth_after_stop": true,
+      "actual_missing_package_http_status": 409,
+      "controlled_status_transport_failure": 503,
+      "view_closed_and_real_empty_project_opened": true,
+      "original_readonly_request_completed": true,
+      "native_original_delayed_http200_provenance": false,
+      "same_owned_epoch_after_reopen": true,
+      "source_electron_closed_and_independent_daemon_ready": false,
+      "model_inference_in_this_case": false,
+      "owned_cleanup": {
+        "exited": true,
+        "exitCode": 0,
+        "signal": null,
+        "exitedBeforeStop": false,
+        "forced": false,
+        "forcedReason": null,
+        "groupAlive": false,
+        "escaped": [],
+        "unownedReferences": [],
+        "scanError": null,
+        "durationMs": 973,
+        "stoppedAt": "2026-10-07T21:24:04.062Z",
+        "healthy_at_end": true,
+        "port_closed": true,
+        "pid_alive": false
+      },
+      "expected_console_failures_retained": [
+        "Failed to load resource: the server responded with a status of 409 (Conflict)",
+        "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+        "Failed to load resource: the server responded with a status of 409 (Conflict)",
+        "Failed to load resource: net::ERR_CONNECTION_RESET",
+        "Failed to load resource: net::ERR_CONNECTION_RESET",
+        "Failed to load resource: net::ERR_CONNECTION_RESET",
+        "Failed to load resource: net::ERR_CONNECTION_RESET"
+      ]
+    }
+  ],
+  "proof_hashes": {
+    "command.json": "0e0f212fe2ae71304d0f9e593a89d9a8d125a6e2aef43ab1dcd63bf8908ad096",
+    "result.log": "2c7223b1d97db9bfdf39800e347981348d74d2186e7841cda23262ef7a4ab145",
+    "source-before.json": "8bb514dc8a10bd3f76982e801770125833055ac407e4c0d8fe1b9891d862a1a8",
+    "source-after.json": "8bb514dc8a10bd3f76982e801770125833055ac407e4c0d8fe1b9891d862a1a8"
+  },
+  "report_sha256": "28942adc9a6be890ef54fa1d0daf07f38949030c3e9c53aa05b7026e4a249459",
+  "global_teardown_sha256": "0a5cd36009f81acf336b2840da9e930e4610d9f293bf7984d9c53fe95b9ab21f",
+  "global_teardown_leftovers": 0,
+  "scope": "Actual source UI configuration/lifecycle and independent daemon readiness only. Synthetic generated Torch CPU approval setup; not OpenVINO IR apply or actual model inference in these cases.",
+  "acceptance": {
+    "ir_scenarios_qualified": false,
+    "actual_inference_in_this_case": false,
+    "native_os_registration_verified": false,
+    "publisher_approved": false,
+    "installed_target_verified": false,
+    "device_reboot_verified": false,
+    "complete_process_tree_verified": false,
+    "model_quality_approved": false,
+    "whole_parent_accepted": false
+  }
+}

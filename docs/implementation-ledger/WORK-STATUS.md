@@ -307,3 +307,19 @@ compiled canary의 닫힌 protocol2/worker8개 필드를 화면 bridge에서 검
 - 불확실한 실행은 파일을 보존한다. 확인된 결과 뒤에는 원래 FD 안의 항목만 정리하고 빈 루트는 남긴다. 경로를 다시 해석해 루트를 삭제하지 않는다. 복구 marker는 실행 시도 intent이며 실제 spawn 수락 근거로 세지 않는다.
 - 최종 private 관련 검사32개 통과·선택 OpenVINO 의존성1개 skip를 보존했다. 기존 별도 OpenVINO 인터프리터의 실제 변환·full-flow1개는 따로 통과했다. Root 통합 retention/서비스 CI29개 및 별도 source-lane18개가 통과했다. 각 실행의 정확한 소스·로그·XML·독립 리뷰 hash를 공개 receipt에 기록했다.
 - 기존69/13 부모 집계와575/874 action 집계는 그대로다. 전체 process-tree, native Windows, 실제 publisher/target, 대표 품질 및72시간 수락을 추가하지 않는다.
+
+
+## 2026-10-08 Studio 종료 뒤 독립 서비스 응답
+
+- 게시된 clean `9c1e717`에서 browser1·source Electron1이 retry 없이 통과했고2130개 소스 파일이 전후 동일했다. 실제 서비스 시작·중지·재시작, 없는 패키지409 거절, controlled503 표시, 화면 취소·빈 프로젝트 이동·원래 프로젝트 재열기와 같은 release/epoch 보존을 확인했다.
+- 원래 source Electron handle을 닫아 Studio/backend 포트가 종료된 뒤에도 독립 서비스는 같은 PID/birth/command/manifest로 ready 응답했다. 마지막에는 해당 owned 서비스만 중지하고 port closure와 harness의 leftover0을 기록했다.
+- 두 이미지 synthetic fixture 승인·생성된 Torch CPU 모델은 시험 준비다. 이 두 UI case 안에서는 실제 새 모델 검사나 OpenVINO IR 적용을 하지 않았으므로 F099 IR의5개 pending 시나리오를 올리지 않는다. 실제 설치·전용 계정·재부팅·장비·publisher·대표 품질 및 부모 수락도 추가하지 않는다.
+- 실제 실행 두 건과 통합 receipt를 별도로 고정했다. 기존69/13 부모와575/874 action 집계는 유지한다.
+
+
+## 2026-10-08 앱 실행 private home 격리
+
+- 기존 owned lease의 `PATH/LANG/VISION_*` 환경이 private HOME/cache/tmp 정책을 누락해 실제 계정 영역을 참조할 수 있는 네 경우를 no-spawn 경계에서 실패로 재현했다. macOS Foundation이 HOME만 변경하면 원래 계정 home을 반환하는 실제 metadata probe 실패도 보존했다.
+- 원래 install 폴더 FD 아래 새 nonce home을0700으로 만들고 HOME·cache·tmp·offline·CPU-mask와 macOS `CFFIXED_USER_HOME`을 고정한다. 호출자의 secret/plugin/startup env는 복사하지 않는다. 실패·불확실한 종료에서 홈을 지우거나 재사용하지 않는다.
+- Root 관련43개가 skip 없이 통과했고2131개 소스 파일이 동일했다. 별도 private 최종12개·독립 read-only 리뷰를 고정했다. CI에는 두 no-spawn 함수의4개 parameter-expanded case만 추가하고 actual native/compiled case는 선택하지 않았다.
+- 실제 Electron/frozen 시작·일반 backend CPU 모드·동일 UID 공격자의 지속 path containment·전체 tree 종료·publisher·설치 대상·품질 및 부모 수락은 이 근거에 포함하지 않는다. retained home을 소비하는 향후 migration/clear에도 별도 소유권 처리가 필요하다.

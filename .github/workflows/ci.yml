@@ -210,6 +210,8 @@ jobs:
           backend/tests/test_application_launch_execution.py
           backend/tests/test_application_launch_controller.py
           backend/tests/test_application_launch_lease.py
+          backend/tests/test_application_launch_electron.py::test_owned_main_spawn_uses_derived_private_environment_without_inherited_authority
+          backend/tests/test_application_launch_electron.py::test_unsafe_owned_runtime_home_refuses_before_spawn_and_preserves_foreign_files
           backend/tests/test_application_launch_handshake.py
           backend/tests/test_application_launch_frozen_execution.py::test_fixed_frozen_worker_flag_refuses_source_before_backend_or_home
           backend/tests/test_application_launch_frozen_execution.py::test_current_inventory_advertises_separate_fixed_cpu_protocol

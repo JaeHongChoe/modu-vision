@@ -3930,6 +3930,14 @@
           "result": "Windows SCM dispatcher and owned lifecycle; independently reviewed and merged in PR #3.",
           "scope": "Partial parent slice; parent implementation/acceptance is not promoted by this entry. Remaining: Actual registration, service identity, reboot/Session0, devices and installer.",
           "platform": "Source-qualified CPU, simulator and separately recorded limited native/GPU checks; see docs/verification/2026-10-04-service-extension-evidence.md"
+        },
+        {
+          "kind": "clean-source-service-lifecycle-execution",
+          "source_sha": "9c1e717971f7d0318cdc94e7b412b3bc224b0a7c",
+          "receipt": "docs/verification/receipts/2026-10-08-service-lifecycle-9c1e717.json",
+          "receipt_sha256": "f46103ff159f721a2033d63fc7898284670d089eedc89ca564b3290a57aa5385",
+          "result": "Actual clean source browser1 and Electron1 passed without retries;2130 source files unchanged. Start/stop/restart,409 missing-package refusal, controlled503, explicit view cancellation/project switch/reopen and source Studio-close independent readiness qualified.",
+          "scope": "Synthetic Torch CPU service lifecycle only. No actual inference in this case, no OpenVINO IR action scenario promotion, installer/account/reboot/device/publisher/quality or whole-parent acceptance."
         }
       ],
       "file_actions": {
@@ -4699,6 +4707,14 @@
           "receipt_sha256": "e18ffee645428e69f89e95b89e129f01107f26f84d3c8d3462c567f6fbed157a",
           "result": "Clean source actual browser2/native3 cases retry0,83 backend/907 renderer-main regressions, types and separate scoped review pass. Shared inert engine now connected to actual Studio project-owned install/inventory/diagnostics.",
           "scope": "Full offline base distribution, signed Studio pack activation, installed/frozen target qualification, representative human-quality and legal/publisher acceptance remain separate. Windows native testing waived, never a pass."
+        },
+        {
+          "kind": "source-bound-owned-runtime-home",
+          "source_sha": "9c1e717971f7d0318cdc94e7b412b3bc224b0a7c",
+          "receipt": "docs/verification/receipts/2026-10-08-owned-runtime-home-9c1e717.json",
+          "receipt_sha256": "2a8925fa3c84f5a5550213f5b3e7e94d38ca331f7c3f311e6ca3107a9c10d50b",
+          "result": "Root43 related lease/environment cases passed without skips,2131 source files unchanged. Private12 final source/OS lookup cases also passed. Original4 missing/unsafe-home failures and actual macOS Foundation home mismatch retained and corrected.",
+          "scope": "Derived retained private POSIX home/env at the existing owned launch boundary. No actual Electron, frozen backend, global CPU device, complete tree, hostile same-UID continuous containment, installer/publisher or whole-parent acceptance."
         }
       ],
       "file_actions": {
@@ -4900,6 +4916,14 @@
           "receipt_sha256": "be3fae6924039cb2b3929562c35a90a83180eaf47aec54fa237a22f17ceb0e31",
           "result": "Actual prior3 consumer workspace deletion and2 check-to-use races reproduced and fixed. Private32passed/1optional dependency skip; separate actual OpenVINO1passed. Root29retention/service CI and separate18source-lane cases passed.",
           "scope": "POSIX original-directory FD-bound retention and contents-only confirmed cleanup. Controlled no-handle policy; no native Windows, durable/escaped-tree ownership, representative quality, target or full parent acceptance."
+        },
+        {
+          "kind": "source-bound-owned-runtime-home",
+          "source_sha": "9c1e717971f7d0318cdc94e7b412b3bc224b0a7c",
+          "receipt": "docs/verification/receipts/2026-10-08-owned-runtime-home-9c1e717.json",
+          "receipt_sha256": "2a8925fa3c84f5a5550213f5b3e7e94d38ca331f7c3f311e6ca3107a9c10d50b",
+          "result": "Root43 related lease/environment cases passed without skips,2131 source files unchanged. Private12 final source/OS lookup cases also passed. Original4 missing/unsafe-home failures and actual macOS Foundation home mismatch retained and corrected.",
+          "scope": "Derived retained private POSIX home/env at the existing owned launch boundary. No actual Electron, frozen backend, global CPU device, complete tree, hostile same-UID continuous containment, installer/publisher or whole-parent acceptance."
         }
       ],
       "file_actions": {
@@ -5834,6 +5858,14 @@
           "receipt_sha256": "0c2b851676f8bfa313a4dfc29bdcc3d78cc556c6b2fe89fe9cac93e61099d05f",
           "result": "Actual browser and unpacked Electron both passed once;3 new F059 refresh dimensions.207 actions/575 verified/874 pending.",
           "scope": "Controlled saved reports; no inference, human quality or complete-feature acceptance."
+        },
+        {
+          "kind": "clean-source-service-lifecycle-execution",
+          "source_sha": "9c1e717971f7d0318cdc94e7b412b3bc224b0a7c",
+          "receipt": "docs/verification/receipts/2026-10-08-service-lifecycle-9c1e717.json",
+          "receipt_sha256": "f46103ff159f721a2033d63fc7898284670d089eedc89ca564b3290a57aa5385",
+          "result": "Actual clean source browser1 and Electron1 passed without retries;2130 source files unchanged. Start/stop/restart,409 missing-package refusal, controlled503, explicit view cancellation/project switch/reopen and source Studio-close independent readiness qualified.",
+          "scope": "Synthetic Torch CPU service lifecycle only. No actual inference in this case, no OpenVINO IR action scenario promotion, installer/account/reboot/device/publisher/quality or whole-parent acceptance."
         }
       ],
       "file_actions": {

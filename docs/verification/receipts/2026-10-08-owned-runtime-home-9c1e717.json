@@ -1,0 +1,50 @@
+{
+  "schema": "modu-vision.owned-runtime-home/v1",
+  "base_sha": "9c1e717971f7d0318cdc94e7b412b3bc224b0a7c",
+  "source_files": {
+    "backend/engine/application_launch_lease.py": "d6cea9d88cf52546511cb2ad0a264828fac42ff6746496f0aa7bf196d6c05f8d",
+    "backend/tests/test_application_launch_electron.py": "db9b8b7de27dfea8e551ad4841136780795b94d0f435a798103c7d20d5774cce"
+  },
+  "results": {
+    "root_cases_passed": 43,
+    "root_failed": 0,
+    "root_skipped": 0,
+    "elapsed_seconds": 69.44658254203387,
+    "source_inputs": 2131,
+    "source_unchanged": true,
+    "private_final_cases_passed": 12,
+    "private_final_skipped": 0
+  },
+  "proof_hashes": {
+    "phase_freeze": "14de0c3781c4590dc93f2e72ca9c16dc0f590c3ad65c84faefc5c371928e1d27",
+    "patch": "2830050147bbec32138f460d211385dc8e2721bf95182946fbca5e1a09cfa653",
+    "independent_review": "027366b564244a2f56adfb2ee3dbbe26026fd0ec58f460854ecb468a8828dc51",
+    "root_command.json": "6e6422eaf145d73864c3ac1536b45e4e33dfcadd23652a5fee0b10fbcc7d5c43",
+    "root_result.log": "72371c4b04304f20fa2f9dd8dfdb28b156f83a2ff0747b12949dfc1c00655675",
+    "root_result.xml": "32279b3567da3be614373dc12b1d349994553fafcf766cc88d2a373a590eaabf",
+    "root_source-before.json": "9b6b09abc40a6cca378818e9512e0ab02704f48fbea6a80f1cda81f6d0667af6",
+    "root_source-after.json": "9b6b09abc40a6cca378818e9512e0ab02704f48fbea6a80f1cda81f6d0667af6"
+  },
+  "retained_failures": {
+    "private_home_no_spawn_cases": 4,
+    "actual_Foundation_wrong_home_case": 1
+  },
+  "scope": "POSIX no-spawn lease environment and actual macOS Foundation read-only home lookup. Unique nonce private directory creation uses original directory descriptors. Spawn failure retains original recovery_required state and directory bytes. Caller secret/plugin/startup environment does not supply authority.",
+  "limitations": [
+    "Not an actual Electron or compiled backend launch.",
+    "Final path observation is not continuous containment against a hostile same-UID ancestor or child-path replacement.",
+    "Retained runtime homes cannot be removed or reused as a consequence of these gates.",
+    "Native global backend CPU configuration is not inferred from CUDA masks.",
+    "Consumed/recovery_required ownership still prevents migration; any future qualified clear/migration must account for retained runtime-home ownership."
+  ],
+  "acceptance": {
+    "actual_native_startup_verified": false,
+    "model_inference_verified": false,
+    "complete_process_tree_verified": false,
+    "native_windows_verified": false,
+    "publisher_approved": false,
+    "installed_target_verified": false,
+    "model_quality_approved": false,
+    "whole_parent_accepted": false
+  }
+}

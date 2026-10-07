@@ -23,6 +23,7 @@ from backend.engine.process_isolation import session_isolation
 
 ACTIVE_LEASE = 'application-launch-lease.json'
 LEASES = '.application-launches'
+RUNTIME_HOMES = '.application-runtime-homes'
 DATABASE_LOCK = 'application-database-ownership.lock'
 TRANSITION_LOCK = 'transition.lock'
 CONTROL_PATHS = {ACTIVE_LEASE, LEASES, DATABASE_LOCK}
@@ -57,6 +58,63 @@ def _identity_shape(value):
         and type(value['pid']) is int and value['pid'] > 0
         and type(value['created_at']) in (int, float) and math.isfinite(value['created_at']) and value['created_at'] > 0
         and _update()._hex(value['command_sha256']))
+
+
+def _runtime_home_environment(root, nonce):
+    """Derive one retained private runtime home; caller environment has no authority.
+
+    The lease has persisted its only spawn attempt before this operation. These
+    directories are retained on errors/exits because tree reconciliation has not
+    been proved. No cache from a previous nonce is reused or removed.
+    """
+    if os.name != 'posix': raise LaunchLeaseError('Owned runtime home requires POSIX directory handles')
+    descriptors = []
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+
+    def directory(parent, name, *, fresh=False):
+        try: os.mkdir(name, 0o700, dir_fd=parent)
+        except FileExistsError:
+            if fresh: raise LaunchLeaseError('Owned runtime home nonce already exists')
+        fd = os.open(name, flags, dir_fd=parent); descriptors.append(fd)
+        info = os.fstat(fd)
+        if (not stat.S_ISDIR(info.st_mode) or info.st_uid != os.geteuid()
+                or stat.S_IMODE(info.st_mode) != 0o700):
+            raise LaunchLeaseError('Owned runtime home must be a private original directory')
+        return fd
+
+    try:
+        root_fd = os.open(root, flags); descriptors.append(root_fd)
+        _, owner = owned_root(root)
+        root_info = os.fstat(root_fd)
+        if (root_info.st_dev, root_info.st_ino) != (owner['root_identity']['device'], owner['root_identity']['inode']):
+            raise LaunchLeaseError('Owned runtime home installation identity changed')
+        homes_fd = directory(root_fd, RUNTIME_HOMES)
+        home_fd = directory(homes_fd, nonce, fresh=True)
+        cache_fd = directory(home_fd, 'cache', fresh=True)
+        config_fd = directory(home_fd, 'config', fresh=True)
+        directory(home_fd, 'tmp', fresh=True)
+        for name in ('torch', 'huggingface', 'matplotlib'): directory(cache_fd, name, fresh=True)
+        directory(config_fd, 'yolo', fresh=True)
+        home = root/RUNTIME_HOMES/nonce
+        # Directory creation is descriptor-relative. Refuse a changed published
+        # path before handing the fixed absolute paths to the owned executable.
+        _update()._unlinked(home)
+        current = home.lstat(); original = os.fstat(home_fd)
+        if (current.st_dev, current.st_ino) != (original.st_dev, original.st_ino):
+            raise LaunchLeaseError('Owned runtime home identity changed before spawn')
+        cache = home/'cache'
+        return {'HOME': str(home), 'USERPROFILE': str(home), 'CFFIXED_USER_HOME': str(home),
+            'TMPDIR': str(home/'tmp'), 'TMP': str(home/'tmp'), 'TEMP': str(home/'tmp'),
+            'XDG_CACHE_HOME': str(cache), 'XDG_CONFIG_HOME': str(home/'config'),
+            'TORCH_HOME': str(cache/'torch'), 'HF_HOME': str(cache/'huggingface'),
+            'MPLCONFIGDIR': str(cache/'matplotlib'), 'YOLO_CONFIG_DIR': str(home/'config/yolo'),
+            'HF_HUB_OFFLINE': '1', 'TRANSFORMERS_OFFLINE': '1', 'HF_DATASETS_OFFLINE': '1',
+            'CUDA_VISIBLE_DEVICES': '', 'NVIDIA_VISIBLE_DEVICES': 'none',
+            'OMP_NUM_THREADS': '1', 'MKL_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1'}
+    except OSError as exc:
+        raise LaunchLeaseError('Owned runtime home could not be admitted: '+type(exc).__name__) from exc
+    finally:
+        for fd in reversed(descriptors): os.close(fd)
 
 
 def _paths(root):
@@ -380,6 +438,7 @@ class LaunchSupervisor:
                 environment = {'PATH': os.defpath, 'LANG': 'C.UTF-8', 'VISION_AI_STUDIO_USER_DATA_DIR': str(self.root),
                     'VISION_APPLICATION_LAUNCH_NONCE': self.nonce, 'VISION_APPLICATION_GENERATION': row['binding']['application_generation'],
                     'VISION_APPLICATION_DATABASE_GENERATION': row['binding']['database_generation_path']}
+                environment.update(_runtime_home_environment(self.root, self.nonce))
                 pass_fds = ()
                 if bootstrap:
                     self._bootstrap_channel, child_channel = socket.socketpair(socket.AF_UNIX, socket.SOCK_STREAM)
