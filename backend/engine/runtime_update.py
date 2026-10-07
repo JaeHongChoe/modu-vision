@@ -263,6 +263,7 @@ def _native_layout(manifest):
     if (not manifest['entrypoint'].startswith(root+'MacOS/') or manifest['entrypoint']not in files):
         raise UpdateError('Native entrypoint must be a canonical regular Contents/MacOS file')
 
+    directory_aliases={}
     for name,target in expected.items():
         parts=name.rsplit('/',1)[0].split('/');pending=target.split('/');seen=set();expansions=0
         while pending:
@@ -283,8 +284,27 @@ def _native_layout(manifest):
         if candidate not in files and candidate not in directories:raise UpdateError('Dangling native internal link')
         if candidate in directories and (name.startswith(candidate+'/') or name==candidate):
             raise UpdateError('Native directory link forms an ancestor cycle')
+        if candidate in directories:directory_aliases[name]=candidate
+    # Canonical directory edges plus directory aliases must also remain acyclic.
+    # Two sibling folders can point into one another without either alias being
+    # an ancestor or a cyclic raw-target chain; recursive consumers would loop.
+    graph={name:set() for name in directories}
+    for name in directories:
+        if '/' in name:
+            parent=name.rsplit('/',1)[0]
+            if parent in graph:graph[parent].add(name)
+    for name,target in directory_aliases.items():graph[name.rsplit('/',1)[0]].add(target)
+    colors={}
+    for start in graph:
+        if colors.get(start):continue
+        colors[start]=1;stack=[(start,iter(graph[start]))]
+        while stack:
+            node,children=stack[-1]
+            child=next(children,None)
+            if child is None:colors[node]=2;stack.pop();continue
+            if colors.get(child)==1:raise UpdateError('Cyclic native directory aliases')
+            if not colors.get(child):colors[child]=1;stack.append((child,iter(graph[child])))
     return expected,directories
-
 
 def _portable(archive,release,*,destination=None):
     with _file(archive,1024**3) as (reader,_),zipfile.ZipFile(reader) as bundle:

@@ -1,0 +1,79 @@
+{
+  "schema": "modu-vision.native-layout-component-controls/v1",
+  "source_sha": "b505ccd0f6939012cf707ca7eca1e8876e084b4d",
+  "source_binding": [
+    {
+      "path": "backend/engine/runtime_update.py",
+      "sha256": "ecd005ee5c127750e372e43a981b68745ad3a9c3760b70212974a89bddbe0a48"
+    },
+    {
+      "path": "backend/tests/test_native_update_layout.py",
+      "sha256": "c2a8527af873017d112de4c6435e44235a7a18d5897f298379645dc0c2bb0ef3"
+    },
+    {
+      "path": "backend/tests/test_service_s6_04.py",
+      "sha256": "51c8a193465f4a0050c839b65673688b56b802c7d219070fc74ff9143001fbb4"
+    },
+    {
+      "path": "backend/tests/test_portable_update_review.py",
+      "sha256": "93f2cbeb52c9b299c431a87efef47fea5e59877264869b3fb32d161b4dbcb931"
+    },
+    {
+      "path": "backend/tests/test_global_migration.py",
+      "sha256": "8c5d13d79dacf187f237f8f821b0aa99de2fb0570743a1e3d3052c93798e2d70"
+    },
+    {
+      "path": "src/main/portableUpdate.ts",
+      "sha256": "82640c74bb4e976b9228ff68a27d2b026a8115ca34889296e52fb2da8c9b5c63"
+    },
+    {
+      "path": "src/main/portableUpdate.test.cjs",
+      "sha256": "6e656e5836741bfc1bdbd1c736b30c62b8a0de95bd1cfbf3ecdb2744b3beae8d"
+    },
+    {
+      "path": "src/types/electron.d.ts",
+      "sha256": "0c703aca1c44c32e8bf335c6a5d530d4aa7b955b92c43d40f296519e4c1ef425"
+    },
+    {
+      "path": "src/renderer/components/runtime/PortableUpdatePanel.tsx",
+      "sha256": "938dcde621ba4e3d1a6863a00afcfeb0b1bff3823a56eb2a076327dc50d3e96a"
+    }
+  ],
+  "executed_before_commit_on_identical_component_bytes": true,
+  "python_regressions": {
+    "passed": 109,
+    "failed": 0,
+    "seconds": 63.88,
+    "native_cases": 33,
+    "actual_host": "Darwin/arm64"
+  },
+  "main_controls": {
+    "passed": 18,
+    "failed": 0
+  },
+  "product_and_e2e_types": "passed",
+  "ci_model_lane_regressions": {
+    "passed": 18,
+    "scope": "Current a53edf6 workflow selection; no real hosted result inferred"
+  },
+  "log_sha256": {
+    "native-layout-red.log": "6f7717a6a29510dbda0ebc8be657248878c0d39ad6d2f21f9c5abb169d0eaaa4",
+    "native-layout-green-1.log": "902e5a4eb2d1812b051f2ae6f93dbcd39d22f7d066bcb0090cee1fdf26466756",
+    "native-layout-regressions.log": "8f42e4ddf929e13a195e74b42c57b9897e8874b2cd72aba35ebc6a66cf98e467",
+    "native-review-red.log": "556a547d42ccdbdb5ecec295c9e1ee767eb7b7b5919aa4ebf1bd1bcbe662c16d",
+    "native-review-green.log": "5aa893953ed1e5713044d6858270b19391d8bc15c334fa75943ab024f1fd9ee4",
+    "native-typecheck.log": "3cea01ca6731d254d8cb8265f4fb29f0abcddf05eb43593ffedb269501b44fad",
+    "native-e2e-typecheck.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "native-ci-model-lanes.log": "9572bcb943c2c7fe9f90d5a0dd800823cfebb659088e9a1d0c3808887ee6954c"
+  },
+  "preserved_failures": [
+    "initial native positive refused all links",
+    "initial installed regular replacement wrongly admitted; corrected before109green",
+    "initial new main review missing/invalid-layout and portable link-count refusal assertions failed; corrected before18green"
+  ],
+  "scope": "Controlled Ed25519 fixture authority, one owned .app/Contents canonical archive and3 internal links; actual file/DB install, entrypoint launch, forward recovery and unchanged original/new writes. No real publisher/codesign/OS installer/installed product/target quality/independent acceptance.",
+  "parent_acceptance": "pending",
+  "whole_public_browser_receipt": "2026-10-07-whole-public-browser-a53edf6.json",
+  "whole_public_browser_receipt_sha256": "0353afe8153e17885d20bc83a61db474b2a978e8c2b9520bbdf76f49160629a2",
+  "new_known_gap": "A sibling-directory traversal cycle was independently reproduced againsta53. The later fix and its new test are recorded separately, not retroactively included in this109-check source binding."
+}

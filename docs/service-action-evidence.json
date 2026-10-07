@@ -20331,6 +20331,28 @@
            "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
           }
          ]
+        },
+        {
+         "task": "S6-04",
+         "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+         "kind": "click",
+         "action": "portable 설치 폴더 선택",
+         "expected": "Select only an explicit separate owned home.",
+         "observed": "Actual manager inspected the selected controlled owned home; current Studio was untouched.",
+         "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+         "receipt": "2026-10-07-portable-update-review-a53edf6-browser.json",
+         "receipt_sha256": "efbb460129d409fb2ce96903b4b19cc0550a3751f7cfa15a2261df7c4b5b79b1",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d3d1cf77f07cd8faa2a27e697a581d97c8ac36b7cf476d3c8ca5d886a53dec7c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e4bfb6aeaec7816254f5db98a31d184dd3a09443ffeba37ab33114fbef8e487a"
+          }
+         ]
         }
        ]
       },
@@ -20360,6 +20382,24 @@
            "sha256": "dd095e483424ccaf1a73c82a645f97b511932c387d25c4bf2e882a382b68c19f"
           }
          ]
+        },
+        {
+         "task": "S6-04",
+         "source_sha": "b505ccd0f6939012cf707ca7eca1e8876e084b4d",
+         "kind": "click",
+         "action": "portable 설치 폴더 선택",
+         "expected": "An unprovisioned native app must refuse before opening the folder picker.",
+         "observed": "Actual Electron main/preload/renderer returned packaged-application refusal with no selected home or dialog.",
+         "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::native desktop refuses unprovisioned portable changes before opening a directory dialog",
+         "receipt": "2026-10-07-portable-update-b505ccd-electron.json",
+         "receipt_sha256": "8214092a08ea6f5db7ec2ba20f8a07dcacdbef20aff934cfbe6d6635b9b3580d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2e4caaa2d7ab4c8168f400e9b7275d7e39d22b4bff96a69554b71d016e57c490"
+          }
+         ]
         }
        ]
       },
@@ -20387,6 +20427,28 @@
            "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
           }
          ]
+        },
+        {
+         "task": "S6-04",
+         "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+         "kind": "click",
+         "action": "portable 설치 폴더 선택",
+         "expected": "Cancelling the folder selection must not set a home.",
+         "observed": "Cancelled controlled host picker returned null; no selected installation appeared.",
+         "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+         "receipt": "2026-10-07-portable-update-review-a53edf6-browser.json",
+         "receipt_sha256": "efbb460129d409fb2ce96903b4b19cc0550a3751f7cfa15a2261df7c4b5b79b1",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d3d1cf77f07cd8faa2a27e697a581d97c8ac36b7cf476d3c8ca5d886a53dec7c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e4bfb6aeaec7816254f5db98a31d184dd3a09443ffeba37ab33114fbef8e487a"
+          }
+         ]
         }
        ]
       },
@@ -20412,6 +20474,28 @@
           {
            "id": "screenshot-1",
            "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+          }
+         ]
+        },
+        {
+         "task": "S6-04",
+         "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+         "kind": "click",
+         "action": "portable 설치 폴더 선택",
+         "expected": "Re-select after reload must read the committed pair.",
+         "observed": "Reopening read1.0.0/fence2 and later1.1.0/fence3 from the actual owned store.",
+         "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+         "receipt": "2026-10-07-portable-update-review-a53edf6-browser.json",
+         "receipt_sha256": "efbb460129d409fb2ce96903b4b19cc0550a3751f7cfa15a2261df7c4b5b79b1",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d3d1cf77f07cd8faa2a27e697a581d97c8ac36b7cf476d3c8ca5d886a53dec7c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e4bfb6aeaec7816254f5db98a31d184dd3a09443ffeba37ab33114fbef8e487a"
           }
          ]
         }
@@ -20449,6 +20533,28 @@
           {
            "id": "screenshot-1",
            "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+          }
+         ]
+        },
+        {
+         "task": "S6-04",
+         "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+         "kind": "click",
+         "action": "portable 상태 다시 읽기",
+         "expected": "Read pending or committed state without automatically retrying the update.",
+         "observed": "Explicit read after actual child exits displayed recovery-required state and the permitted controls.",
+         "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+         "receipt": "2026-10-07-portable-update-review-a53edf6-browser.json",
+         "receipt_sha256": "efbb460129d409fb2ce96903b4b19cc0550a3751f7cfa15a2261df7c4b5b79b1",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d3d1cf77f07cd8faa2a27e697a581d97c8ac36b7cf476d3c8ca5d886a53dec7c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e4bfb6aeaec7816254f5db98a31d184dd3a09443ffeba37ab33114fbef8e487a"
           }
          ]
         }
@@ -20531,6 +20637,28 @@
            "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
           }
          ]
+        },
+        {
+         "task": "S6-04",
+         "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+         "kind": "click",
+         "action": "portable 변경 내용 확인",
+         "expected": "Display a review bound to the actual signed input and current source.",
+         "observed": "Actual main/Python review displayed0.0.0→1.0.0 and later1.0.0→1.1.0; no installation ran on review.",
+         "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+         "receipt": "2026-10-07-portable-update-review-a53edf6-browser.json",
+         "receipt_sha256": "efbb460129d409fb2ce96903b4b19cc0550a3751f7cfa15a2261df7c4b5b79b1",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d3d1cf77f07cd8faa2a27e697a581d97c8ac36b7cf476d3c8ca5d886a53dec7c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e4bfb6aeaec7816254f5db98a31d184dd3a09443ffeba37ab33114fbef8e487a"
+          }
+         ]
         }
        ]
       },
@@ -20581,6 +20709,28 @@
           {
            "id": "screenshot-1",
            "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+          }
+         ]
+        },
+        {
+         "task": "S6-04",
+         "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+         "kind": "click",
+         "action": "선택한 portable 설치의 학습·검사가 종료되고 백업을 확인했습니다",
+         "expected": "Only explicit confirmation enables apply and recovery controls.",
+         "observed": "Apply and pre-database abort were disabled until the checkbox was checked; backend independently checked the actual source.",
+         "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+         "receipt": "2026-10-07-portable-update-review-a53edf6-browser.json",
+         "receipt_sha256": "efbb460129d409fb2ce96903b4b19cc0550a3751f7cfa15a2261df7c4b5b79b1",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d3d1cf77f07cd8faa2a27e697a581d97c8ac36b7cf476d3c8ca5d886a53dec7c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e4bfb6aeaec7816254f5db98a31d184dd3a09443ffeba37ab33114fbef8e487a"
           }
          ]
         }
@@ -20635,6 +20785,28 @@
            "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
           }
          ]
+        },
+        {
+         "task": "S6-04",
+         "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+         "kind": "click",
+         "action": "검토한 portable 업데이트 적용",
+         "expected": "Install exactly the reviewed app/database pair.",
+         "observed": "Actual signed source transaction committed version1.0.0/fence1 and read it through the panel.",
+         "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+         "receipt": "2026-10-07-portable-update-review-a53edf6-browser.json",
+         "receipt_sha256": "efbb460129d409fb2ce96903b4b19cc0550a3751f7cfa15a2261df7c4b5b79b1",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d3d1cf77f07cd8faa2a27e697a581d97c8ac36b7cf476d3c8ca5d886a53dec7c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e4bfb6aeaec7816254f5db98a31d184dd3a09443ffeba37ab33114fbef8e487a"
+          }
+         ]
         }
        ]
       },
@@ -20665,6 +20837,28 @@
            "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
           }
          ]
+        },
+        {
+         "task": "S6-04",
+         "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+         "kind": "click",
+         "action": "검토한 portable 업데이트 적용",
+         "expected": "Changed source after review must refuse before staging.",
+         "observed": "Writing labels after preview caused review refusal and no application-active pointer; explicit re-review was required.",
+         "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+         "receipt": "2026-10-07-portable-update-review-a53edf6-browser.json",
+         "receipt_sha256": "efbb460129d409fb2ce96903b4b19cc0550a3751f7cfa15a2261df7c4b5b79b1",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d3d1cf77f07cd8faa2a27e697a581d97c8ac36b7cf476d3c8ca5d886a53dec7c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e4bfb6aeaec7816254f5db98a31d184dd3a09443ffeba37ab33114fbef8e487a"
+          }
+         ]
         }
        ]
       },
@@ -20690,6 +20884,28 @@
           {
            "id": "screenshot-1",
            "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+          }
+         ]
+        },
+        {
+         "task": "S6-04",
+         "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+         "kind": "click",
+         "action": "검토한 portable 업데이트 적용",
+         "expected": "An interrupted install must consume review and require a fresh state read.",
+         "observed": "Actual controlled child exits91 at before_database and after_database surfaced errors; explicit inspection enabled the appropriate recovery.",
+         "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+         "receipt": "2026-10-07-portable-update-review-a53edf6-browser.json",
+         "receipt_sha256": "efbb460129d409fb2ce96903b4b19cc0550a3751f7cfa15a2261df7c4b5b79b1",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d3d1cf77f07cd8faa2a27e697a581d97c8ac36b7cf476d3c8ca5d886a53dec7c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e4bfb6aeaec7816254f5db98a31d184dd3a09443ffeba37ab33114fbef8e487a"
           }
          ]
         }
@@ -20735,6 +20951,28 @@
            "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
           }
          ]
+        },
+        {
+         "task": "S6-04",
+         "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+         "kind": "click",
+         "action": "같은 업데이트 마무리",
+         "expected": "Finish the same interrupted app/database transaction, not a new install.",
+         "observed": "Post-database interruption finished1.1.0/fence3; an already committed finish was idempotent at fence2.",
+         "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+         "receipt": "2026-10-07-portable-update-review-a53edf6-browser.json",
+         "receipt_sha256": "efbb460129d409fb2ce96903b4b19cc0550a3751f7cfa15a2261df7c4b5b79b1",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d3d1cf77f07cd8faa2a27e697a581d97c8ac36b7cf476d3c8ca5d886a53dec7c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e4bfb6aeaec7816254f5db98a31d184dd3a09443ffeba37ab33114fbef8e487a"
+          }
+         ]
         }
        ]
       },
@@ -20774,6 +21012,28 @@
            "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
           }
          ]
+        },
+        {
+         "task": "S6-04",
+         "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+         "kind": "click",
+         "action": "같은 업데이트 마무리",
+         "expected": "Reopen only after finish actually commits and releases the command.",
+         "observed": "Panel awaited committed status and enabled selection, then reloaded and inspected1.1.0/fence3.",
+         "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+         "receipt": "2026-10-07-portable-update-review-a53edf6-browser.json",
+         "receipt_sha256": "efbb460129d409fb2ce96903b4b19cc0550a3751f7cfa15a2261df7c4b5b79b1",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d3d1cf77f07cd8faa2a27e697a581d97c8ac36b7cf476d3c8ca5d886a53dec7c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e4bfb6aeaec7816254f5db98a31d184dd3a09443ffeba37ab33114fbef8e487a"
+          }
+         ]
         }
        ]
       },
@@ -20809,6 +21069,28 @@
           {
            "id": "screenshot-1",
            "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+          }
+         ]
+        },
+        {
+         "task": "S6-04",
+         "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+         "kind": "click",
+         "action": "새 쓰기 보존하며 복구",
+         "expected": "Forward recovery must preserve newer account and labels.",
+         "observed": "Actual current-schema forward recovery advanced fence1→2 and retained newly created account and labels.",
+         "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+         "receipt": "2026-10-07-portable-update-review-a53edf6-browser.json",
+         "receipt_sha256": "efbb460129d409fb2ce96903b4b19cc0550a3751f7cfa15a2261df7c4b5b79b1",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d3d1cf77f07cd8faa2a27e697a581d97c8ac36b7cf476d3c8ca5d886a53dec7c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e4bfb6aeaec7816254f5db98a31d184dd3a09443ffeba37ab33114fbef8e487a"
           }
          ]
         }
@@ -20850,6 +21132,28 @@
            "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
           }
          ]
+        },
+        {
+         "task": "S6-04",
+         "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+         "kind": "click",
+         "action": "새 쓰기 보존하며 복구",
+         "expected": "Reload and select the same home to read its current pair.",
+         "observed": "Browser reloaded and selected the owned home with version1.0.0/fence2.",
+         "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+         "receipt": "2026-10-07-portable-update-review-a53edf6-browser.json",
+         "receipt_sha256": "efbb460129d409fb2ce96903b4b19cc0550a3751f7cfa15a2261df7c4b5b79b1",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d3d1cf77f07cd8faa2a27e697a581d97c8ac36b7cf476d3c8ca5d886a53dec7c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e4bfb6aeaec7816254f5db98a31d184dd3a09443ffeba37ab33114fbef8e487a"
+          }
+         ]
         }
        ]
       },
@@ -20885,6 +21189,28 @@
           {
            "id": "screenshot-1",
            "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+          }
+         ]
+        },
+        {
+         "task": "S6-04",
+         "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+         "kind": "click",
+         "action": "데이터 전환 전 설치 취소",
+         "expected": "A pre-database abort retains the previous committed pair; a post-database abort is absent.",
+         "observed": "Actual before_database interruption was aborted to version1.0.0/fence2. After database publication no abort button existed.",
+         "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+         "receipt": "2026-10-07-portable-update-review-a53edf6-browser.json",
+         "receipt_sha256": "efbb460129d409fb2ce96903b4b19cc0550a3751f7cfa15a2261df7c4b5b79b1",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d3d1cf77f07cd8faa2a27e697a581d97c8ac36b7cf476d3c8ca5d886a53dec7c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e4bfb6aeaec7816254f5db98a31d184dd3a09443ffeba37ab33114fbef8e487a"
           }
          ]
         }

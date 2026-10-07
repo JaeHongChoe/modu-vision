@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "b505ccd0f6939012cf707ca7eca1e8876e084b4d",
+  "source_dirty": false,
+  "test": "scripts/e2e/portable-update-review.spec.ts::native desktop refuses unprovisioned portable changes before opening a directory dialog",
+  "test_source_sha256": "c9a37fffc92b381e11703819348a76787eed61e4110e1a579ed38f909af41992",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "fef2caaa6fa4225ceee7419fc981f3bb724f9b1f659cc858a74b61b449607e60",
+  "harness_sha256": "811cb237ac4d76fe7977d2947e183061d7a0ed23fb4bb89ace292bac057eb03d",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "2e4caaa2d7ab4c8168f400e9b7275d7e39d22b4bff96a69554b71d016e57c490"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

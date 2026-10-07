@@ -1,4 +1,4 @@
-# 남은 16개 대상의 실행 기록
+# 남은 15개와 직전 완료 항목의 실행 기록
 
 2026-10-07. 기존 16개를 모두 추적하며 실행 가능한 구현과 검증을 진행한다. 현재 부모 구현 검증은 **67/82**, 미완료 구현 표시는 **15/82**, 전체 실사용 수락은 **0/82**이다. S5-10만 이번에 구현 검증으로 승격했다. 개별 검사·slice·부모 수는 서로 더하지 않는다.
 
@@ -227,3 +227,10 @@ Clean03358ce의 actual browser1 passed(8.8min, retries0, screenshots13, owned te
 기존portable schema1의 link 거절은 유지하고, darwin schema2의 한 .app/Contents 안에서만 canonical regular files와 서명된 내부 link 목록을 허용했다. 실제 link expansion 뒤 dotdot을 처리하며 escape/dangling/cycle·file/dir/case 충돌·alias 하위 파일·unsigned/다른 target·설치 후 ordinary-file replacement/empty directory/foreign parent 변경을 거절한다. 모든 regular bytes를 검증한 뒤만 link를 생성하고 launch/recovery에서 원시 target·모든 canonical hashes/modes·DB pair를 다시 검사한다. UI review에 실제 layout/link count를 표시하고 main에서 contract를 검증한다.
 
 Owned qualification-key macOS fixture의 actual install→entrypoint→new profile write→forward recovery와 기존파일 보존, malformed/tampered controls 포함 Python109 pass, main18 pass, product/E2E typechecks pass다. 최초 positive red와 설치 후 ordinary-file replacement 실패를 모두 보존했다. 실제 native publisher/codesign/OS installer/install-home/known-image acceptance를 뜻하지 않으며 S6-04 부모는 pending이다. 다음 실제 GUI와 전체 앱 replay는 별도 실행 기록으로 남긴다.
+
+## 추가 실행: 전체 공개 browser 선택과 macOS 링크 레이아웃
+
+- Cleana53edf6의 전체 공개 browser 선택은185 passed/0 failed/0 flaky/1 explicit skip이며 owned teardown이 깨끗하다. User-authentic pretrained suite는 이 선택에서 제외하고 기존 별도 실행 근거를 보존한다. UNet 화면 흐름은 별도03358ce에서 실제12epoch CPU 완료했다. 전체 native Electron·Windows·대표 품질·실 배포자·장비·독립 수락으로 더하지 않는다.
+- macOS schema2는 하나의.app/Contents 안의 canonical 정규 파일과 signed 내부 링크만 허용하고 schema1의 link 거절은 유지한다. 실제 owned signed fixture install/entrypoint/새 쓰기 forward recovery 및 변경된 설치 링크 거절을 확인했다. 같은 pinned trust/compatibility/source fence를 사용하고 실제 publisher 키나 OS installer는 만들지 않았다.
+- b505ccd의 실제 Python109/Node18와 source bytes binding, a53의 실제 native GUI positive, b505의 실제 Electron 미준비 거절을 각각 기록한다. 최초 native GUI premature reload 실패 및 전체 선택 옵션 누락의 missing-owned-weights 중단은 원본 그대로 보존했다. 나중에 재현한 sibling-directory traversal cycle은 별도 수정·검증 대상이며 이 과거109개 결과에 포함하지 않는다.
+- 기존 portable verified 차원은 동일 GUI case를 재실행한 새 근거로 보완했으며 action/scenario 수는 늘리지 않았다. 부모67/82·pending15/82·전체 수락0을 유지한다.

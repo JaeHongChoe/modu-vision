@@ -122,3 +122,13 @@ def test_native_dotdot_is_resolved_after_the_real_alias_expansion(tmp_path):
   d['links']=[{'path':p,'target':v}for p,v in l.items()]
  value=native(tmp_path,change);installed=update.install_update(root,plan(root,value));command=update.launch_plan(root,value['authority'],pinned_authority_sha256=value['pinned_authority_sha256'])
  assert subprocess.run(command['argv'],capture_output=True,text=True,timeout=5).stdout=='owned-native-layout\n'
+
+
+def test_native_directory_aliases_cannot_form_a_recursive_traversal_cycle(tmp_path):
+ from backend.engine import runtime_update as update
+ def change(d,f,l):
+  l[FRAME+'/One/Link']='../Two';l[FRAME+'/Two/Link']='../One'
+  d['links']=[{'path':p,'target':v}for p,v in l.items()]
+ value=native(tmp_path,change)
+ with pytest.raises(update.UpdateError,match='cycle|Cyclic'):
+  update._portable(value['directory']/'application.zip',value['payload'])

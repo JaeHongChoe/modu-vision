@@ -4733,6 +4733,14 @@
      "receipt_sha256": "f59c137e1f756974f241f1cb7c5ffe84289f2d652f160d34cb73dd6eb99d2702",
      "result": "Current native macOS user context has0 valid code-signing identities. No identity export, key modification, publisher authority or signature inferred.",
      "scope": "Available native macOS code-signing identities in current user context only; no publisher authority, signature, account provisioning or release approval inferred."
+    },
+    {
+     "kind": "whole-public-browser-and-native-layout-controls",
+     "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+     "receipt": "docs/verification/receipts/2026-10-07-whole-public-browser-a53edf6.json",
+     "receipt_sha256": "0353afe8153e17885d20bc83a61db474b2a978e8c2b9520bbdf76f49160629a2",
+     "result": "185 expected passed/0 failed/0 retried/1 explicitly gated skip with clean owned teardown. Actual macOS schema2 controlled signed layout reviewed, installed, fixture entrypoint executed, changed target refused and exact target restored. Existing portable recovery cases replayed; no new action count.",
+     "scope": "Public generated/controlled/source-display browser selection only. User-authentic pretrained suites excluded; these are preserved as separate owned-model runs. No Windows, representative quality, real publisher/OS installer, physical devices, independent acceptance or72h completion inferred."
     }
    ],
    "file_actions": {
@@ -5509,6 +5517,14 @@
      "receipt_sha256": "6cb3848a0c1b8e7348e43334f1a36173a2c8e2f528f96f856cbc67ceb43d33d7",
      "result": "Actual1 browser case passed in8.8minutes with13screenshots and owned teardown. First job aborted/released; second job completed12epochs36steps. Same-model evaluation, saved ROI[8,8,56,56]/class branch,8-image batch/history reopen and independent-process one-image CPU package parity observed.",
      "scope": "Actual screen-driven browser register/train/abort/release/restart/evaluate/fixed-ROI/class-branch/save/run/node-inspector/batch/reload/export flow, actual backend and CPU model. Browser desktop-folder shim only; no Electron native, GPU, representative quality, human approval, physical-device, real publisher or independent acceptance."
+    },
+    {
+     "kind": "whole-public-browser-and-native-layout-controls",
+     "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+     "receipt": "docs/verification/receipts/2026-10-07-whole-public-browser-a53edf6.json",
+     "receipt_sha256": "0353afe8153e17885d20bc83a61db474b2a978e8c2b9520bbdf76f49160629a2",
+     "result": "185 expected passed/0 failed/0 retried/1 explicitly gated skip with clean owned teardown. Actual macOS schema2 controlled signed layout reviewed, installed, fixture entrypoint executed, changed target refused and exact target restored. Existing portable recovery cases replayed; no new action count.",
+     "scope": "Public generated/controlled/source-display browser selection only. User-authentic pretrained suites excluded; these are preserved as separate owned-model runs. No Windows, representative quality, real publisher/OS installer, physical devices, independent acceptance or72h completion inferred."
     }
    ],
    "file_actions": {
@@ -5693,6 +5709,14 @@
      "receipt_sha256": "6cb3848a0c1b8e7348e43334f1a36173a2c8e2f528f96f856cbc67ceb43d33d7",
      "result": "Actual1 browser case passed in8.8minutes with13screenshots and owned teardown. First job aborted/released; second job completed12epochs36steps. Same-model evaluation, saved ROI[8,8,56,56]/class branch,8-image batch/history reopen and independent-process one-image CPU package parity observed.",
      "scope": "Actual screen-driven browser register/train/abort/release/restart/evaluate/fixed-ROI/class-branch/save/run/node-inspector/batch/reload/export flow, actual backend and CPU model. Browser desktop-folder shim only; no Electron native, GPU, representative quality, human approval, physical-device, real publisher or independent acceptance."
+    },
+    {
+     "kind": "whole-public-browser-and-native-layout-controls",
+     "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+     "receipt": "docs/verification/receipts/2026-10-07-whole-public-browser-a53edf6.json",
+     "receipt_sha256": "0353afe8153e17885d20bc83a61db474b2a978e8c2b9520bbdf76f49160629a2",
+     "result": "185 expected passed/0 failed/0 retried/1 explicitly gated skip with clean owned teardown. Actual macOS schema2 controlled signed layout reviewed, installed, fixture entrypoint executed, changed target refused and exact target restored. Existing portable recovery cases replayed; no new action count.",
+     "scope": "Public generated/controlled/source-display browser selection only. User-authentic pretrained suites excluded; these are preserved as separate owned-model runs. No Windows, representative quality, real publisher/OS installer, physical devices, independent acceptance or72h completion inferred."
     }
    ],
    "file_actions": {

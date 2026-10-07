@@ -1,0 +1,1146 @@
+{
+  "schema": "modu-vision.whole-public-browser/v1",
+  "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+  "source_dirty": false,
+  "selection": "browser --grep-invert @owned-model --workers=1 --retries=0",
+  "stats": {
+    "startTime": "2026-10-07T11:35:29.808Z",
+    "duration": 1873003.891,
+    "expected": 185,
+    "skipped": 1,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "report_sha256": "6cfe26c4146db5eec2b9a99b9cc0e8c88efbfbf87dfcd3168aefe57a09288bbb",
+  "preflight_sha256": "a5ac65f2c951d8d10d7911751fa30977dd7028a1f1603de0f347e49f90da3879",
+  "teardown_sha256": "821714aab62249d01a2808b2cc64da97d70ac2d750c19f85a4aca36974c24676",
+  "retained_harness_inventory": [
+    {
+      "test": "archive-worker.spec.ts \u203a ZIP worker result and failure reopen and adoption requires explicit confirmation",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "a48fcc83e101bd61882edc875aa8b99fad1dcbbac9e0deafdb17dc36d16e9006"
+    },
+    {
+      "test": "browser-team-session.spec.ts \u203a browser HTTPS cookie login opens authorized flow and role revocation refuses writes",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "3b19c01e1a96b2349f1fd7e0552f54123f0dca90eebcabe02e8c0658168d2c08"
+    },
+    {
+      "test": "camera-input-identity.spec.ts \u203a camera input identity form, invalid refusal and saved reopen",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "9f9d558f9bf8f91c6779e000f59fb685fa0c980d5b854ce14ba403500653d92f"
+    },
+    {
+      "test": "capture-intake-closure.spec.ts \u203a captured evidence routes through human review owned adoption and verified original return",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "380886a2b9f5845cfe1395e846befd76af35a19020ec0bfb3121797f38585e1c"
+    },
+    {
+      "test": "capture-safety-controls.spec.ts \u203a capture registration review adoption and sampling preserve records through invalid error cancel conflict and reopen",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "32780c66c782beb630e7342b8c0b6e439d775e8ac10134e53efa12f66573f141"
+    },
+    {
+      "test": "classification-summary.spec.ts \u203a classification import summary matches eligible default loader partitions and reopens",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "02340b25e39695de8594b6d18c57585b342b251ca334a20c8d9e1aec630a7202"
+    },
+    {
+      "test": "comparison-manual-selection.spec.ts \u203a manual comparison pair and explicit empty survive evaluation model changes",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "1dfc49726bfabe8159859863cec0c9aacbec4532b9310f21a8a2b744906cc37c"
+    },
+    {
+      "test": "comparison-task-center.spec.ts \u203a CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "4a10f2cd34fd03b8197e31e4240d3f94bf96822d9c8f64614bc08df08508c7da"
+    },
+    {
+      "test": "completed-model-flag-controls.spec.ts \u203a completed model flags remain marks through invalid input cancel stale writes and reopen",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "2a98332f9f7f34cde5d0cf49d33957e62920943d40def4e329328fca1b6b49a0"
+    },
+    {
+      "test": "derived-source-controls.spec.ts \u203a derived source selection and verified return preserve bytes through empty invalid error cancel and reopen",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "1428eaf38a2252402154b99bbe60f0bab2df5b2fc73d0dc209923f47f60f7a94"
+    },
+    {
+      "test": "derived-workflow-closure.spec.ts \u203a derived edits reach reviewed new data actual retraining fixed comparison and verified undo",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "94a877b3d26f8b4da8f73581e48529e15d3336b8a08ad6397411cc92acc7a86f"
+    },
+    {
+      "test": "diagnostic-download-controls.spec.ts \u203a diagnostic controls preserve exact bundles through cancellation transport failure retry and reopen",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "1d0611717e74300c7f88aa31ea6fdf6a61c2d99622f3487971fdc377cc3f04dd"
+    },
+    {
+      "test": "dicom-integrity-rle.spec.ts \u203a DICOM built-in RLE view selects distinct frames and refuses an unavailable frame",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "c6ef77b8ee6dd5a00cbb4ba226cebbbcd34c42924daa516e738e3f550916d55f"
+    },
+    {
+      "test": "dicom-integrity-rle.spec.ts \u203a DICOM optional runtime preserves source through window errors and reopen",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "e860a06b39858b8270015039a382f037554d4c69adb25cd36ec3d6d5c1c1ee12"
+    },
+    {
+      "test": "dicom-runtime-pack.spec.ts \u203a DICOM optional runtime preserves source through window errors and reopen",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "b3a0f238edc400bc0b79f15dee43757375b86eaa06b935932568b8e072d43127"
+    },
+    {
+      "test": "drift-feedback-model-bindings.spec.ts \u203a drift freezes feedback and reopens review changes with exact model bindings",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "fe8e8aac3b9318efe9cbe9d131a3a9a6dafd9131149685ae337f5d0cf8cd47ef"
+    },
+    {
+      "test": "enhancement-pair-closure.spec.ts \u203a explicit paired enhancement validates imports trains measures compares reopens and exports actual flow",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "9bfb4837489bbddd6d28ea85b10ff9cd17a0633a532446bc3691fcb2c526cf21"
+    },
+    {
+      "test": "evaluation-selection.spec.ts \u203a saved evaluation selection retains exact model and labelset and refuses unavailable records",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "965da92f865a6d7db134f70a94056b1b7be96985dd467d02a62bb26dbb5e6785"
+    },
+    {
+      "test": "evaluation-source-overlay.spec.ts \u203a saved segmentation overlays bind non-square source bytes and refuse missing or changed provenance",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "c38e71c28e93cd405e85244bbbe27e4a3652125690039db7c412b368f7e25ced"
+    },
+    {
+      "test": "field-protocols.spec.ts \u203a field mappings and explicit rejected-to-ACK retry on actual sockets",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "1d4f8028f59ffbad5aaa9f863d40713231cd5676c2b3c80090247ad9563a8b8f"
+    },
+    {
+      "test": "fixtures/harness-smoke.spec.ts \u203a browser renderer reaches the owned backend through the token-holding server",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "9f7066e17b5740dffb644e5d055b7edc62d33c165bd08feecb1445dd99a30e5e"
+    },
+    {
+      "test": "fleet-actual-rollout.spec.ts \u203a actual authenticated CPU fleet canary, disconnect continuity and rollback",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "20cceec5bc35ceae18ed0fda533d591f4ed4fdb19898cd1d1d85e4a726873161"
+    },
+    {
+      "test": "fleet-credential-migration.spec.ts \u203a legacy fleet credentials migrate from the app with failure recovery and reopen",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "241002efee99784dbe152fb074d1e2ccb1ca39af1f56e5b1338ad0dd344f3148"
+    },
+    {
+      "test": "fleet-emergency-rollback.spec.ts \u203a emergency rollback requires reason and authenticated capability (reviewer)",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "6c42f169b0624326fd5b16fe5979f4dafb2b1d77a472137949ab3d4ead8364d7"
+    },
+    {
+      "test": "fleet-emergency-rollback.spec.ts \u203a emergency rollback requires reason and authenticated capability (owner)",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "7c7f9c7d42a943528037be99f32c67748436f6bd343cce3ad880f639cb58f5b0"
+    },
+    {
+      "test": "fleet-emergency-rollback.spec.ts \u203a emergency rollback requires reason and authenticated capability (readback)",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "b8db2cedf3d6b8797f63d342b61889115bf30b38b7c66c698c1a8c6bb16ee2d9"
+    },
+    {
+      "test": "flow-comparison-integrity.spec.ts \u203a actual A B partial ROI history reopens and quarantines changed envelopes",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "79255a24a3c27295df960140cf703b0f9dcef58c6420f74a391dd5db0ee66c57"
+    },
+    {
+      "test": "flow-debug-model-freeze.spec.ts \u203a actual CPU debug cache and frozen model A B survive history reopen",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "8d3a3c483d7dc484cfc9b62020178b395484763e10e3f8c5bb31aab439ed41bc"
+    },
+    {
+      "test": "flow-inspector-large-dag.spec.ts \u203a supported large DAG inspector resize collapse and reopen preserve graph",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "0c1dd062b93bbeb8b8c5aa9781da56973800ff56cecff4e919a30ff014da09f2"
+    },
+    {
+      "test": "flow-navigation-record-bounds.spec.ts \u203a actual graph search and minimap preserve graph on navigation and reopen",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "97c20bc020abd595a6484d8b6504b22d7877af0d4d21403d4f24b6960e96d5f7"
+    },
+    {
+      "test": "flow-template-draft-history.spec.ts \u203a cross-project model class mapping preserves source and recovers draft",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "f1b26eed0ef5ca0288e4b8d4a06a4deb652a1a8afbc9b82d3639c69f666d8408"
+    },
+    {
+      "test": "flow-template-safety.spec.ts \u203a template save and explicit mapping preserve originals across errors cancellation and reopen",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "2e344425a2b107809ef644c9eaaf84a1a2cdc9c1c783c6b9a8703784fe581099"
+    },
+    {
+      "test": "image-library-closure.spec.ts \u203a metadata and error filters find an image outside the first 200 and preserve its reopened identity",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "d22f82b378f74a577b3334b275984684544e1e7dafb2cfb883e278bc58155fff"
+    },
+    {
+      "test": "inspection-input-queue.spec.ts \u203a folder inputs persist a paged queue, retry and explicit replay lineage with exports",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "72836a44078d312c5f3d3d8230407e44b698fe8679dc630bd9a4abdd59249f27"
+    },
+    {
+      "test": "inspection-traceability.spec.ts \u203a part identity, reinspection lineage, separate review and filtered exports persist",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "19d6ed3810375e948f71239b1d178c1e7baf89c617565618593c90271eba6d97"
+    },
+    {
+      "test": "keyboard-action-wait.spec.ts \u203a keyboard activation waits for a saving-disabled target instead of activating its opener",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "470d92d28053d4d93bb45a1784df4f3f5799bffd19f7fdcedf95d3261e98fc4c"
+    },
+    {
+      "test": "keyboard-canvas-closure.spec.ts \u203a keyboard graph and original ROI survive window and display scale changes",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "f04254119026ff649141cbc219cf0f43d1ba51d8c48c0435929fbfdaaaf48e8d"
+    },
+    {
+      "test": "keyboard-modal-isolation.spec.ts \u203a modal keyboard cannot edit the selected background annotation",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "90e5fc8f0ca012d2619297e0b552966d5d766b3a84690c6ea0f5346f0cbefc57"
+    },
+    {
+      "test": "label-format-roundtrip.spec.ts \u203a app format bundles preserve two nested images and native class meaning",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "c623bda9875b674c476e49e2389d19cbbd8e6a368331c97378a192ec5c21a14f"
+    },
+    {
+      "test": "label-prompt-exclusions.spec.ts \u203a exclusion controls stay image-specific and missing learned provider remains blocked",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "0630183311e4d937f2728eb562f9f413acd8cd82d3eb50dc4a0e73bf126d81aa"
+    },
+    {
+      "test": "labeling-mask-content.spec.ts \u203a two-class brush erase undo redo and reload preserve exact mask content",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "afa054e1f06ff10386fd04a3d8a011326e4fa7142c924346c38412b7d1e872ca"
+    },
+    {
+      "test": "labeling-vector-content.spec.ts \u203a bbox polygon OBB and independent direction retain exact saved geometry",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "127788906fdc59fe324f5d162a14f39478283f56b484fddceed6e9516e17894b"
+    },
+    {
+      "test": "library-selection-controls.spec.ts \u203a library selection waits for saved identity and preserves cancelled failed and retried filters",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "ae3bdb845fe98185f141c02bc3a42e1bc19da6d93267693abb5db782c3ee903f"
+    },
+    {
+      "test": "library-selection-controls.spec.ts \u203a library selection refuses an actual changed original and recovers its exact restored revision",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "42bbdb8eb97a979d7fe839b4bcd3844aa07e97e1bbf469c4ea8f2e9aa0a1bc92"
+    },
+    {
+      "test": "metadata-truth-closure.spec.ts \u203a review metadata named flags colors and statistics reopen without declaring empty labels normal",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "75e99dabbdc7a62b4a715f2f15cb1c229763614982643a5631249f0670f9a3b6"
+    },
+    {
+      "test": "model-execution-support.spec.ts \u203a ten family support follows actual recipe contracts",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "ddf8062ba108cd8725a4a7e23971e9a1024e60e2bfa86f6f191bfd0f651db16f"
+    },
+    {
+      "test": "model-execution-target.spec.ts \u203a browser native action preserves CPU receipt and fails selected server without local fallback",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "102b9bfc0bc3588a95a606e5eb8b45f1af19f5ac215dbe3d43c475b9835d9627"
+    },
+    {
+      "test": "native-update-layout.spec.ts \u203a macOS native layout review shows signed internal links and refuses changed installed targets",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "1d414d6d1fe7844e94788980eb4717d70b83f49d2213074caace250e060c0445"
+    },
+    {
+      "test": "ocr-actual-training.spec.ts \u203a actual OCR screen rejects unknown Korean charset and trains evaluates reads multiline and exports exact rules",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "6e93d5563d309084bd7c59ee15ed64f3a09f4c7308f3d486247825bc2cc79278"
+    },
+    {
+      "test": "ocr-fitting-content.spec.ts \u203a human OCR text and three fitting modes save and reopen exact native content",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "eabfd0c621f9a75407b0d99f0513a1a1252a45751a279efcfa96d5092170398f"
+    },
+    {
+      "test": "offline-release-boundary.spec.ts \u203a browser shows desktop-only offline verification without requesting a file",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "86625b8c95f94b5f5f80de0cdbb84cd44d9b33be0cf34bf62a4e1613af67a876"
+    },
+    {
+      "test": "operations-observability.spec.ts \u203a persistent operations pages, scoped traces and opt-in failures",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "22761a0010f6fe5806812b867d4efc900de47e5b094599243d28918e2357bf4b"
+    },
+    {
+      "test": "pixel-evaluation-layers.spec.ts \u203a saved labelset evaluations expose exact truth, prediction and error pixels and refuse stale masks",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "37a69ebb2b82d8537d68d8fd4fe438ac8f6ecca2dbe4ae377f3f6fb4cec17e11"
+    },
+    {
+      "test": "pixel-mask-roundtrip.spec.ts \u203a app pixel-mask bundles retain holes palette and exact image identities",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "a2703d110f182b25b9f0abae8e282a2130d8a658ddc962c564688c48e4a54a09"
+    },
+    {
+      "test": "portable-update-review.spec.ts \u203a portable review binds actual signed bytes and preserves new writes through app recovery",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "f9cf858c665af2796fc1dc0df0f2611b266fcc8317b6150eb986a92fa022e71b"
+    },
+    {
+      "test": "project-archive-controls.spec.ts \u203a archive controls preserve originals across invalid paths cancellation transport errors and fresh restore",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "3ffd467614848aa4434777aa60ff7618fb70d20a3a6971f1589fa91328b488b9"
+    },
+    {
+      "test": "project-display-controls.spec.ts \u203a project display controls preserve labels and concurrent preferences through errors cancel and retry",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "761f91d8356b09277d0a43c3d96c5cdffbbe91d90f5aa4179049ea503f1cd7c3"
+    },
+    {
+      "test": "project-lifecycle.spec.ts \u203a actual app template and fresh archive relocation preserve model source versions and review history",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "a54c9298c5436be892d1db52532fb02c98fd06fc9603da27344ac904927a6ff8"
+    },
+    {
+      "test": "project-recovery-closure.spec.ts \u203a project archive restores labels review records SQLite and recoverable retention into a fresh workspace",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "0d8d098a5471ebf962ee90f667524f8c0fb5af079d9a25326b957bdf3e1fec01"
+    },
+    {
+      "test": "provenance-closure.spec.ts \u203a source label split model flow and historical result trace survives revocation and source changes",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "41230ed77efc862df89e864684c52bbed3e5dd0fe3f913b50421638c3176fb43"
+    },
+    {
+      "test": "raster-evidence.spec.ts \u203a stored ROI mask and heatmap match CPU inspection and exact node output",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "5ef88d2310f261735d9be5ed9e10c69d41cb9c52e9338ab941c7f04ccaabbc15"
+    },
+    {
+      "test": "readiness-grouped-split.spec.ts \u203a declared original families grouped split receipt and task diagnostics reopen",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "a6916f596e2f6f4dd8bf71e59579ba6355001f81334d1144606561c81c03c04c"
+    },
+    {
+      "test": "retention-preview-closure.spec.ts \u203a reviewed retention refuses stale bytes and preserves cancelled failed and restored artifacts",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "425730a67bcaef8e5a1a9552a12203f8f5936e31835b5f74c6f03ff8d76264c7"
+    },
+    {
+      "test": "review-queue-content.spec.ts \u203a saved review queue preserves priority cursor and reviewer without approving labels",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "dd581dbb9d2bf08aa94bebb7934f9895fcb65a9d695ce2808a7c9f435f4aa5c1"
+    },
+    {
+      "test": "review-queue-handoff.spec.ts \u203a saved queue returns to exact evaluation and gates training on saved data and policy",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "2ad99257f15aa0acc8a2efc6e9d166d569c80dd8c4c9becf63414b1cf49df262"
+    },
+    {
+      "test": "rotation-actual-training.spec.ts \u203a actual rotation screen labels trains evaluates aligns exports and reopens exact learned direction",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "9db5629b887f90ddc6f934556df986ce03e874cb8c9ef978f437a4bac7732eb3"
+    },
+    {
+      "test": "runtime-optimization-binding.spec.ts \u203a optimization lifecycle refuses missing input and failed submission, cancels exact job and reopens",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "ddad6ad095ffbe56e7c10acd3c710e5e7a282ffe01119b4be54c900de265c3ee"
+    },
+    {
+      "test": "runtime-optimization-binding.spec.ts \u203a optimization renderer refuses cached source and foreign poll responses before review",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "5871b92d7152029ecf410a2c98554cd573929972e2c207aaf7be34a4cb8e9003"
+    },
+    {
+      "test": "service-data-validation-status.spec.ts \u203a the data step calls a validation complete only for an active version that read the whole, current source",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "2eaff1b81a3a22d3bcf47d6e0cd04357698ba563066944ad78074875c1d27618"
+    },
+    {
+      "test": "service-data-validation-status.spec.ts \u203a an unchanged excluded unreadable image stays validated and recovering it requires validation again",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "99f16fb29b915e59402271fb8e6157be06a4a90dbf6152df45593b2c7e8e55d9"
+    },
+    {
+      "test": "service-e03-calibration.spec.ts \u203a a calibration is made from known lengths in the measurement editor and refused when a length disagrees",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "b35b36a4e5f256108ad39befbe787a7bdc58cbbf020e261937c8e18a915acb76"
+    },
+    {
+      "test": "service-e04-activation-race.spec.ts \u203a late activation reject cannot change the current editor after changeAuthority",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "208771b1948dd4bc9c0f95a6e42409b0b7677f53bc7505ef83577238f385513f"
+    },
+    {
+      "test": "service-e04-activation-race.spec.ts \u203a same-scope activation error remains visible and keeps the editor base",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "7adbd5cfe1be669042bcd47900566734bf97379e7438f957577e16000745884d"
+    },
+    {
+      "test": "service-e04-activation-race.spec.ts \u203a late activation resolve cannot change the current editor after transportRoundTrip",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "d8a48222ed31ce31115723ae4277355c80c7d68d030852500382fa7a65520083"
+    },
+    {
+      "test": "service-e04-activation-race.spec.ts \u203a late activation resolve cannot change the current editor after switchSource",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "646dea2b00c32f5b53ccae6a65dac9e78e75498fee7e6c8dad70f511b87aed97"
+    },
+    {
+      "test": "service-e04-activation-race.spec.ts \u203a same-scope activation success advances the editor base and refreshes the active version",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "565d76fc453c1d83eef255eabe7b820a96dc45321215cb0d564969df89eb7a3b"
+    },
+    {
+      "test": "service-e04-activation-race.spec.ts \u203a late activation resolve cannot change the current editor after reset",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "0a34d7ecd0e2ac819b6215976389059b46c7e8b3392c0bc441d5303cc2363506"
+    },
+    {
+      "test": "service-e04-activation-race.spec.ts \u203a late activation resolve cannot change the current editor after remount",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "a74d556170bf32a5ce326c469c70b1c8fb0bed6ff4674ae06fe2e54da3e2e7a4"
+    },
+    {
+      "test": "service-e04-activation-race.spec.ts \u203a late activation readback errors cannot appear under a new authority",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "58bbb1243b81920b4a3d5621e39e60d51257c7890d677782058a30680c2e607b"
+    },
+    {
+      "test": "service-e04-change-record.spec.ts \u203a activating an earlier version shows what it changes and records the reason",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "023e52dd4ad6d42e70de8de224cc8ea7dcb41deb76a1651b22a82978f18b772b"
+    },
+    {
+      "test": "service-e04-change-record.spec.ts \u203a a rule change is saved with its difference and reason, and the record shows the running release",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "2a6f658263cc0a4390e2c629706f4c683aac25180026ad3d5f336be501b6f3ff"
+    },
+    {
+      "test": "service-e04-change-record.spec.ts \u203a a save after another editor saved is refused before and by the server, and the edits stay",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "bae1ddb0e833cbb7374d5fedf97b4e22de5e0e7ac6c03f79c98a64d77b12dcba"
+    },
+    {
+      "test": "service-e05-gold-review.spec.ts \u203a a labeler set compared with approved gold images gives placed conflicts, stales when gold changes, and keeps gold out of training",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "8bc2179e5f59b030b1430359ba6691026e2d2d654e669b740e71e6af5fb66acf"
+    },
+    {
+      "test": "service-e05-image-open.spec.ts \u203a gold result outside the gallery stays selected while labels load and opens the actual canvas",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "275babf10b487c9e597b4b5af6cf7ab434581d3ad559743e151e5616946b97bc"
+    },
+    {
+      "test": "service-e05-image-open.spec.ts \u203a late image labels cannot restore the previous selection after a real project switch",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "c170949223e21823646448ca2926f9d992852f3e63d5cd24c0ff06804957898c"
+    },
+    {
+      "test": "service-e05-image-open.spec.ts \u203a late image labels cannot restore the previous selection after a real labelset switch",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "ad50e30072adeb5a9c2152a3ba658d9c1d44cf8d53636565dc8312a3d216030f"
+    },
+    {
+      "test": "service-e05-review-race.spec.ts \u203a late create cannot issue report writes after switchLabelset",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "53771cdc0b05530414f14ad81c5ca4a0c4b1748abaf7e1323114a4b20c52ad31"
+    },
+    {
+      "test": "service-e05-review-race.spec.ts \u203a late create cannot issue report writes after actorRole",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "32cdeaaefd0f7c026801004bcc757fa3b0126934b897b3129cb0c9c3ff660992"
+    },
+    {
+      "test": "service-e05-review-race.spec.ts \u203a late initial profiles cannot overwrite a newly selected project",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "14c19d5b3581bcd0a87cc66929282b19c563d19d85c07844ddf3319d33f4c6f5"
+    },
+    {
+      "test": "service-e05-review-race.spec.ts \u203a late create cannot issue report writes after unmount_project",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "196a27a160948a3a3040a0da84a8a816d8b07ac5d304a81c68b1f1221d642656"
+    },
+    {
+      "test": "service-e05-review-race.spec.ts \u203a late report read cannot appear in a new labelset",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "b1a7cd8be950e9e71be95254b6dc3332661fcf86f61be0da3d4e06178c692ec5"
+    },
+    {
+      "test": "service-e05-review-race.spec.ts \u203a late policy reject cannot affect a new actor or role",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "502142be33c303081a63b5f26d121759eb3a71f7e6c702e8a3b7bd3eda9363e6"
+    },
+    {
+      "test": "service-e05-review-race.spec.ts \u203a late create cannot issue report writes after transportABA",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "80cd7d0bc1350bfdfc46a13c9b6646ab44c34a0571aa38eec40b7a8c74506e0d"
+    },
+    {
+      "test": "service-e05-review-race.spec.ts \u203a late create cannot issue report writes after projectABA",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "62fa1f842c1bcbf099bd92e25161aedcadc6cd99f4bf0ecc50b249db5e64f755"
+    },
+    {
+      "test": "service-e05-review-race.spec.ts \u203a late real image-open continuation cannot close a replacement review",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "48f8ff7b7ac9ceb25f39ef61f6b000bc10826a4b778a8ed7ff2659c8211d6520"
+    },
+    {
+      "test": "service-e05-review-race.spec.ts \u203a late policy release cannot affect a new actor or role",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "3bcb2eeda5bcc4236822c09d6fdfffa029b34fbacce4cbfc8ec4108a44f7b76b"
+    },
+    {
+      "test": "service-e05-review-race.spec.ts \u203a same-scope create, saved report, policy and actual image opening remain usable",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "f5c4c4ab1e655bff796fcc7cdf059792f66444fd6d00c5e7a1fe18bc1c82988a"
+    },
+    {
+      "test": "service-e05-review-race.spec.ts \u203a same-scope saved result read, rerun and retirement remain usable",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "a8fa4794e2a91fe1a3c79dda82744fa1bc58f17be078c98a464b188a38e16c9b"
+    },
+    {
+      "test": "service-e07-preflight-race.spec.ts \u203a a late preflight reply cannot claim readiness after selected target changes",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "8a282a8df67e9281c16da47470e48ae29df1548b94b66359fbdc21762ea9dce5"
+    },
+    {
+      "test": "service-e07-preflight-race.spec.ts \u203a a late preflight reply cannot claim readiness after edge target changes",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "36989575e44a141448442128dcea96db45e00d55c1273e34f02e4570381f9967"
+    },
+    {
+      "test": "service-e07-preflight.spec.ts \u203a the preflight maps a missing model to its node with a remedy, separates this computer from an edge target and reopens",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "9af9f4db5251b55433c0b0620d54c5ec4b55fcd6603008eb1f846c2d9707906d"
+    },
+    {
+      "test": "service-labeling-focus.spec.ts \u203a focus editing gives the labeling canvas the window height, refits the image and is remembered",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "d9a5c7eca3e98b28b12cd3c4614cf7569b5ac7210ea22af56283dea9a560d2ee"
+    },
+    {
+      "test": "service-labeling-focus.spec.ts \u203a the shared editing lock is taken, renewed and kept in focus editing, and a remembered focus layout can save",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "bfbdde5577ac92d1fc4dad842529d64c8900dd3f5f3e7e714e1d79e3b57d7a37"
+    },
+    {
+      "test": "service-s0-05.spec.ts \u203a S0-02: a raw distance threshold of 8 is saved, reopened and used for the run",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "36436501f828542a83bd8cf5923712160d4a10656eea736a01f8bcf54be53b07"
+    },
+    {
+      "test": "service-s0-05.spec.ts \u203a S0-05 flow canvas versions \u203a an inflight run refuses layout moves and records changed rules as an earlier version",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "bab7935ccedaebbcd7ef04eec6f58ecc1b6a30dff2a7c7508e1a86c43d2cf22f"
+    },
+    {
+      "test": "service-s0-05.spec.ts \u203a S0-05 flow canvas versions \u203a a layout move keeps the run current; a rule edit makes it an earlier version until undo",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "c65fedf4a02b7752280b6bf5c861d534506ad9f87454c1f6c821ecb091159a23"
+    },
+    {
+      "test": "service-s0-05.spec.ts \u203a S0-05 whole-flow evaluation \u203a the shown evaluation stays marked for re-evaluation when the re-read after a truth save fails",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "c45b5a4bca57850707610e86fff086e36567d1727d634b85b9fed886212fb974"
+    },
+    {
+      "test": "service-s0-05.spec.ts \u203a S0-05 whole-flow evaluation \u203a an error image opens in the image viewer",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "b3f39ba2758a1fc9e55166b5f6ac656ef070eae8e7a0ac2393bfc64b1d2051f5"
+    },
+    {
+      "test": "service-s0-05.spec.ts \u203a S0-05 whole-flow evaluation \u203a an evaluation of another version is never shown as valid for the selected version",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "6a831f5d8bc2d8dbdae48b1d426db05227b9d0a1e49b64c240ea560577f69daf"
+    },
+    {
+      "test": "service-s0-05.spec.ts \u203a S0-05 whole-flow evaluation \u203a saving an explicit truth marks the shown evaluation for re-evaluation at once",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "fc279a66631b1a425a678887151d7f88fce067f5ca2a9444aeccf7c1efbaad79"
+    },
+    {
+      "test": "service-s0-05.spec.ts \u203a S0-05 whole-flow evaluation \u203a an evaluation finishing after a version switch does not replace the selected version result",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "ef93a35c200ddbd18786cab8b3f27fc30415efc9be36be7774620aa5b8d4fb6e"
+    },
+    {
+      "test": "service-s0-05.spec.ts \u203a S0-05 whole-flow evaluation \u203a an error image can be run on the flow canvas",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "5cf58096ef99fa1c5fa67cba87d633f70c095a2b7e3f051ac606f9580647e501"
+    },
+    {
+      "test": "service-s0-05.spec.ts \u203a a refused model family change keeps the active family and says why",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "3bb239e0284e4da5fd5cf4ed693ae17810612e02f9eaa8dd94903b6802952d6b"
+    },
+    {
+      "test": "service-s0-06.spec.ts \u203a renderer policy allows a configured HTTPS shared server but not arbitrary plain HTTP",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "a9f69c7880b12332a54b9575ed7761d46b1a2562a826391316ab5c240d5969ba"
+    },
+    {
+      "test": "service-s0-08.spec.ts \u203a S0-08: a model trained on the actual backend carries its calibrated threshold into the flow; a saved raw threshold of 8 is reopened, kept by an earlier version and used by actual runs; an unsaved flow refuses a task change",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "197405eed1932215a2eeb1691448391ff31e5ceaeed3a79b5ce2d447764a6458"
+    },
+    {
+      "test": "service-s1-05.spec.ts \u203a S1-05: a CPU preflight from the model hub moves the classification stages from unverified to verified",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "3a4afee0427037ef0f7abeb4bd14935501b52b73bb6b6bc1839fea223b690d37"
+    },
+    {
+      "test": "service-s1-10.spec.ts \u203a a plain browser explains that it cannot open a folder dialog, and paths are typed in",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "fa92d010a958a9e5bd8178010e26a2d142ca9f6777d0b6dcc306f71ac3e1fce0"
+    },
+    {
+      "test": "service-s1-10.spec.ts \u203a the desktop bridge offers the folder dialog",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "0044bbed386513d3870e05f1d1f4caaf6ff4fdfc99312167fded4f3817751b4f"
+    },
+    {
+      "test": "service-s1-10.spec.ts \u203a the job event cursor starts with a reset and continues with what the ledger records",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "82bd9843742ab00742441dddf58dc1623cfa5bbb87d98441fa829a0373fc9f18"
+    },
+    {
+      "test": "service-s2-01.spec.ts \u203a S2-01: a first start guides the order and builds the example end to end on this computer",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "4e614171f547f7bd2490af257ab0cc8202ebf1202286df51b59ff75ee2e3fa8d"
+    },
+    {
+      "test": "service-s2-02.spec.ts \u203a closed current request cannot replace newer evidence after reopening",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "1a313e2195880d03c8cad7c1c117af1df31cf70d5c0cd148089b207e2c4a8079"
+    },
+    {
+      "test": "service-s2-02.spec.ts \u203a closed legacy request cannot replace newer evidence after reopening",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "a96fb2782c7bb8998852a561116fdbc4a96473758cecf8d1a72e9818aec1bdba"
+    },
+    {
+      "test": "service-s2-02.spec.ts \u203a impact workspace uses accessible shared controls at 1920x1080",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "251f2b07abad31c361a039851a9d01e1689faac65df685a13ec9adb77c3dbdde"
+    },
+    {
+      "test": "service-s2-02.spec.ts \u203a impact workspace uses accessible shared controls at 1366x768",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "3d1ea792a3cfc0df4239eb8bd083fabb93d84591267477ee69703a8bc25e7562"
+    },
+    {
+      "test": "service-s2-03.spec.ts \u203a approval missing comparison has a focused recovery link",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "539569a5a6e0f5430174977474b8fdbb8f1c8f007af950d54d413d867d862566"
+    },
+    {
+      "test": "service-s2-03.spec.ts \u203a blocked training and deployment expose a visible recovery destination",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "67e1097c2a92c91ec6ff50512b771db676bd6805ff7341e527b8901117958bf6"
+    },
+    {
+      "test": "service-s2-03.spec.ts \u203a model family choice uses the same cancellable task impact preview",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "ba51a969ce880e1ee6e2fdd89444ef0f9b85a1de1802a71dec7fe7f7bc2b30a1"
+    },
+    {
+      "test": "service-s2-03.spec.ts \u203a new readiness reply wins and failed read stays unverified",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "54ff7589cdb5e314fd02221eb8a78112aa62274e7a8c7b7725c0e24cfcb27262"
+    },
+    {
+      "test": "service-s2-03.spec.ts \u203a six stages expose readiness without blocking manual navigation at 1366",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "4143d71d92cd5c1e68be9512ae5c97dce662beee3f4fb43415d672d12f9a38c3"
+    },
+    {
+      "test": "service-s2-03.spec.ts \u203a six stages expose readiness without blocking manual navigation at 1920",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "e3a56c2694388d36f60f5708befc0854e6164c4ff3f21623c7f73a71bec5d4fd"
+    },
+    {
+      "test": "service-s2-03.spec.ts \u203a task change previews impact; cancel preserves task and confirm applies once",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "dc40dbf99871abdd59ac93e4d4c7689af523e8c112dea4015bc9e43b78978809"
+    },
+    {
+      "test": "service-s2-03.spec.ts \u203a task refusal preserves active selection and exposes the existing failure",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "c7a76f0359fc5b85f71740fe1421f9b380853f1b288a858595d9bd917081ff64"
+    },
+    {
+      "test": "service-s2-04.spec.ts \u203a approval readback is explicit and invalidates after semantic editing without claiming target deployment",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "e282b27ecac38abb31f84ed7918388a3b6cf3b1c9722e2e4a72a34af979a68e4"
+    },
+    {
+      "test": "service-s2-04.spec.ts \u203a four work areas preserve their identities at 1366x768",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "569381b6a99f3f98df9e01a47679a180232cdae748dfc02917ea781c98339397"
+    },
+    {
+      "test": "service-s2-04.spec.ts \u203a four work areas preserve their identities at 1920x1080",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "d9bbb21361dacdc079919c8f02d45eed71d3b13a2f071da0fa1c29a8a4459fcc"
+    },
+    {
+      "test": "service-s2-04.spec.ts \u203a model verification refusal and cancellation during held verification preserve graph",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "684a78ca46995e6995e6a4722a8edfff12eb913e9a4737d66b51b3d4ddd1e118"
+    },
+    {
+      "test": "service-s2-04.spec.ts \u203a recipe cancel preserves current DAG; explicit mapping adopts raw-distance model as unsaved draft",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "e7989293b7fd1795c4c8867df3e977c020c25e046b4b243fb4d265aa6c7f0083"
+    },
+    {
+      "test": "service-s2-05.spec.ts \u203a an added model shows its own problem, the wrong output port is refused and the right one connects",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "d878aaf31c18f00f322f11afd15c3efb1645c56d01ef2a0f813461734a228974"
+    },
+    {
+      "test": "service-s2-05.spec.ts \u203a every wire starts at its typed output port and ends at its input port, including older untyped edges",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "e42600fccca2573bfba5edf32f5ef2da95ee8fa2c9b6f1cabb543ed129d421ff"
+    },
+    {
+      "test": "service-s2-05.spec.ts \u203a the decision states how an image that met no condition is judged, and the choice stays with the flow",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "60b3a75c8c50b0eae1cd39f0fe9a852db3bb4c484a6c1d68420a512dfeac19de"
+    },
+    {
+      "test": "service-s2-07.spec.ts \u203a fixed test images are kept by identity across a reload and a removed image is reported",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "6589c8f8c9b77dfd4aca21222e67318c2832cf4436aad536c9d9d3acca38e55d"
+    },
+    {
+      "test": "service-s2-07-invalid-images.spec.ts \u203a a damaged image can be inspected but cannot enter the fixed comparison test set",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "3398f4cc1d1954beb83b071c87fea0518b57ae871bfda05db3f4dc9ea4f9beca"
+    },
+    {
+      "test": "service-s2-07-list-recovery.spec.ts \u203a a failed validated next page recovers through its exact cursor and preserves the selected UUID",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "257c0154f26aed528463b5294cfbd1e3c2aaacc08834f87251af2e3ef426649b"
+    },
+    {
+      "test": "service-s2-07-list-recovery.spec.ts \u203a legacy image picker retries the same page without replacing its confirmed selection",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "776d0aaade4c7b4874fd88c908f4c8c3ae26af8b804eeaffcc634e97c00170d3"
+    },
+    {
+      "test": "service-s2-07-list-recovery.spec.ts \u203a legacy fixed test paths survive listing failure and manual recovery in the same panel",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "c6edd96d4b6c8549b13d435d570480925ce1a1519a5b676dac4cd8f2da03f9bf"
+    },
+    {
+      "test": "service-s2-07-operator-choice.spec.ts \u203a operator choice restores exact identity, blocks changed content and remains empty after clearing",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "55199182018c10bc3c17dea0a0a342f3babaf42fd6f14c5f53f5a3acad2b705a"
+    },
+    {
+      "test": "service-s2-07-package-cohort.spec.ts \u203a package comparison choices survive reload, retain changed images and require explicit reselection",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "035606e1378a341f7f66fa90e618ba06da94ce4b703e2871bb39b9ae311138e4"
+    },
+    {
+      "test": "service-s2-07.spec.ts \u203a the inspection image is chosen by identity and a moved image is reported, not re-selected by path",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "0282331d69863a7ea596f03db0f8fb8a2c4b1c75bebe684d553338c4bd02f1bf"
+    },
+    {
+      "test": "service-s2-09.spec.ts \u203a a job left running by a restart reads as interrupted in the task center and in its workbench, with the same next action",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "1eb9ea1f23d4c1e0d8c9bdf1bf4215433776122ff92e3e8ac18b77bc9ac119fe"
+    },
+    {
+      "test": "service-s2-09.spec.ts \u203a a saved stop whose server observation is refused stays unconfirmed without offering a second cancel",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "1cd0801f4d6f6915360e4488c1d65e8705759bcce0890b1c02717154ef7f270a"
+    },
+    {
+      "test": "service-s2-09-incumbent-selection.spec.ts \u203a specialist replacement selects saved incumbent evidence: matching",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "5630ead7d4d0c929153ae55f379a72c34ab6e6a7f750795c277c39103d8913aa"
+    },
+    {
+      "test": "service-s2-09-incumbent-selection.spec.ts \u203a specialist replacement selects saved incumbent evidence: failed read and missing comparison",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "0bd836c6518ddcc4d6df800f669a0156c489a83b83769445a462b0329bb66c63"
+    },
+    {
+      "test": "service-s2-09.spec.ts \u203a local patch reconnection refused keeps the same job and never submits training",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "a02b79a7cca8254c36a00a8b126e76f2a124ee02d8be18107387ce697d51d085"
+    },
+    {
+      "test": "service-s2-09.spec.ts \u203a local patch reconnection observed keeps the same job and never submits training",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "53b54808658c653b9c8de04679cada48ee89d3bd62b1d9ccd67f08d2241589b6"
+    },
+    {
+      "test": "service-s2-09-parent-summary.spec.ts \u203a ocr parent selection displays saved context without inventing missing completion",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "0fd067b9804ffac6fb8635121b25aece15423fad8d9ec6bf4fbdc2bacb71d714"
+    },
+    {
+      "test": "service-s2-09-parent-summary.spec.ts \u203a core parent selection displays saved context without inventing missing completion",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "7c7efb245b88839d09de5a6072d84481040b36d6a6189618b92481d9934f35f9"
+    },
+    {
+      "test": "service-s2-09-patch-scheduling.spec.ts \u203a remote scheduling keeps prepared patch input and forwards a bounded runtime without launching training",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "be601fa06d8a4e93ce6b56b5a9715cf71fb504ce5506b75938f6e8a164df7beb"
+    },
+    {
+      "test": "service-s2-09-patch-scheduling.spec.ts \u203a refused scheduling keeps prepared patch input and forwards a bounded runtime without launching training",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "b587e2a577aeaca625150c3a491ece64fc8c57a857df9d4478b555b329bbeee0"
+    },
+    {
+      "test": "service-s2-09-patch-scheduling.spec.ts \u203a local scheduling keeps prepared patch input and forwards a bounded runtime without launching training",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "a77caa87ce9c2920e23f43ce7f6388dafcc6423c06931b9d0c6789dc1e4d289a"
+    },
+    {
+      "test": "service-s2-09-runtime-budget.spec.ts \u203a the app submits runtime seconds and the owned CPU job reaches budget cancellation with its reservation returned",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "f4dffe5a862d45b006445954ca0a43c63e8fed50769016f2c898de801af324a8"
+    },
+    {
+      "test": "service-s2-09-runtime-budget.spec.ts \u203a invalid runtime budget blocks the real core start action without submitting a job",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "05815e27c3f647bd0b0579823b340a1bb4733a4797e10d675d41de3524f6ec85"
+    },
+    {
+      "test": "service-s2-09-specialist-runtime.spec.ts \u203a rotated-detection local runtime is validated and sent with its prepared input",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "1b9d3df6f911151834f162515499288169633655081ad6eef291368325f299bb"
+    },
+    {
+      "test": "service-s2-09-specialist-runtime.spec.ts \u203a rotated-detection remote runtime is validated and sent with its prepared input",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "52ce414b38ca24749a875c090c41cae9ddfad058a18e0c40fb2ac83789f98e48"
+    },
+    {
+      "test": "service-s2-09-specialist-runtime.spec.ts \u203a enhancement remote runtime is validated and sent with its prepared input",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "58ac4cc524ac08a9ae76493c3620d7b94b3f0cbe28d211c33f065d1a06962d10"
+    },
+    {
+      "test": "service-s2-09-specialist-runtime.spec.ts \u203a defect-gan local runtime is validated and sent with its prepared input",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "b30a21d61b23b470886717880521ce26f3ba2f1c5d5ad51e65b5859cf70a22c8"
+    },
+    {
+      "test": "service-s2-09-specialist-runtime.spec.ts \u203a rotation remote runtime is validated and sent with its prepared input",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "216b9daf88478a95140b48d8bf17d7f46871774d2f35673e17beb398cffec4c1"
+    },
+    {
+      "test": "service-s2-09-specialist-runtime.spec.ts \u203a ocr remote runtime is validated and sent with its prepared input",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "dc85c62746e51820931018e116453a8022733083e51a7c5dd571af3c4e13ad24"
+    },
+    {
+      "test": "service-s2-09-specialist-runtime.spec.ts \u203a real owned CPU rotation training reaches its runtime limit from the app without manual cancellation",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "077ea9d677b21d66bb64d05b42fe70ceec485802c5ea3bfba49e7cbce4e403a8"
+    },
+    {
+      "test": "service-s2-09-specialist-runtime.spec.ts \u203a rotation local runtime is validated and sent with its prepared input",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "d8443e84e1f61d33f3315e275a3b8c20c9b306657543a79da278d89aa7076f40"
+    },
+    {
+      "test": "service-s2-09-specialist-runtime.spec.ts \u203a enhancement local runtime is validated and sent with its prepared input",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "ea2539ec7568b067d93044ba23c566f23751aea1474f35da15e0f8da55ce08a0"
+    },
+    {
+      "test": "service-s2-09-specialist-runtime.spec.ts \u203a ocr local runtime is validated and sent with its prepared input",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "ef944c39479158bdbb3109f40c307bd903a131df91ddd5369868fa417d1b27e8"
+    },
+    {
+      "test": "service-s2-09-specialist-runtime.spec.ts \u203a defect-gan remote runtime is validated and sent with its prepared input",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "3d2bf8f41c46740281b4358bc35e4869e188953787d66f6a7b109120fdf4fed6"
+    },
+    {
+      "test": "service-s2-09.spec.ts \u203a \uc774\ubbf8\uc9c0 \uac1c\uc120: a disconnected server job is reopened and, reconnect first, handled through the server job API",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "125a372971c333877ff4dad955a521f6e2cd19f1892e5a277c832070c162e5f2"
+    },
+    {
+      "test": "service-s2-09.spec.ts \u203a \uc774\ubbf8\uc9c0 \uac1c\uc120: a disconnected server job is reopened and, cancel while disconnected, handled through the server job API",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "efa40282af68eb75abaebea55d4c31f8cb16bf30cc7bdc3c8f77c049f98a71ae"
+    },
+    {
+      "test": "service-s2-09.spec.ts \u203a \ud68c\uc804 \uac1d\uccb4 \uac80\ucd9c: a disconnected server job is reopened and, cancel while disconnected, handled through the server job API",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "b82f0d46dc9b48fd3e7e03398bc62e8726478b4746048dc23978a8a2d8ec75f9"
+    },
+    {
+      "test": "service-s2-09.spec.ts \u203a \ud68c\uc804 \uac1d\uccb4 \uac80\ucd9c: a disconnected server job is reopened and, reconnect first, handled through the server job API",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "b7509c2b1bc8616450be187b82d4044c8bda7f4201aa6c23bdf48005146a4100"
+    },
+    {
+      "test": "service-s2-10.spec.ts \u203a operator executes owned CPU service, keeps review and locale on restart and refuses keyboard edits",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "7d16fe150785801624b7eb26b854cd408229c041e07ef94b66b30856ce5081f2"
+    },
+    {
+      "test": "service-s3-01.spec.ts \u203a a validated revision reads every image, a reject policy holds it, and only an explicit accept activates one",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "86f6cd5266edf0db514901c7651a67c4cf690d3d9609a4ecd270174a4bb228a8"
+    },
+    {
+      "test": "service-s3-01-archive.spec.ts \u203a a dataset ZIP picked in the panel is uploaded, extracted into the project and validated",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "59db535a78e47ab44b2e4c59238aabe1b8bad2897c34a0d42eba02547f2c72fe"
+    },
+    {
+      "test": "service-s3-01-duplicates.spec.ts \u203a a validated revision reports byte-identical images under different labels and removes nothing",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "55f0e0acb81624c37be7d7a0b5ccdc951ab4a1d8cc44117128f9bea0e90b89fd"
+    },
+    {
+      "test": "support-bundle-closure.spec.ts \u203a actual selected support downloads redact controlled failure and match persisted response",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "56738872d40add515243957e7a7643bb6263f1e48696ead81fae3080ea035421"
+    },
+    {
+      "test": "team-edit-closure.spec.ts \u203a team edit reconnect compares drafts and preserves two-person review and assignment",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "ccae8a778bddd1942949c3dbe0ea765a3736f1ab0096fc3c026591f288f90778"
+    },
+    {
+      "test": "team-recovery.spec.ts \u203a independent HTTPS team clients conflict, lose revoked authority and reopen preserved edits after backend restart",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "3c2a1772cfc4eda3b20a5f1204d828dedbac0a323c1f6f101a7e2d649f8cd899"
+    },
+    {
+      "test": "training-center-ten-family.spec.ts \u203a all ten families reopen the same persisted interruption and use preparation and budget controls",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "2dfc25ac8de634435a62cf6a205df8a18afa76fb6bdcfbfcd0f2258bff70ad03"
+    },
+    {
+      "test": "user-language-help.spec.ts \u203a language settings and guidance persist and glossary help follows the chosen language",
+      "status": "passed",
+      "result": "pass",
+      "harness_sha256": "145e21b995bb978c123fde1f294e9b1c349f0bdc7b89d77ced88bccee8a217e6"
+    }
+  ],
+  "selected_gui_receipts": [
+    {
+      "case": "native-update-layout",
+      "gui_receipt_sha256": "3d3929f821d3dfc6fd61c354583cd0b67e75667a0b31fa4b786127623dc8bf45"
+    },
+    {
+      "case": "portable-update-review",
+      "gui_receipt_sha256": "efbb460129d409fb2ce96903b4b19cc0550a3751f7cfa15a2261df7c4b5b79b1"
+    },
+    {
+      "case": "review-queue-handoff",
+      "gui_receipt_sha256": "98baa98bc44e09dea3a28148a1553c601cbd58cdb5e10700e1cc03f7857657c1"
+    }
+  ],
+  "skipped": "UNet actual CPU screen flow explicitly gated; its separate03358ce run completed successfully and is preserved independently.",
+  "scope": "Public generated/controlled/source-display browser selection only. User-authentic pretrained suites excluded; these are preserved as separate owned-model runs. No Windows, representative quality, real publisher/OS installer, physical devices, independent acceptance or72h completion inferred.",
+  "parent_pending": 15
+}
