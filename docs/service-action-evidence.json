@@ -3075,13 +3075,199 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "3be69bbda8bc101c6f56f5bdb96f2312e9675244",
+         "kind": "click",
+         "action": "작업 배정",
+         "reviewer": "Root clean execution and independent frozen source/proof review; whole feature, human quality and installed target acceptance pending",
+         "test": "scripts/e2e/team-assignment-controls.spec.ts::assignment empty invalid priority and exact POST failure preserve records before real retry",
+         "receipt": "2026-10-08-team-assignment-3be69bb-browser.json",
+         "receipt_sha256": "fd17d4084252c3f7640f4cc80eeb5558a70dd5505b227990e359a626ea396e8e",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "507b458bff82b54ad20f79722978f09da4e6baec83887dc0f34756d0db57bae8"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "d0e524d8216c2e30c8a71ff10fa25cf1f3aa0c0d54994d4fe97f91f2f8261c01"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "fb0a83c3f3510256522031e57018e38a8fe687b4b64dcb2e20022ddd6aa36ec3"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "65c75e31499d5b3d74d6b9b8d8aa78361764cae2e0f6b04ae602d6e825ad9e6b"
+          }
+         ],
+         "expected": "Explicit blank actor disables assignment with no POST and preserves selected UUID/revision.",
+         "observed": "Explicit blank actor disables assignment with no POST and preserves selected UUID/revision."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "3be69bbda8bc101c6f56f5bdb96f2312e9675244",
+         "kind": "click",
+         "action": "작업 배정",
+         "reviewer": "Root clean execution and independent frozen source/proof review; whole feature, human quality and installed target acceptance pending",
+         "test": "scripts/e2e/team-assignment-controls.spec.ts::native assignment empty invalid and exact POST failure preserve annotations before real retry",
+         "receipt": "2026-10-08-team-assignment-3be69bb-electron.json",
+         "receipt_sha256": "8dafb0f90708fbe7226efa3eb81b6af154a17323ef97902611dae3898cce856a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a98c93188a5a870bb6b4a4f6b245a1a0f14da4cede9378d473ca98725bdd606f"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0e59952942c3569f07f71557ef904299844b86c56299a62d481133505f8763f8"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f5688603088f70fac741f9ec4b5194f2f8a1a74f89f2a3639049e95298c98776"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "f08221a96ae3b04588debddd704056ea48b28e5acc3d5191a9f8447ca1d4c3fd"
+          }
+         ],
+         "expected": "Explicit blank actor disables assignment with no POST and preserves selected UUID/revision.",
+         "observed": "Explicit blank actor disables assignment with no POST and preserves selected UUID/revision."
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "3be69bbda8bc101c6f56f5bdb96f2312e9675244",
+         "kind": "click",
+         "action": "작업 배정",
+         "reviewer": "Root clean execution and independent frozen source/proof review; whole feature, human quality and installed target acceptance pending",
+         "test": "scripts/e2e/team-assignment-controls.spec.ts::assignment empty invalid priority and exact POST failure preserve records before real retry",
+         "receipt": "2026-10-08-team-assignment-3be69bb-browser.json",
+         "receipt_sha256": "fd17d4084252c3f7640f4cc80eeb5558a70dd5505b227990e359a626ea396e8e",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "507b458bff82b54ad20f79722978f09da4e6baec83887dc0f34756d0db57bae8"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "d0e524d8216c2e30c8a71ff10fa25cf1f3aa0c0d54994d4fe97f91f2f8261c01"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "fb0a83c3f3510256522031e57018e38a8fe687b4b64dcb2e20022ddd6aa36ec3"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "65c75e31499d5b3d74d6b9b8d8aa78361764cae2e0f6b04ae602d6e825ad9e6b"
+          }
+         ],
+         "expected": "Actual priority151 POST returns422 with input151/schema limit100; rendered priority constraint and unchanged selected record are confirmed.",
+         "observed": "Actual priority151 POST returns422 with input151/schema limit100; rendered priority constraint and unchanged selected record are confirmed."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "3be69bbda8bc101c6f56f5bdb96f2312e9675244",
+         "kind": "click",
+         "action": "작업 배정",
+         "reviewer": "Root clean execution and independent frozen source/proof review; whole feature, human quality and installed target acceptance pending",
+         "test": "scripts/e2e/team-assignment-controls.spec.ts::native assignment empty invalid and exact POST failure preserve annotations before real retry",
+         "receipt": "2026-10-08-team-assignment-3be69bb-electron.json",
+         "receipt_sha256": "8dafb0f90708fbe7226efa3eb81b6af154a17323ef97902611dae3898cce856a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a98c93188a5a870bb6b4a4f6b245a1a0f14da4cede9378d473ca98725bdd606f"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0e59952942c3569f07f71557ef904299844b86c56299a62d481133505f8763f8"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f5688603088f70fac741f9ec4b5194f2f8a1a74f89f2a3639049e95298c98776"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "f08221a96ae3b04588debddd704056ea48b28e5acc3d5191a9f8447ca1d4c3fd"
+          }
+         ],
+         "expected": "Actual priority151 POST returns422 with input151/schema limit100; rendered priority constraint and unchanged selected record are confirmed.",
+         "observed": "Actual priority151 POST returns422 with input151/schema limit100; rendered priority constraint and unchanged selected record are confirmed."
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "3be69bbda8bc101c6f56f5bdb96f2312e9675244",
+         "kind": "click",
+         "action": "작업 배정",
+         "reviewer": "Root clean execution and independent frozen source/proof review; whole feature, human quality and installed target acceptance pending",
+         "test": "scripts/e2e/team-assignment-controls.spec.ts::assignment empty invalid priority and exact POST failure preserve records before real retry",
+         "receipt": "2026-10-08-team-assignment-3be69bb-browser.json",
+         "receipt_sha256": "fd17d4084252c3f7640f4cc80eeb5558a70dd5505b227990e359a626ea396e8e",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "507b458bff82b54ad20f79722978f09da4e6baec83887dc0f34756d0db57bae8"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "d0e524d8216c2e30c8a71ff10fa25cf1f3aa0c0d54994d4fe97f91f2f8261c01"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "fb0a83c3f3510256522031e57018e38a8fe687b4b64dcb2e20022ddd6aa36ec3"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "65c75e31499d5b3d74d6b9b8d8aa78361764cae2e0f6b04ae602d6e825ad9e6b"
+          }
+         ],
+         "expected": "Exact valid assignment POST receives controlled503 before backend dispatch, leaves record unchanged, then explicit real200 retry increments only one assignment revision and preserves labels/mask.",
+         "observed": "Exact valid assignment POST receives controlled503 before backend dispatch, leaves record unchanged, then explicit real200 retry increments only one assignment revision and preserves labels/mask."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "3be69bbda8bc101c6f56f5bdb96f2312e9675244",
+         "kind": "click",
+         "action": "작업 배정",
+         "reviewer": "Root clean execution and independent frozen source/proof review; whole feature, human quality and installed target acceptance pending",
+         "test": "scripts/e2e/team-assignment-controls.spec.ts::native assignment empty invalid and exact POST failure preserve annotations before real retry",
+         "receipt": "2026-10-08-team-assignment-3be69bb-electron.json",
+         "receipt_sha256": "8dafb0f90708fbe7226efa3eb81b6af154a17323ef97902611dae3898cce856a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a98c93188a5a870bb6b4a4f6b245a1a0f14da4cede9378d473ca98725bdd606f"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0e59952942c3569f07f71557ef904299844b86c56299a62d481133505f8763f8"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f5688603088f70fac741f9ec4b5194f2f8a1a74f89f2a3639049e95298c98776"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "f08221a96ae3b04588debddd704056ea48b28e5acc3d5191a9f8447ca1d4c3fd"
+          }
+         ],
+         "expected": "Exact valid assignment POST receives controlled503 before backend dispatch, leaves record unchanged, then explicit real200 retry increments only one assignment revision and preserves labels/mask.",
+         "observed": "Exact valid assignment POST receives controlled503 before backend dispatch, leaves record unchanged, then explicit real200 retry increments only one assignment revision and preserves labels/mask."
+        }
+       ]
       },
       "cancel": {
        "state": "pending"
@@ -11670,19 +11856,239 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "3be69bbda8bc101c6f56f5bdb96f2312e9675244",
+         "kind": "click",
+         "action": "배포 준비 · 승인 패키지 적용",
+         "reviewer": "Root clean execution and independent frozen source/proof review; whole feature, human quality and installed target acceptance pending",
+         "test": "scripts/e2e/converted-service-controls.spec.ts::native reviewed OpenVINO CPU service preserves exact epoch through empty invalid error cancel and reopen",
+         "receipt": "2026-10-08-converted-service-3be69bb-electron.json",
+         "receipt_sha256": "6b75dde0b5240af2b51e0bdd5b2c6545f28f74544ddcefeec50bbd3f3711d44b",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "786431fce25deaee876e6f1dcfc25bf99991ff5268e14f48f3a18255c313eb52"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0aeac5f3f355bde1feda028f56df74db52fb1abef477fbe0ad828e2c7ca823de"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "58ba22f1fa9450e841c7ef005440c849e22f07be83c91d0cce206d30a3643793"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "fdea54552e9312d28cbce3308173b3060b060d2b279dd3613c35cab52cff5a24"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "6f9f8097f8bfed0b50171569b00eb20354880cd2ce31983a91c2e92db28faaf7"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "22bd1b6099499f940b0c9cc02f0285abf6d61fd400d1cd8c182b5596ab1fffd1"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "62fb34e7097508d509936a6621291830e5120ab2f38f0e5019d71fdfb920f4bd"
+          }
+         ],
+         "expected": "Blank reviewed IR manual path disables apply with no POST and preserves the original active/history/epoch.",
+         "observed": "Blank reviewed IR manual path disables apply with no POST and preserves the original active/history/epoch."
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "3be69bbda8bc101c6f56f5bdb96f2312e9675244",
+         "kind": "click",
+         "action": "배포 준비 · 승인 패키지 적용",
+         "reviewer": "Root clean execution and independent frozen source/proof review; whole feature, human quality and installed target acceptance pending",
+         "test": "scripts/e2e/converted-service-controls.spec.ts::native reviewed OpenVINO CPU service preserves exact epoch through empty invalid error cancel and reopen",
+         "receipt": "2026-10-08-converted-service-3be69bb-electron.json",
+         "receipt_sha256": "6b75dde0b5240af2b51e0bdd5b2c6545f28f74544ddcefeec50bbd3f3711d44b",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "786431fce25deaee876e6f1dcfc25bf99991ff5268e14f48f3a18255c313eb52"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0aeac5f3f355bde1feda028f56df74db52fb1abef477fbe0ad828e2c7ca823de"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "58ba22f1fa9450e841c7ef005440c849e22f07be83c91d0cce206d30a3643793"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "fdea54552e9312d28cbce3308173b3060b060d2b279dd3613c35cab52cff5a24"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "6f9f8097f8bfed0b50171569b00eb20354880cd2ce31983a91c2e92db28faaf7"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "22bd1b6099499f940b0c9cc02f0285abf6d61fd400d1cd8c182b5596ab1fffd1"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "62fb34e7097508d509936a6621291830e5120ab2f38f0e5019d71fdfb920f4bd"
+          }
+         ],
+         "expected": "Actual missing-path apply POST409 preserves original IR epoch and creates no package path.",
+         "observed": "Actual missing-path apply POST409 preserves original IR epoch and creates no package path."
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "3be69bbda8bc101c6f56f5bdb96f2312e9675244",
+         "kind": "click",
+         "action": "배포 준비 · 승인 패키지 적용",
+         "reviewer": "Root clean execution and independent frozen source/proof review; whole feature, human quality and installed target acceptance pending",
+         "test": "scripts/e2e/converted-service-controls.spec.ts::native reviewed OpenVINO CPU service preserves exact epoch through empty invalid error cancel and reopen",
+         "receipt": "2026-10-08-converted-service-3be69bb-electron.json",
+         "receipt_sha256": "6b75dde0b5240af2b51e0bdd5b2c6545f28f74544ddcefeec50bbd3f3711d44b",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "786431fce25deaee876e6f1dcfc25bf99991ff5268e14f48f3a18255c313eb52"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0aeac5f3f355bde1feda028f56df74db52fb1abef477fbe0ad828e2c7ca823de"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "58ba22f1fa9450e841c7ef005440c849e22f07be83c91d0cce206d30a3643793"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "fdea54552e9312d28cbce3308173b3060b060d2b279dd3613c35cab52cff5a24"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "6f9f8097f8bfed0b50171569b00eb20354880cd2ce31983a91c2e92db28faaf7"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "22bd1b6099499f940b0c9cc02f0285abf6d61fd400d1cd8c182b5596ab1fffd1"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "62fb34e7097508d509936a6621291830e5120ab2f38f0e5019d71fdfb920f4bd"
+          }
+         ],
+         "expected": "Exact valid reviewed IR apply POST gets controlled503 before backend dispatch; active/history/PID-birth-command/config/release/policy remain unchanged. GET503 is separate refresh evidence.",
+         "observed": "Exact valid reviewed IR apply POST gets controlled503 before backend dispatch; active/history/PID-birth-command/config/release/policy remain unchanged. GET503 is separate refresh evidence."
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "3be69bbda8bc101c6f56f5bdb96f2312e9675244",
+         "kind": "click",
+         "action": "배포 준비 · 승인 패키지 적용",
+         "reviewer": "Root clean execution and independent frozen source/proof review; whole feature, human quality and installed target acceptance pending",
+         "test": "scripts/e2e/converted-service-controls.spec.ts::native reviewed OpenVINO CPU service preserves exact epoch through empty invalid error cancel and reopen",
+         "receipt": "2026-10-08-converted-service-3be69bb-electron.json",
+         "receipt_sha256": "6b75dde0b5240af2b51e0bdd5b2c6545f28f74544ddcefeec50bbd3f3711d44b",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "786431fce25deaee876e6f1dcfc25bf99991ff5268e14f48f3a18255c313eb52"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0aeac5f3f355bde1feda028f56df74db52fb1abef477fbe0ad828e2c7ca823de"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "58ba22f1fa9450e841c7ef005440c849e22f07be83c91d0cce206d30a3643793"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "fdea54552e9312d28cbce3308173b3060b060d2b279dd3613c35cab52cff5a24"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "6f9f8097f8bfed0b50171569b00eb20354880cd2ce31983a91c2e92db28faaf7"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "22bd1b6099499f940b0c9cc02f0285abf6d61fd400d1cd8c182b5596ab1fffd1"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "62fb34e7097508d509936a6621291830e5120ab2f38f0e5019d71fdfb920f4bd"
+          }
+         ],
+         "expected": "Explicit view close and actual empty-project switch observe exact held read disposition and prevent stale original IR repaint. Native original UI200 is a controlled snapshot from separate authenticated GET, not original delayed HTTP provenance.",
+         "observed": "Explicit view close and actual empty-project switch observe exact held read disposition and prevent stale original IR repaint. Native original UI200 is a controlled snapshot from separate authenticated GET, not original delayed HTTP provenance."
+        }
+       ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "3be69bbda8bc101c6f56f5bdb96f2312e9675244",
+         "kind": "click",
+         "action": "배포 준비 · 승인 패키지 적용",
+         "reviewer": "Root clean execution and independent frozen source/proof review; whole feature, human quality and installed target acceptance pending",
+         "test": "scripts/e2e/converted-service-controls.spec.ts::native reviewed OpenVINO CPU service preserves exact epoch through empty invalid error cancel and reopen",
+         "receipt": "2026-10-08-converted-service-3be69bb-electron.json",
+         "receipt_sha256": "6b75dde0b5240af2b51e0bdd5b2c6545f28f74544ddcefeec50bbd3f3711d44b",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "786431fce25deaee876e6f1dcfc25bf99991ff5268e14f48f3a18255c313eb52"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0aeac5f3f355bde1feda028f56df74db52fb1abef477fbe0ad828e2c7ca823de"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "58ba22f1fa9450e841c7ef005440c849e22f07be83c91d0cce206d30a3643793"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "fdea54552e9312d28cbce3308173b3060b060d2b279dd3613c35cab52cff5a24"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "6f9f8097f8bfed0b50171569b00eb20354880cd2ce31983a91c2e92db28faaf7"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "22bd1b6099499f940b0c9cc02f0285abf6d61fd400d1cd8c182b5596ab1fffd1"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "62fb34e7097508d509936a6621291830e5120ab2f38f0e5019d71fdfb920f4bd"
+          }
+         ],
+         "expected": "Actual original-project reopen and reload return same approved IR manifest, active/history, deviceopenvino:CPU and original daemon epoch; package/policy/images/models hashes remain unchanged.",
+         "observed": "Actual original-project reopen and reload return same approved IR manifest, active/history, deviceopenvino:CPU and original daemon epoch; package/policy/images/models hashes remain unchanged."
+        }
+       ]
       },
       "handoff": {
        "state": "verified",

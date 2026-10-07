@@ -34,6 +34,7 @@ export const CategorySelector: React.FC = () => {
         return (
           <button
             key={cat.id}
+            aria-pressed={isActive}
             onClick={() => setActiveCategory(cat)}
             className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs transition-all cursor-pointer ${
               isActive

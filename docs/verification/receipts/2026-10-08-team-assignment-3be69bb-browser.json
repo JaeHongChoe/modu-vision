@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "3be69bbda8bc101c6f56f5bdb96f2312e9675244",
+  "source_dirty": false,
+  "test": "scripts/e2e/team-assignment-controls.spec.ts::assignment empty invalid priority and exact POST failure preserve records before real retry",
+  "test_source_sha256": "2a845a7ea17ec23f31bc0b656fe00b42fe334a1634145baabfbcb4bc23f270f6",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "d12c59290e8c2e29f9955a15908725ce7ab0a77ddf4785a9dc8822e71e760dd9",
+  "harness_sha256": "b94687f18dcb567b022e7ba842da561ea196ab8fb9e06644ea230b5e3ad0dae1",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "507b458bff82b54ad20f79722978f09da4e6baec83887dc0f34756d0db57bae8"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "d0e524d8216c2e30c8a71ff10fa25cf1f3aa0c0d54994d4fe97f91f2f8261c01"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "fb0a83c3f3510256522031e57018e38a8fe687b4b64dcb2e20022ddd6aa36ec3"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "65c75e31499d5b3d74d6b9b8d8aa78361764cae2e0f6b04ae602d6e825ad9e6b"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

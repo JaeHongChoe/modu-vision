@@ -32,7 +32,7 @@
 | S6-04 | 오프라인 설치와 업데이트 | POSIX 앱/DB cutover·복구·기존 home 인수, 영속 controller와 main/backend 인증 handshake를 구현하고 검증했다. 원래 backend epoch의 source CPU 기준 이미지 실행과 source candidate 활성 pointer 변경 전 검사·복구를 추가 검증했다. 실제 compiled candidate adapter, 전체 process-tree 종료 확인, OS installer adapter와 native packaged positive startup을 이어간다. 실 publisher 서명은 별도 조건이다. |
 | S6-05 | 공개 CI와 source 재현성 | 이전 소스의 hosted 성공·실패를 보존한다. 보호된 수동 candidate 검증 workflow와 source/artifact/환경 정책 gate를 추가했다. 실제 workflow 실행·서명·배포는 하지 않았고, 새 게시 소스의 전체 hosted 결과가 필요하다. |
 | S6-06 | 서명과 릴리스 채널 | 실제 Authenticode/publisher identity·서명 후 byte inventory·채널 승인 필요. |
-| S7-01 | 기존 기능 전체 coverage 계약 | 원래156개 ID를 유지한다. 현재207개 curated action의578개 시나리오 검증,871개 pending이다. 알려진 누락 메뉴/shortcut·남은 시나리오·전체 기능 수락을 이어간다. 행동 수와 전체 기능 완료 수는 다르다. |
+| S7-01 | 기존 기능 전체 coverage 계약 | 원래156개 ID를 유지한다. 현재207개 curated action의586개 시나리오 검증,863개 pending이다. 알려진 누락 메뉴/shortcut·남은 시나리오·전체 기능 수락을 이어간다. 행동 수와 전체 기능 완료 수는 다르다. |
 | S7-02 | 10모델군 실제 작업 시나리오 | 실제5 distinct learned chain은 완료. 10모델군 각각 사람이 검토한 정답과 대표 multi-task recipe 검증 필요. |
 | S7-03 | Windows 실제 설치와 사용 QA | Windows 실제 설치·사용 QA 사용자 면제. hosted Server2025 component 실행을 Win11 실사용 성공으로 세지 않음. |
 | S7-05 | 데이터 규모와 연속 운전 | 실제 browser/native에서10만 메타데이터·실제 이미지3장,3×120 keyset page·최대DOM32·응답120·tail UUID/SHA 재열기·파일 없는 항목 선택 거절을 검증했다. 10만 실제 사진 decode나 target 자원/택트 수락은 아니다. a184b1e의 동일 외장72시간 실행은 유지 중이며 이전 시간을 합산하지 않고 terminal receipt가 필요하다. |
@@ -331,3 +331,12 @@ compiled canary의 닫힌 protocol2/worker8개 필드를 화면 bridge에서 검
 - 원래 source Studio/backend를 닫은 뒤 독립 daemon의 같은 PID/birth/command/manifest에서 실제 CPU 이미지 검사1개가 completed였다. 같은 입력의 반복 제출은 같은 작업 ID·결과1개·completed event1개로 읽혔다. 저장된 원래 admission bytes/hash와 decoded HTTP 결과가 일치하고 package/policy/images가 보존됐다.
 - 이 실행의 generated weights·synthetic approval/truth는 품질 수락이 아니다. 첫 검사 test의 decoded API 이름 오류 실패와 실제 완료 row/정상 owned cleanup도 이전 근거로 보존했다. Root는 수정된 case를 clean 소스에서 다시 실행했다.
 - action 집계는578verified/871pending, 구현 부모는69verified/13pending 그대로다. 별도 공정 품질·publisher/설치·전용 계정/재부팅·물리 장치·전체 tree·72시간 완료는 올리지 않는다.
+
+
+## 2026-10-08 팀 배정3개·실제 IR 서비스5개 시나리오
+
+- clean `3be69bb`에서 browser1·source Electron2가150.50초, retry 없이 통과하고2143개 소스가 동일했다. F024 배정의 빈 작업자·실제 우선순위422·정확한 controlled POST503 후 명시적 실제 재시도3개를 검증했다. 선택 image UUID/revision·라벨·mask 보존과 성공 재시도1회만의 배정 revision 증가를 확인했다.
+- 실제 CPU→OpenVINO 변환·별도 정밀도/전체 흐름 검토·IR 서비스 적용·입력 completed를 수행했다. 빈 경로·없는 경로409·정확한 적용 POST503·명시적 화면 닫기/프로젝트 전환·원래 IR epoch 재열기5개를 검증했다. GET 상태503은 적용 오류의 근거로 대신하지 않았다.
+- 원래 native 지연 HTTP200 provenance는 거짓이다. 별도 인증된 실제 GET의 snapshot을 원래 UI 응답에 controlled200으로 전달했고, 요청 종료와 새 빈 프로젝트에 옛 상태가 다시 그려지지 않는 범위만 확인했다.
+- generated allOK weights가 syntheticNG를 놓친 결과는 보존했다. controlled 검토/정답은 사람의 모델 품질 승인이나 설치·publisher·장비·whole tree 수락이 아니다. 실제 owned daemon/app/backend/port 정리는 확인됐다.
+- action 집계586verified/863pending, 구현 부모69verified/13pending, Windows 면제 후 요청 범위11pending을 유지한다. 공개 CI의 `0b7501a` CPU 회귀 통과·browser191통과/1실패도 유지하며 최신 소스의 hosted 성공으로 대신하지 않는다.

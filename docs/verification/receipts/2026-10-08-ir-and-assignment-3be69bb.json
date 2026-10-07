@@ -1,0 +1,181 @@
+{
+  "schema": "modu-vision.ir-and-assignment-controls/v1",
+  "source_sha": "3be69bbda8bc101c6f56f5bdb96f2312e9675244",
+  "source_files": {
+    "scripts/e2e/team-assignment-controls.spec.ts": "2a845a7ea17ec23f31bc0b656fe00b42fe334a1634145baabfbcb4bc23f270f6",
+    "scripts/e2e/converted-service-controls.spec.ts": "62f13f8faeab8383e6479edc1e2418f36d54e57fcf76366634e833031a38dd7e"
+  },
+  "results": {
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "retries": 0,
+    "elapsed_seconds": 150.50174937502015,
+    "source_inputs": 2143,
+    "source_unchanged": true,
+    "clean_before_and_after": true
+  },
+  "cases": [
+    {
+      "mode": "electron",
+      "label": "converted-service",
+      "execution_receipt": "docs/verification/receipts/2026-10-08-converted-service-3be69bb-electron.json",
+      "execution_receipt_sha256": "6b75dde0b5240af2b51e0bdd5b2c6545f28f74544ddcefeec50bbd3f3711d44b",
+      "screenshots": 7,
+      "owned_cleanup": {
+        "electron_alive": false,
+        "backends": [
+          {
+            "port": 53956,
+            "pid": 34537,
+            "port_closed": true,
+            "pid_alive": false
+          }
+        ],
+        "logged_backend_pids": [
+          34537
+        ],
+        "logged_backend_pids_alive": [],
+        "backend_restarted": false,
+        "escaped": [],
+        "unowned_references": [],
+        "scan_error": null,
+        "close_timed_out": false
+      },
+      "expected_console_failures_retained": [],
+      "controls": {
+        "blank_path_disabled_no_POST": true,
+        "absent_path_actual_POST_status": 409,
+        "exact_valid_apply_POST_controlled_error_status": 503,
+        "held_read_disposition": {
+          "kind": "finished",
+          "failure": null
+        },
+        "native_original_delayed_HTTP200_provenance": false,
+        "original_IR_epoch_reopened": true,
+        "package_policy_original_images_and_model_hashes_preserved": true
+      },
+      "owned_service_cleanup": {
+        "status": "stopped"
+      }
+    },
+    {
+      "mode": "browser",
+      "label": "team-assignment",
+      "execution_receipt": "docs/verification/receipts/2026-10-08-team-assignment-3be69bb-browser.json",
+      "execution_receipt_sha256": "fd17d4084252c3f7640f4cc80eeb5558a70dd5505b227990e359a626ea396e8e",
+      "screenshots": 4,
+      "owned_cleanup": {
+        "exited": true,
+        "exitCode": 0,
+        "signal": null,
+        "exitedBeforeStop": false,
+        "forced": false,
+        "forcedReason": null,
+        "groupAlive": false,
+        "escaped": [],
+        "unownedReferences": [],
+        "scanError": null,
+        "durationMs": 1003,
+        "stoppedAt": "2026-10-07T22:09:00.147Z",
+        "healthy_at_end": true,
+        "port_closed": true,
+        "pid_alive": false
+      },
+      "expected_console_failures_retained": [
+        "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)",
+        "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      ],
+      "controls": {
+        "blank_actor_disabled_no_POST": true,
+        "actual_invalid_priority_POST_status": 422,
+        "exact_valid_POST_controlled_error_status": 503,
+        "explicit_real_retry_status": 200,
+        "one_assignment_revision": true,
+        "annotation_and_mask_preserved": true
+      }
+    },
+    {
+      "mode": "electron",
+      "label": "team-assignment",
+      "execution_receipt": "docs/verification/receipts/2026-10-08-team-assignment-3be69bb-electron.json",
+      "execution_receipt_sha256": "8dafb0f90708fbe7226efa3eb81b6af154a17323ef97902611dae3898cce856a",
+      "screenshots": 4,
+      "owned_cleanup": {
+        "electron_alive": false,
+        "backends": [
+          {
+            "port": 54131,
+            "pid": 36881,
+            "port_closed": true,
+            "pid_alive": false
+          }
+        ],
+        "logged_backend_pids": [
+          36881
+        ],
+        "logged_backend_pids_alive": [],
+        "backend_restarted": false,
+        "escaped": [],
+        "unowned_references": [],
+        "scan_error": null,
+        "close_timed_out": false
+      },
+      "expected_console_failures_retained": [],
+      "controls": {
+        "blank_actor_disabled_no_POST": true,
+        "actual_invalid_priority_POST_status": 422,
+        "exact_valid_POST_controlled_error_status": 503,
+        "explicit_real_retry_status": 200,
+        "one_assignment_revision": true,
+        "annotation_and_mask_preserved": true
+      }
+    }
+  ],
+  "actual_IR_CPU_job": {
+    "device": "openvino:CPU",
+    "state": "completed",
+    "image_sha256": "4a0945534329d26ce523a2f096e203aae59a9fffaec71895599fa3ef42d23f22",
+    "runtime_binding_sha256": "3e2f3e7786e7dea9a89338215973a7891b932c6e4c991bd902373a3bfa47347e",
+    "release_manifest_sha256": "3d6351b9b84f1477477bfb3801fb4d04210e98fcb73c5e27ecd67a9916585cd1",
+    "model_sha256": {
+      "job_candidate": "56ad0c5dcbd33deb7e482da444e3eda71787088c8fd3e600f612c577f815997c"
+    },
+    "model_verdict": "OK",
+    "result_payload_sha256": "32bb26fcac6bbadce9c81fa00f1992837085d63cef97c28d9f0a4e6fc6704222",
+    "actual_conversion_and_CPU_job": true,
+    "actual_source_electron": true,
+    "synthetic_all_OK_weights_miss_synthetic_NG": true,
+    "model_quality_approved": false
+  },
+  "proof_hashes": {
+    "command.json": "3da185dca18b63ef9519dca28cf26c8d9c2a59b2804e564b3ab63e448baaa339",
+    "result.log": "32d69cff6f31a5b9a905af3e0037c59d9c3ddc4d06c3a69446c0507534964e50",
+    "source-before.json": "ef906ac8c74e5e970b24396532a600335e08e25733c1a93f7af200887d0cedca",
+    "source-after.json": "ef906ac8c74e5e970b24396532a600335e08e25733c1a93f7af200887d0cedca"
+  },
+  "report_sha256": "d12c59290e8c2e29f9955a15908725ce7ab0a77ddf4785a9dc8822e71e760dd9",
+  "global_teardown_sha256": "07421fe44cde8bbb0e8d3d0b2372224d2bb2f1ae4c1b06d49548172177147279",
+  "independent_reviews": {
+    "assignment": "622a075b3aba2fca1314020ddef788ed4ef89d1cff66add332e6766c45b1cf1d",
+    "IR_root": "e8a3bb3b48eacdd53e690eebf516450de16d2bc441eeb1334b535133a6e9833c",
+    "IR_peer": "c405fa952362a37183720de92af6af0406b5a9137cd7ebb50d249ae509931fde"
+  },
+  "retained_prior_failures": [
+    "Assignment test expected submitted151 in the rendered422 message instead of the actual priority<=100 constraint. Final verifies JSON input151 and rendered constraint.",
+    "Populated data auto-selected an image after transient empty hint. Final empty case explicitly uses blank actor and preserves selected image; no no-selected-image claim.",
+    "IR nested selector initially missed the manual path. Final selector fixed and exact applyPOST503 added after GET503-only scope review."
+  ],
+  "acceptance": {
+    "curated_scenarios_qualified": 8,
+    "actual_IR_CPU_job": true,
+    "synthetic_truth": true,
+    "model_quality_approved": false,
+    "installed_target_verified": false,
+    "native_os_registration_verified": false,
+    "device_reboot_verified": false,
+    "publisher_approved": false,
+    "complete_process_tree_verified": false,
+    "whole_parent_accepted": false
+  }
+}

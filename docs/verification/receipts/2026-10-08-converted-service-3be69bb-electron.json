@@ -1,0 +1,52 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "3be69bbda8bc101c6f56f5bdb96f2312e9675244",
+  "source_dirty": false,
+  "test": "scripts/e2e/converted-service-controls.spec.ts::native reviewed OpenVINO CPU service preserves exact epoch through empty invalid error cancel and reopen",
+  "test_source_sha256": "62f13f8faeab8383e6479edc1e2418f36d54e57fcf76366634e833031a38dd7e",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "d12c59290e8c2e29f9955a15908725ce7ab0a77ddf4785a9dc8822e71e760dd9",
+  "harness_sha256": "9c5ac029059ac8464ec59f4b5c12d52296a645efb75897f4b168a79b9a13620b",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "786431fce25deaee876e6f1dcfc25bf99991ff5268e14f48f3a18255c313eb52"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "0aeac5f3f355bde1feda028f56df74db52fb1abef477fbe0ad828e2c7ca823de"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "58ba22f1fa9450e841c7ef005440c849e22f07be83c91d0cce206d30a3643793"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "fdea54552e9312d28cbce3308173b3060b060d2b279dd3613c35cab52cff5a24"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "6f9f8097f8bfed0b50171569b00eb20354880cd2ce31983a91c2e92db28faaf7"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "22bd1b6099499f940b0c9cc02f0285abf6d61fd400d1cd8c182b5596ab1fffd1"
+    },
+    {
+      "id": "screenshot-6",
+      "sha256": "62fb34e7097508d509936a6621291830e5120ab2f38f0e5019d71fdfb920f4bd"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

@@ -4723,6 +4723,14 @@
           "receipt_sha256": "2a8925fa3c84f5a5550213f5b3e7e94d38ca331f7c3f311e6ca3107a9c10d50b",
           "result": "Root43 related lease/environment cases passed without skips,2131 source files unchanged. Private12 final source/OS lookup cases also passed. Original4 missing/unsafe-home failures and actual macOS Foundation home mismatch retained and corrected.",
           "scope": "Derived retained private POSIX home/env at the existing owned launch boundary. No actual Electron, frozen backend, global CPU device, complete tree, hostile same-UID continuous containment, installer/publisher or whole-parent acceptance."
+        },
+        {
+          "kind": "clean-source-reviewed-IR-and-assignment-controls",
+          "source_sha": "3be69bbda8bc101c6f56f5bdb96f2312e9675244",
+          "receipt": "docs/verification/receipts/2026-10-08-ir-and-assignment-3be69bb.json",
+          "receipt_sha256": "cff0a4d73b7f6c6241f80642e2259cf04014adc3391cd1977db28ec9904af57a",
+          "result": "Clean browser1/sourceElectron2 passed without retries with2143 unchanged sources. F024 assign3 and F099 actualIR apply5 scenarios qualified. Actual reviewed OpenVINO CPU input job completed; synthetic allOK weights miss syntheticNG and quality is false.",
+          "scope": "Exact source software slice only. No installed publisher/device/OS registration/reboot/whole-tree/human quality or parent acceptance."
         }
       ],
       "file_actions": {
@@ -5882,6 +5890,14 @@
           "receipt_sha256": "838f1afe1290e6290c04bb7387678969523b9526130151b187d727362f4fcbdc",
           "result": "Actual clean browser1/source Electron2 passed without retries,2137 source files unchanged. F024 queue-filter empty/error/cancel3 qualified. After own Studio/backend close, independent source CPU service completed one generated-image job; duplicate submission/readback preserved one result and same daemon epoch.",
           "scope": "Synthetic controlled weights/truth and exact source software slice only. Native transport provenance scoped; no IR apply, publisher/installer/account/reboot/hardware/quality/tree or parent acceptance."
+        },
+        {
+          "kind": "clean-source-reviewed-IR-and-assignment-controls",
+          "source_sha": "3be69bbda8bc101c6f56f5bdb96f2312e9675244",
+          "receipt": "docs/verification/receipts/2026-10-08-ir-and-assignment-3be69bb.json",
+          "receipt_sha256": "cff0a4d73b7f6c6241f80642e2259cf04014adc3391cd1977db28ec9904af57a",
+          "result": "Clean browser1/sourceElectron2 passed without retries with2143 unchanged sources. F024 assign3 and F099 actualIR apply5 scenarios qualified. Actual reviewed OpenVINO CPU input job completed; synthetic allOK weights miss syntheticNG and quality is false.",
+          "scope": "Exact source software slice only. No installed publisher/device/OS registration/reboot/whole-tree/human quality or parent acceptance."
         }
       ],
       "file_actions": {
@@ -5906,7 +5922,7 @@
       },
       "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts",
       "remaining": [
-        "207 curated actions have575 verified and874 pending scenarios. Metadata picker error/cancel/handoff now exercised in clean browser and native Electron at fe92877. Omitted menus/shortcuts, unexecuted dimensions and full156-feature target acceptance remain pending."
+        "207 curated actions have586 verified and863 pending scenarios. Metadata picker error/cancel/handoff now exercised in clean browser and native Electron at fe92877. Omitted menus/shortcuts, unexecuted dimensions and full156-feature target acceptance remain pending."
       ]
     },
     {
@@ -5969,6 +5985,14 @@
           "receipt_sha256": "be3fae6924039cb2b3929562c35a90a83180eaf47aec54fa237a22f17ceb0e31",
           "result": "Actual prior3 consumer workspace deletion and2 check-to-use races reproduced and fixed. Private32passed/1optional dependency skip; separate actual OpenVINO1passed. Root29retention/service CI and separate18source-lane cases passed.",
           "scope": "POSIX original-directory FD-bound retention and contents-only confirmed cleanup. Controlled no-handle policy; no native Windows, durable/escaped-tree ownership, representative quality, target or full parent acceptance."
+        },
+        {
+          "kind": "clean-source-reviewed-IR-and-assignment-controls",
+          "source_sha": "3be69bbda8bc101c6f56f5bdb96f2312e9675244",
+          "receipt": "docs/verification/receipts/2026-10-08-ir-and-assignment-3be69bb.json",
+          "receipt_sha256": "cff0a4d73b7f6c6241f80642e2259cf04014adc3391cd1977db28ec9904af57a",
+          "result": "Clean browser1/sourceElectron2 passed without retries with2143 unchanged sources. F024 assign3 and F099 actualIR apply5 scenarios qualified. Actual reviewed OpenVINO CPU input job completed; synthetic allOK weights miss syntheticNG and quality is false.",
+          "scope": "Exact source software slice only. No installed publisher/device/OS registration/reboot/whole-tree/human quality or parent acceptance."
         }
       ],
       "file_actions": {
