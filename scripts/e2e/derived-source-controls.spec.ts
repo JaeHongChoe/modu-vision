@@ -24,7 +24,11 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  const version=await api('/api/data-workbench/derived-adoptions',{version_ids:[derived.id],actor:'fixture-derived-reviewer',name:'Owned reviewed derivative'});expect(version.activated).toBe(false);expect(version.adopted).toHaveLength(1);
  await panel.getByRole('button',{name:'파생 학습 버전 새로 확인',exact:true}).click();await expect(use).toBeEnabled();await expect(back).toBeDisabled();
  const branch=path.join(version.source_dataset_path,version.adopted[0].relative_path),record=path.join(path.dirname(version.source_dataset_path),'record.json');
- const protectedFiles=[...fixture.images.map((r:any)=>r.path),branch,record,split.split_path,originalLabels.mask_file,derived.file_path,path.join(derived.dataset_path,'review.json')],originalHashes=Object.fromEntries(protectedFiles.map(file=>[file,sha(file)]));
+ // Classification may retain vector labels without an original raster mask.
+ // Preserve each actual saved annotation record and every referenced raster.
+ const savedLabels=fs.readdirSync(project.annotations_dir,{recursive:true}).map(file=>path.join(project.annotations_dir,String(file))).filter(file=>file.endsWith('.json')&&fs.statSync(file).isFile()).filter(file=>{const data=JSON.parse(fs.readFileSync(file,'utf8'));return data.annotations?.some((a:any)=>a.id==='preserved-bbox');});expect(savedLabels.length).toBeGreaterThan(0);
+ const savedMasks=savedLabels.flatMap(file=>{const data=JSON.parse(fs.readFileSync(file,'utf8'));return typeof data.mask_file==='string'?[data.mask_file]:[];});
+ const protectedFiles=[...fixture.images.map((r:any)=>r.path),branch,record,split.split_path,...savedLabels,...savedMasks,derived.file_path,path.join(derived.dataset_path,'review.json')],originalHashes=Object.fromEntries(protectedFiles.map(file=>[file,sha(file)]));
  let projectWrites=0,trainingPosts=0;page.on('request',r=>{const u=new URL(r.url());if(r.method()==='PUT'&&u.pathname==='/api/project/update')projectWrites++;if(r.method()==='POST'&&u.pathname==='/api/training/start')trainingPosts++;});
  // Closing before choosing submits no source selection. It is not a claim
  // that an already submitted operation is cancelled by closing the panel.
