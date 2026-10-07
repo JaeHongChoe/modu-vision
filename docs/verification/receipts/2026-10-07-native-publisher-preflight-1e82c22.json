@@ -1,0 +1,11 @@
+{
+  "schema": "modu-vision.publisher-native-preflight/v1",
+  "observed_at": "2026-10-07T09:07:40.517183+00:00",
+  "source_sha": "1e82c22d6a647ade840cc5c2a14d4be71c07d156",
+  "host": "darwin",
+  "exit_code": 0,
+  "valid_codesigning_identity_count": 0,
+  "identities_not_exported": true,
+  "keys_not_modified": true,
+  "scope": "Available native macOS code-signing identities in current user context only; no publisher authority, signature, account provisioning or release approval inferred."
+}

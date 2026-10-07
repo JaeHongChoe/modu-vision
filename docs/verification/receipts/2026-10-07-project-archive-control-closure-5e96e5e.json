@@ -1,0 +1,61 @@
+{
+  "schema": "modu-vision.project-archive-controls/v1",
+  "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+  "source_dirty": false,
+  "gui_cases": [
+    {
+      "case": "archive",
+      "mode": "browser",
+      "receipt": "2026-10-07-project-archive-controls-5e96e5e-browser.json",
+      "receipt_sha256": "ff2a9e13c83437cff78e34708f2b81f6ea30a7746580942376f64efd2c5c8d7b"
+    },
+    {
+      "case": "archive",
+      "mode": "electron",
+      "receipt": "2026-10-07-project-archive-controls-5e96e5e-electron.json",
+      "receipt_sha256": "1751b069db898728a98188d3428f217eb3f9b882ccb8899a7854a98e5533be37"
+    },
+    {
+      "case": "library",
+      "mode": "browser",
+      "receipt": "2026-10-07-library-selection-controls-5e96e5e-browser.json",
+      "receipt_sha256": "13cc196dfa43c40c0e9279ed7936038cbe6b894d74e0d027eb30ce6bb4605779"
+    },
+    {
+      "case": "library",
+      "mode": "electron",
+      "receipt": "2026-10-07-library-selection-controls-5e96e5e-electron.json",
+      "receipt_sha256": "ef614c7259646471470b14c97c4c8522a9a292adc0477612ebefaf06cbd80828"
+    }
+  ],
+  "new_verified_scenarios": 16,
+  "observations": {
+    "project-archive": {
+      "empty": "Blank and whitespace-only destination disabled the actual submit control; no backup request or archive file was created.",
+      "invalid": "Selecting the original project directory returned actual422 requiring an outside destination; all original image and persisted marker hashes stayed unchanged.",
+      "error": "Explicit controlled503 transport failure created no archive and preserved original bytes; removing that transport fixture and deliberately retrying created the actual archive.",
+      "cancel": "Closing an unsubmitted valid destination made no backup request and created no archive; reopening cleared the abandoned destination.",
+      "reopen": "After actual archive creation and renderer reload, transient input was empty, the original archive hash and sole directory member remained exact, and source bytes stayed unchanged.",
+      "handoff": "The exact archive and its recorded SHA were used in a fresh absent-path restore; actual restored originals and persisted marker matched and restore verification was separately recorded."
+    },
+    "fresh-project-restore": {
+      "empty": "Missing archive or destination disabled the actual fresh-restore control for both independently missing fields.",
+      "error": "Explicit controlled503 transport failure kept the selected original project, created no target and preserved archive/source hashes; deliberate retry restored the exact archive to the new project.",
+      "cancel": "Closing populated unsubmitted archive/target fields emitted no restore request, created no target and retained archive/source hashes; reopening cleared both abandoned fields."
+    },
+    "library-metadata-filter": {
+      "error": "Controlled503 while loading the selected tag cohort preserved its exact query and remembered UUID/SHA. Explicit retry after removing the fixture returned the actual single matching row.",
+      "cancel": "Closing the unsubmitted no-match Lot cohort retained the previously confirmed UUID/SHA and every original source hash.",
+      "reopen": "Reopening cleared transient tag/Lot filters, resolved the actual remembered image and retained exact prior stored UUID/SHA.",
+      "handoff": "Selecting the actual tag-filtered row and confirming retained exactly the backend row UUID/SHA through flow renderer reload and subsequent actual found-resolution."
+    },
+    "library-confirm-selection": {
+      "empty": "With no saved or manually picked selection the actual confirmation control was disabled; no stored preference existed.",
+      "error": "Controlled503 on saved-identity resolution disabled confirmation and retained the exact original scoped preference; explicit reopen after removing the fixture resolved the actual original.",
+      "cancel": "Picking a different actual validated row and cancelling retained the prior confirmed UUID/SHA; reopening resolved that prior original, not the abandoned temporary selection."
+    }
+  },
+  "scope": "Actual original-identity delayed resolution, filter retry/cancel/reopen, owned archive422/create/fresh restore and GUI cancellation/reopen with original/archive hashes.503 is controlled transport only. No model training, human quality, Windows, installed publisher or independent acceptance.",
+  "review": "root_only",
+  "parent_acceptance": "pending"
+}

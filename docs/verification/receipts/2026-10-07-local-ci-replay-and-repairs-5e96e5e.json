@@ -1,0 +1,100 @@
+{
+  "schema": "modu-vision.local-ci-replay/v1",
+  "original_clean_source": "1e82c22d6a647ade840cc5c2a14d4be71c07d156",
+  "repair_source": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+  "scope": "Actual hosted Linux CI CPU test selection replayed locally on macOS. Baseline failure is retained; only its license contract and previously skipped optional-provider cases are separately verified. No hosted Linux success, Windows pass, human model quality or independent release approval.",
+  "baseline": {
+    "tests": 2737,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 30,
+    "passed": 2706,
+    "junit_sha256": "691983b50d91eaa5a18ce49e168fc5acbd8fd5dadc9db141cc52ce0c396bcc23",
+    "elapsed_seconds": 1834.81,
+    "source_dirty_at_start_and_end": false,
+    "workflow_selection_binding_sha256": "0a069a87b84094f6ce2fcd4a0b9f0ad62f8f60693c968c88d93722c2db358dd7",
+    "completion_binding_sha256": "9b58b69a12c736e664a3b3302cc8110f02479e7722b6b91afdc8e377a37e272a",
+    "log_sha256": "b7f65327491db449d190e87fb328c05d69481e1a2aa7e18b622cdf83a15cccd7",
+    "skipped_reasons": {
+      "Windows file sharing semantics": 2,
+      "this file system tells letter cases apart: the other spelling is another folder": 1,
+      "could not import 'pydicom': No module named 'pydicom'": 26,
+      "Explicit OpenVINO validation interpreter is required": 1
+    },
+    "failed_case": "test_committed_notices_cover_locked_npm_entries_and_declared_python_requirements",
+    "failed_dependency": "cryptography"
+  },
+  "notice_repair": {
+    "tests": 62,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 62,
+    "junit_sha256": "c43431078df459dd35cdd60a65f7a4d9c0070a0949432fecd452b27bdde4e4d8",
+    "tested_before_commit": true,
+    "code_bytes_match_committed_source": true,
+    "generated_notices_sha256": "1a15d9fa8e478733b2ead05533e31925d6503fdc5ca8850473e32e8eecb74ceb",
+    "log_sha256": "519143bf284a209ff2dce657a5a5ed2b0fcaf5be707a2f69a97a72977566835f",
+    "added_generated_components": [
+      "cryptography",
+      "cffi",
+      "pycparser"
+    ],
+    "legal_distribution_approval": false
+  },
+  "renderer": {
+    "passed": 875,
+    "skipped": 0,
+    "failed": 0,
+    "tested_before_commit": true,
+    "code_bytes_match_committed_source": true,
+    "log_sha256": "964db94168b87b333f562525b3619035e8af52e366c16622697b11c97c038a56",
+    "related": {
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0,
+      "log_sha256": "7e2aa6d1b14fa1522e6308c555980f31b922d56f6e1fbb5316760774b2de7c83"
+    },
+    "causal_red_failed": 1,
+    "causal_red_passed": 3,
+    "red_log_sha256": "91e641280408281b6b693957f7b2c5e356dd65d3e8ba60c7862e629be40dbf83",
+    "types_passed": [
+      "production",
+      "e2e"
+    ]
+  },
+  "optional_cases": {
+    "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+    "source_dirty_at_start": false,
+    "binding_sha256": "4c5c5923bcb170b5946afdf39fbeb82dce1b2f0049c21557395c144140e5c8d1",
+    "dicom": {
+      "tests": 26,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 26,
+      "junit_sha256": "46ed02eba7960b9033e862258d88b0537862e2a43944a578d344e81e44f15609",
+      "log_sha256": "3d2c732825dc151aebcc6a733ead6a5c59dea5557f207a1910444aba29215c1d"
+    },
+    "openvino": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 1,
+      "junit_sha256": "6aa6d72a7d765dfb3935fa08022f37017f4a4d033b508cbb1340722769c43fbd",
+      "log_sha256": "971dc7f073b09bece71cdc59418c0efacca5318df498b80b1d6edf8b14b972ac",
+      "pyarrow_disabled_before_collection_as_required_by_actual_test": true
+    },
+    "base_environment_unchanged": true,
+    "remaining_platform_skips": 3
+  },
+  "new_gui": {
+    "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+    "browser_passed": 2,
+    "electron_passed": 2,
+    "retries": 0,
+    "independent_acceptance": false
+  },
+  "review": "root_only"
+}

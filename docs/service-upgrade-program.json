@@ -2247,7 +2247,10 @@
    "files": [
     "backend/api/routes_dataset.py",
     "backend/engine/dataset_index.py",
-    "backend/engine/annotation_formats.py"
+    "backend/engine/annotation_formats.py",
+    "src/renderer/components/common/ImagePickerModal.tsx",
+    "src/renderer/components/common/ImagePickerModal.pending.test.cjs",
+    "scripts/e2e/library-selection-controls.spec.ts"
    ],
    "proposed_contract": "ImportJob(manifest, mapping, mode) -> DatasetRevision / query_images(...)",
    "acceptance": [
@@ -2350,12 +2353,23 @@
      "result": "Task83 moves verified ZIP copy, reuse/extraction and extracted-source snapshot into the fenced import worker. Chunk/entry checks, byte progress and promotion guards preserve cancellation and stale-attempt refusal. Same-ID explicit recovery binds artifact, annotations, extracted bytes and expected active revision. Changed folders stay intact; completed versions still require explicit adoption. Backend140, renderer709 and three actual Chrome/macOS Electron cases pass.",
      "scope": "Immutable artifact reference and annotation-only bytes are still bound at submission; an explicit resume validates saved source bytes before queuing. Unsafe/space failures are recorded job failures. Old source and extracted-archive spec digests are retained. Crash-left staging sweep and abandoned artifact quota remain separate.",
      "platform": "Owned synthetic Chrome/macOS Electron runs; root review only; independent review unavailable; Windows excluded; no new SSH/GPU/training."
+    },
+    {
+     "kind": "actual-clean-archive-control-closure",
+     "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+     "receipt": "docs/verification/receipts/2026-10-07-project-archive-control-closure-5e96e5e.json",
+     "receipt_sha256": "059d047af7e98d2230a164a0b806e78a10d028079aa60bfee54aef36cc557b42",
+     "result": "Actual browser2/Electron2 passed with owned teardown. Nine archive/restore and seven library scenarios verified using actual invalid422, explicit503 failure/correction, unsubmitted cancellation, archive/source hashes and fresh restored project reopen.",
+     "scope": "Actual original-identity delayed resolution, filter retry/cancel/reopen, owned archive422/create/fresh restore and GUI cancellation/reopen with original/archive hashes.503 is controlled transport only. No model training, human quality, Windows, installed publisher or independent acceptance."
     }
    ],
    "file_actions": {
     "backend/api/routes_dataset.py": "Modify",
     "backend/engine/dataset_index.py": "Create",
-    "backend/engine/annotation_formats.py": "Modify"
+    "backend/engine/annotation_formats.py": "Modify",
+    "src/renderer/components/common/ImagePickerModal.tsx": "Modify",
+    "src/renderer/components/common/ImagePickerModal.pending.test.cjs": "Create",
+    "scripts/e2e/library-selection-controls.spec.ts": "Create"
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-3-data.md",
    "acceptance_state": {
@@ -4313,6 +4327,14 @@
      "receipt_sha256": "069cb81e493c4c9a4fb0581c72115df7850bc0079f0e7cdb3381323b60c0cc0b",
      "result": "70 related checks plus browser2/Electron2 actual cases passed on exact clean source. App binds selected content to preview; stale409, protected originals, controlled503, cancellation, occupied target refusal, exact restore/reopen and original archive regression were executed.",
      "scope": "Project-owned reviewed movement and recoverable restoration; controlled HTTP503 is a simulated transport failure, not backend/model failure. No permanent deletion, model quality or full feature/parent acceptance."
+    },
+    {
+     "kind": "actual-clean-archive-control-closure",
+     "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+     "receipt": "docs/verification/receipts/2026-10-07-project-archive-control-closure-5e96e5e.json",
+     "receipt_sha256": "059d047af7e98d2230a164a0b806e78a10d028079aa60bfee54aef36cc557b42",
+     "result": "Actual browser2/Electron2 passed with owned teardown. Nine archive/restore and seven library scenarios verified using actual invalid422, explicit503 failure/correction, unsubmitted cancellation, archive/source hashes and fresh restored project reopen.",
+     "scope": "Actual original-identity delayed resolution, filter retry/cancel/reopen, owned archive422/create/fresh restore and GUI cancellation/reopen with original/archive hashes.503 is controlled transport only. No model training, human quality, Windows, installed publisher or independent acceptance."
     }
    ],
    "file_actions": {
@@ -4432,6 +4454,14 @@
      "result": "published main 423e3fcfb15550ceadb2e3396deeb94893c941ca; remote HEAD confirmed",
      "scope": "license inventory and required notices only; current runtime notice refreshed for candidate Electron44; redistribution decision remains S6-11",
      "platform": "macOS development; native target pending"
+    },
+    {
+     "kind": "actual-cpu-workflow-replay-and-scoped-repairs",
+     "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+     "receipt": "docs/verification/receipts/2026-10-07-local-ci-replay-and-repairs-5e96e5e.json",
+     "receipt_sha256": "a4283c5526e91adf04db1a661f164675032fd4b84ee5cbbf60ab4fdb1f9d32c9",
+     "result": "Clean1e82c22 local replay:2706 passed/1 notice failure/30 skips. Generated notice repair62 pass; clean5e96e5e existing optional interpreters27 pass/0skip. Renderer875 pass and actual browser2/Electron2 pass. Original failure and3 platform skips remain explicit.",
+     "scope": "Actual hosted Linux CI CPU test selection replayed locally on macOS. Baseline failure is retained; only its license contract and previously skipped optional-provider cases are separately verified. No hosted Linux success, Windows pass, human model quality or independent release approval."
     }
    ],
    "file_actions": {
@@ -4566,6 +4596,14 @@
      "scope": "Exact immutable base image supplies CUDA/cuDNN; these native libraries are not bundled in this pack. Tiny synthetic controls are not representative quality, Studio jobs, native legal, publisher or release acceptance. All earlier qualification failures retained.",
      "receipt": "docs/verification/receipts/2026-10-07-nvidia-cuda12-offline-pack-dd163b7.json",
      "receipt_sha256": "004eaa953aa605da2612f09d4dc7ebedbb3be8f616321e01bfb989e93d611f84"
+    },
+    {
+     "kind": "actual-cpu-workflow-replay-and-scoped-repairs",
+     "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+     "receipt": "docs/verification/receipts/2026-10-07-local-ci-replay-and-repairs-5e96e5e.json",
+     "receipt_sha256": "a4283c5526e91adf04db1a661f164675032fd4b84ee5cbbf60ab4fdb1f9d32c9",
+     "result": "Clean1e82c22 local replay:2706 passed/1 notice failure/30 skips. Generated notice repair62 pass; clean5e96e5e existing optional interpreters27 pass/0skip. Renderer875 pass and actual browser2/Electron2 pass. Original failure and3 platform skips remain explicit.",
+     "scope": "Actual hosted Linux CI CPU test selection replayed locally on macOS. Baseline failure is retained; only its license contract and previously skipped optional-provider cases are separately verified. No hosted Linux success, Windows pass, human model quality or independent release approval."
     }
    ],
    "file_actions": {
@@ -4655,6 +4693,14 @@
      "receipts": [
       "docs/verification/receipts/2026-10-07-reviewed-frozen-portable-update-41f6d0b.json"
      ]
+    },
+    {
+     "kind": "native-macos-publisher-preflight",
+     "source_sha": "1e82c22d6a647ade840cc5c2a14d4be71c07d156",
+     "receipt": "docs/verification/receipts/2026-10-07-native-publisher-preflight-1e82c22.json",
+     "receipt_sha256": "f59c137e1f756974f241f1cb7c5ffe84289f2d652f160d34cb73dd6eb99d2702",
+     "result": "Current native macOS user context has0 valid code-signing identities. No identity export, key modification, publisher authority or signature inferred.",
+     "scope": "Available native macOS code-signing identities in current user context only; no publisher authority, signature, account provisioning or release approval inferred."
     }
    ],
    "file_actions": {
@@ -4902,6 +4948,14 @@
      "scope": "Only selected ZIP members were verified; full archive/large trace not verified. Latest hosted CI pending and original run not cancelled.",
      "receipt": "docs/verification/receipts/2026-10-07-ci-comparison-selection-repair-5743664.json",
      "receipt_sha256": "bce7c5e105dd130eeb97111b4214982c827abc6ea317f9ac8a6498f1b146e1a3"
+    },
+    {
+     "kind": "actual-cpu-workflow-replay-and-scoped-repairs",
+     "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+     "receipt": "docs/verification/receipts/2026-10-07-local-ci-replay-and-repairs-5e96e5e.json",
+     "receipt_sha256": "a4283c5526e91adf04db1a661f164675032fd4b84ee5cbbf60ab4fdb1f9d32c9",
+     "result": "Clean1e82c22 local replay:2706 passed/1 notice failure/30 skips. Generated notice repair62 pass; clean5e96e5e existing optional interpreters27 pass/0skip. Renderer875 pass and actual browser2/Electron2 pass. Original failure and3 platform skips remain explicit.",
+     "scope": "Actual hosted Linux CI CPU test selection replayed locally on macOS. Baseline failure is retained; only its license contract and previously skipped optional-provider cases are separately verified. No hosted Linux success, Windows pass, human model quality or independent release approval."
     }
    ],
    "file_actions": {
@@ -4944,9 +4998,8 @@
    },
    "proposed_test_file": "backend/tests/test_service_s6_05.py",
    "remaining": [
-    "Complete hosted success is available for exact7e183c9 and964e032, not the newest candidate. Newer0eadf8c retained2319 passed/7 skipped/1 failed in the 120ms heartbeat test.",
-    "The owned heartbeat test now observes two actual ledger/resource renewals; 58 related macOS cases and119 isolated Linux cases pass. Read the complete new published-source CI before promotion; queued older runs are preserved.",
-    "Retain earlier123/browser and0f3 keyboard failure histories; focused repairs do not prove the full156-feature GUI acceptance."
+    "The newest candidate requires complete hosted-source CI success. Local macOS replay and exact optional-provider execution are recorded separately and do not substitute for hosted Linux/Windows execution.",
+    "Retain original prior CI failure histories and current local notice failure; its generated notice repair62 cases pass. Older queued runs are preserved."
    ]
   },
   {
@@ -4976,6 +5029,14 @@
      "result": "33 backend,835 renderer/main,9 release/recovery controls and actual DINOv3 CPU/native candidate reopen pass; automated receipt warm-start lineage and stale account navigation fixed. API types regenerated after exact2c source CI failure.",
      "scope": "Root review only; synthetic cohorts unapproved, no device/signing/release/independent acceptance. New complete hosted CI remains required. Receipt SHA-256 7b9edb4e86b1968efdef952994b4260e4a403e6df43b75c7ac387492de540d52",
      "platform": "macOS private actual training/process/Electron plus controlled release/signature fixtures"
+    },
+    {
+     "kind": "native-macos-publisher-preflight",
+     "source_sha": "1e82c22d6a647ade840cc5c2a14d4be71c07d156",
+     "receipt": "docs/verification/receipts/2026-10-07-native-publisher-preflight-1e82c22.json",
+     "receipt_sha256": "f59c137e1f756974f241f1cb7c5ffe84289f2d652f160d34cb73dd6eb99d2702",
+     "result": "Current native macOS user context has0 valid code-signing identities. No identity export, key modification, publisher authority or signature inferred.",
+     "scope": "Available native macOS code-signing identities in current user context only; no publisher authority, signature, account provisioning or release approval inferred."
     }
    ],
    "file_actions": {
@@ -5227,7 +5288,9 @@
     "docs/service-upgrade-program.json",
     "docs/service-upgrade-coverage.md",
     "scripts/check_service_plan.py",
-    "docs/implementation-ledger/SERVICE-UPGRADE.md"
+    "docs/implementation-ledger/SERVICE-UPGRADE.md",
+    "scripts/e2e/project-archive-controls.spec.ts",
+    "scripts/e2e/library-selection-controls.spec.ts"
    ],
    "proposed_contract": "RequirementEvidence(id, implementation, gui, persist, reopen, failure, handoff, platform, target, prerequisites)",
    "acceptance": [
@@ -5334,13 +5397,31 @@
      "receipt_sha256": "321011772ea712e95e87c2fd9ce6aff2df8856ebfc41b018eaee60976cd9370c",
      "result": "106 related checks with equal production bytes and four actual source-bound browser/macOS cases.23 new curated dimensions were executed; whole/subset saved records, original model/version/images and reopened draft were preserved.",
      "scope": "Four curated template actions only. Final safety cases run on42edae7; cross-project regression cases run on0544e0e; backend106 runs on481ebfb with equal relevant production bytes. HTTP503 is explicitly simulated transport. Abandoned save inputs were never submitted. No training, activation, model quality, release or full feature/parent acceptance."
+    },
+    {
+     "kind": "actual-clean-archive-control-closure",
+     "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+     "receipt": "docs/verification/receipts/2026-10-07-project-archive-control-closure-5e96e5e.json",
+     "receipt_sha256": "059d047af7e98d2230a164a0b806e78a10d028079aa60bfee54aef36cc557b42",
+     "result": "Actual browser2/Electron2 passed with owned teardown. Nine archive/restore and seven library scenarios verified using actual invalid422, explicit503 failure/correction, unsubmitted cancellation, archive/source hashes and fresh restored project reopen.",
+     "scope": "Actual original-identity delayed resolution, filter retry/cancel/reopen, owned archive422/create/fresh restore and GUI cancellation/reopen with original/archive hashes.503 is controlled transport only. No model training, human quality, Windows, installed publisher or independent acceptance."
+    },
+    {
+     "kind": "actual-cpu-workflow-replay-and-scoped-repairs",
+     "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+     "receipt": "docs/verification/receipts/2026-10-07-local-ci-replay-and-repairs-5e96e5e.json",
+     "receipt_sha256": "a4283c5526e91adf04db1a661f164675032fd4b84ee5cbbf60ab4fdb1f9d32c9",
+     "result": "Clean1e82c22 local replay:2706 passed/1 notice failure/30 skips. Generated notice repair62 pass; clean5e96e5e existing optional interpreters27 pass/0skip. Renderer875 pass and actual browser2/Electron2 pass. Original failure and3 platform skips remain explicit.",
+     "scope": "Actual hosted Linux CI CPU test selection replayed locally on macOS. Baseline failure is retained; only its license contract and previously skipped optional-provider cases are separately verified. No hosted Linux success, Windows pass, human model quality or independent release approval."
     }
    ],
    "file_actions": {
     "docs/service-upgrade-program.json": "Modify",
     "docs/service-upgrade-coverage.md": "Modify",
     "scripts/check_service_plan.py": "Modify after S6-05 handoff",
-    "docs/implementation-ledger/SERVICE-UPGRADE.md": "Modify after S0-08 handoff"
+    "docs/implementation-ledger/SERVICE-UPGRADE.md": "Modify after S0-08 handoff",
+    "scripts/e2e/project-archive-controls.spec.ts": "Create",
+    "scripts/e2e/library-selection-controls.spec.ts": "Create"
    },
    "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-7-acceptance.md",
    "acceptance_state": {
@@ -5356,7 +5437,7 @@
    },
    "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts",
    "remaining": [
-    "192 curated actions now have413 verified scenarios and931 pending scenarios. Template4-action dimensions are executed; other helpers/menus/shortcuts and all156-feature full acceptance remain pending."
+    "192 curated actions now have429 verified scenarios and915 pending scenarios. Retention, template and project archive controls have explicit scenario records; other helpers/menus/shortcuts and all156-feature full acceptance remain pending."
    ]
   },
   {
@@ -5566,7 +5647,7 @@
    },
    "proposed_test_file": "scripts/e2e/service-s7-05.spec.ts",
    "remaining": [
-    "Same independent72h attempt observed at61704.03 seconds/1026 cycles. No restart or prior-duration sum; terminal72h receipt remains pending.",
+    "Same independent72h attempt observed at64235.27 seconds/1068 cycles. No restart or prior-duration sum; terminal72h receipt remains pending.",
     "Actual Mac and isolated LinuxCPU10k/100k metadata and80MP decode metrics are recorded. Representative image inventory, full GUI paging and physical target RAM/disk/tact/quality remain unqualified.",
     "Previous disk-reserve failure at50 cycles/3007.65 seconds is retained and excluded from current elapsed duration."
    ]

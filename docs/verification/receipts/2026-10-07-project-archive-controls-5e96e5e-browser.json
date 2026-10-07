@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+  "source_dirty": false,
+  "test": "scripts/e2e/project-archive-controls.spec.ts::archive controls preserve originals across invalid paths cancellation transport errors and fresh restore",
+  "test_source_sha256": "97bf1e0be863e90f9029816901a413e8abf64c7edcb1f6156a4774bb6ffb9298",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "16aa8434465edf927fd04cbcabc813cda95b17e7847e257b7a0724763e2f1272",
+  "harness_sha256": "706f1561d821cc970a8c2a73c63a5556faad8e43cb01ec5e733afd18603dd768",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "75fd65ded1fc8fdfaf9a6eb6d4d627dcfd541b65cb3cf5425dc0925e223da164"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "d79db3d6833199be5de4a4cd8acf25001c0a3874d0282ebc709aa381f0913302"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "cf158878b10b2bbc1b41590c17e743ea6ee8d4c08bbfd36e220101a076a659da"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

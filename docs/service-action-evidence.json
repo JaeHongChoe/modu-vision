@@ -13,7 +13,7 @@
   "src/renderer/components/runtime/ProductDeliveryWorkspace.tsx": "e703e6deb33b642e9da292583e45e5005c386a3d7bd15fee5510fcbf9f5ec106",
   "src/renderer/components/wizard/ProjectWorkspaceDialog.tsx": "8be688631863ce99a0593aabb3d0a229c25389622615c338d8ee35bb17601464",
   "src/renderer/components/wizard/ArtifactRetentionPanel.tsx": "b892d9aa9aa0707ec5c58fc142d2b3ec4ecbffa15df8d513b4da20267c045dd4",
-  "src/renderer/components/common/ImagePickerModal.tsx": "495fba86a83afe716fde1f27b26a631752c3ccb73bb4042eec1f7722f97a68f7",
+  "src/renderer/components/common/ImagePickerModal.tsx": "6cde4dc76f927e9ed7469c1765ba6b9f84193f24caf2df3bda0b347466030966",
   "src/renderer/components/labeling/DerivedImagePanel.tsx": "f8a8053a1a2920471d9cee999957a3b417b97fabd0b274ee378d3fd6efee25b4",
   "src/renderer/components/dataset/DerivedDatasetPanel.tsx": "11263d7aa7052d4ede7782669f8976cbe4e5d0c9896404021acd5bd4299ccbcf",
   "src/renderer/components/dataset/DatasetWorkflowPanel.tsx": "11fe07f0e6453605b605265b2d6c55ea45d9b0dfe62d9db55123d14f298b740c",
@@ -17544,22 +17544,346 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "프로젝트 백업 만들기",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "browser: Blank and whitespace-only destination disabled the actual submit control; no backup request or archive file was created.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/project-archive-controls.spec.ts::archive controls preserve originals across invalid paths cancellation transport errors and fresh restore",
+         "receipt": "2026-10-07-project-archive-controls-5e96e5e-browser.json",
+         "receipt_sha256": "ff2a9e13c83437cff78e34708f2b81f6ea30a7746580942376f64efd2c5c8d7b",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "75fd65ded1fc8fdfaf9a6eb6d4d627dcfd541b65cb3cf5425dc0925e223da164"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "d79db3d6833199be5de4a4cd8acf25001c0a3874d0282ebc709aa381f0913302"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "cf158878b10b2bbc1b41590c17e743ea6ee8d4c08bbfd36e220101a076a659da"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "프로젝트 백업 만들기",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "electron: Blank and whitespace-only destination disabled the actual submit control; no backup request or archive file was created.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/project-archive-controls.spec.ts::native archive controls preserve original bytes and reopen the explicitly restored fresh project",
+         "receipt": "2026-10-07-project-archive-controls-5e96e5e-electron.json",
+         "receipt_sha256": "1751b069db898728a98188d3428f217eb3f9b882ccb8899a7854a98e5533be37",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9ebe9fb608c4e2614d09b6f2f8bb2f618dc24ac09374821a0613cb21437aabe8"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ba7dd5a8c03d81313d823309935f18075fbe63962d2ba66b01a6708f7ccd2e32"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "da7ab910695aa02684fe4dc3e7f26be2ce60a68a70a15a66d47994ab10864cbc"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "프로젝트 백업 만들기",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "browser: Selecting the original project directory returned actual422 requiring an outside destination; all original image and persisted marker hashes stayed unchanged.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/project-archive-controls.spec.ts::archive controls preserve originals across invalid paths cancellation transport errors and fresh restore",
+         "receipt": "2026-10-07-project-archive-controls-5e96e5e-browser.json",
+         "receipt_sha256": "ff2a9e13c83437cff78e34708f2b81f6ea30a7746580942376f64efd2c5c8d7b",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "75fd65ded1fc8fdfaf9a6eb6d4d627dcfd541b65cb3cf5425dc0925e223da164"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "d79db3d6833199be5de4a4cd8acf25001c0a3874d0282ebc709aa381f0913302"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "cf158878b10b2bbc1b41590c17e743ea6ee8d4c08bbfd36e220101a076a659da"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "프로젝트 백업 만들기",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "electron: Selecting the original project directory returned actual422 requiring an outside destination; all original image and persisted marker hashes stayed unchanged.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/project-archive-controls.spec.ts::native archive controls preserve original bytes and reopen the explicitly restored fresh project",
+         "receipt": "2026-10-07-project-archive-controls-5e96e5e-electron.json",
+         "receipt_sha256": "1751b069db898728a98188d3428f217eb3f9b882ccb8899a7854a98e5533be37",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9ebe9fb608c4e2614d09b6f2f8bb2f618dc24ac09374821a0613cb21437aabe8"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ba7dd5a8c03d81313d823309935f18075fbe63962d2ba66b01a6708f7ccd2e32"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "da7ab910695aa02684fe4dc3e7f26be2ce60a68a70a15a66d47994ab10864cbc"
+          }
+         ]
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "프로젝트 백업 만들기",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "browser: Explicit controlled503 transport failure created no archive and preserved original bytes; removing that transport fixture and deliberately retrying created the actual archive.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/project-archive-controls.spec.ts::archive controls preserve originals across invalid paths cancellation transport errors and fresh restore",
+         "receipt": "2026-10-07-project-archive-controls-5e96e5e-browser.json",
+         "receipt_sha256": "ff2a9e13c83437cff78e34708f2b81f6ea30a7746580942376f64efd2c5c8d7b",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "75fd65ded1fc8fdfaf9a6eb6d4d627dcfd541b65cb3cf5425dc0925e223da164"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "d79db3d6833199be5de4a4cd8acf25001c0a3874d0282ebc709aa381f0913302"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "cf158878b10b2bbc1b41590c17e743ea6ee8d4c08bbfd36e220101a076a659da"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "프로젝트 백업 만들기",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "electron: Explicit controlled503 transport failure created no archive and preserved original bytes; removing that transport fixture and deliberately retrying created the actual archive.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/project-archive-controls.spec.ts::native archive controls preserve original bytes and reopen the explicitly restored fresh project",
+         "receipt": "2026-10-07-project-archive-controls-5e96e5e-electron.json",
+         "receipt_sha256": "1751b069db898728a98188d3428f217eb3f9b882ccb8899a7854a98e5533be37",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9ebe9fb608c4e2614d09b6f2f8bb2f618dc24ac09374821a0613cb21437aabe8"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ba7dd5a8c03d81313d823309935f18075fbe63962d2ba66b01a6708f7ccd2e32"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "da7ab910695aa02684fe4dc3e7f26be2ce60a68a70a15a66d47994ab10864cbc"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "프로젝트 백업 만들기",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "browser: Closing an unsubmitted valid destination made no backup request and created no archive; reopening cleared the abandoned destination.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/project-archive-controls.spec.ts::archive controls preserve originals across invalid paths cancellation transport errors and fresh restore",
+         "receipt": "2026-10-07-project-archive-controls-5e96e5e-browser.json",
+         "receipt_sha256": "ff2a9e13c83437cff78e34708f2b81f6ea30a7746580942376f64efd2c5c8d7b",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "75fd65ded1fc8fdfaf9a6eb6d4d627dcfd541b65cb3cf5425dc0925e223da164"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "d79db3d6833199be5de4a4cd8acf25001c0a3874d0282ebc709aa381f0913302"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "cf158878b10b2bbc1b41590c17e743ea6ee8d4c08bbfd36e220101a076a659da"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "프로젝트 백업 만들기",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "electron: Closing an unsubmitted valid destination made no backup request and created no archive; reopening cleared the abandoned destination.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/project-archive-controls.spec.ts::native archive controls preserve original bytes and reopen the explicitly restored fresh project",
+         "receipt": "2026-10-07-project-archive-controls-5e96e5e-electron.json",
+         "receipt_sha256": "1751b069db898728a98188d3428f217eb3f9b882ccb8899a7854a98e5533be37",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9ebe9fb608c4e2614d09b6f2f8bb2f618dc24ac09374821a0613cb21437aabe8"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ba7dd5a8c03d81313d823309935f18075fbe63962d2ba66b01a6708f7ccd2e32"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "da7ab910695aa02684fe4dc3e7f26be2ce60a68a70a15a66d47994ab10864cbc"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "프로젝트 백업 만들기",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "browser: After actual archive creation and renderer reload, transient input was empty, the original archive hash and sole directory member remained exact, and source bytes stayed unchanged.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/project-archive-controls.spec.ts::archive controls preserve originals across invalid paths cancellation transport errors and fresh restore",
+         "receipt": "2026-10-07-project-archive-controls-5e96e5e-browser.json",
+         "receipt_sha256": "ff2a9e13c83437cff78e34708f2b81f6ea30a7746580942376f64efd2c5c8d7b",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "75fd65ded1fc8fdfaf9a6eb6d4d627dcfd541b65cb3cf5425dc0925e223da164"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "d79db3d6833199be5de4a4cd8acf25001c0a3874d0282ebc709aa381f0913302"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "cf158878b10b2bbc1b41590c17e743ea6ee8d4c08bbfd36e220101a076a659da"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "프로젝트 백업 만들기",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "electron: After actual archive creation and renderer reload, transient input was empty, the original archive hash and sole directory member remained exact, and source bytes stayed unchanged.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/project-archive-controls.spec.ts::native archive controls preserve original bytes and reopen the explicitly restored fresh project",
+         "receipt": "2026-10-07-project-archive-controls-5e96e5e-electron.json",
+         "receipt_sha256": "1751b069db898728a98188d3428f217eb3f9b882ccb8899a7854a98e5533be37",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9ebe9fb608c4e2614d09b6f2f8bb2f618dc24ac09374821a0613cb21437aabe8"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ba7dd5a8c03d81313d823309935f18075fbe63962d2ba66b01a6708f7ccd2e32"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "da7ab910695aa02684fe4dc3e7f26be2ce60a68a70a15a66d47994ab10864cbc"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "프로젝트 백업 만들기",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "browser: The exact archive and its recorded SHA were used in a fresh absent-path restore; actual restored originals and persisted marker matched and restore verification was separately recorded.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/project-archive-controls.spec.ts::archive controls preserve originals across invalid paths cancellation transport errors and fresh restore",
+         "receipt": "2026-10-07-project-archive-controls-5e96e5e-browser.json",
+         "receipt_sha256": "ff2a9e13c83437cff78e34708f2b81f6ea30a7746580942376f64efd2c5c8d7b",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "75fd65ded1fc8fdfaf9a6eb6d4d627dcfd541b65cb3cf5425dc0925e223da164"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "d79db3d6833199be5de4a4cd8acf25001c0a3874d0282ebc709aa381f0913302"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "cf158878b10b2bbc1b41590c17e743ea6ee8d4c08bbfd36e220101a076a659da"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "프로젝트 백업 만들기",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "electron: The exact archive and its recorded SHA were used in a fresh absent-path restore; actual restored originals and persisted marker matched and restore verification was separately recorded.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/project-archive-controls.spec.ts::native archive controls preserve original bytes and reopen the explicitly restored fresh project",
+         "receipt": "2026-10-07-project-archive-controls-5e96e5e-electron.json",
+         "receipt_sha256": "1751b069db898728a98188d3428f217eb3f9b882ccb8899a7854a98e5533be37",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9ebe9fb608c4e2614d09b6f2f8bb2f618dc24ac09374821a0613cb21437aabe8"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ba7dd5a8c03d81313d823309935f18075fbe63962d2ba66b01a6708f7ccd2e32"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "da7ab910695aa02684fe4dc3e7f26be2ce60a68a70a15a66d47994ab10864cbc"
+          }
+         ]
+        }
+       ]
       }
      }
     },
@@ -17600,7 +17924,61 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "새 프로젝트로 복원",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "browser: Missing archive or destination disabled the actual fresh-restore control for both independently missing fields.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/project-archive-controls.spec.ts::archive controls preserve originals across invalid paths cancellation transport errors and fresh restore",
+         "receipt": "2026-10-07-project-archive-controls-5e96e5e-browser.json",
+         "receipt_sha256": "ff2a9e13c83437cff78e34708f2b81f6ea30a7746580942376f64efd2c5c8d7b",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "75fd65ded1fc8fdfaf9a6eb6d4d627dcfd541b65cb3cf5425dc0925e223da164"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "d79db3d6833199be5de4a4cd8acf25001c0a3874d0282ebc709aa381f0913302"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "cf158878b10b2bbc1b41590c17e743ea6ee8d4c08bbfd36e220101a076a659da"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "새 프로젝트로 복원",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "electron: Missing archive or destination disabled the actual fresh-restore control for both independently missing fields.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/project-archive-controls.spec.ts::native archive controls preserve original bytes and reopen the explicitly restored fresh project",
+         "receipt": "2026-10-07-project-archive-controls-5e96e5e-electron.json",
+         "receipt_sha256": "1751b069db898728a98188d3428f217eb3f9b882ccb8899a7854a98e5533be37",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9ebe9fb608c4e2614d09b6f2f8bb2f618dc24ac09374821a0613cb21437aabe8"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ba7dd5a8c03d81313d823309935f18075fbe63962d2ba66b01a6708f7ccd2e32"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "da7ab910695aa02684fe4dc3e7f26be2ce60a68a70a15a66d47994ab10864cbc"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
        "state": "verified",
@@ -17634,10 +18012,118 @@
        ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "새 프로젝트로 복원",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "browser: Explicit controlled503 transport failure kept the selected original project, created no target and preserved archive/source hashes; deliberate retry restored the exact archive to the new project.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/project-archive-controls.spec.ts::archive controls preserve originals across invalid paths cancellation transport errors and fresh restore",
+         "receipt": "2026-10-07-project-archive-controls-5e96e5e-browser.json",
+         "receipt_sha256": "ff2a9e13c83437cff78e34708f2b81f6ea30a7746580942376f64efd2c5c8d7b",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "75fd65ded1fc8fdfaf9a6eb6d4d627dcfd541b65cb3cf5425dc0925e223da164"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "d79db3d6833199be5de4a4cd8acf25001c0a3874d0282ebc709aa381f0913302"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "cf158878b10b2bbc1b41590c17e743ea6ee8d4c08bbfd36e220101a076a659da"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "새 프로젝트로 복원",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "electron: Explicit controlled503 transport failure kept the selected original project, created no target and preserved archive/source hashes; deliberate retry restored the exact archive to the new project.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/project-archive-controls.spec.ts::native archive controls preserve original bytes and reopen the explicitly restored fresh project",
+         "receipt": "2026-10-07-project-archive-controls-5e96e5e-electron.json",
+         "receipt_sha256": "1751b069db898728a98188d3428f217eb3f9b882ccb8899a7854a98e5533be37",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9ebe9fb608c4e2614d09b6f2f8bb2f618dc24ac09374821a0613cb21437aabe8"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ba7dd5a8c03d81313d823309935f18075fbe63962d2ba66b01a6708f7ccd2e32"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "da7ab910695aa02684fe4dc3e7f26be2ce60a68a70a15a66d47994ab10864cbc"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "새 프로젝트로 복원",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "browser: Closing populated unsubmitted archive/target fields emitted no restore request, created no target and retained archive/source hashes; reopening cleared both abandoned fields.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/project-archive-controls.spec.ts::archive controls preserve originals across invalid paths cancellation transport errors and fresh restore",
+         "receipt": "2026-10-07-project-archive-controls-5e96e5e-browser.json",
+         "receipt_sha256": "ff2a9e13c83437cff78e34708f2b81f6ea30a7746580942376f64efd2c5c8d7b",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "75fd65ded1fc8fdfaf9a6eb6d4d627dcfd541b65cb3cf5425dc0925e223da164"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "d79db3d6833199be5de4a4cd8acf25001c0a3874d0282ebc709aa381f0913302"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "cf158878b10b2bbc1b41590c17e743ea6ee8d4c08bbfd36e220101a076a659da"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "새 프로젝트로 복원",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "electron: Closing populated unsubmitted archive/target fields emitted no restore request, created no target and retained archive/source hashes; reopening cleared both abandoned fields.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/project-archive-controls.spec.ts::native archive controls preserve original bytes and reopen the explicitly restored fresh project",
+         "receipt": "2026-10-07-project-archive-controls-5e96e5e-electron.json",
+         "receipt_sha256": "1751b069db898728a98188d3428f217eb3f9b882ccb8899a7854a98e5533be37",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9ebe9fb608c4e2614d09b6f2f8bb2f618dc24ac09374821a0613cb21437aabe8"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ba7dd5a8c03d81313d823309935f18075fbe63962d2ba66b01a6708f7ccd2e32"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "da7ab910695aa02684fe4dc3e7f26be2ce60a68a70a15a66d47994ab10864cbc"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
        "state": "verified",
@@ -19348,16 +19834,264 @@
        "state": "pending"
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "태그·제품·Lot·오류 필터",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "browser: Controlled503 while loading the selected tag cohort preserved its exact query and remembered UUID/SHA. Explicit retry after removing the fixture returned the actual single matching row.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/library-selection-controls.spec.ts::library selection waits for saved identity and preserves cancelled failed and retried filters",
+         "receipt": "2026-10-07-library-selection-controls-5e96e5e-browser.json",
+         "receipt_sha256": "13cc196dfa43c40c0e9279ed7936038cbe6b894d74e0d027eb30ce6bb4605779",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "7d117b12c7af002fccb19441e8d4374a3d1a53c747e8f8a37475b32c9986f001"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "02a3ee3f127af70c7b79ead4401312801f23456950b735c671d9cfeb14966245"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "c16c1e77857d9959d19395e1dff471e2a1b8d5e0e07e51ab7ae3f3cbe1e93e5f"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "0d712fbe7e6480fb920cbbc070d51f8bb7ef8a05d49c803c0ac11615b9965b6d"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "태그·제품·Lot·오류 필터",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "electron: Controlled503 while loading the selected tag cohort preserved its exact query and remembered UUID/SHA. Explicit retry after removing the fixture returned the actual single matching row.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/library-selection-controls.spec.ts::native library selection refuses unresolved saved bytes and reopens exact confirmed identity",
+         "receipt": "2026-10-07-library-selection-controls-5e96e5e-electron.json",
+         "receipt_sha256": "ef614c7259646471470b14c97c4c8522a9a292adc0477612ebefaf06cbd80828",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4990434fbe114c814b727632af63c0abd6cc9f34e5792814fb05847fed2a4328"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "08db90e5b05311416676acb397ed421669d8f8ae8ccdf1a07b3c45f8a16754c6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "3a866a7f472be9bba37ac2e3f5e2ead29be78985e2239740094ae4319cb80baa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "7fc42b6e7a5de3d47ef5fd5ed2723e710a639ca3a42082c85d0aaf3575f4f23f"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "태그·제품·Lot·오류 필터",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "browser: Closing the unsubmitted no-match Lot cohort retained the previously confirmed UUID/SHA and every original source hash.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/library-selection-controls.spec.ts::library selection waits for saved identity and preserves cancelled failed and retried filters",
+         "receipt": "2026-10-07-library-selection-controls-5e96e5e-browser.json",
+         "receipt_sha256": "13cc196dfa43c40c0e9279ed7936038cbe6b894d74e0d027eb30ce6bb4605779",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "7d117b12c7af002fccb19441e8d4374a3d1a53c747e8f8a37475b32c9986f001"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "02a3ee3f127af70c7b79ead4401312801f23456950b735c671d9cfeb14966245"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "c16c1e77857d9959d19395e1dff471e2a1b8d5e0e07e51ab7ae3f3cbe1e93e5f"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "0d712fbe7e6480fb920cbbc070d51f8bb7ef8a05d49c803c0ac11615b9965b6d"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "태그·제품·Lot·오류 필터",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "electron: Closing the unsubmitted no-match Lot cohort retained the previously confirmed UUID/SHA and every original source hash.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/library-selection-controls.spec.ts::native library selection refuses unresolved saved bytes and reopens exact confirmed identity",
+         "receipt": "2026-10-07-library-selection-controls-5e96e5e-electron.json",
+         "receipt_sha256": "ef614c7259646471470b14c97c4c8522a9a292adc0477612ebefaf06cbd80828",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4990434fbe114c814b727632af63c0abd6cc9f34e5792814fb05847fed2a4328"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "08db90e5b05311416676acb397ed421669d8f8ae8ccdf1a07b3c45f8a16754c6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "3a866a7f472be9bba37ac2e3f5e2ead29be78985e2239740094ae4319cb80baa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "7fc42b6e7a5de3d47ef5fd5ed2723e710a639ca3a42082c85d0aaf3575f4f23f"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "태그·제품·Lot·오류 필터",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "browser: Reopening cleared transient tag/Lot filters, resolved the actual remembered image and retained exact prior stored UUID/SHA.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/library-selection-controls.spec.ts::library selection waits for saved identity and preserves cancelled failed and retried filters",
+         "receipt": "2026-10-07-library-selection-controls-5e96e5e-browser.json",
+         "receipt_sha256": "13cc196dfa43c40c0e9279ed7936038cbe6b894d74e0d027eb30ce6bb4605779",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "7d117b12c7af002fccb19441e8d4374a3d1a53c747e8f8a37475b32c9986f001"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "02a3ee3f127af70c7b79ead4401312801f23456950b735c671d9cfeb14966245"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "c16c1e77857d9959d19395e1dff471e2a1b8d5e0e07e51ab7ae3f3cbe1e93e5f"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "0d712fbe7e6480fb920cbbc070d51f8bb7ef8a05d49c803c0ac11615b9965b6d"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "태그·제품·Lot·오류 필터",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "electron: Reopening cleared transient tag/Lot filters, resolved the actual remembered image and retained exact prior stored UUID/SHA.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/library-selection-controls.spec.ts::native library selection refuses unresolved saved bytes and reopens exact confirmed identity",
+         "receipt": "2026-10-07-library-selection-controls-5e96e5e-electron.json",
+         "receipt_sha256": "ef614c7259646471470b14c97c4c8522a9a292adc0477612ebefaf06cbd80828",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4990434fbe114c814b727632af63c0abd6cc9f34e5792814fb05847fed2a4328"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "08db90e5b05311416676acb397ed421669d8f8ae8ccdf1a07b3c45f8a16754c6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "3a866a7f472be9bba37ac2e3f5e2ead29be78985e2239740094ae4319cb80baa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "7fc42b6e7a5de3d47ef5fd5ed2723e710a639ca3a42082c85d0aaf3575f4f23f"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "태그·제품·Lot·오류 필터",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "browser: Selecting the actual tag-filtered row and confirming retained exactly the backend row UUID/SHA through flow renderer reload and subsequent actual found-resolution.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/library-selection-controls.spec.ts::library selection waits for saved identity and preserves cancelled failed and retried filters",
+         "receipt": "2026-10-07-library-selection-controls-5e96e5e-browser.json",
+         "receipt_sha256": "13cc196dfa43c40c0e9279ed7936038cbe6b894d74e0d027eb30ce6bb4605779",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "7d117b12c7af002fccb19441e8d4374a3d1a53c747e8f8a37475b32c9986f001"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "02a3ee3f127af70c7b79ead4401312801f23456950b735c671d9cfeb14966245"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "c16c1e77857d9959d19395e1dff471e2a1b8d5e0e07e51ab7ae3f3cbe1e93e5f"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "0d712fbe7e6480fb920cbbc070d51f8bb7ef8a05d49c803c0ac11615b9965b6d"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "태그·제품·Lot·오류 필터",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "electron: Selecting the actual tag-filtered row and confirming retained exactly the backend row UUID/SHA through flow renderer reload and subsequent actual found-resolution.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/library-selection-controls.spec.ts::native library selection refuses unresolved saved bytes and reopens exact confirmed identity",
+         "receipt": "2026-10-07-library-selection-controls-5e96e5e-electron.json",
+         "receipt_sha256": "ef614c7259646471470b14c97c4c8522a9a292adc0477612ebefaf06cbd80828",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4990434fbe114c814b727632af63c0abd6cc9f34e5792814fb05847fed2a4328"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "08db90e5b05311416676acb397ed421669d8f8ae8ccdf1a07b3c45f8a16754c6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "3a866a7f472be9bba37ac2e3f5e2ead29be78985e2239740094ae4319cb80baa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "7fc42b6e7a5de3d47ef5fd5ed2723e710a639ca3a42082c85d0aaf3575f4f23f"
+          }
+         ]
+        }
+       ]
       }
      }
     },
@@ -19394,16 +20128,202 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "선택 확정",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "browser: With no saved or manually picked selection the actual confirmation control was disabled; no stored preference existed.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/library-selection-controls.spec.ts::library selection waits for saved identity and preserves cancelled failed and retried filters",
+         "receipt": "2026-10-07-library-selection-controls-5e96e5e-browser.json",
+         "receipt_sha256": "13cc196dfa43c40c0e9279ed7936038cbe6b894d74e0d027eb30ce6bb4605779",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "7d117b12c7af002fccb19441e8d4374a3d1a53c747e8f8a37475b32c9986f001"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "02a3ee3f127af70c7b79ead4401312801f23456950b735c671d9cfeb14966245"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "c16c1e77857d9959d19395e1dff471e2a1b8d5e0e07e51ab7ae3f3cbe1e93e5f"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "0d712fbe7e6480fb920cbbc070d51f8bb7ef8a05d49c803c0ac11615b9965b6d"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "선택 확정",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "electron: With no saved or manually picked selection the actual confirmation control was disabled; no stored preference existed.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/library-selection-controls.spec.ts::native library selection refuses unresolved saved bytes and reopens exact confirmed identity",
+         "receipt": "2026-10-07-library-selection-controls-5e96e5e-electron.json",
+         "receipt_sha256": "ef614c7259646471470b14c97c4c8522a9a292adc0477612ebefaf06cbd80828",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4990434fbe114c814b727632af63c0abd6cc9f34e5792814fb05847fed2a4328"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "08db90e5b05311416676acb397ed421669d8f8ae8ccdf1a07b3c45f8a16754c6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "3a866a7f472be9bba37ac2e3f5e2ead29be78985e2239740094ae4319cb80baa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "7fc42b6e7a5de3d47ef5fd5ed2723e710a639ca3a42082c85d0aaf3575f4f23f"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
        "state": "pending"
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "선택 확정",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "browser: Controlled503 on saved-identity resolution disabled confirmation and retained the exact original scoped preference; explicit reopen after removing the fixture resolved the actual original.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/library-selection-controls.spec.ts::library selection waits for saved identity and preserves cancelled failed and retried filters",
+         "receipt": "2026-10-07-library-selection-controls-5e96e5e-browser.json",
+         "receipt_sha256": "13cc196dfa43c40c0e9279ed7936038cbe6b894d74e0d027eb30ce6bb4605779",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "7d117b12c7af002fccb19441e8d4374a3d1a53c747e8f8a37475b32c9986f001"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "02a3ee3f127af70c7b79ead4401312801f23456950b735c671d9cfeb14966245"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "c16c1e77857d9959d19395e1dff471e2a1b8d5e0e07e51ab7ae3f3cbe1e93e5f"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "0d712fbe7e6480fb920cbbc070d51f8bb7ef8a05d49c803c0ac11615b9965b6d"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "선택 확정",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "electron: Controlled503 on saved-identity resolution disabled confirmation and retained the exact original scoped preference; explicit reopen after removing the fixture resolved the actual original.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/library-selection-controls.spec.ts::native library selection refuses unresolved saved bytes and reopens exact confirmed identity",
+         "receipt": "2026-10-07-library-selection-controls-5e96e5e-electron.json",
+         "receipt_sha256": "ef614c7259646471470b14c97c4c8522a9a292adc0477612ebefaf06cbd80828",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4990434fbe114c814b727632af63c0abd6cc9f34e5792814fb05847fed2a4328"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "08db90e5b05311416676acb397ed421669d8f8ae8ccdf1a07b3c45f8a16754c6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "3a866a7f472be9bba37ac2e3f5e2ead29be78985e2239740094ae4319cb80baa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "7fc42b6e7a5de3d47ef5fd5ed2723e710a639ca3a42082c85d0aaf3575f4f23f"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "선택 확정",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "browser: Picking a different actual validated row and cancelling retained the prior confirmed UUID/SHA; reopening resolved that prior original, not the abandoned temporary selection.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/library-selection-controls.spec.ts::library selection waits for saved identity and preserves cancelled failed and retried filters",
+         "receipt": "2026-10-07-library-selection-controls-5e96e5e-browser.json",
+         "receipt_sha256": "13cc196dfa43c40c0e9279ed7936038cbe6b894d74e0d027eb30ce6bb4605779",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "7d117b12c7af002fccb19441e8d4374a3d1a53c747e8f8a37475b32c9986f001"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "02a3ee3f127af70c7b79ead4401312801f23456950b735c671d9cfeb14966245"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "c16c1e77857d9959d19395e1dff471e2a1b8d5e0e07e51ab7ae3f3cbe1e93e5f"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "0d712fbe7e6480fb920cbbc070d51f8bb7ef8a05d49c803c0ac11615b9965b6d"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+         "kind": "click",
+         "action": "선택 확정",
+         "expected": "Explicit project archive and fresh restore preserve original contents across the named scenario.",
+         "observed": "electron: Picking a different actual validated row and cancelling retained the prior confirmed UUID/SHA; reopening resolved that prior original, not the abandoned temporary selection.",
+         "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+         "test": "scripts/e2e/library-selection-controls.spec.ts::native library selection refuses unresolved saved bytes and reopens exact confirmed identity",
+         "receipt": "2026-10-07-library-selection-controls-5e96e5e-electron.json",
+         "receipt_sha256": "ef614c7259646471470b14c97c4c8522a9a292adc0477612ebefaf06cbd80828",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4990434fbe114c814b727632af63c0abd6cc9f34e5792814fb05847fed2a4328"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "08db90e5b05311416676acb397ed421669d8f8ae8ccdf1a07b3c45f8a16754c6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "3a866a7f472be9bba37ac2e3f5e2ead29be78985e2239740094ae4319cb80baa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "7fc42b6e7a5de3d47ef5fd5ed2723e710a639ca3a42082c85d0aaf3575f4f23f"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
        "state": "verified",

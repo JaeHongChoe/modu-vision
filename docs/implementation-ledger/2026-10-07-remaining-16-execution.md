@@ -10,13 +10,13 @@
 | S6-02 | Windows 설치 | 설치 구성·unsigned packaged CPU/restart 검증 기록 보존 | Windows11 설치·제거 실기 QA는 사용자 면제이며 통과로 집계하지 않음 |
 | S6-03 | 선택 runtime pack | 별도 FP32/FP16 pack 및 OpenVINO/NNCF INT8 pack64파일 설치·재검증; 실제 Xeon CPU 양자화·full flow·OCR 및 관련140개 통과 | 다른 provider/장치·대표 정답 cohort·native license/publisher 승인 |
 | S6-04 | 오프라인 업데이트 | owned POSIX portable 앱·DB cutover, crash finish, 새 account/profile 보존 forward recovery; actual frozen CLI5회·별도 CPU known-image2회; 새 main/preload/renderer 검토·복구 연결, 관련Python125/Node40 및 UI2개 통과 | 실제 OS installer·설치된 home·native layout·실 publisher 서명·native positive 설치 및 installed-app known-image handoff |
-| S6-05 | 공개 CI | sourcec2e7b6 hosted workflow success 재확인; heartbeat 검사 수정·Mac58/Linux119 통과 | 최신 게시 source 전체 CI 완료; 기존 queue 및 실패 기록 보존 |
+| S6-05 | 공개 CI | 기존 hosted success 보존; 전체 CPU2706 pass/고지 누락1 fail·고지62 및 optional27 repair pass | 최신 게시 source 전체 CI 완료; 기존 queue 및 실패 기록 보존 |
 | S6-06 | 서명·채널 | unsigned 상태와 checksum/source 연결 | 실제 publisher/서명 키·최종 artifact와 stable/beta 운영 정책 |
-| S7-01 | 전체 기능 행동 coverage | 192개 curated action, 413개 시나리오 검증; retention·template 실제 browser/Electron 근거 추가 | 931개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
+| S7-01 | 전체 기능 행동 coverage | 192개 curated action, 429개 시나리오 검증; retention·template 실제 browser/Electron 근거 추가 | 915개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
 | S7-02 | 10개 모델군 시나리오 | 실제 family별 학습/추론·다중 checkpoint·flow/package control 기록 | 사람이 검토한 대표 분류/정상/OCR/OBB/향상/GAN truth와 품질 판정 |
 | S7-03 | Windows 실사용 | 기존 unsigned runner 결과 보존 | 사용자 면제. 신규 실기 테스트를 시작하지 않으며 pass로 바꾸지 않음 |
 | S7-04 | 동시 작업·장애 | 2개 계정/agent·actual CPU·재접속·권한/충돌 control; controlled signed portable 앱·DB cutover 및 crash recovery | 물리적 장애와 실제 publisher가 서명한 native 앱 업데이트 |
-| S7-05 | 규모·72시간 운전 | 같은 연속 운전 17.14시간/1026 cycles; Mac/Linux10k·100k metadata와80MP decode 측정 완료 | 72시간 종료 receipt 및 실제 target RAM/disk/p95/tact 측정 |
+| S7-05 | 규모·72시간 운전 | 같은 연속 운전 17.84시간/1068 cycles; Mac/Linux10k·100k metadata와80MP decode 측정 완료 | 72시간 종료 receipt 및 실제 target RAM/disk/p95/tact 측정 |
 | S7-06 | 공정 품질·장비 | simulator 계약과 실행/품질 상태 구분 | 실제 camera/PLC/MES 및 제품/Lot별 정답·미검/과검 승인 기준 |
 | S7-07 | 공개 후보 판정 | 최신 standalone backend freeze·startup/restart 및270개 의존성 license bytes 누락0 | native library 조건·업데이트/coverage·실제 서명·독립 리뷰·pilot |
 | S7-08 | 사용자 pilot·운영 | feedback/지원/backup 절차 및 승인 경계 기록 | 실제 처음 쓰는 참여자 pilot과 유지보수 책임·SLA 결정 |
@@ -153,3 +153,17 @@
 - 10만 행 paging p95는 Mac1.709ms/Linux2.817ms, test-filter search p95는 Mac14.131ms/Linux17.954ms였다. Mac10만 case peak RSS904,249,344 bytes, Linux1,091,051,520 bytes이며 Linux는 별도2CPU/8GiB 제한이다. 정확한 출력 file inventory와 logical/allocated bytes를 기록했고 shared filesystem free delta를 소유 파일 사용량과 구분했다.
 - 각 호스트의 두 queue controls에서 원래5000 REVIEW rows·duplicate5000·backpressure100·재조회5000을 확인했다. 실제 모델 inference나72시간 경과는 이 짧은 검사에 포함하지 않는다. Linux owned container는 exit0/removed이며 다른 작업을 중단하지 않았다.
 - 같은 independent72h process/observer/caffeinate의 create time을 다시 읽었고 기존 운전을 유지했다. Public receipt:2026-10-07-local-linux-capacity-0544e0e.json. 부모67/82·미완료15/82·수락0을 유지한다.
+
+## 추가 실행: 프로젝트 백업·복원의 오류·취소·재시도
+
+- Clean source5e96e5e의 actual browser1/Electron1에서 원본 폴더 안으로 백업하는 요청의422, 빈 입력 비활성화, 제출 전 취소와 재열기, 실제 archive 생성과 새 project 복원을 확인했다.503은 명시적인 통신 fixture이며 서버 실패로 바꾸어 기록하지 않는다.
+- 오류·취소에는 새 archive/restore target이 없고 선택한 project와 원본 hash가 유지됐다. 직접 수정 재시도 뒤 exact archive SHA·복원 marker·모든 source image hash와 실제 재열린 restore record를 대조했다.
+- 기존4 actions의 미검증16 scenarios를 채워192 actions/429 verified/915 pending이다. Full feature 수락0과 부모67/82·미완료15/82는 유지하며 Windows·현장 품질·배포자 서명·독립 승인은 포함하지 않는다.
+
+- 저장한 이미지 identity의 실제 확인이 끝나기 전 선택 확정이 켜지는 오류를 production component red1/green4로 재현·수정했다. 새로 직접 고른 유효한 row는 유지되며 뒤늦은 저장 선택 오류가 덮지 않는다. Clean actual browser/Electron에서 응답 지연·503·정확한 필터 재시도·선택 취소·재열기와 모든 원본 hash를 대조했다. 기존 invalid 차원은 임의로 승격하지 않았다.
+
+## 추가 실행: 전체 CPU 선택 replay와 의존성 고지 교정
+
+- Clean1e82c22에서 실제 Linux CI의2737-case 선택을 Mac에서 실행해2706 passed/1 failed/30 skipped이다. 고지 문서에 cryptography가 빠진 원래 실패를 보존했다. 실제 inventory로 cffi·cryptography·pycparser 세 행을 재생성했고 관련62 passed이다. 공개 라이선스 승인으로 대체하지 않는다.
+- Clean5e96e5e에서 기존 별도 검증 interpreter로 DICOM26와 actual OpenVINO full-flow1을 실행해27 passed/0 skipped이다. Mac에서 실행할 수 없는 Windows sharing2와 다른 file-system spelling1은 계속 skip이며 native Windows pass로 세지 않는다. Backend/workflow 원본은1e82c22와 같고 새 renderer875 passed 및 두 타입 검사, actual browser2/Electron2 passed이다. 최신 hosted CI는 별도 확인한다.
+- 실제 Mac 현재 사용자 context의 유효한 code-signing identity0개를 읽기 전용으로 확인했다. 실 publisher authority나 키를 만들어 signed positive 검사로 바꾸지 않았다. Public receipts:2026-10-07-local-ci-replay-and-repairs-5e96e5e.json,2026-10-07-native-publisher-preflight-1e82c22.json.
