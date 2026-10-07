@@ -17,7 +17,12 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  const query=`/api/annotations/part?file_path=${encodeURIComponent(image)}`,empty=await api(query);expect(empty.annotations).toEqual([]);
  const point=async(x:number,y:number)=>{const b=(await page.locator('[data-canvas-container]').boundingBox())!;return{x:b.x+(b.width-256)/2+x,y:b.y+(b.height-256)/2+y};};
  const drag=async(x1:number,y1:number,x2:number,y2:number,cancel=false)=>{const a=await point(x1,y1),b=await point(x2,y2);await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(b.x,b.y,{steps:8});if(cancel)await page.keyboard.press('Escape');await page.mouse.up();};
- const drawPoints=async(points:number[][])=>{for(const[x,y]of points){const p=await point(x,y);await page.mouse.click(p.x,p.y);}};
+ const drawPoints=async(points:number[][])=>{
+  // Saving can change toolbar height. A 1:1 view intentionally preserves its
+  // existing pan across resize; explicitly recenter before source-pixel input.
+  await page.getByTitle('100% Zoom (1:1)',{exact:true}).click();
+  for(const[x,y]of points){const p=await point(x,y);await page.mouse.move(p.x,p.y);await expect(page.getByTestId('canvas-hud')).toContainText(new RegExp(`X:\\s*${x}\\s*px\\s*Y:\\s*${y}\\s*px`));await page.mouse.click(p.x,p.y);}
+ };
  const saveButton=page.getByTestId('annotation-save-button'),pending=()=>page.getByRole('button',{name:'Save Changes',exact:true}),count=()=>page.getByTitle('Delete annotation',{exact:true});
  const writes:string[]=[];page.on('request',r=>{if(r.method()==='POST'&&new URL(r.url()).pathname==='/api/annotations/save')writes.push(r.url());});
  await page.getByTitle('선택 및 이동 (Select / Move - 1)',{exact:true}).click();await page.keyboard.press('Delete');await page.keyboard.press('Control+z');await page.keyboard.press('Control+y');await expect(count()).toHaveCount(0);await expect(pending()).toHaveCount(0);
