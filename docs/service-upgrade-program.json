@@ -1057,7 +1057,7 @@
         "S1-02",
         "S1-06"
       ],
-      "status": "planned",
+      "status": "verification_pending",
       "evidence": [
         {
           "kind": "actual owned drained generation execution; root review, independent review pending",
@@ -1156,6 +1156,14 @@
           "receipt_sha256": "95b727fd095728f0484df62e90e3b576f1981191a8bc13e3b1f7e5f969adfab6",
           "result": "228 affected backend controls and30 release candidate contracts passed with zero failures/skips; actual shared-admission conflict and seven typed corruption cases reproduced then rejected. Upstream actionlint syntax/context validation passes after illegal job env context repair.",
           "scope": "Software prerequisite only. Durable spawned ambiguity stays recovery_required; authenticated native controller/process-tree reconciliation, actual installer and current source hosted CI remain pending. No original soak or user-home operation."
+        },
+        {
+          "kind": "independently-reviewed-supported-migration-implementation",
+          "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
+          "receipt": "docs/verification/receipts/2026-10-08-migration-implementation-1a9b830.json",
+          "receipt_sha256": "6f7b002e360158a97562b6dc6be8f29de182e8b13cd57aea01fc6b516f073853",
+          "result": "All4 original assertions mapped to current source and retained primary execution;24 current source hashes verified. Current26 original S1-08 regressions pass without failures/skips. Supported current POSIX implementation independently reviewed.",
+          "scope": "Implementation only: current declared local/remote-training/opted-in specialist ownership and explicit quiescent installed-home controls. Unsupported protocols require drain/refusal or further adapter code. Other8 acceptance gates remain pending; no actual user-home adoption, native target, representative quality or whole-parent acceptance."
         }
       ],
       "file_actions": {
@@ -1173,7 +1181,7 @@
       },
       "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-1-platform.md",
       "acceptance_state": {
-        "implementation": "pending",
+        "implementation": "verified",
         "contract": "pending",
         "gui": "pending",
         "persist": "pending",
@@ -1185,7 +1193,7 @@
       },
       "proposed_test_file": "backend/tests/test_service_s1_08.py",
       "remaining": [
-        "Explicit installed-home adoption and logical-history snapshots now exist with reviewed ownership/quiescence attestation, original-byte backup and atomic owner publication in controlled POSIX fixtures. Actual installed native target migration, unsupported live workers and independent acceptance remain separate."
+        "Supported current POSIX migration implementation independently reviewed and verified; actual installed native target migration, unsupported/legacy live-worker adapters, whole-backbone/device qualification and the other8 original acceptance dimensions remain separate. Unknown protocols retain explicit drain/refusal."
       ]
     },
     {
@@ -4820,6 +4828,14 @@
           "receipt_sha256": "95b727fd095728f0484df62e90e3b576f1981191a8bc13e3b1f7e5f969adfab6",
           "result": "228 affected backend controls and30 release candidate contracts passed with zero failures/skips; actual shared-admission conflict and seven typed corruption cases reproduced then rejected. Upstream actionlint syntax/context validation passes after illegal job env context repair.",
           "scope": "Software prerequisite only. Durable spawned ambiguity stays recovery_required; authenticated native controller/process-tree reconciliation, actual installer and current source hosted CI remain pending. No original soak or user-home operation."
+        },
+        {
+          "kind": "owned-launch-controller-bridge-and-gui-readback",
+          "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
+          "receipt": "docs/verification/receipts/2026-10-08-owned-launch-bridge-1a9b830.json",
+          "receipt_sha256": "ad919678b166487b09a049d7c807f774ae3a28841442394203ed8b222f30ea91",
+          "result": "385 unchanged related outcomes plus36 corrected command/inventory/resource regressions,952 renderer/main cases and4 clean actual GUI cases verified. The initial388-case gate retained3 stale-fixture failures; no second full-suite execution is claimed.",
+          "scope": "Controlled real source process binding and actual GUI lifecycle/recovery controls only; native packaged positive startup, actual known-image inference, whole writer reconciliation, publisher, installer and release remain pending."
         }
       ],
       "file_actions": {
@@ -4842,7 +4858,7 @@
       },
       "proposed_test_file": "backend/tests/test_service_s6_04.py",
       "remaining": [
-        "Preserve qualified app/database cutover/recovery, installed-home adoption and durable launch foundation. Complete admission-compatible transitions, persistent frozen native controller, authenticated generation handshake, process-tree reconciliation, actual known-image execution and OS installer adapter. Real publisher signatures and installed native positive acceptance remain separate."
+        "Persistent controller, early main/backend generation binding, declared frozen dispatcher protocol and durable GUI readback are implemented and source-fixture qualified. Actual packaged descriptor retention/startup, same-backend known-image execution, qualification-S010 pre-cutover canary, whole writer/process-tree reconciliation, OS installer adapters, real publisher and installed native acceptance remain pending."
       ]
     },
     {
@@ -5690,6 +5706,14 @@
           "receipt_sha256": "083e9d91db7e94fae2c1c5f7c5eefdc1e98ebee0e309b6a36b2ce90ba4e8fb83",
           "result": "412 integrated backend,922 renderer/main,39 scope/registry,29 candidate validation regressions and7 clean browser/native GUI cases passed. Individual software evidence only.",
           "scope": "Explicit POSIX owned installed-home adoption, finite immutable logical snapshots, update/migration launch guards, fail-closed persistent launch foundation, protected manual candidate validation workflow, actual saved evaluation and100k-metadata GUI controls. Only controlled software fixtures; no actual user installed-home adoption or native authenticated updated-app launch. Native caller/controller and actual acceptance remain pending."
+        },
+        {
+          "kind": "owned-launch-controller-bridge-and-gui-readback",
+          "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
+          "receipt": "docs/verification/receipts/2026-10-08-owned-launch-bridge-1a9b830.json",
+          "receipt_sha256": "ad919678b166487b09a049d7c807f774ae3a28841442394203ed8b222f30ea91",
+          "result": "385 unchanged related outcomes plus36 corrected command/inventory/resource regressions,952 renderer/main cases and4 clean actual GUI cases verified. The initial388-case gate retained3 stale-fixture failures; no second full-suite execution is claimed.",
+          "scope": "Controlled real source process binding and actual GUI lifecycle/recovery controls only; native packaged positive startup, actual known-image inference, whole writer reconciliation, publisher, installer and release remain pending."
         }
       ],
       "file_actions": {
@@ -5714,7 +5738,7 @@
       },
       "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts",
       "remaining": [
-        "205 curated actions have564 verified and871 pending scenarios. Six new actions add42 dimensions,19 actually verified and23 pending; remaining menus/shortcuts, native/controller flows and full156-feature target acceptance remain pending."
+        "207 curated actions have569 verified and880 pending scenarios. Two launch lifecycle actions add14 dimensions,5 verified with controlled CLI/signature responses through actual GUI and9 pending. Omitted menus/shortcuts and full156-feature target acceptance remain pending."
       ]
     },
     {
@@ -5843,7 +5867,7 @@
         "S5-10",
         "S6-04"
       ],
-      "status": "in_progress",
+      "status": "verification_pending",
       "evidence": [
         {
           "kind": "owned-local-component-followup",
@@ -5954,6 +5978,22 @@
           "receipt_sha256": "95b727fd095728f0484df62e90e3b576f1981191a8bc13e3b1f7e5f969adfab6",
           "result": "228 affected backend controls and30 release candidate contracts passed with zero failures/skips; actual shared-admission conflict and seven typed corruption cases reproduced then rejected. Upstream actionlint syntax/context validation passes after illegal job env context repair.",
           "scope": "Software prerequisite only. Durable spawned ambiguity stays recovery_required; authenticated native controller/process-tree reconciliation, actual installer and current source hosted CI remain pending. No original soak or user-home operation."
+        },
+        {
+          "kind": "owned-launch-controller-bridge-and-gui-readback",
+          "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
+          "receipt": "docs/verification/receipts/2026-10-08-owned-launch-bridge-1a9b830.json",
+          "receipt_sha256": "ad919678b166487b09a049d7c807f774ae3a28841442394203ed8b222f30ea91",
+          "result": "385 unchanged related outcomes plus36 corrected command/inventory/resource regressions,952 renderer/main cases and4 clean actual GUI cases verified. The initial388-case gate retained3 stale-fixture failures; no second full-suite execution is claimed.",
+          "scope": "Controlled real source process binding and actual GUI lifecycle/recovery controls only; native packaged positive startup, actual known-image inference, whole writer reconciliation, publisher, installer and release remain pending."
+        },
+        {
+          "kind": "independently-reviewed-current-controlled-software-fault-matrix",
+          "source_sha": "213e9b702f5ce1ee5b25d34f0a9fc94896bafba3",
+          "receipt": "docs/verification/receipts/2026-10-08-software-fault-matrix-213e9b7.json",
+          "receipt_sha256": "b1428cf4080d50e28130d7ad760404b4af0f5f50e96b0cf8edd3b59bff109af9",
+          "result": "Current integrated matrix61 and focused44 pass without failures/skips; all35 original required selectors and full parameter case identities retained across10 fault scenarios. Parent pytest filtering reproduced then excluded from the child runner. Independent original/delta reviews passed.",
+          "scope": "Implementation only: controlled transport, injected CPU MemoryError and disk classifications, real owned CLI/lease/SQLite/HTTP and controlled-authority POSIX portable pair recovery. No actual allocator/physical-network exhaustion, installed target, publisher signing or whole-parent acceptance; other8 gates pending."
         }
       ],
       "file_actions": {
@@ -5962,7 +6002,7 @@
       },
       "phase_plan": "docs/superpowers/plans/2026-10-02-service-phase-7-acceptance.md",
       "acceptance_state": {
-        "implementation": "pending",
+        "implementation": "verified",
         "contract": "pending",
         "gui": "pending",
         "persist": "pending",
@@ -5974,7 +6014,7 @@
       },
       "proposed_test_file": "scripts/e2e/service-s7-04.spec.ts",
       "remaining": [
-        "Injected transport/OOM/disk controls do not prove physical faults or signed application/DB cutover; target fault parent stays pending."
+        "Controlled software matrix implementation independently reviewed and verified; physical target faults, publisher-signed native application update, installed target qualification and other8 original acceptance dimensions remain pending."
       ]
     },
     {
@@ -10678,13 +10718,13 @@
     "progress": {
       "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",
       "parent_implementation": {
-        "verified": 67,
-        "pending": 15
+        "verified": 69,
+        "pending": 13
       },
       "parent_status": {
-        "verification_pending": 61,
-        "in_progress": 13,
-        "planned": 8
+        "verification_pending": 63,
+        "in_progress": 12,
+        "planned": 7
       },
       "merged_extension_slices": 16,
       "additional_improved_parent_areas": 2,

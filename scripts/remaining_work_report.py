@@ -41,7 +41,7 @@ FOLLOWUPS = {
     'S6-02': ('', ['Windows native installation/removal is waived for requested work only.']),
     'S6-03': ('Preserve inert pack API/GUI bindings qualified at 5284df6; qualify additional declared providers/targets with new source-bound evidence.',
               ['Other supported providers/devices, representative quality and native license/publisher acceptance.']),
-    'S6-04': ('Preserve implemented portable app/database cutover/recovery and fail-closed durable launch ownership; complete native supervisor/caller, authenticated handshake, process-tree reconciliation, known-image execution and OS installer adapter.',
+    'S6-04': ('Preserve implemented portable app/database cutover/recovery, owned persistent controller and authenticated main/backend handshake; qualify native packaged startup and complete known-image execution, process-tree reconciliation, pre-activation canary and OS installer adapter.',
               ['Real publisher signature, OS installer, installed home and installed-app known-image handoff.']),
     'S6-05': ('Preserve the protected manual release-candidate validation workflow and bind complete hosted CI to the exact newly published source.',
               ['Publication and hosted runner completion; older source success cannot qualify newer source.']),

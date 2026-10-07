@@ -21514,54 +21514,53 @@
      "source": "src/renderer/components/runtime/PortableUpdatePanel.tsx",
      "scenarios": {
       "success": {
-       "state": "pending",
+       "state": "verified",
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "portable 설치 폴더 선택",
          "expected": "Select only an explicit separate owned home.",
          "observed": "Actual manager inspected the selected controlled owned home; current Studio was untouched.",
          "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
-         "receipt": "2026-10-07-portable-update-clean-487560a-browser.json",
-         "receipt_sha256": "63decbd85111241f646a59e4db3d13173fec1ef62b581aeeb45b3ab87e4889bb",
+         "receipt": "2026-10-08-portable-update-recovery-1a9b830-browser.json",
+         "receipt_sha256": "3676fc2ae02ba3c199bebf4c0bd0d64fb2fad50566f4f4f3c083d103d16a1145",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "2e5d446badd475f7af2ca06d0397aaff4feccff0b325319c379dc1b02ad2e14c"
+           "sha256": "50bcf0240a1fab42ade6c82ae084ea0f68d6fee574651e5389a3b3e357d9f5bf"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+           "sha256": "996251d5923b6073068c1388cbf037a75cf1675bc3b125a425f12c48f4292eae"
           }
          ]
         },
         {
          "task": "S6-04",
-         "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "portable 설치 폴더 선택",
          "expected": "Select only an explicit separate owned home.",
          "observed": "Actual manager inspected the selected controlled owned home; current Studio was untouched.",
          "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
-         "receipt": "2026-10-07-portable-update-review-a53edf6-browser.json",
-         "receipt_sha256": "efbb460129d409fb2ce96903b4b19cc0550a3751f7cfa15a2261df7c4b5b79b1",
+         "receipt": "2026-10-08-portable-update-recovery-1a9b830-browser.json",
+         "receipt_sha256": "3676fc2ae02ba3c199bebf4c0bd0d64fb2fad50566f4f4f3c083d103d16a1145",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "d3d1cf77f07cd8faa2a27e697a581d97c8ac36b7cf476d3c8ca5d886a53dec7c"
+           "sha256": "50bcf0240a1fab42ade6c82ae084ea0f68d6fee574651e5389a3b3e357d9f5bf"
           },
           {
            "id": "screenshot-1",
-           "sha256": "e4bfb6aeaec7816254f5db98a31d184dd3a09443ffeba37ab33114fbef8e487a"
+           "sha256": "996251d5923b6073068c1388cbf037a75cf1675bc3b125a425f12c48f4292eae"
           }
          ]
         }
-       ],
-       "reason": "The GUI spec bytes changed for the new launch bridge. Prior exact-source evidence is retained; this current-source dimension awaits the same actual GUI case before promotion."
+       ]
       },
       "empty": {
        "state": "pending"
@@ -21570,146 +21569,143 @@
        "state": "pending"
       },
       "error": {
-       "state": "pending",
+       "state": "verified",
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "portable 설치 폴더 선택",
          "expected": "An unprovisioned native app must refuse before opening the folder picker.",
          "observed": "Actual Electron main/preload/renderer returned packaged-application refusal with no selected home or dialog.",
          "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::native desktop refuses unprovisioned portable changes before opening a directory dialog",
-         "receipt": "2026-10-07-portable-update-clean-487560a-electron.json",
-         "receipt_sha256": "51a782f359077df4f3f7f875de5876adff5f575ec030507c5ec5d5acf980cd4c",
+         "receipt": "2026-10-08-portable-native-refusal-1a9b830-electron.json",
+         "receipt_sha256": "655d3412ca661a5576cb4a2b37843e5e86fbf3ab1e39f983ae0ff878ad6f8921",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "dd095e483424ccaf1a73c82a645f97b511932c387d25c4bf2e882a382b68c19f"
+           "sha256": "76712857b22a79580f513526d2fdfbbfe6868645e52e13d8e2f53661d6fa611d"
           }
          ]
         },
         {
          "task": "S6-04",
-         "source_sha": "b505ccd0f6939012cf707ca7eca1e8876e084b4d",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "portable 설치 폴더 선택",
          "expected": "An unprovisioned native app must refuse before opening the folder picker.",
          "observed": "Actual Electron main/preload/renderer returned packaged-application refusal with no selected home or dialog.",
          "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::native desktop refuses unprovisioned portable changes before opening a directory dialog",
-         "receipt": "2026-10-07-portable-update-b505ccd-electron.json",
-         "receipt_sha256": "8214092a08ea6f5db7ec2ba20f8a07dcacdbef20aff934cfbe6d6635b9b3580d",
+         "receipt": "2026-10-08-portable-native-refusal-1a9b830-electron.json",
+         "receipt_sha256": "655d3412ca661a5576cb4a2b37843e5e86fbf3ab1e39f983ae0ff878ad6f8921",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "2e4caaa2d7ab4c8168f400e9b7275d7e39d22b4bff96a69554b71d016e57c490"
+           "sha256": "76712857b22a79580f513526d2fdfbbfe6868645e52e13d8e2f53661d6fa611d"
           }
          ]
         }
-       ],
-       "reason": "The GUI spec bytes changed for the new launch bridge. Prior exact-source evidence is retained; this current-source dimension awaits the same actual GUI case before promotion."
+       ]
       },
       "cancel": {
-       "state": "pending",
+       "state": "verified",
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "portable 설치 폴더 선택",
          "expected": "Cancelling the folder selection must not set a home.",
          "observed": "Cancelled controlled host picker returned null; no selected installation appeared.",
          "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
-         "receipt": "2026-10-07-portable-update-clean-487560a-browser.json",
-         "receipt_sha256": "63decbd85111241f646a59e4db3d13173fec1ef62b581aeeb45b3ab87e4889bb",
+         "receipt": "2026-10-08-portable-update-recovery-1a9b830-browser.json",
+         "receipt_sha256": "3676fc2ae02ba3c199bebf4c0bd0d64fb2fad50566f4f4f3c083d103d16a1145",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "2e5d446badd475f7af2ca06d0397aaff4feccff0b325319c379dc1b02ad2e14c"
+           "sha256": "50bcf0240a1fab42ade6c82ae084ea0f68d6fee574651e5389a3b3e357d9f5bf"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+           "sha256": "996251d5923b6073068c1388cbf037a75cf1675bc3b125a425f12c48f4292eae"
           }
          ]
         },
         {
          "task": "S6-04",
-         "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "portable 설치 폴더 선택",
          "expected": "Cancelling the folder selection must not set a home.",
          "observed": "Cancelled controlled host picker returned null; no selected installation appeared.",
          "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
-         "receipt": "2026-10-07-portable-update-review-a53edf6-browser.json",
-         "receipt_sha256": "efbb460129d409fb2ce96903b4b19cc0550a3751f7cfa15a2261df7c4b5b79b1",
+         "receipt": "2026-10-08-portable-update-recovery-1a9b830-browser.json",
+         "receipt_sha256": "3676fc2ae02ba3c199bebf4c0bd0d64fb2fad50566f4f4f3c083d103d16a1145",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "d3d1cf77f07cd8faa2a27e697a581d97c8ac36b7cf476d3c8ca5d886a53dec7c"
+           "sha256": "50bcf0240a1fab42ade6c82ae084ea0f68d6fee574651e5389a3b3e357d9f5bf"
           },
           {
            "id": "screenshot-1",
-           "sha256": "e4bfb6aeaec7816254f5db98a31d184dd3a09443ffeba37ab33114fbef8e487a"
+           "sha256": "996251d5923b6073068c1388cbf037a75cf1675bc3b125a425f12c48f4292eae"
           }
          ]
         }
-       ],
-       "reason": "The GUI spec bytes changed for the new launch bridge. Prior exact-source evidence is retained; this current-source dimension awaits the same actual GUI case before promotion."
+       ]
       },
       "reopen": {
-       "state": "pending",
+       "state": "verified",
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "portable 설치 폴더 선택",
          "expected": "Re-select after reload must read the committed pair.",
          "observed": "Reopening read1.0.0/fence2 and later1.1.0/fence3 from the actual owned store.",
          "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
-         "receipt": "2026-10-07-portable-update-clean-487560a-browser.json",
-         "receipt_sha256": "63decbd85111241f646a59e4db3d13173fec1ef62b581aeeb45b3ab87e4889bb",
+         "receipt": "2026-10-08-portable-update-recovery-1a9b830-browser.json",
+         "receipt_sha256": "3676fc2ae02ba3c199bebf4c0bd0d64fb2fad50566f4f4f3c083d103d16a1145",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "2e5d446badd475f7af2ca06d0397aaff4feccff0b325319c379dc1b02ad2e14c"
+           "sha256": "50bcf0240a1fab42ade6c82ae084ea0f68d6fee574651e5389a3b3e357d9f5bf"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+           "sha256": "996251d5923b6073068c1388cbf037a75cf1675bc3b125a425f12c48f4292eae"
           }
          ]
         },
         {
          "task": "S6-04",
-         "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "portable 설치 폴더 선택",
          "expected": "Re-select after reload must read the committed pair.",
          "observed": "Reopening read1.0.0/fence2 and later1.1.0/fence3 from the actual owned store.",
          "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
-         "receipt": "2026-10-07-portable-update-review-a53edf6-browser.json",
-         "receipt_sha256": "efbb460129d409fb2ce96903b4b19cc0550a3751f7cfa15a2261df7c4b5b79b1",
+         "receipt": "2026-10-08-portable-update-recovery-1a9b830-browser.json",
+         "receipt_sha256": "3676fc2ae02ba3c199bebf4c0bd0d64fb2fad50566f4f4f3c083d103d16a1145",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "d3d1cf77f07cd8faa2a27e697a581d97c8ac36b7cf476d3c8ca5d886a53dec7c"
+           "sha256": "50bcf0240a1fab42ade6c82ae084ea0f68d6fee574651e5389a3b3e357d9f5bf"
           },
           {
            "id": "screenshot-1",
-           "sha256": "e4bfb6aeaec7816254f5db98a31d184dd3a09443ffeba37ab33114fbef8e487a"
+           "sha256": "996251d5923b6073068c1388cbf037a75cf1675bc3b125a425f12c48f4292eae"
           }
          ]
         }
-       ],
-       "reason": "The GUI spec bytes changed for the new launch bridge. Prior exact-source evidence is retained; this current-source dimension awaits the same actual GUI case before promotion."
+       ]
       },
       "handoff": {
        "state": "pending"
@@ -21722,134 +21718,131 @@
      "source": "src/renderer/components/runtime/PortableUpdatePanel.tsx",
      "scenarios": {
       "success": {
-       "state": "pending",
+       "state": "verified",
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "portable 상태 다시 읽기",
          "expected": "Read pending or committed state without automatically retrying the update.",
          "observed": "Explicit read after actual child exits displayed recovery-required state and the permitted controls.",
          "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
-         "receipt": "2026-10-07-portable-update-clean-487560a-browser.json",
-         "receipt_sha256": "63decbd85111241f646a59e4db3d13173fec1ef62b581aeeb45b3ab87e4889bb",
+         "receipt": "2026-10-08-portable-update-recovery-1a9b830-browser.json",
+         "receipt_sha256": "3676fc2ae02ba3c199bebf4c0bd0d64fb2fad50566f4f4f3c083d103d16a1145",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "2e5d446badd475f7af2ca06d0397aaff4feccff0b325319c379dc1b02ad2e14c"
+           "sha256": "50bcf0240a1fab42ade6c82ae084ea0f68d6fee574651e5389a3b3e357d9f5bf"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+           "sha256": "996251d5923b6073068c1388cbf037a75cf1675bc3b125a425f12c48f4292eae"
           }
          ]
         },
         {
          "task": "S6-04",
-         "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "portable 상태 다시 읽기",
          "expected": "Read pending or committed state without automatically retrying the update.",
          "observed": "Explicit read after actual child exits displayed recovery-required state and the permitted controls.",
          "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
-         "receipt": "2026-10-07-portable-update-review-a53edf6-browser.json",
-         "receipt_sha256": "efbb460129d409fb2ce96903b4b19cc0550a3751f7cfa15a2261df7c4b5b79b1",
+         "receipt": "2026-10-08-portable-update-recovery-1a9b830-browser.json",
+         "receipt_sha256": "3676fc2ae02ba3c199bebf4c0bd0d64fb2fad50566f4f4f3c083d103d16a1145",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "d3d1cf77f07cd8faa2a27e697a581d97c8ac36b7cf476d3c8ca5d886a53dec7c"
+           "sha256": "50bcf0240a1fab42ade6c82ae084ea0f68d6fee574651e5389a3b3e357d9f5bf"
           },
           {
            "id": "screenshot-1",
-           "sha256": "e4bfb6aeaec7816254f5db98a31d184dd3a09443ffeba37ab33114fbef8e487a"
+           "sha256": "996251d5923b6073068c1388cbf037a75cf1675bc3b125a425f12c48f4292eae"
           }
          ]
         }
-       ],
-       "reason": "The GUI spec bytes changed for the new launch bridge. Prior exact-source evidence is retained; this current-source dimension awaits the same actual GUI case before promotion."
+       ]
       },
       "empty": {
-       "state": "pending",
+       "state": "verified",
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "eec5df11e1cc8b996a69b2f0136944e3500b3ecd",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "portable 상태 다시 읽기",
          "expected": "The existing action preserves explicit source/target identity, rejects the named invalid condition, and requires deliberate review/confirmation/submission in the executed scenario.",
          "observed": "browser: Before selecting a portable home the actual read-state control was disabled. No home was selected by the renderer automatically.",
          "reviewer": "Codex root actual clean-source UI, persisted file hashes, network/CLI readback and screenshots; independent, real publisher and human quality acceptance pending",
          "test": "scripts/e2e/native-update-layout.spec.ts::macOS native layout review shows signed internal links and refuses changed installed targets",
-         "receipt": "2026-10-07-native-update-layout-eec5df1-browser.json",
-         "receipt_sha256": "59fec7ac9af8d336a774ac7fcfa98751b1dd10374ded7208bf5537d42b1d3cc8",
+         "receipt": "2026-10-08-portable-native-layout-1a9b830-browser.json",
+         "receipt_sha256": "79cfbc18e68ec35a111af299d812c5e5ff36cd83d74724a762bfa767973d5bd7",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "00bec7813edbd4a1830b1b2f75bffc81508ec26f71706e86ae4c0c1213f0f726"
+           "sha256": "244212456e6d969e0f0f1ec27202820bbfd2ff393a1a9222f4699ba6c666477a"
           },
           {
            "id": "screenshot-1",
-           "sha256": "b51d5e290237b9e404fbb2905dc24a9ffed5fed04351b8be192d252fcdcafc8f"
+           "sha256": "f152e61d975de48bb8910a553282400a6c52e06be31d8f406f695c2a149e01db"
           },
           {
            "id": "screenshot-2",
-           "sha256": "b32bc9f878500757e6e8c630370c9fc48e7c1e318a59c0c3d9ddfd17f5efc86b"
+           "sha256": "abc60f138e0344747a47225416ad3d97dacfc690020743712a28be2f3aefc5c4"
           },
           {
            "id": "screenshot-3",
-           "sha256": "39b06e94181afdb3cfa02d664410998037e980b32f168e5b7178463a2bc4f7ea"
+           "sha256": "91cd775573f24d7bbf3094cbe1e3350715bf15dbd3d139ff55fabc4cdcf24a4d"
           },
           {
            "id": "screenshot-4",
-           "sha256": "3d26c335cd1f6db43ea1e27429b38a9fb8abb2042d7f911675a92846c471323c"
+           "sha256": "c6a304d1dd47ce50bf168b1fedfa2b6d157f9cdf06fba52da11326b54affaafe"
           }
          ]
         }
-       ],
-       "reason": "The GUI spec bytes changed for the new launch bridge. Prior exact-source evidence is retained; this current-source dimension awaits the same actual GUI case before promotion."
+       ]
       },
       "invalid": {
-       "state": "pending",
+       "state": "verified",
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "eec5df11e1cc8b996a69b2f0136944e3500b3ecd",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "portable 상태 다시 읽기",
          "expected": "The existing action preserves explicit source/target identity, rejects the named invalid condition, and requires deliberate review/confirmation/submission in the executed scenario.",
          "observed": "browser: After actual controlled native layout installation, changing the raw signed internal-link target made explicit inspection return Installed native link target changed, with no apply control. Restoring the exact raw target and deliberately inspecting again recovered the same version1.0.0/fence1; original labels remained exact.",
          "reviewer": "Codex root actual clean-source UI, persisted file hashes, network/CLI readback and screenshots; independent, real publisher and human quality acceptance pending",
          "test": "scripts/e2e/native-update-layout.spec.ts::macOS native layout review shows signed internal links and refuses changed installed targets",
-         "receipt": "2026-10-07-native-update-layout-eec5df1-browser.json",
-         "receipt_sha256": "59fec7ac9af8d336a774ac7fcfa98751b1dd10374ded7208bf5537d42b1d3cc8",
+         "receipt": "2026-10-08-portable-native-layout-1a9b830-browser.json",
+         "receipt_sha256": "79cfbc18e68ec35a111af299d812c5e5ff36cd83d74724a762bfa767973d5bd7",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "00bec7813edbd4a1830b1b2f75bffc81508ec26f71706e86ae4c0c1213f0f726"
+           "sha256": "244212456e6d969e0f0f1ec27202820bbfd2ff393a1a9222f4699ba6c666477a"
           },
           {
            "id": "screenshot-1",
-           "sha256": "b51d5e290237b9e404fbb2905dc24a9ffed5fed04351b8be192d252fcdcafc8f"
+           "sha256": "f152e61d975de48bb8910a553282400a6c52e06be31d8f406f695c2a149e01db"
           },
           {
            "id": "screenshot-2",
-           "sha256": "b32bc9f878500757e6e8c630370c9fc48e7c1e318a59c0c3d9ddfd17f5efc86b"
+           "sha256": "abc60f138e0344747a47225416ad3d97dacfc690020743712a28be2f3aefc5c4"
           },
           {
            "id": "screenshot-3",
-           "sha256": "39b06e94181afdb3cfa02d664410998037e980b32f168e5b7178463a2bc4f7ea"
+           "sha256": "91cd775573f24d7bbf3094cbe1e3350715bf15dbd3d139ff55fabc4cdcf24a4d"
           },
           {
            "id": "screenshot-4",
-           "sha256": "3d26c335cd1f6db43ea1e27429b38a9fb8abb2042d7f911675a92846c471323c"
+           "sha256": "c6a304d1dd47ce50bf168b1fedfa2b6d157f9cdf06fba52da11326b54affaafe"
           }
          ]
         }
-       ],
-       "reason": "The GUI spec bytes changed for the new launch bridge. Prior exact-source evidence is retained; this current-source dimension awaits the same actual GUI case before promotion."
+       ]
       },
       "error": {
        "state": "pending"
@@ -21871,44 +21864,43 @@
      "source": "src/renderer/components/runtime/PortableUpdatePanel.tsx",
      "scenarios": {
       "success": {
-       "state": "pending",
+       "state": "verified",
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "eec5df11e1cc8b996a69b2f0136944e3500b3ecd",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "portable 릴리스 채널",
          "expected": "The existing action preserves explicit source/target identity, rejects the named invalid condition, and requires deliberate review/confirmation/submission in the executed scenario.",
          "observed": "browser: Actual stable→beta selection cleared the displayed bound review and backup confirmation, removing the apply control. Selecting stable again produced a fresh actual signed review. This is the local review target only, not a saved public release policy.",
          "reviewer": "Codex root actual clean-source UI, persisted file hashes, network/CLI readback and screenshots; independent, real publisher and human quality acceptance pending",
          "test": "scripts/e2e/native-update-layout.spec.ts::macOS native layout review shows signed internal links and refuses changed installed targets",
-         "receipt": "2026-10-07-native-update-layout-eec5df1-browser.json",
-         "receipt_sha256": "59fec7ac9af8d336a774ac7fcfa98751b1dd10374ded7208bf5537d42b1d3cc8",
+         "receipt": "2026-10-08-portable-native-layout-1a9b830-browser.json",
+         "receipt_sha256": "79cfbc18e68ec35a111af299d812c5e5ff36cd83d74724a762bfa767973d5bd7",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "00bec7813edbd4a1830b1b2f75bffc81508ec26f71706e86ae4c0c1213f0f726"
+           "sha256": "244212456e6d969e0f0f1ec27202820bbfd2ff393a1a9222f4699ba6c666477a"
           },
           {
            "id": "screenshot-1",
-           "sha256": "b51d5e290237b9e404fbb2905dc24a9ffed5fed04351b8be192d252fcdcafc8f"
+           "sha256": "f152e61d975de48bb8910a553282400a6c52e06be31d8f406f695c2a149e01db"
           },
           {
            "id": "screenshot-2",
-           "sha256": "b32bc9f878500757e6e8c630370c9fc48e7c1e318a59c0c3d9ddfd17f5efc86b"
+           "sha256": "abc60f138e0344747a47225416ad3d97dacfc690020743712a28be2f3aefc5c4"
           },
           {
            "id": "screenshot-3",
-           "sha256": "39b06e94181afdb3cfa02d664410998037e980b32f168e5b7178463a2bc4f7ea"
+           "sha256": "91cd775573f24d7bbf3094cbe1e3350715bf15dbd3d139ff55fabc4cdcf24a4d"
           },
           {
            "id": "screenshot-4",
-           "sha256": "3d26c335cd1f6db43ea1e27429b38a9fb8abb2042d7f911675a92846c471323c"
+           "sha256": "c6a304d1dd47ce50bf168b1fedfa2b6d157f9cdf06fba52da11326b54affaafe"
           }
          ]
         }
-       ],
-       "reason": "The GUI spec bytes changed for the new launch bridge. Prior exact-source evidence is retained; this current-source dimension awaits the same actual GUI case before promotion."
+       ]
       },
       "empty": {
        "state": "pending"
@@ -21926,44 +21918,43 @@
        "state": "pending"
       },
       "handoff": {
-       "state": "pending",
+       "state": "verified",
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "eec5df11e1cc8b996a69b2f0136944e3500b3ecd",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "portable 릴리스 채널",
          "expected": "The existing action preserves explicit source/target identity, rejects the named invalid condition, and requires deliberate review/confirmation/submission in the executed scenario.",
          "observed": "browser: A stable signed fixture release selected through the beta control was actually refused by the main manager/source CLI with Release target differs and install count0. Stable review then bound the same3-file/3-link inventory and allowed only explicit confirmation/application.",
          "reviewer": "Codex root actual clean-source UI, persisted file hashes, network/CLI readback and screenshots; independent, real publisher and human quality acceptance pending",
          "test": "scripts/e2e/native-update-layout.spec.ts::macOS native layout review shows signed internal links and refuses changed installed targets",
-         "receipt": "2026-10-07-native-update-layout-eec5df1-browser.json",
-         "receipt_sha256": "59fec7ac9af8d336a774ac7fcfa98751b1dd10374ded7208bf5537d42b1d3cc8",
+         "receipt": "2026-10-08-portable-native-layout-1a9b830-browser.json",
+         "receipt_sha256": "79cfbc18e68ec35a111af299d812c5e5ff36cd83d74724a762bfa767973d5bd7",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "00bec7813edbd4a1830b1b2f75bffc81508ec26f71706e86ae4c0c1213f0f726"
+           "sha256": "244212456e6d969e0f0f1ec27202820bbfd2ff393a1a9222f4699ba6c666477a"
           },
           {
            "id": "screenshot-1",
-           "sha256": "b51d5e290237b9e404fbb2905dc24a9ffed5fed04351b8be192d252fcdcafc8f"
+           "sha256": "f152e61d975de48bb8910a553282400a6c52e06be31d8f406f695c2a149e01db"
           },
           {
            "id": "screenshot-2",
-           "sha256": "b32bc9f878500757e6e8c630370c9fc48e7c1e318a59c0c3d9ddfd17f5efc86b"
+           "sha256": "abc60f138e0344747a47225416ad3d97dacfc690020743712a28be2f3aefc5c4"
           },
           {
            "id": "screenshot-3",
-           "sha256": "39b06e94181afdb3cfa02d664410998037e980b32f168e5b7178463a2bc4f7ea"
+           "sha256": "91cd775573f24d7bbf3094cbe1e3350715bf15dbd3d139ff55fabc4cdcf24a4d"
           },
           {
            "id": "screenshot-4",
-           "sha256": "3d26c335cd1f6db43ea1e27429b38a9fb8abb2042d7f911675a92846c471323c"
+           "sha256": "c6a304d1dd47ce50bf168b1fedfa2b6d157f9cdf06fba52da11326b54affaafe"
           }
          ]
         }
-       ],
-       "reason": "The GUI spec bytes changed for the new launch bridge. Prior exact-source evidence is retained; this current-source dimension awaits the same actual GUI case before promotion."
+       ]
       }
      }
     },
@@ -21973,97 +21964,95 @@
      "source": "src/renderer/components/runtime/PortableUpdatePanel.tsx",
      "scenarios": {
       "success": {
-       "state": "pending",
+       "state": "verified",
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "portable 변경 내용 확인",
          "expected": "Display a review bound to the actual signed input and current source.",
          "observed": "Actual main/Python review displayed0.0.0→1.0.0 and later1.0.0→1.1.0; no installation ran on review.",
          "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
-         "receipt": "2026-10-07-portable-update-clean-487560a-browser.json",
-         "receipt_sha256": "63decbd85111241f646a59e4db3d13173fec1ef62b581aeeb45b3ab87e4889bb",
+         "receipt": "2026-10-08-portable-update-recovery-1a9b830-browser.json",
+         "receipt_sha256": "3676fc2ae02ba3c199bebf4c0bd0d64fb2fad50566f4f4f3c083d103d16a1145",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "2e5d446badd475f7af2ca06d0397aaff4feccff0b325319c379dc1b02ad2e14c"
+           "sha256": "50bcf0240a1fab42ade6c82ae084ea0f68d6fee574651e5389a3b3e357d9f5bf"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+           "sha256": "996251d5923b6073068c1388cbf037a75cf1675bc3b125a425f12c48f4292eae"
           }
          ]
         },
         {
          "task": "S6-04",
-         "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "portable 변경 내용 확인",
          "expected": "Display a review bound to the actual signed input and current source.",
          "observed": "Actual main/Python review displayed0.0.0→1.0.0 and later1.0.0→1.1.0; no installation ran on review.",
          "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
-         "receipt": "2026-10-07-portable-update-review-a53edf6-browser.json",
-         "receipt_sha256": "efbb460129d409fb2ce96903b4b19cc0550a3751f7cfa15a2261df7c4b5b79b1",
+         "receipt": "2026-10-08-portable-update-recovery-1a9b830-browser.json",
+         "receipt_sha256": "3676fc2ae02ba3c199bebf4c0bd0d64fb2fad50566f4f4f3c083d103d16a1145",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "d3d1cf77f07cd8faa2a27e697a581d97c8ac36b7cf476d3c8ca5d886a53dec7c"
+           "sha256": "50bcf0240a1fab42ade6c82ae084ea0f68d6fee574651e5389a3b3e357d9f5bf"
           },
           {
            "id": "screenshot-1",
-           "sha256": "e4bfb6aeaec7816254f5db98a31d184dd3a09443ffeba37ab33114fbef8e487a"
+           "sha256": "996251d5923b6073068c1388cbf037a75cf1675bc3b125a425f12c48f4292eae"
           }
          ]
         }
-       ],
-       "reason": "The GUI spec bytes changed for the new launch bridge. Prior exact-source evidence is retained; this current-source dimension awaits the same actual GUI case before promotion."
+       ]
       },
       "empty": {
        "state": "pending"
       },
       "invalid": {
-       "state": "pending",
+       "state": "verified",
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "eec5df11e1cc8b996a69b2f0136944e3500b3ecd",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "portable 변경 내용 확인",
          "expected": "The existing action preserves explicit source/target identity, rejects the named invalid condition, and requires deliberate review/confirmation/submission in the executed scenario.",
          "observed": "browser: An actual signed release whose channel differed from the selected beta target failed preview, displayed Release target differs, produced no apply/confirmation controls and left application-active absent, install count0 and original labels exact.",
          "reviewer": "Codex root actual clean-source UI, persisted file hashes, network/CLI readback and screenshots; independent, real publisher and human quality acceptance pending",
          "test": "scripts/e2e/native-update-layout.spec.ts::macOS native layout review shows signed internal links and refuses changed installed targets",
-         "receipt": "2026-10-07-native-update-layout-eec5df1-browser.json",
-         "receipt_sha256": "59fec7ac9af8d336a774ac7fcfa98751b1dd10374ded7208bf5537d42b1d3cc8",
+         "receipt": "2026-10-08-portable-native-layout-1a9b830-browser.json",
+         "receipt_sha256": "79cfbc18e68ec35a111af299d812c5e5ff36cd83d74724a762bfa767973d5bd7",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "00bec7813edbd4a1830b1b2f75bffc81508ec26f71706e86ae4c0c1213f0f726"
+           "sha256": "244212456e6d969e0f0f1ec27202820bbfd2ff393a1a9222f4699ba6c666477a"
           },
           {
            "id": "screenshot-1",
-           "sha256": "b51d5e290237b9e404fbb2905dc24a9ffed5fed04351b8be192d252fcdcafc8f"
+           "sha256": "f152e61d975de48bb8910a553282400a6c52e06be31d8f406f695c2a149e01db"
           },
           {
            "id": "screenshot-2",
-           "sha256": "b32bc9f878500757e6e8c630370c9fc48e7c1e318a59c0c3d9ddfd17f5efc86b"
+           "sha256": "abc60f138e0344747a47225416ad3d97dacfc690020743712a28be2f3aefc5c4"
           },
           {
            "id": "screenshot-3",
-           "sha256": "39b06e94181afdb3cfa02d664410998037e980b32f168e5b7178463a2bc4f7ea"
+           "sha256": "91cd775573f24d7bbf3094cbe1e3350715bf15dbd3d139ff55fabc4cdcf24a4d"
           },
           {
            "id": "screenshot-4",
-           "sha256": "3d26c335cd1f6db43ea1e27429b38a9fb8abb2042d7f911675a92846c471323c"
+           "sha256": "c6a304d1dd47ce50bf168b1fedfa2b6d157f9cdf06fba52da11326b54affaafe"
           }
          ]
         }
-       ],
-       "reason": "The GUI spec bytes changed for the new launch bridge. Prior exact-source evidence is retained; this current-source dimension awaits the same actual GUI case before promotion."
+       ]
       },
       "error": {
        "state": "pending"
@@ -22085,54 +22074,53 @@
      "source": "src/renderer/components/runtime/PortableUpdatePanel.tsx",
      "scenarios": {
       "success": {
-       "state": "pending",
+       "state": "verified",
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "선택한 portable 설치의 학습·검사가 종료되고 백업을 확인했습니다",
          "expected": "Only explicit confirmation enables apply and recovery controls.",
          "observed": "Apply and pre-database abort were disabled until the checkbox was checked; backend independently checked the actual source.",
          "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
-         "receipt": "2026-10-07-portable-update-clean-487560a-browser.json",
-         "receipt_sha256": "63decbd85111241f646a59e4db3d13173fec1ef62b581aeeb45b3ab87e4889bb",
+         "receipt": "2026-10-08-portable-update-recovery-1a9b830-browser.json",
+         "receipt_sha256": "3676fc2ae02ba3c199bebf4c0bd0d64fb2fad50566f4f4f3c083d103d16a1145",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "2e5d446badd475f7af2ca06d0397aaff4feccff0b325319c379dc1b02ad2e14c"
+           "sha256": "50bcf0240a1fab42ade6c82ae084ea0f68d6fee574651e5389a3b3e357d9f5bf"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+           "sha256": "996251d5923b6073068c1388cbf037a75cf1675bc3b125a425f12c48f4292eae"
           }
          ]
         },
         {
          "task": "S6-04",
-         "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "선택한 portable 설치의 학습·검사가 종료되고 백업을 확인했습니다",
          "expected": "Only explicit confirmation enables apply and recovery controls.",
          "observed": "Apply and pre-database abort were disabled until the checkbox was checked; backend independently checked the actual source.",
          "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
-         "receipt": "2026-10-07-portable-update-review-a53edf6-browser.json",
-         "receipt_sha256": "efbb460129d409fb2ce96903b4b19cc0550a3751f7cfa15a2261df7c4b5b79b1",
+         "receipt": "2026-10-08-portable-update-recovery-1a9b830-browser.json",
+         "receipt_sha256": "3676fc2ae02ba3c199bebf4c0bd0d64fb2fad50566f4f4f3c083d103d16a1145",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "d3d1cf77f07cd8faa2a27e697a581d97c8ac36b7cf476d3c8ca5d886a53dec7c"
+           "sha256": "50bcf0240a1fab42ade6c82ae084ea0f68d6fee574651e5389a3b3e357d9f5bf"
           },
           {
            "id": "screenshot-1",
-           "sha256": "e4bfb6aeaec7816254f5db98a31d184dd3a09443ffeba37ab33114fbef8e487a"
+           "sha256": "996251d5923b6073068c1388cbf037a75cf1675bc3b125a425f12c48f4292eae"
           }
          ]
         }
-       ],
-       "reason": "The GUI spec bytes changed for the new launch bridge. Prior exact-source evidence is retained; this current-source dimension awaits the same actual GUI case before promotion."
+       ]
       },
       "empty": {
        "state": "pending"
@@ -22144,84 +22132,82 @@
        "state": "pending"
       },
       "cancel": {
-       "state": "pending",
+       "state": "verified",
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "eec5df11e1cc8b996a69b2f0136944e3500b3ecd",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "선택한 portable 설치의 학습·검사가 종료되고 백업을 확인했습니다",
          "expected": "The existing action preserves explicit source/target identity, rejects the named invalid condition, and requires deliberate review/confirmation/submission in the executed scenario.",
          "observed": "browser: Unchecking the explicit confirmation after review disabled apply and left install count0. Changing channel subsequently cleared confirmation rather than carrying it into a different signed target.",
          "reviewer": "Codex root actual clean-source UI, persisted file hashes, network/CLI readback and screenshots; independent, real publisher and human quality acceptance pending",
          "test": "scripts/e2e/native-update-layout.spec.ts::macOS native layout review shows signed internal links and refuses changed installed targets",
-         "receipt": "2026-10-07-native-update-layout-eec5df1-browser.json",
-         "receipt_sha256": "59fec7ac9af8d336a774ac7fcfa98751b1dd10374ded7208bf5537d42b1d3cc8",
+         "receipt": "2026-10-08-portable-native-layout-1a9b830-browser.json",
+         "receipt_sha256": "79cfbc18e68ec35a111af299d812c5e5ff36cd83d74724a762bfa767973d5bd7",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "00bec7813edbd4a1830b1b2f75bffc81508ec26f71706e86ae4c0c1213f0f726"
+           "sha256": "244212456e6d969e0f0f1ec27202820bbfd2ff393a1a9222f4699ba6c666477a"
           },
           {
            "id": "screenshot-1",
-           "sha256": "b51d5e290237b9e404fbb2905dc24a9ffed5fed04351b8be192d252fcdcafc8f"
+           "sha256": "f152e61d975de48bb8910a553282400a6c52e06be31d8f406f695c2a149e01db"
           },
           {
            "id": "screenshot-2",
-           "sha256": "b32bc9f878500757e6e8c630370c9fc48e7c1e318a59c0c3d9ddfd17f5efc86b"
+           "sha256": "abc60f138e0344747a47225416ad3d97dacfc690020743712a28be2f3aefc5c4"
           },
           {
            "id": "screenshot-3",
-           "sha256": "39b06e94181afdb3cfa02d664410998037e980b32f168e5b7178463a2bc4f7ea"
+           "sha256": "91cd775573f24d7bbf3094cbe1e3350715bf15dbd3d139ff55fabc4cdcf24a4d"
           },
           {
            "id": "screenshot-4",
-           "sha256": "3d26c335cd1f6db43ea1e27429b38a9fb8abb2042d7f911675a92846c471323c"
+           "sha256": "c6a304d1dd47ce50bf168b1fedfa2b6d157f9cdf06fba52da11326b54affaafe"
           }
          ]
         }
-       ],
-       "reason": "The GUI spec bytes changed for the new launch bridge. Prior exact-source evidence is retained; this current-source dimension awaits the same actual GUI case before promotion."
+       ]
       },
       "reopen": {
-       "state": "pending",
+       "state": "verified",
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "eec5df11e1cc8b996a69b2f0136944e3500b3ecd",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "선택한 portable 설치의 학습·검사가 종료되고 백업을 확인했습니다",
          "expected": "The existing action preserves explicit source/target identity, rejects the named invalid condition, and requires deliberate review/confirmation/submission in the executed scenario.",
          "observed": "browser: Leaving a reviewed and checked screen before applying, then reloading and selecting the same owned home, retained version0.0.0 without application-active. A fresh review reopened with confirmation unchecked and apply disabled; only explicit re-check and apply installed.",
          "reviewer": "Codex root actual clean-source UI, persisted file hashes, network/CLI readback and screenshots; independent, real publisher and human quality acceptance pending",
          "test": "scripts/e2e/native-update-layout.spec.ts::macOS native layout review shows signed internal links and refuses changed installed targets",
-         "receipt": "2026-10-07-native-update-layout-eec5df1-browser.json",
-         "receipt_sha256": "59fec7ac9af8d336a774ac7fcfa98751b1dd10374ded7208bf5537d42b1d3cc8",
+         "receipt": "2026-10-08-portable-native-layout-1a9b830-browser.json",
+         "receipt_sha256": "79cfbc18e68ec35a111af299d812c5e5ff36cd83d74724a762bfa767973d5bd7",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "00bec7813edbd4a1830b1b2f75bffc81508ec26f71706e86ae4c0c1213f0f726"
+           "sha256": "244212456e6d969e0f0f1ec27202820bbfd2ff393a1a9222f4699ba6c666477a"
           },
           {
            "id": "screenshot-1",
-           "sha256": "b51d5e290237b9e404fbb2905dc24a9ffed5fed04351b8be192d252fcdcafc8f"
+           "sha256": "f152e61d975de48bb8910a553282400a6c52e06be31d8f406f695c2a149e01db"
           },
           {
            "id": "screenshot-2",
-           "sha256": "b32bc9f878500757e6e8c630370c9fc48e7c1e318a59c0c3d9ddfd17f5efc86b"
+           "sha256": "abc60f138e0344747a47225416ad3d97dacfc690020743712a28be2f3aefc5c4"
           },
           {
            "id": "screenshot-3",
-           "sha256": "39b06e94181afdb3cfa02d664410998037e980b32f168e5b7178463a2bc4f7ea"
+           "sha256": "91cd775573f24d7bbf3094cbe1e3350715bf15dbd3d139ff55fabc4cdcf24a4d"
           },
           {
            "id": "screenshot-4",
-           "sha256": "3d26c335cd1f6db43ea1e27429b38a9fb8abb2042d7f911675a92846c471323c"
+           "sha256": "c6a304d1dd47ce50bf168b1fedfa2b6d157f9cdf06fba52da11326b54affaafe"
           }
          ]
         }
-       ],
-       "reason": "The GUI spec bytes changed for the new launch bridge. Prior exact-source evidence is retained; this current-source dimension awaits the same actual GUI case before promotion."
+       ]
       },
       "handoff": {
        "state": "pending"
@@ -22234,197 +22220,193 @@
      "source": "src/renderer/components/runtime/PortableUpdatePanel.tsx",
      "scenarios": {
       "success": {
-       "state": "pending",
+       "state": "verified",
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "검토한 portable 업데이트 적용",
          "expected": "Install exactly the reviewed app/database pair.",
          "observed": "Actual signed source transaction committed version1.0.0/fence1 and read it through the panel.",
          "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
-         "receipt": "2026-10-07-portable-update-clean-487560a-browser.json",
-         "receipt_sha256": "63decbd85111241f646a59e4db3d13173fec1ef62b581aeeb45b3ab87e4889bb",
+         "receipt": "2026-10-08-portable-update-recovery-1a9b830-browser.json",
+         "receipt_sha256": "3676fc2ae02ba3c199bebf4c0bd0d64fb2fad50566f4f4f3c083d103d16a1145",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "2e5d446badd475f7af2ca06d0397aaff4feccff0b325319c379dc1b02ad2e14c"
+           "sha256": "50bcf0240a1fab42ade6c82ae084ea0f68d6fee574651e5389a3b3e357d9f5bf"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+           "sha256": "996251d5923b6073068c1388cbf037a75cf1675bc3b125a425f12c48f4292eae"
           }
          ]
         },
         {
          "task": "S6-04",
-         "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "검토한 portable 업데이트 적용",
          "expected": "Install exactly the reviewed app/database pair.",
          "observed": "Actual signed source transaction committed version1.0.0/fence1 and read it through the panel.",
          "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
-         "receipt": "2026-10-07-portable-update-review-a53edf6-browser.json",
-         "receipt_sha256": "efbb460129d409fb2ce96903b4b19cc0550a3751f7cfa15a2261df7c4b5b79b1",
+         "receipt": "2026-10-08-portable-update-recovery-1a9b830-browser.json",
+         "receipt_sha256": "3676fc2ae02ba3c199bebf4c0bd0d64fb2fad50566f4f4f3c083d103d16a1145",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "d3d1cf77f07cd8faa2a27e697a581d97c8ac36b7cf476d3c8ca5d886a53dec7c"
+           "sha256": "50bcf0240a1fab42ade6c82ae084ea0f68d6fee574651e5389a3b3e357d9f5bf"
           },
           {
            "id": "screenshot-1",
-           "sha256": "e4bfb6aeaec7816254f5db98a31d184dd3a09443ffeba37ab33114fbef8e487a"
+           "sha256": "996251d5923b6073068c1388cbf037a75cf1675bc3b125a425f12c48f4292eae"
           }
          ]
         }
-       ],
-       "reason": "The GUI spec bytes changed for the new launch bridge. Prior exact-source evidence is retained; this current-source dimension awaits the same actual GUI case before promotion."
+       ]
       },
       "empty": {
        "state": "pending"
       },
       "invalid": {
-       "state": "pending",
+       "state": "verified",
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "검토한 portable 업데이트 적용",
          "expected": "Changed source after review must refuse before staging.",
          "observed": "Writing labels after preview caused review refusal and no application-active pointer; explicit re-review was required.",
          "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
-         "receipt": "2026-10-07-portable-update-clean-487560a-browser.json",
-         "receipt_sha256": "63decbd85111241f646a59e4db3d13173fec1ef62b581aeeb45b3ab87e4889bb",
+         "receipt": "2026-10-08-portable-update-recovery-1a9b830-browser.json",
+         "receipt_sha256": "3676fc2ae02ba3c199bebf4c0bd0d64fb2fad50566f4f4f3c083d103d16a1145",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "2e5d446badd475f7af2ca06d0397aaff4feccff0b325319c379dc1b02ad2e14c"
+           "sha256": "50bcf0240a1fab42ade6c82ae084ea0f68d6fee574651e5389a3b3e357d9f5bf"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+           "sha256": "996251d5923b6073068c1388cbf037a75cf1675bc3b125a425f12c48f4292eae"
           }
          ]
         },
         {
          "task": "S6-04",
-         "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "검토한 portable 업데이트 적용",
          "expected": "Changed source after review must refuse before staging.",
          "observed": "Writing labels after preview caused review refusal and no application-active pointer; explicit re-review was required.",
          "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
-         "receipt": "2026-10-07-portable-update-review-a53edf6-browser.json",
-         "receipt_sha256": "efbb460129d409fb2ce96903b4b19cc0550a3751f7cfa15a2261df7c4b5b79b1",
+         "receipt": "2026-10-08-portable-update-recovery-1a9b830-browser.json",
+         "receipt_sha256": "3676fc2ae02ba3c199bebf4c0bd0d64fb2fad50566f4f4f3c083d103d16a1145",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "d3d1cf77f07cd8faa2a27e697a581d97c8ac36b7cf476d3c8ca5d886a53dec7c"
+           "sha256": "50bcf0240a1fab42ade6c82ae084ea0f68d6fee574651e5389a3b3e357d9f5bf"
           },
           {
            "id": "screenshot-1",
-           "sha256": "e4bfb6aeaec7816254f5db98a31d184dd3a09443ffeba37ab33114fbef8e487a"
+           "sha256": "996251d5923b6073068c1388cbf037a75cf1675bc3b125a425f12c48f4292eae"
           }
          ]
         }
-       ],
-       "reason": "The GUI spec bytes changed for the new launch bridge. Prior exact-source evidence is retained; this current-source dimension awaits the same actual GUI case before promotion."
+       ]
       },
       "error": {
-       "state": "pending",
+       "state": "verified",
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "검토한 portable 업데이트 적용",
          "expected": "An interrupted install must consume review and require a fresh state read.",
          "observed": "Actual controlled child exits91 at before_database and after_database surfaced errors; explicit inspection enabled the appropriate recovery.",
          "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
-         "receipt": "2026-10-07-portable-update-clean-487560a-browser.json",
-         "receipt_sha256": "63decbd85111241f646a59e4db3d13173fec1ef62b581aeeb45b3ab87e4889bb",
+         "receipt": "2026-10-08-portable-update-recovery-1a9b830-browser.json",
+         "receipt_sha256": "3676fc2ae02ba3c199bebf4c0bd0d64fb2fad50566f4f4f3c083d103d16a1145",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "2e5d446badd475f7af2ca06d0397aaff4feccff0b325319c379dc1b02ad2e14c"
+           "sha256": "50bcf0240a1fab42ade6c82ae084ea0f68d6fee574651e5389a3b3e357d9f5bf"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+           "sha256": "996251d5923b6073068c1388cbf037a75cf1675bc3b125a425f12c48f4292eae"
           }
          ]
         },
         {
          "task": "S6-04",
-         "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "검토한 portable 업데이트 적용",
          "expected": "An interrupted install must consume review and require a fresh state read.",
          "observed": "Actual controlled child exits91 at before_database and after_database surfaced errors; explicit inspection enabled the appropriate recovery.",
          "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
-         "receipt": "2026-10-07-portable-update-review-a53edf6-browser.json",
-         "receipt_sha256": "efbb460129d409fb2ce96903b4b19cc0550a3751f7cfa15a2261df7c4b5b79b1",
+         "receipt": "2026-10-08-portable-update-recovery-1a9b830-browser.json",
+         "receipt_sha256": "3676fc2ae02ba3c199bebf4c0bd0d64fb2fad50566f4f4f3c083d103d16a1145",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "d3d1cf77f07cd8faa2a27e697a581d97c8ac36b7cf476d3c8ca5d886a53dec7c"
+           "sha256": "50bcf0240a1fab42ade6c82ae084ea0f68d6fee574651e5389a3b3e357d9f5bf"
           },
           {
            "id": "screenshot-1",
-           "sha256": "e4bfb6aeaec7816254f5db98a31d184dd3a09443ffeba37ab33114fbef8e487a"
+           "sha256": "996251d5923b6073068c1388cbf037a75cf1675bc3b125a425f12c48f4292eae"
           }
          ]
         }
-       ],
-       "reason": "The GUI spec bytes changed for the new launch bridge. Prior exact-source evidence is retained; this current-source dimension awaits the same actual GUI case before promotion."
+       ]
       },
       "cancel": {
-       "state": "pending",
+       "state": "verified",
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "eec5df11e1cc8b996a69b2f0136944e3500b3ecd",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "검토한 portable 업데이트 적용",
          "expected": "The existing action preserves explicit source/target identity, rejects the named invalid condition, and requires deliberate review/confirmation/submission in the executed scenario.",
          "observed": "browser: Reloading the reviewed/confirmed screen before submitting apply produced no install command or application-active pointer. Reopening required fresh review and confirmation. Subsequent deliberate apply installed only the intended native fixture and preserved original labels.",
          "reviewer": "Codex root actual clean-source UI, persisted file hashes, network/CLI readback and screenshots; independent, real publisher and human quality acceptance pending",
          "test": "scripts/e2e/native-update-layout.spec.ts::macOS native layout review shows signed internal links and refuses changed installed targets",
-         "receipt": "2026-10-07-native-update-layout-eec5df1-browser.json",
-         "receipt_sha256": "59fec7ac9af8d336a774ac7fcfa98751b1dd10374ded7208bf5537d42b1d3cc8",
+         "receipt": "2026-10-08-portable-native-layout-1a9b830-browser.json",
+         "receipt_sha256": "79cfbc18e68ec35a111af299d812c5e5ff36cd83d74724a762bfa767973d5bd7",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "00bec7813edbd4a1830b1b2f75bffc81508ec26f71706e86ae4c0c1213f0f726"
+           "sha256": "244212456e6d969e0f0f1ec27202820bbfd2ff393a1a9222f4699ba6c666477a"
           },
           {
            "id": "screenshot-1",
-           "sha256": "b51d5e290237b9e404fbb2905dc24a9ffed5fed04351b8be192d252fcdcafc8f"
+           "sha256": "f152e61d975de48bb8910a553282400a6c52e06be31d8f406f695c2a149e01db"
           },
           {
            "id": "screenshot-2",
-           "sha256": "b32bc9f878500757e6e8c630370c9fc48e7c1e318a59c0c3d9ddfd17f5efc86b"
+           "sha256": "abc60f138e0344747a47225416ad3d97dacfc690020743712a28be2f3aefc5c4"
           },
           {
            "id": "screenshot-3",
-           "sha256": "39b06e94181afdb3cfa02d664410998037e980b32f168e5b7178463a2bc4f7ea"
+           "sha256": "91cd775573f24d7bbf3094cbe1e3350715bf15dbd3d139ff55fabc4cdcf24a4d"
           },
           {
            "id": "screenshot-4",
-           "sha256": "3d26c335cd1f6db43ea1e27429b38a9fb8abb2042d7f911675a92846c471323c"
+           "sha256": "c6a304d1dd47ce50bf168b1fedfa2b6d157f9cdf06fba52da11326b54affaafe"
           }
          ]
         }
-       ],
-       "reason": "The GUI spec bytes changed for the new launch bridge. Prior exact-source evidence is retained; this current-source dimension awaits the same actual GUI case before promotion."
+       ]
       },
       "reopen": {
        "state": "pending"
@@ -22440,54 +22422,53 @@
      "source": "src/renderer/components/runtime/PortableUpdatePanel.tsx",
      "scenarios": {
       "success": {
-       "state": "pending",
+       "state": "verified",
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "같은 업데이트 마무리",
          "expected": "Finish the same interrupted app/database transaction, not a new install.",
          "observed": "Post-database interruption finished1.1.0/fence3; an already committed finish was idempotent at fence2.",
          "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
-         "receipt": "2026-10-07-portable-update-clean-487560a-browser.json",
-         "receipt_sha256": "63decbd85111241f646a59e4db3d13173fec1ef62b581aeeb45b3ab87e4889bb",
+         "receipt": "2026-10-08-portable-update-recovery-1a9b830-browser.json",
+         "receipt_sha256": "3676fc2ae02ba3c199bebf4c0bd0d64fb2fad50566f4f4f3c083d103d16a1145",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "2e5d446badd475f7af2ca06d0397aaff4feccff0b325319c379dc1b02ad2e14c"
+           "sha256": "50bcf0240a1fab42ade6c82ae084ea0f68d6fee574651e5389a3b3e357d9f5bf"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+           "sha256": "996251d5923b6073068c1388cbf037a75cf1675bc3b125a425f12c48f4292eae"
           }
          ]
         },
         {
          "task": "S6-04",
-         "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "같은 업데이트 마무리",
          "expected": "Finish the same interrupted app/database transaction, not a new install.",
          "observed": "Post-database interruption finished1.1.0/fence3; an already committed finish was idempotent at fence2.",
          "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
-         "receipt": "2026-10-07-portable-update-review-a53edf6-browser.json",
-         "receipt_sha256": "efbb460129d409fb2ce96903b4b19cc0550a3751f7cfa15a2261df7c4b5b79b1",
+         "receipt": "2026-10-08-portable-update-recovery-1a9b830-browser.json",
+         "receipt_sha256": "3676fc2ae02ba3c199bebf4c0bd0d64fb2fad50566f4f4f3c083d103d16a1145",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "d3d1cf77f07cd8faa2a27e697a581d97c8ac36b7cf476d3c8ca5d886a53dec7c"
+           "sha256": "50bcf0240a1fab42ade6c82ae084ea0f68d6fee574651e5389a3b3e357d9f5bf"
           },
           {
            "id": "screenshot-1",
-           "sha256": "e4bfb6aeaec7816254f5db98a31d184dd3a09443ffeba37ab33114fbef8e487a"
+           "sha256": "996251d5923b6073068c1388cbf037a75cf1675bc3b125a425f12c48f4292eae"
           }
          ]
         }
-       ],
-       "reason": "The GUI spec bytes changed for the new launch bridge. Prior exact-source evidence is retained; this current-source dimension awaits the same actual GUI case before promotion."
+       ]
       },
       "empty": {
        "state": "pending"
@@ -22502,54 +22483,53 @@
        "state": "pending"
       },
       "reopen": {
-       "state": "pending",
+       "state": "verified",
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "같은 업데이트 마무리",
          "expected": "Reopen only after finish actually commits and releases the command.",
          "observed": "Panel awaited committed status and enabled selection, then reloaded and inspected1.1.0/fence3.",
          "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
-         "receipt": "2026-10-07-portable-update-clean-487560a-browser.json",
-         "receipt_sha256": "63decbd85111241f646a59e4db3d13173fec1ef62b581aeeb45b3ab87e4889bb",
+         "receipt": "2026-10-08-portable-update-recovery-1a9b830-browser.json",
+         "receipt_sha256": "3676fc2ae02ba3c199bebf4c0bd0d64fb2fad50566f4f4f3c083d103d16a1145",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "2e5d446badd475f7af2ca06d0397aaff4feccff0b325319c379dc1b02ad2e14c"
+           "sha256": "50bcf0240a1fab42ade6c82ae084ea0f68d6fee574651e5389a3b3e357d9f5bf"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+           "sha256": "996251d5923b6073068c1388cbf037a75cf1675bc3b125a425f12c48f4292eae"
           }
          ]
         },
         {
          "task": "S6-04",
-         "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "같은 업데이트 마무리",
          "expected": "Reopen only after finish actually commits and releases the command.",
          "observed": "Panel awaited committed status and enabled selection, then reloaded and inspected1.1.0/fence3.",
          "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
-         "receipt": "2026-10-07-portable-update-review-a53edf6-browser.json",
-         "receipt_sha256": "efbb460129d409fb2ce96903b4b19cc0550a3751f7cfa15a2261df7c4b5b79b1",
+         "receipt": "2026-10-08-portable-update-recovery-1a9b830-browser.json",
+         "receipt_sha256": "3676fc2ae02ba3c199bebf4c0bd0d64fb2fad50566f4f4f3c083d103d16a1145",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "d3d1cf77f07cd8faa2a27e697a581d97c8ac36b7cf476d3c8ca5d886a53dec7c"
+           "sha256": "50bcf0240a1fab42ade6c82ae084ea0f68d6fee574651e5389a3b3e357d9f5bf"
           },
           {
            "id": "screenshot-1",
-           "sha256": "e4bfb6aeaec7816254f5db98a31d184dd3a09443ffeba37ab33114fbef8e487a"
+           "sha256": "996251d5923b6073068c1388cbf037a75cf1675bc3b125a425f12c48f4292eae"
           }
          ]
         }
-       ],
-       "reason": "The GUI spec bytes changed for the new launch bridge. Prior exact-source evidence is retained; this current-source dimension awaits the same actual GUI case before promotion."
+       ]
       },
       "handoff": {
        "state": "pending"
@@ -22562,54 +22542,53 @@
      "source": "src/renderer/components/runtime/PortableUpdatePanel.tsx",
      "scenarios": {
       "success": {
-       "state": "pending",
+       "state": "verified",
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "새 쓰기 보존하며 복구",
          "expected": "Forward recovery must preserve newer account and labels.",
          "observed": "Actual current-schema forward recovery advanced fence1→2 and retained newly created account and labels.",
          "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
-         "receipt": "2026-10-07-portable-update-clean-487560a-browser.json",
-         "receipt_sha256": "63decbd85111241f646a59e4db3d13173fec1ef62b581aeeb45b3ab87e4889bb",
+         "receipt": "2026-10-08-portable-update-recovery-1a9b830-browser.json",
+         "receipt_sha256": "3676fc2ae02ba3c199bebf4c0bd0d64fb2fad50566f4f4f3c083d103d16a1145",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "2e5d446badd475f7af2ca06d0397aaff4feccff0b325319c379dc1b02ad2e14c"
+           "sha256": "50bcf0240a1fab42ade6c82ae084ea0f68d6fee574651e5389a3b3e357d9f5bf"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+           "sha256": "996251d5923b6073068c1388cbf037a75cf1675bc3b125a425f12c48f4292eae"
           }
          ]
         },
         {
          "task": "S6-04",
-         "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "새 쓰기 보존하며 복구",
          "expected": "Forward recovery must preserve newer account and labels.",
          "observed": "Actual current-schema forward recovery advanced fence1→2 and retained newly created account and labels.",
          "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
-         "receipt": "2026-10-07-portable-update-review-a53edf6-browser.json",
-         "receipt_sha256": "efbb460129d409fb2ce96903b4b19cc0550a3751f7cfa15a2261df7c4b5b79b1",
+         "receipt": "2026-10-08-portable-update-recovery-1a9b830-browser.json",
+         "receipt_sha256": "3676fc2ae02ba3c199bebf4c0bd0d64fb2fad50566f4f4f3c083d103d16a1145",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "d3d1cf77f07cd8faa2a27e697a581d97c8ac36b7cf476d3c8ca5d886a53dec7c"
+           "sha256": "50bcf0240a1fab42ade6c82ae084ea0f68d6fee574651e5389a3b3e357d9f5bf"
           },
           {
            "id": "screenshot-1",
-           "sha256": "e4bfb6aeaec7816254f5db98a31d184dd3a09443ffeba37ab33114fbef8e487a"
+           "sha256": "996251d5923b6073068c1388cbf037a75cf1675bc3b125a425f12c48f4292eae"
           }
          ]
         }
-       ],
-       "reason": "The GUI spec bytes changed for the new launch bridge. Prior exact-source evidence is retained; this current-source dimension awaits the same actual GUI case before promotion."
+       ]
       },
       "empty": {
        "state": "pending"
@@ -22624,54 +22603,53 @@
        "state": "pending"
       },
       "reopen": {
-       "state": "pending",
+       "state": "verified",
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "새 쓰기 보존하며 복구",
          "expected": "Reload and select the same home to read its current pair.",
          "observed": "Browser reloaded and selected the owned home with version1.0.0/fence2.",
          "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
-         "receipt": "2026-10-07-portable-update-clean-487560a-browser.json",
-         "receipt_sha256": "63decbd85111241f646a59e4db3d13173fec1ef62b581aeeb45b3ab87e4889bb",
+         "receipt": "2026-10-08-portable-update-recovery-1a9b830-browser.json",
+         "receipt_sha256": "3676fc2ae02ba3c199bebf4c0bd0d64fb2fad50566f4f4f3c083d103d16a1145",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "2e5d446badd475f7af2ca06d0397aaff4feccff0b325319c379dc1b02ad2e14c"
+           "sha256": "50bcf0240a1fab42ade6c82ae084ea0f68d6fee574651e5389a3b3e357d9f5bf"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+           "sha256": "996251d5923b6073068c1388cbf037a75cf1675bc3b125a425f12c48f4292eae"
           }
          ]
         },
         {
          "task": "S6-04",
-         "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "새 쓰기 보존하며 복구",
          "expected": "Reload and select the same home to read its current pair.",
          "observed": "Browser reloaded and selected the owned home with version1.0.0/fence2.",
          "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
-         "receipt": "2026-10-07-portable-update-review-a53edf6-browser.json",
-         "receipt_sha256": "efbb460129d409fb2ce96903b4b19cc0550a3751f7cfa15a2261df7c4b5b79b1",
+         "receipt": "2026-10-08-portable-update-recovery-1a9b830-browser.json",
+         "receipt_sha256": "3676fc2ae02ba3c199bebf4c0bd0d64fb2fad50566f4f4f3c083d103d16a1145",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "d3d1cf77f07cd8faa2a27e697a581d97c8ac36b7cf476d3c8ca5d886a53dec7c"
+           "sha256": "50bcf0240a1fab42ade6c82ae084ea0f68d6fee574651e5389a3b3e357d9f5bf"
           },
           {
            "id": "screenshot-1",
-           "sha256": "e4bfb6aeaec7816254f5db98a31d184dd3a09443ffeba37ab33114fbef8e487a"
+           "sha256": "996251d5923b6073068c1388cbf037a75cf1675bc3b125a425f12c48f4292eae"
           }
          ]
         }
-       ],
-       "reason": "The GUI spec bytes changed for the new launch bridge. Prior exact-source evidence is retained; this current-source dimension awaits the same actual GUI case before promotion."
+       ]
       },
       "handoff": {
        "state": "pending"
@@ -22684,54 +22662,53 @@
      "source": "src/renderer/components/runtime/PortableUpdatePanel.tsx",
      "scenarios": {
       "success": {
-       "state": "pending",
+       "state": "verified",
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "487560aaa76fbfa30e43ef6d50f901c15e87827e",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "데이터 전환 전 설치 취소",
          "expected": "A pre-database abort retains the previous committed pair; a post-database abort is absent.",
          "observed": "Actual before_database interruption was aborted to version1.0.0/fence2. After database publication no abort button existed.",
          "reviewer": "Codex root exact source, clean execution and screenshot readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
-         "receipt": "2026-10-07-portable-update-clean-487560a-browser.json",
-         "receipt_sha256": "63decbd85111241f646a59e4db3d13173fec1ef62b581aeeb45b3ab87e4889bb",
+         "receipt": "2026-10-08-portable-update-recovery-1a9b830-browser.json",
+         "receipt_sha256": "3676fc2ae02ba3c199bebf4c0bd0d64fb2fad50566f4f4f3c083d103d16a1145",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "2e5d446badd475f7af2ca06d0397aaff4feccff0b325319c379dc1b02ad2e14c"
+           "sha256": "50bcf0240a1fab42ade6c82ae084ea0f68d6fee574651e5389a3b3e357d9f5bf"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c2b56436dece0bfcc416311505fe71835b75e65a5bd367d30e2cfb8cbbb86f30"
+           "sha256": "996251d5923b6073068c1388cbf037a75cf1675bc3b125a425f12c48f4292eae"
           }
          ]
         },
         {
          "task": "S6-04",
-         "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
          "kind": "click",
          "action": "데이터 전환 전 설치 취소",
          "expected": "A pre-database abort retains the previous committed pair; a post-database abort is absent.",
          "observed": "Actual before_database interruption was aborted to version1.0.0/fence2. After database publication no abort button existed.",
          "reviewer": "Codex root actual clean-source replay and saved state readback; independent and real publisher acceptance pending",
          "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
-         "receipt": "2026-10-07-portable-update-review-a53edf6-browser.json",
-         "receipt_sha256": "efbb460129d409fb2ce96903b4b19cc0550a3751f7cfa15a2261df7c4b5b79b1",
+         "receipt": "2026-10-08-portable-update-recovery-1a9b830-browser.json",
+         "receipt_sha256": "3676fc2ae02ba3c199bebf4c0bd0d64fb2fad50566f4f4f3c083d103d16a1145",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "d3d1cf77f07cd8faa2a27e697a581d97c8ac36b7cf476d3c8ca5d886a53dec7c"
+           "sha256": "50bcf0240a1fab42ade6c82ae084ea0f68d6fee574651e5389a3b3e357d9f5bf"
           },
           {
            "id": "screenshot-1",
-           "sha256": "e4bfb6aeaec7816254f5db98a31d184dd3a09443ffeba37ab33114fbef8e487a"
+           "sha256": "996251d5923b6073068c1388cbf037a75cf1675bc3b125a425f12c48f4292eae"
           }
          ]
         }
-       ],
-       "reason": "The GUI spec bytes changed for the new launch bridge. Prior exact-source evidence is retained; this current-source dimension awaits the same actual GUI case before promotion."
+       ]
       },
       "empty": {
        "state": "pending"
@@ -22752,9 +22729,194 @@
        "state": "pending"
       }
      }
+    },
+    {
+     "id": "portable-launch-request",
+     "label": "전환한 portable 앱 시작",
+     "source": "src/renderer/components/runtime/PortableUpdatePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "pending",
+       "reason": "This dimension was not exercised by the retained controlled lifecycle GUI case."
+      },
+      "empty": {
+       "state": "pending",
+       "reason": "This dimension was not exercised by the retained controlled lifecycle GUI case."
+      },
+      "invalid": {
+       "state": "pending",
+       "reason": "This dimension was not exercised by the retained controlled lifecycle GUI case."
+      },
+      "error": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
+         "kind": "click",
+         "action": "전환한 portable 앱 시작",
+         "expected": "Response loss retains exactly one launch request and disables another request instead of retrying.",
+         "observed": "Response loss retains exactly one launch request and disables another request instead of retrying. Actual browser renderer and actual main manager; CLI/signature responses are controlled. This GUI case does not execute the persistent controller, frozen native app or model inference.",
+         "reviewer": "Root exact-source GUI, screenshot and owned-teardown readback; target and final independent acceptance remain pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::controlled launch lifecycle UI preserves response-loss readback and durable state across reopening",
+         "receipt": "2026-10-08-portable-launch-lifecycle-1a9b830-browser.json",
+         "receipt_sha256": "20599bad03e6bc4e29aa859d3d57d4b31bf9899241c20b0b91b55ba571df9f5d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "426dbbca4c4bad24fcd9618af5fa9d43c233452486be61c49c44e90f371b4101"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "1151eb053a56487d2106658414d2dfcd08c231560efa28218128d18e377ebfd4"
+          }
+         ]
+        }
+       ]
+      },
+      "cancel": {
+       "state": "pending",
+       "reason": "This dimension was not exercised by the retained controlled lifecycle GUI case."
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
+         "kind": "click",
+         "action": "전환한 portable 앱 시작",
+         "expected": "Reload and reselection restore the controlled durable ready state and keep duplicate launch and update controls disabled.",
+         "observed": "Reload and reselection restore the controlled durable ready state and keep duplicate launch and update controls disabled. Actual browser renderer and actual main manager; CLI/signature responses are controlled. This GUI case does not execute the persistent controller, frozen native app or model inference.",
+         "reviewer": "Root exact-source GUI, screenshot and owned-teardown readback; target and final independent acceptance remain pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::controlled launch lifecycle UI preserves response-loss readback and durable state across reopening",
+         "receipt": "2026-10-08-portable-launch-lifecycle-1a9b830-browser.json",
+         "receipt_sha256": "20599bad03e6bc4e29aa859d3d57d4b31bf9899241c20b0b91b55ba571df9f5d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "426dbbca4c4bad24fcd9618af5fa9d43c233452486be61c49c44e90f371b4101"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "1151eb053a56487d2106658414d2dfcd08c231560efa28218128d18e377ebfd4"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending",
+       "reason": "This dimension was not exercised by the retained controlled lifecycle GUI case."
+      }
+     }
+    },
+    {
+     "id": "portable-launch-inspect",
+     "label": "portable 앱 실행 상태 확인",
+     "source": "src/renderer/components/runtime/PortableUpdatePanel.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
+         "kind": "click",
+         "action": "portable 앱 실행 상태 확인",
+         "expected": "Explicit refresh displays the exact authenticated binding-only ready result from the controlled CLI response.",
+         "observed": "Explicit refresh displays the exact authenticated binding-only ready result from the controlled CLI response. Actual browser renderer and actual main manager; CLI/signature responses are controlled. This GUI case does not execute the persistent controller, frozen native app or model inference.",
+         "reviewer": "Root exact-source GUI, screenshot and owned-teardown readback; target and final independent acceptance remain pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::controlled launch lifecycle UI preserves response-loss readback and durable state across reopening",
+         "receipt": "2026-10-08-portable-launch-lifecycle-1a9b830-browser.json",
+         "receipt_sha256": "20599bad03e6bc4e29aa859d3d57d4b31bf9899241c20b0b91b55ba571df9f5d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "426dbbca4c4bad24fcd9618af5fa9d43c233452486be61c49c44e90f371b4101"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "1151eb053a56487d2106658414d2dfcd08c231560efa28218128d18e377ebfd4"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending",
+       "reason": "This dimension was not exercised by the retained controlled lifecycle GUI case."
+      },
+      "invalid": {
+       "state": "pending",
+       "reason": "This dimension was not exercised by the retained controlled lifecycle GUI case."
+      },
+      "error": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
+         "kind": "click",
+         "action": "portable 앱 실행 상태 확인",
+         "expected": "A controlled original-controller birth-loss result displays recovery-required while duplicate launch stays disabled.",
+         "observed": "A controlled original-controller birth-loss result displays recovery-required while duplicate launch stays disabled. Actual browser renderer and actual main manager; CLI/signature responses are controlled. This GUI case does not execute the persistent controller, frozen native app or model inference.",
+         "reviewer": "Root exact-source GUI, screenshot and owned-teardown readback; target and final independent acceptance remain pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::controlled launch lifecycle UI preserves response-loss readback and durable state across reopening",
+         "receipt": "2026-10-08-portable-launch-lifecycle-1a9b830-browser.json",
+         "receipt_sha256": "20599bad03e6bc4e29aa859d3d57d4b31bf9899241c20b0b91b55ba571df9f5d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "426dbbca4c4bad24fcd9618af5fa9d43c233452486be61c49c44e90f371b4101"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "1151eb053a56487d2106658414d2dfcd08c231560efa28218128d18e377ebfd4"
+          }
+         ]
+        }
+       ]
+      },
+      "cancel": {
+       "state": "pending",
+       "reason": "This dimension was not exercised by the retained controlled lifecycle GUI case."
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
+         "kind": "click",
+         "action": "portable 앱 실행 상태 확인",
+         "expected": "Reselection reads the controlled durable lifecycle through the actual main manager after a renderer reload.",
+         "observed": "Reselection reads the controlled durable lifecycle through the actual main manager after a renderer reload. Actual browser renderer and actual main manager; CLI/signature responses are controlled. This GUI case does not execute the persistent controller, frozen native app or model inference.",
+         "reviewer": "Root exact-source GUI, screenshot and owned-teardown readback; target and final independent acceptance remain pending",
+         "test": "scripts/e2e/portable-update-review.spec.ts::controlled launch lifecycle UI preserves response-loss readback and durable state across reopening",
+         "receipt": "2026-10-08-portable-launch-lifecycle-1a9b830-browser.json",
+         "receipt_sha256": "20599bad03e6bc4e29aa859d3d57d4b31bf9899241c20b0b91b55ba571df9f5d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "426dbbca4c4bad24fcd9618af5fa9d43c233452486be61c49c44e90f371b4101"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "1151eb053a56487d2106658414d2dfcd08c231560efa28218128d18e377ebfd4"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending",
+       "reason": "This dimension was not exercised by the retained controlled lifecycle GUI case."
+      }
+     }
     }
    ],
-   "remaining": "Explicit portable controls supplement the curated list. Channel changes, unexecuted scenarios, real signed native positive installation, other actions, host pickers, runtime menus and shortcuts remain pending."
+   "remaining": "Only exact retained GUI dimensions are verified. Real packaged controller/FD retention, known-image inference, recovery reconciliation, unexecuted dimensions and full target acceptance remain pending."
   },
   {
    "id": "U026",

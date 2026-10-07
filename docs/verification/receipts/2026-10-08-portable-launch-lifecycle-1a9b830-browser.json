@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
+  "source_dirty": false,
+  "test": "scripts/e2e/portable-update-review.spec.ts::controlled launch lifecycle UI preserves response-loss readback and durable state across reopening",
+  "test_source_sha256": "7ed75995382c3dd15f3db3745badae4bcd92086e69f5259bcaaab22a59ab851f",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "859856ad00454684e8560e635c2a0a777efe7ba92665867c040352ba050baaea",
+  "harness_sha256": "d0e9fb7a58ce1e436a07855b44503d907145aa5ef620dfc3fee602eef9ffd49c",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "426dbbca4c4bad24fcd9618af5fa9d43c233452486be61c49c44e90f371b4101"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "1151eb053a56487d2106658414d2dfcd08c231560efa28218128d18e377ebfd4"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}
