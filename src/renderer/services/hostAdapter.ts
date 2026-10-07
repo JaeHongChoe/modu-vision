@@ -87,6 +87,11 @@ export const host = {
     check: async () => required('updates', 'checkForUpdate')(),
     download: async () => required('updates', 'downloadUpdate')(),
     verifyOffline: async () => required('updates', 'verifyOfflineUpdate')(),
+    selectPortableHome: async () => required('updates', 'selectPortableUpdateHome')(),
+    inspectPortable: async () => required('updates', 'inspectPortableUpdate')(),
+    previewPortable: async (channel:'stable'|'beta') => required('updates', 'previewPortableUpdate')(channel),
+    applyPortable: async (id:string) => required('updates', 'applyPortableUpdate')(id),
+    recoverPortable: async (action:Parameters<ElectronAPI['recoverPortableUpdate']>[0],expected:Parameters<ElectronAPI['recoverPortableUpdate']>[1]) => required('updates', 'recoverPortableUpdate')(action,expected),
   },
 
   shared: {

@@ -6,7 +6,7 @@ must supply an independently pinned authority and an owned, drained installation
 Ordinary stores refuse attachment while a durable update intent is unfinished.
 """
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 import base64
 import hashlib
 import json
@@ -372,6 +372,62 @@ def plan_update(root,bundle,envelope,authority,*,pinned_authority_sha256,target)
             source['source_sha256'],current[1] if current else None,previous,dict(target))
 
 
+def review_update(plan):
+    """Bounded review; no application launch, migration or credential disclosure."""
+    installer=next(row for row in plan.app['artifacts'] if row['kind']=='installer')
+    manifest,_=_portable(Path(plan.bundle)/installer['path'],plan.app)
+    _,owner=_root(plan.root)
+    return {'status':'reviewed','installation_id':owner['installation_id'],
+        'plan_sha256':_sha(_canonical(asdict(plan))), 'source_sha256':plan.source_sha256,
+        'envelope_sha256':plan.envelope_sha256,'authority_sha256':plan.authority_sha256,
+        'current_version':plan.target['current_version'],'version':plan.app['version'],
+        'publisher':plan.app['publisher'],'channel':plan.app['channel'],
+        'application_file_count':len(manifest['files']),'pack_count':len(plan.packs),
+        'artifact_bytes':sum(row['size'] for row in plan.app['artifacts']),
+        'database_fence':plan.previous_database['fence'] if plan.previous_database else 0,
+        'copied_session_policy':'revoked','application_started':False,
+        'native_signature_acceptance':'unqualified','model_quality_acceptance':'required'}
+
+
+def inspect_update(root,authority,*,pinned_authority_sha256):
+    """Reopen only this installation's pinned current or unfinished intent.
+
+    Exclusive admission permits inspection while recovery blocks ordinary stores;
+    it does not repair, attach stores, start applications or grant execution rights.
+    """
+    root,owner=_root(root)
+    raw=_read(authority,32768)
+    if not _hex(pinned_authority_sha256) or _sha(raw)!=pinned_authority_sha256:
+        raise UpdateError('Pinned publisher authority changed')
+    with store_admission(root,exclusive=True):
+        pending=_json(_read(root/PENDING)) if (root/PENDING).exists() else None
+        pointer=_pointer(root)
+        if pending:
+            _fields(pending,{'schema_version','installation_id','update_id'})
+            if type(pending['schema_version']) is not int or pending['schema_version']!=1 or pending['installation_id']!=owner['installation_id']:
+                raise UpdateError('Foreign recovery pointer')
+        identifier=pending['update_id'] if pending else pointer['update_id'] if pointer else None
+        result={'status':'ready','installation_id':owner['installation_id'], 'version':'0.0.0',
+            'update_id':None,'database_fence':0,'allowed_recovery':[],
+            'application_started':False,'native_signature_acceptance':'unqualified',
+            'model_quality_acceptance':'required'}
+        if identifier is None:return result
+        record,_=_intent(root,identifier)
+        # Check the externally pinned bytes before following the intent's stored
+        # authority path. A copied/edited intent cannot choose a new publisher.
+        if record.get('authority_sha256')!=pinned_authority_sha256:
+            raise UpdateError('Update intent differs from the pinned authority')
+        record,_,_=_validated_intent(root,identifier)
+        if not pending:validate_attachment(root)
+        current=active_generation(root)
+        result.update(status='recovery_required' if pending else 'committed',
+            version=record['release']['version'],update_id=identifier,
+            database_fence=current[1]['fence'] if current else 0,
+            allowed_recovery=['finish','abort'] if pending and record['status']=='staged' and record['migration_id'] is None
+                else ['finish'] if pending else ['finish','forward'])
+        return result
+
+
 def _intent(root,identifier):
     if not _hex(identifier,32):raise UpdateError('Invalid application update identity')
     directory=_unlinked(root/UPDATES/identifier);record=_json(_read(directory/'journal.json',1024**2))
@@ -536,17 +592,44 @@ def launch_plan(root,authority,*,pinned_authority_sha256):
 def main(argv=None):
     import argparse
     parser=argparse.ArgumentParser(description=__doc__);commands=parser.add_subparsers(dest='command',required=True)
-    install=commands.add_parser('install')
-    for name in ('root','bundle','envelope','authority','pinned-authority-sha256','target-file'):install.add_argument('--'+name,required=True)
+    for command in ('install','preview'):
+        install=commands.add_parser(command)
+        for name in ('root','bundle','envelope','authority','pinned-authority-sha256'):install.add_argument('--'+name,required=True)
+        targets=install.add_mutually_exclusive_group(required=True)
+        targets.add_argument('--target-file');targets.add_argument('--target-json')
+        install.add_argument('--use-owned-version',action='store_true')
+        if command=='install':install.add_argument('--expected-plan-sha256')
+    inspect=commands.add_parser('inspect')
+    for name in ('root','authority','pinned-authority-sha256'):inspect.add_argument('--'+name,required=True)
     recover=commands.add_parser('recover');recover.add_argument('--root',required=True);recover.add_argument('--intent',required=True)
     recover.add_argument('--action',choices=('finish','forward','abort'),required=True)
+    recover.add_argument('--authority');recover.add_argument('--pinned-authority-sha256')
     launch=commands.add_parser('launch-plan')
     for name in ('root','authority','pinned-authority-sha256'):launch.add_argument('--'+name,required=True)
     args=parser.parse_args(argv)
     try:
-        if args.command=='install':result=install_update(args.root,plan_update(args.root,args.bundle,args.envelope,args.authority,
-            pinned_authority_sha256=args.pinned_authority_sha256,target=_json(_read(args.target_file))))
-        elif args.command=='recover':result=recover_update(args.root,args.intent,action=args.action)
+        if args.command in ('install','preview'):
+            target=_json(_read(args.target_file)) if args.target_file else _json(args.target_json.encode())
+            if args.use_owned_version:
+                _fields(target,{'platform','arch','channel','current_version','origin'})
+                target['current_version']=inspect_update(args.root,args.authority,
+                    pinned_authority_sha256=args.pinned_authority_sha256)['version']
+            plan=plan_update(args.root,args.bundle,args.envelope,args.authority,
+                pinned_authority_sha256=args.pinned_authority_sha256,target=target)
+            review=review_update(plan)
+            if args.command=='install':
+                if args.expected_plan_sha256 is not None and (not _hex(args.expected_plan_sha256) or args.expected_plan_sha256!=review['plan_sha256']):
+                    raise UpdateError('Installation source changed after review; review it again')
+                result=install_update(args.root,plan)
+            else:result=review
+        elif args.command=='inspect':result=inspect_update(args.root,args.authority,pinned_authority_sha256=args.pinned_authority_sha256)
+        elif args.command=='recover':
+            if args.authority or args.pinned_authority_sha256:
+                if not args.authority or not args.pinned_authority_sha256:raise UpdateError('Both pinned authority fields are required')
+                state=inspect_update(args.root,args.authority,pinned_authority_sha256=args.pinned_authority_sha256)
+                if state['update_id']!=args.intent or args.action not in state['allowed_recovery']:
+                    raise UpdateError('Recovery selection differs from the inspected current intent')
+            result=recover_update(args.root,args.intent,action=args.action)
         else:result=launch_plan(args.root,args.authority,pinned_authority_sha256=args.pinned_authority_sha256)
         print(json.dumps(result,ensure_ascii=False));return 0
     except (ValueError,OSError,zipfile.BadZipFile) as exc:

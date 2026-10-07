@@ -1,6 +1,7 @@
 import {useEffect,useRef,useState} from 'react';
 import type {DistributionState,ManualDelivery,NativeSignature,UpdateChannel} from '../../../types/electron';
 import {host} from '../../services/hostAdapter';
+import {PortableUpdatePanel} from './PortableUpdatePanel';
 const button='rounded border border-slate-600 px-3 py-2 disabled:opacity-40';
 const signatureLabel:Record<NativeSignature['status'],string>={verified:'OS 서명 검증 통과',unsigned:'배포자 서명 없음',invalid:'서명 검증 실패',unavailable:'이 환경에서 서명 검증 도구 필요',development:'개발 실행 · 배포 인증 미확인'};
 const recoveryLabel:Record<string,string>={downloading:'다운로드 진행 중',verifying:'서명 확인 중',interrupted:'다운로드가 중단되었습니다. 새 버전을 다시 확인한 뒤 다운로드하세요.',failed:'다운로드·검증에 실패했습니다. 새 버전을 다시 확인하세요.',downloaded_unverified:'패키지는 저장됐지만 전달 검증이 중단됐습니다. 새 버전을 다시 확인하세요.',publisher_required:'패키지 해시는 확인됐습니다. 설치 앱과 일치하는 배포자 서명이 필요합니다.',handoff_ready:'검증한 패키지가 저장됐습니다. 프로젝트 백업 후 수동으로 설치하세요.',invalidated:'저장 패키지 또는 설치 앱이 변경됐습니다. 새 버전을 다시 확인하세요.'};
@@ -24,6 +25,7 @@ export function DistributionSettingsPanel(){
   {delivery&&<div className="rounded border border-slate-600 p-2" role="status"><p>{delivery.offline?'오프라인 검증':'다운로드'} {delivery.version} · 크기·SHA256 일치 · {signatureLabel[delivery.signature.status]}</p>{delivery.offline&&<p>전체 파일 {delivery.artifacts_verified}개 검증 · 추가 runtime pack은 설치 전 별도 호환성 검증 필요</p>}<p>{delivery.handoff_ready?'설치 앱과 배포자 일치 확인. 프로젝트 백업 후 수동으로 설치하세요.':'설치 앱과 일치하는 배포자 서명이 확인돼야 설치 전달 준비가 완료됩니다.'}</p><details className="mt-2 break-all text-xs text-slate-400"><summary>저장 위치·검증 해시</summary><p>{delivery.path}</p><p>{delivery.sha256}</p><p>{delivery.signature.reason}</p></details></div>}
   {state?.update.recovery&&<div className="rounded border border-slate-600 p-2" role="status"><p>마지막 전달 {state.update.recovery.version} · {recoveryLabel[state.update.recovery.status]||'전달 상태 확인 필요'}</p><p className="mt-1 text-slate-400">설치 완료 여부는 수동 설치 후 앱 버전과 실제 실행으로 확인하세요.</p><details className="mt-2 break-all text-xs text-slate-400"><summary>전달 복구 기록</summary><p>확인 {state.update.recovery.checked_at}</p><p>릴리스 목록 SHA-256 {state.update.recovery.manifest_sha256}</p><p>후보 파일 SHA-256 {state.update.recovery.candidate_sha256}</p><p>기존 실행 파일 SHA-256 {state.update.recovery.installed_sha256||'미확인'}</p>{state.update.recovery.candidate_path&&<p>{state.update.recovery.candidate_path}</p>}</details></div>}
   <details className="text-xs text-slate-400"><summary>릴리스 목록 형식·제한</summary><p>설치 앱은 고정 발행자 키로 서명된 canonical JSON 목록이 필요합니다. 개발 실행의 단순 JSON 목록은 설치 승인 근거가 아닙니다. 앱의 OS·아키텍처와 같은 채널이어야 합니다. 패키지는 목록과 동일한 HTTPS 서버에 있어야 하며 목록 64 KiB, 패키지 1 GiB 이하입니다. ZIP은 배포자 서명을 별도로 검증해야 합니다.</p></details>
+  <PortableUpdatePanel/>
   {busy&&<p role="status">배포 상태 확인 중…</p>}{error&&<p role="alert" className="break-all text-red-300">{error}</p>}
  </fieldset>;
 }

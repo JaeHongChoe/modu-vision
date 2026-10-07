@@ -197,6 +197,7 @@ jobs:
           backend/tests/test_service_s1_08.py
           backend/tests/test_global_migration.py
           backend/tests/test_service_s6_04.py
+          backend/tests/test_portable_update_review.py
           backend/tests/test_global_restore_recovery.py
           backend/tests/test_historical_job_binding.py
           backend/tests/test_terminal_runtime_history.py

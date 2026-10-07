@@ -5,6 +5,7 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 import type { BackendSupervisor } from './supervisor';
 import {getSharedConnection,loginSharedServer,selectSharedProject,disconnectSharedServer} from './sharedSession';
 import {DistributionManager} from './distributionStatus';
+import {PortableUpdateManager} from './portableUpdate';
 
 // Documents, images and report folders the studio produces. Executables,
 // scripts, shortcuts and application bundles are never opened from the renderer.
@@ -75,6 +76,28 @@ export function registerIpcHandlers(supervisor: BackendSupervisor): void {
     if(result.canceled||!result.filePaths[0])return null;
     authorizeShared(event);return distribution.verifyOffline(result.filePaths[0]);
   });
+  const portable=new PortableUpdateManager({packaged:app.isPackaged,platform:process.platform,arch:process.arch,
+    resourcesPath:process.resourcesPath,userDataPath:app.getPath('userData'),appPath:distribution.options.appPath,
+    signature:target=>distribution.signature(target)});
+  const choosePortable=async(event:IpcMainInvokeEvent,options:OpenDialogOptions)=>{
+    authorizeShared(event);const win=BrowserWindow.fromWebContents(event.sender);
+    const result=win?await dialog.showOpenDialog(win,options):await dialog.showOpenDialog(options);
+    authorizeShared(event);return result.canceled?null:result.filePaths[0]||null;
+  };
+  ipcMain.handle('distribution:select-portable-home',async event=>{
+    authorizeShared(event);await portable.ensureSupported();
+    const selected=await choosePortable(event,{title:'중지된 별도 portable 설치 폴더 선택',properties:['openDirectory']});
+    return selected?portable.select(selected):null;
+  });
+  ipcMain.handle('distribution:inspect-portable',event=>{authorizeShared(event);return portable.inspect();});
+  ipcMain.handle('distribution:preview-portable',async(event,channel)=>{
+    authorizeShared(event);await portable.ensureSupported();
+    if(!['stable','beta'].includes(channel))throw Error('Select a stable or beta channel');
+    const selected=await choosePortable(event,{title:'portable 앱의 서명된 오프라인 릴리스 목록 선택',properties:['openFile'],filters:[{name:'Release manifest',extensions:['json']}]});
+    return selected?portable.preview(selected,channel):null;
+  });
+  ipcMain.handle('distribution:apply-portable',(event,id)=>{authorizeShared(event);return portable.apply(id);});
+  ipcMain.handle('distribution:recover-portable',(event,action,expected)=>{authorizeShared(event);return portable.recover(action,expected);});
   ipcMain.handle('shared:get',event=>{authorizeShared(event);return getSharedConnection();});
   ipcMain.handle('shared:login',(event,input)=>{authorizeShared(event);return loginSharedServer(input);});
   ipcMain.handle('shared:select',(event,project_id)=>{authorizeShared(event);return selectSharedProject(project_id);});
