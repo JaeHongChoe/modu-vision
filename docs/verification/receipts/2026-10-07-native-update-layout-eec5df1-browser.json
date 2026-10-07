@@ -1,0 +1,44 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "eec5df11e1cc8b996a69b2f0136944e3500b3ecd",
+  "source_dirty": false,
+  "test": "scripts/e2e/native-update-layout.spec.ts::macOS native layout review shows signed internal links and refuses changed installed targets",
+  "test_source_sha256": "f8fa218777c42c27dd4f29e32f42f51e6ed004beb1bb185dc3d678083d8563ee",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "d50f4b6e83b4b2929b5706a8ee258fe82bcd64be8d0c09285a205f8857176740",
+  "harness_sha256": "abc5223b202846c52d8c0276314303ce8df23557196813a0230c163698ce47df",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "00bec7813edbd4a1830b1b2f75bffc81508ec26f71706e86ae4c0c1213f0f726"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "b51d5e290237b9e404fbb2905dc24a9ffed5fed04351b8be192d252fcdcafc8f"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "b32bc9f878500757e6e8c630370c9fc48e7c1e318a59c0c3d9ddfd17f5efc86b"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "39b06e94181afdb3cfa02d664410998037e980b32f168e5b7178463a2bc4f7ea"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "3d26c335cd1f6db43ea1e27429b38a9fb8abb2042d7f911675a92846c471323c"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

@@ -17861,7 +17861,61 @@
        ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "eec5df11e1cc8b996a69b2f0136944e3500b3ecd",
+         "kind": "click",
+         "action": "실제 서비스 캡처 등록",
+         "expected": "The existing action preserves explicit source/target identity, rejects the named invalid condition, and requires deliberate review/confirmation/submission in the executed scenario.",
+         "observed": "browser: Actual browser and native Electron requests for malformed and absent32-hex service IDs returned409 and displayed their actual validator errors. No intake index was created and the saved source split SHA stayed exact.",
+         "reviewer": "Codex root actual clean-source UI, persisted file hashes, network/CLI readback and screenshots; independent, real publisher and human quality acceptance pending",
+         "test": "scripts/e2e/capture-sampling-handoff.spec.ts::saved capture sampling policy applies quotas and immutable replay before new revision handoff",
+         "receipt": "2026-10-07-capture-sampling-handoff-eec5df1-browser.json",
+         "receipt_sha256": "9f17c90dfa5f04fa78253ce078d685654de444780a765b15b16e8ce46957037f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "688d1490026c9e7088c78f8fc118798f4340337a829671caaa5b0229974ee8ba"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c1563208cc3157b15b209ad9c07c2222639b0df515a4cc13fb1b4fa3426abe84"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "1371720d220039f9ba39b5e632b96c7c58de98879f5443b05d836cb688bdfab0"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "eec5df11e1cc8b996a69b2f0136944e3500b3ecd",
+         "kind": "click",
+         "action": "실제 서비스 캡처 등록",
+         "expected": "The existing action preserves explicit source/target identity, rejects the named invalid condition, and requires deliberate review/confirmation/submission in the executed scenario.",
+         "observed": "electron: Actual browser and native Electron requests for malformed and absent32-hex service IDs returned409 and displayed their actual validator errors. No intake index was created and the saved source split SHA stayed exact.",
+         "reviewer": "Codex root actual clean-source UI, persisted file hashes, network/CLI readback and screenshots; independent, real publisher and human quality acceptance pending",
+         "test": "scripts/e2e/capture-sampling-handoff.spec.ts::native saved capture sampling policy applies quotas and immutable replay before new revision handoff",
+         "receipt": "2026-10-07-capture-sampling-handoff-eec5df1-electron.json",
+         "receipt_sha256": "fcff39342bd26e884d5dc83a8aa5bfb140c2ee42f3d9a071ed1c0f7c9a90f13a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "e840eb9af2e7934e586e57fa586988e291ce2547f4ce7ba7b5d51675ec0e6857"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f9dc75a4fe77a9f9b05dd9b1a6b3e50130b8819532ea17faa23d6e93e24ac92b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "a67f4a3657d53ab2960dabc46203e567909275133ae8bea5bebaa6ebe4456fa6"
+          }
+         ]
+        }
+       ]
       },
       "error": {
        "state": "verified",
@@ -20561,10 +20615,82 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "eec5df11e1cc8b996a69b2f0136944e3500b3ecd",
+         "kind": "click",
+         "action": "portable 상태 다시 읽기",
+         "expected": "The existing action preserves explicit source/target identity, rejects the named invalid condition, and requires deliberate review/confirmation/submission in the executed scenario.",
+         "observed": "browser: Before selecting a portable home the actual read-state control was disabled. No home was selected by the renderer automatically.",
+         "reviewer": "Codex root actual clean-source UI, persisted file hashes, network/CLI readback and screenshots; independent, real publisher and human quality acceptance pending",
+         "test": "scripts/e2e/native-update-layout.spec.ts::macOS native layout review shows signed internal links and refuses changed installed targets",
+         "receipt": "2026-10-07-native-update-layout-eec5df1-browser.json",
+         "receipt_sha256": "59fec7ac9af8d336a774ac7fcfa98751b1dd10374ded7208bf5537d42b1d3cc8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "00bec7813edbd4a1830b1b2f75bffc81508ec26f71706e86ae4c0c1213f0f726"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "b51d5e290237b9e404fbb2905dc24a9ffed5fed04351b8be192d252fcdcafc8f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "b32bc9f878500757e6e8c630370c9fc48e7c1e318a59c0c3d9ddfd17f5efc86b"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "39b06e94181afdb3cfa02d664410998037e980b32f168e5b7178463a2bc4f7ea"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "3d26c335cd1f6db43ea1e27429b38a9fb8abb2042d7f911675a92846c471323c"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "eec5df11e1cc8b996a69b2f0136944e3500b3ecd",
+         "kind": "click",
+         "action": "portable 상태 다시 읽기",
+         "expected": "The existing action preserves explicit source/target identity, rejects the named invalid condition, and requires deliberate review/confirmation/submission in the executed scenario.",
+         "observed": "browser: After actual controlled native layout installation, changing the raw signed internal-link target made explicit inspection return Installed native link target changed, with no apply control. Restoring the exact raw target and deliberately inspecting again recovered the same version1.0.0/fence1; original labels remained exact.",
+         "reviewer": "Codex root actual clean-source UI, persisted file hashes, network/CLI readback and screenshots; independent, real publisher and human quality acceptance pending",
+         "test": "scripts/e2e/native-update-layout.spec.ts::macOS native layout review shows signed internal links and refuses changed installed targets",
+         "receipt": "2026-10-07-native-update-layout-eec5df1-browser.json",
+         "receipt_sha256": "59fec7ac9af8d336a774ac7fcfa98751b1dd10374ded7208bf5537d42b1d3cc8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "00bec7813edbd4a1830b1b2f75bffc81508ec26f71706e86ae4c0c1213f0f726"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "b51d5e290237b9e404fbb2905dc24a9ffed5fed04351b8be192d252fcdcafc8f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "b32bc9f878500757e6e8c630370c9fc48e7c1e318a59c0c3d9ddfd17f5efc86b"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "39b06e94181afdb3cfa02d664410998037e980b32f168e5b7178463a2bc4f7ea"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "3d26c335cd1f6db43ea1e27429b38a9fb8abb2042d7f911675a92846c471323c"
+          }
+         ]
+        }
+       ]
       },
       "error": {
        "state": "pending"
@@ -20586,7 +20712,43 @@
      "source": "src/renderer/components/runtime/PortableUpdatePanel.tsx",
      "scenarios": {
       "success": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "eec5df11e1cc8b996a69b2f0136944e3500b3ecd",
+         "kind": "click",
+         "action": "portable 릴리스 채널",
+         "expected": "The existing action preserves explicit source/target identity, rejects the named invalid condition, and requires deliberate review/confirmation/submission in the executed scenario.",
+         "observed": "browser: Actual stable→beta selection cleared the displayed bound review and backup confirmation, removing the apply control. Selecting stable again produced a fresh actual signed review. This is the local review target only, not a saved public release policy.",
+         "reviewer": "Codex root actual clean-source UI, persisted file hashes, network/CLI readback and screenshots; independent, real publisher and human quality acceptance pending",
+         "test": "scripts/e2e/native-update-layout.spec.ts::macOS native layout review shows signed internal links and refuses changed installed targets",
+         "receipt": "2026-10-07-native-update-layout-eec5df1-browser.json",
+         "receipt_sha256": "59fec7ac9af8d336a774ac7fcfa98751b1dd10374ded7208bf5537d42b1d3cc8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "00bec7813edbd4a1830b1b2f75bffc81508ec26f71706e86ae4c0c1213f0f726"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "b51d5e290237b9e404fbb2905dc24a9ffed5fed04351b8be192d252fcdcafc8f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "b32bc9f878500757e6e8c630370c9fc48e7c1e318a59c0c3d9ddfd17f5efc86b"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "39b06e94181afdb3cfa02d664410998037e980b32f168e5b7178463a2bc4f7ea"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "3d26c335cd1f6db43ea1e27429b38a9fb8abb2042d7f911675a92846c471323c"
+          }
+         ]
+        }
+       ]
       },
       "empty": {
        "state": "pending"
@@ -20604,7 +20766,43 @@
        "state": "pending"
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "eec5df11e1cc8b996a69b2f0136944e3500b3ecd",
+         "kind": "click",
+         "action": "portable 릴리스 채널",
+         "expected": "The existing action preserves explicit source/target identity, rejects the named invalid condition, and requires deliberate review/confirmation/submission in the executed scenario.",
+         "observed": "browser: A stable signed fixture release selected through the beta control was actually refused by the main manager/source CLI with Release target differs and install count0. Stable review then bound the same3-file/3-link inventory and allowed only explicit confirmation/application.",
+         "reviewer": "Codex root actual clean-source UI, persisted file hashes, network/CLI readback and screenshots; independent, real publisher and human quality acceptance pending",
+         "test": "scripts/e2e/native-update-layout.spec.ts::macOS native layout review shows signed internal links and refuses changed installed targets",
+         "receipt": "2026-10-07-native-update-layout-eec5df1-browser.json",
+         "receipt_sha256": "59fec7ac9af8d336a774ac7fcfa98751b1dd10374ded7208bf5537d42b1d3cc8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "00bec7813edbd4a1830b1b2f75bffc81508ec26f71706e86ae4c0c1213f0f726"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "b51d5e290237b9e404fbb2905dc24a9ffed5fed04351b8be192d252fcdcafc8f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "b32bc9f878500757e6e8c630370c9fc48e7c1e318a59c0c3d9ddfd17f5efc86b"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "39b06e94181afdb3cfa02d664410998037e980b32f168e5b7178463a2bc4f7ea"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "3d26c335cd1f6db43ea1e27429b38a9fb8abb2042d7f911675a92846c471323c"
+          }
+         ]
+        }
+       ]
       }
      }
     },
@@ -20666,7 +20864,43 @@
        "state": "pending"
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "eec5df11e1cc8b996a69b2f0136944e3500b3ecd",
+         "kind": "click",
+         "action": "portable 변경 내용 확인",
+         "expected": "The existing action preserves explicit source/target identity, rejects the named invalid condition, and requires deliberate review/confirmation/submission in the executed scenario.",
+         "observed": "browser: An actual signed release whose channel differed from the selected beta target failed preview, displayed Release target differs, produced no apply/confirmation controls and left application-active absent, install count0 and original labels exact.",
+         "reviewer": "Codex root actual clean-source UI, persisted file hashes, network/CLI readback and screenshots; independent, real publisher and human quality acceptance pending",
+         "test": "scripts/e2e/native-update-layout.spec.ts::macOS native layout review shows signed internal links and refuses changed installed targets",
+         "receipt": "2026-10-07-native-update-layout-eec5df1-browser.json",
+         "receipt_sha256": "59fec7ac9af8d336a774ac7fcfa98751b1dd10374ded7208bf5537d42b1d3cc8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "00bec7813edbd4a1830b1b2f75bffc81508ec26f71706e86ae4c0c1213f0f726"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "b51d5e290237b9e404fbb2905dc24a9ffed5fed04351b8be192d252fcdcafc8f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "b32bc9f878500757e6e8c630370c9fc48e7c1e318a59c0c3d9ddfd17f5efc86b"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "39b06e94181afdb3cfa02d664410998037e980b32f168e5b7178463a2bc4f7ea"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "3d26c335cd1f6db43ea1e27429b38a9fb8abb2042d7f911675a92846c471323c"
+          }
+         ]
+        }
+       ]
       },
       "error": {
        "state": "pending"
@@ -20746,10 +20980,82 @@
        "state": "pending"
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "eec5df11e1cc8b996a69b2f0136944e3500b3ecd",
+         "kind": "click",
+         "action": "선택한 portable 설치의 학습·검사가 종료되고 백업을 확인했습니다",
+         "expected": "The existing action preserves explicit source/target identity, rejects the named invalid condition, and requires deliberate review/confirmation/submission in the executed scenario.",
+         "observed": "browser: Unchecking the explicit confirmation after review disabled apply and left install count0. Changing channel subsequently cleared confirmation rather than carrying it into a different signed target.",
+         "reviewer": "Codex root actual clean-source UI, persisted file hashes, network/CLI readback and screenshots; independent, real publisher and human quality acceptance pending",
+         "test": "scripts/e2e/native-update-layout.spec.ts::macOS native layout review shows signed internal links and refuses changed installed targets",
+         "receipt": "2026-10-07-native-update-layout-eec5df1-browser.json",
+         "receipt_sha256": "59fec7ac9af8d336a774ac7fcfa98751b1dd10374ded7208bf5537d42b1d3cc8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "00bec7813edbd4a1830b1b2f75bffc81508ec26f71706e86ae4c0c1213f0f726"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "b51d5e290237b9e404fbb2905dc24a9ffed5fed04351b8be192d252fcdcafc8f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "b32bc9f878500757e6e8c630370c9fc48e7c1e318a59c0c3d9ddfd17f5efc86b"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "39b06e94181afdb3cfa02d664410998037e980b32f168e5b7178463a2bc4f7ea"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "3d26c335cd1f6db43ea1e27429b38a9fb8abb2042d7f911675a92846c471323c"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "eec5df11e1cc8b996a69b2f0136944e3500b3ecd",
+         "kind": "click",
+         "action": "선택한 portable 설치의 학습·검사가 종료되고 백업을 확인했습니다",
+         "expected": "The existing action preserves explicit source/target identity, rejects the named invalid condition, and requires deliberate review/confirmation/submission in the executed scenario.",
+         "observed": "browser: Leaving a reviewed and checked screen before applying, then reloading and selecting the same owned home, retained version0.0.0 without application-active. A fresh review reopened with confirmation unchecked and apply disabled; only explicit re-check and apply installed.",
+         "reviewer": "Codex root actual clean-source UI, persisted file hashes, network/CLI readback and screenshots; independent, real publisher and human quality acceptance pending",
+         "test": "scripts/e2e/native-update-layout.spec.ts::macOS native layout review shows signed internal links and refuses changed installed targets",
+         "receipt": "2026-10-07-native-update-layout-eec5df1-browser.json",
+         "receipt_sha256": "59fec7ac9af8d336a774ac7fcfa98751b1dd10374ded7208bf5537d42b1d3cc8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "00bec7813edbd4a1830b1b2f75bffc81508ec26f71706e86ae4c0c1213f0f726"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "b51d5e290237b9e404fbb2905dc24a9ffed5fed04351b8be192d252fcdcafc8f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "b32bc9f878500757e6e8c630370c9fc48e7c1e318a59c0c3d9ddfd17f5efc86b"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "39b06e94181afdb3cfa02d664410998037e980b32f168e5b7178463a2bc4f7ea"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "3d26c335cd1f6db43ea1e27429b38a9fb8abb2042d7f911675a92846c471323c"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
        "state": "pending"
@@ -20912,7 +21218,43 @@
        ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "eec5df11e1cc8b996a69b2f0136944e3500b3ecd",
+         "kind": "click",
+         "action": "검토한 portable 업데이트 적용",
+         "expected": "The existing action preserves explicit source/target identity, rejects the named invalid condition, and requires deliberate review/confirmation/submission in the executed scenario.",
+         "observed": "browser: Reloading the reviewed/confirmed screen before submitting apply produced no install command or application-active pointer. Reopening required fresh review and confirmation. Subsequent deliberate apply installed only the intended native fixture and preserved original labels.",
+         "reviewer": "Codex root actual clean-source UI, persisted file hashes, network/CLI readback and screenshots; independent, real publisher and human quality acceptance pending",
+         "test": "scripts/e2e/native-update-layout.spec.ts::macOS native layout review shows signed internal links and refuses changed installed targets",
+         "receipt": "2026-10-07-native-update-layout-eec5df1-browser.json",
+         "receipt_sha256": "59fec7ac9af8d336a774ac7fcfa98751b1dd10374ded7208bf5537d42b1d3cc8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "00bec7813edbd4a1830b1b2f75bffc81508ec26f71706e86ae4c0c1213f0f726"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "b51d5e290237b9e404fbb2905dc24a9ffed5fed04351b8be192d252fcdcafc8f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "b32bc9f878500757e6e8c630370c9fc48e7c1e318a59c0c3d9ddfd17f5efc86b"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "39b06e94181afdb3cfa02d664410998037e980b32f168e5b7178463a2bc4f7ea"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "3d26c335cd1f6db43ea1e27429b38a9fb8abb2042d7f911675a92846c471323c"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
        "state": "pending"
@@ -25595,7 +25937,61 @@
        ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "eec5df11e1cc8b996a69b2f0136944e3500b3ecd",
+         "kind": "click",
+         "action": "수집 정책 저장 (소유자)",
+         "expected": "The existing action preserves explicit source/target identity, rejects the named invalid condition, and requires deliberate review/confirmation/submission in the executed scenario.",
+         "observed": "browser: In both actual modes saved policy revision1 selected2 and skipped2 explicit persisted synthetic service events. Registered snapshots matched original hashes with UNKNOWN/pending truth. Re-registration preserved exact index/policy bytes and original decisions. Saving revision2 did not reconsider old skips; a new persisted REVIEW event used revision2, giving3 selected/2 skipped. Actual reload retained policy/history and hashes. No model execution, source activation, training or human quality approval.",
+         "reviewer": "Codex root actual clean-source UI, persisted file hashes, network/CLI readback and screenshots; independent, real publisher and human quality acceptance pending",
+         "test": "scripts/e2e/capture-sampling-handoff.spec.ts::saved capture sampling policy applies quotas and immutable replay before new revision handoff",
+         "receipt": "2026-10-07-capture-sampling-handoff-eec5df1-browser.json",
+         "receipt_sha256": "9f17c90dfa5f04fa78253ce078d685654de444780a765b15b16e8ce46957037f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "688d1490026c9e7088c78f8fc118798f4340337a829671caaa5b0229974ee8ba"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c1563208cc3157b15b209ad9c07c2222639b0df515a4cc13fb1b4fa3426abe84"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "1371720d220039f9ba39b5e632b96c7c58de98879f5443b05d836cb688bdfab0"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "eec5df11e1cc8b996a69b2f0136944e3500b3ecd",
+         "kind": "click",
+         "action": "수집 정책 저장 (소유자)",
+         "expected": "The existing action preserves explicit source/target identity, rejects the named invalid condition, and requires deliberate review/confirmation/submission in the executed scenario.",
+         "observed": "electron: In both actual modes saved policy revision1 selected2 and skipped2 explicit persisted synthetic service events. Registered snapshots matched original hashes with UNKNOWN/pending truth. Re-registration preserved exact index/policy bytes and original decisions. Saving revision2 did not reconsider old skips; a new persisted REVIEW event used revision2, giving3 selected/2 skipped. Actual reload retained policy/history and hashes. No model execution, source activation, training or human quality approval.",
+         "reviewer": "Codex root actual clean-source UI, persisted file hashes, network/CLI readback and screenshots; independent, real publisher and human quality acceptance pending",
+         "test": "scripts/e2e/capture-sampling-handoff.spec.ts::native saved capture sampling policy applies quotas and immutable replay before new revision handoff",
+         "receipt": "2026-10-07-capture-sampling-handoff-eec5df1-electron.json",
+         "receipt_sha256": "fcff39342bd26e884d5dc83a8aa5bfb140c2ee42f3d9a071ed1c0f7c9a90f13a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "e840eb9af2e7934e586e57fa586988e291ce2547f4ce7ba7b5d51675ec0e6857"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f9dc75a4fe77a9f9b05dd9b1a6b3e50130b8819532ea17faa23d6e93e24ac92b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "a67f4a3657d53ab2960dabc46203e567909275133ae8bea5bebaa6ebe4456fa6"
+          }
+         ]
+        }
+       ]
       }
      }
     }

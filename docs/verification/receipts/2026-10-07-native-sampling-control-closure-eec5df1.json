@@ -1,0 +1,65 @@
+{
+  "schema": "modu-vision.native-sampling-handoff-controls/v1",
+  "source_sha": "eec5df11e1cc8b996a69b2f0136944e3500b3ecd",
+  "actual_gui_cases": 3,
+  "actual_modes": [
+    "browser",
+    "electron"
+  ],
+  "retry_count": 0,
+  "existing_pending_dimensions_verified": 10,
+  "action_count": 197,
+  "verified_scenarios": 506,
+  "pending_scenarios": 873,
+  "observations": {
+    "capture-service-registration": {
+      "invalid": "Actual browser and native Electron requests for malformed and absent32-hex service IDs returned409 and displayed their actual validator errors. No intake index was created and the saved source split SHA stayed exact."
+    },
+    "capture-sampling-policy-save": {
+      "handoff": "In both actual modes saved policy revision1 selected2 and skipped2 explicit persisted synthetic service events. Registered snapshots matched original hashes with UNKNOWN/pending truth. Re-registration preserved exact index/policy bytes and original decisions. Saving revision2 did not reconsider old skips; a new persisted REVIEW event used revision2, giving3 selected/2 skipped. Actual reload retained policy/history and hashes. No model execution, source activation, training or human quality approval."
+    },
+    "portable-inspect-state": {
+      "empty": "Before selecting a portable home the actual read-state control was disabled. No home was selected by the renderer automatically.",
+      "invalid": "After actual controlled native layout installation, changing the raw signed internal-link target made explicit inspection return Installed native link target changed, with no apply control. Restoring the exact raw target and deliberately inspecting again recovered the same version1.0.0/fence1; original labels remained exact."
+    },
+    "portable-release-channel": {
+      "success": "Actual stable\u2192beta selection cleared the displayed bound review and backup confirmation, removing the apply control. Selecting stable again produced a fresh actual signed review. This is the local review target only, not a saved public release policy.",
+      "handoff": "A stable signed fixture release selected through the beta control was actually refused by the main manager/source CLI with Release target differs and install count0. Stable review then bound the same3-file/3-link inventory and allowed only explicit confirmation/application."
+    },
+    "portable-review-offline": {
+      "invalid": "An actual signed release whose channel differed from the selected beta target failed preview, displayed Release target differs, produced no apply/confirmation controls and left application-active absent, install count0 and original labels exact."
+    },
+    "portable-confirm-drained-backup": {
+      "cancel": "Unchecking the explicit confirmation after review disabled apply and left install count0. Changing channel subsequently cleared confirmation rather than carrying it into a different signed target.",
+      "reopen": "Leaving a reviewed and checked screen before applying, then reloading and selecting the same owned home, retained version0.0.0 without application-active. A fresh review reopened with confirmation unchecked and apply disabled; only explicit re-check and apply installed."
+    },
+    "portable-apply-reviewed": {
+      "cancel": "Reloading the reviewed/confirmed screen before submitting apply produced no install command or application-active pointer. Reopening required fresh review and confirmation. Subsequent deliberate apply installed only the intended native fixture and preserved original labels."
+    }
+  },
+  "gui_receipts": [
+    {
+      "case": "capture-sampling-handoff",
+      "mode": "browser",
+      "receipt": "2026-10-07-capture-sampling-handoff-eec5df1-browser.json",
+      "receipt_sha256": "9f17c90dfa5f04fa78253ce078d685654de444780a765b15b16e8ce46957037f"
+    },
+    {
+      "case": "capture-sampling-handoff",
+      "mode": "electron",
+      "receipt": "2026-10-07-capture-sampling-handoff-eec5df1-electron.json",
+      "receipt_sha256": "fcff39342bd26e884d5dc83a8aa5bfb140c2ee42f3d9a071ed1c0f7c9a90f13a"
+    },
+    {
+      "case": "native-update-layout",
+      "mode": "browser",
+      "receipt": "2026-10-07-native-update-layout-eec5df1-browser.json",
+      "receipt_sha256": "59fec7ac9af8d336a774ac7fcfa98751b1dd10374ded7208bf5537d42b1d3cc8"
+    }
+  ],
+  "component_receipt": "2026-10-07-native-cycle-components-eec5df1.json",
+  "component_receipt_sha256": "7cd6938801283d64ddc5cbb87657b0d55b7e816c69cdd2b1a1a0e1f1b4bf4f12",
+  "collector_schema_correction": "The original private collector assumed browser page_errors existed in native manifests and stopped after collecting browser cases. Original logs were retained; native execution was not rerun or weakened. The corrected collector uses actual Electron process/backend/port teardown fields and the same passed report. No claim of an unavailable native page_errors field.",
+  "scope": "Generated source images, persisted synthetic service events, controlled Ed25519 authority and native-signature output fixture, source CLI/native layout fixture only. No representative model quality, automatic truth, full offline base activation, real publisher/OS installer/installed product, Windows/device or independent acceptance.",
+  "parent_pending": 15
+}

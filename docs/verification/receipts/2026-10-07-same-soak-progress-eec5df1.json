@@ -1,0 +1,47 @@
+{
+  "schema": "modu-vision.same-endurance-progress/v1",
+  "observed_at": "2026-10-07T12:15:08.417689+00:00",
+  "frozen_source_sha": "a184b1e254e881c0af09f0f788c993b35da92c89",
+  "raw_receipt_sha256": "a824464e881798b4bd976d5e63e99276167bae2e005b8e0cd292563ea390381e",
+  "source_binding_sha256": "fd68736a9f34c6096711b5b217b9ddea6e65dc813ba0ceaae79822cfcfc0a36d",
+  "original_process_identities": [
+    {
+      "pid": 96648,
+      "create_time": 1791300478.197693,
+      "status": "running"
+    },
+    {
+      "pid": 96637,
+      "create_time": 1791300478.132385,
+      "status": "sleeping"
+    },
+    {
+      "pid": 96873,
+      "create_time": 1791300601.228116,
+      "status": "sleeping"
+    }
+  ],
+  "metrics": {
+    "schema_version": 1,
+    "status": "running",
+    "pid": 96648,
+    "started_utc": "2026-10-06T15:28:02Z",
+    "requested_seconds": 259200.0,
+    "interval_seconds": 60.0,
+    "checkpoint_sha256": "e7512480de1bae33b903319f21f7e24ea2c9f9b65753239228570be3afe146b1",
+    "actual_cpu_inference": true,
+    "model_quality_approved": false,
+    "approved_field_service": false,
+    "hardware_delivery_exercised": false,
+    "soak_72h_completed": false,
+    "quota_bytes": 536870912,
+    "minimum_free_bytes": 67108864,
+    "elapsed_seconds": 74776.72879916604,
+    "cycles": 1243,
+    "completed": 1243,
+    "duplicate_requests": 1243,
+    "backpressure_refusals": 1243,
+    "process_peak_rss_bytes": 517144576
+  },
+  "scope": "Same original worker/observer/caffeinate and external mount; progress only, not72h completion. Original source/observer bytes matched the frozen commit; no restart or aggregation of the old failed run."
+}

@@ -12,11 +12,11 @@
 | S6-04 | 오프라인 업데이트 | owned POSIX portable 앱·DB cutover, crash finish, 새 account/profile 보존 forward recovery; actual frozen CLI5회·별도 CPU known-image2회; 새 main/preload/renderer 검토·복구 연결, 관련Python125/Node40 및 UI2개 통과 | 실제 OS installer·설치된 home·실 publisher 서명·native positive 설치 및 installed-app known-image handoff |
 | S6-05 | 공개 CI | 기존 hosted success 보존; 전체 CPU2706 pass/고지 누락1 fail·고지62 및 optional27 repair pass | 최신 게시 source 전체 CI 완료; 기존 queue 및 실패 기록 보존 |
 | S6-06 | 서명·채널 | unsigned 상태와 checksum/source 연결 | 실제 publisher/서명 키·최종 artifact와 stable/beta 운영 정책 |
-| S7-01 | 전체 기능 행동 coverage | 197개 curated action, 496개 시나리오 검증; retention·template 실제 browser/Electron 근거 추가 | 883개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
+| S7-01 | 전체 기능 행동 coverage | 197개 curated action, 506개 시나리오 검증; retention·template 실제 browser/Electron 근거 추가 | 873개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
 | S7-02 | 10개 모델군 시나리오 | 실제 family별 학습/추론·다중 checkpoint·flow/package control 기록 | 사람이 검토한 대표 분류/정상/OCR/OBB/향상/GAN truth와 품질 판정 |
 | S7-03 | Windows 실사용 | 기존 unsigned runner 결과 보존 | 사용자 면제. 신규 실기 테스트를 시작하지 않으며 pass로 바꾸지 않음 |
 | S7-04 | 동시 작업·장애 | 2개 계정/agent·actual CPU·재접속·권한/충돌 control; controlled signed portable 앱·DB cutover 및 crash recovery | 물리적 장애와 실제 publisher가 서명한 native 앱 업데이트 |
-| S7-05 | 규모·72시간 운전 | 같은 연속 운전 19.65시간/1176 cycles; Mac/Linux10k·100k metadata와80MP decode 측정 완료 | 72시간 종료 receipt 및 실제 target RAM/disk/p95/tact 측정 |
+| S7-05 | 규모·72시간 운전 | 같은 연속 운전 20.77시간/1243 cycles; Mac/Linux10k·100k metadata와80MP decode 측정 완료 | 72시간 종료 receipt 및 실제 target RAM/disk/p95/tact 측정 |
 | S7-06 | 공정 품질·장비 | simulator 계약과 실행/품질 상태 구분 | 실제 camera/PLC/MES 및 제품/Lot별 정답·미검/과검 승인 기준 |
 | S7-07 | 공개 후보 판정 | 최신 standalone backend freeze·startup/restart 및270개 의존성 license bytes 누락0 | native library 조건·업데이트/coverage·실제 서명·독립 리뷰·pilot |
 | S7-08 | 사용자 pilot·운영 | feedback/지원/backup 절차 및 승인 경계 기록 | 실제 처음 쓰는 참여자 pilot과 유지보수 책임·SLA 결정 |
@@ -234,3 +234,10 @@ Owned qualification-key macOS fixture의 actual install→entrypoint→new profi
 - macOS schema2는 하나의.app/Contents 안의 canonical 정규 파일과 signed 내부 링크만 허용하고 schema1의 link 거절은 유지한다. 실제 owned signed fixture install/entrypoint/새 쓰기 forward recovery 및 변경된 설치 링크 거절을 확인했다. 같은 pinned trust/compatibility/source fence를 사용하고 실제 publisher 키나 OS installer는 만들지 않았다.
 - b505ccd의 실제 Python109/Node18와 source bytes binding, a53의 실제 native GUI positive, b505의 실제 Electron 미준비 거절을 각각 기록한다. 최초 native GUI premature reload 실패 및 전체 선택 옵션 누락의 missing-owned-weights 중단은 원본 그대로 보존했다. 나중에 재현한 sibling-directory traversal cycle은 별도 수정·검증 대상이며 이 과거109개 결과에 포함하지 않는다.
 - 기존 portable verified 차원은 동일 GUI case를 재실행한 새 근거로 보완했으며 action/scenario 수는 늘리지 않았다. 부모67/82·pending15/82·전체 수락0을 유지한다.
+
+## 추가 실행: 저장한 정책의 실제 후속 적용·native 순환·채널/취소 경계
+
+- Signed sibling-directory aliases가 a53에서 거절되지 않는 원래 red를 보존했다. Canonical directory와 resolved alias의 방향 그래프를 반복 순회해 전체 cycle을 거절하고 정상 framework alias/원본·새 쓰기 recovery를 유지한다. eec5df1에 연결된 selected bytes와 관련110 passed를 확인했다. 실행은 커밋 전이므로 clean GUI와 구분했다.
+- Cleaneec5df1 actual browser2/native Electron1 passed, retry0, owned teardown이다. Malformed/absent service job IDs의 실제409·index 미생성과 split hash 보존을 확인했다. 저장 revision1에서 selected2/skipped2, immutable replay와 index/policy hash 보존, revision2 뒤 old skips 유지·new REVIEW capture만 새 policy_ref·selected3/skipped2, actual reload·UNKNOWN/pending·각 snapshot sourceSHA를 확인했다. 모델 실행이나 새 version/source/training은 없다.
+- Native controlled signed layout에서는 미선택 read 비활성화·confirmation 해제·channel 변경 때 review/confirmation 폐기, signed stable release의 beta-target actual refusal·no install, 적용 전 화면 종료·reload 후 새 확인 필요, 실제 native fixture install/entrypoint·raw link 변조 거절·exact 복구·같은1.0.0/fence1 재열기를 확인했다. Real publisher 서명이나 OS installer를 대신하지 않는다.
+- 기존 pending10차원을 채워197 actions/506 verified/873 pending이다. 부모67/82·pending15/82·전체 수락0은 유지한다. Public receipt:native-sampling-control-closure-eec5df1. 새 수정본 전체 browser replay는 실행하지 않았으며 직전185-pass 전체 선택은 정확한 a53 source에만 연결했다.

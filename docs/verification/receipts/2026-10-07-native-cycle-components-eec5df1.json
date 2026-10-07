@@ -1,0 +1,54 @@
+{
+  "schema": "modu-vision.native-cycle-component-controls/v1",
+  "source_sha": "eec5df11e1cc8b996a69b2f0136944e3500b3ecd",
+  "binding": "Focused regressions executed before commit, without further tested source edits during their execution. Selected current bytes independently match this commit; not described as a clean-source GUI run.",
+  "components": [
+    {
+      "path": "backend/engine/runtime_update.py",
+      "sha256": "be3de185cb392298be112f71debf0b85d2a120dd59cdf5df18998206bdda487f"
+    },
+    {
+      "path": "backend/tests/test_native_update_layout.py",
+      "sha256": "500407c7f108e7cb626b4b09701c11c5ca90e036c663f9f1570842a70ec1489f"
+    },
+    {
+      "path": "backend/tests/test_service_s6_04.py",
+      "sha256": "51c8a193465f4a0050c839b65673688b56b802c7d219070fc74ff9143001fbb4"
+    },
+    {
+      "path": "backend/tests/test_portable_update_review.py",
+      "sha256": "93f2cbeb52c9b299c431a87efef47fea5e59877264869b3fb32d161b4dbcb931"
+    },
+    {
+      "path": "backend/tests/test_global_migration.py",
+      "sha256": "8c5d13d79dacf187f237f8f821b0aa99de2fb0570743a1e3d3052c93798e2d70"
+    },
+    {
+      "path": "scripts/e2e/native-update-layout.spec.ts",
+      "sha256": "f8fa218777c42c27dd4f29e32f42f51e6ed004beb1bb185dc3d678083d8563ee"
+    },
+    {
+      "path": "scripts/e2e/capture-sampling-handoff.spec.ts",
+      "sha256": "c324f198cfe5d706f897ad6b1dc1e30ac39d0fd170b2ad8ed8b81268087e1f77"
+    },
+    {
+      "path": "scripts/e2e/fixtures/capture_sampling_event.py",
+      "sha256": "2fb812872c98042c345b0274db7d0c7e9a952936f5591852ddc3d9557e453047"
+    }
+  ],
+  "python": {
+    "passed": 110,
+    "failed": 0,
+    "log_sha256": "55d112fa092aa118cd885ce7cc235b65c425cf656a5336c5532432a255c92650"
+  },
+  "e2e_typecheck": {
+    "exit_code": 0,
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "preserved_red": {
+    "source_sha": "a53edf6dffb994062eb3f1d1ebf237e8458c1d60",
+    "failure": "DID NOT RAISE: signed sibling-directory aliases were admitted",
+    "log_sha256": "70995592db3ff776f8e997248a60ca69dae774518767ff7c0fa3568f74579aa5"
+  },
+  "scope": "Bounded canonical directory/alias DAG validation rejects sibling recursive traversal while preserving normal framework links and signed portable/native DB recovery controls. Root-only, no real publisher, OS installer, installed target or independent acceptance."
+}

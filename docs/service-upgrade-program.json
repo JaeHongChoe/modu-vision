@@ -2915,6 +2915,14 @@
      "receipt_sha256": "f7c0da9d802633d8357082f89d532c1b31d8bda781225a01666f07ebf59d39be",
      "result": "Actual browser3/Electron3 passed with retries0 and owned teardown. Ten existing pending derived-source dimensions and26 dimensions across four previously unlisted capture actions are evidenced; registration invalid and downstream policy application remain unexecuted.",
      "scope": "Generated actual owned images and persisted synthetic service/evaluation records exercise UI/storage/control boundaries. Controlled503 is an explicit transport fixture; actual409/422 and byte preservation are separately read. No representative quality, real inspection inference, downstream new-capture sampling, publisher/native installer/Windows/physical device or independent acceptance inferred."
+    },
+    {
+     "kind": "actual-native-cycle-and-sampling-handoff-controls",
+     "source_sha": "eec5df11e1cc8b996a69b2f0136944e3500b3ecd",
+     "receipt": "docs/verification/receipts/2026-10-07-native-sampling-control-closure-eec5df1.json",
+     "receipt_sha256": "6dfe77590608bf62d649dbf9fbc2587f5e630a56d073aa3841005a8791db9c90",
+     "result": "Focused Python110 passed; clean browser2/native Electron1 passed retries0 with owned teardown. Ten existing pending action dimensions executed; no new action or parent acceptance.",
+     "scope": "Generated source images, persisted synthetic service events, controlled Ed25519 authority and native-signature output fixture, source CLI/native layout fixture only. No representative model quality, automatic truth, full offline base activation, real publisher/OS installer/installed product, Windows/device or independent acceptance."
     }
    ],
    "file_actions": {
@@ -4741,6 +4749,14 @@
      "receipt_sha256": "0353afe8153e17885d20bc83a61db474b2a978e8c2b9520bbdf76f49160629a2",
      "result": "185 expected passed/0 failed/0 retried/1 explicitly gated skip with clean owned teardown. Actual macOS schema2 controlled signed layout reviewed, installed, fixture entrypoint executed, changed target refused and exact target restored. Existing portable recovery cases replayed; no new action count.",
      "scope": "Public generated/controlled/source-display browser selection only. User-authentic pretrained suites excluded; these are preserved as separate owned-model runs. No Windows, representative quality, real publisher/OS installer, physical devices, independent acceptance or72h completion inferred."
+    },
+    {
+     "kind": "actual-native-cycle-and-sampling-handoff-controls",
+     "source_sha": "eec5df11e1cc8b996a69b2f0136944e3500b3ecd",
+     "receipt": "docs/verification/receipts/2026-10-07-native-sampling-control-closure-eec5df1.json",
+     "receipt_sha256": "6dfe77590608bf62d649dbf9fbc2587f5e630a56d073aa3841005a8791db9c90",
+     "result": "Focused Python110 passed; clean browser2/native Electron1 passed retries0 with owned teardown. Ten existing pending action dimensions executed; no new action or parent acceptance.",
+     "scope": "Generated source images, persisted synthetic service events, controlled Ed25519 authority and native-signature output fixture, source CLI/native layout fixture only. No representative model quality, automatic truth, full offline base activation, real publisher/OS installer/installed product, Windows/device or independent acceptance."
     }
    ],
    "file_actions": {
@@ -5525,6 +5541,14 @@
      "receipt_sha256": "0353afe8153e17885d20bc83a61db474b2a978e8c2b9520bbdf76f49160629a2",
      "result": "185 expected passed/0 failed/0 retried/1 explicitly gated skip with clean owned teardown. Actual macOS schema2 controlled signed layout reviewed, installed, fixture entrypoint executed, changed target refused and exact target restored. Existing portable recovery cases replayed; no new action count.",
      "scope": "Public generated/controlled/source-display browser selection only. User-authentic pretrained suites excluded; these are preserved as separate owned-model runs. No Windows, representative quality, real publisher/OS installer, physical devices, independent acceptance or72h completion inferred."
+    },
+    {
+     "kind": "actual-native-cycle-and-sampling-handoff-controls",
+     "source_sha": "eec5df11e1cc8b996a69b2f0136944e3500b3ecd",
+     "receipt": "docs/verification/receipts/2026-10-07-native-sampling-control-closure-eec5df1.json",
+     "receipt_sha256": "6dfe77590608bf62d649dbf9fbc2587f5e630a56d073aa3841005a8791db9c90",
+     "result": "Focused Python110 passed; clean browser2/native Electron1 passed retries0 with owned teardown. Ten existing pending action dimensions executed; no new action or parent acceptance.",
+     "scope": "Generated source images, persisted synthetic service events, controlled Ed25519 authority and native-signature output fixture, source CLI/native layout fixture only. No representative model quality, automatic truth, full offline base activation, real publisher/OS installer/installed product, Windows/device or independent acceptance."
     }
    ],
    "file_actions": {
@@ -5549,7 +5573,7 @@
    },
    "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts",
    "remaining": [
-    "197 curated actions have496 verified scenarios and883 pending scenarios. Other helpers/menus/shortcuts and all156-feature full acceptance remain pending."
+    "197 curated actions have506 verified scenarios and873 pending scenarios. Other helpers/menus/shortcuts and all156-feature full acceptance remain pending."
    ]
   },
   {
@@ -5717,6 +5741,14 @@
      "receipt_sha256": "0353afe8153e17885d20bc83a61db474b2a978e8c2b9520bbdf76f49160629a2",
      "result": "185 expected passed/0 failed/0 retried/1 explicitly gated skip with clean owned teardown. Actual macOS schema2 controlled signed layout reviewed, installed, fixture entrypoint executed, changed target refused and exact target restored. Existing portable recovery cases replayed; no new action count.",
      "scope": "Public generated/controlled/source-display browser selection only. User-authentic pretrained suites excluded; these are preserved as separate owned-model runs. No Windows, representative quality, real publisher/OS installer, physical devices, independent acceptance or72h completion inferred."
+    },
+    {
+     "kind": "actual-native-cycle-and-sampling-handoff-controls",
+     "source_sha": "eec5df11e1cc8b996a69b2f0136944e3500b3ecd",
+     "receipt": "docs/verification/receipts/2026-10-07-native-sampling-control-closure-eec5df1.json",
+     "receipt_sha256": "6dfe77590608bf62d649dbf9fbc2587f5e630a56d073aa3841005a8791db9c90",
+     "result": "Focused Python110 passed; clean browser2/native Electron1 passed retries0 with owned teardown. Ten existing pending action dimensions executed; no new action or parent acceptance.",
+     "scope": "Generated source images, persisted synthetic service events, controlled Ed25519 authority and native-signature output fixture, source CLI/native layout fixture only. No representative model quality, automatic truth, full offline base activation, real publisher/OS installer/installed product, Windows/device or independent acceptance."
     }
    ],
    "file_actions": {
@@ -5787,6 +5819,14 @@
      "receipt_sha256": "ad4f989260c00de0da9ea8fac5302180f3097d8c3181477da479a7db0f3311cd",
      "result": "Closed temporary verification inputs were externally preserved with exact member hashes and process/mount readback. Same72h process identities remain alive.",
      "scope": "Development-host capacity recovery only. No product model/project source, active mount, running work, or evidence deleted. Closed temporary inputs are recoverable from the external verified TAR. This is not product disk-fault acceptance, terminal72h completion or release acceptance."
+    },
+    {
+     "kind": "same-original-endurance-progress",
+     "source_sha": "a184b1e254e881c0af09f0f788c993b35da92c89",
+     "receipt": "docs/verification/receipts/2026-10-07-same-soak-progress-eec5df1.json",
+     "receipt_sha256": "453f86d2443e15b54151cd4b8f48b0b83d60b3ebae12bc4caf7a4f2905656638",
+     "result": "Same process create times retained;20.77hours/1243cycles, still running.",
+     "scope": "Same original worker/observer/caffeinate and external mount; progress only, not72h completion. Original source/observer bytes matched the frozen commit; no restart or aggregation of the old failed run."
     }
    ],
    "file_actions": {

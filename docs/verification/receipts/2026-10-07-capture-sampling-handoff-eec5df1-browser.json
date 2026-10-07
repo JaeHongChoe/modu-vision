@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "eec5df11e1cc8b996a69b2f0136944e3500b3ecd",
+  "source_dirty": false,
+  "test": "scripts/e2e/capture-sampling-handoff.spec.ts::saved capture sampling policy applies quotas and immutable replay before new revision handoff",
+  "test_source_sha256": "c324f198cfe5d706f897ad6b1dc1e30ac39d0fd170b2ad8ed8b81268087e1f77",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "d50f4b6e83b4b2929b5706a8ee258fe82bcd64be8d0c09285a205f8857176740",
+  "harness_sha256": "e0ad529d61a8d05772f6f90117db81b9e85860942bb312687518bff662edfa9d",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "688d1490026c9e7088c78f8fc118798f4340337a829671caaa5b0229974ee8ba"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "c1563208cc3157b15b209ad9c07c2222639b0df515a4cc13fb1b4fa3426abe84"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "1371720d220039f9ba39b5e632b96c7c58de98879f5443b05d836cb688bdfab0"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}
