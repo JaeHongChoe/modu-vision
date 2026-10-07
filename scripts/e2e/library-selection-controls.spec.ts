@@ -4,6 +4,7 @@ import path from 'node:path';
 import type {Page} from '@playwright/test';
 import {test,expect,type Workspace,type Evidence} from './fixtures/test';
 import {installDesktopHostShim} from './fixtures/desktop-host-shim';
+import {png} from './qa/appFlow';
 test.use({actionTimeout:10_000});
 type Api=(route:string,body?:unknown,method?:string)=>Promise<any>;
 const sha=(bytes:Buffer)=>crypto.createHash('sha256').update(bytes).digest('hex');
@@ -74,4 +75,68 @@ test('native library selection refuses unresolved saved bytes and reopens exact 
  const {window}=electronSession,status=await electronSession.waitForBackend();
  const api:Api=(route,body,method)=>window.evaluate(async({port,route,body,method})=>{const r=await fetch(`http://127.0.0.1:${port}${route}`,{method:method||(body===undefined?'GET':'POST'),...(body===undefined?{}:{headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})});if(!r.ok)throw Error(`Owned library fixture HTTP ${r.status}`);return r.json();},{port:status.port,route,body,method});
  await exercise(window,workspace,evidence,api,true);
+});
+
+async function exerciseChangedOriginal(page:Page,workspace:Workspace,evidence:Evidence,api:Api,native:boolean,url?:string){
+ const prefix=native?'native':'browser',name='Changed original identity fixture';
+ const project=await api('/api/project/create',{name,task:'classification'});
+ await api('/api/project/update',{source_dataset_dir:workspace.dataset},'PUT');
+ const importAndAccept=async(expectedActive:string|null)=>{
+  const started=await api('/api/dataset/imports',{task:'classification',verify:true});let view:any;
+  for(let i=0;i<200;i++){view=await api(`/api/dataset/imports/${started.job_id}`);if(['completed','failed','aborted','interrupted'].includes(view.state))break;await new Promise(r=>setTimeout(r,50));}
+  expect(view.state).toBe('completed');const revision=view.result.revision.revision_id;
+  const accepted=await api(`/api/dataset/imports/${started.job_id}/accept`,{revision_id:revision,expected_active:expectedActive});
+  expect(accepted.active_revision).toBe(revision);return {job_id:started.job_id,revision};
+ };
+ const originalRevision=await importAndAccept(null);
+ const rows=await api('/api/dataset/library/images?limit=120'),first=rows.items[0];
+ expect(rows.items.length).toBeGreaterThan(1);
+ const original=workspace.images.find(i=>path.resolve(i.path)===path.resolve(first.file_path));expect(original).toBeDefined();
+ expect(fs.lstatSync(first.file_path).isSymbolicLink()).toBe(false);expect(sha(fs.readFileSync(first.file_path))).toBe(original!.sha256);
+ const storage=()=>page.evaluate(()=>Object.entries(localStorage).filter(([key])=>key.startsWith('modu.inspectionImage.v2:')).map(([key,value])=>({key,value:JSON.parse(value)})));
+ const prohibited:string[]=[];page.on('request',r=>{if(r.method()==='POST'&&/\/(training\/start|compute\/jobs|train)$/.test(new URL(r.url()).pathname))prohibited.push(r.url());});
+ if(url)await page.goto(url);else await page.reload();
+ const enter=async()=>{await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(name);await page.getByRole('button',{name:/05.*플로우차트/}).click();};
+ await enter();const open=()=>page.getByRole('button',{name:'이미지 변경...',exact:true}).click();
+ const picker=page.getByRole('dialog',{name:'검사 대상 이미지 선택'}),confirm=()=>picker.getByRole('button',{name:'선택 확정',exact:true});
+ await open();await picker.getByRole('listitem').filter({hasText:first.file_name}).first().click();await confirm().click();await expect(picker).toBeHidden();
+ const remembered=await storage();expect(remembered).toHaveLength(1);expect(remembered[0].value.imageUuid).toBe(first.image_uuid);expect(remembered[0].value.sha256).toBe(original!.sha256);
+ const preserved=path.join(workspace.root,'preserved-original.png'),replacement=path.join(workspace.root,'preserved-replacement.png');
+ expect(fs.existsSync(preserved)).toBe(false);expect(fs.existsSync(replacement)).toBe(false);
+ const replacementBytes=png(32,3,(x,y)=>[x*7%256,y*5%256,97]),replacementSha=sha(replacementBytes);
+ expect(replacementSha).not.toBe(original!.sha256);fs.renameSync(first.file_path,preserved);let changedRevision:any,changedResolution:any;
+ try{
+  fs.writeFileSync(first.file_path,replacementBytes,{flag:'wx'});changedRevision=await importAndAccept(originalRevision.revision);
+  const changedRows=await api('/api/dataset/library/images?limit=120'),changedRow=changedRows.items.find((i:any)=>i.image_uuid===first.image_uuid);
+  expect(changedRow.sha256).toBe(replacementSha);expect(sha(fs.readFileSync(preserved))).toBe(original!.sha256);
+  await page.reload();await enter();const response=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/dataset/library/resolve'&&r.request().method()==='POST');
+  await open();const reply=await response;expect(reply.status()).toBe(200);changedResolution=await reply.json();
+  expect(changedResolution.results[0].status).toBe('changed');expect(changedResolution.results[0].current.sha256).toBe(replacementSha);
+  await expect(picker).toContainText('다른 내용의 파일');await expect(confirm()).toBeDisabled();expect(await storage()).toEqual(remembered);
+  await evidence.screenshot(page,`${prefix}-changed-original-is-not-confirmable`);await picker.getByRole('button',{name:'취소',exact:true}).click();
+ }finally{
+  if(fs.existsSync(first.file_path))fs.renameSync(first.file_path,replacement);
+  fs.renameSync(preserved,first.file_path);expect(sha(fs.readFileSync(first.file_path))).toBe(original!.sha256);
+ }
+ const restoredRevision=await importAndAccept(changedRevision.revision);
+ await page.reload();await enter();const response=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/dataset/library/resolve'&&r.request().method()==='POST');
+ await open();const reply=await response;expect(reply.status()).toBe(200);const restoredResolution=await reply.json();
+ expect(restoredResolution.results[0].status).toBe('found');expect(restoredResolution.results[0].current.sha256).toBe(original!.sha256);
+ await expect(picker).toContainText('선택: '+first.relative_path);await expect(confirm()).toBeEnabled();expect(await storage()).toEqual(remembered);expect(prohibited).toEqual([]);
+ for(const image of workspace.images){expect(sha(fs.readFileSync(image.path))).toBe(image.sha256);evidence.addFile(image.path);}
+ expect(sha(fs.readFileSync(replacement))).toBe(replacementSha);evidence.addFile(replacement);
+ await evidence.screenshot(page,`${prefix}-restored-original-resolves-after-revalidation`);
+ evidence.note('library_changed_original',{project,first,originalRevision,changedRevision,restoredRevision,remembered,replacement_sha256:replacementSha,changedResolution,restoredResolution,
+  actual_ui_and_backend:true,actual_changed_resolution:true,invalid_confirmation_disabled:true,remembered_uuid_sha_unchanged:true,owned_original_temporarily_replaced:true,
+  exact_original_restored_and_revalidated:true,actual_restored_found_resolution:true,replacement_evidence_preserved:true,no_training_submitted:true,human_quality_approval:false,independent_acceptance:false});
+}
+test('library selection refuses an actual changed original and recovers its exact restored revision',async({page,request,renderer,workspace,evidence})=>{
+ await installDesktopHostShim(page,renderer.port);
+ const api:Api=async(route,body,method)=>{const r=await request.fetch(renderer.origin+route,{method:method||(body===undefined?'GET':'POST'),...(body===undefined?{}:{data:body})});expect(r.ok(),`Owned library fixture HTTP ${r.status()}`).toBe(true);return r.json();};
+ await exerciseChangedOriginal(page,workspace,evidence,api,false,renderer.url);
+});
+test('native library selection refuses an actual changed original and recovers its exact restored revision',{tag:'@electron'},async({electronSession,workspace,evidence})=>{
+ const {window}=electronSession,status=await electronSession.waitForBackend();
+ const api:Api=(route,body,method)=>window.evaluate(async({port,route,body,method})=>{const r=await fetch(`http://127.0.0.1:${port}${route}`,{method:method||(body===undefined?'GET':'POST'),...(body===undefined?{}:{headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})});if(!r.ok)throw Error(`Owned library fixture HTTP ${r.status}`);return r.json();},{port:status.port,route,body,method});
+ await exerciseChangedOriginal(window,workspace,evidence,api,true);
 });
