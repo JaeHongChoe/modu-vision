@@ -113,8 +113,11 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  await expect.poll(()=>preview.evaluate(image=>(image as HTMLImageElement).naturalWidth)).toBe(32);
  const previewUrl=await preview.getAttribute('src');expect(previewUrl).toBeTruthy();
  expect(new URL(previewUrl!,page.url()).searchParams.get('file_path')).toBe(fixture.tail.path);
- const previewResponse=await page.request.get(new URL(previewUrl!,page.url()).href);expect(previewResponse.ok()).toBe(true);
- const previewBytes=await previewResponse.body(),previewSha=crypto.createHash('sha256').update(previewBytes).digest('hex');
+ // Read through the renderer's real network session. Native Electron attaches
+ // the backend token there; Playwright's separate request client does not.
+ const previewResponse=await page.evaluate(async url=>{const response=await fetch(url);return {status:response.status,bytes:Array.from(new Uint8Array(await response.arrayBuffer()))};},new URL(previewUrl!,page.url()).href);
+ expect(previewResponse.status).toBe(200);
+ const previewBytes=Buffer.from(previewResponse.bytes),previewSha=crypto.createHash('sha256').update(previewBytes).digest('hex');
  // The thumbnail is JPEG, so its bytes differ from the original PNG. Decode
  // both independently to verify the actual downstream pixels and source hash.
  const previewProof=JSON.parse(execFileSync(harness.resolvePython(),['-c','import hashlib,io,json,sys;from pathlib import Path;from PIL import Image;p=Path(sys.argv[1]);s=Image.open(p).convert("RGB");v=Image.open(io.BytesIO(sys.stdin.buffer.read())).convert("RGB");print(json.dumps({"source_sha256":hashlib.sha256(p.read_bytes()).hexdigest(),"source_size":s.size,"preview_size":v.size,"source_rgb":s.getpixel((16,16)),"preview_rgb":v.getpixel((16,16))}))',fixture.tail.path],{input:previewBytes,encoding:'utf8',timeout:10_000}).trim());
