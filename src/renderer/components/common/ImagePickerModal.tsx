@@ -65,7 +65,7 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
   const pageSize = 48;
   const pageCount = Math.max(1, Math.ceil(datasetTotal / pageSize));
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isOpen) return;
     const sameScope = openedScope.current === scope;
     openedScope.current = scope;
@@ -74,7 +74,9 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
     // reused only after this modal has already opened in the same live scope.
     const remembered = projectId ? recallSelection(projectId) : null;
     const initial = identityOf(selectedImage) ? remembered : sameScope ? selectedImage : null;
-    setTempSelected(initial);
+    // A remembered dataset identity is usable after resolution confirms it.
+    // Reset before paint so reopening never offers its unchecked old path.
+    setTempSelected(identityOf(initial) ? null : initial);
     setLocalPathInput(initial?.source === 'file' ? initial.imagePath : '');
     setDatasetPage(1);
     setDatasetSplit('all');

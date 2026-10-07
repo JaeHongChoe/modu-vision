@@ -43,9 +43,11 @@ Python dependencies are not locked. This interpreter satisfies `requirements.txt
 | annotated-types | 0.6.0 | MIT License | resolved | https://pypi.org/project/annotated-types/ |
 | anyio | 4.7.0 | MIT AND MIT License | resolved | https://github.com/agronholm/anyio |
 | certifi | 2025.8.3 | MPL-2.0 AND Mozilla Public License 2.0 (MPL 2.0) | needs_review | https://github.com/certifi/python-certifi |
+| cffi | 1.17.1 | MIT AND MIT License | resolved | https://github.com/python-cffi/cffi |
 | charset-normalizer | 3.3.2 | MIT AND MIT License | resolved | https://github.com/Ousret/charset_normalizer |
 | click | 8.1.8 | BSD License | resolved | https://github.com/pallets/click/ |
 | contourpy | 1.3.1 | BSD License | resolved | https://github.com/contourpy/contourpy |
+| cryptography | 44.0.1 | Apache-2.0 OR BSD-3-Clause AND Apache Software License AND BSD License | resolved | https://github.com/pyca/cryptography |
 | cycler | 0.11.0 | BSD AND BSD License | resolved | https://github.com/matplotlib/cycler |
 | fastapi | 0.142.2 | MIT | resolved | https://github.com/fastapi/fastapi |
 | filelock | 3.17.0 | Unlicense | resolved | https://github.com/tox-dev/py-filelock |
@@ -77,6 +79,7 @@ Python dependencies are not locked. This interpreter satisfies `requirements.txt
 | polars-runtime-32 | 1.40.1 | MIT AND MIT License | resolved | https://www.pola.rs/ |
 | protobuf | 5.29.3 | 3-Clause BSD License | resolved | https://developers.google.com/protocol-buffers/ |
 | psutil | 7.2.2 | BSD-3-Clause | resolved | https://github.com/giampaolo/psutil |
+| pycparser | 2.21 | BSD AND BSD License | resolved | https://github.com/eliben/pycparser |
 | pydantic | 2.10.3 | MIT | resolved | https://github.com/pydantic/pydantic |
 | pydantic-core | 2.27.1 | MIT AND MIT License | resolved | https://github.com/pydantic/pydantic-core |
 | pyparsing | 3.2.0 | MIT License | resolved | https://github.com/pyparsing/pyparsing/ |
