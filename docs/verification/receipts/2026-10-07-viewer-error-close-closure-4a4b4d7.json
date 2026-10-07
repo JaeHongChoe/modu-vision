@@ -1,0 +1,952 @@
+{
+  "schema": "modu-vision.viewer-error-close-closure/v1",
+  "source_sha": "4a4b4d7f6a746a56487d1a7a1e34931d8dfcb01b",
+  "actual_gui_cases": 2,
+  "attempts_each": 1,
+  "observed": "Real decoder error closed through the existing return button, retained exact frozen history identity, then valid original reopened with exact raster/run/version/image SHA and reset100percent controls. Authoritative backend report/evidence hashes and all original files unchanged. Zero foreign requests, writes and owned process leftovers.",
+  "root_native_visual_readback": true,
+  "receipts": [
+    {
+      "mode": "browser",
+      "receipt": "2026-10-07-viewer-error-close-4a4b4d7-browser.json",
+      "receipt_sha256": "4ea1d5d62cb8425b480781b3782912c0ad82e127fc2ea6d6e6066ec0ea393690"
+    },
+    {
+      "mode": "electron",
+      "receipt": "2026-10-07-viewer-error-close-4a4b4d7-electron.json",
+      "receipt_sha256": "f0a588ab24fc9f9daf6d0257109ea855ac5903f9ca4c407561a2ede8c1b6ec07"
+    }
+  ],
+  "prior_gui_reference_lineage": [
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evidence-viewer-safety.spec.ts::saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+      "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-browser.json",
+      "receipt_sha256": "89e1815fd7ccf2eeb78726e437e35f067a8fb6e0fb06183cb8eb86e4f13f7de5",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "921080822c0965ebc36586760a1e23348e6ecf6865a06d913a3d0bb4799552ee"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "87d8e7076632ad972d8c657cc71235bd0b0710aa500295ea39f524d18e347015"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "794284db177c4483176425cf9fe9a9bfb66230e060eeef688c1734cf4d2d9510"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "81ee3be45180bdbbbe53a799a7b30cbd23834668433c554d391c1e56f3670e7d"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "f2c788b0b1b50e1d813d7c9a53f2af5457af74a1c7f885acca2e78afd87ba0a6"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "fa23138c5f42f5b90b4ccfc0df99069da7ff05b3ac8830a54e3d8a82acb2bbcc"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evidence-viewer-safety.spec.ts::native saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+      "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-electron.json",
+      "receipt_sha256": "cd646bfd26372ce99af39ef9eeeaf06a9ecefa8b4cb67a5d235a516d5606b124",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "541f85a95afabcb7c758a65f190bef0f9ad08d635517a14e2f23e2b2f4f95413"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "2e898bb896968d9d37af2947b0b76956172993024620f7f5b2ec939f19ed42f6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "8e854607ee2ed1818fe12d2a311e19186089aaaf3ee64133ebd6a9d5d0c546ea"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "430ab034e9a3d73fdb4064a67a6d1b3724d157e951394e848d7a09d153184d8c"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "e261d91e9b317c66f54e608656db52874ebf4cbf32f4edada3158725e6543ed9"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b8962ba250800ee14a1257254ea6e81302025eff140b9b2c93ffd587c960604d"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evidence-viewer-safety.spec.ts::saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+      "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-browser.json",
+      "receipt_sha256": "89e1815fd7ccf2eeb78726e437e35f067a8fb6e0fb06183cb8eb86e4f13f7de5",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "921080822c0965ebc36586760a1e23348e6ecf6865a06d913a3d0bb4799552ee"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "87d8e7076632ad972d8c657cc71235bd0b0710aa500295ea39f524d18e347015"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "794284db177c4483176425cf9fe9a9bfb66230e060eeef688c1734cf4d2d9510"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "81ee3be45180bdbbbe53a799a7b30cbd23834668433c554d391c1e56f3670e7d"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "f2c788b0b1b50e1d813d7c9a53f2af5457af74a1c7f885acca2e78afd87ba0a6"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "fa23138c5f42f5b90b4ccfc0df99069da7ff05b3ac8830a54e3d8a82acb2bbcc"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evidence-viewer-safety.spec.ts::native saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+      "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-electron.json",
+      "receipt_sha256": "cd646bfd26372ce99af39ef9eeeaf06a9ecefa8b4cb67a5d235a516d5606b124",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "541f85a95afabcb7c758a65f190bef0f9ad08d635517a14e2f23e2b2f4f95413"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "2e898bb896968d9d37af2947b0b76956172993024620f7f5b2ec939f19ed42f6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "8e854607ee2ed1818fe12d2a311e19186089aaaf3ee64133ebd6a9d5d0c546ea"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "430ab034e9a3d73fdb4064a67a6d1b3724d157e951394e848d7a09d153184d8c"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "e261d91e9b317c66f54e608656db52874ebf4cbf32f4edada3158725e6543ed9"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b8962ba250800ee14a1257254ea6e81302025eff140b9b2c93ffd587c960604d"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evidence-viewer-safety.spec.ts::saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+      "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-browser.json",
+      "receipt_sha256": "89e1815fd7ccf2eeb78726e437e35f067a8fb6e0fb06183cb8eb86e4f13f7de5",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "921080822c0965ebc36586760a1e23348e6ecf6865a06d913a3d0bb4799552ee"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "87d8e7076632ad972d8c657cc71235bd0b0710aa500295ea39f524d18e347015"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "794284db177c4483176425cf9fe9a9bfb66230e060eeef688c1734cf4d2d9510"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "81ee3be45180bdbbbe53a799a7b30cbd23834668433c554d391c1e56f3670e7d"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "f2c788b0b1b50e1d813d7c9a53f2af5457af74a1c7f885acca2e78afd87ba0a6"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "fa23138c5f42f5b90b4ccfc0df99069da7ff05b3ac8830a54e3d8a82acb2bbcc"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evidence-viewer-safety.spec.ts::native saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+      "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-electron.json",
+      "receipt_sha256": "cd646bfd26372ce99af39ef9eeeaf06a9ecefa8b4cb67a5d235a516d5606b124",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "541f85a95afabcb7c758a65f190bef0f9ad08d635517a14e2f23e2b2f4f95413"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "2e898bb896968d9d37af2947b0b76956172993024620f7f5b2ec939f19ed42f6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "8e854607ee2ed1818fe12d2a311e19186089aaaf3ee64133ebd6a9d5d0c546ea"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "430ab034e9a3d73fdb4064a67a6d1b3724d157e951394e848d7a09d153184d8c"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "e261d91e9b317c66f54e608656db52874ebf4cbf32f4edada3158725e6543ed9"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b8962ba250800ee14a1257254ea6e81302025eff140b9b2c93ffd587c960604d"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evidence-viewer-safety.spec.ts::saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+      "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-browser.json",
+      "receipt_sha256": "89e1815fd7ccf2eeb78726e437e35f067a8fb6e0fb06183cb8eb86e4f13f7de5",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "921080822c0965ebc36586760a1e23348e6ecf6865a06d913a3d0bb4799552ee"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "87d8e7076632ad972d8c657cc71235bd0b0710aa500295ea39f524d18e347015"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "794284db177c4483176425cf9fe9a9bfb66230e060eeef688c1734cf4d2d9510"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "81ee3be45180bdbbbe53a799a7b30cbd23834668433c554d391c1e56f3670e7d"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "f2c788b0b1b50e1d813d7c9a53f2af5457af74a1c7f885acca2e78afd87ba0a6"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "fa23138c5f42f5b90b4ccfc0df99069da7ff05b3ac8830a54e3d8a82acb2bbcc"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evidence-viewer-safety.spec.ts::native saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+      "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-electron.json",
+      "receipt_sha256": "cd646bfd26372ce99af39ef9eeeaf06a9ecefa8b4cb67a5d235a516d5606b124",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "541f85a95afabcb7c758a65f190bef0f9ad08d635517a14e2f23e2b2f4f95413"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "2e898bb896968d9d37af2947b0b76956172993024620f7f5b2ec939f19ed42f6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "8e854607ee2ed1818fe12d2a311e19186089aaaf3ee64133ebd6a9d5d0c546ea"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "430ab034e9a3d73fdb4064a67a6d1b3724d157e951394e848d7a09d153184d8c"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "e261d91e9b317c66f54e608656db52874ebf4cbf32f4edada3158725e6543ed9"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b8962ba250800ee14a1257254ea6e81302025eff140b9b2c93ffd587c960604d"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evidence-viewer-safety.spec.ts::saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+      "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-browser.json",
+      "receipt_sha256": "89e1815fd7ccf2eeb78726e437e35f067a8fb6e0fb06183cb8eb86e4f13f7de5",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "921080822c0965ebc36586760a1e23348e6ecf6865a06d913a3d0bb4799552ee"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "87d8e7076632ad972d8c657cc71235bd0b0710aa500295ea39f524d18e347015"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "794284db177c4483176425cf9fe9a9bfb66230e060eeef688c1734cf4d2d9510"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "81ee3be45180bdbbbe53a799a7b30cbd23834668433c554d391c1e56f3670e7d"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "f2c788b0b1b50e1d813d7c9a53f2af5457af74a1c7f885acca2e78afd87ba0a6"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "fa23138c5f42f5b90b4ccfc0df99069da7ff05b3ac8830a54e3d8a82acb2bbcc"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evidence-viewer-safety.spec.ts::native saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+      "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-electron.json",
+      "receipt_sha256": "cd646bfd26372ce99af39ef9eeeaf06a9ecefa8b4cb67a5d235a516d5606b124",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "541f85a95afabcb7c758a65f190bef0f9ad08d635517a14e2f23e2b2f4f95413"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "2e898bb896968d9d37af2947b0b76956172993024620f7f5b2ec939f19ed42f6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "8e854607ee2ed1818fe12d2a311e19186089aaaf3ee64133ebd6a9d5d0c546ea"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "430ab034e9a3d73fdb4064a67a6d1b3724d157e951394e848d7a09d153184d8c"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "e261d91e9b317c66f54e608656db52874ebf4cbf32f4edada3158725e6543ed9"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b8962ba250800ee14a1257254ea6e81302025eff140b9b2c93ffd587c960604d"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evidence-viewer-safety.spec.ts::saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+      "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-browser.json",
+      "receipt_sha256": "89e1815fd7ccf2eeb78726e437e35f067a8fb6e0fb06183cb8eb86e4f13f7de5",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "921080822c0965ebc36586760a1e23348e6ecf6865a06d913a3d0bb4799552ee"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "87d8e7076632ad972d8c657cc71235bd0b0710aa500295ea39f524d18e347015"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "794284db177c4483176425cf9fe9a9bfb66230e060eeef688c1734cf4d2d9510"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "81ee3be45180bdbbbe53a799a7b30cbd23834668433c554d391c1e56f3670e7d"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "f2c788b0b1b50e1d813d7c9a53f2af5457af74a1c7f885acca2e78afd87ba0a6"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "fa23138c5f42f5b90b4ccfc0df99069da7ff05b3ac8830a54e3d8a82acb2bbcc"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evidence-viewer-safety.spec.ts::native saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+      "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-electron.json",
+      "receipt_sha256": "cd646bfd26372ce99af39ef9eeeaf06a9ecefa8b4cb67a5d235a516d5606b124",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "541f85a95afabcb7c758a65f190bef0f9ad08d635517a14e2f23e2b2f4f95413"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "2e898bb896968d9d37af2947b0b76956172993024620f7f5b2ec939f19ed42f6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "8e854607ee2ed1818fe12d2a311e19186089aaaf3ee64133ebd6a9d5d0c546ea"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "430ab034e9a3d73fdb4064a67a6d1b3724d157e951394e848d7a09d153184d8c"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "e261d91e9b317c66f54e608656db52874ebf4cbf32f4edada3158725e6543ed9"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b8962ba250800ee14a1257254ea6e81302025eff140b9b2c93ffd587c960604d"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evidence-viewer-safety.spec.ts::saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+      "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-browser.json",
+      "receipt_sha256": "89e1815fd7ccf2eeb78726e437e35f067a8fb6e0fb06183cb8eb86e4f13f7de5",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "921080822c0965ebc36586760a1e23348e6ecf6865a06d913a3d0bb4799552ee"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "87d8e7076632ad972d8c657cc71235bd0b0710aa500295ea39f524d18e347015"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "794284db177c4483176425cf9fe9a9bfb66230e060eeef688c1734cf4d2d9510"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "81ee3be45180bdbbbe53a799a7b30cbd23834668433c554d391c1e56f3670e7d"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "f2c788b0b1b50e1d813d7c9a53f2af5457af74a1c7f885acca2e78afd87ba0a6"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "fa23138c5f42f5b90b4ccfc0df99069da7ff05b3ac8830a54e3d8a82acb2bbcc"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evidence-viewer-safety.spec.ts::native saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+      "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-electron.json",
+      "receipt_sha256": "cd646bfd26372ce99af39ef9eeeaf06a9ecefa8b4cb67a5d235a516d5606b124",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "541f85a95afabcb7c758a65f190bef0f9ad08d635517a14e2f23e2b2f4f95413"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "2e898bb896968d9d37af2947b0b76956172993024620f7f5b2ec939f19ed42f6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "8e854607ee2ed1818fe12d2a311e19186089aaaf3ee64133ebd6a9d5d0c546ea"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "430ab034e9a3d73fdb4064a67a6d1b3724d157e951394e848d7a09d153184d8c"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "e261d91e9b317c66f54e608656db52874ebf4cbf32f4edada3158725e6543ed9"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b8962ba250800ee14a1257254ea6e81302025eff140b9b2c93ffd587c960604d"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evidence-viewer-safety.spec.ts::saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+      "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-browser.json",
+      "receipt_sha256": "89e1815fd7ccf2eeb78726e437e35f067a8fb6e0fb06183cb8eb86e4f13f7de5",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "921080822c0965ebc36586760a1e23348e6ecf6865a06d913a3d0bb4799552ee"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "87d8e7076632ad972d8c657cc71235bd0b0710aa500295ea39f524d18e347015"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "794284db177c4483176425cf9fe9a9bfb66230e060eeef688c1734cf4d2d9510"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "81ee3be45180bdbbbe53a799a7b30cbd23834668433c554d391c1e56f3670e7d"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "f2c788b0b1b50e1d813d7c9a53f2af5457af74a1c7f885acca2e78afd87ba0a6"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "fa23138c5f42f5b90b4ccfc0df99069da7ff05b3ac8830a54e3d8a82acb2bbcc"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evidence-viewer-safety.spec.ts::native saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+      "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-electron.json",
+      "receipt_sha256": "cd646bfd26372ce99af39ef9eeeaf06a9ecefa8b4cb67a5d235a516d5606b124",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "541f85a95afabcb7c758a65f190bef0f9ad08d635517a14e2f23e2b2f4f95413"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "2e898bb896968d9d37af2947b0b76956172993024620f7f5b2ec939f19ed42f6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "8e854607ee2ed1818fe12d2a311e19186089aaaf3ee64133ebd6a9d5d0c546ea"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "430ab034e9a3d73fdb4064a67a6d1b3724d157e951394e848d7a09d153184d8c"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "e261d91e9b317c66f54e608656db52874ebf4cbf32f4edada3158725e6543ed9"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b8962ba250800ee14a1257254ea6e81302025eff140b9b2c93ffd587c960604d"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evidence-viewer-safety.spec.ts::saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+      "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-browser.json",
+      "receipt_sha256": "89e1815fd7ccf2eeb78726e437e35f067a8fb6e0fb06183cb8eb86e4f13f7de5",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "921080822c0965ebc36586760a1e23348e6ecf6865a06d913a3d0bb4799552ee"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "87d8e7076632ad972d8c657cc71235bd0b0710aa500295ea39f524d18e347015"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "794284db177c4483176425cf9fe9a9bfb66230e060eeef688c1734cf4d2d9510"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "81ee3be45180bdbbbe53a799a7b30cbd23834668433c554d391c1e56f3670e7d"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "f2c788b0b1b50e1d813d7c9a53f2af5457af74a1c7f885acca2e78afd87ba0a6"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "fa23138c5f42f5b90b4ccfc0df99069da7ff05b3ac8830a54e3d8a82acb2bbcc"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evidence-viewer-safety.spec.ts::native saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+      "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-electron.json",
+      "receipt_sha256": "cd646bfd26372ce99af39ef9eeeaf06a9ecefa8b4cb67a5d235a516d5606b124",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "541f85a95afabcb7c758a65f190bef0f9ad08d635517a14e2f23e2b2f4f95413"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "2e898bb896968d9d37af2947b0b76956172993024620f7f5b2ec939f19ed42f6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "8e854607ee2ed1818fe12d2a311e19186089aaaf3ee64133ebd6a9d5d0c546ea"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "430ab034e9a3d73fdb4064a67a6d1b3724d157e951394e848d7a09d153184d8c"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "e261d91e9b317c66f54e608656db52874ebf4cbf32f4edada3158725e6543ed9"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b8962ba250800ee14a1257254ea6e81302025eff140b9b2c93ffd587c960604d"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evidence-viewer-safety.spec.ts::saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+      "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-browser.json",
+      "receipt_sha256": "89e1815fd7ccf2eeb78726e437e35f067a8fb6e0fb06183cb8eb86e4f13f7de5",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "921080822c0965ebc36586760a1e23348e6ecf6865a06d913a3d0bb4799552ee"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "87d8e7076632ad972d8c657cc71235bd0b0710aa500295ea39f524d18e347015"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "794284db177c4483176425cf9fe9a9bfb66230e060eeef688c1734cf4d2d9510"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "81ee3be45180bdbbbe53a799a7b30cbd23834668433c554d391c1e56f3670e7d"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "f2c788b0b1b50e1d813d7c9a53f2af5457af74a1c7f885acca2e78afd87ba0a6"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "fa23138c5f42f5b90b4ccfc0df99069da7ff05b3ac8830a54e3d8a82acb2bbcc"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evidence-viewer-safety.spec.ts::native saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+      "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-electron.json",
+      "receipt_sha256": "cd646bfd26372ce99af39ef9eeeaf06a9ecefa8b4cb67a5d235a516d5606b124",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "541f85a95afabcb7c758a65f190bef0f9ad08d635517a14e2f23e2b2f4f95413"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "2e898bb896968d9d37af2947b0b76956172993024620f7f5b2ec939f19ed42f6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "8e854607ee2ed1818fe12d2a311e19186089aaaf3ee64133ebd6a9d5d0c546ea"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "430ab034e9a3d73fdb4064a67a6d1b3724d157e951394e848d7a09d153184d8c"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "e261d91e9b317c66f54e608656db52874ebf4cbf32f4edada3158725e6543ed9"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b8962ba250800ee14a1257254ea6e81302025eff140b9b2c93ffd587c960604d"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evidence-viewer-safety.spec.ts::saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+      "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-browser.json",
+      "receipt_sha256": "89e1815fd7ccf2eeb78726e437e35f067a8fb6e0fb06183cb8eb86e4f13f7de5",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "921080822c0965ebc36586760a1e23348e6ecf6865a06d913a3d0bb4799552ee"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "87d8e7076632ad972d8c657cc71235bd0b0710aa500295ea39f524d18e347015"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "794284db177c4483176425cf9fe9a9bfb66230e060eeef688c1734cf4d2d9510"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "81ee3be45180bdbbbe53a799a7b30cbd23834668433c554d391c1e56f3670e7d"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "f2c788b0b1b50e1d813d7c9a53f2af5457af74a1c7f885acca2e78afd87ba0a6"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "fa23138c5f42f5b90b4ccfc0df99069da7ff05b3ac8830a54e3d8a82acb2bbcc"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evidence-viewer-safety.spec.ts::native saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+      "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-electron.json",
+      "receipt_sha256": "cd646bfd26372ce99af39ef9eeeaf06a9ecefa8b4cb67a5d235a516d5606b124",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "541f85a95afabcb7c758a65f190bef0f9ad08d635517a14e2f23e2b2f4f95413"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "2e898bb896968d9d37af2947b0b76956172993024620f7f5b2ec939f19ed42f6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "8e854607ee2ed1818fe12d2a311e19186089aaaf3ee64133ebd6a9d5d0c546ea"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "430ab034e9a3d73fdb4064a67a6d1b3724d157e951394e848d7a09d153184d8c"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "e261d91e9b317c66f54e608656db52874ebf4cbf32f4edada3158725e6543ed9"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b8962ba250800ee14a1257254ea6e81302025eff140b9b2c93ffd587c960604d"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evidence-viewer-safety.spec.ts::saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+      "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-browser.json",
+      "receipt_sha256": "89e1815fd7ccf2eeb78726e437e35f067a8fb6e0fb06183cb8eb86e4f13f7de5",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "921080822c0965ebc36586760a1e23348e6ecf6865a06d913a3d0bb4799552ee"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "87d8e7076632ad972d8c657cc71235bd0b0710aa500295ea39f524d18e347015"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "794284db177c4483176425cf9fe9a9bfb66230e060eeef688c1734cf4d2d9510"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "81ee3be45180bdbbbe53a799a7b30cbd23834668433c554d391c1e56f3670e7d"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "f2c788b0b1b50e1d813d7c9a53f2af5457af74a1c7f885acca2e78afd87ba0a6"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "fa23138c5f42f5b90b4ccfc0df99069da7ff05b3ac8830a54e3d8a82acb2bbcc"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evidence-viewer-safety.spec.ts::native saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+      "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-electron.json",
+      "receipt_sha256": "cd646bfd26372ce99af39ef9eeeaf06a9ecefa8b4cb67a5d235a516d5606b124",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "541f85a95afabcb7c758a65f190bef0f9ad08d635517a14e2f23e2b2f4f95413"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "2e898bb896968d9d37af2947b0b76956172993024620f7f5b2ec939f19ed42f6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "8e854607ee2ed1818fe12d2a311e19186089aaaf3ee64133ebd6a9d5d0c546ea"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "430ab034e9a3d73fdb4064a67a6d1b3724d157e951394e848d7a09d153184d8c"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "e261d91e9b317c66f54e608656db52874ebf4cbf32f4edada3158725e6543ed9"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b8962ba250800ee14a1257254ea6e81302025eff140b9b2c93ffd587c960604d"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evidence-viewer-safety.spec.ts::saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+      "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-browser.json",
+      "receipt_sha256": "89e1815fd7ccf2eeb78726e437e35f067a8fb6e0fb06183cb8eb86e4f13f7de5",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "921080822c0965ebc36586760a1e23348e6ecf6865a06d913a3d0bb4799552ee"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "87d8e7076632ad972d8c657cc71235bd0b0710aa500295ea39f524d18e347015"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "794284db177c4483176425cf9fe9a9bfb66230e060eeef688c1734cf4d2d9510"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "81ee3be45180bdbbbe53a799a7b30cbd23834668433c554d391c1e56f3670e7d"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "f2c788b0b1b50e1d813d7c9a53f2af5457af74a1c7f885acca2e78afd87ba0a6"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "fa23138c5f42f5b90b4ccfc0df99069da7ff05b3ac8830a54e3d8a82acb2bbcc"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evidence-viewer-safety.spec.ts::native saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+      "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-electron.json",
+      "receipt_sha256": "cd646bfd26372ce99af39ef9eeeaf06a9ecefa8b4cb67a5d235a516d5606b124",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "541f85a95afabcb7c758a65f190bef0f9ad08d635517a14e2f23e2b2f4f95413"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "2e898bb896968d9d37af2947b0b76956172993024620f7f5b2ec939f19ed42f6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "8e854607ee2ed1818fe12d2a311e19186089aaaf3ee64133ebd6a9d5d0c546ea"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "430ab034e9a3d73fdb4064a67a6d1b3724d157e951394e848d7a09d153184d8c"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "e261d91e9b317c66f54e608656db52874ebf4cbf32f4edada3158725e6543ed9"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b8962ba250800ee14a1257254ea6e81302025eff140b9b2c93ffd587c960604d"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evidence-viewer-safety.spec.ts::saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+      "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-browser.json",
+      "receipt_sha256": "89e1815fd7ccf2eeb78726e437e35f067a8fb6e0fb06183cb8eb86e4f13f7de5",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "921080822c0965ebc36586760a1e23348e6ecf6865a06d913a3d0bb4799552ee"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "87d8e7076632ad972d8c657cc71235bd0b0710aa500295ea39f524d18e347015"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "794284db177c4483176425cf9fe9a9bfb66230e060eeef688c1734cf4d2d9510"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "81ee3be45180bdbbbe53a799a7b30cbd23834668433c554d391c1e56f3670e7d"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "f2c788b0b1b50e1d813d7c9a53f2af5457af74a1c7f885acca2e78afd87ba0a6"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "fa23138c5f42f5b90b4ccfc0df99069da7ff05b3ac8830a54e3d8a82acb2bbcc"
+        }
+      ]
+    },
+    {
+      "registry": "docs/service-action-evidence.json",
+      "test": "scripts/e2e/evidence-viewer-safety.spec.ts::native saved evidence decoder errors and empty snapshots recover without altering exact CPU report",
+      "source_sha": "7edd21fe122ec4c7e607bd88d4457b3b10c16d0b",
+      "receipt": "2026-10-07-evidence-viewer-safety-7edd21f-electron.json",
+      "receipt_sha256": "cd646bfd26372ce99af39ef9eeeaf06a9ecefa8b4cb67a5d235a516d5606b124",
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "541f85a95afabcb7c758a65f190bef0f9ad08d635517a14e2f23e2b2f4f95413"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "2e898bb896968d9d37af2947b0b76956172993024620f7f5b2ec939f19ed42f6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "8e854607ee2ed1818fe12d2a311e19186089aaaf3ee64133ebd6a9d5d0c546ea"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "430ab034e9a3d73fdb4064a67a6d1b3724d157e951394e848d7a09d153184d8c"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "e261d91e9b317c66f54e608656db52874ebf4cbf32f4edada3158725e6543ed9"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "b8962ba250800ee14a1257254ea6e81302025eff140b9b2c93ffd587c960604d"
+        }
+      ]
+    }
+  ],
+  "lineage": "Entire prior viewer safety case re-executed from clean exact4a4b4d7 with all original assertions; registry points to fresh receipts, original historical receipts remain retained unchanged.",
+  "scope": "Owned synthetic images/untrained PaDiM fixture real CPU inspection; no model training, representative human quality, hardware, Windows, publisher/release/independent acceptance.",
+  "actions": 198,
+  "verified_scenarios": 539,
+  "pending_scenarios": 847,
+  "parent_pending": 15
+}

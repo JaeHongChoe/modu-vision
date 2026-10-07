@@ -12,11 +12,11 @@
 | S6-04 | 오프라인 업데이트 | owned POSIX portable 앱·DB cutover, crash finish, 새 account/profile 보존 forward recovery; actual frozen CLI5회·별도 CPU known-image2회; 새 main/preload/renderer 검토·복구 연결, 관련Python125/Node40 및 UI2개 통과 | 실제 OS installer·설치된 home·실 publisher 서명·native positive 설치 및 installed-app known-image handoff |
 | S6-05 | 공개 CI | 기존 hosted success 보존; 전체 CPU2706 pass/고지 누락1 fail·고지62 및 optional27 repair pass | 최신 게시 source 전체 CI 완료; 기존 queue 및 실패 기록 보존 |
 | S6-06 | 서명·채널 | unsigned 상태와 checksum/source 연결 | 실제 publisher/서명 키·최종 artifact와 stable/beta 운영 정책 |
-| S7-01 | 전체 기능 행동 coverage | 198개 curated action, 538개 시나리오 검증; retention·template 실제 browser/Electron 근거 추가 | 848개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
+| S7-01 | 전체 기능 행동 coverage | 198개 curated action, 539개 시나리오 검증; retention·template 실제 browser/Electron 근거 추가 | 847개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
 | S7-02 | 10개 모델군 시나리오 | 실제 family별 학습/추론·다중 checkpoint·flow/package control 기록 | 사람이 검토한 대표 분류/정상/OCR/OBB/향상/GAN truth와 품질 판정 |
 | S7-03 | Windows 실사용 | 기존 unsigned runner 결과 보존 | 사용자 면제. 신규 실기 테스트를 시작하지 않으며 pass로 바꾸지 않음 |
 | S7-04 | 동시 작업·장애 | 2개 계정/agent·actual CPU·재접속·권한/충돌 control; controlled signed portable 앱·DB cutover 및 crash recovery | 물리적 장애와 실제 publisher가 서명한 native 앱 업데이트 |
-| S7-05 | 규모·72시간 운전 | 같은 연속 운전 20.77시간/1243 cycles; Mac/Linux10k·100k metadata와80MP decode 측정 완료 | 72시간 종료 receipt 및 실제 target RAM/disk/p95/tact 측정 |
+| S7-05 | 규모·72시간 운전 | 같은 연속 운전 22.01시간/1317 cycles; Mac/Linux10k·100k metadata와80MP decode 측정 완료 | 72시간 종료 receipt 및 실제 target RAM/disk/p95/tact 측정 |
 | S7-06 | 공정 품질·장비 | simulator 계약과 실행/품질 상태 구분 | 실제 camera/PLC/MES 및 제품/Lot별 정답·미검/과검 승인 기준 |
 | S7-07 | 공개 후보 판정 | 최신 standalone backend freeze·startup/restart 및270개 의존성 license bytes 누락0 | native library 조건·업데이트/coverage·실제 서명·독립 리뷰·pilot |
 | S7-08 | 사용자 pilot·운영 | feedback/지원/backup 절차 및 승인 경계 기록 | 실제 처음 쓰는 참여자 pilot과 유지보수 책임·SLA 결정 |
@@ -283,3 +283,12 @@ Owned qualification-key macOS fixture의 actual install→entrypoint→new profi
 - 관련26 passed/전체 renderer-main903 passed/0skip, product/e2e 타입 검사를 통과했다. Clean source6d782fb에서 actual browser/native 각1회가 retry0으로 통과했다. Metadata503·deliberate retry·늦은 응답을 보류한 상태에서 화면 이동/재진입·정확한 origin 보존·늦은 annotation read0을 확인했다. 원래 red 로그와 screenshot/API/teardown을 보존했다.
 - 새 실제 reopen action7차원 및 기존 return empty1차원만 채워198 actions/538 verified/848 pending이다. Return error/cancel은 이 metadata reopen 근거로 채우지 않았다. Historical report JSON hash와 원본 SHA, 정확한 report/image/product/Lot 복귀가 유지됐다. 합성 normal 라벨은 사람의 품질 승인이나 training으로 집계하지 않는다.
 - Public receipt:2026-10-07-evidence-edit-closure-6d782fb.json. 부모67/82·미완료15/82·전체 수락0을 유지한다.
+
+## 추가 실행: decoder 오류 상태의 근거 창 닫기·정확한 재열기
+
+- Clean source4a4b4d7에서 실제 browser/native 각1회가 retry0으로 통과했다. 잘못된 base raster로 실제 decoder 오류가 남은 상태에서 기존 복귀 버튼으로 닫았고, 같은 저장 플로우/실행/원본 SHA에 묶인 정상 원본을 명시적으로 재열었다. Controls100percent/reset, backend saved report/evidence JSON hash와 원본 files 불변, foreign request0/write0/owned teardown을 확인했다.
+- 기존 close/reopen의 pending error1차원만 채워198 actions/539 verified/847 pending이다. 이전 viewer 회귀 전체 assertion도 같은 clean source에서 재실행했다. 원래 receipt는 그대로 보존하고 registry는 신규 exact test bytes에 묶었다. Public receipt:2026-10-07-viewer-error-close-closure-4a4b4d7.json. 부모15건과 대표 품질·장비·배포자·독립 수락은 계속 pending이다.
+
+## 같은72시간 운전의 추가 관찰
+
+- 2026-10-07T13:28:40.123254+00:00 실제 원본 receipt는 running·22.01시간/1317cycles이고 completed/중복 거절/backpressure 거절이 각각1317/1317/1317이다. 원래 worker/observer/caffeinate PID와 create time·시작시각·checkpoint가 일치한다. 재시작·기존 실패 실행 합산 없이 유지했으며72시간 종료는 아직 아니다. Public receipt:2026-10-07-same-soak-progress-4a4b4d7.json.

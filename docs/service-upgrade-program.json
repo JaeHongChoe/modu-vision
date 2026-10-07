@@ -5605,6 +5605,14 @@
      "receipt_sha256": "cb6456a25c6f4a6044655508b30862c91b88626936dbc81f2280da0f7cc18eb7",
      "result": "Four reproduced product races repaired;26 focused/903 renderer-main passed, both types and actual clean browser/native cases passed.",
      "scope": "Owned generated classification images, untrained checkpoint actual CPU comparisons/inspection and functional label fixture. No representative human truth, training, Windows/physical devices, real publisher update, independent or parent acceptance."
+    },
+    {
+     "kind": "actual-viewer-error-close-controls",
+     "source_sha": "4a4b4d7f6a746a56487d1a7a1e34931d8dfcb01b",
+     "receipt": "docs/verification/receipts/2026-10-07-viewer-error-close-closure-4a4b4d7.json",
+     "receipt_sha256": "a9dc789657f722aef9f0ac5c7824f71629dd0515d45e88d24bffd0930bbe8c0c",
+     "result": "Clean browser/native1 each retry0 passed; one existing pending error scenario filled after actual decoder-error close and exact valid re-open.",
+     "scope": "Owned synthetic images/untrained PaDiM fixture real CPU inspection; no model training, representative human quality, hardware, Windows, publisher/release/independent acceptance."
     }
    ],
    "file_actions": {
@@ -5629,7 +5637,7 @@
    },
    "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts",
    "remaining": [
-    "198 curated actions have538 verified scenarios and848 pending scenarios. Other helpers/menus/shortcuts and all156-feature full acceptance remain pending."
+    "198 curated actions have539 verified scenarios and847 pending scenarios. Other helpers/menus/shortcuts and all156-feature full acceptance remain pending."
    ]
   },
   {
@@ -5837,6 +5845,14 @@
      "receipt_sha256": "cb6456a25c6f4a6044655508b30862c91b88626936dbc81f2280da0f7cc18eb7",
      "result": "Four reproduced product races repaired;26 focused/903 renderer-main passed, both types and actual clean browser/native cases passed.",
      "scope": "Owned generated classification images, untrained checkpoint actual CPU comparisons/inspection and functional label fixture. No representative human truth, training, Windows/physical devices, real publisher update, independent or parent acceptance."
+    },
+    {
+     "kind": "actual-viewer-error-close-controls",
+     "source_sha": "4a4b4d7f6a746a56487d1a7a1e34931d8dfcb01b",
+     "receipt": "docs/verification/receipts/2026-10-07-viewer-error-close-closure-4a4b4d7.json",
+     "receipt_sha256": "a9dc789657f722aef9f0ac5c7824f71629dd0515d45e88d24bffd0930bbe8c0c",
+     "result": "Clean browser/native1 each retry0 passed; one existing pending error scenario filled after actual decoder-error close and exact valid re-open.",
+     "scope": "Owned synthetic images/untrained PaDiM fixture real CPU inspection; no model training, representative human quality, hardware, Windows, publisher/release/independent acceptance."
     }
    ],
    "file_actions": {
