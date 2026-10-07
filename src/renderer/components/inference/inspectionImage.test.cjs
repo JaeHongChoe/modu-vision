@@ -1,0 +1,10 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),Module=require('node:module'),ts=require('typescript');
+function load(file){const m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(path.dirname(file));const req=m.require.bind(m);m.require=n=>n==='../common/evidenceViewer'?load(path.join(__dirname,'../common/evidenceViewer.ts')):req(n);m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,file);return m.exports;}
+const v=load(path.join(__dirname,'inspectionImage.ts')),png='data:image/png;base64,AA==',thumb='/api/dataset/thumbnail/owned.png?file_path=%2Fowned%2Fpart.png';
+test('persisted output permits inline snapshots and falls back explicitly to a controlled thumbnail',()=>{
+ assert.equal(v.inspectionPreview(png,thumb),png);assert.equal(v.inspectionPreview('https://foreign.invalid/image.png',thumb),thumb);assert.equal(v.inspectionPreview(undefined,thumb),thumb);
+});
+test('thumbnail admission rejects external, scheme-relative, file, script, blob and other backend routes',()=>{
+ for(const value of ['https://foreign.invalid/image.png','http://127.0.0.1:8000/image.png','//foreign.invalid/image.png','file:///private/image.png','javascript:bad','blob:http://owned.invalid/random','data:image/svg+xml,<svg/>','/api/project/export','/api/dataset/thumbnail/../../private.png','/api/dataset/thumbnail/','/api/dataset/thumbnail\\part.png'])assert.equal(v.inspectionThumbnail(value),undefined,value);
+ assert.equal(v.inspectionThumbnail(thumb),thumb);assert.equal(v.inspectionThumbnail('/api/dataset/thumbnail/owned part.png?file_path=%2Fowned%2Fpart.png'),'/api/dataset/thumbnail/owned part.png?file_path=%2Fowned%2Fpart.png');assert.equal(v.inspectionThumbnail(png),png);assert.equal(v.inspectionThumbnail({}),undefined);assert.equal(v.inspectionPreview('https://foreign.invalid/a','//foreign.invalid/b'),undefined);
+});

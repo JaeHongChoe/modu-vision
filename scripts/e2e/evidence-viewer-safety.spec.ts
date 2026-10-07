@@ -43,6 +43,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Owne
   const body=structuredClone(pathname===runPath?protectedRun:protectedOriginal);hits[`${mode}:${pathname===runPath?'report':'original'}`]=(hits[`${mode}:${pathname===runPath?'report':'original'}`]||0)+1;
   if(pathname===originalPath){if(mode==='bad-base')body.image=bad;else if(mode==='empty')body.image='';else if(mode==='external')body.image=external;}
   else if(mode==='bad-overlay'||mode==='empty'||mode==='external')for(const row of body.rows)if(row.result){
+   if(mode==='external')row.image.thumbnail_url=external;
    if(mode==='bad-overlay')row.result.annotated_image=bad;
    else{row.result.annotated_image=mode==='external'?external:'';row.result.crops=mode==='empty'?[]:row.result.crops.map((crop:any)=>({...crop,crop_thumbnail:external,mask:external,anomaly_map:external}));}
   }

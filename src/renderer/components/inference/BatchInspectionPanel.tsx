@@ -14,7 +14,8 @@ import { ReviewQueuePanel } from './ReviewQueuePanel';
 import {useTaskHandoff} from '../training/useTaskHandoff';
 import {openSelectedInspectionRun} from './inspectionHistorySelection';
 import {EvidenceImageViewer} from '../common/EvidenceImageViewer';
-import {inspectionEvidence, type EvidenceView} from '../common/evidenceViewer';
+import {inspectionEvidence, safeSnapshot, type EvidenceView} from '../common/evidenceViewer';
+import {inspectionPreview,inspectionThumbnail} from './inspectionImage';
 import {
   batchSourceResetKey, filterBatchRows, isBatchSourceCurrent, isBatchSourceReady,
   isInspectionHistoryContextCurrent, inspectionRunMatchesSource, createInspectionHistoryContext, createInspectionRunExitGuard,
@@ -317,6 +318,8 @@ export const BatchInspectionPanel: React.FC = () => {
   const summary = summarizeBatch(rows);
   const visibleRows = filterBatchRows(rows, filter);
   const selected = visibleRows.find((row) => row.image.file_path === selectedPath) ?? visibleRows[0] ?? null;
+  const previewSource=inspectionPreview(selected?.result?.annotated_image,selected?.image.thumbnail_url);
+  const previewIsResult=!!selected?.result?.annotated_image&&safeSnapshot(selected.result.annotated_image);
   const closeEvidence=()=>{evidenceRequest.current++;setEvidenceView(null);};
   const openEvidence=async()=>{
     if(!selected||!report)return;
@@ -568,7 +571,7 @@ export const BatchInspectionPanel: React.FC = () => {
                   onClick={() => setSelectedPath(row.image.file_path)}
                   className={`flex w-full items-center gap-2 border-b border-[#243043] px-2 py-1.5 text-left hover:bg-[#1A212E] ${selected?.image.file_path === row.image.file_path ? 'bg-[#1A212E]' : ''}`}
                 >
-                  <img src={resolveApiUrl(row.image.thumbnail_url)} alt="" className="h-9 w-12 shrink-0 rounded object-contain bg-black" />
+                  <img src={inspectionThumbnail(row.image.thumbnail_url)?resolveApiUrl(row.image.thumbnail_url):undefined} alt="" className="h-9 w-12 shrink-0 rounded object-contain bg-black" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-xs text-slate-100" title={row.image.file_path}>{row.image.file_name}</span>
                     <span className="block truncate text-[10px] text-slate-400">{row.image.split} · {row.error || row.result?.rejection_reason || row.image.file_path}</span>
@@ -594,8 +597,8 @@ export const BatchInspectionPanel: React.FC = () => {
                   }} className="rounded border border-cyan-700 px-3 py-1 text-xs text-cyan-200 hover:bg-cyan-950 disabled:opacity-40">이 이미지 라벨 수정</button>
                   {selected.image_sha256 && <p className="break-all font-mono text-[10px] text-slate-500">검사 원본 SHA-256: {selected.image_sha256}</p>}
                   <div className="flex h-48 items-center justify-center overflow-hidden rounded border border-[#243043] bg-black">
-                    {selected.result?.annotated_image || selected.image.thumbnail_url
-                      ? <img src={resolveApiUrl(selected.result?.annotated_image || selected.image.thumbnail_url)} alt={`${selected.image.file_name} 검사 미리보기`} className="h-full w-full object-contain" />
+                    {previewSource
+                      ? <img src={resolveApiUrl(previewSource)} alt={`${selected.image.file_name} ${previewIsResult?'검사 미리보기':'원본 썸네일'}`} className="h-full w-full object-contain" />
                       : <span className="text-xs text-slate-500">미리보기가 없습니다.</span>}
                   </div>
                   {selected.error && <div role="alert" className="rounded border border-red-700 bg-red-950/30 p-2 text-xs text-red-200">{selected.error}</div>}

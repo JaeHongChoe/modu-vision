@@ -1,0 +1,85 @@
+{
+  "schema": "modu-vision.inspection-preview-admission-components/v1",
+  "base_source_sha": "2c27b6e68f3658ef497b08f46fe623acae6c1057",
+  "execution_before_code_commit": true,
+  "clean_gui_execution": false,
+  "selected_files": {
+    "src/renderer/components/inference/BatchInspectionPanel.tsx": "38574cffd8fe725945d733079d9eaaa7e60dccca245523f574a28cea019a47e3",
+    "src/renderer/components/inference/inspectionImage.ts": "1d729f2c05af44b60b40061e4a3395a4be3b25577218d25e0bb1f20dcdeee5a0",
+    "src/renderer/components/inference/inspectionImage.test.cjs": "b7067661ed3265a4ce7a2f9e66f96763e296c6a4ec5390435cb5814b521831de",
+    "scripts/e2e/evidence-viewer-safety.spec.ts": "95365f9880adb683e5d7ebc59b92e5ef3c40f52980569a48bce2028c27296c72"
+  },
+  "renderer_main": {
+    "passed": 890,
+    "failed": 0,
+    "skipped": 0
+  },
+  "product_and_e2e_types": "passed",
+  "retained_log_sha256": {
+    "evidence-preview-full-renderer.log": "8bae1b8b71b6f464ee9c4bf67c6d2bc138b88776509fa1a32e198ac293032cc1",
+    "evidence-preview-final-types.log": "3cea01ca6731d254d8cb8265f4fb29f0abcddf05eb43593ffedb269501b44fad"
+  },
+  "original_gui_runs": [
+    {
+      "run": "viewer-720c1bb",
+      "mode": "browser",
+      "report_sha256": "ef6c65e16462728c6ad70bdec43c89c8e6cf4f8cbbde04d2b9f1118c5f7659f0",
+      "teardown_sha256": "c37f2f58df853160a2cb3cc755cec70f422647463d58ba77299184e83a2e7262",
+      "stats": {
+        "startTime": "2026-10-07T12:29:29.589Z",
+        "duration": 37531.948000000004,
+        "expected": 1,
+        "skipped": 0,
+        "unexpected": 1,
+        "flaky": 0
+      },
+      "cause": "Range lexical value invalid (browser); Node route.fetch did not traverse native main process-token injection (native). Original errors and reports retained."
+    },
+    {
+      "run": "viewer-720c1bb",
+      "mode": "electron",
+      "report_sha256": "3dd26e690ec913a25656ff61443cce20a73e2c946fb30565e096cc5f37eb81de",
+      "teardown_sha256": "a374598b5a5a6a0a309463910df82f3b159894ab63150f0bf941f850594c72a8",
+      "stats": {
+        "startTime": "2026-10-07T12:29:29.589Z",
+        "duration": 44415.734000000004,
+        "expected": 1,
+        "skipped": 0,
+        "unexpected": 1,
+        "flaky": 0
+      },
+      "cause": "Range lexical value invalid (browser); Node route.fetch did not traverse native main process-token injection (native). Original errors and reports retained."
+    },
+    {
+      "run": "viewer-2c27b6e",
+      "mode": "browser",
+      "report_sha256": "45ebe20b89714911e749e54f94d42b4a6064b761a64240877a8fe429b4042dad",
+      "teardown_sha256": "3dff2d867d28a7828cd46aa1d416adfb5c385b9f2e4a001d70f4a0c4ae93e445",
+      "stats": {
+        "startTime": "2026-10-07T12:31:22.139Z",
+        "duration": 23881.434,
+        "expected": 0,
+        "skipped": 0,
+        "unexpected": 1,
+        "flaky": 0
+      },
+      "cause": "Actual background inspection preview requested the external fixture address while the viewer correctly refused it; this is a product boundary defect. Both original failures retained."
+    },
+    {
+      "run": "viewer-2c27b6e",
+      "mode": "electron",
+      "report_sha256": "26f0672ef59d4681a44bfdd1607c8e19199d7fd3b716fb43b5a1ca379307931b",
+      "teardown_sha256": "c7129ff4b1116e24f75049324e886d7945524992949cdf201493827b86c14339",
+      "stats": {
+        "startTime": "2026-10-07T12:31:22.139Z",
+        "duration": 27176.902,
+        "expected": 0,
+        "skipped": 0,
+        "unexpected": 1,
+        "flaky": 0
+      },
+      "cause": "Actual background inspection preview requested the external fixture address while the viewer correctly refused it; this is a product boundary defect. Both original failures retained."
+    }
+  ],
+  "scope": "Decoder recovery and safe image-origin admission only. The generated fixture domain was nonresolving. No production authentication was disabled or native token exposed. Actual final GUI rerun remains pending; no publisher, model-quality, device or independent approval."
+}
