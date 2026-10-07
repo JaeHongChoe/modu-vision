@@ -1,0 +1,51 @@
+{
+  "schema": "modu-vision.first-party-ocr-asset-pack/v1",
+  "source_sha": "704b68554ee52aa0b81d504b242b76c2644296d5",
+  "training_source_sha": "9bf7f1ecf19c865e69d5493966aed44964ca834e",
+  "source_dirty_at_start": false,
+  "platform": "darwin-arm64",
+  "payload_files": 5,
+  "payload_bytes": 217125,
+  "estimated_staging_bytes": 651375,
+  "inventory_sha256": "4e889341eab80b58e72920fd4f6a33207fd1123aea3e86197439a546e81a9d66",
+  "existing_base": {
+    "python": "3.13.5",
+    "implementation": "cpython",
+    "architecture": "arm64",
+    "providers": {
+      "torch": "2.9.1",
+      "numpy": "2.2.6",
+      "Pillow": "12.3.0",
+      "opencv-python": "4.12.0.88",
+      "opencv-python-headless": "4.12.0.88"
+    },
+    "libraries_bundled": false,
+    "existing_base_runtime_required": true,
+    "alternate_external_ocr_provider_added": false
+  },
+  "training_not_repeated": true,
+  "actual_cpu_images": 4,
+  "fresh_process_outputs_identical": true,
+  "installed_payload_code_hashes_verified": true,
+  "original_inputs_preserved": true,
+  "pack_payload_unchanged": true,
+  "installation_idempotent": true,
+  "installed_inactive": true,
+  "runtime_inventory_execution_flag_preserved_false": true,
+  "explicit_qualification_execution_verified": true,
+  "actual_model_sha256": "191b2551010befb829a154645b3841f16a79fbc39ca9fefc57fe177813535abd",
+  "actual_output_sha256": "1cf9953057e2a3303db1602d5adaa2d8ad48dba0f28a6633f8a89c5f0cd0e4f6",
+  "detector": "classical horizontal projection, not learned",
+  "unsupported_vertical_refused": true,
+  "model_quality_approved": false,
+  "publisher_signed": false,
+  "independent_review_accepted": false,
+  "scope": "First-party CTC code plus a tiny synthetic completed-training checkpoint in an inactive asset pack. Existing pinned local CPU dependencies are required and are not distributed inside this pack. Four generated images and a fresh-process reopen are execution evidence, not representative OCR quality, a third-party OCR provider, full offline base installation, GPU, Windows or publisher acceptance.",
+  "private_qualification_sha256": "aae9caa4fc74fabb514f47eabd1c653ee81197dd3960b07a118537e4a2e81ee2",
+  "private_execution_sha256": {
+    "first-execution.json": "1cf9953057e2a3303db1602d5adaa2d8ad48dba0f28a6633f8a89c5f0cd0e4f6",
+    "fresh-process-reopen.json": "1cf9953057e2a3303db1602d5adaa2d8ad48dba0f28a6633f8a89c5f0cd0e4f6",
+    "original-training-binding.json": "45cfb3ebab906efd4c681bcdc6812ecc02ff27f6f6519e5c1db8b5631c64bdb3"
+  },
+  "payload_source_notice": "Exact project MIT source code and the synthetic completed-training checkpoint. No external OCR-engine distribution was added. Installed payload is deliberately inactive; explicit subprocess qualification is separate from automatic Studio activation."
+}

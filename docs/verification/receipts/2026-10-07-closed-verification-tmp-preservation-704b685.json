@@ -1,0 +1,58 @@
+{
+  "schema": "modu-vision.closed-verification-tmp-preservation/v1",
+  "source_sha": "704b68554ee52aa0b81d504b242b76c2644296d5",
+  "items": [
+    {
+      "preserved_members": 101438,
+      "preserved_regular_files": 73152,
+      "logical_bytes": 16586718534,
+      "before_free_bytes": 492023808,
+      "after_free_bytes": 17306185728,
+      "original_closed_tmp_removed": true,
+      "protected_hashes_match": true,
+      "active_soak_preserved": true,
+      "whole_original_receipts_and_source_freezes_preserved": true,
+      "label": "closed-local-ci-tmp",
+      "archive_sha256": "f02fe2798a68bbe73be00f0a8d45e0453dc86c3f7acd01b1906f84457598819c",
+      "private_relocation_sha256": "46e63202337b8f3f795c3d36176c8ee5a05499cf056075f9deb81349ef86214a",
+      "scope": "Closed verification temporary data preserved in a whole byte-verified external TAR. Original source freezes/logs/XML/receipts retained. Native system agents whose descriptors were unreadable are named only in the private inspection record; recursive lsof target stdout/stderr were empty, and no readable owned process used either target."
+    },
+    {
+      "preserved_members": 47780,
+      "preserved_regular_files": 33290,
+      "logical_bytes": 14163626352,
+      "before_free_bytes": 178905088,
+      "after_free_bytes": 14431764480,
+      "original_closed_tmp_removed": true,
+      "protected_hashes_match": true,
+      "active_soak_preserved": true,
+      "whole_original_receipts_and_source_freezes_preserved": true,
+      "label": "closed-oct04-shard0-tmp",
+      "archive_sha256": "5e16d955fbd80c8652257326924adce0c4dfc3b93c950bfc5d4dde8f7a754a33",
+      "private_relocation_sha256": "6fd031c676cb15062fcf6d3d84491d916818e796f2550e2129122a295b135364",
+      "scope": "Closed verification temporary data preserved in a whole byte-verified external TAR. Original source freezes/logs/XML/receipts retained. Native system agents whose descriptors were unreadable are named only in the private inspection record; recursive lsof target stdout/stderr were empty, and no readable owned process used either target."
+    }
+  ],
+  "active_same_72h_attempt": {
+    "status": "running",
+    "elapsed_seconds": 66647.85164383304,
+    "cycles": 1108,
+    "original_process_identities": [
+      {
+        "pid": 96648,
+        "create_time": 1791300478.197693
+      },
+      {
+        "pid": 96637,
+        "create_time": 1791300478.132385
+      },
+      {
+        "pid": 96873,
+        "create_time": 1791300601.228116
+      }
+    ],
+    "restarted": false,
+    "earlier_attempt_duration_added": false
+  },
+  "scope": "Development-host capacity recovery only. No product model/project source, active mount, running work, or evidence deleted. Closed temporary inputs are recoverable from the external verified TAR. This is not product disk-fault acceptance, terminal72h completion or release acceptance."
+}

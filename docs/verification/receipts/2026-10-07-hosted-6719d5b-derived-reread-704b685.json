@@ -1,0 +1,37 @@
+{
+  "run_id": 37565026919,
+  "artifact_id": 11471377807,
+  "read_bytes": 2461106,
+  "archive_size": 1258228155,
+  "whole_archive_verified": false,
+  "members": [
+    {
+      "member": "modu-e2e/2026-10-07T08-50-12-123Z-13605/results/derived-workflow-closure-d-78351-omparison-and-verified-undo-browser/error-context.md",
+      "bytes": 35285,
+      "sha256": "c18bb2011dab5ef24c1757933a7cc5045d0a4bbeecd8e4f45db0c5b68e9a1c7b"
+    },
+    {
+      "member": "modu-e2e/2026-10-07T08-50-12-123Z-13605/results/derived-workflow-closure-d-78351-omparison-and-verified-undo-browser/test-failed-1.png",
+      "bytes": 207279,
+      "sha256": "7207112ca38dde12ff247537a25d71832c763e507ec0adbcd5b1be8d7e70078f"
+    }
+  ],
+  "hosted_source_sha": "6719d5b999c453e75cd8cde8cafed2cf88cec78a",
+  "source_sha": "704b68554ee52aa0b81d504b242b76c2644296d5",
+  "schema": "modu-vision.hosted-failure-local-reread/v1",
+  "observed_conclusion": "failure",
+  "scope": "Exact older hosted run failed after CPU success with browser166 passed/1 failed/1 skipped. Two failure-context/screenshot ZIP members were read and byte-verified; the whole ZIP and large trace were not verified. Current manual-model-scope repair already existed before this readback. Actual clean704b685 browser/Electron derived workflow reruns passed with exact incumbent/candidate/comparison/checkpoint identity and unsubmitted human attestation. This is not newest hosted CI success.",
+  "current_source_sha": "704b68554ee52aa0b81d504b242b76c2644296d5",
+  "current_gui": [
+    {
+      "receipt": "2026-10-07-library-derived-704b685-browser.json",
+      "receipt_sha256": "0d2ba14e5218d7fb583d7e0903f27d8119d5fc4f2dd914a594305cfabc2a2ba2"
+    },
+    {
+      "receipt": "2026-10-07-library-derived-704b685-electron.json",
+      "receipt_sha256": "2c89907937ad061ed95dd476864b68989d3d31ebd00e9d4068d0953e63d1a197"
+    }
+  ],
+  "independent_review_accepted": false,
+  "model_quality_approved": false
+}

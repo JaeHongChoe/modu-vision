@@ -4604,6 +4604,14 @@
      "receipt_sha256": "a4283c5526e91adf04db1a661f164675032fd4b84ee5cbbf60ab4fdb1f9d32c9",
      "result": "Clean1e82c22 local replay:2706 passed/1 notice failure/30 skips. Generated notice repair62 pass; clean5e96e5e existing optional interpreters27 pass/0skip. Renderer875 pass and actual browser2/Electron2 pass. Original failure and3 platform skips remain explicit.",
      "scope": "Actual hosted Linux CI CPU test selection replayed locally on macOS. Baseline failure is retained; only its license contract and previously skipped optional-provider cases are separately verified. No hosted Linux success, Windows pass, human model quality or independent release approval."
+    },
+    {
+     "kind": "actual-first-party-ocr-inactive-pack",
+     "source_sha": "704b68554ee52aa0b81d504b242b76c2644296d5",
+     "receipt": "docs/verification/receipts/2026-10-07-first-party-ocr-asset-pack-704b685.json",
+     "receipt_sha256": "4958286756adc1d5387c8ff624cd36607a09d41cbbb905f764df9e29b01a722a",
+     "result": "Five-file first-party OCR asset pack installed/idempotently reopened; four original generated images inferred twice by fresh processes from exact installed payload code and the retained completed checkpoint.",
+     "scope": "First-party CTC code plus a tiny synthetic completed-training checkpoint in an inactive asset pack. Existing pinned local CPU dependencies are required and are not distributed inside this pack. Four generated images and a fresh-process reopen are execution evidence, not representative OCR quality, a third-party OCR provider, full offline base installation, GPU, Windows or publisher acceptance."
     }
    ],
    "file_actions": {
@@ -4628,7 +4636,7 @@
     "E07"
    ],
    "remaining": [
-    "Separate OpenVINO CPU FP32/FP16, NNCF INT8 and ONNX CUDA12 FP32/FP16 packs now have source/license-byte and actual isolated execution evidence. Optional OCR distribution, other devices, native-library legal/publisher decisions and representative heldout quality remain pending."
+    "OpenVINO FP32/FP16, NNCF INT8, ONNX CUDA12 and the inactive first-party CTC code/checkpoint pack have separate execution evidence. Full offline base-runtime installation, automatic Studio pack activation, other providers/devices, native-library legal/publisher decisions and representative heldout quality remain pending. No alternate OCR-engine provider is required by the existing CTC implementation."
    ]
   },
   {
@@ -4956,6 +4964,14 @@
      "receipt_sha256": "a4283c5526e91adf04db1a661f164675032fd4b84ee5cbbf60ab4fdb1f9d32c9",
      "result": "Clean1e82c22 local replay:2706 passed/1 notice failure/30 skips. Generated notice repair62 pass; clean5e96e5e existing optional interpreters27 pass/0skip. Renderer875 pass and actual browser2/Electron2 pass. Original failure and3 platform skips remain explicit.",
      "scope": "Actual hosted Linux CI CPU test selection replayed locally on macOS. Baseline failure is retained; only its license contract and previously skipped optional-provider cases are separately verified. No hosted Linux success, Windows pass, human model quality or independent release approval."
+    },
+    {
+     "kind": "actual-old-hosted-failure-current-derived-reread",
+     "source_sha": "704b68554ee52aa0b81d504b242b76c2644296d5",
+     "receipt": "docs/verification/receipts/2026-10-07-hosted-6719d5b-derived-reread-704b685.json",
+     "receipt_sha256": "df495f2b87c674cfbc34d75bde2371f47c8fbbd97972d8fe3aa957a81c8a2c71",
+     "result": "Older source6719d5b failed with reversed manual comparison identities; current704b685 browser/Electron derived flow retained the intended original/candidate and exact assessment checkpoint.",
+     "scope": "Exact older hosted run failed after CPU success with browser166 passed/1 failed/1 skipped. Two failure-context/screenshot ZIP members were read and byte-verified; the whole ZIP and large trace were not verified. Current manual-model-scope repair already existed before this readback. Actual clean704b685 browser/Electron derived workflow reruns passed with exact incumbent/candidate/comparison/checkpoint identity and unsubmitted human attestation. This is not newest hosted CI success."
     }
    ],
    "file_actions": {
@@ -5413,6 +5429,14 @@
      "receipt_sha256": "a4283c5526e91adf04db1a661f164675032fd4b84ee5cbbf60ab4fdb1f9d32c9",
      "result": "Clean1e82c22 local replay:2706 passed/1 notice failure/30 skips. Generated notice repair62 pass; clean5e96e5e existing optional interpreters27 pass/0skip. Renderer875 pass and actual browser2/Electron2 pass. Original failure and3 platform skips remain explicit.",
      "scope": "Actual hosted Linux CI CPU test selection replayed locally on macOS. Baseline failure is retained; only its license contract and previously skipped optional-provider cases are separately verified. No hosted Linux success, Windows pass, human model quality or independent release approval."
+    },
+    {
+     "kind": "actual-library-changed-original",
+     "source_sha": "704b68554ee52aa0b81d504b242b76c2644296d5",
+     "receipt": "docs/verification/receipts/2026-10-07-library-original-followup-704b685.json",
+     "receipt_sha256": "6b64ff1fb014eda4820429ea13cb54671661fca9f2bdf4aa8b51c64ad54164b5",
+     "result": "Clean browser3/Electron3 passed. One invalid-selection dimension added and seven previous library control dimensions freshly rebound to current executed spec bytes.",
+     "scope": "Actual replaced-original and exact recovery in browser/Electron. Seven previous control dimensions were rerun after the spec extension and rebound to current executed spec bytes; old receipts remain immutable historical evidence. Derived retraining/comparison/original return were separately rerun. No human quality, native installer, Windows, field or independent acceptance inferred."
     }
    ],
    "file_actions": {
@@ -5437,7 +5461,7 @@
    },
    "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts",
    "remaining": [
-    "192 curated actions now have429 verified scenarios and915 pending scenarios. Retention, template and project archive controls have explicit scenario records; other helpers/menus/shortcuts and all156-feature full acceptance remain pending."
+    "192 curated actions now have430 verified scenarios and914 pending scenarios. Retention, template, project archive and changed-original selection controls have explicit scenario records; other helpers/menus/shortcuts and all156-feature full acceptance remain pending."
    ]
   },
   {
@@ -5627,6 +5651,14 @@
      "receipt_sha256": "664cf27b9cb0309dac4984f69966729accd601c9a7503972660cb04510ae41e1",
      "result": "Per host10k/100k metadata paging/searches,80MP source-preserving decode, two5000-record REVIEW queue controls with duplicate/backpressure/reopen.313 selected source files independently match commit. No actual model inference in these short controls; same separate72h attempt remains live.",
      "scope": "Actual synthetic metadata search/paging, per-host generated uniform80MP original decode and durable non-model REVIEW queue controls. Mac workstation and isolated Linux CPU measurements only. Numeric timing is not industrial tact, throughput promise, human quality, GUI-scale or72h acceptance. Host total RAM differs from the explicit8GiB Linux container cap. Source images generated separately per host are not claimed byte-identical across hosts. Other workloads and the existing soak were preserved."
+    },
+    {
+     "kind": "same-running-soak-and-capacity-preservation",
+     "source_sha": "704b68554ee52aa0b81d504b242b76c2644296d5",
+     "receipt": "docs/verification/receipts/2026-10-07-closed-verification-tmp-preservation-704b685.json",
+     "receipt_sha256": "ad4f989260c00de0da9ea8fac5302180f3097d8c3181477da479a7db0f3311cd",
+     "result": "Closed temporary verification inputs were externally preserved with exact member hashes and process/mount readback. Same72h process identities remain alive.",
+     "scope": "Development-host capacity recovery only. No product model/project source, active mount, running work, or evidence deleted. Closed temporary inputs are recoverable from the external verified TAR. This is not product disk-fault acceptance, terminal72h completion or release acceptance."
     }
    ],
    "file_actions": {
@@ -5647,7 +5679,7 @@
    },
    "proposed_test_file": "scripts/e2e/service-s7-05.spec.ts",
    "remaining": [
-    "Same independent72h attempt observed at64235.27 seconds/1068 cycles. No restart or prior-duration sum; terminal72h receipt remains pending.",
+    "Same independent72h attempt observed at66647.85 seconds/1108 cycles. No restart or prior-duration sum; terminal72h receipt remains pending.",
     "Actual Mac and isolated LinuxCPU10k/100k metadata and80MP decode metrics are recorded. Representative image inventory, full GUI paging and physical target RAM/disk/tact/quality remain unqualified.",
     "Previous disk-reserve failure at50 cycles/3007.65 seconds is retained and excluded from current elapsed duration."
    ]

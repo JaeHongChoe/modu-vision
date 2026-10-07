@@ -12,11 +12,11 @@
 | S6-04 | 오프라인 업데이트 | owned POSIX portable 앱·DB cutover, crash finish, 새 account/profile 보존 forward recovery; actual frozen CLI5회·별도 CPU known-image2회; 새 main/preload/renderer 검토·복구 연결, 관련Python125/Node40 및 UI2개 통과 | 실제 OS installer·설치된 home·native layout·실 publisher 서명·native positive 설치 및 installed-app known-image handoff |
 | S6-05 | 공개 CI | 기존 hosted success 보존; 전체 CPU2706 pass/고지 누락1 fail·고지62 및 optional27 repair pass | 최신 게시 source 전체 CI 완료; 기존 queue 및 실패 기록 보존 |
 | S6-06 | 서명·채널 | unsigned 상태와 checksum/source 연결 | 실제 publisher/서명 키·최종 artifact와 stable/beta 운영 정책 |
-| S7-01 | 전체 기능 행동 coverage | 192개 curated action, 429개 시나리오 검증; retention·template 실제 browser/Electron 근거 추가 | 915개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
+| S7-01 | 전체 기능 행동 coverage | 192개 curated action, 430개 시나리오 검증; retention·template 실제 browser/Electron 근거 추가 | 914개 curated 시나리오와 누락 메뉴/shortcut; 기존156개 feature 전체 수락은0 |
 | S7-02 | 10개 모델군 시나리오 | 실제 family별 학습/추론·다중 checkpoint·flow/package control 기록 | 사람이 검토한 대표 분류/정상/OCR/OBB/향상/GAN truth와 품질 판정 |
 | S7-03 | Windows 실사용 | 기존 unsigned runner 결과 보존 | 사용자 면제. 신규 실기 테스트를 시작하지 않으며 pass로 바꾸지 않음 |
 | S7-04 | 동시 작업·장애 | 2개 계정/agent·actual CPU·재접속·권한/충돌 control; controlled signed portable 앱·DB cutover 및 crash recovery | 물리적 장애와 실제 publisher가 서명한 native 앱 업데이트 |
-| S7-05 | 규모·72시간 운전 | 같은 연속 운전 17.84시간/1068 cycles; Mac/Linux10k·100k metadata와80MP decode 측정 완료 | 72시간 종료 receipt 및 실제 target RAM/disk/p95/tact 측정 |
+| S7-05 | 규모·72시간 운전 | 같은 연속 운전 18.51시간/1108 cycles; Mac/Linux10k·100k metadata와80MP decode 측정 완료 | 72시간 종료 receipt 및 실제 target RAM/disk/p95/tact 측정 |
 | S7-06 | 공정 품질·장비 | simulator 계약과 실행/품질 상태 구분 | 실제 camera/PLC/MES 및 제품/Lot별 정답·미검/과검 승인 기준 |
 | S7-07 | 공개 후보 판정 | 최신 standalone backend freeze·startup/restart 및270개 의존성 license bytes 누락0 | native library 조건·업데이트/coverage·실제 서명·독립 리뷰·pilot |
 | S7-08 | 사용자 pilot·운영 | feedback/지원/backup 절차 및 승인 경계 기록 | 실제 처음 쓰는 참여자 pilot과 유지보수 책임·SLA 결정 |
@@ -167,3 +167,20 @@
 - Clean1e82c22에서 실제 Linux CI의2737-case 선택을 Mac에서 실행해2706 passed/1 failed/30 skipped이다. 고지 문서에 cryptography가 빠진 원래 실패를 보존했다. 실제 inventory로 cffi·cryptography·pycparser 세 행을 재생성했고 관련62 passed이다. 공개 라이선스 승인으로 대체하지 않는다.
 - Clean5e96e5e에서 기존 별도 검증 interpreter로 DICOM26와 actual OpenVINO full-flow1을 실행해27 passed/0 skipped이다. Mac에서 실행할 수 없는 Windows sharing2와 다른 file-system spelling1은 계속 skip이며 native Windows pass로 세지 않는다. Backend/workflow 원본은1e82c22와 같고 새 renderer875 passed 및 두 타입 검사, actual browser2/Electron2 passed이다. 최신 hosted CI는 별도 확인한다.
 - 실제 Mac 현재 사용자 context의 유효한 code-signing identity0개를 읽기 전용으로 확인했다. 실 publisher authority나 키를 만들어 signed positive 검사로 바꾸지 않았다. Public receipts:2026-10-07-local-ci-replay-and-repairs-5e96e5e.json,2026-10-07-native-publisher-preflight-1e82c22.json.
+
+## 추가 실행: 실제 원본 변경 거절과 exact 복구
+
+- Clean704b685 browser1/Electron1에서 원본을 별도 보존하고 같은 경로를 다른 PNG로 교체했다. 실제 accepted revision은 같은 UUID의 변경 SHA를 반환했고 선택 경고와 확정 비활성화를 확인했다. 취소 후 기존 선택은 그대로였고 exact 원본 복구·재검증 후 found로 돌아왔다. 별도 replacement도 보존했다.
+- 기존 library control7차원과 파생 데이터의 actual 재학습·비교·원본 복귀를 동일 clean704b685 browser2/Electron2에서 재실행했다. 확장된 spec의 새 파일 hash로 원장 근거를 갱신했으며 기존5e96e5e receipts는 역사 기록으로 보존했다. 새 invalid1차원으로430 verified/914 pending이다.
+- 이전 hosted6719d5b의 실패 화면·문맥 두 ZIP member만 해시로 확인했다. 전체1.26GB archive·큰 trace는 확인하지 않았다. 해당 옛 source의 후보/기준 뒤집힘은 이미 현재 source에서 수동 선택 scope로 교정돼 있다. 새 actual UI 실행에서 비교·assessment의 원래 모델/후보/checkpoint identity가 같고 human attestation은 미제출이다. 최신 hosted 전체 성공은 별도다.
+
+## 추가 실행: 완료 모델을 재학습하지 않은 OCR asset pack
+
+- 원래 Linux CPU2epoch 완료 checkpoint와 generated 이미지4개의 hash를 다시 읽어 새5-file CTC code/model/MIT asset pack에 연결했다. 실제 명시적 inactive 설치·idempotent 재설치·payload 재검증 후 설치된 두 source modules로 fresh process2회 CPU 추론했다. 출력은 같고 원본/팩 hash는 그대로이며 지원하지 않는 vertical recipe는 거절했다.
+- 기존 Torch/NumPy/Pillow/OpenCV base runtime이 필요하며 새 OCR 외부 engine이나 base wheels를 배포하지 않았다. Runtime inventory의 generic execution flag는 false를 유지하고 이 명시적 qualification만 따로 기록했다. Studio 자동 활성화·전체 offline base 설치·대표 OCR 품질·native publisher 서명·독립 수락은 남는다.
+- Public receipts는 first-party-ocr-asset-pack-704b685, library-original-followup-704b685, hosted-6719d5b-derived-reread-704b685이다. 부모67/82·미완료15/82·실사용 전체 수락0은 유지한다.
+
+## 검증 공간 보존 및 같은72시간 운전
+
+- 원래 종료된 CPU 검증 tmp16,586,718,534 logical bytes와10월4일 완료 shard tmp14,163,626,352 logical bytes를 실제 외장 TAR에 파일별 hash·hardlink content·member 목록까지 대조해 보존했다. 원래 source freezes/logs/XML/receipts와 모델·사진·live mount는 유지했다. 내부 free14,431,764,480 bytes 및 검증 볼륨 free17,306,185,728 bytes로 회복했다. Logical input 합계와 실제 capacity 증가량을 구분한다.
+- 같은 process/create time의 independent72h는 현재 18.51h/1108 cycles 실행 중이다. 재시작·중단·이전 실패 시간 합산을 하지 않았으며 terminal72h는 pending이다. 이 개발 host 정리는 실제 제품의 물리 disk fault 수락으로 사용하지 않는다.

@@ -1,0 +1,506 @@
+{
+  "schema": "modu-vision.library-changed-original-controls/v1",
+  "source_sha": "704b68554ee52aa0b81d504b242b76c2644296d5",
+  "source_dirty": false,
+  "new_verified_scenarios": 1,
+  "repeated_verified_scenarios": 7,
+  "historical_superseded_evidence": [
+    {
+      "action": "library-metadata-filter",
+      "scenario": "error",
+      "historical_evidence": [
+        {
+          "task": "S7-01",
+          "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+          "kind": "click",
+          "action": "\ud0dc\uadf8\u00b7\uc81c\ud488\u00b7Lot\u00b7\uc624\ub958 \ud544\ud130",
+          "expected": "Only an explicitly selected or resolved validated original can be confirmed; cancellation and failed resolution preserve the prior UUID and SHA.",
+          "observed": "browser: Controlled503 while loading the selected tag cohort preserved its exact query and remembered UUID/SHA. Explicit retry after removing the fixture returned the actual single matching row.",
+          "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+          "test": "scripts/e2e/library-selection-controls.spec.ts::library selection waits for saved identity and preserves cancelled failed and retried filters",
+          "receipt": "2026-10-07-library-selection-controls-5e96e5e-browser.json",
+          "receipt_sha256": "13cc196dfa43c40c0e9279ed7936038cbe6b894d74e0d027eb30ce6bb4605779",
+          "artifacts": [
+            {
+              "id": "screenshot-0",
+              "sha256": "7d117b12c7af002fccb19441e8d4374a3d1a53c747e8f8a37475b32c9986f001"
+            },
+            {
+              "id": "screenshot-1",
+              "sha256": "02a3ee3f127af70c7b79ead4401312801f23456950b735c671d9cfeb14966245"
+            },
+            {
+              "id": "screenshot-2",
+              "sha256": "c16c1e77857d9959d19395e1dff471e2a1b8d5e0e07e51ab7ae3f3cbe1e93e5f"
+            },
+            {
+              "id": "screenshot-3",
+              "sha256": "0d712fbe7e6480fb920cbbc070d51f8bb7ef8a05d49c803c0ac11615b9965b6d"
+            }
+          ]
+        },
+        {
+          "task": "S7-01",
+          "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+          "kind": "click",
+          "action": "\ud0dc\uadf8\u00b7\uc81c\ud488\u00b7Lot\u00b7\uc624\ub958 \ud544\ud130",
+          "expected": "Only an explicitly selected or resolved validated original can be confirmed; cancellation and failed resolution preserve the prior UUID and SHA.",
+          "observed": "electron: Controlled503 while loading the selected tag cohort preserved its exact query and remembered UUID/SHA. Explicit retry after removing the fixture returned the actual single matching row.",
+          "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+          "test": "scripts/e2e/library-selection-controls.spec.ts::native library selection refuses unresolved saved bytes and reopens exact confirmed identity",
+          "receipt": "2026-10-07-library-selection-controls-5e96e5e-electron.json",
+          "receipt_sha256": "ef614c7259646471470b14c97c4c8522a9a292adc0477612ebefaf06cbd80828",
+          "artifacts": [
+            {
+              "id": "screenshot-0",
+              "sha256": "4990434fbe114c814b727632af63c0abd6cc9f34e5792814fb05847fed2a4328"
+            },
+            {
+              "id": "screenshot-1",
+              "sha256": "08db90e5b05311416676acb397ed421669d8f8ae8ccdf1a07b3c45f8a16754c6"
+            },
+            {
+              "id": "screenshot-2",
+              "sha256": "3a866a7f472be9bba37ac2e3f5e2ead29be78985e2239740094ae4319cb80baa"
+            },
+            {
+              "id": "screenshot-3",
+              "sha256": "7fc42b6e7a5de3d47ef5fd5ed2723e710a639ca3a42082c85d0aaf3575f4f23f"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "action": "library-metadata-filter",
+      "scenario": "cancel",
+      "historical_evidence": [
+        {
+          "task": "S7-01",
+          "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+          "kind": "click",
+          "action": "\ud0dc\uadf8\u00b7\uc81c\ud488\u00b7Lot\u00b7\uc624\ub958 \ud544\ud130",
+          "expected": "Only an explicitly selected or resolved validated original can be confirmed; cancellation and failed resolution preserve the prior UUID and SHA.",
+          "observed": "browser: Closing the unsubmitted no-match Lot cohort retained the previously confirmed UUID/SHA and every original source hash.",
+          "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+          "test": "scripts/e2e/library-selection-controls.spec.ts::library selection waits for saved identity and preserves cancelled failed and retried filters",
+          "receipt": "2026-10-07-library-selection-controls-5e96e5e-browser.json",
+          "receipt_sha256": "13cc196dfa43c40c0e9279ed7936038cbe6b894d74e0d027eb30ce6bb4605779",
+          "artifacts": [
+            {
+              "id": "screenshot-0",
+              "sha256": "7d117b12c7af002fccb19441e8d4374a3d1a53c747e8f8a37475b32c9986f001"
+            },
+            {
+              "id": "screenshot-1",
+              "sha256": "02a3ee3f127af70c7b79ead4401312801f23456950b735c671d9cfeb14966245"
+            },
+            {
+              "id": "screenshot-2",
+              "sha256": "c16c1e77857d9959d19395e1dff471e2a1b8d5e0e07e51ab7ae3f3cbe1e93e5f"
+            },
+            {
+              "id": "screenshot-3",
+              "sha256": "0d712fbe7e6480fb920cbbc070d51f8bb7ef8a05d49c803c0ac11615b9965b6d"
+            }
+          ]
+        },
+        {
+          "task": "S7-01",
+          "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+          "kind": "click",
+          "action": "\ud0dc\uadf8\u00b7\uc81c\ud488\u00b7Lot\u00b7\uc624\ub958 \ud544\ud130",
+          "expected": "Only an explicitly selected or resolved validated original can be confirmed; cancellation and failed resolution preserve the prior UUID and SHA.",
+          "observed": "electron: Closing the unsubmitted no-match Lot cohort retained the previously confirmed UUID/SHA and every original source hash.",
+          "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+          "test": "scripts/e2e/library-selection-controls.spec.ts::native library selection refuses unresolved saved bytes and reopens exact confirmed identity",
+          "receipt": "2026-10-07-library-selection-controls-5e96e5e-electron.json",
+          "receipt_sha256": "ef614c7259646471470b14c97c4c8522a9a292adc0477612ebefaf06cbd80828",
+          "artifacts": [
+            {
+              "id": "screenshot-0",
+              "sha256": "4990434fbe114c814b727632af63c0abd6cc9f34e5792814fb05847fed2a4328"
+            },
+            {
+              "id": "screenshot-1",
+              "sha256": "08db90e5b05311416676acb397ed421669d8f8ae8ccdf1a07b3c45f8a16754c6"
+            },
+            {
+              "id": "screenshot-2",
+              "sha256": "3a866a7f472be9bba37ac2e3f5e2ead29be78985e2239740094ae4319cb80baa"
+            },
+            {
+              "id": "screenshot-3",
+              "sha256": "7fc42b6e7a5de3d47ef5fd5ed2723e710a639ca3a42082c85d0aaf3575f4f23f"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "action": "library-metadata-filter",
+      "scenario": "reopen",
+      "historical_evidence": [
+        {
+          "task": "S7-01",
+          "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+          "kind": "click",
+          "action": "\ud0dc\uadf8\u00b7\uc81c\ud488\u00b7Lot\u00b7\uc624\ub958 \ud544\ud130",
+          "expected": "Only an explicitly selected or resolved validated original can be confirmed; cancellation and failed resolution preserve the prior UUID and SHA.",
+          "observed": "browser: Reopening cleared transient tag/Lot filters, resolved the actual remembered image and retained exact prior stored UUID/SHA.",
+          "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+          "test": "scripts/e2e/library-selection-controls.spec.ts::library selection waits for saved identity and preserves cancelled failed and retried filters",
+          "receipt": "2026-10-07-library-selection-controls-5e96e5e-browser.json",
+          "receipt_sha256": "13cc196dfa43c40c0e9279ed7936038cbe6b894d74e0d027eb30ce6bb4605779",
+          "artifacts": [
+            {
+              "id": "screenshot-0",
+              "sha256": "7d117b12c7af002fccb19441e8d4374a3d1a53c747e8f8a37475b32c9986f001"
+            },
+            {
+              "id": "screenshot-1",
+              "sha256": "02a3ee3f127af70c7b79ead4401312801f23456950b735c671d9cfeb14966245"
+            },
+            {
+              "id": "screenshot-2",
+              "sha256": "c16c1e77857d9959d19395e1dff471e2a1b8d5e0e07e51ab7ae3f3cbe1e93e5f"
+            },
+            {
+              "id": "screenshot-3",
+              "sha256": "0d712fbe7e6480fb920cbbc070d51f8bb7ef8a05d49c803c0ac11615b9965b6d"
+            }
+          ]
+        },
+        {
+          "task": "S7-01",
+          "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+          "kind": "click",
+          "action": "\ud0dc\uadf8\u00b7\uc81c\ud488\u00b7Lot\u00b7\uc624\ub958 \ud544\ud130",
+          "expected": "Only an explicitly selected or resolved validated original can be confirmed; cancellation and failed resolution preserve the prior UUID and SHA.",
+          "observed": "electron: Reopening cleared transient tag/Lot filters, resolved the actual remembered image and retained exact prior stored UUID/SHA.",
+          "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+          "test": "scripts/e2e/library-selection-controls.spec.ts::native library selection refuses unresolved saved bytes and reopens exact confirmed identity",
+          "receipt": "2026-10-07-library-selection-controls-5e96e5e-electron.json",
+          "receipt_sha256": "ef614c7259646471470b14c97c4c8522a9a292adc0477612ebefaf06cbd80828",
+          "artifacts": [
+            {
+              "id": "screenshot-0",
+              "sha256": "4990434fbe114c814b727632af63c0abd6cc9f34e5792814fb05847fed2a4328"
+            },
+            {
+              "id": "screenshot-1",
+              "sha256": "08db90e5b05311416676acb397ed421669d8f8ae8ccdf1a07b3c45f8a16754c6"
+            },
+            {
+              "id": "screenshot-2",
+              "sha256": "3a866a7f472be9bba37ac2e3f5e2ead29be78985e2239740094ae4319cb80baa"
+            },
+            {
+              "id": "screenshot-3",
+              "sha256": "7fc42b6e7a5de3d47ef5fd5ed2723e710a639ca3a42082c85d0aaf3575f4f23f"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "action": "library-metadata-filter",
+      "scenario": "handoff",
+      "historical_evidence": [
+        {
+          "task": "S7-01",
+          "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+          "kind": "click",
+          "action": "\ud0dc\uadf8\u00b7\uc81c\ud488\u00b7Lot\u00b7\uc624\ub958 \ud544\ud130",
+          "expected": "Only an explicitly selected or resolved validated original can be confirmed; cancellation and failed resolution preserve the prior UUID and SHA.",
+          "observed": "browser: Selecting the actual tag-filtered row and confirming retained exactly the backend row UUID/SHA through flow renderer reload and subsequent actual found-resolution.",
+          "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+          "test": "scripts/e2e/library-selection-controls.spec.ts::library selection waits for saved identity and preserves cancelled failed and retried filters",
+          "receipt": "2026-10-07-library-selection-controls-5e96e5e-browser.json",
+          "receipt_sha256": "13cc196dfa43c40c0e9279ed7936038cbe6b894d74e0d027eb30ce6bb4605779",
+          "artifacts": [
+            {
+              "id": "screenshot-0",
+              "sha256": "7d117b12c7af002fccb19441e8d4374a3d1a53c747e8f8a37475b32c9986f001"
+            },
+            {
+              "id": "screenshot-1",
+              "sha256": "02a3ee3f127af70c7b79ead4401312801f23456950b735c671d9cfeb14966245"
+            },
+            {
+              "id": "screenshot-2",
+              "sha256": "c16c1e77857d9959d19395e1dff471e2a1b8d5e0e07e51ab7ae3f3cbe1e93e5f"
+            },
+            {
+              "id": "screenshot-3",
+              "sha256": "0d712fbe7e6480fb920cbbc070d51f8bb7ef8a05d49c803c0ac11615b9965b6d"
+            }
+          ]
+        },
+        {
+          "task": "S7-01",
+          "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+          "kind": "click",
+          "action": "\ud0dc\uadf8\u00b7\uc81c\ud488\u00b7Lot\u00b7\uc624\ub958 \ud544\ud130",
+          "expected": "Only an explicitly selected or resolved validated original can be confirmed; cancellation and failed resolution preserve the prior UUID and SHA.",
+          "observed": "electron: Selecting the actual tag-filtered row and confirming retained exactly the backend row UUID/SHA through flow renderer reload and subsequent actual found-resolution.",
+          "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+          "test": "scripts/e2e/library-selection-controls.spec.ts::native library selection refuses unresolved saved bytes and reopens exact confirmed identity",
+          "receipt": "2026-10-07-library-selection-controls-5e96e5e-electron.json",
+          "receipt_sha256": "ef614c7259646471470b14c97c4c8522a9a292adc0477612ebefaf06cbd80828",
+          "artifacts": [
+            {
+              "id": "screenshot-0",
+              "sha256": "4990434fbe114c814b727632af63c0abd6cc9f34e5792814fb05847fed2a4328"
+            },
+            {
+              "id": "screenshot-1",
+              "sha256": "08db90e5b05311416676acb397ed421669d8f8ae8ccdf1a07b3c45f8a16754c6"
+            },
+            {
+              "id": "screenshot-2",
+              "sha256": "3a866a7f472be9bba37ac2e3f5e2ead29be78985e2239740094ae4319cb80baa"
+            },
+            {
+              "id": "screenshot-3",
+              "sha256": "7fc42b6e7a5de3d47ef5fd5ed2723e710a639ca3a42082c85d0aaf3575f4f23f"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "action": "library-confirm-selection",
+      "scenario": "empty",
+      "historical_evidence": [
+        {
+          "task": "S7-01",
+          "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+          "kind": "click",
+          "action": "\uc120\ud0dd \ud655\uc815",
+          "expected": "Only an explicitly selected or resolved validated original can be confirmed; cancellation and failed resolution preserve the prior UUID and SHA.",
+          "observed": "browser: With no saved or manually picked selection the actual confirmation control was disabled; no stored preference existed.",
+          "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+          "test": "scripts/e2e/library-selection-controls.spec.ts::library selection waits for saved identity and preserves cancelled failed and retried filters",
+          "receipt": "2026-10-07-library-selection-controls-5e96e5e-browser.json",
+          "receipt_sha256": "13cc196dfa43c40c0e9279ed7936038cbe6b894d74e0d027eb30ce6bb4605779",
+          "artifacts": [
+            {
+              "id": "screenshot-0",
+              "sha256": "7d117b12c7af002fccb19441e8d4374a3d1a53c747e8f8a37475b32c9986f001"
+            },
+            {
+              "id": "screenshot-1",
+              "sha256": "02a3ee3f127af70c7b79ead4401312801f23456950b735c671d9cfeb14966245"
+            },
+            {
+              "id": "screenshot-2",
+              "sha256": "c16c1e77857d9959d19395e1dff471e2a1b8d5e0e07e51ab7ae3f3cbe1e93e5f"
+            },
+            {
+              "id": "screenshot-3",
+              "sha256": "0d712fbe7e6480fb920cbbc070d51f8bb7ef8a05d49c803c0ac11615b9965b6d"
+            }
+          ]
+        },
+        {
+          "task": "S7-01",
+          "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+          "kind": "click",
+          "action": "\uc120\ud0dd \ud655\uc815",
+          "expected": "Only an explicitly selected or resolved validated original can be confirmed; cancellation and failed resolution preserve the prior UUID and SHA.",
+          "observed": "electron: With no saved or manually picked selection the actual confirmation control was disabled; no stored preference existed.",
+          "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+          "test": "scripts/e2e/library-selection-controls.spec.ts::native library selection refuses unresolved saved bytes and reopens exact confirmed identity",
+          "receipt": "2026-10-07-library-selection-controls-5e96e5e-electron.json",
+          "receipt_sha256": "ef614c7259646471470b14c97c4c8522a9a292adc0477612ebefaf06cbd80828",
+          "artifacts": [
+            {
+              "id": "screenshot-0",
+              "sha256": "4990434fbe114c814b727632af63c0abd6cc9f34e5792814fb05847fed2a4328"
+            },
+            {
+              "id": "screenshot-1",
+              "sha256": "08db90e5b05311416676acb397ed421669d8f8ae8ccdf1a07b3c45f8a16754c6"
+            },
+            {
+              "id": "screenshot-2",
+              "sha256": "3a866a7f472be9bba37ac2e3f5e2ead29be78985e2239740094ae4319cb80baa"
+            },
+            {
+              "id": "screenshot-3",
+              "sha256": "7fc42b6e7a5de3d47ef5fd5ed2723e710a639ca3a42082c85d0aaf3575f4f23f"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "action": "library-confirm-selection",
+      "scenario": "error",
+      "historical_evidence": [
+        {
+          "task": "S7-01",
+          "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+          "kind": "click",
+          "action": "\uc120\ud0dd \ud655\uc815",
+          "expected": "Only an explicitly selected or resolved validated original can be confirmed; cancellation and failed resolution preserve the prior UUID and SHA.",
+          "observed": "browser: Controlled503 on saved-identity resolution disabled confirmation and retained the exact original scoped preference; explicit reopen after removing the fixture resolved the actual original.",
+          "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+          "test": "scripts/e2e/library-selection-controls.spec.ts::library selection waits for saved identity and preserves cancelled failed and retried filters",
+          "receipt": "2026-10-07-library-selection-controls-5e96e5e-browser.json",
+          "receipt_sha256": "13cc196dfa43c40c0e9279ed7936038cbe6b894d74e0d027eb30ce6bb4605779",
+          "artifacts": [
+            {
+              "id": "screenshot-0",
+              "sha256": "7d117b12c7af002fccb19441e8d4374a3d1a53c747e8f8a37475b32c9986f001"
+            },
+            {
+              "id": "screenshot-1",
+              "sha256": "02a3ee3f127af70c7b79ead4401312801f23456950b735c671d9cfeb14966245"
+            },
+            {
+              "id": "screenshot-2",
+              "sha256": "c16c1e77857d9959d19395e1dff471e2a1b8d5e0e07e51ab7ae3f3cbe1e93e5f"
+            },
+            {
+              "id": "screenshot-3",
+              "sha256": "0d712fbe7e6480fb920cbbc070d51f8bb7ef8a05d49c803c0ac11615b9965b6d"
+            }
+          ]
+        },
+        {
+          "task": "S7-01",
+          "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+          "kind": "click",
+          "action": "\uc120\ud0dd \ud655\uc815",
+          "expected": "Only an explicitly selected or resolved validated original can be confirmed; cancellation and failed resolution preserve the prior UUID and SHA.",
+          "observed": "electron: Controlled503 on saved-identity resolution disabled confirmation and retained the exact original scoped preference; explicit reopen after removing the fixture resolved the actual original.",
+          "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+          "test": "scripts/e2e/library-selection-controls.spec.ts::native library selection refuses unresolved saved bytes and reopens exact confirmed identity",
+          "receipt": "2026-10-07-library-selection-controls-5e96e5e-electron.json",
+          "receipt_sha256": "ef614c7259646471470b14c97c4c8522a9a292adc0477612ebefaf06cbd80828",
+          "artifacts": [
+            {
+              "id": "screenshot-0",
+              "sha256": "4990434fbe114c814b727632af63c0abd6cc9f34e5792814fb05847fed2a4328"
+            },
+            {
+              "id": "screenshot-1",
+              "sha256": "08db90e5b05311416676acb397ed421669d8f8ae8ccdf1a07b3c45f8a16754c6"
+            },
+            {
+              "id": "screenshot-2",
+              "sha256": "3a866a7f472be9bba37ac2e3f5e2ead29be78985e2239740094ae4319cb80baa"
+            },
+            {
+              "id": "screenshot-3",
+              "sha256": "7fc42b6e7a5de3d47ef5fd5ed2723e710a639ca3a42082c85d0aaf3575f4f23f"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "action": "library-confirm-selection",
+      "scenario": "cancel",
+      "historical_evidence": [
+        {
+          "task": "S7-01",
+          "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+          "kind": "click",
+          "action": "\uc120\ud0dd \ud655\uc815",
+          "expected": "Only an explicitly selected or resolved validated original can be confirmed; cancellation and failed resolution preserve the prior UUID and SHA.",
+          "observed": "browser: Picking a different actual validated row and cancelling retained the prior confirmed UUID/SHA; reopening resolved that prior original, not the abandoned temporary selection.",
+          "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+          "test": "scripts/e2e/library-selection-controls.spec.ts::library selection waits for saved identity and preserves cancelled failed and retried filters",
+          "receipt": "2026-10-07-library-selection-controls-5e96e5e-browser.json",
+          "receipt_sha256": "13cc196dfa43c40c0e9279ed7936038cbe6b894d74e0d027eb30ce6bb4605779",
+          "artifacts": [
+            {
+              "id": "screenshot-0",
+              "sha256": "7d117b12c7af002fccb19441e8d4374a3d1a53c747e8f8a37475b32c9986f001"
+            },
+            {
+              "id": "screenshot-1",
+              "sha256": "02a3ee3f127af70c7b79ead4401312801f23456950b735c671d9cfeb14966245"
+            },
+            {
+              "id": "screenshot-2",
+              "sha256": "c16c1e77857d9959d19395e1dff471e2a1b8d5e0e07e51ab7ae3f3cbe1e93e5f"
+            },
+            {
+              "id": "screenshot-3",
+              "sha256": "0d712fbe7e6480fb920cbbc070d51f8bb7ef8a05d49c803c0ac11615b9965b6d"
+            }
+          ]
+        },
+        {
+          "task": "S7-01",
+          "source_sha": "5e96e5ee314dd0a1cb8d73fdb5b056793c137351",
+          "kind": "click",
+          "action": "\uc120\ud0dd \ud655\uc815",
+          "expected": "Only an explicitly selected or resolved validated original can be confirmed; cancellation and failed resolution preserve the prior UUID and SHA.",
+          "observed": "electron: Picking a different actual validated row and cancelling retained the prior confirmed UUID/SHA; reopening resolved that prior original, not the abandoned temporary selection.",
+          "reviewer": "Codex root exact clean-source UI, request and disk-hash readback; independent and field acceptance pending",
+          "test": "scripts/e2e/library-selection-controls.spec.ts::native library selection refuses unresolved saved bytes and reopens exact confirmed identity",
+          "receipt": "2026-10-07-library-selection-controls-5e96e5e-electron.json",
+          "receipt_sha256": "ef614c7259646471470b14c97c4c8522a9a292adc0477612ebefaf06cbd80828",
+          "artifacts": [
+            {
+              "id": "screenshot-0",
+              "sha256": "4990434fbe114c814b727632af63c0abd6cc9f34e5792814fb05847fed2a4328"
+            },
+            {
+              "id": "screenshot-1",
+              "sha256": "08db90e5b05311416676acb397ed421669d8f8ae8ccdf1a07b3c45f8a16754c6"
+            },
+            {
+              "id": "screenshot-2",
+              "sha256": "3a866a7f472be9bba37ac2e3f5e2ead29be78985e2239740094ae4319cb80baa"
+            },
+            {
+              "id": "screenshot-3",
+              "sha256": "7fc42b6e7a5de3d47ef5fd5ed2723e710a639ca3a42082c85d0aaf3575f4f23f"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "gui_cases": [
+    {
+      "case": "changed-browser",
+      "receipt": "2026-10-07-library-changed-704b685-browser.json",
+      "receipt_sha256": "c8f59502a3d5463ff36dfec83e4574706c5e5b0217807c00af9cfaa675086c98"
+    },
+    {
+      "case": "changed-electron",
+      "receipt": "2026-10-07-library-changed-704b685-electron.json",
+      "receipt_sha256": "a99a92f66809a11cdb5d50839f2ed36418583ffdf6ac25d06fb11cc6063080bc"
+    },
+    {
+      "case": "controls-browser",
+      "receipt": "2026-10-07-library-controls-704b685-browser.json",
+      "receipt_sha256": "be7cee5a6c101a94b609885e1fe5577ab8d1a6c03a8b431b8f943ad88db454f9"
+    },
+    {
+      "case": "controls-electron",
+      "receipt": "2026-10-07-library-controls-704b685-electron.json",
+      "receipt_sha256": "626381331950d444c8312bf159f93be37bd81103f951260f1476a19aca0ad8a7"
+    },
+    {
+      "case": "derived-browser",
+      "receipt": "2026-10-07-library-derived-704b685-browser.json",
+      "receipt_sha256": "0d2ba14e5218d7fb583d7e0903f27d8119d5fc4f2dd914a594305cfabc2a2ba2"
+    },
+    {
+      "case": "derived-electron",
+      "receipt": "2026-10-07-library-derived-704b685-electron.json",
+      "receipt_sha256": "2c89907937ad061ed95dd476864b68989d3d31ebd00e9d4068d0953e63d1a197"
+    }
+  ],
+  "scope": "Actual replaced-original and exact recovery in browser/Electron. Seven previous control dimensions were rerun after the spec extension and rebound to current executed spec bytes; old receipts remain immutable historical evidence. Derived retraining/comparison/original return were separately rerun. No human quality, native installer, Windows, field or independent acceptance inferred.",
+  "review": "root_only",
+  "parent_acceptance": "pending"
+}
