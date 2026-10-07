@@ -1,0 +1,112 @@
+{
+  "schema": "modu-vision.privileged-reader-ownership/v1",
+  "source_sha": "446588e57397e21f8e765972bd83d9a61810fd3b",
+  "source_bindings": {
+    "backend/engine/migration_guard.py": "54e16d2eab63defe8311af1ff2bc51b92ae45f26ec7acf2f6b67c1946c60fcb9",
+    "backend/engine/global_store_paths.py": "2dee3d93e3dfe2fe48e3cb5974c3ef53c6f27439f031ea5e9245e12146eaf5b1",
+    "backend/engine/historical_control_schema.py": "ea4b8e61579e8ea7f63bd29e6a44c7f4a95d173271ff76cfbf78f4d88dcf1886",
+    "backend/engine/application_launch_handshake.py": "b7d9f4d00cd5d8a9b7eb9cd9a5c7572a16ca8e0e4198624d7fd332ce4e48a87e",
+    "backend/tests/test_privileged_reader_ownership.py": "16bd2800d32c8622774ece09a8ebf4d03b2937d22ebbca9a6b640f98b48a4940"
+  },
+  "independent_handoff_sha256": "ce31087cfa091d5002c018756c256d28c0a42b6227ecce0b25a1db8936c0f604",
+  "independent_review_sha256": "62397701d6fd7c41f586d788e820f10ed24d06f05a9b835df7eae2f9236cafab",
+  "root_current_gate": {
+    "passed": 84,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "deliberate_deselections": 4,
+    "tracked_inputs_unchanged": 2114,
+    "seconds": 42.44379716704134
+  },
+  "retained_primary": {
+    "privileged-current.xml": "e044557cbd652f364adf4f967a08e2880cb286dc913d1e4b85e209792fe3f2d9",
+    "privileged-current.log": "843ad37e7c2700f34f125dadbcc9be17c0c92ac2ad978cfb4e7283774de267cb",
+    "privileged-current-command.json": "c2a2bd3720e528ef23f3c8a1b188e1e3ff4b55fb505e830edc1133b9d3568791",
+    "privileged-source-before.json": "918c0789bfeb459f69993f63671119a43316e6bc9edcf4ee2b94d44c3b7db671",
+    "privileged-source-after.json": "918c0789bfeb459f69993f63671119a43316e6bc9edcf4ee2b94d44c3b7db671"
+  },
+  "meaningful_red": {
+    "failed": 9,
+    "passed": 1,
+    "red_log_sha256": "f6bc85d3cb449ee64d15f4781baf35e1d0acbe7ffcc9646426fd0ccf52292d2d"
+  },
+  "actual_controlled_receipts": [
+    {
+      "mode": "unguarded",
+      "original_pointers_preserved": true,
+      "scenario": "staged-profile-authority",
+      "unpublished_generation_write_refused": true
+    },
+    {
+      "mode": "expired-staging",
+      "original_pointers_preserved": true,
+      "scenario": "staged-profile-authority",
+      "unpublished_generation_write_refused": true
+    },
+    {
+      "mode": "expired-exclusive",
+      "original_pointers_preserved": true,
+      "scenario": "staged-profile-authority",
+      "unpublished_generation_write_refused": true
+    },
+    {
+      "mode": "both-exited",
+      "original_pointers_preserved": true,
+      "scenario": "staged-profile-authority",
+      "unpublished_generation_write_refused": true
+    },
+    {
+      "actual_sqlite_bytes_preserved": true,
+      "mode": "unguarded",
+      "normalization_refused": true,
+      "scenario": "historical-predecessor-owner"
+    },
+    {
+      "actual_sqlite_bytes_preserved": true,
+      "mode": "copied-thread",
+      "normalization_refused": true,
+      "scenario": "historical-predecessor-owner"
+    },
+    {
+      "actual_sqlite_bytes_preserved": true,
+      "mode": "expired-context",
+      "normalization_refused": true,
+      "scenario": "historical-predecessor-owner"
+    },
+    {
+      "actual_profiles_and_sqlite_rows_preserved": true,
+      "scenario": "original-owner-nested-staging"
+    },
+    {
+      "foreign_owner_refused": true,
+      "mode": "thread",
+      "native_descriptor_authentication_qualified": false,
+      "original_owner_shared_ready": true,
+      "scenario": "controlled-bootstrap-admission-reader"
+    },
+    {
+      "foreign_owner_refused": true,
+      "mode": "async-task",
+      "native_descriptor_authentication_qualified": false,
+      "original_owner_shared_ready": true,
+      "scenario": "controlled-bootstrap-admission-reader"
+    }
+  ],
+  "implementation": "Shared admission readers require the current execution owner. Staging readers require an active scope marker bound by object identity to its original live exclusive admission record; exiting the scope or original admission revokes it, and a subsequent exclusive guard cannot revive it.",
+  "limits": [
+    "Backend readiness tests use a controlled prevalidated bootstrap/cache dependency and qualify only its actual source admission reader. No native descriptor authentication or frozen backend acceptance is claimed.",
+    "Only supported cooperative guard/store/staging writers are covered; not whole writer inventory, descendant enrollment, whole-tree exit, native writer flush or process reconciliation.",
+    "Four old native-process selectors with signal fallback were deliberately deselected. Actual previous ownership/fork/reused-ID cases were reexecuted and passed.",
+    "No P/docs/registry edits, GPU, training, deployment, publisher authority, commit or push."
+  ],
+  "privileged_reader_software_repair_verified": true,
+  "native_descriptor_authentication_qualified": false,
+  "whole_active_writer_inventory_closed": false,
+  "whole_process_tree_reconciled": false,
+  "parent_implementation_verified": 69,
+  "parent_implementation_pending": 13,
+  "required_pending": 11,
+  "accepted_parents": 0,
+  "release_ready": false
+}
