@@ -1,0 +1,132 @@
+{
+  "schema": "modu-vision.cold-control-lazy-import/v1",
+  "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+  "linux_baseline_source_sha": "cbe56a469731cd51c6d77d53401a8aba01e24d0e",
+  "scope": "Two source files composed on current root; isolated originalLinuxCPU cases use exact cbe baseline plus only these two deltas; not clean full-source compiled or native qualification.",
+  "owned_source_sha256": {
+    "backend/engine/__init__.py": "e77c780ffb8601d9ce7ccd9b90cec73fc1e3b247b2a5081af6013a16fa5462e1",
+    "backend/tests/test_engine_lazy_imports.py": "303af9ef27b59fedf1c86c9e5252a71f28c022d9defa91808b04f9cfa532bed9",
+    "backend/tests/test_live_specialist_control.py": "5470e6ecc98981a41d41383d5d63c6975ed5cf2bf40bddd7a1c72f7d9cd1446d"
+  },
+  "cause": "Actual cold global_migration control CLI imported eager backend.engine initializer, loading device/dataset and PyTorch in each fresh process. Original Linux OCR cutover exhausted unchanged12s checkpoint after two actual stale-plan refusals.",
+  "change": "Resolve the same35 named public objects with PEP562 only when requested; original __all__ names/order and from-import/star object identity retained. Control imports do not load tensor/device/dataset runtime.",
+  "gates": {
+    "red": {
+      "cases": 7,
+      "failed": 6,
+      "skipped": 0,
+      "xml_sha256": "1679857d00531ecac52a51a694a1cf0cd343718ff99bcd1bfd8b8e2e2b804552"
+    },
+    "green": {
+      "cases": 7,
+      "failed": 0,
+      "skipped": 0,
+      "xml_sha256": "f683ae553f7e4918ba35c65c62410f5d1479873392385f38ea2b76bde93b0671"
+    },
+    "related": {
+      "cases": 75,
+      "failed": 0,
+      "skipped": 0,
+      "xml_sha256": "be47215bf8a213c9a27e3a36c2267f5537cc2302b009e2be294b03b973bf63fc"
+    },
+    "linux-control-red": {
+      "cases": 1,
+      "failed": 1,
+      "skipped": 0,
+      "xml_sha256": "83a05f77437bdc4653d7f77eb2f46292f5a890f2443c903f4b702ada94d2fddc"
+    },
+    "linux-control-green": {
+      "cases": 7,
+      "failed": 0,
+      "skipped": 0,
+      "xml_sha256": "e6aee8bc4495b6c6fe7d84992c1b823fb2b5d4be8b0d870176d906be9ba51bda"
+    },
+    "linux-original-ocr": {
+      "cases": 2,
+      "failed": 0,
+      "skipped": 0,
+      "xml_sha256": "1482b462a476ee1ba6b5d897f2fa2e0f03c54d5dd9ab0a604e3f2fa7a90f7336"
+    }
+  },
+  "root_composed_gate": {
+    "passed": 9,
+    "failed": 0,
+    "skipped": 0,
+    "elapsed_seconds": 15.383775209018495,
+    "source_inputs": 2169,
+    "source_before_after_same": true,
+    "xml_sha256": "feee52429e4334d2be8860a448dd7612109f05cc90adb5c50f38755a6fdc6567",
+    "log_sha256": "d80d83e5b7ccd7abb8978183799915aa71ef389b53fb38b156beeeb175ec70fc",
+    "receipt_sha256": "ee1911bf1a786fab8f8f2bcbec98877abd77d8efdcf8707f9a80c0e53e8dced1"
+  },
+  "original_linux_cli_timings": [
+    {
+      "phase": "preview-live",
+      "elapsed_seconds": 0.3926837593317032,
+      "returncode": 0,
+      "original_timeout_seconds": 5
+    },
+    {
+      "phase": "apply-live",
+      "elapsed_seconds": 0.4754656171426177,
+      "returncode": 0,
+      "original_timeout_seconds": 5
+    },
+    {
+      "phase": "preview-live",
+      "elapsed_seconds": 0.3812582101672888,
+      "returncode": 0,
+      "original_timeout_seconds": 5
+    },
+    {
+      "phase": "apply-live",
+      "elapsed_seconds": 0.3947000913321972,
+      "returncode": 1,
+      "original_timeout_seconds": 5
+    },
+    {
+      "phase": "preview-live",
+      "elapsed_seconds": 0.38217187067493796,
+      "returncode": 0,
+      "original_timeout_seconds": 5
+    },
+    {
+      "phase": "apply-live",
+      "elapsed_seconds": 0.47638979088515043,
+      "returncode": 0,
+      "original_timeout_seconds": 5
+    }
+  ],
+  "original_ocr_guards": {
+    "checkpoint_seconds": 12,
+    "runtime_deadline_ms": 30000,
+    "max_reviews": 3,
+    "test_changed": false,
+    "worker_relaunch": false,
+    "reservation_clear": false,
+    "ownership_or_signal_authority_relaxed": false
+  },
+  "source_and_proof_binding": {
+    "freeze_sha256": "1b54a555c65ac34ea6623feca1d4dfd8aec0260f49c66683936dc17b1ced8603",
+    "patch_sha256": "41810676b64148c473ed63521ed7cdbfd6093dea57fa24aa946a8d5eee7c0aa5",
+    "proof_index_sha256": "fbc284ea729f8b7b6202739cf19c3b96061afcedc9d7f4bed9b7ad4da3f4a107",
+    "proof_pin_count": 57,
+    "root_independent_review_sha256": "45c5512280eafcce1150385871df5fba9fc7509ee4ccc46cbda247f2dd3d63ac",
+    "linux_source_inputs": 1514,
+    "linux_source_before_after_same": true,
+    "owned_linux_container_removed": true,
+    "actual_GPU_count": 0
+  },
+  "acceptance": {
+    "original_linux_ocr_two_cases": true,
+    "public_import_compatibility": true,
+    "full_hosted_latest_CI": false,
+    "GAN_identity_race_fixed": false,
+    "application_launch_failures_fixed": false,
+    "latest_backend_compiled": false,
+    "prior_native_proof_transferred_to_new_initializer": false,
+    "model_quality": false,
+    "publisher_release": false,
+    "whole_parent": false
+  }
+}

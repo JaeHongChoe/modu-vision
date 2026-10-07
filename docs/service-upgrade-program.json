@@ -1808,6 +1808,14 @@
           "receipt_sha256": "88d5a8b5daa926da0c6b93872a1b2e245001e774deff16b5f320cbf969eded6c",
           "result": "Clean browser1/native Electron1 passed retry0;14 existing pending dimensions executed with exact authenticated run/original hashes, actual decoder errors and zero foreign image requests.",
           "scope": "Owned generated images, controlled untrained-feature PaDiM statistics, actual one-image CPU inspection; explicit corruption of authenticated captured response only. Backend stored run and original files were never changed by the fault fixture. No representative human quality, publisher, physical device/Windows, whole feature or independent acceptance."
+        },
+        {
+          "kind": "clean-source-review-refusal-and-debugger-controls",
+          "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+          "receipt": "docs/verification/receipts/2026-10-08-review-debugger-e28d1d9.json",
+          "receipt_sha256": "a83fa47336c8ca0c4ec1cd2320bad8c2eaca2a1de41d637bb4af4ee2746e0775",
+          "result": "Browser2/sourceElectron2 passed with unchanged clean inputs. Eleven F024 curated refusal/reopen dimensions and five supplemental U006 artifact controls observed.",
+          "scope": "Exact source UI only; controlled503 and synthetic display artifacts; no humantruth/modelquality/installed/publisher/whole feature acceptance."
         }
       ],
       "file_actions": {
@@ -2020,6 +2028,14 @@
           "receipt_sha256": "321011772ea712e95e87c2fd9ce6aff2df8856ebfc41b018eaee60976cd9370c",
           "result": "106 related checks with equal production bytes and four actual source-bound browser/macOS cases.23 new curated dimensions were executed; whole/subset saved records, original model/version/images and reopened draft were preserved.",
           "scope": "Four curated template actions only. Final safety cases run on42edae7; cross-project regression cases run on0544e0e; backend106 runs on481ebfb with equal relevant production bytes. HTTP503 is explicitly simulated transport. Abandoned save inputs were never submitted. No training, activation, model quality, release or full feature/parent acceptance."
+        },
+        {
+          "kind": "clean-source-review-refusal-and-debugger-controls",
+          "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+          "receipt": "docs/verification/receipts/2026-10-08-review-debugger-e28d1d9.json",
+          "receipt_sha256": "a83fa47336c8ca0c4ec1cd2320bad8c2eaca2a1de41d637bb4af4ee2746e0775",
+          "result": "Browser2/sourceElectron2 passed with unchanged clean inputs. Eleven F024 curated refusal/reopen dimensions and five supplemental U006 artifact controls observed.",
+          "scope": "Exact source UI only; controlled503 and synthetic display artifacts; no humantruth/modelquality/installed/publisher/whole feature acceptance."
         }
       ],
       "file_actions": {
@@ -2585,6 +2601,14 @@
           "receipt_sha256": "88aee7bb6282096fe8473b54d4ec0f75da17ed7ee7e38fd5a9332f57dd769574",
           "result": "Root clean browser1/sourceElectron1 passed40.77s/retry0 with2157 same inputs. Actual refreshed one-row queue and annotation UUID/path/hash delivery verified without mutation.",
           "scope": "Two curated scenarios only. Durable filters, model/human quality, publisher/installed target and whole-parent acceptance are not claimed."
+        },
+        {
+          "kind": "clean-source-review-refusal-and-debugger-controls",
+          "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+          "receipt": "docs/verification/receipts/2026-10-08-review-debugger-e28d1d9.json",
+          "receipt_sha256": "a83fa47336c8ca0c4ec1cd2320bad8c2eaca2a1de41d637bb4af4ee2746e0775",
+          "result": "Browser2/sourceElectron2 passed with unchanged clean inputs. Eleven F024 curated refusal/reopen dimensions and five supplemental U006 artifact controls observed.",
+          "scope": "Exact source UI only; controlled503 and synthetic display artifacts; no humantruth/modelquality/installed/publisher/whole feature acceptance."
         }
       ],
       "file_actions": {
@@ -4996,6 +5020,22 @@
           "receipt_sha256": "b50507eaad9cb4d9ce73cc3bfb86a73ba98b621b3008a5e019660e687b6795c5",
           "result": "Actual native diagnostic located startup-order failure; original-source red2 then green2, renderer/main types and20 CI contracts passed with2165 same tracked inputs. CI now executes the2 exact supervisor-source regressions.",
           "scope": "Source repair with controlled child handles and real local HTTP only; actual new frozen native gate, installed target, OS adapter, signing, latest hosted CI and whole acceptance remain pending."
+        },
+        {
+          "kind": "actual-private-native-original-controller-cpu-readbacks",
+          "source_sha": "d3d469c1261db9b47cd959d14e2f9f6601535871",
+          "receipt": "docs/verification/receipts/2026-10-08-actual-private-native-coherent4.json",
+          "receipt_sha256": "49c788149319b375a9909dda99ffb5b99f69fcf67c9186e5cee2a3f9d2a34c08",
+          "result": "Actual frozen controller Electron frozen backend controlled CPU A/OK/oneROI/zero defects and two compiled readbacks passed448.524s;2130 source hashes unchanged; ordinary AppKit quit and registered original-process exits verified; recovery_required retained.",
+          "scope": "Private inherited-prerequisite freeze/test-only patch; not installed release or whole-process-tree acceptance. Publisher/OS/native target/device config/model quality remain pending."
+        },
+        {
+          "kind": "cold-control-package-lazy-import-original-linux-ocr",
+          "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+          "receipt": "docs/verification/receipts/2026-10-08-cold-control-lazy-import-e28d1d9.json",
+          "receipt_sha256": "7e9b0991cd9f23fc5d3d7d74f8144382ad923a2778230e40d2775cf1cb772717",
+          "result": "Cold imports red6 then green7;75 related cases passed; actual originalLinuxOCR natural/heartbeat2 cases passed unchanged12/30/3 guards; root composed9 passed with2169 same source inputs.",
+          "scope": "Two-source control import repair, observed originalLinuxCPU only. Latest hostedCI/GANidentity/app-launch cases and new native compiled backend remain pending."
         }
       ],
       "file_actions": {
@@ -5018,7 +5058,7 @@
       },
       "proposed_test_file": "backend/tests/test_service_s6_04.py",
       "remaining": [
-        "Persistent controller, early main/backend generation binding, frozen dispatcher protocol and source GUI readback are implemented. Coherent4 compiled pre-cutover CPU canary has five distinct successful observations with the first cold missing-FD timeout retained; installed live upgrade is not accepted. Original owned-bootstrap-before-health ordering is source-qualified; actual packaged descriptor/startup and same-backend native known-image execution are under qualification. Whole writer/process-tree reconciliation, OS installer adapters, real publisher and installed native acceptance remain pending."
+        "Persistent controller, early main/backend binding, compiled dispatcher and original-owned bootstrap-before-health ordering are source-qualified. Actual private frozen controller/Electron/backend controlled CPU A/OK and two compiled readbacks passed; normal quit and original registered processes exited with recovery_required retained. Coherent4 pre-cutover CPU canary has five distinct successful observations with the cold missing-FD timeout retained. Whole writer/process-tree reconciliation, OS installer adapters, actual publisher/installed-release acceptance, ordinary device configuration and post-start environment mutation qualification remain pending."
       ]
     },
     {
@@ -5329,6 +5369,14 @@
           "receipt_sha256": "b50507eaad9cb4d9ce73cc3bfb86a73ba98b621b3008a5e019660e687b6795c5",
           "result": "Actual native diagnostic located startup-order failure; original-source red2 then green2, renderer/main types and20 CI contracts passed with2165 same tracked inputs. CI now executes the2 exact supervisor-source regressions.",
           "scope": "Source repair with controlled child handles and real local HTTP only; actual new frozen native gate, installed target, OS adapter, signing, latest hosted CI and whole acceptance remain pending."
+        },
+        {
+          "kind": "cold-control-package-lazy-import-original-linux-ocr",
+          "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+          "receipt": "docs/verification/receipts/2026-10-08-cold-control-lazy-import-e28d1d9.json",
+          "receipt_sha256": "7e9b0991cd9f23fc5d3d7d74f8144382ad923a2778230e40d2775cf1cb772717",
+          "result": "Cold imports red6 then green7;75 related cases passed; actual originalLinuxOCR natural/heartbeat2 cases passed unchanged12/30/3 guards; root composed9 passed with2169 same source inputs.",
+          "scope": "Two-source control import repair, observed originalLinuxCPU only. Latest hostedCI/GANidentity/app-launch cases and new native compiled backend remain pending."
         }
       ],
       "file_actions": {
@@ -5986,6 +6034,22 @@
           "receipt_sha256": "8f7e10cb23f987e040d7916d9e8a808f71b0a1248d9014a0d373bc4212a96513",
           "result": "Root browser1/sourceElectron1 passed38.84s/retry0 with2161 same sources. Preview/apply empty/invalid/error six dimensions verified with real422/409/200 and exact controlled503.",
           "scope": "Synthetic source UI controls only; no human picker/label truth/model quality/installed/publisher/hardware/whole acceptance."
+        },
+        {
+          "kind": "clean-source-review-refusal-and-debugger-controls",
+          "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+          "receipt": "docs/verification/receipts/2026-10-08-review-debugger-e28d1d9.json",
+          "receipt_sha256": "a83fa47336c8ca0c4ec1cd2320bad8c2eaca2a1de41d637bb4af4ee2746e0775",
+          "result": "Browser2/sourceElectron2 passed with unchanged clean inputs. Eleven F024 curated refusal/reopen dimensions and five supplemental U006 artifact controls observed.",
+          "scope": "Exact source UI only; controlled503 and synthetic display artifacts; no humantruth/modelquality/installed/publisher/whole feature acceptance."
+        },
+        {
+          "kind": "actual-private-native-original-controller-cpu-readbacks",
+          "source_sha": "d3d469c1261db9b47cd959d14e2f9f6601535871",
+          "receipt": "docs/verification/receipts/2026-10-08-actual-private-native-coherent4.json",
+          "receipt_sha256": "49c788149319b375a9909dda99ffb5b99f69fcf67c9186e5cee2a3f9d2a34c08",
+          "result": "Actual frozen controller Electron frozen backend controlled CPU A/OK/oneROI/zero defects and two compiled readbacks passed448.524s;2130 source hashes unchanged; ordinary AppKit quit and registered original-process exits verified; recovery_required retained.",
+          "scope": "Private inherited-prerequisite freeze/test-only patch; not installed release or whole-process-tree acceptance. Publisher/OS/native target/device config/model quality remain pending."
         }
       ],
       "file_actions": {
@@ -6010,7 +6074,7 @@
       },
       "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts",
       "remaining": [
-        "207 curated actions have600 verified and849 pending scenarios. Metadata picker error/cancel/handoff now exercised in clean browser and native Electron at fe92877. Omitted menus/shortcuts, unexecuted dimensions and full156-feature target acceptance remain pending."
+        "207 curated actions have611 verified and838 pending scenarios. Metadata picker error/cancel/handoff now exercised in clean browser and native Electron at fe92877. Omitted menus/shortcuts, unexecuted dimensions and full156-feature target acceptance remain pending."
       ]
     },
     {

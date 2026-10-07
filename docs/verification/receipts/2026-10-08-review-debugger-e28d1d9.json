@@ -1,0 +1,3347 @@
+{
+  "schema": "modu-vision.review-debugger-clean-controls/v1",
+  "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+  "spec_sha256": {
+    "scripts/e2e/team-review-refusal-controls.spec.ts": "582d68b52552c42a7e9e50496e17747c2bb4730cfe8617faf933b21b0b0465d7",
+    "scripts/e2e/flow-debugger-artifact-controls.spec.ts": "31075ec4b4386d146c08b80091a5bbcb5cc30c41411aa7ef8e502705c71ec937"
+  },
+  "results": {
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0,
+    "retries": 0,
+    "elapsed_seconds": 62.1805862080073,
+    "source_inputs": 2168,
+    "source_unchanged": true,
+    "clean_before_after": true
+  },
+  "cases": [
+    {
+      "kind": "debugger_artifact_controls",
+      "mode": "browser",
+      "receipt": "docs/verification/receipts/2026-10-08-flow-debugger-e28d1d9-browser.json",
+      "receipt_sha256": "91ea077a0091afad45bded505228ea3f0e53be14e1a42eed7dff6e3f53e3087e",
+      "actual_controls": {
+        "record_id": "U006",
+        "supplemental_action_ids": [
+          "debugger-artifact-search",
+          "debugger-artifact-page",
+          "debugger-artifact-details",
+          "debugger-roi-path",
+          "debugger-viewer-return"
+        ],
+        "actual_ui": true,
+        "source_electron": false,
+        "controlled_execution_response": true,
+        "actual_backend_execution": false,
+        "fixture_result_sha256": "fd10bbaf0fcebfffa1a90f3ec1504b870d36c43318ab4a4f9d7ec3538c9d5964",
+        "fixture_requests": 1,
+        "graph_before": {
+          "active.json": "9d80cbf9a9fc4ba1c26ba9fbcd195691b003dc11ff26790e5cea31a6900193aa",
+          "pipeline_segmentation_7d02d561c1ef0c1a.json": "4ae49812d59adf5dec139772d207371653aba9769b5fe967c40cf221de4a2a93",
+          "versions/193c6fe1cdc1447395e569f86e948bb8.json": "360f7b4cfbafc246be58b50ec355f7fab1ded05aa504b95be32c9791175e34d4"
+        },
+        "graph_after": {
+          "active.json": "9d80cbf9a9fc4ba1c26ba9fbcd195691b003dc11ff26790e5cea31a6900193aa",
+          "pipeline_segmentation_7d02d561c1ef0c1a.json": "4ae49812d59adf5dec139772d207371653aba9769b5fe967c40cf221de4a2a93",
+          "versions/193c6fe1cdc1447395e569f86e948bb8.json": "360f7b4cfbafc246be58b50ec355f7fab1ded05aa504b95be32c9791175e34d4"
+        },
+        "project_id": "487e21ad",
+        "source_images": [
+          {
+            "label": "ok",
+            "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/0-d75067bc-r0/dataset/ok/sample-ok.png",
+            "bytes": 96,
+            "sha256": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e"
+          },
+          {
+            "label": "ng",
+            "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/0-d75067bc-r0/dataset/ng/sample-ng.png",
+            "bytes": 103,
+            "sha256": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da"
+          }
+        ],
+        "writes": [
+          "POST /api/flowchart/run"
+        ],
+        "pages": [
+          12,
+          12,
+          6
+        ],
+        "independent_input_output_paging": true,
+        "uppercase_search_resets_last_page": true,
+        "empty_search_message": true,
+        "reset_first_page": true,
+        "exact_measurements": {
+          "fixture_kind": "controlled_output",
+          "ordinal": 29,
+          "predicted_class": "scratch",
+          "verdict": "NG",
+          "confidence": 0.91
+        },
+        "skipped_node_excluded_from_path": true,
+        "selected_edge_path_only": true,
+        "enter_space_controls": true,
+        "escape_and_explicit_return_focus": true,
+        "reload_does_not_restore_stale_execution": true,
+        "graph_source_unchanged": true,
+        "model_inference_executed": false,
+        "model_quality_accepted": false,
+        "installed_native_accepted": false,
+        "process_tree_accepted": false,
+        "windows_excluded": true
+      },
+      "owned_cleanup": {
+        "exited": true,
+        "exitCode": 0,
+        "signal": null,
+        "exitedBeforeStop": false,
+        "forced": false,
+        "forcedReason": null,
+        "groupAlive": false,
+        "escaped": [],
+        "unownedReferences": [],
+        "scanError": null,
+        "durationMs": 909,
+        "stoppedAt": "2026-10-07T23:44:56.741Z",
+        "healthy_at_end": true,
+        "port_closed": true,
+        "pid_alive": false
+      }
+    },
+    {
+      "kind": "debugger_artifact_controls",
+      "mode": "electron",
+      "receipt": "docs/verification/receipts/2026-10-08-flow-debugger-e28d1d9-electron.json",
+      "receipt_sha256": "9b2a6f7aeafd07a0e934afcad770789f26bd655e906c370aaf645d4bf3e2adaf",
+      "actual_controls": {
+        "record_id": "U006",
+        "supplemental_action_ids": [
+          "debugger-artifact-search",
+          "debugger-artifact-page",
+          "debugger-artifact-details",
+          "debugger-roi-path",
+          "debugger-viewer-return"
+        ],
+        "actual_ui": true,
+        "source_electron": true,
+        "controlled_execution_response": true,
+        "actual_backend_execution": false,
+        "fixture_result_sha256": "77f90e7557556d6e9ceb84fbd102ed41cae5c486ba4058a73c49854d8a27611e",
+        "fixture_requests": 1,
+        "graph_before": {
+          "active.json": "46fd57be651286373662098142ed5fde39ef6997442cc97f77728958ea1c04a2",
+          "pipeline_segmentation_721c3cb9712b70e3.json": "4ae49812d59adf5dec139772d207371653aba9769b5fe967c40cf221de4a2a93",
+          "versions/9253e445246c4bea9d9e8804d319ae41.json": "3eb37684bc96f4d1cb1d8ad5c8eb62ccbe30ae81c6af99e62b96e5a81fbf8373"
+        },
+        "graph_after": {
+          "active.json": "46fd57be651286373662098142ed5fde39ef6997442cc97f77728958ea1c04a2",
+          "pipeline_segmentation_721c3cb9712b70e3.json": "4ae49812d59adf5dec139772d207371653aba9769b5fe967c40cf221de4a2a93",
+          "versions/9253e445246c4bea9d9e8804d319ae41.json": "3eb37684bc96f4d1cb1d8ad5c8eb62ccbe30ae81c6af99e62b96e5a81fbf8373"
+        },
+        "project_id": "8d109066",
+        "source_images": [
+          {
+            "label": "ok",
+            "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/1-fceafb18-r0/dataset/ok/sample-ok.png",
+            "bytes": 96,
+            "sha256": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e"
+          },
+          {
+            "label": "ng",
+            "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/1-fceafb18-r0/dataset/ng/sample-ng.png",
+            "bytes": 103,
+            "sha256": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da"
+          }
+        ],
+        "writes": [
+          "POST /api/flowchart/run"
+        ],
+        "pages": [
+          12,
+          12,
+          6
+        ],
+        "independent_input_output_paging": true,
+        "uppercase_search_resets_last_page": true,
+        "empty_search_message": true,
+        "reset_first_page": true,
+        "exact_measurements": {
+          "fixture_kind": "controlled_output",
+          "ordinal": 29,
+          "predicted_class": "scratch",
+          "verdict": "NG",
+          "confidence": 0.91
+        },
+        "skipped_node_excluded_from_path": true,
+        "selected_edge_path_only": true,
+        "enter_space_controls": true,
+        "escape_and_explicit_return_focus": true,
+        "reload_does_not_restore_stale_execution": true,
+        "graph_source_unchanged": true,
+        "model_inference_executed": false,
+        "model_quality_accepted": false,
+        "installed_native_accepted": false,
+        "process_tree_accepted": false,
+        "windows_excluded": true
+      },
+      "owned_cleanup": {
+        "electron_alive": false,
+        "backends": [
+          {
+            "port": 62465,
+            "pid": 63350,
+            "port_closed": true,
+            "pid_alive": false
+          }
+        ],
+        "logged_backend_pids": [
+          63350
+        ],
+        "logged_backend_pids_alive": [],
+        "backend_restarted": false,
+        "escaped": [],
+        "unowned_references": [],
+        "scan_error": null,
+        "close_timed_out": false
+      }
+    },
+    {
+      "kind": "team_review_refusal_controls",
+      "mode": "browser",
+      "receipt": "docs/verification/receipts/2026-10-08-team-review-e28d1d9-browser.json",
+      "receipt_sha256": "d14243b142a7d7ef74f29a21dd77d991ff0223f880fa6fbea216195d91eb7d08",
+      "actual_controls": {
+        "record_id": "F024",
+        "actions": {
+          "approve-vote": [
+            "empty",
+            "invalid",
+            "error"
+          ],
+          "reject-vote": [
+            "empty",
+            "invalid",
+            "error"
+          ],
+          "adjudicate": [
+            "empty",
+            "invalid",
+            "error",
+            "cancel",
+            "reopen"
+          ]
+        },
+        "project_id": "85f8914c",
+        "image_uuid": "f6ae35ae-a38d-5ac6-954b-7a4d9aba7731",
+        "image_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/0-a1d71380-r0/review-refusal-source/part.png",
+        "source_sha256": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+        "baseline": {
+          "annotation": {
+            "image_id": "part",
+            "annotations": [
+              {
+                "id": "controlled-label",
+                "type": "bbox",
+                "label": "Scratch",
+                "category_id": 2,
+                "bbox": [
+                  2,
+                  3,
+                  20,
+                  21
+                ],
+                "rotated_bbox": null,
+                "polygon": null,
+                "points": null,
+                "mask_rle": null,
+                "is_normal": null,
+                "color": null,
+                "text": null,
+                "direction_deg": null
+              }
+            ],
+            "image_width": 256,
+            "image_height": 256,
+            "mask_file": null,
+            "metadata": {
+              "decode_error": null,
+              "image_uuid": "f6ae35ae-a38d-5ac6-954b-7a4d9aba7731",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/0-a1d71380-r0/review-refusal-source/part.png",
+              "relative_path": "part.png",
+              "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+              "content_version": 1,
+              "width": 256,
+              "height": 256,
+              "revision": 2,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "needs_review",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "f08bf3e5-13dd-4492-b39d-ee2ced0fad6b",
+                  "at": "2026-10-07T23:45:02Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                  }
+                },
+                {
+                  "id": "f44857e4-efb4-4497-97f0-89928fb09cc4",
+                  "at": "2026-10-07T23:45:02Z",
+                  "actor": "fixture-labeler",
+                  "action": "annotation_changed",
+                  "revision": 2,
+                  "changes": {
+                    "workflow_state": "needs_review"
+                  }
+                }
+              ],
+              "annotation_hash": "9f05dfaf7a7713962f7f8d82aba7d2d5c09b787c8ef4e90cb905cbe219284442",
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [],
+                "review_status": "pending",
+                "annotation_actor": "fixture-labeler",
+                "history": []
+              }
+            }
+          },
+          "annotation_files": {
+            "json": {
+              "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/0-a1d71380-r0/projects/owned_review_refusal_controls/annotations/by_dataset/0c1b08e54cff15f1/part.json",
+              "sha256": "9f05dfaf7a7713962f7f8d82aba7d2d5c09b787c8ef4e90cb905cbe219284442"
+            },
+            "mask": null
+          },
+          "image": {
+            "image": {
+              "decode_error": null,
+              "image_uuid": "f6ae35ae-a38d-5ac6-954b-7a4d9aba7731",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/0-a1d71380-r0/review-refusal-source/part.png",
+              "relative_path": "part.png",
+              "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+              "content_version": 1,
+              "width": 256,
+              "height": 256,
+              "revision": 2,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "needs_review",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "f08bf3e5-13dd-4492-b39d-ee2ced0fad6b",
+                  "at": "2026-10-07T23:45:02Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                  }
+                },
+                {
+                  "id": "f44857e4-efb4-4497-97f0-89928fb09cc4",
+                  "at": "2026-10-07T23:45:02Z",
+                  "actor": "fixture-labeler",
+                  "action": "annotation_changed",
+                  "revision": 2,
+                  "changes": {
+                    "workflow_state": "needs_review"
+                  }
+                }
+              ],
+              "annotation_hash": "9f05dfaf7a7713962f7f8d82aba7d2d5c09b787c8ef4e90cb905cbe219284442",
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [],
+                "review_status": "pending",
+                "annotation_actor": "fixture-labeler",
+                "history": []
+              }
+            }
+          },
+          "workspace": {
+            "scope": {
+              "project_id": "85f8914c",
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/0-a1d71380-r0/review-refusal-source",
+              "labelset_id": "default"
+            },
+            "book": {
+              "id": "book_2bfb5af4dbc4402b8d0237b8217fc3dc",
+              "version": 1,
+              "title": "Controlled original book",
+              "categories": [
+                {
+                  "id": 0,
+                  "name": "OK",
+                  "color": "#10b981",
+                  "definition": "",
+                  "inclusion": "",
+                  "exclusion": "",
+                  "annotation_guidance": "",
+                  "examples": []
+                },
+                {
+                  "id": 2,
+                  "name": "Scratch",
+                  "color": "#f59e0b",
+                  "definition": "",
+                  "inclusion": "",
+                  "exclusion": "",
+                  "annotation_guidance": "",
+                  "examples": []
+                }
+              ],
+              "actor": "fixture-owner",
+              "published_at": "2026-10-07T23:45:02Z",
+              "sha256": "dee6c5fe0c0064866c4d5a7dfdf8377c2cf6a913a5bd556d8f7423a9f4e564e1"
+            },
+            "book_history": [
+              {
+                "id": "book_2bfb5af4dbc4402b8d0237b8217fc3dc",
+                "version": 1,
+                "title": "Controlled original book",
+                "categories": [
+                  {
+                    "id": 0,
+                    "name": "OK",
+                    "color": "#10b981",
+                    "definition": "",
+                    "inclusion": "",
+                    "exclusion": "",
+                    "annotation_guidance": "",
+                    "examples": []
+                  },
+                  {
+                    "id": 2,
+                    "name": "Scratch",
+                    "color": "#f59e0b",
+                    "definition": "",
+                    "inclusion": "",
+                    "exclusion": "",
+                    "annotation_guidance": "",
+                    "examples": []
+                  }
+                ],
+                "actor": "fixture-owner",
+                "published_at": "2026-10-07T23:45:02Z",
+                "sha256": "dee6c5fe0c0064866c4d5a7dfdf8377c2cf6a913a5bd556d8f7423a9f4e564e1"
+              }
+            ],
+            "settings": {
+              "revision": 2,
+              "editing_enabled": false,
+              "review_enabled": true,
+              "required_reviews": 2,
+              "prevent_self_review": true,
+              "approved_only_training": true
+            },
+            "members": [],
+            "actor": null
+          },
+          "queue": {
+            "items": [
+              {
+                "decode_error": null,
+                "image_uuid": "f6ae35ae-a38d-5ac6-954b-7a4d9aba7731",
+                "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/0-a1d71380-r0/review-refusal-source/part.png",
+                "relative_path": "part.png",
+                "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+                "content_version": 1,
+                "width": 256,
+                "height": 256,
+                "revision": 2,
+                "tags": [],
+                "product": "",
+                "lot": "",
+                "group": "",
+                "workflow_state": "needs_review",
+                "usage_state": "active",
+                "reviewer": null,
+                "review_history": [],
+                "audit": [
+                  {
+                    "id": "f08bf3e5-13dd-4492-b39d-ee2ced0fad6b",
+                    "at": "2026-10-07T23:45:02Z",
+                    "actor": "system",
+                    "action": "registered",
+                    "revision": 1,
+                    "changes": {
+                      "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                    }
+                  },
+                  {
+                    "id": "f44857e4-efb4-4497-97f0-89928fb09cc4",
+                    "at": "2026-10-07T23:45:02Z",
+                    "actor": "fixture-labeler",
+                    "action": "annotation_changed",
+                    "revision": 2,
+                    "changes": {
+                      "workflow_state": "needs_review"
+                    }
+                  }
+                ],
+                "annotation_hash": "9f05dfaf7a7713962f7f8d82aba7d2d5c09b787c8ef4e90cb905cbe219284442",
+                "mask_hash": null,
+                "team": {
+                  "assignment": null,
+                  "edit_lease": null,
+                  "reviews": [],
+                  "review_status": "pending",
+                  "annotation_actor": "fixture-labeler",
+                  "history": []
+                }
+              }
+            ],
+            "total": 1,
+            "offset": 0,
+            "limit": 30
+          }
+        },
+        "disputed": {
+          "annotation": {
+            "image_id": "part",
+            "annotations": [
+              {
+                "id": "controlled-label",
+                "type": "bbox",
+                "label": "Scratch",
+                "category_id": 2,
+                "bbox": [
+                  2,
+                  3,
+                  20,
+                  21
+                ],
+                "rotated_bbox": null,
+                "polygon": null,
+                "points": null,
+                "mask_rle": null,
+                "is_normal": null,
+                "color": null,
+                "text": null,
+                "direction_deg": null
+              }
+            ],
+            "image_width": 256,
+            "image_height": 256,
+            "mask_file": null,
+            "metadata": {
+              "decode_error": null,
+              "image_uuid": "f6ae35ae-a38d-5ac6-954b-7a4d9aba7731",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/0-a1d71380-r0/review-refusal-source/part.png",
+              "relative_path": "part.png",
+              "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+              "content_version": 1,
+              "width": 256,
+              "height": 256,
+              "revision": 4,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "needs_review",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "f08bf3e5-13dd-4492-b39d-ee2ced0fad6b",
+                  "at": "2026-10-07T23:45:02Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                  }
+                },
+                {
+                  "id": "f44857e4-efb4-4497-97f0-89928fb09cc4",
+                  "at": "2026-10-07T23:45:02Z",
+                  "actor": "fixture-labeler",
+                  "action": "annotation_changed",
+                  "revision": 2,
+                  "changes": {
+                    "workflow_state": "needs_review"
+                  }
+                },
+                {
+                  "id": "954bb180-802f-4bc6-98ac-090a2b160189",
+                  "at": "2026-10-07T23:45:03Z",
+                  "actor": "fixture-opinion-a",
+                  "action": "team_review",
+                  "revision": 3,
+                  "changes": {
+                    "decision": "approve",
+                    "review_status": "pending"
+                  }
+                },
+                {
+                  "id": "bae84dac-74ec-4956-8a1b-7face8d6da25",
+                  "at": "2026-10-07T23:45:03Z",
+                  "actor": "fixture-opinion-b",
+                  "action": "team_review",
+                  "revision": 4,
+                  "changes": {
+                    "decision": "reject",
+                    "review_status": "disputed"
+                  }
+                }
+              ],
+              "annotation_hash": "9f05dfaf7a7713962f7f8d82aba7d2d5c09b787c8ef4e90cb905cbe219284442",
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [
+                  {
+                    "actor": "fixture-opinion-a",
+                    "decision": "approve",
+                    "reason": "Synthetic fixture opinion A",
+                    "at": "2026-10-07T23:45:03Z",
+                    "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                  },
+                  {
+                    "actor": "fixture-opinion-b",
+                    "decision": "reject",
+                    "reason": "Synthetic fixture opinion B",
+                    "at": "2026-10-07T23:45:03Z",
+                    "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                  }
+                ],
+                "review_status": "disputed",
+                "annotation_actor": "fixture-labeler",
+                "history": [
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-opinion-a",
+                    "decision": "approve",
+                    "reason": "Synthetic fixture opinion A",
+                    "at": "2026-10-07T23:45:03Z",
+                    "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                  },
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-opinion-b",
+                    "decision": "reject",
+                    "reason": "Synthetic fixture opinion B",
+                    "at": "2026-10-07T23:45:03Z",
+                    "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                  }
+                ]
+              }
+            }
+          },
+          "annotation_files": {
+            "json": {
+              "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/0-a1d71380-r0/projects/owned_review_refusal_controls/annotations/by_dataset/0c1b08e54cff15f1/part.json",
+              "sha256": "9f05dfaf7a7713962f7f8d82aba7d2d5c09b787c8ef4e90cb905cbe219284442"
+            },
+            "mask": null
+          },
+          "image": {
+            "image": {
+              "decode_error": null,
+              "image_uuid": "f6ae35ae-a38d-5ac6-954b-7a4d9aba7731",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/0-a1d71380-r0/review-refusal-source/part.png",
+              "relative_path": "part.png",
+              "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+              "content_version": 1,
+              "width": 256,
+              "height": 256,
+              "revision": 4,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "needs_review",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "f08bf3e5-13dd-4492-b39d-ee2ced0fad6b",
+                  "at": "2026-10-07T23:45:02Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                  }
+                },
+                {
+                  "id": "f44857e4-efb4-4497-97f0-89928fb09cc4",
+                  "at": "2026-10-07T23:45:02Z",
+                  "actor": "fixture-labeler",
+                  "action": "annotation_changed",
+                  "revision": 2,
+                  "changes": {
+                    "workflow_state": "needs_review"
+                  }
+                },
+                {
+                  "id": "954bb180-802f-4bc6-98ac-090a2b160189",
+                  "at": "2026-10-07T23:45:03Z",
+                  "actor": "fixture-opinion-a",
+                  "action": "team_review",
+                  "revision": 3,
+                  "changes": {
+                    "decision": "approve",
+                    "review_status": "pending"
+                  }
+                },
+                {
+                  "id": "bae84dac-74ec-4956-8a1b-7face8d6da25",
+                  "at": "2026-10-07T23:45:03Z",
+                  "actor": "fixture-opinion-b",
+                  "action": "team_review",
+                  "revision": 4,
+                  "changes": {
+                    "decision": "reject",
+                    "review_status": "disputed"
+                  }
+                }
+              ],
+              "annotation_hash": "9f05dfaf7a7713962f7f8d82aba7d2d5c09b787c8ef4e90cb905cbe219284442",
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [
+                  {
+                    "actor": "fixture-opinion-a",
+                    "decision": "approve",
+                    "reason": "Synthetic fixture opinion A",
+                    "at": "2026-10-07T23:45:03Z",
+                    "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                  },
+                  {
+                    "actor": "fixture-opinion-b",
+                    "decision": "reject",
+                    "reason": "Synthetic fixture opinion B",
+                    "at": "2026-10-07T23:45:03Z",
+                    "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                  }
+                ],
+                "review_status": "disputed",
+                "annotation_actor": "fixture-labeler",
+                "history": [
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-opinion-a",
+                    "decision": "approve",
+                    "reason": "Synthetic fixture opinion A",
+                    "at": "2026-10-07T23:45:03Z",
+                    "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                  },
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-opinion-b",
+                    "decision": "reject",
+                    "reason": "Synthetic fixture opinion B",
+                    "at": "2026-10-07T23:45:03Z",
+                    "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                  }
+                ]
+              }
+            }
+          },
+          "workspace": {
+            "scope": {
+              "project_id": "85f8914c",
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/0-a1d71380-r0/review-refusal-source",
+              "labelset_id": "default"
+            },
+            "book": {
+              "id": "book_2bfb5af4dbc4402b8d0237b8217fc3dc",
+              "version": 1,
+              "title": "Controlled original book",
+              "categories": [
+                {
+                  "id": 0,
+                  "name": "OK",
+                  "color": "#10b981",
+                  "definition": "",
+                  "inclusion": "",
+                  "exclusion": "",
+                  "annotation_guidance": "",
+                  "examples": []
+                },
+                {
+                  "id": 2,
+                  "name": "Scratch",
+                  "color": "#f59e0b",
+                  "definition": "",
+                  "inclusion": "",
+                  "exclusion": "",
+                  "annotation_guidance": "",
+                  "examples": []
+                }
+              ],
+              "actor": "fixture-owner",
+              "published_at": "2026-10-07T23:45:02Z",
+              "sha256": "dee6c5fe0c0064866c4d5a7dfdf8377c2cf6a913a5bd556d8f7423a9f4e564e1"
+            },
+            "book_history": [
+              {
+                "id": "book_2bfb5af4dbc4402b8d0237b8217fc3dc",
+                "version": 1,
+                "title": "Controlled original book",
+                "categories": [
+                  {
+                    "id": 0,
+                    "name": "OK",
+                    "color": "#10b981",
+                    "definition": "",
+                    "inclusion": "",
+                    "exclusion": "",
+                    "annotation_guidance": "",
+                    "examples": []
+                  },
+                  {
+                    "id": 2,
+                    "name": "Scratch",
+                    "color": "#f59e0b",
+                    "definition": "",
+                    "inclusion": "",
+                    "exclusion": "",
+                    "annotation_guidance": "",
+                    "examples": []
+                  }
+                ],
+                "actor": "fixture-owner",
+                "published_at": "2026-10-07T23:45:02Z",
+                "sha256": "dee6c5fe0c0064866c4d5a7dfdf8377c2cf6a913a5bd556d8f7423a9f4e564e1"
+              }
+            ],
+            "settings": {
+              "revision": 2,
+              "editing_enabled": false,
+              "review_enabled": true,
+              "required_reviews": 2,
+              "prevent_self_review": true,
+              "approved_only_training": true
+            },
+            "members": [],
+            "actor": null
+          },
+          "queue": {
+            "items": [
+              {
+                "decode_error": null,
+                "image_uuid": "f6ae35ae-a38d-5ac6-954b-7a4d9aba7731",
+                "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/0-a1d71380-r0/review-refusal-source/part.png",
+                "relative_path": "part.png",
+                "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+                "content_version": 1,
+                "width": 256,
+                "height": 256,
+                "revision": 4,
+                "tags": [],
+                "product": "",
+                "lot": "",
+                "group": "",
+                "workflow_state": "needs_review",
+                "usage_state": "active",
+                "reviewer": null,
+                "review_history": [],
+                "audit": [
+                  {
+                    "id": "f08bf3e5-13dd-4492-b39d-ee2ced0fad6b",
+                    "at": "2026-10-07T23:45:02Z",
+                    "actor": "system",
+                    "action": "registered",
+                    "revision": 1,
+                    "changes": {
+                      "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                    }
+                  },
+                  {
+                    "id": "f44857e4-efb4-4497-97f0-89928fb09cc4",
+                    "at": "2026-10-07T23:45:02Z",
+                    "actor": "fixture-labeler",
+                    "action": "annotation_changed",
+                    "revision": 2,
+                    "changes": {
+                      "workflow_state": "needs_review"
+                    }
+                  },
+                  {
+                    "id": "954bb180-802f-4bc6-98ac-090a2b160189",
+                    "at": "2026-10-07T23:45:03Z",
+                    "actor": "fixture-opinion-a",
+                    "action": "team_review",
+                    "revision": 3,
+                    "changes": {
+                      "decision": "approve",
+                      "review_status": "pending"
+                    }
+                  },
+                  {
+                    "id": "bae84dac-74ec-4956-8a1b-7face8d6da25",
+                    "at": "2026-10-07T23:45:03Z",
+                    "actor": "fixture-opinion-b",
+                    "action": "team_review",
+                    "revision": 4,
+                    "changes": {
+                      "decision": "reject",
+                      "review_status": "disputed"
+                    }
+                  }
+                ],
+                "annotation_hash": "9f05dfaf7a7713962f7f8d82aba7d2d5c09b787c8ef4e90cb905cbe219284442",
+                "mask_hash": null,
+                "team": {
+                  "assignment": null,
+                  "edit_lease": null,
+                  "reviews": [
+                    {
+                      "actor": "fixture-opinion-a",
+                      "decision": "approve",
+                      "reason": "Synthetic fixture opinion A",
+                      "at": "2026-10-07T23:45:03Z",
+                      "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                    },
+                    {
+                      "actor": "fixture-opinion-b",
+                      "decision": "reject",
+                      "reason": "Synthetic fixture opinion B",
+                      "at": "2026-10-07T23:45:03Z",
+                      "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                    }
+                  ],
+                  "review_status": "disputed",
+                  "annotation_actor": "fixture-labeler",
+                  "history": [
+                    {
+                      "action": "reviewed",
+                      "actor": "fixture-opinion-a",
+                      "decision": "approve",
+                      "reason": "Synthetic fixture opinion A",
+                      "at": "2026-10-07T23:45:03Z",
+                      "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                    },
+                    {
+                      "action": "reviewed",
+                      "actor": "fixture-opinion-b",
+                      "decision": "reject",
+                      "reason": "Synthetic fixture opinion B",
+                      "at": "2026-10-07T23:45:03Z",
+                      "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                    }
+                  ]
+                }
+              }
+            ],
+            "total": 1,
+            "offset": 0,
+            "limit": 30
+          }
+        },
+        "reopened": {
+          "annotation": {
+            "image_id": "part",
+            "annotations": [
+              {
+                "id": "controlled-label",
+                "type": "bbox",
+                "label": "Scratch",
+                "category_id": 2,
+                "bbox": [
+                  2,
+                  3,
+                  20,
+                  21
+                ],
+                "rotated_bbox": null,
+                "polygon": null,
+                "points": null,
+                "mask_rle": null,
+                "is_normal": null,
+                "color": null,
+                "text": null,
+                "direction_deg": null
+              }
+            ],
+            "image_width": 256,
+            "image_height": 256,
+            "mask_file": null,
+            "metadata": {
+              "decode_error": null,
+              "image_uuid": "f6ae35ae-a38d-5ac6-954b-7a4d9aba7731",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/0-a1d71380-r0/review-refusal-source/part.png",
+              "relative_path": "part.png",
+              "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+              "content_version": 1,
+              "width": 256,
+              "height": 256,
+              "revision": 4,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "needs_review",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "f08bf3e5-13dd-4492-b39d-ee2ced0fad6b",
+                  "at": "2026-10-07T23:45:02Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                  }
+                },
+                {
+                  "id": "f44857e4-efb4-4497-97f0-89928fb09cc4",
+                  "at": "2026-10-07T23:45:02Z",
+                  "actor": "fixture-labeler",
+                  "action": "annotation_changed",
+                  "revision": 2,
+                  "changes": {
+                    "workflow_state": "needs_review"
+                  }
+                },
+                {
+                  "id": "954bb180-802f-4bc6-98ac-090a2b160189",
+                  "at": "2026-10-07T23:45:03Z",
+                  "actor": "fixture-opinion-a",
+                  "action": "team_review",
+                  "revision": 3,
+                  "changes": {
+                    "decision": "approve",
+                    "review_status": "pending"
+                  }
+                },
+                {
+                  "id": "bae84dac-74ec-4956-8a1b-7face8d6da25",
+                  "at": "2026-10-07T23:45:03Z",
+                  "actor": "fixture-opinion-b",
+                  "action": "team_review",
+                  "revision": 4,
+                  "changes": {
+                    "decision": "reject",
+                    "review_status": "disputed"
+                  }
+                }
+              ],
+              "annotation_hash": "9f05dfaf7a7713962f7f8d82aba7d2d5c09b787c8ef4e90cb905cbe219284442",
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [
+                  {
+                    "actor": "fixture-opinion-a",
+                    "decision": "approve",
+                    "reason": "Synthetic fixture opinion A",
+                    "at": "2026-10-07T23:45:03Z",
+                    "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                  },
+                  {
+                    "actor": "fixture-opinion-b",
+                    "decision": "reject",
+                    "reason": "Synthetic fixture opinion B",
+                    "at": "2026-10-07T23:45:03Z",
+                    "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                  }
+                ],
+                "review_status": "disputed",
+                "annotation_actor": "fixture-labeler",
+                "history": [
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-opinion-a",
+                    "decision": "approve",
+                    "reason": "Synthetic fixture opinion A",
+                    "at": "2026-10-07T23:45:03Z",
+                    "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                  },
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-opinion-b",
+                    "decision": "reject",
+                    "reason": "Synthetic fixture opinion B",
+                    "at": "2026-10-07T23:45:03Z",
+                    "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                  }
+                ]
+              }
+            }
+          },
+          "annotation_files": {
+            "json": {
+              "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/0-a1d71380-r0/projects/owned_review_refusal_controls/annotations/by_dataset/0c1b08e54cff15f1/part.json",
+              "sha256": "9f05dfaf7a7713962f7f8d82aba7d2d5c09b787c8ef4e90cb905cbe219284442"
+            },
+            "mask": null
+          },
+          "image": {
+            "image": {
+              "decode_error": null,
+              "image_uuid": "f6ae35ae-a38d-5ac6-954b-7a4d9aba7731",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/0-a1d71380-r0/review-refusal-source/part.png",
+              "relative_path": "part.png",
+              "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+              "content_version": 1,
+              "width": 256,
+              "height": 256,
+              "revision": 4,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "needs_review",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "f08bf3e5-13dd-4492-b39d-ee2ced0fad6b",
+                  "at": "2026-10-07T23:45:02Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                  }
+                },
+                {
+                  "id": "f44857e4-efb4-4497-97f0-89928fb09cc4",
+                  "at": "2026-10-07T23:45:02Z",
+                  "actor": "fixture-labeler",
+                  "action": "annotation_changed",
+                  "revision": 2,
+                  "changes": {
+                    "workflow_state": "needs_review"
+                  }
+                },
+                {
+                  "id": "954bb180-802f-4bc6-98ac-090a2b160189",
+                  "at": "2026-10-07T23:45:03Z",
+                  "actor": "fixture-opinion-a",
+                  "action": "team_review",
+                  "revision": 3,
+                  "changes": {
+                    "decision": "approve",
+                    "review_status": "pending"
+                  }
+                },
+                {
+                  "id": "bae84dac-74ec-4956-8a1b-7face8d6da25",
+                  "at": "2026-10-07T23:45:03Z",
+                  "actor": "fixture-opinion-b",
+                  "action": "team_review",
+                  "revision": 4,
+                  "changes": {
+                    "decision": "reject",
+                    "review_status": "disputed"
+                  }
+                }
+              ],
+              "annotation_hash": "9f05dfaf7a7713962f7f8d82aba7d2d5c09b787c8ef4e90cb905cbe219284442",
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [
+                  {
+                    "actor": "fixture-opinion-a",
+                    "decision": "approve",
+                    "reason": "Synthetic fixture opinion A",
+                    "at": "2026-10-07T23:45:03Z",
+                    "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                  },
+                  {
+                    "actor": "fixture-opinion-b",
+                    "decision": "reject",
+                    "reason": "Synthetic fixture opinion B",
+                    "at": "2026-10-07T23:45:03Z",
+                    "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                  }
+                ],
+                "review_status": "disputed",
+                "annotation_actor": "fixture-labeler",
+                "history": [
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-opinion-a",
+                    "decision": "approve",
+                    "reason": "Synthetic fixture opinion A",
+                    "at": "2026-10-07T23:45:03Z",
+                    "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                  },
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-opinion-b",
+                    "decision": "reject",
+                    "reason": "Synthetic fixture opinion B",
+                    "at": "2026-10-07T23:45:03Z",
+                    "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                  }
+                ]
+              }
+            }
+          },
+          "workspace": {
+            "scope": {
+              "project_id": "85f8914c",
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/0-a1d71380-r0/review-refusal-source",
+              "labelset_id": "default"
+            },
+            "book": {
+              "id": "book_2bfb5af4dbc4402b8d0237b8217fc3dc",
+              "version": 1,
+              "title": "Controlled original book",
+              "categories": [
+                {
+                  "id": 0,
+                  "name": "OK",
+                  "color": "#10b981",
+                  "definition": "",
+                  "inclusion": "",
+                  "exclusion": "",
+                  "annotation_guidance": "",
+                  "examples": []
+                },
+                {
+                  "id": 2,
+                  "name": "Scratch",
+                  "color": "#f59e0b",
+                  "definition": "",
+                  "inclusion": "",
+                  "exclusion": "",
+                  "annotation_guidance": "",
+                  "examples": []
+                }
+              ],
+              "actor": "fixture-owner",
+              "published_at": "2026-10-07T23:45:02Z",
+              "sha256": "dee6c5fe0c0064866c4d5a7dfdf8377c2cf6a913a5bd556d8f7423a9f4e564e1"
+            },
+            "book_history": [
+              {
+                "id": "book_2bfb5af4dbc4402b8d0237b8217fc3dc",
+                "version": 1,
+                "title": "Controlled original book",
+                "categories": [
+                  {
+                    "id": 0,
+                    "name": "OK",
+                    "color": "#10b981",
+                    "definition": "",
+                    "inclusion": "",
+                    "exclusion": "",
+                    "annotation_guidance": "",
+                    "examples": []
+                  },
+                  {
+                    "id": 2,
+                    "name": "Scratch",
+                    "color": "#f59e0b",
+                    "definition": "",
+                    "inclusion": "",
+                    "exclusion": "",
+                    "annotation_guidance": "",
+                    "examples": []
+                  }
+                ],
+                "actor": "fixture-owner",
+                "published_at": "2026-10-07T23:45:02Z",
+                "sha256": "dee6c5fe0c0064866c4d5a7dfdf8377c2cf6a913a5bd556d8f7423a9f4e564e1"
+              }
+            ],
+            "settings": {
+              "revision": 2,
+              "editing_enabled": false,
+              "review_enabled": true,
+              "required_reviews": 2,
+              "prevent_self_review": true,
+              "approved_only_training": true
+            },
+            "members": [],
+            "actor": null
+          },
+          "queue": {
+            "items": [
+              {
+                "decode_error": null,
+                "image_uuid": "f6ae35ae-a38d-5ac6-954b-7a4d9aba7731",
+                "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/0-a1d71380-r0/review-refusal-source/part.png",
+                "relative_path": "part.png",
+                "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+                "content_version": 1,
+                "width": 256,
+                "height": 256,
+                "revision": 4,
+                "tags": [],
+                "product": "",
+                "lot": "",
+                "group": "",
+                "workflow_state": "needs_review",
+                "usage_state": "active",
+                "reviewer": null,
+                "review_history": [],
+                "audit": [
+                  {
+                    "id": "f08bf3e5-13dd-4492-b39d-ee2ced0fad6b",
+                    "at": "2026-10-07T23:45:02Z",
+                    "actor": "system",
+                    "action": "registered",
+                    "revision": 1,
+                    "changes": {
+                      "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                    }
+                  },
+                  {
+                    "id": "f44857e4-efb4-4497-97f0-89928fb09cc4",
+                    "at": "2026-10-07T23:45:02Z",
+                    "actor": "fixture-labeler",
+                    "action": "annotation_changed",
+                    "revision": 2,
+                    "changes": {
+                      "workflow_state": "needs_review"
+                    }
+                  },
+                  {
+                    "id": "954bb180-802f-4bc6-98ac-090a2b160189",
+                    "at": "2026-10-07T23:45:03Z",
+                    "actor": "fixture-opinion-a",
+                    "action": "team_review",
+                    "revision": 3,
+                    "changes": {
+                      "decision": "approve",
+                      "review_status": "pending"
+                    }
+                  },
+                  {
+                    "id": "bae84dac-74ec-4956-8a1b-7face8d6da25",
+                    "at": "2026-10-07T23:45:03Z",
+                    "actor": "fixture-opinion-b",
+                    "action": "team_review",
+                    "revision": 4,
+                    "changes": {
+                      "decision": "reject",
+                      "review_status": "disputed"
+                    }
+                  }
+                ],
+                "annotation_hash": "9f05dfaf7a7713962f7f8d82aba7d2d5c09b787c8ef4e90cb905cbe219284442",
+                "mask_hash": null,
+                "team": {
+                  "assignment": null,
+                  "edit_lease": null,
+                  "reviews": [
+                    {
+                      "actor": "fixture-opinion-a",
+                      "decision": "approve",
+                      "reason": "Synthetic fixture opinion A",
+                      "at": "2026-10-07T23:45:03Z",
+                      "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                    },
+                    {
+                      "actor": "fixture-opinion-b",
+                      "decision": "reject",
+                      "reason": "Synthetic fixture opinion B",
+                      "at": "2026-10-07T23:45:03Z",
+                      "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                    }
+                  ],
+                  "review_status": "disputed",
+                  "annotation_actor": "fixture-labeler",
+                  "history": [
+                    {
+                      "action": "reviewed",
+                      "actor": "fixture-opinion-a",
+                      "decision": "approve",
+                      "reason": "Synthetic fixture opinion A",
+                      "at": "2026-10-07T23:45:03Z",
+                      "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                    },
+                    {
+                      "action": "reviewed",
+                      "actor": "fixture-opinion-b",
+                      "decision": "reject",
+                      "reason": "Synthetic fixture opinion B",
+                      "at": "2026-10-07T23:45:03Z",
+                      "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                    }
+                  ]
+                }
+              }
+            ],
+            "total": 1,
+            "offset": 0,
+            "limit": 30
+          }
+        },
+        "explicit_fixture_vote_setup": {
+          "first": {
+            "image": {
+              "decode_error": null,
+              "image_uuid": "f6ae35ae-a38d-5ac6-954b-7a4d9aba7731",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/0-a1d71380-r0/review-refusal-source/part.png",
+              "relative_path": "part.png",
+              "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+              "content_version": 1,
+              "width": 256,
+              "height": 256,
+              "revision": 3,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "needs_review",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "f08bf3e5-13dd-4492-b39d-ee2ced0fad6b",
+                  "at": "2026-10-07T23:45:02Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                  }
+                },
+                {
+                  "id": "f44857e4-efb4-4497-97f0-89928fb09cc4",
+                  "at": "2026-10-07T23:45:02Z",
+                  "actor": "fixture-labeler",
+                  "action": "annotation_changed",
+                  "revision": 2,
+                  "changes": {
+                    "workflow_state": "needs_review"
+                  }
+                },
+                {
+                  "id": "954bb180-802f-4bc6-98ac-090a2b160189",
+                  "at": "2026-10-07T23:45:03Z",
+                  "actor": "fixture-opinion-a",
+                  "action": "team_review",
+                  "revision": 3,
+                  "changes": {
+                    "decision": "approve",
+                    "review_status": "pending"
+                  }
+                }
+              ],
+              "annotation_hash": "9f05dfaf7a7713962f7f8d82aba7d2d5c09b787c8ef4e90cb905cbe219284442",
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [
+                  {
+                    "actor": "fixture-opinion-a",
+                    "decision": "approve",
+                    "reason": "Synthetic fixture opinion A",
+                    "at": "2026-10-07T23:45:03Z",
+                    "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                  }
+                ],
+                "review_status": "pending",
+                "annotation_actor": "fixture-labeler",
+                "history": [
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-opinion-a",
+                    "decision": "approve",
+                    "reason": "Synthetic fixture opinion A",
+                    "at": "2026-10-07T23:45:03Z",
+                    "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                  }
+                ]
+              }
+            }
+          },
+          "second": {
+            "image": {
+              "decode_error": null,
+              "image_uuid": "f6ae35ae-a38d-5ac6-954b-7a4d9aba7731",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/0-a1d71380-r0/review-refusal-source/part.png",
+              "relative_path": "part.png",
+              "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+              "content_version": 1,
+              "width": 256,
+              "height": 256,
+              "revision": 4,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "needs_review",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "f08bf3e5-13dd-4492-b39d-ee2ced0fad6b",
+                  "at": "2026-10-07T23:45:02Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                  }
+                },
+                {
+                  "id": "f44857e4-efb4-4497-97f0-89928fb09cc4",
+                  "at": "2026-10-07T23:45:02Z",
+                  "actor": "fixture-labeler",
+                  "action": "annotation_changed",
+                  "revision": 2,
+                  "changes": {
+                    "workflow_state": "needs_review"
+                  }
+                },
+                {
+                  "id": "954bb180-802f-4bc6-98ac-090a2b160189",
+                  "at": "2026-10-07T23:45:03Z",
+                  "actor": "fixture-opinion-a",
+                  "action": "team_review",
+                  "revision": 3,
+                  "changes": {
+                    "decision": "approve",
+                    "review_status": "pending"
+                  }
+                },
+                {
+                  "id": "bae84dac-74ec-4956-8a1b-7face8d6da25",
+                  "at": "2026-10-07T23:45:03Z",
+                  "actor": "fixture-opinion-b",
+                  "action": "team_review",
+                  "revision": 4,
+                  "changes": {
+                    "decision": "reject",
+                    "review_status": "disputed"
+                  }
+                }
+              ],
+              "annotation_hash": "9f05dfaf7a7713962f7f8d82aba7d2d5c09b787c8ef4e90cb905cbe219284442",
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [
+                  {
+                    "actor": "fixture-opinion-a",
+                    "decision": "approve",
+                    "reason": "Synthetic fixture opinion A",
+                    "at": "2026-10-07T23:45:03Z",
+                    "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                  },
+                  {
+                    "actor": "fixture-opinion-b",
+                    "decision": "reject",
+                    "reason": "Synthetic fixture opinion B",
+                    "at": "2026-10-07T23:45:03Z",
+                    "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                  }
+                ],
+                "review_status": "disputed",
+                "annotation_actor": "fixture-labeler",
+                "history": [
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-opinion-a",
+                    "decision": "approve",
+                    "reason": "Synthetic fixture opinion A",
+                    "at": "2026-10-07T23:45:03Z",
+                    "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                  },
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-opinion-b",
+                    "decision": "reject",
+                    "reason": "Synthetic fixture opinion B",
+                    "at": "2026-10-07T23:45:03Z",
+                    "binding_sha256": "3f9631e04de5a4095903d551d3d62e352a44bf28e2c3f654c3db044bb8471baf"
+                  }
+                ]
+              }
+            }
+          },
+          "count": 2,
+          "human_truth": false
+        },
+        "empty": {
+          "blank_actor_disabled": true,
+          "blank_rejection_reason_disabled": true,
+          "blank_adjudication_reason_disabled": true,
+          "no_ui_POST": true
+        },
+        "invalid": {
+          "actual_self_review_422": 2,
+          "actual_self_adjudication_422": 1,
+          "original_labels_and_current_votes_preserved": true
+        },
+        "error": {
+          "controlled_valid_POST_503": 3,
+          "original_POST_not_dispatched": true,
+          "original_labels_and_current_votes_preserved": true
+        },
+        "cancel": {
+          "explicit_close_unsent_adjudication": true,
+          "no_POST": true,
+          "dispatched_mutation_not_cancelled": true
+        },
+        "reopen": {
+          "actual_page_reload": true,
+          "exact_disputed_review_records_retained": true,
+          "no_adjudication": true
+        },
+        "responses": [
+          {
+            "action": "approve-vote",
+            "status": 422
+          },
+          {
+            "action": "reject-vote",
+            "status": 422
+          },
+          {
+            "action": "approve-vote",
+            "status": 503
+          },
+          {
+            "action": "reject-vote",
+            "status": 503
+          },
+          {
+            "action": "adjudicate",
+            "status": 422
+          },
+          {
+            "action": "adjudicate",
+            "status": 503
+          }
+        ],
+        "controlled_failures": [
+          {
+            "path": "/api/team-data/images/f6ae35ae-a38d-5ac6-954b-7a4d9aba7731/review",
+            "body": {
+              "expected_revision": 2,
+              "actor": "fixture-reviewer",
+              "decision": "approve",
+              "reason": "Synthetic valid opinion not submitted"
+            },
+            "status": 503
+          },
+          {
+            "path": "/api/team-data/images/f6ae35ae-a38d-5ac6-954b-7a4d9aba7731/review",
+            "body": {
+              "expected_revision": 2,
+              "actor": "fixture-reviewer",
+              "decision": "reject",
+              "reason": "Synthetic valid opinion not submitted"
+            },
+            "status": 503
+          },
+          {
+            "path": "/api/team-data/images/f6ae35ae-a38d-5ac6-954b-7a4d9aba7731/adjudicate",
+            "body": {
+              "expected_revision": 4,
+              "actor": "fixture-reviewer",
+              "decision": "approve",
+              "reason": "Synthetic valid adjudication not submitted"
+            },
+            "status": 503
+          }
+        ],
+        "ui_mutations": [
+          {
+            "method": "POST",
+            "path": "/api/team-data/images/f6ae35ae-a38d-5ac6-954b-7a4d9aba7731/review",
+            "body": {
+              "expected_revision": 2,
+              "actor": "fixture-labeler",
+              "decision": "approve",
+              "reason": "Synthetic self-review refusal"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/api/team-data/images/f6ae35ae-a38d-5ac6-954b-7a4d9aba7731/review",
+            "body": {
+              "expected_revision": 2,
+              "actor": "fixture-labeler",
+              "decision": "reject",
+              "reason": "Synthetic self-review refusal"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/api/team-data/images/f6ae35ae-a38d-5ac6-954b-7a4d9aba7731/review",
+            "body": {
+              "expected_revision": 2,
+              "actor": "fixture-reviewer",
+              "decision": "approve",
+              "reason": "Synthetic valid opinion not submitted"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/api/team-data/images/f6ae35ae-a38d-5ac6-954b-7a4d9aba7731/review",
+            "body": {
+              "expected_revision": 2,
+              "actor": "fixture-reviewer",
+              "decision": "reject",
+              "reason": "Synthetic valid opinion not submitted"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/api/team-data/images/f6ae35ae-a38d-5ac6-954b-7a4d9aba7731/adjudicate",
+            "body": {
+              "expected_revision": 4,
+              "actor": "fixture-labeler",
+              "decision": "approve",
+              "reason": "Synthetic self-adjudication refusal"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/api/team-data/images/f6ae35ae-a38d-5ac6-954b-7a4d9aba7731/adjudicate",
+            "body": {
+              "expected_revision": 4,
+              "actor": "fixture-reviewer",
+              "decision": "approve",
+              "reason": "Synthetic valid adjudication not submitted"
+            }
+          }
+        ],
+        "actual_source_ui": true,
+        "source_electron": false,
+        "synthetic_review_controls": true,
+        "quality_or_human_truth_approved": false,
+        "actual_model_inference": false,
+        "installed_target_verified": false,
+        "gpu_used": false
+      },
+      "owned_cleanup": {
+        "exited": true,
+        "exitCode": 0,
+        "signal": null,
+        "exitedBeforeStop": false,
+        "forced": false,
+        "forcedReason": null,
+        "groupAlive": false,
+        "escaped": [],
+        "unownedReferences": [],
+        "scanError": null,
+        "durationMs": 978,
+        "stoppedAt": "2026-10-07T23:45:05.700Z",
+        "healthy_at_end": true,
+        "port_closed": true,
+        "pid_alive": false
+      }
+    },
+    {
+      "kind": "team_review_refusal_controls",
+      "mode": "electron",
+      "receipt": "docs/verification/receipts/2026-10-08-team-review-e28d1d9-electron.json",
+      "receipt_sha256": "11d6333fab62bebe2f24b600ae5e2f564a53847581e5014799f9a0789bb58cd4",
+      "actual_controls": {
+        "record_id": "F024",
+        "actions": {
+          "approve-vote": [
+            "empty",
+            "invalid",
+            "error"
+          ],
+          "reject-vote": [
+            "empty",
+            "invalid",
+            "error"
+          ],
+          "adjudicate": [
+            "empty",
+            "invalid",
+            "error",
+            "cancel",
+            "reopen"
+          ]
+        },
+        "project_id": "3717d60e",
+        "image_uuid": "16b942ce-6f71-5a5c-8d87-b364291be785",
+        "image_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/1-d8fd904d-r0/review-refusal-source/part.png",
+        "source_sha256": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+        "baseline": {
+          "annotation": {
+            "image_id": "part",
+            "annotations": [
+              {
+                "id": "controlled-label",
+                "type": "bbox",
+                "label": "Scratch",
+                "category_id": 2,
+                "bbox": [
+                  2,
+                  3,
+                  20,
+                  21
+                ],
+                "rotated_bbox": null,
+                "polygon": null,
+                "points": null,
+                "mask_rle": null,
+                "is_normal": null,
+                "color": null,
+                "text": null,
+                "direction_deg": null
+              }
+            ],
+            "image_width": 256,
+            "image_height": 256,
+            "mask_file": null,
+            "metadata": {
+              "decode_error": null,
+              "image_uuid": "16b942ce-6f71-5a5c-8d87-b364291be785",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/1-d8fd904d-r0/review-refusal-source/part.png",
+              "relative_path": "part.png",
+              "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+              "content_version": 1,
+              "width": 256,
+              "height": 256,
+              "revision": 2,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "needs_review",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "404bd3f6-8b39-48a6-88af-6a513d3d87d4",
+                  "at": "2026-10-07T23:45:35Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                  }
+                },
+                {
+                  "id": "17ff898b-c921-4d3f-a5b4-16e1ac53ae67",
+                  "at": "2026-10-07T23:45:35Z",
+                  "actor": "fixture-labeler",
+                  "action": "annotation_changed",
+                  "revision": 2,
+                  "changes": {
+                    "workflow_state": "needs_review"
+                  }
+                }
+              ],
+              "annotation_hash": "9f05dfaf7a7713962f7f8d82aba7d2d5c09b787c8ef4e90cb905cbe219284442",
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [],
+                "review_status": "pending",
+                "annotation_actor": "fixture-labeler",
+                "history": []
+              }
+            }
+          },
+          "annotation_files": {
+            "json": {
+              "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/1-d8fd904d-r0/userData/projects/owned_review_refusal_controls/annotations/by_dataset/cc7588b2b454e3e3/part.json",
+              "sha256": "9f05dfaf7a7713962f7f8d82aba7d2d5c09b787c8ef4e90cb905cbe219284442"
+            },
+            "mask": null
+          },
+          "image": {
+            "image": {
+              "decode_error": null,
+              "image_uuid": "16b942ce-6f71-5a5c-8d87-b364291be785",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/1-d8fd904d-r0/review-refusal-source/part.png",
+              "relative_path": "part.png",
+              "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+              "content_version": 1,
+              "width": 256,
+              "height": 256,
+              "revision": 2,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "needs_review",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "404bd3f6-8b39-48a6-88af-6a513d3d87d4",
+                  "at": "2026-10-07T23:45:35Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                  }
+                },
+                {
+                  "id": "17ff898b-c921-4d3f-a5b4-16e1ac53ae67",
+                  "at": "2026-10-07T23:45:35Z",
+                  "actor": "fixture-labeler",
+                  "action": "annotation_changed",
+                  "revision": 2,
+                  "changes": {
+                    "workflow_state": "needs_review"
+                  }
+                }
+              ],
+              "annotation_hash": "9f05dfaf7a7713962f7f8d82aba7d2d5c09b787c8ef4e90cb905cbe219284442",
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [],
+                "review_status": "pending",
+                "annotation_actor": "fixture-labeler",
+                "history": []
+              }
+            }
+          },
+          "workspace": {
+            "scope": {
+              "project_id": "3717d60e",
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/1-d8fd904d-r0/review-refusal-source",
+              "labelset_id": "default"
+            },
+            "book": {
+              "id": "book_d1bb82f6048b4d4296273fc88d2329bc",
+              "version": 1,
+              "title": "Controlled original book",
+              "categories": [
+                {
+                  "id": 0,
+                  "name": "OK",
+                  "color": "#10b981",
+                  "definition": "",
+                  "inclusion": "",
+                  "exclusion": "",
+                  "annotation_guidance": "",
+                  "examples": []
+                },
+                {
+                  "id": 2,
+                  "name": "Scratch",
+                  "color": "#f59e0b",
+                  "definition": "",
+                  "inclusion": "",
+                  "exclusion": "",
+                  "annotation_guidance": "",
+                  "examples": []
+                }
+              ],
+              "actor": "fixture-owner",
+              "published_at": "2026-10-07T23:45:35Z",
+              "sha256": "e2c3b0a42378c106e5dea7017811a3565d90f3b3150e8d3bdc7e8bbcd15d0731"
+            },
+            "book_history": [
+              {
+                "id": "book_d1bb82f6048b4d4296273fc88d2329bc",
+                "version": 1,
+                "title": "Controlled original book",
+                "categories": [
+                  {
+                    "id": 0,
+                    "name": "OK",
+                    "color": "#10b981",
+                    "definition": "",
+                    "inclusion": "",
+                    "exclusion": "",
+                    "annotation_guidance": "",
+                    "examples": []
+                  },
+                  {
+                    "id": 2,
+                    "name": "Scratch",
+                    "color": "#f59e0b",
+                    "definition": "",
+                    "inclusion": "",
+                    "exclusion": "",
+                    "annotation_guidance": "",
+                    "examples": []
+                  }
+                ],
+                "actor": "fixture-owner",
+                "published_at": "2026-10-07T23:45:35Z",
+                "sha256": "e2c3b0a42378c106e5dea7017811a3565d90f3b3150e8d3bdc7e8bbcd15d0731"
+              }
+            ],
+            "settings": {
+              "revision": 2,
+              "editing_enabled": false,
+              "review_enabled": true,
+              "required_reviews": 2,
+              "prevent_self_review": true,
+              "approved_only_training": true
+            },
+            "members": [],
+            "actor": null
+          },
+          "queue": {
+            "items": [
+              {
+                "decode_error": null,
+                "image_uuid": "16b942ce-6f71-5a5c-8d87-b364291be785",
+                "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/1-d8fd904d-r0/review-refusal-source/part.png",
+                "relative_path": "part.png",
+                "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+                "content_version": 1,
+                "width": 256,
+                "height": 256,
+                "revision": 2,
+                "tags": [],
+                "product": "",
+                "lot": "",
+                "group": "",
+                "workflow_state": "needs_review",
+                "usage_state": "active",
+                "reviewer": null,
+                "review_history": [],
+                "audit": [
+                  {
+                    "id": "404bd3f6-8b39-48a6-88af-6a513d3d87d4",
+                    "at": "2026-10-07T23:45:35Z",
+                    "actor": "system",
+                    "action": "registered",
+                    "revision": 1,
+                    "changes": {
+                      "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                    }
+                  },
+                  {
+                    "id": "17ff898b-c921-4d3f-a5b4-16e1ac53ae67",
+                    "at": "2026-10-07T23:45:35Z",
+                    "actor": "fixture-labeler",
+                    "action": "annotation_changed",
+                    "revision": 2,
+                    "changes": {
+                      "workflow_state": "needs_review"
+                    }
+                  }
+                ],
+                "annotation_hash": "9f05dfaf7a7713962f7f8d82aba7d2d5c09b787c8ef4e90cb905cbe219284442",
+                "mask_hash": null,
+                "team": {
+                  "assignment": null,
+                  "edit_lease": null,
+                  "reviews": [],
+                  "review_status": "pending",
+                  "annotation_actor": "fixture-labeler",
+                  "history": []
+                }
+              }
+            ],
+            "total": 1,
+            "offset": 0,
+            "limit": 30
+          }
+        },
+        "disputed": {
+          "annotation": {
+            "image_id": "part",
+            "annotations": [
+              {
+                "id": "controlled-label",
+                "type": "bbox",
+                "label": "Scratch",
+                "category_id": 2,
+                "bbox": [
+                  2,
+                  3,
+                  20,
+                  21
+                ],
+                "rotated_bbox": null,
+                "polygon": null,
+                "points": null,
+                "mask_rle": null,
+                "is_normal": null,
+                "color": null,
+                "text": null,
+                "direction_deg": null
+              }
+            ],
+            "image_width": 256,
+            "image_height": 256,
+            "mask_file": null,
+            "metadata": {
+              "decode_error": null,
+              "image_uuid": "16b942ce-6f71-5a5c-8d87-b364291be785",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/1-d8fd904d-r0/review-refusal-source/part.png",
+              "relative_path": "part.png",
+              "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+              "content_version": 1,
+              "width": 256,
+              "height": 256,
+              "revision": 4,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "needs_review",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "404bd3f6-8b39-48a6-88af-6a513d3d87d4",
+                  "at": "2026-10-07T23:45:35Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                  }
+                },
+                {
+                  "id": "17ff898b-c921-4d3f-a5b4-16e1ac53ae67",
+                  "at": "2026-10-07T23:45:35Z",
+                  "actor": "fixture-labeler",
+                  "action": "annotation_changed",
+                  "revision": 2,
+                  "changes": {
+                    "workflow_state": "needs_review"
+                  }
+                },
+                {
+                  "id": "ba9d08c7-b8a7-41a1-9440-7c8d20407cb7",
+                  "at": "2026-10-07T23:45:36Z",
+                  "actor": "fixture-opinion-a",
+                  "action": "team_review",
+                  "revision": 3,
+                  "changes": {
+                    "decision": "approve",
+                    "review_status": "pending"
+                  }
+                },
+                {
+                  "id": "65869747-d535-4c99-b9bf-de5f0918b8ff",
+                  "at": "2026-10-07T23:45:36Z",
+                  "actor": "fixture-opinion-b",
+                  "action": "team_review",
+                  "revision": 4,
+                  "changes": {
+                    "decision": "reject",
+                    "review_status": "disputed"
+                  }
+                }
+              ],
+              "annotation_hash": "9f05dfaf7a7713962f7f8d82aba7d2d5c09b787c8ef4e90cb905cbe219284442",
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [
+                  {
+                    "actor": "fixture-opinion-a",
+                    "decision": "approve",
+                    "reason": "Synthetic fixture opinion A",
+                    "at": "2026-10-07T23:45:36Z",
+                    "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                  },
+                  {
+                    "actor": "fixture-opinion-b",
+                    "decision": "reject",
+                    "reason": "Synthetic fixture opinion B",
+                    "at": "2026-10-07T23:45:36Z",
+                    "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                  }
+                ],
+                "review_status": "disputed",
+                "annotation_actor": "fixture-labeler",
+                "history": [
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-opinion-a",
+                    "decision": "approve",
+                    "reason": "Synthetic fixture opinion A",
+                    "at": "2026-10-07T23:45:36Z",
+                    "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                  },
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-opinion-b",
+                    "decision": "reject",
+                    "reason": "Synthetic fixture opinion B",
+                    "at": "2026-10-07T23:45:36Z",
+                    "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                  }
+                ]
+              }
+            }
+          },
+          "annotation_files": {
+            "json": {
+              "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/1-d8fd904d-r0/userData/projects/owned_review_refusal_controls/annotations/by_dataset/cc7588b2b454e3e3/part.json",
+              "sha256": "9f05dfaf7a7713962f7f8d82aba7d2d5c09b787c8ef4e90cb905cbe219284442"
+            },
+            "mask": null
+          },
+          "image": {
+            "image": {
+              "decode_error": null,
+              "image_uuid": "16b942ce-6f71-5a5c-8d87-b364291be785",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/1-d8fd904d-r0/review-refusal-source/part.png",
+              "relative_path": "part.png",
+              "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+              "content_version": 1,
+              "width": 256,
+              "height": 256,
+              "revision": 4,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "needs_review",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "404bd3f6-8b39-48a6-88af-6a513d3d87d4",
+                  "at": "2026-10-07T23:45:35Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                  }
+                },
+                {
+                  "id": "17ff898b-c921-4d3f-a5b4-16e1ac53ae67",
+                  "at": "2026-10-07T23:45:35Z",
+                  "actor": "fixture-labeler",
+                  "action": "annotation_changed",
+                  "revision": 2,
+                  "changes": {
+                    "workflow_state": "needs_review"
+                  }
+                },
+                {
+                  "id": "ba9d08c7-b8a7-41a1-9440-7c8d20407cb7",
+                  "at": "2026-10-07T23:45:36Z",
+                  "actor": "fixture-opinion-a",
+                  "action": "team_review",
+                  "revision": 3,
+                  "changes": {
+                    "decision": "approve",
+                    "review_status": "pending"
+                  }
+                },
+                {
+                  "id": "65869747-d535-4c99-b9bf-de5f0918b8ff",
+                  "at": "2026-10-07T23:45:36Z",
+                  "actor": "fixture-opinion-b",
+                  "action": "team_review",
+                  "revision": 4,
+                  "changes": {
+                    "decision": "reject",
+                    "review_status": "disputed"
+                  }
+                }
+              ],
+              "annotation_hash": "9f05dfaf7a7713962f7f8d82aba7d2d5c09b787c8ef4e90cb905cbe219284442",
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [
+                  {
+                    "actor": "fixture-opinion-a",
+                    "decision": "approve",
+                    "reason": "Synthetic fixture opinion A",
+                    "at": "2026-10-07T23:45:36Z",
+                    "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                  },
+                  {
+                    "actor": "fixture-opinion-b",
+                    "decision": "reject",
+                    "reason": "Synthetic fixture opinion B",
+                    "at": "2026-10-07T23:45:36Z",
+                    "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                  }
+                ],
+                "review_status": "disputed",
+                "annotation_actor": "fixture-labeler",
+                "history": [
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-opinion-a",
+                    "decision": "approve",
+                    "reason": "Synthetic fixture opinion A",
+                    "at": "2026-10-07T23:45:36Z",
+                    "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                  },
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-opinion-b",
+                    "decision": "reject",
+                    "reason": "Synthetic fixture opinion B",
+                    "at": "2026-10-07T23:45:36Z",
+                    "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                  }
+                ]
+              }
+            }
+          },
+          "workspace": {
+            "scope": {
+              "project_id": "3717d60e",
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/1-d8fd904d-r0/review-refusal-source",
+              "labelset_id": "default"
+            },
+            "book": {
+              "id": "book_d1bb82f6048b4d4296273fc88d2329bc",
+              "version": 1,
+              "title": "Controlled original book",
+              "categories": [
+                {
+                  "id": 0,
+                  "name": "OK",
+                  "color": "#10b981",
+                  "definition": "",
+                  "inclusion": "",
+                  "exclusion": "",
+                  "annotation_guidance": "",
+                  "examples": []
+                },
+                {
+                  "id": 2,
+                  "name": "Scratch",
+                  "color": "#f59e0b",
+                  "definition": "",
+                  "inclusion": "",
+                  "exclusion": "",
+                  "annotation_guidance": "",
+                  "examples": []
+                }
+              ],
+              "actor": "fixture-owner",
+              "published_at": "2026-10-07T23:45:35Z",
+              "sha256": "e2c3b0a42378c106e5dea7017811a3565d90f3b3150e8d3bdc7e8bbcd15d0731"
+            },
+            "book_history": [
+              {
+                "id": "book_d1bb82f6048b4d4296273fc88d2329bc",
+                "version": 1,
+                "title": "Controlled original book",
+                "categories": [
+                  {
+                    "id": 0,
+                    "name": "OK",
+                    "color": "#10b981",
+                    "definition": "",
+                    "inclusion": "",
+                    "exclusion": "",
+                    "annotation_guidance": "",
+                    "examples": []
+                  },
+                  {
+                    "id": 2,
+                    "name": "Scratch",
+                    "color": "#f59e0b",
+                    "definition": "",
+                    "inclusion": "",
+                    "exclusion": "",
+                    "annotation_guidance": "",
+                    "examples": []
+                  }
+                ],
+                "actor": "fixture-owner",
+                "published_at": "2026-10-07T23:45:35Z",
+                "sha256": "e2c3b0a42378c106e5dea7017811a3565d90f3b3150e8d3bdc7e8bbcd15d0731"
+              }
+            ],
+            "settings": {
+              "revision": 2,
+              "editing_enabled": false,
+              "review_enabled": true,
+              "required_reviews": 2,
+              "prevent_self_review": true,
+              "approved_only_training": true
+            },
+            "members": [],
+            "actor": null
+          },
+          "queue": {
+            "items": [
+              {
+                "decode_error": null,
+                "image_uuid": "16b942ce-6f71-5a5c-8d87-b364291be785",
+                "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/1-d8fd904d-r0/review-refusal-source/part.png",
+                "relative_path": "part.png",
+                "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+                "content_version": 1,
+                "width": 256,
+                "height": 256,
+                "revision": 4,
+                "tags": [],
+                "product": "",
+                "lot": "",
+                "group": "",
+                "workflow_state": "needs_review",
+                "usage_state": "active",
+                "reviewer": null,
+                "review_history": [],
+                "audit": [
+                  {
+                    "id": "404bd3f6-8b39-48a6-88af-6a513d3d87d4",
+                    "at": "2026-10-07T23:45:35Z",
+                    "actor": "system",
+                    "action": "registered",
+                    "revision": 1,
+                    "changes": {
+                      "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                    }
+                  },
+                  {
+                    "id": "17ff898b-c921-4d3f-a5b4-16e1ac53ae67",
+                    "at": "2026-10-07T23:45:35Z",
+                    "actor": "fixture-labeler",
+                    "action": "annotation_changed",
+                    "revision": 2,
+                    "changes": {
+                      "workflow_state": "needs_review"
+                    }
+                  },
+                  {
+                    "id": "ba9d08c7-b8a7-41a1-9440-7c8d20407cb7",
+                    "at": "2026-10-07T23:45:36Z",
+                    "actor": "fixture-opinion-a",
+                    "action": "team_review",
+                    "revision": 3,
+                    "changes": {
+                      "decision": "approve",
+                      "review_status": "pending"
+                    }
+                  },
+                  {
+                    "id": "65869747-d535-4c99-b9bf-de5f0918b8ff",
+                    "at": "2026-10-07T23:45:36Z",
+                    "actor": "fixture-opinion-b",
+                    "action": "team_review",
+                    "revision": 4,
+                    "changes": {
+                      "decision": "reject",
+                      "review_status": "disputed"
+                    }
+                  }
+                ],
+                "annotation_hash": "9f05dfaf7a7713962f7f8d82aba7d2d5c09b787c8ef4e90cb905cbe219284442",
+                "mask_hash": null,
+                "team": {
+                  "assignment": null,
+                  "edit_lease": null,
+                  "reviews": [
+                    {
+                      "actor": "fixture-opinion-a",
+                      "decision": "approve",
+                      "reason": "Synthetic fixture opinion A",
+                      "at": "2026-10-07T23:45:36Z",
+                      "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                    },
+                    {
+                      "actor": "fixture-opinion-b",
+                      "decision": "reject",
+                      "reason": "Synthetic fixture opinion B",
+                      "at": "2026-10-07T23:45:36Z",
+                      "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                    }
+                  ],
+                  "review_status": "disputed",
+                  "annotation_actor": "fixture-labeler",
+                  "history": [
+                    {
+                      "action": "reviewed",
+                      "actor": "fixture-opinion-a",
+                      "decision": "approve",
+                      "reason": "Synthetic fixture opinion A",
+                      "at": "2026-10-07T23:45:36Z",
+                      "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                    },
+                    {
+                      "action": "reviewed",
+                      "actor": "fixture-opinion-b",
+                      "decision": "reject",
+                      "reason": "Synthetic fixture opinion B",
+                      "at": "2026-10-07T23:45:36Z",
+                      "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                    }
+                  ]
+                }
+              }
+            ],
+            "total": 1,
+            "offset": 0,
+            "limit": 30
+          }
+        },
+        "reopened": {
+          "annotation": {
+            "image_id": "part",
+            "annotations": [
+              {
+                "id": "controlled-label",
+                "type": "bbox",
+                "label": "Scratch",
+                "category_id": 2,
+                "bbox": [
+                  2,
+                  3,
+                  20,
+                  21
+                ],
+                "rotated_bbox": null,
+                "polygon": null,
+                "points": null,
+                "mask_rle": null,
+                "is_normal": null,
+                "color": null,
+                "text": null,
+                "direction_deg": null
+              }
+            ],
+            "image_width": 256,
+            "image_height": 256,
+            "mask_file": null,
+            "metadata": {
+              "decode_error": null,
+              "image_uuid": "16b942ce-6f71-5a5c-8d87-b364291be785",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/1-d8fd904d-r0/review-refusal-source/part.png",
+              "relative_path": "part.png",
+              "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+              "content_version": 1,
+              "width": 256,
+              "height": 256,
+              "revision": 4,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "needs_review",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "404bd3f6-8b39-48a6-88af-6a513d3d87d4",
+                  "at": "2026-10-07T23:45:35Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                  }
+                },
+                {
+                  "id": "17ff898b-c921-4d3f-a5b4-16e1ac53ae67",
+                  "at": "2026-10-07T23:45:35Z",
+                  "actor": "fixture-labeler",
+                  "action": "annotation_changed",
+                  "revision": 2,
+                  "changes": {
+                    "workflow_state": "needs_review"
+                  }
+                },
+                {
+                  "id": "ba9d08c7-b8a7-41a1-9440-7c8d20407cb7",
+                  "at": "2026-10-07T23:45:36Z",
+                  "actor": "fixture-opinion-a",
+                  "action": "team_review",
+                  "revision": 3,
+                  "changes": {
+                    "decision": "approve",
+                    "review_status": "pending"
+                  }
+                },
+                {
+                  "id": "65869747-d535-4c99-b9bf-de5f0918b8ff",
+                  "at": "2026-10-07T23:45:36Z",
+                  "actor": "fixture-opinion-b",
+                  "action": "team_review",
+                  "revision": 4,
+                  "changes": {
+                    "decision": "reject",
+                    "review_status": "disputed"
+                  }
+                }
+              ],
+              "annotation_hash": "9f05dfaf7a7713962f7f8d82aba7d2d5c09b787c8ef4e90cb905cbe219284442",
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [
+                  {
+                    "actor": "fixture-opinion-a",
+                    "decision": "approve",
+                    "reason": "Synthetic fixture opinion A",
+                    "at": "2026-10-07T23:45:36Z",
+                    "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                  },
+                  {
+                    "actor": "fixture-opinion-b",
+                    "decision": "reject",
+                    "reason": "Synthetic fixture opinion B",
+                    "at": "2026-10-07T23:45:36Z",
+                    "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                  }
+                ],
+                "review_status": "disputed",
+                "annotation_actor": "fixture-labeler",
+                "history": [
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-opinion-a",
+                    "decision": "approve",
+                    "reason": "Synthetic fixture opinion A",
+                    "at": "2026-10-07T23:45:36Z",
+                    "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                  },
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-opinion-b",
+                    "decision": "reject",
+                    "reason": "Synthetic fixture opinion B",
+                    "at": "2026-10-07T23:45:36Z",
+                    "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                  }
+                ]
+              }
+            }
+          },
+          "annotation_files": {
+            "json": {
+              "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/1-d8fd904d-r0/userData/projects/owned_review_refusal_controls/annotations/by_dataset/cc7588b2b454e3e3/part.json",
+              "sha256": "9f05dfaf7a7713962f7f8d82aba7d2d5c09b787c8ef4e90cb905cbe219284442"
+            },
+            "mask": null
+          },
+          "image": {
+            "image": {
+              "decode_error": null,
+              "image_uuid": "16b942ce-6f71-5a5c-8d87-b364291be785",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/1-d8fd904d-r0/review-refusal-source/part.png",
+              "relative_path": "part.png",
+              "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+              "content_version": 1,
+              "width": 256,
+              "height": 256,
+              "revision": 4,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "needs_review",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "404bd3f6-8b39-48a6-88af-6a513d3d87d4",
+                  "at": "2026-10-07T23:45:35Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                  }
+                },
+                {
+                  "id": "17ff898b-c921-4d3f-a5b4-16e1ac53ae67",
+                  "at": "2026-10-07T23:45:35Z",
+                  "actor": "fixture-labeler",
+                  "action": "annotation_changed",
+                  "revision": 2,
+                  "changes": {
+                    "workflow_state": "needs_review"
+                  }
+                },
+                {
+                  "id": "ba9d08c7-b8a7-41a1-9440-7c8d20407cb7",
+                  "at": "2026-10-07T23:45:36Z",
+                  "actor": "fixture-opinion-a",
+                  "action": "team_review",
+                  "revision": 3,
+                  "changes": {
+                    "decision": "approve",
+                    "review_status": "pending"
+                  }
+                },
+                {
+                  "id": "65869747-d535-4c99-b9bf-de5f0918b8ff",
+                  "at": "2026-10-07T23:45:36Z",
+                  "actor": "fixture-opinion-b",
+                  "action": "team_review",
+                  "revision": 4,
+                  "changes": {
+                    "decision": "reject",
+                    "review_status": "disputed"
+                  }
+                }
+              ],
+              "annotation_hash": "9f05dfaf7a7713962f7f8d82aba7d2d5c09b787c8ef4e90cb905cbe219284442",
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [
+                  {
+                    "actor": "fixture-opinion-a",
+                    "decision": "approve",
+                    "reason": "Synthetic fixture opinion A",
+                    "at": "2026-10-07T23:45:36Z",
+                    "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                  },
+                  {
+                    "actor": "fixture-opinion-b",
+                    "decision": "reject",
+                    "reason": "Synthetic fixture opinion B",
+                    "at": "2026-10-07T23:45:36Z",
+                    "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                  }
+                ],
+                "review_status": "disputed",
+                "annotation_actor": "fixture-labeler",
+                "history": [
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-opinion-a",
+                    "decision": "approve",
+                    "reason": "Synthetic fixture opinion A",
+                    "at": "2026-10-07T23:45:36Z",
+                    "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                  },
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-opinion-b",
+                    "decision": "reject",
+                    "reason": "Synthetic fixture opinion B",
+                    "at": "2026-10-07T23:45:36Z",
+                    "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                  }
+                ]
+              }
+            }
+          },
+          "workspace": {
+            "scope": {
+              "project_id": "3717d60e",
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/1-d8fd904d-r0/review-refusal-source",
+              "labelset_id": "default"
+            },
+            "book": {
+              "id": "book_d1bb82f6048b4d4296273fc88d2329bc",
+              "version": 1,
+              "title": "Controlled original book",
+              "categories": [
+                {
+                  "id": 0,
+                  "name": "OK",
+                  "color": "#10b981",
+                  "definition": "",
+                  "inclusion": "",
+                  "exclusion": "",
+                  "annotation_guidance": "",
+                  "examples": []
+                },
+                {
+                  "id": 2,
+                  "name": "Scratch",
+                  "color": "#f59e0b",
+                  "definition": "",
+                  "inclusion": "",
+                  "exclusion": "",
+                  "annotation_guidance": "",
+                  "examples": []
+                }
+              ],
+              "actor": "fixture-owner",
+              "published_at": "2026-10-07T23:45:35Z",
+              "sha256": "e2c3b0a42378c106e5dea7017811a3565d90f3b3150e8d3bdc7e8bbcd15d0731"
+            },
+            "book_history": [
+              {
+                "id": "book_d1bb82f6048b4d4296273fc88d2329bc",
+                "version": 1,
+                "title": "Controlled original book",
+                "categories": [
+                  {
+                    "id": 0,
+                    "name": "OK",
+                    "color": "#10b981",
+                    "definition": "",
+                    "inclusion": "",
+                    "exclusion": "",
+                    "annotation_guidance": "",
+                    "examples": []
+                  },
+                  {
+                    "id": 2,
+                    "name": "Scratch",
+                    "color": "#f59e0b",
+                    "definition": "",
+                    "inclusion": "",
+                    "exclusion": "",
+                    "annotation_guidance": "",
+                    "examples": []
+                  }
+                ],
+                "actor": "fixture-owner",
+                "published_at": "2026-10-07T23:45:35Z",
+                "sha256": "e2c3b0a42378c106e5dea7017811a3565d90f3b3150e8d3bdc7e8bbcd15d0731"
+              }
+            ],
+            "settings": {
+              "revision": 2,
+              "editing_enabled": false,
+              "review_enabled": true,
+              "required_reviews": 2,
+              "prevent_self_review": true,
+              "approved_only_training": true
+            },
+            "members": [],
+            "actor": null
+          },
+          "queue": {
+            "items": [
+              {
+                "decode_error": null,
+                "image_uuid": "16b942ce-6f71-5a5c-8d87-b364291be785",
+                "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/1-d8fd904d-r0/review-refusal-source/part.png",
+                "relative_path": "part.png",
+                "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+                "content_version": 1,
+                "width": 256,
+                "height": 256,
+                "revision": 4,
+                "tags": [],
+                "product": "",
+                "lot": "",
+                "group": "",
+                "workflow_state": "needs_review",
+                "usage_state": "active",
+                "reviewer": null,
+                "review_history": [],
+                "audit": [
+                  {
+                    "id": "404bd3f6-8b39-48a6-88af-6a513d3d87d4",
+                    "at": "2026-10-07T23:45:35Z",
+                    "actor": "system",
+                    "action": "registered",
+                    "revision": 1,
+                    "changes": {
+                      "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                    }
+                  },
+                  {
+                    "id": "17ff898b-c921-4d3f-a5b4-16e1ac53ae67",
+                    "at": "2026-10-07T23:45:35Z",
+                    "actor": "fixture-labeler",
+                    "action": "annotation_changed",
+                    "revision": 2,
+                    "changes": {
+                      "workflow_state": "needs_review"
+                    }
+                  },
+                  {
+                    "id": "ba9d08c7-b8a7-41a1-9440-7c8d20407cb7",
+                    "at": "2026-10-07T23:45:36Z",
+                    "actor": "fixture-opinion-a",
+                    "action": "team_review",
+                    "revision": 3,
+                    "changes": {
+                      "decision": "approve",
+                      "review_status": "pending"
+                    }
+                  },
+                  {
+                    "id": "65869747-d535-4c99-b9bf-de5f0918b8ff",
+                    "at": "2026-10-07T23:45:36Z",
+                    "actor": "fixture-opinion-b",
+                    "action": "team_review",
+                    "revision": 4,
+                    "changes": {
+                      "decision": "reject",
+                      "review_status": "disputed"
+                    }
+                  }
+                ],
+                "annotation_hash": "9f05dfaf7a7713962f7f8d82aba7d2d5c09b787c8ef4e90cb905cbe219284442",
+                "mask_hash": null,
+                "team": {
+                  "assignment": null,
+                  "edit_lease": null,
+                  "reviews": [
+                    {
+                      "actor": "fixture-opinion-a",
+                      "decision": "approve",
+                      "reason": "Synthetic fixture opinion A",
+                      "at": "2026-10-07T23:45:36Z",
+                      "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                    },
+                    {
+                      "actor": "fixture-opinion-b",
+                      "decision": "reject",
+                      "reason": "Synthetic fixture opinion B",
+                      "at": "2026-10-07T23:45:36Z",
+                      "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                    }
+                  ],
+                  "review_status": "disputed",
+                  "annotation_actor": "fixture-labeler",
+                  "history": [
+                    {
+                      "action": "reviewed",
+                      "actor": "fixture-opinion-a",
+                      "decision": "approve",
+                      "reason": "Synthetic fixture opinion A",
+                      "at": "2026-10-07T23:45:36Z",
+                      "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                    },
+                    {
+                      "action": "reviewed",
+                      "actor": "fixture-opinion-b",
+                      "decision": "reject",
+                      "reason": "Synthetic fixture opinion B",
+                      "at": "2026-10-07T23:45:36Z",
+                      "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                    }
+                  ]
+                }
+              }
+            ],
+            "total": 1,
+            "offset": 0,
+            "limit": 30
+          }
+        },
+        "explicit_fixture_vote_setup": {
+          "first": {
+            "image": {
+              "decode_error": null,
+              "image_uuid": "16b942ce-6f71-5a5c-8d87-b364291be785",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/1-d8fd904d-r0/review-refusal-source/part.png",
+              "relative_path": "part.png",
+              "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+              "content_version": 1,
+              "width": 256,
+              "height": 256,
+              "revision": 3,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "needs_review",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "404bd3f6-8b39-48a6-88af-6a513d3d87d4",
+                  "at": "2026-10-07T23:45:35Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                  }
+                },
+                {
+                  "id": "17ff898b-c921-4d3f-a5b4-16e1ac53ae67",
+                  "at": "2026-10-07T23:45:35Z",
+                  "actor": "fixture-labeler",
+                  "action": "annotation_changed",
+                  "revision": 2,
+                  "changes": {
+                    "workflow_state": "needs_review"
+                  }
+                },
+                {
+                  "id": "ba9d08c7-b8a7-41a1-9440-7c8d20407cb7",
+                  "at": "2026-10-07T23:45:36Z",
+                  "actor": "fixture-opinion-a",
+                  "action": "team_review",
+                  "revision": 3,
+                  "changes": {
+                    "decision": "approve",
+                    "review_status": "pending"
+                  }
+                }
+              ],
+              "annotation_hash": "9f05dfaf7a7713962f7f8d82aba7d2d5c09b787c8ef4e90cb905cbe219284442",
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [
+                  {
+                    "actor": "fixture-opinion-a",
+                    "decision": "approve",
+                    "reason": "Synthetic fixture opinion A",
+                    "at": "2026-10-07T23:45:36Z",
+                    "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                  }
+                ],
+                "review_status": "pending",
+                "annotation_actor": "fixture-labeler",
+                "history": [
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-opinion-a",
+                    "decision": "approve",
+                    "reason": "Synthetic fixture opinion A",
+                    "at": "2026-10-07T23:45:36Z",
+                    "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                  }
+                ]
+              }
+            }
+          },
+          "second": {
+            "image": {
+              "decode_error": null,
+              "image_uuid": "16b942ce-6f71-5a5c-8d87-b364291be785",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/review-debugger-root-adapter/clean-source-01/ws/1-d8fd904d-r0/review-refusal-source/part.png",
+              "relative_path": "part.png",
+              "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+              "content_version": 1,
+              "width": 256,
+              "height": 256,
+              "revision": 4,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "needs_review",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "404bd3f6-8b39-48a6-88af-6a513d3d87d4",
+                  "at": "2026-10-07T23:45:35Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                  }
+                },
+                {
+                  "id": "17ff898b-c921-4d3f-a5b4-16e1ac53ae67",
+                  "at": "2026-10-07T23:45:35Z",
+                  "actor": "fixture-labeler",
+                  "action": "annotation_changed",
+                  "revision": 2,
+                  "changes": {
+                    "workflow_state": "needs_review"
+                  }
+                },
+                {
+                  "id": "ba9d08c7-b8a7-41a1-9440-7c8d20407cb7",
+                  "at": "2026-10-07T23:45:36Z",
+                  "actor": "fixture-opinion-a",
+                  "action": "team_review",
+                  "revision": 3,
+                  "changes": {
+                    "decision": "approve",
+                    "review_status": "pending"
+                  }
+                },
+                {
+                  "id": "65869747-d535-4c99-b9bf-de5f0918b8ff",
+                  "at": "2026-10-07T23:45:36Z",
+                  "actor": "fixture-opinion-b",
+                  "action": "team_review",
+                  "revision": 4,
+                  "changes": {
+                    "decision": "reject",
+                    "review_status": "disputed"
+                  }
+                }
+              ],
+              "annotation_hash": "9f05dfaf7a7713962f7f8d82aba7d2d5c09b787c8ef4e90cb905cbe219284442",
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [
+                  {
+                    "actor": "fixture-opinion-a",
+                    "decision": "approve",
+                    "reason": "Synthetic fixture opinion A",
+                    "at": "2026-10-07T23:45:36Z",
+                    "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                  },
+                  {
+                    "actor": "fixture-opinion-b",
+                    "decision": "reject",
+                    "reason": "Synthetic fixture opinion B",
+                    "at": "2026-10-07T23:45:36Z",
+                    "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                  }
+                ],
+                "review_status": "disputed",
+                "annotation_actor": "fixture-labeler",
+                "history": [
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-opinion-a",
+                    "decision": "approve",
+                    "reason": "Synthetic fixture opinion A",
+                    "at": "2026-10-07T23:45:36Z",
+                    "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                  },
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-opinion-b",
+                    "decision": "reject",
+                    "reason": "Synthetic fixture opinion B",
+                    "at": "2026-10-07T23:45:36Z",
+                    "binding_sha256": "113772246de531857f49fc1b72ed5e6b984b7212301b2d207b6ac7b7f80adbb5"
+                  }
+                ]
+              }
+            }
+          },
+          "count": 2,
+          "human_truth": false
+        },
+        "empty": {
+          "blank_actor_disabled": true,
+          "blank_rejection_reason_disabled": true,
+          "blank_adjudication_reason_disabled": true,
+          "no_ui_POST": true
+        },
+        "invalid": {
+          "actual_self_review_422": 2,
+          "actual_self_adjudication_422": 1,
+          "original_labels_and_current_votes_preserved": true
+        },
+        "error": {
+          "controlled_valid_POST_503": 3,
+          "original_POST_not_dispatched": true,
+          "original_labels_and_current_votes_preserved": true
+        },
+        "cancel": {
+          "explicit_close_unsent_adjudication": true,
+          "no_POST": true,
+          "dispatched_mutation_not_cancelled": true
+        },
+        "reopen": {
+          "actual_page_reload": true,
+          "exact_disputed_review_records_retained": true,
+          "no_adjudication": true
+        },
+        "responses": [
+          {
+            "action": "approve-vote",
+            "status": 422
+          },
+          {
+            "action": "reject-vote",
+            "status": 422
+          },
+          {
+            "action": "approve-vote",
+            "status": 503
+          },
+          {
+            "action": "reject-vote",
+            "status": 503
+          },
+          {
+            "action": "adjudicate",
+            "status": 422
+          },
+          {
+            "action": "adjudicate",
+            "status": 503
+          }
+        ],
+        "controlled_failures": [
+          {
+            "path": "/api/team-data/images/16b942ce-6f71-5a5c-8d87-b364291be785/review",
+            "body": {
+              "expected_revision": 2,
+              "actor": "fixture-reviewer",
+              "decision": "approve",
+              "reason": "Synthetic valid opinion not submitted"
+            },
+            "status": 503
+          },
+          {
+            "path": "/api/team-data/images/16b942ce-6f71-5a5c-8d87-b364291be785/review",
+            "body": {
+              "expected_revision": 2,
+              "actor": "fixture-reviewer",
+              "decision": "reject",
+              "reason": "Synthetic valid opinion not submitted"
+            },
+            "status": 503
+          },
+          {
+            "path": "/api/team-data/images/16b942ce-6f71-5a5c-8d87-b364291be785/adjudicate",
+            "body": {
+              "expected_revision": 4,
+              "actor": "fixture-reviewer",
+              "decision": "approve",
+              "reason": "Synthetic valid adjudication not submitted"
+            },
+            "status": 503
+          }
+        ],
+        "ui_mutations": [
+          {
+            "method": "POST",
+            "path": "/api/team-data/images/16b942ce-6f71-5a5c-8d87-b364291be785/review",
+            "body": {
+              "expected_revision": 2,
+              "actor": "fixture-labeler",
+              "decision": "approve",
+              "reason": "Synthetic self-review refusal"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/api/team-data/images/16b942ce-6f71-5a5c-8d87-b364291be785/review",
+            "body": {
+              "expected_revision": 2,
+              "actor": "fixture-labeler",
+              "decision": "reject",
+              "reason": "Synthetic self-review refusal"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/api/team-data/images/16b942ce-6f71-5a5c-8d87-b364291be785/review",
+            "body": {
+              "expected_revision": 2,
+              "actor": "fixture-reviewer",
+              "decision": "approve",
+              "reason": "Synthetic valid opinion not submitted"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/api/team-data/images/16b942ce-6f71-5a5c-8d87-b364291be785/review",
+            "body": {
+              "expected_revision": 2,
+              "actor": "fixture-reviewer",
+              "decision": "reject",
+              "reason": "Synthetic valid opinion not submitted"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/api/team-data/images/16b942ce-6f71-5a5c-8d87-b364291be785/adjudicate",
+            "body": {
+              "expected_revision": 4,
+              "actor": "fixture-labeler",
+              "decision": "approve",
+              "reason": "Synthetic self-adjudication refusal"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/api/team-data/images/16b942ce-6f71-5a5c-8d87-b364291be785/adjudicate",
+            "body": {
+              "expected_revision": 4,
+              "actor": "fixture-reviewer",
+              "decision": "approve",
+              "reason": "Synthetic valid adjudication not submitted"
+            }
+          }
+        ],
+        "actual_source_ui": true,
+        "source_electron": true,
+        "synthetic_review_controls": true,
+        "quality_or_human_truth_approved": false,
+        "actual_model_inference": false,
+        "installed_target_verified": false,
+        "gpu_used": false
+      },
+      "owned_cleanup": {
+        "electron_alive": false,
+        "backends": [
+          {
+            "port": 62493,
+            "pid": 63385,
+            "port_closed": true,
+            "pid_alive": false
+          }
+        ],
+        "logged_backend_pids": [
+          63385
+        ],
+        "logged_backend_pids_alive": [],
+        "backend_restarted": false,
+        "escaped": [],
+        "unowned_references": [],
+        "scan_error": null,
+        "close_timed_out": false
+      }
+    }
+  ],
+  "proof_hashes": {
+    "command.json": "14f109d2040dc293b77d26a448264d75a133b19fa9c96125dadd3a2a20459960",
+    "result.log": "0a671aafecf08054c22960b93abbbe115c216272bc2380f6394512dffb9ed97c",
+    "source-before.json": "b26eb07503fda7b086618e9a5c850503a57bf32470b772056ccdd1358209fa9e",
+    "source-after.json": "b26eb07503fda7b086618e9a5c850503a57bf32470b772056ccdd1358209fa9e"
+  },
+  "report_sha256": "80596688177483d1653c395870a30bec9c8f4d1a03e517a0b075f0d3c577beb3",
+  "global_teardown_sha256": "4020827a660c61394553d39b7da3248ab54064972c28b87d75434d007b74787a",
+  "independent_reviews_sha256": {
+    "team": "4f0f38cc5b08ddfce9310df0d25cacb6a432e84c906648014e02f686b5e15064",
+    "debugger": "ee8dee7a7bf47f080876722c52415a45d4526868a2569b03615e8c5603f3284e"
+  },
+  "acceptance": {
+    "new_curated_scenarios": 11,
+    "U006_supplemental_controls": 5,
+    "curated_actions_added": 0,
+    "quality": false,
+    "actual_debugger_model_math": false,
+    "installed_target": false,
+    "publisher_or_release": false,
+    "whole_tree": false,
+    "whole_feature": false
+  },
+  "scope": [
+    "Two explicit actual fixture review votes are setup and separate from six failed UI mutations; no human truth.",
+    "503 responses are controlled before original dispatch; self422 is actual backend refusal.",
+    "Debugger execution response contains synthetic30 artifact fixtures; source UI controls/graph/backend persistence are actual.",
+    "Reopen of debugger intentionally does not revive stale synthetic execution; graph/source bytes unchanged."
+  ]
+}

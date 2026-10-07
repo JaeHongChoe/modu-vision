@@ -3895,13 +3895,223 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+         "kind": "click",
+         "action": "팀 검수 거절과 기록 보존",
+         "reviewer": "Root independent exact source/raw proof review and clean browser/source Electron execution; whole feature quality installed publisher and target acceptance pending",
+         "test": "scripts/e2e/team-review-refusal-controls.spec.ts::review and adjudication input self-review and transport refusals preserve exact records across reopen",
+         "receipt": "2026-10-08-team-review-e28d1d9-browser.json",
+         "receipt_sha256": "d14243b142a7d7ef74f29a21dd77d991ff0223f880fa6fbea216195d91eb7d08",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8ef6fbbf735876dcc2cbc2930bf31977e0944b0139c22940ecbed4da9bc0bd64"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "08d6feba17270c36c3fa8155d095f05692c34ac58ffb7fc3bf6ae1afcd703360"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6dda791bbffdcb6dac1a0b2854e277fb0661e1cf0c2ede99833478cfea6945d7"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "3b3fa2cf0159a6b8019cb39733006b9ab2de5fe0419e1f6dacef0d2ec067f4cd"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "b515bf2545079fa3b6d78d8086c2d40e8315d08cb9dcd6afbf0fdbdf9ec8bb97"
+          }
+         ],
+         "expected": "Blank actor disables approve without POST and preserves exact API records/raw annotation JSON/source bytes.",
+         "observed": "Blank actor disables approve without POST and preserves exact API records/raw annotation JSON/source bytes."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+         "kind": "click",
+         "action": "팀 검수 거절과 기록 보존",
+         "reviewer": "Root independent exact source/raw proof review and clean browser/source Electron execution; whole feature quality installed publisher and target acceptance pending",
+         "test": "scripts/e2e/team-review-refusal-controls.spec.ts::native review and adjudication refusals preserve labels and original disputed records",
+         "receipt": "2026-10-08-team-review-e28d1d9-electron.json",
+         "receipt_sha256": "11d6333fab62bebe2f24b600ae5e2f564a53847581e5014799f9a0789bb58cd4",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "baf09f2b23eaf71c40a444846e1ce1bf4da0efbd4e3b1781ea77667fb87c3426"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "92c2bc2ab7e539650d0f2b8e22d1b438a26f2f6f15091e40bb95dc77c3e8e62c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "92419e788045b7aae230c776ad3a8806594c0d1de659318de96bdd28a7480458"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "01297a850e61d00ae0e2aa31b1b96cf08f433a922e8e512f6922683dd2830767"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "47367567e59a7200d09a95c6c273d23d098d409a76d89b472027f0715ed30287"
+          }
+         ],
+         "expected": "Blank actor disables approve without POST and preserves exact API records/raw annotation JSON/source bytes.",
+         "observed": "Blank actor disables approve without POST and preserves exact API records/raw annotation JSON/source bytes."
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+         "kind": "click",
+         "action": "팀 검수 거절과 기록 보존",
+         "reviewer": "Root independent exact source/raw proof review and clean browser/source Electron execution; whole feature quality installed publisher and target acceptance pending",
+         "test": "scripts/e2e/team-review-refusal-controls.spec.ts::review and adjudication input self-review and transport refusals preserve exact records across reopen",
+         "receipt": "2026-10-08-team-review-e28d1d9-browser.json",
+         "receipt_sha256": "d14243b142a7d7ef74f29a21dd77d991ff0223f880fa6fbea216195d91eb7d08",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8ef6fbbf735876dcc2cbc2930bf31977e0944b0139c22940ecbed4da9bc0bd64"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "08d6feba17270c36c3fa8155d095f05692c34ac58ffb7fc3bf6ae1afcd703360"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6dda791bbffdcb6dac1a0b2854e277fb0661e1cf0c2ede99833478cfea6945d7"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "3b3fa2cf0159a6b8019cb39733006b9ab2de5fe0419e1f6dacef0d2ec067f4cd"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "b515bf2545079fa3b6d78d8086c2d40e8315d08cb9dcd6afbf0fdbdf9ec8bb97"
+          }
+         ],
+         "expected": "Actual self-review422 refuses fixture labeler without adding vote or changing exact records/raw JSON.",
+         "observed": "Actual self-review422 refuses fixture labeler without adding vote or changing exact records/raw JSON."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+         "kind": "click",
+         "action": "팀 검수 거절과 기록 보존",
+         "reviewer": "Root independent exact source/raw proof review and clean browser/source Electron execution; whole feature quality installed publisher and target acceptance pending",
+         "test": "scripts/e2e/team-review-refusal-controls.spec.ts::native review and adjudication refusals preserve labels and original disputed records",
+         "receipt": "2026-10-08-team-review-e28d1d9-electron.json",
+         "receipt_sha256": "11d6333fab62bebe2f24b600ae5e2f564a53847581e5014799f9a0789bb58cd4",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "baf09f2b23eaf71c40a444846e1ce1bf4da0efbd4e3b1781ea77667fb87c3426"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "92c2bc2ab7e539650d0f2b8e22d1b438a26f2f6f15091e40bb95dc77c3e8e62c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "92419e788045b7aae230c776ad3a8806594c0d1de659318de96bdd28a7480458"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "01297a850e61d00ae0e2aa31b1b96cf08f433a922e8e512f6922683dd2830767"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "47367567e59a7200d09a95c6c273d23d098d409a76d89b472027f0715ed30287"
+          }
+         ],
+         "expected": "Actual self-review422 refuses fixture labeler without adding vote or changing exact records/raw JSON.",
+         "observed": "Actual self-review422 refuses fixture labeler without adding vote or changing exact records/raw JSON."
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+         "kind": "click",
+         "action": "팀 검수 거절과 기록 보존",
+         "reviewer": "Root independent exact source/raw proof review and clean browser/source Electron execution; whole feature quality installed publisher and target acceptance pending",
+         "test": "scripts/e2e/team-review-refusal-controls.spec.ts::review and adjudication input self-review and transport refusals preserve exact records across reopen",
+         "receipt": "2026-10-08-team-review-e28d1d9-browser.json",
+         "receipt_sha256": "d14243b142a7d7ef74f29a21dd77d991ff0223f880fa6fbea216195d91eb7d08",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8ef6fbbf735876dcc2cbc2930bf31977e0944b0139c22940ecbed4da9bc0bd64"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "08d6feba17270c36c3fa8155d095f05692c34ac58ffb7fc3bf6ae1afcd703360"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6dda791bbffdcb6dac1a0b2854e277fb0661e1cf0c2ede99833478cfea6945d7"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "3b3fa2cf0159a6b8019cb39733006b9ab2de5fe0419e1f6dacef0d2ec067f4cd"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "b515bf2545079fa3b6d78d8086c2d40e8315d08cb9dcd6afbf0fdbdf9ec8bb97"
+          }
+         ],
+         "expected": "Valid other-reviewer exact POST receives controlled503 before original dispatch; original labels and vote state unchanged.",
+         "observed": "Valid other-reviewer exact POST receives controlled503 before original dispatch; original labels and vote state unchanged."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+         "kind": "click",
+         "action": "팀 검수 거절과 기록 보존",
+         "reviewer": "Root independent exact source/raw proof review and clean browser/source Electron execution; whole feature quality installed publisher and target acceptance pending",
+         "test": "scripts/e2e/team-review-refusal-controls.spec.ts::native review and adjudication refusals preserve labels and original disputed records",
+         "receipt": "2026-10-08-team-review-e28d1d9-electron.json",
+         "receipt_sha256": "11d6333fab62bebe2f24b600ae5e2f564a53847581e5014799f9a0789bb58cd4",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "baf09f2b23eaf71c40a444846e1ce1bf4da0efbd4e3b1781ea77667fb87c3426"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "92c2bc2ab7e539650d0f2b8e22d1b438a26f2f6f15091e40bb95dc77c3e8e62c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "92419e788045b7aae230c776ad3a8806594c0d1de659318de96bdd28a7480458"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "01297a850e61d00ae0e2aa31b1b96cf08f433a922e8e512f6922683dd2830767"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "47367567e59a7200d09a95c6c273d23d098d409a76d89b472027f0715ed30287"
+          }
+         ],
+         "expected": "Valid other-reviewer exact POST receives controlled503 before original dispatch; original labels and vote state unchanged.",
+         "observed": "Valid other-reviewer exact POST receives controlled503 before original dispatch; original labels and vote state unchanged."
+        }
+       ]
       },
       "cancel": {
        "state": "pending"
@@ -3951,13 +4161,223 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+         "kind": "click",
+         "action": "팀 검수 거절과 기록 보존",
+         "reviewer": "Root independent exact source/raw proof review and clean browser/source Electron execution; whole feature quality installed publisher and target acceptance pending",
+         "test": "scripts/e2e/team-review-refusal-controls.spec.ts::review and adjudication input self-review and transport refusals preserve exact records across reopen",
+         "receipt": "2026-10-08-team-review-e28d1d9-browser.json",
+         "receipt_sha256": "d14243b142a7d7ef74f29a21dd77d991ff0223f880fa6fbea216195d91eb7d08",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8ef6fbbf735876dcc2cbc2930bf31977e0944b0139c22940ecbed4da9bc0bd64"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "08d6feba17270c36c3fa8155d095f05692c34ac58ffb7fc3bf6ae1afcd703360"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6dda791bbffdcb6dac1a0b2854e277fb0661e1cf0c2ede99833478cfea6945d7"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "3b3fa2cf0159a6b8019cb39733006b9ab2de5fe0419e1f6dacef0d2ec067f4cd"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "b515bf2545079fa3b6d78d8086c2d40e8315d08cb9dcd6afbf0fdbdf9ec8bb97"
+          }
+         ],
+         "expected": "Blank actor or rejection reason disables reject without POST and preserves exact records/raw annotation JSON.",
+         "observed": "Blank actor or rejection reason disables reject without POST and preserves exact records/raw annotation JSON."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+         "kind": "click",
+         "action": "팀 검수 거절과 기록 보존",
+         "reviewer": "Root independent exact source/raw proof review and clean browser/source Electron execution; whole feature quality installed publisher and target acceptance pending",
+         "test": "scripts/e2e/team-review-refusal-controls.spec.ts::native review and adjudication refusals preserve labels and original disputed records",
+         "receipt": "2026-10-08-team-review-e28d1d9-electron.json",
+         "receipt_sha256": "11d6333fab62bebe2f24b600ae5e2f564a53847581e5014799f9a0789bb58cd4",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "baf09f2b23eaf71c40a444846e1ce1bf4da0efbd4e3b1781ea77667fb87c3426"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "92c2bc2ab7e539650d0f2b8e22d1b438a26f2f6f15091e40bb95dc77c3e8e62c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "92419e788045b7aae230c776ad3a8806594c0d1de659318de96bdd28a7480458"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "01297a850e61d00ae0e2aa31b1b96cf08f433a922e8e512f6922683dd2830767"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "47367567e59a7200d09a95c6c273d23d098d409a76d89b472027f0715ed30287"
+          }
+         ],
+         "expected": "Blank actor or rejection reason disables reject without POST and preserves exact records/raw annotation JSON.",
+         "observed": "Blank actor or rejection reason disables reject without POST and preserves exact records/raw annotation JSON."
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+         "kind": "click",
+         "action": "팀 검수 거절과 기록 보존",
+         "reviewer": "Root independent exact source/raw proof review and clean browser/source Electron execution; whole feature quality installed publisher and target acceptance pending",
+         "test": "scripts/e2e/team-review-refusal-controls.spec.ts::review and adjudication input self-review and transport refusals preserve exact records across reopen",
+         "receipt": "2026-10-08-team-review-e28d1d9-browser.json",
+         "receipt_sha256": "d14243b142a7d7ef74f29a21dd77d991ff0223f880fa6fbea216195d91eb7d08",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8ef6fbbf735876dcc2cbc2930bf31977e0944b0139c22940ecbed4da9bc0bd64"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "08d6feba17270c36c3fa8155d095f05692c34ac58ffb7fc3bf6ae1afcd703360"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6dda791bbffdcb6dac1a0b2854e277fb0661e1cf0c2ede99833478cfea6945d7"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "3b3fa2cf0159a6b8019cb39733006b9ab2de5fe0419e1f6dacef0d2ec067f4cd"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "b515bf2545079fa3b6d78d8086c2d40e8315d08cb9dcd6afbf0fdbdf9ec8bb97"
+          }
+         ],
+         "expected": "Actual self-review422 refuses fixture labeler and preserves labels and vote state.",
+         "observed": "Actual self-review422 refuses fixture labeler and preserves labels and vote state."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+         "kind": "click",
+         "action": "팀 검수 거절과 기록 보존",
+         "reviewer": "Root independent exact source/raw proof review and clean browser/source Electron execution; whole feature quality installed publisher and target acceptance pending",
+         "test": "scripts/e2e/team-review-refusal-controls.spec.ts::native review and adjudication refusals preserve labels and original disputed records",
+         "receipt": "2026-10-08-team-review-e28d1d9-electron.json",
+         "receipt_sha256": "11d6333fab62bebe2f24b600ae5e2f564a53847581e5014799f9a0789bb58cd4",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "baf09f2b23eaf71c40a444846e1ce1bf4da0efbd4e3b1781ea77667fb87c3426"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "92c2bc2ab7e539650d0f2b8e22d1b438a26f2f6f15091e40bb95dc77c3e8e62c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "92419e788045b7aae230c776ad3a8806594c0d1de659318de96bdd28a7480458"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "01297a850e61d00ae0e2aa31b1b96cf08f433a922e8e512f6922683dd2830767"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "47367567e59a7200d09a95c6c273d23d098d409a76d89b472027f0715ed30287"
+          }
+         ],
+         "expected": "Actual self-review422 refuses fixture labeler and preserves labels and vote state.",
+         "observed": "Actual self-review422 refuses fixture labeler and preserves labels and vote state."
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+         "kind": "click",
+         "action": "팀 검수 거절과 기록 보존",
+         "reviewer": "Root independent exact source/raw proof review and clean browser/source Electron execution; whole feature quality installed publisher and target acceptance pending",
+         "test": "scripts/e2e/team-review-refusal-controls.spec.ts::review and adjudication input self-review and transport refusals preserve exact records across reopen",
+         "receipt": "2026-10-08-team-review-e28d1d9-browser.json",
+         "receipt_sha256": "d14243b142a7d7ef74f29a21dd77d991ff0223f880fa6fbea216195d91eb7d08",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8ef6fbbf735876dcc2cbc2930bf31977e0944b0139c22940ecbed4da9bc0bd64"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "08d6feba17270c36c3fa8155d095f05692c34ac58ffb7fc3bf6ae1afcd703360"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6dda791bbffdcb6dac1a0b2854e277fb0661e1cf0c2ede99833478cfea6945d7"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "3b3fa2cf0159a6b8019cb39733006b9ab2de5fe0419e1f6dacef0d2ec067f4cd"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "b515bf2545079fa3b6d78d8086c2d40e8315d08cb9dcd6afbf0fdbdf9ec8bb97"
+          }
+         ],
+         "expected": "Exact valid reject POST503 before dispatch preserves original records and annotation/source bytes.",
+         "observed": "Exact valid reject POST503 before dispatch preserves original records and annotation/source bytes."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+         "kind": "click",
+         "action": "팀 검수 거절과 기록 보존",
+         "reviewer": "Root independent exact source/raw proof review and clean browser/source Electron execution; whole feature quality installed publisher and target acceptance pending",
+         "test": "scripts/e2e/team-review-refusal-controls.spec.ts::native review and adjudication refusals preserve labels and original disputed records",
+         "receipt": "2026-10-08-team-review-e28d1d9-electron.json",
+         "receipt_sha256": "11d6333fab62bebe2f24b600ae5e2f564a53847581e5014799f9a0789bb58cd4",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "baf09f2b23eaf71c40a444846e1ce1bf4da0efbd4e3b1781ea77667fb87c3426"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "92c2bc2ab7e539650d0f2b8e22d1b438a26f2f6f15091e40bb95dc77c3e8e62c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "92419e788045b7aae230c776ad3a8806594c0d1de659318de96bdd28a7480458"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "01297a850e61d00ae0e2aa31b1b96cf08f433a922e8e512f6922683dd2830767"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "47367567e59a7200d09a95c6c273d23d098d409a76d89b472027f0715ed30287"
+          }
+         ],
+         "expected": "Exact valid reject POST503 before dispatch preserves original records and annotation/source bytes.",
+         "observed": "Exact valid reject POST503 before dispatch preserves original records and annotation/source bytes."
+        }
+       ]
       },
       "cancel": {
        "state": "pending"
@@ -4007,19 +4427,369 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+         "kind": "click",
+         "action": "팀 검수 거절과 기록 보존",
+         "reviewer": "Root independent exact source/raw proof review and clean browser/source Electron execution; whole feature quality installed publisher and target acceptance pending",
+         "test": "scripts/e2e/team-review-refusal-controls.spec.ts::review and adjudication input self-review and transport refusals preserve exact records across reopen",
+         "receipt": "2026-10-08-team-review-e28d1d9-browser.json",
+         "receipt_sha256": "d14243b142a7d7ef74f29a21dd77d991ff0223f880fa6fbea216195d91eb7d08",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8ef6fbbf735876dcc2cbc2930bf31977e0944b0139c22940ecbed4da9bc0bd64"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "08d6feba17270c36c3fa8155d095f05692c34ac58ffb7fc3bf6ae1afcd703360"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6dda791bbffdcb6dac1a0b2854e277fb0661e1cf0c2ede99833478cfea6945d7"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "3b3fa2cf0159a6b8019cb39733006b9ab2de5fe0419e1f6dacef0d2ec067f4cd"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "b515bf2545079fa3b6d78d8086c2d40e8315d08cb9dcd6afbf0fdbdf9ec8bb97"
+          }
+         ],
+         "expected": "Blank actor or adjudication reason disables button without POST and retains two explicit fixture votes.",
+         "observed": "Blank actor or adjudication reason disables button without POST and retains two explicit fixture votes."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+         "kind": "click",
+         "action": "팀 검수 거절과 기록 보존",
+         "reviewer": "Root independent exact source/raw proof review and clean browser/source Electron execution; whole feature quality installed publisher and target acceptance pending",
+         "test": "scripts/e2e/team-review-refusal-controls.spec.ts::native review and adjudication refusals preserve labels and original disputed records",
+         "receipt": "2026-10-08-team-review-e28d1d9-electron.json",
+         "receipt_sha256": "11d6333fab62bebe2f24b600ae5e2f564a53847581e5014799f9a0789bb58cd4",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "baf09f2b23eaf71c40a444846e1ce1bf4da0efbd4e3b1781ea77667fb87c3426"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "92c2bc2ab7e539650d0f2b8e22d1b438a26f2f6f15091e40bb95dc77c3e8e62c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "92419e788045b7aae230c776ad3a8806594c0d1de659318de96bdd28a7480458"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "01297a850e61d00ae0e2aa31b1b96cf08f433a922e8e512f6922683dd2830767"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "47367567e59a7200d09a95c6c273d23d098d409a76d89b472027f0715ed30287"
+          }
+         ],
+         "expected": "Blank actor or adjudication reason disables button without POST and retains two explicit fixture votes.",
+         "observed": "Blank actor or adjudication reason disables button without POST and retains two explicit fixture votes."
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+         "kind": "click",
+         "action": "팀 검수 거절과 기록 보존",
+         "reviewer": "Root independent exact source/raw proof review and clean browser/source Electron execution; whole feature quality installed publisher and target acceptance pending",
+         "test": "scripts/e2e/team-review-refusal-controls.spec.ts::review and adjudication input self-review and transport refusals preserve exact records across reopen",
+         "receipt": "2026-10-08-team-review-e28d1d9-browser.json",
+         "receipt_sha256": "d14243b142a7d7ef74f29a21dd77d991ff0223f880fa6fbea216195d91eb7d08",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8ef6fbbf735876dcc2cbc2930bf31977e0944b0139c22940ecbed4da9bc0bd64"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "08d6feba17270c36c3fa8155d095f05692c34ac58ffb7fc3bf6ae1afcd703360"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6dda791bbffdcb6dac1a0b2854e277fb0661e1cf0c2ede99833478cfea6945d7"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "3b3fa2cf0159a6b8019cb39733006b9ab2de5fe0419e1f6dacef0d2ec067f4cd"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "b515bf2545079fa3b6d78d8086c2d40e8315d08cb9dcd6afbf0fdbdf9ec8bb97"
+          }
+         ],
+         "expected": "Actual self-adjudication422 refuses fixture labeler; dispute and labels unchanged.",
+         "observed": "Actual self-adjudication422 refuses fixture labeler; dispute and labels unchanged."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+         "kind": "click",
+         "action": "팀 검수 거절과 기록 보존",
+         "reviewer": "Root independent exact source/raw proof review and clean browser/source Electron execution; whole feature quality installed publisher and target acceptance pending",
+         "test": "scripts/e2e/team-review-refusal-controls.spec.ts::native review and adjudication refusals preserve labels and original disputed records",
+         "receipt": "2026-10-08-team-review-e28d1d9-electron.json",
+         "receipt_sha256": "11d6333fab62bebe2f24b600ae5e2f564a53847581e5014799f9a0789bb58cd4",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "baf09f2b23eaf71c40a444846e1ce1bf4da0efbd4e3b1781ea77667fb87c3426"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "92c2bc2ab7e539650d0f2b8e22d1b438a26f2f6f15091e40bb95dc77c3e8e62c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "92419e788045b7aae230c776ad3a8806594c0d1de659318de96bdd28a7480458"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "01297a850e61d00ae0e2aa31b1b96cf08f433a922e8e512f6922683dd2830767"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "47367567e59a7200d09a95c6c273d23d098d409a76d89b472027f0715ed30287"
+          }
+         ],
+         "expected": "Actual self-adjudication422 refuses fixture labeler; dispute and labels unchanged.",
+         "observed": "Actual self-adjudication422 refuses fixture labeler; dispute and labels unchanged."
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+         "kind": "click",
+         "action": "팀 검수 거절과 기록 보존",
+         "reviewer": "Root independent exact source/raw proof review and clean browser/source Electron execution; whole feature quality installed publisher and target acceptance pending",
+         "test": "scripts/e2e/team-review-refusal-controls.spec.ts::review and adjudication input self-review and transport refusals preserve exact records across reopen",
+         "receipt": "2026-10-08-team-review-e28d1d9-browser.json",
+         "receipt_sha256": "d14243b142a7d7ef74f29a21dd77d991ff0223f880fa6fbea216195d91eb7d08",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8ef6fbbf735876dcc2cbc2930bf31977e0944b0139c22940ecbed4da9bc0bd64"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "08d6feba17270c36c3fa8155d095f05692c34ac58ffb7fc3bf6ae1afcd703360"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6dda791bbffdcb6dac1a0b2854e277fb0661e1cf0c2ede99833478cfea6945d7"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "3b3fa2cf0159a6b8019cb39733006b9ab2de5fe0419e1f6dacef0d2ec067f4cd"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "b515bf2545079fa3b6d78d8086c2d40e8315d08cb9dcd6afbf0fdbdf9ec8bb97"
+          }
+         ],
+         "expected": "Exact valid other-reviewer adjudication503 before dispatch retains original dispute and annotation bytes.",
+         "observed": "Exact valid other-reviewer adjudication503 before dispatch retains original dispute and annotation bytes."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+         "kind": "click",
+         "action": "팀 검수 거절과 기록 보존",
+         "reviewer": "Root independent exact source/raw proof review and clean browser/source Electron execution; whole feature quality installed publisher and target acceptance pending",
+         "test": "scripts/e2e/team-review-refusal-controls.spec.ts::native review and adjudication refusals preserve labels and original disputed records",
+         "receipt": "2026-10-08-team-review-e28d1d9-electron.json",
+         "receipt_sha256": "11d6333fab62bebe2f24b600ae5e2f564a53847581e5014799f9a0789bb58cd4",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "baf09f2b23eaf71c40a444846e1ce1bf4da0efbd4e3b1781ea77667fb87c3426"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "92c2bc2ab7e539650d0f2b8e22d1b438a26f2f6f15091e40bb95dc77c3e8e62c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "92419e788045b7aae230c776ad3a8806594c0d1de659318de96bdd28a7480458"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "01297a850e61d00ae0e2aa31b1b96cf08f433a922e8e512f6922683dd2830767"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "47367567e59a7200d09a95c6c273d23d098d409a76d89b472027f0715ed30287"
+          }
+         ],
+         "expected": "Exact valid other-reviewer adjudication503 before dispatch retains original dispute and annotation bytes.",
+         "observed": "Exact valid other-reviewer adjudication503 before dispatch retains original dispute and annotation bytes."
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+         "kind": "click",
+         "action": "팀 검수 거절과 기록 보존",
+         "reviewer": "Root independent exact source/raw proof review and clean browser/source Electron execution; whole feature quality installed publisher and target acceptance pending",
+         "test": "scripts/e2e/team-review-refusal-controls.spec.ts::review and adjudication input self-review and transport refusals preserve exact records across reopen",
+         "receipt": "2026-10-08-team-review-e28d1d9-browser.json",
+         "receipt_sha256": "d14243b142a7d7ef74f29a21dd77d991ff0223f880fa6fbea216195d91eb7d08",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8ef6fbbf735876dcc2cbc2930bf31977e0944b0139c22940ecbed4da9bc0bd64"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "08d6feba17270c36c3fa8155d095f05692c34ac58ffb7fc3bf6ae1afcd703360"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6dda791bbffdcb6dac1a0b2854e277fb0661e1cf0c2ede99833478cfea6945d7"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "3b3fa2cf0159a6b8019cb39733006b9ab2de5fe0419e1f6dacef0d2ec067f4cd"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "b515bf2545079fa3b6d78d8086c2d40e8315d08cb9dcd6afbf0fdbdf9ec8bb97"
+          }
+         ],
+         "expected": "Closing unsent adjudication draft sends no POST and retains original dispute; dispatched operation cancellation not evaluated.",
+         "observed": "Closing unsent adjudication draft sends no POST and retains original dispute; dispatched operation cancellation not evaluated."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+         "kind": "click",
+         "action": "팀 검수 거절과 기록 보존",
+         "reviewer": "Root independent exact source/raw proof review and clean browser/source Electron execution; whole feature quality installed publisher and target acceptance pending",
+         "test": "scripts/e2e/team-review-refusal-controls.spec.ts::native review and adjudication refusals preserve labels and original disputed records",
+         "receipt": "2026-10-08-team-review-e28d1d9-electron.json",
+         "receipt_sha256": "11d6333fab62bebe2f24b600ae5e2f564a53847581e5014799f9a0789bb58cd4",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "baf09f2b23eaf71c40a444846e1ce1bf4da0efbd4e3b1781ea77667fb87c3426"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "92c2bc2ab7e539650d0f2b8e22d1b438a26f2f6f15091e40bb95dc77c3e8e62c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "92419e788045b7aae230c776ad3a8806594c0d1de659318de96bdd28a7480458"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "01297a850e61d00ae0e2aa31b1b96cf08f433a922e8e512f6922683dd2830767"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "47367567e59a7200d09a95c6c273d23d098d409a76d89b472027f0715ed30287"
+          }
+         ],
+         "expected": "Closing unsent adjudication draft sends no POST and retains original dispute; dispatched operation cancellation not evaluated.",
+         "observed": "Closing unsent adjudication draft sends no POST and retains original dispute; dispatched operation cancellation not evaluated."
+        }
+       ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+         "kind": "click",
+         "action": "팀 검수 거절과 기록 보존",
+         "reviewer": "Root independent exact source/raw proof review and clean browser/source Electron execution; whole feature quality installed publisher and target acceptance pending",
+         "test": "scripts/e2e/team-review-refusal-controls.spec.ts::review and adjudication input self-review and transport refusals preserve exact records across reopen",
+         "receipt": "2026-10-08-team-review-e28d1d9-browser.json",
+         "receipt_sha256": "d14243b142a7d7ef74f29a21dd77d991ff0223f880fa6fbea216195d91eb7d08",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8ef6fbbf735876dcc2cbc2930bf31977e0944b0139c22940ecbed4da9bc0bd64"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "08d6feba17270c36c3fa8155d095f05692c34ac58ffb7fc3bf6ae1afcd703360"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6dda791bbffdcb6dac1a0b2854e277fb0661e1cf0c2ede99833478cfea6945d7"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "3b3fa2cf0159a6b8019cb39733006b9ab2de5fe0419e1f6dacef0d2ec067f4cd"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "b515bf2545079fa3b6d78d8086c2d40e8315d08cb9dcd6afbf0fdbdf9ec8bb97"
+          }
+         ],
+         "expected": "Actual page reload/reopen retains exact two fixture opinions and dispute with no adjudication and unchanged raw annotation JSON.",
+         "observed": "Actual page reload/reopen retains exact two fixture opinions and dispute with no adjudication and unchanged raw annotation JSON."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+         "kind": "click",
+         "action": "팀 검수 거절과 기록 보존",
+         "reviewer": "Root independent exact source/raw proof review and clean browser/source Electron execution; whole feature quality installed publisher and target acceptance pending",
+         "test": "scripts/e2e/team-review-refusal-controls.spec.ts::native review and adjudication refusals preserve labels and original disputed records",
+         "receipt": "2026-10-08-team-review-e28d1d9-electron.json",
+         "receipt_sha256": "11d6333fab62bebe2f24b600ae5e2f564a53847581e5014799f9a0789bb58cd4",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "baf09f2b23eaf71c40a444846e1ce1bf4da0efbd4e3b1781ea77667fb87c3426"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "92c2bc2ab7e539650d0f2b8e22d1b438a26f2f6f15091e40bb95dc77c3e8e62c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "92419e788045b7aae230c776ad3a8806594c0d1de659318de96bdd28a7480458"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "01297a850e61d00ae0e2aa31b1b96cf08f433a922e8e512f6922683dd2830767"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "47367567e59a7200d09a95c6c273d23d098d409a76d89b472027f0715ed30287"
+          }
+         ],
+         "expected": "Actual page reload/reopen retains exact two fixture opinions and dispute with no adjudication and unchanged raw annotation JSON.",
+         "observed": "Actual page reload/reopen retains exact two fixture opinions and dispute with no adjudication and unchanged raw annotation JSON."
+        }
+       ]
       },
       "handoff": {
        "state": "pending"

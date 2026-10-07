@@ -1,0 +1,44 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+  "source_dirty": false,
+  "test": "scripts/e2e/team-review-refusal-controls.spec.ts::review and adjudication input self-review and transport refusals preserve exact records across reopen",
+  "test_source_sha256": "582d68b52552c42a7e9e50496e17747c2bb4730cfe8617faf933b21b0b0465d7",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "80596688177483d1653c395870a30bec9c8f4d1a03e517a0b075f0d3c577beb3",
+  "harness_sha256": "8037e911c5ebb8583cfa5a15c95f2235201e9372660d92431c7ed84f4ab45b86",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "8ef6fbbf735876dcc2cbc2930bf31977e0944b0139c22940ecbed4da9bc0bd64"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "08d6feba17270c36c3fa8155d095f05692c34ac58ffb7fc3bf6ae1afcd703360"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "6dda791bbffdcb6dac1a0b2854e277fb0661e1cf0c2ede99833478cfea6945d7"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "3b3fa2cf0159a6b8019cb39733006b9ab2de5fe0419e1f6dacef0d2ec067f4cd"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "b515bf2545079fa3b6d78d8086c2d40e8315d08cb9dcd6afbf0fdbdf9ec8bb97"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

@@ -6895,7 +6895,61 @@
         "state": "pending"
       },
       "gui": {
-        "state": "pending"
+        "state": "verified",
+        "evidence": [
+          {
+            "task": "S2-06",
+            "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+            "kind": "click",
+            "action": "노드 근거 검색·페이지·상세·경로·복귀",
+            "reviewer": "Root independent exact source/raw proof review and clean browser/source Electron execution; whole feature quality installed publisher and target acceptance pending",
+            "test": "scripts/e2e/flow-debugger-artifact-controls.spec.ts::flow debugger pages searches and returns exact controlled artifacts without writes",
+            "receipt": "2026-10-08-flow-debugger-e28d1d9-browser.json",
+            "receipt_sha256": "91ea077a0091afad45bded505228ea3f0e53be14e1a42eed7dff6e3f53e3087e",
+            "artifacts": [
+              {
+                "id": "screenshot-0",
+                "sha256": "743ed37a96e45a17ea966ec1bf4110cd738a0c995069ce9e1f9a1ff44ad4b7c3"
+              },
+              {
+                "id": "screenshot-1",
+                "sha256": "78a16f078d0491963d838bbba3028b50d544a76191b124dc69ac8574eebf1b3e"
+              },
+              {
+                "id": "screenshot-2",
+                "sha256": "8b28dea72c770fc084de00b5b453b6ff42e745e8c24d22f815d750eaa10f0b7e"
+              }
+            ],
+            "expected": "Actual node debugger search/page/details/active ROI-path and keyboard viewer return controls with synthetic display response; graph/source unchanged and reload omits stale execution. Backend model math and complete-feature acceptance not evaluated.",
+            "observed": "Actual node debugger search/page/details/active ROI-path and keyboard viewer return controls with synthetic display response; graph/source unchanged and reload omits stale execution. Backend model math and complete-feature acceptance not evaluated."
+          },
+          {
+            "task": "S2-06",
+            "source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+            "kind": "click",
+            "action": "노드 근거 검색·페이지·상세·경로·복귀",
+            "reviewer": "Root independent exact source/raw proof review and clean browser/source Electron execution; whole feature quality installed publisher and target acceptance pending",
+            "test": "scripts/e2e/flow-debugger-artifact-controls.spec.ts::native flow debugger keyboard controls keep exact controlled artifact and return focus",
+            "receipt": "2026-10-08-flow-debugger-e28d1d9-electron.json",
+            "receipt_sha256": "9b2a6f7aeafd07a0e934afcad770789f26bd655e906c370aaf645d4bf3e2adaf",
+            "artifacts": [
+              {
+                "id": "screenshot-0",
+                "sha256": "9883a40c07dc10c92a3eef30a1bc23d184f2104e31013530a2c8b7a9a1e15a8a"
+              },
+              {
+                "id": "screenshot-1",
+                "sha256": "3708b6cffef8a21ee7bdd5ec1954d82cae6c870409e085068915e9a46e6f6362"
+              },
+              {
+                "id": "screenshot-2",
+                "sha256": "a62f03f9f3395877adfb3845d524a0e7a7365a19b4993b86dcf3d291e2b6b66d"
+              }
+            ],
+            "expected": "Actual node debugger search/page/details/active ROI-path and keyboard viewer return controls with synthetic display response; graph/source unchanged and reload omits stale execution. Backend model math and complete-feature acceptance not evaluated.",
+            "observed": "Actual node debugger search/page/details/active ROI-path and keyboard viewer return controls with synthetic display response; graph/source unchanged and reload omits stale execution. Backend model math and complete-feature acceptance not evaluated."
+          }
+        ]
       },
       "persist": {
         "state": "pending"

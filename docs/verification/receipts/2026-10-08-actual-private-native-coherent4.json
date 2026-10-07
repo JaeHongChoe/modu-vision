@@ -1,0 +1,152 @@
+{
+  "schema": "modu-vision.actual-private-native-controlled-cpu/v1",
+  "source_sha": "d3d469c1261db9b47cd959d14e2f9f6601535871",
+  "source_scope": "Private detached d3 base with independently hash-bound inherited prerequisites and test-only patch; not a clean full-source build. Current root frontend456/backend339 resource bytes were separately matched before newer production composition.",
+  "composed_test_source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+  "test": "backend/tests/test_application_launch_electron.py::test_actual_private_electron_original_controller_backend_epoch_and_cpu_pins",
+  "test_sha256": "e654907447b0ee2bc48bf426e05be2531da2041f30b356edd0b1466145798b63",
+  "actual_execution": {
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "pytest_seconds": 448.524,
+    "source_inputs": 2130,
+    "source_before_after_same": true,
+    "original_controller_main_backend_chain": true,
+    "normal_appkit_quit": true,
+    "registered_original_processes_exited": true
+  },
+  "artifact_binding": {
+    "backend_binary_sha256": "9762b4a942423ee1dd7f08d3b8aa6341bacd04391796f3f73bbcbb8d9f787189",
+    "backend_build_identity_sha256": "31ad39e9064824a79655b5e124e15896946af19d5a4e3f2cfa9fb786aafb5374",
+    "backend_release_sha256": "bd8fa0fb9eb79f5fc4c373ef46d1c089fdcd4a764a8a44f2ae41060322f6a4b0",
+    "backend_inventory_sha256": "ca668e745ef8ab229dbac54c0313888def96be60dfad6707de09261990dbec31",
+    "supplier_manifest_sha256": "5a39f2eff216ea2ad395bbecb8b88572540b1c68d52e7bfddf7fc3660b0494f6",
+    "bundle_artifact_pins_sha256": "310d74fa4037df6b0c47ceb9bfc5217a90c1bc6d675a7084d69b38234b03ea84",
+    "frontend_source_count": 456,
+    "backend_resource_count": 339,
+    "backend_exported_source_count": 335
+  },
+  "controlled_cpu": {
+    "semantic_output": {
+      "defective_roi_count": 0,
+      "final_verdict": "OK",
+      "recognized_texts": [
+        "A"
+      ],
+      "roi_count": 1,
+      "routed_output_node_id": "output"
+    },
+    "epoch": "1bad9fee290dd50c03d63dea5c572bf7",
+    "output_sha256": "61b232b4193c7d5d204f0dc21b7b814901d0b4059b0a3cc1606a9f271d04ca8a",
+    "receipt_sha256": "1ac3fd58b46c71862f59c327d26f6e782570aade730cda5c95a5eb86098aee71",
+    "input_pins": {
+      "projects/cpu-known-image/delivery/launch-known-image/input.png": "e27b492665b0e46239625a584b7568968e3bce694c89b274670a7099e236e5ee",
+      "projects/cpu-known-image/delivery/launch-known-image/package/manifest.json": "aef681b50be7a796f81ba465427aa78f1c3224e601d31126111970e646ebffc3",
+      "projects/cpu-known-image/delivery/launch-known-image/package/models/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/best_model.pt": "9e6ba9c218c98fb39ffb2c50713b5972e1796d4a3631a50959185067ede4c47f",
+      "projects/cpu-known-image/delivery/launch-known-image/package/pipeline.json": "ca67a4948f34f1556d8bafaccc3337badcc11f3031e15e68ddadf9c413852213",
+      "projects/cpu-known-image/project.json": "51ca3594cd049076f1db27cfe8906f1f772e7f2e716176380f953fd00b8d4ccc"
+    },
+    "pointers_preserved": {
+      "application-active.json": "a1c1f2182d8b071599ae52bbf6e6915d02f6a6aff9a194968c48ffc4bd0f27e4",
+      "global-active.json": "80c9b4dfbf2611875bb5f4d12a23ed8021822a19bb92a5436662d44331d1d7a7"
+    },
+    "bootstrap_exact_main_backend_epoch_binding": true,
+    "compiled_readbacks": [
+      {
+        "actual_application_inference_verified": false,
+        "actual_cpu_execution_verified": true,
+        "database_fence": 2,
+        "execution_scope": "controlled_frozen_backend",
+        "installation_id": "998a10f02b2e44b49f9dd106ea31e93b",
+        "model_quality_approved": false,
+        "native_app_handshake_verified": false,
+        "nonce": "beeef03141f744e1b6f3086778557bd9",
+        "owned_backend_execution_origin_verified": true,
+        "plan_sha256": "8caf9093435548a84cd83b798be5c2bc66c054c39ac0f58967f118a885b40536",
+        "receipt_sha256": "1ac3fd58b46c71862f59c327d26f6e782570aade730cda5c95a5eb86098aee71",
+        "release_ready": false,
+        "schema_version": 1,
+        "status": "verified",
+        "update_id": "150c506ab5934b339ff54030e09517a1",
+        "worker_process_tree_exit_verified": false
+      },
+      {
+        "actual_application_inference_verified": false,
+        "actual_cpu_execution_verified": true,
+        "database_fence": 2,
+        "execution_scope": "controlled_frozen_backend",
+        "installation_id": "998a10f02b2e44b49f9dd106ea31e93b",
+        "model_quality_approved": false,
+        "native_app_handshake_verified": false,
+        "nonce": "beeef03141f744e1b6f3086778557bd9",
+        "owned_backend_execution_origin_verified": true,
+        "plan_sha256": "8caf9093435548a84cd83b798be5c2bc66c054c39ac0f58967f118a885b40536",
+        "receipt_sha256": "1ac3fd58b46c71862f59c327d26f6e782570aade730cda5c95a5eb86098aee71",
+        "release_ready": false,
+        "schema_version": 1,
+        "status": "verified",
+        "update_id": "150c506ab5934b339ff54030e09517a1",
+        "worker_process_tree_exit_verified": false
+      }
+    ]
+  },
+  "cleanup": {
+    "durable_state": "recovery_required",
+    "nonce": "beeef03141f744e1b6f3086778557bd9",
+    "normal_quit_requested": true,
+    "original_backend_exited": true,
+    "original_controller_reaped": true,
+    "original_main_exited": true,
+    "whole_tree_exit_verified": false
+  },
+  "private_original_process_observations": {
+    "backend": {
+      "pid": 56096,
+      "status": "absent"
+    },
+    "controller": {
+      "pid": 55967,
+      "status": "absent"
+    },
+    "main": {
+      "pid": 56066,
+      "status": "absent"
+    }
+  },
+  "source_only_root_gate": {
+    "source_sha": "6e3becacf105979d1d30988f80e39787590ae0f2",
+    "source_inputs": 2168,
+    "source_unchanged": true,
+    "owned": {
+      "backend/tests/test_application_launch_electron.py": "e654907447b0ee2bc48bf426e05be2531da2041f30b356edd0b1466145798b63",
+      "scripts/e2e/team-review-refusal-controls.spec.ts": "582d68b52552c42a7e9e50496e17747c2bb4730cfe8617faf933b21b0b0465d7",
+      "scripts/e2e/flow-debugger-artifact-controls.spec.ts": "31075ec4b4386d146c08b80091a5bbcb5cc30c41411aa7ef8e502705c71ec937"
+    }
+  },
+  "proof_hashes": {
+    "native_freeze": "4a3599e8753675f9977d6e026b99640ac2b2ed925931d2516fac0207bc78e591",
+    "proof_index": "72b50069ff34ed9639644f28ee33f69567817a8a5c098d4f48622628b0c79dfa",
+    "actual_native_proof": "0ff219b41b5367c01d235c20abf98c07bbde0711d98ad6d941596e2fb88cdf67",
+    "actual_native_xml": "ad7bf7ef7e3ef9f33efc0f060b31f63255e736502cccc2df7dadb6a47b44e5bf",
+    "actual_native_log": "781b319fe01f9f85165ea9ff78de482ddfe694e98529835e572c0770fc9540cc",
+    "actual_native_start_argv": "8220242800919310d57a4b73ce920ff2e5049d0afa7f67610466bac9cc1f3504",
+    "root_independent_review": "5cdddfe0d765055db2530a7f25fe0ce3dfc84f25e2c8bb3eeb82468afb7de24b",
+    "peer_independent_review": "61f358eee2486ce2764d85188fc93b25f012a9920fc9ecfaa7de2b07f4d744ce"
+  },
+  "acceptance": {
+    "actual_private_controller_electron_frozen_backend_startup": true,
+    "controlled_cpu_execution": true,
+    "whole_process_tree": false,
+    "installed_release": false,
+    "OS_registration": false,
+    "publisher": false,
+    "ordinary_backend_device_configuration": false,
+    "post_start_environment_mutations": false,
+    "native_target_matrix": false,
+    "model_quality": false,
+    "release": false,
+    "whole_parent": false
+  },
+  "retained_failed_observation": "Original primary8 failed descriptor EOF remains failure with uncertain controller state; separate diagnostic located and source-qualified supervisor startup order. Successful primary9 does not rewrite old failed outcome."
+}
