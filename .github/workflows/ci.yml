@@ -149,6 +149,7 @@ jobs:
           backend/tests/test_openvino_runtime.py::test_openvino_service_inference_uses_owned_worker_without_a_deadline
           backend/tests/test_runtime_deadline_sdk.py::test_runtime_ignores_unlisted_bytecode_and_preserves_all_package_bytes
           backend/tests/test_runtime_deadline_sdk.py::test_packaged_cpp_native_sdk_embeds_python_and_matches_whole_graph
+          backend/tests/test_runtime_deadline_tree.py
           backend/tests/test_gan_generation_package.py
           backend/tests/test_dino_flow_threshold_precision.py
           backend/tests/test_flow_package.py
@@ -209,6 +210,14 @@ jobs:
           backend/tests/test_application_launch_controller.py
           backend/tests/test_application_launch_lease.py
           backend/tests/test_application_launch_handshake.py
+          backend/tests/test_application_launch_frozen_execution.py::test_fixed_frozen_worker_flag_refuses_source_before_backend_or_home
+          backend/tests/test_application_launch_frozen_execution.py::test_current_inventory_advertises_separate_fixed_cpu_protocol
+          backend/tests/test_application_launch_frozen_execution.py::test_frozen_resource_boundary_refuses_changed_or_unreviewed_inputs_before_home
+          backend/tests/test_application_launch_frozen_execution.py::test_frozen_worker_refuses_foreign_parent_before_private_home
+          backend/tests/test_application_launch_frozen_execution.py::test_fixed_worker_replay_and_partial_marker_refuse_before_math
+          backend/tests/test_application_launch_frozen_execution.py::test_fixed_worker_parser_rejects_unknown_flags_before_inventory
+          backend/tests/test_application_launch_frozen_execution.py::test_worker_request_changes_refuse_before_home_or_marker
+          backend/tests/test_application_launch_frozen_execution.py::test_worker_origin_refuses_lifecycle_race_even_when_original_processes_stay_live
           backend/tests/test_live_update_inspection.py
           backend/tests/test_owned_launch_build_inventory.py
           backend/tests/test_pyinstaller_command_boundary.py

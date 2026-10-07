@@ -20,17 +20,34 @@ export function validatedCanaryPins(value:unknown):PortableCanaryPins {
 const canaryArgs=(pins:PortableCanaryPins)=>['--canary-workspace-id',pins.workspace_id,'--canary-project-id',pins.project_id,'--canary-plan-sha256',pins.plan_sha256];
 function reviewedCanary(value:unknown,pins:PortableCanaryPins):PortableCanaryReview {
   const keys=['schema_version','protocol','required','policy','status','supported','pins','capability_sha256','candidate_runtime_source_sha256','reason','candidate_main_launch_verified','native_application_verified','frozen_backend_verified','owned_backend_execution_origin_verified','worker_process_tree_exit_verified','model_quality_verified','release_ready'];
+  if(value&&typeof value==='object'&&!Array.isArray(value)&&(value as any).protocol===2)keys.push('worker_binding');
   if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).sort().join(',')!==keys.sort().join(','))throw Error('Invalid canary review response');
   const row=value as PortableCanaryReview;
-  if(row.schema_version!==1||row.protocol!==1||row.required!==true||row.policy!=='same_reviewed_source_runtime_worker_v1'
-    ||!['source_ready','requires_target'].includes(row.status)||row.supported!==(row.status==='source_ready')
+  const ready=row.protocol===1?row.status==='source_ready':row.status==='frozen_ready';
+  const protocolValid=(row.protocol===1&&row.policy==='same_reviewed_source_runtime_worker_v1'&&['source_ready','requires_target'].includes(row.status))
+    ||(row.protocol===2&&row.policy==='same_reviewed_frozen_runtime_worker_v1'&&['frozen_ready','requires_target'].includes(row.status));
+  if(row.schema_version!==1||row.required!==true||!protocolValid||row.supported!==ready
     ||['candidate_main_launch_verified','native_application_verified','frozen_backend_verified','owned_backend_execution_origin_verified','worker_process_tree_exit_verified','model_quality_verified','release_ready'].some(k=>(row as any)[k]!==false))throw Error('Invalid canary review binding or acceptance claim');
   const echoed=validatedCanaryPins(row.pins);
   if(Object.keys(pins).some(k=>(echoed as any)[k]!==(pins as any)[k]))throw Error('Canary review differs from the selected independent pins');
-  if(row.status==='source_ready'){
+  if(ready){
     if(!hex(row.capability_sha256)||!hex(row.candidate_runtime_source_sha256)||row.reason!==null)throw Error('Invalid ready canary capability');
   }else if((row.capability_sha256!==null&&!hex(row.capability_sha256))||(row.candidate_runtime_source_sha256!==null&&!hex(row.candidate_runtime_source_sha256))
     ||typeof row.reason!=='string'||!row.reason.trim()||row.reason.length>500)throw Error('Invalid unavailable canary reason');
+  if(row.protocol===2){
+    if(!ready){if(row.worker_binding!==null)throw Error('Invalid unavailable canary worker binding');return {...row,pins:echoed};}
+    const worker=row.worker_binding;
+    const names=['protocol','executable_path','executable_sha256','build_receipt_path','build_receipt_sha256','build_identity_sha256','runtime_source_sha256','resource_inventory_sha256'];
+    // These signed-manifest-relative paths describe the reviewed worker. They
+    // never become renderer-selected launch arguments or filesystem authority.
+    const relative=(p:unknown)=>typeof p==='string'&&p.length>0&&p.length<=4096&&!/[\\:\x00-\x1f\x7f]/.test(p)
+      &&!p.startsWith('/')&&p.split('/').every(q=>q.length>0&&q!=='.'&&q!=='..'&&!/[. ]$/.test(q));
+    if(!worker||typeof worker!=='object'||Array.isArray(worker)||Object.keys(worker).sort().join(',')!==names.sort().join(',')
+      ||worker.protocol!==1||!relative(worker.executable_path)||!relative(worker.build_receipt_path)
+      ||!['executable_sha256','build_receipt_sha256','build_identity_sha256','runtime_source_sha256','resource_inventory_sha256'].every(k=>hex((worker as any)[k]))
+      ||worker.runtime_source_sha256!==row.candidate_runtime_source_sha256)throw Error('Invalid ready canary worker binding');
+    return {...row,pins:echoed,worker_binding:{...worker}};
+  }
   return {...row,pins:echoed};
 }
 function launchRefusal(row:any):string|undefined{return row&&typeof row==='object'&&!Array.isArray(row)

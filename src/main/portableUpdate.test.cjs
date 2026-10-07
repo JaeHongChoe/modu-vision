@@ -145,3 +145,24 @@ test('canary unsupported target remains a readonly review and never submits inst
 test('canary invented target quality tree or release acceptance refuses before review authority',async t=>{
  for(const key of ['candidate_main_launch_verified','native_application_verified','frozen_backend_verified','owned_backend_execution_origin_verified','worker_process_tree_exit_verified','model_quality_verified','release_ready']){const f=setup(t);f.review.preactivation_canary[key]=true;await f.m.select(f.root);await assert.rejects(()=>f.m.preview(path.join(f.directory,'signed.json'),'stable',canaryPins),/canary/i);assert(!f.calls.some(c=>c.args[1]==='install'));}
 });
+
+function frozenCanaryProof(){return {...canaryProof(),protocol:2,policy:'same_reviewed_frozen_runtime_worker_v1',status:'frozen_ready',worker_binding:{protocol:1,executable_path:'Owned CPU.app/Contents/Resources/backend_bin/vision_ai_backend/vision_ai_backend',executable_sha256:'6'.repeat(64),build_receipt_path:'Owned CPU.app/Contents/Resources/backend_bin/vision_ai_backend/backend-release.json',build_receipt_sha256:'7'.repeat(64),build_identity_sha256:'8'.repeat(64),runtime_source_sha256:'5'.repeat(64),resource_inventory_sha256:'9'.repeat(64)}};}
+test('compiled canary review snapshots derived binding and consumes only the existing pin and plan arguments',async t=>{
+ const f=setup(t);f.review.preactivation_canary=frozenCanaryProof();await f.m.select(f.root);
+ const r=await f.m.preview(path.join(f.directory,'signed.json'),'stable',canaryPins);
+ assert.equal(r.installable,true);assert.equal(r.preactivation_canary.protocol,2);assert.equal(r.preactivation_canary.worker_binding.runtime_source_sha256,'5'.repeat(64));
+ r.preactivation_canary.worker_binding.executable_path='/foreign/authority';r.preactivation_canary.pins.plan_sha256='0'.repeat(64);
+ assert.equal(f.review.preactivation_canary.worker_binding.executable_path,frozenCanaryProof().worker_binding.executable_path);
+ await f.m.apply(r.review_id);const commands=f.calls.filter(c=>['preview','install'].includes(c.args[1]));assert.equal(commands.length,2);
+ for(const c of commands){for(const [flag,value] of [['--canary-workspace-id',canaryPins.workspace_id],['--canary-project-id',canaryPins.project_id],['--canary-plan-sha256',canaryPins.plan_sha256]])assert.equal(c.args[c.args.indexOf(flag)+1],value);assert(!c.args.some(a=>a.includes('Owned CPU.app')||a.includes('worker-binding')||a==='/foreign/authority'));}
+ await assert.rejects(()=>f.m.apply(r.review_id),/review/i);assert.equal(f.calls.filter(c=>c.args[1]==='install').length,1);
+});
+test('compiled unsupported review cannot give installation authority',async t=>{
+ const f=setup(t);f.review.preactivation_canary={...frozenCanaryProof(),status:'requires_target',supported:false,worker_binding:null,reason:'Candidate needs a reviewed compiled worker.'};await f.m.select(f.root);
+ const r=await f.m.preview(path.join(f.directory,'signed.json'),'stable',canaryPins);assert.equal(r.installable,false);await assert.rejects(()=>f.m.apply(r.review_id),/compiled worker/i);assert(!f.calls.some(c=>c.args[1]==='install'));
+});
+for(const damage of ['unknown-policy','unknown-protocol','missing-binding','extra-binding','foreign-runtime','bad-hash','absolute-path','parent-path','backslash-path','control-path','unsupported-binding','missing-pins','claimed-acceptance'])test(`compiled canary refuses ${damage} without granting review`,async t=>{
+ const f=setup(t),proof=frozenCanaryProof();f.review.preactivation_canary=proof;
+ if(damage==='unknown-policy')proof.policy='foreign';if(damage==='unknown-protocol')proof.protocol=3;if(damage==='missing-binding')delete proof.worker_binding;if(damage==='extra-binding')proof.worker_binding.command='foreign';if(damage==='foreign-runtime')proof.worker_binding.runtime_source_sha256='a'.repeat(64);if(damage==='bad-hash')proof.worker_binding.build_identity_sha256='bad';if(damage==='absolute-path')proof.worker_binding.executable_path='/foreign';if(damage==='parent-path')proof.worker_binding.build_receipt_path='owned/../receipt';if(damage==='backslash-path')proof.worker_binding.executable_path='owned\\foreign';if(damage==='control-path')proof.worker_binding.executable_path='owned/\nforeign';if(damage==='unsupported-binding'){proof.status='requires_target';proof.supported=false;proof.reason='Unavailable.';}if(damage==='missing-pins'){proof.status='missing_pins';proof.supported=false;proof.pins=null;proof.worker_binding=null;proof.reason='Pins needed.';}if(damage==='claimed-acceptance')proof.frozen_backend_verified=true;
+ await f.m.select(f.root);await assert.rejects(()=>f.m.preview(path.join(f.directory,'signed.json'),'stable',canaryPins),/canary|기준 이미지|review/i);await assert.rejects(()=>f.m.apply('foreign'),/review/i);assert(!f.calls.some(c=>c.args[1]==='install'));
+});
