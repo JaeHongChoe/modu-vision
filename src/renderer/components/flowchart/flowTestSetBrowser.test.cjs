@@ -12,6 +12,7 @@ function fixture(){
   '../../stores/useComputeStore':{useComputeStore:store({transportRevision:0,selectedProfileId:null})},
   '../../stores/useFlowchartStore':{useFlowchartStore:store({pipeline:null,isRunning:false})},
   './flowWorkspace':{},'./modelFlowHandoff':{},'./flowTestSet':load('flowTestSet.ts'),
+  '../inference/inspectionImage':load('../inference/inspectionImage.ts',{'../common/evidenceViewer':load('../common/evidenceViewer.ts')}),
   '../common/ImageLibraryBrowser':{ImageLibraryBrowser:Browser}});
  const render=()=>h.render(()=>m.FlowWorkspacePanel({versions:[],models:[],onOpenImage(){},area:'evaluate'}));
  render();return {render,browser:()=>nodes(render()).find(row=>row.type===Browser)};
