@@ -4876,6 +4876,14 @@
           "receipt_sha256": "6733ddfcdf0154de5f97c3a8afb2049778090198b03b73f6941862fd3216f336",
           "result": "Actual original epoch compiledA/OK in33.119 seconds with sealed receipt, repeated readback, output and partial receipt refusal. Current106 unique source cases qualified across105 initial passes and1 early-admission negative rerun.",
           "scope": "Exact older compiled slice and current source composition; staged compiled candidate, packaged native, process tree, publisher and quality acceptance remain open."
+        },
+        {
+          "kind": "source-bound-followup",
+          "source_sha": "75af77cfafed0c243889a1871ceb1c963924b4b4",
+          "receipt": "docs/verification/receipts/2026-10-08-portable-native-layout-75af77c-browser.json",
+          "receipt_sha256": "809e0ff3024f51cccc1579445a82ec7135c62fac33b704df26c9c9f84ee3d7ac",
+          "result": "Actual clean-source browser replay passed once with zero retries; eight existing action references refreshed to the exact new spec bytes.",
+          "scope": "Exact clean committed-source browser case: real main manager, signed schema2/links, controlled source CLI canary publication, inert fixture entrypoint, channel/refusal/cancel/reopen controls. No actual canary math, generated checkpoint, provisioned native application, OS installer, real publisher, whole-tree, human quality or release acceptance."
         }
       ],
       "file_actions": {

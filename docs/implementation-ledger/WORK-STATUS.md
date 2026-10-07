@@ -289,3 +289,7 @@ GitHub run37642522031은 release workflow 파일 검증 단계에서 실패했�
 ## 원래 backend epoch의 compiled CPU 실행 · 4a264cc
 
 고정 compiled worker를 별도 entry로 연결했고 실제 빌드에서 A/OK 기준 이미지 계산이33.119초에 끝났다. 같은 backend epoch의 봉인 기록을 반복 조회하고 결과 변조·부분 기록을 거절했다. 현재 코드 조합은 초기105 통과와 조기 inventory 거절 기대를 맞춘1개 재실행으로106개 고유 case를 검증했고 main11건·타입 검사도 통과했다. 실제 binary는 기록한 이전 isolated slice의 빌드이며 현재 전체 source의 staged candidate나 packaged Electron 성공으로 세지 않는다. compiled candidate 설치 adapter와 전체 계보·실 publisher·대표 품질 조건을 계속 진행한다. 근거: `../verification/receipts/2026-10-08-owned-compiled-cpu-4a264cc.json`.
+
+## 설치 화면의 명시적 canary pin 연결과 근거 갱신 · 75af77c
+
+기존 native layout 화면 시험은 새 기준 이미지 pin 입력을 포함하도록 갱신했다. 실제 clean-source 브라우저에서 한 번 실행해 통과했고 채널 불일치, 취소·재열기, 확인하지 않은 설치 차단, 서명된 내부 링크 변조 거절과 원래 라벨 보존을 다시 확인했다. canary 게시 자체는 이 사례의 통제된 fixture이며 실제 수학 실행이나 native 설치 수락으로 계산하지 않는다. 새 spec을 먼저 게시한 hosted run37681211730은 이전 GUI 근거의 spec 해시 불일치8건으로 중단됐다. 실제 새 실행 근거로8개 참조를 갱신했고 기존 실패 기록은 보존했다. 부모69/13·필수11·종합 수락0 및 행동207개·575/874는 유지한다. 근거: `../verification/receipts/2026-10-08-portable-native-layout-75af77c-browser.json`.

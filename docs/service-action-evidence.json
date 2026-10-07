@@ -22043,35 +22043,35 @@
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
+         "source_sha": "75af77cfafed0c243889a1871ceb1c963924b4b4",
          "kind": "click",
          "action": "portable 상태 다시 읽기",
          "expected": "The existing action preserves explicit source/target identity, rejects the named invalid condition, and requires deliberate review/confirmation/submission in the executed scenario.",
          "observed": "browser: Before selecting a portable home the actual read-state control was disabled. No home was selected by the renderer automatically.",
-         "reviewer": "Codex root actual clean-source UI, persisted file hashes, network/CLI readback and screenshots; independent, real publisher and human quality acceptance pending",
+         "reviewer": "Codex root actual clean committed-source browser replay, signed fixture bytes and owned teardown readback; controlled canary fixture only, no actual math, real publisher or human acceptance",
          "test": "scripts/e2e/native-update-layout.spec.ts::macOS native layout review shows signed internal links and refuses changed installed targets",
-         "receipt": "2026-10-08-portable-native-layout-1a9b830-browser.json",
-         "receipt_sha256": "79cfbc18e68ec35a111af299d812c5e5ff36cd83d74724a762bfa767973d5bd7",
+         "receipt": "2026-10-08-portable-native-layout-75af77c-browser.json",
+         "receipt_sha256": "809e0ff3024f51cccc1579445a82ec7135c62fac33b704df26c9c9f84ee3d7ac",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "244212456e6d969e0f0f1ec27202820bbfd2ff393a1a9222f4699ba6c666477a"
+           "sha256": "be350fb205ead29e301e9f6de45009ac2488ef71d4f6de2337f2a0dada569530"
           },
           {
            "id": "screenshot-1",
-           "sha256": "f152e61d975de48bb8910a553282400a6c52e06be31d8f406f695c2a149e01db"
+           "sha256": "8e1eccf10ddcbc2005b57dc9d557b98ee94e7769aaa54b7180cfad6527591b7a"
           },
           {
            "id": "screenshot-2",
-           "sha256": "abc60f138e0344747a47225416ad3d97dacfc690020743712a28be2f3aefc5c4"
+           "sha256": "3bb952f6656a210636df921ef9ffe53fc73a4a283c147a3a17640f71f44ad8eb"
           },
           {
            "id": "screenshot-3",
-           "sha256": "91cd775573f24d7bbf3094cbe1e3350715bf15dbd3d139ff55fabc4cdcf24a4d"
+           "sha256": "19f3f3a79b65a2d199d79b55bd55bdb41100149dc146f2e946b9333a18c66d5b"
           },
           {
            "id": "screenshot-4",
-           "sha256": "c6a304d1dd47ce50bf168b1fedfa2b6d157f9cdf06fba52da11326b54affaafe"
+           "sha256": "4c7a34f2834b57e02937b5e4aab76c0537c2bc5ed64488291afd3eebccf99ecf"
           }
          ]
         }
@@ -22082,35 +22082,35 @@
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
+         "source_sha": "75af77cfafed0c243889a1871ceb1c963924b4b4",
          "kind": "click",
          "action": "portable 상태 다시 읽기",
          "expected": "The existing action preserves explicit source/target identity, rejects the named invalid condition, and requires deliberate review/confirmation/submission in the executed scenario.",
          "observed": "browser: After actual controlled native layout installation, changing the raw signed internal-link target made explicit inspection return Installed native link target changed, with no apply control. Restoring the exact raw target and deliberately inspecting again recovered the same version1.0.0/fence1; original labels remained exact.",
-         "reviewer": "Codex root actual clean-source UI, persisted file hashes, network/CLI readback and screenshots; independent, real publisher and human quality acceptance pending",
+         "reviewer": "Codex root actual clean committed-source browser replay, signed fixture bytes and owned teardown readback; controlled canary fixture only, no actual math, real publisher or human acceptance",
          "test": "scripts/e2e/native-update-layout.spec.ts::macOS native layout review shows signed internal links and refuses changed installed targets",
-         "receipt": "2026-10-08-portable-native-layout-1a9b830-browser.json",
-         "receipt_sha256": "79cfbc18e68ec35a111af299d812c5e5ff36cd83d74724a762bfa767973d5bd7",
+         "receipt": "2026-10-08-portable-native-layout-75af77c-browser.json",
+         "receipt_sha256": "809e0ff3024f51cccc1579445a82ec7135c62fac33b704df26c9c9f84ee3d7ac",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "244212456e6d969e0f0f1ec27202820bbfd2ff393a1a9222f4699ba6c666477a"
+           "sha256": "be350fb205ead29e301e9f6de45009ac2488ef71d4f6de2337f2a0dada569530"
           },
           {
            "id": "screenshot-1",
-           "sha256": "f152e61d975de48bb8910a553282400a6c52e06be31d8f406f695c2a149e01db"
+           "sha256": "8e1eccf10ddcbc2005b57dc9d557b98ee94e7769aaa54b7180cfad6527591b7a"
           },
           {
            "id": "screenshot-2",
-           "sha256": "abc60f138e0344747a47225416ad3d97dacfc690020743712a28be2f3aefc5c4"
+           "sha256": "3bb952f6656a210636df921ef9ffe53fc73a4a283c147a3a17640f71f44ad8eb"
           },
           {
            "id": "screenshot-3",
-           "sha256": "91cd775573f24d7bbf3094cbe1e3350715bf15dbd3d139ff55fabc4cdcf24a4d"
+           "sha256": "19f3f3a79b65a2d199d79b55bd55bdb41100149dc146f2e946b9333a18c66d5b"
           },
           {
            "id": "screenshot-4",
-           "sha256": "c6a304d1dd47ce50bf168b1fedfa2b6d157f9cdf06fba52da11326b54affaafe"
+           "sha256": "4c7a34f2834b57e02937b5e4aab76c0537c2bc5ed64488291afd3eebccf99ecf"
           }
          ]
         }
@@ -22140,35 +22140,35 @@
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
+         "source_sha": "75af77cfafed0c243889a1871ceb1c963924b4b4",
          "kind": "click",
          "action": "portable 릴리스 채널",
          "expected": "The existing action preserves explicit source/target identity, rejects the named invalid condition, and requires deliberate review/confirmation/submission in the executed scenario.",
          "observed": "browser: Actual stable→beta selection cleared the displayed bound review and backup confirmation, removing the apply control. Selecting stable again produced a fresh actual signed review. This is the local review target only, not a saved public release policy.",
-         "reviewer": "Codex root actual clean-source UI, persisted file hashes, network/CLI readback and screenshots; independent, real publisher and human quality acceptance pending",
+         "reviewer": "Codex root actual clean committed-source browser replay, signed fixture bytes and owned teardown readback; controlled canary fixture only, no actual math, real publisher or human acceptance",
          "test": "scripts/e2e/native-update-layout.spec.ts::macOS native layout review shows signed internal links and refuses changed installed targets",
-         "receipt": "2026-10-08-portable-native-layout-1a9b830-browser.json",
-         "receipt_sha256": "79cfbc18e68ec35a111af299d812c5e5ff36cd83d74724a762bfa767973d5bd7",
+         "receipt": "2026-10-08-portable-native-layout-75af77c-browser.json",
+         "receipt_sha256": "809e0ff3024f51cccc1579445a82ec7135c62fac33b704df26c9c9f84ee3d7ac",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "244212456e6d969e0f0f1ec27202820bbfd2ff393a1a9222f4699ba6c666477a"
+           "sha256": "be350fb205ead29e301e9f6de45009ac2488ef71d4f6de2337f2a0dada569530"
           },
           {
            "id": "screenshot-1",
-           "sha256": "f152e61d975de48bb8910a553282400a6c52e06be31d8f406f695c2a149e01db"
+           "sha256": "8e1eccf10ddcbc2005b57dc9d557b98ee94e7769aaa54b7180cfad6527591b7a"
           },
           {
            "id": "screenshot-2",
-           "sha256": "abc60f138e0344747a47225416ad3d97dacfc690020743712a28be2f3aefc5c4"
+           "sha256": "3bb952f6656a210636df921ef9ffe53fc73a4a283c147a3a17640f71f44ad8eb"
           },
           {
            "id": "screenshot-3",
-           "sha256": "91cd775573f24d7bbf3094cbe1e3350715bf15dbd3d139ff55fabc4cdcf24a4d"
+           "sha256": "19f3f3a79b65a2d199d79b55bd55bdb41100149dc146f2e946b9333a18c66d5b"
           },
           {
            "id": "screenshot-4",
-           "sha256": "c6a304d1dd47ce50bf168b1fedfa2b6d157f9cdf06fba52da11326b54affaafe"
+           "sha256": "4c7a34f2834b57e02937b5e4aab76c0537c2bc5ed64488291afd3eebccf99ecf"
           }
          ]
         }
@@ -22194,35 +22194,35 @@
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
+         "source_sha": "75af77cfafed0c243889a1871ceb1c963924b4b4",
          "kind": "click",
          "action": "portable 릴리스 채널",
          "expected": "The existing action preserves explicit source/target identity, rejects the named invalid condition, and requires deliberate review/confirmation/submission in the executed scenario.",
          "observed": "browser: A stable signed fixture release selected through the beta control was actually refused by the main manager/source CLI with Release target differs and install count0. Stable review then bound the same3-file/3-link inventory and allowed only explicit confirmation/application.",
-         "reviewer": "Codex root actual clean-source UI, persisted file hashes, network/CLI readback and screenshots; independent, real publisher and human quality acceptance pending",
+         "reviewer": "Codex root actual clean committed-source browser replay, signed fixture bytes and owned teardown readback; controlled canary fixture only, no actual math, real publisher or human acceptance",
          "test": "scripts/e2e/native-update-layout.spec.ts::macOS native layout review shows signed internal links and refuses changed installed targets",
-         "receipt": "2026-10-08-portable-native-layout-1a9b830-browser.json",
-         "receipt_sha256": "79cfbc18e68ec35a111af299d812c5e5ff36cd83d74724a762bfa767973d5bd7",
+         "receipt": "2026-10-08-portable-native-layout-75af77c-browser.json",
+         "receipt_sha256": "809e0ff3024f51cccc1579445a82ec7135c62fac33b704df26c9c9f84ee3d7ac",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "244212456e6d969e0f0f1ec27202820bbfd2ff393a1a9222f4699ba6c666477a"
+           "sha256": "be350fb205ead29e301e9f6de45009ac2488ef71d4f6de2337f2a0dada569530"
           },
           {
            "id": "screenshot-1",
-           "sha256": "f152e61d975de48bb8910a553282400a6c52e06be31d8f406f695c2a149e01db"
+           "sha256": "8e1eccf10ddcbc2005b57dc9d557b98ee94e7769aaa54b7180cfad6527591b7a"
           },
           {
            "id": "screenshot-2",
-           "sha256": "abc60f138e0344747a47225416ad3d97dacfc690020743712a28be2f3aefc5c4"
+           "sha256": "3bb952f6656a210636df921ef9ffe53fc73a4a283c147a3a17640f71f44ad8eb"
           },
           {
            "id": "screenshot-3",
-           "sha256": "91cd775573f24d7bbf3094cbe1e3350715bf15dbd3d139ff55fabc4cdcf24a4d"
+           "sha256": "19f3f3a79b65a2d199d79b55bd55bdb41100149dc146f2e946b9333a18c66d5b"
           },
           {
            "id": "screenshot-4",
-           "sha256": "c6a304d1dd47ce50bf168b1fedfa2b6d157f9cdf06fba52da11326b54affaafe"
+           "sha256": "4c7a34f2834b57e02937b5e4aab76c0537c2bc5ed64488291afd3eebccf99ecf"
           }
          ]
         }
@@ -22270,35 +22270,35 @@
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
+         "source_sha": "75af77cfafed0c243889a1871ceb1c963924b4b4",
          "kind": "click",
          "action": "portable 변경 내용 확인",
          "expected": "The existing action preserves explicit source/target identity, rejects the named invalid condition, and requires deliberate review/confirmation/submission in the executed scenario.",
          "observed": "browser: An actual signed release whose channel differed from the selected beta target failed preview, displayed Release target differs, produced no apply/confirmation controls and left application-active absent, install count0 and original labels exact.",
-         "reviewer": "Codex root actual clean-source UI, persisted file hashes, network/CLI readback and screenshots; independent, real publisher and human quality acceptance pending",
+         "reviewer": "Codex root actual clean committed-source browser replay, signed fixture bytes and owned teardown readback; controlled canary fixture only, no actual math, real publisher or human acceptance",
          "test": "scripts/e2e/native-update-layout.spec.ts::macOS native layout review shows signed internal links and refuses changed installed targets",
-         "receipt": "2026-10-08-portable-native-layout-1a9b830-browser.json",
-         "receipt_sha256": "79cfbc18e68ec35a111af299d812c5e5ff36cd83d74724a762bfa767973d5bd7",
+         "receipt": "2026-10-08-portable-native-layout-75af77c-browser.json",
+         "receipt_sha256": "809e0ff3024f51cccc1579445a82ec7135c62fac33b704df26c9c9f84ee3d7ac",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "244212456e6d969e0f0f1ec27202820bbfd2ff393a1a9222f4699ba6c666477a"
+           "sha256": "be350fb205ead29e301e9f6de45009ac2488ef71d4f6de2337f2a0dada569530"
           },
           {
            "id": "screenshot-1",
-           "sha256": "f152e61d975de48bb8910a553282400a6c52e06be31d8f406f695c2a149e01db"
+           "sha256": "8e1eccf10ddcbc2005b57dc9d557b98ee94e7769aaa54b7180cfad6527591b7a"
           },
           {
            "id": "screenshot-2",
-           "sha256": "abc60f138e0344747a47225416ad3d97dacfc690020743712a28be2f3aefc5c4"
+           "sha256": "3bb952f6656a210636df921ef9ffe53fc73a4a283c147a3a17640f71f44ad8eb"
           },
           {
            "id": "screenshot-3",
-           "sha256": "91cd775573f24d7bbf3094cbe1e3350715bf15dbd3d139ff55fabc4cdcf24a4d"
+           "sha256": "19f3f3a79b65a2d199d79b55bd55bdb41100149dc146f2e946b9333a18c66d5b"
           },
           {
            "id": "screenshot-4",
-           "sha256": "c6a304d1dd47ce50bf168b1fedfa2b6d157f9cdf06fba52da11326b54affaafe"
+           "sha256": "4c7a34f2834b57e02937b5e4aab76c0537c2bc5ed64488291afd3eebccf99ecf"
           }
          ]
         }
@@ -22364,35 +22364,35 @@
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
+         "source_sha": "75af77cfafed0c243889a1871ceb1c963924b4b4",
          "kind": "click",
          "action": "선택한 portable 설치의 학습·검사가 종료되고 백업을 확인했습니다",
          "expected": "The existing action preserves explicit source/target identity, rejects the named invalid condition, and requires deliberate review/confirmation/submission in the executed scenario.",
          "observed": "browser: Unchecking the explicit confirmation after review disabled apply and left install count0. Changing channel subsequently cleared confirmation rather than carrying it into a different signed target.",
-         "reviewer": "Codex root actual clean-source UI, persisted file hashes, network/CLI readback and screenshots; independent, real publisher and human quality acceptance pending",
+         "reviewer": "Codex root actual clean committed-source browser replay, signed fixture bytes and owned teardown readback; controlled canary fixture only, no actual math, real publisher or human acceptance",
          "test": "scripts/e2e/native-update-layout.spec.ts::macOS native layout review shows signed internal links and refuses changed installed targets",
-         "receipt": "2026-10-08-portable-native-layout-1a9b830-browser.json",
-         "receipt_sha256": "79cfbc18e68ec35a111af299d812c5e5ff36cd83d74724a762bfa767973d5bd7",
+         "receipt": "2026-10-08-portable-native-layout-75af77c-browser.json",
+         "receipt_sha256": "809e0ff3024f51cccc1579445a82ec7135c62fac33b704df26c9c9f84ee3d7ac",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "244212456e6d969e0f0f1ec27202820bbfd2ff393a1a9222f4699ba6c666477a"
+           "sha256": "be350fb205ead29e301e9f6de45009ac2488ef71d4f6de2337f2a0dada569530"
           },
           {
            "id": "screenshot-1",
-           "sha256": "f152e61d975de48bb8910a553282400a6c52e06be31d8f406f695c2a149e01db"
+           "sha256": "8e1eccf10ddcbc2005b57dc9d557b98ee94e7769aaa54b7180cfad6527591b7a"
           },
           {
            "id": "screenshot-2",
-           "sha256": "abc60f138e0344747a47225416ad3d97dacfc690020743712a28be2f3aefc5c4"
+           "sha256": "3bb952f6656a210636df921ef9ffe53fc73a4a283c147a3a17640f71f44ad8eb"
           },
           {
            "id": "screenshot-3",
-           "sha256": "91cd775573f24d7bbf3094cbe1e3350715bf15dbd3d139ff55fabc4cdcf24a4d"
+           "sha256": "19f3f3a79b65a2d199d79b55bd55bdb41100149dc146f2e946b9333a18c66d5b"
           },
           {
            "id": "screenshot-4",
-           "sha256": "c6a304d1dd47ce50bf168b1fedfa2b6d157f9cdf06fba52da11326b54affaafe"
+           "sha256": "4c7a34f2834b57e02937b5e4aab76c0537c2bc5ed64488291afd3eebccf99ecf"
           }
          ]
         }
@@ -22403,35 +22403,35 @@
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
+         "source_sha": "75af77cfafed0c243889a1871ceb1c963924b4b4",
          "kind": "click",
          "action": "선택한 portable 설치의 학습·검사가 종료되고 백업을 확인했습니다",
          "expected": "The existing action preserves explicit source/target identity, rejects the named invalid condition, and requires deliberate review/confirmation/submission in the executed scenario.",
          "observed": "browser: Leaving a reviewed and checked screen before applying, then reloading and selecting the same owned home, retained version0.0.0 without application-active. A fresh review reopened with confirmation unchecked and apply disabled; only explicit re-check and apply installed.",
-         "reviewer": "Codex root actual clean-source UI, persisted file hashes, network/CLI readback and screenshots; independent, real publisher and human quality acceptance pending",
+         "reviewer": "Codex root actual clean committed-source browser replay, signed fixture bytes and owned teardown readback; controlled canary fixture only, no actual math, real publisher or human acceptance",
          "test": "scripts/e2e/native-update-layout.spec.ts::macOS native layout review shows signed internal links and refuses changed installed targets",
-         "receipt": "2026-10-08-portable-native-layout-1a9b830-browser.json",
-         "receipt_sha256": "79cfbc18e68ec35a111af299d812c5e5ff36cd83d74724a762bfa767973d5bd7",
+         "receipt": "2026-10-08-portable-native-layout-75af77c-browser.json",
+         "receipt_sha256": "809e0ff3024f51cccc1579445a82ec7135c62fac33b704df26c9c9f84ee3d7ac",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "244212456e6d969e0f0f1ec27202820bbfd2ff393a1a9222f4699ba6c666477a"
+           "sha256": "be350fb205ead29e301e9f6de45009ac2488ef71d4f6de2337f2a0dada569530"
           },
           {
            "id": "screenshot-1",
-           "sha256": "f152e61d975de48bb8910a553282400a6c52e06be31d8f406f695c2a149e01db"
+           "sha256": "8e1eccf10ddcbc2005b57dc9d557b98ee94e7769aaa54b7180cfad6527591b7a"
           },
           {
            "id": "screenshot-2",
-           "sha256": "abc60f138e0344747a47225416ad3d97dacfc690020743712a28be2f3aefc5c4"
+           "sha256": "3bb952f6656a210636df921ef9ffe53fc73a4a283c147a3a17640f71f44ad8eb"
           },
           {
            "id": "screenshot-3",
-           "sha256": "91cd775573f24d7bbf3094cbe1e3350715bf15dbd3d139ff55fabc4cdcf24a4d"
+           "sha256": "19f3f3a79b65a2d199d79b55bd55bdb41100149dc146f2e946b9333a18c66d5b"
           },
           {
            "id": "screenshot-4",
-           "sha256": "c6a304d1dd47ce50bf168b1fedfa2b6d157f9cdf06fba52da11326b54affaafe"
+           "sha256": "4c7a34f2834b57e02937b5e4aab76c0537c2bc5ed64488291afd3eebccf99ecf"
           }
          ]
         }
@@ -22536,35 +22536,35 @@
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "1a9b83007e30756b9ce74c972881e2c151a769af",
+         "source_sha": "75af77cfafed0c243889a1871ceb1c963924b4b4",
          "kind": "click",
          "action": "검토한 portable 업데이트 적용",
          "expected": "The existing action preserves explicit source/target identity, rejects the named invalid condition, and requires deliberate review/confirmation/submission in the executed scenario.",
          "observed": "browser: Reloading the reviewed/confirmed screen before submitting apply produced no install command or application-active pointer. Reopening required fresh review and confirmation. Subsequent deliberate apply installed only the intended native fixture and preserved original labels.",
-         "reviewer": "Codex root actual clean-source UI, persisted file hashes, network/CLI readback and screenshots; independent, real publisher and human quality acceptance pending",
+         "reviewer": "Codex root actual clean committed-source browser replay, signed fixture bytes and owned teardown readback; controlled canary fixture only, no actual math, real publisher or human acceptance",
          "test": "scripts/e2e/native-update-layout.spec.ts::macOS native layout review shows signed internal links and refuses changed installed targets",
-         "receipt": "2026-10-08-portable-native-layout-1a9b830-browser.json",
-         "receipt_sha256": "79cfbc18e68ec35a111af299d812c5e5ff36cd83d74724a762bfa767973d5bd7",
+         "receipt": "2026-10-08-portable-native-layout-75af77c-browser.json",
+         "receipt_sha256": "809e0ff3024f51cccc1579445a82ec7135c62fac33b704df26c9c9f84ee3d7ac",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "244212456e6d969e0f0f1ec27202820bbfd2ff393a1a9222f4699ba6c666477a"
+           "sha256": "be350fb205ead29e301e9f6de45009ac2488ef71d4f6de2337f2a0dada569530"
           },
           {
            "id": "screenshot-1",
-           "sha256": "f152e61d975de48bb8910a553282400a6c52e06be31d8f406f695c2a149e01db"
+           "sha256": "8e1eccf10ddcbc2005b57dc9d557b98ee94e7769aaa54b7180cfad6527591b7a"
           },
           {
            "id": "screenshot-2",
-           "sha256": "abc60f138e0344747a47225416ad3d97dacfc690020743712a28be2f3aefc5c4"
+           "sha256": "3bb952f6656a210636df921ef9ffe53fc73a4a283c147a3a17640f71f44ad8eb"
           },
           {
            "id": "screenshot-3",
-           "sha256": "91cd775573f24d7bbf3094cbe1e3350715bf15dbd3d139ff55fabc4cdcf24a4d"
+           "sha256": "19f3f3a79b65a2d199d79b55bd55bdb41100149dc146f2e946b9333a18c66d5b"
           },
           {
            "id": "screenshot-4",
-           "sha256": "c6a304d1dd47ce50bf168b1fedfa2b6d157f9cdf06fba52da11326b54affaafe"
+           "sha256": "4c7a34f2834b57e02937b5e4aab76c0537c2bc5ed64488291afd3eebccf99ecf"
           }
          ]
         }
