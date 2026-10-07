@@ -7,7 +7,7 @@ records are archival only: no connection, launch, signal or lease is created.
 import hashlib
 import json
 import math
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 import sqlite3
 
@@ -110,11 +110,36 @@ def _validate_remote_epoch(root, output, journal):
         raise ValueError('Remote training-state bytes or epoch identity differ from the received receipt')
 
 
+def _validate_remote_labels(root, output, journal):
+    """Keep original pending proposals as archival content, not review authority."""
+    labels, _ = _read(root, output / 'label_results.json')
+    rows = labels.get('results')
+    if (labels.get('job_id') != journal['job_id']
+            or labels.get('input_manifest_sha256') != journal['input_manifest_sha256']
+            or labels.get('automatically_approved') is not False
+            or not isinstance(rows, list) or not 1 <= len(rows) <= 10000):
+        raise ValueError('Remote label results differ from their original pending snapshot')
+    images = set()
+    for row in rows:
+        if not isinstance(row, dict):
+            raise ValueError('Remote label result must be a pending image record')
+        name = row.get('image_path')
+        if not isinstance(name, str) or not name or '\\' in name or '\x00' in name:
+            raise ValueError('Remote label image must have its original relative snapshot path')
+        path = PurePosixPath(name)
+        if (path.is_absolute() or '..' in path.parts or str(path) != name or name == '.'
+                or name in images or not isinstance(row.get('image_sha256'), str)
+                or not re.fullmatch('[0-9a-f]{64}', row['image_sha256'])
+                or not isinstance(row.get('candidates'), list) or row.get('review_state') != 'pending'):
+            raise ValueError('Remote label image identity or pending review state is invalid')
+        images.add(name)
+
+
 def validate_remote(root, scopes, path, journal):
     """Original confirmed exit and received bytes, never current SSH authority.
 
-    This adapter supports the original current train manifest, not relocated
-    specialist aliases or remote operation results. Received optimizer epoch
+    This adapter supports original current train and pending label manifests,
+    not relocated specialist aliases or other remote operation results. Received optimizer epoch
     states are retained only with their original hash-bound receipt; no resume
     execution or live worker adoption is granted. It reads
     the coordinator's existing exit confirmation; it does not check a server's
@@ -122,12 +147,12 @@ def validate_remote(root, scopes, path, journal):
     """
     from backend.remote.profiles import ComputeProfile
     root = Path(root).absolute()
-    identifier, state = journal.get('job_id'), journal.get('state')
+    identifier, state, operation = journal.get('job_id'), journal.get('state'), journal.get('operation')
     if (not isinstance(identifier, str) or not re.fullmatch(r'job_[A-Za-z0-9_-]{1,123}', identifier)
             or Path(path).name != identifier + '.json' or journal.get('protocol_version') != 1
-            or journal.get('operation') != 'train' or state not in TERMINAL
+            or operation not in {'train', 'label'} or state not in TERMINAL
             or journal.get('worker_terminal_state') != state or journal.get('worker_exit_confirmed') is not True):
-        raise ValueError('Only confirmed ended current remote training journals can migrate')
+        raise ValueError('Only confirmed ended current remote train or label journals can migrate')
     profile = ComputeProfile.model_validate(journal.get('profile'))
     handle = journal.get('remote_handle')
     pattern = r'[1-9][0-9]*:[0-9a-f]{32}' if profile.runtime_kind == 'python' else r'[0-9a-fA-F]{12,64}'
@@ -148,31 +173,38 @@ def validate_remote(root, scopes, path, journal):
             or type(selected[0].get('size')) is not int or selected[0]['size'] != len(raw)
             or selected[0].get('sha256') != hashlib.sha256(raw).hexdigest()):
         raise ValueError('Remote original launch specification changed')
-    if (spec.get('protocol_version') != 1 or spec.get('job_id') != identifier or spec.get('operation') != 'train'
+    if (spec.get('protocol_version') != 1 or spec.get('job_id') != identifier or spec.get('operation') != operation
             or spec.get('task') != journal.get('task') or spec.get('preset') != journal.get('preset')
             or not re.fullmatch('[0-9a-f]{64}', str(journal.get('input_manifest_sha256', '')))
             or spec.get('input_manifest_sha256') != journal['input_manifest_sha256']
-            or launch.get('operation', 'train') != 'train'):
+            or launch.get('operation', 'train') != operation):
         raise ValueError('Remote history launch belongs to another run, task or snapshot')
     receipt, _ = _read(root, output / 'job_receipt.json')
     if (receipt.get('job_id') != identifier or receipt.get('status') != state
             or receipt.get('task') != journal['task'] or receipt.get('output_dir') != str(output)
             or receipt.get('compute_profile_id') != profile.id):
         raise ValueError('Remote terminal receipt differs from its original job/profile')
-    _validate_remote_epoch(root, output, journal)
-    if state != 'completed':
+    if operation == 'train':
+        _validate_remote_epoch(root, output, journal)
+    elif any(p.exists() or p.is_symlink() for p in (
+            output / 'latest_training_state.pt', output / 'training_state_receipt.json')):
+        raise ValueError('Remote label history cannot carry training-state authority')
+    label_artifacts_present = operation == 'label' and any(p.exists() or p.is_symlink() for p in (
+        output / 'label_results.json', output / 'remote_artifacts.json'))
+    if state != 'completed' and not label_artifacts_present:
         return
     manifest, _ = _read(root, output / 'remote_artifacts.json')
     if (manifest.get('protocol_version') != 1 or manifest.get('job_id') != identifier
-            or manifest.get('operation') != 'train' or manifest.get('input_manifest_sha256') != journal['input_manifest_sha256']
+            or manifest.get('operation') != operation or manifest.get('input_manifest_sha256') != journal['input_manifest_sha256']
             or 'relocation' in manifest):
         raise ValueError('Remote received artifact manifest belongs to another or relocated run')
     rows = manifest.get('artifacts')
-    if not isinstance(rows, list) or len(rows) != 2 or any(not isinstance(row, dict) for row in rows):
+    expected = {'outputs/best_model.pt', 'outputs/model_meta.json'} if operation == 'train' else {'outputs/label_results.json'}
+    if not isinstance(rows, list) or len(rows) != len(expected) or any(not isinstance(row, dict) for row in rows):
         raise ValueError('Remote received artifact list is invalid')
     names = [row.get('path') for row in rows]
-    if any(not isinstance(name, str) for name in names) or set(names) != {'outputs/best_model.pt', 'outputs/model_meta.json'}:
-        raise ValueError('Remote received artifact identities differ from the current train manifest')
+    if any(not isinstance(name, str) for name in names) or set(names) != expected:
+        raise ValueError('Remote received artifact identities differ from the original operation manifest')
     for row in rows:
         file = _file(root, output / Path(row['path']).name)
         if (type(row.get('size')) is not int or row['size'] < 1 or file.stat().st_size != row['size']
@@ -182,6 +214,9 @@ def validate_remote(root, scopes, path, journal):
             checksum = hashlib.file_digest(stream, 'sha256').hexdigest()
         if checksum != row['sha256'] or (file.name == 'best_model.pt' and receipt.get('checkpoint_sha256') != checksum):
             raise ValueError('Remote received artifact or completed receipt checksum changed')
+    if operation == 'label':
+        _validate_remote_labels(root, output, journal)
+        return
     metadata, _ = _read(root, output / 'model_meta.json')
     if metadata.get('task') != journal['task']:
         raise ValueError('Remote received model task differs')

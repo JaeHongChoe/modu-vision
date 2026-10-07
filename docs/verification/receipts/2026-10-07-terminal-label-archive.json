@@ -1,0 +1,48 @@
+{
+  "schema": "TerminalLabelArchiveVerification/v1",
+  "source_base_sha": "9d509a180e69b161e3a6c804df7658291e8530d2",
+  "source_files": {
+    "backend/engine/terminal_runtime_history.py": "726b94a56cc07b5d4df0f35cd38f0384e350ac7716d7c4a34298e9aa89db97a6",
+    "backend/tests/test_terminal_remote_label_history.py": "449b9a58b068334601e796ff2b708a7c78b3ae8c2e0090ba09825407af5d34dd",
+    ".github/workflows/ci.yml": "ab26f2f231d656b8ee53ba3d55c7d862a4bb4cfb32c6c88c5fdf87d789bc2232"
+  },
+  "suite": {
+    "cases": 163,
+    "passed": 163,
+    "skipped": 0,
+    "junit_sha256": "5d8e1d5b7537b78ce34b7535b53ad4adc2a3c7640a889b49c70dfde0b6ce6fa0",
+    "selectors": [
+      "backend/tests/test_terminal_remote_label_history.py",
+      "backend/tests/test_terminal_remote_epoch_history.py",
+      "backend/tests/test_terminal_remote_history.py",
+      "backend/tests/test_terminal_runtime_history.py",
+      "backend/tests/test_historical_job_binding.py",
+      "backend/tests/test_global_migration.py",
+      "backend/tests/test_global_restore_recovery.py",
+      "backend/tests/test_service_ci_dependencies.py",
+      "backend/tests/test_source_ci_model_lanes.py"
+    ]
+  },
+  "label_cases": 32,
+  "original_snapshot_worker_coordinator_receipt_paths_exercised": true,
+  "model_provider_and_transport": "Controlled local test boundary; not a real remote foundation model",
+  "confirmed_terminal_states": [
+    "completed",
+    "failed",
+    "aborted"
+  ],
+  "pending_candidate_content_and_original_bytes_preserved": true,
+  "new_worker_authority_created": false,
+  "user_installation_migrated": false,
+  "actual_remote_compute_submitted": false,
+  "annotation_content_auto_accepted": false,
+  "human_quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Original owned drained current-schema ended train/label archival history only; live or uncertain workers, unsupported schemas, specialist relocation and other operation formats remain pending",
+  "retained_preliminary_findings": [
+    "Prior code refused valid ended label journals",
+    "Symlink refusal reports a blocked preview rather than an exception in this label path",
+    "Controlled producer fixture required its explicit SSH port",
+    "The pre-cutover store instance correctly refused post-cutover access; test now opens the fresh active store"
+  ]
+}

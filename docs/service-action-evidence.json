@@ -41,7 +41,10 @@
   "src/renderer/components/training/EnhancementWorkbench.tsx": "a352a4b0b7d9b01383a3505982430dd4e5dd0bc18bb5bf93ef14db523b4d48b6",
   "src/renderer/components/training/DefectGANWorkbench.tsx": "fb3ed02f8e651b16c912ab78d67262e40f42a44811796ebd1472d1b545466f40",
   "src/renderer/components/training/GANCompositionEditor.tsx": "4efa78cf4c0c6c98e02aa7764ea46e5a2140bc6b4932d949e92270fc211d66e3",
-  "src/renderer/components/training/RotatedDetectionPanel.tsx": "ae00129395b52847a08db514892f7df15e8825971913a3e299fcd5fa9d86c697"
+  "src/renderer/components/training/RotatedDetectionPanel.tsx": "ae00129395b52847a08db514892f7df15e8825971913a3e299fcd5fa9d86c697",
+  "src/renderer/components/training/OCRWorkbench.tsx": "769a2316ba1770bccd1c6c78987d99ee779ddf64d82f4c080ad5280924e51125",
+  "src/renderer/components/training/RotationWorkbench.tsx": "196db2fe456d37b264fcda1ac600f9d61480487e873a1cf4200d1bc5b0a14dd1",
+  "src/renderer/components/training/RotatedBoxFitting.tsx": "5b27de4bda68f1629261bc4dab546cc1f3c254af4f516c87fdbef1fbc69d9b50"
  },
  "records": [
   {
@@ -3061,19 +3064,1345 @@
        "state": "pending"
       }
      }
+    },
+    {
+     "id": "obb-native-center-fit-save-reopen",
+     "label": "중심 기준 · 회전 박스 맞추기 · 정답 표에 추가",
+     "source": "src/renderer/components/training/RotatedBoxFitting.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-07",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "중심 기준 · 회전 박스 맞추기 · 정답 표에 추가",
+         "expected": "Fit actual native mouse points in original pixel coordinates, save and reopen.",
+         "observed": "Actual native center fitting used independently derived delivered mouse coordinates. Box/corner geometry, original image SHA, class and split survived manifest save/reopen. No OBB training or representative geometry approval was claimed by this content case.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/ocr-fitting-content.spec.ts::native human OCR text and three fitting modes save and reopen exact native content",
+         "receipt": "2026-10-07-app-execution-5de874675c0f2c7823c2.json",
+         "receipt_sha256": "568b83eb40cf15336115d6f2278c8a456eb92f254a3c1473a9f7f4a313333522",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3401b19dd3880c456c3967017f8a460c6545a209554a4f8c63afc6927ec9d58e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f593298f83c483716cb9d02886848d7dae2d0e27cd247428d453559bd87a482c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8a7e7e8c893640545387a1287e99c4eee721a5b30430f233ccf36d5e387aac5c"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "db722bb828eff03637e3771306c3910e0797a92ad91415837db92047f7afa4d6"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "c8d5b00231029e59c67da2ad4815b8617d8f6c70be2362a0e5eb11c459b4c2a8"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-07",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "중심 기준 · 회전 박스 맞추기 · 정답 표에 추가",
+         "expected": "Fit actual native mouse points in original pixel coordinates, save and reopen.",
+         "observed": "Actual native center fitting used independently derived delivered mouse coordinates. Box/corner geometry, original image SHA, class and split survived manifest save/reopen. No OBB training or representative geometry approval was claimed by this content case.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/ocr-fitting-content.spec.ts::native human OCR text and three fitting modes save and reopen exact native content",
+         "receipt": "2026-10-07-app-execution-5de874675c0f2c7823c2.json",
+         "receipt_sha256": "568b83eb40cf15336115d6f2278c8a456eb92f254a3c1473a9f7f4a313333522",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3401b19dd3880c456c3967017f8a460c6545a209554a4f8c63afc6927ec9d58e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f593298f83c483716cb9d02886848d7dae2d0e27cd247428d453559bd87a482c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8a7e7e8c893640545387a1287e99c4eee721a5b30430f233ccf36d5e387aac5c"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "db722bb828eff03637e3771306c3910e0797a92ad91415837db92047f7afa4d6"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "c8d5b00231029e59c67da2ad4815b8617d8f6c70be2362a0e5eb11c459b4c2a8"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "obb-native-face-fit-save-reopen",
+     "label": "한 면 기준 · 회전 박스 맞추기 · 정답 표에 추가",
+     "source": "src/renderer/components/training/RotatedBoxFitting.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-07",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "한 면 기준 · 회전 박스 맞추기 · 정답 표에 추가",
+         "expected": "Fit actual native mouse points in original pixel coordinates, save and reopen.",
+         "observed": "Actual native face fitting used independently derived delivered mouse coordinates. Box/corner geometry, original image SHA, class and split survived manifest save/reopen. No OBB training or representative geometry approval was claimed by this content case.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/ocr-fitting-content.spec.ts::native human OCR text and three fitting modes save and reopen exact native content",
+         "receipt": "2026-10-07-app-execution-5de874675c0f2c7823c2.json",
+         "receipt_sha256": "568b83eb40cf15336115d6f2278c8a456eb92f254a3c1473a9f7f4a313333522",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3401b19dd3880c456c3967017f8a460c6545a209554a4f8c63afc6927ec9d58e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f593298f83c483716cb9d02886848d7dae2d0e27cd247428d453559bd87a482c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8a7e7e8c893640545387a1287e99c4eee721a5b30430f233ccf36d5e387aac5c"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "db722bb828eff03637e3771306c3910e0797a92ad91415837db92047f7afa4d6"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "c8d5b00231029e59c67da2ad4815b8617d8f6c70be2362a0e5eb11c459b4c2a8"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-07",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "한 면 기준 · 회전 박스 맞추기 · 정답 표에 추가",
+         "expected": "Fit actual native mouse points in original pixel coordinates, save and reopen.",
+         "observed": "Actual native face fitting used independently derived delivered mouse coordinates. Box/corner geometry, original image SHA, class and split survived manifest save/reopen. No OBB training or representative geometry approval was claimed by this content case.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/ocr-fitting-content.spec.ts::native human OCR text and three fitting modes save and reopen exact native content",
+         "receipt": "2026-10-07-app-execution-5de874675c0f2c7823c2.json",
+         "receipt_sha256": "568b83eb40cf15336115d6f2278c8a456eb92f254a3c1473a9f7f4a313333522",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3401b19dd3880c456c3967017f8a460c6545a209554a4f8c63afc6927ec9d58e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f593298f83c483716cb9d02886848d7dae2d0e27cd247428d453559bd87a482c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8a7e7e8c893640545387a1287e99c4eee721a5b30430f233ccf36d5e387aac5c"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "db722bb828eff03637e3771306c3910e0797a92ad91415837db92047f7afa4d6"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "c8d5b00231029e59c67da2ad4815b8617d8f6c70be2362a0e5eb11c459b4c2a8"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "obb-native-irregular-fit-save-reopen",
+     "label": "불규칙 외곽 · 회전 박스 맞추기 · 정답 표에 추가",
+     "source": "src/renderer/components/training/RotatedBoxFitting.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-07",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "불규칙 외곽 · 회전 박스 맞추기 · 정답 표에 추가",
+         "expected": "Fit actual native mouse points in original pixel coordinates, save and reopen.",
+         "observed": "Actual native irregular fitting used independently derived delivered mouse coordinates. Box/corner geometry, original image SHA, class and split survived manifest save/reopen. No OBB training or representative geometry approval was claimed by this content case.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/ocr-fitting-content.spec.ts::native human OCR text and three fitting modes save and reopen exact native content",
+         "receipt": "2026-10-07-app-execution-5de874675c0f2c7823c2.json",
+         "receipt_sha256": "568b83eb40cf15336115d6f2278c8a456eb92f254a3c1473a9f7f4a313333522",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3401b19dd3880c456c3967017f8a460c6545a209554a4f8c63afc6927ec9d58e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f593298f83c483716cb9d02886848d7dae2d0e27cd247428d453559bd87a482c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8a7e7e8c893640545387a1287e99c4eee721a5b30430f233ccf36d5e387aac5c"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "db722bb828eff03637e3771306c3910e0797a92ad91415837db92047f7afa4d6"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "c8d5b00231029e59c67da2ad4815b8617d8f6c70be2362a0e5eb11c459b4c2a8"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-07",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "불규칙 외곽 · 회전 박스 맞추기 · 정답 표에 추가",
+         "expected": "Fit actual native mouse points in original pixel coordinates, save and reopen.",
+         "observed": "Actual native irregular fitting used independently derived delivered mouse coordinates. Box/corner geometry, original image SHA, class and split survived manifest save/reopen. No OBB training or representative geometry approval was claimed by this content case.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/ocr-fitting-content.spec.ts::native human OCR text and three fitting modes save and reopen exact native content",
+         "receipt": "2026-10-07-app-execution-5de874675c0f2c7823c2.json",
+         "receipt_sha256": "568b83eb40cf15336115d6f2278c8a456eb92f254a3c1473a9f7f4a313333522",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3401b19dd3880c456c3967017f8a460c6545a209554a4f8c63afc6927ec9d58e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f593298f83c483716cb9d02886848d7dae2d0e27cd247428d453559bd87a482c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8a7e7e8c893640545387a1287e99c4eee721a5b30430f233ccf36d5e387aac5c"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "db722bb828eff03637e3771306c3910e0797a92ad91415837db92047f7afa4d6"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "c8d5b00231029e59c67da2ad4815b8617d8f6c70be2362a0e5eb11c459b4c2a8"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "obb-native-independent-direction-content",
+     "label": "회전 객체 독립 방향 · 정답 표에 추가",
+     "source": "src/renderer/components/training/RotatedBoxFitting.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-07",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "회전 객체 독립 방향 · 정답 표에 추가",
+         "expected": "Keep independent object direction separate from the fitted axial box angle.",
+         "observed": "Native content controls saved and reopened explicit315/0/180-degree directions while fitted box angles stayed0 degrees. Original images and class/split/geometry hashes were retained; this does not enable independent-direction prediction in the YOLO OBB adapter.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/ocr-fitting-content.spec.ts::native human OCR text and three fitting modes save and reopen exact native content",
+         "receipt": "2026-10-07-app-execution-5de874675c0f2c7823c2.json",
+         "receipt_sha256": "568b83eb40cf15336115d6f2278c8a456eb92f254a3c1473a9f7f4a313333522",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3401b19dd3880c456c3967017f8a460c6545a209554a4f8c63afc6927ec9d58e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f593298f83c483716cb9d02886848d7dae2d0e27cd247428d453559bd87a482c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8a7e7e8c893640545387a1287e99c4eee721a5b30430f233ccf36d5e387aac5c"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "db722bb828eff03637e3771306c3910e0797a92ad91415837db92047f7afa4d6"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "c8d5b00231029e59c67da2ad4815b8617d8f6c70be2362a0e5eb11c459b4c2a8"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-07",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "회전 객체 독립 방향 · 정답 표에 추가",
+         "expected": "Keep independent object direction separate from the fitted axial box angle.",
+         "observed": "Native content controls saved and reopened explicit315/0/180-degree directions while fitted box angles stayed0 degrees. Original images and class/split/geometry hashes were retained; this does not enable independent-direction prediction in the YOLO OBB adapter.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/ocr-fitting-content.spec.ts::native human OCR text and three fitting modes save and reopen exact native content",
+         "receipt": "2026-10-07-app-execution-5de874675c0f2c7823c2.json",
+         "receipt_sha256": "568b83eb40cf15336115d6f2278c8a456eb92f254a3c1473a9f7f4a313333522",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3401b19dd3880c456c3967017f8a460c6545a209554a4f8c63afc6927ec9d58e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f593298f83c483716cb9d02886848d7dae2d0e27cd247428d453559bd87a482c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8a7e7e8c893640545387a1287e99c4eee721a5b30430f233ccf36d5e387aac5c"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "db722bb828eff03637e3771306c3910e0797a92ad91415837db92047f7afa4d6"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "c8d5b00231029e59c67da2ad4815b8617d8f6c70be2362a0e5eb11c459b4c2a8"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
     }
    ],
-   "remaining": "Only exact listed controls and scenarios have executed. Unlisted actions, human quality, physical targets, licensing and whole-feature acceptance remain pending."
+   "remaining": "Only exact listed controls and scenarios have executed. Unlisted actions, representative human quality, physical targets, independent review and whole-feature acceptance remain pending."
   },
   {
    "id": "F030",
-   "actions": [],
-   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+   "actions": [
+    {
+     "id": "ocr-native-exact-truth-save-reopen",
+     "label": "선택 이미지의 문자 정답 추가 · 정답과 이미지 해시 저장 · 저장된 정답 읽기",
+     "source": "src/renderer/components/training/OCRWorkbench.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-06",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "선택 이미지의 문자 정답 추가 · 정답과 이미지 해시 저장 · 저장된 정답 읽기",
+         "expected": "Keep entered Unicode, leading/trailing spaces, split and original image hashes exactly.",
+         "observed": "Actual native controls saved and reopened4 original rows including fullwidth and nonbreaking characters. Exact text and source hashes matched; no training was submitted by this content case.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/ocr-fitting-content.spec.ts::native human OCR text and three fitting modes save and reopen exact native content",
+         "receipt": "2026-10-07-app-execution-5de874675c0f2c7823c2.json",
+         "receipt_sha256": "568b83eb40cf15336115d6f2278c8a456eb92f254a3c1473a9f7f4a313333522",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3401b19dd3880c456c3967017f8a460c6545a209554a4f8c63afc6927ec9d58e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f593298f83c483716cb9d02886848d7dae2d0e27cd247428d453559bd87a482c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8a7e7e8c893640545387a1287e99c4eee721a5b30430f233ccf36d5e387aac5c"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "db722bb828eff03637e3771306c3910e0797a92ad91415837db92047f7afa4d6"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "c8d5b00231029e59c67da2ad4815b8617d8f6c70be2362a0e5eb11c459b4c2a8"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-06",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "선택 이미지의 문자 정답 추가 · 정답과 이미지 해시 저장 · 저장된 정답 읽기",
+         "expected": "Keep entered Unicode, leading/trailing spaces, split and original image hashes exactly.",
+         "observed": "Actual native controls saved and reopened4 original rows including fullwidth and nonbreaking characters. Exact text and source hashes matched; no training was submitted by this content case.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/ocr-fitting-content.spec.ts::native human OCR text and three fitting modes save and reopen exact native content",
+         "receipt": "2026-10-07-app-execution-5de874675c0f2c7823c2.json",
+         "receipt_sha256": "568b83eb40cf15336115d6f2278c8a456eb92f254a3c1473a9f7f4a313333522",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3401b19dd3880c456c3967017f8a460c6545a209554a4f8c63afc6927ec9d58e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f593298f83c483716cb9d02886848d7dae2d0e27cd247428d453559bd87a482c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8a7e7e8c893640545387a1287e99c4eee721a5b30430f233ccf36d5e387aac5c"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "db722bb828eff03637e3771306c3910e0797a92ad91415837db92047f7afa4d6"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "c8d5b00231029e59c67da2ad4815b8617d8f6c70be2362a0e5eb11c459b4c2a8"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "ocr-native-unknown-training-alphabet",
+     "label": "정답과 이미지 해시 저장",
+     "source": "src/renderer/components/training/OCRWorkbench.tsx",
+     "scenarios": {
+      "success": {
+       "state": "pending"
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-06",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "정답과 이미지 해시 저장",
+         "expected": "Reject heldout characters absent from the training alphabet.",
+         "observed": "Actual native save returned422 for an unknown Korean/digit heldout alphabet and displayed the training-alphabet alert; the corrected table then prepared successfully.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/ocr-actual-training.spec.ts::native actual Korean digit OCR trains and executes a candidate-only whole-flow package",
+         "receipt": "2026-10-07-app-execution-fd0d3f541c61d61f096f.json",
+         "receipt_sha256": "2763a633f2bf9dc0f9801fa5ead3d79d996c8a315914ebe5cf58175e26d9667c",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9255c210e784c724f0f80b8c8cadeeb0059498098699aa5adcd78b5fc1c728b0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5c0daf4e5eb2421c19dea3b3864274d51a55cb7881aef1c8d4302c75bb486631"
+          }
+         ]
+        }
+       ]
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "ocr-native-hash-bound-splits",
+     "label": "정답과 이미지 해시 저장",
+     "source": "src/renderer/components/training/OCRWorkbench.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-06",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "정답과 이미지 해시 저장",
+         "expected": "Prepare the explicit original8/2/2 split without changing input bytes.",
+         "observed": "Actual native prepare returned8 train/2 val/2 test and persisted the dataset selector; all original synthetic glyph image hashes remained unchanged.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/ocr-actual-training.spec.ts::native actual Korean digit OCR trains and executes a candidate-only whole-flow package",
+         "receipt": "2026-10-07-app-execution-fd0d3f541c61d61f096f.json",
+         "receipt_sha256": "2763a633f2bf9dc0f9801fa5ead3d79d996c8a315914ebe5cf58175e26d9667c",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9255c210e784c724f0f80b8c8cadeeb0059498098699aa5adcd78b5fc1c728b0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5c0daf4e5eb2421c19dea3b3864274d51a55cb7881aef1c8d4302c75bb486631"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "ocr-native-actual-cpu-training",
+     "label": "OCR 후보 학습",
+     "source": "src/renderer/components/training/OCRWorkbench.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-06",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "OCR 후보 학습",
+         "expected": "Train the entered CPU recognizer and retain its explicit recipe.",
+         "observed": "Actual native120-epoch CPU job completed with batch2/input32/learning_rate0.003, decreasing recorded training loss and the exact detect_recognize/text-rule recipe. Synthetic glyph quality is not representative manufacturing approval.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/ocr-actual-training.spec.ts::native actual Korean digit OCR trains and executes a candidate-only whole-flow package",
+         "receipt": "2026-10-07-app-execution-fd0d3f541c61d61f096f.json",
+         "receipt_sha256": "2763a633f2bf9dc0f9801fa5ead3d79d996c8a315914ebe5cf58175e26d9667c",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9255c210e784c724f0f80b8c8cadeeb0059498098699aa5adcd78b5fc1c728b0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5c0daf4e5eb2421c19dea3b3864274d51a55cb7881aef1c8d4302c75bb486631"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "ocr-native-heldout-evaluation",
+     "label": "시험 분할 평가",
+     "source": "src/renderer/components/training/OCRWorkbench.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-06",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "시험 분할 평가",
+         "expected": "Evaluate the selected completed candidate on its original heldout cohort.",
+         "observed": "Actual native recipe evaluation reported2 original heldout images, CER0 and WER0 with hash-bound per-character alignment. This small synthetic cohort does not establish general OCR quality.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/ocr-actual-training.spec.ts::native actual Korean digit OCR trains and executes a candidate-only whole-flow package",
+         "receipt": "2026-10-07-app-execution-fd0d3f541c61d61f096f.json",
+         "receipt_sha256": "2763a633f2bf9dc0f9801fa5ead3d79d996c8a315914ebe5cf58175e26d9667c",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9255c210e784c724f0f80b8c8cadeeb0059498098699aa5adcd78b5fc1c728b0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5c0daf4e5eb2421c19dea3b3864274d51a55cb7881aef1c8d4302c75bb486631"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "ocr-native-multiline-and-empty",
+     "label": "문자 읽기",
+     "source": "src/renderer/components/training/OCRWorkbench.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-06",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "문자 읽기",
+         "expected": "Keep horizontal line order and original-pixel regions; refuse invented text for blank input.",
+         "observed": "Actual native prediction returned 가1 then 나2 on separate lines, line indices0/1 and original96x84 region coordinates matching rendered SVG rectangles. Blank image returned empty text and regions. These are horizontal region proposals, not a learned scene-text detector or vertical-text qualification.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/ocr-actual-training.spec.ts::native actual Korean digit OCR trains and executes a candidate-only whole-flow package",
+         "receipt": "2026-10-07-app-execution-fd0d3f541c61d61f096f.json",
+         "receipt_sha256": "2763a633f2bf9dc0f9801fa5ead3d79d996c8a315914ebe5cf58175e26d9667c",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9255c210e784c724f0f80b8c8cadeeb0059498098699aa5adcd78b5fc1c728b0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5c0daf4e5eb2421c19dea3b3864274d51a55cb7881aef1c8d4302c75bb486631"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-06",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "문자 읽기",
+         "expected": "Keep horizontal line order and original-pixel regions; refuse invented text for blank input.",
+         "observed": "Actual native prediction returned 가1 then 나2 on separate lines, line indices0/1 and original96x84 region coordinates matching rendered SVG rectangles. Blank image returned empty text and regions. These are horizontal region proposals, not a learned scene-text detector or vertical-text qualification.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/ocr-actual-training.spec.ts::native actual Korean digit OCR trains and executes a candidate-only whole-flow package",
+         "receipt": "2026-10-07-app-execution-fd0d3f541c61d61f096f.json",
+         "receipt_sha256": "2763a633f2bf9dc0f9801fa5ead3d79d996c8a315914ebe5cf58175e26d9667c",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9255c210e784c724f0f80b8c8cadeeb0059498098699aa5adcd78b5fc1c728b0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5c0daf4e5eb2421c19dea3b3864274d51a55cb7881aef1c8d4302c75bb486631"
+          }
+         ]
+        }
+       ]
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "ocr-native-completed-recipe-reopen",
+     "label": "완료 후보 모델 · OCR 인식 방식",
+     "source": "src/renderer/components/training/OCRWorkbench.tsx",
+     "scenarios": {
+      "success": {
+       "state": "pending"
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-06",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "완료 후보 모델 · OCR 인식 방식",
+         "expected": "Reopen the same completed model, prepared input and OCR settings.",
+         "observed": "Native reload retained the exact model ID, prepared dataset, detect_recognize mode, batch/input/learning rate, min/max length and allowed-value strings.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/ocr-actual-training.spec.ts::native actual Korean digit OCR trains and executes a candidate-only whole-flow package",
+         "receipt": "2026-10-07-app-execution-fd0d3f541c61d61f096f.json",
+         "receipt_sha256": "2763a633f2bf9dc0f9801fa5ead3d79d996c8a315914ebe5cf58175e26d9667c",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9255c210e784c724f0f80b8c8cadeeb0059498098699aa5adcd78b5fc1c728b0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5c0daf4e5eb2421c19dea3b3864274d51a55cb7881aef1c8d4302c75bb486631"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "ocr-native-explicit-flow-binding",
+     "label": "검사 플로우·배포 패키지 · 선택 모델 연결",
+     "source": "src/renderer/components/flowchart/FlowchartStudio.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-06",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "검사 플로우·배포 패키지 · 선택 모델 연결",
+         "expected": "Explicitly hand off the selected completed OCR candidate to the flow.",
+         "observed": "Native workbench opened model binding and explicitly connected the selected candidate. Separate actual CPU API flow and independent package processes preserved multiline regions, recipe/rule result and NG verdict. Package creation/execution was a helper path, not GUI export or signed deployment.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/ocr-actual-training.spec.ts::native actual Korean digit OCR trains and executes a candidate-only whole-flow package",
+         "receipt": "2026-10-07-app-execution-fd0d3f541c61d61f096f.json",
+         "receipt_sha256": "2763a633f2bf9dc0f9801fa5ead3d79d996c8a315914ebe5cf58175e26d9667c",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9255c210e784c724f0f80b8c8cadeeb0059498098699aa5adcd78b5fc1c728b0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5c0daf4e5eb2421c19dea3b3864274d51a55cb7881aef1c8d4302c75bb486631"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-06",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "검사 플로우·배포 패키지 · 선택 모델 연결",
+         "expected": "Explicitly hand off the selected completed OCR candidate to the flow.",
+         "observed": "Native workbench opened model binding and explicitly connected the selected candidate. Separate actual CPU API flow and independent package processes preserved multiline regions, recipe/rule result and NG verdict. Package creation/execution was a helper path, not GUI export or signed deployment.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/ocr-actual-training.spec.ts::native actual Korean digit OCR trains and executes a candidate-only whole-flow package",
+         "receipt": "2026-10-07-app-execution-fd0d3f541c61d61f096f.json",
+         "receipt_sha256": "2763a633f2bf9dc0f9801fa5ead3d79d996c8a315914ebe5cf58175e26d9667c",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9255c210e784c724f0f80b8c8cadeeb0059498098699aa5adcd78b5fc1c728b0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5c0daf4e5eb2421c19dea3b3864274d51a55cb7881aef1c8d4302c75bb486631"
+          }
+         ]
+        }
+       ]
+      }
+     }
+    }
+   ],
+   "remaining": "Only exact listed controls and scenarios have executed. Unlisted actions, representative human quality, physical targets, independent review and whole-feature acceptance remain pending."
   },
   {
    "id": "F031",
-   "actions": [],
-   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+   "actions": [
+    {
+     "id": "rotation-native-original-angle-preparation",
+     "label": "원본과 보정각 준비",
+     "source": "src/renderer/components/training/RotationWorkbench.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-08",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "원본과 보정각 준비",
+         "expected": "Bind explicit correction-angle truth and original image splits.",
+         "observed": "Actual native preparation returned8 train/4 val/4 test; every original synthetic directional image hash remained unchanged.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/rotation-actual-training.spec.ts::native actual rotation screen completes CPU learned direction and offline export",
+         "receipt": "2026-10-07-app-execution-683f63122818687ea89e.json",
+         "receipt_sha256": "4abe8a5d297ee120f82d01525d7007e71ea5ce4650074808bf215cb3708fcc8d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1eb4541505e94234756797da380eb205a7407bfd90a2960007ca80f6319282db"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "246fdb33628681d470f5cbefb948040eedbdba2281444ccbee10207de887d9f4"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "rotation-native-actual-cpu-training",
+     "label": "정방향 모델 후보 학습",
+     "source": "src/renderer/components/training/RotationWorkbench.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-08",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "정방향 모델 후보 학습",
+         "expected": "Run the entered20-epoch local CPU direction candidate.",
+         "observed": "Actual native job completed20 epochs with input32,learning_rate0.01,max_runtime60s and decreased training loss. Selected best epoch is separate from completed epoch count; quality_approved remained false.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/rotation-actual-training.spec.ts::native actual rotation screen completes CPU learned direction and offline export",
+         "receipt": "2026-10-07-app-execution-683f63122818687ea89e.json",
+         "receipt_sha256": "4abe8a5d297ee120f82d01525d7007e71ea5ce4650074808bf215cb3708fcc8d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1eb4541505e94234756797da380eb205a7407bfd90a2960007ca80f6319282db"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "246fdb33628681d470f5cbefb948040eedbdba2281444ccbee10207de887d9f4"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "rotation-native-heldout-angle-evaluation",
+     "label": "시험 분할 평가",
+     "source": "src/renderer/components/training/RotationWorkbench.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-08",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "시험 분할 평가",
+         "expected": "Measure circular angle error on the selected completed heldout candidate.",
+         "observed": "Actual native evaluation used4 heldout synthetic images and displayed circular MAE9.9344 degrees and within10-degree fraction0.5. These measurements do not establish production alignment quality.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/rotation-actual-training.spec.ts::native actual rotation screen completes CPU learned direction and offline export",
+         "receipt": "2026-10-07-app-execution-683f63122818687ea89e.json",
+         "receipt_sha256": "4abe8a5d297ee120f82d01525d7007e71ea5ce4650074808bf215cb3708fcc8d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1eb4541505e94234756797da380eb205a7407bfd90a2960007ca80f6319282db"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "246fdb33628681d470f5cbefb948040eedbdba2281444ccbee10207de887d9f4"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "rotation-native-selected-image-alignment",
+     "label": "선택 이미지 정렬",
+     "source": "src/renderer/components/training/RotationWorkbench.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-08",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "선택 이미지 정렬",
+         "expected": "Align the explicitly selected original using the learned completed model.",
+         "observed": "Actual native request predicted a correction angle and displayed the aligned original image; the selected source bytes remained unchanged.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/rotation-actual-training.spec.ts::native actual rotation screen completes CPU learned direction and offline export",
+         "receipt": "2026-10-07-app-execution-683f63122818687ea89e.json",
+         "receipt_sha256": "4abe8a5d297ee120f82d01525d7007e71ea5ce4650074808bf215cb3708fcc8d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1eb4541505e94234756797da380eb205a7407bfd90a2960007ca80f6319282db"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "246fdb33628681d470f5cbefb948040eedbdba2281444ccbee10207de887d9f4"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "rotation-native-independent-export-pixels",
+     "label": "내보내기",
+     "source": "src/renderer/components/training/RotationWorkbench.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-08",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "내보내기",
+         "expected": "Export the selected candidate and compare a separate package process.",
+         "observed": "Actual native export button created the TorchScript candidate package; its independent CPU process matched exact aligned output pixels. Signing, release publishing and physical target execution remain pending.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/rotation-actual-training.spec.ts::native actual rotation screen completes CPU learned direction and offline export",
+         "receipt": "2026-10-07-app-execution-683f63122818687ea89e.json",
+         "receipt_sha256": "4abe8a5d297ee120f82d01525d7007e71ea5ce4650074808bf215cb3708fcc8d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1eb4541505e94234756797da380eb205a7407bfd90a2960007ca80f6319282db"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "246fdb33628681d470f5cbefb948040eedbdba2281444ccbee10207de887d9f4"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-08",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "내보내기",
+         "expected": "Export the selected candidate and compare a separate package process.",
+         "observed": "Actual native export button created the TorchScript candidate package; its independent CPU process matched exact aligned output pixels. Signing, release publishing and physical target execution remain pending.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/rotation-actual-training.spec.ts::native actual rotation screen completes CPU learned direction and offline export",
+         "receipt": "2026-10-07-app-execution-683f63122818687ea89e.json",
+         "receipt_sha256": "4abe8a5d297ee120f82d01525d7007e71ea5ce4650074808bf215cb3708fcc8d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1eb4541505e94234756797da380eb205a7407bfd90a2960007ca80f6319282db"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "246fdb33628681d470f5cbefb948040eedbdba2281444ccbee10207de887d9f4"
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    {
+     "id": "rotation-native-model-and-truth-reopen",
+     "label": "완료 정방향 후보 모델 · 프로젝트에 저장된 보정각 정답",
+     "source": "src/renderer/components/training/RotationWorkbench.tsx",
+     "scenarios": {
+      "success": {
+       "state": "pending"
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-08",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "완료 정방향 후보 모델 · 프로젝트에 저장된 보정각 정답",
+         "expected": "Reopen the exact prepared input and completed best candidate.",
+         "observed": "Native reload retained the same job ID and prepared correction-angle dataset.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/rotation-actual-training.spec.ts::native actual rotation screen completes CPU learned direction and offline export",
+         "receipt": "2026-10-07-app-execution-683f63122818687ea89e.json",
+         "receipt_sha256": "4abe8a5d297ee120f82d01525d7007e71ea5ce4650074808bf215cb3708fcc8d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1eb4541505e94234756797da380eb205a7407bfd90a2960007ca80f6319282db"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "246fdb33628681d470f5cbefb948040eedbdba2281444ccbee10207de887d9f4"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    },
+    {
+     "id": "rotation-native-explicit-flow-model",
+     "label": "플로우에 연결 · 선택 모델 연결",
+     "source": "src/renderer/components/flowchart/FlowchartStudio.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-08",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "플로우에 연결 · 선택 모델 연결",
+         "expected": "Connect only the explicit completed direction candidate.",
+         "observed": "Native workbench opened binding and selected the exact completed model; the flow rotation selector retained that ID. This case did not execute the whole flow.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/rotation-actual-training.spec.ts::native actual rotation screen completes CPU learned direction and offline export",
+         "receipt": "2026-10-07-app-execution-683f63122818687ea89e.json",
+         "receipt_sha256": "4abe8a5d297ee120f82d01525d7007e71ea5ce4650074808bf215cb3708fcc8d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1eb4541505e94234756797da380eb205a7407bfd90a2960007ca80f6319282db"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "246fdb33628681d470f5cbefb948040eedbdba2281444ccbee10207de887d9f4"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "pending"
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "pending"
+      },
+      "handoff": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-08",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "플로우에 연결 · 선택 모델 연결",
+         "expected": "Connect only the explicit completed direction candidate.",
+         "observed": "Native workbench opened binding and selected the exact completed model; the flow rotation selector retained that ID. This case did not execute the whole flow.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/rotation-actual-training.spec.ts::native actual rotation screen completes CPU learned direction and offline export",
+         "receipt": "2026-10-07-app-execution-683f63122818687ea89e.json",
+         "receipt_sha256": "4abe8a5d297ee120f82d01525d7007e71ea5ce4650074808bf215cb3708fcc8d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1eb4541505e94234756797da380eb205a7407bfd90a2960007ca80f6319282db"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "246fdb33628681d470f5cbefb948040eedbdba2281444ccbee10207de887d9f4"
+          }
+         ]
+        }
+       ]
+      }
+     }
+    }
+   ],
+   "remaining": "Only exact listed controls and scenarios have executed. Unlisted actions, representative human quality, physical targets, independent review and whole-feature acceptance remain pending."
   },
   {
    "id": "F032",
@@ -4473,8 +5802,109 @@
   },
   {
    "id": "F079",
-   "actions": [],
-   "remaining": "Unreviewed actions, runtime-generated menus and shortcuts require explicit scenario execution."
+   "actions": [
+    {
+     "id": "ocr-native-rule-inputs-reopen-and-refusal",
+     "label": "OCR 최소 문자 수 · OCR 최대 문자 수 · OCR 허용 문자열 (한 줄에 하나)",
+     "source": "src/renderer/components/training/OCRWorkbench.tsx",
+     "scenarios": {
+      "success": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-06",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "OCR 최소 문자 수 · OCR 최대 문자 수 · OCR 허용 문자열 (한 줄에 하나)",
+         "expected": "Keep explicit string rules separate from recognized text and persist them.",
+         "observed": "Native inputs min1/max10, regex and allowed values reopened exactly. Actual two-line text failed allowed_values; blank text failed regex/min_length/allowed_values. Actual whole-flow and separate candidate package retained those rule results; no manual text correction or semantic approval is inferred.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/ocr-actual-training.spec.ts::native actual Korean digit OCR trains and executes a candidate-only whole-flow package",
+         "receipt": "2026-10-07-app-execution-fd0d3f541c61d61f096f.json",
+         "receipt_sha256": "2763a633f2bf9dc0f9801fa5ead3d79d996c8a315914ebe5cf58175e26d9667c",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9255c210e784c724f0f80b8c8cadeeb0059498098699aa5adcd78b5fc1c728b0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5c0daf4e5eb2421c19dea3b3864274d51a55cb7881aef1c8d4302c75bb486631"
+          }
+         ]
+        }
+       ]
+      },
+      "empty": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-06",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "OCR 최소 문자 수 · OCR 최대 문자 수 · OCR 허용 문자열 (한 줄에 하나)",
+         "expected": "Keep explicit string rules separate from recognized text and persist them.",
+         "observed": "Native inputs min1/max10, regex and allowed values reopened exactly. Actual two-line text failed allowed_values; blank text failed regex/min_length/allowed_values. Actual whole-flow and separate candidate package retained those rule results; no manual text correction or semantic approval is inferred.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/ocr-actual-training.spec.ts::native actual Korean digit OCR trains and executes a candidate-only whole-flow package",
+         "receipt": "2026-10-07-app-execution-fd0d3f541c61d61f096f.json",
+         "receipt_sha256": "2763a633f2bf9dc0f9801fa5ead3d79d996c8a315914ebe5cf58175e26d9667c",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9255c210e784c724f0f80b8c8cadeeb0059498098699aa5adcd78b5fc1c728b0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5c0daf4e5eb2421c19dea3b3864274d51a55cb7881aef1c8d4302c75bb486631"
+          }
+         ]
+        }
+       ]
+      },
+      "invalid": {
+       "state": "pending"
+      },
+      "error": {
+       "state": "pending"
+      },
+      "cancel": {
+       "state": "pending"
+      },
+      "reopen": {
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-06",
+         "source_sha": "0eadf8c9ee87e894597286fdc85bed625771e132",
+         "kind": "click",
+         "action": "OCR 최소 문자 수 · OCR 최대 문자 수 · OCR 허용 문자열 (한 줄에 하나)",
+         "expected": "Keep explicit string rules separate from recognized text and persist them.",
+         "observed": "Native inputs min1/max10, regex and allowed values reopened exactly. Actual two-line text failed allowed_values; blank text failed regex/min_length/allowed_values. Actual whole-flow and separate candidate package retained those rule results; no manual text correction or semantic approval is inferred.",
+         "reviewer": "Codex root exact retained native control and byte readback; human quality, device, independent review and release acceptance pending",
+         "test": "scripts/e2e/ocr-actual-training.spec.ts::native actual Korean digit OCR trains and executes a candidate-only whole-flow package",
+         "receipt": "2026-10-07-app-execution-fd0d3f541c61d61f096f.json",
+         "receipt_sha256": "2763a633f2bf9dc0f9801fa5ead3d79d996c8a315914ebe5cf58175e26d9667c",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9255c210e784c724f0f80b8c8cadeeb0059498098699aa5adcd78b5fc1c728b0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5c0daf4e5eb2421c19dea3b3864274d51a55cb7881aef1c8d4302c75bb486631"
+          }
+         ]
+        }
+       ]
+      },
+      "handoff": {
+       "state": "pending"
+      }
+     }
+    }
+   ],
+   "remaining": "Only exact listed controls and scenarios have executed. Unlisted actions, representative human quality, physical targets, independent review and whole-feature acceptance remain pending."
   },
   {
    "id": "F080",
