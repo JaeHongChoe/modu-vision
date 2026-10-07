@@ -136,14 +136,15 @@ def _rebuild(path, expected):
 def normalize_staged(root,scopes,known):
     """Canonical current DDL in a verified private copy; original rows retained."""
     from backend.engine.global_migration import _schema
-    from backend.engine.global_store_paths import _STAGED,owned_root,active_generation
+    from backend.engine.global_store_paths import staged_generation_admitted,owned_root,active_generation
     root=Path(root).absolute();installation,_=owned_root(root)
     if (installation is None or root.parent!=installation/'.global-generations'
-            or _STAGED.get()!=(str(installation),str(root))
             or any(p.is_symlink() for p in (root,*root.parents))):
         raise ValueError('Historical conversion requires explicit private staged construction')
     active=active_generation(installation)
     if active is not None and active[0]==root:raise ValueError('Historical conversion cannot rewrite an active generation')
+    if not staged_generation_admitted(installation,root):
+        raise ValueError('Historical conversion requires explicit private staged construction')
     for scope in ('ledger','leases'):
         path=root/scopes[scope];actual=_schema(path)
         if actual==known[scope]:continue

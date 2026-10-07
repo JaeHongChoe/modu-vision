@@ -269,9 +269,9 @@ def backend_bootstrap_ready():
     """Publish binding readiness only after recovery under shared lifespan admission."""
     proof = early_backend_bootstrap()
     if proof is None: return None
-    from backend.engine.migration_guard import _HELD
+    from backend.engine.migration_guard import shared_admitted
     root = _CACHE['root']
-    if not any(item['active'] and item['key'] == str(root) and not item['exclusive'] for item in _HELD.get()):
+    if not shared_admitted(root):
         raise HandshakeError('Backend readiness requires admitted shared application lifespan')
     if not _CACHE['ready']:
         send_frame(_CACHE['socket'], {**proof, 'kind': 'backend_ready'}); _CACHE['ready'] = True

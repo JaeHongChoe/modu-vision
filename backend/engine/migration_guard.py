@@ -22,11 +22,22 @@ def _execution_owner():
     return os.getpid(),threading.current_thread(),task
 
 
-def exclusive_admitted(root):
-    """Exclusive reentrancy belongs to the original process/thread/async task."""
+def _admission_capability(root, *, exclusive):
+    """Return only this execution owner's exact live admission record."""
     key=str(Path(root).resolve())
     owner=_execution_owner()
-    return any(item['key']==key and item['active'] and item['exclusive'] and item['owner']==owner for item in _HELD.get())
+    return next((item for item in _HELD.get() if item['key']==key and item['active']
+                 and item['exclusive'] is exclusive and item['owner']==owner),None)
+
+
+def exclusive_admitted(root):
+    """Exclusive reentrancy belongs to the original process/thread/async task."""
+    return _admission_capability(root,exclusive=True) is not None
+
+
+def shared_admitted(root):
+    """Shared readiness requires this owner's live ordinary admission."""
+    return _admission_capability(root,exclusive=False) is not None
 
 
 def _windows_admission(handle, exclusive):

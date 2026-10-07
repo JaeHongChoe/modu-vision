@@ -4,7 +4,7 @@ from contextvars import ContextVar
 import json,os
 import hashlib
 from pathlib import Path
-from backend.engine.migration_guard import maintenance_guard,exclusive_admitted
+from backend.engine.migration_guard import maintenance_guard,exclusive_admitted,_admission_capability
 
 OWNER_FILE='.global-migration-owner.json'
 POINTER_FILE='global-active.json'
@@ -87,16 +87,30 @@ def resolve_store_path(path):
 
 @contextmanager
 def staged_construction(root,generation):
-    """Private migration callers hold exclusive admission around this scope."""
-    token=_STAGED.set((str(Path(root).resolve()),str(Path(generation).resolve())))
+    """Only the original live exclusive admission can use this private scope."""
+    scope={'root':str(Path(root).resolve()),'generation':str(Path(generation).resolve()),
+           'active':True,'admission':_admission_capability(root,exclusive=True)}
+    token=_STAGED.set(scope)
     try:yield
-    finally:_STAGED.reset(token)
+    finally:
+        scope['active']=False
+        _STAGED.reset(token)
+
+
+def staged_generation_admitted(root,generation):
+    """Copied/expired scopes cannot borrow or revive an exclusive capability."""
+    scope=_STAGED.get()
+    return (isinstance(scope,dict) and scope['active'] and scope['admission'] is not None
+            and scope['root']==str(Path(root).resolve())
+            and scope['generation']==str(Path(generation).resolve())
+            and _admission_capability(root,exclusive=True) is scope['admission'])
 
 
 def _assert_current_store(root,owner,path):
     path=Path(path).absolute();relative=path.relative_to(root)
     staged=_STAGED.get()
-    if staged and staged[0]==str(root) and path.is_relative_to(Path(staged[1])):return
+    if (staged and staged_generation_admitted(root,staged['generation'])
+            and path.is_relative_to(Path(staged['generation']))):return
     active=active_generation(root)
     scopes=set(owner['scopes'].values())
     declared=(relative.as_posix() in scopes or any(path.is_relative_to(root/owner['scopes'][key]) for key in ('local_journals','remote_journals')))
