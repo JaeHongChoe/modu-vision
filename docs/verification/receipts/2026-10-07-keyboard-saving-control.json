@@ -1,0 +1,121 @@
+{
+  "schema": "KeyboardSavingPrecondition/v1",
+  "source_sha": "c37b1ba74ab0d10f88849ee21c86922e5a7c5f2b",
+  "source_dirty": false,
+  "source_input_sha256": {
+    "scripts/e2e/fixtures/keyboard-action.ts": "6cfaac04211a7962ec22cb113f1f7349effcd7e0443a2d61fd1795669479000a",
+    "scripts/e2e/keyboard-action-wait.spec.ts": "64c48479ecad565f1249a7dc6e4bce576919bf5fdee2ea9ce42f1cf06a5405f0",
+    "scripts/e2e/keyboard-canvas-closure.spec.ts": "8bafd5a446febace7ac1c3978ff61e21a118e5cbd60d6f75978df7732ec0cb1e"
+  },
+  "failed_hosted_run": {
+    "run_id": 37538406281,
+    "source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+    "status": "failed",
+    "receipt_sha256": "bc39e2d3b9637cd2ccca6d75bd815dc9a2397bafb0f7295fc2e958be25322f13",
+    "cpu_passed": 2307,
+    "cpu_skipped": 7,
+    "cpu_failures": 0,
+    "cpu_skip_review": [
+      {
+        "case": "tests.test_service_s1_09::test_windows_refuses_to_replace_a_file_a_reader_holds_and_the_retry_waits_it_out",
+        "reason": "Windows file sharing semantics"
+      },
+      {
+        "case": "tests.test_service_s1_09::test_a_status_file_read_while_it_is_replaced_never_fails_either_side_on_windows",
+        "reason": "Windows file sharing semantics"
+      },
+      {
+        "case": "tests.test_service_s2_01::test_an_example_folder_reached_under_another_letter_case_is_still_the_example",
+        "reason": "this file system tells letter cases apart: the other spelling is another folder"
+      },
+      {
+        "case": "tests.test_whole_flow_runtime_review::test_actual_openvino_full_flow_review_and_package_reopen",
+        "reason": "Explicit OpenVINO validation interpreter is required"
+      },
+      {
+        "case": "tests.test_ssh_keychain_transport::test_native_macos_openssh_effective_configuration_overrides_conflicting_user_defaults[ssh]",
+        "reason": "Apple OpenSSH Keychain config parser is macOS specific"
+      },
+      {
+        "case": "tests.test_ssh_keychain_transport::test_native_macos_openssh_effective_configuration_overrides_conflicting_user_defaults[scp]",
+        "reason": "Apple OpenSSH Keychain config parser is macOS specific"
+      },
+      {
+        "case": "tests.test_ssh_keychain_transport::test_native_macos_openssh_effective_configuration_overrides_conflicting_user_defaults[rsync]",
+        "reason": "Apple OpenSSH Keychain config parser is macOS specific"
+      }
+    ],
+    "browser": {
+      "passed": 162,
+      "failed": 1,
+      "skipped": 1,
+      "not_recorded": 0
+    },
+    "browser_skip_reason": "qa-app-flow.spec.ts requires explicit MV_E2E_APP_FLOW=1 for two CPU training jobs; not run by this public lane",
+    "owned_model_cases_not_executed": 11,
+    "trace_sha256": "fd4306c180052e71c81e3d33454fa65b4923a7e3fb7c58cd3fad700bacfafe38",
+    "failure_screenshot_sha256": "610f0420fc1037fddf49dfa5a275816c0c33d351682c5a402030b4b70d240152",
+    "observed_frames": [
+      {
+        "call": "call@11914",
+        "phase": "after",
+        "time_ms": 545949.647,
+        "draft_saving": true,
+        "fixed_roi_disabled": true
+      },
+      {
+        "call": "call@11918",
+        "phase": "after",
+        "time_ms": 545983.63,
+        "fixed_roi_targeted": true,
+        "fixed_roi_disabled": true
+      }
+    ],
+    "next_key": {
+      "call": "call@11922",
+      "time_ms": 545984.498,
+      "key": "Enter"
+    },
+    "root_cause": "focus() did not wait for enabled controls during autosave; Enter activated the previously focused image-picker opener"
+  },
+  "regression_red": {
+    "passed": 0,
+    "failed": 1,
+    "log_sha256": "03cf733bcfde5c5201cab2c4f420b3aa42fe62be407f844b4f2505b3196aa345",
+    "scope": "real browser controlled disabled target reproduces early opener activation"
+  },
+  "qualification": {
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "retry": 0,
+    "duration_seconds": 34.7,
+    "gui_receipts": [
+      {
+        "path": "docs/verification/receipts/2026-10-07-keyboard-qualified-keyboard-action-wait-keybo-1670f-ad-of-activating-its-opener-browser.json",
+        "sha256": "a0b7f653abfa46e7ad39c1ddee4bbe571045e3a6956c475d3200ccd2185beef0",
+        "mode": "browser",
+        "test": "scripts/e2e/keyboard-action-wait.spec.ts::keyboard activation waits for a saving-disabled target instead of activating its opener"
+      },
+      {
+        "path": "docs/verification/receipts/2026-10-07-keyboard-qualified-keyboard-canvas-closure-ke-3f72f-w-and-display-scale-changes-browser.json",
+        "sha256": "821456960fe20831da8cc60aab96f72348cb968fbec77c4f2cc2008beeee63ec",
+        "mode": "browser",
+        "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::keyboard graph and original ROI survive window and display scale changes"
+      },
+      {
+        "path": "docs/verification/receipts/2026-10-07-keyboard-qualified-keyboard-canvas-closure-na-bc2d1-OI-preserve-draft-and-focus-electron.json",
+        "sha256": "46b48c561cefecbf945095743b91c63583aa04041d0482c3d1e80c5625e7f0ef",
+        "mode": "electron",
+        "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus"
+      }
+    ],
+    "e2e_typecheck": "passed",
+    "controlled_helper_case_is_product_flow": false,
+    "actual_flow_cases": 2
+  },
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "parent_promoted": false,
+  "scope": "Keyboard test action preconditions only. Product autosave/edit locks remain intact. Latest complete hosted CI, Windows/device, human quality and release acceptance remain separate."
+}
