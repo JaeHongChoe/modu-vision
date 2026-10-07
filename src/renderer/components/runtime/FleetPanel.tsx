@@ -6,7 +6,7 @@ import {useDeliveryScope} from './useDeliveryScope';
 import {SavedPackagePicker} from './SavedPackagePicker';
 import {emergencyAcknowledged,type RollbackCapabilities,type EmergencyRollbackEvent,type EmergencyRollbackReceipt} from './emergencyRollbackPolicy';
 import {fleetRollouts,rolloutControls,type FleetRollout} from '../../services/fleetRollouts';
-type Target={target_id:string;name:string;url:string;token_set:boolean};
+type Target={target_id:string;name:string;url:string;token_set:boolean;credential_storage?:'server_secret_v1'|'legacy_project_database'|'unconfigured'};
 type Deployment={deployment_id:string;created_at:number;reviewer:string;restored_from?:string;release:{manifest_sha256:string;device:string}};
 type AgentState={target:Target;runtime:{status:string;device?:string;manifest_sha256?:string;model_sha256?:Record<string,string>};active:Deployment|null;history:Deployment[];matches_active:boolean;error?:string;emergency_rollback_events?:EmergencyRollbackEvent[]};
 const control='min-w-0 rounded border border-slate-600 bg-[#0D1622] p-2 text-xs';
@@ -24,6 +24,10 @@ export function FleetPanel({onNavigate}:{onNavigate?:(step:WorkflowStep)=>void}=
   const selectedRef=useRef(selected);selectedRef.current=selected;
   const capabilities=capabilityRecord?.key===key?capabilityRecord.value:null;
   const [capabilityError,setCapabilityError]=useState('');
+  const [credentialReason,setCredentialReason]=useState(''),[credentialStatus,setCredentialStatus]=useState<'idle'|'submitting'|'confirmed'|'unverified'>('idle');
+  const credentialRequest=useRef<{key:string;targetId:string}|null>(null);
+  const selectedTarget=targets.find(target=>target.target_id===selected);
+  const canMigrateCredentials=capabilities?.actor_role==='owner'||capabilities?.actor_role==='local_owner';
   const [rollouts,setRollouts]=useState<FleetRollout[]>([]),[rolloutId,setRolloutId]=useState(''),[rollout,setRollout]=useState<FleetRollout|null>(null);
   const [rolloutTargets,setRolloutTargets]=useState<string[]>([]),[canary,setCanary]=useState(''),[batchSize,setBatchSize]=useState(5),[pauseReason,setPauseReason]=useState('');
   const rolloutRef=useRef(rolloutId);rolloutRef.current=rolloutId;
@@ -40,6 +44,7 @@ export function FleetPanel({onNavigate}:{onNavigate?:(step:WorkflowStep)=>void}=
     let current=true;const started=scope.current;
     setTargets([]);setSelected('');selectedRef.current='';setState(null);setName('');setUrl('');setToken('');setPackagePath('');setReviewer('');setRollback('');setBusy(false);setError('');setCapabilities(null);setCapabilityError('');setReason('');setEmergencyStatus('idle');setEmergencyError('');lastReceipt.current=null;setSubmittedReason('');
     setRollouts([]);setRolloutId('');rolloutRef.current='';setRollout(null);setRolloutTargets([]);setCanary('');setBatchSize(5);setPauseReason('');
+    setCredentialReason('');setCredentialStatus('idle');credentialRequest.current=null;
     if(projectDir){
       request<{targets:Target[]}>('/api/fleet/targets').then(r=>{if(current&&currentScope(started))setTargets(r.targets);}).catch(e=>{if(current&&currentScope(started))setError(String(e.message||e));});
       void refreshCapabilities();
@@ -114,6 +119,40 @@ export function FleetPanel({onNavigate}:{onNavigate?:(step:WorkflowStep)=>void}=
     if(targetResult.status==='rejected')throw targetResult.reason;
   };
   const action=async(fn:()=>Promise<unknown>)=>{if(!same())return;const started=scope.current;setBusy(true);setError('');try{await fn();}catch(e){if(currentScope(started))setError(String((e as Error).message||e));}finally{if(currentScope(started))setBusy(false);}};
+  const readCredentials=async(identifier:string)=>{
+    const started=scope.current;
+    const result=await request<{targets:Target[]}>('/api/fleet/targets');
+    if(!currentScope(started)||selectedRef.current!==identifier)return null;
+    const target=result.targets.find(row=>row.target_id===identifier);
+    if(!target)throw new Error('등록된 장비를 확인하지 못했습니다.');
+    setTargets(result.targets);
+    return target;
+  };
+  const migrateCredentials=async()=>{
+    if(!same()||busy||credentialRequest.current||!canMigrateCredentials||!selected||selectedTarget?.credential_storage!=='legacy_project_database'||credentialReason.trim().length<10)return;
+    const started=scope.current,identifier=selected,reason=credentialReason.trim();
+    const pending={key:started.key,targetId:identifier};credentialRequest.current=pending;
+    const current=()=>currentScope(started)&&selectedRef.current===identifier&&credentialRequest.current===pending;
+    setBusy(true);setCredentialStatus('submitting');
+    try{
+      try{
+        const result=await request<Target>(`/api/fleet/targets/${encodeURIComponent(identifier)}/credentials/migrate`,{method:'POST',body:JSON.stringify({reason})});
+        if(result.target_id!==identifier)throw new Error('응답 장비가 다릅니다.');
+      }catch{
+        // A lost POST response may follow a committed migration. Reconcile
+        // registered storage separately; this does not contact the field agent.
+      }
+      if(!current())return;
+      const target=await readCredentials(identifier);
+      if(!current())return;
+      if(target?.credential_storage!=='server_secret_v1')throw new Error('이동 확인 필요');
+      setCredentialStatus('confirmed');setCredentialReason('');
+    }catch{
+      if(current())setCredentialStatus('unverified');
+    }finally{
+      if(currentScope(started)&&credentialRequest.current===pending){credentialRequest.current=null;setBusy(false);}
+    }
+  };
   const add=async()=>{const started=scope.current;await request('/api/fleet/targets',{method:'POST',body:JSON.stringify({name,url,token})});if(!currentScope(started))return;setToken('');setName('');setUrl('');const result=await request<{targets:Target[]}>('/api/fleet/targets');if(currentScope(started))setTargets(result.targets);};
   const deploy=async()=>{const started=scope.current;await request(`/api/fleet/targets/${encodeURIComponent(selected)}/deploy`,{method:'POST',body:JSON.stringify({package_path:packagePath,device,reviewer})});if(currentScope(started))await read(selected);};
   const restore=async()=>{const started=scope.current;await request(`/api/fleet/targets/${encodeURIComponent(selected)}/rollback`,{method:'POST',body:JSON.stringify({deployment_id:rollback,reviewer})});if(currentScope(started))await read(selected);};
@@ -146,7 +185,21 @@ export function FleetPanel({onNavigate}:{onNavigate?:(step:WorkflowStep)=>void}=
   return <details className="mt-3 rounded-lg border border-slate-700 bg-[#142131] p-3"><summary className="cursor-pointer text-sm font-semibold text-cyan-200">중앙 · 현장 장비 모델 관리</summary><div className="mt-3 space-y-3 text-xs text-slate-200">
     <p className="leading-5 text-slate-400">장비에 Field Agent를 실행한 뒤 HTTPS 주소 또는 SSH 터널로 등록하세요. 승인된 전체 플로우를 전송하고 장비가 실제 사용하는 manifest·장치·모델 해시를 확인합니다.</p>
     <details><summary className="cursor-pointer text-slate-300">현장 장비 추가</summary><div className="mt-2 grid gap-2 sm:grid-cols-2"><input aria-label="현장 장비 이름" placeholder="장비 이름" className={control} value={name} onChange={e=>setName(e.target.value)}/><input aria-label="현장 Agent 주소" placeholder="https://cell.example.com" className={control} value={url} onChange={e=>setUrl(e.target.value)}/><input aria-label="현장 Agent 인증값" type="password" autoComplete="off" placeholder="Agent access token" className={`${control} sm:col-span-2`} value={token} onChange={e=>setToken(e.target.value)}/><button disabled={busy||!name.trim()||!url.trim()||token.length<16} className="rounded bg-cyan-800 px-3 py-2 disabled:opacity-40" onClick={()=>void action(add)}>연결 설정 저장</button></div></details>
-    <div className="flex gap-2"><select aria-label="현장 장비 선택" className={`${control} flex-1`} disabled={busy} value={selected} onChange={e=>{const id=e.target.value;selectedRef.current=id;setSelected(id);setState(null);setRollback('');setReason('');setEmergencyStatus('idle');setEmergencyError('');lastReceipt.current=null;setSubmittedReason('');if(id)void action(()=>read(id));}}><option value="">장비 선택</option>{targets.map(t=><option key={t.target_id} value={t.target_id}>{t.name} · {t.url}</option>)}</select><button className="text-cyan-200" disabled={busy||!selected} onClick={()=>void action(refreshActualState)}>실제 상태 확인</button></div>
+    <div className="flex gap-2"><select aria-label="현장 장비 선택" className={`${control} flex-1`} disabled={busy} value={selected} onChange={e=>{const id=e.target.value;selectedRef.current=id;setSelected(id);setState(null);setRollback('');setReason('');setEmergencyStatus('idle');setEmergencyError('');lastReceipt.current=null;setSubmittedReason('');setCredentialReason('');setCredentialStatus('idle');if(id)void action(()=>read(id));}}><option value="">장비 선택</option>{targets.map(t=><option key={t.target_id} value={t.target_id}>{t.name} · {t.url}</option>)}</select><button className="text-cyan-200" disabled={busy||!selected} onClick={()=>void action(refreshActualState)}>실제 상태 확인</button></div>
+    {selectedTarget&&<section aria-label="현장 장비 인증값 보관" className="workspace-section space-y-2">
+      <h3>현장 장비 인증값 보관</h3>
+      <p className="workspace-description">{selectedTarget.credential_storage==='server_secret_v1'?'인증값이 이 서버에 보관됩니다. 프로젝트를 다른 서버로 옮기면 연결 설정을 다시 저장하세요.':selectedTarget.credential_storage==='legacy_project_database'?'인증값이 프로젝트 안에 보관되어 있습니다. 이 서버의 저장소로 옮겨도 장비 주소와 인증값은 유지됩니다.':'인증값 보관 상태를 확인하거나 연결 설정을 저장하세요.'}</p>
+      {selectedTarget.credential_storage==='legacy_project_database'&&<>
+        <p id="fleet-credential-help" className="workspace-description">프로젝트 소유자가 사유를 10자 이상 입력해 옮길 수 있습니다. 장비 연결 없이 처리하며 이전 백업의 인증값까지 지우지는 않습니다.</p>
+        {!canMigrateCredentials&&<p className="text-amber-200">{capabilities?'프로젝트 소유자 권한이 필요합니다.':'소유자 권한 확인 중입니다. 권한을 확인하지 못하면 실제 상태 확인을 눌러 다시 확인하세요.'}</p>}
+        <label className="workspace-field">인증값 이동 사유<input aria-label="인증값 이동 사유" aria-describedby="fleet-credential-help" required minLength={10} maxLength={2000} disabled={busy||!canMigrateCredentials} value={credentialReason} onChange={event=>setCredentialReason(event.target.value)}/></label>
+        <button type="button" className="workspace-button workspace-button--primary" disabled={busy||!canMigrateCredentials||credentialReason.trim().length<10} onClick={()=>void migrateCredentials()}>인증값을 서버 저장소로 옮기기</button>
+      </>}
+      {credentialStatus==='submitting'&&<p role="status">인증값 이동·보관 상태 확인 중…</p>}
+      {credentialStatus==='confirmed'&&<p role="status" className="text-emerald-300">인증값 이동 확인됨</p>}
+      {credentialStatus==='unverified'&&<p role="alert" className="text-amber-200">이동을 확인하지 못했습니다. 입력한 사유를 유지했습니다. 보관 상태를 다시 읽고 필요하면 재시도하세요.</p>}
+      <button type="button" className="workspace-button" disabled={busy} onClick={()=>void action(async()=>{const target=await readCredentials(selected);if(target?.credential_storage==='server_secret_v1'&&credentialStatus==='unverified'){setCredentialStatus('confirmed');setCredentialReason('');}})}>인증값 보관 상태 다시 읽기</button>
+    </section>}
     {state&&<section className="rounded border border-slate-700 bg-slate-950/40 p-2"><p>{state.runtime.status==='ready'?'장비 응답 확인됨':state.runtime.status==='stopped'?'장비 검사 서비스 중지됨':'장비 연결 확인 필요'} · {state.runtime.device||'장치 응답 없음'} · {state.matches_active?'중앙 적용 기록과 일치':'중앙 기록과 실행 상태 확인 필요'}</p><p className="mt-1 break-all font-mono text-[10px]">실행 manifest: {state.runtime.manifest_sha256||'—'}</p>{Object.entries(state.runtime.model_sha256||{}).map(([id,hash])=><p key={id} className="mt-1 break-all font-mono text-[10px]">{id} · {hash}</p>)}</section>}
     <div className="grid gap-2 sm:grid-cols-2"><SavedPackagePicker value={packagePath} onChange={setPackagePath} disabled={busy}/><details className="sm:col-span-2"><summary className="text-slate-400">고급 · 패키지 폴더 직접 입력</summary><input aria-label="현장 배포 승인 패키지" className={`${control} w-full`} value={packagePath} onChange={e=>setPackagePath(e.target.value)}/></details><label>적용 검토자<input aria-label="현장 배포 검토자" className={`${control} w-full`} value={reviewer} onChange={e=>setReviewer(e.target.value)}/></label><label>장비 실행 자원<input aria-label="현장 실행 자원" className={`${control} w-full`} value={device} onChange={e=>setDevice(e.target.value)} placeholder="cpu / cuda:0 / openvino:CPU"/></label></div>
     {deployBlocker&&<div className="mt-2 text-xs text-amber-200"><p id="fleet-deploy-reason">적용 보류: {deployBlocker}</p><button className="workspace-button mt-2" onClick={()=>{if(selected&&!packagePath.trim())void (onNavigate||useProjectStore.getState().setStep)(6);else document.querySelector<HTMLElement>(!selected?'[aria-label="현장 장비 선택"]':'[aria-label="현장 배포 검토자"]')?.focus();}}>{!selected?'현장 장비 선택':!packagePath.trim()?'승인·패키지 확인 (6단계)':'적용 입력 확인'}</button></div>}
