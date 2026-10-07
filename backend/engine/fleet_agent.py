@@ -194,8 +194,15 @@ def create_agent_app(root,token):
 
 def main(argv=None):
     parser=argparse.ArgumentParser(description='Run an authenticated field deployment and inspection agent')
-    parser.add_argument('--state-dir',required=True);parser.add_argument('--host',default='127.0.0.1');parser.add_argument('--port',type=int,default=8514);args=parser.parse_args(argv)
+    parser.add_argument('--state-dir',required=True);parser.add_argument('--host',default='127.0.0.1');parser.add_argument('--port',type=int,default=8514)
+    parser.add_argument('--token-file',help='Service-user-owned private server token file; exclusive with VISION_FIELD_AGENT_TOKEN')
+    parser.add_argument('--tls-cert');parser.add_argument('--tls-key');args=parser.parse_args(argv)
+    from backend.engine.service_listener_security import listener_tls,service_token
+    try:
+        tls=listener_tls(args.host,args.tls_cert,args.tls_key)
+        token=service_token(os.environ.get('VISION_FIELD_AGENT_TOKEN'),args.token_file)
+    except (ValueError,OSError) as exc:parser.error(str(exc))
     import uvicorn
-    uvicorn.run(create_agent_app(args.state_dir,os.environ.get('VISION_FIELD_AGENT_TOKEN','')),host=args.host,port=args.port)
+    uvicorn.run(create_agent_app(args.state_dir,token),host=args.host,port=args.port,**tls)
 
 if __name__=='__main__':main()

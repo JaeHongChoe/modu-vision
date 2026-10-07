@@ -135,11 +135,73 @@ def _validate_remote_labels(root, output, journal):
         images.add(name)
 
 
+def registered_model_output(models, journal):
+    """The exact native specialist alias is the only alternate model namespace."""
+    launch = journal.get('launch_spec') or {}
+    alias = launch.get('local_model_id') if isinstance(launch, dict) else None
+    if alias is None:
+        return Path(models) / journal['job_id']
+    if (journal.get('operation') != 'train'
+            or journal.get('task') not in {'rotation', 'ocr', 'rotated_detection', 'enhancement', 'defect_gan'}
+            or not isinstance(alias, str) or not re.fullmatch('[0-9a-f]{32}', alias)
+            or journal.get('job_id') != 'job_' + alias):
+        raise ValueError('Historical specialist and remote identity differ')
+    return Path(models) / journal['task'] / alias
+
+
+def _validate_relocated_pair(root, output, journal, manifest, profile):
+    from backend.remote.artifact_relocation import SPECIALIST_TASKS, matches_path_relocation
+    if journal['operation'] != 'train' or journal['task'] not in SPECIALIST_TASKS:
+        raise ValueError('Relocation is unsupported for this archived operation')
+    remote = f'{profile.remote_root}/runs/{journal["job_id"]}/input/data'
+    local = str(output / 'remote_snapshot' / 'data')
+    if manifest.get('relocation') != {'remote_dataset_root': remote, 'local_dataset_root': local}:
+        raise ValueError('Archived relocation differs from its original run and output')
+    received, _ = _read(root, output / 'remote_received_artifacts.json')
+    if any(received.get(key) != journal[key] for key in ('job_id', 'operation', 'input_manifest_sha256')) or received.get('protocol_version') != 1 or 'relocation' in received:
+        raise ValueError('Original received manifest belongs to another run')
+    rows = received.get('artifacts')
+    expected = {'outputs/best_model.pt', 'outputs/model_meta.json'}
+    if (not isinstance(rows, list) or len(rows) != 2 or any(not isinstance(row, dict) or not isinstance(row.get('path'), str) for row in rows)
+            or {row['path'] for row in rows} != expected):
+        raise ValueError('Original received artifact identities differ')
+    current = {row['path']: row for row in manifest['artifacts']}
+    if any(type(row.get('size')) is not int or not 0 < row['size'] <= 2 * 1024**3 for row in current.values()):
+        raise ValueError('Relocated model exceeds bounded archive size')
+    for row in rows:
+        original = _file(root, output / 'remote_received' / Path(row['path']).name)
+        if (type(row.get('size')) is not int or not 0 < row['size'] <= 2 * 1024**3
+                or original.stat().st_size != row['size'] or current[row['path']].get('received_sha256') != row.get('sha256')):
+            raise ValueError('Original received artifact size or binding differs')
+        with original.open('rb') as stream:
+            if hashlib.file_digest(stream, 'sha256').hexdigest() != row.get('sha256'):
+                raise ValueError('Original received artifact bytes changed')
+    before, _ = _read(root, output / 'remote_received' / 'model_meta.json')
+    after, _ = _read(root, output / 'model_meta.json')
+    original_checkpoint = next(row['sha256'] for row in rows if row['path'] == 'outputs/best_model.pt')
+    if (after.get('checkpoint_sha256') != current['outputs/best_model.pt']['sha256']
+            or ('checkpoint_sha256' in before and before['checkpoint_sha256'] != original_checkpoint)):
+        raise ValueError('Relocated metadata checkpoint identity differs')
+    # Only the relocated checkpoint hash is changed outside the path mapping.
+    after = dict(after); after['checkpoint_sha256'] = before.get('checkpoint_sha256')
+    if 'checkpoint_sha256' not in before: after.pop('checkpoint_sha256')
+    if not matches_path_relocation(before, after, remote, local):
+        raise ValueError('Relocated metadata changed more than original paths/checkpoint checksum')
+    import torch
+    try:
+        original = torch.load(output / 'remote_received' / 'best_model.pt', map_location='cpu', weights_only=True)
+        relocated = torch.load(output / 'best_model.pt', map_location='cpu', weights_only=True)
+    except Exception as exc:
+        raise ValueError('Restricted original/relocated model archive is invalid') from exc
+    if not matches_path_relocation(original, relocated, remote, local):
+        raise ValueError('Relocated checkpoint changed original weights or nonpath values')
+
+
 def validate_remote(root, scopes, path, journal):
     """Original confirmed exit and received bytes, never current SSH authority.
 
     This adapter supports original current train and pending label manifests,
-    not relocated specialist aliases or other remote operation results. Received optimizer epoch
+    including retained path-only specialist relocation, not other operation results. Received optimizer epoch
     states are retained only with their original hash-bound receipt; no resume
     execution or live worker adoption is granted. It reads
     the coordinator's existing exit confirmation; it does not check a server's
@@ -180,7 +242,14 @@ def validate_remote(root, scopes, path, journal):
             or launch.get('operation', 'train') != operation):
         raise ValueError('Remote history launch belongs to another run, task or snapshot')
     receipt, _ = _read(root, output / 'job_receipt.json')
-    if (receipt.get('job_id') != identifier or receipt.get('status') != state
+    alias = launch.get('local_model_id')
+    if alias is not None:
+        registered_model_output(output.parent.parent, journal)
+        if receipt.get('job_id') != alias or receipt.get('remote_job_id') != identifier or output.name != alias:
+            raise ValueError('Remote specialist receipt identity differs')
+    elif receipt.get('job_id') != identifier or 'remote_job_id' in receipt:
+        raise ValueError('Remote terminal receipt identity differs')
+    if (receipt.get('status') != state
             or receipt.get('task') != journal['task'] or receipt.get('output_dir') != str(output)
             or receipt.get('compute_profile_id') != profile.id):
         raise ValueError('Remote terminal receipt differs from its original job/profile')
@@ -196,7 +265,7 @@ def validate_remote(root, scopes, path, journal):
     manifest, _ = _read(root, output / 'remote_artifacts.json')
     if (manifest.get('protocol_version') != 1 or manifest.get('job_id') != identifier
             or manifest.get('operation') != operation or manifest.get('input_manifest_sha256') != journal['input_manifest_sha256']
-            or 'relocation' in manifest):
+            or ('relocation' in manifest and operation != 'train')):
         raise ValueError('Remote received artifact manifest belongs to another or relocated run')
     rows = manifest.get('artifacts')
     expected = {'outputs/best_model.pt', 'outputs/model_meta.json'} if operation == 'train' else {'outputs/label_results.json'}
@@ -214,6 +283,8 @@ def validate_remote(root, scopes, path, journal):
             checksum = hashlib.file_digest(stream, 'sha256').hexdigest()
         if checksum != row['sha256'] or (file.name == 'best_model.pt' and receipt.get('checkpoint_sha256') != checksum):
             raise ValueError('Remote received artifact or completed receipt checksum changed')
+    if 'relocation' in manifest:
+        _validate_relocated_pair(root, output, journal, manifest, profile)
     if operation == 'label':
         _validate_remote_labels(root, output, journal)
         return
@@ -267,7 +338,7 @@ def journal_blockers(source_root, scopes, *, installation_root=None):
                 raise ValueError('Runtime output lacks one original registered project')
             key, workspace, project_id, directory = matches[0]
             project, _ = _read(original, Path(directory) / 'project.json')
-            if (project.get('id') != project_id or output != Path(project.get('models_dir', '')) / row['id']):
+            if (project.get('id') != project_id or output != registered_model_output(project.get('models_dir', ''), journal)):
                 raise ValueError('Runtime output differs from its original registered models')
             if row['source'] == 'legacy_migration':
                 spec = json.loads(row['spec_json'], object_pairs_hook=_unique)

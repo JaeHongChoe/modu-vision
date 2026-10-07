@@ -93,9 +93,10 @@ def _view(root, owner):
             project = json.loads(manifest.read_bytes())
             models = _owned_path(root, project.get('models_dir'))
             if not models.is_dir():raise ValueError('Historical project models must remain a directory')
+            from backend.engine.terminal_runtime_history import registered_model_output
             if (workspace != identities.get('workspace_id') or project.get('id') != project_id
                     or project.get('workspace_id', workspace) != workspace or not models.is_relative_to(directory)
-                    or output != models / row['id']):
+                    or output != registered_model_output(models, journal)):
                 raise ValueError('Historical output/project manifest differs from its registered local namespace')
             rows.append({'job_id': row['id'], 'revision': row['revision'], 'state': row['state'],
                 'spec_sha256': row['spec_sha256'], 'source_sha256': spec['legacy_sha256'],

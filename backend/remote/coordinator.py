@@ -374,16 +374,14 @@ def _copy_artifacts(
                 raise ArtifactValidationError("Remote checkpoint provenance differs from the pinned training version")
         for relative, staged_path in staged.items():
             os.replace(staged_path, output_dir / PurePosixPath(relative).name)
-        if journal['task'] in {'rotation','ocr','rotated_detection','enhancement','defect_gan','patch_classification'}:
+        if journal.get('operation', 'train') == 'train' and journal['task'] in {'rotation','ocr','rotated_detection','enhancement','defect_gan','patch_classification'}:
             # Verify the received bytes first, then record the deterministic
             # relocation separately so reopened native engines can read them.
             remote_root=f'{profile.remote_root}/runs/{job_id}/input/data'
             local_root=str(output_dir/'remote_snapshot'/'data')
-            def relocate(value):
-                if isinstance(value,dict):return {key:relocate(child) for key,child in value.items()}
-                if isinstance(value,list):return [relocate(child) for child in value]
-                if isinstance(value,str) and (value==remote_root or value.startswith(remote_root+'/')):return local_root+value[len(remote_root):]
-                return value
+            from backend.remote.artifact_relocation import preserve_received_pair, relocate_paths
+            preserve_received_pair(output_dir, _sha256)
+            def relocate(value):return relocate_paths(value,remote_root,local_root)
             metadata_path=output_dir/'model_meta.json';metadata=relocate(json.loads(metadata_path.read_text(encoding='utf-8')))
             import torch
             checkpoint=output_dir/'best_model.pt';payload=relocate(torch.load(checkpoint,map_location='cpu',weights_only=True))

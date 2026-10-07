@@ -1202,6 +1202,9 @@ def main() -> int:
     parser.add_argument("--package", type=Path, default=Path(__file__).resolve().parents[2])
     parser.add_argument("--state-dir", required=True, type=Path)
     parser.add_argument("--token", default=os.environ.get("VISION_INSPECTION_TOKEN"))
+    parser.add_argument('--token-file', type=Path, help='Private server token file; exclusive with --token/environment')
+    parser.add_argument('--tls-cert', type=Path)
+    parser.add_argument('--tls-key', type=Path)
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--input-root", type=Path)
@@ -1222,6 +1225,12 @@ def main() -> int:
     parser.add_argument('--max-queue-age-seconds',type=float,default=3600)
     parser.add_argument('--warmup-image',type=Path)
     args = parser.parse_args()
+    from backend.engine.service_listener_security import listener_tls, service_token
+    try:
+        tls = listener_tls(args.host, args.tls_cert, args.tls_key)
+        args.token = service_token(args.token, args.token_file)
+    except (ValueError, OSError) as exc:
+        parser.error(str(exc))
     gate=os.environ.get('VISION_SCM_START_HANDLE')
     if gate:
         if os.name!='nt':raise RuntimeError('SCM startup gate requires Windows')
@@ -1251,7 +1260,7 @@ def main() -> int:
         shutdown_callback=lambda:setattr(server,'should_exit',True),
         warmup_image=args.warmup_image,
     )
-    server = uvicorn.Server(uvicorn.Config(app,host=args.host,port=args.port))
+    server = uvicorn.Server(uvicorn.Config(app,host=args.host,port=args.port,**tls))
     server.run()
     return 0
 

@@ -69,6 +69,12 @@ def test_actual_loopback_coordinator_transfers_source_then_reopens_relocated_fam
     assert (prepared/'rotation.json').read_bytes()==immutable
     assert json.loads((output/'remote_artifacts.json').read_text())['relocation']['local_dataset_root']==metadata['dataset_path']
     assert (output/'remote_received_artifacts.json').is_file()
+    received=json.loads((output/'remote_received_artifacts.json').read_text())
+    for row in received['artifacts']:
+        original=output/'remote_received'/Path(row['path']).name
+        import hashlib
+        assert original.stat().st_size==row['size']
+        assert hashlib.sha256(original.read_bytes()).hexdigest()==row['sha256']
     (tmp_path/'original_unmounted').rename(source)
     from backend.api.routes_training import _write_job_receipt
     record.status='completed';_write_job_receipt(record)
