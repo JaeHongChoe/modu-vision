@@ -1394,6 +1394,12 @@ export type RuntimeFlowReviewRequest = {
   expected_revision?: string | null;
 };
 
+export type RuntimePackInput = {
+  source_dir: string;
+  inventory_path: string;
+  expected_sha256: string;
+};
+
 export type SamplingPolicyRequest = {
   expected_revision: number;
   policy: { [key: string]: unknown };
@@ -1968,6 +1974,7 @@ export interface ApiRequestBody {
   "POST /api/product-delivery/operator/results/{identifier}/review": OperatorReview;
   "POST /api/product-delivery/packages/{identifier}/verify": ImageInput;
   "POST /api/product-delivery/protocol-test": ProtocolTest;
+  "POST /api/product-delivery/runtime-packs/install": RuntimePackInput;
   "POST /api/product-delivery/servers/{profile_id}/preflight": ImageInput;
   "POST /api/project/backup": ProjectBackupRequest;
   "POST /api/project/compatibility/apply": CompatibilityApplyRequest;
