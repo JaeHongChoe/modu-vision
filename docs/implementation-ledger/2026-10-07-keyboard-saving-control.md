@@ -35,3 +35,19 @@ user-waived Windows actual-QA item. The72-hour run continues independently.
 
 Receipt: `docs/verification/receipts/2026-10-07-keyboard-saving-control.json`.
 Three sanitized clean-source GUI receipts are linked by exact hashes there.
+
+## Individual native control bindings
+
+Nine reviewed actions add16 verified scenarios to F064 and U007: keyboard
+inspection-node addition/selection, compatible and incompatible typed ports,
+Delete/undo/redo, dialog focus/cancellation/local confirmation, fixed-ROI node
+addition, scaled node drag, draft save/reopen, original-pixel ROI drag and arrow
+movement/resize. Each action binds the exact c37b1ba native case, test/source,
+manifest and screenshot hashes. Original image bytes and reopened draft SHA
+were read back. The geometry case binds no learned model and executes no
+inspection or deployment.
+
+The expanded inventory has146 curated actions and264 verified scenarios.
+Its758 pending scenario slots include newly enumerated controls; they are not
+758 remaining parent jobs. Earlier action evidence and parent states are
+preserved. Independent and full-feature acceptance remain pending.
