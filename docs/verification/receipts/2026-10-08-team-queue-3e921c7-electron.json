@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "3e921c7fbc0e4af746b7f8c7562a3d3a9377f6c3",
+  "source_dirty": false,
+  "test": "scripts/e2e/team-queue-controls.spec.ts::native team queue filter keeps current empty state after refusal cancelled old read and reopen",
+  "test_source_sha256": "090f6d35bd39eed69e1c5c0e29a92ff6afd889a9b349d66cd608964552f155e6",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "2d897223e852c0713dd827480098b593c221924dc7078b2ecedc865ee95a5866",
+  "harness_sha256": "204a44265048d867fa075ad71a917b7191ee9ff09527319ec2a03390b5b69092",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "360b5d1c7e3dcf8b4236e453aa14313a8f4dbba6ae86e505f253172c824b0895"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "8158578e6c497cbf3798057e02992f68cc417c10f034301fd76ef184269f17af"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "f340b6b85683c73c38b2a12cb1030c5d2451e58a51fdeb213289655a0bb592ad"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "360b5d1c7e3dcf8b4236e453aa14313a8f4dbba6ae86e505f253172c824b0895"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

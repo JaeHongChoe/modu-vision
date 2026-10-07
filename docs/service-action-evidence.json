@@ -3883,16 +3883,202 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "3e921c7fbc0e4af746b7f8c7562a3d3a9377f6c3",
+         "kind": "click",
+         "action": "작업 목록 담당 필터",
+         "reviewer": "Root exact clean execution and independent source/proof review; model quality and whole-feature acceptance pending",
+         "test": "scripts/e2e/team-queue-controls.spec.ts::native team queue filter keeps current empty state after refusal cancelled old read and reopen",
+         "receipt": "2026-10-08-team-queue-3e921c7-electron.json",
+         "receipt_sha256": "f265b9d837a9306aa9bac31df71728cd66193da36e66868fb86a7704db8468b8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "360b5d1c7e3dcf8b4236e453aa14313a8f4dbba6ae86e505f253172c824b0895"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "8158578e6c497cbf3798057e02992f68cc417c10f034301fd76ef184269f17af"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f340b6b85683c73c38b2a12cb1030c5d2451e58a51fdeb213289655a0bb592ad"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "360b5d1c7e3dcf8b4236e453aa14313a8f4dbba6ae86e505f253172c824b0895"
+          }
+         ],
+         "expected": "Actual unmatched assignee GET200 returns0items/total0 and GUI shows0건 with no rows and disabled next.",
+         "observed": "Actual unmatched assignee GET200 returns0items/total0 and GUI shows0건 with no rows and disabled next."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "3e921c7fbc0e4af746b7f8c7562a3d3a9377f6c3",
+         "kind": "click",
+         "action": "작업 목록 담당 필터",
+         "reviewer": "Root exact clean execution and independent source/proof review; model quality and whole-feature acceptance pending",
+         "test": "scripts/e2e/team-queue-controls.spec.ts::team queue filter shows actual empty and preserves current read across refusal cancel and reopen",
+         "receipt": "2026-10-08-team-queue-3e921c7-browser.json",
+         "receipt_sha256": "8b939c871a16856e4b6b6b158d552102579c4db0cb0743672f4ad52e686a49bf",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "e609045638e453e6a684acbf80076cc3a60457ecea028169964cae20ed8eea67"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "2b561c7acfe7858391777c314cb9b58130fce92b1bfc984bf8447026e4b13346"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "10d71100c7047b3eab7c64cf34a0654b77208e67480ad652ac1c8556af9113a2"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "bd8ffaff7d9da7edda62ca55a91deb7dcd12db94403c2ba84875106d67872030"
+          }
+         ],
+         "expected": "Actual unmatched assignee GET200 returns0items/total0 and GUI shows0건 with no rows and disabled next.",
+         "observed": "Actual unmatched assignee GET200 returns0items/total0 and GUI shows0건 with no rows and disabled next."
+        }
+       ]
       },
       "invalid": {
        "state": "pending"
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "3e921c7fbc0e4af746b7f8c7562a3d3a9377f6c3",
+         "kind": "click",
+         "action": "작업 목록 담당 필터",
+         "reviewer": "Root exact clean execution and independent source/proof review; model quality and whole-feature acceptance pending",
+         "test": "scripts/e2e/team-queue-controls.spec.ts::native team queue filter keeps current empty state after refusal cancelled old read and reopen",
+         "receipt": "2026-10-08-team-queue-3e921c7-electron.json",
+         "receipt_sha256": "f265b9d837a9306aa9bac31df71728cd66193da36e66868fb86a7704db8468b8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "360b5d1c7e3dcf8b4236e453aa14313a8f4dbba6ae86e505f253172c824b0895"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "8158578e6c497cbf3798057e02992f68cc417c10f034301fd76ef184269f17af"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f340b6b85683c73c38b2a12cb1030c5d2451e58a51fdeb213289655a0bb592ad"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "360b5d1c7e3dcf8b4236e453aa14313a8f4dbba6ae86e505f253172c824b0895"
+          }
+         ],
+         "expected": "Exact filter read gets controlled503 alert; original server rows remain unchanged and explicit refresh returns the pinned assigned row200. No actual server failure inferred.",
+         "observed": "Exact filter read gets controlled503 alert; original server rows remain unchanged and explicit refresh returns the pinned assigned row200. No actual server failure inferred."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "3e921c7fbc0e4af746b7f8c7562a3d3a9377f6c3",
+         "kind": "click",
+         "action": "작업 목록 담당 필터",
+         "reviewer": "Root exact clean execution and independent source/proof review; model quality and whole-feature acceptance pending",
+         "test": "scripts/e2e/team-queue-controls.spec.ts::team queue filter shows actual empty and preserves current read across refusal cancel and reopen",
+         "receipt": "2026-10-08-team-queue-3e921c7-browser.json",
+         "receipt_sha256": "8b939c871a16856e4b6b6b158d552102579c4db0cb0743672f4ad52e686a49bf",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "e609045638e453e6a684acbf80076cc3a60457ecea028169964cae20ed8eea67"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "2b561c7acfe7858391777c314cb9b58130fce92b1bfc984bf8447026e4b13346"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "10d71100c7047b3eab7c64cf34a0654b77208e67480ad652ac1c8556af9113a2"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "bd8ffaff7d9da7edda62ca55a91deb7dcd12db94403c2ba84875106d67872030"
+          }
+         ],
+         "expected": "Exact filter read gets controlled503 alert; original server rows remain unchanged and explicit refresh returns the pinned assigned row200. No actual server failure inferred.",
+         "observed": "Exact filter read gets controlled503 alert; original server rows remain unchanged and explicit refresh returns the pinned assigned row200. No actual server failure inferred."
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "3e921c7fbc0e4af746b7f8c7562a3d3a9377f6c3",
+         "kind": "click",
+         "action": "작업 목록 담당 필터",
+         "reviewer": "Root exact clean execution and independent source/proof review; model quality and whole-feature acceptance pending",
+         "test": "scripts/e2e/team-queue-controls.spec.ts::native team queue filter keeps current empty state after refusal cancelled old read and reopen",
+         "receipt": "2026-10-08-team-queue-3e921c7-electron.json",
+         "receipt_sha256": "f265b9d837a9306aa9bac31df71728cd66193da36e66868fb86a7704db8468b8",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "360b5d1c7e3dcf8b4236e453aa14313a8f4dbba6ae86e505f253172c824b0895"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "8158578e6c497cbf3798057e02992f68cc417c10f034301fd76ef184269f17af"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f340b6b85683c73c38b2a12cb1030c5d2451e58a51fdeb213289655a0bb592ad"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "360b5d1c7e3dcf8b4236e453aa14313a8f4dbba6ae86e505f253172c824b0895"
+          }
+         ],
+         "expected": "Explicit dialog close/reopen and newer unmatched filter produce real empty200; exact held old Request disposition observed and its later completed reply cannot repaint the current empty list. Native original HTTP200 provenance remains false.",
+         "observed": "Explicit dialog close/reopen and newer unmatched filter produce real empty200; exact held old Request disposition observed and its later completed reply cannot repaint the current empty list. Native original HTTP200 provenance remains false."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "3e921c7fbc0e4af746b7f8c7562a3d3a9377f6c3",
+         "kind": "click",
+         "action": "작업 목록 담당 필터",
+         "reviewer": "Root exact clean execution and independent source/proof review; model quality and whole-feature acceptance pending",
+         "test": "scripts/e2e/team-queue-controls.spec.ts::team queue filter shows actual empty and preserves current read across refusal cancel and reopen",
+         "receipt": "2026-10-08-team-queue-3e921c7-browser.json",
+         "receipt_sha256": "8b939c871a16856e4b6b6b158d552102579c4db0cb0743672f4ad52e686a49bf",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "e609045638e453e6a684acbf80076cc3a60457ecea028169964cae20ed8eea67"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "2b561c7acfe7858391777c314cb9b58130fce92b1bfc984bf8447026e4b13346"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "10d71100c7047b3eab7c64cf34a0654b77208e67480ad652ac1c8556af9113a2"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "bd8ffaff7d9da7edda62ca55a91deb7dcd12db94403c2ba84875106d67872030"
+          }
+         ],
+         "expected": "Explicit dialog close/reopen and newer unmatched filter produce real empty200; exact held old Request disposition observed and its later completed reply cannot repaint the current empty list. Native original HTTP200 provenance remains false.",
+         "observed": "Explicit dialog close/reopen and newer unmatched filter produce real empty200; exact held old Request disposition observed and its later completed reply cannot repaint the current empty list. Native original HTTP200 provenance remains false."
+        }
+       ]
       },
       "reopen": {
        "state": "pending"

@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "3e921c7fbc0e4af746b7f8c7562a3d3a9377f6c3",
+  "source_dirty": false,
+  "test": "scripts/e2e/inspection-service-studio-exit.spec.ts::native Studio exit preserves one owned CPU inspection and durable duplicate result",
+  "test_source_sha256": "fb55f93be71b56a67c575711b0d31245ed817a2b857cd1e0b5816ce94de1bc38",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "2d897223e852c0713dd827480098b593c221924dc7078b2ecedc865ee95a5866",
+  "harness_sha256": "6411798c9bfde994b846b42b287308e811657ad50da3622693eac2574483374d",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "628507dd6e07113cd520cc09380e78ec69b98ce5301941cb33b454f4276f32eb"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

@@ -32,7 +32,7 @@
 | S6-04 | 오프라인 설치와 업데이트 | POSIX 앱/DB cutover·복구·기존 home 인수, 영속 controller와 main/backend 인증 handshake를 구현하고 검증했다. 원래 backend epoch의 source CPU 기준 이미지 실행과 source candidate 활성 pointer 변경 전 검사·복구를 추가 검증했다. 실제 compiled candidate adapter, 전체 process-tree 종료 확인, OS installer adapter와 native packaged positive startup을 이어간다. 실 publisher 서명은 별도 조건이다. |
 | S6-05 | 공개 CI와 source 재현성 | 이전 소스의 hosted 성공·실패를 보존한다. 보호된 수동 candidate 검증 workflow와 source/artifact/환경 정책 gate를 추가했다. 실제 workflow 실행·서명·배포는 하지 않았고, 새 게시 소스의 전체 hosted 결과가 필요하다. |
 | S6-06 | 서명과 릴리스 채널 | 실제 Authenticode/publisher identity·서명 후 byte inventory·채널 승인 필요. |
-| S7-01 | 기존 기능 전체 coverage 계약 | 원래156개 ID를 유지한다. 현재207개 curated action의575개 시나리오 검증,874개 pending이다. 알려진 누락 메뉴/shortcut·남은 시나리오·전체 기능 수락을 이어간다. 행동 수와 전체 기능 완료 수는 다르다. |
+| S7-01 | 기존 기능 전체 coverage 계약 | 원래156개 ID를 유지한다. 현재207개 curated action의578개 시나리오 검증,871개 pending이다. 알려진 누락 메뉴/shortcut·남은 시나리오·전체 기능 수락을 이어간다. 행동 수와 전체 기능 완료 수는 다르다. |
 | S7-02 | 10모델군 실제 작업 시나리오 | 실제5 distinct learned chain은 완료. 10모델군 각각 사람이 검토한 정답과 대표 multi-task recipe 검증 필요. |
 | S7-03 | Windows 실제 설치와 사용 QA | Windows 실제 설치·사용 QA 사용자 면제. hosted Server2025 component 실행을 Win11 실사용 성공으로 세지 않음. |
 | S7-05 | 데이터 규모와 연속 운전 | 실제 browser/native에서10만 메타데이터·실제 이미지3장,3×120 keyset page·최대DOM32·응답120·tail UUID/SHA 재열기·파일 없는 항목 선택 거절을 검증했다. 10만 실제 사진 decode나 target 자원/택트 수락은 아니다. a184b1e의 동일 외장72시간 실행은 유지 중이며 이전 시간을 합산하지 않고 terminal receipt가 필요하다. |
@@ -323,3 +323,11 @@ compiled canary의 닫힌 protocol2/worker8개 필드를 화면 bridge에서 검
 - 원래 install 폴더 FD 아래 새 nonce home을0700으로 만들고 HOME·cache·tmp·offline·CPU-mask와 macOS `CFFIXED_USER_HOME`을 고정한다. 호출자의 secret/plugin/startup env는 복사하지 않는다. 실패·불확실한 종료에서 홈을 지우거나 재사용하지 않는다.
 - Root 관련43개가 skip 없이 통과했고2131개 소스 파일이 동일했다. 별도 private 최종12개·독립 read-only 리뷰를 고정했다. CI에는 두 no-spawn 함수의4개 parameter-expanded case만 추가하고 actual native/compiled case는 선택하지 않았다.
 - 실제 Electron/frozen 시작·일반 backend CPU 모드·동일 UID 공격자의 지속 path containment·전체 tree 종료·publisher·설치 대상·품질 및 부모 수락은 이 근거에 포함하지 않는다. retained home을 소비하는 향후 migration/clear에도 별도 소유권 처리가 필요하다.
+
+
+## 2026-10-08 작업 목록3개 시나리오와 Studio 종료 뒤 실제 검사
+
+- clean `3e921c7`의 browser1·source Electron2가 retry 없이 통과했고2137개 소스 파일이 동일했다. F024 작업 목록 담당 필터의 빈 결과·controlled 오류·명시적 화면 취소3개만 검증으로 올렸다. 원래 데이터·이미지·revision은 유지되고 늦은 옛 읽기가 새 빈 목록을 다시 그리지 않았다. native 옛 HTTP200 provenance는 주장하지 않는다.
+- 원래 source Studio/backend를 닫은 뒤 독립 daemon의 같은 PID/birth/command/manifest에서 실제 CPU 이미지 검사1개가 completed였다. 같은 입력의 반복 제출은 같은 작업 ID·결과1개·completed event1개로 읽혔다. 저장된 원래 admission bytes/hash와 decoded HTTP 결과가 일치하고 package/policy/images가 보존됐다.
+- 이 실행의 generated weights·synthetic approval/truth는 품질 수락이 아니다. 첫 검사 test의 decoded API 이름 오류 실패와 실제 완료 row/정상 owned cleanup도 이전 근거로 보존했다. Root는 수정된 case를 clean 소스에서 다시 실행했다.
+- action 집계는578verified/871pending, 구현 부모는69verified/13pending 그대로다. 별도 공정 품질·publisher/설치·전용 계정/재부팅·물리 장치·전체 tree·72시간 완료는 올리지 않는다.

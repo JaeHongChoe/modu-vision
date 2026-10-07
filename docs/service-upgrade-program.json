@@ -3938,6 +3938,14 @@
           "receipt_sha256": "f46103ff159f721a2033d63fc7898284670d089eedc89ca564b3290a57aa5385",
           "result": "Actual clean source browser1 and Electron1 passed without retries;2130 source files unchanged. Start/stop/restart,409 missing-package refusal, controlled503, explicit view cancellation/project switch/reopen and source Studio-close independent readiness qualified.",
           "scope": "Synthetic Torch CPU service lifecycle only. No actual inference in this case, no OpenVINO IR action scenario promotion, installer/account/reboot/device/publisher/quality or whole-parent acceptance."
+        },
+        {
+          "kind": "clean-source-queue-and-independent-inspection",
+          "source_sha": "3e921c7fbc0e4af746b7f8c7562a3d3a9377f6c3",
+          "receipt": "docs/verification/receipts/2026-10-08-queue-and-studio-exit-3e921c7.json",
+          "receipt_sha256": "838f1afe1290e6290c04bb7387678969523b9526130151b187d727362f4fcbdc",
+          "result": "Actual clean browser1/source Electron2 passed without retries,2137 source files unchanged. F024 queue-filter empty/error/cancel3 qualified. After own Studio/backend close, independent source CPU service completed one generated-image job; duplicate submission/readback preserved one result and same daemon epoch.",
+          "scope": "Synthetic controlled weights/truth and exact source software slice only. Native transport provenance scoped; no IR apply, publisher/installer/account/reboot/hardware/quality/tree or parent acceptance."
         }
       ],
       "file_actions": {
@@ -5866,6 +5874,14 @@
           "receipt_sha256": "f46103ff159f721a2033d63fc7898284670d089eedc89ca564b3290a57aa5385",
           "result": "Actual clean source browser1 and Electron1 passed without retries;2130 source files unchanged. Start/stop/restart,409 missing-package refusal, controlled503, explicit view cancellation/project switch/reopen and source Studio-close independent readiness qualified.",
           "scope": "Synthetic Torch CPU service lifecycle only. No actual inference in this case, no OpenVINO IR action scenario promotion, installer/account/reboot/device/publisher/quality or whole-parent acceptance."
+        },
+        {
+          "kind": "clean-source-queue-and-independent-inspection",
+          "source_sha": "3e921c7fbc0e4af746b7f8c7562a3d3a9377f6c3",
+          "receipt": "docs/verification/receipts/2026-10-08-queue-and-studio-exit-3e921c7.json",
+          "receipt_sha256": "838f1afe1290e6290c04bb7387678969523b9526130151b187d727362f4fcbdc",
+          "result": "Actual clean browser1/source Electron2 passed without retries,2137 source files unchanged. F024 queue-filter empty/error/cancel3 qualified. After own Studio/backend close, independent source CPU service completed one generated-image job; duplicate submission/readback preserved one result and same daemon epoch.",
+          "scope": "Synthetic controlled weights/truth and exact source software slice only. Native transport provenance scoped; no IR apply, publisher/installer/account/reboot/hardware/quality/tree or parent acceptance."
         }
       ],
       "file_actions": {
