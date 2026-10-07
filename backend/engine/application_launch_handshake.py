@@ -276,3 +276,35 @@ def backend_bootstrap_ready():
     if not _CACHE['ready']:
         send_frame(_CACHE['socket'], {**proof, 'kind': 'backend_ready'}); _CACHE['ready'] = True
     return {**proof, 'kind': 'backend_ready'}
+
+
+def backend_execution_service(stop_event=None):
+    """Consume at most one controller-origin CPU request after admitted ready.
+
+    Idle waiting has no bootstrap deadline. A request has a hard worker budget;
+    EOF, replay or an interrupted execution closes the epoch instead of retrying.
+    The daemon caller retains its shared installation lifespan throughout.
+    """
+    if _CACHE is None or not _CACHE['ready']:raise HandshakeError('CPU consumer requires original admitted backend readiness')
+    from backend.engine.migration_guard import maintenance_guard
+    from backend.engine.application_launch_execution import execute_backend
+    root=_CACHE['root'];sock=_CACHE['socket'];executed=False
+    try:
+        with maintenance_guard(root):
+            while stop_event is None or not stop_event.is_set():
+                if not select.select([sock],[],[],.2)[0]:continue
+                if executed:raise HandshakeError('CPU private request replay requires recovery')
+                context=_root_context()
+                if context is None or _context()!=_CACHE['context']:raise HandshakeError('CPU backend process context changed')
+                proof=_validate(root,context[1],_CACHE['challenge'])
+                if proof!=_CACHE['proof']:raise HandshakeError('CPU backend original process binding changed')
+                frame=read_frame(sock,10);executed=True
+                completed=execute_backend(frame,proof,root)
+                send_frame(sock,completed)
+    except BaseException:
+        # Closing this original endpoint tells main/controller to retain durable
+        # recovery. It never proves worker descendants exited or clears a lease.
+        try:sock.shutdown(socket.SHUT_RDWR)
+        except OSError:pass
+        sock.close()
+        raise

@@ -84,8 +84,9 @@ def _record(root, nonce, *, record=None):
     if record is None: record = update._json(update._read(directory/'journal.json'))
     names = {'schema_version', 'protocol_version', 'nonce', 'revision', 'state', 'binding', 'supervisor', 'process',
         'spawn_attempted', 'claimed', 'ready_receipt_sha256', 'exit_observation', 'known_image_receipt_sha256', 'reason', 'transition_lock_identity'}
+    if isinstance(record, dict) and record.get('protocol_version') == 3: names.add('cpu_execution')
     if (not isinstance(record, dict) or set(record) != names or type(record['schema_version']) is not int
-            or record['schema_version'] != 1 or type(record['protocol_version']) is not int or record['protocol_version'] != 2
+            or record['schema_version'] != 1 or type(record['protocol_version']) is not int or record['protocol_version'] not in (2, 3)
             or record['nonce'] != nonce or type(record['revision']) is not int or record['revision'] < 1
             or record['state'] not in STATES or not _identity_shape(record['supervisor'])
             or record['process'] is not None and not _identity_shape(record['process'])
@@ -145,6 +146,9 @@ def _record(root, nonce, *, record=None):
         expected_members.add('known-image-receipt.json')
         if update._sha(update._read(directory/'known-image-receipt.json')) != record['known_image_receipt_sha256']:
             _refuse('known-image receipt changed')
+    if record.get('cpu_execution') is not None:
+        from backend.engine.application_launch_execution import validate_sealed_execution
+        expected_members.update(validate_sealed_execution(record, directory))
     if {p.name for p in directory.iterdir()} != expected_members: _refuse('unknown lease history member')
     return record
 
@@ -324,10 +328,10 @@ class LaunchSupervisor:
             assert_quiescent(root)
             binding = update._launch_binding(root, authority, pinned_authority_sha256=pinned_authority_sha256)
             nonce = uuid.uuid4().hex
-            row = {'schema_version': 1, 'protocol_version': 2, 'nonce': nonce, 'revision': 1, 'state': 'reserved',
+            row = {'schema_version': 1, 'protocol_version': 3, 'nonce': nonce, 'revision': 1, 'state': 'reserved',
                 'binding': binding, 'supervisor': _identity(os.getpid()), 'process': None, 'spawn_attempted': False,
                 'claimed': False, 'ready_receipt_sha256': None, 'exit_observation': None,
-                'known_image_receipt_sha256': None, 'reason': None, 'transition_lock_identity': None}
+                'known_image_receipt_sha256': None, 'reason': None, 'transition_lock_identity': None, 'cpu_execution': None}
             _write(root, row, initial=True)
             return cls(root, nonce)
 
@@ -448,6 +452,46 @@ class LaunchSupervisor:
             row = self._owned()
             if row['state'] in {'reserved', 'exited'}: raise LaunchLeaseError('Recovery requires a spawn attempt')
             return self._persist(row, state='recovery_required', reason=str(reason)[:500])
+
+    def _begin_cpu_execution(self, request, capability):
+        """Seal the original controller's one request before any CPU dispatch."""
+        update = _update()
+        with _transition_admission(self.root, self.nonce):
+            row=self._owned();self._binding(row);self._live(row,row['process'])
+            if row['state']!='ready' or row.get('cpu_execution') is not None or self._bootstrap_channel is None:
+                raise LaunchLeaseError('CPU execution requires one original authenticated ready controller')
+            directory=self.root/LEASES/self.nonce; path=directory/'cpu-execution-intent.json'
+            if path.exists():_refuse('unpublished CPU execution intent requires recovery')
+            intent={'schema_version':1,'kind':'owned_cpu_execution_intent','request':request,'capability':capability}
+            update._write(path,intent);_checkpoint('after_cpu_execution_intent')
+            state={'request_id':request['request_id'],'request_sha256':update._sha(update._canonical(request)),
+                'intent_sha256':update._sha(update._read(path)),'receipt_sha256':None}
+            self._persist(row,protocol_version=3,cpu_execution=state)
+            return intent
+
+    def _publish_cpu_execution(self, receipt):
+        """Exact publication retry only; no redispatch, repair or quality claim."""
+        update=_update()
+        with _transition_admission(self.root,self.nonce):
+            row=self._owned();self._binding(row);self._live(row,row['process'])
+            state=row.get('cpu_execution')
+            if row['state']!='ready' or state is None or self._bootstrap_channel is None:
+                raise LaunchLeaseError('CPU receipt requires original authenticated ready admission')
+            from backend.engine.application_launch_execution import recheck_receipt_artifacts
+            recheck_receipt_artifacts(self.root,row,receipt)
+            path=self.root/LEASES/self.nonce/'cpu-execution-receipt.json'; prior=state['receipt_sha256']
+            raw=update._canonical(receipt)
+            if len(raw)>65536:raise LaunchLeaseError('CPU receipt exceeds its bound')
+            if prior is not None:
+                existing=update._read(path)
+                if update._sha(existing)!=prior or update._canonical(update._json(existing))!=raw:
+                    raise LaunchLeaseError('Another CPU execution receipt is already bound')
+                return prior
+            if path.exists():_refuse('unpublished CPU execution receipt requires recovery')
+            update._write(path,receipt);_checkpoint('after_cpu_execution_receipt')
+            digest=update._sha(update._read(path))
+            self._persist(row,cpu_execution={**state,'receipt_sha256':digest})
+            return digest
 
     def observe_exit(self):
         with _transition_admission(self.root, self.nonce):

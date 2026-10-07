@@ -277,6 +277,7 @@ async def lifespan(app: FastAPI):
 async def _admitted_lifespan(app: FastAPI):
     """Lifespan context manager orchestrating clean startup and shutdown sequences."""
     from backend.api.routes_workers import stop_for_shutdown as stop_worker_preflight
+    execution_stop=None;execution_thread=None
     try:
         # Startup may partially recover workers before a failure or supervisor
         # EOF. Cleanup must also run when the suspended lifespan is finalized
@@ -293,9 +294,16 @@ async def _admitted_lifespan(app: FastAPI):
         # Only stale preflight folders of this installation are swept.
         threading.Thread(target=sweep_stale_runs, name="PreflightRunSweep", daemon=True).start()
         logger.info("Vision AI Studio backend daemon initialized (v%s).", VERSION)
-        backend_bootstrap_ready()
+        if backend_bootstrap_ready() is not None:
+            from backend.engine.application_launch_handshake import backend_execution_service
+            execution_stop=threading.Event()
+            execution_thread=threading.Thread(target=backend_execution_service,args=(execution_stop,),
+                name='OwnedCPUKnownImage',daemon=True)
+            execution_thread.start()
         yield
     finally:
+        if execution_stop is not None:execution_stop.set()
+        if execution_thread is not None:execution_thread.join(timeout=1)
         logger.info("Initiating Vision AI Studio backend shutdown...")
         try:
             # Detach owned jobs for reattachment; do not terminate training.

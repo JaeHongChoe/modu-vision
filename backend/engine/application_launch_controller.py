@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import secrets
 import select
+import sys
 import time
 from contextlib import contextmanager
 
@@ -64,7 +65,8 @@ def _inspection_snapshot(root):
             if not update._hex(nonce, 32): raise HandshakeError('Invalid read-only launch pointer')
             directory = update._unlinked(root/lease.LEASES/nonce)
             members = {item.name for item in directory.iterdir()}
-            for name in ('journal.json', 'spawn-intent.json', 'bootstrap-receipt.json', 'known-image-receipt.json'):
+            for name in ('journal.json', 'spawn-intent.json', 'bootstrap-receipt.json', 'known-image-receipt.json',
+                    'cpu-execution-intent.json','cpu-execution-receipt.json'):
                 file = update._unlinked(directory/name)
                 snapshots[name] = update._read(file) if file.exists() else None
         yield
@@ -193,6 +195,7 @@ def authenticate(owner, row):
         'backend_build_identity_sha256': ready['build_identity_sha256'], 'backend_frozen': ready['frozen'],
         'challenge_sha256': update._sha(challenge.encode()), 'epoch': ready['epoch']}
     owner._publish_bootstrap(receipt)
+    owner._authenticated_backend_proof = first
     return ready['process']
 
 
@@ -207,14 +210,44 @@ def _emit(value):
     except OSError: pass  # A lost updater pipe never changes controller ownership.
 
 
+def _cpu_capability(args, root):
+    values=[getattr(args,name,None) for name in ('cpu_known_image_workspace_id','cpu_known_image_project_id','cpu_known_image_plan_sha256')]
+    if not any(value is not None for value in values):return None
+    if any(value is None for value in values) or args.inspect:raise HandshakeError('CPU known-image request requires all pins and a new owned launch')
+    if getattr(sys,'frozen',False):raise HandshakeError('requires_target: fixed frozen CPU worker is not qualified')
+    from backend.engine.application_launch_execution import admit_plan
+    return admit_plan(root,*values)
+
+
+def execute_cpu(owner, capability):
+    """Dispatch exactly once through the original authenticated main/backend."""
+    from backend.engine import application_launch_execution as execution
+    with lease._transition_admission(owner.root,owner.nonce):
+        row=owner._owned();owner._binding(row);owner._live(row,row['process'])
+        bootstrap=update._json(update._read(owner.root/lease.LEASES/owner.nonce/'bootstrap-receipt.json'))
+        if bootstrap['backend_frozen']:raise HandshakeError('requires_target: fixed frozen CPU worker is not qualified')
+        request=execution.request(owner,capability,bootstrap['epoch'])
+    intent=owner._begin_cpu_execution(request,capability)
+    send_frame(owner._bootstrap_channel,request)
+    frame=read_frame(owner._bootstrap_channel,210)
+    if (set(frame)!={'schema_version','kind','nonce','proof_b64'} or type(frame['schema_version']) is not int
+            or frame['schema_version']!=1 or frame['kind']!='cpu_execution_proof' or frame['nonce']!=owner.nonce):
+        raise HandshakeError('CPU forwarding capability differs')
+    proof=execution.encoded_proof(frame['proof_b64'])
+    receipt=execution.verify_completion(owner,intent,proof)
+    owner._publish_cpu_execution(receipt)
+    return receipt
+
+
 def run(args):
     root, _ = update._root(args.root)
     with store_admission(root, exclusive=True):
         binding = update._launch_binding(root, args.authority, pinned_authority_sha256=args.pinned_authority_sha256)
         _expected(binding, args)
+        capability=_cpu_capability(args,root)
         owner = lease.LaunchSupervisor.reserve(root, args.authority, pinned_authority_sha256=args.pinned_authority_sha256)
         try: row = owner.start(bootstrap=True)
-        except (ValueError, OSError, psutil.Error) as exc:
+        except Exception as exc:
             # Reservation already owns a durable nonce. An interrupted spawn
             # must keep the original handles, even if its journal is ambiguous.
             try: owner.recovery('Spawn admission interrupted: '+str(exc))
@@ -223,9 +256,13 @@ def run(args):
     _emit(_result(binding, row))
     backend = None; failed = row['state'] != 'starting'; pending_reason = None
     if not failed:
-        try: backend = authenticate(owner, row)
-        except (ValueError, OSError, psutil.Error) as exc:
-            pending_reason = 'Private bootstrap refused: '+str(exc); failed = True
+        try:
+            backend = authenticate(owner, row)
+            if capability is not None:execute_cpu(owner,capability)
+        except Exception as exc:
+            # After spawn, even an unexpected validator/transport exception
+            # keeps the original handles. Durable ownership is never released.
+            pending_reason = 'Private bootstrap or execution refused: '+str(exc); failed = True
     # No further stdout/stderr writes. No stop on updater stdin/pipe EOF.
     while True:
         if not failed:
@@ -238,22 +275,34 @@ def run(args):
                     raise HandshakeError('Authenticated backend ownership changed')
                 elif select.select([owner._bootstrap_channel], [], [], 0)[0]:
                     raise HandshakeError('Private main descriptor ended or replayed after readiness')
-            except (ValueError, OSError, psutil.Error) as exc:
+            except Exception as exc:
                 pending_reason = 'Process-tree ownership is unresolved: '+str(exc); failed = True
         if pending_reason is not None:
             try: owner.recovery(pending_reason); pending_reason = None
-            except (ValueError, OSError, psutil.Error): pass
+            except Exception: pass
         time.sleep(.2)
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--inspect', action='store_true')
+    observers=parser.add_mutually_exclusive_group()
+    observers.add_argument('--inspect', action='store_true')
+    observers.add_argument('--inspect-cpu-execution', action='store_true')
+    parser.add_argument('--expected-launch-nonce')
     for name in ('root', 'authority', 'pinned-authority-sha256', 'expected-installation-id', 'expected-update-id', 'expected-database-fence'):
         parser.add_argument('--'+name, required=True)
+    for name in ('cpu-known-image-workspace-id','cpu-known-image-project-id','cpu-known-image-plan-sha256'):
+        parser.add_argument('--'+name)
     args = parser.parse_args(argv)
     try:
-        if args.inspect: _emit(inspect(args)); return 0
+        if args.inspect_cpu_execution:
+            from backend.engine.application_launch_execution import inspect_execution
+            _emit(inspect_execution(args));return 0
+        if args.expected_launch_nonce is not None:raise HandshakeError('Expected launch nonce is only valid for CPU receipt inspection')
+        if args.inspect:
+            if any(getattr(args,name) is not None for name in ('cpu_known_image_workspace_id','cpu_known_image_project_id','cpu_known_image_plan_sha256')):
+                raise HandshakeError('Read-only lifecycle inspection cannot dispatch CPU execution')
+            _emit(inspect(args)); return 0
         run(args)
     except (ValueError, OSError, psutil.Error) as exc:
         # This handler is only valid before durable spawning; run contains all
