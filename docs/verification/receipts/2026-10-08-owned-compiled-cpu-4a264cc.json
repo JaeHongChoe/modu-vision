@@ -1,0 +1,123 @@
+{
+  "schema": "modu-vision.owned-compiled-cpu-epoch/v1",
+  "source_sha": "4a264cc8ba5886167a04eed900a97597cff44458",
+  "source_bindings": {
+    "backend/engine/application_launch_execution.py": "b33b7b701265bbd6e62dcd6d681de08886bdb9f2fcd2a66e528612886377a294",
+    "backend/engine/application_launch_controller.py": "80aabbac79b33f3183c46b30431dd75f1cb9a3dd46fec395336829fb841b8458",
+    "scripts/frozen_backend_entry.py": "b223916d573115e748bb5dd3f31ba6f131dd6999901b9b0a800cd8a158a6fd2c",
+    "scripts/build_backend_binary.py": "56ae133af5840f5a58e1cf164d9e72cf1b4b78c9018324301e92b9ec5c80d8b0",
+    "backend/tests/test_owned_launch_build_inventory.py": "0ebb853111ddca63704c4c04b5ecbfb4cff7c6ce3a607f06a4518b97987d0ffb",
+    "backend/tests/test_pyinstaller_command_boundary.py": "b659a7e466a603624e1106e8abf32b53c91a6baa742a3c35cf8d6fc190439b2e",
+    "backend/tests/test_application_launch_frozen_execution.py": "4fe27c85294c53dd6d26192b1ec4d1180b9792ee8c32aad7889c5dd39f7cd440",
+    "src/main/applicationLaunch.ts": "acfd9961b5b437f220faa5eb91795fbffcb1e94c6949281cb2a39af1c58d0381",
+    "src/main/applicationLaunch.test.cjs": "4327b8e98de393cafa287e469c1c80e232a3b5f5f0a4af61018557ca0c7e54ad"
+  },
+  "independent_handoff_sha256": "3c62d1171096785ec047985a22b555233f0971547e1ea5a02161406c3e257357",
+  "patch_sha256": "e2187edf721439dbd92ee6b8d40d2595b71f96fdeb7645c1849ab4c7113c8e45",
+  "actual_compiled_execution": {
+    "actual_cpu_execution_verified": true,
+    "changed_output_refused": true,
+    "elapsed_ms": 33119.228,
+    "exported_python_executed": false,
+    "original_pointer_and_journal_bytes_preserved_by_observers": true,
+    "output_sha256": "cf115e0fab40fe2275e724b136aa5dee7ed47d894998dfa4b52e80f6c49e9057",
+    "owned_backend_execution_origin_verified": true,
+    "owned_fixture_teardown_assertions_passed": true,
+    "partial_receipt_refused": true,
+    "proof_sha256": "944aecce0deba7dc5fdd2f16f2358c47bc9a99cffe496492e2256619aef19fb1",
+    "receipt_sha256": "99d9616c9104364b88234f34a3beb6dac11fbff78866c718cba11d78490ede31",
+    "sealed_receipt_inspection_repeats": 2,
+    "semantic_output": {
+      "defective_roi_count": 0,
+      "final_verdict": "OK",
+      "recognized_texts": [
+        "A"
+      ],
+      "roi_count": 1,
+      "routed_output_node_id": "output"
+    },
+    "startup_inspection_repeats": 3
+  },
+  "compiled_candidate": {
+    "acceptance": null,
+    "backend_release_sha256": "66f91c89996de8343d67fa93e5e3f60a5ef51f6078abc5429223f6c64e896a0b",
+    "binary_sha256": "da9509b85fbc4cccb5bd3fa4e9c968c836987327a1822e24c491ca62210a89ed",
+    "build_identity_sha256": "7540b4465c6914aabe1bb4c39a2d9ca641e3421777c32da259818ba516cd50ed",
+    "controlled_native_shaped_main": "Node fixture using actual TS bridge; not packaged Electron",
+    "controller_protocol": 1,
+    "cpu_protocol": 1,
+    "license_status": "collected",
+    "missing_license_texts": 0,
+    "provenance": "older private F + sealed source CPU7 + exact portable-only reader prerequisite; explicitly separate from current P/full staged-canary installation",
+    "public_distribution_approved": false,
+    "signature_status": "unverified",
+    "supplier_inputs": 14
+  },
+  "independent_scoped_gates": {
+    "actual_compiled_final_replay": {
+      "failed": 0,
+      "passed": 1,
+      "seconds": 495.21,
+      "skipped": 0
+    },
+    "compiled_fixture_observation_budget_seconds": 360,
+    "final_input_count": 2108,
+    "final_inputs_unchanged": true,
+    "final_node_consumer": {
+      "failed": 0,
+      "passed": 11,
+      "skipped": 0
+    },
+    "main_typecheck_exit": 0,
+    "no_single_full_suite_claim": true,
+    "prior_failures_preserved": [
+      "actual-compiled-math.xml",
+      "actual-compiled-math-consumer-replay.xml",
+      "consumer-bounds-first-red.log",
+      "dispatcher-first-red.xml",
+      "lifecycle-first-red.xml",
+      "actual-compiled-boundary.xml"
+    ],
+    "production_frame_deadline_seconds": 210,
+    "production_worker_deadline_ms": 60000,
+    "python_owned_related": {
+      "deselected": 1,
+      "failed": 0,
+      "passed": 104,
+      "scope": "before only two manifest-consumer paths and excluded compiled-fixture observation wait changed",
+      "seconds": 267.74,
+      "skipped": 0
+    }
+  },
+  "root_composition_gate": {
+    "unique_qualified_cases": 106,
+    "initial_passed": 105,
+    "initial_failed": 1,
+    "rerun_passed": 1,
+    "skipped": 0,
+    "one_106_green_invocation": false,
+    "initial_command_sha256": "428f6ca9fb7a60d0af994034d916b720f39d76a2fee78ed1228879ed6f0d5239",
+    "initial_xml_sha256": "8f1ddc0ccc127461b847e88e064cb6b771c1bb0ab7753edf23cfd1bbdc81564c",
+    "rerun_xml_sha256": "72042aef4626dec37bd7f859a97f0dfbe97b89d4ac0406256ddd6574973ff464",
+    "source_canary_negative_test_sha256": "70cd95a27c6fa31443933403774fa3d189f42bb298b50f4e1261055629eee514",
+    "repair": "The simulated source-frozen negative now expects inventory refusal already in plan admission, retaining no-staging and unchanged original pointers. No production guard was weakened.",
+    "main_node_passed": 11,
+    "main_typecheck_exit": 0
+  },
+  "capability": "Fixed private compiled CPU worker protocol1, launched by and bound to the original admitted backend epoch. Early dispatch occurs before mutable server/home bootstrap; arbitrary exported package Python is not executed.",
+  "limits": [
+    "The real compiled artifact is the declared older privateF plus sourceCPU7 and the exact portable reader prerequisite. It is not a rebuild of the current entire root source or a staged candidate installation.",
+    "Actual known-image arithmetic, sealed receipt and repeat inspection/tamper refusals are verified. The native-shaped main is a Node fixture using the actual TS bridge; packaged Electron, real publisher, full process tree, OS installer and representative model quality remain pending.",
+    "The fixture observation wait360 seconds accommodates full artifact rehashing. Production210-second frame and60000ms worker deadlines were preserved."
+  ],
+  "current_staged_canary_verified": false,
+  "native_application_verified": false,
+  "worker_process_tree_exit_verified": false,
+  "real_publisher_verified": false,
+  "model_quality_approved": false,
+  "release_ready": false,
+  "parent_implementation_verified": 69,
+  "parent_implementation_pending": 13,
+  "required_pending": 11,
+  "accepted_parents": 0
+}

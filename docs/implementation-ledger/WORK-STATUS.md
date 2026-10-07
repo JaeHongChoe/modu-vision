@@ -285,3 +285,7 @@ GitHub run37642522031은 release workflow 파일 검증 단계에서 실패했�
 서명된 source candidate는 검토한 프로젝트3개 pin에 묶인 실제 CPU 기준 이미지 결과가 있어야 DB와 앱 pointer를 바꿀 수 있다. 중앙 게시와 직접 복구에도 같은 검사·봉인 기록을 적용했다. 현재 조합의 backend343건, 화면961건과3개 타입 검사, 실제 browser2/Electron1이 통과했다. 브라우저에서 적용·새 계정과 라벨 보존·중단 복구·재열기를 확인했고 Electron은 미설정 개발 설치를 거절했다. 생성한 OCR checkpoint와 시험 서명이며 실 publisher·compiled candidate·전체 계보·품질 수락은 미검증이다. 근거: `../verification/receipts/2026-10-08-staged-source-canary-fbcdc7a.json`.
 
 이전 hosted CI의2797 통과·1 실패·17 skip을 보존했다. 실패는 실제 학습 reservation heartbeat 뒤에 오래된 검토를 적용한 경우였다. 보호는 유지하고 테스트가 기존12초 checkpoint 안에서 새로 검토하도록 수정했다. 현재31건의 초기 통과와 runner 기록 폴더를 바로잡은2건의 별도 재실행으로33개 고유 case가 확인됐다. 새 전체 hosted 결과는 별도로 읽는다. 부모69/13·필수11·종합 수락0과 행동207개·575/874는 유지한다. 근거: `../verification/receipts/2026-10-08-live-ocr-ci-race-fbcdc7a.json`.
+
+## 원래 backend epoch의 compiled CPU 실행 · 4a264cc
+
+고정 compiled worker를 별도 entry로 연결했고 실제 빌드에서 A/OK 기준 이미지 계산이33.119초에 끝났다. 같은 backend epoch의 봉인 기록을 반복 조회하고 결과 변조·부분 기록을 거절했다. 현재 코드 조합은 초기105 통과와 조기 inventory 거절 기대를 맞춘1개 재실행으로106개 고유 case를 검증했고 main11건·타입 검사도 통과했다. 실제 binary는 기록한 이전 isolated slice의 빌드이며 현재 전체 source의 staged candidate나 packaged Electron 성공으로 세지 않는다. compiled candidate 설치 adapter와 전체 계보·실 publisher·대표 품질 조건을 계속 진행한다. 근거: `../verification/receipts/2026-10-08-owned-compiled-cpu-4a264cc.json`.
