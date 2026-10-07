@@ -91,6 +91,29 @@ def protocol_test(body:ProtocolTest,request:Request):
 def installation(request:Request):return execute(lambda:delivery.installation_readiness(project(request)))
 
 
+class RuntimePackInput(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    source_dir:str=Field(min_length=1,max_length=4096)
+    inventory_path:str=Field(min_length=1,max_length=4096)
+    expected_sha256:str=Field(pattern=r'^[a-f0-9]{64}$')
+
+
+@router.get('/runtime-packs')
+def runtime_packs(request:Request):
+    from backend.engine.runtime_pack_store import inventory
+    return execute(lambda:inventory(project(request)))
+
+
+@router.post('/runtime-packs/install')
+def install_runtime_pack(body:RuntimePackInput,request:Request):
+    role(request,{'owner'})
+    account=getattr(request.state,'account_user',None)
+    if account and not account['administrator']:
+        raise HTTPException(403,'Server administrator permission required for runtime pack installation')
+    from backend.engine.runtime_pack_store import install
+    return execute(lambda:install(project(request),**body.model_dump()))
+
+
 @router.get('/hardware')
 def hardware(request:Request):return execute(lambda:delivery.hardware_matrix(project(request)))
 

@@ -114,3 +114,31 @@ def test_install_boundary_and_observed_target_are_required(tmp_path, monkeypatch
         monkeypatch.setattr(module.shutil,'disk_usage',lambda *_: type('Disk',(),{'free':0})())
     with pytest.raises(ValueError): module.install_pack(root, raw, store=store, **args)
     assert (root/'runtime.whl').is_file()
+
+
+def test_repeat_nvidia_install_after_driver_upgrade_preserves_original_receipt(tmp_path):
+    root,raw,store,args=install_args(tmp_path)
+    manifest=json.loads(raw);manifest.update(kind='nvidia',driver_minimum='560.28.03')
+    raw=module.canonical_bytes(manifest);args.update(expected_sha256=hashlib.sha256(raw).hexdigest(),driver_version='560.35.03')
+    original=module.install_pack(root,raw,store=store,**args)
+    target=Path(original['installation_path']);before=(target/'receipt.json').read_bytes()
+    args['driver_version']='570.00'
+    assert module.install_pack(root,raw,store=store,**args)==original
+    assert (target/'receipt.json').read_bytes()==before
+    observed=module.inspect_installation(target,**args)
+    assert observed['target_compatible'] is True and observed['observed_driver']=='570.00'
+
+
+def test_repeat_install_returns_only_the_receipt_snapshot_that_was_validated(tmp_path,monkeypatch):
+    root,raw,store,args=install_args(tmp_path)
+    original=module.install_pack(root,raw,store=store,**args)
+    file=Path(original['installation_path'])/'receipt.json';inspect=module.inspect_installation
+    def raced(*values,**options):
+        result=inspect(*values,**options)
+        changed=json.loads(file.read_bytes());changed['activated']=True
+        file.write_bytes(module.canonical_bytes(changed))
+        return result
+    monkeypatch.setattr(module,'inspect_installation',raced)
+    repeated=module.install_pack(root,raw,store=store,**args)
+    assert repeated==original and repeated['activated'] is False
+    assert json.loads(file.read_bytes())['activated'] is True

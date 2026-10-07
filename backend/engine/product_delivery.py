@@ -206,6 +206,7 @@ def redact_diagnostics(value):
 
 
 def installation_readiness(project):
+    from backend.engine.runtime_pack_store import inventory as runtime_pack_inventory
     root=_root(project);manifest=root/'project.json';schema=1
     if manifest.is_symlink():raise ValueError('Project manifest cannot be linked')
     if manifest.exists():schema=json.loads(manifest.read_text(encoding='utf-8')).get('schema_version',1)
@@ -225,7 +226,7 @@ def installation_readiness(project):
             except (OSError,ValueError):continue
     return {'app_version':app_version,'version_source':version_source,'host':{'os':platform.system(),'architecture':platform.machine(),'python':platform.python_version()},
         'project':{'schema_version':schema,'supported_schema_versions':[1],'compatible':type(schema)is int and schema==1,'migration_performed':migrated},
-        'runtime_dependencies':dependencies,'python_supported':(3,10)<=sys.version_info[:2]<(3,14),
+        'runtime_dependencies':dependencies,'runtime_packs':runtime_pack_inventory(project),'python_supported':(3,10)<=sys.version_info[:2]<(3,14),
         'sdk':{'Python':{'ready':all(dependencies.values()),'requires_python':True},
                'C++':{'ready':bool(compiler) and headers.is_file() and all(dependencies.values()),'compiler_available':bool(compiler),'python_headers_available':headers.is_file(),'requires_embedded_python':True},
                'C#':{'ready':bool(shutil.which('dotnet')) and bool(compiler) and headers.is_file() and all(dependencies.values()),'dotnet_available':bool(shutil.which('dotnet')),'requires_embedded_python':True,'bridge':'C ABI / PInvoke'}},

@@ -23,6 +23,7 @@ from typing import Any, Callable, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 PROTOCOL_VERSION = 1
+RUNTIME_PROTOCOL_VERSION = 1
 SupportState = Literal['verified', 'unverified', 'not_installed', 'unsupported']
 DeviceKind = Literal['cpu', 'cuda', 'mps']
 STAGES = ('train', 'evaluate', 'infer', 'search', 'export')

@@ -6,9 +6,7 @@ from pathlib import Path
 
 import pytest
 
-spec = importlib.util.spec_from_file_location('runtime_pack', Path(__file__).parents[2] / 'scripts/runtime_pack.py')
-module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(module)
+from backend.engine import runtime_pack as module
 
 
 def fixture(tmp_path):
