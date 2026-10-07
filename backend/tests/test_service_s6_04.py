@@ -300,7 +300,9 @@ def test_direct_launcher_dispatch_uses_explicit_offline_update_cli(tmp_path):
     import sys
     root,scopes,*_=owned(tmp_path);value=fixture(tmp_path);target=tmp_path/'target.json';target.write_bytes(canonical(value['target']))
     repository=Path(__file__).resolve().parents[2]
-    env={**os.environ,'PYTHONPATH':str(repository)}
+    # Keep explicitly isolated dependency overlays in the launcher child too.
+    # A source prefix must not discard the qualification's locked environment.
+    env={**os.environ,'PYTHONPATH':os.pathsep.join(filter(None,(str(repository),os.environ.get('PYTHONPATH',''))))}
     result=subprocess.run([sys.executable,str(repository/'scripts/frozen_backend_entry.py'),'--offline-application-update','install',
         '--root',str(root),'--bundle',str(value['directory']),'--envelope',str(value['envelope']),
         '--authority',str(value['authority']),'--pinned-authority-sha256',value['pinned_authority_sha256'],
