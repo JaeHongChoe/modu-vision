@@ -20,6 +20,7 @@ import fs from 'fs';
 import http from 'http';
 import os from 'os';
 import path from 'path';
+import {OwnedApplicationLaunch} from './applicationLaunch';
 
 function getElectronApp(): any {
   try {
@@ -79,17 +80,18 @@ export interface SupervisorConfig {
   autoRestart?: boolean;
   maxRestartAttempts?: number;
   restartCooldownWindowMs?: number;
+  ownedApplicationLaunch?: OwnedApplicationLaunch;
 }
 
 const MAX_LOG_BUFFER_LINES = 100;
 
 /** Spawn options for the backend. Its stdin stays open as the graceful stop channel, closed by stopBackend (when the
  *  app itself exits, the exit hook force-stops the backend instead), and no console window opens for it on Windows. */
-export function backendSpawnOptions(cwd: string, env: NodeJS.ProcessEnv) {
+export function backendSpawnOptions(cwd: string, env: NodeJS.ProcessEnv, owned=false) {
   return {
     cwd,
     env: { ...env, VISION_AI_STUDIO_STOP_ON_STDIN_EOF: '1' },
-    stdio: ['pipe', 'pipe', 'pipe'] as ['pipe', 'pipe', 'pipe'],
+    stdio: owned ? ['pipe', 'pipe', 'pipe', 'pipe'] as ['pipe','pipe','pipe','pipe'] : ['pipe', 'pipe', 'pipe'] as ['pipe', 'pipe', 'pipe'],
     windowsHide: true,
   };
 }
@@ -109,7 +111,9 @@ export function forceStop(proc: ChildProcess): void {
 
 export class BackendSupervisor extends EventEmitter {
   private runtimeIdentity:BackendStatusInfo['runtimeIdentity']=null;
-  private config: Required<SupervisorConfig>;
+  private config: Required<Omit<SupervisorConfig,'ownedApplicationLaunch'>>;
+  private ownedApplicationLaunch:OwnedApplicationLaunch|undefined;
+  private ownedBackendAttempted=false;
   private state: ProcessState = 'STOPPED';
   private childProcess: ChildProcess | null = null;
   private port: number | null = null;
@@ -127,6 +131,7 @@ export class BackendSupervisor extends EventEmitter {
 
   constructor(customConfig?: SupervisorConfig) {
     super();
+    this.ownedApplicationLaunch=customConfig?.ownedApplicationLaunch;
 
     // Default configuration
     this.config = {
@@ -227,12 +232,15 @@ export class BackendSupervisor extends EventEmitter {
     this.apiToken = apiToken;
 
     try {
-      const projectDir = this.resolveProjectDir();
+      const owned=this.ownedApplicationLaunch;
+      if(owned&&this.ownedBackendAttempted)throw new Error('Owned backend restart requires reconciled launch ownership');
+      const projectDir = owned?.projects || this.resolveProjectDir();
       const standaloneBin = this.resolveStandaloneBinary();
       let spawnBin: string;
       let spawnArgs: string[];
 
       if (standaloneBin) {
+        if(owned){const artifact=owned.executable(standaloneBin);if(!artifact.build)throw new Error('Owned native backend requires its committed frozen inventory');this.runtimeIdentity={mode:'frozen',build_identity_sha256:artifact.build,executable_sha256:artifact.sha256};}
         this.resolvedPythonPath = standaloneBin;
         spawnBin = standaloneBin;
         spawnArgs = [
@@ -243,6 +251,7 @@ export class BackendSupervisor extends EventEmitter {
         ];
         console.log(`[Supervisor] Launching compiled standalone backend: ${spawnBin} ${spawnArgs.join(' ')}`);
       } else {
+        if(owned)throw new Error('Owned native launch requires its committed frozen backend');
         const pythonBin = this.resolvePython();
         this.resolvedPythonPath = pythonBin;
 
@@ -260,11 +269,12 @@ export class BackendSupervisor extends EventEmitter {
         ];
         console.log(`[Supervisor] Launching Python backend: ${spawnBin} ${spawnArgs.join(' ')}`);
       }
+      if(owned)spawnArgs.push('--shared-auth-dir',owned.auth);
 
       const appRoot = this.getAppRoot();
       const backendCwd = this.getBackendWorkingDirectory(appRoot);
       const userDataDir = getElectronApp()?.getPath('userData');
-      const env = {
+      let env:NodeJS.ProcessEnv = {
         ...process.env,
         PYTHONUNBUFFERED: '1',
         PYTHONDONTWRITEBYTECODE: '1',
@@ -273,9 +283,12 @@ export class BackendSupervisor extends EventEmitter {
         VISION_AI_APP_VERSION: getElectronApp()?.getVersion() || '',
         ...(userDataDir ? { VISION_AI_STUDIO_USER_DATA_DIR: userDataDir } : {}),
       };
+      if(owned)env=owned.backendEnvironment(env);
+      else if(Object.keys(env).some(key=>key.startsWith('VISION_APPLICATION_')))throw new Error('Unauthenticated application launch context cannot spawn a backend');
 
       try {
-        this.childProcess = spawn(spawnBin, spawnArgs, backendSpawnOptions(backendCwd, env));
+        if(owned)this.ownedBackendAttempted=true;
+        this.childProcess = spawn(spawnBin, spawnArgs, backendSpawnOptions(backendCwd, env,!!owned));
       } catch (spawnError: any) {
         this.setState('CRASHED');
         throw new Error(`Failed to spawn backend process at '${spawnBin}': ${spawnError.message}`);
@@ -288,6 +301,9 @@ export class BackendSupervisor extends EventEmitter {
 
       // Attach stream listeners
       this.attachProcessListeners(this.childProcess);
+      const bootstrap=owned?.bindBackend(this.childProcess,spawnBin,this.runtimeIdentity?.build_identity_sha256||null);
+      // Attach immediately so an early descriptor refusal is always handled.
+      bootstrap?.catch(()=>{});
 
       // 1. Discover Ephemeral Port from stdout
       // Frozen model libraries need time for first-launch OS verification and
@@ -304,6 +320,7 @@ export class BackendSupervisor extends EventEmitter {
         this.config.host,
         this.config.healthCheckTimeoutMs
       );
+      if(bootstrap)await bootstrap;
       this.healthInfo = health;
       this.startTime = Date.now();
       this.setState('HEALTHY');
@@ -312,6 +329,7 @@ export class BackendSupervisor extends EventEmitter {
       this.emit('ready', port, health);
       return port;
     } catch (startupError: any) {
+      this.ownedApplicationLaunch?.refuse();
       console.error(`[Supervisor] Startup failed: ${startupError.message}`);
       const alreadyReported = this.state === 'CRASHED';
       await this.stopBackend();
@@ -451,7 +469,8 @@ export class BackendSupervisor extends EventEmitter {
       (t) => now - t < this.config.restartCooldownWindowMs
     );
 
-    if (this.config.autoRestart && this.restartTimestamps.length < this.config.maxRestartAttempts) {
+    if(this.ownedApplicationLaunch)this.ownedApplicationLaunch.refuse();
+    if (!this.ownedApplicationLaunch && this.config.autoRestart && this.restartTimestamps.length < this.config.maxRestartAttempts) {
       this.restartTimestamps.push(now);
       this.restartCount++;
       console.warn(

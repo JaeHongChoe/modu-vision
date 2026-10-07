@@ -488,14 +488,15 @@ def review_update(plan):
 def inspect_update(root,authority,*,pinned_authority_sha256):
     """Reopen only this installation's pinned current or unfinished intent.
 
-    Exclusive admission permits inspection while recovery blocks ordinary stores;
-    it does not repair, attach stores, start applications or grant execution rights.
+    Committed readback shares the live backend fence. Pending recovery requires
+    exclusive admission, without repairing or granting execution rights. A
+    pending pointer appearing before shared entry is refused by store admission.
     """
     root,owner=_root(root)
     raw=_read(authority,32768)
     if not _hex(pinned_authority_sha256) or _sha(raw)!=pinned_authority_sha256:
         raise UpdateError('Pinned publisher authority changed')
-    with store_admission(root,exclusive=True):
+    with store_admission(root,exclusive=(root/PENDING).exists()):
         pending=_json(_read(root/PENDING)) if (root/PENDING).exists() else None
         pointer=_pointer(root)
         if pending:

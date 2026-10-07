@@ -17,6 +17,7 @@ Usage:
 
 import os
 import argparse
+import ast
 import hashlib
 import importlib.metadata
 import importlib.util
@@ -33,6 +34,14 @@ if str(ROOT_DIR) not in sys.path:
 BACKEND_DIR = ROOT_DIR / "backend"
 OUTPUT_DIR = ROOT_DIR / "dist-backend"
 ENTRY_POINT = ROOT_DIR / "scripts" / "frozen_backend_entry.py"
+
+OWNED_APPLICATION_LAUNCH_RESOURCES = (
+    'scripts/frozen_backend_entry.py',
+    'backend/engine/application_launch_controller.py',
+    'backend/engine/application_launch_handshake.py',
+    'backend/engine/application_launch_lease.py',
+)
+OWNED_APPLICATION_LAUNCH_PROTOCOL = 'owned_application_launch_controller_protocol'
 
 # Names are distribution/module pairs because wheel and import names differ.
 DEPENDENCIES = (
@@ -57,6 +66,78 @@ def sha256(path):
     with Path(path).open('rb') as reader:
         for chunk in iter(lambda: reader.read(1024 * 1024), b''): digest.update(chunk)
     return digest.hexdigest()
+
+
+def _launch_protocol_resources(resources):
+    """Require one exact checksum row per prerequisite; aliases are not pins."""
+    if not isinstance(resources, list):
+        raise ValueError('Owned application launch protocol resources are missing')
+    pins = {}
+    for name in OWNED_APPLICATION_LAUNCH_RESOURCES:
+        rows = [row for row in resources if isinstance(row, dict) and row.get('path') == name]
+        if len(rows) != 1 or set(rows[0]) != {'path', 'sha256'}:
+            raise ValueError('Owned application launch protocol resource differs: '+name)
+        digest = rows[0]['sha256']
+        if not isinstance(digest, str) or len(digest) != 64 or any(value not in '0123456789abcdef' for value in digest):
+            raise ValueError('Owned application launch protocol checksum differs: '+name)
+        pins[name] = digest
+    return pins
+
+
+def _launch_dispatch_present(raw):
+    """A flag in comments or a dormant function cannot advertise a dispatcher."""
+    try:
+        tree = ast.parse(raw)
+    except (SyntaxError, UnicodeError, ValueError):
+        return False
+    shape = lambda node: ast.dump(node, include_attributes=False)
+    guard = ast.parse("if __name__ == '__main__': pass").body[0].test
+    dispatch = ast.parse("""if len(sys.argv)>1 and sys.argv[1]=='--owned-application-launch-controller':
+    from backend.engine.application_launch_controller import main
+    raise SystemExit(main(sys.argv[2:]))
+""").body[0]
+    bootstrap_import = ast.parse('from backend.engine.application_launch_handshake import early_backend_bootstrap').body[0]
+    bootstrap_call = ast.parse('early_backend_bootstrap()').body[0]
+    server = ast.parse("runpy.run_module('backend.main', run_name='__main__')").body[0]
+    entries = [node for node in tree.body if isinstance(node, ast.If) and shape(node.test) == shape(guard)]
+    if len(entries) != 1:
+        return False
+    entry = entries[0]
+    # The fixed controller branch and early backend gate must precede the
+    # ordinary desktop server fallback in the actually executed entry block.
+    wanted = [shape(dispatch), shape(bootstrap_import), shape(bootstrap_call), shape(server)]
+    positions = []
+    for expected in wanted:
+        matches = [index for index, node in enumerate(entry.body) if shape(node) == expected]
+        if len(matches) != 1:
+            return False
+        positions.append(matches[0])
+    if positions != sorted(positions):
+        return False
+    freeze_support = shape(ast.parse('multiprocessing.freeze_support()').body[0])
+    if any(shape(node) != freeze_support for node in entry.body[:positions[0]]):
+        # No older server fallback, exit, or mutable startup may run before
+        # the fixed dispatcher. Future prefix changes require a fresh review.
+        return False
+    return not any(shape(node) == shape(server) for node in tree.body[:tree.body.index(entry)])
+
+
+def _owned_launch_protocol_available(root, resources):
+    """Bind the declaration to bytes included in this exact source inventory."""
+    try:
+        pins = _launch_protocol_resources(resources)
+    except ValueError:
+        return False
+    root = Path(root)
+    for name, digest in pins.items():
+        source = root/name
+        if (not source.is_file() or source.is_symlink()
+                or any(parent.is_symlink() for parent in source.parents if parent != root and root in parent.parents)
+                or sha256(source) != digest):
+            return False
+    raw = (root/OWNED_APPLICATION_LAUNCH_RESOURCES[0]).read_bytes()
+    return (hashlib.sha256(raw).hexdigest() == pins[OWNED_APPLICATION_LAUNCH_RESOURCES[0]]
+            and _launch_dispatch_present(raw))
 
 
 def dependency_inventory(root: Path, *, supplier_manifest=None) -> dict:
@@ -94,6 +175,10 @@ def dependency_inventory(root: Path, *, supplier_manifest=None) -> dict:
                              'inference_requires_exported_package_weights': True,
                              'hardware_prerequisites': ['CUDA driver for CUDA targets', 'Compatible camera/PLC SDK and device permissions'],
                              'optional_features_unavailable': [row['module'] for row in dependencies if not row['required'] and not row['available']]}}
+    if _owned_launch_protocol_available(root, inventory['resources']):
+        # This declares the fixed bootstrap interface, never native startup,
+        # process-tree exit, inference, publisher, or release acceptance.
+        inventory[OWNED_APPLICATION_LAUNCH_PROTOCOL] = 1
     if supplier_manifest is not None:
         from scripts.package_license_texts import _supplier_licenses,_read
         source=Path(supplier_manifest).absolute();suppliers=_supplier_licenses(source)
@@ -104,6 +189,11 @@ def dependency_inventory(root: Path, *, supplier_manifest=None) -> dict:
 
 
 def validate_inventory(inventory):
+    if OWNED_APPLICATION_LAUNCH_PROTOCOL in inventory:
+        protocol = inventory[OWNED_APPLICATION_LAUNCH_PROTOCOL]
+        if type(protocol) is not int or protocol != 1:
+            raise ValueError('Unsupported owned application launch protocol declaration')
+        _launch_protocol_resources(inventory.get('resources'))
     missing=[row['module'] for row in inventory['dependencies'] if row['required'] and not row['available']]
     outdated=[row['module'] for row in inventory['dependencies'] if row['required'] and row['available'] and not row['satisfies_requirement']]
     if missing:raise RuntimeError('Build environment lacks required dependencies: '+', '.join(missing))

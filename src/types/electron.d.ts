@@ -26,6 +26,8 @@ export interface ElectronAPI {
   previewPortableUpdate:(channel:'stable'|'beta')=>Promise<PortableUpdateReview|null>;
   applyPortableUpdate:(reviewId:string)=>Promise<PortableUpdateState>;
   recoverPortableUpdate:(action:PortableRecoveryAction,expected:{installation_id:string;update_id:string})=>Promise<PortableUpdateState>;
+  launchPortableUpdate:(expected:PortableLaunchExpected)=>Promise<PortableLaunchState>;
+  inspectPortableLaunch:(expected:PortableLaunchExpected)=>Promise<PortableLaunchState>;
   getSharedConnection:()=>Promise<SharedConnection|null>;
   loginSharedServer:(input:{server_url:string;username:string;password:string})=>Promise<SharedConnection>;
   selectSharedProject:(projectId:string)=>Promise<SharedConnection>;
@@ -53,7 +55,9 @@ export interface DistributionState {backend?:DistributionBackend;app_version:str
 export interface ManualDelivery {offline?:boolean;artifacts_verified?:number;version:string;path:string;sha256:string;integrity_verified:true;signature:NativeSignature;publisher_matches_installed:boolean;handoff_ready:boolean;prerequisite:string}
 
 export type PortableRecoveryAction='finish'|'forward'|'abort';
-export interface PortableUpdateState {status:'ready'|'committed'|'recovery_required';root:string;installation_id:string;version:string;update_id:string|null;database_fence:number;allowed_recovery:PortableRecoveryAction[];application_started:false;native_signature_acceptance:'unqualified';model_quality_acceptance:'required'}
+export interface PortableLaunchExpected {installation_id:string;update_id:string;database_fence:number}
+export interface PortableLaunchState extends PortableLaunchExpected {schema_version:1;root:string;status:'absent'|'reserved'|'starting'|'ready'|'recovery_required'|'exited';nonce:string|null;bootstrap_binding_verified:boolean;readiness:'unverified'|'authenticated_controller_binding_only';native_app_handshake_verified:false;backend_handshake_verified:false;actual_application_inference_verified:false;release_ready:false;reason?:string}
+export interface PortableUpdateState {status:'ready'|'committed'|'recovery_required';root:string;installation_id:string;version:string;update_id:string|null;database_fence:number;allowed_recovery:PortableRecoveryAction[];application_started:false;native_signature_acceptance:'unqualified';model_quality_acceptance:'required';launch_state?:PortableLaunchState}
 export interface PortableUpdateReview {status:'reviewed';root:string;review_id:string;installation_id:string;plan_sha256:string;source_sha256:string;envelope_sha256:string;authority_sha256:string;version:string;current_version:string;publisher:string;channel:'stable'|'beta';application_file_count:number;application_layout:'portable/v1'|'darwin-app/v2';application_link_count:number;pack_count:number;artifact_bytes:number;database_fence:number;copied_session_policy:'revoked';application_started:false}
 
 export interface SharedConnection {server_url:string;expires_at:number;user:{id:string;username:string;administrator:boolean|number};project_id?:string}

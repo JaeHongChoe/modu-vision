@@ -14,7 +14,12 @@ def prepare(monkeypatch):
     inventory = {'schema_version': 1, 'dependencies': [], 'build_identity_sha256': 'fixture',
                  'resources': [{'path': str(path.relative_to(root)), 'sha256': build.sha256(path)}
                                for path in sorted(paths)]}
-    monkeypatch.setattr(build, 'dependency_inventory', lambda root: inventory)
+    def inventory_for(root, *, supplier_manifest=None):
+        # Keep the compiler-boundary fixture aligned with the actual inventory
+        # API; this case deliberately does not provision supplier license data.
+        assert supplier_manifest is None
+        return inventory
+    monkeypatch.setattr(build, 'dependency_inventory', inventory_for)
     monkeypatch.setattr(build, 'check_pyinstaller', lambda: True)
     monkeypatch.setattr(build.platform, 'system', lambda: 'Windows')
     monkeypatch.setattr(uuid, 'uuid4', lambda: uuid.UUID(hex='a' * 32))

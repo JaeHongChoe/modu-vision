@@ -12,6 +12,7 @@ import os
 from pathlib import Path
 import re
 import stat
+import socket
 import subprocess
 import uuid
 
@@ -118,6 +119,27 @@ def _record(root, nonce, *, record=None):
     if record['state'] == 'ready' and (not record['claimed'] or record['process'] is None or record['ready_receipt_sha256'] is None):
         _refuse('unbound readiness receipt')
     expected_members = {'journal.json', TRANSITION_LOCK} | ({'spawn-intent.json'} if record['spawn_attempted'] else set())
+    bootstrap = directory/'bootstrap-receipt.json'; update._unlinked(bootstrap)
+    if bootstrap.exists():
+        expected_members.add('bootstrap-receipt.json')
+        raw = update._read(bootstrap)
+        receipt = update._json(raw)
+        names = {'schema_version', 'kind', 'nonce', 'binding', 'main_process', 'backend_process',
+            'backend_executable', 'backend_executable_sha256', 'backend_build_identity_sha256', 'backend_frozen',
+            'challenge_sha256', 'epoch'}
+        if (record['ready_receipt_sha256'] is None or update._sha(raw) != record['ready_receipt_sha256']
+                or not isinstance(receipt, dict) or set(receipt) != names
+                or type(receipt['schema_version']) is not int or receipt['schema_version'] != 1
+                or receipt['kind'] != 'authenticated_controller_binding_only' or receipt['nonce'] != nonce
+                or update._canonical(receipt['binding']) != update._canonical(binding)
+                or update._canonical(receipt['main_process']) != update._canonical(record['process'])
+                or not _identity_shape(receipt['backend_process'])
+                or not isinstance(receipt['backend_executable'], str)
+                or not update._hex(receipt['backend_executable_sha256'])
+                or receipt['backend_build_identity_sha256'] is not None and not update._hex(receipt['backend_build_identity_sha256'])
+                or type(receipt['backend_frozen']) is not bool or not update._hex(receipt['challenge_sha256'])
+                or not update._hex(receipt['epoch'], 32)):
+            _refuse('authenticated bootstrap receipt changed or unbound')
     if record['known_image_receipt_sha256'] is not None:
         expected_members.add('known-image-receipt.json')
         if update._sha(update._read(directory/'known-image-receipt.json')) != record['known_image_receipt_sha256']:
@@ -291,6 +313,8 @@ class LaunchSupervisor:
         self.root, _ = _update()._root(root)
         if not _update()._hex(nonce, 32): raise LaunchLeaseError('Invalid launch nonce')
         self.nonce = nonce; self._process = None; self._lock = None; self._snapshot = None
+        self._bootstrap_channel = None
+        self._bootstrap_transport = None
 
     @classmethod
     def reserve(cls, root, authority, *, pinned_authority_sha256):
@@ -333,7 +357,8 @@ class LaunchSupervisor:
             self._binding(row)
             return self._persist(row, state='exited', exit_observation={'never_spawned': True})
 
-    def start(self):
+    def start(self, *, bootstrap=False):
+        if type(bootstrap) is not bool: raise TypeError('Bootstrap must be a boolean')
         with store_admission(self.root, exclusive=True):
             row = self._owned()
             if row['state'] != 'reserved': raise LaunchLeaseError('Only an unspawned reservation can start')
@@ -345,13 +370,26 @@ class LaunchSupervisor:
             row = self._persist(row, state='starting', spawn_attempted=True)
             # Persisted starting admission precedes the only spawn operation.
             _checkpoint('before_spawn')
+            child_channel = None
             try:
                 environment = {'PATH': os.defpath, 'LANG': 'C.UTF-8', 'VISION_AI_STUDIO_USER_DATA_DIR': str(self.root),
                     'VISION_APPLICATION_LAUNCH_NONCE': self.nonce, 'VISION_APPLICATION_GENERATION': row['binding']['application_generation'],
                     'VISION_APPLICATION_DATABASE_GENERATION': row['binding']['database_generation_path']}
+                pass_fds = ()
+                if bootstrap:
+                    self._bootstrap_channel, child_channel = socket.socketpair(socket.AF_UNIX, socket.SOCK_STREAM)
+                    self._bootstrap_channel.set_inheritable(False)
+                    child_channel.set_inheritable(False)
+                    child_stat = os.fstat(child_channel.fileno())
+                    # macOS reports the socket device sentinel as signed -1 in
+                    # Python and uint64 in Node. Decimal strings avoid coercion.
+                    self._bootstrap_transport = {'device': str(child_stat.st_dev & ((1 << 64)-1)), 'inode': str(child_stat.st_ino),
+                        'family': 'AF_UNIX', 'type': 'SOCK_STREAM', 'anonymous': True}
+                    environment['VISION_APPLICATION_LAUNCH_FD'] = str(child_channel.fileno())
+                    pass_fds = (child_channel.fileno(),)
                 self._process = subprocess.Popen([row['binding']['executable']], env=environment,
                     cwd=self.root, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                    close_fds=True, start_new_session=True)
+                    close_fds=True, start_new_session=True, pass_fds=pass_fds)
                 _checkpoint('after_spawn')
                 identity = _identity(self._process.pid)
                 return self._persist(self._owned(), process=identity)
@@ -361,6 +399,8 @@ class LaunchSupervisor:
                 self._persist(current, state='recovery_required', reason='Spawn/identity observation interrupted: '+type(exc).__name__)
                 if isinstance(exc, psutil.Error): return _public(self._owned())
                 raise
+            finally:
+                if child_channel is not None: child_channel.close()
 
     def _live(self, row, process):
         if self._process is None: raise LaunchLeaseError('Original supervisor OS child handle is unavailable')
@@ -388,6 +428,25 @@ class LaunchSupervisor:
             self._live(row, process)
             receipt = {'nonce': self.nonce, 'binding': binding, 'process': process, 'kind': 'controller_binding_only'}
             return self._persist(row, state='ready', ready_receipt_sha256=_update()._sha(_update()._canonical(receipt)))
+
+    def _publish_bootstrap(self, receipt):
+        """Publish only after this original controller verifies private channels."""
+        with _transition_admission(self.root, self.nonce):
+            row = self._owned(); self._binding(row)
+            if row['state'] != 'starting' or not row['claimed'] or self._bootstrap_channel is None:
+                raise LaunchLeaseError('Authenticated bootstrap requires the original private channel')
+            self._live(row, row['process'])
+            path = self.root/LEASES/self.nonce/'bootstrap-receipt.json'
+            if path.exists(): _refuse('unpublished bootstrap receipt requires recovery')
+            _update()._write(path, receipt)
+            _checkpoint('after_bootstrap_receipt')
+            return self._persist(row, state='ready', ready_receipt_sha256=_update()._sha(_update()._read(path)))
+
+    def recovery(self, reason):
+        with _transition_admission(self.root, self.nonce):
+            row = self._owned()
+            if row['state'] in {'reserved', 'exited'}: raise LaunchLeaseError('Recovery requires a spawn attempt')
+            return self._persist(row, state='recovery_required', reason=str(reason)[:500])
 
     def observe_exit(self):
         with _transition_admission(self.root, self.nonce):
@@ -455,6 +514,8 @@ class LaunchSupervisor:
                     row = self._owned()
                     if row['state'] != 'recovery_required': self._persist(row, state='recovery_required', reason='Supervisor handle released; process-tree ownership unverified')
             finally:
+                if self._bootstrap_channel is not None:
+                    self._bootstrap_channel.close(); self._bootstrap_channel = None
                 if self._lock is not None:
                     self._lock.__exit__(None, None, None); self._lock = None
 

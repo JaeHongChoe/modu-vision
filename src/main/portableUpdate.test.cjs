@@ -1,5 +1,5 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),crypto=require('node:crypto'),Module=require('node:module'),ts=require('typescript');
-function load(name='portableUpdate.ts'){const file=path.join(__dirname,name),m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(path.dirname(file));const requireOriginal=m.require.bind(m);m.require=k=>k==='./releaseTrust'?load('releaseTrust.ts'):requireOriginal(k);m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,file);return m.exports;}
+function load(name='portableUpdate.ts'){const file=path.join(__dirname,name),m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(path.dirname(file));const requireOriginal=m.require.bind(m);m.require=k=>['./releaseTrust','./persistentLaunch'].includes(k)?load(k.slice(2)+'.ts'):requireOriginal(k);m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,file);return m.exports;}
 const hash=b=>crypto.createHash('sha256').update(b).digest('hex');
 function setup(t,extra={}){const directory=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'portable-update-main-')));t.after(()=>fs.rmSync(directory,{recursive:true,force:true}));const resources=path.join(directory,'resources'),root=path.join(directory,'owned'),user=path.join(directory,'current-user');fs.mkdirSync(resources);fs.mkdirSync(root);fs.mkdirSync(user);fs.mkdirSync(path.join(resources,'backend_bin'));const binary=Buffer.from('controlled runtime file');fs.writeFileSync(path.join(resources,'backend_bin/vision_ai_backend'),binary);fs.writeFileSync(path.join(resources,'backend_bin/backend-release.json'),JSON.stringify({executable:'vision_ai_backend',executable_sha256:hash(binary),inventory:{build_identity_sha256:'a'.repeat(64),platform:'Darwin',architecture:'arm64'}}));const pair=crypto.generateKeyPairSync('ed25519');fs.writeFileSync(path.join(resources,'release-trust.json'),JSON.stringify({schema_version:1,publisher:'controlled-publisher',keys:{fixture:pair.publicKey.export({type:'spki',format:'der'}).toString('base64')},revoked_key_ids:[],allowed_origins:['https://release.example.test'],compatibility:{api_context:1,worker:1,runtime:1,dataset_index:1}}));const calls=[];let mutate;
 const status={status:'ready',installation_id:'b'.repeat(32),version:'0.0.0',update_id:null,database_fence:0,allowed_recovery:[],application_started:false};
@@ -18,3 +18,94 @@ test('a stale window recovery view cannot mutate a newly selected installation',
 
 for(const change of ['missing_layout','invalid_layout','negative_links','portable_links','fractional_links'])test(`native review refuses ${change} before issuing a UI review token`,async t=>{const f=setup(t);await f.m.select(f.root);if(change==='missing_layout')delete f.review.application_layout;else if(change==='invalid_layout')f.review.application_layout='foreign/v9';else if(change==='negative_links')f.review.application_link_count=-1;else if(change==='portable_links')f.review.application_link_count=3;else f.review.application_link_count=1.5;await assert.rejects(()=>f.m.preview(path.join(f.directory,'signed.json'),'stable'),/review/);assert.equal(f.calls.some(c=>c.args[1]==='install'),false);});
 test('native macOS review exposes the verified layout and link count without launching',async t=>{const f=setup(t);Object.assign(f.review,{application_layout:'darwin-app/v2',application_link_count:3});await f.m.select(f.root);const r=await f.m.preview(path.join(f.directory,'signed.json'),'stable');assert.equal(r.application_layout,'darwin-app/v2');assert.equal(r.application_link_count,3);assert.equal(r.application_started,false);assert.equal(f.calls.some(c=>c.args[1]==='install'),false);});
+
+function launchFixture(t){
+ const launches=[],f=setup(t,{launchRunner:async(file,args)=>{launches.push({file,args});return{stdout:JSON.stringify(result)+'\n',stderr:''};}});
+ const receiptPath=path.join(f.resources,'backend_bin/backend-release.json'),receipt=JSON.parse(fs.readFileSync(receiptPath,'utf8'));
+ Object.assign(receipt.inventory,{owned_application_launch_controller_protocol:1,resources:['scripts/frozen_backend_entry.py','backend/engine/application_launch_controller.py','backend/engine/application_launch_handshake.py','backend/engine/application_launch_lease.py'].map(p=>({path:p,sha256:hash(p)}))});
+ fs.writeFileSync(receiptPath,JSON.stringify(receipt));
+ Object.assign(f.status,{status:'committed',update_id:'f'.repeat(32),database_fence:1});
+ const expected={installation_id:f.status.installation_id,update_id:f.status.update_id,database_fence:1};
+ let result={schema_version:1,status:'starting',nonce:'1'.repeat(32),...expected,bootstrap_binding_verified:false,readiness:'unverified',native_app_handshake_verified:false,backend_handshake_verified:false,actual_application_inference_verified:false,release_ready:false};
+ const ordinary=f.m.options.runner;f.m.options.runner=async(file,args)=>args[0]==='--owned-application-launch-controller'?{stdout:JSON.stringify(result)+'\n',stderr:''}:ordinary(file,args);
+ return {...f,expected,launches,result,setResult:value=>result=value};
+}
+test('launch is bound to the exact selected committed pair and fixed persistent controller arguments',async t=>{
+ const f=launchFixture(t);await f.m.select(f.root);const result=await f.m.launch(f.expected);
+ assert.equal(result.status,'starting');assert.equal(result.bootstrap_binding_verified,false);assert.equal(result.release_ready,false);
+ assert.equal(f.launches.length,1);const {file,args}=f.launches[0];assert.equal(file,path.join(f.resources,'backend_bin/vision_ai_backend'));
+ assert.equal(args[0],'--owned-application-launch-controller');
+ for(const [flag,value] of [['--root',f.root],['--expected-installation-id',f.expected.installation_id],['--expected-update-id',f.expected.update_id],['--expected-database-fence','1']])assert.equal(args[args.indexOf(flag)+1],value);
+ assert.equal(args.includes('--inspect'),false);assert.ok(args.includes('--pinned-authority-sha256'));
+ await assert.rejects(()=>f.m.launch(f.expected),/already|read.*state/i);assert.equal(f.launches.length,1);
+});
+test('stale, malformed or uncommitted launch requests refuse before persistent spawn',async t=>{
+ for(const change of ['installation','update','fence','bool-fence','extra-field','uncommitted','recovery']){
+  const f=launchFixture(t);await f.m.select(f.root);const expected={...f.expected};
+  if(change==='installation')expected.installation_id='2'.repeat(32);if(change==='update')expected.update_id='3'.repeat(32);if(change==='fence')expected.database_fence=2;
+  if(change==='bool-fence')expected.database_fence=true;if(change==='extra-field')expected.executable='/untrusted';if(change==='uncommitted')f.status.status='ready';if(change==='recovery')f.status.status='recovery_required';
+  await assert.rejects(()=>f.m.launch(expected));assert.equal(f.launches.length,0,change);
+ }
+});
+test('a lost launch response is not retried and separate inspection never spawns',async t=>{
+ const f=launchFixture(t);await f.m.select(f.root);let requests=0;f.m.options.launchRunner=async()=>{requests++;throw Error('controlled lost response');};
+ await assert.rejects(()=>f.m.launch(f.expected),/lost response/);await assert.rejects(()=>f.m.launch(f.expected),/already|read.*state/i);assert.equal(requests,1);
+ f.setResult({...f.result,status:'recovery_required',reason:'original child state is uncertain'});
+ const readback=await f.m.inspectLaunch(f.expected);assert.equal(readback.status,'recovery_required');assert.equal(requests,1);
+});
+test('launch state rejects wrong bindings, typed corruption, false ready and invented acceptance',async t=>{
+ for(const mutate of [r=>r.installation_id='2'.repeat(32),r=>r.database_fence=true,r=>r.nonce=null,r=>r.schema_version=true,r=>r.status='ready',r=>r.bootstrap_binding_verified='yes',r=>r.readiness='native_accepted',r=>r.native_app_handshake_verified=true,r=>r.backend_handshake_verified=true,r=>r.actual_application_inference_verified=true,r=>r.release_ready=true,r=>r.token='sensitive']){
+  const f=launchFixture(t);await f.m.select(f.root);mutate(f.result);await assert.rejects(()=>f.m.launch(f.expected),/launch|binding|response/i);
+ }
+});
+test('authenticated bootstrap readback remains separate from native, inference and release acceptance',async t=>{
+ const f=launchFixture(t);await f.m.select(f.root);f.setResult({...f.result,status:'ready',bootstrap_binding_verified:true,readiness:'authenticated_controller_binding_only'});
+ const readback=await f.m.inspectLaunch(f.expected);assert.equal(readback.status,'ready');assert.equal(readback.bootstrap_binding_verified,true);assert.equal(readback.native_app_handshake_verified,false);assert.equal(readback.actual_application_inference_verified,false);assert.equal(readback.release_ready,false);assert.equal(f.launches.length,0);
+});
+test('reordered IPC object fields cannot replay the same already requested committed pair',async t=>{
+ const f=launchFixture(t);await f.m.select(f.root);await f.m.launch(f.expected);
+ await assert.rejects(()=>f.m.launch({database_fence:1,update_id:f.expected.update_id,installation_id:f.expected.installation_id}),/already|read.*state/i);
+ assert.equal(f.launches.length,1);
+});
+test('inspection refuses false readiness, contradictory absent state and extra capability fields',async t=>{
+ for(const change of ['ready-without-bootstrap','absent-with-bootstrap','unknown-secret','invalid-nonce']){
+  const f=launchFixture(t);await f.m.select(f.root);let row={...f.result};
+  if(change==='ready-without-bootstrap')row.status='ready';
+  if(change==='absent-with-bootstrap')Object.assign(row,{status:'absent',nonce:null,bootstrap_binding_verified:true,readiness:'authenticated_controller_binding_only'});
+  if(change==='unknown-secret')row.capability='must-not-forward';if(change==='invalid-nonce')row.nonce='bad';f.setResult(row);
+  await assert.rejects(()=>f.m.inspectLaunch(f.expected),/launch|binding|response/i);assert.equal(f.launches.length,0);
+ }
+});
+test('pre-reservation CLI refusal remains a bounded error without inventing a lifecycle nonce',async t=>{
+ const f=launchFixture(t);await f.m.select(f.root);const ordinary=f.m.options.runner;
+ f.m.options.runner=async(file,args)=>{if(args[0]!=='--owned-application-launch-controller')return ordinary(file,args);const error=Error('controlled CLI exit2');error.stdout=JSON.stringify({schema_version:1,status:'refused',error:'Selected application binding changed'});throw error;};
+ await assert.rejects(()=>f.m.inspectLaunch(f.expected),/Selected application binding changed/);assert.equal(f.launches.length,0);
+});
+test('legacy or incomplete frozen controller inventory refuses before either launch or inspection execution',async t=>{
+ for(const change of ['missing-protocol','old-protocol','bool-protocol','missing-dispatch','missing-handshake','duplicate-resource','invalid-resource-hash']){
+  for(const inspect of [false,true]){
+   const f=launchFixture(t),receiptPath=path.join(f.resources,'backend_bin/backend-release.json'),receipt=JSON.parse(fs.readFileSync(receiptPath,'utf8'));
+   if(change==='missing-protocol')delete receipt.inventory.owned_application_launch_controller_protocol;
+   if(change==='old-protocol')receipt.inventory.owned_application_launch_controller_protocol=0;
+   if(change==='bool-protocol')receipt.inventory.owned_application_launch_controller_protocol=true;
+   if(change==='missing-dispatch')receipt.inventory.resources=receipt.inventory.resources.filter(r=>r.path!=='scripts/frozen_backend_entry.py');
+   if(change==='missing-handshake')receipt.inventory.resources=receipt.inventory.resources.filter(r=>r.path!=='backend/engine/application_launch_handshake.py');
+   if(change==='duplicate-resource')receipt.inventory.resources.push({...receipt.inventory.resources[0]});
+   if(change==='invalid-resource-hash')receipt.inventory.resources[0].sha256='bad';
+   fs.writeFileSync(receiptPath,JSON.stringify(receipt));await f.m.select(f.root);
+   const ordinary=f.m.options.runner;let controllerInspections=0;f.m.options.runner=async(file,args)=>{if(args[0]==='--owned-application-launch-controller')controllerInspections++;return ordinary(file,args);};
+   await assert.rejects(()=>inspect?f.m.inspectLaunch(f.expected):f.m.launch(f.expected),/controller.*inventory|inventory.*controller/i,change);
+   assert.equal(f.launches.length,0,change);assert.equal(controllerInspections,0,change);
+  }
+ }
+});
+test('runtime inventory changing during publisher verification refuses before execution',async t=>{
+ const f=launchFixture(t);await f.m.select(f.root);const receiptPath=path.join(f.resources,'backend_bin/backend-release.json');let once=true;
+ f.m.options.signature=async()=>{if(once){once=false;fs.appendFileSync(receiptPath,' ');}return {status:'verified',publisher:'controlled-publisher'};};
+ await assert.rejects(()=>f.m.inspectLaunch(f.expected),/inventory|changed/i);assert.equal(f.launches.length,0);
+});
+test('reselection returns durable live launch state without spawning and never hides refused inspection',async t=>{
+ const f=launchFixture(t);f.setResult({...f.result,status:'ready',bootstrap_binding_verified:true,readiness:'authenticated_controller_binding_only'});
+ const selected=await f.m.select(f.root);assert.equal(selected.launch_state.status,'ready');assert.equal(f.launches.length,0);
+ f.setResult({...f.result,status:'ready',bootstrap_binding_verified:false});await assert.rejects(()=>f.m.select(f.root),/binding|response/i);assert.equal(f.launches.length,0);
+});

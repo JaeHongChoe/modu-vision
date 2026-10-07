@@ -88,6 +88,9 @@ def diagnostics():
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()
+    if len(sys.argv)>1 and sys.argv[1]=='--owned-application-launch-controller':
+        from backend.engine.application_launch_controller import main
+        raise SystemExit(main(sys.argv[2:]))
     if sys.argv[1:] == ['--backend-diagnostics']:
         raise SystemExit(diagnostics())
     if len(sys.argv)>1 and sys.argv[1] in ('--flow-package-runner','--flow-package-worker'):
@@ -102,4 +105,6 @@ if __name__ == '__main__':
     if len(sys.argv)>1 and sys.argv[1]=='--offline-application-update':
         from backend.engine.runtime_update import main
         raise SystemExit(main(sys.argv[2:]))
+    from backend.engine.application_launch_handshake import early_backend_bootstrap
+    early_backend_bootstrap()
     runpy.run_module('backend.main', run_name='__main__')

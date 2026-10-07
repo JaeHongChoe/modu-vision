@@ -92,6 +92,8 @@ export const host = {
     previewPortable: async (channel:'stable'|'beta') => required('updates', 'previewPortableUpdate')(channel),
     applyPortable: async (id:string) => required('updates', 'applyPortableUpdate')(id),
     recoverPortable: async (action:Parameters<ElectronAPI['recoverPortableUpdate']>[0],expected:Parameters<ElectronAPI['recoverPortableUpdate']>[1]) => required('updates', 'recoverPortableUpdate')(action,expected),
+    launchPortable: async (expected:Parameters<ElectronAPI['launchPortableUpdate']>[0]) => required('updates', 'launchPortableUpdate')(expected),
+    inspectPortableLaunch: async (expected:Parameters<ElectronAPI['inspectPortableLaunch']>[0]) => required('updates', 'inspectPortableLaunch')(expected),
   },
 
   shared: {

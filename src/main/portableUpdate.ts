@@ -1,16 +1,26 @@
-/** Explicit owned portable homes only. No current-app replacement or launch. */
+/** Explicit owned portable homes; all launch authority stays in trusted main. */
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {readTrustAuthority,readBoundedStableFile} from './releaseTrust';
-import type {NativeSignature,PortableUpdateState,PortableUpdateReview,PortableRecoveryAction} from '../types/electron';
+import {runPersistentController} from './persistentLaunch';
+import type {NativeSignature,PortableUpdateState,PortableUpdateReview,PortableRecoveryAction,PortableLaunchExpected,PortableLaunchState} from '../types/electron';
 
 const runFile=promisify(execFile),sha=(raw:Buffer)=>crypto.createHash('sha256').update(raw).digest('hex');
 const hex=(value:unknown,n=64)=>typeof value==='string'&&new RegExp(`^[0-9a-f]{${n}}$`).test(value);
+function launchRefusal(row:any):string|undefined{return row&&typeof row==='object'&&!Array.isArray(row)
+  &&Object.keys(row).sort().join(',')==='error,schema_version,status'&&row.schema_version===1&&row.status==='refused'
+  &&typeof row.error==='string'&&row.error.length>0&&row.error.length<=2048?row.error:undefined;}
 type Runner=(file:string,args:string[])=>Promise<{stdout:string;stderr:string}>;
-export interface PortableUpdateOptions {packaged:boolean;platform:string;arch:string;resourcesPath:string;userDataPath:string;appPath:string;signature:(target?:string)=>Promise<NativeSignature>;runner?:Runner}
+function supportsController(inventory:any):boolean {
+  const required=['scripts/frozen_backend_entry.py','backend/engine/application_launch_controller.py','backend/engine/application_launch_handshake.py','backend/engine/application_launch_lease.py'];
+  return inventory?.owned_application_launch_controller_protocol===1&&Array.isArray(inventory.resources)
+    &&required.every(p=>inventory.resources.filter((r:any)=>r?.path===p&&hex(r.sha256)).length===1
+      &&inventory.resources.filter((r:any)=>r?.path===p).length===1);
+}
+export interface PortableUpdateOptions {packaged:boolean;platform:string;arch:string;resourcesPath:string;userDataPath:string;appPath:string;signature:(target?:string)=>Promise<NativeSignature>;runner?:Runner;launchRunner?:Runner}
 function unlinked(value:string):string {
   if(typeof value!=='string'||!path.isAbsolute(value)||value.length>4096||value.includes('\0'))throw Error('An absolute portable path is required');
   const absolute=path.resolve(value);
@@ -35,6 +45,7 @@ export class PortableUpdateManager {
   private root:string|null=null;
   private busy=false;
   private review:{id:string;manifest:string;channel:'stable'|'beta';sha:string}|null=null;
+  private launchRequests=new Set<string>();
   constructor(options:PortableUpdateOptions){this.options=options;}
 
   async ensureSupported():Promise<void>{await this.trusted();}
@@ -46,15 +57,16 @@ export class PortableUpdateManager {
     const authority=unlinked(path.join(o.resourcesPath,'release-trust.json')),trust=readTrustAuthority(authority);
     const authoritySHA=sha(readBoundedStableFile(authority,32768,'Pinned publisher authority'));
     const binary=unlinked(path.join(o.resourcesPath,'backend_bin','vision_ai_backend'));
-    const receipt=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(runtimeFile(path.join(path.dirname(binary),'backend-release.json'),16*1024*1024,false) as Buffer));
+    const receiptPath=path.join(path.dirname(binary),'backend-release.json'),receiptBytes=runtimeFile(receiptPath,16*1024*1024,false) as Buffer;
+    const receiptSHA=sha(receiptBytes),receipt=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(receiptBytes));
     const platform=({Darwin:'darwin',Linux:'linux'} as Record<string,string>)[receipt.inventory?.platform];
     const arch=({arm64:'arm64',aarch64:'arm64',x86_64:'x64',AMD64:'x64'} as Record<string,string>)[receipt.inventory?.architecture];
     const binarySHA=runtimeFile(binary,1024*1024*1024,true);
     if(receipt.executable!=='vision_ai_backend'||receipt.executable_sha256!==binarySHA||!hex(receipt.inventory?.build_identity_sha256)||platform!==o.platform||arch!==o.arch)throw Error('Frozen runtime checksum or target differs from its inventory');
     const installed=await o.signature(),backend=await o.signature(binary);
     if(installed.status!=='verified'||backend.status!=='verified'||installed.publisher!==trust.publisher||backend.publisher!==trust.publisher)throw Error('Application and runtime need verified signatures matching the pinned publisher');
-    if(sha(readBoundedStableFile(authority,32768,'Pinned publisher authority'))!==authoritySHA||runtimeFile(binary,1024*1024*1024,true)!==binarySHA)throw Error('Pinned authority or frozen runtime changed during publisher verification');
-    return {authority,authoritySHA,binary,trust};
+    if(sha(readBoundedStableFile(authority,32768,'Pinned publisher authority'))!==authoritySHA||runtimeFile(binary,1024*1024*1024,true)!==binarySHA||runtimeFile(receiptPath,16*1024*1024,true)!==receiptSHA)throw Error('Pinned authority, frozen runtime or inventory changed during publisher verification');
+    return {authority,authoritySHA,binary,trust,inventory:receipt.inventory};
   }
 
   private async exclusive<T>(action:()=>Promise<T>):Promise<T>{
@@ -95,7 +107,14 @@ export class PortableUpdateManager {
     this.review=null;this.root=null;const candidate=unlinked(root);
     if(!fs.statSync(candidate).isDirectory())throw Error('Select a portable installation directory');
     for(const current of [this.options.userDataPath,this.options.appPath])if(overlap(candidate,path.resolve(current)))throw Error('This selection overlaps the current application or its user home');
-    this.root=candidate;try{return await this.readback();}catch(error){this.root=null;throw error;}
+    this.root=candidate;try{
+      const state=await this.readback();
+      if(state.status==='committed'&&state.update_id&&state.database_fence>0&&supportsController((await this.trusted()).inventory)){
+        const expected={installation_id:state.installation_id,update_id:state.update_id,database_fence:state.database_fence};
+        return {...state,launch_state:await this.controllerCommand(expected,true)};
+      }
+      return state;
+    }catch(error){this.root=null;throw error;}
   });}
 
   async inspect():Promise<PortableUpdateState>{return this.exclusive(()=>this.readback());}
@@ -137,4 +156,69 @@ export class PortableUpdateManager {
     if(!['committed','aborted'].includes(result.status))throw Error('Recovery result is unconfirmed; read its state again');
     return this.readback();
   });}
+
+  private launchExpected(value:PortableLaunchExpected):PortableLaunchExpected {
+    if(!value||typeof value!=='object'||Array.isArray(value)
+      ||Object.keys(value).sort().join(',')!=='database_fence,installation_id,update_id'
+      ||!hex(value.installation_id,32)||!hex(value.update_id,32)
+      ||!Number.isSafeInteger(value.database_fence)||value.database_fence<1)throw Error('Invalid selected launch binding');
+    return {installation_id:value.installation_id,update_id:value.update_id,database_fence:value.database_fence};
+  }
+
+  private launchResponse(stdout:string,expected:PortableLaunchExpected,startingOnly=false):PortableLaunchState {
+    if(typeof stdout!=='string'||Buffer.byteLength(stdout,'utf8')>64*1024)throw Error('Invalid bounded launch response');
+    let row:any;try{row=JSON.parse(stdout.trim());}catch{throw Error('Invalid launch response');}
+    const refused=launchRefusal(row);if(refused)throw Error(refused);
+    const keys=['schema_version','status','nonce','installation_id','update_id','database_fence','bootstrap_binding_verified','readiness','native_app_handshake_verified','backend_handshake_verified','actual_application_inference_verified','release_ready'];
+    if(row?.reason!==undefined)keys.push('reason');
+    if(!row||typeof row!=='object'||Array.isArray(row)||Object.keys(row).sort().join(',')!==keys.sort().join(',')
+      ||row.schema_version!==1||!['absent','reserved','starting','ready','recovery_required','exited'].includes(row.status)
+      ||(startingOnly&&row.status!=='starting')||row.installation_id!==expected.installation_id||row.update_id!==expected.update_id
+      ||!Number.isSafeInteger(row.database_fence)||row.database_fence!==expected.database_fence
+      ||(row.status==='absent'?row.nonce!==null:!hex(row.nonce,32))
+      ||typeof row.bootstrap_binding_verified!=='boolean'||!['unverified','authenticated_controller_binding_only'].includes(row.readiness)
+      ||row.bootstrap_binding_verified!==(row.readiness==='authenticated_controller_binding_only')
+      ||(row.status==='ready'&&!row.bootstrap_binding_verified)
+      ||(['absent','reserved','starting','exited'].includes(row.status)&&row.bootstrap_binding_verified)
+      ||['native_app_handshake_verified','backend_handshake_verified','actual_application_inference_verified','release_ready'].some(key=>row[key]!==false)
+      ||(row.reason!==undefined&&(typeof row.reason!=='string'||row.reason.length>500)))throw Error('Invalid or foreign launch binding response');
+    return {...row,root:this.root!};
+  }
+
+  private async controllerCommand(expected:PortableLaunchExpected,inspect:boolean):Promise<PortableLaunchState>{
+    if(!this.root)throw Error('Select an owned portable installation first');
+    unlinked(this.root);const trusted=await this.trusted();
+    // Never probe an unknown flag on a legacy backend: it may start desktop
+    // initialization before argparse refuses it. The signed inventory declares
+    // the dispatcher protocol and binds each early launch handler's source.
+    if(!supportsController(trusted.inventory))throw Error('Frozen controller protocol or source inventory is unsupported');
+    const args=['--owned-application-launch-controller',...(inspect?['--inspect']:[]),'--root',this.root,
+      '--authority',trusted.authority,'--pinned-authority-sha256',trusted.authoritySHA,
+      '--expected-installation-id',expected.installation_id,'--expected-update-id',expected.update_id,
+      '--expected-database-fence',String(expected.database_fence)];
+    const runner=inspect?(this.options.runner||((file:string,argv:string[])=>runFile(file,argv,{timeout:15000,maxBuffer:64*1024,encoding:'utf8',shell:false})))
+      :(this.options.launchRunner||runPersistentController);
+    let response;
+    try{response=await runner(trusted.binary,args);}catch(cause){
+      const raw=(cause as {stdout?:unknown}).stdout;
+      if(typeof raw==='string'&&Buffer.byteLength(raw,'utf8')<=64*1024){let row;try{row=JSON.parse(raw.trim());}catch{}
+        const refused=launchRefusal(row);if(refused)throw Error(refused);}
+      throw cause;
+    }
+    return this.launchResponse(response.stdout,expected,!inspect);
+  }
+
+  async launch(input:PortableLaunchExpected):Promise<PortableLaunchState>{return this.exclusive(async()=>{
+    const expected=this.launchExpected(input);
+    const key=JSON.stringify([this.root,expected]);
+    if(this.launchRequests.has(key))throw Error('Launch was already requested; read its launch state before further work');
+    const current=await this.readback();
+    if(current.status!=='committed'||current.installation_id!==expected.installation_id
+      ||current.update_id!==expected.update_id||current.database_fence!==expected.database_fence)throw Error('Selected committed launch binding changed; read the current installation');
+    this.review=null;this.launchRequests.add(key);
+    return this.controllerCommand(expected,false);
+  });}
+
+  async inspectLaunch(input:PortableLaunchExpected):Promise<PortableLaunchState>{return this.exclusive(()=>
+    this.controllerCommand(this.launchExpected(input),true));}
 }

@@ -11,8 +11,8 @@ const harness=require('./fixtures/harness.cjs'),runFile=promisify(execFile);
 function managerClass():any {
  const file=path.join(harness.REPO_ROOT,'src/main/portableUpdate.ts'),m=new Module(file,module);m.filename=file;m.paths=(Module as any)._nodeModulePaths(path.dirname(file));
  const original=m.require.bind(m);m.require=(key:string)=>{
-  if(key!=='./releaseTrust')return original(key);
-  const f=path.join(harness.REPO_ROOT,'src/main/releaseTrust.ts'),t=new Module(f,module);t.filename=f;t.paths=m.paths;
+  if(!['./releaseTrust','./persistentLaunch'].includes(key))return original(key);
+  const f=path.join(harness.REPO_ROOT,'src/main',key.slice(2)+'.ts'),t=new Module(f,module);t.filename=f;t.paths=m.paths;
   (t as any)._compile(ts.transpileModule(fs.readFileSync(f,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,f);return t.exports;
  };
  (m as any)._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,file);return m.exports.PortableUpdateManager;

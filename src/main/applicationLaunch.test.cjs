@@ -1,0 +1,26 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),os=require('node:os'),Module=require('node:module'),ts=require('typescript');
+function load(){const file=path.join(__dirname,'applicationLaunch.ts'),m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(__dirname);m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,file);return m.exports;}
+test('private framing rejects duplicate keys, nonfinite values and oversized frames',()=>{const {parsePrivateDocument}=load();
+ for(const raw of ['{"a":1,"a":2}','{"a":1e999}','{"a":{"k":1,"k":2}}','x'.repeat(65537)])assert.throws(()=>parsePrivateDocument(Buffer.from(raw)));
+ assert.deepEqual(parsePrivateDocument(Buffer.from('{"created_at":1700000000.0,"pid":17}')).value,{created_at:1700000000,pid:17});
+ assert.equal(parsePrivateDocument(Buffer.from('{"created_at":1700000000.0,"pid":17}')).canonical,'{"created_at":1700000000.0,"pid":17}');});
+test('ordinary absence returns without creating scopes while partial owned context refuses',async()=>{const {authenticateMainLaunch}=load();
+ assert.equal(await authenticateMainLaunch({}),null);
+ await assert.rejects(authenticateMainLaunch({VISION_APPLICATION_LAUNCH_NONCE:'a'.repeat(32)}),/context|root/i);});
+test('owned current application cannot start without a private descriptor or create project/auth scopes',async()=>{const {authenticateMainLaunch}=load();
+ const root=fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()),'owned-main-refusal-'));
+ try {fs.writeFileSync(path.join(root,'.global-migration-owner.json'),'{}');fs.writeFileSync(path.join(root,'application-active.json'),'{}');
+ await assert.rejects(authenticateMainLaunch({VISION_AI_STUDIO_USER_DATA_DIR:root}),/descriptor|context/i);
+ assert.equal(fs.existsSync(path.join(root,'projects')),false);assert.equal(fs.existsSync(path.join(root,'auth')),false);
+ }finally{fs.rmSync(root,{recursive:true,force:true});}});
+for(const name of ['.global-migration-owner.json','application-active.json','application-launch-lease.json','.application-launches','application-database-ownership.lock'])test(`dangling ${name} refuses before ordinary fallback creates scopes`,async()=>{const {authenticateMainLaunch}=load();const root=fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()),'owned-link-refusal-'));
+ try{fs.symlinkSync(path.join(root,'missing-target'),path.join(root,name));await assert.rejects(authenticateMainLaunch({VISION_AI_STUDIO_USER_DATA_DIR:root}),/link/i);assert.equal(fs.existsSync(path.join(root,'projects')),false);assert.equal(fs.existsSync(path.join(root,'auth')),false);}finally{fs.rmSync(root,{recursive:true,force:true});}});
+test('malformed original owner refuses before ordinary mutable startup',async()=>{const {authenticateMainLaunch}=load();const root=fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()),'owned-invalid-owner-'));
+ try{fs.writeFileSync(path.join(root,'.global-migration-owner.json'),'{}');await assert.rejects(authenticateMainLaunch({VISION_AI_STUDIO_USER_DATA_DIR:root}),/identity/i);assert.equal(fs.existsSync(path.join(root,'projects')),false);}finally{fs.rmSync(root,{recursive:true,force:true});}});
+test('actual index refusal reaches neither instance lock nor supervisor nor IPC/window startup',async()=>{const root=fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()),'owned-index-refusal-')),saved=process.env.VISION_AI_STUDIO_USER_DATA_DIR,calls=[];
+ try{fs.writeFileSync(path.join(root,'.global-migration-owner.json'),'{}');fs.writeFileSync(path.join(root,'application-active.json'),'{}');process.env.VISION_AI_STUDIO_USER_DATA_DIR=root;
+ const file=path.join(__dirname,'index.ts'),m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(__dirname);const original=m.require.bind(m);
+ m.require=name=>name==='electron'?{app:{isPackaged:false,on:()=>{},exit:code=>calls.push(['exit',code]),quit:()=>calls.push('quit'),whenReady:()=>{calls.push('whenReady');return new Promise(()=>{});}},BrowserWindow:class{constructor(){calls.push('window');}}}:name==='./supervisor'?{BackendSupervisor:class{constructor(){calls.push('supervisor');}}}:name==='./instanceLock'?{acquireAppInstanceLock:()=>{calls.push('instanceLock');return true;}}:name==='./ipc'?{registerIpcHandlers:()=>calls.push('ipc')}:name==='./sharedSession'?{}:name==='./applicationLaunch'?load():original(name);
+ m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,file);
+ await new Promise(resolve=>setImmediate(resolve));assert.deepEqual(calls,[['exit',2]]);assert.equal(fs.existsSync(path.join(root,'projects')),false);assert.equal(fs.existsSync(path.join(root,'auth')),false);
+ }finally{if(saved===undefined)delete process.env.VISION_AI_STUDIO_USER_DATA_DIR;else process.env.VISION_AI_STUDIO_USER_DATA_DIR=saved;fs.rmSync(root,{recursive:true,force:true});}});

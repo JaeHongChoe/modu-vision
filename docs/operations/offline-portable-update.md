@@ -158,6 +158,9 @@ must match before inspection follows the intent's stored paths. The response
 distinguishes a ready installation, committed pair and interrupted transition,
 and lists the currently permitted recovery actions. An optional authority and
 pin on `recover` bind recovery to this same inspected intent.
+Committed inspection shares the backend's live admission fence. A pending
+transition still requires exclusive admission; a pending pointer appearing
+before shared entry refuses readback. Inspection never drains or stops a writer.
 
 ```sh
 python -m backend.engine.runtime_update recover \
@@ -192,8 +195,56 @@ process review ID is consumed before installation begins. Lost responses require
 an explicit state read, never an automatic retry. Recovery also rechecks the
 installation and update IDs shown in the selected view before it runs.
 
-This panel does not launch the updated application or adopt an installed home.
-The selected app must subsequently be started and qualified with a known image.
+After a committed transition, the panel can explicitly request **전환한 portable
+앱 시작**. Trusted main chooses the pinned frozen controller, selected root,
+installation/update IDs and database fence. Renderer input cannot select an
+executable, arguments, environment, descriptor or process to stop. A legacy
+backend without protocol1 and the four checksum-bound early handler sources
+refuses before any unknown controller flag is executed. Installed-home adoption
+remains a separate operator workflow.
+
+The manager consumes a launch request before spawning. A bounded starting
+acknowledgement confirms durable spawn publication, not successful inference.
+If the response is lost, main closes only its own reply streams and never
+signals the persistent controller or retries. **portable 앱 실행 상태 확인**
+reads the original durable ownership. Reopening and reselecting a supported
+committed installation restores that readback and disables update/recovery and
+duplicate launch controls while ownership is unresolved.
+
+## Persistent launch controller and early startup binding
+
+The frozen entry dispatches `--owned-application-launch-controller` before
+desktop backend imports. Trusted main supplies these exact inputs; `--inspect`
+performs readback without reservation or spawning:
+
+```sh
+vision_ai_backend --owned-application-launch-controller --inspect \
+  --root /path/to/owned-installation \
+  --authority /path/to/provisioned-authority.json \
+  --pinned-authority-sha256 <independently-pinned-sha256> \
+  --expected-installation-id <installation-id> \
+  --expected-update-id <committed-update-id> \
+  --expected-database-fence <positive-fence>
+```
+
+The original controller retains its own database ownership handle and anonymous
+private descriptor after the updater disconnects. A per-nonce transition mutex
+permits claim/readiness/inspection alongside the backend's shared admission,
+while reserve/cutover/recovery remains exclusive. Main authenticates before
+instance-lock/user-home creation or mutable supervisor startup; the backend
+authenticates before SCM, routes and recovery imports. Backend scopes are the
+logical `root/projects` and `root/auth`; store resolution follows the committed
+generation internally. Partial context, foreign artifacts, changed process
+births, channel replay and missing descriptors refuse the binding.
+
+Readiness is explicitly `authenticated_controller_binding_only`, based on a
+separate durable receipt. The response's native-app, backend-native, actual
+inference and release acceptance fields remain false. An ended direct child,
+lost original controller or unverified descendant tree remains
+`recovery_required`; no observation or PID lookup clears the original lease.
+Do not delete launch journals or signal guessed processes to unblock an update.
+Packaged descriptor retention, complete process-tree reconciliation, known-image
+execution and OS installer registration still require their own qualification.
 
 ## Qualification boundaries
 

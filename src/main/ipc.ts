@@ -98,6 +98,8 @@ export function registerIpcHandlers(supervisor: BackendSupervisor): void {
   });
   ipcMain.handle('distribution:apply-portable',(event,id)=>{authorizeShared(event);return portable.apply(id);});
   ipcMain.handle('distribution:recover-portable',(event,action,expected)=>{authorizeShared(event);return portable.recover(action,expected);});
+  ipcMain.handle('distribution:launch-portable',(event,expected)=>{authorizeShared(event);return portable.launch(expected);});
+  ipcMain.handle('distribution:inspect-portable-launch',(event,expected)=>{authorizeShared(event);return portable.inspectLaunch(expected);});
   ipcMain.handle('shared:get',event=>{authorizeShared(event);return getSharedConnection();});
   ipcMain.handle('shared:login',(event,input)=>{authorizeShared(event);return loginSharedServer(input);});
   ipcMain.handle('shared:select',(event,project_id)=>{authorizeShared(event);return selectSharedProject(project_id);});

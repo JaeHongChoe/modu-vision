@@ -31,6 +31,10 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
+# Owned application authentication precedes SCM and all mutable server imports.
+from backend.engine.application_launch_handshake import early_backend_bootstrap, backend_bootstrap_ready
+early_backend_bootstrap()
+
 # SCM must connect its dispatcher before importing Studio/GPU application code.
 if __name__ == '__main__' and sys.argv[1:2] == ['--windows-inspection-service']:
     from backend.engine.windows_inspection_service import main as service_main
@@ -289,6 +293,7 @@ async def _admitted_lifespan(app: FastAPI):
         # Only stale preflight folders of this installation are swept.
         threading.Thread(target=sweep_stale_runs, name="PreflightRunSweep", daemon=True).start()
         logger.info("Vision AI Studio backend daemon initialized (v%s).", VERSION)
+        backend_bootstrap_ready()
         yield
     finally:
         logger.info("Initiating Vision AI Studio backend shutdown...")

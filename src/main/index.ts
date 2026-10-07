@@ -5,12 +5,13 @@ import { BackendSupervisor } from './supervisor';
 import { registerIpcHandlers } from './ipc';
 import { acquireAppInstanceLock } from './instanceLock';
 import {isSharedServerUrl,sharedHeaders} from './sharedSession';
+import {authenticateMainLaunch} from './applicationLaunch';
 
 // Determine execution mode
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
 let mainWindow: BrowserWindow | null = null;
-const supervisor = new BackendSupervisor();
+let supervisor:BackendSupervisor|undefined;
 
 function trustedRendererUrl(url: string, packagedUrl: string): boolean {
   try {
@@ -66,8 +67,8 @@ async function createWindow(): Promise<BrowserWindow> {
       callback({ requestHeaders: details.requestHeaders });
       return;
     }
-    const port = supervisor.getPort();
-    const token = supervisor.getApiToken();
+    const port = supervisor?.getPort();
+    const token = supervisor?.getApiToken();
     const frameUrl = details.frame?.url;
     if (details.method === 'OPTIONS'
       || details.webContentsId !== win.webContents.id
@@ -135,11 +136,14 @@ async function createWindow(): Promise<BrowserWindow> {
   return win;
 }
 
-// Single instance lock
-const gotSingleInstanceLock = acquireAppInstanceLock(app, process.env.VISION_AI_STUDIO_USER_DATA_DIR);
-if (!gotSingleInstanceLock) {
-  app.quit();
-} else {
+// Authenticate before instance-lock/userData mkdir, supervisor dependency/project
+// bootstrap, IPC or a renderer can observe mutable application scopes.
+async function startApplication():Promise<void>{
+ const owned=await authenticateMainLaunch();
+ if(owned)for(const key of Object.keys(process.env))if(key.startsWith('VISION_APPLICATION_'))delete process.env[key];
+ const gotSingleInstanceLock=acquireAppInstanceLock(app,owned?.root||process.env.VISION_AI_STUDIO_USER_DATA_DIR);
+ if(!gotSingleInstanceLock){owned?.refuse();app.quit();return;}
+ supervisor=new BackendSupervisor({ownedApplicationLaunch:owned||undefined});
   app.on('second-instance', () => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
@@ -149,10 +153,10 @@ if (!gotSingleInstanceLock) {
 
   app.whenReady().then(async () => {
     // Register IPC handlers
-    registerIpcHandlers(supervisor);
+    registerIpcHandlers(supervisor!);
 
     // Launch Python Backend Supervisor in background
-    supervisor.startBackend().catch((err) => {
+    supervisor!.startBackend().catch((err) => {
       console.error('[Main] Python backend failed to launch:', err);
     });
 
@@ -166,6 +170,7 @@ if (!gotSingleInstanceLock) {
     });
   });
 }
+startApplication().catch(()=>{app.exit(2);});
 
 // Graceful application shutdown and supervisor cleanup
 app.on('window-all-closed', () => {
@@ -181,7 +186,7 @@ app.on('before-quit', async (event) => {
     event.preventDefault();
     console.log('[Main] Application quit initiated. Stopping backend daemon...');
     try {
-      await supervisor.stopBackend();
+      await supervisor?.stopBackend();
     } catch (err) {
       console.error('[Main] Error during supervisor shutdown:', err);
     } finally {
