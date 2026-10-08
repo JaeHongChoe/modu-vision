@@ -208,7 +208,24 @@ def _owned_runtime_environment(temporary: Path, options: dict[str, Any]) -> dict
     return env
 
 
+class _UnconfirmedFlowOutcome(Exception):
+    """Cross admitted scope before preserving its public timeout/cancel result."""
+    def __init__(self, outcome):
+        self.outcome = outcome
+
+
 def _run_isolated(package_dir, image_path, image_id, options, cancel_event=None):
+    # The current exporter bundles this dependency and its stdlib-only unowned
+    # path. A broken import is a runtime failure, never unowned admission.
+    from backend.engine.application_launch_handshake import owned_flow_cpu_writer_scope
+    try:
+        with owned_flow_cpu_writer_scope(device=options['device']) as transport:
+            return _run_isolated_admitted(package_dir, image_path, image_id, options, cancel_event, transport)
+    except _UnconfirmedFlowOutcome as failure:
+        return failure.outcome
+
+
+def _run_isolated_admitted(package_dir, image_path, image_id, options, cancel_event, transport):
     from backend.engine.runtime_deadline import execute_owned_process,owned_process_workspace
     root=Path(package_dir).expanduser().resolve()
     # Validate graph and content before executing a packaged Python entry point.
@@ -238,11 +255,14 @@ def _run_isolated(package_dir, image_path, image_id, options, cancel_event=None)
                      '-c',bootstrap,str(root),str(request),str(output)]
         env=_owned_runtime_environment(Path(temporary),options)
         workspace.started()
-        outcome=execute_owned_process(command,deadline_ms=options['deadline_ms'],env=env,cwd=temporary,cancel_event=cancel_event)
+        writer_options = {'pass_fds': transport} if transport else {}
+        outcome=execute_owned_process(command,deadline_ms=options['deadline_ms'],env=env,cwd=temporary,cancel_event=cancel_event,**writer_options)
         workspace.finished(outcome)
         if outcome['status'] in ('timeout','cancelled'):
             outcome['image_id']=image_id
-            return outcome
+            # Exception passes through the producer context so unsuccessful
+            # admitted work stays sticky before its active count leaves.
+            raise _UnconfirmedFlowOutcome(outcome)
         if outcome['returncode']!=0:
             raise RuntimeError(f"Owned inference failed: {outcome['stderr'] or outcome['stdout']}")
         if not output.is_file() or output.stat().st_size>128*1024*1024:

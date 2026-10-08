@@ -26,6 +26,7 @@ _CONTEXT_NAMES = ('VISION_AI_STUDIO_USER_DATA_DIR', 'VISION_APPLICATION_LAUNCH_N
 _CHALLENGE_FIELDS = {'schema_version', 'kind', 'challenge', 'epoch', 'nonce', 'binding',
     'main_process', 'backend_pid', 'backend_executable', 'backend_build_identity_sha256'}
 _CACHE = None
+_FIXED_CPU_PRODUCER = object()
 
 
 class BackendWorkAdmission:
@@ -104,11 +105,26 @@ def owned_cpu_writer_scope():
     storage changes, not OFD equivalence. Arbitrary trusted-process descriptor
     table mutation is outside this private in-process contract.
     """
+    with _owned_cpu_producer_scope() as transport:
+        yield transport
+
+
+@contextmanager
+def owned_flow_cpu_writer_scope(*, device):
+    """Selected CPU package worker only; unowned SDK devices keep defaults."""
+    with _owned_cpu_producer_scope(flow_device=device) as transport:
+        yield transport
+
+
+@contextmanager
+def _owned_cpu_producer_scope(*, flow_device=_FIXED_CPU_PRODUCER):
     context = _root_context()
     if _CACHE is None:
         if context is not None: raise HandshakeError('Owned CPU producer has no original cached writer admission')
         yield ()  # Ordinary unowned/export compatibility, no owned authority.
         return
+    if flow_device is not _FIXED_CPU_PRODUCER and (type(flow_device) is not str or flow_device != 'cpu'):
+        raise HandshakeError('Owned flow producer admission supports only selected CPU execution')
     if context is None or _context() != _CACHE['context'] or not _CACHE['ready']:
         raise HandshakeError('Original owned CPU producer capability is unavailable')
     root, values = context

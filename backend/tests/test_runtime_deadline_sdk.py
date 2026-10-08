@@ -120,7 +120,7 @@ def test_owned_package_worker_skips_unlisted_startup_and_parent_environment(real
     assert observed['command'][1:3]==['-I','-B']
     assert observed['command'][3:5]==['-X','pycache_prefix='+str(owned/'bytecode')]
     assert observed['command'][-3:]==[str(package),str(owned/'request.json'),str(owned/'result.json')]
-    assert not owned.exists(),'Owned inference temporary state must be removed after exit'
+    assert owned.is_dir() and not any(owned.iterdir()),'Original owned inference root must remain empty after exit'
     assert before=={p.relative_to(package).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in package.rglob('*') if p.is_file()}
 
 
@@ -132,7 +132,8 @@ def test_runtime_ignores_unlisted_bytecode_and_preserves_all_package_bytes(real_
     marker=tmp_path/'unlisted-bytecode-executed'
     poison=tmp_path/'controlled-poison.py'
     poison.write_text(f'from pathlib import Path\nPath({str(marker)!r}).write_text("unverified")\nraise RuntimeError("unlisted cached code")\n')
-    cache=Path(importlib.util.cache_from_source(str(verified)));cache.parent.mkdir(exist_ok=True)
+    cache=verified.parent/'__pycache__'/Path(importlib.util.cache_from_source(str(verified))).name
+    cache.parent.mkdir(exist_ok=True)
     py_compile.compile(str(poison),cfile=str(cache),doraise=True)
     raw=cache.read_bytes();stat=verified.stat()
     # Timestamp header names the checksum-verified source; the unlisted payload differs.
