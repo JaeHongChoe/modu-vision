@@ -690,7 +690,33 @@ def _writer_snapshot_raw_evidence(root, nonce):
     return snapshot,registry_raw,publication_raw
 
 
-def _assert_returned_cpu_settlement(observation, cpu, controller, *, registry_raw, publication_raw):
+def _assert_cpu_receipt_raw(receipt, receipt_raw, receipt_sha256):
+    """Durable receipt bytes only; request/completion hashes stay canonical."""
+    assert type(receipt_raw) is bytes and 0<len(receipt_raw)<=65536
+    assert type(receipt_sha256) is str and len(receipt_sha256)==64
+    def exact_pairs(pairs):
+        value={}
+        for key,item in pairs:
+            assert key not in value;value[key]=item
+        return value
+    assert json.loads(receipt_raw,object_pairs_hook=exact_pairs)==receipt
+    assert sha(receipt_raw)==receipt_sha256
+
+
+def _cpu_receipt_raw_evidence(root, nonce, receipt):
+    """Read original validated journal before/after without remint or writes."""
+    from backend.engine import application_launch_lease as lease
+    journal=lease.inspect_launch(root)
+    receipt_raw=lease._update()._read(root/lease.LEASES/nonce/'cpu-execution-receipt.json')
+    assert lease.inspect_launch(root)==journal
+    assert journal['nonce']==receipt['nonce']==nonce
+    execution=journal['cpu_execution']
+    assert execution['request_id']==receipt['request_id'] and execution['request_sha256']==receipt['request_sha256']
+    _assert_cpu_receipt_raw(receipt,receipt_raw,execution['receipt_sha256'])
+    return receipt_raw
+
+
+def _assert_returned_cpu_settlement(observation, cpu, controller, *, registry_raw, publication_raw, cpu_receipt_raw):
     """Fixture evidence only; original typed settlement is never reminted here."""
     assert type(observation) is dict and set(observation)=={'schema_version','kind','controller_process',
         'receipt','request','completion','settlement','writer_snapshot'}
@@ -716,9 +742,10 @@ def _assert_returned_cpu_settlement(observation, cpu, controller, *, registry_ra
     assert completion['backend_proof']['process']==cpu['backend_process']
     for name in ('output_path','output_sha256','semantic_output','worker_pid','runtime_source_sha256'):
         assert completion[name]==cpu[name]
+    _assert_cpu_receipt_raw(cpu,cpu_receipt_raw,observation['settlement']['receipt_sha256'])
     assert observation['settlement']=={'schema_version':1,'kind':'source_cpu_settled','nonce':cpu['nonce'],
         'request_id':cpu['request_id'],'request_sha256':cpu['request_sha256'],
-        'completion_sha256':sha(canonical(completion)),'receipt_sha256':sha(canonical(cpu))}
+        'completion_sha256':sha(canonical(completion)),'receipt_sha256':sha(cpu_receipt_raw)}
     snapshot=observation['writer_snapshot'];assert set(snapshot)=={'registry','registry_sha256'}
     _assert_writer_snapshot_raw(snapshot,registry_raw,publication_raw)
     registry=snapshot['registry']
@@ -745,7 +772,8 @@ def _record_returned_cpu_settlement(owner, receipt):
     assert state['thread'] is threading.current_thread() and state['failed'] is False
     assert state['phase']=='finished' and state['settled'] is True
     publication=state['publication'];assert publication['receipt']==receipt
-    assert publication['receipt_sha256']==sha(canonical(receipt))
+    cpu_receipt_raw=_cpu_receipt_raw_evidence(owner.root,receipt['nonce'],receipt)
+    _assert_cpu_receipt_raw(receipt,cpu_receipt_raw,publication['receipt_sha256'])
     assert publication['completion_sha256']==sha(canonical(publication['completion']))
     snapshot,registry_raw,publication_raw=_writer_snapshot_raw_evidence(owner.root,receipt['nonce'])
     assert registry_raw==owner._writer_epoch._raw and publication_raw==owner._writer_epoch._pointer
@@ -755,7 +783,7 @@ def _record_returned_cpu_settlement(owner, receipt):
         'completion':publication['completion'],'settlement':owner._cpu_settlement,
         'writer_snapshot':snapshot}
     _assert_returned_cpu_settlement(observation,receipt,observation['controller_process'],
-        registry_raw=registry_raw,publication_raw=publication_raw)
+        registry_raw=registry_raw,publication_raw=publication_raw,cpu_receipt_raw=cpu_receipt_raw)
     finished=next(row for row in observation['writer_snapshot']['registry']['writers']
         if row['writer_id']==state['registration'].writer_id)
     assert finished['process']==state['child'] and finished['role']=='owned_cpu_worker'
@@ -811,11 +839,12 @@ def _wait_returned_cpu_settlement(root, nonce, child, cpu, deadline):
         observation=json.loads(raw,object_pairs_hook=exact_pairs)
         try:
             journal=inspect_launch(root);snapshot,registry_raw,publication_raw=_writer_snapshot_raw_evidence(root,nonce)
+            cpu_receipt_raw=_cpu_receipt_raw_evidence(root,nonce,cpu)
         except LeaseTransitionBusy:
             # Only original read-only entry busy; retain the original 50 s cap.
             time.sleep(max(0,min(.01,deadline-time.monotonic())));continue
         assert time.monotonic()<deadline
-        _assert_returned_cpu_settlement(observation,cpu,witness,registry_raw=registry_raw,publication_raw=publication_raw)
+        _assert_returned_cpu_settlement(observation,cpu,witness,registry_raw=registry_raw,publication_raw=publication_raw,cpu_receipt_raw=cpu_receipt_raw)
         assert journal['state']=='ready' and journal['nonce']==nonce and journal['supervisor']==witness
         assert journal['binding']==cpu['binding'] and journal['process']==cpu['main_process']
         assert journal['writer_drain']['phase']=='enrolled'
@@ -826,7 +855,7 @@ def _wait_returned_cpu_settlement(root, nonce, child, cpu, deadline):
         execution=journal['cpu_execution']
         assert execution['request_id']==cpu['request_id'] and execution['request_sha256']==cpu['request_sha256']
         directory=root/'.application-launches'/nonce
-        receipt_raw=(directory/'cpu-execution-receipt.json').read_bytes()
+        receipt_raw=(directory/'cpu-execution-receipt.json').read_bytes();assert receipt_raw==cpu_receipt_raw
         assert execution['receipt_sha256']==sha(receipt_raw)==observation['settlement']['receipt_sha256']
         assert json.loads(receipt_raw)==cpu
         intent_raw=(directory/'cpu-execution-intent.json').read_bytes()
