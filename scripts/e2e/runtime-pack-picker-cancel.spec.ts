@@ -6,7 +6,7 @@ import type {Page, Request} from '@playwright/test';
 import {test, expect, type Workspace, type Evidence} from './fixtures/test';
 import {installDesktopHostShim} from './fixtures/desktop-host-shim';
 
-type Api = (route: string, body?: unknown, method?: string) => Promise<any>;
+type Api = (route: string, body?: unknown, method?: string) => Promise<{status: number; body: any}>;
 type Pick = {kind: 'source' | 'inventory'; options: unknown; result: null};
 type Producer = {read(): Promise<Pick[]>; restore(): Promise<void>};
 const sha = (raw: Buffer | string) => createHash('sha256').update(raw).digest('hex');
@@ -25,12 +25,19 @@ function tree(root: string): Record<string, {bytes: number; sha256: string}> {
   visit(root); return files;
 }
 
+function acceptFixtureResponse(route: string, method: string, response: {status: number; body: any}, datasetEmpty: boolean) {
+  if (datasetEmpty && method === 'GET' && ['/api/team-data', '/api/team-data/readiness'].includes(route)) {
+    expect(response.status).toBe(422); expect(response.body).toEqual({detail: 'Import a dataset into this project before creating a version.'});
+  } else expect(response.status).toBe(200);
+  return response.body;
+}
+
 async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, producer: Producer, native: boolean, url?: string) {
-  const fixtureCalls: any[] = [], rendererWrites: any[] = [];
-  const ownedApi: Api = async (route, body, method) => {
+  const fixtureCalls: any[] = [], rendererWrites: any[] = []; let datasetEmpty = false;
+  const ownedApi = async (route: string, body?: unknown, method?: string) => {
     const verb = method || (body ? 'POST' : 'GET');
-    const record = await api(route, body, method);
-    fixtureCalls.push({method: verb, route, ...(body ? {body} : {}), response: record});
+    const response = await api(route, body, method), record = acceptFixtureResponse(route, verb, response, datasetEmpty);
+    fixtureCalls.push({method: verb, route, ...(body ? {body} : {}), status: response.status, response: record});
     return record;
   };
   const pending = new Map<Request, {started: number; finished?: number; failed?: string}>();
@@ -61,6 +68,7 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, produce
   };
   try {
     const project = await ownedApi('/api/project/create', {name: 'Owned runtime picker cancellation', task: 'classification'});
+    expect(project.source_dataset_dir).toBeNull(); expect(fs.readdirSync(project.dataset_dir)).toEqual([]); datasetEmpty = true;
     const expectedRoot = native ? path.join(w.userData, 'projects') : w.projects;
     expect(path.dirname(project.project_dir)).toBe(expectedRoot); expect(fs.realpathSync(project.project_dir)).toBe(project.project_dir);
     const inputs = path.join(project.project_dir, 'runtime-picker-only-inputs'); fs.mkdirSync(inputs);
@@ -90,7 +98,7 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, produce
     const rendererSetup = [...rendererWrites]; rendererWrites.length = 0;
     // The source-less project has no import, install, training, inference or runtime activation setup.
     expect(rendererSetup).toEqual(native ? [{method: 'POST', endpoint: '/api/project/create', body: {name: 'Owned runtime picker cancellation', task: 'classification'}}] : []);
-    expect(fixtureCalls.filter(row => row.method !== 'GET')).toEqual([{method: 'POST', route: '/api/project/create', body: {name: 'Owned runtime picker cancellation', task: 'classification'}, response: project}]);
+    expect(fixtureCalls.filter(row => row.method !== 'GET')).toEqual([{method: 'POST', route: '/api/project/create', body: {name: 'Owned runtime picker cancellation', task: 'classification'}, status: 200, response: project}]);
     const beforeRecord = {project, roots, before, apiBefore, inputBefore, harness_original_images: w.images, fixtureCalls: [...fixtureCalls], rendererSetup};
     const beforeFile = path.join(w.logs, 'runtime-picker-before.json'); fs.writeFileSync(beforeFile, JSON.stringify(beforeRecord, null, 2), {flag: 'wx'}); e.addFile(beforeFile);
     for (const [kind, root] of Object.entries(roots)) for (const relative of Object.keys(before[kind])) {
@@ -128,7 +136,7 @@ test('runtime pack source and inventory null choices preserve exact inputs befor
   const picks: Pick[] = []; await installDesktopHostShim(page, renderer.port);
   await page.exposeFunction('__ownedRuntimeNullPick', async (kind: Pick['kind'], options: unknown) => {picks.push({kind, options, result: null}); return null;});
   await page.addInitScript(() => {const api = (window as any).api; api.selectFolder = (options: unknown) => (window as any).__ownedRuntimeNullPick('source', options); api.selectFile = (options: unknown) => (window as any).__ownedRuntimeNullPick('inventory', options);});
-  const api: Api = async (route, body, method) => {const response = await page.request.fetch(renderer.origin + route, {method: method || (body ? 'POST' : 'GET'), data: body}); expect(response.ok(), await response.text()).toBe(true); return response.json();};
+  const api: Api = async (route, body, method) => {const response = await page.request.fetch(renderer.origin + route, {method: method || (body ? 'POST' : 'GET'), data: body}); return {status: response.status(), body: await response.json()};};
   await exercise(page, workspace, evidence, api, {read: async () => [...picks], restore: async () => {}}, false, renderer.url);
 });
 
@@ -151,7 +159,7 @@ test('native runtime pack original preload IPC null choices preserve exact input
   });
   const api: Api = (route, body, method) => page.evaluate(async ({port, route, body, method}) => {
     const response = await fetch(`http://127.0.0.1:${port}${route}`, {method: method || (body ? 'POST' : 'GET'), headers: {'Content-Type': 'application/json'}, body: body ? JSON.stringify(body) : undefined});
-    if (!response.ok) throw Error(`Owned picker readback HTTP ${response.status}: ${await response.text()}`); return response.json();
+    return {status: response.status, body: await response.json()};
   }, {port: status.port, route, body, method});
   await exercise(page, workspace, evidence, api, {
     read: () => electronSession.app.evaluate(() => (globalThis as any).__ownedRuntimeCancelDialog.calls),

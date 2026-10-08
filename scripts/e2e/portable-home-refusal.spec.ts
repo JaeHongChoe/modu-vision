@@ -61,12 +61,19 @@ function tree(root: string): Record<string, unknown> {
   walk(root); return entries;
 }
 
+function acceptFixtureResponse(route: string, method: string, response: {status: number; body: any}, datasetEmpty: boolean) {
+  if (datasetEmpty && method === 'GET' && ['/api/team-data', '/api/team-data/readiness'].includes(route)) {
+    expect(response.status).toBe(422); expect(response.body).toEqual({detail: 'Import a dataset into this project before creating a version.'});
+  } else expect(response.status).toBe(200);
+  return response.body;
+}
+
 test('portable home actual choice refuses current parent child and linked scopes before the read-only runner', async ({page, renderer, workspace, evidence}) => {
   const fixture = portableFixture(path.join(workspace.root, 'portable-home-boundaries'));
-  const fixtureCalls: any[] = [], rendererWrites: any[] = [], choices: any[] = [], unexpectedOperations: any[] = [];
+  const fixtureCalls: any[] = [], rendererWrites: any[] = [], choices: any[] = [], unexpectedOperations: any[] = []; let datasetEmpty = false;
   const api = async (route: string, body?: unknown) => {
-    const method = body ? 'POST' : 'GET', response = await page.request.fetch(renderer.origin + route, {method, data: body}); expect(response.ok(), await response.text()).toBe(true);
-    const record = await response.json(); fixtureCalls.push({method, route, ...(body ? {body} : {}), response: record}); return record;
+    const method = body ? 'POST' : 'GET', response = await page.request.fetch(renderer.origin + route, {method, data: body});
+    const status = response.status(), record = acceptFixtureResponse(route, method, {status, body: await response.json()}, datasetEmpty); fixtureCalls.push({method, route, ...(body ? {body} : {}), status, response: record}); return record;
   };
   const observe = (request: Request) => {const endpoint = new URL(request.url()).pathname; if (endpoint.startsWith('/api/') && request.method() === 'GET') pending.set(request, {started: performance.now()}); if (endpoint.startsWith('/api/') && !['GET', 'HEAD', 'OPTIONS'].includes(request.method())) {let body; try {body = request.postDataJSON();} catch {body = request.postData();} rendererWrites.push({method: request.method(), endpoint, body});}};
   const pending = new Map<Request, {started: number; finished?: number; failed?: string}>();
@@ -104,6 +111,7 @@ test('portable home actual choice refuses current parent child and linked scopes
   });
   try {
     const project = await api('/api/project/create', {name: 'Owned portable home boundaries', task: 'classification'});
+    expect(project.source_dataset_dir).toBeNull(); expect(fs.readdirSync(project.dataset_dir)).toEqual([]); datasetEmpty = true;
     expect(path.dirname(project.project_dir)).toBe(workspace.projects); expect(fs.realpathSync(project.project_dir)).toBe(project.project_dir);
     await page.goto(renderer.url); await expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name);
     await page.getByRole('button', {name: '패키지·장치·진단', exact: true}).click();
@@ -118,7 +126,7 @@ test('portable home actual choice refuses current parent child and linked scopes
     const roots = {project: project.project_dir, harness_original_dataset: workspace.dataset, owned_portable_inputs: fixture.folder};
     const before = Object.fromEntries(Object.entries(roots).map(([kind, root]) => [kind, tree(root)]));
     expect(rendererWrites).toEqual([]); expect(fixture.commands).toEqual([]); expect(fixture.signatures).toEqual([]); expect(fixture.launches).toEqual([]);
-    expect(fixtureCalls.filter(row => row.method !== 'GET')).toEqual([{method: 'POST', route: '/api/project/create', body: {name: 'Owned portable home boundaries', task: 'classification'}, response: project}]);
+    expect(fixtureCalls.filter(row => row.method !== 'GET')).toEqual([{method: 'POST', route: '/api/project/create', body: {name: 'Owned portable home boundaries', task: 'classification'}, status: 200, response: project}]);
     for (const [kind, entries] of Object.entries(before)) {
       const links = Object.entries(entries).filter(([, row]) => (row as any).kind === 'symlink');
       expect(links).toEqual(kind === 'owned_portable_inputs' ? [['linked-owned', {kind: 'symlink', target: fixture.valid}]] : []);
