@@ -5130,7 +5130,7 @@
       },
       "proposed_test_file": "backend/tests/test_service_s6_04.py",
       "remaining": [
-        "Persistent controller, early main/backend binding, compiled dispatcher and original-owned bootstrap-before-health ordering are source-qualified. Fresh clean78b private frozen controller/Electron/backend controlled CPU A/OK and two compiled readbacks passed; normal quit and original registered processes exited with recovery_required retained. Coherent4 pre-cutover CPU canary has five distinct successful observations with the cold missing-FD timeout retained. Whole writer/process-tree reconciliation, OS installer adapters, actual publisher/installed-release acceptance, ordinary device configuration and post-start environment mutation qualification remain pending."
+        "Persistent controller, early main/backend binding, compiled dispatcher and original-owned bootstrap-before-health ordering are source-qualified. Fresh clean78b private frozen controller/Electron/backend controlled CPU A/OK and two compiled readbacks passed; normal quit and original registered processes exited with recovery_required retained. Coherent4 pre-cutover CPU canary has five distinct successful observations with the cold missing-FD timeout retained. Whole writer/process-tree reconciliation, OS installer adapters, actual publisher/installed-release acceptance, ordinary device configuration and post-start environment mutation qualification remain pending. Those78b and coherent4 results are historical components. Current c306 fresh compile passed, but its unchanged original frozen gate has3 passed/1 failed: initial service binding exceeded the original absolute10-second frame budget before CPU math, with no CPU execution receipt. A separate original single fresh validator took10.50245058 seconds with all retained signed and installed bytes unchanged; it is not service or cold-cache acceptance. The current negative record is docs/verification/receipts/2026-10-09-current-frozen-service-c306f9d-negative.json. Current compiled-service qualification remains pending; no parent or release acceptance is promoted."
       ]
     },
     {
@@ -6210,7 +6210,7 @@
       },
       "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts",
       "remaining": [
-        "207 curated actions have658 verified and791 pending scenarios. Exact existing graph-history empty/reopen/handoff controls were exercised in clean source browser and Electron at1728356, with current graph/source restoration and unchanged persisted hashes. Omitted menus/shortcuts, unexecuted dimensions and full156-feature target acceptance remain pending."
+        "207 curated actions have765 verified and684 pending scenarios. Exact existing graph-history empty/reopen/handoff controls were exercised in clean source browser and Electron at1728356, with current graph/source restoration and unchanged persisted hashes. Omitted menus/shortcuts, unexecuted dimensions and full156-feature target acceptance remain pending."
       ]
     },
     {

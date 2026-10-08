@@ -1,0 +1,89 @@
+{
+  "schema": "modu-vision.current-private-frozen-service-negative/v1",
+  "source_sha": "c306f9d5b48fd71415539b3d11e65c221817faad",
+  "record_kind": "retained_failed_service_validation_not_release_acceptance",
+  "compile": {
+    "returncode": 0,
+    "elapsed_seconds": 234.9129749579588,
+    "source_inputs": 2322,
+    "source_archive_before_after_current_equal": true,
+    "compiler_standard_ad_hoc_MachO_processing_disclosed": true,
+    "publisher_or_installed_release_acceptance": false
+  },
+  "original_frozen_gate": {
+    "passed": 3,
+    "failed": 1,
+    "errors": 0,
+    "skipped": 0,
+    "pytest_seconds": 473.57,
+    "runner_seconds": 474.53689037507866,
+    "returncode": 1,
+    "source_inputs": 2322,
+    "source_archive_before_after_current_equal": true
+  },
+  "service_failure": {
+    "stage": "initial service pre-frame binding validation",
+    "message": "Original service binding verification completed late",
+    "source_function": "application_launch_handshake._validate_service_action",
+    "source_line": 846,
+    "original_absolute_frame_budget_seconds": 10.0,
+    "subsequent_transport_outcome": "descriptor EOF",
+    "cpu_math_started": false,
+    "cpu_execution_receipt_present": false
+  },
+  "artifact_binding": {
+    "backend_binary_sha256": "f57f4c483cc63d4b1529353798dc759e3f582c802242501689f5398ec101163e",
+    "backend_release_sha256": "bc27d2b41fde79c4ebbb206466157db7f0ade882d629f9088d68b6a9f6346208",
+    "backend_build_identity_sha256": "81f6a7dcc550b36858718b5ae6f22be89475a92e658761a0f2e65e99cba9520d"
+  },
+  "single_pass_profile": {
+    "validated_intent_calls": 1,
+    "body_elapsed_seconds": 10.502450582920574,
+    "full_original_sha_equal": true,
+    "full_original_shape_equal": true,
+    "retained_original_transition_ofd": true,
+    "cold_cache_proof": false,
+    "service_deadline_acceptance": false,
+    "candidate_build_acceptance": false,
+    "scope": "One separate read-only fresh validation on the retained signed and installed fixture. Earlier full evidence hashing had read the bytes. The service requires fresh validation before and after its admitted action; this single-pass timing does not constitute a successful service execution."
+  },
+  "proof_hashes": {
+    "original_compile_exit": "b917b1f29b072945e72cc160e4e3cf483410c03394701518e7a9f12808e6deb7",
+    "original_compile_log": "e3aa198e66ce3e786d3364c941f7e6088d07823f1eb6d5eb8963b1a32bea34dd",
+    "original_frozen_exit": "df41b90309c240b2537d04d231d256eab6755213f3f4a6ae8e72ed061e462186",
+    "original_frozen_xml": "a28e6c12f5bcf266f82ed085dbaf5b879413a9d5904c8816d5c723b0ab59482f",
+    "original_frozen_log": "273152f4cacd91dd4215a49866b49ef90c83abcf12661d6679a9d6e0feb4c8c1",
+    "original_backend_first_failure": "5f55afe15ea053832e04ecf23149267868a546c55a1ba05d634dede069da29cf",
+    "original_failure_preservation": "4743e03c2734b4856d0a028659f0c791eb2e4e17a1856675ab4d1ca0b852c1ef",
+    "original_preservation_freeze": "da39fb5bed13bf94bef3fc3727951c115fa73095e8588d78abb67edf3d2dbd4c",
+    "original_full_phase_inventory": "5debc8a164fb3dd5af0e65af6fb338cbe4f54dca9bde69bb296175d916c0b7b2",
+    "original_full_compiled_inventory": "20fcfd72cef3d9b8b038b3cdad99f4fb8abed3e22f75b4c1afe9dd2a5419ca77",
+    "original_single_pass_profile": "dd92e469de84fa21261e41164fb9befffd18c3fe4bd75c4cb30294295ff9527e"
+  },
+  "preserved_historical_components": [
+    {
+      "receipt": "docs/verification/receipts/2026-10-08-current-private-native-78b6b73.json",
+      "sha256": "baf72bd57b8a3fa251ed9ac6dfc54b0ff91700fee8cc94535ddb94e306d5c889",
+      "scope": "Historical private78b controlled native CPU/readback pass remains tied to its own source; no result transfers to the failed c306 service."
+    },
+    {
+      "receipt": "docs/verification/receipts/2026-10-08-coherent-staged-compiled4-f8332dd.json",
+      "sha256": "2a23e02a4f285ab4138aee550fe3d2a942f84b0f8627a755f7b21db54e077d96",
+      "scope": "Historical five distinct coherent4 pre-cutover successes and its retained cold missing-descriptor failure remain separate."
+    }
+  ],
+  "acceptance": {
+    "current_c306_service_binding": false,
+    "current_c306_cpu_execution": false,
+    "current_c306_native_target": false,
+    "whole_writer_process_tree": false,
+    "managed_lease_release": false,
+    "installed_release": false,
+    "publisher_signing": false,
+    "model_quality": false,
+    "human_approval": false,
+    "whole_parent": false,
+    "release": false
+  },
+  "scope": "Negative current private compiled-service record. Three dispatcher refusals passed and the original positive CPU fixture failed before math. Source-only optimization controls and subsequent read-only timing observations do not replace this original failed gate."
+}
