@@ -226,6 +226,8 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
       const expectedPoints = output.kind === 'align' ? output.row.annotations[0].polygon : [[8, 10], [40, 10], [40, 44], [8, 44]];
       expect(labelPoints).toBe(expectedPoints.map((point: number[]) => point.join(',')).join(' '));
       const detail = panel.locator('details').filter({hasText: '버전 출처와 보존 해시'});
+      if (await detail.getAttribute('open') === null) await detail.locator('summary').click();
+      await expect(detail.locator('pre')).toBeVisible();
       expect(JSON.parse(await detail.locator('pre').innerText())).toMatchObject({version: output.row.id, parent: null,
         actor: basePayload.actor, operation: output.row.operation, original_sha256: sourceSha, derived_sha256: output.row.derived_sha256, dataset_path: output.row.dataset_path});
       await expect(panel).toContainText('검수 대기'); await unchanged(); await capture(output.kind + '-actual-reload-exact-version-reopened', preview);
