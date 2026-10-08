@@ -35,15 +35,21 @@ export function assertOnlyDraftEffect(before:Record<string,Tree>,after:Record<st
  expect(after.project[relative]).not.toEqual(before.project[relative]);
  const expected=clone(before);expected.project[relative]=after.project[relative];expect(after).toEqual(expected);
 }
-export function assertSourcePixels(raw:Buffer){
+export function assertSourcePixels(raw:Buffer,blue=100){
+ expect([100,101]).toContain(blue);
  expect(raw.subarray(0,8)).toEqual(Buffer.from([137,80,78,71,13,10,26,10]));let cursor=8,header:Buffer|undefined;const data:Buffer[]=[];
  while(cursor<raw.length){const size=raw.readUInt32BE(cursor),type=raw.toString('ascii',cursor+4,cursor+8),value=raw.subarray(cursor+8,cursor+8+size);expect(cursor+size+12).toBeLessThanOrEqual(raw.length);
   if(type==='IHDR'){expect(header).toBeUndefined();header=value;}if(type==='IDAT')data.push(value);cursor+=size+12;
  }
  expect(cursor).toBe(raw.length);expect(header).toBeDefined();expect(header!.readUInt32BE(0)).toBe(256);expect(header!.readUInt32BE(4)).toBe(256);expect([...header!.subarray(8)]).toEqual([8,2,0,0,0]);
  const pixels=inflateSync(Buffer.concat(data));expect(pixels.length).toBe(256*769);
- for(let y=0;y<256;y++){expect(pixels[y*769]).toBe(0);for(let x=0;x<256;x++)expect([...pixels.subarray(y*769+1+x*3,y*769+4+x*3)]).toEqual([x,y,100]);}
+ for(let y=0;y<256;y++){expect(pixels[y*769]).toBe(0);for(let x=0;x<256;x++)expect([...pixels.subarray(y*769+1+x*3,y*769+4+x*3)]).toEqual([x,y,blue]);}
  return {width:256,height:256,pixels:65536,channels:3};
+}
+export function assertAnomalyImport(value:any){
+ expect(value).toEqual({status:'success',total_images:2,source_images:2,unlabeled_images:0,classes:{good:2},split:{train:1,val:1,test:0},corrupted_images:[],
+  validation:{requested:true,checked_images:2,complete:true,scope:'all images: every image file under the folder was decoded'},split_supported:false,
+  split_unavailable_reason:'anomaly 분할은 현재 학습 데이터에 적용되지 않습니다. 원본 데이터의 train/val/test 구성을 사용하세요. / anomaly split is not applied by the training loader; use source train/val/test folders.'});
 }
 
 function protectedTree(root:string):Tree{
@@ -95,10 +101,12 @@ async function exercise(page:Page,w:Workspace,e:Evidence,api:Api,native:boolean,
   }finally{clearTimeout(timer);}
  };
  const value=async(route:string,body?:unknown,method?:string)=>{const reply=await readReply(route,body,method);calls.push({route,method:method||(body===undefined?'GET':'POST'),request:body,...reply});return JSON.parse(reply.body);};
- const source=path.join(w.root,'original-draft-source');fs.mkdirSync(source);const image=path.join(source,'part.png');fs.writeFileSync(image,png(256,3,(x,y)=>[x,y,100]),{flag:'wx'});
- const originalPNG=fs.readFileSync(image),imageHash=sha(originalPNG),pixelProof=assertSourcePixels(originalPNG);
+ const source=path.join(w.root,'original-draft-source');fs.mkdirSync(source);const normal=path.join(source,'train','good');fs.mkdirSync(normal,{recursive:true});
+ const sourceImages=[100,101].map((blue,index)=>{const file=path.join(normal,index===0?'part.png':'part-1.png');fs.writeFileSync(file,png(256,3,(x,y)=>[x,y,blue]),{flag:'wx'});
+  const raw=fs.readFileSync(file);return {path:file,relative:path.relative(source,file).split(path.sep).join('/'),sha256:sha(raw),size:raw.length,blue,RGB:assertSourcePixels(raw,blue)};});
+ const image=sourceImages[0].path,originalPNG=fs.readFileSync(image),imageHash=sha(originalPNG),pixelProof=sourceImages[0].RGB;
  const project=await value('/api/project/create',{name:'Owned flow draft save error',task:'anomaly'});await value('/api/project/update',{source_dataset_dir:source},'PUT');
- await value('/api/dataset/import',{folder_path:source,task:'anomaly',validate_images:true});
+ assertAnomalyImport(await value('/api/dataset/import',{folder_path:source,task:'anomaly',validate_images:true}));
  const ownedParent=native?path.join(w.userData,'projects'):w.projects;
  expect(path.dirname(project.project_dir)).toBe(ownedParent);expect(fs.realpathSync(project.project_dir)).toBe(project.project_dir);expect(fs.lstatSync(project.project_dir).isSymbolicLink()).toBe(false);
  const context={project_id:project.id,source_dataset_path:source,labelset_id:project.active_labelset_id||'default'};
@@ -158,13 +166,14 @@ async function exercise(page:Page,w:Workspace,e:Evidence,api:Api,native:boolean,
   const expectedAPI=clone(before.api);expectedAPI['/api/flowchart/draft']=after.api['/api/flowchart/draft'];expect(after.api).toEqual(expectedAPI);expect(after.storage).toEqual(before.storage);
   assertOnlyDraftEffect(before.trees,after.trees,relative);expect(JSON.parse(fs.readFileSync(draftFile,'utf8'))).toEqual(Object.fromEntries(Object.entries(recovered).filter(([key])=>key!=='active_version_id')));
   expect(writes).toHaveLength(2);for(const row of writes)assertDraftRequest(row,origin,changed,context);expect(writes[0]).toEqual(writes[1]);expect(faultCount).toBe(1);
-  expect(fs.existsSync(path.join(project.project_dir,'flowcharts/active.json'))).toBe(false);expect(fs.readFileSync(image)).toEqual(originalPNG);assertSourcePixels(fs.readFileSync(image));for(const row of w.images)expect(sha(fs.readFileSync(row.path))).toBe(row.sha256);
+  expect(fs.existsSync(path.join(project.project_dir,'flowcharts/active.json'))).toBe(false);expect(fs.readFileSync(image)).toEqual(originalPNG);
+  for(const row of sourceImages){const raw=fs.readFileSync(row.path);expect(raw.length).toBe(row.size);expect(sha(raw)).toBe(row.sha256);assertSourcePixels(raw,row.blue);}for(const row of w.images)expect(sha(fs.readFileSync(row.path))).toBe(row.sha256);
   await e.screenshot(page,(native?'native':'browser')+'-explicit-original-draft-save200-readback-recovers-same-edit');
   await settle();const observedReplies=[...clocks.values()].map(({request,pending:_pending,failure:_failure,...clock})=>({method:request.method(),url:request.url(),request_body:request.postData(),...clock,raw_sha256:sha(clock.raw!),raw_size:Buffer.byteLength(clock.raw!)}));
   for(const row of observedReplies)if(row.status!==200){if(row.url===origin+'/api/flowchart/draft'&&row.method==='PUT')assertDraftFailure({status:row.status!,body:row.raw!});else{
    expect(row.status).toBe(404);expect(row.method).toBe('GET');expect(['/api/flowchart/pipeline/active','/api/flowchart/pipeline/active/record']).toContain(new URL(row.url).pathname);expect(JSON.parse(row.raw!)).toEqual({detail:'No active project flowchart.'});
   }}
-  const proof={cell:'U012.save-draft.error',project,context,source:{path:image,sha256:imageHash,RGB:pixelProof},roots,original_saved_record:saved,original_raw_draft_sha256:sha(originalDraft),changed_pipeline:changed,
+  const proof={cell:'U012.save-draft.error',project,context,source:{path:image,sha256:imageHash,RGB:pixelProof,root:source,images:sourceImages,layout:'train/good normal-only; original disjoint partition train1/val1/test0'},roots,original_saved_record:saved,original_raw_draft_sha256:sha(originalDraft),changed_pipeline:changed,
    rejected,accepted,recovered,after_error_preserved:true,snapshots,setup_calls:setupCalls,setup_renderer_writes:setupWrites,post_baseline_writes:writes,whole_renderer_writes:[...setupWrites,...writes],fixture_read_clocks:timings,original_observed_request_body_clocks:observedReplies,pre_observer_responses:preObserverResponses,
    scope:{source_electron: native,actual_original_source_ui:true,installed_target:false,model_or_GPU_execution: false,cancel_covered:false,quality_or_human_or_parent_approval:false,failed_same_target_policy:'650ms autosave failure suppresses same-target automatic retry; only explicit save retries',policy_source_controls_separate_from_actual_response_slice:true}};
   const file=path.join(w.logs,'flow-draft-save-error-proof.json');fs.writeFileSync(file,JSON.stringify(proof,null,2),{flag:'wx'});e.addFile(file);e.note('flow_draft_save_error',{proof_path:file,proof_sha256:sha(fs.readFileSync(file)),proof_size:fs.statSync(file).size});
