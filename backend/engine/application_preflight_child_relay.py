@@ -271,7 +271,9 @@ def _endpoint(channel):
     except OSError as exc:
         raise HandshakeError('Original preflight private channel is unavailable') from exc
     if not stat.S_ISSOCK(info.st_mode): raise HandshakeError('Original preflight endpoint differs')
-    return channel.fileno(), info.st_dev, info.st_ino, info.st_mode, info.st_uid
+    # Darwin clears socket permission bits when the original peer closes.
+    # File type, held descriptor identity and owner remain the identity pin.
+    return channel.fileno(), info.st_dev, info.st_ino, stat.S_IFMT(info.st_mode), info.st_uid
 
 
 class BackendRelayQueue:
