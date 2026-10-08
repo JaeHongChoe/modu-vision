@@ -64,7 +64,7 @@ export function assertSaveCycle(writes:Write[],status:200|503,source:string){
  }
 }
 export function assertReadDeadline(timing:ReadTiming){
- expect(timing.deadline-timing.started).toBe(10_000);
+ expect(timing.deadline).toBe(timing.started+10_000);
  expect(timing.finished).toBeDefined();expect(timing.finished!).toBeGreaterThanOrEqual(timing.started);expect(timing.finished!).toBeLessThanOrEqual(timing.deadline);
 }
 export async function withinOriginalReadDeadline<T>(timing:ReadTiming,read:()=>Promise<T>,now=()=>performance.now()):Promise<T>{
