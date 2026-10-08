@@ -230,6 +230,12 @@ jobs:
           backend/tests/test_staged_canary_frozen_execution.py::test_staged_compiled_attempt_intent_blocks_crash_retry_without_spawning
           backend/tests/test_staged_canary_frozen_execution.py::test_install_coerced_review_schema_refuses_before_staging
           backend/tests/test_application_launch_execution.py
+          backend/tests/test_application_launch_quiescence.py
+          backend/tests/test_application_launch_quiescence_bridge.py
+          backend/tests/test_application_writer_control_paths.py
+          backend/tests/test_application_runtime_home_paths.py
+          backend/tests/test_application_cpu_writer_lifetime.py
+          backend/tests/test_application_drain_transition_busy.py
           backend/tests/test_application_launch_controller.py
           backend/tests/test_application_launch_lease.py
           backend/tests/test_application_launch_electron.py::test_owned_main_spawn_uses_derived_private_environment_without_inherited_authority
