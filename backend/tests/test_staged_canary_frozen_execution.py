@@ -366,7 +366,7 @@ def test_released_semantic_import_boundary_is_after_private_worker_admission(tmp
 
 
 
-def compiled_candidate(tmp_path,binary,*,binary_runtime=False,deadline_ms=60000):
+def compiled_candidate(tmp_path,binary,*,binary_runtime=False,deadline_ms=60000,layout_schema=2):
     """Real signed onedir, inert main; no Electron or native installer claim."""
     from backend.tests.test_staged_update_canary import source_candidate
     from backend.engine import application_launch_execution as execution
@@ -399,8 +399,11 @@ def compiled_candidate(tmp_path,binary,*,binary_runtime=False,deadline_ms=60000)
                 'executable':bool(path.stat().st_mode&0o111)});files.append((name,path))
     entry='Owned Canary.app/Contents/MacOS/studio';inert=b'#!/bin/sh\nexit 0\n'
     rows.append({'path':entry,'size':len(inert),'sha256':update._sha(inert),'executable':True})
-    application={'schema_version':2,'version':'1.0.0','platform':value['target']['platform'],
-        'arch':value['target']['arch'],'entrypoint':entry,'files':rows,'links':links}
+    assert type(layout_schema) is int and layout_schema in (1,2)
+    application={'schema_version':layout_schema,'version':'1.0.0','platform':value['target']['platform'],
+        'arch':value['target']['arch'],'entrypoint':entry,'files':rows}
+    if layout_schema==2:application['links']=links
+    else:assert not links,'Schema1 portable metadata cannot claim native aliases'
     archive=value['directory']/'application.zip'
     with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=3) as writer:
         writer.writestr('portable-application.json',update._canonical(application));writer.writestr(entry,inert)
@@ -413,18 +416,43 @@ def compiled_candidate(tmp_path,binary,*,binary_runtime=False,deadline_ms=60000)
     return root,value,project,reviewed,spec
 
 
-def test_staged_compiled_attempt_intent_blocks_crash_retry_without_spawning(tmp_path,monkeypatch):
+@pytest.mark.parametrize('source_target',[{'platform':'darwin','arch':'arm64'}, {'platform':'linux','arch':'x64'}],ids=['darwin-source','linux-source'])
+def test_staged_compiled_attempt_intent_blocks_crash_retry_without_spawning(tmp_path,monkeypatch,source_target):
     """Signed inert metadata exercises protocol2 durable dispatch only."""
     from backend.engine import staged_update_canary as canary
     from backend.tests.test_staged_update_canary import pointers
+    from backend.tests import test_staged_update_canary as source_fixtures
     from types import SimpleNamespace
-    application,_,_,prefix=candidate_metadata(tmp_path,monkeypatch)
+    application,_,metadata_receipt,prefix=candidate_metadata(tmp_path,monkeypatch)
+    original_source=source_fixtures.source_candidate
+    def controlled_source_target(*args,**kwargs):
+        values=original_source(*args,**kwargs);value=values[1]
+        value['target'].update(source_target);value['payload'].update(source_target)
+        # Model only the target classifier for inert metadata. No binary or
+        # installer executes, and this is not qualification of the modeled OS.
+        monkeypatch.setattr(update,'platform',SimpleNamespace(
+            system=lambda:'Darwin' if source_target['platform']=='darwin' else 'Linux',
+            machine=lambda:'arm64' if source_target['arch']=='arm64' else 'x86_64'))
+        return values
+    monkeypatch.setattr(source_fixtures,'source_candidate',controlled_source_target)
     binary=application/(prefix+'vision_ai_backend');binary.chmod(0o755)
     case=tmp_path/'case';case.mkdir()
-    root,value,_,_,spec=compiled_candidate(case,binary)
+    layout_schema=2 if source_target['platform']=='darwin' else 1
+    root,value,_,_,spec=compiled_candidate(case,binary,layout_schema=layout_schema)
     proposal=update.plan_update(root,value['directory'],value['envelope'],value['authority'],
         pinned_authority_sha256=value['pinned_authority_sha256'],target=value['target'],canary=spec)
     assert proposal.canary_preflight['protocol']==2 and proposal.canary_preflight['status']=='frozen_ready'
+    assert {name:value['target'][name] for name in ('platform','arch')}==source_target
+    assert {name:value['payload'][name] for name in ('platform','arch')}==source_target
+    assert {name:proposal.app[name] for name in ('platform','arch')}==source_target
+    with zipfile.ZipFile(value['directory']/'application.zip') as archive:
+        signed_application=json.loads(archive.read('portable-application.json'))
+    assert {name:signed_application[name] for name in ('platform','arch')}==source_target
+    assert signed_application['schema_version']==layout_schema
+    if layout_schema==2:assert signed_application['links']==[]
+    else:assert 'links' not in signed_application
+    assert metadata_receipt['signature_status']=='unverified' and metadata_receipt['acceptance'] is None
+    assert all(proposal.canary_preflight[name] is False for name in canary.FLAGS)
     before=pointers(root);module=adapter()
     monkeypatch.setattr(module,'subprocess',SimpleNamespace(Popen=lambda *args,**kwargs:pytest.fail('Interrupted attempt spawned a process')))
     def crash(point):
