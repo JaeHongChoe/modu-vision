@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "kind": "source_cpu_flow_and_original_start_identity_component_qualification",
+  "component_commits": {
+    "startup": "61ddadfc19e915146bfc9c0e50cba6899a76a3dc",
+    "flow": "2d2024775f9718efd5d0b30784530a09d7e5ab72",
+    "inert_fixture": "00793558567aad51ea2d6a4343db820fcd14f797"
+  },
+  "source_files": [
+    {
+      "path": "backend/engine/application_launch_lease.py",
+      "sha256": "07986bd39f19b3bfbd7c06a823bdb41b9e52f041db29c43ff63a63ad657e0d6f",
+      "base_sha256": "3a7348bce5b6f9a295fb4255b8f11bc15d68367da6507ed7e3f9f5a1a720b1d1"
+    },
+    {
+      "path": "backend/tests/test_application_start_identity.py",
+      "sha256": "018faa5c3f14f2e60bf93dc4df7bd45356eed3b8fb94bbdbdb7c259282bd4ede",
+      "base_sha256": null
+    },
+    {
+      "path": "backend/engine/flow_package_runtime.py",
+      "sha256": "2df2c507153d8de20778c4e3398d69abb53b48bb06bd6d887cb42a68eb7937d4",
+      "base_sha256": "a209d889bc721c3865057704bef6d0ec6a85bb71a8c68dbb275a7d014bf421b2"
+    },
+    {
+      "path": "backend/engine/application_launch_handshake.py",
+      "sha256": "05da91a3f199433a2b0e34c7ac259f30e7204cfa6998999e75624f4f9d505c73",
+      "base_sha256": "75cf7ff31e37a0a955ae7db66f9675191bba1b55c7dfb7d122bdd1f8f1cf9344"
+    },
+    {
+      "path": "backend/tests/test_flow_writer_lifetime.py",
+      "sha256": "4a6ddcb543850841a6f47715e09b0b7052577b1dbd8ffa517863e6b08643a198",
+      "base_sha256": null
+    },
+    {
+      "path": "backend/tests/test_runtime_deadline_sdk.py",
+      "sha256": "1c41a5aa9c0e06383bf875d9c56a293c87cc24cf69bb348e2d67eb05a5748e72",
+      "base_sha256": "4ff8c3fc72256a193076541d9d4fd6d0153382bc2515167a45a7dab43e22d4d6"
+    },
+    {
+      "path": "backend/tests/test_staged_canary_frozen_execution.py",
+      "sha256": "59ad8ff92bf4703e5acf28c600d99cb3d6da3e7f5068a1eb2ad5ea55fedf232c",
+      "base_sha256": "7afde41c74658692587182c772274f13d578a5161acb8a3db3c722bba20a89c5"
+    }
+  ],
+  "gates": {
+    "startup-identity-red": {
+      "base_commit": "8d9e23211f034b531d7e92a17732989f7fdd5778",
+      "source_dirty_at_execution": true,
+      "exit_code": 1,
+      "elapsed_seconds": 4.343739958014339,
+      "source_inputs": 2218,
+      "source_unchanged": true,
+      "tests": 1,
+      "failure": 1,
+      "error": 0,
+      "skipped": 0,
+      "raw_receipt_sha256": "948008a2b98e60c121650802ae2d5dfb1e5e6462b47b506d7353eed469f44681",
+      "raw_log_sha256": "4427b7022d1f39a9eaa29a0b92aaf5856b40c10ac0fe5e66e207d5e92e88a25b",
+      "junit_sha256": "6fa1aa8eb28c3736cce7a88e4bb5a95c9c17a9bb33698f8060878a28fead4fde",
+      "source_before_sha256": "56c357b40e7a1ba6a3ae9b425eb8f2e90eb9ac07b81a2183a09dd76ac5c0a8fa",
+      "source_after_sha256": "56c357b40e7a1ba6a3ae9b425eb8f2e90eb9ac07b81a2183a09dd76ac5c0a8fa"
+    },
+    "startup-identity-final": {
+      "base_commit": "8d9e23211f034b531d7e92a17732989f7fdd5778",
+      "source_dirty_at_execution": true,
+      "exit_code": 0,
+      "elapsed_seconds": 13.960002749983687,
+      "source_inputs": 2218,
+      "source_unchanged": true,
+      "tests": 15,
+      "failure": 0,
+      "error": 0,
+      "skipped": 0,
+      "raw_receipt_sha256": "199db015fe1492f148f4448608d4969c93bc2464028b2b1e1be460972be9e043",
+      "raw_log_sha256": "23c866d6a880879a6c2ece2730fee5ed730cf42f51b3ad79ff5639a19b2e00ee",
+      "junit_sha256": "9fef32612a9621c6322ef5445be387b6321101976b9988258174b14c0efda7d3",
+      "source_before_sha256": "e896df8c35d699f3b60517caf2ee83b7718dc7fd2d3a92cef9308d45317914b3",
+      "source_after_sha256": "e896df8c35d699f3b60517caf2ee83b7718dc7fd2d3a92cef9308d45317914b3"
+    },
+    "flow-start-composed": {
+      "base_commit": "8d9e23211f034b531d7e92a17732989f7fdd5778",
+      "source_dirty_at_execution": true,
+      "exit_code": 0,
+      "elapsed_seconds": 221.24089233297855,
+      "source_inputs": 2219,
+      "source_unchanged": true,
+      "tests": 58,
+      "failure": 0,
+      "error": 0,
+      "skipped": 0,
+      "raw_receipt_sha256": "8abc94bd630d9733b0ffd57d0f45689b89cba1443a1f15d41cbe536e46a97987",
+      "raw_log_sha256": "0826ce981a5aca88d8662f312dff316468fd4dee6ce9406684df23cb30a39cd1",
+      "junit_sha256": "c6cd9aee333c25e5d45f3cd66f30d5dd6828b38a7a80faad40efc4088df322c8",
+      "source_before_sha256": "8c13aec18a8144bc5a9b7472a3156eb73802022a948580e8cd8d6ae2e67f2522",
+      "source_after_sha256": "8c13aec18a8144bc5a9b7472a3156eb73802022a948580e8cd8d6ae2e67f2522"
+    }
+  },
+  "gate_scope": {
+    "startup_final": "13 new startup cases plus unchanged original direct-child exit and spawn-failure cases",
+    "composed": "22 selected flow cases,19 original CPU lifetime cases,13 startup cases,2 affected SDK fixtures,2 inert target metadata cases",
+    "source_binding": "Dirty execution rooted at8d9e232,2219 before/after source hashes unchanged; exact seven changed/new files subsequently committed. Does not claim whole clean commit execution."
+  },
+  "independent_reviews": {
+    "startup": "a394a85690724979373481b8b3e4033bb2ad0ac1b28f81656a58d7de29ccffcc",
+    "flow": "50db1e735fb9109b94400453a87b8043b04e67721d62f282da8e41a1bf8e2846",
+    "inert_fixture": "0214d908b013473fa548580e0027a20f3feb4e271476485ac809b89f1f097220"
+  },
+  "scope": {
+    "startup": "Only first identity of retained original Popen; bounded0.5s two equal nonempty samples, fresh birth/parent/session checks; strict historical identity readers and original shutdown budget unchanged. No historical repair or spawn retry.",
+    "flow": "Admission at isolated worker entry before verification and scratch writes through result parsing and cleanup; original private descriptor transport. Protocol2 refuses, protocol3 counts without transport, protocol4 retains original writer OFD. Controlled source backend and synthetic A/OK/oneROI parity; fresh standalone SDK also checked.",
+    "inert_fixture": "Darwin schema2 retained; Linux metadata-only target uses schema1 without aliases. Actual compiled/native test bodies and production layout checks unchanged.",
+    "noncompletion": "Timeout/cancel retains public payload and marks unsupported before producer leaves. Backend core row remains reserved and complete writer/tree reconciliation remains unresolved."
+  },
+  "claims": {
+    "selected_source_cpu_flow_qualified": true,
+    "bounded_original_start_identity_qualified": true,
+    "actual_linux_inspector_replay_passed": false,
+    "whole_writer_coverage": false,
+    "process_tree_exit_verified": false,
+    "lease_release": false,
+    "installed_application_requalified": false,
+    "publisher_qualified": false,
+    "model_quality_approved": false,
+    "gpu_execution": false,
+    "windows_native_qualified": false,
+    "hosted_ci_completed": false
+  },
+  "accounting": {
+    "original_work_packages": 82,
+    "original_legacy_features": 156,
+    "curated_actions": 207,
+    "implementation_verified": 69,
+    "implementation_pending": 13,
+    "required_pending_after_windows_waiver": 11,
+    "verified_scenarios": 658,
+    "pending_scenarios": 791,
+    "not_required_scenarios": 0,
+    "accepted_work_packages": 0
+  }
+}

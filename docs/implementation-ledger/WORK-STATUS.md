@@ -17,8 +17,12 @@
 | `9b74433` | 실행별 임시 홈을 일반 사용자 데이터 inventory·hash·기존 home 인수 대상에서 제외한다. 실제 경로·symlink 거절을 포함한 관련94개 검사 통과. 기존 active DB 이관은 이미 선언된 scope만 복사했으며, 이번 수정으로 새 DB 복사 문제를 해결했다고 주장하지 않는다. | 실제 설치 home·운영 장비 및 전체 수락. |
 | `0c6a77e` | 원래 CPU writer 잠금의 private duplicate를 실제 worker와 남은 descendant에 전달하고, 결과 검증·정리까지 producer lifetime을 유지한다. 종료 결과 게시의 짧은 transition contention만 기존4초 안에서 재검증·재시도한다. 기존 lease와 새 실패 검사46개, 실제 CPU·drain·원래 Node/backend exit 통합49개 통과. | core의 backend row는 reserved, CPU row는 unsupported로 유지한다. 전체 writer/tree 종료나 launch lease 해제는 아직 승인하지 않는다. |
 | `56effc7` | 검증한 writer·임시 홈·CPU lifetime·drain 실패 검사6개 파일을 source CI에 추가한다. 기존 queue·권한·timeout은 유지한다. | 정확한 최신 게시 소스의 전체 hosted CI 결과. |
+| `61ddadf` | 원래 Popen의 시작 직후 빈 실행 명령을 영속 identity로 기록하지 않는다. 최초 birth·parent·session과 원래 handle을 유지하고0.5초 안에서 같은 비어 있지 않은 명령을 두 번 확인한다. 새 실패·복구 검사와 기존 종료·spawn 실패15개 통과. | 기존 잘못된 이력은 자동 수정하지 않는다. 실제 Linux inspector 재검사와 전체 writer 종료 확인. |
+| `2d20247` | 선택된 CPU 플로우의 package 검사·임시 파일 작성 전에 원래 writer admission을 얻고, 실제 실행·결과 해석·정리까지 유지한다. protocol2 거절,3의 counted scope,4의 원래 descriptor 전달과 독립 SDK를22개 검사로 확인했다. SDK fixture 보정 후 관련6개도 통과. | inline·GPU·원격·background producer 및 전체 수락은 별도 작업이다. |
+| `0079355` | inert compiled-intent fixture의 Darwin schema2와 Linux schema1을 구분해 원래 crash-before-spawn·재시도 거절 검사를 유지한다. metadata 검사10개 통과. | 실제 compiled/native·publisher 실행을 이 fixture로 승인하지 않는다. |
+| `ecf41e4` | 시작 identity와 CPU 플로우 검사2개 파일을 source CI에 추가한다. selector227개 중복·누락 없음을 확인했다. | 새 게시 소스의 전체 hosted CI 완료. |
 
-각 gate는 실행 당시 dirty source의 전후 manifest와 정확한 변경 파일 hash에 연결한다. 이 결과를 후속 소스의 clean commit·frozen/native·서명·공정 품질 수락으로 확대하지 않는다. 상세 근거는 `docs/verification/receipts/2026-10-08-original-writer-drain-0c6a77e.json`이다. 부모 구현 집계69/13과 curated658/791은 유지한다. 플로우 producer와 남은 Linux 실패는 별도 작업으로 진행한다.
+각 gate는 실행 당시 dirty source의 전후 manifest와 정확한 변경 파일 hash에 연결한다. 이 결과를 후속 소스의 clean commit·frozen/native·서명·공정 품질 수락으로 확대하지 않는다. 상세 근거는 `docs/verification/receipts/2026-10-08-original-writer-drain-0c6a77e.json`과 `docs/verification/receipts/2026-10-08-flow-start-0079355.json`이다. 후자의 합친 소스 검사58개는 실패·skip 없이 통과했고2219개 source 입력 hash가 전후 같았다. 부모 구현 집계69/13과 curated658/791은 유지한다. 남은 producer·Linux 영향 검증·UI 시나리오는 계속 진행한다.
 
 ## 단계별 집계
 
