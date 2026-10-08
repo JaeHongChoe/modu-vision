@@ -6,6 +6,7 @@ attempt, supervisor crash or observed direct-child exit keeps update admission
 closed until a future verifiable process-tree reconciliation adapter exists.
 """
 from contextlib import contextmanager
+import errno
 import hashlib
 import math
 import os
@@ -32,6 +33,10 @@ STATES = {'reserved', 'starting', 'ready', 'exited', 'recovery_required'}
 
 class LaunchLeaseError(ValueError):
     pass
+
+
+class LeaseTransitionBusy(LaunchLeaseError):
+    """Only original nonblocking flock contention; no ownership admission."""
 
 
 def _update():
@@ -320,7 +325,10 @@ def _transition_admission(root, nonce=None):
             before = os.fstat(fd)
             if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1 or before.st_size != 0: _refuse('invalid transition lock')
             try: fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            except OSError as exc: raise LaunchLeaseError('Lease transition is busy; retry after it completes') from exc
+            except OSError as exc:
+                if exc.errno in {errno.EAGAIN, errno.EWOULDBLOCK}:
+                    raise LeaseTransitionBusy('Lease transition is busy; retry after it completes') from exc
+                raise LaunchLeaseError('Lease transition lock failed; ownership requires recovery') from exc
             locked = True
             # Bounded hints only precede the mutex. Full record/member/pointer
             # validation is performed by the caller after acquisition.

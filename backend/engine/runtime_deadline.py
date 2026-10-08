@@ -321,7 +321,42 @@ def _terminate_owned(process, ownership=None):
     return True
 
 
-def execute_owned_process(command, *, deadline_ms, env=None, cwd=None,cancel_event=None) -> dict[str, Any]:
+@contextmanager
+def _writer_transport(pass_fds):
+    """Bound transport only; the authenticated caller owns original OFD authority.
+
+    A private duplicate stabilizes inheritance without exposing or closing the
+    caller's per-scope descriptor. Metadata cannot prove an acquired lock/OFD.
+    """
+    if type(pass_fds) is not tuple or len(pass_fds) > 1:
+        raise ValueError('Writer transport requires a tuple with at most one descriptor')
+    if not pass_fds:
+        yield ()
+        return
+    fd = pass_fds[0]
+    if os.name != 'posix' or type(fd) is not int or fd < 3:
+        raise ValueError('Writer transport requires a POSIX non-stdio descriptor')
+    import stat
+    try:
+        before = os.fstat(fd)
+        private = os.dup(fd)
+    except OSError as exc:
+        raise ValueError('Writer transport descriptor is unavailable') from exc
+    try:
+        try: info = os.fstat(private)
+        except OSError as exc:
+            raise ValueError('Writer transport descriptor is unavailable') from exc
+        identity = lambda s: (s.st_dev, s.st_ino, s.st_mode, s.st_uid, s.st_nlink, s.st_size, s.st_ctime_ns)
+        if (identity(before) != identity(info) or not stat.S_ISREG(info.st_mode)
+                or stat.S_IMODE(info.st_mode) != 0o600 or info.st_uid != os.getuid()
+                or info.st_nlink != 1 or info.st_size != 0):
+            raise ValueError('Writer transport descriptor must be a stable private empty regular file')
+        yield (private,)
+    finally:
+        os.close(private)  # Never LOCK_UN an inherited open-file description.
+
+
+def execute_owned_process(command, *, deadline_ms, env=None, cwd=None,cancel_event=None,pass_fds=()) -> dict[str, Any]:
     """Budget initialization and refuse success for observed surviving work."""
     validate_deadline(deadline_ms)
     started=time.monotonic()
@@ -330,9 +365,10 @@ def execute_owned_process(command, *, deadline_ms, env=None, cwd=None,cancel_eve
     # a separate bounded JSON file, not arbitrary model logging on stdout.
     import tempfile
     module = _optional_psutil()
-    with tempfile.TemporaryFile() as stdout, tempfile.TemporaryFile() as stderr:
+    with _writer_transport(pass_fds) as inherited, tempfile.TemporaryFile() as stdout, tempfile.TemporaryFile() as stderr:
         # Own session on POSIX; own process group and no console window on Windows.
-        process=subprocess.Popen(command,stdout=stdout,stderr=stderr,env=env,cwd=cwd,**session_isolation())
+        transport = {'close_fds': True, 'pass_fds': inherited} if inherited else {}
+        process=subprocess.Popen(command,stdout=stdout,stderr=stderr,env=env,cwd=cwd,**transport,**session_isolation())
         ownership = _OwnedGroup(process,module)
         cancelled=False
         timed_out=False

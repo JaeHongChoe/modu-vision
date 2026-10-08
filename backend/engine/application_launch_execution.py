@@ -559,6 +559,14 @@ def frozen_worker_main(argv=None):
 
 def execute_backend(frame, proof, root):
     """Only the authenticated cache consumer calls this, under its shared life."""
+    from backend.engine.application_launch_handshake import owned_cpu_writer_scope
+    # Admit before snapshot, output, home/cache or worker side effects. Retain
+    # the original writer OFD through outcome and all output/source validation.
+    with owned_cpu_writer_scope() as writer_pass_fds:
+        return _execute_backend_admitted(frame, proof, root, writer_pass_fds)
+
+
+def _execute_backend_admitted(frame, proof, root, writer_pass_fds):
     if proof['frozen']:
         inventory,_=_frozen_inventory()
         if inventory['build_identity_sha256']!=proof['build_identity_sha256']:
@@ -611,7 +619,7 @@ def execute_backend(frame, proof, root):
             command=[sys.executable,'--owned-application-cpu-worker','--request-file',str(worker_request),
                 '--request-sha256',update._sha(capsule)]
         outcome=execute_owned_process(command,
-            deadline_ms=plan['deadline_ms'],env=environment,cwd=temporary)
+            deadline_ms=plan['deadline_ms'],env=environment,cwd=temporary,pass_fds=writer_pass_fds)
         if outcome['status']!='completed' or outcome['returncode']!=0:
             raise ExecutionError('Owned CPU execution failed or timed out; process-tree exit remains unverified')
         result=_json(_read(output,MAX_RESULT)); semantic=validate_result(result,capability)

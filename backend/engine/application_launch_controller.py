@@ -286,7 +286,23 @@ def prepare_drain(owner, frame):
     except (ValueError, TypeError, RecursionError) as exc: raise HandshakeError('Invalid managed drain proof') from exc
     if len(decoded) > 16384 or update._canonical(receipt) != decoded: raise HandshakeError('Managed drain proof is not bounded/canonical')
     validate_drain_receipt(receipt, request, backend_process=proof['process'])
-    owner.publish_writer_drain(phase='drained' if receipt['status'] == 'managed_scopes_drained' else 'refused', receipt=receipt)
+    deadline = started + frame['budget_ms']/1000
+    while True:
+        if time.monotonic() >= deadline:
+            raise HandshakeError('Original managed shutdown budget expired before publication')
+        try:
+            # A concurrent original backend binding read may briefly hold this
+            # mutex. Each attempt retains the original owner/phase/CAS checks;
+            # no other error, new deadline, or partial publication is retried.
+            owner.publish_writer_drain(phase='drained' if receipt['status'] == 'managed_scopes_drained' else 'refused', receipt=receipt)
+            break
+        except lease.LeaseTransitionBusy:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise HandshakeError('Original managed shutdown budget expired during publication')
+            time.sleep(min(.01, remaining))
+    if time.monotonic() >= deadline:
+        raise HandshakeError('Original managed shutdown budget expired before acknowledgement')
     send_frame(owner._bootstrap_channel, {'schema_version': 1, 'kind': 'managed_drain_admitted',
         'nonce': owner.nonce, 'request_id': request['request_id'], 'receipt_sha256': update._sha(decoded), 'status': receipt['status']})
     if receipt['status'] != 'managed_scopes_drained': raise HandshakeError('Backend managed scope retains uncovered/active writers')
