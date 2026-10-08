@@ -341,7 +341,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   },
 
   addAnnotation: (item) => {
-    if (get().annotationLoadStatus !== 'ready') return;
+    if (!get().currentImage || get().annotationLoadStatus !== 'ready') return;
     const { annotations, history } = get();
     const itemWithId = {
       ...item,
