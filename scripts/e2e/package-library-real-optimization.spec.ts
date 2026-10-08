@@ -21,27 +21,46 @@ function requestBudget(method: string, pathname: string) {
 
 
 type ObservedClock = {started: number; budget: number; deadline: number; finished?: number; failure?: string};
-type CapturedResponse = {request: Request; reply: Response; status: number; clock?: ObservedClock; raw?: string;
+type ObserverBoundary = {wall_cutoff: number; origin: string};
+type PreobserverGet = {original_wall_start: number; observer_wall_cutoff: number; original_origin: string;
+  response_started: number; response_budget: number; response_deadline: number};
+type CapturedResponse = {request: Request; reply: Response; status: number; clock?: ObservedClock; preobserver?: PreobserverGet; raw?: string;
   reply_finished?: Error | null; body_captured_at?: number; error?: unknown; pending: Promise<void>};
 
-function captureOriginalResponse(reply: Response, clock: ObservedClock | undefined): CapturedResponse {
-  const request = reply.request();
-  // OPTIONS keeps its original exclusion from observed request clocks. Its full
-  // original body is retained, without inventing a request-start deadline.
-  expect(clock !== undefined || request.method() === 'OPTIONS').toBe(true);
-  const row: CapturedResponse = {request, reply, status: reply.status(), clock, pending: Promise.resolve()};
+function captureOriginalResponse(reply: Response, clock: ObservedClock | undefined, boundary?: ObserverBoundary): CapturedResponse {
+  const request = reply.request(), responseStarted = performance.now();
+  let preobserver: PreobserverGet | undefined;
+  if (clock === undefined && request.method() !== 'OPTIONS') {
+    const url = new URL(request.url());
+    let originalStart: number | undefined;
+    try {originalStart = request.timing().startTime;} catch {originalStart = undefined;}
+    const accepted = request.method() === 'GET' && boundary !== undefined && boundary !== null && url.origin === boundary.origin
+      && url.username === '' && url.password === '' && url.pathname.startsWith('/api/')
+      && Number.isFinite(boundary.wall_cutoff) && boundary.wall_cutoff > 0
+      && typeof originalStart === 'number' && Number.isFinite(originalStart) && originalStart > 0 && originalStart <= boundary.wall_cutoff;
+    if (!accepted) throw Error('Unclocked original API response refused: ' + JSON.stringify({path: url.pathname,
+      method: request.method(), original_start_time: originalStart ?? null, observer_wall_cutoff: boundary?.wall_cutoff ?? null}));
+    preobserver = {original_wall_start: originalStart!, observer_wall_cutoff: boundary!.wall_cutoff, original_origin: url.origin,
+      response_started: responseStarted, response_budget: READ_MS, response_deadline: responseStarted + READ_MS};
+  }
+  // OPTIONS retains its original exclusion. An original preobserver GET
+  // has genuine original wall-start provenance but only a response-event body
+  // bound; it never acquires an invented original full-request clock.
+  const row: CapturedResponse = {request, reply, status: reply.status(), clock, preobserver, pending: Promise.resolve()};
+  const captureDeadline = clock?.deadline ?? preobserver?.response_deadline;
   row.pending = (async () => {
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       // Start BOTH reads at the original response event, before any navigation.
       const original = Promise.all([reply.text(), reply.finished()]).then(([raw, terminal]) => {
         const captured = performance.now();
-        if (clock) expect(captured).toBeLessThanOrEqual(clock.deadline);
+        if (captureDeadline !== undefined) expect(captured).toBeLessThanOrEqual(captureDeadline);
         expect(terminal).toBeNull();
         row.raw = raw; row.reply_finished = terminal; row.body_captured_at = captured;
       });
-      if (clock) await Promise.race([original, new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(Error('Original response body exceeded its request-start deadline')), Math.max(0, clock.deadline - performance.now()));
+      if (captureDeadline !== undefined) await Promise.race([original, new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(Error(clock ? 'Original response body exceeded its request-start deadline'
+          : 'Preobserver original GET body exceeded its response-event deadline')), Math.max(0, captureDeadline - performance.now()));
       })]);
       else await original;
     } catch (error) {row.error = error;} finally {clearTimeout(timer);}
@@ -191,7 +210,8 @@ test('native actual OpenVINO job preserves full original package and reopens exa
   };
   const finished = (request: Request) => {const row = clocks.get(request); if (row) row.finished = performance.now();};
   const failed = (request: Request) => {const row = clocks.get(request); if (row) {row.finished = performance.now(); row.failure = request.failure()?.errorText || 'unknown';}};
-  const response = (reply: Response) => {if (new URL(reply.url()).pathname.startsWith('/api/')) replies.push(captureOriginalResponse(reply, clocks.get(reply.request())));};
+  const observerBoundary: ObserverBoundary = {wall_cutoff: Date.now(), origin: `http://127.0.0.1:${backend.port}`};
+  const response = (reply: Response) => {if (new URL(reply.url()).pathname.startsWith('/api/')) replies.push(captureOriginalResponse(reply, clocks.get(reply.request()), observerBoundary));};
   page.on('request', observed); page.on('requestfinished', finished); page.on('requestfailed', failed); page.on('response', response);
   const api = async (route: string, body?: unknown, method = body === undefined ? 'GET' : 'POST') => {
     const value = await page.evaluate(async ({port, route, method, body, budget}) => {
@@ -223,6 +243,15 @@ test('native actual OpenVINO job preserves full original package and reopens exa
       await row.pending; expect(row.error).toBeUndefined(); expect(typeof row.raw).toBe('string');
       expect(row.reply.request()).toBe(row.request); expect(row.reply.status()).toBe(row.status); expect(row.reply_finished).toBeNull();
       if (row.clock) expect(row.body_captured_at!).toBeLessThanOrEqual(row.clock.deadline);
+      else if (row.preobserver) {
+        expect(row.request.method()).toBe('GET'); expect(new URL(row.request.url()).origin).toBe(observerBoundary.origin);
+        expect(row.preobserver.observer_wall_cutoff).toBe(observerBoundary.wall_cutoff);
+        expect(row.preobserver.original_wall_start).toBeGreaterThan(0);
+        expect(row.preobserver.original_wall_start).toBeLessThanOrEqual(observerBoundary.wall_cutoff);
+        expect(row.preobserver.response_budget).toBe(READ_MS);
+        expect(row.preobserver.response_deadline).toBe(row.preobserver.response_started + READ_MS);
+        expect(row.body_captured_at!).toBeLessThanOrEqual(row.preobserver.response_deadline);
+      } else expect(row.request.method()).toBe('OPTIONS');
     }
   };
   const library = () => page.getByRole('region', {name: '저장된 검사 패키지 보관함', exact: true});
@@ -411,7 +440,9 @@ test('native actual OpenVINO job preserves full original package and reopens exa
       observed_renderer_requests: reads.map(({request: _request, ...clock}) => clock),
       eager_original_response_bodies: replies.map(row => ({method: row.request.method(), route: new URL(row.request.url()).pathname, query: new URL(row.request.url()).search,
         status: row.status, raw: row.raw, raw_sha256: sha(row.raw!), raw_size: Buffer.byteLength(row.raw!), response_finished: row.reply_finished,
-        body_captured_at: row.body_captured_at, original_request_clock: row.clock ?? null, original_request_start_deadline_exported: row.clock !== undefined})),
+        body_captured_at: row.body_captured_at, original_request_clock: row.clock ?? null, original_request_start_deadline_exported: row.clock !== undefined,
+        preobserver_original_GET: row.preobserver ?? null, preobserver_original_full_request_15s_accepted: false})),
+      preobserver_GETs_excluded_from_original_started_15s_claim: true,
       source_checkpoint_image_and_full_package_unchanged: true, selected_provider_readonly: providerBefore, original_prerequisite_409: prerequisite,
       models_initialized_not_trained: true, synthetic_NG_is_missed_by_all_OK_weights: true, model_quality_human_signing_deploy_GPU_Windows_accepted: false,
       runtime_pack_install_activation_signature_license_accepted: false, original_worker_Popen_exit_receipt_exported: false,
