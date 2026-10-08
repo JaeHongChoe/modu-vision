@@ -15,6 +15,52 @@ type ReadTiming={started:number;deadline:number;finished?:number};
 const sha=(value:Buffer|string)=>crypto.createHash('sha256').update(value).digest('hex');
 const actions=['brush-class-mask','erase-selected-mask','mask-undo-redo'] as const;
 
+// This is the original rendered mask plane, not a new ideal-stroke oracle.
+// Actual 1:1 toolbar recenter uses calculateActualSize; capture the complete
+// source rectangle's device-pixel cover, including fractional edge samples.
+export function readRenderedSourceView(canvas:HTMLCanvasElement){
+ const container=canvas.closest('[data-canvas-container]');if(!container)throw Error('Original canvas container absent');
+ const rect=container.getBoundingClientRect(),canvasRect=canvas.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
+ const context=canvas.getContext('2d');if(!context)throw Error('Original rendered mask context absent');
+ const hud=container.querySelector('[data-testid="canvas-hud"]')?.textContent||'';
+ if(!/\bscale\s*100\s*%/.test(hud))throw Error('Actual original 1:1 toolbar view required');
+ if(![1,2].includes(dpr)||![rect.x,rect.y,rect.width,rect.height].every(Number.isFinite))throw Error('Original fixture DPR/geometry invalid');
+ if(rect.width!==canvasRect.width||rect.height!==canvasRect.height||rect.x!==canvasRect.x||rect.y!==canvasRect.y)throw Error('Canvas and original container geometry differ');
+ if(canvas.width!==Math.trunc(rect.width*dpr)||canvas.height!==Math.trunc(rect.height*dpr))throw Error('Original canvas bitmap has not followed its container');
+ const t=context.getTransform(),matrix=[t.a,t.b,t.c,t.d,t.e,t.f];
+ if(matrix.some((v,i)=>v!==[dpr,0,0,dpr,0,0][i]))throw Error('Original DPR-only context transform required');
+ const transform={scale:1,offsetX:(rect.width-256)/2,offsetY:(rect.height-256)/2};
+ const startX=transform.offsetX*dpr,startY=transform.offsetY*dpr,endX=startX+256*dpr,endY=startY+256*dpr;
+ const x=Math.floor(startX),y=Math.floor(startY),width=Math.ceil(endX)-x,height=Math.ceil(endY)-y;
+ if(x<0||y<0||Math.ceil(endX)>canvas.width||Math.ceil(endY)>canvas.height)throw Error('Entire original256 source extent must be visible');
+ const pixels=context.getImageData(x,y,width,height).data;let binary='';
+ for(let i=0;i<pixels.length;i+=8192)binary+=String.fromCharCode(...pixels.subarray(i,i+8192));
+ return {width:canvas.width,height:canvas.height,png:canvas.toDataURL('image/png'),
+  geometry:{css:{x:rect.x,y:rect.y,width:rect.width,height:rect.height},dpr,context_transform:matrix,hud,actual_size_transform:transform,
+   physical_cover:{x,y,width,height,startX,startY,endX,endY},source_width:256,source_height:256},
+  source_plane:{source_width:256,source_height:256,dpr,width,height,phaseX:startX-x,phaseY:startY-y,rgba_base64:btoa(binary)}};
+}
+export function assertRenderedSourceView(view:any){
+ const g=view.geometry,r=g.css,p=g.physical_cover,s=view.source_plane;
+ expect([1,2]).toContain(g.dpr);for(const v of [r.x,r.y,r.width,r.height])expect(Number.isFinite(v)).toBe(true);
+ expect(g.context_transform).toEqual([g.dpr,0,0,g.dpr,0,0]);expect(g.hud).toMatch(/\bscale\s*100\s*%/);
+ expect(g.actual_size_transform).toEqual({scale:1,offsetX:(r.width-256)/2,offsetY:(r.height-256)/2});
+ expect(view.width).toBe(Math.trunc(r.width*g.dpr));expect(view.height).toBe(Math.trunc(r.height*g.dpr));
+ const startX=g.actual_size_transform.offsetX*g.dpr,startY=g.actual_size_transform.offsetY*g.dpr,endX=startX+256*g.dpr,endY=startY+256*g.dpr;
+ expect(p).toEqual({x:Math.floor(startX),y:Math.floor(startY),width:Math.ceil(endX)-Math.floor(startX),height:Math.ceil(endY)-Math.floor(startY),startX,startY,endX,endY});
+ expect(p.x).toBeGreaterThanOrEqual(0);expect(p.y).toBeGreaterThanOrEqual(0);expect(Math.ceil(endX)).toBeLessThanOrEqual(view.width);expect(Math.ceil(endY)).toBeLessThanOrEqual(view.height);
+ expect([g.source_width,g.source_height,s.source_width,s.source_height]).toEqual([256,256,256,256]);
+ expect([s.dpr,s.width,s.height,s.phaseX,s.phaseY]).toEqual([g.dpr,p.width,p.height,startX-p.x,startY-p.y]);
+ const bytes=Buffer.from(s.rgba_base64,'base64');expect(bytes.toString('base64')).toBe(s.rgba_base64);expect(bytes.length).toBe(p.width*p.height*4);
+ expect(bytes.some((value,index)=>index%4===3&&value>0)).toBe(true);
+ expect(s.sha256).toBe(sha(bytes));expect(view.sha256).toBe(sha(view.png));expect(view.png.startsWith('data:image/png;base64,')).toBe(true);
+ expect(view.source_identity.image_path).toBeTruthy();expect(view.source_identity.image_sha256).toMatch(/^[a-f0-9]{64}$/);
+}
+export function assertSameRenderedSourcePlane(after:any,before:any){
+ assertRenderedSourceView(after);assertRenderedSourceView(before);
+ expect(after.source_identity).toEqual(before.source_identity);expect(after.source_plane).toEqual(before.source_plane);
+}
+
 export function assertOwnedProjectDirectory(directory:string,root:string){
  for(const p of [root,directory]){
   expect(path.isAbsolute(p)).toBe(true);expect(path.normalize(p)).toBe(p);
@@ -284,7 +330,8 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  const stroke=async(y:number,x1:number,x2:number,button:'left'|'right'='left')=>{
   const a=await point(x1,y),b=await point(x2,y);await page.mouse.move(a.x,a.y);await page.mouse.down({button});await page.mouse.move(b.x,b.y,{steps:10});await page.mouse.up({button});
  };
- const view=async()=>{const payload=await page.locator('[data-canvas-container] canvas').nth(1).evaluate((c:HTMLCanvasElement)=>({width:c.width,height:c.height,png:c.toDataURL('image/png')}));return{width:payload.width,height:payload.height,sha256:sha(payload.png)};};
+ const view=async()=>{const payload=await page.locator('[data-canvas-container] canvas').nth(1).evaluate(readRenderedSourceView);const result={...payload,sha256:sha(payload.png),source_identity:{image_path:imagePath,image_sha256:imageSha},source_plane:{...payload.source_plane,sha256:sha(Buffer.from(payload.source_plane.rgba_base64,'base64'))}};assertRenderedSourceView(result);return result;};
+ const retainView=(action:string,label:string,rendered:Awaited<ReturnType<typeof view>>)=>{const file=path.join(workspace.logs,'raster-'+action+'-cancel-'+label+'-full-viewport.png');fs.writeFileSync(file,Buffer.from(rendered.png.slice('data:image/png;base64,'.length),'base64'),{flag:'wx'});evidence.addFile(file);return{...rendered,full_viewport_png_file:file};};
  const save=async(status:200|503,label:string)=>{
   const start=writes.length;let importOrder:number|null=null;
   const response=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/annotations/save'&&r.request().method()==='POST',{timeout:10_000});
@@ -349,15 +396,15 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  const cancel=async(action:string,makeDraft:()=>Promise<void>)=>{
   await focus(true);await selectClass();await recenter();const before=await protect(action+'-cancel',roots,routes),viewBefore=await view(),start=writes.length;
   await makeDraft();await expect(page.getByRole('button',{name:'Save Changes',exact:true})).toBeVisible();
-  await expect.poll(async()=> (await view()).sha256).not.toBe(viewBefore.sha256);const draftView=await view();
+  await expect.poll(async()=> (await view()).source_plane.sha256).not.toBe(viewBefore.source_plane.sha256);const draftView=await view();
   await focus(false);await page.getByRole('button',{name:'이미지 정보·검토',exact:true}).click();
   const read=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/annotations/part'&&r.request().method()==='GET'&&new URL(r.url()).searchParams.get('file_path')===imagePath,{timeout:10_000});
   await page.getByRole('button',{name:'현재 편집을 버리고 최신 라벨 불러오기',exact:true}).click();const reply=await read;expect(reply.status()).toBe(200);const originalReply={status:200,body:await withinOriginalReadDeadline(readTimes.get(reply.request())!,()=>reply.text()),url:reply.url()};
   await expect(rows()).toHaveCount(2);await expect(page.getByRole('button',{name:'Save Changes',exact:true})).toHaveCount(0);
   await page.getByRole('button',{name:'이미지 정보·검토',exact:true}).click();await focus(true);await recenter();
-  await expect.poll(async()=>await view()).toEqual(viewBefore);
-  const after=await unchanged(before);expect(writes.slice(start)).toEqual([]);await screenshot(action+'-cancel-explicit-server-read');
-  cells.push({action:'U030.'+action,dimension:'cancel',before,after,viewBefore,draftView,viewAfter:await view(),originalReply,mutations:writes.slice(start),history_reset_claim:false,escape_cancel_claim:false});
+  await expect.poll(async()=>{const actual=await view();assertSameRenderedSourcePlane(actual,viewBefore);return true;}).toBe(true);
+  const after=await unchanged(before);expect(writes.slice(start)).toEqual([]);const viewAfter=await view();assertSameRenderedSourcePlane(viewAfter,viewBefore);await screenshot(action+'-cancel-explicit-server-read');
+  cells.push({action:'U030.'+action,dimension:'cancel',before,after,viewBefore:retainView(action,'before',viewBefore),draftView:retainView(action,'draft',draftView),viewAfter:retainView(action,'after',viewAfter),originalReply,mutations:writes.slice(start),history_reset_claim:false,escape_cancel_claim:false,whole_source_rendered_plane_equal:true,full_viewport_layout_identity_claim:false});
  };
  const handoff=async(action:string)=>{
   const before=await protect(action+'-handoff',roots,routes),start=writes.length;
