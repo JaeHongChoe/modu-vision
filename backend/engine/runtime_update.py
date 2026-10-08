@@ -6,6 +6,7 @@ must supply an independently pinned authority and an owned, drained installation
 Ordinary stores refuse attachment while a durable update intent is unfinished.
 """
 from contextlib import contextmanager
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from dataclasses import asdict, dataclass
 import base64
 import hashlib
@@ -16,6 +17,7 @@ from pathlib import Path, PurePosixPath
 import re
 import shutil
 import stat
+import threading
 import uuid
 from urllib.parse import urlsplit
 import zipfile
@@ -553,15 +555,121 @@ def _intent(root,identifier):
     return record,directory
 
 
-def _validated_intent(root,identifier):
-    record,directory=_intent(root,identifier)
-    release,raw=verify_release(directory/'envelope.json',record['authority_path'],record['authority_sha256'],record['target'])
-    if _sha(raw)!=record['envelope_sha256'] or release!=record['release']:raise UpdateError('Application update release binding changed')
-    _bundle(directory/'bundle',release)
-    installer=next(row for row in release['artifacts'] if row['kind']=='installer')
-    manifest,manifest_sha=_portable(directory/'bundle'/installer['path'],release)
-    generation=_unlinked(root/GENERATIONS/identifier);application=generation/'application'
-    if _sha(_read(application/'portable-application.json',MAX_APPLICATION_MANIFEST))!=manifest_sha:raise UpdateError('Installed application manifest integrity differs')
+class _IntentCheckWork:
+    """One invocation-local validator; never a cached or transferable proof."""
+    def __init__(self,function,args,kwargs):
+        self.function=function;self.args=args;self.kwargs=kwargs
+        self.lock=threading.Lock();self.complete=threading.Event()
+        self.started=False;self.rejected=False;self.future=None
+        self.value=None;self.error=None;self.submission_error=None
+
+    def run(self):
+        with self.lock:
+            if self.rejected:return None
+            self.started=True
+        try:
+            self.value=self.function(*self.args,**self.kwargs)
+        except BaseException as error:
+            self.error=error
+            raise
+        finally:
+            self.complete.set()
+        return self.value
+
+    def reject_before_start(self):
+        # submit may enqueue before raising without returning its Future. The
+        # same lock prevents that late wrapper from starting original file I/O.
+        with self.lock:
+            if not self.started:
+                self.rejected=True
+                self.complete.set()
+
+
+def _intent_checks_join(checks,first):
+    """Keep original work custody despite interrupted caller waits."""
+    for work in checks:
+        if work.future is None:
+            while True:
+                try:
+                    work.reject_before_start();break
+                except BaseException as error:
+                    if first is None:first=error
+    pending={work.future for work in checks if work.future is not None}
+    while pending:
+        try:
+            done,_=wait(pending,return_when=FIRST_COMPLETED)
+            for future in done:
+                if future.done():pending.discard(future)
+        except BaseException as error:
+            if first is None:first=error
+    for work in checks:
+        if work.future is not None:
+            while True:
+                try:
+                    # done/result proves Future completion independently of
+                    # Thread.join/shutdown's interpreter interruption behavior.
+                    if not work.future.done():
+                        wait((work.future,),return_when=FIRST_COMPLETED);continue
+                    work.future.result();break
+                except BaseException as error:
+                    if error is work.error:break
+                    if first is None:first=error
+        while True:
+            try:
+                if work.complete.is_set():break
+                work.complete.wait()
+            except BaseException as error:
+                if first is None:first=error
+    return first
+
+
+def _intent_parallel_checks(executor,calls,retained):
+    values=[]
+    for offset in range(0,len(calls),4):
+        checks=[];first=None
+        try:
+            for function,args,kwargs in calls[offset:offset+4]:
+                work=_IntentCheckWork(function,args,kwargs)
+                retained.append(work);checks.append(work)
+                try:
+                    work.future=executor.submit(work.run)
+                except BaseException as error:
+                    work.submission_error=error
+                    if not isinstance(error,Exception) and first is None:first=error
+                    break
+        except BaseException as error:
+            first=error
+        first=_intent_checks_join(checks,first)
+        if first is not None:raise first
+        # Completion order cannot replace original stage/manifest order.
+        for work in checks:
+            if work.submission_error is not None:raise work.submission_error
+            if work.error is not None:raise work.error
+            values.append(work.value)
+    return values
+
+
+def _intent_executor_close(executor,retained,first):
+    while True:
+        try:
+            first=_intent_checks_join(retained,first);break
+        except BaseException as error:
+            if first is None:first=error
+    while True:
+        try:
+            executor.shutdown(wait=True,cancel_futures=False);break
+        except BaseException as error:
+            if first is None:first=error
+    # No shutdown return, including an interrupted Thread.join, substitutes
+    # for the original worker completion record and known Future.done/result.
+    while True:
+        try:
+            return _intent_checks_join(retained,first)
+        except BaseException as error:
+            if first is None:first=error
+
+
+def _installed_intent_namespace(application,manifest):
     links,directories=_native_layout(manifest) if manifest['schema_version']==2 else ({},set())
     expected={row['path'] for row in manifest['files']}|set(links)|{'portable-application.json'}
     actual=set()
@@ -578,17 +686,46 @@ def _validated_intent(root,identifier):
             elif not path.is_dir():raise UpdateError('Installed application contains a special file')
             elif manifest['schema_version']==2 and name not in directories:raise UpdateError('Installed native directory membership differs')
     if actual!=expected:raise UpdateError('Installed application membership differs')
-    for row in manifest['files']:
-        _check_file(application/row['path'],row)
-        if stat.S_IMODE((application/row['path']).stat().st_mode)!=(0o500 if row['executable'] else 0o400):
-            raise UpdateError('Installed application executable mode changed')
-    if record['migration_id'] is not None:
-        _,database=migration._journal(root,record['migration_id'])
-        if (database.get('installation_id')!=record['installation_id']
-                or database.get('source_sha256')!=record['source_sha256']
-                or database.get('previous_pointer')!=record['previous_database']):
-            raise UpdateError('Application update database intent binding changed')
-    return record,directory,manifest
+
+
+def _installed_intent_row(application,row):
+    _check_file(application/row['path'],row)
+    if stat.S_IMODE((application/row['path']).stat().st_mode)!=(0o500 if row['executable'] else 0o400):
+        raise UpdateError('Installed application executable mode changed')
+
+
+def _validated_intent(root,identifier):
+    record,directory=_intent(root,identifier)
+    release,raw=verify_release(directory/'envelope.json',record['authority_path'],record['authority_sha256'],record['target'])
+    if _sha(raw)!=record['envelope_sha256'] or release!=record['release']:raise UpdateError('Application update release binding changed')
+    installer=next(row for row in release['artifacts'] if row['kind']=='installer')
+    executor=ThreadPoolExecutor(max_workers=4);retained=[];first=None;result=None
+    try:
+        _,(manifest,manifest_sha)=_intent_parallel_checks(executor,[
+            (_bundle,(directory/'bundle',release),{}),
+            (_portable,(directory/'bundle'/installer['path'],release),{'destination':None}),
+        ],retained)
+        generation=_unlinked(root/GENERATIONS/identifier);application=generation/'application'
+        if _sha(_read(application/'portable-application.json',MAX_APPLICATION_MANIFEST))!=manifest_sha:raise UpdateError('Installed application manifest integrity differs')
+        _installed_intent_namespace(application,manifest)
+        _intent_parallel_checks(executor,[(_installed_intent_row,(application,row),{}) for row in manifest['files']],retained)
+        _installed_intent_namespace(application,manifest)
+        for row in manifest['files']:
+            if stat.S_IMODE((application/row['path']).stat().st_mode)!=(0o500 if row['executable'] else 0o400):
+                raise UpdateError('Installed application executable mode changed')
+        if record['migration_id'] is not None:
+            _,database=migration._journal(root,record['migration_id'])
+            if (database.get('installation_id')!=record['installation_id']
+                    or database.get('source_sha256')!=record['source_sha256']
+                    or database.get('previous_pointer')!=record['previous_database']):
+                raise UpdateError('Application update database intent binding changed')
+        result=record,directory,manifest
+    except BaseException as error:
+        first=error
+    finally:
+        first=_intent_executor_close(executor,retained,first)
+    if first is not None:raise first
+    return result
 
 
 def _pending(root,record):

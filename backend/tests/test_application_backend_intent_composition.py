@@ -20,10 +20,93 @@ from backend.tests.test_application_launch_handshake import installed_backend
 from backend.tests.test_service_s6_04 import controlled_preactivation_guard
 
 
+def _allow_original_intent_validator_workers(monkeypatch):
+    """Test-only allowance for the exact current invocation's file validators.
+
+    Names never authorize a thread. The original stdlib worker, executor weakref,
+    work queue, constructor caller and submitter code must all be the originals.
+    Original Popen denial remains in each fixture. No application thread is
+    admitted by this source fixture compatibility boundary.
+    """
+    import concurrent.futures.thread as pool_module
+    import types
+    import weakref
+    executor_type=pool_module.ThreadPoolExecutor
+    worker=pool_module._worker
+    adjustment=executor_type._adjust_thread_count.__code__
+    thread_type=threading.Thread
+    original_start=thread_type.start
+    original_validation=update._validated_intent
+    validation_code=original_validation.__code__
+    submission_code=update._intent_parallel_checks.__code__
+    original_run=update._IntentCheckWork.run
+    contexts=[];observations=[]
+
+    def validation(*args,**kwargs):
+        context={'pools':[],'works':[],'futures':[],'threads':{}}
+        contexts.append(context)
+        try:
+            return original_validation(*args,**kwargs)
+        finally:
+            assert contexts[-1] is context
+            contexts.pop()
+            for executor in context['pools']:
+                assert type(executor) is executor_type and executor._shutdown
+                assert all(not thread.is_alive() for thread in executor._threads)
+                assert set(executor._threads)<=set(context['threads'])
+            for work in context['works']:
+                assert work.complete.is_set()
+                assert work.started or (work.rejected and work.submission_error is not None)
+            assert all(future.done() for future in context['futures'])
+            observations.append(context)
+
+    def make_executor(*args,**kwargs):
+        caller=sys._getframe(1)
+        assert contexts and caller.f_code is validation_code
+        assert args==() and kwargs=={'max_workers':4}
+        context=contexts[-1]
+        executor=executor_type(*args,**kwargs)
+        assert type(executor) is executor_type and executor._initializer is None
+        context['pools'].append(executor)
+        original_submit=executor.submit
+        def submit(function,*arguments,**keywords):
+            caller=sys._getframe(1)
+            assert contexts and contexts[-1] is context and caller.f_code is submission_code
+            assert type(function) is types.MethodType and function.__func__ is original_run
+            assert type(function.__self__) is update._IntentCheckWork
+            assert caller.f_locals['work'] is function.__self__
+            assert arguments==() and keywords=={}
+            context['works'].append(function.__self__)
+            future=original_submit(function,*arguments,**keywords)
+            context['futures'].append(future)
+            return future
+        executor.submit=submit
+        return executor
+
+    def start(thread):
+        caller=sys._getframe(1)
+        assert contexts and caller.f_code is adjustment
+        context=contexts[-1];executor=caller.f_locals['self']
+        assert any(executor is owned for owned in context['pools'])
+        assert type(thread) is thread_type and caller.f_locals['t'] is thread and thread._target is worker
+        arguments=thread._args
+        assert len(arguments)==4 and type(arguments[0]) is weakref.ReferenceType
+        assert arguments[0]() is executor and arguments[1] is executor._work_queue
+        assert arguments[2] is executor._initializer is None and arguments[3]==executor._initargs==()
+        assert thread not in context['threads']
+        context['threads'][thread]=executor
+        return original_start(thread)
+
+    monkeypatch.setattr(update,'ThreadPoolExecutor',make_executor)
+    monkeypatch.setattr(update,'_validated_intent',validation)
+    monkeypatch.setattr(threading.Thread,'start',start)
+    return observations
+
+
 @pytest.fixture
 def original(tmp_path, monkeypatch):
     monkeypatch.setattr(subprocess.Popen, '__init__', lambda *a, **k: pytest.fail('No child permitted'))
-    monkeypatch.setattr(threading.Thread, 'start', lambda *a, **k: pytest.fail('No thread permitted'))
+    _allow_original_intent_validator_workers(monkeypatch)
     root, record, backend = installed_backend(tmp_path)
     backend_identity = lease._identity(os.getpid())
     main_identity = copy.deepcopy(record['process'])
@@ -264,7 +347,7 @@ def frozen_original(tmp_path,monkeypatch):
     from backend.tests.test_global_migration import owned
     from backend.tests.test_service_s6_04 import fixture,plan,canonical,sha
     monkeypatch.setattr(subprocess.Popen,'__init__',lambda *a,**k:pytest.fail('No child permitted'))
-    monkeypatch.setattr(threading.Thread,'start',lambda *a,**k:pytest.fail('No thread permitted'))
+    _allow_original_intent_validator_workers(monkeypatch)
     root,*_=owned(tmp_path);value=fixture(tmp_path)
     payload=b'inert controlled binary bytes; never executable in this gate'
     inventory={'schema_version':1,'build_identity_sha256':'d'*64,'scope':'explicit inert compiled inventory model'}
