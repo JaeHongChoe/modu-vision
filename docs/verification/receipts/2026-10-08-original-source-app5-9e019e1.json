@@ -1,0 +1,189 @@
+{
+  "schema": "modu-vision.original-source-app-cpu-regressions/v1",
+  "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+  "source_red": "2e8667c7d345a5347813d01be8b23d8014e0316a",
+  "source_files": {
+    "backend/engine/runtime_deadline.py": "fc2031a7e88aec81f63b12746daee6ae6f02babb34e66388c87e4bf1d79671ca",
+    "backend/tests/test_application_launch_execution.py": "a9d64631cf95aab8abd3ec9291f3b92e6e189162acaf1b545eb26f5af84ad125",
+    "src/main/applicationLaunch.ts": "acfd9961b5b437f220faa5eb91795fbffcb1e94c6949281cb2a39af1c58d0381"
+  },
+  "production_delta": [
+    "backend/engine/runtime_deadline.py"
+  ],
+  "scope": "Original controller/TypeScript bridge/source backend controlled CPU execution and durable publication refusal; no native installed release acceptance.",
+  "paired_original_red": {
+    "receipt_sha256": "912f2f73e9572769bbcd4f40b3a782a4b62d8de9afee59f20ab1624a64e1193c",
+    "xml_sha256": "396b34df898fa7b3a085514a5646fb1b48b75e78ec014ffdd329262f186f30cd",
+    "log_sha256": "335fa048cae5560c0f70d04f611629a0a023451bc056757faef31526992e218a",
+    "run_binding_sha256": "f174695ae81f6d0b5b5106973426539af14fb461ec66d53107f6cbce47da1239",
+    "source_binding_sha256": "7bd099124d3a3380bc3f380463fb7b80608b90e30b4cb3e25b5a09f2c4f429f6",
+    "source_inputs": 762,
+    "source_sha": "2e8667c7d345a5347813d01be8b23d8014e0316a",
+    "source_unchanged": true,
+    "cases": 5,
+    "failed": 5,
+    "errors": 0,
+    "skipped": 0,
+    "case_times": [
+      {
+        "name": "test_exact_cpu_receipt_retry_rechecks_artifacts_instead_of_accepting_stale_output",
+        "time_s": "12.721"
+      },
+      {
+        "name": "test_exact_receipt_repeat_preserves_original_bytes_and_foreign_claims_refuse",
+        "time_s": "9.472"
+      },
+      {
+        "name": "test_interrupted_execution_publication_never_repairs_or_unlocks[receipt]",
+        "time_s": "41.208"
+      },
+      {
+        "name": "test_interrupted_execution_publication_never_repairs_or_unlocks[output]",
+        "time_s": "9.352"
+      },
+      {
+        "name": "test_reviewed_package_python_cannot_shadow_snapshotted_current_runtime",
+        "time_s": "9.496"
+      }
+    ],
+    "container_removed": true
+  },
+  "paired_current_green": {
+    "receipt_sha256": "59e2e63febd25868bf08766f887fecf6819a820316e3701088bc20846a05f5cb",
+    "xml_sha256": "a67c19298dfd6e896488eeee2d4c3a54f4ea36660cb51bc307cfd368ccf69872",
+    "log_sha256": "c826e0114172c33bac5d8ccc99b6239fab6287bb349c76eee2464d7034ba257d",
+    "run_binding_sha256": "3f5de8989b762fef2a9a75d9023fdedf6e03b640ae84f73aedeadef7bb50f1f6",
+    "source_binding_sha256": "42c5337d10fd2473169564cd94ebd624899fe20b126ff665e9f9544936ca1dba",
+    "source_inputs": 763,
+    "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+    "source_unchanged": true,
+    "cases": 5,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "case_times": [
+      {
+        "name": "test_exact_cpu_receipt_retry_rechecks_artifacts_instead_of_accepting_stale_output",
+        "time_s": "18.965"
+      },
+      {
+        "name": "test_exact_receipt_repeat_preserves_original_bytes_and_foreign_claims_refuse",
+        "time_s": "15.654"
+      },
+      {
+        "name": "test_interrupted_execution_publication_never_repairs_or_unlocks[receipt]",
+        "time_s": "16.252"
+      },
+      {
+        "name": "test_interrupted_execution_publication_never_repairs_or_unlocks[output]",
+        "time_s": "13.297"
+      },
+      {
+        "name": "test_reviewed_package_python_cannot_shadow_snapshotted_current_runtime",
+        "time_s": "15.524"
+      }
+    ],
+    "container_removed": true
+  },
+  "green_pytest_seconds": 79.95,
+  "red_pytest_seconds": 82.6,
+  "saved_controlled_cpu_outputs": [
+    {
+      "sha256": "9710650a4225ed0bb9013516bd0603edec43a8f0e74f3adc4a43085cb60cebc2",
+      "semantic_output": {
+        "final_verdict": "OK",
+        "roi_count": 1,
+        "defective_roi_count": 0,
+        "routed_output_node_id": "output",
+        "recognized_texts": [
+          "A"
+        ]
+      },
+      "partial_publication_control": false,
+      "live_receipt_acceptance_claimed": false
+    },
+    {
+      "sha256": "4375c22e154e5f4c8451b96f678a455ea22d1dce1e3f726bc565c0d7e0ca2a95",
+      "semantic_output": {
+        "final_verdict": "OK",
+        "roi_count": 1,
+        "defective_roi_count": 0,
+        "routed_output_node_id": "output",
+        "recognized_texts": [
+          "A"
+        ]
+      },
+      "partial_publication_control": false,
+      "live_receipt_acceptance_claimed": false
+    },
+    {
+      "sha256": "748af036370c33cb99bb7e1e70b308f061deb13cda425fd93cd99ce587ffeaf8",
+      "semantic_output": {
+        "final_verdict": "OK",
+        "roi_count": 1,
+        "defective_roi_count": 0,
+        "routed_output_node_id": "output",
+        "recognized_texts": [
+          "A"
+        ]
+      },
+      "partial_publication_control": true,
+      "live_receipt_acceptance_claimed": false
+    },
+    {
+      "sha256": "16572ef11d7c3266c3260712c3c48256edb1e3d4c88181e125f20a5b2ba90170",
+      "semantic_output": {
+        "final_verdict": "OK",
+        "roi_count": 1,
+        "defective_roi_count": 0,
+        "routed_output_node_id": "output",
+        "recognized_texts": [
+          "A"
+        ]
+      },
+      "partial_publication_control": false,
+      "live_receipt_acceptance_claimed": false
+    }
+  ],
+  "proof_index_sha256": "2dba76ece44cd3c268c8b93fe9d8a881cdc8ac42224e6682a97d286d95e953e7",
+  "root_proof_files_rehashed": 81,
+  "root_review_sha256": "2ffe7e5f0011a6fe286078ed9914a8aba75ce34e9b4c4628795eea024142fece",
+  "freeze_sha256": "9429eff7078d1bce4ce4acf0a22f9eb043c039093feb0c866490b9b5883378f9",
+  "initial_private_export_setup_failure": {
+    "receipt_sha256": "9c34579eb9671b7a7ce9e961b72a0f3d7380209337e4fc796e098f3dbb5737d2",
+    "reason": "private export omitted required two committed HTTP clients; corrected before original worker admission",
+    "product_or_hosted_failure_claimed": false
+  },
+  "guards": {
+    "original_tests_TS_bridge_deadlines_unchanged": true,
+    "partial_publication_remains_refused": true,
+    "stale_output_foreign_receipt_and_package_shadow_refused": true,
+    "no_extra_instrumented_backend_replay": true,
+    "only_cpu_no_gpu": true,
+    "owned_container_removed": true,
+    "no_new_image_or_deployment": true,
+    "signal_identity_auth_or_publication_guards_relaxed": false
+  },
+  "prerequisites": {
+    "sha256": "de8cf776c3e546bd07ddfda864e7cea2f3a8f856d53d2243804235047e3b2600",
+    "node": "24.21.0",
+    "typescript": "5.9.3",
+    "cryptography": "50.0.2",
+    "cffi": "2.0.0",
+    "pycparser": "2.23",
+    "no_image_pull": true,
+    "no_download_inside_container": true,
+    "hosted_exact_node_patch_claimed": false
+  },
+  "acceptance": {
+    "five_original_source_app_cases_passed": true,
+    "whole_hosted_CI": false,
+    "compiled_native_application": false,
+    "installed_target": false,
+    "whole_process_tree": false,
+    "publisher_release": false,
+    "model_or_human_quality": false,
+    "windows": false,
+    "parent_acceptance": false
+  }
+}

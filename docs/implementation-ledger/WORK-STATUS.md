@@ -32,7 +32,7 @@
 | S6-04 | 오프라인 설치와 업데이트 | POSIX 앱/DB cutover·복구·기존 home 인수, 영속 controller와 main/backend 인증 handshake를 구현하고 검증했다. 원래 backend epoch의 source CPU 기준 이미지 실행과 source candidate 활성 pointer 변경 전 검사·복구를 추가 검증했다. 정확한 compiled candidate worker의 A/OK 수학·두 pointer 변경 전 봉인·재실행 거절을 검증했다. 전체 process-tree 종료 확인, OS installer adapter와 native packaged positive startup을 이어간다. 실 publisher 서명은 별도 조건이다. |
 | S6-05 | 공개 CI와 source 재현성 | 이전 소스의 hosted 성공·실패를 보존한다. 보호된 수동 candidate 검증 workflow와 source/artifact/환경 정책 gate를 추가했다. 실제 workflow 실행·서명·배포는 하지 않았고, 새 게시 소스의 전체 hosted 결과가 필요하다. |
 | S6-06 | 서명과 릴리스 채널 | 실제 Authenticode/publisher identity·서명 후 byte inventory·채널 승인 필요. |
-| S7-01 | 기존 기능 전체 coverage 계약 | 원래156개 ID를 유지한다. 현재207개 curated action의611개 시나리오 검증,838개 pending이다. 알려진 누락 메뉴/shortcut·남은 시나리오·전체 기능 수락을 이어간다. 행동 수와 전체 기능 완료 수는 다르다. |
+| S7-01 | 기존 기능 전체 coverage 계약 | 원래156개 ID를 유지한다. 현재207개 curated action의619개 시나리오 검증,830개 pending이다. 알려진 누락 메뉴/shortcut·남은 시나리오·전체 기능 수락을 이어간다. 행동 수와 전체 기능 완료 수는 다르다. |
 | S7-02 | 10모델군 실제 작업 시나리오 | 실제5 distinct learned chain은 완료. 10모델군 각각 사람이 검토한 정답과 대표 multi-task recipe 검증 필요. |
 | S7-03 | Windows 실제 설치와 사용 QA | Windows 실제 설치·사용 QA 사용자 면제. hosted Server2025 component 실행을 Win11 실사용 성공으로 세지 않음. |
 | S7-05 | 데이터 규모와 연속 운전 | 실제 browser/native에서10만 메타데이터·실제 이미지3장,3×120 keyset page·최대DOM32·응답120·tail UUID/SHA 재열기·파일 없는 항목 선택 거절을 검증했다. 10만 실제 사진 decode나 target 자원/택트 수락은 아니다. a184b1e의 동일 외장72시간 실행은 유지 중이며 이전 시간을 합산하지 않고 terminal receipt가 필요하다. |
@@ -403,3 +403,24 @@ compiled canary의 닫힌 protocol2/worker8개 필드를 화면 bridge에서 검
 - cold global_migration 시작마다 engine package가 PyTorch/device/dataset을 먼저 가져오는 원인을 실제 Linux에서 확인했다.35개 public export·순서·동일 객체·star import를 보존하는 lazy initializer로 수정했다. 원래 OCR의12초 checkpoint·30초 runtime·재검토3회·소유권·신호 조건은 변경하지 않았다.
 - 수정 전 cold 회귀6실패→수정 후7통과, 관련75통과. GPU0인 기존 pinned Linux CPU 환경에서 원래 OCR natural/heartbeat2개가7.55초에 통과하고1514개 소스가 불변했다. actualCLI가0.4초대로 단축됐으며 heartbeat의 stale plan을 실제 거절한 뒤 fresh pair로 정상 적용했고 worker 재시작/예약 삭제는 없다. root 합성9개도14.50초 통과/2169소스 불변이다.
 - 실제 native 앞선 성공은 원래 eager initializer를 포함한 coherent4 frozen binary의 근거다. 새 lazy backend를 native로 재검증했다고 이전 근거를 넘기지 않는다. GAN 종료 경계와 hosted 앱5개 실패는 별도 해결 중이다.
+
+
+## 2026-10-08 미전송 검수와 로컬 초안 비교8개
+
+- clean `9e019e1`의 browser/source Electron2건이 retry 없이 통과했고2178개 소스가 동일했다. 승인·반려 초안을 닫고 실제 reload/reopen해도 기존1개 fixture 의견과 raw label/workflow/source hash가 그대로이며 UI 쓰기 요청은0개였다.
+- 실제 canvas로 만든 로컬 초안은 reload 후 바이트 단위로 보존된다. 빈 초안의 제어 부재, 다른 원본 SHA 적용 차단, exact GET의 통제503, 실제200 비교 후 기준·서버·로컬 라벨 readback을 확인했다. 사람 검수와 저장·적용은 수행하지 않았다.
+- 기존207개 curated 행동의619개 시나리오 verified/830개 pending이다. 부모 구현69/13과 전체 수락0은 유지한다.
+
+
+## 2026-10-08 원래 프로세스 종료 경계 판정 수정
+
+- `9e019e1`의 runtime은 원래 birth/group/session·미회수 Popen과 반환 row session이 일치할 때만 잠깐 비어 있는 명령을 관찰 상태로 보존한다. strict signal/child enrollment 판정은 여전히 false이며 기존 UNKNOWN은 지우지 않는다.
+- 원래 Linux GAN30초 gate가 실패했던 자연 경계에서 수정 후7.665초로 통과했다. 같은 empty command와 non-Z row가 실제 관찰됐고 원래 Popen 종료 후에만 completed0이었다. root40개와 private40개도 skip 없이 통과했다. 타임아웃·외부 row/session·PID 재사용·미등록 자식·관찰 실패 거절을 보존했다.
+- 이미 배포된 frozen/native 근거는 옛 binary/source에 고정되어 있고 이번 소스에 옮겨 세지 않는다. 전체 process tree와 설치/publisher/대표 품질·최신 hosted CI 수락은 아직 별도다.
+
+
+## 2026-10-08 Linux 앱 실행 실패5개 해결
+
+- 원래5개 테스트를 clean `9e019e1`에서 그대로 실행해79.95초,5pass/0skip로 통과했다. 같은 실행의763개 입력 hash가 불변이며 CPU 격리 container가 종료됐다. 이전 `2e8667c`의5fail과 private setup 누락은 각각 보존한다.
+- 앞선 실패5개 모두 실제 A/OK 결과는 만들었으나 original leader UNKNOWN 때문에 publication이 거절됐다. production 변경은 runtime 판정 하나이고 테스트/TS bridge/dependency/deadline은 같다. stale receipt·foreign claim·부분 publication·package shadow 거절은 성공으로 바꾸지 않았다.
+- 현재 source 경로의 회귀 해결이며, 별도 최신 hosted CI와 새 compiled/native target 근거는 여전히 필요하다.

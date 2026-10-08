@@ -2609,6 +2609,14 @@
           "receipt_sha256": "a83fa47336c8ca0c4ec1cd2320bad8c2eaca2a1de41d637bb4af4ee2746e0775",
           "result": "Browser2/sourceElectron2 passed with unchanged clean inputs. Eleven F024 curated refusal/reopen dimensions and five supplemental U006 artifact controls observed.",
           "scope": "Exact source UI only; controlled503 and synthetic display artifacts; no humantruth/modelquality/installed/publisher/whole feature acceptance."
+        },
+        {
+          "kind": "clean-source-unsent-review-and-draft-lifecycle",
+          "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+          "receipt": "docs/verification/receipts/2026-10-08-team-draft-9e019e1.json",
+          "receipt_sha256": "d7e2fd4b5d804db6ec5f08afabe70b5b03b3cf7cd5c75ac16d2dfca445eee1fa",
+          "result": "Clean browser/source Electron2 passed with2178 source inputs unchanged; eight existing F024 dimensions observed.",
+          "scope": "Actual unsent controls/readback with one fixture opinion, wrong local source pin and controlled GET503; no label application, human truth, model or whole-feature acceptance."
         }
       ],
       "file_actions": {
@@ -5036,6 +5044,22 @@
           "receipt_sha256": "7e9b0991cd9f23fc5d3d7d74f8144382ad923a2778230e40d2775cf1cb772717",
           "result": "Cold imports red6 then green7;75 related cases passed; actual originalLinuxOCR natural/heartbeat2 cases passed unchanged12/30/3 guards; root composed9 passed with2169 same source inputs.",
           "scope": "Two-source control import repair, observed originalLinuxCPU only. Latest hostedCI/GANidentity/app-launch cases and new native compiled backend remain pending."
+        },
+        {
+          "kind": "original-owned-child-empty-command-observation-repair",
+          "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+          "receipt": "docs/verification/receipts/2026-10-08-original-exit-identity-9e019e1.json",
+          "receipt_sha256": "1014636f9a2fffb151487d8232d3a3461a94ed2291c0b63b39542c445f4190a8",
+          "result": "Root identity/tree/workspace40 passed with2177 unchanged input files; actual original LinuxGAN30s red-to-green retained and exact natural boundary observed.",
+          "scope": "Strict signal/enrollment checks and old UNKNOWN retention unchanged. New frozen/native build, full hosted CI, installed target and complete process-tree/quality acceptance remain separate."
+        },
+        {
+          "kind": "paired-original-linux-source-app-cpu-five-regressions",
+          "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+          "receipt": "docs/verification/receipts/2026-10-08-original-source-app5-9e019e1.json",
+          "receipt_sha256": "ca9987628ddae1428d602af374cf4de676037ac74a08cb51ab9320c8ad61b899",
+          "result": "Five unchanged original source app tests red5→green5,79.95s and763 exact committed source inputs unchanged. Controlled CPU A/OK results delivered; stale/foreign/partial/shadow refusal preserved.",
+          "scope": "Source controller/TypeScript/backend path on isolated offline CPU Linux image. Original deadlines preserved; actual compiled/native/installed target, whole process tree, latest full hosted CI and quality acceptance remain separate."
         }
       ],
       "file_actions": {
@@ -5377,6 +5401,22 @@
           "receipt_sha256": "7e9b0991cd9f23fc5d3d7d74f8144382ad923a2778230e40d2775cf1cb772717",
           "result": "Cold imports red6 then green7;75 related cases passed; actual originalLinuxOCR natural/heartbeat2 cases passed unchanged12/30/3 guards; root composed9 passed with2169 same source inputs.",
           "scope": "Two-source control import repair, observed originalLinuxCPU only. Latest hostedCI/GANidentity/app-launch cases and new native compiled backend remain pending."
+        },
+        {
+          "kind": "original-owned-child-empty-command-observation-repair",
+          "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+          "receipt": "docs/verification/receipts/2026-10-08-original-exit-identity-9e019e1.json",
+          "receipt_sha256": "1014636f9a2fffb151487d8232d3a3461a94ed2291c0b63b39542c445f4190a8",
+          "result": "Root identity/tree/workspace40 passed with2177 unchanged input files; actual original LinuxGAN30s red-to-green retained and exact natural boundary observed.",
+          "scope": "Strict signal/enrollment checks and old UNKNOWN retention unchanged. New frozen/native build, full hosted CI, installed target and complete process-tree/quality acceptance remain separate."
+        },
+        {
+          "kind": "paired-original-linux-source-app-cpu-five-regressions",
+          "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+          "receipt": "docs/verification/receipts/2026-10-08-original-source-app5-9e019e1.json",
+          "receipt_sha256": "ca9987628ddae1428d602af374cf4de676037ac74a08cb51ab9320c8ad61b899",
+          "result": "Five unchanged original source app tests red5→green5,79.95s and763 exact committed source inputs unchanged. Controlled CPU A/OK results delivered; stale/foreign/partial/shadow refusal preserved.",
+          "scope": "Source controller/TypeScript/backend path on isolated offline CPU Linux image. Original deadlines preserved; actual compiled/native/installed target, whole process tree, latest full hosted CI and quality acceptance remain separate."
         }
       ],
       "file_actions": {
@@ -6050,6 +6090,30 @@
           "receipt_sha256": "49c788149319b375a9909dda99ffb5b99f69fcf67c9186e5cee2a3f9d2a34c08",
           "result": "Actual frozen controller Electron frozen backend controlled CPU A/OK/oneROI/zero defects and two compiled readbacks passed448.524s;2130 source hashes unchanged; ordinary AppKit quit and registered original-process exits verified; recovery_required retained.",
           "scope": "Private inherited-prerequisite freeze/test-only patch; not installed release or whole-process-tree acceptance. Publisher/OS/native target/device config/model quality remain pending."
+        },
+        {
+          "kind": "clean-source-unsent-review-and-draft-lifecycle",
+          "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+          "receipt": "docs/verification/receipts/2026-10-08-team-draft-9e019e1.json",
+          "receipt_sha256": "d7e2fd4b5d804db6ec5f08afabe70b5b03b3cf7cd5c75ac16d2dfca445eee1fa",
+          "result": "Clean browser/source Electron2 passed with2178 source inputs unchanged; eight existing F024 dimensions observed.",
+          "scope": "Actual unsent controls/readback with one fixture opinion, wrong local source pin and controlled GET503; no label application, human truth, model or whole-feature acceptance."
+        },
+        {
+          "kind": "original-owned-child-empty-command-observation-repair",
+          "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+          "receipt": "docs/verification/receipts/2026-10-08-original-exit-identity-9e019e1.json",
+          "receipt_sha256": "1014636f9a2fffb151487d8232d3a3461a94ed2291c0b63b39542c445f4190a8",
+          "result": "Root identity/tree/workspace40 passed with2177 unchanged input files; actual original LinuxGAN30s red-to-green retained and exact natural boundary observed.",
+          "scope": "Strict signal/enrollment checks and old UNKNOWN retention unchanged. New frozen/native build, full hosted CI, installed target and complete process-tree/quality acceptance remain separate."
+        },
+        {
+          "kind": "paired-original-linux-source-app-cpu-five-regressions",
+          "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+          "receipt": "docs/verification/receipts/2026-10-08-original-source-app5-9e019e1.json",
+          "receipt_sha256": "ca9987628ddae1428d602af374cf4de676037ac74a08cb51ab9320c8ad61b899",
+          "result": "Five unchanged original source app tests red5→green5,79.95s and763 exact committed source inputs unchanged. Controlled CPU A/OK results delivered; stale/foreign/partial/shadow refusal preserved.",
+          "scope": "Source controller/TypeScript/backend path on isolated offline CPU Linux image. Original deadlines preserved; actual compiled/native/installed target, whole process tree, latest full hosted CI and quality acceptance remain separate."
         }
       ],
       "file_actions": {
@@ -6074,7 +6138,7 @@
       },
       "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts",
       "remaining": [
-        "207 curated actions have611 verified and838 pending scenarios. Metadata picker error/cancel/handoff now exercised in clean browser and native Electron at fe92877. Omitted menus/shortcuts, unexecuted dimensions and full156-feature target acceptance remain pending."
+        "207 curated actions have619 verified and830 pending scenarios. Metadata picker error/cancel/handoff now exercised in clean browser and native Electron at fe92877. Omitted menus/shortcuts, unexecuted dimensions and full156-feature target acceptance remain pending."
       ]
     },
     {
@@ -6558,6 +6622,22 @@
           "result": "33 backend,835 renderer/main,9 release/recovery controls and actual DINOv3 CPU/native candidate reopen pass; automated receipt warm-start lineage and stale account navigation fixed. API types regenerated after exact2c source CI failure.",
           "scope": "Root review only; synthetic cohorts unapproved, no device/signing/release/independent acceptance. New complete hosted CI remains required. Receipt SHA-256 7b9edb4e86b1968efdef952994b4260e4a403e6df43b75c7ac387492de540d52",
           "platform": "macOS private actual training/process/Electron plus controlled release/signature fixtures"
+        },
+        {
+          "kind": "original-owned-child-empty-command-observation-repair",
+          "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+          "receipt": "docs/verification/receipts/2026-10-08-original-exit-identity-9e019e1.json",
+          "receipt_sha256": "1014636f9a2fffb151487d8232d3a3461a94ed2291c0b63b39542c445f4190a8",
+          "result": "Root identity/tree/workspace40 passed with2177 unchanged input files; actual original LinuxGAN30s red-to-green retained and exact natural boundary observed.",
+          "scope": "Strict signal/enrollment checks and old UNKNOWN retention unchanged. New frozen/native build, full hosted CI, installed target and complete process-tree/quality acceptance remain separate."
+        },
+        {
+          "kind": "paired-original-linux-source-app-cpu-five-regressions",
+          "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+          "receipt": "docs/verification/receipts/2026-10-08-original-source-app5-9e019e1.json",
+          "receipt_sha256": "ca9987628ddae1428d602af374cf4de676037ac74a08cb51ab9320c8ad61b899",
+          "result": "Five unchanged original source app tests red5→green5,79.95s and763 exact committed source inputs unchanged. Controlled CPU A/OK results delivered; stale/foreign/partial/shadow refusal preserved.",
+          "scope": "Source controller/TypeScript/backend path on isolated offline CPU Linux image. Original deadlines preserved; actual compiled/native/installed target, whole process tree, latest full hosted CI and quality acceptance remain separate."
         }
       ],
       "file_actions": {

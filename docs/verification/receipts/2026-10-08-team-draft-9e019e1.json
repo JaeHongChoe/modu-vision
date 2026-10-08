@@ -1,0 +1,2022 @@
+{
+  "schema": "modu-vision.team-draft-clean-controls/v1",
+  "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+  "test_source_sha256": "a3dab03826069df155d0d8af04dba4c02cc0bac87e51d442633e3f1e07d77618",
+  "results": {
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0,
+    "retries": 0,
+    "elapsed_seconds": 44.446063707990106,
+    "source_inputs": 2178,
+    "source_unchanged": true,
+    "clean_before_after": true
+  },
+  "cases": [
+    {
+      "mode": "electron",
+      "receipt": "docs/verification/receipts/2026-10-08-team-draft-9e019e1-electron.json",
+      "receipt_sha256": "233cf25977ffab59e47e33edff597dcee56fb4e67aedb652347265fcca98fcf1",
+      "controls": {
+        "record_id": "F024",
+        "actions": {
+          "approve-vote": [
+            "cancel",
+            "reopen"
+          ],
+          "reject-vote": [
+            "cancel",
+            "reopen"
+          ],
+          "compare-draft": [
+            "empty",
+            "invalid",
+            "error",
+            "reopen"
+          ]
+        },
+        "project_id": "9dac709e",
+        "image_uuid": "653fc9e5-8096-5bc8-a253-3b85b42f7284",
+        "baseline": {
+          "annotation": {
+            "image_id": "part",
+            "annotations": [
+              {
+                "id": "original-label",
+                "type": "bbox",
+                "label": "Scratch",
+                "category_id": 2,
+                "bbox": [
+                  2,
+                  3,
+                  20,
+                  21
+                ],
+                "rotated_bbox": null,
+                "polygon": null,
+                "points": null,
+                "mask_rle": null,
+                "is_normal": null,
+                "color": null,
+                "text": null,
+                "direction_deg": null
+              }
+            ],
+            "image_width": 256,
+            "image_height": 256,
+            "mask_file": null,
+            "metadata": {
+              "decode_error": null,
+              "image_uuid": "653fc9e5-8096-5bc8-a253-3b85b42f7284",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/1-260c5a75-r0/review-draft-source/part.png",
+              "relative_path": "part.png",
+              "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+              "content_version": 1,
+              "width": 256,
+              "height": 256,
+              "revision": 3,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "needs_review",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "d8f4e9bf-428e-4ba5-ac2f-fe070bd9fef5",
+                  "at": "2026-10-08T00:08:02Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                  }
+                },
+                {
+                  "id": "e763447c-71b3-4037-a5ec-4cde066c5f8e",
+                  "at": "2026-10-08T00:08:02Z",
+                  "actor": "fixture-labeler",
+                  "action": "annotation_changed",
+                  "revision": 2,
+                  "changes": {
+                    "workflow_state": "needs_review"
+                  }
+                },
+                {
+                  "id": "be3e14af-ff17-4f68-91fb-e4949ef721de",
+                  "at": "2026-10-08T00:08:02Z",
+                  "actor": "fixture-original-reviewer",
+                  "action": "team_review",
+                  "revision": 3,
+                  "changes": {
+                    "decision": "approve",
+                    "review_status": "pending"
+                  }
+                }
+              ],
+              "annotation_hash": "664b14934a022bebba307b4b5d7908477bc4c47a003a8dd99627f60071057026",
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [
+                  {
+                    "actor": "fixture-original-reviewer",
+                    "decision": "approve",
+                    "reason": "Synthetic original opinion",
+                    "at": "2026-10-08T00:08:02Z",
+                    "binding_sha256": "d20e924758e791a104246e57bc3b42181a380c5b0e9783779e05e37ab5fb10e5"
+                  }
+                ],
+                "review_status": "pending",
+                "annotation_actor": "fixture-labeler",
+                "history": [
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-original-reviewer",
+                    "decision": "approve",
+                    "reason": "Synthetic original opinion",
+                    "at": "2026-10-08T00:08:02Z",
+                    "binding_sha256": "d20e924758e791a104246e57bc3b42181a380c5b0e9783779e05e37ab5fb10e5"
+                  }
+                ]
+              }
+            }
+          },
+          "image": {
+            "image": {
+              "decode_error": null,
+              "image_uuid": "653fc9e5-8096-5bc8-a253-3b85b42f7284",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/1-260c5a75-r0/review-draft-source/part.png",
+              "relative_path": "part.png",
+              "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+              "content_version": 1,
+              "width": 256,
+              "height": 256,
+              "revision": 3,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "needs_review",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "d8f4e9bf-428e-4ba5-ac2f-fe070bd9fef5",
+                  "at": "2026-10-08T00:08:02Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                  }
+                },
+                {
+                  "id": "e763447c-71b3-4037-a5ec-4cde066c5f8e",
+                  "at": "2026-10-08T00:08:02Z",
+                  "actor": "fixture-labeler",
+                  "action": "annotation_changed",
+                  "revision": 2,
+                  "changes": {
+                    "workflow_state": "needs_review"
+                  }
+                },
+                {
+                  "id": "be3e14af-ff17-4f68-91fb-e4949ef721de",
+                  "at": "2026-10-08T00:08:02Z",
+                  "actor": "fixture-original-reviewer",
+                  "action": "team_review",
+                  "revision": 3,
+                  "changes": {
+                    "decision": "approve",
+                    "review_status": "pending"
+                  }
+                }
+              ],
+              "annotation_hash": "664b14934a022bebba307b4b5d7908477bc4c47a003a8dd99627f60071057026",
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [
+                  {
+                    "actor": "fixture-original-reviewer",
+                    "decision": "approve",
+                    "reason": "Synthetic original opinion",
+                    "at": "2026-10-08T00:08:02Z",
+                    "binding_sha256": "d20e924758e791a104246e57bc3b42181a380c5b0e9783779e05e37ab5fb10e5"
+                  }
+                ],
+                "review_status": "pending",
+                "annotation_actor": "fixture-labeler",
+                "history": [
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-original-reviewer",
+                    "decision": "approve",
+                    "reason": "Synthetic original opinion",
+                    "at": "2026-10-08T00:08:02Z",
+                    "binding_sha256": "d20e924758e791a104246e57bc3b42181a380c5b0e9783779e05e37ab5fb10e5"
+                  }
+                ]
+              }
+            }
+          },
+          "workspace": {
+            "scope": {
+              "project_id": "9dac709e",
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/1-260c5a75-r0/review-draft-source",
+              "labelset_id": "default"
+            },
+            "book": {
+              "id": "book_6956abed0ed44532aaa083f7d2f15b12",
+              "version": 1,
+              "title": "Controlled draft book",
+              "categories": [
+                {
+                  "id": 0,
+                  "name": "OK",
+                  "color": "#10b981",
+                  "definition": "",
+                  "inclusion": "",
+                  "exclusion": "",
+                  "annotation_guidance": "",
+                  "examples": []
+                },
+                {
+                  "id": 2,
+                  "name": "Scratch",
+                  "color": "#f59e0b",
+                  "definition": "",
+                  "inclusion": "",
+                  "exclusion": "",
+                  "annotation_guidance": "",
+                  "examples": []
+                }
+              ],
+              "actor": "fixture-owner",
+              "published_at": "2026-10-08T00:08:02Z",
+              "sha256": "8313b4749fb5ab33ad13869527f8157f61fe9f84068a5c9469f8ff0f63ff5e7d"
+            },
+            "book_history": [
+              {
+                "id": "book_6956abed0ed44532aaa083f7d2f15b12",
+                "version": 1,
+                "title": "Controlled draft book",
+                "categories": [
+                  {
+                    "id": 0,
+                    "name": "OK",
+                    "color": "#10b981",
+                    "definition": "",
+                    "inclusion": "",
+                    "exclusion": "",
+                    "annotation_guidance": "",
+                    "examples": []
+                  },
+                  {
+                    "id": 2,
+                    "name": "Scratch",
+                    "color": "#f59e0b",
+                    "definition": "",
+                    "inclusion": "",
+                    "exclusion": "",
+                    "annotation_guidance": "",
+                    "examples": []
+                  }
+                ],
+                "actor": "fixture-owner",
+                "published_at": "2026-10-08T00:08:02Z",
+                "sha256": "8313b4749fb5ab33ad13869527f8157f61fe9f84068a5c9469f8ff0f63ff5e7d"
+              }
+            ],
+            "settings": {
+              "revision": 2,
+              "editing_enabled": false,
+              "review_enabled": true,
+              "required_reviews": 2,
+              "prevent_self_review": true,
+              "approved_only_training": true
+            },
+            "members": [],
+            "actor": null
+          },
+          "queue": {
+            "items": [
+              {
+                "decode_error": null,
+                "image_uuid": "653fc9e5-8096-5bc8-a253-3b85b42f7284",
+                "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/1-260c5a75-r0/review-draft-source/part.png",
+                "relative_path": "part.png",
+                "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+                "content_version": 1,
+                "width": 256,
+                "height": 256,
+                "revision": 3,
+                "tags": [],
+                "product": "",
+                "lot": "",
+                "group": "",
+                "workflow_state": "needs_review",
+                "usage_state": "active",
+                "reviewer": null,
+                "review_history": [],
+                "audit": [
+                  {
+                    "id": "d8f4e9bf-428e-4ba5-ac2f-fe070bd9fef5",
+                    "at": "2026-10-08T00:08:02Z",
+                    "actor": "system",
+                    "action": "registered",
+                    "revision": 1,
+                    "changes": {
+                      "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                    }
+                  },
+                  {
+                    "id": "e763447c-71b3-4037-a5ec-4cde066c5f8e",
+                    "at": "2026-10-08T00:08:02Z",
+                    "actor": "fixture-labeler",
+                    "action": "annotation_changed",
+                    "revision": 2,
+                    "changes": {
+                      "workflow_state": "needs_review"
+                    }
+                  },
+                  {
+                    "id": "be3e14af-ff17-4f68-91fb-e4949ef721de",
+                    "at": "2026-10-08T00:08:02Z",
+                    "actor": "fixture-original-reviewer",
+                    "action": "team_review",
+                    "revision": 3,
+                    "changes": {
+                      "decision": "approve",
+                      "review_status": "pending"
+                    }
+                  }
+                ],
+                "annotation_hash": "664b14934a022bebba307b4b5d7908477bc4c47a003a8dd99627f60071057026",
+                "mask_hash": null,
+                "team": {
+                  "assignment": null,
+                  "edit_lease": null,
+                  "reviews": [
+                    {
+                      "actor": "fixture-original-reviewer",
+                      "decision": "approve",
+                      "reason": "Synthetic original opinion",
+                      "at": "2026-10-08T00:08:02Z",
+                      "binding_sha256": "d20e924758e791a104246e57bc3b42181a380c5b0e9783779e05e37ab5fb10e5"
+                    }
+                  ],
+                  "review_status": "pending",
+                  "annotation_actor": "fixture-labeler",
+                  "history": [
+                    {
+                      "action": "reviewed",
+                      "actor": "fixture-original-reviewer",
+                      "decision": "approve",
+                      "reason": "Synthetic original opinion",
+                      "at": "2026-10-08T00:08:02Z",
+                      "binding_sha256": "d20e924758e791a104246e57bc3b42181a380c5b0e9783779e05e37ab5fb10e5"
+                    }
+                  ]
+                }
+              }
+            ],
+            "total": 1,
+            "offset": 0,
+            "limit": 30
+          },
+          "files": {
+            "annotation_json": {
+              "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/1-260c5a75-r0/userData/projects/owned_review_draft_lifecycle/annotations/by_dataset/adb98f5bb1fc96f7/part.json",
+              "sha256": "664b14934a022bebba307b4b5d7908477bc4c47a003a8dd99627f60071057026"
+            },
+            "metadata_json": {
+              "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/1-260c5a75-r0/userData/projects/owned_review_draft_lifecycle/annotations/by_dataset/adb98f5bb1fc96f7/metadata/workflow.json",
+              "sha256": "13419f7a69faf39d926c8c3a7872b9ee72867e59056e1c37fcf96e8fa732e603"
+            },
+            "mask": null,
+            "source": {
+              "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/1-260c5a75-r0/review-draft-source/part.png",
+              "sha256": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+            }
+          }
+        },
+        "final": {
+          "annotation": {
+            "image_id": "part",
+            "annotations": [
+              {
+                "id": "original-label",
+                "type": "bbox",
+                "label": "Scratch",
+                "category_id": 2,
+                "bbox": [
+                  2,
+                  3,
+                  20,
+                  21
+                ],
+                "rotated_bbox": null,
+                "polygon": null,
+                "points": null,
+                "mask_rle": null,
+                "is_normal": null,
+                "color": null,
+                "text": null,
+                "direction_deg": null
+              }
+            ],
+            "image_width": 256,
+            "image_height": 256,
+            "mask_file": null,
+            "metadata": {
+              "decode_error": null,
+              "image_uuid": "653fc9e5-8096-5bc8-a253-3b85b42f7284",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/1-260c5a75-r0/review-draft-source/part.png",
+              "relative_path": "part.png",
+              "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+              "content_version": 1,
+              "width": 256,
+              "height": 256,
+              "revision": 3,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "needs_review",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "d8f4e9bf-428e-4ba5-ac2f-fe070bd9fef5",
+                  "at": "2026-10-08T00:08:02Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                  }
+                },
+                {
+                  "id": "e763447c-71b3-4037-a5ec-4cde066c5f8e",
+                  "at": "2026-10-08T00:08:02Z",
+                  "actor": "fixture-labeler",
+                  "action": "annotation_changed",
+                  "revision": 2,
+                  "changes": {
+                    "workflow_state": "needs_review"
+                  }
+                },
+                {
+                  "id": "be3e14af-ff17-4f68-91fb-e4949ef721de",
+                  "at": "2026-10-08T00:08:02Z",
+                  "actor": "fixture-original-reviewer",
+                  "action": "team_review",
+                  "revision": 3,
+                  "changes": {
+                    "decision": "approve",
+                    "review_status": "pending"
+                  }
+                }
+              ],
+              "annotation_hash": "664b14934a022bebba307b4b5d7908477bc4c47a003a8dd99627f60071057026",
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [
+                  {
+                    "actor": "fixture-original-reviewer",
+                    "decision": "approve",
+                    "reason": "Synthetic original opinion",
+                    "at": "2026-10-08T00:08:02Z",
+                    "binding_sha256": "d20e924758e791a104246e57bc3b42181a380c5b0e9783779e05e37ab5fb10e5"
+                  }
+                ],
+                "review_status": "pending",
+                "annotation_actor": "fixture-labeler",
+                "history": [
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-original-reviewer",
+                    "decision": "approve",
+                    "reason": "Synthetic original opinion",
+                    "at": "2026-10-08T00:08:02Z",
+                    "binding_sha256": "d20e924758e791a104246e57bc3b42181a380c5b0e9783779e05e37ab5fb10e5"
+                  }
+                ]
+              }
+            }
+          },
+          "image": {
+            "image": {
+              "decode_error": null,
+              "image_uuid": "653fc9e5-8096-5bc8-a253-3b85b42f7284",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/1-260c5a75-r0/review-draft-source/part.png",
+              "relative_path": "part.png",
+              "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+              "content_version": 1,
+              "width": 256,
+              "height": 256,
+              "revision": 3,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "needs_review",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "d8f4e9bf-428e-4ba5-ac2f-fe070bd9fef5",
+                  "at": "2026-10-08T00:08:02Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                  }
+                },
+                {
+                  "id": "e763447c-71b3-4037-a5ec-4cde066c5f8e",
+                  "at": "2026-10-08T00:08:02Z",
+                  "actor": "fixture-labeler",
+                  "action": "annotation_changed",
+                  "revision": 2,
+                  "changes": {
+                    "workflow_state": "needs_review"
+                  }
+                },
+                {
+                  "id": "be3e14af-ff17-4f68-91fb-e4949ef721de",
+                  "at": "2026-10-08T00:08:02Z",
+                  "actor": "fixture-original-reviewer",
+                  "action": "team_review",
+                  "revision": 3,
+                  "changes": {
+                    "decision": "approve",
+                    "review_status": "pending"
+                  }
+                }
+              ],
+              "annotation_hash": "664b14934a022bebba307b4b5d7908477bc4c47a003a8dd99627f60071057026",
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [
+                  {
+                    "actor": "fixture-original-reviewer",
+                    "decision": "approve",
+                    "reason": "Synthetic original opinion",
+                    "at": "2026-10-08T00:08:02Z",
+                    "binding_sha256": "d20e924758e791a104246e57bc3b42181a380c5b0e9783779e05e37ab5fb10e5"
+                  }
+                ],
+                "review_status": "pending",
+                "annotation_actor": "fixture-labeler",
+                "history": [
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-original-reviewer",
+                    "decision": "approve",
+                    "reason": "Synthetic original opinion",
+                    "at": "2026-10-08T00:08:02Z",
+                    "binding_sha256": "d20e924758e791a104246e57bc3b42181a380c5b0e9783779e05e37ab5fb10e5"
+                  }
+                ]
+              }
+            }
+          },
+          "workspace": {
+            "scope": {
+              "project_id": "9dac709e",
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/1-260c5a75-r0/review-draft-source",
+              "labelset_id": "default"
+            },
+            "book": {
+              "id": "book_6956abed0ed44532aaa083f7d2f15b12",
+              "version": 1,
+              "title": "Controlled draft book",
+              "categories": [
+                {
+                  "id": 0,
+                  "name": "OK",
+                  "color": "#10b981",
+                  "definition": "",
+                  "inclusion": "",
+                  "exclusion": "",
+                  "annotation_guidance": "",
+                  "examples": []
+                },
+                {
+                  "id": 2,
+                  "name": "Scratch",
+                  "color": "#f59e0b",
+                  "definition": "",
+                  "inclusion": "",
+                  "exclusion": "",
+                  "annotation_guidance": "",
+                  "examples": []
+                }
+              ],
+              "actor": "fixture-owner",
+              "published_at": "2026-10-08T00:08:02Z",
+              "sha256": "8313b4749fb5ab33ad13869527f8157f61fe9f84068a5c9469f8ff0f63ff5e7d"
+            },
+            "book_history": [
+              {
+                "id": "book_6956abed0ed44532aaa083f7d2f15b12",
+                "version": 1,
+                "title": "Controlled draft book",
+                "categories": [
+                  {
+                    "id": 0,
+                    "name": "OK",
+                    "color": "#10b981",
+                    "definition": "",
+                    "inclusion": "",
+                    "exclusion": "",
+                    "annotation_guidance": "",
+                    "examples": []
+                  },
+                  {
+                    "id": 2,
+                    "name": "Scratch",
+                    "color": "#f59e0b",
+                    "definition": "",
+                    "inclusion": "",
+                    "exclusion": "",
+                    "annotation_guidance": "",
+                    "examples": []
+                  }
+                ],
+                "actor": "fixture-owner",
+                "published_at": "2026-10-08T00:08:02Z",
+                "sha256": "8313b4749fb5ab33ad13869527f8157f61fe9f84068a5c9469f8ff0f63ff5e7d"
+              }
+            ],
+            "settings": {
+              "revision": 2,
+              "editing_enabled": false,
+              "review_enabled": true,
+              "required_reviews": 2,
+              "prevent_self_review": true,
+              "approved_only_training": true
+            },
+            "members": [],
+            "actor": null
+          },
+          "queue": {
+            "items": [
+              {
+                "decode_error": null,
+                "image_uuid": "653fc9e5-8096-5bc8-a253-3b85b42f7284",
+                "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/1-260c5a75-r0/review-draft-source/part.png",
+                "relative_path": "part.png",
+                "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+                "content_version": 1,
+                "width": 256,
+                "height": 256,
+                "revision": 3,
+                "tags": [],
+                "product": "",
+                "lot": "",
+                "group": "",
+                "workflow_state": "needs_review",
+                "usage_state": "active",
+                "reviewer": null,
+                "review_history": [],
+                "audit": [
+                  {
+                    "id": "d8f4e9bf-428e-4ba5-ac2f-fe070bd9fef5",
+                    "at": "2026-10-08T00:08:02Z",
+                    "actor": "system",
+                    "action": "registered",
+                    "revision": 1,
+                    "changes": {
+                      "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                    }
+                  },
+                  {
+                    "id": "e763447c-71b3-4037-a5ec-4cde066c5f8e",
+                    "at": "2026-10-08T00:08:02Z",
+                    "actor": "fixture-labeler",
+                    "action": "annotation_changed",
+                    "revision": 2,
+                    "changes": {
+                      "workflow_state": "needs_review"
+                    }
+                  },
+                  {
+                    "id": "be3e14af-ff17-4f68-91fb-e4949ef721de",
+                    "at": "2026-10-08T00:08:02Z",
+                    "actor": "fixture-original-reviewer",
+                    "action": "team_review",
+                    "revision": 3,
+                    "changes": {
+                      "decision": "approve",
+                      "review_status": "pending"
+                    }
+                  }
+                ],
+                "annotation_hash": "664b14934a022bebba307b4b5d7908477bc4c47a003a8dd99627f60071057026",
+                "mask_hash": null,
+                "team": {
+                  "assignment": null,
+                  "edit_lease": null,
+                  "reviews": [
+                    {
+                      "actor": "fixture-original-reviewer",
+                      "decision": "approve",
+                      "reason": "Synthetic original opinion",
+                      "at": "2026-10-08T00:08:02Z",
+                      "binding_sha256": "d20e924758e791a104246e57bc3b42181a380c5b0e9783779e05e37ab5fb10e5"
+                    }
+                  ],
+                  "review_status": "pending",
+                  "annotation_actor": "fixture-labeler",
+                  "history": [
+                    {
+                      "action": "reviewed",
+                      "actor": "fixture-original-reviewer",
+                      "decision": "approve",
+                      "reason": "Synthetic original opinion",
+                      "at": "2026-10-08T00:08:02Z",
+                      "binding_sha256": "d20e924758e791a104246e57bc3b42181a380c5b0e9783779e05e37ab5fb10e5"
+                    }
+                  ]
+                }
+              }
+            ],
+            "total": 1,
+            "offset": 0,
+            "limit": 30
+          },
+          "files": {
+            "annotation_json": {
+              "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/1-260c5a75-r0/userData/projects/owned_review_draft_lifecycle/annotations/by_dataset/adb98f5bb1fc96f7/part.json",
+              "sha256": "664b14934a022bebba307b4b5d7908477bc4c47a003a8dd99627f60071057026"
+            },
+            "metadata_json": {
+              "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/1-260c5a75-r0/userData/projects/owned_review_draft_lifecycle/annotations/by_dataset/adb98f5bb1fc96f7/metadata/workflow.json",
+              "sha256": "13419f7a69faf39d926c8c3a7872b9ee72867e59056e1c37fcf96e8fa732e603"
+            },
+            "mask": null,
+            "source": {
+              "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/1-260c5a75-r0/review-draft-source/part.png",
+              "sha256": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+            }
+          }
+        },
+        "lifecycle": [
+          {
+            "action": "approve-vote",
+            "unsent_reason": "Unsent synthetic approve-vote",
+            "cancel_no_POST": true,
+            "reload_reopen_no_POST": true
+          },
+          {
+            "action": "reject-vote",
+            "unsent_reason": "Unsent synthetic reject-vote",
+            "cancel_no_POST": true,
+            "reload_reopen_no_POST": true
+          }
+        ],
+        "explicit_fixture_vote_setup": {
+          "count": 1,
+          "response": {
+            "image": {
+              "decode_error": null,
+              "image_uuid": "653fc9e5-8096-5bc8-a253-3b85b42f7284",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/1-260c5a75-r0/review-draft-source/part.png",
+              "relative_path": "part.png",
+              "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+              "content_version": 1,
+              "width": 256,
+              "height": 256,
+              "revision": 3,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "needs_review",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "d8f4e9bf-428e-4ba5-ac2f-fe070bd9fef5",
+                  "at": "2026-10-08T00:08:02Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                  }
+                },
+                {
+                  "id": "e763447c-71b3-4037-a5ec-4cde066c5f8e",
+                  "at": "2026-10-08T00:08:02Z",
+                  "actor": "fixture-labeler",
+                  "action": "annotation_changed",
+                  "revision": 2,
+                  "changes": {
+                    "workflow_state": "needs_review"
+                  }
+                },
+                {
+                  "id": "be3e14af-ff17-4f68-91fb-e4949ef721de",
+                  "at": "2026-10-08T00:08:02Z",
+                  "actor": "fixture-original-reviewer",
+                  "action": "team_review",
+                  "revision": 3,
+                  "changes": {
+                    "decision": "approve",
+                    "review_status": "pending"
+                  }
+                }
+              ],
+              "annotation_hash": "664b14934a022bebba307b4b5d7908477bc4c47a003a8dd99627f60071057026",
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [
+                  {
+                    "actor": "fixture-original-reviewer",
+                    "decision": "approve",
+                    "reason": "Synthetic original opinion",
+                    "at": "2026-10-08T00:08:02Z",
+                    "binding_sha256": "d20e924758e791a104246e57bc3b42181a380c5b0e9783779e05e37ab5fb10e5"
+                  }
+                ],
+                "review_status": "pending",
+                "annotation_actor": "fixture-labeler",
+                "history": [
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-original-reviewer",
+                    "decision": "approve",
+                    "reason": "Synthetic original opinion",
+                    "at": "2026-10-08T00:08:02Z",
+                    "binding_sha256": "d20e924758e791a104246e57bc3b42181a380c5b0e9783779e05e37ab5fb10e5"
+                  }
+                ]
+              }
+            }
+          },
+          "human_truth": false
+        },
+        "ui_writes": [],
+        "compare": {
+          "empty_control_absent": true,
+          "local_created_by_actual_canvas": true,
+          "draft_key": "modu-annotation-draft:v1:[\"[\\\"local\\\",\\\"94e818731f784675a4767d36d7e10204\\\",\\\"939bc9e9f3cb4714b359050cac782fcf\\\",\\\"/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/1-260c5a75-r0/userData/projects/owned_review_draft_lifecycle\\\",\\\"9dac709e\\\",\\\"/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/1-260c5a75-r0/review-draft-source\\\",\\\"default\\\",\\\"segmentation\\\",\\\"account\\\"]\",\"/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/1-260c5a75-r0/review-draft-source/part.png\"]",
+          "original_draft": {
+            "schema": 1,
+            "scope": "[\"local\",\"94e818731f784675a4767d36d7e10204\",\"939bc9e9f3cb4714b359050cac782fcf\",\"/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/1-260c5a75-r0/userData/projects/owned_review_draft_lifecycle\",\"9dac709e\",\"/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/1-260c5a75-r0/review-draft-source\",\"default\",\"segmentation\",\"account\"]",
+            "image_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/1-260c5a75-r0/review-draft-source/part.png",
+            "image_uuid": "653fc9e5-8096-5bc8-a253-3b85b42f7284",
+            "source_sha256": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+            "base_revision": 3,
+            "base_annotations": [
+              {
+                "id": "original-label",
+                "type": "bbox",
+                "label": "Scratch",
+                "category_id": 2,
+                "bbox": [
+                  2,
+                  3,
+                  20,
+                  21
+                ],
+                "rotated_bbox": null,
+                "polygon": null,
+                "points": null,
+                "mask_rle": null,
+                "is_normal": null,
+                "color": "#f59e0b",
+                "text": null,
+                "direction_deg": null
+              }
+            ],
+            "annotations": [
+              {
+                "id": "original-label",
+                "type": "bbox",
+                "label": "Scratch",
+                "category_id": 2,
+                "bbox": [
+                  2,
+                  3,
+                  20,
+                  21
+                ],
+                "rotated_bbox": null,
+                "polygon": null,
+                "points": null,
+                "mask_rle": null,
+                "is_normal": null,
+                "color": "#f59e0b",
+                "text": null,
+                "direction_deg": null
+              },
+              {
+                "id": "bbox_1791418084413",
+                "type": "bbox",
+                "label": "Scratch",
+                "category_id": 2,
+                "bbox": [
+                  40,
+                  40,
+                  80,
+                  80
+                ],
+                "color": "#f59e0b"
+              }
+            ],
+            "width": 256,
+            "height": 256,
+            "saved_at": "2026-10-08T00:08:04.413Z",
+            "nonce": "135d94b7-b3fb-46b6-8637-04559fad7d6d"
+          },
+          "original_raw_sha256": "5d226e5b9039c8867e552ba764f664cac004e1927f2498703af6072ddd8316ad",
+          "invalid_source_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "invalid_raw_sha256": "2acc7befe56b3be684ae3ea3fe8600e43494ee0f4404ed2bfdd1d85c2e7aafa5",
+          "invalid_apply_disabled_after_confirmation": true,
+          "controlled_GET_503_count": 1,
+          "responses": [
+            {
+              "status": 200,
+              "original_GET_dispatched": true
+            },
+            {
+              "status": 503,
+              "original_GET_dispatched": false
+            },
+            {
+              "status": 200,
+              "original_GET_dispatched": true
+            }
+          ],
+          "original_draft_retained_exact": true,
+          "actual_reload_reopen": true,
+          "applied": false,
+          "saved": false
+        },
+        "actual_source_ui": true,
+        "source_electron": true,
+        "synthetic_review_controls": true,
+        "quality_or_human_truth_approved": false,
+        "actual_model_inference": false,
+        "installed_target_verified": false,
+        "gpu_used": false
+      },
+      "owned_cleanup": {
+        "electron_alive": false,
+        "backends": [
+          {
+            "port": 65365,
+            "pid": 72415,
+            "port_closed": true,
+            "pid_alive": false
+          }
+        ],
+        "logged_backend_pids": [
+          72415
+        ],
+        "logged_backend_pids_alive": [],
+        "backend_restarted": false,
+        "escaped": [],
+        "unowned_references": [],
+        "scan_error": null,
+        "close_timed_out": false
+      }
+    },
+    {
+      "mode": "browser",
+      "receipt": "docs/verification/receipts/2026-10-08-team-draft-9e019e1-browser.json",
+      "receipt_sha256": "d5af4f9c15d5d09ed08038f2062de3d34b0e6a136342b9a6ee84fbd00743c5e4",
+      "controls": {
+        "record_id": "F024",
+        "actions": {
+          "approve-vote": [
+            "cancel",
+            "reopen"
+          ],
+          "reject-vote": [
+            "cancel",
+            "reopen"
+          ],
+          "compare-draft": [
+            "empty",
+            "invalid",
+            "error",
+            "reopen"
+          ]
+        },
+        "project_id": "5bacc315",
+        "image_uuid": "0363b1c2-46fe-57cd-9f4f-57c4d978b676",
+        "baseline": {
+          "annotation": {
+            "image_id": "part",
+            "annotations": [
+              {
+                "id": "original-label",
+                "type": "bbox",
+                "label": "Scratch",
+                "category_id": 2,
+                "bbox": [
+                  2,
+                  3,
+                  20,
+                  21
+                ],
+                "rotated_bbox": null,
+                "polygon": null,
+                "points": null,
+                "mask_rle": null,
+                "is_normal": null,
+                "color": null,
+                "text": null,
+                "direction_deg": null
+              }
+            ],
+            "image_width": 256,
+            "image_height": 256,
+            "mask_file": null,
+            "metadata": {
+              "decode_error": null,
+              "image_uuid": "0363b1c2-46fe-57cd-9f4f-57c4d978b676",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/0-4e8b4b2a-r0/review-draft-source/part.png",
+              "relative_path": "part.png",
+              "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+              "content_version": 1,
+              "width": 256,
+              "height": 256,
+              "revision": 3,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "needs_review",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "4e8385e7-7ac6-4d43-95ba-2985d3c4645a",
+                  "at": "2026-10-08T00:07:40Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                  }
+                },
+                {
+                  "id": "758fdfeb-6504-4acb-a0c8-520a0fef734d",
+                  "at": "2026-10-08T00:07:40Z",
+                  "actor": "fixture-labeler",
+                  "action": "annotation_changed",
+                  "revision": 2,
+                  "changes": {
+                    "workflow_state": "needs_review"
+                  }
+                },
+                {
+                  "id": "5378cae7-10df-4543-91b3-629c5dbf3b72",
+                  "at": "2026-10-08T00:07:40Z",
+                  "actor": "fixture-original-reviewer",
+                  "action": "team_review",
+                  "revision": 3,
+                  "changes": {
+                    "decision": "approve",
+                    "review_status": "pending"
+                  }
+                }
+              ],
+              "annotation_hash": "664b14934a022bebba307b4b5d7908477bc4c47a003a8dd99627f60071057026",
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [
+                  {
+                    "actor": "fixture-original-reviewer",
+                    "decision": "approve",
+                    "reason": "Synthetic original opinion",
+                    "at": "2026-10-08T00:07:40Z",
+                    "binding_sha256": "8aa16b3306be6797dd29425796642842b2834678ee9dc451f27b9c9414f14dff"
+                  }
+                ],
+                "review_status": "pending",
+                "annotation_actor": "fixture-labeler",
+                "history": [
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-original-reviewer",
+                    "decision": "approve",
+                    "reason": "Synthetic original opinion",
+                    "at": "2026-10-08T00:07:40Z",
+                    "binding_sha256": "8aa16b3306be6797dd29425796642842b2834678ee9dc451f27b9c9414f14dff"
+                  }
+                ]
+              }
+            }
+          },
+          "image": {
+            "image": {
+              "decode_error": null,
+              "image_uuid": "0363b1c2-46fe-57cd-9f4f-57c4d978b676",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/0-4e8b4b2a-r0/review-draft-source/part.png",
+              "relative_path": "part.png",
+              "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+              "content_version": 1,
+              "width": 256,
+              "height": 256,
+              "revision": 3,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "needs_review",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "4e8385e7-7ac6-4d43-95ba-2985d3c4645a",
+                  "at": "2026-10-08T00:07:40Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                  }
+                },
+                {
+                  "id": "758fdfeb-6504-4acb-a0c8-520a0fef734d",
+                  "at": "2026-10-08T00:07:40Z",
+                  "actor": "fixture-labeler",
+                  "action": "annotation_changed",
+                  "revision": 2,
+                  "changes": {
+                    "workflow_state": "needs_review"
+                  }
+                },
+                {
+                  "id": "5378cae7-10df-4543-91b3-629c5dbf3b72",
+                  "at": "2026-10-08T00:07:40Z",
+                  "actor": "fixture-original-reviewer",
+                  "action": "team_review",
+                  "revision": 3,
+                  "changes": {
+                    "decision": "approve",
+                    "review_status": "pending"
+                  }
+                }
+              ],
+              "annotation_hash": "664b14934a022bebba307b4b5d7908477bc4c47a003a8dd99627f60071057026",
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [
+                  {
+                    "actor": "fixture-original-reviewer",
+                    "decision": "approve",
+                    "reason": "Synthetic original opinion",
+                    "at": "2026-10-08T00:07:40Z",
+                    "binding_sha256": "8aa16b3306be6797dd29425796642842b2834678ee9dc451f27b9c9414f14dff"
+                  }
+                ],
+                "review_status": "pending",
+                "annotation_actor": "fixture-labeler",
+                "history": [
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-original-reviewer",
+                    "decision": "approve",
+                    "reason": "Synthetic original opinion",
+                    "at": "2026-10-08T00:07:40Z",
+                    "binding_sha256": "8aa16b3306be6797dd29425796642842b2834678ee9dc451f27b9c9414f14dff"
+                  }
+                ]
+              }
+            }
+          },
+          "workspace": {
+            "scope": {
+              "project_id": "5bacc315",
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/0-4e8b4b2a-r0/review-draft-source",
+              "labelset_id": "default"
+            },
+            "book": {
+              "id": "book_15777210ca9a49bc8cabb6a09cc74677",
+              "version": 1,
+              "title": "Controlled draft book",
+              "categories": [
+                {
+                  "id": 0,
+                  "name": "OK",
+                  "color": "#10b981",
+                  "definition": "",
+                  "inclusion": "",
+                  "exclusion": "",
+                  "annotation_guidance": "",
+                  "examples": []
+                },
+                {
+                  "id": 2,
+                  "name": "Scratch",
+                  "color": "#f59e0b",
+                  "definition": "",
+                  "inclusion": "",
+                  "exclusion": "",
+                  "annotation_guidance": "",
+                  "examples": []
+                }
+              ],
+              "actor": "fixture-owner",
+              "published_at": "2026-10-08T00:07:40Z",
+              "sha256": "ecbe7e292672abc68f7cbbb53f5f7ce40cfd04598df503aa4b61051daef80966"
+            },
+            "book_history": [
+              {
+                "id": "book_15777210ca9a49bc8cabb6a09cc74677",
+                "version": 1,
+                "title": "Controlled draft book",
+                "categories": [
+                  {
+                    "id": 0,
+                    "name": "OK",
+                    "color": "#10b981",
+                    "definition": "",
+                    "inclusion": "",
+                    "exclusion": "",
+                    "annotation_guidance": "",
+                    "examples": []
+                  },
+                  {
+                    "id": 2,
+                    "name": "Scratch",
+                    "color": "#f59e0b",
+                    "definition": "",
+                    "inclusion": "",
+                    "exclusion": "",
+                    "annotation_guidance": "",
+                    "examples": []
+                  }
+                ],
+                "actor": "fixture-owner",
+                "published_at": "2026-10-08T00:07:40Z",
+                "sha256": "ecbe7e292672abc68f7cbbb53f5f7ce40cfd04598df503aa4b61051daef80966"
+              }
+            ],
+            "settings": {
+              "revision": 2,
+              "editing_enabled": false,
+              "review_enabled": true,
+              "required_reviews": 2,
+              "prevent_self_review": true,
+              "approved_only_training": true
+            },
+            "members": [],
+            "actor": null
+          },
+          "queue": {
+            "items": [
+              {
+                "decode_error": null,
+                "image_uuid": "0363b1c2-46fe-57cd-9f4f-57c4d978b676",
+                "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/0-4e8b4b2a-r0/review-draft-source/part.png",
+                "relative_path": "part.png",
+                "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+                "content_version": 1,
+                "width": 256,
+                "height": 256,
+                "revision": 3,
+                "tags": [],
+                "product": "",
+                "lot": "",
+                "group": "",
+                "workflow_state": "needs_review",
+                "usage_state": "active",
+                "reviewer": null,
+                "review_history": [],
+                "audit": [
+                  {
+                    "id": "4e8385e7-7ac6-4d43-95ba-2985d3c4645a",
+                    "at": "2026-10-08T00:07:40Z",
+                    "actor": "system",
+                    "action": "registered",
+                    "revision": 1,
+                    "changes": {
+                      "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                    }
+                  },
+                  {
+                    "id": "758fdfeb-6504-4acb-a0c8-520a0fef734d",
+                    "at": "2026-10-08T00:07:40Z",
+                    "actor": "fixture-labeler",
+                    "action": "annotation_changed",
+                    "revision": 2,
+                    "changes": {
+                      "workflow_state": "needs_review"
+                    }
+                  },
+                  {
+                    "id": "5378cae7-10df-4543-91b3-629c5dbf3b72",
+                    "at": "2026-10-08T00:07:40Z",
+                    "actor": "fixture-original-reviewer",
+                    "action": "team_review",
+                    "revision": 3,
+                    "changes": {
+                      "decision": "approve",
+                      "review_status": "pending"
+                    }
+                  }
+                ],
+                "annotation_hash": "664b14934a022bebba307b4b5d7908477bc4c47a003a8dd99627f60071057026",
+                "mask_hash": null,
+                "team": {
+                  "assignment": null,
+                  "edit_lease": null,
+                  "reviews": [
+                    {
+                      "actor": "fixture-original-reviewer",
+                      "decision": "approve",
+                      "reason": "Synthetic original opinion",
+                      "at": "2026-10-08T00:07:40Z",
+                      "binding_sha256": "8aa16b3306be6797dd29425796642842b2834678ee9dc451f27b9c9414f14dff"
+                    }
+                  ],
+                  "review_status": "pending",
+                  "annotation_actor": "fixture-labeler",
+                  "history": [
+                    {
+                      "action": "reviewed",
+                      "actor": "fixture-original-reviewer",
+                      "decision": "approve",
+                      "reason": "Synthetic original opinion",
+                      "at": "2026-10-08T00:07:40Z",
+                      "binding_sha256": "8aa16b3306be6797dd29425796642842b2834678ee9dc451f27b9c9414f14dff"
+                    }
+                  ]
+                }
+              }
+            ],
+            "total": 1,
+            "offset": 0,
+            "limit": 30
+          },
+          "files": {
+            "annotation_json": {
+              "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/0-4e8b4b2a-r0/projects/owned_review_draft_lifecycle/annotations/by_dataset/8acc74950123cdd5/part.json",
+              "sha256": "664b14934a022bebba307b4b5d7908477bc4c47a003a8dd99627f60071057026"
+            },
+            "metadata_json": {
+              "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/0-4e8b4b2a-r0/projects/owned_review_draft_lifecycle/annotations/by_dataset/8acc74950123cdd5/metadata/workflow.json",
+              "sha256": "98bff82f6fba8deb092dce7f4cf879ff36af3081e7d41561f9fa7dee82c30d17"
+            },
+            "mask": null,
+            "source": {
+              "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/0-4e8b4b2a-r0/review-draft-source/part.png",
+              "sha256": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+            }
+          }
+        },
+        "final": {
+          "annotation": {
+            "image_id": "part",
+            "annotations": [
+              {
+                "id": "original-label",
+                "type": "bbox",
+                "label": "Scratch",
+                "category_id": 2,
+                "bbox": [
+                  2,
+                  3,
+                  20,
+                  21
+                ],
+                "rotated_bbox": null,
+                "polygon": null,
+                "points": null,
+                "mask_rle": null,
+                "is_normal": null,
+                "color": null,
+                "text": null,
+                "direction_deg": null
+              }
+            ],
+            "image_width": 256,
+            "image_height": 256,
+            "mask_file": null,
+            "metadata": {
+              "decode_error": null,
+              "image_uuid": "0363b1c2-46fe-57cd-9f4f-57c4d978b676",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/0-4e8b4b2a-r0/review-draft-source/part.png",
+              "relative_path": "part.png",
+              "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+              "content_version": 1,
+              "width": 256,
+              "height": 256,
+              "revision": 3,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "needs_review",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "4e8385e7-7ac6-4d43-95ba-2985d3c4645a",
+                  "at": "2026-10-08T00:07:40Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                  }
+                },
+                {
+                  "id": "758fdfeb-6504-4acb-a0c8-520a0fef734d",
+                  "at": "2026-10-08T00:07:40Z",
+                  "actor": "fixture-labeler",
+                  "action": "annotation_changed",
+                  "revision": 2,
+                  "changes": {
+                    "workflow_state": "needs_review"
+                  }
+                },
+                {
+                  "id": "5378cae7-10df-4543-91b3-629c5dbf3b72",
+                  "at": "2026-10-08T00:07:40Z",
+                  "actor": "fixture-original-reviewer",
+                  "action": "team_review",
+                  "revision": 3,
+                  "changes": {
+                    "decision": "approve",
+                    "review_status": "pending"
+                  }
+                }
+              ],
+              "annotation_hash": "664b14934a022bebba307b4b5d7908477bc4c47a003a8dd99627f60071057026",
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [
+                  {
+                    "actor": "fixture-original-reviewer",
+                    "decision": "approve",
+                    "reason": "Synthetic original opinion",
+                    "at": "2026-10-08T00:07:40Z",
+                    "binding_sha256": "8aa16b3306be6797dd29425796642842b2834678ee9dc451f27b9c9414f14dff"
+                  }
+                ],
+                "review_status": "pending",
+                "annotation_actor": "fixture-labeler",
+                "history": [
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-original-reviewer",
+                    "decision": "approve",
+                    "reason": "Synthetic original opinion",
+                    "at": "2026-10-08T00:07:40Z",
+                    "binding_sha256": "8aa16b3306be6797dd29425796642842b2834678ee9dc451f27b9c9414f14dff"
+                  }
+                ]
+              }
+            }
+          },
+          "image": {
+            "image": {
+              "decode_error": null,
+              "image_uuid": "0363b1c2-46fe-57cd-9f4f-57c4d978b676",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/0-4e8b4b2a-r0/review-draft-source/part.png",
+              "relative_path": "part.png",
+              "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+              "content_version": 1,
+              "width": 256,
+              "height": 256,
+              "revision": 3,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "needs_review",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "4e8385e7-7ac6-4d43-95ba-2985d3c4645a",
+                  "at": "2026-10-08T00:07:40Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                  }
+                },
+                {
+                  "id": "758fdfeb-6504-4acb-a0c8-520a0fef734d",
+                  "at": "2026-10-08T00:07:40Z",
+                  "actor": "fixture-labeler",
+                  "action": "annotation_changed",
+                  "revision": 2,
+                  "changes": {
+                    "workflow_state": "needs_review"
+                  }
+                },
+                {
+                  "id": "5378cae7-10df-4543-91b3-629c5dbf3b72",
+                  "at": "2026-10-08T00:07:40Z",
+                  "actor": "fixture-original-reviewer",
+                  "action": "team_review",
+                  "revision": 3,
+                  "changes": {
+                    "decision": "approve",
+                    "review_status": "pending"
+                  }
+                }
+              ],
+              "annotation_hash": "664b14934a022bebba307b4b5d7908477bc4c47a003a8dd99627f60071057026",
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [
+                  {
+                    "actor": "fixture-original-reviewer",
+                    "decision": "approve",
+                    "reason": "Synthetic original opinion",
+                    "at": "2026-10-08T00:07:40Z",
+                    "binding_sha256": "8aa16b3306be6797dd29425796642842b2834678ee9dc451f27b9c9414f14dff"
+                  }
+                ],
+                "review_status": "pending",
+                "annotation_actor": "fixture-labeler",
+                "history": [
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-original-reviewer",
+                    "decision": "approve",
+                    "reason": "Synthetic original opinion",
+                    "at": "2026-10-08T00:07:40Z",
+                    "binding_sha256": "8aa16b3306be6797dd29425796642842b2834678ee9dc451f27b9c9414f14dff"
+                  }
+                ]
+              }
+            }
+          },
+          "workspace": {
+            "scope": {
+              "project_id": "5bacc315",
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/0-4e8b4b2a-r0/review-draft-source",
+              "labelset_id": "default"
+            },
+            "book": {
+              "id": "book_15777210ca9a49bc8cabb6a09cc74677",
+              "version": 1,
+              "title": "Controlled draft book",
+              "categories": [
+                {
+                  "id": 0,
+                  "name": "OK",
+                  "color": "#10b981",
+                  "definition": "",
+                  "inclusion": "",
+                  "exclusion": "",
+                  "annotation_guidance": "",
+                  "examples": []
+                },
+                {
+                  "id": 2,
+                  "name": "Scratch",
+                  "color": "#f59e0b",
+                  "definition": "",
+                  "inclusion": "",
+                  "exclusion": "",
+                  "annotation_guidance": "",
+                  "examples": []
+                }
+              ],
+              "actor": "fixture-owner",
+              "published_at": "2026-10-08T00:07:40Z",
+              "sha256": "ecbe7e292672abc68f7cbbb53f5f7ce40cfd04598df503aa4b61051daef80966"
+            },
+            "book_history": [
+              {
+                "id": "book_15777210ca9a49bc8cabb6a09cc74677",
+                "version": 1,
+                "title": "Controlled draft book",
+                "categories": [
+                  {
+                    "id": 0,
+                    "name": "OK",
+                    "color": "#10b981",
+                    "definition": "",
+                    "inclusion": "",
+                    "exclusion": "",
+                    "annotation_guidance": "",
+                    "examples": []
+                  },
+                  {
+                    "id": 2,
+                    "name": "Scratch",
+                    "color": "#f59e0b",
+                    "definition": "",
+                    "inclusion": "",
+                    "exclusion": "",
+                    "annotation_guidance": "",
+                    "examples": []
+                  }
+                ],
+                "actor": "fixture-owner",
+                "published_at": "2026-10-08T00:07:40Z",
+                "sha256": "ecbe7e292672abc68f7cbbb53f5f7ce40cfd04598df503aa4b61051daef80966"
+              }
+            ],
+            "settings": {
+              "revision": 2,
+              "editing_enabled": false,
+              "review_enabled": true,
+              "required_reviews": 2,
+              "prevent_self_review": true,
+              "approved_only_training": true
+            },
+            "members": [],
+            "actor": null
+          },
+          "queue": {
+            "items": [
+              {
+                "decode_error": null,
+                "image_uuid": "0363b1c2-46fe-57cd-9f4f-57c4d978b676",
+                "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/0-4e8b4b2a-r0/review-draft-source/part.png",
+                "relative_path": "part.png",
+                "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+                "content_version": 1,
+                "width": 256,
+                "height": 256,
+                "revision": 3,
+                "tags": [],
+                "product": "",
+                "lot": "",
+                "group": "",
+                "workflow_state": "needs_review",
+                "usage_state": "active",
+                "reviewer": null,
+                "review_history": [],
+                "audit": [
+                  {
+                    "id": "4e8385e7-7ac6-4d43-95ba-2985d3c4645a",
+                    "at": "2026-10-08T00:07:40Z",
+                    "actor": "system",
+                    "action": "registered",
+                    "revision": 1,
+                    "changes": {
+                      "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                    }
+                  },
+                  {
+                    "id": "758fdfeb-6504-4acb-a0c8-520a0fef734d",
+                    "at": "2026-10-08T00:07:40Z",
+                    "actor": "fixture-labeler",
+                    "action": "annotation_changed",
+                    "revision": 2,
+                    "changes": {
+                      "workflow_state": "needs_review"
+                    }
+                  },
+                  {
+                    "id": "5378cae7-10df-4543-91b3-629c5dbf3b72",
+                    "at": "2026-10-08T00:07:40Z",
+                    "actor": "fixture-original-reviewer",
+                    "action": "team_review",
+                    "revision": 3,
+                    "changes": {
+                      "decision": "approve",
+                      "review_status": "pending"
+                    }
+                  }
+                ],
+                "annotation_hash": "664b14934a022bebba307b4b5d7908477bc4c47a003a8dd99627f60071057026",
+                "mask_hash": null,
+                "team": {
+                  "assignment": null,
+                  "edit_lease": null,
+                  "reviews": [
+                    {
+                      "actor": "fixture-original-reviewer",
+                      "decision": "approve",
+                      "reason": "Synthetic original opinion",
+                      "at": "2026-10-08T00:07:40Z",
+                      "binding_sha256": "8aa16b3306be6797dd29425796642842b2834678ee9dc451f27b9c9414f14dff"
+                    }
+                  ],
+                  "review_status": "pending",
+                  "annotation_actor": "fixture-labeler",
+                  "history": [
+                    {
+                      "action": "reviewed",
+                      "actor": "fixture-original-reviewer",
+                      "decision": "approve",
+                      "reason": "Synthetic original opinion",
+                      "at": "2026-10-08T00:07:40Z",
+                      "binding_sha256": "8aa16b3306be6797dd29425796642842b2834678ee9dc451f27b9c9414f14dff"
+                    }
+                  ]
+                }
+              }
+            ],
+            "total": 1,
+            "offset": 0,
+            "limit": 30
+          },
+          "files": {
+            "annotation_json": {
+              "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/0-4e8b4b2a-r0/projects/owned_review_draft_lifecycle/annotations/by_dataset/8acc74950123cdd5/part.json",
+              "sha256": "664b14934a022bebba307b4b5d7908477bc4c47a003a8dd99627f60071057026"
+            },
+            "metadata_json": {
+              "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/0-4e8b4b2a-r0/projects/owned_review_draft_lifecycle/annotations/by_dataset/8acc74950123cdd5/metadata/workflow.json",
+              "sha256": "98bff82f6fba8deb092dce7f4cf879ff36af3081e7d41561f9fa7dee82c30d17"
+            },
+            "mask": null,
+            "source": {
+              "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/0-4e8b4b2a-r0/review-draft-source/part.png",
+              "sha256": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+            }
+          }
+        },
+        "lifecycle": [
+          {
+            "action": "approve-vote",
+            "unsent_reason": "Unsent synthetic approve-vote",
+            "cancel_no_POST": true,
+            "reload_reopen_no_POST": true
+          },
+          {
+            "action": "reject-vote",
+            "unsent_reason": "Unsent synthetic reject-vote",
+            "cancel_no_POST": true,
+            "reload_reopen_no_POST": true
+          }
+        ],
+        "explicit_fixture_vote_setup": {
+          "count": 1,
+          "response": {
+            "image": {
+              "decode_error": null,
+              "image_uuid": "0363b1c2-46fe-57cd-9f4f-57c4d978b676",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/0-4e8b4b2a-r0/review-draft-source/part.png",
+              "relative_path": "part.png",
+              "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+              "content_version": 1,
+              "width": 256,
+              "height": 256,
+              "revision": 3,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "needs_review",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "4e8385e7-7ac6-4d43-95ba-2985d3c4645a",
+                  "at": "2026-10-08T00:07:40Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8"
+                  }
+                },
+                {
+                  "id": "758fdfeb-6504-4acb-a0c8-520a0fef734d",
+                  "at": "2026-10-08T00:07:40Z",
+                  "actor": "fixture-labeler",
+                  "action": "annotation_changed",
+                  "revision": 2,
+                  "changes": {
+                    "workflow_state": "needs_review"
+                  }
+                },
+                {
+                  "id": "5378cae7-10df-4543-91b3-629c5dbf3b72",
+                  "at": "2026-10-08T00:07:40Z",
+                  "actor": "fixture-original-reviewer",
+                  "action": "team_review",
+                  "revision": 3,
+                  "changes": {
+                    "decision": "approve",
+                    "review_status": "pending"
+                  }
+                }
+              ],
+              "annotation_hash": "664b14934a022bebba307b4b5d7908477bc4c47a003a8dd99627f60071057026",
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [
+                  {
+                    "actor": "fixture-original-reviewer",
+                    "decision": "approve",
+                    "reason": "Synthetic original opinion",
+                    "at": "2026-10-08T00:07:40Z",
+                    "binding_sha256": "8aa16b3306be6797dd29425796642842b2834678ee9dc451f27b9c9414f14dff"
+                  }
+                ],
+                "review_status": "pending",
+                "annotation_actor": "fixture-labeler",
+                "history": [
+                  {
+                    "action": "reviewed",
+                    "actor": "fixture-original-reviewer",
+                    "decision": "approve",
+                    "reason": "Synthetic original opinion",
+                    "at": "2026-10-08T00:07:40Z",
+                    "binding_sha256": "8aa16b3306be6797dd29425796642842b2834678ee9dc451f27b9c9414f14dff"
+                  }
+                ]
+              }
+            }
+          },
+          "human_truth": false
+        },
+        "ui_writes": [],
+        "compare": {
+          "empty_control_absent": true,
+          "local_created_by_actual_canvas": true,
+          "draft_key": "modu-annotation-draft:v1:[\"[\\\"local\\\",\\\"ab42f04aa67a4ea68d11c13d1d55112b\\\",\\\"56653137db514ada9e10ec9fb1ab6715\\\",\\\"/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/0-4e8b4b2a-r0/projects/owned_review_draft_lifecycle\\\",\\\"5bacc315\\\",\\\"/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/0-4e8b4b2a-r0/review-draft-source\\\",\\\"default\\\",\\\"segmentation\\\",\\\"account\\\"]\",\"/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/0-4e8b4b2a-r0/review-draft-source/part.png\"]",
+          "original_draft": {
+            "schema": 1,
+            "scope": "[\"local\",\"ab42f04aa67a4ea68d11c13d1d55112b\",\"56653137db514ada9e10ec9fb1ab6715\",\"/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/0-4e8b4b2a-r0/projects/owned_review_draft_lifecycle\",\"5bacc315\",\"/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/0-4e8b4b2a-r0/review-draft-source\",\"default\",\"segmentation\",\"account\"]",
+            "image_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/team-draft-root-adapter/clean-source-01/ws/0-4e8b4b2a-r0/review-draft-source/part.png",
+            "image_uuid": "0363b1c2-46fe-57cd-9f4f-57c4d978b676",
+            "source_sha256": "5e95f32980e2d8fddb043a2727c6e6f22a984f068863aa775ed162197ee2daf8",
+            "base_revision": 3,
+            "base_annotations": [
+              {
+                "id": "original-label",
+                "type": "bbox",
+                "label": "Scratch",
+                "category_id": 2,
+                "bbox": [
+                  2,
+                  3,
+                  20,
+                  21
+                ],
+                "rotated_bbox": null,
+                "polygon": null,
+                "points": null,
+                "mask_rle": null,
+                "is_normal": null,
+                "color": "#f59e0b",
+                "text": null,
+                "direction_deg": null
+              }
+            ],
+            "annotations": [
+              {
+                "id": "original-label",
+                "type": "bbox",
+                "label": "Scratch",
+                "category_id": 2,
+                "bbox": [
+                  2,
+                  3,
+                  20,
+                  21
+                ],
+                "rotated_bbox": null,
+                "polygon": null,
+                "points": null,
+                "mask_rle": null,
+                "is_normal": null,
+                "color": "#f59e0b",
+                "text": null,
+                "direction_deg": null
+              },
+              {
+                "id": "bbox_1791418062238",
+                "type": "bbox",
+                "label": "Scratch",
+                "category_id": 2,
+                "bbox": [
+                  40,
+                  40,
+                  80,
+                  80
+                ],
+                "color": "#f59e0b"
+              }
+            ],
+            "width": 256,
+            "height": 256,
+            "saved_at": "2026-10-08T00:07:42.238Z",
+            "nonce": "86b9a0b3-1ae6-4df0-9149-581fd8a397f3"
+          },
+          "original_raw_sha256": "abd67b9ba8623604d41d35242b638d91b3be4849fd17029fe14538b61b95fc0c",
+          "invalid_source_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "invalid_raw_sha256": "f359db46d869523146079f8657e09aa98bd2c458768661167b178c6ddca7cbe6",
+          "invalid_apply_disabled_after_confirmation": true,
+          "controlled_GET_503_count": 1,
+          "responses": [
+            {
+              "status": 200,
+              "original_GET_dispatched": true
+            },
+            {
+              "status": 503,
+              "original_GET_dispatched": false
+            },
+            {
+              "status": 200,
+              "original_GET_dispatched": true
+            }
+          ],
+          "original_draft_retained_exact": true,
+          "actual_reload_reopen": true,
+          "applied": false,
+          "saved": false
+        },
+        "actual_source_ui": true,
+        "source_electron": false,
+        "synthetic_review_controls": true,
+        "quality_or_human_truth_approved": false,
+        "actual_model_inference": false,
+        "installed_target_verified": false,
+        "gpu_used": false
+      },
+      "owned_cleanup": {
+        "exited": true,
+        "exitCode": 0,
+        "signal": null,
+        "exitedBeforeStop": false,
+        "forced": false,
+        "forcedReason": null,
+        "groupAlive": false,
+        "escaped": [],
+        "unownedReferences": [],
+        "scanError": null,
+        "durationMs": 939,
+        "stoppedAt": "2026-10-08T00:07:44.779Z",
+        "healthy_at_end": true,
+        "port_closed": true,
+        "pid_alive": false
+      }
+    }
+  ],
+  "proof_hashes": {
+    "command.json": "99f8fa4205da70c9402cf628e39ce619de06930c228450e45da8ddd53269b09f",
+    "result.log": "4bd5912daa67170ef618f4bd9eed5776f6acafee2e24d33073b4a265305ce1d1",
+    "source-before.json": "01bfb682eeea32f0551d2023387e50fbb28ae267fc82b8b2a1049f6a54b190e0",
+    "source-after.json": "01bfb682eeea32f0551d2023387e50fbb28ae267fc82b8b2a1049f6a54b190e0"
+  },
+  "report_sha256": "c98cfe03667b47166c025266bfa3143cd1c3e36d9fb18535dc00c497a21bcc4b",
+  "teardown_sha256": "468a9efef0b1725f1a0a9704e344767fb6dadf78d145d6ddbff101efe6d41f3b",
+  "root_review_sha256": "c51402720992c82ae5206d440a014457094e2830f30d28439d0c85d9a3ed72ae",
+  "private_handoff_sha256": "47c8c19cb91c55037fbf95668dae37ed44e57fabc170a12052d625f4153bcc4c",
+  "retained_initial_test_selector_failure": true,
+  "acceptance": {
+    "new_existing_curated_scenarios": 8,
+    "curated_actions_added": 0,
+    "quality": false,
+    "human_truth": false,
+    "model_inference": false,
+    "installed_target": false,
+    "publisher_or_release": false,
+    "whole_tree": false,
+    "whole_feature": false
+  },
+  "scope": [
+    "One explicit fixture review vote is preparation, not a UI vote or human truth.",
+    "Cancel means closing an unsent form, not terminating an in-flight request.",
+    "One wrong source pin is a controlled local-storage input; one GET503 is controlled before dispatch.",
+    "The local draft is actually created through canvas; no save or apply is performed."
+  ]
+}

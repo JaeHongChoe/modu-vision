@@ -3727,13 +3727,295 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "kind": "click",
+         "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
+         "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
+         "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::native unsent reviews and local comparison retain exact original votes labels metadata and draft",
+         "receipt": "2026-10-08-team-draft-9e019e1-electron.json",
+         "receipt_sha256": "233cf25977ffab59e47e33edff597dcee56fb4e67aedb652347265fcca98fcf1",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "513512c9a1dbda8f22f37efc9bea0b84d6495df61ec3bd72de3ad2ee2172037e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e862c89a53de4dfeee9f0e8985066733f6dba0f40b55dd520f1a8f7a25ba87a4"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f718d5c3dd5c4af3429d9a3e1b71ebd1bb5c600b9a52686ba065a2a1c1138b12"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "f4e5d911dd932182bc8374289fd1634a562421b81699d4f1265b2f36450ab2f6"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "a04cb04da90f53c50f09a79368432eb6b434fa5e927c09fc8eb9c8d880207cd6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "5e4ee11b336f5b224fdbf29807d8f0dd0b5e90aec68c160649b7fd21fa68f439"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "c7b289603e42c2120809036d8b8108c592a320bd2224981044de33820015db3f"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "49290c9ff26f6f78c90b4efb8d6e5bae7ecdd64c3ca7082386150bfd43134191"
+          }
+         ],
+         "expected": "Without a local draft the comparison action is absent and all server records remain unchanged.",
+         "observed": "Without a local draft the comparison action is absent and all server records remain unchanged."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "kind": "click",
+         "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
+         "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
+         "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::unsent reviews and private draft comparison preserve original votes labels and metadata through reload",
+         "receipt": "2026-10-08-team-draft-9e019e1-browser.json",
+         "receipt_sha256": "d5af4f9c15d5d09ed08038f2062de3d34b0e6a136342b9a6ee84fbd00743c5e4",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c06c29a7ddebf976f514f205e624ea5f2ea2a33dcb5417c2dd09e511f58eea1a"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "03ec5f7814cc5db741d31851799e592a8607bb2b28c532de38d705d8e0565cd2"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "bc8d50016380a301dc294735010e5e08861d940dc5bffe8480ab9047f8cc323a"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "7800860d3ae9b1f1d5390cfedd5b902536c7fc001b6acfcb1653536fad5005da"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "2d283a53bf53b343025a87cb05120bea7ceb332dbebf152da014fe9f1a5a109f"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "2c720ffbeae0a487a47aaabf91650979a00cd20e3ca4efeebdeebad28eada090"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "19355495f2bd73693d52e260def6f9eb2b920955ce009b2272a50925175ac31e"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "f5e598ea4c72f2e791ce1d267b82eb64f2cbedff14ed3b0a500cfad19f071d77"
+          }
+         ],
+         "expected": "Without a local draft the comparison action is absent and all server records remain unchanged.",
+         "observed": "Without a local draft the comparison action is absent and all server records remain unchanged."
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "kind": "click",
+         "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
+         "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
+         "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::native unsent reviews and local comparison retain exact original votes labels metadata and draft",
+         "receipt": "2026-10-08-team-draft-9e019e1-electron.json",
+         "receipt_sha256": "233cf25977ffab59e47e33edff597dcee56fb4e67aedb652347265fcca98fcf1",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "513512c9a1dbda8f22f37efc9bea0b84d6495df61ec3bd72de3ad2ee2172037e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e862c89a53de4dfeee9f0e8985066733f6dba0f40b55dd520f1a8f7a25ba87a4"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f718d5c3dd5c4af3429d9a3e1b71ebd1bb5c600b9a52686ba065a2a1c1138b12"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "f4e5d911dd932182bc8374289fd1634a562421b81699d4f1265b2f36450ab2f6"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "a04cb04da90f53c50f09a79368432eb6b434fa5e927c09fc8eb9c8d880207cd6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "5e4ee11b336f5b224fdbf29807d8f0dd0b5e90aec68c160649b7fd21fa68f439"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "c7b289603e42c2120809036d8b8108c592a320bd2224981044de33820015db3f"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "49290c9ff26f6f78c90b4efb8d6e5bae7ecdd64c3ca7082386150bfd43134191"
+          }
+         ],
+         "expected": "Controlled wrong source SHA in local draft is refused by actual comparison200; explicit confirmation cannot enable apply, and original server records are unchanged.",
+         "observed": "Controlled wrong source SHA in local draft is refused by actual comparison200; explicit confirmation cannot enable apply, and original server records are unchanged."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "kind": "click",
+         "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
+         "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
+         "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::unsent reviews and private draft comparison preserve original votes labels and metadata through reload",
+         "receipt": "2026-10-08-team-draft-9e019e1-browser.json",
+         "receipt_sha256": "d5af4f9c15d5d09ed08038f2062de3d34b0e6a136342b9a6ee84fbd00743c5e4",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c06c29a7ddebf976f514f205e624ea5f2ea2a33dcb5417c2dd09e511f58eea1a"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "03ec5f7814cc5db741d31851799e592a8607bb2b28c532de38d705d8e0565cd2"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "bc8d50016380a301dc294735010e5e08861d940dc5bffe8480ab9047f8cc323a"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "7800860d3ae9b1f1d5390cfedd5b902536c7fc001b6acfcb1653536fad5005da"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "2d283a53bf53b343025a87cb05120bea7ceb332dbebf152da014fe9f1a5a109f"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "2c720ffbeae0a487a47aaabf91650979a00cd20e3ca4efeebdeebad28eada090"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "19355495f2bd73693d52e260def6f9eb2b920955ce009b2272a50925175ac31e"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "f5e598ea4c72f2e791ce1d267b82eb64f2cbedff14ed3b0a500cfad19f071d77"
+          }
+         ],
+         "expected": "Controlled wrong source SHA in local draft is refused by actual comparison200; explicit confirmation cannot enable apply, and original server records are unchanged.",
+         "observed": "Controlled wrong source SHA in local draft is refused by actual comparison200; explicit confirmation cannot enable apply, and original server records are unchanged."
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "kind": "click",
+         "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
+         "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
+         "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::native unsent reviews and local comparison retain exact original votes labels metadata and draft",
+         "receipt": "2026-10-08-team-draft-9e019e1-electron.json",
+         "receipt_sha256": "233cf25977ffab59e47e33edff597dcee56fb4e67aedb652347265fcca98fcf1",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "513512c9a1dbda8f22f37efc9bea0b84d6495df61ec3bd72de3ad2ee2172037e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e862c89a53de4dfeee9f0e8985066733f6dba0f40b55dd520f1a8f7a25ba87a4"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f718d5c3dd5c4af3429d9a3e1b71ebd1bb5c600b9a52686ba065a2a1c1138b12"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "f4e5d911dd932182bc8374289fd1634a562421b81699d4f1265b2f36450ab2f6"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "a04cb04da90f53c50f09a79368432eb6b434fa5e927c09fc8eb9c8d880207cd6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "5e4ee11b336f5b224fdbf29807d8f0dd0b5e90aec68c160649b7fd21fa68f439"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "c7b289603e42c2120809036d8b8108c592a320bd2224981044de33820015db3f"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "49290c9ff26f6f78c90b4efb8d6e5bae7ecdd64c3ca7082386150bfd43134191"
+          }
+         ],
+         "expected": "Exact comparison GET receives controlled503 before original dispatch, reports failure and retains exact original local draft/server records.",
+         "observed": "Exact comparison GET receives controlled503 before original dispatch, reports failure and retains exact original local draft/server records."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "kind": "click",
+         "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
+         "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
+         "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::unsent reviews and private draft comparison preserve original votes labels and metadata through reload",
+         "receipt": "2026-10-08-team-draft-9e019e1-browser.json",
+         "receipt_sha256": "d5af4f9c15d5d09ed08038f2062de3d34b0e6a136342b9a6ee84fbd00743c5e4",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c06c29a7ddebf976f514f205e624ea5f2ea2a33dcb5417c2dd09e511f58eea1a"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "03ec5f7814cc5db741d31851799e592a8607bb2b28c532de38d705d8e0565cd2"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "bc8d50016380a301dc294735010e5e08861d940dc5bffe8480ab9047f8cc323a"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "7800860d3ae9b1f1d5390cfedd5b902536c7fc001b6acfcb1653536fad5005da"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "2d283a53bf53b343025a87cb05120bea7ceb332dbebf152da014fe9f1a5a109f"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "2c720ffbeae0a487a47aaabf91650979a00cd20e3ca4efeebdeebad28eada090"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "19355495f2bd73693d52e260def6f9eb2b920955ce009b2272a50925175ac31e"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "f5e598ea4c72f2e791ce1d267b82eb64f2cbedff14ed3b0a500cfad19f071d77"
+          }
+         ],
+         "expected": "Exact comparison GET receives controlled503 before original dispatch, reports failure and retains exact original local draft/server records.",
+         "observed": "Exact comparison GET receives controlled503 before original dispatch, reports failure and retains exact original local draft/server records."
+        }
+       ]
       },
       "cancel": {
        "state": "verified",
@@ -3767,7 +4049,101 @@
        ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "kind": "click",
+         "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
+         "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
+         "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::native unsent reviews and local comparison retain exact original votes labels metadata and draft",
+         "receipt": "2026-10-08-team-draft-9e019e1-electron.json",
+         "receipt_sha256": "233cf25977ffab59e47e33edff597dcee56fb4e67aedb652347265fcca98fcf1",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "513512c9a1dbda8f22f37efc9bea0b84d6495df61ec3bd72de3ad2ee2172037e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e862c89a53de4dfeee9f0e8985066733f6dba0f40b55dd520f1a8f7a25ba87a4"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f718d5c3dd5c4af3429d9a3e1b71ebd1bb5c600b9a52686ba065a2a1c1138b12"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "f4e5d911dd932182bc8374289fd1634a562421b81699d4f1265b2f36450ab2f6"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "a04cb04da90f53c50f09a79368432eb6b434fa5e927c09fc8eb9c8d880207cd6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "5e4ee11b336f5b224fdbf29807d8f0dd0b5e90aec68c160649b7fd21fa68f439"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "c7b289603e42c2120809036d8b8108c592a320bd2224981044de33820015db3f"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "49290c9ff26f6f78c90b4efb8d6e5bae7ecdd64c3ca7082386150bfd43134191"
+          }
+         ],
+         "expected": "Actual canvas-created local draft survives reload byte-for-byte; real comparison200 shows exact base/current/local annotations, confirmation unset and apply disabled; no server write.",
+         "observed": "Actual canvas-created local draft survives reload byte-for-byte; real comparison200 shows exact base/current/local annotations, confirmation unset and apply disabled; no server write."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "kind": "click",
+         "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
+         "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
+         "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::unsent reviews and private draft comparison preserve original votes labels and metadata through reload",
+         "receipt": "2026-10-08-team-draft-9e019e1-browser.json",
+         "receipt_sha256": "d5af4f9c15d5d09ed08038f2062de3d34b0e6a136342b9a6ee84fbd00743c5e4",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c06c29a7ddebf976f514f205e624ea5f2ea2a33dcb5417c2dd09e511f58eea1a"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "03ec5f7814cc5db741d31851799e592a8607bb2b28c532de38d705d8e0565cd2"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "bc8d50016380a301dc294735010e5e08861d940dc5bffe8480ab9047f8cc323a"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "7800860d3ae9b1f1d5390cfedd5b902536c7fc001b6acfcb1653536fad5005da"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "2d283a53bf53b343025a87cb05120bea7ceb332dbebf152da014fe9f1a5a109f"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "2c720ffbeae0a487a47aaabf91650979a00cd20e3ca4efeebdeebad28eada090"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "19355495f2bd73693d52e260def6f9eb2b920955ce009b2272a50925175ac31e"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "f5e598ea4c72f2e791ce1d267b82eb64f2cbedff14ed3b0a500cfad19f071d77"
+          }
+         ],
+         "expected": "Actual canvas-created local draft survives reload byte-for-byte; real comparison200 shows exact base/current/local annotations, confirmation unset and apply disabled; no server write.",
+         "observed": "Actual canvas-created local draft survives reload byte-for-byte; real comparison200 shows exact base/current/local annotations, confirmation unset and apply disabled; no server write."
+        }
+       ]
       },
       "handoff": {
        "state": "pending"
@@ -4114,10 +4490,198 @@
        ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "kind": "click",
+         "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
+         "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
+         "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::native unsent reviews and local comparison retain exact original votes labels metadata and draft",
+         "receipt": "2026-10-08-team-draft-9e019e1-electron.json",
+         "receipt_sha256": "233cf25977ffab59e47e33edff597dcee56fb4e67aedb652347265fcca98fcf1",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "513512c9a1dbda8f22f37efc9bea0b84d6495df61ec3bd72de3ad2ee2172037e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e862c89a53de4dfeee9f0e8985066733f6dba0f40b55dd520f1a8f7a25ba87a4"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f718d5c3dd5c4af3429d9a3e1b71ebd1bb5c600b9a52686ba065a2a1c1138b12"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "f4e5d911dd932182bc8374289fd1634a562421b81699d4f1265b2f36450ab2f6"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "a04cb04da90f53c50f09a79368432eb6b434fa5e927c09fc8eb9c8d880207cd6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "5e4ee11b336f5b224fdbf29807d8f0dd0b5e90aec68c160649b7fd21fa68f439"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "c7b289603e42c2120809036d8b8108c592a320bd2224981044de33820015db3f"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "49290c9ff26f6f78c90b4efb8d6e5bae7ecdd64c3ca7082386150bfd43134191"
+          }
+         ],
+         "expected": "Closing a valid but unsent approve form sends no UI POST and retains exact original vote, annotation JSON, workflow metadata and source bytes.",
+         "observed": "Closing a valid but unsent approve form sends no UI POST and retains exact original vote, annotation JSON, workflow metadata and source bytes."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "kind": "click",
+         "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
+         "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
+         "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::unsent reviews and private draft comparison preserve original votes labels and metadata through reload",
+         "receipt": "2026-10-08-team-draft-9e019e1-browser.json",
+         "receipt_sha256": "d5af4f9c15d5d09ed08038f2062de3d34b0e6a136342b9a6ee84fbd00743c5e4",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c06c29a7ddebf976f514f205e624ea5f2ea2a33dcb5417c2dd09e511f58eea1a"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "03ec5f7814cc5db741d31851799e592a8607bb2b28c532de38d705d8e0565cd2"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "bc8d50016380a301dc294735010e5e08861d940dc5bffe8480ab9047f8cc323a"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "7800860d3ae9b1f1d5390cfedd5b902536c7fc001b6acfcb1653536fad5005da"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "2d283a53bf53b343025a87cb05120bea7ceb332dbebf152da014fe9f1a5a109f"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "2c720ffbeae0a487a47aaabf91650979a00cd20e3ca4efeebdeebad28eada090"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "19355495f2bd73693d52e260def6f9eb2b920955ce009b2272a50925175ac31e"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "f5e598ea4c72f2e791ce1d267b82eb64f2cbedff14ed3b0a500cfad19f071d77"
+          }
+         ],
+         "expected": "Closing a valid but unsent approve form sends no UI POST and retains exact original vote, annotation JSON, workflow metadata and source bytes.",
+         "observed": "Closing a valid but unsent approve form sends no UI POST and retains exact original vote, annotation JSON, workflow metadata and source bytes."
+        }
+       ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "kind": "click",
+         "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
+         "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
+         "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::native unsent reviews and local comparison retain exact original votes labels metadata and draft",
+         "receipt": "2026-10-08-team-draft-9e019e1-electron.json",
+         "receipt_sha256": "233cf25977ffab59e47e33edff597dcee56fb4e67aedb652347265fcca98fcf1",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "513512c9a1dbda8f22f37efc9bea0b84d6495df61ec3bd72de3ad2ee2172037e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e862c89a53de4dfeee9f0e8985066733f6dba0f40b55dd520f1a8f7a25ba87a4"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f718d5c3dd5c4af3429d9a3e1b71ebd1bb5c600b9a52686ba065a2a1c1138b12"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "f4e5d911dd932182bc8374289fd1634a562421b81699d4f1265b2f36450ab2f6"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "a04cb04da90f53c50f09a79368432eb6b434fa5e927c09fc8eb9c8d880207cd6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "5e4ee11b336f5b224fdbf29807d8f0dd0b5e90aec68c160649b7fd21fa68f439"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "c7b289603e42c2120809036d8b8108c592a320bd2224981044de33820015db3f"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "49290c9ff26f6f78c90b4efb8d6e5bae7ecdd64c3ca7082386150bfd43134191"
+          }
+         ],
+         "expected": "Actual reload and reopening approve controls keeps exactly the original fixture vote and records; previous unsent reason is not submitted.",
+         "observed": "Actual reload and reopening approve controls keeps exactly the original fixture vote and records; previous unsent reason is not submitted."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "kind": "click",
+         "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
+         "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
+         "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::unsent reviews and private draft comparison preserve original votes labels and metadata through reload",
+         "receipt": "2026-10-08-team-draft-9e019e1-browser.json",
+         "receipt_sha256": "d5af4f9c15d5d09ed08038f2062de3d34b0e6a136342b9a6ee84fbd00743c5e4",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c06c29a7ddebf976f514f205e624ea5f2ea2a33dcb5417c2dd09e511f58eea1a"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "03ec5f7814cc5db741d31851799e592a8607bb2b28c532de38d705d8e0565cd2"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "bc8d50016380a301dc294735010e5e08861d940dc5bffe8480ab9047f8cc323a"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "7800860d3ae9b1f1d5390cfedd5b902536c7fc001b6acfcb1653536fad5005da"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "2d283a53bf53b343025a87cb05120bea7ceb332dbebf152da014fe9f1a5a109f"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "2c720ffbeae0a487a47aaabf91650979a00cd20e3ca4efeebdeebad28eada090"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "19355495f2bd73693d52e260def6f9eb2b920955ce009b2272a50925175ac31e"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "f5e598ea4c72f2e791ce1d267b82eb64f2cbedff14ed3b0a500cfad19f071d77"
+          }
+         ],
+         "expected": "Actual reload and reopening approve controls keeps exactly the original fixture vote and records; previous unsent reason is not submitted.",
+         "observed": "Actual reload and reopening approve controls keeps exactly the original fixture vote and records; previous unsent reason is not submitted."
+        }
+       ]
       },
       "handoff": {
        "state": "pending"
@@ -4380,10 +4944,198 @@
        ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "kind": "click",
+         "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
+         "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
+         "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::native unsent reviews and local comparison retain exact original votes labels metadata and draft",
+         "receipt": "2026-10-08-team-draft-9e019e1-electron.json",
+         "receipt_sha256": "233cf25977ffab59e47e33edff597dcee56fb4e67aedb652347265fcca98fcf1",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "513512c9a1dbda8f22f37efc9bea0b84d6495df61ec3bd72de3ad2ee2172037e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e862c89a53de4dfeee9f0e8985066733f6dba0f40b55dd520f1a8f7a25ba87a4"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f718d5c3dd5c4af3429d9a3e1b71ebd1bb5c600b9a52686ba065a2a1c1138b12"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "f4e5d911dd932182bc8374289fd1634a562421b81699d4f1265b2f36450ab2f6"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "a04cb04da90f53c50f09a79368432eb6b434fa5e927c09fc8eb9c8d880207cd6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "5e4ee11b336f5b224fdbf29807d8f0dd0b5e90aec68c160649b7fd21fa68f439"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "c7b289603e42c2120809036d8b8108c592a320bd2224981044de33820015db3f"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "49290c9ff26f6f78c90b4efb8d6e5bae7ecdd64c3ca7082386150bfd43134191"
+          }
+         ],
+         "expected": "Closing a valid but unsent reject form sends no UI POST and retains exact original vote and label/metadata/source bytes.",
+         "observed": "Closing a valid but unsent reject form sends no UI POST and retains exact original vote and label/metadata/source bytes."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "kind": "click",
+         "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
+         "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
+         "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::unsent reviews and private draft comparison preserve original votes labels and metadata through reload",
+         "receipt": "2026-10-08-team-draft-9e019e1-browser.json",
+         "receipt_sha256": "d5af4f9c15d5d09ed08038f2062de3d34b0e6a136342b9a6ee84fbd00743c5e4",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c06c29a7ddebf976f514f205e624ea5f2ea2a33dcb5417c2dd09e511f58eea1a"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "03ec5f7814cc5db741d31851799e592a8607bb2b28c532de38d705d8e0565cd2"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "bc8d50016380a301dc294735010e5e08861d940dc5bffe8480ab9047f8cc323a"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "7800860d3ae9b1f1d5390cfedd5b902536c7fc001b6acfcb1653536fad5005da"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "2d283a53bf53b343025a87cb05120bea7ceb332dbebf152da014fe9f1a5a109f"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "2c720ffbeae0a487a47aaabf91650979a00cd20e3ca4efeebdeebad28eada090"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "19355495f2bd73693d52e260def6f9eb2b920955ce009b2272a50925175ac31e"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "f5e598ea4c72f2e791ce1d267b82eb64f2cbedff14ed3b0a500cfad19f071d77"
+          }
+         ],
+         "expected": "Closing a valid but unsent reject form sends no UI POST and retains exact original vote and label/metadata/source bytes.",
+         "observed": "Closing a valid but unsent reject form sends no UI POST and retains exact original vote and label/metadata/source bytes."
+        }
+       ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "kind": "click",
+         "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
+         "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
+         "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::native unsent reviews and local comparison retain exact original votes labels metadata and draft",
+         "receipt": "2026-10-08-team-draft-9e019e1-electron.json",
+         "receipt_sha256": "233cf25977ffab59e47e33edff597dcee56fb4e67aedb652347265fcca98fcf1",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "513512c9a1dbda8f22f37efc9bea0b84d6495df61ec3bd72de3ad2ee2172037e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e862c89a53de4dfeee9f0e8985066733f6dba0f40b55dd520f1a8f7a25ba87a4"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f718d5c3dd5c4af3429d9a3e1b71ebd1bb5c600b9a52686ba065a2a1c1138b12"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "f4e5d911dd932182bc8374289fd1634a562421b81699d4f1265b2f36450ab2f6"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "a04cb04da90f53c50f09a79368432eb6b434fa5e927c09fc8eb9c8d880207cd6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "5e4ee11b336f5b224fdbf29807d8f0dd0b5e90aec68c160649b7fd21fa68f439"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "c7b289603e42c2120809036d8b8108c592a320bd2224981044de33820015db3f"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "49290c9ff26f6f78c90b4efb8d6e5bae7ecdd64c3ca7082386150bfd43134191"
+          }
+         ],
+         "expected": "Actual reload and reopening reject controls retains original pending opinion and unchanged server records without submitting draft reason.",
+         "observed": "Actual reload and reopening reject controls retains original pending opinion and unchanged server records without submitting draft reason."
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "kind": "click",
+         "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
+         "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
+         "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::unsent reviews and private draft comparison preserve original votes labels and metadata through reload",
+         "receipt": "2026-10-08-team-draft-9e019e1-browser.json",
+         "receipt_sha256": "d5af4f9c15d5d09ed08038f2062de3d34b0e6a136342b9a6ee84fbd00743c5e4",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c06c29a7ddebf976f514f205e624ea5f2ea2a33dcb5417c2dd09e511f58eea1a"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "03ec5f7814cc5db741d31851799e592a8607bb2b28c532de38d705d8e0565cd2"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "bc8d50016380a301dc294735010e5e08861d940dc5bffe8480ab9047f8cc323a"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "7800860d3ae9b1f1d5390cfedd5b902536c7fc001b6acfcb1653536fad5005da"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "2d283a53bf53b343025a87cb05120bea7ceb332dbebf152da014fe9f1a5a109f"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "2c720ffbeae0a487a47aaabf91650979a00cd20e3ca4efeebdeebad28eada090"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "19355495f2bd73693d52e260def6f9eb2b920955ce009b2272a50925175ac31e"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "f5e598ea4c72f2e791ce1d267b82eb64f2cbedff14ed3b0a500cfad19f071d77"
+          }
+         ],
+         "expected": "Actual reload and reopening reject controls retains original pending opinion and unchanged server records without submitting draft reason.",
+         "observed": "Actual reload and reopening reject controls retains original pending opinion and unchanged server records without submitting draft reason."
+        }
+       ]
       },
       "handoff": {
        "state": "pending"

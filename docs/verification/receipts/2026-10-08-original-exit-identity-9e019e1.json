@@ -1,0 +1,143 @@
+{
+  "schema": "modu-vision.original-exit-identity-repair/v1",
+  "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+  "root_gate_source_base": "2e8667c7d345a5347813d01be8b23d8014e0316a",
+  "root_gate_exact_dirty_composition": " M backend/engine/runtime_deadline.py\n?? backend/tests/test_runtime_deadline_identity.py\n?? scripts/e2e/team-review-draft-lifecycle.spec.ts\n",
+  "source_files": {
+    "backend/engine/runtime_deadline.py": "fc2031a7e88aec81f63b12746daee6ae6f02babb34e66388c87e4bf1d79671ca",
+    "backend/tests/test_runtime_deadline_identity.py": "cd4aa27d3903f979d998055f99be3654f1b6e51236dac398c5b4610bc427a5fd"
+  },
+  "scope": "Per-call POSIX observation-only original empty-command exit boundary; not signal/enrollment authority or complete process-tree acceptance.",
+  "root_focused": {
+    "passed": 40,
+    "failed": 0,
+    "skipped": 0,
+    "pytest_seconds": 18.22,
+    "runner_seconds": 19.25994445796823,
+    "source_inputs": 2177,
+    "source_unchanged": true,
+    "receipt_sha256": "632a0e6fe5d11834a67d53025edcc410384dfdc27ae1faaf539b4a6307e7cf56",
+    "junit_sha256": "27a02099bfd4d2c22ff37c1ba111cae07b91f5d0f181b7a293795ea6c2f871d4",
+    "log_sha256": "59c96c3cd6afe65bd7e3d9810dfe7d254f6090ac46ae6114111f505bbf57e7ae"
+  },
+  "private_final_focused": {
+    "cases": 40,
+    "elapsed_seconds": 15.80518825002946,
+    "errors": 0,
+    "failed": 0,
+    "passed": 40,
+    "runtime_sha256": "fc2031a7e88aec81f63b12746daee6ae6f02babb34e66388c87e4bf1d79671ca",
+    "skipped": 0,
+    "source_inputs": 2167,
+    "source_unchanged": true
+  },
+  "actual_original_linux_gan": {
+    "transparent_identity_red": {
+      "original_deadline_ms": 30000,
+      "actual_matching_birth_group_session_empty_command_observed": true,
+      "unreaped_original_handle": true,
+      "strict_leader_matches": false,
+      "matching_original_non_z_row": {
+        "state": "R",
+        "session": 20
+      },
+      "helper_status": "uncertain",
+      "effective_returncode": 1,
+      "elapsed_ms": 2492.305,
+      "raw_sha256": "65ce7eab9432c47e91b48b6f0bed3050806df9760fb20a294a2c60e704a536ee",
+      "source_inputs": 756,
+      "source_unchanged": true,
+      "container_removed": true,
+      "passed": false,
+      "test": "backend/tests/test_gan_generation_package.py::test_heldout_gan_evaluation_and_verified_generation_package",
+      "pytest_seconds": 7.518
+    },
+    "qualified_candidate": {
+      "original_deadline_ms": 30000,
+      "actual_matching_birth_group_session_empty_command_observed": true,
+      "unreaped_original_handle": true,
+      "strict_leader_matches": false,
+      "matching_original_non_z_row": {
+        "state": "R",
+        "session": 20
+      },
+      "helper_status": "completed",
+      "effective_returncode": 0,
+      "elapsed_ms": 2556.456,
+      "raw_sha256": "0f2977f17a8d44f30cc666ef638d214789b54854c46aa69af1dff1bd7d70eb6e",
+      "source_inputs": 757,
+      "source_unchanged": true,
+      "container_removed": true,
+      "passed": true,
+      "test": "backend/tests/test_gan_generation_package.py::test_heldout_gan_evaluation_and_verified_generation_package",
+      "pytest_seconds": 7.665
+    }
+  },
+  "retained_red_gates": {
+    "foreign-row-red": {
+      "cases": 1,
+      "elapsed_seconds": 5.48006799997529,
+      "errors": 0,
+      "failed": 1,
+      "passed": 0,
+      "runtime_sha256": "9497dcc9d71e8fa6fefe411b063537fb8d2b0e26ef61a4e583b77ad3f318d27e",
+      "skipped": 0,
+      "source_inputs": 2167,
+      "source_unchanged": true
+    },
+    "identity-red": {
+      "cases": 8,
+      "elapsed_seconds": 6.806523917010054,
+      "errors": 0,
+      "failed": 1,
+      "passed": 7,
+      "runtime_sha256": "92b4390b5ea8e7710a60f667d5bc7769f890a68253cddd9f1223a329d0107874",
+      "skipped": 0,
+      "source_inputs": 2167,
+      "source_unchanged": true
+    },
+    "missing-row-red": {
+      "cases": 1,
+      "elapsed_seconds": 6.061962584033608,
+      "errors": 0,
+      "failed": 1,
+      "passed": 0,
+      "runtime_sha256": "9497dcc9d71e8fa6fefe411b063537fb8d2b0e26ef61a4e583b77ad3f318d27e",
+      "skipped": 0,
+      "source_inputs": 2167,
+      "source_unchanged": true
+    }
+  },
+  "proof_index": {
+    "sha256": "9763584dabefe2d5edab31a46984f4a93c15cd3236a6ac364ec815e0adda9f5c",
+    "root_rehashed": 166,
+    "mismatches": 0
+  },
+  "root_review_sha256": "785b2327e59b7c4c3647a42163d405997a6e0c32ccd6941dd644ab9742a336b6",
+  "peer_review_sha256": "6dd39db6101c5c6574fc4bc9c9c88640929b819168c62dc2b987d4c6ed2643d7",
+  "guards": {
+    "strict_leader_matches_remains_false": true,
+    "exact_own_row_session_required": true,
+    "signals_or_enrollment_authority_expanded": false,
+    "deadline_extended": false,
+    "old_unknown_cleared": false,
+    "persistent_empty_or_foreign_missing_session_refuses": true
+  },
+  "acceptance": {
+    "actual_linux_original_gan_regression_passed": true,
+    "whole_hosted_ci": false,
+    "new_frozen_native_binary_qualified": false,
+    "whole_process_tree": false,
+    "installed_target": false,
+    "windows": false,
+    "publisher_or_release": false,
+    "model_quality": false,
+    "parent_acceptance": false
+  },
+  "limitations": [
+    "Transparent diagnostic observers delegate actual reader values unchanged; selective event logging can affect scheduling, so no broad latency or all-race proof is inferred.",
+    "Original unreaped child with matching row-session can wait through an empty command without becoming sticky UNKNOWN; actual original exit and final bounded observation are still required.",
+    "Earlier compiled/native receipts remain bound to their previous backend bytes and are not transferred to this changed runtime.",
+    "Paired original app execution regressions are recorded separately; complete latest hosted CI remains required."
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+  "source_dirty": false,
+  "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::native unsent reviews and local comparison retain exact original votes labels metadata and draft",
+  "test_source_sha256": "a3dab03826069df155d0d8af04dba4c02cc0bac87e51d442633e3f1e07d77618",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "c98cfe03667b47166c025266bfa3143cd1c3e36d9fb18535dc00c497a21bcc4b",
+  "harness_sha256": "bb064c3fbcbbdfa1d8ffa1dc80b499157e268a9a95466f83581729abbd4998f5",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "513512c9a1dbda8f22f37efc9bea0b84d6495df61ec3bd72de3ad2ee2172037e"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "e862c89a53de4dfeee9f0e8985066733f6dba0f40b55dd520f1a8f7a25ba87a4"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "f718d5c3dd5c4af3429d9a3e1b71ebd1bb5c600b9a52686ba065a2a1c1138b12"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "f4e5d911dd932182bc8374289fd1634a562421b81699d4f1265b2f36450ab2f6"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "a04cb04da90f53c50f09a79368432eb6b434fa5e927c09fc8eb9c8d880207cd6"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "5e4ee11b336f5b224fdbf29807d8f0dd0b5e90aec68c160649b7fd21fa68f439"
+    },
+    {
+      "id": "screenshot-6",
+      "sha256": "c7b289603e42c2120809036d8b8108c592a320bd2224981044de33820015db3f"
+    },
+    {
+      "id": "screenshot-7",
+      "sha256": "49290c9ff26f6f78c90b4efb8d6e5bae7ecdd64c3ca7082386150bfd43134191"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}
