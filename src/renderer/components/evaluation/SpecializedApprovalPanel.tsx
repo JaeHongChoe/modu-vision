@@ -6,9 +6,15 @@ type Family = 'ocr' | 'rotated_detection' | 'enhancement' | 'rotation';
 type Evidence = { evaluation_id: string; created_at: number; result: { job_id: string; task?: Family; sample_count?: number; split?: string; [key: string]: unknown }; binding: { checkpoint_sha256: string; dataset_fingerprint: string; source_dataset_path?: string; family_dataset_sha256?: string } };
 type ActiveApproval = {job_id: string; checkpoint_sha256: string; valid?: boolean};
 const defaults = { ocr: { minimum: { exact_match_accuracy: 1 }, maximum: { character_error_rate: 0 } }, rotated_detection: { minimum: { precision: 1, recall: 1, mean_oriented_iou: .5 }, maximum: { mean_angle_error_deg: 10 } }, enhancement: { minimum: { output_psnr: 20 }, maximum: { output_mse: .01 } }, rotation: {minimum:{within_10_deg:.95},maximum:{angular_mae_deg:5}} };
+function readySource(projectState: ReturnType<typeof useProjectStore.getState>, dataset: ReturnType<typeof useDatasetStore.getState>): string {
+  const project = projectState.project, source = dataset.folderPath;
+  return project && project.id && !projectState.isProjectBusy && projectState.projectDir === project.project_dir
+    && projectState.task === project.task && source && source === project.source_dataset_dir
+    && dataset.datasetKey === `${source}\0${project.task}` && !dataset.isLoading && !dataset.importError ? source : '';
+}
 export const SpecializedApprovalPanel: React.FC = () => {
-  const projectDir = useProjectStore(state => state.projectDir);
-  const source = useDatasetStore(state => state.folderPath);
+  const projectState = useProjectStore(state => state), dataset = useDatasetStore(state => state);
+  const projectDir = projectState.projectDir, source = readySource(projectState, dataset);
   const [,setContextRevision] = useState(getProjectContextGeneration);
   useEffect(() => subscribeProjectContext(() => setContextRevision(getProjectContextGeneration())), []);
   const [family, setFamily] = useState<Family>('ocr');
@@ -19,7 +25,11 @@ export const SpecializedApprovalPanel: React.FC = () => {
   const [active, setActive] = useState<ActiveApproval | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [readRevision, setReadRevision] = useState(0);
-  const captureScope = () => JSON.stringify([projectDir, source, family, getProjectContextGeneration(), getApiPersistenceIdentity(), readRevision]);
+  const captureScope = () => {
+    const current = useProjectStore.getState();
+    return JSON.stringify([current.project?.id, current.projectDir, current.task, readySource(current, useDatasetStore.getState()),
+      family, getProjectContextGeneration(), getApiPersistenceIdentity(), readRevision]);
+  };
   const scope = captureScope();
   const scopeRef = useRef(scope); scopeRef.current = scope;
   useEffect(() => {
