@@ -54,6 +54,34 @@ export function assertAnomalyImport(value:any){
   split_unavailable_reason:'anomaly 분할은 현재 학습 데이터에 적용되지 않습니다. 원본 데이터의 train/val/test 구성을 사용하세요. / anomaly split is not applied by the training loader; use source train/val/test folders.'});
 }
 
+export function assertObservedDraftReplies(rows:any[],origin:string,source:string,beforeAPI:Record<string,Reply>,pipeline:any){
+ const original=(route:string)=>{const reply=beforeAPI[route];expect(reply.status).toBe(200);expect(reply.url).toBe(origin+route);return JSON.parse(reply.body);};
+ const project=original('/api/project/current');expect(project.task).toBe('anomaly');expect(project.source_dataset_dir).toBe(source);
+ expect(original('/api/dataset/revisions')).toEqual({active_revision:null,revisions:[]});
+ expect(original('/api/flowchart/pipeline/active-version')).toEqual({version_id:null});
+ expect(original('/api/flowchart/pipelines?source_dataset_path='+encodeURIComponent(source))).toEqual({pipelines:[],total:0});
+ for(const node of pipeline.nodes)expect(node.data.model_job_id).toBeNull();
+ const libraryURL=origin+'/api/dataset/library/images?state=valid&limit=120';
+ const evaluationURL=origin+'/api/evaluation/results?'+new URLSearchParams({source_dataset_path:source,source_task:'anomaly'});
+ const counts={draft_failure:0,missing_revision:0,missing_model:0};
+ for(const row of rows){
+  for(const value of [row.started,row.deadline,row.finished])expect(Number.isFinite(value)).toBe(true);
+  expect(row.deadline).toBe(row.started+10_000);expect(row.finished).toBeGreaterThanOrEqual(row.started);expect(row.finished).toBeLessThanOrEqual(row.deadline);
+  expect(typeof row.raw).toBe('string');expect(row.raw_sha256).toBe(sha(row.raw));expect(row.raw_size).toBe(Buffer.byteLength(row.raw));
+  if(row.status===200)continue;
+  if(row.url===origin+'/api/flowchart/draft'&&row.method==='PUT'){
+   assertDraftFailure({status:row.status,body:row.raw});counts.draft_failure++;
+  }else if(row.url===libraryURL){
+   expect(row.method).toBe('GET');expect(row.request_body).toBeNull();expect(row.status).toBe(409);
+   expect(JSON.parse(row.raw)).toEqual({detail:'No validated dataset revision is active; validate the source and accept a revision first'});counts.missing_revision++;
+  }else{
+   expect(row.url).toBe(evaluationURL);expect(row.method).toBe('GET');expect(row.request_body).toBeNull();expect(row.status).toBe(404);
+   expect(JSON.parse(row.raw)).toEqual({detail:'No completed training job has been selected'});counts.missing_model++;
+  }
+ }
+ expect(counts).toEqual({draft_failure:1,missing_revision:1,missing_model:1});
+}
+
 function protectedTree(root:string):Tree{
  const result:Tree={};const walk=(directory:string)=>{
   const entry=fs.lstatSync(directory);expect(entry.isSymbolicLink()).toBe(false);expect(entry.isDirectory()).toBe(true);
@@ -172,9 +200,7 @@ async function exercise(page:Page,w:Workspace,e:Evidence,api:Api,native:boolean,
   for(const row of sourceImages){const raw=fs.readFileSync(row.path);expect(raw.length).toBe(row.size);expect(sha(raw)).toBe(row.sha256);assertSourcePixels(raw,row.blue);}for(const row of w.images)expect(sha(fs.readFileSync(row.path))).toBe(row.sha256);
   await e.screenshot(page,(native?'native':'browser')+'-explicit-original-draft-save200-readback-recovers-same-edit');
   await settle();const observedReplies=[...clocks.values()].map(({request,pending:_pending,failure:_failure,...clock})=>({method:request.method(),url:request.url(),request_body:request.postData(),...clock,raw_sha256:sha(clock.raw!),raw_size:Buffer.byteLength(clock.raw!)}));
-  for(const row of observedReplies)if(row.status!==200){if(row.url===origin+'/api/flowchart/draft'&&row.method==='PUT')assertDraftFailure({status:row.status!,body:row.raw!});else{
-   expect(row.status).toBe(404);expect(row.method).toBe('GET');expect(['/api/flowchart/pipeline/active','/api/flowchart/pipeline/active/record']).toContain(new URL(row.url).pathname);expect(JSON.parse(row.raw!)).toEqual({detail:'No active project flowchart.'});
-  }}
+  assertObservedDraftReplies(observedReplies,origin,source,before.api,saved.pipeline);
   const proof={cell:'U012.save-draft.error',project,context,source:{path:image,sha256:imageHash,RGB:pixelProof,root:source,images:sourceImages,layout:'train/good normal-only; original disjoint partition train1/val1/test0'},roots,original_saved_record:saved,original_raw_draft_sha256:sha(originalDraft),changed_pipeline:changed,
    rejected,accepted,recovered,after_error_preserved:true,snapshots,setup_calls:setupCalls,setup_renderer_writes:setupWrites,post_baseline_writes:writes,whole_renderer_writes:[...setupWrites,...writes],fixture_read_clocks:timings,original_observed_request_body_clocks:observedReplies,pre_observer_responses:preObserverResponses,
    scope:{source_electron: native,actual_original_source_ui:true,installed_target:false,model_or_GPU_execution: false,cancel_covered:false,quality_or_human_or_parent_approval:false,failed_same_target_policy:'650ms autosave failure suppresses same-target automatic retry; only explicit save retries',policy_source_controls_separate_from_actual_response_slice:true}};
