@@ -33,6 +33,82 @@ async function within<T>(promise: Promise<T>, deadline: number): Promise<T> {
   finally {if (timer) clearTimeout(timer);}
 }
 
+type ReadonlyDiff = {ordinal: number; request: Request; response: Response; method: string; url: string;
+  request_raw: string; request_sha256: string; request_bytes: number; body: any; started: number; deadline: number;
+  finished: number; status: number; response_raw: string; response_sha256: string; response_bytes: number; reply: any};
+
+function canonicalFixtureJson(value: any): string {
+  const ordered = (item: any): any => {
+    if (typeof item === 'number') {expect(Number.isFinite(item)).toBe(true); return Object.is(item, -0) ? 0 : item;}
+    if (Array.isArray(item)) return item.map(ordered);
+    if (item && typeof item === 'object') return Object.fromEntries(Object.keys(item).sort().map(key => [key, ordered(item[key])]));
+    return item;
+  };
+  return JSON.stringify(ordered(value));
+}
+
+function fixtureSemanticHash(graph: any): string {
+  // Both inputs are the original backend-default-filled saved graph/full draft.
+  // This independent fixture projection preserves every rule except display label.
+  const nodes = Object.fromEntries(graph.nodes.map((node: any) => [node.id,
+    Object.fromEntries(Object.entries(node.data).filter(([key]) => key !== 'label'))]));
+  const edges = graph.edges.map((edge: any) => Object.fromEntries(['source', 'target', 'isBranch', 'predicate', 'payload_type']
+    .map(key => [key, edge[key]])));
+  // This fixture has only ASCII strings/null in these edge fields, for which
+  // Python's spaced JSON sorting and compact JSON sorting have identical order.
+  for (const edge of edges) for (const value of Object.values(edge)) {
+    expect(value === null || typeof value === 'string' && /^[a-z_]+$/.test(value)).toBe(true);
+  }
+  edges.sort((a: any, b: any) => {const left = canonicalFixtureJson(a), right = canonicalFixtureJson(b); return left < right ? -1 : left > right ? 1 : 0;});
+  return sha(canonicalFixtureJson({nodes, edges, execution_config: graph.execution_config}));
+}
+
+async function captureOriginalReadonlyDiff(request: Request, ordinal: number, started: number): Promise<ReadonlyDiff> {
+  const deadline = started + 10_000, rawRequest = request.postData();
+  expect(request.method()).toBe('POST'); expect(rawRequest).not.toBeNull();
+  const response = await within(request.response(), deadline); expect(response).not.toBeNull();
+  expect(response!.request()).toBe(request);
+  // Start the full original body read as soon as this same response is present,
+  // before navigation can destroy Electron's original response resource.
+  const raw = await within(response!.body(), deadline);
+  expect(await within(response!.finished(), deadline)).toBeNull();
+  const finished = Date.now(); expect(finished).toBeLessThanOrEqual(deadline);
+  expect(response!.status()).toBe(200); expect(response!.headers()['content-type']).toContain('application/json');
+  return {ordinal, request, response: response!, method: request.method(), url: request.url(), request_raw: rawRequest!,
+    request_sha256: sha(rawRequest!), request_bytes: Buffer.byteLength(rawRequest!), body: JSON.parse(rawRequest!),
+    started, deadline, finished, status: response!.status(), response_raw: raw.toString('utf8'),
+    response_sha256: sha(raw), response_bytes: raw.length, reply: JSON.parse(raw.toString('utf8'))};
+}
+
+function assertReadonlyDiffs(records: ReadonlyDiff[], origin: string, initialVersion: string, savedVersion: string, beforeGraph: any, afterGraph: any) {
+  expect(records).toHaveLength(2); expect(new Set(records.map(row => row.request)).size).toBe(2);
+  expect(new Set(records.map(row => row.response)).size).toBe(2);
+  const rows = [...records].sort((a, b) => a.ordinal - b.ordinal);
+  const beforeHash = fixtureSemanticHash(beforeGraph), afterHash = fixtureSemanticHash(afterGraph);
+  const changes = [
+    {kind: 'node_changed', node_id: 'roi_left', field: 'params.roi_bbox', before: [0, 0, 64, 64], after: [0, 0, 32, 64]},
+    {kind: 'node_changed', node_id: 'roi_right', field: 'params.roi_bbox', before: [0, 0, 64, 64], after: [32, 0, 64, 64]},
+    {kind: 'execution_changed', before: {max_workers: 1, device_slots: 1}, after: {max_workers: 2, device_slots: 2}},
+  ];
+  for (const [index, row] of rows.entries()) {
+    const url = new URL(row.url), revision = index === 0 ? initialVersion : savedVersion;
+    expect(row.ordinal).toBe(index); expect(row.request.method()).toBe('POST'); expect(row.method).toBe('POST');
+    expect(url.origin).toBe(origin); expect(url.pathname).toBe('/api/flowchart/pipeline/diff');
+    expect([...url.searchParams.entries()]).toEqual([['expected_version_id', revision]]);
+    expect(row.request.url()).toBe(row.url); expect(row.response.request()).toBe(row.request);
+    expect(row.request.postData()).toBe(row.request_raw); expect(JSON.parse(row.request_raw)).toEqual(afterGraph);
+    expect(row.body).toEqual(afterGraph); expect(row.request_sha256).toBe(sha(row.request_raw));
+    expect(row.request_bytes).toBe(Buffer.byteLength(row.request_raw));
+    expect(Number.isFinite(row.started)).toBe(true); expect(row.deadline).toBe(row.started + 10_000);
+    expect(row.finished).toBeGreaterThanOrEqual(row.started); expect(row.finished).toBeLessThanOrEqual(row.deadline);
+    expect(row.response.status()).toBe(200); expect(row.status).toBe(200);
+    expect(row.response_sha256).toBe(sha(row.response_raw)); expect(row.response_bytes).toBe(Buffer.byteLength(row.response_raw));
+    expect(JSON.parse(row.response_raw)).toEqual(row.reply);
+    expect(row.reply).toEqual({parent_revision: revision, stale: false, semantic_delta: {changes: index === 0 ? changes : [],
+      layout_only: false, semantic_sha256_before: index === 0 ? beforeHash : afterHash, semantic_sha256_after: afterHash}, layout_only: false});
+  }
+}
+
 async function prepareValidatedRetainedRevision(api: Api, setup: Api, original: any, project: any) {
   // The legacy summary import does not create an active validated index.
   // Use the original durable job and explicit acceptance before the baseline;
@@ -140,6 +216,17 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   };
   // Complete all original renderer GETs before and after every protected API
   // reread. A failed/unknown read is retained, never filtered from custody.
+  const readonlyDiffs: ReadonlyDiff[] = [], readonlyDiffPending = new Set<Promise<void>>(), readonlyDiffFailures: string[] = [];
+  let readonlyDiffOrdinal = 0;
+  const captureReadonlyDiff = (request: Request) => {
+    const ordinal = readonlyDiffOrdinal++, started = Date.now();
+    let operation: Promise<void>;
+    operation = captureOriginalReadonlyDiff(request, ordinal, started)
+      .then(record => {readonlyDiffs.push(record);})
+      .catch(error => {readonlyDiffFailures.push(String(error));})
+      .finally(() => {readonlyDiffPending.delete(operation);});
+    readonlyDiffPending.add(operation);
+  };
   const pending = new Set<Request>(), readTimes = new Map<Request, number>(), finishedReads: any[] = [], readFailures: string[] = [];
   const startRead = (request: Request) => {if (request.method() === 'GET' && new URL(request.url()).pathname.startsWith('/api/')) {
     pending.add(request); readTimes.set(request, Date.now());
@@ -176,7 +263,8 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   };
   page.on('request', startRead); page.on('requestfinished', request => {void finishRead(request);});
   page.on('requestfailed', request => {if (pending.delete(request)) readFailures.push('Failed original read ' + request.url());});
-  const settle = async () => {await expect.poll(() => pending.size, {timeout: 10_000}).toBe(0); expect(readFailures).toEqual([]);};
+  const settle = async () => {await expect.poll(() => pending.size, {timeout: 10_000}).toBe(0); expect(readFailures).toEqual([]);
+    await Promise.all([...readonlyDiffPending]); expect(readonlyDiffFailures).toEqual([]);};
   if (url) await page.goto(url); else await page.reload();
   await openFlow(); await settle();
   const scoped = new URLSearchParams({source_dataset_path: source, task: 'segmentation'});
@@ -210,7 +298,8 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   }
   const writes: Array<{method: string; url: string; body: any; request: Request}> = [];
   const observeWrite = (request: Request) => {if (new URL(request.url()).pathname.startsWith('/api/') && !['GET', 'HEAD', 'OPTIONS'].includes(request.method())) {
-    writes.push({method: request.method(), url: request.url(), body: request.postDataJSON(), request});
+    if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/flowchart/pipeline/diff') captureReadonlyDiff(request);
+    else writes.push({method: request.method(), url: request.url(), body: request.postDataJSON(), request});
   }};
   page.on('request', observeWrite);
   // Every genuine semantic update is independently persisted by the existing
@@ -344,6 +433,9 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   expect(await api('/api/flowchart/execution-resources?device=cpu')).toEqual(resourcesBefore);
   await settle(); for (const [key, root] of Object.entries(roots)) expect(tree(String(root))).toEqual(after[key]);
   invoke('check');
+  const observedOrigins = [...new Set(finishedReads.map(row => new URL(row.url).origin))]; expect(observedOrigins).toHaveLength(1);
+  assertReadonlyDiffs(readonlyDiffs, observedOrigins[0], initial.version_id, saved.version_id, initialGraphRecord.pipeline || initialGraphRecord, exactPipeline);
+  const readonlyDiffRecords = readonlyDiffs.sort((a, b) => a.ordinal - b.ordinal).map(({request: _request, response: _response, ...row}) => row);
   for (const write of writes) {
     const endpoint = new URL(write.url).pathname;
     expect(['/api/flowchart/models/verify', '/api/flowchart/execution-resources', '/api/flowchart/pipeline', '/api/flowchart/run', '/api/flowchart/draft']).toContain(endpoint);
@@ -369,13 +461,13 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
     initial, setupWrites, validatedRevision, saved, savedList, exactPipeline, graphSha, roots, before, after, apiBefore, apiAfter, changed, changesBefore, changesAfter,
     resourcesBefore, resourcesParallel, restoredResources, drafts, persistedDraft, draft_raw: {relative_path: draftRelative, bytes: draftRaw.length, sha256: sha(draftRaw)}, runs, packageProof,
     writes: writes.map(({request: _request, ...record}) => record), explicit_restore_write: {method: 'PUT', endpoint: '/api/flowchart/execution-resources',
-      body: {device: 'cpu', device_slots: 1}, response: restoredResources}, finishedReads,
+      body: {device: 'cpu', device_slots: 1}, response: restoredResources}, finishedReads, readonlyDiffRecords,
     actual_source_electron: sourceElectron, compiled_backend_covered: false, actual_os_dialog: false,
     original_training_reused: true, new_training: false, original_validation_overlap: true,
     model_quality_approved: false, whole_flow_approved: false, release_approved: false, target_device_accepted: false});
   const finalFile = path.join(workspace.logs, 'retained-unet-final.json'); fs.writeFileSync(finalFile, JSON.stringify({before, after, apiBefore, apiAfter,
     validatedRevision, drafts, persistedDraft, draft_raw: {relative_path: draftRelative, bytes: draftRaw.length, sha256: sha(draftRaw)},
-    runs, packageProof, changesBefore, changesAfter, changed}, null, 2)); evidence.addFile(finalFile);
+    runs, packageProof, changesBefore, changesAfter, changed, readonlyDiffRecords}, null, 2)); evidence.addFile(finalFile);
 }
 
 const browserApi = (request: APIRequestContext, origin: string): Api => async (route, body, method = body === undefined ? 'GET' : 'POST') => {
