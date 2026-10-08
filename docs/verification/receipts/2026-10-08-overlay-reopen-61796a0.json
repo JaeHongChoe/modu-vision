@@ -1,0 +1,153 @@
+{
+  "schema": "modu-vision.saved-overlay-reopen/v1",
+  "source_sha": "61796a0038c77dae4d4b222b96f8383949e4b3ff",
+  "source_dirty": false,
+  "source_inputs": 2222,
+  "source_maps_equal_git_archive": true,
+  "report_sha256": "39bfdfc0ffe2679bc2a98c51e90fcbf2c2157dd90552a0eacef6be40ae7fb23d",
+  "batch_results": {
+    "passed": 2,
+    "failed": 2,
+    "failure_classification": "Separate mask fixture had zero rows because it omitted nested source paths; not a product red; raw retained."
+  },
+  "qualified_GUI_cases": [
+    {
+      "mode": "electron",
+      "GUI_receipt": "2026-10-08-overlay-reopen-61796a0-electron.json",
+      "GUI_receipt_sha256": "b085f53ea845053294bdf529f61369fbdd7dcd58456f9b5ca10d2b362e52b83f",
+      "manifest_sha256": "909cf956a48b1959e158d5bac209c3af0c083a84a795ee83f1bc4a29d6037fc3",
+      "test_source_sha256": "ed5ce19e1542ed27a931c96c98d1d6b8dddf8945ba70854da621f61a78141f87",
+      "screenshots": [
+        {
+          "id": "screenshot-0",
+          "sha256": "a7630bd983cafc83c34ed4adb85e1d8b55569b365edd298ccaaea95430812b86"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "012ab385a7506d7c66442bbcdcbde659e5e4f348b6e65850451c4fed2bf982a6"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "dbca15f6953e7339e59575fae4ace64f02a4b274be990b48c1e2b97c3f4354dd"
+        }
+      ],
+      "original_cleanup": {
+        "electron_alive": false,
+        "backends": [
+          {
+            "port": 63618,
+            "pid": 21222,
+            "port_closed": true,
+            "pid_alive": false
+          }
+        ],
+        "logged_backend_pids": [
+          21222
+        ],
+        "logged_backend_pids_alive": [],
+        "backend_restarted": false,
+        "escaped": [],
+        "unowned_references": [],
+        "scan_error": null,
+        "close_timed_out": false
+      },
+      "full_original_coordinate_rasters": {
+        "all": {
+          "size": [
+            160,
+            96
+          ],
+          "rgba_sha256": "34fe50cd75372ed1727a93aed6e90b02558d8d44a69cd8a08c024dfc6a3fa68c"
+        },
+        "scratch": {
+          "size": [
+            160,
+            96
+          ],
+          "rgba_sha256": "3386a1af922e101cc08503e43ba26d5fcdbc5edeb69aa82eaaf7460322616390"
+        }
+      }
+    },
+    {
+      "mode": "browser",
+      "GUI_receipt": "2026-10-08-overlay-reopen-61796a0-browser.json",
+      "GUI_receipt_sha256": "8e68ed19a409556ec157721e2cd284d7e6eb2498cafbb733ea27e136f830b5af",
+      "manifest_sha256": "f69e1edb5eccda4882ffc13e1bf545c27334af63d44ab808927f483efe1f600b",
+      "test_source_sha256": "ed5ce19e1542ed27a931c96c98d1d6b8dddf8945ba70854da621f61a78141f87",
+      "screenshots": [
+        {
+          "id": "screenshot-0",
+          "sha256": "ed487d09d5ded70fd38ecf4af4a9231eb6dd740d9dc4f8597f0e065b7b892a2c"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "ce4dc855b4cf9c5dac94ca5f5610ae8d8683b86fe2b28d9ff945c2505f7f6c1c"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "a8a7fb46b4637363c2fe9ca580a00b3d2b45469488e4a026dc03d32e9a41ac45"
+        }
+      ],
+      "original_cleanup": {
+        "exited": true,
+        "exitCode": 0,
+        "signal": null,
+        "exitedBeforeStop": false,
+        "forced": false,
+        "forcedReason": null,
+        "groupAlive": false,
+        "escaped": [],
+        "unownedReferences": [],
+        "scanError": null,
+        "durationMs": 1667,
+        "stoppedAt": "2026-10-08T03:50:03.181Z",
+        "healthy_at_end": true,
+        "port_closed": true,
+        "pid_alive": false
+      },
+      "full_original_coordinate_rasters": {
+        "all": {
+          "size": [
+            160,
+            96
+          ],
+          "rgba_sha256": "34fe50cd75372ed1727a93aed6e90b02558d8d44a69cd8a08c024dfc6a3fa68c"
+        },
+        "scratch": {
+          "size": [
+            160,
+            96
+          ],
+          "rgba_sha256": "3386a1af922e101cc08503e43ba26d5fcdbc5edeb69aa82eaaf7460322616390"
+        }
+      }
+    }
+  ],
+  "qualified_cells": [
+    "U011.native-saved-overlay-opacity.reopen",
+    "U011.native-saved-overlay-zoom.reopen",
+    "U011.native-saved-overlay-mouse-pan.reopen",
+    "F051.native-saved-overlay-class-selector.reopen"
+  ],
+  "preservation": {
+    "original_sources_all_hash_verified": true,
+    "all_saved_report_and_input_hashes_verified": true,
+    "complete_unfiltered_annotation_tree_byte_equal_to_actual_before_copies": true,
+    "annotation_and_team_full_GET_records_equal_asserted": true,
+    "new_UI_mutating_requests": 0
+  },
+  "earlier_source_bound_gate": {
+    "freeze_sha256": "666e76eac9dffe27be3dcf95873af846f0751d863f17a7125931477a5d16b415",
+    "earlier_failed_baseline_not_product_red": true,
+    "source_bound_gate_promoted_to_clean_proof": false
+  },
+  "claim_limits": {
+    "model_inference": false,
+    "human_label_quality": false,
+    "physical_device_acceptance": false,
+    "frozen_installed_native_acceptance": false,
+    "whole_writer_tree_acceptance": false,
+    "whole_feature_or_parent_acceptance": false
+  },
+  "count_delta": 4
+}

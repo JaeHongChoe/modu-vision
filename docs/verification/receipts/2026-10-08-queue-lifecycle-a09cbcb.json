@@ -1,0 +1,270 @@
+{
+  "schema": "modu-vision.saved-queue-lifecycle/v1",
+  "source_sha": "a09cbcbd13591a7e82ee68e6ee522a122e55d4d8",
+  "source_dirty": false,
+  "source_inputs": 2224,
+  "source_maps_equal_git_archive": true,
+  "run": {
+    "changed_sources": [],
+    "elapsed_seconds": 40.833247900009155,
+    "returncode": 0,
+    "source_count": 2224,
+    "source_maps_equal": true
+  },
+  "report_sha256": "fa9544dc7ad3f6b5cb35caf828a7ab005dfe9b6a67fafc7a9193725cd16ad18e",
+  "qualified_GUI_cases": [
+    {
+      "mode": "electron",
+      "GUI_receipt": "2026-10-08-queue-lifecycle-a09cbcb-electron.json",
+      "GUI_receipt_sha256": "e6f20971195054354628793e1c9d013a44de4c0cb6972beef28d54dee660b60f",
+      "manifest_sha256": "df2e727175f98b42b85f14c50d98767536abb24bb4dc8df039cf2037b563a3be",
+      "test_source_sha256": "fc7f57dbbddd635749f72c528a1b8544021582ffed80b5ea25a7ec4c6cee40ea",
+      "screenshots": [
+        {
+          "id": "screenshot-0",
+          "sha256": "a5044fd52397a905ca3f112de00cbfa93d202aa0e271369c5ebbefa7c0fb0310"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "a29eb10e1c6ac341ffb02e809a8eed0d68cf0db6e30f4f8a9392251cf13dad4d"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "a5044fd52397a905ca3f112de00cbfa93d202aa0e271369c5ebbefa7c0fb0310"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "a29eb10e1c6ac341ffb02e809a8eed0d68cf0db6e30f4f8a9392251cf13dad4d"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "c0ab044d03ec81ae2501d3a2d4c3d6675599c5897dab9b39e432c2e47ee4096b"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "32d40bdaaf0242e55e594431279855c61d886bafd9578fa956f56a088e57ad4d"
+        },
+        {
+          "id": "screenshot-6",
+          "sha256": "32d40bdaaf0242e55e594431279855c61d886bafd9578fa956f56a088e57ad4d"
+        }
+      ],
+      "original_cleanup": {
+        "electron_alive": false,
+        "backends": [
+          {
+            "port": 49994,
+            "pid": 29162,
+            "port_closed": true,
+            "pid_alive": false
+          }
+        ],
+        "logged_backend_pids": [
+          29162
+        ],
+        "logged_backend_pids_alive": [],
+        "backend_restarted": false,
+        "escaped": [],
+        "unowned_references": [],
+        "scan_error": null,
+        "close_timed_out": false
+      }
+    },
+    {
+      "mode": "browser",
+      "GUI_receipt": "2026-10-08-queue-lifecycle-a09cbcb-browser.json",
+      "GUI_receipt_sha256": "a45afdcc8ec1682f49e6d67d3ce0e2f910c3d536f9caaa18a6f28b11577c5acb",
+      "manifest_sha256": "f5c615a1832aa808aa88322e4f2928c668f68d38dad0f176b26405b2dd9400d7",
+      "test_source_sha256": "fc7f57dbbddd635749f72c528a1b8544021582ffed80b5ea25a7ec4c6cee40ea",
+      "screenshots": [
+        {
+          "id": "screenshot-0",
+          "sha256": "b32c48c18777851a50ad0ff5fbea86043f0b38e28b7d4e083de2306afa58d029"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "42d8ef761d49eaed9c798c9b519f80052f0682ea5e8037badf1996a918ab1e07"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "b32c48c18777851a50ad0ff5fbea86043f0b38e28b7d4e083de2306afa58d029"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "42d8ef761d49eaed9c798c9b519f80052f0682ea5e8037badf1996a918ab1e07"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "5984fc67e86511e612ab7362fe383d4689629c21307558a86b318bcbe468cbba"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "157d1890d144fd3b9c39f5d334775fccb57be146d91ba7b66249c92a6d940d78"
+        },
+        {
+          "id": "screenshot-6",
+          "sha256": "157d1890d144fd3b9c39f5d334775fccb57be146d91ba7b66249c92a6d940d78"
+        }
+      ],
+      "original_cleanup": {
+        "exited": true,
+        "exitCode": 0,
+        "signal": null,
+        "exitedBeforeStop": false,
+        "forced": false,
+        "forcedReason": null,
+        "groupAlive": false,
+        "escaped": [],
+        "unownedReferences": [],
+        "scanError": null,
+        "durationMs": 975,
+        "stoppedAt": "2026-10-08T04:27:21.054Z",
+        "healthy_at_end": true,
+        "port_closed": true,
+        "pid_alive": false
+      }
+    }
+  ],
+  "qualified_cells": [
+    "U015.saved-queue-create.cancel",
+    "U015.saved-queue-threshold.cancel",
+    "U015.saved-queue-margin.cancel",
+    "U015.saved-queue-origin-choice.cancel",
+    "U015.saved-queue-threshold.reopen",
+    "U015.saved-queue-margin.reopen",
+    "U015.saved-queue-origin-choice.reopen",
+    "U015.saved-queue-open.error",
+    "U015.saved-queue-open.reopen"
+  ],
+  "controls": [
+    {
+      "action": "U015.saved-queue-create",
+      "dimension": "cancel",
+      "actual_stage_exit": true,
+      "cancellation_kind": "abandoned valid unsent inputs; no explicit cancellation dialog",
+      "queue_POSTs": 0
+    },
+    {
+      "action": "U015.saved-queue-threshold",
+      "dimension": "cancel",
+      "actual_stage_exit": true,
+      "cancellation_kind": "abandoned valid unsent inputs; no explicit cancellation dialog",
+      "queue_POSTs": 0
+    },
+    {
+      "action": "U015.saved-queue-margin",
+      "dimension": "cancel",
+      "actual_stage_exit": true,
+      "cancellation_kind": "abandoned valid unsent inputs; no explicit cancellation dialog",
+      "queue_POSTs": 0
+    },
+    {
+      "action": "U015.saved-queue-origin-choice",
+      "dimension": "cancel",
+      "actual_stage_exit": true,
+      "cancellation_kind": "abandoned valid unsent inputs; no explicit cancellation dialog",
+      "queue_POSTs": 0
+    },
+    {
+      "action": "U015.saved-queue-threshold",
+      "dimension": "reopen",
+      "actual_reload": true,
+      "abandoned_inputs": {
+        "evaluation": "evaluation_153c5b60204145759be21853d1fb3bf7",
+        "threshold": 0.7,
+        "margin": 0.11
+      },
+      "reset_inputs": {
+        "evaluation": "evaluation_d3affb4bb85142d89e5594da2d8bb477",
+        "threshold": 0.5,
+        "margin": 0.05
+      },
+      "saved_queue_unchanged": true,
+      "queue_POSTs": 0
+    },
+    {
+      "action": "U015.saved-queue-margin",
+      "dimension": "reopen",
+      "actual_reload": true,
+      "abandoned_inputs": {
+        "evaluation": "evaluation_153c5b60204145759be21853d1fb3bf7",
+        "threshold": 0.7,
+        "margin": 0.11
+      },
+      "reset_inputs": {
+        "evaluation": "evaluation_d3affb4bb85142d89e5594da2d8bb477",
+        "threshold": 0.5,
+        "margin": 0.05
+      },
+      "saved_queue_unchanged": true,
+      "queue_POSTs": 0
+    },
+    {
+      "action": "U015.saved-queue-origin-choice",
+      "dimension": "reopen",
+      "actual_reload": true,
+      "abandoned_inputs": {
+        "evaluation": "evaluation_153c5b60204145759be21853d1fb3bf7",
+        "threshold": 0.7,
+        "margin": 0.11
+      },
+      "reset_inputs": {
+        "evaluation": "evaluation_d3affb4bb85142d89e5594da2d8bb477",
+        "threshold": 0.5,
+        "margin": 0.05
+      },
+      "saved_queue_unchanged": true,
+      "queue_POSTs": 0
+    },
+    {
+      "action": "U015.saved-queue-open",
+      "dimension": "error",
+      "exact_scoped_GET_503_count": 1,
+      "saved_queue_cursor_history_and_files_unchanged": true,
+      "retry": {
+        "real_queue_status": 200,
+        "raw_status": 200,
+        "annotation_status": 200,
+        "image_uuid": "1deff65c-a702-5f8f-9476-36366ff2e7a9",
+        "sha256": "8595850b27e6fe68450b3682518f6743699cbf5951e598af6e4762c60e08084d",
+        "complete_original_byte_equality": true,
+        "revision": 2
+      }
+    },
+    {
+      "action": "U015.saved-queue-open",
+      "dimension": "reopen",
+      "actual_reload": true,
+      "actual_saved_queue_id": "review_0df55aa39e2f43be9396ea339c387575",
+      "reopened": {
+        "real_queue_status": 200,
+        "raw_status": 200,
+        "annotation_status": 200,
+        "image_uuid": "1deff65c-a702-5f8f-9476-36366ff2e7a9",
+        "sha256": "8595850b27e6fe68450b3682518f6743699cbf5951e598af6e4762c60e08084d",
+        "complete_original_byte_equality": true,
+        "revision": 2
+      },
+      "cursor": 0,
+      "revision": 1,
+      "history": [],
+      "queue_advanced": false
+    }
+  ],
+  "preservation": {
+    "all_retained_files_rehashed": true,
+    "complete_source_annotation_report_workbench_split_trees_equal_actual_before_copies": true,
+    "complete_queue_cursor_revision_history_metadata_annotations_preserved": true,
+    "exact_original_raw_response_bytes_hash_UUID_revision_verified": true,
+    "all_renderer_API_mutations_after_baseline": 0,
+    "controlled_setup_labels_and_reports_not_human_truth_or_inference": true
+  },
+  "claim_limits": {
+    "model_inference": false,
+    "human_label_quality": false,
+    "frozen_installed_native": false,
+    "whole_writer_tree_acceptance": false,
+    "whole_feature_or_parent_acceptance": false
+  },
+  "count_delta": 9
+}

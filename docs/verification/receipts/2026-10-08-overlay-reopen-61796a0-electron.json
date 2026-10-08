@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "61796a0038c77dae4d4b222b96f8383949e4b3ff",
+  "source_dirty": false,
+  "test": "scripts/e2e/evaluation-viewer-reopen.spec.ts::source Electron saved overlay reopen resets opacity zoom pan and scoped class without modifying evidence",
+  "test_source_sha256": "ed5ce19e1542ed27a931c96c98d1d6b8dddf8945ba70854da621f61a78141f87",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "39bfdfc0ffe2679bc2a98c51e90fcbf2c2157dd90552a0eacef6be40ae7fb23d",
+  "harness_sha256": "909cf956a48b1959e158d5bac209c3af0c083a84a795ee83f1bc4a29d6037fc3",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "a7630bd983cafc83c34ed4adb85e1d8b55569b365edd298ccaaea95430812b86"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "012ab385a7506d7c66442bbcdcbde659e5e4f348b6e65850451c4fed2bf982a6"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "dbca15f6953e7339e59575fae4ace64f02a4b274be990b48c1e2b97c3f4354dd"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

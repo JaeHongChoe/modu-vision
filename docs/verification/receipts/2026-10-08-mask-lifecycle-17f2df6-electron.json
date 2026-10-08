@@ -1,0 +1,60 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "17f2df6c09f0de2501bcde00467249d230141208",
+  "source_dirty": false,
+  "test": "scripts/e2e/pixel-mask-lifecycle.spec.ts::source Electron pixel mask lifecycle preserves labels across chooser refusal preview errors remount and empty export",
+  "test_source_sha256": "900c1b9e318f7094a384856596236f22dc58faf0c6c68900e8979455d53999e1",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "69e11801ab10f0c36490c2da0d78fd503ff85485658b167aff6342fb6a7cd02f",
+  "harness_sha256": "05a0926daa986df98725e7ddab77043ec33e8d52efb9f7eaa2811d51774907bb",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "b0f936ba25e86aaff5f9ae3e19f74ec6d46cab8ed69c009ab4447c5038c8847c"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "9caa69eef61387ba351f3d07ad23f8172ace1a14028af14955e26f4d26db40bf"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "f30e7296e06c2ec0375c1488edc607f58ad862e5079dfe99b6e1de7935187fa1"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "73dcd9276835bbeded286cb613d6f95e2ab1949b95c986220bea71dce6b39e06"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "d8b18c0cbd243409f09ac617daa161970e25bcd7f1c8553f67745f1821f9b865"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "ed431254cb5318863fbbd044dd80b1236ca370eb3a27711c74d38b792cc7c2a5"
+    },
+    {
+      "id": "screenshot-6",
+      "sha256": "bac417a9e07a4e75134d90e79ad1c88988e6fb9365002c8bd4343b53820547a8"
+    },
+    {
+      "id": "screenshot-7",
+      "sha256": "aefd8bd5613b2bdc2cf8ffe69b211fdc530711fea067997ed704bb2dc88f4c62"
+    },
+    {
+      "id": "screenshot-8",
+      "sha256": "9813485d5588367760f388764f6c88ae9b3680097664580dc14bcdd0e9e2b03b"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

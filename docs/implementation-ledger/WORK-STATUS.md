@@ -17,12 +17,14 @@
 | `9b74433` | 실행별 임시 홈을 일반 사용자 데이터 inventory·hash·기존 home 인수 대상에서 제외한다. 실제 경로·symlink 거절을 포함한 관련94개 검사 통과. 기존 active DB 이관은 이미 선언된 scope만 복사했으며, 이번 수정으로 새 DB 복사 문제를 해결했다고 주장하지 않는다. | 실제 설치 home·운영 장비 및 전체 수락. |
 | `0c6a77e` | 원래 CPU writer 잠금의 private duplicate를 실제 worker와 남은 descendant에 전달하고, 결과 검증·정리까지 producer lifetime을 유지한다. 종료 결과 게시의 짧은 transition contention만 기존4초 안에서 재검증·재시도한다. 기존 lease와 새 실패 검사46개, 실제 CPU·drain·원래 Node/backend exit 통합49개 통과. | core의 backend row는 reserved, CPU row는 unsupported로 유지한다. 전체 writer/tree 종료나 launch lease 해제는 아직 승인하지 않는다. |
 | `56effc7` | 검증한 writer·임시 홈·CPU lifetime·drain 실패 검사6개 파일을 source CI에 추가한다. 기존 queue·권한·timeout은 유지한다. | 정확한 최신 게시 소스의 전체 hosted CI 결과. |
-| `61ddadf` | 원래 Popen의 시작 직후 빈 실행 명령을 영속 identity로 기록하지 않는다. 최초 birth·parent·session과 원래 handle을 유지하고0.5초 안에서 같은 비어 있지 않은 명령을 두 번 확인한다. 새 실패·복구 검사와 기존 종료·spawn 실패15개 통과. | 기존 잘못된 이력은 자동 수정하지 않는다. 실제 Linux inspector 재검사와 전체 writer 종료 확인. |
+| `61ddadf` | 원래 Popen의 시작 직후 빈 실행 명령을 영속 identity로 기록하지 않는다. 최초 birth·parent·session과 원래 handle을 유지하고0.5초 안에서 같은 비어 있지 않은 명령을 두 번 확인한다. 새 실패·복구 검사와 기존 종료·spawn 실패15개 통과. 실제 Linux의 소스`0079355`에서도 원래 inspector와 신규 시작·metadata16개 검사가 통과했다. | 기존 잘못된 이력은 자동 수정하지 않는다. 전체 writer 종료 확인과 최신 전체 hosted CI. |
 | `2d20247` | 선택된 CPU 플로우의 package 검사·임시 파일 작성 전에 원래 writer admission을 얻고, 실제 실행·결과 해석·정리까지 유지한다. protocol2 거절,3의 counted scope,4의 원래 descriptor 전달과 독립 SDK를22개 검사로 확인했다. SDK fixture 보정 후 관련6개도 통과. | inline·GPU·원격·background producer 및 전체 수락은 별도 작업이다. |
 | `0079355` | inert compiled-intent fixture의 Darwin schema2와 Linux schema1을 구분해 원래 crash-before-spawn·재시도 거절 검사를 유지한다. metadata 검사10개 통과. | 실제 compiled/native·publisher 실행을 이 fixture로 승인하지 않는다. |
 | `ecf41e4` | 시작 identity와 CPU 플로우 검사2개 파일을 source CI에 추가한다. selector227개 중복·누락 없음을 확인했다. | 새 게시 소스의 전체 hosted CI 완료. |
 
 각 gate는 실행 당시 dirty source의 전후 manifest와 정확한 변경 파일 hash에 연결한다. 이 결과를 후속 소스의 clean commit·frozen/native·서명·공정 품질 수락으로 확대하지 않는다. 상세 근거는 `docs/verification/receipts/2026-10-08-original-writer-drain-0c6a77e.json`과 `docs/verification/receipts/2026-10-08-flow-start-0079355.json`이다. 후자의 합친 소스 검사58개는 실패·skip 없이 통과했고2219개 source 입력 hash가 전후 같았다. 부모 구현 집계69/13과 curated658/791은 유지한다. 남은 producer·Linux 영향 검증·UI 시나리오는 계속 진행한다.
+
+Linux focused16개 실행은 GPU·network 없이 고정된 CPU container에서 실행했고`0079355` Git archive2219개 파일과 실행 전후 manifest가 일치했다. 이전에 실패한 inspector의 원래 assertions와10초 timeout을 유지해`starting`과 원래 child의 birth·명령 hash를 확인했다. 정리는 비공개 원래 Popen의 terminate/wait로 한정했으므로 원래 teardown 동등성이나 전체 tree·lease 해제를 승인하지 않는다. 이 기록은 `docs/verification/receipts/2026-10-08-linux-start-0079355.json`이며, 정확한 최신 전체 hosted CI는 별도 대기 중이다.
 
 ## 단계별 집계
 
@@ -47,7 +49,7 @@
 | S6-04 | 오프라인 설치와 업데이트 | POSIX 앱/DB cutover·복구·기존 home 인수, 영속 controller와 main/backend 인증 handshake를 구현하고 검증했다. 원래 backend epoch의 source CPU 기준 이미지 실행과 source candidate 활성 pointer 변경 전 검사·복구를 추가 검증했다. 정확한 compiled candidate worker의 A/OK 수학·두 pointer 변경 전 봉인·재실행 거절과 소스78b6b73의 실제 private frozen 앱 시작을 검증했다. 후속 소스 변경은 이 frozen 결과를 승계하지 않는다. 전체 writer/process-tree 종료 확인, OS installer adapter와 실제 publisher 서명은 계속 미완료이다. |
 | S6-05 | 공개 CI와 source 재현성 | 이전 소스의 hosted 성공·실패를 보존한다. 보호된 수동 candidate 검증 workflow와 source/artifact/환경 정책 gate를 추가했다. 실제 workflow 실행·서명·배포는 하지 않았고, 새 게시 소스의 전체 hosted 결과가 필요하다. |
 | S6-06 | 서명과 릴리스 채널 | 실제 Authenticode/publisher identity·서명 후 byte inventory·채널 승인 필요. |
-| S7-01 | 기존 기능 전체 coverage 계약 | 원래156개 ID를 유지한다. 현재207개 curated action의658개 시나리오 검증,791개 pending이다. 알려진 누락 메뉴/shortcut·남은 시나리오·전체 기능 수락을 이어간다. 행동 수와 전체 기능 완료 수는 다르다. |
+| S7-01 | 기존 기능 전체 coverage 계약 | 원래156개 ID를 유지한다. 현재207개 curated action의692개 시나리오 검증,757개 pending이다. 알려진 누락 메뉴/shortcut·남은 시나리오·전체 기능 수락을 이어간다. 행동 수와 전체 기능 완료 수는 다르다. |
 | S7-02 | 10모델군 실제 작업 시나리오 | 실제5 distinct learned chain은 완료. 10모델군 각각 사람이 검토한 정답과 대표 multi-task recipe 검증 필요. |
 | S7-03 | Windows 실제 설치와 사용 QA | Windows 실제 설치·사용 QA 사용자 면제. hosted Server2025 component 실행을 Win11 실사용 성공으로 세지 않음. |
 | S7-05 | 데이터 규모와 연속 운전 | 실제 browser/native에서10만 메타데이터·실제 이미지3장,3×120 keyset page·최대DOM32·응답120·tail UUID/SHA 재열기·파일 없는 항목 선택 거절을 검증했다. 10만 실제 사진 decode나 target 자원/택트 수락은 아니다. a184b1e의 동일 외장72시간 실행은 유지 중이며 이전 시간을 합산하지 않고 terminal receipt가 필요하다. |
@@ -479,3 +481,29 @@ compiled canary의 닫힌 protocol2/worker8개 필드를 화면 bridge에서 검
 
 - `1f47697` hosted renderer/main 검사976pass/1fail의80ms 단일 heartbeat 표본 실패를 보존했다.160ms 간격의 제어된 fixture에서 같은 실패를 재현하고, 실제 counter 증가를 고정1초 안에 관찰하도록 테스트를 수정했다. 멈춘 fixture는 계속 실패한다. 이 재현으로 당시 hosted scheduler의 정확한 상태를 단정하지 않는다.
 - 수정 후보의 원래 concurrency4 전체 renderer/main992개가 통과했고, clean `328d661`의 원래 영속 controller5개도 통과했다.2208개 tracked 입력은 clean 실행 전후 동일했다. production controller·15000ms 응답 예산·원래 자식 handle의 exit/signal 검사는 바꾸지 않았다. 최신 full hosted CI 완료·전체 writer 종료·부모 수락은 여전히 별도다. 근거: `../verification/receipts/2026-10-08-persistent-heartbeat-328d661.json`.
+
+
+## 저장 평가 화면 재열기 · 61796a0
+
+- 커밋된 소스61796a0의 browser/source Electron에서 opacity·zoom·mouse pan의 실제 close/remount 초기화와 클래스 선택의 실제 renderer reload 초기화가 각각 통과했다. 전체2222개 파일은 Git archive 및 실행 전후 해시가 같고 original/report/input/full annotation metadata와 실제 사전 복사본 bytes를 유지했다. 같은 batch의 mask2건은 nested fixture를 빠뜨린 별도 실패이며 성공으로 세지 않는다.
+- 정확한 기존 reopen4개만 pending에서 verified로 바꿔 curated207개·662verified/787pending이다. 부모 구현69/13·필수 pending11·전체 수락0은 유지하며 실제 모델 품질·장비·frozen 설치 수락으로 승계하지 않는다. 근거: `../verification/receipts/2026-10-08-overlay-reopen-61796a0.json`.
+
+### 2026-10-08 pixel mask lifecycle 실제 clean UI 검증
+
+커밋 `17f2df6`의 실제 브라우저·source Electron 2건이 원래 timeout·0 retry로 통과했다(39.57초). Git archive와 전후2222개 source hash가 같고 original backend/main 종료·빈 teardown을 확인했다. chooser cancel/error와 preview422/503/retry/remount, zero-label export503/retry 및2개 원본의 전체 background PNG pixels·원본 mapping·실제 다운로드 hash를 검증했다. 이전617 fixture 실패는 nested 원본 경로 누락으로 보존하며 제품 실패로 세지 않는다. 기존8개 pending cell만 반영해 curated670/779이며 부모69/13·품질·장치·frozen/native acceptance는 그대로다. 근거: `docs/verification/receipts/2026-10-08-mask-lifecycle-17f2df6.json`.
+
+### 2026-10-08 readiness·그룹 분할 preview 실제 clean UI 검증
+
+`769e198` 실제 browser·source Electron2건은 원래 timeout·0 retry로38.38초에 통과했다. Git archive2223개 source와 전후 hash가 같고 original process 종료·빈 teardown을 확인했다. 진단503의 저장 보고서 보존·실제200 retry, 정확한 원본 SHA/UUID/revision의 라벨 화면 인계, ratio90% 실제422와 preview503/retry, unsent lot preview 재열기 후 저장 product 분할 복원5항목을 닫았다. 전체 annotation/source/split tree·diagnosis bytes·API metadata/versions/settings를 보존했고 label/split 적용은 없었다. curated675/774, 부모69/13·전체 품질/장치 수락은 유지한다. 근거: `docs/verification/receipts/2026-10-08-readiness-lifecycle-769e198.json`.
+
+### 2026-10-08 저장 검토 큐 실제 clean UI 검증
+
+`a09cbcb` 실제 browser·source Electron2건이 원래 timeout·0 retry로40.83초에 통과했다. 원래 Git archive2224개 source 전후 hash와 original process 종료·빈 teardown을 확인했다. 유효한 미전송 원본평가·임계값·margin의 실제 stage 이탈4건과 reload/default 복원3건, 정확한 큐 조회503 후 실제200 원본 SHA/UUID/revision 인계와 reload 재선택2건을 닫았다. 전체 원본·annotation·보고서·workbench·split bytes와 큐 cursor/history/metadata/API를 보존했고 renderer API 변경0건이다. 초기 labels와 보고서는 통제 fixture이며 사람의 truth나 inference가 아니다. curated684/765, 부모69/13·전체 수락은 유지한다. 근거: `docs/verification/receipts/2026-10-08-queue-lifecycle-a09cbcb.json`.
+
+### 2026-10-08 원래 Node backend·preflight 종료 수명 통합 검증
+
+`41aedeb`의 코드11개 파일은 원래 main Popen/private channel에서 인증한 Node backend의 active/direct_exited 등록과 preflight의 one-use ticket/count/original OFD 정리를 통합했다. close·wait/heartbeat·lease release가 불확실하면 custody와 active count를 유지하고 완료를 게시하지 않는다. Root193개(실패/생략0), 원래 deadline/0 retry로600.12초, 전체2240개 전후 source hash 일치 및 commit11개 code bytes와 실제 테스트 bytes 일치를 확인했다. dirty 테스트 base `a09cbcb`를 명시하며 clean 설치/native/tree/전체 writer/launch lease 해제를 주장하지 않는다. 기존 실제 backend row 기대3파일만 exact original backend/main identity로 좁게 갱신했고 private plugin 없이 통과했다. 이전 preflight cc5의 pytest 임시 증거814개 누락으로 그것은 미승인 유지하며 새1674개 증거와 red/fix/actual 기록을 별도 보존했다. 부모69/13은 유지한다. 근거: `docs/verification/receipts/2026-10-08-node-preflight-composed-41aedeb.json`.
+
+### 2026-10-08 파생 정렬·밝기 저장 수명주기 actual clean UI8
+
+`c969d40`의 clean browser·source Electron 파생 편집2건은 original timeout·0 retry로 통과했다. 같은68.99초 batch의 별도 queue-progress2건은 실패하여 미완료로 유지한다. Git archive2229개와 source 전후 hash, original process 종료·빈 teardown을 확인했다. invalid 각도181/밝기4.1의 저장 비활성·0 POST, 유효 미전송 설정 stage 이탈 후 기본값 복원, 각각503 보존→실제200 새 버전, reload 후 정확한 버전·원본 SHA/UUID/revision·전체 PNG·라벨 geometry·보존 출처8항목만 검증으로 올렸다. 원본/annotation/report/split 전체 tree와 API 정책·검토·설정·버전을 보존하고 workbench는 기존 seed와 의도한5파일×2 출력만 증가했다. independent PIL pixel/decoded RGB와 수학적 회전 좌표를 root 재검증했다. curated692/757, 부모69/13·전체 품질/장치/배포 수락은 유지한다. 근거: `docs/verification/receipts/2026-10-08-derived-lifecycle-c969d40.json`.

@@ -1,0 +1,263 @@
+{
+  "schema": "modu-vision.mask-lifecycle/v1",
+  "source_sha": "17f2df6c09f0de2501bcde00467249d230141208",
+  "source_dirty": false,
+  "source_inputs": 2222,
+  "source_maps_equal_git_archive": true,
+  "run": {
+    "changed_sources": [],
+    "elapsed_seconds": 39.57348322868347,
+    "returncode": 0,
+    "source_count": 2222,
+    "source_maps_equal": true
+  },
+  "report_sha256": "69e11801ab10f0c36490c2da0d78fd503ff85485658b167aff6342fb6a7cd02f",
+  "qualified_GUI_cases": [
+    {
+      "mode": "browser",
+      "GUI_receipt": "2026-10-08-mask-lifecycle-17f2df6-browser.json",
+      "GUI_receipt_sha256": "6db174707d4755927ad8b886e8516dfdc7132fd6b63ee4d6d9aaa779fb25f18a",
+      "manifest_sha256": "8185850b3a4657d6dff329cc5bd1c6ded2b456bf16c5d0cbef710f1f4d13a741",
+      "test_source_sha256": "900c1b9e318f7094a384856596236f22dc58faf0c6c68900e8979455d53999e1",
+      "screenshots": [
+        {
+          "id": "screenshot-0",
+          "sha256": "8c2bbfb5c1a1e62a8cb178b69ea4e67d9eccd190ea3efd455dd3815ada3a063d"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "e285805b1f2cb663b3b4c2aa4943e7be438fb1a4b665ce89fbe8669d3aa18ae4"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "d1e31d80e99a5567fbeafc637b7a536df0ba00964281e12d0b2ca16c5db5111a"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "a671ffaf84f9ca9743b0653529ca4f21d5e3c217e84249be97471e60416890ec"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "003750b501acbb0b13fcf25023578f5ffa37fb55bbc31c0e5bf8cb30f9750fda"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "8c2bbfb5c1a1e62a8cb178b69ea4e67d9eccd190ea3efd455dd3815ada3a063d"
+        },
+        {
+          "id": "screenshot-6",
+          "sha256": "fe9ff559fcd17337ba612e8b91767026c6b2afb355182d856b67bf9420c06797"
+        },
+        {
+          "id": "screenshot-7",
+          "sha256": "c0e304fe3e8eb23314d27129a63358e05a90d9e988b547df044998721c3e2dd1"
+        },
+        {
+          "id": "screenshot-8",
+          "sha256": "a75c80fea553c9374dc949026c54d0fe779adb081e03ff55dcecab3e841300a3"
+        }
+      ],
+      "original_cleanup": {
+        "exited": true,
+        "exitCode": 0,
+        "signal": null,
+        "exitedBeforeStop": false,
+        "forced": false,
+        "forcedReason": null,
+        "groupAlive": false,
+        "escaped": [],
+        "unownedReferences": [],
+        "scanError": null,
+        "durationMs": 888,
+        "stoppedAt": "2026-10-08T04:04:19.898Z",
+        "healthy_at_end": true,
+        "port_closed": true,
+        "pid_alive": false
+      },
+      "zero_label_export_masks": [
+        {
+          "file_name": "ng/sample-ng.png",
+          "width": 32,
+          "height": 32,
+          "source_sha256": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da",
+          "mask_sha256": "4c2c6160dd4d28e4a68be4f721dcf5552b286bdc72b5c180a0d9c97db38876a5"
+        },
+        {
+          "file_name": "ok/sample-ok.png",
+          "width": 32,
+          "height": 32,
+          "source_sha256": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e",
+          "mask_sha256": "4c2c6160dd4d28e4a68be4f721dcf5552b286bdc72b5c180a0d9c97db38876a5"
+        }
+      ]
+    },
+    {
+      "mode": "electron",
+      "GUI_receipt": "2026-10-08-mask-lifecycle-17f2df6-electron.json",
+      "GUI_receipt_sha256": "c539a3bcd8331873ac51ac906b3f5589e9ea266545cf9dc2cbafeffda629cde0",
+      "manifest_sha256": "05a0926daa986df98725e7ddab77043ec33e8d52efb9f7eaa2811d51774907bb",
+      "test_source_sha256": "900c1b9e318f7094a384856596236f22dc58faf0c6c68900e8979455d53999e1",
+      "screenshots": [
+        {
+          "id": "screenshot-0",
+          "sha256": "b0f936ba25e86aaff5f9ae3e19f74ec6d46cab8ed69c009ab4447c5038c8847c"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "9caa69eef61387ba351f3d07ad23f8172ace1a14028af14955e26f4d26db40bf"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "f30e7296e06c2ec0375c1488edc607f58ad862e5079dfe99b6e1de7935187fa1"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "73dcd9276835bbeded286cb613d6f95e2ab1949b95c986220bea71dce6b39e06"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "d8b18c0cbd243409f09ac617daa161970e25bcd7f1c8553f67745f1821f9b865"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "ed431254cb5318863fbbd044dd80b1236ca370eb3a27711c74d38b792cc7c2a5"
+        },
+        {
+          "id": "screenshot-6",
+          "sha256": "bac417a9e07a4e75134d90e79ad1c88988e6fb9365002c8bd4343b53820547a8"
+        },
+        {
+          "id": "screenshot-7",
+          "sha256": "aefd8bd5613b2bdc2cf8ffe69b211fdc530711fea067997ed704bb2dc88f4c62"
+        },
+        {
+          "id": "screenshot-8",
+          "sha256": "9813485d5588367760f388764f6c88ae9b3680097664580dc14bcdd0e9e2b03b"
+        }
+      ],
+      "original_cleanup": {
+        "electron_alive": false,
+        "backends": [
+          {
+            "port": 64583,
+            "pid": 24945,
+            "port_closed": true,
+            "pid_alive": false
+          }
+        ],
+        "logged_backend_pids": [
+          24945
+        ],
+        "logged_backend_pids_alive": [],
+        "backend_restarted": false,
+        "escaped": [],
+        "unowned_references": [],
+        "scan_error": null,
+        "close_timed_out": false
+      },
+      "zero_label_export_masks": [
+        {
+          "file_name": "ng/sample-ng.png",
+          "width": 32,
+          "height": 32,
+          "source_sha256": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da",
+          "mask_sha256": "4c2c6160dd4d28e4a68be4f721dcf5552b286bdc72b5c180a0d9c97db38876a5"
+        },
+        {
+          "file_name": "ok/sample-ok.png",
+          "width": 32,
+          "height": 32,
+          "source_sha256": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e",
+          "mask_sha256": "4c2c6160dd4d28e4a68be4f721dcf5552b286bdc72b5c180a0d9c97db38876a5"
+        }
+      ]
+    }
+  ],
+  "qualified_cells": [
+    "F118.pixel-mask-folder.cancel",
+    "F118.pixel-mask-folder.error",
+    "F118.pixel-mask-preview.invalid",
+    "F118.pixel-mask-preview.error",
+    "F118.pixel-mask-folder.reopen",
+    "F118.pixel-mask-preview.reopen",
+    "F118.pixel-mask-export.error",
+    "F118.pixel-mask-export.empty"
+  ],
+  "controls": [
+    {
+      "action": "F118.pixel-mask-folder",
+      "dimension": "cancel",
+      "chooser": "controlled bridge null",
+      "extra_post": 0,
+      "preview_preserved": true
+    },
+    {
+      "action": "F118.pixel-mask-folder",
+      "dimension": "error",
+      "chooser": "controlled bridge throw",
+      "extra_post": 0,
+      "preview_preserved": true
+    },
+    {
+      "action": "F118.pixel-mask-preview",
+      "dimension": "invalid",
+      "status": 422,
+      "actual_backend": true,
+      "applied": false
+    },
+    {
+      "action": "F118.pixel-mask-preview",
+      "dimension": "error",
+      "controlled_status": 503,
+      "retry_actual_backend_status": 200,
+      "applied": false
+    },
+    {
+      "action": "F118.pixel-mask-folder",
+      "dimension": "reopen",
+      "actual_remount": true,
+      "transient_folder_cleared": true,
+      "extra_post": 0
+    },
+    {
+      "action": "F118.pixel-mask-preview",
+      "dimension": "reopen",
+      "actual_remount": true,
+      "transient_preview_cleared": true,
+      "extra_post": 0
+    },
+    {
+      "action": "F118.pixel-mask-export",
+      "dimension": "error",
+      "controlled_status": 503,
+      "retry_actual_backend_status": 200,
+      "extra_failed_download": 0
+    },
+    {
+      "action": "F118.pixel-mask-export",
+      "dimension": "empty",
+      "images": 2,
+      "annotations": 0,
+      "actual_archive_all_background_masks": true,
+      "zero_image_dataset": false
+    }
+  ],
+  "preservation": {
+    "all_retained_files_rehashed": true,
+    "complete_unfiltered_annotation_tree_equal_actual_before_copies": true,
+    "original_image_bytes_and_export_mapping_and_background_mask_pixels_verified": true,
+    "new_UI_mutating_requests_only_mask_preview_export": true,
+    "mask_apply_requests": 0
+  },
+  "earlier_failed_fixture_source": "61796a0038c77dae4d4b222b96f8383949e4b3ff",
+  "earlier_failure": "Zero image fixture manifest omitted nested original paths; retained original failure; no product red inferred",
+  "claim_limits": {
+    "physical_os_folder_chooser": false,
+    "model_inference": false,
+    "human_label_quality": false,
+    "frozen_installed_native": false,
+    "whole_writer_tree_acceptance": false,
+    "whole_feature_or_parent_acceptance": false
+  },
+  "count_delta": 8
+}

@@ -10393,7 +10393,35 @@
        "state": "pending"
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "61796a0038c77dae4d4b222b96f8383949e4b3ff",
+         "kind": "click",
+         "action": "평가 증거 클래스",
+         "expected": "Actual renderer reload resets the saved evidence class fromCrack toall while retaining the exact report/input/raster.",
+         "observed": "Actual source Electron close/remount and renderer reload passed; complete original-coordinate all/Scratch raster hashes and original/report/annotation bytes were preserved. Browser companion also passed; no model inference or label write.",
+         "reviewer": "Codex root independent full Git archive/source map, retained files, actual before byte copies, strict clean GUI collector and teardown readback; physical/frozen/human quality and whole-feature acceptance remain pending.",
+         "test": "scripts/e2e/evaluation-viewer-reopen.spec.ts::source Electron saved overlay reopen resets opacity zoom pan and scoped class without modifying evidence",
+         "receipt": "2026-10-08-overlay-reopen-61796a0-electron.json",
+         "receipt_sha256": "b085f53ea845053294bdf529f61369fbdd7dcd58456f9b5ca10d2b362e52b83f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a7630bd983cafc83c34ed4adb85e1d8b55569b365edd298ccaaea95430812b86"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "012ab385a7506d7c66442bbcdcbde659e5e4f348b6e65850451c4fed2bf982a6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "dbca15f6953e7339e59575fae4ace64f02a4b274be990b48c1e2b97c3f4354dd"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
        "state": "pending"
@@ -19012,13 +19040,169 @@
        "state": "pending"
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "17f2df6c09f0de2501bcde00467249d230141208",
+         "kind": "click",
+         "action": "mask 폴더 선택",
+         "expected": "Execute the exact existing pixel mask error scenario while preserving original labels and sources.",
+         "observed": "{\"action\": \"F118.pixel-mask-folder\", \"dimension\": \"error\", \"chooser\": \"controlled bridge throw\", \"extra_post\": 0, \"preview_preserved\": true}; actual clean browser and source Electron passed; all annotation/source/metadata bytes preserved. Chooser null/throw and HTTP503 were scoped controls; real422/200 and zero-label PNG export were read back.",
+         "reviewer": "Codex root independent Git archive/source map, all file pins, original before byte copies, complete palette pixels and source mapping, strict clean GUI collector and original teardown readback; human/device/frozen/parent acceptance pending.",
+         "test": "scripts/e2e/pixel-mask-lifecycle.spec.ts::source Electron pixel mask lifecycle preserves labels across chooser refusal preview errors remount and empty export",
+         "receipt": "2026-10-08-mask-lifecycle-17f2df6-electron.json",
+         "receipt_sha256": "c539a3bcd8331873ac51ac906b3f5589e9ea266545cf9dc2cbafeffda629cde0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b0f936ba25e86aaff5f9ae3e19f74ec6d46cab8ed69c009ab4447c5038c8847c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "9caa69eef61387ba351f3d07ad23f8172ace1a14028af14955e26f4d26db40bf"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f30e7296e06c2ec0375c1488edc607f58ad862e5079dfe99b6e1de7935187fa1"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "73dcd9276835bbeded286cb613d6f95e2ab1949b95c986220bea71dce6b39e06"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "d8b18c0cbd243409f09ac617daa161970e25bcd7f1c8553f67745f1821f9b865"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "ed431254cb5318863fbbd044dd80b1236ca370eb3a27711c74d38b792cc7c2a5"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "bac417a9e07a4e75134d90e79ad1c88988e6fb9365002c8bd4343b53820547a8"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "aefd8bd5613b2bdc2cf8ffe69b211fdc530711fea067997ed704bb2dc88f4c62"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "9813485d5588367760f388764f6c88ae9b3680097664580dc14bcdd0e9e2b03b"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "17f2df6c09f0de2501bcde00467249d230141208",
+         "kind": "click",
+         "action": "mask 폴더 선택",
+         "expected": "Execute the exact existing pixel mask cancel scenario while preserving original labels and sources.",
+         "observed": "{\"action\": \"F118.pixel-mask-folder\", \"dimension\": \"cancel\", \"chooser\": \"controlled bridge null\", \"extra_post\": 0, \"preview_preserved\": true}; actual clean browser and source Electron passed; all annotation/source/metadata bytes preserved. Chooser null/throw and HTTP503 were scoped controls; real422/200 and zero-label PNG export were read back.",
+         "reviewer": "Codex root independent Git archive/source map, all file pins, original before byte copies, complete palette pixels and source mapping, strict clean GUI collector and original teardown readback; human/device/frozen/parent acceptance pending.",
+         "test": "scripts/e2e/pixel-mask-lifecycle.spec.ts::source Electron pixel mask lifecycle preserves labels across chooser refusal preview errors remount and empty export",
+         "receipt": "2026-10-08-mask-lifecycle-17f2df6-electron.json",
+         "receipt_sha256": "c539a3bcd8331873ac51ac906b3f5589e9ea266545cf9dc2cbafeffda629cde0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b0f936ba25e86aaff5f9ae3e19f74ec6d46cab8ed69c009ab4447c5038c8847c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "9caa69eef61387ba351f3d07ad23f8172ace1a14028af14955e26f4d26db40bf"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f30e7296e06c2ec0375c1488edc607f58ad862e5079dfe99b6e1de7935187fa1"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "73dcd9276835bbeded286cb613d6f95e2ab1949b95c986220bea71dce6b39e06"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "d8b18c0cbd243409f09ac617daa161970e25bcd7f1c8553f67745f1821f9b865"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "ed431254cb5318863fbbd044dd80b1236ca370eb3a27711c74d38b792cc7c2a5"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "bac417a9e07a4e75134d90e79ad1c88988e6fb9365002c8bd4343b53820547a8"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "aefd8bd5613b2bdc2cf8ffe69b211fdc530711fea067997ed704bb2dc88f4c62"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "9813485d5588367760f388764f6c88ae9b3680097664580dc14bcdd0e9e2b03b"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "17f2df6c09f0de2501bcde00467249d230141208",
+         "kind": "click",
+         "action": "mask 폴더 선택",
+         "expected": "Execute the exact existing pixel mask reopen scenario while preserving original labels and sources.",
+         "observed": "{\"action\": \"F118.pixel-mask-folder\", \"dimension\": \"reopen\", \"actual_remount\": true, \"transient_folder_cleared\": true, \"extra_post\": 0}; actual clean browser and source Electron passed; all annotation/source/metadata bytes preserved. Chooser null/throw and HTTP503 were scoped controls; real422/200 and zero-label PNG export were read back.",
+         "reviewer": "Codex root independent Git archive/source map, all file pins, original before byte copies, complete palette pixels and source mapping, strict clean GUI collector and original teardown readback; human/device/frozen/parent acceptance pending.",
+         "test": "scripts/e2e/pixel-mask-lifecycle.spec.ts::source Electron pixel mask lifecycle preserves labels across chooser refusal preview errors remount and empty export",
+         "receipt": "2026-10-08-mask-lifecycle-17f2df6-electron.json",
+         "receipt_sha256": "c539a3bcd8331873ac51ac906b3f5589e9ea266545cf9dc2cbafeffda629cde0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b0f936ba25e86aaff5f9ae3e19f74ec6d46cab8ed69c009ab4447c5038c8847c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "9caa69eef61387ba351f3d07ad23f8172ace1a14028af14955e26f4d26db40bf"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f30e7296e06c2ec0375c1488edc607f58ad862e5079dfe99b6e1de7935187fa1"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "73dcd9276835bbeded286cb613d6f95e2ab1949b95c986220bea71dce6b39e06"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "d8b18c0cbd243409f09ac617daa161970e25bcd7f1c8553f67745f1821f9b865"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "ed431254cb5318863fbbd044dd80b1236ca370eb3a27711c74d38b792cc7c2a5"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "bac417a9e07a4e75134d90e79ad1c88988e6fb9365002c8bd4343b53820547a8"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "aefd8bd5613b2bdc2cf8ffe69b211fdc530711fea067997ed704bb2dc88f4c62"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "9813485d5588367760f388764f6c88ae9b3680097664580dc14bcdd0e9e2b03b"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
        "state": "pending"
@@ -19077,16 +19261,172 @@
        "state": "pending"
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "17f2df6c09f0de2501bcde00467249d230141208",
+         "kind": "click",
+         "action": "mask 미리보기",
+         "expected": "Execute the exact existing pixel mask invalid scenario while preserving original labels and sources.",
+         "observed": "{\"action\": \"F118.pixel-mask-preview\", \"dimension\": \"invalid\", \"status\": 422, \"actual_backend\": true, \"applied\": false}; actual clean browser and source Electron passed; all annotation/source/metadata bytes preserved. Chooser null/throw and HTTP503 were scoped controls; real422/200 and zero-label PNG export were read back.",
+         "reviewer": "Codex root independent Git archive/source map, all file pins, original before byte copies, complete palette pixels and source mapping, strict clean GUI collector and original teardown readback; human/device/frozen/parent acceptance pending.",
+         "test": "scripts/e2e/pixel-mask-lifecycle.spec.ts::source Electron pixel mask lifecycle preserves labels across chooser refusal preview errors remount and empty export",
+         "receipt": "2026-10-08-mask-lifecycle-17f2df6-electron.json",
+         "receipt_sha256": "c539a3bcd8331873ac51ac906b3f5589e9ea266545cf9dc2cbafeffda629cde0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b0f936ba25e86aaff5f9ae3e19f74ec6d46cab8ed69c009ab4447c5038c8847c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "9caa69eef61387ba351f3d07ad23f8172ace1a14028af14955e26f4d26db40bf"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f30e7296e06c2ec0375c1488edc607f58ad862e5079dfe99b6e1de7935187fa1"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "73dcd9276835bbeded286cb613d6f95e2ab1949b95c986220bea71dce6b39e06"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "d8b18c0cbd243409f09ac617daa161970e25bcd7f1c8553f67745f1821f9b865"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "ed431254cb5318863fbbd044dd80b1236ca370eb3a27711c74d38b792cc7c2a5"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "bac417a9e07a4e75134d90e79ad1c88988e6fb9365002c8bd4343b53820547a8"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "aefd8bd5613b2bdc2cf8ffe69b211fdc530711fea067997ed704bb2dc88f4c62"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "9813485d5588367760f388764f6c88ae9b3680097664580dc14bcdd0e9e2b03b"
+          }
+         ]
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "17f2df6c09f0de2501bcde00467249d230141208",
+         "kind": "click",
+         "action": "mask 미리보기",
+         "expected": "Execute the exact existing pixel mask error scenario while preserving original labels and sources.",
+         "observed": "{\"action\": \"F118.pixel-mask-preview\", \"dimension\": \"error\", \"controlled_status\": 503, \"retry_actual_backend_status\": 200, \"applied\": false}; actual clean browser and source Electron passed; all annotation/source/metadata bytes preserved. Chooser null/throw and HTTP503 were scoped controls; real422/200 and zero-label PNG export were read back.",
+         "reviewer": "Codex root independent Git archive/source map, all file pins, original before byte copies, complete palette pixels and source mapping, strict clean GUI collector and original teardown readback; human/device/frozen/parent acceptance pending.",
+         "test": "scripts/e2e/pixel-mask-lifecycle.spec.ts::source Electron pixel mask lifecycle preserves labels across chooser refusal preview errors remount and empty export",
+         "receipt": "2026-10-08-mask-lifecycle-17f2df6-electron.json",
+         "receipt_sha256": "c539a3bcd8331873ac51ac906b3f5589e9ea266545cf9dc2cbafeffda629cde0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b0f936ba25e86aaff5f9ae3e19f74ec6d46cab8ed69c009ab4447c5038c8847c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "9caa69eef61387ba351f3d07ad23f8172ace1a14028af14955e26f4d26db40bf"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f30e7296e06c2ec0375c1488edc607f58ad862e5079dfe99b6e1de7935187fa1"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "73dcd9276835bbeded286cb613d6f95e2ab1949b95c986220bea71dce6b39e06"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "d8b18c0cbd243409f09ac617daa161970e25bcd7f1c8553f67745f1821f9b865"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "ed431254cb5318863fbbd044dd80b1236ca370eb3a27711c74d38b792cc7c2a5"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "bac417a9e07a4e75134d90e79ad1c88988e6fb9365002c8bd4343b53820547a8"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "aefd8bd5613b2bdc2cf8ffe69b211fdc530711fea067997ed704bb2dc88f4c62"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "9813485d5588367760f388764f6c88ae9b3680097664580dc14bcdd0e9e2b03b"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
        "state": "pending"
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "17f2df6c09f0de2501bcde00467249d230141208",
+         "kind": "click",
+         "action": "mask 미리보기",
+         "expected": "Execute the exact existing pixel mask reopen scenario while preserving original labels and sources.",
+         "observed": "{\"action\": \"F118.pixel-mask-preview\", \"dimension\": \"reopen\", \"actual_remount\": true, \"transient_preview_cleared\": true, \"extra_post\": 0}; actual clean browser and source Electron passed; all annotation/source/metadata bytes preserved. Chooser null/throw and HTTP503 were scoped controls; real422/200 and zero-label PNG export were read back.",
+         "reviewer": "Codex root independent Git archive/source map, all file pins, original before byte copies, complete palette pixels and source mapping, strict clean GUI collector and original teardown readback; human/device/frozen/parent acceptance pending.",
+         "test": "scripts/e2e/pixel-mask-lifecycle.spec.ts::source Electron pixel mask lifecycle preserves labels across chooser refusal preview errors remount and empty export",
+         "receipt": "2026-10-08-mask-lifecycle-17f2df6-electron.json",
+         "receipt_sha256": "c539a3bcd8331873ac51ac906b3f5589e9ea266545cf9dc2cbafeffda629cde0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b0f936ba25e86aaff5f9ae3e19f74ec6d46cab8ed69c009ab4447c5038c8847c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "9caa69eef61387ba351f3d07ad23f8172ace1a14028af14955e26f4d26db40bf"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f30e7296e06c2ec0375c1488edc607f58ad862e5079dfe99b6e1de7935187fa1"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "73dcd9276835bbeded286cb613d6f95e2ab1949b95c986220bea71dce6b39e06"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "d8b18c0cbd243409f09ac617daa161970e25bcd7f1c8553f67745f1821f9b865"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "ed431254cb5318863fbbd044dd80b1236ca370eb3a27711c74d38b792cc7c2a5"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "bac417a9e07a4e75134d90e79ad1c88988e6fb9365002c8bd4343b53820547a8"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "aefd8bd5613b2bdc2cf8ffe69b211fdc530711fea067997ed704bb2dc88f4c62"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "9813485d5588367760f388764f6c88ae9b3680097664580dc14bcdd0e9e2b03b"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
        "state": "pending"
@@ -19398,13 +19738,117 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "17f2df6c09f0de2501bcde00467249d230141208",
+         "kind": "click",
+         "action": "pixel mask 내보내기",
+         "expected": "Execute the exact existing pixel mask empty scenario while preserving original labels and sources.",
+         "observed": "{\"action\": \"F118.pixel-mask-export\", \"dimension\": \"empty\", \"images\": 2, \"annotations\": 0, \"actual_archive_all_background_masks\": true, \"zero_image_dataset\": false}; actual clean browser and source Electron passed; all annotation/source/metadata bytes preserved. Chooser null/throw and HTTP503 were scoped controls; real422/200 and zero-label PNG export were read back.",
+         "reviewer": "Codex root independent Git archive/source map, all file pins, original before byte copies, complete palette pixels and source mapping, strict clean GUI collector and original teardown readback; human/device/frozen/parent acceptance pending.",
+         "test": "scripts/e2e/pixel-mask-lifecycle.spec.ts::source Electron pixel mask lifecycle preserves labels across chooser refusal preview errors remount and empty export",
+         "receipt": "2026-10-08-mask-lifecycle-17f2df6-electron.json",
+         "receipt_sha256": "c539a3bcd8331873ac51ac906b3f5589e9ea266545cf9dc2cbafeffda629cde0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b0f936ba25e86aaff5f9ae3e19f74ec6d46cab8ed69c009ab4447c5038c8847c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "9caa69eef61387ba351f3d07ad23f8172ace1a14028af14955e26f4d26db40bf"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f30e7296e06c2ec0375c1488edc607f58ad862e5079dfe99b6e1de7935187fa1"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "73dcd9276835bbeded286cb613d6f95e2ab1949b95c986220bea71dce6b39e06"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "d8b18c0cbd243409f09ac617daa161970e25bcd7f1c8553f67745f1821f9b865"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "ed431254cb5318863fbbd044dd80b1236ca370eb3a27711c74d38b792cc7c2a5"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "bac417a9e07a4e75134d90e79ad1c88988e6fb9365002c8bd4343b53820547a8"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "aefd8bd5613b2bdc2cf8ffe69b211fdc530711fea067997ed704bb2dc88f4c62"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "9813485d5588367760f388764f6c88ae9b3680097664580dc14bcdd0e9e2b03b"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
        "state": "pending"
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "17f2df6c09f0de2501bcde00467249d230141208",
+         "kind": "click",
+         "action": "pixel mask 내보내기",
+         "expected": "Execute the exact existing pixel mask error scenario while preserving original labels and sources.",
+         "observed": "{\"action\": \"F118.pixel-mask-export\", \"dimension\": \"error\", \"controlled_status\": 503, \"retry_actual_backend_status\": 200, \"extra_failed_download\": 0}; actual clean browser and source Electron passed; all annotation/source/metadata bytes preserved. Chooser null/throw and HTTP503 were scoped controls; real422/200 and zero-label PNG export were read back.",
+         "reviewer": "Codex root independent Git archive/source map, all file pins, original before byte copies, complete palette pixels and source mapping, strict clean GUI collector and original teardown readback; human/device/frozen/parent acceptance pending.",
+         "test": "scripts/e2e/pixel-mask-lifecycle.spec.ts::source Electron pixel mask lifecycle preserves labels across chooser refusal preview errors remount and empty export",
+         "receipt": "2026-10-08-mask-lifecycle-17f2df6-electron.json",
+         "receipt_sha256": "c539a3bcd8331873ac51ac906b3f5589e9ea266545cf9dc2cbafeffda629cde0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b0f936ba25e86aaff5f9ae3e19f74ec6d46cab8ed69c009ab4447c5038c8847c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "9caa69eef61387ba351f3d07ad23f8172ace1a14028af14955e26f4d26db40bf"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f30e7296e06c2ec0375c1488edc607f58ad862e5079dfe99b6e1de7935187fa1"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "73dcd9276835bbeded286cb613d6f95e2ab1949b95c986220bea71dce6b39e06"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "d8b18c0cbd243409f09ac617daa161970e25bcd7f1c8553f67745f1821f9b865"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "ed431254cb5318863fbbd044dd80b1236ca370eb3a27711c74d38b792cc7c2a5"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "bac417a9e07a4e75134d90e79ad1c88988e6fb9365002c8bd4343b53820547a8"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "aefd8bd5613b2bdc2cf8ffe69b211fdc530711fea067997ed704bb2dc88f4c62"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "9813485d5588367760f388764f6c88ae9b3680097664580dc14bcdd0e9e2b03b"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
        "state": "pending"
@@ -21624,7 +22068,35 @@
        "state": "pending"
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-06",
+         "source_sha": "61796a0038c77dae4d4b222b96f8383949e4b3ff",
+         "kind": "click",
+         "action": "근거 겹침 투명도",
+         "expected": "Close at0.65 and reopen the same saved viewer at0.5 without changing evidence.",
+         "observed": "Actual source Electron close/remount and renderer reload passed; complete original-coordinate all/Scratch raster hashes and original/report/annotation bytes were preserved. Browser companion also passed; no model inference or label write.",
+         "reviewer": "Codex root independent full Git archive/source map, retained files, actual before byte copies, strict clean GUI collector and teardown readback; physical/frozen/human quality and whole-feature acceptance remain pending.",
+         "test": "scripts/e2e/evaluation-viewer-reopen.spec.ts::source Electron saved overlay reopen resets opacity zoom pan and scoped class without modifying evidence",
+         "receipt": "2026-10-08-overlay-reopen-61796a0-electron.json",
+         "receipt_sha256": "b085f53ea845053294bdf529f61369fbdd7dcd58456f9b5ca10d2b362e52b83f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a7630bd983cafc83c34ed4adb85e1d8b55569b365edd298ccaaea95430812b86"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "012ab385a7506d7c66442bbcdcbde659e5e4f348b6e65850451c4fed2bf982a6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "dbca15f6953e7339e59575fae4ace64f02a4b274be990b48c1e2b97c3f4354dd"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
        "state": "pending"
@@ -21700,7 +22172,35 @@
        "state": "pending"
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-06",
+         "source_sha": "61796a0038c77dae4d4b222b96f8383949e4b3ff",
+         "kind": "click",
+         "action": "근거 이미지 확대",
+         "expected": "Close at125 percent and reopen the same saved viewer at100 percent.",
+         "observed": "Actual source Electron close/remount and renderer reload passed; complete original-coordinate all/Scratch raster hashes and original/report/annotation bytes were preserved. Browser companion also passed; no model inference or label write.",
+         "reviewer": "Codex root independent full Git archive/source map, retained files, actual before byte copies, strict clean GUI collector and teardown readback; physical/frozen/human quality and whole-feature acceptance remain pending.",
+         "test": "scripts/e2e/evaluation-viewer-reopen.spec.ts::source Electron saved overlay reopen resets opacity zoom pan and scoped class without modifying evidence",
+         "receipt": "2026-10-08-overlay-reopen-61796a0-electron.json",
+         "receipt_sha256": "b085f53ea845053294bdf529f61369fbdd7dcd58456f9b5ca10d2b362e52b83f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a7630bd983cafc83c34ed4adb85e1d8b55569b365edd298ccaaea95430812b86"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "012ab385a7506d7c66442bbcdcbde659e5e4f348b6e65850451c4fed2bf982a6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "dbca15f6953e7339e59575fae4ace64f02a4b274be990b48c1e2b97c3f4354dd"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
        "state": "pending"
@@ -21776,7 +22276,35 @@
        "state": "pending"
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-06",
+         "source_sha": "61796a0038c77dae4d4b222b96f8383949e4b3ff",
+         "kind": "click",
+         "action": "근거 이미지 이동 영역",
+         "expected": "Close at40,25 display pan and reopen the same saved viewer at0,0.",
+         "observed": "Actual source Electron close/remount and renderer reload passed; complete original-coordinate all/Scratch raster hashes and original/report/annotation bytes were preserved. Browser companion also passed; no model inference or label write.",
+         "reviewer": "Codex root independent full Git archive/source map, retained files, actual before byte copies, strict clean GUI collector and teardown readback; physical/frozen/human quality and whole-feature acceptance remain pending.",
+         "test": "scripts/e2e/evaluation-viewer-reopen.spec.ts::source Electron saved overlay reopen resets opacity zoom pan and scoped class without modifying evidence",
+         "receipt": "2026-10-08-overlay-reopen-61796a0-electron.json",
+         "receipt_sha256": "b085f53ea845053294bdf529f61369fbdd7dcd58456f9b5ca10d2b362e52b83f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a7630bd983cafc83c34ed4adb85e1d8b55569b365edd298ccaaea95430812b86"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "012ab385a7506d7c66442bbcdcbde659e5e4f348b6e65850451c4fed2bf982a6"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "dbca15f6953e7339e59575fae4ace64f02a4b274be990b48c1e2b97c3f4354dd"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
        "state": "pending"
@@ -22558,7 +23086,51 @@
        ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-07",
+         "source_sha": "769e198553b4c5bf352fcfe79cbbf58f8a238824",
+         "kind": "click",
+         "action": "준비 상태 진단",
+         "expected": "Exercise exact existing readiness error condition without changing labels or saved split.",
+         "observed": "{\"action\": \"U013.readiness-diagnose\", \"dimension\": \"error\", \"controlled_status\": 503, \"saved_report_sha256_preserved\": \"31dc523470b76787a2cadd8b6130c8600691945efe72c1c31bc0155a637edde1\", \"retry_actual_backend_status\": 200}; actual clean browser and source Electron passed; complete protected original/annotation/split/diagnosis bytes and API records preserved.",
+         "reviewer": "Codex root independent archive/source map, all retained pins, actual before byte copies, exact original raw response hash and UUID/revision, strict clean GUI collector and original teardown readback; model/human/device/frozen/parent acceptance pending.",
+         "test": "scripts/e2e/readiness-preview-lifecycle.spec.ts::source Electron readiness diagnosis and unsent grouped split lifecycle preserve exact originals and saved split",
+         "receipt": "2026-10-08-readiness-lifecycle-769e198-electron.json",
+         "receipt_sha256": "68cbaab5543f34a5435e7de03b86ae7ac5f3f9fbba2a34cc3c19b8604823f5d4",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "e65ed97fa0cd865f7a49818c23eaa7a5665d583d558500a5d9217af264710c1e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "b62b846fd8f66652f5662cdb69c51cde6a47ea6967c27c2f93fcbbd639f105cc"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "2bfa2204b8607a61363456c1cec3ece51220245b00727c90963d799df154e90f"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "b98ae5a93e1b09893bafb004c739997eb2c805482998fe1cca028042d54d991d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "01605c00e6f63b8cdb6d57ea6ac34cf379eb5bcba2dbfee9959359b4d7bd1b06"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "20429f5f815507d5507be582dacaa0523a053e94cf2808ca7dee2073887c2dcf"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "4273ff75351a2e5772a489b66addda92cb2d0752f0281d428a98989ec1181e87"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
        "state": "pending"
@@ -22591,7 +23163,51 @@
        ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-07",
+         "source_sha": "769e198553b4c5bf352fcfe79cbbf58f8a238824",
+         "kind": "click",
+         "action": "준비 상태 진단",
+         "expected": "Exercise exact existing readiness handoff condition without changing labels or saved split.",
+         "observed": "{\"action\": \"U013.readiness-diagnose\", \"dimension\": \"handoff\", \"stage\": 2, \"image_uuid\": \"c6b748b6-4a9e-57fb-9968-d813e2d5633c\", \"revision\": 2, \"source_sha256\": \"919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da\", \"actual_raw_response_sha256\": \"919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da\", \"labels_saved\": false}; actual clean browser and source Electron passed; complete protected original/annotation/split/diagnosis bytes and API records preserved.",
+         "reviewer": "Codex root independent archive/source map, all retained pins, actual before byte copies, exact original raw response hash and UUID/revision, strict clean GUI collector and original teardown readback; model/human/device/frozen/parent acceptance pending.",
+         "test": "scripts/e2e/readiness-preview-lifecycle.spec.ts::source Electron readiness diagnosis and unsent grouped split lifecycle preserve exact originals and saved split",
+         "receipt": "2026-10-08-readiness-lifecycle-769e198-electron.json",
+         "receipt_sha256": "68cbaab5543f34a5435e7de03b86ae7ac5f3f9fbba2a34cc3c19b8604823f5d4",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "e65ed97fa0cd865f7a49818c23eaa7a5665d583d558500a5d9217af264710c1e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "b62b846fd8f66652f5662cdb69c51cde6a47ea6967c27c2f93fcbbd639f105cc"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "2bfa2204b8607a61363456c1cec3ece51220245b00727c90963d799df154e90f"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "b98ae5a93e1b09893bafb004c739997eb2c805482998fe1cca028042d54d991d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "01605c00e6f63b8cdb6d57ea6ac34cf379eb5bcba2dbfee9959359b4d7bd1b06"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "20429f5f815507d5507be582dacaa0523a053e94cf2808ca7dee2073887c2dcf"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "4273ff75351a2e5772a489b66addda92cb2d0752f0281d428a98989ec1181e87"
+          }
+         ]
+        }
+       ]
       }
      }
     },
@@ -22631,16 +23247,148 @@
        "state": "pending"
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-07",
+         "source_sha": "769e198553b4c5bf352fcfe79cbbf58f8a238824",
+         "kind": "click",
+         "action": "분할 미리보기",
+         "expected": "Exercise exact existing readiness invalid condition without changing labels or saved split.",
+         "observed": "{\"action\": \"U013.group-split-preview\", \"dimension\": \"invalid\", \"ratios\": [0.6, 0.3, 0], \"actual_backend_status\": 422, \"saved_split_unchanged\": true, \"split_applied\": false}; actual clean browser and source Electron passed; complete protected original/annotation/split/diagnosis bytes and API records preserved.",
+         "reviewer": "Codex root independent archive/source map, all retained pins, actual before byte copies, exact original raw response hash and UUID/revision, strict clean GUI collector and original teardown readback; model/human/device/frozen/parent acceptance pending.",
+         "test": "scripts/e2e/readiness-preview-lifecycle.spec.ts::source Electron readiness diagnosis and unsent grouped split lifecycle preserve exact originals and saved split",
+         "receipt": "2026-10-08-readiness-lifecycle-769e198-electron.json",
+         "receipt_sha256": "68cbaab5543f34a5435e7de03b86ae7ac5f3f9fbba2a34cc3c19b8604823f5d4",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "e65ed97fa0cd865f7a49818c23eaa7a5665d583d558500a5d9217af264710c1e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "b62b846fd8f66652f5662cdb69c51cde6a47ea6967c27c2f93fcbbd639f105cc"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "2bfa2204b8607a61363456c1cec3ece51220245b00727c90963d799df154e90f"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "b98ae5a93e1b09893bafb004c739997eb2c805482998fe1cca028042d54d991d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "01605c00e6f63b8cdb6d57ea6ac34cf379eb5bcba2dbfee9959359b4d7bd1b06"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "20429f5f815507d5507be582dacaa0523a053e94cf2808ca7dee2073887c2dcf"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "4273ff75351a2e5772a489b66addda92cb2d0752f0281d428a98989ec1181e87"
+          }
+         ]
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-07",
+         "source_sha": "769e198553b4c5bf352fcfe79cbbf58f8a238824",
+         "kind": "click",
+         "action": "분할 미리보기",
+         "expected": "Exercise exact existing readiness error condition without changing labels or saved split.",
+         "observed": "{\"action\": \"U013.group-split-preview\", \"dimension\": \"error\", \"controlled_status\": 503, \"retry_actual_backend_status\": 200, \"preview_qualification_sha256\": \"966b06607b5991e3d36ac70e1df13b25b463ee8c0108ba7fd43e555248bc3e52\", \"split_applied\": false}; actual clean browser and source Electron passed; complete protected original/annotation/split/diagnosis bytes and API records preserved.",
+         "reviewer": "Codex root independent archive/source map, all retained pins, actual before byte copies, exact original raw response hash and UUID/revision, strict clean GUI collector and original teardown readback; model/human/device/frozen/parent acceptance pending.",
+         "test": "scripts/e2e/readiness-preview-lifecycle.spec.ts::source Electron readiness diagnosis and unsent grouped split lifecycle preserve exact originals and saved split",
+         "receipt": "2026-10-08-readiness-lifecycle-769e198-electron.json",
+         "receipt_sha256": "68cbaab5543f34a5435e7de03b86ae7ac5f3f9fbba2a34cc3c19b8604823f5d4",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "e65ed97fa0cd865f7a49818c23eaa7a5665d583d558500a5d9217af264710c1e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "b62b846fd8f66652f5662cdb69c51cde6a47ea6967c27c2f93fcbbd639f105cc"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "2bfa2204b8607a61363456c1cec3ece51220245b00727c90963d799df154e90f"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "b98ae5a93e1b09893bafb004c739997eb2c805482998fe1cca028042d54d991d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "01605c00e6f63b8cdb6d57ea6ac34cf379eb5bcba2dbfee9959359b4d7bd1b06"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "20429f5f815507d5507be582dacaa0523a053e94cf2808ca7dee2073887c2dcf"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "4273ff75351a2e5772a489b66addda92cb2d0752f0281d428a98989ec1181e87"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
        "state": "pending"
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-07",
+         "source_sha": "769e198553b4c5bf352fcfe79cbbf58f8a238824",
+         "kind": "click",
+         "action": "분할 미리보기",
+         "expected": "Exercise exact existing readiness reopen condition without changing labels or saved split.",
+         "observed": "{\"action\": \"U013.group-split-preview\", \"dimension\": \"reopen\", \"actual_full_reload\": true, \"unsent_preview_discarded\": true, \"saved_qualification_sha256\": \"17a7f02f83fd51fb64c373edeae64a678103b429bc501f1ef18e82a0f789f161\", \"split_applied\": false, \"extra_post\": 0}; actual clean browser and source Electron passed; complete protected original/annotation/split/diagnosis bytes and API records preserved.",
+         "reviewer": "Codex root independent archive/source map, all retained pins, actual before byte copies, exact original raw response hash and UUID/revision, strict clean GUI collector and original teardown readback; model/human/device/frozen/parent acceptance pending.",
+         "test": "scripts/e2e/readiness-preview-lifecycle.spec.ts::source Electron readiness diagnosis and unsent grouped split lifecycle preserve exact originals and saved split",
+         "receipt": "2026-10-08-readiness-lifecycle-769e198-electron.json",
+         "receipt_sha256": "68cbaab5543f34a5435e7de03b86ae7ac5f3f9fbba2a34cc3c19b8604823f5d4",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "e65ed97fa0cd865f7a49818c23eaa7a5665d583d558500a5d9217af264710c1e"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "b62b846fd8f66652f5662cdb69c51cde6a47ea6967c27c2f93fcbbd639f105cc"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "2bfa2204b8607a61363456c1cec3ece51220245b00727c90963d799df154e90f"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "b98ae5a93e1b09893bafb004c739997eb2c805482998fe1cca028042d54d991d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "01605c00e6f63b8cdb6d57ea6ac34cf379eb5bcba2dbfee9959359b4d7bd1b06"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "20429f5f815507d5507be582dacaa0523a053e94cf2808ca7dee2073887c2dcf"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "4273ff75351a2e5772a489b66addda92cb2d0752f0281d428a98989ec1181e87"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
        "state": "pending"
@@ -22793,16 +23541,224 @@
        "state": "pending"
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-08",
+         "source_sha": "c969d40d6ca6d136855e2f5d54a544ba187cdcd6",
+         "kind": "click",
+         "action": "정렬 새 버전 저장",
+         "expected": "Exercise exact derived edit invalid condition while retaining original labels, data and policy.",
+         "observed": "{\"action\": \"U014.align-version-save\", \"dimension\": \"invalid\", \"actual_disabled_save_control\": true, \"invalid_field\": \"clockwise_degrees\", \"invalid_value\": 181, \"derived_POSTs\": 0}; actual clean browser and source Electron passed; exact two derived output inventories, PNG and decoded RGB hashes and independent rotated geometry verified.",
+         "reviewer": "Codex root independent Git archive/source maps, every retained pin and original before-copy, independent PIL pixel and mathematical annotation geometry readback, strict per-case clean GUI collector, original teardown; other mixed batch queue cases remain failed and pending.",
+         "test": "scripts/e2e/derived-edit-lifecycle.spec.ts::native derived align and brightness lifecycle binds exact saved pixels labels and original custody",
+         "receipt": "2026-10-08-derived-lifecycle-c969d40-electron.json",
+         "receipt_sha256": "97f6de8ebceaef7a640aa2f15959d836d6261c33f7a52a3588057b787dd988d0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "65c3e9be9117bc192703f1ccfe0206d88fda003a21d8973e4da2831422b2cd67"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "afd53bf6e3750153b0eb499a7199aae31cf36b656f2d2843139569dd859ee877"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "1df285a80b19b2b9a294422dd45c2ae2e81bf16d8ec29eb0d082628fab3d51f9"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "c15d8357121f288ace320909e87897b71cff0898948c947ff7375a78f22a574a"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "5e5089dcc4a30da79af4483a5588579e6e84a44f629cbcd09436abfff5c2b592"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "6049f0287011c92164da5f932c3b109d919d379c21810948333cf125711f63c2"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "94361a61a3b50722cc93878e1d3f1ae66cc43c84bd31cfee152a154693b0d77a"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "37f405ef926b7a40e833b9ccc61d749742c825ea7bcc9c5e4f217f9b177aa1e4"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "042d0c2b09384a7be64f31657fa217d6f7190d6f21cec092e778e5a429b2dd9d"
+          }
+         ]
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-08",
+         "source_sha": "c969d40d6ca6d136855e2f5d54a544ba187cdcd6",
+         "kind": "click",
+         "action": "정렬 새 버전 저장",
+         "expected": "Exercise exact derived edit error condition while retaining original labels, data and policy.",
+         "observed": "{\"action\": \"U014.align-version-save\", \"dimension\": \"error\", \"exact_POST_503_count\": 1, \"no_output_on_failure\": true, \"actual_backend_retry\": 200, \"original_labels_and_settings_unchanged\": true, \"created_version_id\": \"derived_4c60ddf1f3e74c65b8e1b3bf362098b5\"}; actual clean browser and source Electron passed; exact two derived output inventories, PNG and decoded RGB hashes and independent rotated geometry verified.",
+         "reviewer": "Codex root independent Git archive/source maps, every retained pin and original before-copy, independent PIL pixel and mathematical annotation geometry readback, strict per-case clean GUI collector, original teardown; other mixed batch queue cases remain failed and pending.",
+         "test": "scripts/e2e/derived-edit-lifecycle.spec.ts::native derived align and brightness lifecycle binds exact saved pixels labels and original custody",
+         "receipt": "2026-10-08-derived-lifecycle-c969d40-electron.json",
+         "receipt_sha256": "97f6de8ebceaef7a640aa2f15959d836d6261c33f7a52a3588057b787dd988d0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "65c3e9be9117bc192703f1ccfe0206d88fda003a21d8973e4da2831422b2cd67"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "afd53bf6e3750153b0eb499a7199aae31cf36b656f2d2843139569dd859ee877"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "1df285a80b19b2b9a294422dd45c2ae2e81bf16d8ec29eb0d082628fab3d51f9"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "c15d8357121f288ace320909e87897b71cff0898948c947ff7375a78f22a574a"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "5e5089dcc4a30da79af4483a5588579e6e84a44f629cbcd09436abfff5c2b592"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "6049f0287011c92164da5f932c3b109d919d379c21810948333cf125711f63c2"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "94361a61a3b50722cc93878e1d3f1ae66cc43c84bd31cfee152a154693b0d77a"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "37f405ef926b7a40e833b9ccc61d749742c825ea7bcc9c5e4f217f9b177aa1e4"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "042d0c2b09384a7be64f31657fa217d6f7190d6f21cec092e778e5a429b2dd9d"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-08",
+         "source_sha": "c969d40d6ca6d136855e2f5d54a544ba187cdcd6",
+         "kind": "click",
+         "action": "정렬 새 버전 저장",
+         "expected": "Exercise exact derived edit cancel condition while retaining original labels, data and policy.",
+         "observed": "{\"action\": \"U014.align-version-save\", \"dimension\": \"cancel\", \"actual_stage_exit\": true, \"cancellation_kind\": \"abandon valid unsent parameters; no explicit cancel dialog\", \"derived_POSTs\": 0}; actual clean browser and source Electron passed; exact two derived output inventories, PNG and decoded RGB hashes and independent rotated geometry verified.",
+         "reviewer": "Codex root independent Git archive/source maps, every retained pin and original before-copy, independent PIL pixel and mathematical annotation geometry readback, strict per-case clean GUI collector, original teardown; other mixed batch queue cases remain failed and pending.",
+         "test": "scripts/e2e/derived-edit-lifecycle.spec.ts::native derived align and brightness lifecycle binds exact saved pixels labels and original custody",
+         "receipt": "2026-10-08-derived-lifecycle-c969d40-electron.json",
+         "receipt_sha256": "97f6de8ebceaef7a640aa2f15959d836d6261c33f7a52a3588057b787dd988d0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "65c3e9be9117bc192703f1ccfe0206d88fda003a21d8973e4da2831422b2cd67"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "afd53bf6e3750153b0eb499a7199aae31cf36b656f2d2843139569dd859ee877"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "1df285a80b19b2b9a294422dd45c2ae2e81bf16d8ec29eb0d082628fab3d51f9"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "c15d8357121f288ace320909e87897b71cff0898948c947ff7375a78f22a574a"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "5e5089dcc4a30da79af4483a5588579e6e84a44f629cbcd09436abfff5c2b592"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "6049f0287011c92164da5f932c3b109d919d379c21810948333cf125711f63c2"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "94361a61a3b50722cc93878e1d3f1ae66cc43c84bd31cfee152a154693b0d77a"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "37f405ef926b7a40e833b9ccc61d749742c825ea7bcc9c5e4f217f9b177aa1e4"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "042d0c2b09384a7be64f31657fa217d6f7190d6f21cec092e778e5a429b2dd9d"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-08",
+         "source_sha": "c969d40d6ca6d136855e2f5d54a544ba187cdcd6",
+         "kind": "click",
+         "action": "정렬 새 버전 저장",
+         "expected": "Exercise exact derived edit reopen condition while retaining original labels, data and policy.",
+         "observed": "{\"action\": \"U014.align-version-save\", \"dimension\": \"reopen\", \"actual_reload_and_exact_history_selection\": true, \"exact_version_id\": \"derived_4c60ddf1f3e74c65b8e1b3bf362098b5\", \"raw_GET_status\": 200, \"complete_png_bytes_equal\": true, \"original_sha256\": \"878f0ef9cab804bd792532cfcc2d9d45a84c34f69a61e018c2360e4aa1427b79\", \"derived_sha256\": \"90240ffca70e370d8923ab282335281ad0884a80deb18603854cdfec4663ff52\", \"original_image_uuid\": \"34ce30a4-afa0-5984-be2c-9e20809275c9\", \"original_revision\": 2, \"reviewed_or_adopted\": false}; actual clean browser and source Electron passed; exact two derived output inventories, PNG and decoded RGB hashes and independent rotated geometry verified.",
+         "reviewer": "Codex root independent Git archive/source maps, every retained pin and original before-copy, independent PIL pixel and mathematical annotation geometry readback, strict per-case clean GUI collector, original teardown; other mixed batch queue cases remain failed and pending.",
+         "test": "scripts/e2e/derived-edit-lifecycle.spec.ts::native derived align and brightness lifecycle binds exact saved pixels labels and original custody",
+         "receipt": "2026-10-08-derived-lifecycle-c969d40-electron.json",
+         "receipt_sha256": "97f6de8ebceaef7a640aa2f15959d836d6261c33f7a52a3588057b787dd988d0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "65c3e9be9117bc192703f1ccfe0206d88fda003a21d8973e4da2831422b2cd67"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "afd53bf6e3750153b0eb499a7199aae31cf36b656f2d2843139569dd859ee877"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "1df285a80b19b2b9a294422dd45c2ae2e81bf16d8ec29eb0d082628fab3d51f9"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "c15d8357121f288ace320909e87897b71cff0898948c947ff7375a78f22a574a"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "5e5089dcc4a30da79af4483a5588579e6e84a44f629cbcd09436abfff5c2b592"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "6049f0287011c92164da5f932c3b109d919d379c21810948333cf125711f63c2"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "94361a61a3b50722cc93878e1d3f1ae66cc43c84bd31cfee152a154693b0d77a"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "37f405ef926b7a40e833b9ccc61d749742c825ea7bcc9c5e4f217f9b177aa1e4"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "042d0c2b09384a7be64f31657fa217d6f7190d6f21cec092e778e5a429b2dd9d"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
        "state": "pending"
@@ -22849,16 +23805,224 @@
        "state": "pending"
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-08",
+         "source_sha": "c969d40d6ca6d136855e2f5d54a544ba187cdcd6",
+         "kind": "click",
+         "action": "밝기 새 버전 저장",
+         "expected": "Exercise exact derived edit invalid condition while retaining original labels, data and policy.",
+         "observed": "{\"action\": \"U014.brightness-version-save\", \"dimension\": \"invalid\", \"actual_disabled_save_control\": true, \"invalid_field\": \"factor\", \"invalid_value\": 4.1, \"derived_POSTs\": 0}; actual clean browser and source Electron passed; exact two derived output inventories, PNG and decoded RGB hashes and independent rotated geometry verified.",
+         "reviewer": "Codex root independent Git archive/source maps, every retained pin and original before-copy, independent PIL pixel and mathematical annotation geometry readback, strict per-case clean GUI collector, original teardown; other mixed batch queue cases remain failed and pending.",
+         "test": "scripts/e2e/derived-edit-lifecycle.spec.ts::native derived align and brightness lifecycle binds exact saved pixels labels and original custody",
+         "receipt": "2026-10-08-derived-lifecycle-c969d40-electron.json",
+         "receipt_sha256": "97f6de8ebceaef7a640aa2f15959d836d6261c33f7a52a3588057b787dd988d0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "65c3e9be9117bc192703f1ccfe0206d88fda003a21d8973e4da2831422b2cd67"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "afd53bf6e3750153b0eb499a7199aae31cf36b656f2d2843139569dd859ee877"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "1df285a80b19b2b9a294422dd45c2ae2e81bf16d8ec29eb0d082628fab3d51f9"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "c15d8357121f288ace320909e87897b71cff0898948c947ff7375a78f22a574a"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "5e5089dcc4a30da79af4483a5588579e6e84a44f629cbcd09436abfff5c2b592"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "6049f0287011c92164da5f932c3b109d919d379c21810948333cf125711f63c2"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "94361a61a3b50722cc93878e1d3f1ae66cc43c84bd31cfee152a154693b0d77a"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "37f405ef926b7a40e833b9ccc61d749742c825ea7bcc9c5e4f217f9b177aa1e4"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "042d0c2b09384a7be64f31657fa217d6f7190d6f21cec092e778e5a429b2dd9d"
+          }
+         ]
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-08",
+         "source_sha": "c969d40d6ca6d136855e2f5d54a544ba187cdcd6",
+         "kind": "click",
+         "action": "밝기 새 버전 저장",
+         "expected": "Exercise exact derived edit error condition while retaining original labels, data and policy.",
+         "observed": "{\"action\": \"U014.brightness-version-save\", \"dimension\": \"error\", \"exact_POST_503_count\": 1, \"no_output_on_failure\": true, \"actual_backend_retry\": 200, \"original_labels_and_settings_unchanged\": true, \"created_version_id\": \"derived_8e92108dfc7a4f608dd65b3ebb24ca51\"}; actual clean browser and source Electron passed; exact two derived output inventories, PNG and decoded RGB hashes and independent rotated geometry verified.",
+         "reviewer": "Codex root independent Git archive/source maps, every retained pin and original before-copy, independent PIL pixel and mathematical annotation geometry readback, strict per-case clean GUI collector, original teardown; other mixed batch queue cases remain failed and pending.",
+         "test": "scripts/e2e/derived-edit-lifecycle.spec.ts::native derived align and brightness lifecycle binds exact saved pixels labels and original custody",
+         "receipt": "2026-10-08-derived-lifecycle-c969d40-electron.json",
+         "receipt_sha256": "97f6de8ebceaef7a640aa2f15959d836d6261c33f7a52a3588057b787dd988d0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "65c3e9be9117bc192703f1ccfe0206d88fda003a21d8973e4da2831422b2cd67"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "afd53bf6e3750153b0eb499a7199aae31cf36b656f2d2843139569dd859ee877"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "1df285a80b19b2b9a294422dd45c2ae2e81bf16d8ec29eb0d082628fab3d51f9"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "c15d8357121f288ace320909e87897b71cff0898948c947ff7375a78f22a574a"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "5e5089dcc4a30da79af4483a5588579e6e84a44f629cbcd09436abfff5c2b592"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "6049f0287011c92164da5f932c3b109d919d379c21810948333cf125711f63c2"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "94361a61a3b50722cc93878e1d3f1ae66cc43c84bd31cfee152a154693b0d77a"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "37f405ef926b7a40e833b9ccc61d749742c825ea7bcc9c5e4f217f9b177aa1e4"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "042d0c2b09384a7be64f31657fa217d6f7190d6f21cec092e778e5a429b2dd9d"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-08",
+         "source_sha": "c969d40d6ca6d136855e2f5d54a544ba187cdcd6",
+         "kind": "click",
+         "action": "밝기 새 버전 저장",
+         "expected": "Exercise exact derived edit cancel condition while retaining original labels, data and policy.",
+         "observed": "{\"action\": \"U014.brightness-version-save\", \"dimension\": \"cancel\", \"actual_stage_exit\": true, \"cancellation_kind\": \"abandon valid unsent parameters; no explicit cancel dialog\", \"derived_POSTs\": 0}; actual clean browser and source Electron passed; exact two derived output inventories, PNG and decoded RGB hashes and independent rotated geometry verified.",
+         "reviewer": "Codex root independent Git archive/source maps, every retained pin and original before-copy, independent PIL pixel and mathematical annotation geometry readback, strict per-case clean GUI collector, original teardown; other mixed batch queue cases remain failed and pending.",
+         "test": "scripts/e2e/derived-edit-lifecycle.spec.ts::native derived align and brightness lifecycle binds exact saved pixels labels and original custody",
+         "receipt": "2026-10-08-derived-lifecycle-c969d40-electron.json",
+         "receipt_sha256": "97f6de8ebceaef7a640aa2f15959d836d6261c33f7a52a3588057b787dd988d0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "65c3e9be9117bc192703f1ccfe0206d88fda003a21d8973e4da2831422b2cd67"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "afd53bf6e3750153b0eb499a7199aae31cf36b656f2d2843139569dd859ee877"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "1df285a80b19b2b9a294422dd45c2ae2e81bf16d8ec29eb0d082628fab3d51f9"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "c15d8357121f288ace320909e87897b71cff0898948c947ff7375a78f22a574a"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "5e5089dcc4a30da79af4483a5588579e6e84a44f629cbcd09436abfff5c2b592"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "6049f0287011c92164da5f932c3b109d919d379c21810948333cf125711f63c2"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "94361a61a3b50722cc93878e1d3f1ae66cc43c84bd31cfee152a154693b0d77a"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "37f405ef926b7a40e833b9ccc61d749742c825ea7bcc9c5e4f217f9b177aa1e4"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "042d0c2b09384a7be64f31657fa217d6f7190d6f21cec092e778e5a429b2dd9d"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-08",
+         "source_sha": "c969d40d6ca6d136855e2f5d54a544ba187cdcd6",
+         "kind": "click",
+         "action": "밝기 새 버전 저장",
+         "expected": "Exercise exact derived edit reopen condition while retaining original labels, data and policy.",
+         "observed": "{\"action\": \"U014.brightness-version-save\", \"dimension\": \"reopen\", \"actual_reload_and_exact_history_selection\": true, \"exact_version_id\": \"derived_8e92108dfc7a4f608dd65b3ebb24ca51\", \"raw_GET_status\": 200, \"complete_png_bytes_equal\": true, \"original_sha256\": \"878f0ef9cab804bd792532cfcc2d9d45a84c34f69a61e018c2360e4aa1427b79\", \"derived_sha256\": \"c0273dde1496f2e5e7f9427fb83f358eff329b60480b82ac6a203336f2aec6c4\", \"original_image_uuid\": \"34ce30a4-afa0-5984-be2c-9e20809275c9\", \"original_revision\": 2, \"reviewed_or_adopted\": false}; actual clean browser and source Electron passed; exact two derived output inventories, PNG and decoded RGB hashes and independent rotated geometry verified.",
+         "reviewer": "Codex root independent Git archive/source maps, every retained pin and original before-copy, independent PIL pixel and mathematical annotation geometry readback, strict per-case clean GUI collector, original teardown; other mixed batch queue cases remain failed and pending.",
+         "test": "scripts/e2e/derived-edit-lifecycle.spec.ts::native derived align and brightness lifecycle binds exact saved pixels labels and original custody",
+         "receipt": "2026-10-08-derived-lifecycle-c969d40-electron.json",
+         "receipt_sha256": "97f6de8ebceaef7a640aa2f15959d836d6261c33f7a52a3588057b787dd988d0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "65c3e9be9117bc192703f1ccfe0206d88fda003a21d8973e4da2831422b2cd67"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "afd53bf6e3750153b0eb499a7199aae31cf36b656f2d2843139569dd859ee877"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "1df285a80b19b2b9a294422dd45c2ae2e81bf16d8ec29eb0d082628fab3d51f9"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "c15d8357121f288ace320909e87897b71cff0898948c947ff7375a78f22a574a"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "5e5089dcc4a30da79af4483a5588579e6e84a44f629cbcd09436abfff5c2b592"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "6049f0287011c92164da5f932c3b109d919d379c21810948333cf125711f63c2"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "94361a61a3b50722cc93878e1d3f1ae66cc43c84bd31cfee152a154693b0d77a"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "37f405ef926b7a40e833b9ccc61d749742c825ea7bcc9c5e4f217f9b177aa1e4"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "042d0c2b09384a7be64f31657fa217d6f7190d6f21cec092e778e5a429b2dd9d"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
        "state": "pending"
@@ -23321,7 +24485,51 @@
        ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "a09cbcbd13591a7e82ee68e6ee522a122e55d4d8",
+         "kind": "click",
+         "action": "우선순위 큐 저장",
+         "expected": "Exercise exact existing queue cancel state while preserving original labels and saved queue.",
+         "observed": "{\"action\": \"U015.saved-queue-create\", \"dimension\": \"cancel\", \"actual_stage_exit\": true, \"cancellation_kind\": \"abandoned valid unsent inputs; no explicit cancellation dialog\", \"queue_POSTs\": 0}; actual clean browser and source Electron passed; complete original and saved records preserved; renderer API writes zero.",
+         "reviewer": "Codex root independent archive/full source maps, all retained pins and actual before byte copies, queue and raw response hash UUID revision, strict clean GUI collector and original process teardown; whole feature acceptance pending.",
+         "test": "scripts/e2e/review-queue-lifecycle.spec.ts::native unsent queue choices and saved queue exact original open preserve complete source labels and history",
+         "receipt": "2026-10-08-queue-lifecycle-a09cbcb-electron.json",
+         "receipt_sha256": "e6f20971195054354628793e1c9d013a44de4c0cb6972beef28d54dee660b60f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a5044fd52397a905ca3f112de00cbfa93d202aa0e271369c5ebbefa7c0fb0310"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a29eb10e1c6ac341ffb02e809a8eed0d68cf0db6e30f4f8a9392251cf13dad4d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "a5044fd52397a905ca3f112de00cbfa93d202aa0e271369c5ebbefa7c0fb0310"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "a29eb10e1c6ac341ffb02e809a8eed0d68cf0db6e30f4f8a9392251cf13dad4d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "c0ab044d03ec81ae2501d3a2d4c3d6675599c5897dab9b39e432c2e47ee4096b"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "32d40bdaaf0242e55e594431279855c61d886bafd9578fa956f56a088e57ad4d"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "32d40bdaaf0242e55e594431279855c61d886bafd9578fa956f56a088e57ad4d"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
        "state": "verified",
@@ -23501,10 +24709,98 @@
        ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "a09cbcbd13591a7e82ee68e6ee522a122e55d4d8",
+         "kind": "click",
+         "action": "검토 큐 임계값",
+         "expected": "Exercise exact existing queue cancel state while preserving original labels and saved queue.",
+         "observed": "{\"action\": \"U015.saved-queue-threshold\", \"dimension\": \"cancel\", \"actual_stage_exit\": true, \"cancellation_kind\": \"abandoned valid unsent inputs; no explicit cancellation dialog\", \"queue_POSTs\": 0}; actual clean browser and source Electron passed; complete original and saved records preserved; renderer API writes zero.",
+         "reviewer": "Codex root independent archive/full source maps, all retained pins and actual before byte copies, queue and raw response hash UUID revision, strict clean GUI collector and original process teardown; whole feature acceptance pending.",
+         "test": "scripts/e2e/review-queue-lifecycle.spec.ts::native unsent queue choices and saved queue exact original open preserve complete source labels and history",
+         "receipt": "2026-10-08-queue-lifecycle-a09cbcb-electron.json",
+         "receipt_sha256": "e6f20971195054354628793e1c9d013a44de4c0cb6972beef28d54dee660b60f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a5044fd52397a905ca3f112de00cbfa93d202aa0e271369c5ebbefa7c0fb0310"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a29eb10e1c6ac341ffb02e809a8eed0d68cf0db6e30f4f8a9392251cf13dad4d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "a5044fd52397a905ca3f112de00cbfa93d202aa0e271369c5ebbefa7c0fb0310"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "a29eb10e1c6ac341ffb02e809a8eed0d68cf0db6e30f4f8a9392251cf13dad4d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "c0ab044d03ec81ae2501d3a2d4c3d6675599c5897dab9b39e432c2e47ee4096b"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "32d40bdaaf0242e55e594431279855c61d886bafd9578fa956f56a088e57ad4d"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "32d40bdaaf0242e55e594431279855c61d886bafd9578fa956f56a088e57ad4d"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "a09cbcbd13591a7e82ee68e6ee522a122e55d4d8",
+         "kind": "click",
+         "action": "검토 큐 임계값",
+         "expected": "Exercise exact existing queue reopen state while preserving original labels and saved queue.",
+         "observed": "{\"action\": \"U015.saved-queue-threshold\", \"dimension\": \"reopen\", \"actual_reload\": true, \"abandoned_inputs\": {\"evaluation\": \"evaluation_153c5b60204145759be21853d1fb3bf7\", \"threshold\": 0.7, \"margin\": 0.11}, \"reset_inputs\": {\"evaluation\": \"evaluation_d3affb4bb85142d89e5594da2d8bb477\", \"threshold\": 0.5, \"margin\": 0.05}, \"saved_queue_unchanged\": true, \"queue_POSTs\": 0}; actual clean browser and source Electron passed; complete original and saved records preserved; renderer API writes zero.",
+         "reviewer": "Codex root independent archive/full source maps, all retained pins and actual before byte copies, queue and raw response hash UUID revision, strict clean GUI collector and original process teardown; whole feature acceptance pending.",
+         "test": "scripts/e2e/review-queue-lifecycle.spec.ts::native unsent queue choices and saved queue exact original open preserve complete source labels and history",
+         "receipt": "2026-10-08-queue-lifecycle-a09cbcb-electron.json",
+         "receipt_sha256": "e6f20971195054354628793e1c9d013a44de4c0cb6972beef28d54dee660b60f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a5044fd52397a905ca3f112de00cbfa93d202aa0e271369c5ebbefa7c0fb0310"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a29eb10e1c6ac341ffb02e809a8eed0d68cf0db6e30f4f8a9392251cf13dad4d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "a5044fd52397a905ca3f112de00cbfa93d202aa0e271369c5ebbefa7c0fb0310"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "a29eb10e1c6ac341ffb02e809a8eed0d68cf0db6e30f4f8a9392251cf13dad4d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "c0ab044d03ec81ae2501d3a2d4c3d6675599c5897dab9b39e432c2e47ee4096b"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "32d40bdaaf0242e55e594431279855c61d886bafd9578fa956f56a088e57ad4d"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "32d40bdaaf0242e55e594431279855c61d886bafd9578fa956f56a088e57ad4d"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
        "state": "pending"
@@ -23564,13 +24860,101 @@
        "state": "pending"
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "a09cbcbd13591a7e82ee68e6ee522a122e55d4d8",
+         "kind": "click",
+         "action": "현재 항목 열기",
+         "expected": "Exercise exact existing queue error state while preserving original labels and saved queue.",
+         "observed": "{\"action\": \"U015.saved-queue-open\", \"dimension\": \"error\", \"exact_scoped_GET_503_count\": 1, \"saved_queue_cursor_history_and_files_unchanged\": true, \"retry\": {\"real_queue_status\": 200, \"raw_status\": 200, \"annotation_status\": 200, \"image_uuid\": \"1deff65c-a702-5f8f-9476-36366ff2e7a9\", \"sha256\": \"8595850b27e6fe68450b3682518f6743699cbf5951e598af6e4762c60e08084d\", \"complete_original_byte_equality\": true, \"revision\": 2}}; actual clean browser and source Electron passed; complete original and saved records preserved; renderer API writes zero.",
+         "reviewer": "Codex root independent archive/full source maps, all retained pins and actual before byte copies, queue and raw response hash UUID revision, strict clean GUI collector and original process teardown; whole feature acceptance pending.",
+         "test": "scripts/e2e/review-queue-lifecycle.spec.ts::native unsent queue choices and saved queue exact original open preserve complete source labels and history",
+         "receipt": "2026-10-08-queue-lifecycle-a09cbcb-electron.json",
+         "receipt_sha256": "e6f20971195054354628793e1c9d013a44de4c0cb6972beef28d54dee660b60f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a5044fd52397a905ca3f112de00cbfa93d202aa0e271369c5ebbefa7c0fb0310"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a29eb10e1c6ac341ffb02e809a8eed0d68cf0db6e30f4f8a9392251cf13dad4d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "a5044fd52397a905ca3f112de00cbfa93d202aa0e271369c5ebbefa7c0fb0310"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "a29eb10e1c6ac341ffb02e809a8eed0d68cf0db6e30f4f8a9392251cf13dad4d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "c0ab044d03ec81ae2501d3a2d4c3d6675599c5897dab9b39e432c2e47ee4096b"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "32d40bdaaf0242e55e594431279855c61d886bafd9578fa956f56a088e57ad4d"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "32d40bdaaf0242e55e594431279855c61d886bafd9578fa956f56a088e57ad4d"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
        "state": "pending"
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "a09cbcbd13591a7e82ee68e6ee522a122e55d4d8",
+         "kind": "click",
+         "action": "현재 항목 열기",
+         "expected": "Exercise exact existing queue reopen state while preserving original labels and saved queue.",
+         "observed": "{\"action\": \"U015.saved-queue-open\", \"dimension\": \"reopen\", \"actual_reload\": true, \"actual_saved_queue_id\": \"review_0df55aa39e2f43be9396ea339c387575\", \"reopened\": {\"real_queue_status\": 200, \"raw_status\": 200, \"annotation_status\": 200, \"image_uuid\": \"1deff65c-a702-5f8f-9476-36366ff2e7a9\", \"sha256\": \"8595850b27e6fe68450b3682518f6743699cbf5951e598af6e4762c60e08084d\", \"complete_original_byte_equality\": true, \"revision\": 2}, \"cursor\": 0, \"revision\": 1, \"history\": [], \"queue_advanced\": false}; actual clean browser and source Electron passed; complete original and saved records preserved; renderer API writes zero.",
+         "reviewer": "Codex root independent archive/full source maps, all retained pins and actual before byte copies, queue and raw response hash UUID revision, strict clean GUI collector and original process teardown; whole feature acceptance pending.",
+         "test": "scripts/e2e/review-queue-lifecycle.spec.ts::native unsent queue choices and saved queue exact original open preserve complete source labels and history",
+         "receipt": "2026-10-08-queue-lifecycle-a09cbcb-electron.json",
+         "receipt_sha256": "e6f20971195054354628793e1c9d013a44de4c0cb6972beef28d54dee660b60f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a5044fd52397a905ca3f112de00cbfa93d202aa0e271369c5ebbefa7c0fb0310"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a29eb10e1c6ac341ffb02e809a8eed0d68cf0db6e30f4f8a9392251cf13dad4d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "a5044fd52397a905ca3f112de00cbfa93d202aa0e271369c5ebbefa7c0fb0310"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "a29eb10e1c6ac341ffb02e809a8eed0d68cf0db6e30f4f8a9392251cf13dad4d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "c0ab044d03ec81ae2501d3a2d4c3d6675599c5897dab9b39e432c2e47ee4096b"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "32d40bdaaf0242e55e594431279855c61d886bafd9578fa956f56a088e57ad4d"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "32d40bdaaf0242e55e594431279855c61d886bafd9578fa956f56a088e57ad4d"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
        "state": "pending"
@@ -24775,10 +26159,98 @@
        "state": "pending"
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "a09cbcbd13591a7e82ee68e6ee522a122e55d4d8",
+         "kind": "click",
+         "action": "검토 큐 원본 평가",
+         "expected": "Exercise exact existing queue cancel state while preserving original labels and saved queue.",
+         "observed": "{\"action\": \"U015.saved-queue-origin-choice\", \"dimension\": \"cancel\", \"actual_stage_exit\": true, \"cancellation_kind\": \"abandoned valid unsent inputs; no explicit cancellation dialog\", \"queue_POSTs\": 0}; actual clean browser and source Electron passed; complete original and saved records preserved; renderer API writes zero.",
+         "reviewer": "Codex root independent archive/full source maps, all retained pins and actual before byte copies, queue and raw response hash UUID revision, strict clean GUI collector and original process teardown; whole feature acceptance pending.",
+         "test": "scripts/e2e/review-queue-lifecycle.spec.ts::native unsent queue choices and saved queue exact original open preserve complete source labels and history",
+         "receipt": "2026-10-08-queue-lifecycle-a09cbcb-electron.json",
+         "receipt_sha256": "e6f20971195054354628793e1c9d013a44de4c0cb6972beef28d54dee660b60f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a5044fd52397a905ca3f112de00cbfa93d202aa0e271369c5ebbefa7c0fb0310"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a29eb10e1c6ac341ffb02e809a8eed0d68cf0db6e30f4f8a9392251cf13dad4d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "a5044fd52397a905ca3f112de00cbfa93d202aa0e271369c5ebbefa7c0fb0310"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "a29eb10e1c6ac341ffb02e809a8eed0d68cf0db6e30f4f8a9392251cf13dad4d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "c0ab044d03ec81ae2501d3a2d4c3d6675599c5897dab9b39e432c2e47ee4096b"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "32d40bdaaf0242e55e594431279855c61d886bafd9578fa956f56a088e57ad4d"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "32d40bdaaf0242e55e594431279855c61d886bafd9578fa956f56a088e57ad4d"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "a09cbcbd13591a7e82ee68e6ee522a122e55d4d8",
+         "kind": "click",
+         "action": "검토 큐 원본 평가",
+         "expected": "Exercise exact existing queue reopen state while preserving original labels and saved queue.",
+         "observed": "{\"action\": \"U015.saved-queue-origin-choice\", \"dimension\": \"reopen\", \"actual_reload\": true, \"abandoned_inputs\": {\"evaluation\": \"evaluation_153c5b60204145759be21853d1fb3bf7\", \"threshold\": 0.7, \"margin\": 0.11}, \"reset_inputs\": {\"evaluation\": \"evaluation_d3affb4bb85142d89e5594da2d8bb477\", \"threshold\": 0.5, \"margin\": 0.05}, \"saved_queue_unchanged\": true, \"queue_POSTs\": 0}; actual clean browser and source Electron passed; complete original and saved records preserved; renderer API writes zero.",
+         "reviewer": "Codex root independent archive/full source maps, all retained pins and actual before byte copies, queue and raw response hash UUID revision, strict clean GUI collector and original process teardown; whole feature acceptance pending.",
+         "test": "scripts/e2e/review-queue-lifecycle.spec.ts::native unsent queue choices and saved queue exact original open preserve complete source labels and history",
+         "receipt": "2026-10-08-queue-lifecycle-a09cbcb-electron.json",
+         "receipt_sha256": "e6f20971195054354628793e1c9d013a44de4c0cb6972beef28d54dee660b60f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a5044fd52397a905ca3f112de00cbfa93d202aa0e271369c5ebbefa7c0fb0310"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a29eb10e1c6ac341ffb02e809a8eed0d68cf0db6e30f4f8a9392251cf13dad4d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "a5044fd52397a905ca3f112de00cbfa93d202aa0e271369c5ebbefa7c0fb0310"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "a29eb10e1c6ac341ffb02e809a8eed0d68cf0db6e30f4f8a9392251cf13dad4d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "c0ab044d03ec81ae2501d3a2d4c3d6675599c5897dab9b39e432c2e47ee4096b"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "32d40bdaaf0242e55e594431279855c61d886bafd9578fa956f56a088e57ad4d"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "32d40bdaaf0242e55e594431279855c61d886bafd9578fa956f56a088e57ad4d"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
        "state": "pending"
@@ -24965,10 +26437,98 @@
        ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "a09cbcbd13591a7e82ee68e6ee522a122e55d4d8",
+         "kind": "click",
+         "action": "검토 큐 임계 주변 범위",
+         "expected": "Exercise exact existing queue cancel state while preserving original labels and saved queue.",
+         "observed": "{\"action\": \"U015.saved-queue-margin\", \"dimension\": \"cancel\", \"actual_stage_exit\": true, \"cancellation_kind\": \"abandoned valid unsent inputs; no explicit cancellation dialog\", \"queue_POSTs\": 0}; actual clean browser and source Electron passed; complete original and saved records preserved; renderer API writes zero.",
+         "reviewer": "Codex root independent archive/full source maps, all retained pins and actual before byte copies, queue and raw response hash UUID revision, strict clean GUI collector and original process teardown; whole feature acceptance pending.",
+         "test": "scripts/e2e/review-queue-lifecycle.spec.ts::native unsent queue choices and saved queue exact original open preserve complete source labels and history",
+         "receipt": "2026-10-08-queue-lifecycle-a09cbcb-electron.json",
+         "receipt_sha256": "e6f20971195054354628793e1c9d013a44de4c0cb6972beef28d54dee660b60f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a5044fd52397a905ca3f112de00cbfa93d202aa0e271369c5ebbefa7c0fb0310"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a29eb10e1c6ac341ffb02e809a8eed0d68cf0db6e30f4f8a9392251cf13dad4d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "a5044fd52397a905ca3f112de00cbfa93d202aa0e271369c5ebbefa7c0fb0310"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "a29eb10e1c6ac341ffb02e809a8eed0d68cf0db6e30f4f8a9392251cf13dad4d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "c0ab044d03ec81ae2501d3a2d4c3d6675599c5897dab9b39e432c2e47ee4096b"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "32d40bdaaf0242e55e594431279855c61d886bafd9578fa956f56a088e57ad4d"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "32d40bdaaf0242e55e594431279855c61d886bafd9578fa956f56a088e57ad4d"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "a09cbcbd13591a7e82ee68e6ee522a122e55d4d8",
+         "kind": "click",
+         "action": "검토 큐 임계 주변 범위",
+         "expected": "Exercise exact existing queue reopen state while preserving original labels and saved queue.",
+         "observed": "{\"action\": \"U015.saved-queue-margin\", \"dimension\": \"reopen\", \"actual_reload\": true, \"abandoned_inputs\": {\"evaluation\": \"evaluation_153c5b60204145759be21853d1fb3bf7\", \"threshold\": 0.7, \"margin\": 0.11}, \"reset_inputs\": {\"evaluation\": \"evaluation_d3affb4bb85142d89e5594da2d8bb477\", \"threshold\": 0.5, \"margin\": 0.05}, \"saved_queue_unchanged\": true, \"queue_POSTs\": 0}; actual clean browser and source Electron passed; complete original and saved records preserved; renderer API writes zero.",
+         "reviewer": "Codex root independent archive/full source maps, all retained pins and actual before byte copies, queue and raw response hash UUID revision, strict clean GUI collector and original process teardown; whole feature acceptance pending.",
+         "test": "scripts/e2e/review-queue-lifecycle.spec.ts::native unsent queue choices and saved queue exact original open preserve complete source labels and history",
+         "receipt": "2026-10-08-queue-lifecycle-a09cbcb-electron.json",
+         "receipt_sha256": "e6f20971195054354628793e1c9d013a44de4c0cb6972beef28d54dee660b60f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a5044fd52397a905ca3f112de00cbfa93d202aa0e271369c5ebbefa7c0fb0310"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a29eb10e1c6ac341ffb02e809a8eed0d68cf0db6e30f4f8a9392251cf13dad4d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "a5044fd52397a905ca3f112de00cbfa93d202aa0e271369c5ebbefa7c0fb0310"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "a29eb10e1c6ac341ffb02e809a8eed0d68cf0db6e30f4f8a9392251cf13dad4d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "c0ab044d03ec81ae2501d3a2d4c3d6675599c5897dab9b39e432c2e47ee4096b"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "32d40bdaaf0242e55e594431279855c61d886bafd9578fa956f56a088e57ad4d"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "32d40bdaaf0242e55e594431279855c61d886bafd9578fa956f56a088e57ad4d"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
        "state": "pending"

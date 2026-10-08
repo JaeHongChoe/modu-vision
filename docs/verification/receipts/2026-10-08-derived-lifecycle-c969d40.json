@@ -1,0 +1,306 @@
+{
+  "schema": "modu-vision.derived-edit-lifecycle/v1",
+  "source_sha": "c969d40d6ca6d136855e2f5d54a544ba187cdcd6",
+  "source_dirty": false,
+  "source_inputs": 2229,
+  "source_maps_equal_git_archive": true,
+  "run": {
+    "changed_sources": [],
+    "elapsed_seconds": 68.98569893836975,
+    "returncode": 1,
+    "source_count": 2229,
+    "source_maps_equal": true
+  },
+  "mixed_batch_limit": "Derived browser and Electron cases passed once; the separate queue progress cases failed and are not promoted.",
+  "report_sha256": "67edd9f3fa87772f2b7fcfb024bb65222195ef19f7a98b0406ad2ebb484dd92d",
+  "qualified_GUI_cases": [
+    {
+      "mode": "browser",
+      "GUI_receipt": "2026-10-08-derived-lifecycle-c969d40-browser.json",
+      "GUI_receipt_sha256": "009c592699c3ab6c0096d8ffdb4aaf77307aeb68317efa85b9f78c950a5f7701",
+      "manifest_sha256": "60ae76c4815b5798df9916825b9f07bbcf5e8a31f8923b851c5a5600d64ffcc1",
+      "test_source_sha256": "82190b19132329f4d8061c3466bf54032f439908dbfa244470cf85bc94a52766",
+      "screenshots": [
+        {
+          "id": "screenshot-0",
+          "sha256": "8f638d091b109e01fbba4703aeaa7c5882985ef225a401cb1611435954c0e342"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "1db26a55ea2e82d29457f29770d23fea612297fd6e3895edc362e56425b70e31"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "73b256299e6edf681d5f420d7acb66db78d6d992ba33602e9ce2d3c38a2b8b80"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "2f7c4aa9d74c31d4ec7042f063ce7778df04300ba47d286e7ceb26aebf39890b"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "e27dee7123ba1f4b8ba9eb845067d6b5d1753df1340c3285fdf9081563030922"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "d226abc2139dee6064c3594700938208386e44924c100ba8f7b97486ac002a43"
+        },
+        {
+          "id": "screenshot-6",
+          "sha256": "04b67d15ba296233615fb9e4febb9851c8d3ff0ccf35543c8f88e0d11b37ed96"
+        },
+        {
+          "id": "screenshot-7",
+          "sha256": "a3a45d8fa4633de8d53f797fb0cac727477c44c933a9c69336e9ba103fd2ea5f"
+        },
+        {
+          "id": "screenshot-8",
+          "sha256": "8eb17447eb9af1cd56bffe2460cdc361a506c9bd866e909eb9fc1ece8f759ede"
+        }
+      ],
+      "original_cleanup": {
+        "exited": true,
+        "exitCode": 0,
+        "signal": null,
+        "exitedBeforeStop": false,
+        "forced": false,
+        "forcedReason": null,
+        "groupAlive": false,
+        "escaped": [],
+        "unownedReferences": [],
+        "scanError": null,
+        "durationMs": 937,
+        "stoppedAt": "2026-10-08T04:48:26.688Z",
+        "healthy_at_end": true,
+        "port_closed": true,
+        "pid_alive": false
+      }
+    },
+    {
+      "mode": "electron",
+      "GUI_receipt": "2026-10-08-derived-lifecycle-c969d40-electron.json",
+      "GUI_receipt_sha256": "97f6de8ebceaef7a640aa2f15959d836d6261c33f7a52a3588057b787dd988d0",
+      "manifest_sha256": "8bd9a4431e6b16fe6bfb573587a38456906ad06d5c66ed2f519b8b29cd4548a2",
+      "test_source_sha256": "82190b19132329f4d8061c3466bf54032f439908dbfa244470cf85bc94a52766",
+      "screenshots": [
+        {
+          "id": "screenshot-0",
+          "sha256": "65c3e9be9117bc192703f1ccfe0206d88fda003a21d8973e4da2831422b2cd67"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "afd53bf6e3750153b0eb499a7199aae31cf36b656f2d2843139569dd859ee877"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "1df285a80b19b2b9a294422dd45c2ae2e81bf16d8ec29eb0d082628fab3d51f9"
+        },
+        {
+          "id": "screenshot-3",
+          "sha256": "c15d8357121f288ace320909e87897b71cff0898948c947ff7375a78f22a574a"
+        },
+        {
+          "id": "screenshot-4",
+          "sha256": "5e5089dcc4a30da79af4483a5588579e6e84a44f629cbcd09436abfff5c2b592"
+        },
+        {
+          "id": "screenshot-5",
+          "sha256": "6049f0287011c92164da5f932c3b109d919d379c21810948333cf125711f63c2"
+        },
+        {
+          "id": "screenshot-6",
+          "sha256": "94361a61a3b50722cc93878e1d3f1ae66cc43c84bd31cfee152a154693b0d77a"
+        },
+        {
+          "id": "screenshot-7",
+          "sha256": "37f405ef926b7a40e833b9ccc61d749742c825ea7bcc9c5e4f217f9b177aa1e4"
+        },
+        {
+          "id": "screenshot-8",
+          "sha256": "042d0c2b09384a7be64f31657fa217d6f7190d6f21cec092e778e5a429b2dd9d"
+        }
+      ],
+      "original_cleanup": {
+        "electron_alive": false,
+        "backends": [
+          {
+            "port": 52586,
+            "pid": 33713,
+            "port_closed": true,
+            "pid_alive": false
+          }
+        ],
+        "logged_backend_pids": [
+          33713
+        ],
+        "logged_backend_pids_alive": [],
+        "backend_restarted": false,
+        "escaped": [],
+        "unowned_references": [],
+        "scan_error": null,
+        "close_timed_out": false
+      }
+    }
+  ],
+  "qualified_cells": [
+    "U014.align-version-save.invalid",
+    "U014.brightness-version-save.invalid",
+    "U014.align-version-save.cancel",
+    "U014.brightness-version-save.cancel",
+    "U014.align-version-save.error",
+    "U014.brightness-version-save.error",
+    "U014.align-version-save.reopen",
+    "U014.brightness-version-save.reopen"
+  ],
+  "controls": [
+    {
+      "action": "U014.align-version-save",
+      "dimension": "invalid",
+      "actual_disabled_save_control": true,
+      "invalid_field": "clockwise_degrees",
+      "invalid_value": 181,
+      "derived_POSTs": 0
+    },
+    {
+      "action": "U014.brightness-version-save",
+      "dimension": "invalid",
+      "actual_disabled_save_control": true,
+      "invalid_field": "factor",
+      "invalid_value": 4.1,
+      "derived_POSTs": 0
+    },
+    {
+      "action": "U014.align-version-save",
+      "dimension": "cancel",
+      "actual_stage_exit": true,
+      "cancellation_kind": "abandon valid unsent parameters; no explicit cancel dialog",
+      "derived_POSTs": 0
+    },
+    {
+      "action": "U014.brightness-version-save",
+      "dimension": "cancel",
+      "actual_stage_exit": true,
+      "cancellation_kind": "abandon valid unsent parameters; no explicit cancel dialog",
+      "derived_POSTs": 0
+    },
+    {
+      "action": "U014.align-version-save",
+      "dimension": "error",
+      "exact_POST_503_count": 1,
+      "no_output_on_failure": true,
+      "actual_backend_retry": 200,
+      "original_labels_and_settings_unchanged": true,
+      "created_version_id": "derived_4c60ddf1f3e74c65b8e1b3bf362098b5"
+    },
+    {
+      "action": "U014.brightness-version-save",
+      "dimension": "error",
+      "exact_POST_503_count": 1,
+      "no_output_on_failure": true,
+      "actual_backend_retry": 200,
+      "original_labels_and_settings_unchanged": true,
+      "created_version_id": "derived_8e92108dfc7a4f608dd65b3ebb24ca51"
+    },
+    {
+      "action": "U014.align-version-save",
+      "dimension": "reopen",
+      "actual_reload_and_exact_history_selection": true,
+      "exact_version_id": "derived_4c60ddf1f3e74c65b8e1b3bf362098b5",
+      "raw_GET_status": 200,
+      "complete_png_bytes_equal": true,
+      "original_sha256": "878f0ef9cab804bd792532cfcc2d9d45a84c34f69a61e018c2360e4aa1427b79",
+      "derived_sha256": "90240ffca70e370d8923ab282335281ad0884a80deb18603854cdfec4663ff52",
+      "original_image_uuid": "34ce30a4-afa0-5984-be2c-9e20809275c9",
+      "original_revision": 2,
+      "reviewed_or_adopted": false
+    },
+    {
+      "action": "U014.brightness-version-save",
+      "dimension": "reopen",
+      "actual_reload_and_exact_history_selection": true,
+      "exact_version_id": "derived_8e92108dfc7a4f608dd65b3ebb24ca51",
+      "raw_GET_status": 200,
+      "complete_png_bytes_equal": true,
+      "original_sha256": "878f0ef9cab804bd792532cfcc2d9d45a84c34f69a61e018c2360e4aa1427b79",
+      "derived_sha256": "c0273dde1496f2e5e7f9427fb83f358eff329b60480b82ac6a203336f2aec6c4",
+      "original_image_uuid": "34ce30a4-afa0-5984-be2c-9e20809275c9",
+      "original_revision": 2,
+      "reviewed_or_adopted": false
+    }
+  ],
+  "independent_pixel_geometry_oracles": [
+    {
+      "mode": "browser",
+      "kind": "align",
+      "version_id": "derived_50dcb81738ad44d28dcaaec24d06563b",
+      "source_sha256": "878f0ef9cab804bd792532cfcc2d9d45a84c34f69a61e018c2360e4aa1427b79",
+      "derived_sha256": "90240ffca70e370d8923ab282335281ad0884a80deb18603854cdfec4663ff52",
+      "decoded_rgb_sha256": "9af7543625b97b04d1153b344e3a3a2d073db6245d9c0f0a07b5440b82168b4a",
+      "size": [
+        88,
+        88
+      ],
+      "full_output_file_count": 5,
+      "independent_pixel_and_geometry_readback": true
+    },
+    {
+      "mode": "browser",
+      "kind": "brightness",
+      "version_id": "derived_3058a81113b947d3b7558ba7f4d1c6b3",
+      "source_sha256": "878f0ef9cab804bd792532cfcc2d9d45a84c34f69a61e018c2360e4aa1427b79",
+      "derived_sha256": "c0273dde1496f2e5e7f9427fb83f358eff329b60480b82ac6a203336f2aec6c4",
+      "decoded_rgb_sha256": "4515399cbcf07189ef4ae599ee809c35f4c8c11e93129c69c75937188f1d2455",
+      "size": [
+        64,
+        64
+      ],
+      "full_output_file_count": 5,
+      "independent_pixel_and_geometry_readback": true
+    },
+    {
+      "mode": "electron",
+      "kind": "align",
+      "version_id": "derived_4c60ddf1f3e74c65b8e1b3bf362098b5",
+      "source_sha256": "878f0ef9cab804bd792532cfcc2d9d45a84c34f69a61e018c2360e4aa1427b79",
+      "derived_sha256": "90240ffca70e370d8923ab282335281ad0884a80deb18603854cdfec4663ff52",
+      "decoded_rgb_sha256": "9af7543625b97b04d1153b344e3a3a2d073db6245d9c0f0a07b5440b82168b4a",
+      "size": [
+        88,
+        88
+      ],
+      "full_output_file_count": 5,
+      "independent_pixel_and_geometry_readback": true
+    },
+    {
+      "mode": "electron",
+      "kind": "brightness",
+      "version_id": "derived_8e92108dfc7a4f608dd65b3ebb24ca51",
+      "source_sha256": "878f0ef9cab804bd792532cfcc2d9d45a84c34f69a61e018c2360e4aa1427b79",
+      "derived_sha256": "c0273dde1496f2e5e7f9427fb83f358eff329b60480b82ac6a203336f2aec6c4",
+      "decoded_rgb_sha256": "4515399cbcf07189ef4ae599ee809c35f4c8c11e93129c69c75937188f1d2455",
+      "size": [
+        64,
+        64
+      ],
+      "full_output_file_count": 5,
+      "independent_pixel_and_geometry_readback": true
+    }
+  ],
+  "preservation": {
+    "all_retained_files_rehashed": true,
+    "whole_source_annotation_report_split_trees_equal_actual_before_copies": true,
+    "all_original_metadata_team_policy_preferences_dataset_versions_adoptions_asserted_equal": true,
+    "workbench_exact_original_seed_plus_two_five_file_outputs": true,
+    "exact_original_SHA_UUID_revision_retained": true,
+    "post_baseline_mutations_only_two_controlled_503_and_two_real_200_derived_saves": true,
+    "human_approval_or_adoption": false
+  },
+  "claim_limits": {
+    "model_inference": false,
+    "human_label_quality": false,
+    "frozen_installed_native": false,
+    "whole_writer_tree_acceptance": false,
+    "whole_feature_or_parent_acceptance": false
+  },
+  "count_delta": 8
+}

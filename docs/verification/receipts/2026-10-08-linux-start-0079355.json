@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "kind": "exact_source_linux_original_inspection_and_startup_identity",
+  "source_commit": "00793558567aad51ea2d6a4343db820fcd14f797",
+  "exported_source_files": 2219,
+  "git_archive_file_hashes_match": true,
+  "source_before_after_unchanged": true,
+  "freeze_sha256": "972acc0870933da802edd0c8896ab795805d25d6d0959b41bd1d9329ffc79907",
+  "proof_index_sha256": "d881ddb8393e958dddf0fb41ce1989de7aad247da301dfc3dc04f6197f893fbf",
+  "root_verified_proof_pins": 40,
+  "result": {
+    "command_wall_s": 16.639016531873494,
+    "errors": 0,
+    "failed": 0,
+    "focused_acceptance_green": true,
+    "original_inspection_teardown_equivalence": false,
+    "passed": 16,
+    "pytest_s": 15.728,
+    "skips": 0,
+    "tests": 16
+  },
+  "selector_scope": {
+    "original_inspection_cases": 1,
+    "startup_identity_cases": 13,
+    "inert_target_metadata_cases": 2
+  },
+  "original_inspection": {
+    "source_module": "backend/tests/test_application_launch_controller.py",
+    "source_module_sha256": "e3d2eee84f6d91e8ff44104edb533ac5cc04778cecd8676bcbd77a18978765bb",
+    "assertions_and_original_timeout_unchanged": true,
+    "timeout_seconds": 10,
+    "cli_elapsed_seconds": 0.13725863210856915,
+    "status": "starting",
+    "returncode": 0,
+    "original_child_birth_command_match": true
+  },
+  "cleanup_boundary": {
+    "original_popen_terminate_wait_only": true,
+    "group_or_guessed_pid_signals": false,
+    "original_teardown_equivalence": false,
+    "post_cleanup_state": "recovery_required",
+    "authenticated_exit_accepted": false
+  },
+  "environment": {
+    "caps_drop_all": true,
+    "cpu_limit": 2,
+    "gpu_count": 0,
+    "image": "sha256:e8fdbc13b6fcda4523c5fd93d3c8177588d1346e09df39ff60c87346f327c46b",
+    "memory_gib": 8,
+    "network": "none",
+    "no_gpu_devices": true,
+    "no_image_pull": true,
+    "offline_locked_prerequisites": true,
+    "owned_container_removed": true,
+    "owned_remote_inputs_results_originals_retained": true,
+    "readonly_rootfs": true,
+    "runtime": "runc",
+    "unrelated_services_and_jobs_untouched": true
+  },
+  "raw_pins": {
+    "actual-container-readback.json": "650a9c1cdc134308a56a365ffcce5e8268f10fc133596dae47bfc12d9b669e3b",
+    "completion-assessment.json": "f57100101b43f9e888ac9a580df98c4bac5021058032aae54a1ab951a1858b2f",
+    "composed58-readback.json": "f18239045c204aa0e57ad80664e7ef315241376a0faefaedfa4833adb81b32c8",
+    "host-postflight.json": "8eb89c804828b1b1f74a82ab2e3bb815a5df3d45deefc7ffd5918677818f816a",
+    "host-preflight.json": "c74296389c8d0ad5cbe0f7efad2704c04e9fd8a0b0f314add0ace61846f0062d",
+    "linux.log": "b50d7fa37e2de1282e0e9427c5e3cfb72c2f8736ec71ff3ed161befe4deea14d",
+    "proof-index.json": "d881ddb8393e958dddf0fb41ce1989de7aad247da301dfc3dc04f6197f893fbf",
+    "remote-retention-readback.json": "48dddb813ab2e88ba0a9c613007ef22a8fc30a6f1fc6cbe551be09750788ca22",
+    "results/linux-start-fixed.xml": "a05195e8e3f389f77f0dded849e93023c85008a3609b79a3381e4d1efc1f5e7e",
+    "results/receipt.json": "ffd78afd13be8a590cc266da13255ee72a660f4be732bcf669f5a6bc86344b81",
+    "run-binding.json": "a6a038e68f7a1e9871107091025f5d6842805e7ec2cb5fbcd69eb8219feece32",
+    "source-binding.json": "a2be7d3c286a9b15667b9c160c3dd3e88e350c1d3034ac3dd2f0d233bd5a112b",
+    "source.tar": "79c88cebac37021d51fa5714550132fa52625dc9afd7a02690b0a417bc8e5d51"
+  },
+  "historical_failure_preserved_sha256": "26bc38cf1d0f9d87c6a218643cb7e6a2e682ecd942c13e1e6d1bd96c6185119a",
+  "claims": {
+    "current_all_source_linux_canary_replayed": false,
+    "current_complete_hosted_ci_qualified": false,
+    "exact_source_focused_linux_inspection_primary_qualified": true,
+    "exact_source_startup_identity_focused_linux_qualified": true,
+    "gpu_execution": false,
+    "lease_release": false,
+    "modeled_signed_intent_metadata_control_qualified": true,
+    "native_application_acceptance": false,
+    "original_inspection_teardown_equivalence": false,
+    "publisher_or_model_quality_approved": false,
+    "whole_process_tree_verified": false,
+    "whole_writer_coverage": false
+  },
+  "parent_composed58": {
+    "all2219_source_inputs_match_same_git_archive": true,
+    "passed": 58,
+    "skipped": 0,
+    "execution_was_dirty_checkout": true,
+    "clean_checkout_execution_claim": false
+  },
+  "not_claimed": [
+    "complete hosted CI",
+    "latest source Linux canary",
+    "native installed application",
+    "whole writer coverage",
+    "whole process tree",
+    "lease release",
+    "model quality or publisher approval",
+    "GPU execution"
+  ]
+}

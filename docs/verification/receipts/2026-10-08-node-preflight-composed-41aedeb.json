@@ -1,0 +1,72 @@
+{
+  "schema": "modu-vision.original-node-preflight-writer-component/v1",
+  "committed_code_source_sha": "41aedebee26282b6f65e2b58156572120d14217f",
+  "tested_base_commit": "a09cbcbd13591a7e82ee68e6ee522a122e55d4d8",
+  "source_dirty_at_execution": true,
+  "full_tested_source_inputs": 2240,
+  "full_tested_source_before_equals_after": true,
+  "committed_eleven_code_files_exactly_match_tested_bytes": {
+    ".github/workflows/ci.yml": "760d02006580fd83d2ae82722ebe2feece5aadd3a22570d204e2f42034ffc350",
+    "backend/api/routes_workers.py": "e94997d667d78f7a38f1f394d01d5ab0a42a9225aee87b2e9c54ccdd18f2077d",
+    "backend/engine/application_launch_controller.py": "e86b515d48437f2192fe2e1852785bc00b9c471815a4a95f3461956a6dd3a563",
+    "backend/engine/application_launch_handshake.py": "3a3e9e0b86d6b17c8bcd2510eca40aa2d96d2a20ffbd6f07c55c3d39a4538271",
+    "backend/engine/application_launch_quiescence.py": "f393c44f5f9968c9cbe9a19e573414bf783609a1d467d8222ae3e9d797825a86",
+    "backend/engine/application_node_writer_authority.py": "e48d4ceae060ba501e08122950e3ee7a540b131eec18727ffac9facc59838416",
+    "backend/engine/worker_preflight.py": "4c689c6396ddd8eed323b2d4584da644bc48a5cb491043ac45c8f9ea5a90523a",
+    "backend/tests/test_application_cpu_writer_lifetime.py": "b1deefd22ca7a290fc7151ce61d87212c6807e98fa106ef6de322010d09cb89d",
+    "backend/tests/test_application_launch_quiescence_bridge.py": "1230b1f908f4bf7eb811ae6400c0da7558ea4e7c5888a0134e49b6dab30e6c27",
+    "backend/tests/test_application_node_writer_authority.py": "9a13d7c39e89703f2fb982c3adcae8be27abccd1fdf4402866acb947f44d2a50",
+    "backend/tests/test_worker_preflight_writer_lifetime.py": "3c13ad625b93be477fb111321e2c338bb1edd7a03894a06b87363cab9bc28575"
+  },
+  "source_before_sha256": "00bac6539028fd7a0eb13621aaf65c01a68e44ceb6eeaab7673632cd0e63c23d",
+  "source_after_sha256": "00bac6539028fd7a0eb13621aaf65c01a68e44ceb6eeaab7673632cd0e63c23d",
+  "junit_sha256": "9caa5f48e1b9040c0b6dbe2847a1d65ca357d5cacf1b1980709e758113ad1e5a",
+  "run_record_sha256": "db71710410698637a5a2b39d95a820623de472e3f30f73cb1fe9cbef9f149e4d",
+  "tests": 193,
+  "failures": 0,
+  "errors": 0,
+  "skips": 0,
+  "elapsed_seconds": 600.1176718749921,
+  "test_modules": {
+    "tests.test_application_node_writer_authority": 23,
+    "tests.test_worker_preflight_writer_lifetime": 40,
+    "tests.test_application_launch_quiescence": 18,
+    "tests.test_application_launch_quiescence_bridge": 30,
+    "tests.test_application_cpu_writer_lifetime": 19,
+    "tests.test_application_drain_transition_busy": 8,
+    "tests.test_application_start_identity": 13,
+    "tests.test_flow_writer_lifetime": 22,
+    "tests.test_source_ci_model_lanes": 18,
+    "tests.test_service_ci_dependencies": 2
+  },
+  "independent_review_sha256": {
+    "node": "0fc4785ed9d2c8a6a671b63c802c9b87dce360c749238fa137feece27b19b8df",
+    "preflight_root": "2f629a8109e7245d9e1637600b4689f96e3e77b24106d8849a86f3a1a445b03c",
+    "preflight_peer": "6b49d9be2e5c3d814a0bc48d178c6b8be616b74dcb76fd226b965731530503e3",
+    "preflight_peer_2": "498e63486d1d327de2289060a0e2cf10d2a454f67985a30777778f62e9470889"
+  },
+  "node_scope": "Create-only canonical original controller mint, exact original main Popen/channel/backend proof, one-use authenticated typed receive, backend active and limited direct exit; raw PID/dict/reconstructed proofs do not bind. Python Popen API unchanged.",
+  "preflight_scope": "One original cached bootstrap OFD and counted exact ticket work-thread custody through child work, transport cleanup, heartbeat join, confirmed exact-True reservation release and state publication. Uncertain close/finalizer keeps strong unresolved custody and sticky refusal; no close retry or FD-number reconstruction.",
+  "composition_changes": "Three existing actual test files have narrowly updated backend row assertions for the exact original Node adapter, retaining old arithmetic, OFD, deadline, refusal and cleanup requirements; final root gate used no private expectation plugin.",
+  "actual_math": "Root gate includes actual authenticated fixed CPU OCR/flow and preflight production CPU train/evaluate/infer/export. This is execution evidence, not human model quality.",
+  "evidence_history": {
+    "old_preflight_cc5_accepted": false,
+    "old_preflight_missing_pins": 814,
+    "old_preflight_changed_pins": 0,
+    "fresh_preflight_freeze_sha256": "4b258d836cadf9e36b12d8d581696ea054b7492301486268eb3fde799050aa75",
+    "fresh_preflight_retained_pins": 1674,
+    "node_freeze_sha256": "b58d34b55911a0380d6da4cc2658f2c6c9c6c3ecfcfabe70f74ba4ded735d852",
+    "node_retained_pins": 8730,
+    "failed_original_controller_custody_not_reopened_or_signalled": true
+  },
+  "claim_limits": {
+    "whole_writer_coverage": false,
+    "process_tree_exit_verified": false,
+    "can_release_launch_lease": false,
+    "clean_installed_native": false,
+    "GPU_execution": false,
+    "real_publisher": false,
+    "human_model_quality": false,
+    "whole_parent_acceptance": false
+  }
+}

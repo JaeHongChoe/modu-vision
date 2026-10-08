@@ -1,0 +1,52 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "769e198553b4c5bf352fcfe79cbbf58f8a238824",
+  "source_dirty": false,
+  "test": "scripts/e2e/readiness-preview-lifecycle.spec.ts::source Electron readiness diagnosis and unsent grouped split lifecycle preserve exact originals and saved split",
+  "test_source_sha256": "7d69d3f7f1be8378219a630950609e6bb327ec493b455f5ddecda08241d31884",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "e0bad9326459d4ff092207b4a5b567cb2c844654228508f1147f7cd92a5f1db4",
+  "harness_sha256": "f8ceb5cbcb7842737e3520c32763a6701fc7d74c2f69ad5a558b2d5a87ebeda3",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "e65ed97fa0cd865f7a49818c23eaa7a5665d583d558500a5d9217af264710c1e"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "b62b846fd8f66652f5662cdb69c51cde6a47ea6967c27c2f93fcbbd639f105cc"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "2bfa2204b8607a61363456c1cec3ece51220245b00727c90963d799df154e90f"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "b98ae5a93e1b09893bafb004c739997eb2c805482998fe1cca028042d54d991d"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "01605c00e6f63b8cdb6d57ea6ac34cf379eb5bcba2dbfee9959359b4d7bd1b06"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "20429f5f815507d5507be582dacaa0523a053e94cf2808ca7dee2073887c2dcf"
+    },
+    {
+      "id": "screenshot-6",
+      "sha256": "4273ff75351a2e5772a489b66addda92cb2d0752f0281d428a98989ec1181e87"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}
