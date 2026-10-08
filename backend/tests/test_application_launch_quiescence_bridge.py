@@ -603,6 +603,75 @@ def test_actual_source_cpu_then_managed_drain_and_original_node_exit_keeps_lease
     finally:finish_managed(child,root)
 
 
+def _assert_damaged_refusal(refusal, damage, cpu):
+    """Exact captured protocol rejection, never a generic failure allowance."""
+    assert damage in {'changed_nonce','identical_request_replay'}
+    cause = ('Original main managed drain request differs or replayed' if damage=='changed_nonce'
+             else 'Original controller reply kind differs')
+    assert refusal['state']=='recovery_required'
+    assert refusal['reason']=='Process-tree ownership is unresolved: '+cause
+    assert refusal['nonce']==cpu['nonce'] and refusal['binding']==cpu['binding']
+    assert refusal['process']==cpu['main_process']
+    drain=refusal['writer_drain']
+    assert drain['phase']==('enrolled' if damage=='changed_nonce' else 'closing')
+    assert drain['receipt'] is None and drain['backend_exit'] is None
+    if damage=='changed_nonce':assert drain['request'] is None
+    else:
+        request=drain['request']
+        assert set(request)=={'schema_version','kind','challenge','request_id','nonce','epoch',
+            'binding_sha256','backend_claim_sha256','writer_id','registration_sha256','closed_registry_sha256','budget_ms'}
+        assert type(request['schema_version']) is int and request['schema_version']==1
+        assert request['kind']=='backend_drain_request' and request['nonce']==cpu['nonce'] and request['epoch']==cpu['epoch']
+        assert request['binding_sha256']==sha(canonical(cpu['binding']))
+        assert request['backend_claim_sha256']==cpu['backend_claim_sha256']
+        assert request['writer_id']==drain['writer_id'] and request['registration_sha256']==drain['registration_sha256']
+        from backend.engine.runtime_update import _hex
+        assert _hex(request['challenge']) and _hex(request['request_id'],32) and _hex(request['closed_registry_sha256'])
+        assert type(request['budget_ms']) is int and 0<request['budget_ms']<=4000
+
+
+def _assert_damaged_stop(result, damage, cpu, stderr):
+    """Retained original identities and exact invalid-owner traceback only."""
+    assert damage in {'changed_nonce','identical_request_replay'}
+    assert set(result)=={'main','backend','error','direct_exit','signal'}
+    assert result['main']==cpu['main_process']['pid'] and result['backend']==cpu['backend_process']['pid']
+    assert result['signal'] is None and type(result['direct_exit']) is int and result['direct_exit'] in {0,1}
+    assert isinstance(result['error'],str) and result['error']
+    assert result['error'].splitlines()[0]=='Error: Original owned backend channel/ownership ended'
+    if result['direct_exit']==0:
+        assert stderr==''  # Cooperative exit cannot hide a background exception.
+    else:
+        # After the exact durable bad-frame refusal, original _validate must
+        # reject recovery_required ownership. It must not be relaxed to ready.
+        import re
+        service=str(Path(__file__).resolve().parents[2]/'backend/engine/application_launch_handshake.py')
+        rows=re.findall(r'^  File "([^"\n]+)", line [1-9][0-9]*, in ([^\n]+)$',stderr,re.M)
+        assert rows==[(cpu['backend_executable'],'<module>'),(service,'backend_execution_service'),
+                      (service,'_validate_service_action'),(service,'_validate')]
+        assert stderr.startswith('Traceback (most recent call last):\n')
+        assert stderr.splitlines()[-1]=='backend.engine.application_launch_handshake.HandshakeError: Backend challenge has no current spawned main owner'
+        assert stderr.count('Traceback (most recent call last):')==1
+        terminal=[line for line in stderr.splitlines() if re.match(r'^[A-Za-z_][A-Za-z_0-9.]*: ',line)]
+        assert terminal==[stderr.splitlines()[-1]]
+
+
+def _assert_damaged_registry(registry, damage, refusal, cpu, registry_sha256):
+    """Known CPU remains unsupported; original backend cannot become exited."""
+    assert registry['state']==('open' if damage=='changed_nonce' else 'closed')
+    assert registry['binding']['nonce']==cpu['nonce']
+    assert registry['binding']['launch_binding_sha256']==sha(canonical(cpu['binding']))
+    writers=registry['writers'];assert len(writers)==2
+    backend=next(row for row in writers if row['role']=='backend')
+    assert backend['status']=='active' and backend['process']==cpu['backend_process'] and backend['exit_code'] is None
+    assert backend['writer_id']==refusal['writer_drain']['writer_id']
+    assert backend['registration_sha256']==refusal['writer_drain']['registration_sha256']
+    unresolved=next(row for row in writers if row['role']=='owned_cpu_worker')
+    assert unresolved['status']=='unsupported' and unresolved['reason_code']=='uncovered_protocol'
+    assert unresolved['process'] is None and unresolved['exit_code'] is None
+    if damage=='identical_request_replay':
+        assert refusal['writer_drain']['request']['closed_registry_sha256']==registry_sha256
+
+
 @pytest.mark.parametrize('damage',['changed_nonce','identical_request_replay'])
 def test_actual_controller_refuses_changed_and_replayed_original_main_drain_frames(tmp_path,monkeypatch,damage):
     """Owned real source channel; only the test-origin frame is intentionally damaged."""
@@ -615,8 +684,7 @@ def test_actual_controller_refuses_changed_and_replayed_original_main_drain_fram
         (projects/'drain.trigger').touch()
         refusal=json.loads(wait_file(projects/'managed-controller-refusal.json',seconds=3))
         assert refusal['state']=='recovery_required'
-        expected='request differs or replayed' if damage=='changed_nonce' else 'forwarding differs'
-        assert expected in refusal['reason']
+        _assert_damaged_refusal(refusal,damage,cpu)
         assert refusal['writer_drain']['receipt'] is None and refusal['writer_drain']['backend_exit'] is None
         assert refusal['writer_drain']['phase']==('enrolled' if damage=='changed_nonce' else 'closing')
         assert not (projects/'managed-drain-received.json').exists()
@@ -625,17 +693,16 @@ def test_actual_controller_refuses_changed_and_replayed_original_main_drain_fram
         (projects/'exit.trigger').touch()
         result=json.loads(wait_file(projects/'managed-stop-result.json',seconds=5))
         assert result['signal'] is None and result['error'] is not None
-        if result['direct_exit']==1:
-            stderr=(projects/'execution-backend-error.txt').read_text()
-            assert damage=='identical_request_replay'
-            assert 'backend_execution_service' in stderr and 'proof=_validate' in stderr
-            assert 'Lease transition is busy; retry after it completes' in stderr
-            assert 'BlockingIOError:' in stderr
-        else:assert result['direct_exit']==0
+        stderr=(projects/'execution-backend-error.txt').read_text()
+        _assert_damaged_stop(result,damage,cpu,stderr)
         finish_managed(child,root)
+        from backend.engine.application_launch_quiescence import inspect_epoch
+        snapshot=inspect_epoch(root,ack['nonce'])
+        registry=snapshot['registry'];registry_sha256=snapshot['registry_sha256']
+        _assert_damaged_registry(registry,damage,refusal,cpu,registry_sha256)
         assert {p:p.read_bytes() for p in controls}==controls
         from backend.engine.application_launch_lease import assert_quiescent
         with pytest.raises(ValueError):assert_quiescent(root)
         (projects/'managed-damaged-frame-proof.json').write_bytes(canonical({'damage':damage,'cpu':cpu,'refusal':refusal,
-            'stop':result,'private_fixture_channel_close_after_durable_refusal':True,'native':False,'whole_tree':False,'lease_release':False}))
+            'stop':result,'registry':snapshot,'backend_stderr':stderr,'private_fixture_channel_close_after_durable_refusal':True,'native':False,'whole_tree':False,'lease_release':False}))
     finally:finish_managed(child,root)

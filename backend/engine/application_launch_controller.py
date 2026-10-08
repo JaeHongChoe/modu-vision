@@ -7,6 +7,7 @@ import argparse
 import base64
 import hmac
 import json
+import math
 import os
 from pathlib import Path
 import secrets
@@ -352,10 +353,51 @@ def prepare_drain(owner, frame):
     send_frame(owner._bootstrap_channel, {'schema_version': 1, 'kind': 'managed_drain_admitted',
         'nonce': owner.nonce, 'request_id': request['request_id'], 'receipt_sha256': update._sha(decoded), 'status': receipt['status']}, absolute_deadline=deadline)
     if receipt['status'] != 'managed_scopes_drained': raise HandshakeError('Backend managed scope retains uncovered/active writers')
+    return deadline
 
 
-def observe_backend_exit(owner, event):
+def _exit_remaining(absolute_deadline):
+    if type(absolute_deadline) not in (int, float) or not math.isfinite(absolute_deadline):
+        raise HandshakeError('Original admitted exit deadline differs')
+    remaining = absolute_deadline - time.monotonic()
+    if not 0 < remaining <= 4:
+        raise HandshakeError('Original admitted exit deadline expired or renewed')
+    return remaining
+
+
+def _receive_admitted_backend_exit(owner, absolute_deadline):
+    """Receive an original exit witness before applying live-backend checks.
+
+    A terminal admitted drain may legitimately outlive the backend. Only its
+    original typed receive event can prove the exit; absence or a PID cannot.
+    """
+    authority = getattr(owner, '_node_backend_authority', None)
+    if authority is None: raise HandshakeError('Original typed Node backend authority is unavailable')
+    while True:
+        _exit_remaining(absolute_deadline)
+        drain = owner._owned().get('writer_drain')
+        if (drain is None or drain['phase'] != 'drained' or drain['receipt'] is None
+                or drain['receipt']['status'] != 'managed_scopes_drained'):
+            raise HandshakeError('Original backend exit wait lacks admitted drain')
+        event = node.receive_frame(authority, _exit_remaining(absolute_deadline))
+        _exit_remaining(absolute_deadline)
+        frame = node.frame_value(authority, event)
+        _exit_remaining(absolute_deadline)
+        if frame.get('kind') == 'main_backend_exit': return event
+        request = frame.get('request')
+        if (frame.get('kind') == 'main_preflight_request' and isinstance(request, dict)
+                and request.get('action') == 'finish'):
+            # Existing typed table/core checks permit only the original
+            # enrolled finish. Reserve/bind/repair never enter this wait.
+            _preflight_controller_event(owner, event)
+            _exit_remaining(absolute_deadline)
+            continue
+        raise HandshakeError('Original admitted backend exit event kind differs')
+
+
+def observe_backend_exit(owner, event, *, absolute_deadline=None):
     from backend.engine.application_launch_handshake import validate_backend_exit
+    if absolute_deadline is not None: _exit_remaining(absolute_deadline)
     authority = getattr(owner, '_node_backend_authority', None)
     if authority is None: raise HandshakeError('Original typed Node backend authority is unavailable')
     frame = node.frame_value(authority, event)
@@ -365,12 +407,21 @@ def observe_backend_exit(owner, event):
         if drain is None or drain['phase'] != 'drained': raise HandshakeError('Backend exit lacks admitted original drain')
         proof = owner._authenticated_backend_proof
         validate_backend_exit(frame, drain['request'], proof['process'])
+    if absolute_deadline is not None: _exit_remaining(absolute_deadline)
     owner._writer_epoch.observe_authenticated_node_backend_exit(drain['writer_id'], event,
         expected_registry_sha256=owner._writer_epoch.snapshot()['registry_sha256'])
+    if absolute_deadline is not None: _exit_remaining(absolute_deadline)
     owner.publish_writer_drain(phase='backend_exited', backend_exit=frame)
+    if absolute_deadline is not None: _exit_remaining(absolute_deadline)
     node.assert_exit_acknowledgement(authority)
-    send_frame(owner._bootstrap_channel, {'schema_version': 1, 'kind': 'backend_exit_observed',
-        'nonce': owner.nonce, 'request_id': frame['request_id'], 'exit_sha256': update._sha(update._canonical(frame))})
+    acknowledgement = {'schema_version': 1, 'kind': 'backend_exit_observed',
+        'nonce': owner.nonce, 'request_id': frame['request_id'], 'exit_sha256': update._sha(update._canonical(frame))}
+    if absolute_deadline is None:
+        send_frame(owner._bootstrap_channel, acknowledgement)
+    else:
+        _exit_remaining(absolute_deadline)
+        send_frame(owner._bootstrap_channel, acknowledgement, absolute_deadline=absolute_deadline)
+        _exit_remaining(absolute_deadline)
 
 
 def run(args):
@@ -410,7 +461,10 @@ def run(args):
                 if select.select([owner._bootstrap_channel], [], [], 0)[0]:
                     event = node.receive_frame(owner._node_backend_authority, 4)
                     frame = node.frame_value(owner._node_backend_authority, event)
-                    if frame.get('kind') == 'main_drain_request': prepare_drain(owner, frame)
+                    if frame.get('kind') == 'main_drain_request':
+                        deadline = prepare_drain(owner, frame)
+                        exit_event = _receive_admitted_backend_exit(owner, deadline)
+                        observe_backend_exit(owner, exit_event, absolute_deadline=deadline)
                     elif frame.get('kind') == 'main_preflight_request': _preflight_controller_event(owner, event)
                     elif frame.get('kind') == 'main_backend_exit': observe_backend_exit(owner, event)
                     else: raise HandshakeError('Private main descriptor ended or replayed after readiness')
