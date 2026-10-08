@@ -156,7 +156,22 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
     controls.push({action: 'F021.class-statistic-gallery-filter', dimension: 'reopen', actual_reload: true,
       volatile_filter_reset_to_all: true, unfiltered_complete_original_items_equal: true, reopened_class_items_equal: true,
       selected_original: metadata.find((row: any) => row.file_path === originals[0].path), class_query: again.url()});
-    const after = {trees: Object.fromEntries(Object.entries(roots).map(([name, root]) => [name, tree(root)])), apiAfter, writes};
+    // Existing × abandons the active class filter; this is not a new cancel dialog.
+    const classBadge = page.getByText('Class: TrainOnly', {exact: true}).locator('..');
+    const clearClass = classBadge.getByRole('button', {name: '×', exact: true});
+    await expect(clearClass).toHaveCount(1); await expect(clearClass).toBeEnabled();
+    const cancelledRead = galleryWaiting(null, null); await clearClass.click();
+    const cancelledResponse = await cancelledRead, cancelledBody = await cancelledResponse.json();
+    expect(cancelledResponse.status()).toBe(200); expect(cancelledBody.items).toEqual(apiBefore[galleryRoute()].items);
+    expect(cancelledBody.total).toBe(2); expect(new URL(cancelledResponse.url()).searchParams.has('class_name')).toBe(false);
+    await expect(page.getByText('Class: TrainOnly', {exact: true})).toHaveCount(0);
+    for (const original of originals) await expect(page.getByRole('button', {name: original.name + ' 라벨링에서 열기', exact: true})).toBeVisible();
+    const cancelledApiAfter = await unchanged(); expect(cancelledApiAfter).toEqual(apiAfter);
+    await capture('actual-class-badge-clear-restores-both-originals', panel);
+    controls.push({action: 'F021.class-statistic-gallery-filter', dimension: 'cancel', actual_existing_class_badge_clear: true,
+      invented_confirm_or_cancel_dialog: false, cancelled_class: 'TrainOnly', actual_unfiltered_query: cancelledResponse.url(),
+      real_backend_status: 200, complete_original_items: cancelledBody.items, real_total: 2, post_baseline_mutations: [...writes]});
+    const after = {trees: Object.fromEntries(Object.entries(roots).map(([name, root]) => [name, tree(root)])), apiAfter: cancelledApiAfter, writes};
     const afterFile = path.join(w.logs, 'statistics-gallery-after.json'); fs.writeFileSync(afterFile, JSON.stringify(after, null, 2)); e.addFile(afterFile);
     e.note('statistics_gallery_lifecycle', {requirements: ['S3-07'], cells: controls, baseline, after, all_api_mutations: writes,
       full_source_project_annotations_unfiltered: true, complete_API_records_preserved: true, original_image_hashes_and_UUIDs_preserved: true,
