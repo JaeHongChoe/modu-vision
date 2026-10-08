@@ -102,7 +102,7 @@ def test_actual_known_source_cpu_typed_relay_preserves_original_fences_through_f
     inputs=[project/'project.json',project/reviewed['input_path'],project/reviewed['package_path']/'manifest.json',
             project/reviewed['package_path']/'models'/('a'*32)/'best_model.pt']
     protected={str(p):sha(p.read_bytes()) for p in inputs}
-    child,ack=fixtures.start_cpu_stack(values)
+    child,ack=fixtures.start_cpu_stack(values, prefix=['-c', fixtures._source_input_first_refusal_script()])
     try:
         target,cpu=fixtures.wait_receipt(root,ack['nonce'],child)
         observation=wait_file(root/'projects/actual-cpu-writer-observation.json')
