@@ -81,6 +81,74 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
     evaluation_id: origin.record.evaluation_id, evidence_sha256: origin.record.evidence_sha256}});
   const queueEndpoint = '/api/data-workbench/review-queues/' + initialQueue.id, advanceEndpoint = queueEndpoint + '/advance';
   const stages = page.getByRole('navigation', {name: 'Workflow Stages'});
+  const pendingStoreReads = new Set<Request>(), unverifiedStoreReads = new Set<Request>(), completedStoreReads: any[] = [], verifiedStoreReads: any[] = [], failedStoreReads: any[] = [];
+  const storeReadTimes = new Map<Request, {started: number; deadline: number; finished?: number}>();
+  const storeReader = (request: Request) => request.method() === 'GET' &&
+    ['/api/model-deployments/active', '/api/model-deployments/history', '/api/provenance/impact'].includes(new URL(request.url()).pathname);
+  const evaluationReader = (request: Request) => request.method() === 'GET' &&
+    ['/api/model-deployments/active', '/api/model-deployments/history', '/api/provenance/impact',
+      '/api/fleet/targets', '/api/fleet/capabilities', '/api/fleet/rollouts',
+      '/api/runtime-services/capture-groups', '/api/runtime-services'].includes(new URL(request.url()).pathname);
+  const beginStoreRead = (request: Request) => {
+    if (evaluationReader(request)) {
+      const started = performance.now(); storeReadTimes.set(request, {started, deadline: started + 10_000});
+    }
+    if (storeReader(request)) {pendingStoreReads.add(request); unverifiedStoreReads.add(request);}
+  };
+  const finishStoreRead = (request: Request) => {
+    if (!evaluationReader(request)) return;
+    const address = new URL(request.url()), timing = storeReadTimes.get(request)!;
+    timing.finished = performance.now();
+    if (!storeReader(request)) return;
+    pendingStoreReads.delete(request);
+    completedStoreReads.push({method: 'GET', endpoint: address.pathname, source: address.searchParams.get('source_dataset_path'),
+      task: address.searchParams.get('task'), request_started_ms: timing.started, request_finished_ms: timing.finished, absolute_deadline_ms: timing.deadline});
+  };
+  const failStoreRead = (request: Request) => {if (storeReader(request)) {pendingStoreReads.delete(request); failedStoreReads.push(new URL(request.url()).pathname);}};
+  page.on('request', beginStoreRead); page.on('requestfinished', finishStoreRead); page.on('requestfailed', failStoreRead);
+  const withStoreReadDeadline = async <T,>(request: Request, read: () => Promise<T>): Promise<T> => {
+    const timing = storeReadTimes.get(request)!;
+    const completedInTime = () => timing.finished !== undefined && timing.finished <= timing.deadline;
+    // A previously completed original request may be verified later. It does
+    // not receive a fresh network deadline when this reader inspects it.
+    if (timing.finished !== undefined) {expect(completedInTime()).toBe(true); return read();}
+    const remaining = timing.deadline - performance.now();
+    if (remaining <= 0) throw Error('Original store GET exceeded its absolute 10s completion deadline');
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const operation = read();
+    try {
+      const result = await Promise.race([operation, new Promise<T>((resolve, reject) => {
+        timer = setTimeout(() => completedInTime() ? resolve(operation)
+          : reject(Error('Original store GET exceeded its absolute 10s completion deadline')), remaining);
+      })]);
+      expect(completedInTime()).toBe(true); return result;
+    } finally {if (timer !== undefined) clearTimeout(timer);}
+  };
+  const settleStoreReads = async () => {
+    // Await the original, already-started reads. No new read, retry, file
+    // exception or stability polling stands in for request completion.
+    for (const request of unverifiedStoreReads) {
+      const {response, body} = await withStoreReadDeadline(request, async () => {
+        const response = await request.response(); expect(response).not.toBeNull();
+        expect(response!.status()).toBe(200); expect(await response!.finished()).toBeNull();
+        return {response: response!, body: await response!.json()};
+      });
+      const address = new URL(request.url()), timing = storeReadTimes.get(request)!;
+      if (address.pathname === '/api/provenance/impact')
+        expect(body).toMatchObject({project_id: project.id, source_dataset_path: source, labelset_id: 'default'});
+      else {
+        expect(address.searchParams.get('source_dataset_path')).toBe(source);
+        expect(['ocr', project.task]).toContain(address.searchParams.get('task'));
+        expect(body).toEqual(address.pathname.endsWith('/active') ? {active: null, field_runtime_applied: false} : {revisions: []});
+      }
+      verifiedStoreReads.push({method: 'GET', endpoint: address.pathname, source: address.searchParams.get('source_dataset_path'),
+        task: address.searchParams.get('task'), status: response.status(), response_body_complete: true,
+        request_started_ms: timing.started, request_finished_ms: timing.finished, absolute_deadline_ms: timing.deadline,
+        exact_owned_binding_or_idle_record: true});
+      unverifiedStoreReads.delete(request);
+    }
+    expect(pendingStoreReads.size).toBe(0); expect(unverifiedStoreReads.size).toBe(0); expect(failedStoreReads).toEqual([]);
+  };
   const panel = page.getByRole('region', {name: '저장된 검토 큐', exact: true});
   const choice = panel.getByLabel('저장 검토 큐 선택', {exact: true});
   const open = panel.getByRole('button', {name: '현재 항목 열기', exact: true});
@@ -108,19 +176,30 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
   // model approval reads can overlap while SQLite WAL/SHM files are transient.
   const evaluationDefaultReads = () => {
     const targets = [
-      ['/api/model-deployments/active', true], ['/api/model-deployments/history', true],
-      ['/api/fleet/targets', false], ['/api/fleet/capabilities', false], ['/api/fleet/rollouts', false],
-      ['/api/runtime-services/capture-groups', false], ['/api/runtime-services', false],
+      ['/api/model-deployments/active', project.task], ['/api/model-deployments/history', project.task],
+      ['/api/model-deployments/active', 'ocr'], ['/api/provenance/impact', null],
+      ['/api/fleet/targets', null], ['/api/fleet/capabilities', null], ['/api/fleet/rollouts', null],
+      ['/api/runtime-services/capture-groups', null], ['/api/runtime-services', null],
     ] as const;
-    return targets.map(([endpoint, scoped]) => page.waitForResponse(response => {
+    return targets.map(([endpoint, modelTask]) => page.waitForResponse(response => {
       const address = new URL(response.url());
       return response.request().method() === 'GET' && address.pathname === endpoint
-        && (!scoped || (address.searchParams.get('source_dataset_path') === source && address.searchParams.get('task') === project.task));
-    }));
+        && (modelTask === null || (address.searchParams.get('source_dataset_path') === source && address.searchParams.get('task') === modelTask));
+    }, {timeout: 10_000}));
   };
   const completeEvaluationDefaults = async (waiting: ReturnType<typeof evaluationDefaultReads>) => {
     const responses = await Promise.all(waiting), observed = [];
-    for (const response of responses) {expect(response.status()).toBe(200); observed.push({endpoint: new URL(response.url()).pathname, body: await response.json()});}
+    for (const response of responses) {
+      const body = await withStoreReadDeadline(response.request(), async () => {
+        expect(response.status()).toBe(200); expect(await response.finished()).toBeNull(); return response.json();
+      });
+      const address = new URL(response.url()), timing = storeReadTimes.get(response.request())!;
+      if (address.pathname === '/api/provenance/impact')
+        expect(body).toMatchObject({project_id: project.id, source_dataset_path: source, labelset_id: 'default'});
+      observed.push({endpoint: address.pathname, source: address.searchParams.get('source_dataset_path'), task: address.searchParams.get('task'), body,
+        request_started_ms: timing.started, request_finished_ms: timing.finished, absolute_deadline_ms: timing.deadline});
+    }
+    await settleStoreReads();
     return observed;
   };
   const warmEvaluationReads = evaluationDefaultReads();
@@ -131,7 +210,9 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
   await expect(page.getByRole('combobox', {name: '모델별 저장 평가', exact: true})).toHaveValue(alternate.record.evaluation_id);
   await mountPanel(); await expect(choice).toHaveValue(initialQueue.id); await expect(open).toBeEnabled();
   expect(await api(queueEndpoint)).toEqual(initialQueue);
+  await settleStoreReads();
   const idleEvaluationDefaults = await initializeIdleEvaluationStores(api, source, project.task);
+  await settleStoreReads();
   // Real default initialization and all complete API reads precede the baseline.
   const apiBefore: Record<string, any> = {};
   const protectedEndpoints = ['/api/team-data', '/api/team-data/readiness', '/api/dataset/metadata?limit=100',
@@ -149,6 +230,9 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
   expect(originals.every(original => apiBefore[annotationRoute(original.path)].annotations.length === 1
     && apiBefore[annotationRoute(original.path)].metadata.workflow_state !== 'approved')).toBe(true);
   expect(await api(queueEndpoint)).toEqual(initialQueue); expect(await api('/api/data-workbench/review-queues')).toEqual({queues: [initialQueue]});
+  await settleStoreReads();
+  expect(await initializeIdleEvaluationStores(api, source, project.task)).toEqual(idleEvaluationDefaults);
+  await settleStoreReads();
   const roots = {source, project: project.project_dir, annotations: active.annotations_dir || project.annotations_dir};
   const treesBefore = Object.fromEntries(Object.entries(roots).map(([name, root]) => [name, tree(root)]));
   const queueFiles = Object.keys(treesBefore.project).filter(relative => relative.endsWith('/review_queues/' + initialQueue.id + '.json'));
@@ -156,7 +240,8 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
   const queueLockRelative = path.posix.join(path.posix.dirname(path.posix.dirname(queueRelative)), 'review_queue.lock');
   expect(treesBefore.project[queueRelative]).toBe(sha(canonical(initialQueue)));
   expect(treesBefore.project[queueLockRelative]).toBeUndefined();
-  const baseline = {roots, treesBefore, apiBefore, initialQueue, origin, alternate, metadata, initialEvaluationReads};
+  const baseline = {roots, treesBefore, apiBefore, initialQueue, origin, alternate, metadata, initialEvaluationReads,
+    verifiedStoreReads: [...verifiedStoreReads], pendingStoreReads: pendingStoreReads.size};
   const beforeFile = path.join(w.logs, 'queue-progress-protected-before.json'); fs.writeFileSync(beforeFile, JSON.stringify(baseline, null, 2)); e.addFile(beforeFile);
   for (const [name, root] of Object.entries(roots)) for (const relative of Object.keys(treesBefore[name])) {
     const snapshot = path.join(w.logs, 'queue-progress-protected-before', name, relative);
@@ -180,9 +265,17 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
     expect(tree(project.project_dir)).toEqual(projectExpected);
     expect(JSON.parse(fs.readFileSync(path.join(project.project_dir, queueRelative), 'utf8'))).toEqual(expectedQueue);
   };
+  const settleCustody = async () => {
+    await settleStoreReads();
+    expect(await initializeIdleEvaluationStores(api, source, project.task)).toEqual(idleEvaluationDefaults);
+    await settleStoreReads();
+  };
   const unchanged = async () => {
+    await settleCustody();
     checkFiles(); for (const [endpoint, value] of Object.entries(apiBefore)) expect(await api(endpoint)).toEqual(value);
     expect(await api(queueEndpoint)).toEqual(expectedQueue); expect(await api('/api/data-workbench/review-queues')).toEqual({queues: [expectedQueue]});
+    await settleStoreReads();
+    checkFiles();
     expect(writes).toEqual(expectedWrites);
   };
   const capture = async (name: string, locator: Locator) => {
@@ -232,7 +325,7 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
       await expect(panel.getByRole('alert')).toContainText('Controlled exact queue list GET failure');
       await expect(choice).toHaveValue(''); await expect(choice.locator('option')).toHaveCount(1);
       await expect(open).toHaveCount(0); await expect(review).toHaveCount(0); await expect(skip).toHaveCount(0);
-      checkFiles(); expect(writes).toEqual([]); await capture('list-503-no-stale-action', panel.getByRole('alert'));
+      await settleCustody(); checkFiles(); expect(writes).toEqual([]); await capture('list-503-no-stale-action', panel.getByRole('alert'));
     } finally {await page.unroute('**/api/data-workbench/review-queues', failList);}
     const recovered = page.waitForResponse(response => response.request().method() === 'GET' && new URL(response.url()).pathname === '/api/data-workbench/review-queues');
     await reloadPanel(); const realList = await recovered; expect(realList.status()).toBe(200); expect(await realList.json()).toEqual({queues: [initialQueue]});
@@ -313,7 +406,7 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
       await returnOrigin.click(); expect((await failed).status()).toBe(503);
       await expect(panel.getByRole('alert')).toContainText('Controlled exact origin queue GET failure');
       await expect(panel).toBeVisible(); await expect(page.getByRole('combobox', {name: '모델별 저장 평가', exact: true})).toHaveCount(0);
-      checkFiles(); expect(writes).toEqual(expectedWrites); await capture('origin-503-stays-labeling', panel.getByRole('alert'));
+      await settleCustody(); checkFiles(); expect(writes).toEqual(expectedWrites); await capture('origin-503-stays-labeling', panel.getByRole('alert'));
     } finally {await page.unroute('**' + queueEndpoint, failOrigin);}
     expect(originFailures).toBe(1); await unchanged();
     const realOrigin = page.waitForResponse(response => response.request().method() === 'GET' && new URL(response.url()).pathname === queueEndpoint);
@@ -333,7 +426,12 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
     expect(JSON.parse(await originDetails.locator('pre').innerText())).toEqual({evaluation_id: origin.record.evaluation_id,
       evidence_sha256: origin.record.evidence_sha256, binding: origin.record.binding});
     await completeEvaluationDefaults(finalEvaluationReads);
-    await unchanged(); await capture('real-200-exact-older-origin-hash', originDetails);
+    await capture('real-200-exact-older-origin-hash', originDetails);
+    // Dataset is actualStep 1: the model panels are unmounted and the global
+    // readiness hook does not launch new impact readers in this stage.
+    await stages.getByRole('button').nth(0).click(); await expect(panel).toHaveCount(0);
+    await expect(page.getByRole('combobox', {name: '모델별 저장 평가', exact: true})).toHaveCount(0);
+    await unchanged();
     controls.push({action: 'U015.saved-queue-stale-origin', dimension: 'error', exact_GET_503_count: originFailures,
       labeling_stage_preserved_on_failure: true, real_200_retry: true, older_origin_id: origin.record.evaluation_id,
       actual_selected_id: origin.record.evaluation_id, exact_origin_evidence_sha256: origin.record.evidence_sha256,
@@ -345,11 +443,15 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
     e.note('saved_queue_progress_lifecycle', {requirements: ['S3-09', 'S4-13'], cells: controls, baseline, sourceElectron,
       actual_source_ui: true, all_protected_files_unfiltered: true, full_annotations_metadata_team_settings_preserved: true,
       all_api_mutations: writes, exact_allowed_writes: expectedWrites, queueReads, queue_file_and_new_empty_lock_only: true,
+      store_read_completions: completedStoreReads, verified_store_reads: verifiedStoreReads, failed_store_reads: failedStoreReads,
+      final_pending_store_reads: pendingStoreReads.size, final_unverified_store_reads: unverifiedStoreReads.size,
+      final_actual_stage: 'Dataset activeStep1', final_model_panels_absent: true, original_stage3_identity_and_screenshot_before_leave: true,
       queue_review_state_not_human_label_approval: true, labels_saved_after_baseline: false, controlled_reports_not_model_inference: true,
       human_annotation_or_quality_approval: false, actual_training_inference_or_gpu: false,
       physical_device_or_frozen_package_or_windows_acceptance: false});
   } finally {
     page.off('request', observe);
+    page.off('request', beginStoreRead); page.off('requestfinished', finishStoreRead); page.off('requestfailed', failStoreRead);
     if (!page.isClosed()) {
       await page.unroute(rawPattern, rawFallback); await page.unroute('**/api/data-workbench/review-queues', failList);
       await page.unroute('**' + queueEndpoint, failOrigin);
