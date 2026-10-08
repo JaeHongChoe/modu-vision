@@ -135,7 +135,7 @@ function assertReadonlyResolves(records: ReadonlyResolve[], scopes: ResolveRunSc
     const scope = scopes[index + 1], originalImage = original.cohort[index % 2];
     const matches = validated.library.items.filter((item: any) => item.relative_path === originalImage.relative_path);
     expect(matches).toHaveLength(1); const item = matches[0]; expect(item.sha256).toBe(originalImage.image_sha256);
-    expect(item.valid).toBe(1); expect(item.image_uuid).toMatch(/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/);
+    expect(item.valid).toBe(true); expect(item.image_uuid).toMatch(/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/);
     const selection = {image_uuid: item.image_uuid, sha256: item.sha256}, expectedRequest = {selections: [selection]};
     expect(row.ordinal).toBe(index); expect(row.run_index).toBe(index + 1);
     expect(row.method).toBe('POST'); expect(row.request.method()).toBe('POST');
