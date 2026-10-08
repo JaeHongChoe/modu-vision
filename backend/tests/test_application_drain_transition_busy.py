@@ -66,11 +66,18 @@ def drain(monkeypatch):
             events.append(('publication', kwargs))
     owner = Owner()
     owner.nonce = nonce
-    def send(channel, value):
+    def send(channel, value, *, absolute_deadline):
         assert channel is owner._bootstrap_channel
+        # Both request and ACK retain the same original fake-clock deadline;
+        # this fixture must refuse a renewed or already expired send budget.
+        assert absolute_deadline == 10.05 and clock.now < absolute_deadline
         sent.append(value)
     def read(channel, seconds):
-        assert channel is owner._bootstrap_channel and 0 < seconds <= .05
+        # The sole-reader now passes absolute-deadline minus current clock.
+        # Check the resulting original bound, avoiding subtraction roundoff
+        # (10.05 - 10 is 0.05000000000000071) without adding any tolerance.
+        assert channel is owner._bootstrap_channel and 0 < seconds
+        assert clock.now + seconds <= 10.05
         request = sent[-1]
         receipt = {'schema_version': 1, 'kind': 'backend_managed_drain', 'request': request,
                    'backend_proof': proof, 'status': 'managed_scopes_drained', 'active_scopes': 0,

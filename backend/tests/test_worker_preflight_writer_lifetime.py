@@ -142,8 +142,39 @@ def test_exact_legacy_ticket_compatibility_is_counted_but_has_no_enrolled_fence(
             assert state.snapshot()=={'active_scopes':0,'unsupported':[]}
 
 
+@pytest.mark.parametrize('endpoint', ['missing', 'foreign'])
+def test_unmodeled_owned_relay_refuses_incomplete_original_endpoint_before_spawn(epoch,monkeypatch,tmp_path,endpoint):
+    """An incomplete owned cache must not silently receive legacy authority."""
+    from backend.engine import application_preflight_child_relay as relay
+    with controlled_cache(epoch,monkeypatch) as (_,authority,state,cache):
+        if endpoint == 'foreign':cache['socket'] = object()
+        admitted=ticket();admitted.claim();before=authority.snapshot()
+        original_active=set(relay._ACTIVE);scratch=tmp_path/'unadmitted-child'
+        monkeypatch.setattr(subprocess,'Popen',lambda *_,**__:pytest.fail('Incomplete original endpoint reached Popen'))
+        try:
+            with pytest.raises(KeyError if endpoint == 'missing' else h.HandshakeError,
+                               match='socket' if endpoint == 'missing' else 'channel'):
+                relay.reserve_backend_child(admitted,task='classification',device='cpu',stages=('train',),
+                    workdir=scratch,limit=900,deadline=time.monotonic()+900)
+            assert not scratch.exists() and authority.snapshot()==before
+            assert not hasattr(admitted,'_relay_child') and set(relay._ACTIVE)==original_active
+            assert state.snapshot()=={'active_scopes':1,'unsupported':[]}
+        finally:admitted.finish()
+        assert state.snapshot()=={'active_scopes':0,'unsupported':[]}
+
+
 def test_nested_preflight_uses_same_ticket_and_inherits_actual_private_writer_dup(epoch,monkeypatch,tmp_path):
     with controlled_cache(epoch,monkeypatch) as (_,_,state,cache):
+        from backend.engine import application_preflight_child_relay as relay
+        # This existing controlled child intentionally substitutes its command.
+        # Model only the new reservation boundary; no authenticated relay,
+        # child enrollment or production stage math is claimed by this control.
+        def transport_only(admitted, **plan):
+            assert admitted._cache is cache and admitted._phase == 'active'
+            assert plan['device'] == 'cpu' and plan['stages'] == ('train',)
+            assert state.snapshot()['active_scopes'] == 1
+            return None
+        monkeypatch.setattr(relay, 'reserve_backend_child', transport_only)
         admitted=ticket();admitted.claim();seen=[];original=subprocess.Popen
         def spawn(command,**kwargs):
             assert state.snapshot()['active_scopes']==1
@@ -400,6 +431,16 @@ Path(result).write_text(json.dumps({'runtime_digest':'controlled','results':{'tr
     q,root,owner,authority=epoch;original=subprocess.Popen;handles=[]
     try:
         with controlled_cache(epoch,monkeypatch) as (_,_,state,cache):
+            from backend.engine import application_preflight_child_relay as relay
+            # Only this transport-only escaped-leaf fixture models reservation.
+            # Exact ticket, original Popen and real inherited OFD remain tested;
+            # authenticated relay enrollment is separate actual-source proof.
+            def transport_only(admitted, **plan):
+                assert admitted._cache is cache and admitted._phase == 'active'
+                assert plan['device'] == 'cpu' and plan['stages'] == ('train',)
+                assert state.snapshot()['active_scopes'] == 1
+                return None
+            monkeypatch.setattr(relay, 'reserve_backend_child', transport_only)
             registration=cache['challenge']['writer'];lock=root/q.EPOCHS/owner.nonce/'writers'/registration['writer_id']/'ownership.lock'
             def spawn(command,**kwargs):
                 info=os.fstat(kwargs['pass_fds'][0]);assert state.snapshot()['active_scopes']==1
@@ -457,6 +498,7 @@ def test_actual_authenticated_source_preflight_cpu_preserves_guard_through_real_
    refs=[{'fd':entry.fd,'path':entry.path} for entry in psutil.Process(child.pid).open_files() if entry.path==str(lock)]
    (projects/'preflight-original-child.json').write_text(json.dumps({'pid':child.pid,'birth':psutil.Process(child.pid).create_time(),
     'command':command,'device':info.st_dev,'inode':info.st_ino,'inherited_refs':refs,'passed_count':len(passed),
+    'all_passed_refs':[{'fd':fd,'device':os.fstat(fd).st_dev,'inode':os.fstat(fd).st_ino} for fd in passed],
     'active_scopes':state.snapshot()['active_scopes'],'CUDA_VISIBLE_DEVICES':kwargs['env'].get('CUDA_VISIBLE_DEVICES'),
     'NVIDIA_VISIBLE_DEVICES':kwargs['env'].get('NVIDIA_VISIBLE_DEVICES'),'close_fds':kwargs.get('close_fds')}))
   return child
@@ -516,18 +558,31 @@ def test_actual_authenticated_source_preflight_cpu_preserves_guard_through_real_
         observation=wait_file(root/'projects/preflight-original-child.json')
         records=[json.loads(raw) for raw in (root/'projects/preflight-record-counts.jsonl').read_text().splitlines()]
         assert {row['stage'] for row in records}=={'train','evaluate','infer','export'} and all(row['active_scopes']>=1 for row in records)
-        registry=q.inspect_epoch(root,ack['nonce']);backend=registry['registry']['writers'][0]
-        assert len(registry['registry']['writers'])==1 and backend['role']=='backend' and backend['status']=='active'
+        registry=q.inspect_epoch(root,ack['nonce']);writers=registry['registry']['writers']
+        assert len(writers)==2 and [row['role'] for row in writers]==['backend','preflight']
+        backend,preflight=writers
+        assert backend['status']=='active' and backend['exit_code'] is None
         assert backend['process']==bootstrap['backend_process']
         assert backend['process']['pid']==server['pid']!=bootstrap['main_process']['pid']
         assert backend['lock_identity']=={'device':observation['device'],'inode':observation['inode']}
-        assert observation['passed_count']==1 and len(observation['inherited_refs'])==1 and observation['close_fds'] is True
+        assert preflight['status']=='direct_exited' and preflight['exit_code']==0
+        assert preflight['process']=={'pid':observation['pid'],'created_at':observation['birth'],
+            'command_sha256':sha(canonical(observation['command']))}
+        assert preflight['process']['pid'] not in {server['pid'],bootstrap['main_process']['pid']}
+        assert preflight['writer_id']!=backend['writer_id'] and preflight['lock_identity']!=backend['lock_identity']
+        refs=observation['all_passed_refs'];assert observation['passed_count']==len(refs)==3
+        assert [(ref['device'],ref['inode']) for ref in refs[:2]]==[
+            (backend['lock_identity']['device'],backend['lock_identity']['inode']),
+            (preflight['lock_identity']['device'],preflight['lock_identity']['inode'])]
+        assert len({ref['fd'] for ref in refs})==3
+        assert len(observation['inherited_refs'])==1 and observation['close_fds'] is True
         assert observation['active_scopes']>=1 and observation['CUDA_VISIBLE_DEVICES']=='' and observation['NVIDIA_VISIBLE_DEVICES']=='none'
         assert started['device']=='cpu' and status['workers'][0]['local_compute_busy'] is None
         assert protected=={name:sha(Path(name).read_bytes()) for name in protected}
         (root/'projects/actual-preflight-writer-proof.json').write_bytes(canonical({'scope':'controlled_signed_source_application_epoch',
             'controller':ack,'backend':server,'preflight':last,'original_child':observation,'record_lifetimes':records,
             'registry':registry,'protected':protected,'actual_preflight_cpu_stages_verified':True,
+            'actual_preflight_enrollment_verified':True,'actual_preflight_original_popen_finalize_verified':True,
             'actual_native_application_verified':False,'whole_writer_coverage':False,'process_tree_exit_verified':False,
             'lease_release':False,'model_quality_approved':False,'real_publisher_verified':False,'gpu_execution_verified':False}))
     finally:
