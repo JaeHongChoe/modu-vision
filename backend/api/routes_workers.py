@@ -82,6 +82,23 @@ def _require_owner(request: Request) -> None:
 
 @router.post('/local/preflight', status_code=202)
 def start_preflight(req: PreflightRequest, request: Request):
+    from backend.engine.application_launch_handshake import create_preflight_writer_ticket
+    ticket = create_preflight_writer_ticket(device=req.device)
+    transferred = False
+    try:
+        result = _start_preflight_admitted(req, request, ticket)
+        transferred = True
+        return result
+    finally:
+        # Successful dispatch owns the whole lifetime. Pre-dispatch failures
+        # are cleaned by the admitted helper before this original final close.
+        if not transferred:
+            # The helper settles failed starts; ordinary validation refusal
+            # still owns an undispatched ticket on this request thread.
+            if ticket._phase == 'created': ticket.finish()
+
+
+def _start_preflight_admitted(req, request, ticket):
     from backend.api.routes_training import training_job_manager
     from backend.engine.shared_scheduler import shared_leases
     from backend.engine.worker_preflight import PreflightRefused, plan, preflight_architecture, run_preflight
@@ -105,36 +122,86 @@ def start_preflight(req: PreflightRequest, request: Request):
             raise HTTPException(409, '학습 또는 다른 사전 점검이 이 컴퓨터의 계산 자원을 사용 중입니다. 끝난 뒤 실행하세요.')
         _STATE['running'] = run
     stop = threading.Event()
+    heartbeat_failed = threading.Event()
+
+    def release_reserved():
+        if leases.release(lease_id) is not True:
+            raise RuntimeError('Original preflight reservation release is unconfirmed')
 
     def keep_reserved():
         while not stop.wait(max(0.5, leases.lease_seconds / 3)):
             try:
                 renewed = leases.heartbeat(lease_id)
             except Exception:  # a busy or unreadable reservation table: try again at the next beat
+                heartbeat_failed.set()
                 logger.warning('The local compute reservation of preflight %s could not be renewed now', lease_id, exc_info=True)
                 continue
             if not renewed:
+                heartbeat_failed.set()
                 logger.warning('The local compute reservation of preflight %s is no longer held', lease_id)
                 return
 
     def work():
-        threading.Thread(target=keep_reserved, name=f'{lease_id}-heartbeat', daemon=True).start()
+        ticket.claim()
+        heartbeat = None
+        outcome = {**run, 'results': {}, 'error': '사전 점검 실행 결과를 확인하지 못했습니다.'}
         try:
-            outcome = {**run, **run_preflight(req.task, req.device, stages), 'error': None}
+            heartbeat = threading.Thread(target=keep_reserved, name=f'{lease_id}-heartbeat', daemon=True)
+            heartbeat.start()
+            outcome = {**run, **run_preflight(req.task, req.device, stages, _writer_ticket=ticket), 'error': None}
         except Exception as exc:  # recording failed; the stages are not verified and the reason is kept
+            ticket.unconfirmed()
             logger.exception('Worker preflight of %s on %s could not be recorded', req.task, req.device)
             outcome = {**run, 'results': {}, 'error': f'{type(exc).__name__}: {exc}'}
         finally:
             stop.set()
             try:
-                leases.release(lease_id)
-            except Exception:  # an unreleased row expires after its lease time; the outcome is still published
-                logger.exception('The local compute reservation of preflight %s could not be released', lease_id)
-        with _LOCK:
-            _STATE['running'], _STATE['last'] = None, {**outcome, 'finished_at': time.time()}
-    thread = threading.Thread(target=work, name=f'worker-preflight-{req.task}', daemon=True)
-    _WORKER['thread'] = thread
-    thread.start()
+                # Keep original custody until every in-flight heartbeat write
+                # has returned. Shutdown's existing join budget stays unchanged.
+                if heartbeat is not None:
+                    heartbeat.join()
+                if heartbeat_failed.is_set(): ticket.unconfirmed()
+                def publish_finished():
+                    release_reserved()
+                    with _LOCK:
+                        _STATE['running'], _STATE['last'] = None, {**outcome, 'finished_at': time.time()}
+                ticket.finish(before_leave=publish_finished)
+            except BaseException:
+                ticket.retain_unconfirmed()
+                logger.exception('The original cleanup lifetime of preflight %s is unresolved', lease_id)
+    try:
+        thread = threading.Thread(target=work, name=f'worker-preflight-{req.task}', daemon=True)
+    except BaseException:
+        ticket.unconfirmed()
+        try:
+            def clear_unstarted():
+                release_reserved()
+                with _LOCK:
+                    if _STATE['running'] is run: _STATE['running'] = None
+            ticket.finish(before_leave=clear_unstarted)
+        except BaseException:
+            ticket.retain_unconfirmed()
+        raise
+    try:
+        ticket.dispatch_to(thread)  # Sticky background refusal before Thread.start.
+        _WORKER['thread'] = thread
+        thread.start()
+    except BaseException:
+        if ticket.cancel_dispatch():
+            # No claim can start later. Cleanup remains inside retained custody.
+            try:
+                stop.set()
+                def clear_cancelled():
+                    release_reserved()
+                    with _LOCK:
+                        if _STATE['running'] is run: _STATE['running'] = None
+                        if _WORKER.get('thread') is thread: _WORKER['thread'] = None
+                ticket.finish(before_leave=clear_cancelled)
+            except BaseException:
+                ticket.retain_unconfirmed()
+                raise
+        # A start that raised after claim never closes the worker's capability.
+        raise
     return {'status': 'started', **run}
 
 

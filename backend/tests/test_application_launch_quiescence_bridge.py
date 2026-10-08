@@ -39,10 +39,12 @@ def test_real_controller_enrolls_backend_before_actual_cpu_and_retains_blocking_
         rows = snapshot['registry']['writers']
         assert len([r for r in rows if r['role'] == 'backend']) == 1
         row = next(r for r in rows if r['role'] == 'backend')
-        assert row['status'] == 'reserved' and row['process'] is None
+        assert row['status'] == 'active' and row['process'] == cpu['backend_process']
+        assert row['process']['pid'] != child.pid
         # A Node child receipt must never stand for a retained Python Popen.
         assert all(r['status'] != 'direct_exited' for r in rows)
         journal = json.loads((root / '.application-launches' / ack['nonce'] / 'journal.json').read_bytes())
+        assert row['process']['pid'] != journal['process']['pid'] == cpu['main_process']['pid']
         assert journal['writer_drain']['registration_sha256'] == row['registration_sha256']
         assert journal['writer_drain']['writer_id'] == row['writer_id']
     finally:
@@ -584,7 +586,9 @@ def test_actual_source_cpu_then_managed_drain_and_original_node_exit_keeps_lease
         finish_managed(child,root)  # Original direct-main observation settles publication.
         snapshot=inspect_epoch(root,ack['nonce']);assert snapshot['registry']['state']=='closed'
         backend=next(r for r in snapshot['registry']['writers'] if r['role']=='backend')
-        assert backend['status']=='reserved' and backend['process'] is None
+        assert backend['status']==('active' if uncovered else 'direct_exited')
+        assert backend['exit_code']==(None if uncovered else 0)
+        assert backend['process']==cpu['backend_process']
         assert backend['lock_identity']=={'device':fd['device'],'inode':fd['inode']}
         assert {p:p.read_bytes() for p in controls}==controls
         from backend.engine.application_launch_lease import _load,assert_quiescent

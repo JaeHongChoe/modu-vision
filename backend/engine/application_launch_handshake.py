@@ -16,6 +16,7 @@ import socket
 import sys
 import threading
 import time
+import weakref
 from contextlib import contextmanager
 
 MAX_FRAME = 65536
@@ -27,6 +28,8 @@ _CHALLENGE_FIELDS = {'schema_version', 'kind', 'challenge', 'epoch', 'nonce', 'b
     'main_process', 'backend_pid', 'backend_executable', 'backend_build_identity_sha256'}
 _CACHE = None
 _FIXED_CPU_PRODUCER = object()
+_PREFLIGHT_TICKETS = weakref.WeakSet()
+_PREFLIGHT_UNRESOLVED = set()
 
 
 class BackendWorkAdmission:
@@ -63,14 +66,17 @@ class BackendWorkAdmission:
 
     @contextmanager
     def producer(self):
-        with self._condition:
-            if self._closed: raise HandshakeError('Original backend producer admission is closed')
-            self._active += 1
+        self._begin_producer()
         try: yield
         except BaseException:
             self.uncovered('cpu_producer_unconfirmed')
             raise
         finally: self.leave()
+
+    def _begin_producer(self):
+        with self._condition:
+            if self._closed: raise HandshakeError('Original backend producer admission is closed')
+            self._active += 1
 
     def close(self):
         with self._condition: self._closed = True
@@ -95,6 +101,203 @@ class BackendWorkAdmission:
 
 def backend_work_admission():
     return _CACHE.get('admission') if _CACHE is not None else None
+
+
+class _PreflightWriterTicket:
+    """One original admitted lifetime, not reconstructable launch authority.
+
+    No contextmanager or maintenance ContextVar crosses threads. The original
+    request validates OPEN once; its private OFD duplicate and producer count
+    remain until the exact dispatched thread completes its cleanup. The ticket
+    grants no enrollment, process-tree exit, or release authority.
+    """
+    def __init__(self):
+        raise HandshakeError('An original preflight ticket must be minted')
+
+    def _original(self):
+        if (self not in _PREFLIGHT_TICKETS or os.getpid() != self._pid
+                or _CACHE is not self._cache or _context() != self._context):
+            raise HandshakeError('Original preflight ticket context is unavailable')
+
+    def claim(self):
+        with self._lock:
+            self._original()
+            if self._phase not in {'created', 'dispatched'}:
+                raise HandshakeError('Preflight ticket is already used or finished')
+            if threading.current_thread() is not self._thread:
+                raise HandshakeError('Original preflight ticket thread differs')
+            self._phase = 'active'
+
+    def dispatch_to(self, thread):
+        with self._lock:
+            self._original()
+            if (threading.current_thread() is not self._creator or self._phase != 'created'
+                    or not isinstance(thread, threading.Thread) or thread.ident is not None):
+                raise HandshakeError('Preflight ticket requires one original new thread')
+            if self._admission is not None: self._admission.uncovered('accepted_background_work')
+            self._thread, self._phase = thread, 'dispatched'
+
+    @contextmanager
+    def transport(self, *, device):
+        with self._lock:
+            self._original()
+            if self._phase != 'active' or threading.current_thread() is not self._thread:
+                raise HandshakeError('Original preflight ticket is inactive or belongs to another thread')
+            if type(device) is not str or device != self._device:
+                raise HandshakeError('Original preflight ticket device differs')
+            try: private = tuple(os.dup(fd) for fd in self._transport)
+            except BaseException:
+                if self._admission is not None: self._admission.uncovered('cpu_producer_unconfirmed')
+                raise
+            self._using_transport += 1
+        try: yield private
+        except BaseException:
+            self.unconfirmed()
+            raise
+        finally:
+            try:
+                for fd in private: os.close(fd)
+            except BaseException:
+                # close may have consumed the descriptor before raising. Never
+                # retry it or release this in-flight lifetime on that ambiguity.
+                self.retain_unconfirmed()
+                raise
+            else:
+                with self._lock: self._using_transport -= 1
+
+    def unconfirmed(self):
+        with self._lock:
+            self._original()
+            if threading.current_thread() not in (self._creator, self._thread):
+                raise HandshakeError('Original preflight ticket cleanup thread differs')
+            if self._admission is not None: self._admission.uncovered('cpu_producer_unconfirmed')
+
+    def retain_unconfirmed(self):
+        """Unknown cleanup retains custody; no observation repairs this ticket."""
+        with self._lock:
+            self._original()
+            if (threading.current_thread() not in (self._creator, self._thread)
+                    or self._phase == 'finished'):
+                raise HandshakeError('Original preflight ticket cleanup differs')
+            self._retain_locked()
+
+    def _retain_locked(self):
+        if self._admission is not None: self._admission.uncovered('cpu_producer_unconfirmed')
+        self._phase = 'unresolved'
+        # Keep original custody/count after any uncertain close or final write.
+        # The descriptor is never inspected, retried, or exposed again.
+        _PREFLIGHT_UNRESOLVED.add(self)
+
+    def _release(self, before_leave):
+        self._phase = 'settling'
+        try:
+            for fd in self._transport: os.close(fd)  # Never LOCK_UN the inherited OFD.
+            # Reservation release and final state publication remain counted,
+            # and only happen after every original ticket close returned.
+            if before_leave is not None: before_leave()
+            if self._admission is not None: self._admission.leave()
+        except BaseException:
+            self._retain_locked()
+            raise
+        self._phase = 'finished'
+
+    def finish(self, *, before_leave=None):
+        with self._lock:
+            self._original()
+            if (self._phase not in {'created', 'active', 'cancelled'} or self._using_transport
+                    or threading.current_thread() is not self._thread):
+                raise HandshakeError('Original preflight ticket is inactive or belongs to another thread')
+            self._release(before_leave)
+
+    def cancel_dispatch(self):
+        """Abort before claim, or retain custody after ambiguous Thread.start."""
+        with self._lock:
+            self._original()
+            if threading.current_thread() is not self._creator:
+                raise HandshakeError('Only the original dispatcher can cancel its ticket')
+            if self._admission is not None: self._admission.uncovered('cpu_producer_unconfirmed')
+            if self._phase == 'dispatched':
+                self._phase, self._thread = 'cancelled', self._creator
+                return True  # Retain custody through the dispatcher's cleanup.
+            if self._phase in {'active', 'finished'}:
+                return False  # Never close a capability already held by work.
+            raise HandshakeError('Original preflight ticket has not been dispatched')
+
+
+def _mint_preflight_ticket(device, transport, admission, *, unresolved=False):
+    ticket = object.__new__(_PreflightWriterTicket)
+    ticket._pid, ticket._cache, ticket._context = os.getpid(), _CACHE, _context()
+    ticket._creator = ticket._thread = threading.current_thread()
+    ticket._device, ticket._transport, ticket._admission = device, transport, admission
+    ticket._phase, ticket._lock, ticket._using_transport = ('unresolved' if unresolved else 'created'), threading.Lock(), 0
+    _PREFLIGHT_TICKETS.add(ticket)
+    if unresolved: _PREFLIGHT_UNRESOLVED.add(ticket)
+    return ticket
+
+
+def create_preflight_writer_ticket(*, device):
+    """Acquire before planning/writes; retain the original capability on dispatch.
+
+    Device selection stays the preflight's own explicit CPU/CUDA/MPS contract.
+    This adapter does not discover or execute an accelerator at admission.
+    """
+    if type(device) is not str or device not in {'cpu', 'cuda', 'mps'}:
+        raise HandshakeError('Preflight ticket requires an explicit supported device')
+    context = _root_context()
+    if _CACHE is None:
+        if context is not None: raise HandshakeError('Owned preflight has no original cached writer admission')
+        return _mint_preflight_ticket(device, (), None)
+    if context is None or _context() != _CACHE['context'] or not _CACHE['ready']:
+        raise HandshakeError('Original preflight writer capability is unavailable')
+    root, values = context
+    validated = {}
+    if _validate(root, values, _CACHE['challenge'], validated=validated) != _CACHE['proof']:
+        raise HandshakeError('Original preflight process binding changed')
+    admission = _CACHE['admission']
+    fields = {'writer_guard', 'writer_handle', 'writer_private_fd', 'writer_fd_identity'}
+    if 'writer' not in _CACHE['challenge']:
+        if (validated.get('protocol_version') != 3 or not fields.issubset(_CACHE)
+                or any(_CACHE[k] is not None for k in fields)):
+            raise HandshakeError('Original legacy preflight capability is partial or unsupported')
+        admission._begin_producer()
+        try: return _mint_preflight_ticket(device, (), admission)
+        except BaseException: admission.leave(); raise
+    if validated.get('protocol_version') != 4 or any(_CACHE.get(k) is None for k in fields):
+        raise HandshakeError('Original enrolled preflight capability is partial')
+    writer = _CACHE['challenge']['writer']
+    from backend.engine.application_launch_quiescence import writer_guard
+    # Finish every validation/registry/maintenance context on this thread.
+    private = None; counted = False
+    try:
+        with writer_guard(root, _CACHE['proof']['nonce'], writer['writer_id'],
+                expected_registration_sha256=writer['registration_sha256']):
+            anchor = _CACHE['writer_private_fd']; info = os.fstat(anchor)
+            if (info.st_dev, info.st_ino) != _CACHE['writer_fd_identity']:
+                raise HandshakeError('Original backend writer descriptor identity changed')
+            private = os.dup(anchor)
+            admission._begin_producer(); counted = True
+        # Mint only after the validation guard's final identity check succeeds.
+        return _mint_preflight_ticket(device, (private,), admission)
+    except BaseException:
+        if counted: admission.uncovered('cpu_producer_unconfirmed')
+        try:
+            if private is not None: os.close(private)
+        except BaseException:
+            # Guard validation failed, so no usable ticket may escape. Retain
+            # opaque original custody without retrying a possibly consumed fd.
+            admission.uncovered('cpu_producer_unconfirmed')
+            _mint_preflight_ticket(device, (private,), admission, unresolved=True)
+            raise
+        else:
+            if counted: admission.leave()
+        raise
+
+
+@contextmanager
+def _preflight_ticket_transport(ticket, *, device):
+    if type(ticket) is not _PreflightWriterTicket or ticket not in _PREFLIGHT_TICKETS:
+        raise HandshakeError('An original minted preflight ticket is required')
+    with ticket.transport(device=device) as transport: yield transport
 
 
 @contextmanager

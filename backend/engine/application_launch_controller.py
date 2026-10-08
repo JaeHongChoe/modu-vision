@@ -20,6 +20,7 @@ import psutil
 from backend.engine import application_launch_lease as lease, runtime_update as update
 from backend.engine.global_store_paths import store_admission
 from backend.engine.application_launch_handshake import read_frame, send_frame, HandshakeError
+from backend.engine import application_node_writer_authority as node
 
 
 def _expected(binding, args):
@@ -169,14 +170,20 @@ def authenticate(owner, row):
         'nonce': row['nonce'], 'binding': binding, 'process': row['process'], 'transport': owner._bootstrap_transport}
     if row.get('writer_drain') is not None:
         main_challenge['writer'] = {k: row['writer_drain'][k] for k in ('writer_id', 'registration_sha256', 'registration_registry_sha256')}
-    send_frame(channel, main_challenge)
-    claim = read_frame(channel, 210)
+    authority = getattr(owner, '_node_backend_authority', None)
+    if authority is not None:
+        node.send_authentication_challenge(authority, main_challenge)
+        claim = node.frame_value(authority, node.receive_frame(authority, 210))
+    else:
+        send_frame(channel, main_challenge)
+        claim = read_frame(channel, 210)
     expected = {'schema_version': 1, 'kind': 'main_claim', 'challenge': challenge, 'nonce': row['nonce'],
         'binding_sha256': update._sha(update._canonical(binding)), 'pid': row['process']['pid']}
     if update._canonical(claim) != update._canonical(expected): raise HandshakeError('Main claim differs from private challenge')
     owner.claim(row['process'])
     send_frame(channel, {**expected, 'kind': 'main_admitted'})
-    frame = read_frame(channel, 210)
+    proof_event = node.receive_frame(authority, 210) if authority is not None else None
+    frame = node.frame_value(authority, proof_event) if authority is not None else read_frame(channel, 210)
     if (set(frame) != {'schema_version', 'kind', 'challenge', 'nonce', 'claim_b64', 'ready_b64'}
             or type(frame['schema_version']) is not int or frame['schema_version'] != 1 or frame['kind'] != 'backend_proof'
             or not update._hex(frame['challenge']) or not hmac.compare_digest(frame['challenge'], challenge)
@@ -199,6 +206,7 @@ def authenticate(owner, row):
         'challenge_sha256': update._sha(challenge.encode()), 'epoch': ready['epoch']}
     owner._publish_bootstrap(receipt)
     owner._authenticated_backend_proof = first
+    if authority is not None: node.seal_authentication(authority, proof_event)
     return ready['process']
 
 
@@ -230,8 +238,8 @@ def execute_cpu(owner, capability):
         request=execution.request(owner,capability,bootstrap['epoch'])
     intent=owner._begin_cpu_execution(request,capability)
     if owner._writer_epoch is not None:
-        # CPU ownership/deadline is verified by its existing helper. Its writer
-        # descriptor propagation is not yet covered by this first bridge.
+        # CPU descriptor propagation is verified separately by its helper.
+        # This blocking row remains until complete adapter coverage is proven.
         owner._writer_epoch.block_unsupported('owned_cpu_worker',
             expected_registry_sha256=owner._writer_epoch.snapshot()['registry_sha256'])
     send_frame(owner._bootstrap_channel,request)
@@ -262,6 +270,8 @@ def prepare_drain(owner, frame):
                 or row.get('writer_drain', {}).get('phase') != 'enrolled'):
             raise HandshakeError('Original main managed drain request differs or replayed')
         drain = row['writer_drain']
+    authority = getattr(owner, '_node_backend_authority', None)
+    if authority is not None: node.begin_drain(authority, frame, started)
     snapshot = owner._writer_epoch.snapshot()
     owner._writer_epoch.close_epoch(expected_registry_sha256=snapshot['registry_sha256'])
     closed = owner._writer_epoch.snapshot()
@@ -308,17 +318,21 @@ def prepare_drain(owner, frame):
     if receipt['status'] != 'managed_scopes_drained': raise HandshakeError('Backend managed scope retains uncovered/active writers')
 
 
-def observe_backend_exit(owner, frame):
+def observe_backend_exit(owner, event):
     from backend.engine.application_launch_handshake import validate_backend_exit
+    authority = getattr(owner, '_node_backend_authority', None)
+    if authority is None: raise HandshakeError('Original typed Node backend authority is unavailable')
+    frame = node.frame_value(authority, event)
     with lease._transition_admission(owner.root, owner.nonce):
-        row = owner._owned(); owner._binding(row)
+        row = owner._owned(); owner._binding(row); owner._live(row, row['process'])
         drain = row.get('writer_drain')
         if drain is None or drain['phase'] != 'drained': raise HandshakeError('Backend exit lacks admitted original drain')
         proof = owner._authenticated_backend_proof
         validate_backend_exit(frame, drain['request'], proof['process'])
-    # This authenticated original Node handle observation is deliberately not
-    # passed to WriterEpoch.observe_original_child_exit (Python Popen only).
+    owner._writer_epoch.observe_authenticated_node_backend_exit(drain['writer_id'], event,
+        expected_registry_sha256=owner._writer_epoch.snapshot()['registry_sha256'])
     owner.publish_writer_drain(phase='backend_exited', backend_exit=frame)
+    node.assert_exit_acknowledgement(authority)
     send_frame(owner._bootstrap_channel, {'schema_version': 1, 'kind': 'backend_exit_observed',
         'nonce': owner.nonce, 'request_id': frame['request_id'], 'exit_sha256': update._sha(update._canonical(frame))})
 
@@ -332,7 +346,11 @@ def run(args):
         owner = lease.LaunchSupervisor.reserve(root, args.authority, pinned_authority_sha256=args.pinned_authority_sha256)
         try:
             owner.enroll_backend_writer()
+            mint = object(); node._CONTROLLER_MINTS.add(mint)
+            try: authority = node._mint_original_controller(owner, mint)
+            finally: node._CONTROLLER_MINTS.discard(mint)
             row = owner.start(bootstrap=True)
+            if row['state'] == 'starting': node.capture_original_main(authority, row)
         except Exception as exc:
             # Reservation already owns a durable nonce. An interrupted spawn
             # must keep the original handles, even if its journal is ambiguous.
@@ -354,9 +372,10 @@ def run(args):
         if not failed:
             try:
                 if select.select([owner._bootstrap_channel], [], [], 0)[0]:
-                    frame = read_frame(owner._bootstrap_channel, 4)
+                    event = node.receive_frame(owner._node_backend_authority, 4)
+                    frame = node.frame_value(owner._node_backend_authority, event)
                     if frame.get('kind') == 'main_drain_request': prepare_drain(owner, frame)
-                    elif frame.get('kind') == 'main_backend_exit': observe_backend_exit(owner, frame)
+                    elif frame.get('kind') == 'main_backend_exit': observe_backend_exit(owner, event)
                     else: raise HandshakeError('Private main descriptor ended or replayed after readiness')
                 if owner._process.poll() is not None: owner.observe_exit(); failed = True
                 elif not _same_identity(row['process'], row['process']['pid']):

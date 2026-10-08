@@ -255,7 +255,7 @@ class WriterEpoch:
             _refuse('original create-only authority capability is unavailable')
         self.root = root; self.nonce = nonce; self.snapshot_binding = binding
         self._pid = os.getpid(); self._thread = threading.current_thread()
-        self._raw = raw; self._pointer = pointer; self._handles = {}
+        self._raw = raw; self._pointer = pointer; self._handles = {}; self._node_handles = {}
 
     @classmethod
     def create(cls, root, nonce, *, expected_launch_sha256):
@@ -383,6 +383,42 @@ class WriterEpoch:
             if row['status'] != 'active': _refuse('uncertain original child cannot be repaired')
             return self._replace(value, directory, writer_id, status='direct_exited' if code == 0 else 'uncertain',
                 exit_code=code, reason_code=None if code == 0 else 'child_failed')
+
+    def bind_authenticated_node_backend(self, writer_id, authority, *, expected_registry_sha256):
+        """Separate original Node transport capability; never substitute main Popen."""
+        from backend.engine import application_node_writer_authority as node
+        if type(authority) is not node.NodeBackendAuthority:
+            _refuse('original typed Node backend authority is required')
+        with self._admit(expected_registry_sha256) as (value, directory):
+            row = next((r for r in value['writers'] if r['writer_id'] == writer_id), None)
+            if (value['state'] != 'open' or row is None or row['role'] != 'backend'
+                    or row['status'] != 'reserved' or writer_id in self._node_handles
+                    or writer_id in self._handles):
+                _refuse('original Node backend registration already bound or unresolved')
+            identity, registration = node._core_binding(authority, self, writer_id)
+            if row['registration_sha256'] != registration:
+                _refuse('original Node backend registration pin differs')
+            result = self._replace(value, directory, writer_id, status='active', process=identity)
+            self._node_handles[writer_id] = (authority, identity)
+            return result
+
+    def observe_authenticated_node_backend_exit(self, writer_id, event, *, expected_registry_sha256):
+        """Consume one original receive event; direct child is not a whole tree."""
+        from backend.engine import application_node_writer_authority as node
+        if type(event) is not node.NodeBackendEvent:
+            _refuse('original one-use Node receive event is required')
+        with self._admit(expected_registry_sha256) as (value, directory):
+            original = self._node_handles.get(writer_id)
+            row = next((r for r in value['writers'] if r['writer_id'] == writer_id), None)
+            if (original is None or value['state'] != 'closed' or row is None
+                    or row['role'] != 'backend' or row['status'] != 'active'):
+                _refuse('original active Node backend handle is unavailable')
+            authority, identity = original
+            if row['process'] != identity or node._core_exit(authority, event, self, writer_id) != identity:
+                _refuse('original Node backend identity differs')
+            result = self._replace(value, directory, writer_id, status='direct_exited', exit_code=0)
+            node.finish_exit_publication(authority)
+            return result
 
     def mark_uncertain(self, writer_id, *, reason_code, expected_registry_sha256):
         if reason_code not in REASONS: _refuse('unsupported uncertainty reason code')

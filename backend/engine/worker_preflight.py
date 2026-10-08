@@ -447,8 +447,40 @@ def _child_environment() -> dict[str, str]:
 
 
 def run_preflight(task: str, device: str, stages: tuple[str, ...], *, store: Optional[PreflightStore] = None,
-                  worker_id: str = 'local', timeout: Optional[float] = None, workdir_root: Optional[Path] = None) -> dict:
+                  worker_id: str = 'local', timeout: Optional[float] = None, workdir_root: Optional[Path] = None,
+                  _writer_ticket=None) -> dict:
     """Run one preflight in a child process this app owns and record each stage's result for this runtime."""
+    from backend.engine.application_launch_handshake import create_preflight_writer_ticket, _preflight_ticket_transport
+    from backend.engine.runtime_deadline import _writer_transport
+    own_ticket = _writer_ticket is None
+    ticket = create_preflight_writer_ticket(device=device) if own_ticket else _writer_ticket
+    if own_ticket: ticket.claim()
+    try:
+        # No new OPEN admission for an already dispatched original ticket.
+        with _preflight_ticket_transport(ticket, device=device) as transport:
+            entered = False
+            body_error = None
+            try:
+                with _writer_transport(transport) as inherited:
+                    entered = True
+                    try:
+                        return _run_preflight_admitted(task, device, stages, store=store, worker_id=worker_id,
+                            timeout=timeout, workdir_root=workdir_root, ticket=ticket, inherited=inherited)
+                    except BaseException as exc:
+                        body_error = exc
+                        raise
+            except BaseException as exc:
+                # The nested transport owns another duplicate. Failed entry or
+                # an exception replacing the body's result/error cannot prove
+                # that its cleanup close returned.
+                # Keep original custody without probing or retrying that fd.
+                if not entered or exc is not body_error: ticket.retain_unconfirmed()
+                raise
+    finally:
+        if own_ticket and ticket._phase != 'unresolved': ticket.finish()
+
+
+def _run_preflight_admitted(task, device, stages, *, store, worker_id, timeout, workdir_root, ticket, inherited):
     import subprocess
     import tempfile
     from backend.engine.process_isolation import session_isolation
@@ -468,13 +500,15 @@ def run_preflight(task: str, device: str, stages: tuple[str, ...], *, store: Opt
         with open(run / 'preflight.log', 'w', encoding='utf-8') as log:
             # cwd is the run folder: a stage that writes relative folders writes them here, never into the installed app.
             child = subprocess.Popen(command, cwd=folder, stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT,
-                                     env=_child_environment(), **session_isolation())
+                                     env=_child_environment(), **({'close_fds': True, 'pass_fds': inherited} if inherited else {}),
+                                     **session_isolation())
             with _CHILDREN_LOCK:
                 _CHILDREN.add(child)
             try:
                 child.wait(timeout=limit)
             except subprocess.TimeoutExpired:
                 timed_out = True
+                ticket.unconfirmed()
                 child.kill()  # only this preflight's own child, through its handle
                 child.wait()
             finally:
@@ -484,6 +518,7 @@ def run_preflight(task: str, device: str, stages: tuple[str, ...], *, store: Opt
                     _STOPPED_BY_APP.discard(child)
                 child.stdin.close()
         if stopped_by_app:
+            ticket.unconfirmed()
             # The app quit mid-run: nothing is recorded, so earlier results of this runtime keep their state.
             return {'task': task, 'device': device, 'runtime_digest': runtime_digest(), 'architecture': preflight_architecture(task),
                     'results': {}, 'interrupted': '앱이 종료되어 사전 점검이 중단되었습니다. 결과는 기록하지 않았습니다.'}
@@ -492,6 +527,7 @@ def run_preflight(task: str, device: str, stages: tuple[str, ...], *, store: Opt
         except (OSError, ValueError):
             answer = None
         if answer is None or timed_out:
+            ticket.unconfirmed()
             try:
                 tail = (run / 'preflight.log').read_text(encoding='utf-8', errors='replace')[-400:].strip()
             except OSError as exc:  # the run folder itself was removed meanwhile: still a recorded failure
@@ -500,6 +536,7 @@ def run_preflight(task: str, device: str, stages: tuple[str, ...], *, store: Opt
                    else f'the preflight process ended (exit {child.returncode}) without a result: {tail}')
             answer = {'runtime_digest': runtime_digest(),
                       'results': {stage: {'passed': False, 'reason': why, 'seconds': time.monotonic() - started} for stage in stages}}
+        if child.returncode != 0: ticket.unconfirmed()
         recorded = {}
         for stage, row in answer['results'].items():
             recorded[stage] = store.record(worker_id, answer['runtime_digest'], task, stage, device, passed=row['passed'] is True,

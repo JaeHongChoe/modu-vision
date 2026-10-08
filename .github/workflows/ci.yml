@@ -231,6 +231,8 @@ jobs:
           backend/tests/test_staged_canary_frozen_execution.py::test_install_coerced_review_schema_refuses_before_staging
           backend/tests/test_application_launch_execution.py
           backend/tests/test_application_launch_quiescence.py
+          backend/tests/test_application_node_writer_authority.py
+          backend/tests/test_worker_preflight_writer_lifetime.py
           backend/tests/test_application_launch_quiescence_bridge.py
           backend/tests/test_application_writer_control_paths.py
           backend/tests/test_application_runtime_home_paths.py

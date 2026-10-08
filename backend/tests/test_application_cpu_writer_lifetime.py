@@ -301,10 +301,11 @@ def test_actual_original_cpu_epoch_inherits_writer_inode_and_keeps_scope_through
         snapshot=inspect_epoch(root,ack['nonce']);writers=snapshot['registry']['writers']
         assert len(writers)==2
         backend,worker=sorted(writers,key=lambda row:row['role'])
-        assert backend['role']=='backend' and backend['status']=='reserved'
+        assert backend['role']=='backend' and backend['status']=='active'
+        assert backend['process']==cpu['backend_process']
         assert worker['role']=='owned_cpu_worker' and worker['status']=='unsupported'
         assert worker['reason_code']=='uncovered_protocol'
-        assert backend['process'] is worker['process'] is None
+        assert worker['process'] is None
         lock=root/'.application-writer-epochs'/ack['nonce']/'writers'/backend['writer_id']/'ownership.lock'
         info=lock.stat()
         assert (observation['device'],observation['inode'])==(info.st_dev,info.st_ino)
@@ -333,6 +334,6 @@ def test_actual_original_cpu_epoch_inherits_writer_inode_and_keeps_scope_through
     assert final['state']=='recovery_required'
     final_writers=inspect_epoch(root,ack['nonce'])['registry']['writers']
     assert [(row['role'],row['status'],row['reason_code']) for row in final_writers]==[
-        ('backend','reserved',None),('owned_cpu_worker','unsupported','uncovered_protocol')]
+        ('backend','direct_exited',None),('owned_cpu_worker','unsupported','uncovered_protocol')]
     with pytest.raises(ValueError,match='launch ownership'):
         lease.assert_quiescent(root)
