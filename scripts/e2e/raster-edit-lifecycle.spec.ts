@@ -22,7 +22,7 @@ export function readRenderedSourceView(canvas:HTMLCanvasElement){
  const container=canvas.closest('[data-canvas-container]');if(!container)throw Error('Original canvas container absent');
  const rect=container.getBoundingClientRect(),canvasRect=canvas.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
  const context=canvas.getContext('2d');if(!context)throw Error('Original rendered mask context absent');
- const hud=container.querySelector('[data-testid="canvas-hud"]')?.textContent||'';
+ const hud=(container.querySelector('[data-testid="canvas-hud"]') as HTMLElement|null)?.innerText||'';
  if(!/\bscale\s*100\s*%/.test(hud))throw Error('Actual original 1:1 toolbar view required');
  if(![1,2].includes(dpr)||![rect.x,rect.y,rect.width,rect.height].every(Number.isFinite))throw Error('Original fixture DPR/geometry invalid');
  if(rect.width!==canvasRect.width||rect.height!==canvasRect.height||rect.x!==canvasRect.x||rect.y!==canvasRect.y)throw Error('Canvas and original container geometry differ');
