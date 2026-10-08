@@ -165,15 +165,15 @@ test('native actual OpenVINO job preserves full original package and reopens exa
   page.on('request', observed); page.on('requestfinished', finished); page.on('requestfailed', failed); page.on('response', response);
   const api = async (route: string, body?: unknown, method = body === undefined ? 'GET' : 'POST') => {
     const value = await page.evaluate(async ({port, route, method, body, budget}) => {
-      const started = performance.now(), deadline = started + budget;
+      const started = globalThis.performance.now(), deadline = started + budget;
       let timer: ReturnType<typeof setTimeout> | undefined;
       try {
         return await Promise.race([
           (async () => {const r = await fetch(`http://127.0.0.1:${port}${route}`, {method,
             ...(body === undefined ? {} : {headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)})});
-            const raw = await r.text(); if (performance.now() > deadline) throw Error('Original fixture body exceeded its started read budget');
+            const raw = await r.text(); if (globalThis.performance.now() > deadline) throw Error('Original fixture body exceeded its started read budget');
             return {status: r.status, raw, response: JSON.parse(raw)};})(),
-          new Promise<never>((_, reject) => {timer = setTimeout(() => reject(Error('Original fixture read deadline expired')), Math.max(0, deadline - performance.now()));}),
+          new Promise<never>((_, reject) => {timer = setTimeout(() => reject(Error('Original fixture read deadline expired')), Math.max(0, deadline - globalThis.performance.now()));}),
         ]);
       } finally {clearTimeout(timer);}
     }, {port: backend.port, route, method, body, budget: READ_MS});
