@@ -33,6 +33,58 @@ async function within<T>(promise: Promise<T>, deadline: number): Promise<T> {
   finally {if (timer) clearTimeout(timer);}
 }
 
+async function prepareValidatedRetainedRevision(api: Api, setup: Api, original: any, project: any) {
+  // The legacy summary import does not create an active validated index.
+  // Use the original durable job and explicit acceptance before the baseline;
+  // its manifest digest is distinct from the model's legacy v1 fingerprint.
+  expect(original.task).toBe('segmentation');
+  expect(project.source_dataset_dir).toBe(original.source_dataset_path);
+  const started = Date.now(), deadline = started + 10_000;
+  const bounded = async <T>(operation: () => Promise<T>): Promise<T> => {
+    expect(Date.now()).toBeLessThanOrEqual(deadline);
+    const value = await within(operation(), deadline);
+    expect(Date.now()).toBeLessThanOrEqual(deadline); return value;
+  };
+  const before = await bounded(() => api('/api/dataset/revisions'));
+  expect(before).toEqual({active_revision: null, revisions: []});
+  const submitted = await bounded(() => setup('/api/dataset/imports',
+    {task: 'segmentation', verify: true, invalid_policy: 'reject', follow_links: false}));
+  expect(typeof submitted.job_id).toBe('string'); expect(submitted.job_id.length).toBeGreaterThan(0);
+  expect(submitted.source.root).toBe(original.source_dataset_path);
+  const observed: any[] = []; let completed: any;
+  while (Date.now() < deadline) {
+    completed = await bounded(() => api('/api/dataset/imports/' + submitted.job_id));
+    expect(completed.job_id).toBe(submitted.job_id); expect(completed.source.root).toBe(original.source_dataset_path);
+    observed.push(completed);
+    if (['completed', 'failed', 'aborted', 'interrupted', 'cancelled'].includes(completed.state)) break;
+    await bounded(() => new Promise<void>(resolve => setTimeout(resolve, 50)));
+  }
+  expect(completed.state).toBe('completed');
+  const expectedImages = Object.entries(original.source_tree.files)
+    .filter(([relative]) => relative.startsWith('images/') && relative.endsWith('.png'))
+    .map(([relative_path, row]: [string, any]) => ({relative_path, sha256: row.sha256}))
+    .sort((a, b) => a.relative_path.localeCompare(b.relative_path));
+  expect(expectedImages.length).toBeGreaterThan(0);
+  const revision = completed.result.revision;
+  expect(revision.revision_id).toMatch(/^[a-f0-9]{32}$/); expect(revision.manifest_sha256).toMatch(/^[a-f0-9]{64}$/);
+  expect(revision).toMatchObject({state: 'prepared', image_count: expectedImages.length, valid_count: expectedImages.length,
+    error_count: 0, invalid_policy: 'reject', skipped_links: 0, unreadable_folders: 0, reused_entries: 0, verified_all: true});
+  const accepted = await bounded(() => setup('/api/dataset/imports/' + submitted.job_id + '/accept',
+    {revision_id: revision.revision_id, expected_active: null}));
+  expect(accepted).toEqual({active_revision: revision.revision_id, job_id: submitted.job_id});
+  const active = await bounded(() => api('/api/dataset/revisions'));
+  expect(active.active_revision).toBe(revision.revision_id); expect(active.revisions).toHaveLength(1);
+  expect(active.revisions[0]).toMatchObject({revision_id: revision.revision_id, source_root: original.source_dataset_path,
+    project_root: project.project_dir, task: 'segmentation', publication_key: submitted.job_id, active: true});
+  const library = await bounded(() => api('/api/dataset/library/images?state=valid&limit=120'));
+  expect(library.revision_id).toBe(revision.revision_id); expect(library.source_root).toBe(original.source_dataset_path);
+  expect(library.active).toBe(true); expect(library.next_cursor).toBe(null);
+  expect(library.items.map((row: any) => ({relative_path: row.relative_path, sha256: row.sha256}))
+    .sort((a: any, b: any) => a.relative_path.localeCompare(b.relative_path))).toEqual(expectedImages);
+  for (const row of library.items) expect(row.image_uuid).toMatch(/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/);
+  return {started, deadline, finished: Date.now(), before, submitted, observed, completed, revision, accepted, active, library};
+}
+
 async function exercise(page: Page, workspace: Workspace, evidence: Evidence, api: Api, sourceElectron: boolean, url?: string) {
   test.setTimeout(420_000);
   const bindingFile = process.env.MV_E2E_RETAINED_UNET_BINDING;
@@ -58,6 +110,8 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   const project = await setup('/api/project/update', {source_dataset_dir: source}, 'PUT');
   expect(project).toMatchObject({id: created.id, task: 'segmentation', source_dataset_dir: source});
   await setup('/api/dataset/import', {folder_path: source, task: 'segmentation', validate_images: false});
+  const validatedRevision = await prepareValidatedRetainedRevision(api, setup, original, project);
+  expect(invoke('check')).toEqual(originalCheck);
   const prepared = invoke('prepare', ['--workspace', workspace.root, '--project', JSON.stringify(project)]);
   const query = new URLSearchParams({source_dataset_path: source});
   const catalogRoute = '/api/flowchart/models/catalog?' + query;
@@ -127,7 +181,7 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   await openFlow(); await settle();
   const scoped = new URLSearchParams({source_dataset_path: source, task: 'segmentation'});
   const endpoints = ['/api/project/current', '/api/project/labelsets', '/api/project/preferences', '/api/team-data', '/api/team-data/readiness',
-    '/api/dataset/metadata?limit=100', '/api/dataset/metadata/statistics', '/api/dataset/metadata/split', '/api/dataset/versions',
+    '/api/dataset/metadata?limit=100', '/api/dataset/metadata/statistics', '/api/dataset/metadata/split', '/api/dataset/versions', '/api/dataset/revisions',
     '/api/data-workbench/review-evaluations', '/api/data-workbench/review-queues', '/api/training/jobs', catalogRoute,
     '/api/evaluation/history?' + scoped, '/api/model-deployments/active?' + scoped, '/api/model-deployments/history?' + scoped,
     '/api/fleet/targets', '/api/fleet/capabilities', '/api/fleet/rollouts', '/api/runtime-services/capture-groups', '/api/runtime-services',
@@ -308,7 +362,7 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   // uses original renderer fetch and therefore appears in writes as well.
   expect(writes.filter(row => new URL(row.url).pathname === '/api/flowchart/execution-resources')).toHaveLength(sourceElectron ? 2 : 1);
   evidence.note('retained_unet_parallel_package', {binding_sha256: bindingHash, project, original, originalCheck, prepared, catalog, verified,
-    initial, setupWrites, saved, savedList, exactPipeline, graphSha, roots, before, after, apiBefore, apiAfter, changed, changesBefore, changesAfter,
+    initial, setupWrites, validatedRevision, saved, savedList, exactPipeline, graphSha, roots, before, after, apiBefore, apiAfter, changed, changesBefore, changesAfter,
     resourcesBefore, resourcesParallel, restoredResources, drafts, persistedDraft, draft_raw: {relative_path: draftRelative, bytes: draftRaw.length, sha256: sha(draftRaw)}, runs, packageProof,
     writes: writes.map(({request: _request, ...record}) => record), explicit_restore_write: {method: 'PUT', endpoint: '/api/flowchart/execution-resources',
       body: {device: 'cpu', device_slots: 1}, response: restoredResources}, finishedReads,
@@ -316,7 +370,7 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
     original_training_reused: true, new_training: false, original_validation_overlap: true,
     model_quality_approved: false, whole_flow_approved: false, release_approved: false, target_device_accepted: false});
   const finalFile = path.join(workspace.logs, 'retained-unet-final.json'); fs.writeFileSync(finalFile, JSON.stringify({before, after, apiBefore, apiAfter,
-    drafts, persistedDraft, draft_raw: {relative_path: draftRelative, bytes: draftRaw.length, sha256: sha(draftRaw)},
+    validatedRevision, drafts, persistedDraft, draft_raw: {relative_path: draftRelative, bytes: draftRaw.length, sha256: sha(draftRaw)},
     runs, packageProof, changesBefore, changesAfter, changed}, null, 2)); evidence.addFile(finalFile);
 }
 
@@ -324,7 +378,7 @@ const browserApi = (request: APIRequestContext, origin: string): Api => async (r
   const started = Date.now(), response = await within(request.fetch(origin + route, {method, data: body, timeout: 10_000}), started + 10_000);
   expect(response.status()).toBe(200); return within(response.json(), started + 10_000);
 };
-test('retained original UNet source two ROI parallel aggregate and standalone package', async ({page, request, renderer, workspace, evidence}) => {
+test('retained original UNet source two ROI parallel aggregate and standalone package', {tag: '@owned-model'}, async ({page, request, renderer, workspace, evidence}) => {
   await installDesktopHostShim(page, renderer.port); await exercise(page, workspace, evidence, browserApi(request, renderer.origin), false, renderer.url);
 });
 test('native retained original UNet source two ROI parallel aggregate and standalone package', {tag: ['@electron', '@owned-model']},
