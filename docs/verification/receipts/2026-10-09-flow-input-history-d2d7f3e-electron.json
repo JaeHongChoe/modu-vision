@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "d2d7f3ecda68977a9a7a027ef0a53d5bfaa7ae97",
+  "source_dirty": false,
+  "test": "scripts/e2e/flow-history-input-boundaries.spec.ts::native input-focused history shortcuts preserve graph and durable draft boundary",
+  "test_source_sha256": "400df9d3d2f258d587d815351fe2404005bbf7482ad8f828a568b039f8e3791a",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "d416c5aa6cc8d32a95db572de818515f4f6a840e77eb46611ead230e3ced485d",
+  "harness_sha256": "f52a8e50b46e2dc657e70f5adf7cbf677ca049a5704e35f69502174c8b534a11",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "e04844ff0ec9188e5ee594788592777a207aefab409172e2d74e7962aae2b208"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "d8b4cf7f5f0db531fb6e5edda95080c569af1fbadf0b972a3a585126135fe66a"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

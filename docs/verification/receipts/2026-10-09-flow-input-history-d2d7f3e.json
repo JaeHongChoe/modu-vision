@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "kind": "scoped_existing_action_execution_not_parent_acceptance",
+  "source_sha": "d2d7f3ecda68977a9a7a027ef0a53d5bfaa7ae97",
+  "source_count": 2335,
+  "test_source_sha256": "400df9d3d2f258d587d815351fe2404005bbf7482ad8f828a568b039f8e3791a",
+  "qualification_sha256": "44cd1da99c0d47ee35808787f49d88bd5b391b4773be8a6fe873b98fba8b72e4",
+  "cells": [
+    "U012.undo.invalid",
+    "U012.redo.invalid"
+  ],
+  "requirement_owners": "S2-08",
+  "gui_receipts": [
+    {
+      "path": "docs/verification/receipts/2026-10-09-flow-input-history-d2d7f3e-electron.json",
+      "sha256": "df9a3a53308e99a2796031df2961bf3ac819a82ed38a668f7daece46d73dd3d5",
+      "mode": "electron"
+    },
+    {
+      "path": "docs/verification/receipts/2026-10-09-flow-input-history-d2d7f3e-browser.json",
+      "sha256": "5bbacead3ab28a8bfdad0184578003a68f715631968a0323a6c808cec8b2f444",
+      "mode": "browser"
+    }
+  ],
+  "execution": {
+    "modes": [
+      "browser",
+      "electron"
+    ],
+    "whole_expected_passes": 2,
+    "retries": 0,
+    "original_source_archive_and_before_after_equal": true,
+    "full_original_owned_cleanup_checked": true,
+    "snapshots_per_mode": 5,
+    "full_raw_APIs_per_snapshot": 12,
+    "full_unfiltered_trees_per_snapshot": 3,
+    "complete_source_RGB_pixels_per_mode": 131072,
+    "original_harness_RGB_pixels_per_mode": 2048,
+    "fixture_fullbody_clocks_per_mode": 64,
+    "post_baseline_declared_setup_autosave_PUT200_per_mode": 2,
+    "invalid_undo_writes_per_mode": 0,
+    "invalid_redo_writes_per_mode": 0,
+    "declared_native_setup_writes": 4,
+    "declared_browser_setup_writes": 0,
+    "observed_fullbody_clocks": {
+      "electron": 116,
+      "browser": 52
+    },
+    "original_absolute_budget_ms": 10000,
+    "input_focus_and_unchanged_graph_button_states_checked": true,
+    "internal_history_stack_exported": false,
+    "native_textbox_undo_content_unchanged_claim": false,
+    "650ms_autosave_interval_independently_measured": false
+  },
+  "limits": {
+    "quality_approved": false,
+    "independent_review_accepted": false,
+    "native_page_console_blocked_capture": "unavailable",
+    "native_runtime_error_cleanliness": false,
+    "model_or_training_or_GPU_execution": false,
+    "installed_compiled_OS_signing_publisher_Windows_accepted": false,
+    "human_or_parent_or_final_acceptance": false,
+    "network_JPEG_binary_or_MIME_custody": false,
+    "failed_preparations_retained": true
+  }
+}

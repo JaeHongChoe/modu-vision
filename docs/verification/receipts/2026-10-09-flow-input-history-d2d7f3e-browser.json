@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "d2d7f3ecda68977a9a7a027ef0a53d5bfaa7ae97",
+  "source_dirty": false,
+  "test": "scripts/e2e/flow-history-input-boundaries.spec.ts::input-focused history shortcuts preserve available undo and redo plus saved source",
+  "test_source_sha256": "400df9d3d2f258d587d815351fe2404005bbf7482ad8f828a568b039f8e3791a",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "d416c5aa6cc8d32a95db572de818515f4f6a840e77eb46611ead230e3ced485d",
+  "harness_sha256": "a310e23ce0e18edf2354494a7d83a363e8107ecd398b2c9f360cb5779cb9b51c",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "79b4c60dc4448806df90f18f8b10eb20295ac5c14aa6575b040de4c41c0326be"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "37e25db14cf988f9713cac7ad2a02f88406aa86cf0197da9e1023b577a8003e3"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

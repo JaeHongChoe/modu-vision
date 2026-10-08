@@ -24667,7 +24667,53 @@
        ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "d2d7f3ecda68977a9a7a027ef0a53d5bfaa7ae97",
+         "kind": "click",
+         "action": "플로우 실행 취소",
+         "expected": "Focused search input Control+z with Undo available retains the complete saved graph and original Undo/Redo button states; zero invalid-action content writes. Two real owning autosaves are separately declared setup.",
+         "observed": "electron: Focused search input Control+z with Undo available retains the complete saved graph and original Undo/Redo button states; zero invalid-action content writes. Two real owning autosaves are separately declared setup.",
+         "reviewer": "Root separately granted independent readonly qualification of full original raw API clocks, saved bytes, complete source/harness PNGs, strict original GUI objects and owned teardown; native error cleanliness, installed target, human quality and parent acceptance remain pending.",
+         "test": "scripts/e2e/flow-history-input-boundaries.spec.ts::native input-focused history shortcuts preserve graph and durable draft boundary",
+         "receipt": "2026-10-09-flow-input-history-d2d7f3e-electron.json",
+         "receipt_sha256": "df9a3a53308e99a2796031df2961bf3ac819a82ed38a668f7daece46d73dd3d5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "e04844ff0ec9188e5ee594788592777a207aefab409172e2d74e7962aae2b208"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "d8b4cf7f5f0db531fb6e5edda95080c569af1fbadf0b972a3a585126135fe66a"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "d2d7f3ecda68977a9a7a027ef0a53d5bfaa7ae97",
+         "kind": "click",
+         "action": "플로우 실행 취소",
+         "expected": "Focused search input Control+z with Undo available retains the complete saved graph and original Undo/Redo button states; zero invalid-action content writes. Two real owning autosaves are separately declared setup.",
+         "observed": "browser: Focused search input Control+z with Undo available retains the complete saved graph and original Undo/Redo button states; zero invalid-action content writes. Two real owning autosaves are separately declared setup.",
+         "reviewer": "Root separately granted independent readonly qualification of full original raw API clocks, saved bytes, complete source/harness PNGs, strict original GUI objects and owned teardown; native error cleanliness, installed target, human quality and parent acceptance remain pending.",
+         "test": "scripts/e2e/flow-history-input-boundaries.spec.ts::input-focused history shortcuts preserve available undo and redo plus saved source",
+         "receipt": "2026-10-09-flow-input-history-d2d7f3e-browser.json",
+         "receipt_sha256": "5bbacead3ab28a8bfdad0184578003a68f715631968a0323a6c808cec8b2f444",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "79b4c60dc4448806df90f18f8b10eb20295ac5c14aa6575b040de4c41c0326be"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "37e25db14cf988f9713cac7ad2a02f88406aa86cf0197da9e1023b577a8003e3"
+          }
+         ]
+        }
+       ]
       },
       "error": {
        "state": "pending"
@@ -24917,7 +24963,53 @@
        ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "d2d7f3ecda68977a9a7a027ef0a53d5bfaa7ae97",
+         "kind": "click",
+         "action": "플로우 다시 실행",
+         "expected": "Focused search input Control+Shift+z and Control+y with Redo available retain the complete saved graph and original Undo/Redo button states; zero invalid-action content writes. No internal history-stack or native input text claim.",
+         "observed": "electron: Focused search input Control+Shift+z and Control+y with Redo available retain the complete saved graph and original Undo/Redo button states; zero invalid-action content writes. No internal history-stack or native input text claim.",
+         "reviewer": "Root separately granted independent readonly qualification of full original raw API clocks, saved bytes, complete source/harness PNGs, strict original GUI objects and owned teardown; native error cleanliness, installed target, human quality and parent acceptance remain pending.",
+         "test": "scripts/e2e/flow-history-input-boundaries.spec.ts::native input-focused history shortcuts preserve graph and durable draft boundary",
+         "receipt": "2026-10-09-flow-input-history-d2d7f3e-electron.json",
+         "receipt_sha256": "df9a3a53308e99a2796031df2961bf3ac819a82ed38a668f7daece46d73dd3d5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "e04844ff0ec9188e5ee594788592777a207aefab409172e2d74e7962aae2b208"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "d8b4cf7f5f0db531fb6e5edda95080c569af1fbadf0b972a3a585126135fe66a"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "d2d7f3ecda68977a9a7a027ef0a53d5bfaa7ae97",
+         "kind": "click",
+         "action": "플로우 다시 실행",
+         "expected": "Focused search input Control+Shift+z and Control+y with Redo available retain the complete saved graph and original Undo/Redo button states; zero invalid-action content writes. No internal history-stack or native input text claim.",
+         "observed": "browser: Focused search input Control+Shift+z and Control+y with Redo available retain the complete saved graph and original Undo/Redo button states; zero invalid-action content writes. No internal history-stack or native input text claim.",
+         "reviewer": "Root separately granted independent readonly qualification of full original raw API clocks, saved bytes, complete source/harness PNGs, strict original GUI objects and owned teardown; native error cleanliness, installed target, human quality and parent acceptance remain pending.",
+         "test": "scripts/e2e/flow-history-input-boundaries.spec.ts::input-focused history shortcuts preserve available undo and redo plus saved source",
+         "receipt": "2026-10-09-flow-input-history-d2d7f3e-browser.json",
+         "receipt_sha256": "5bbacead3ab28a8bfdad0184578003a68f715631968a0323a6c808cec8b2f444",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "79b4c60dc4448806df90f18f8b10eb20295ac5c14aa6575b040de4c41c0326be"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "37e25db14cf988f9713cac7ad2a02f88406aa86cf0197da9e1023b577a8003e3"
+          }
+         ]
+        }
+       ]
       },
       "error": {
        "state": "pending"
