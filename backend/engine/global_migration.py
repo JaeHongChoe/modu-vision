@@ -12,7 +12,7 @@ _SCOPES={'ledger','leases','profiles','accounts','context','local_journals','rem
 _EXCLUDED={OWNER_FILE,POINTER_FILE,'.global-generations','.global-migrations','.global-generation.json','migration_admission.lock', '.installed-home-adoption'}
 _APPLICATION_CONTROL={'application-active.json','application-update-pending.json','.application-updates','.application-generations',
                       'application-launch-lease.json','.application-launches','application-database-ownership.lock',
-                      '.application-writer-epochs'}
+                      '.application-writer-epochs', '.application-runtime-homes'}
 
 def digest(value):return hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 

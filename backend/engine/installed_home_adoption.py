@@ -28,7 +28,7 @@ MAX_RECORDS = 10000
 _MARKERS = {OWNER_FILE, POINTER_FILE, '.global-generations', '.global-migrations',
     '.global-generation.json', 'application-active.json', 'application-update-pending.json',
     '.application-updates', '.application-generations', 'application-launch-lease.json',
-    '.application-launches', 'application-database-ownership.lock', '.application-writer-epochs'}
+    '.application-launches', 'application-database-ownership.lock', '.application-writer-epochs', '.application-runtime-homes'}
 
 
 def _digest(value):

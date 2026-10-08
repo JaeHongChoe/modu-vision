@@ -35,7 +35,7 @@ def owned_root(path):
                 raise ValueError('Global installation ownership differs from original directory')
             for name in ('.global-generations','.global-migrations','migration_admission.lock',POINTER_FILE,
                          'application-active.json','application-update-pending.json','.application-updates','.application-generations',
-                         '.application-writer-epochs'):
+                         '.application-writer-epochs', '.application-runtime-homes'):
                 if (root/name).is_symlink():raise ValueError('Global control paths cannot follow links')
             return root.resolve(),data
     return None,None

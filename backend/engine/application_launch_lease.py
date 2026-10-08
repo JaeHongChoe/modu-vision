@@ -26,7 +26,7 @@ LEASES = '.application-launches'
 RUNTIME_HOMES = '.application-runtime-homes'
 DATABASE_LOCK = 'application-database-ownership.lock'
 TRANSITION_LOCK = 'transition.lock'
-CONTROL_PATHS = {ACTIVE_LEASE, LEASES, DATABASE_LOCK, '.application-writer-epochs'}
+CONTROL_PATHS = {ACTIVE_LEASE, LEASES, DATABASE_LOCK, RUNTIME_HOMES, '.application-writer-epochs'}
 STATES = {'reserved', 'starting', 'ready', 'exited', 'recovery_required'}
 
 
