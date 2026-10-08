@@ -37,7 +37,7 @@
         "src/main/supervisorStopExit.test.cjs",
         "src/renderer/components/flowchart/flowGraphIssues.test.cjs"
       ],
-      "cwd": "/Users/kai/.codex/private-research/modu-vision/codex-two-hour-20261003/workspace",
+      "cwd": "${SOURCE_REPO}",
       "exit_code": 0,
       "elapsed_seconds": 0.7576062089647166,
       "log_sha256": "134c90622f395f39a002c29b3a9a0d3a29d442db0f21b7e798bf66d6722f4882"
@@ -48,7 +48,7 @@
         "scripts/verify-supervisor.js",
         "--owned-bootstrap-order"
       ],
-      "cwd": "/Users/kai/.codex/private-research/modu-vision/codex-two-hour-20261003/workspace",
+      "cwd": "${SOURCE_REPO}",
       "exit_code": 0,
       "elapsed_seconds": 0.2811259999871254,
       "log_sha256": "7b8d5ff03a08785a2c6aa5124b550da8807e29ed4ad5282ed93b40c3b6a598a2"
@@ -61,7 +61,7 @@
         "-p",
         "build/tsconfig.node.json"
       ],
-      "cwd": "/Users/kai/.codex/private-research/modu-vision/codex-two-hour-20261003/workspace",
+      "cwd": "${SOURCE_REPO}",
       "exit_code": 0,
       "elapsed_seconds": 0.8225812090095133,
       "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -74,7 +74,7 @@
         "-p",
         "tsconfig.json"
       ],
-      "cwd": "/Users/kai/.codex/private-research/modu-vision/codex-two-hour-20261003/workspace",
+      "cwd": "${SOURCE_REPO}",
       "exit_code": 0,
       "elapsed_seconds": 6.23877741699107,
       "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -87,24 +87,24 @@
         "-p",
         "scripts/e2e/fixtures/tsconfig.json"
       ],
-      "cwd": "/Users/kai/.codex/private-research/modu-vision/codex-two-hour-20261003/workspace",
+      "cwd": "${SOURCE_REPO}",
       "exit_code": 0,
       "elapsed_seconds": 1.6659034169861116,
       "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "argv": [
-        "/Users/kai/Desktop/modu-vision/.venv/bin/python",
+        "${PYTHON_EXECUTABLE}",
         "-m",
         "pytest",
         "backend/tests/test_geometry_source_bounds.py",
         "-q",
         "--basetemp",
-        "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/remaining-app-20261007/safety-composition-clean-evidence/geometry/tmp/pytest",
+        "${PRIVATE_EVIDENCE_ROOT}/safety-composition-clean-evidence/geometry/tmp/pytest",
         "--junitxml",
-        "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/remaining-app-20261007/safety-composition-clean-evidence/geometry/results.xml"
+        "${PRIVATE_EVIDENCE_ROOT}/safety-composition-clean-evidence/geometry/results.xml"
       ],
-      "cwd": "/Users/kai/.codex/private-research/modu-vision/codex-two-hour-20261003/workspace",
+      "cwd": "${SOURCE_REPO}",
       "exit_code": 0,
       "elapsed_seconds": 6.417029457981698,
       "log_sha256": "d9ee719dd806868e3f25c5bd328b40bf787416bac48fc942c224f332ec7e3c93"
@@ -119,7 +119,7 @@
         "--project=electron",
         "--workers=1"
       ],
-      "cwd": "/Users/kai/.codex/private-research/modu-vision/codex-two-hour-20261003/workspace",
+      "cwd": "${SOURCE_REPO}",
       "exit_code": 0,
       "elapsed_seconds": 46.70244725001976,
       "log_sha256": "1d8d5444118561ef5c662e89658b00f3761554a62b38b4649400b3c57fddcc4a"
@@ -167,5 +167,6 @@
     "verified_action_scenarios": 649,
     "pending_action_scenarios": 800
   },
-  "scope": "Bounded clean source regressions. Fresh native78b proof remains historical after these source changes. Stop direct-child observation is not authenticated writer drain. GUI figures are exact legacy-row source app execution only; no new curated scenarios or full feature acceptance."
+  "scope": "Bounded clean source regressions. Fresh native78b proof remains historical after these source changes. Stop direct-child observation is not authenticated writer drain. GUI figures are exact legacy-row source app execution only; no new curated scenarios or full feature acceptance.",
+  "command_path_redaction": "Public argv and cwd use symbolic paths. Exact executable/cwd/argv remain pinned by root_proof.summary_sha256 and each raw gate log; execution was not rerun."
 }
