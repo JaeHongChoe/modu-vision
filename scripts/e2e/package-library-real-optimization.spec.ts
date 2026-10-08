@@ -214,7 +214,7 @@ test('native actual OpenVINO job preserves full original package and reopens exa
     const endpoints = ['/api/project/current', '/api/project/labelsets', '/api/project/preferences', '/api/team-data', '/api/team-data/readiness',
       '/api/dataset/metadata?limit=100', '/api/dataset/metadata/statistics', '/api/dataset/versions', '/api/dataset/revisions',
       '/api/product-delivery/runtime-packs', '/api/product-delivery/installation', '/api/product-delivery/hardware', '/api/runtime-services', '/api/runtime-services/capture-groups',
-      '/api/fleet/targets', '/api/fleet/capabilities', '/api/fleet/rollouts', `/api/model-deployments/active?folder_path=${folder}&task=classification`, `/api/model-deployments/history?folder_path=${folder}&task=classification`,
+      '/api/fleet/targets', '/api/fleet/capabilities', '/api/fleet/rollouts', `/api/model-deployments/active?source_dataset_path=${folder}&task=classification`, `/api/model-deployments/history?source_dataset_path=${folder}&task=classification`,
       ...fixture.heldout.map((file: string) => '/api/annotations/' + encodeURIComponent(path.basename(file, '.png')) + '?file_path=' + encodeURIComponent(file))];
     const apiBefore: Record<string, any> = {}; for (const route of endpoints) apiBefore[route] = await read(route);
     expect(apiBefore['/api/runtime-services'].active).toBeNull(); expect(apiBefore['/api/runtime-services'].runtime.status).toBe('stopped');
