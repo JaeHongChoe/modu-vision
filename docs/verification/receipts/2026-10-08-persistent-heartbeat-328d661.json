@@ -1,0 +1,57 @@
+{
+  "schema": "modu-vision.persistent-controller-observation-regression/v1",
+  "source_sha": "328d661da879caf594a8d94079044d2da9fc9a32",
+  "source_clean_before_after": true,
+  "source_inputs_count": 2208,
+  "source_inputs_unchanged": true,
+  "test_source_sha256": "76fcac54c365ae99340c0bb2d7ccfd3195e697451c77bd7c6e6793d55e6b1f02",
+  "production_runtime_sha256": "beef9c3886cd386f6abead8950d759c0fdf3fb36b3388a1dae4095ae7c175d9b",
+  "clean_focused": {
+    "passed": 5,
+    "failed": 0,
+    "skipped": 0,
+    "exit_code": 0,
+    "elapsed_seconds": 0.8858027499518357,
+    "log_sha256": "fb3538d857ec469445d2056a2c39aa5d4747f62c2972306e5c07946179c4e45a"
+  },
+  "working_candidate_full_renderer": {
+    "passed": 992,
+    "failed": 0,
+    "skipped": 0,
+    "exit_code": 0,
+    "source_dirty_at_execution": true,
+    "candidate_test_bytes_equal": true,
+    "log_sha256": "9b2e57acb2d118dd7f307d810dbbda4fe9f68e51597b22d836bcf34fb1e1c11a",
+    "scope": "Full original concurrency4 renderer/main suite executed before candidate commit; not a clean hosted CI run."
+  },
+  "controlled_qualification_sha256": "5b51931273091f57c1acd4e9b3a9ce6cb4c760ae1ad47fc3092226ff298d75de",
+  "independent_review_sha256": "b91ffb4c095aacd3e32b81abeeb0437c4b7de37ccf2bd98be34439d6c643b97d",
+  "hosted_failure": {
+    "head_sha": "1f47697f8d568ec21e0dddbab3dc7e1b9d648e0a",
+    "run_id": 37696474857,
+    "step": "Type checks, renderer regressions, and build",
+    "passed": 976,
+    "failed": 1,
+    "failed_assertion": "heartbeat counter has advanced after one80ms sample",
+    "failed_log_sha256": "ae7314dbe5ebb06a07b761901bdb5accfb48fbbe9e044ab0c0eefb98e8a64040"
+  },
+  "qualification": {
+    "delayed_fixture_heartbeat_ms": 160,
+    "old_single_sample_ms": 80,
+    "old_fixture_passed": 4,
+    "old_fixture_failed": 1,
+    "new_delayed_fixture_passed": 5,
+    "permanently_stalled_fixture_failed": 1,
+    "new_actual_progress_bound_ms": 1000,
+    "production_ack_timeout_ms_unchanged": 15000,
+    "production_runtime_unchanged": true,
+    "original_handle_exit_and_signal_assertions_preserved": true
+  },
+  "inference": "The controlled160ms fixture reproduces the old sampling failure and passes bounded actual-progress observation; it does not prove the exact scheduler state on the historical hosted runner.",
+  "boundaries": {
+    "new_full_hosted_CI_verified": false,
+    "whole_writer_shutdown_verified": false,
+    "whole_parent_accepted": false,
+    "human_quality_approved": false
+  }
+}

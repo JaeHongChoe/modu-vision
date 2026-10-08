@@ -459,3 +459,8 @@ compiled canary의 닫힌 protocol2/worker8개 필드를 화면 bridge에서 검
 - clean `1728356`의 실제 browser/Electron2건이 retry0·skip0으로 통과했다. 실행 전후2205개 tracked 입력 SHA와 clean 상태를 보존했다. 같은 데이터 폴더를 공유하는 프로젝트 전환의 원본 재조회 누락을 수정하고, A/B/A 화면의 정확한 노드·연결·현재 프로젝트 및 draft/project/image SHA를 확인했다.
 - 기존 Undo/Redo의 empty·reopen·handoff6개, native keyboard delete/undo/redo의 empty·handoff2개, 검색의 handoff1개만 pending에서 verified로 변경했다. 의도한 project open2회 외 콘텐츠 저장·활성화·학습·추론 POST는0회였다.
 - curated 행동207개·658verified/791pending, 부모 구현69/13·Windows 면제2·필수 pending11·수락0이다. 소스 Electron 결과를 frozen native 배포·사람 품질·장비 수락으로 승계하지 않는다. 근거: `../verification/receipts/2026-10-08-history-scope-1728356.json`.
+
+## 영속 controller의 실제 진행 관찰 회귀
+
+- `1f47697` hosted renderer/main 검사976pass/1fail의80ms 단일 heartbeat 표본 실패를 보존했다.160ms 간격의 제어된 fixture에서 같은 실패를 재현하고, 실제 counter 증가를 고정1초 안에 관찰하도록 테스트를 수정했다. 멈춘 fixture는 계속 실패한다. 이 재현으로 당시 hosted scheduler의 정확한 상태를 단정하지 않는다.
+- 수정 후보의 원래 concurrency4 전체 renderer/main992개가 통과했고, clean `328d661`의 원래 영속 controller5개도 통과했다.2208개 tracked 입력은 clean 실행 전후 동일했다. production controller·15000ms 응답 예산·원래 자식 handle의 exit/signal 검사는 바꾸지 않았다. 최신 full hosted CI 완료·전체 writer 종료·부모 수락은 여전히 별도다. 근거: `../verification/receipts/2026-10-08-persistent-heartbeat-328d661.json`.
