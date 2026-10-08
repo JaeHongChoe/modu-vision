@@ -1,0 +1,63 @@
+{
+  "schema": "modu-vision.curated-action-execution-summary/v1",
+  "source_sha": "d5409cb9e0828a7ab55667fcf6e660fc268c5cb6",
+  "test": "scripts/e2e/team-draft-lease-error-lifecycle.spec.ts",
+  "test_source_sha256": "855ede454801b8285147fc279257cd3cb8ec304979f72fe791d977e45561bfbb",
+  "actual_case_results": {
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0,
+    "retries": 0,
+    "source_dirty": false,
+    "protected_source_files": 2312
+  },
+  "qualified_cells": [
+    "F024.apply-draft.error",
+    "F024.apply-draft.cancel",
+    "F024.edit-start.error"
+  ],
+  "gui_receipts": [
+    {
+      "mode": "browser",
+      "receipt": "2026-10-09-team-draft-lease-error-d5409cb-browser.json",
+      "sha256": "e8602d2d2e486a949ea4094ad67a3d0de81bb427e9e55ee6e2af8d0984733ec6"
+    },
+    {
+      "mode": "electron",
+      "receipt": "2026-10-09-team-draft-lease-error-d5409cb-electron.json",
+      "sha256": "ec58fd4c690dd92f07b42d9afdd622ba224d6bd8c19d802ffd8f00b8e69bd817"
+    }
+  ],
+  "independent_qualification_sha256": "541fbae6a05adf88f5e781cd6a997f8d2bef56fe65cea15297581e51cb8e879e",
+  "root_bound_grant_sha256": "330608f2473a2a9b5f1c6d93f102dd3cc3d051a57d2a5a95bcdac590990dad44",
+  "independent_reader_source_freeze_sha256": "2ef87e284f28b8adb25b0c8563d7ae12019ae0514e0181814f355c059050dd24",
+  "protected_state": {
+    "full_api_snapshots": 9,
+    "full_file_tree_roots": 3,
+    "owned_fixture_complete_body_clocks_per_mode": 69,
+    "owned_fixture_body_deadline_seconds": 10,
+    "declared_ui_lease_writes_per_mode": 3,
+    "dialog_cancel_discards_draft": false
+  },
+  "cleanup": {
+    "browser_owned_backend_exited": true,
+    "browser_port_closed": true,
+    "native_owned_electron_and_backends_exited": true,
+    "escaped_or_unowned_processes": false
+  },
+  "limits": [
+    "Dialog cancel only, not draft discard/deletion/history reset.",
+    "Controlled exact GET503 and lease acquire POST503; later lease acquire/release200 are declared setup-independent recovery writes, not extra curated cells.",
+    "69 owned fixture readReply clocks per mode include complete raw body before finished and preserve original10s. UI waitForResponse10s is source-bound header wait; complete end-to-end UI body clocks are not exported.",
+    "UI state claims derive from actual exact passed source assertions plus raw full bodies and screenshots; no independent OCR assertion.",
+    "Native page/console/blocked capture is unavailable where absent; no native cleanliness or installed target/Windows/model/GPU/human quality claim."
+  ],
+  "curated_new_verified_cells": 3,
+  "new_actions": 0,
+  "accepted_parents": 0,
+  "human_quality_approved": false,
+  "installed_release_approved": false,
+  "windows_approved": false,
+  "overall_action_registry_valid": false,
+  "remaining_registry_error": "Existing PackageLibraryPanel source binding changed; fresh OpenVINO native execution qualification remains pending."
+}

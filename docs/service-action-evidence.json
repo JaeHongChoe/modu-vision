@@ -5169,7 +5169,69 @@
        ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "d5409cb9e0828a7ab55667fcf6e660fc268c5cb6",
+         "kind": "click",
+         "action": "편집 시작",
+         "expected": "Exact original image UUID, revision, actor and ttl120 lease acquisition POST503 leaves no owned lease and causes no renewal/release; explicit same acquisition200 and owned release200 recover while preserving labels and the draft.",
+         "observed": "Exact original image UUID, revision, actor and ttl120 lease acquisition POST503 leaves no owned lease and causes no renewal/release; explicit same acquisition200 and owned release200 recover while preserving labels and the draft.",
+         "reviewer": "Root clean browser and source Electron execution with independent frozen source and original body/tree/artifact qualification; human quality, installed target and whole feature acceptance pending",
+         "test": "scripts/e2e/team-draft-lease-error-lifecycle.spec.ts::draft apply503 and accepted dialog cancel preserve the original draft; lease503 explicitly recovers",
+         "receipt": "2026-10-09-team-draft-lease-error-d5409cb-browser.json",
+         "receipt_sha256": "e8602d2d2e486a949ea4094ad67a3d0de81bb427e9e55ee6e2af8d0984733ec6",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3eec699dc3b75c0687835b30864671969b02072bd4c002580d461efcb41e3413"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "1f6ffda01c0d1519fc9636b08c64882710936addd1adc322a4296f557441eb58"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "0924a8c2915d788cc676defd9ce615dcb207cf5b99fc2ddc548ab52ff890f223"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "249841e3dbb36b90b3c4f179efbf2830affea357f9ca06e7290fcbbc1808ac4c"
+          }
+         ]
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "d5409cb9e0828a7ab55667fcf6e660fc268c5cb6",
+         "kind": "click",
+         "action": "편집 시작",
+         "expected": "Exact original image UUID, revision, actor and ttl120 lease acquisition POST503 leaves no owned lease and causes no renewal/release; explicit same acquisition200 and owned release200 recover while preserving labels and the draft.",
+         "observed": "Exact original image UUID, revision, actor and ttl120 lease acquisition POST503 leaves no owned lease and causes no renewal/release; explicit same acquisition200 and owned release200 recover while preserving labels and the draft.",
+         "reviewer": "Root clean browser and source Electron execution with independent frozen source and original body/tree/artifact qualification; human quality, installed target and whole feature acceptance pending",
+         "test": "scripts/e2e/team-draft-lease-error-lifecycle.spec.ts::native draft apply503 cancel and exact lease503 recovery preserve owned source labels and draft",
+         "receipt": "2026-10-09-team-draft-lease-error-d5409cb-electron.json",
+         "receipt_sha256": "ec58fd4c690dd92f07b42d9afdd622ba224d6bd8c19d802ffd8f00b8e69bd817",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "09b7e47a6652983d7b90839319f236f9b80f0fa3dc1601ae9bd433fbd686a649"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ecb036838a900cbc0cf4b205738428164170fb05f74a447588154ae6712ddafa"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6afe50c37454ac5e26b4742850de11b2f19f5e067f80b8d77c73fb0c078ef77b"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "56c56047dcfde62b4c6da18ece27652ae760e70d339047f88abe40390db77b49"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
        "state": "pending"
@@ -5933,10 +5995,134 @@
        ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "d5409cb9e0828a7ab55667fcf6e660fc268c5cb6",
+         "kind": "click",
+         "action": "비교한 초안을 명시적으로 적용",
+         "expected": "Exact selected annotation GET503 preserves compared draft, checked comparison and enabled retry, with all original protected API and tree bytes unchanged; no save or draft deletion.",
+         "observed": "Exact selected annotation GET503 preserves compared draft, checked comparison and enabled retry, with all original protected API and tree bytes unchanged; no save or draft deletion.",
+         "reviewer": "Root clean browser and source Electron execution with independent frozen source and original body/tree/artifact qualification; human quality, installed target and whole feature acceptance pending",
+         "test": "scripts/e2e/team-draft-lease-error-lifecycle.spec.ts::draft apply503 and accepted dialog cancel preserve the original draft; lease503 explicitly recovers",
+         "receipt": "2026-10-09-team-draft-lease-error-d5409cb-browser.json",
+         "receipt_sha256": "e8602d2d2e486a949ea4094ad67a3d0de81bb427e9e55ee6e2af8d0984733ec6",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3eec699dc3b75c0687835b30864671969b02072bd4c002580d461efcb41e3413"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "1f6ffda01c0d1519fc9636b08c64882710936addd1adc322a4296f557441eb58"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "0924a8c2915d788cc676defd9ce615dcb207cf5b99fc2ddc548ab52ff890f223"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "249841e3dbb36b90b3c4f179efbf2830affea357f9ca06e7290fcbbc1808ac4c"
+          }
+         ]
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "d5409cb9e0828a7ab55667fcf6e660fc268c5cb6",
+         "kind": "click",
+         "action": "비교한 초안을 명시적으로 적용",
+         "expected": "Exact selected annotation GET503 preserves compared draft, checked comparison and enabled retry, with all original protected API and tree bytes unchanged; no save or draft deletion.",
+         "observed": "Exact selected annotation GET503 preserves compared draft, checked comparison and enabled retry, with all original protected API and tree bytes unchanged; no save or draft deletion.",
+         "reviewer": "Root clean browser and source Electron execution with independent frozen source and original body/tree/artifact qualification; human quality, installed target and whole feature acceptance pending",
+         "test": "scripts/e2e/team-draft-lease-error-lifecycle.spec.ts::native draft apply503 cancel and exact lease503 recovery preserve owned source labels and draft",
+         "receipt": "2026-10-09-team-draft-lease-error-d5409cb-electron.json",
+         "receipt_sha256": "ec58fd4c690dd92f07b42d9afdd622ba224d6bd8c19d802ffd8f00b8e69bd817",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "09b7e47a6652983d7b90839319f236f9b80f0fa3dc1601ae9bd433fbd686a649"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ecb036838a900cbc0cf4b205738428164170fb05f74a447588154ae6712ddafa"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6afe50c37454ac5e26b4742850de11b2f19f5e067f80b8d77c73fb0c078ef77b"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "56c56047dcfde62b4c6da18ece27652ae760e70d339047f88abe40390db77b49"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "d5409cb9e0828a7ab55667fcf6e660fc268c5cb6",
+         "kind": "click",
+         "action": "비교한 초안을 명시적으로 적용",
+         "expected": "Closing the existing accepted comparison dialog preserves the draft and server records, sends no apply/remove/write request and does not discard the draft.",
+         "observed": "Closing the existing accepted comparison dialog preserves the draft and server records, sends no apply/remove/write request and does not discard the draft.",
+         "reviewer": "Root clean browser and source Electron execution with independent frozen source and original body/tree/artifact qualification; human quality, installed target and whole feature acceptance pending",
+         "test": "scripts/e2e/team-draft-lease-error-lifecycle.spec.ts::draft apply503 and accepted dialog cancel preserve the original draft; lease503 explicitly recovers",
+         "receipt": "2026-10-09-team-draft-lease-error-d5409cb-browser.json",
+         "receipt_sha256": "e8602d2d2e486a949ea4094ad67a3d0de81bb427e9e55ee6e2af8d0984733ec6",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3eec699dc3b75c0687835b30864671969b02072bd4c002580d461efcb41e3413"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "1f6ffda01c0d1519fc9636b08c64882710936addd1adc322a4296f557441eb58"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "0924a8c2915d788cc676defd9ce615dcb207cf5b99fc2ddc548ab52ff890f223"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "249841e3dbb36b90b3c4f179efbf2830affea357f9ca06e7290fcbbc1808ac4c"
+          }
+         ]
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "d5409cb9e0828a7ab55667fcf6e660fc268c5cb6",
+         "kind": "click",
+         "action": "비교한 초안을 명시적으로 적용",
+         "expected": "Closing the existing accepted comparison dialog preserves the draft and server records, sends no apply/remove/write request and does not discard the draft.",
+         "observed": "Closing the existing accepted comparison dialog preserves the draft and server records, sends no apply/remove/write request and does not discard the draft.",
+         "reviewer": "Root clean browser and source Electron execution with independent frozen source and original body/tree/artifact qualification; human quality, installed target and whole feature acceptance pending",
+         "test": "scripts/e2e/team-draft-lease-error-lifecycle.spec.ts::native draft apply503 cancel and exact lease503 recovery preserve owned source labels and draft",
+         "receipt": "2026-10-09-team-draft-lease-error-d5409cb-electron.json",
+         "receipt_sha256": "ec58fd4c690dd92f07b42d9afdd622ba224d6bd8c19d802ffd8f00b8e69bd817",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "09b7e47a6652983d7b90839319f236f9b80f0fa3dc1601ae9bd433fbd686a649"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ecb036838a900cbc0cf4b205738428164170fb05f74a447588154ae6712ddafa"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6afe50c37454ac5e26b4742850de11b2f19f5e067f80b8d77c73fb0c078ef77b"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "56c56047dcfde62b4c6da18ece27652ae760e70d339047f88abe40390db77b49"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
        "state": "pending"
