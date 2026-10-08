@@ -12,6 +12,16 @@ type Write={index:number;method:string;endpoint:string;body:string|null};
 type SaveReply=Reply&{request:string};
 const sha=(raw:Buffer)=>crypto.createHash('sha256').update(raw).digest('hex');
 
+export function assertOwnedProjectDirectory(projectDir:string,ownedRoot:string){
+ expect(path.isAbsolute(ownedRoot)).toBe(true);expect(path.normalize(ownedRoot)).toBe(ownedRoot);
+ expect(path.isAbsolute(projectDir)).toBe(true);expect(path.normalize(projectDir)).toBe(projectDir);
+ expect(path.dirname(projectDir)).toBe(ownedRoot);
+ for(const directory of [ownedRoot,projectDir]){
+  const entry=fs.lstatSync(directory);expect(entry.isSymbolicLink()).toBe(false);expect(entry.isDirectory()).toBe(true);
+  expect(fs.realpathSync(directory)).toBe(directory);
+ }
+}
+
 export function protectedTree(root:string):Record<string,string>{
  const tree:Record<string,string>={};
  const walk=(folder:string)=>{
@@ -105,7 +115,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  }
  const bodyWriteStart=writes.length,current=await value('/api/project/current');
  expect(current.id).toBe(project.id);expect(current.source_dataset_dir).toBe(source);
- expect(path.relative(workspace.projects,current.project_dir)).not.toMatch(/^(?:\.\.(?:\/|\\)|\/)/);
+ assertOwnedProjectDirectory(current.project_dir,native?path.join(workspace.userData,'projects'):workspace.projects);
  const query=`/api/annotations/part?file_path=${encodeURIComponent(imagePath)}`;
  const metadataQuery='/api/dataset/metadata/image?image_path='+encodeURIComponent(imagePath);
  const roots={project:current.project_dir as string,source};
