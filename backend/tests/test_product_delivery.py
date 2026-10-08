@@ -317,3 +317,107 @@ def test_diagnostics_api_persists_only_the_sanitized_bundle(tmp_path, monkeypatc
     assert persisted==bundle and value['includes_source_images'] is False and value['redacted'] is True
     assert bundle['installation']=={'api_key':'[REDACTED]','endpoint':'[URL]','status':'failed'}
     assert token not in json.dumps(persisted)
+
+
+def _checksum_only_converted_library_package(tmp_path, monkeypatch, *, receipt_source='current'):
+    """Scope regression with real graph/inventory checks; never execute/load models."""
+    import hashlib
+    import torch
+    from backend.engine import flowchart_engine
+    def forbidden_model(*args, **kwargs):
+        raise AssertionError('Scope readback must not load, construct or execute a model')
+    monkeypatch.setattr(torch, 'load', forbidden_model)
+    for name in ('create_classification_model', 'create_detection_model', 'build_segmentation_model'):
+        monkeypatch.setattr(flowchart_engine, name, forbidden_model)
+    monkeypatch.setattr(flowchart_engine, 'FlowchartEngine', forbidden_model)
+    p=project(tmp_path);p['task']='classification'
+    package=Path(p['project_dir'])/'exports'/'flows'/'converted';package.mkdir(parents=True)
+    graph=flowchart_engine.get_single_segmentation_flowchart('job_scope_only')
+    graph.nodes[1].data.task='classification';graph.nodes[1].data.params={}
+    job='job_scope_only';checkpoint=f'models/{job}/best_model.pt';directory=f'models/{job}/openvino'
+    content={'pipeline.json':json.dumps(graph.model_dump(mode='json')).encode(),
+             'run_flow.py':b'# Inert runner: must never execute in a scope readback test.\n',
+             checkpoint:b'opaque checkpoint bytes; no torch serialization or model',
+             directory+'/model.xml':b'inert IR bytes; no compilation',directory+'/model.bin':b'inert weights',
+             directory+'/conversion.json':b'{}'}
+    receipt={} if receipt_source is None else {'source_dataset_path':p['source_dataset_dir'] if receipt_source=='current' else str(tmp_path/'foreign-source'),
+                                            'source_fingerprint':'v1:'+'0'*64,'split_manifest_path':None,'split_manifest_sha256':None,
+                                            'calibration_images':[],'validation_images':[]}
+    content['openvino_models.json']=json.dumps({'models':[{'job_id':job,'task':'classification','checkpoint':checkpoint,'directory':directory}],
+                                             'input_receipt':receipt}).encode()
+    for name,data in content.items():
+        target=package/name;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(data)
+    manifest={'schema_version':1,'models':[{'job_id':job,'task':'classification','checkpoint':checkpoint}],
+              'files':[{'path':name,'size':len(data),'sha256':hashlib.sha256(data).hexdigest()} for name,data in content.items()]}
+    (package/'manifest.json').write_text(json.dumps(manifest))
+    return p,package,graph
+
+
+@pytest.mark.parametrize('versions_state',['missing','empty'])
+def test_converted_library_receipt_without_saved_flow_versions_has_current_scope(tmp_path,monkeypatch,versions_state):
+    module=delivery();p,package,_=_checksum_only_converted_library_package(tmp_path,monkeypatch)
+    versions=Path(p['project_dir'])/'flowcharts'/'versions'
+    if versions_state=='empty':versions.mkdir(parents=True)
+    else:assert not versions.exists()
+    before={file.relative_to(package).as_posix():file.read_bytes() for file in package.rglob('*') if file.is_file()}
+    row=module.package_library(p)['packages'][0]
+    assert row['integrity']=='verified' and row['scope_matches'] is True
+    assert row['recipe_task']=='classification' and row['approval_present'] is False and row['version_id'] is None
+    assert module.select_package(p,row['package_id'])==row
+    assert module.package_library(p)['selected_package_id']==row['package_id']
+    assert before=={file.relative_to(package).as_posix():file.read_bytes() for file in package.rglob('*') if file.is_file()}
+    assert versions_state=='empty' or not versions.exists(),'Scope fallback must not create a saved flow/version'
+
+
+@pytest.mark.parametrize('receipt_source',['foreign',None])
+def test_converted_library_receipt_without_saved_flow_versions_rejects_foreign_or_missing_source(tmp_path,monkeypatch,receipt_source):
+    module=delivery();p,_,_=_checksum_only_converted_library_package(tmp_path,monkeypatch,receipt_source=receipt_source)
+    row=module.package_library(p)['packages'][0]
+    assert row['integrity']=='verified' and row['scope_matches'] is False
+    with pytest.raises(ValueError,match='scope'):module.select_package(p,row['package_id'])
+
+
+@pytest.mark.parametrize('obstruction',['file','link'])
+def test_converted_library_receipt_keeps_saved_flow_version_path_obstruction_refusal(tmp_path,monkeypatch,obstruction):
+    module=delivery();p,_,_=_checksum_only_converted_library_package(tmp_path,monkeypatch)
+    versions=Path(p['project_dir'])/'flowcharts'/'versions';versions.parent.mkdir()
+    if obstruction=='file':versions.write_text('original obstruction')
+    else:
+        foreign=tmp_path/'foreign-versions';foreign.mkdir();versions.symlink_to(foreign,target_is_directory=True)
+    row=module.package_library(p)['packages'][0]
+    assert row['integrity']=='verified' and row['scope_matches'] is False
+    with pytest.raises(ValueError,match='scope'):module.select_package(p,row['package_id'])
+    assert versions.is_symlink() if obstruction=='link' else versions.read_text()=='original obstruction'
+
+
+@pytest.mark.parametrize('obstruction',['file','link','dangling-link'])
+def test_converted_library_receipt_keeps_absent_versions_parent_obstruction_refusal(tmp_path,monkeypatch,obstruction):
+    module=delivery();p,_,_=_checksum_only_converted_library_package(tmp_path,monkeypatch)
+    parent=Path(p['project_dir'])/'flowcharts'
+    if obstruction=='file':parent.write_text('original parent obstruction')
+    else:
+        foreign=tmp_path/'foreign-flowcharts'
+        if obstruction=='link':foreign.mkdir()
+        parent.symlink_to(foreign,target_is_directory=True)
+    row=module.package_library(p)['packages'][0]
+    assert row['integrity']=='verified' and row['scope_matches'] is False
+    with pytest.raises(ValueError,match='scope'):module.select_package(p,row['package_id'])
+    assert parent.is_symlink() if obstruction!='file' else parent.read_text()=='original parent obstruction'
+
+
+def test_converted_library_retains_existing_matching_saved_flow_scope(tmp_path,monkeypatch):
+    module=delivery();p,_,graph=_checksum_only_converted_library_package(tmp_path,monkeypatch,receipt_source='foreign')
+    versions=Path(p['project_dir'])/'flowcharts'/'versions';versions.mkdir(parents=True)
+    version='a'*32;(versions/(version+'.json')).write_text(json.dumps({'version_id':version,'recipe_task':'classification',
+        'source_dataset_path':p['source_dataset_dir'],'pipeline':graph.model_dump(mode='json')}))
+    row=module.package_library(p)['packages'][0]
+    assert row['integrity']=='verified' and row['scope_matches'] is True and row['version_id']==version
+    assert module.select_package(p,row['package_id'])==row
+
+
+def test_converted_library_fallback_never_accepts_changed_sealed_receipt(tmp_path,monkeypatch):
+    module=delivery();p,package,_=_checksum_only_converted_library_package(tmp_path,monkeypatch)
+    (package/'openvino_models.json').write_text(json.dumps({'models':[],'input_receipt':{'source_dataset_path':p['source_dataset_dir']}}))
+    row=module.package_library(p)['packages'][0]
+    assert row['integrity']=='failed' and row['scope_matches'] is False
+    with pytest.raises(ValueError,match='checksum'):module.select_package(p,row['package_id'])

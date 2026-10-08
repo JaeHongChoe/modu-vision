@@ -75,14 +75,16 @@ def record_package(project,path,*,version_id=None,recipe_task=None,parity=None):
 def _legacy_binding(project,package,pipeline):
     from backend.engine.flowchart_engine import FlowchartPipeline
     source=_scope(project)['source_dataset_path'];directory=_root(project)/'flowcharts'/'versions'
-    if directory.is_symlink() or not directory.is_dir():return None
-    for path in sorted(directory.glob('*.json')):
-        if path.is_symlink():continue
-        try:
-            row=json.loads(path.read_text(encoding='utf-8'))
-            if row.get('source_dataset_path')==source and FlowchartPipeline.model_validate(row['pipeline'])==pipeline:
-                return {'version_id':row.get('version_id'),'recipe_task':row.get('recipe_task'),**_scope(project)}
-        except (ValueError,KeyError,OSError):continue
+    if directory.is_symlink() or (directory.exists() and not directory.is_dir()):return None
+    if directory.is_dir():
+        for path in sorted(directory.glob('*.json')):
+            if path.is_symlink():continue
+            try:
+                row=json.loads(path.read_text(encoding='utf-8'))
+                if row.get('source_dataset_path')==source and FlowchartPipeline.model_validate(row['pipeline'])==pipeline:
+                    return {'version_id':row.get('version_id'),'recipe_task':row.get('recipe_task'),**_scope(project)}
+            except (ValueError,KeyError,OSError):continue
+    elif directory.parent.is_symlink() or (directory.parent.exists() and not directory.parent.is_dir()):return None
     converted=package/'openvino_models.json'
     if converted.is_file() and not converted.is_symlink():
         receipt=json.loads(converted.read_text(encoding='utf-8')).get('input_receipt',{})
