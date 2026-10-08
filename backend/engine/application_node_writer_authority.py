@@ -231,6 +231,27 @@ def consume_preflight_receive(authority, event):
     return copy.deepcopy(frame['request']), copy.deepcopy(state['proof'])
 
 
+def consume_cpu_receive(authority, event):
+    """Separate SOURCE CPU event; preflight events/capabilities cannot enroll it."""
+    state, row = _fresh(authority); received = _event(authority, event)
+    if state['phase'] != 'bound' or state['proof'] is None or state['proof'].get('frozen') is not False:
+        raise HandshakeError('Original SOURCE CPU relay is unavailable')
+    frame = received['frame']
+    if (type(frame) is not dict or set(frame) != {'schema_version', 'kind', 'nonce', 'request'}
+            or type(frame['schema_version']) is not int or frame['schema_version'] != 1
+            or frame['kind'] != 'main_cpu_child_request' or frame['nonce'] != row['nonce']
+            or type(frame['request']) is not dict):
+        raise HandshakeError('Original SOURCE CPU forwarding event differs')
+    if state['deadline'] is not None and (frame['request'].get('action') != 'finish' or _now() >= state['deadline']):
+        raise HandshakeError('Original SOURCE CPU admission closed or drain deadline expired')
+    backend = state['proof']['process']
+    if _lease()._identity(backend['pid']) != backend or _parent_pid(backend['pid']) != state['main'].pid:
+        raise HandshakeError('Original SOURCE CPU backend birth/command/parent differs')
+    _fresh(authority)
+    received['used'] = True
+    return copy.deepcopy(frame['request']), copy.deepcopy(state['proof'])
+
+
 def seal_authentication(authority, event):
     from backend.engine import application_launch_controller as controller
     state, row = _fresh(authority); received = _event(authority, event)

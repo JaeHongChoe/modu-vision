@@ -670,6 +670,9 @@ def early_backend_bootstrap():
             'admission': BackendWorkAdmission()}
         from backend.engine.application_preflight_child_relay import BackendRelayQueue
         _CACHE['preflight_queue'] = BackendRelayQueue(sock)
+        if proof['frozen'] is False and 'writer' in frame:
+            from backend.engine.application_owned_cpu_child_relay import CpuRelayQueue
+            _CACHE['source_cpu_queue'] = CpuRelayQueue(_CACHE)
         return dict(proof)
     except (OSError, ValueError, KeyError, TypeError, StopIteration) as exc:
         if isinstance(exc, HandshakeError): raise
@@ -751,6 +754,11 @@ def backend_execution_service(stop_event=None):
     queue = _CACHE['preflight_queue']
     if type(queue) is not BackendRelayQueue: raise HandshakeError('Original backend sole reader queue differs')
     queue.claim_reader(); pending = None; cpu = None; drain = None; closing_deadline = None; closing_unsupported = None
+    from backend.engine.application_owned_cpu_child_relay import CpuRelayQueue
+    source_queue=original_cache.get('source_cpu_queue'); source_pending=None
+    if source_queue is not None:
+        if type(source_queue) is not CpuRelayQueue:raise HandshakeError('Original SOURCE CPU sole-reader queue differs')
+        source_queue.claim_reader()
     original_admission = original_cache['admission']
     original_context = original_cache['context']
     original_proof = _canonical(proof); original_challenge = _canonical(original_cache['challenge'])
@@ -779,6 +787,11 @@ def backend_execution_service(stop_event=None):
                 or pending is not None or cpu is not None or drain is not None
                 or queue._active is not None or snapshot['active_scopes'] != 0):
             raise HandshakeError('Original terminal service closing still has accepted work')
+        if source_queue is not None:
+            source_queue._fresh(sock,reader=True)
+            if (original_cache.get('source_cpu_queue') is not source_queue or source_pending is not None
+                    or source_queue._active is not None or source_queue._closed_deadline!=closing_deadline):
+                raise HandshakeError('Original terminal SOURCE CPU closing context changed')
 
     try:
         with maintenance_guard(root):
@@ -798,6 +811,7 @@ def backend_execution_service(stop_event=None):
                 # context remain fresh; full binding reads surround each real
                 # authenticated channel action inside its original deadline.
                 queue._fresh(sock, reader=True)
+                if source_queue is not None:source_queue._fresh(sock,reader=True)
                 if pending is None:
                     pending = queue.take(sock)
                     if pending is not None:
@@ -808,17 +822,39 @@ def backend_execution_service(stop_event=None):
                         proof = _validate_service_action(original_cache, deadline)
                         send_frame(sock, outgoing, absolute_deadline=deadline)
                         _validate_service_action(original_cache, deadline)
+                if source_queue is not None and source_pending is None:
+                    source_pending=source_queue.take(sock)
+                    if source_pending is not None:
+                        outgoing,deadline=source_queue.outgoing(source_pending)
+                        if drained and outgoing['action']!='finish':raise HandshakeError('Original SOURCE CPU admission closed')
+                        deadline=min(deadline,original_cache.get('preflight_drain_deadline',float('inf')))
+                        _validate_service_action(original_cache,deadline);source_queue._fresh(sock,reader=True)
+                        send_frame(sock,outgoing,absolute_deadline=deadline)
+                        _validate_service_action(original_cache,deadline);source_queue._fresh(sock,reader=True)
+                if source_queue is not None:
+                    completed=source_queue.completion_outgoing()
+                    if completed is not None:
+                        deadline=source_queue.action_deadline()
+                        _validate_service_action(original_cache,deadline);send_frame(sock,completed,absolute_deadline=deadline)
+                        _validate_service_action(original_cache,deadline);source_queue._fresh(sock,reader=True)
                 if cpu is not None and cpu['done'].is_set():
                     if cpu['error'] is not None: raise HandshakeError('Original CPU execution callback failed') from cpu['error']
-                    proof = _validate_service_action(original_cache, cpu['deadline'])
-                    send_frame(sock, cpu['result'], absolute_deadline=cpu['deadline'])
-                    _validate_service_action(original_cache, cpu['deadline']); cpu = None
+                    deadline=cpu['deadline'] if source_queue is None else min(cpu['deadline'],source_queue.action_deadline())
+                    completed=cpu['result'] if source_queue is None else source_queue.settlement_outgoing()
+                    proof = _validate_service_action(original_cache, deadline)
+                    send_frame(sock, completed, absolute_deadline=deadline)
+                    _validate_service_action(original_cache, deadline); cpu = None
                 if drain is not None:
                     # Keep this sole reader available for an already accepted
                     # child's final ACK while admission waits. One original
                     # deadline; no second socket reader or refreshed budget.
                     snapshot = _CACHE['admission'].snapshot()
-                    if not snapshot['active_scopes'] or snapshot['unsupported'] or time.monotonic() >= drain['deadline']:
+                    # Count release may finish between the done check above
+                    # and this snapshot. The retained SOURCE callback still
+                    # owes its exact settlement before a clean drain receipt.
+                    source_callback_pending = source_queue is not None and cpu is not None
+                    if ((not snapshot['active_scopes'] and not source_callback_pending)
+                            or snapshot['unsupported'] or time.monotonic() >= drain['deadline']):
                         completed = {'schema_version': 1, 'kind': 'backend_managed_drain', 'request': drain['frame'],
                             'backend_proof': proof, 'status': 'refused' if snapshot['active_scopes'] or snapshot['unsupported'] else 'managed_scopes_drained',
                             **snapshot, 'scope': 'reviewed_foreground_scopes_only', 'whole_writer_coverage': False,
@@ -833,19 +869,34 @@ def backend_execution_service(stop_event=None):
                 if pending is not None:
                     _, deadline = queue.outgoing(pending)
                     if time.monotonic() >= deadline: raise HandshakeError('Original preflight exchange deadline expired')
-                wait = .02 if pending is not None or cpu is not None or drain is not None else .2
+                if source_pending is not None:
+                    _,deadline=source_queue.outgoing(source_pending)
+                    if time.monotonic()>=deadline:raise HandshakeError('Original SOURCE CPU exchange deadline expired')
+                wait = .02 if pending is not None or source_pending is not None or cpu is not None or drain is not None else .2
                 if not select.select([sock],[],[],wait)[0]:continue
                 budget = 10
                 if pending is not None: budget = min(budget, queue.outgoing(pending)[1]-time.monotonic())
+                if source_pending is not None:budget=min(budget,source_queue.outgoing(source_pending)[1]-time.monotonic())
+                if source_queue is not None and cpu is not None:budget=min(budget,source_queue.action_deadline()-time.monotonic())
                 if drain is not None: budget = min(budget, drain['deadline']-time.monotonic())
                 if budget <= 0: raise HandshakeError('Original private service request deadline expired')
                 deadline = time.monotonic()+budget
                 proof = _validate_service_action(original_cache, deadline)
+                if source_queue is not None:source_queue._fresh(sock,reader=True)
                 frame=read_frame(sock,deadline-time.monotonic())
                 proof = _validate_service_action(original_cache, deadline)
+                if source_queue is not None:source_queue._fresh(sock,reader=True)
                 if frame.get('kind') == 'controller_preflight_reply':
                     if pending is None: raise HandshakeError('Original preflight reply is unsolicited or replayed')
                     queue.complete(pending, frame); pending = None
+                    continue
+                if frame.get('kind')=='controller_cpu_child_reply':
+                    if source_queue is None or source_pending is None:raise HandshakeError('Original SOURCE CPU reply unsolicited or replayed')
+                    source_queue.complete(source_pending,frame);source_pending=None
+                    continue
+                if frame.get('kind')=='controller_cpu_publication_ack':
+                    if source_queue is None:raise HandshakeError('Original SOURCE CPU publication unavailable')
+                    source_queue.deliver_publication(frame)
                     continue
                 if frame.get('kind') == 'backend_drain_request':
                     if drained:raise HandshakeError('Managed drain request replay requires recovery')
@@ -865,6 +916,7 @@ def backend_execution_service(stop_event=None):
                     drain = {'frame': frame, 'deadline': started+frame['budget_ms']/1000}
                     _CACHE['preflight_drain_deadline'] = drain['deadline']
                     queue.close_admission(drain['deadline'])
+                    if source_queue is not None:source_queue.close_admission(drain['deadline'])
                 else:
                     if executed or drained:raise HandshakeError('CPU private request replay or closed admission requires recovery')
                     executed=True
@@ -880,6 +932,7 @@ def backend_execution_service(stop_event=None):
                     execution['thread'].start()
     except BaseException:
         queue.abandon(HandshakeError('Original backend private service is unresolved'))
+        if source_queue is not None:source_queue.abandon(HandshakeError('Original SOURCE CPU private service unresolved'))
         original_admission.uncovered('cpu_producer_unconfirmed')
         # Closing this original endpoint tells main/controller to retain durable
         # recovery. It never proves worker descendants exited or clears a lease.

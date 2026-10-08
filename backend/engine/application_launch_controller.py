@@ -248,6 +248,22 @@ def _preflight_controller_event(owner, event):
         raise
 
 
+def _cpu_controller_event(owner,event):
+    from backend.engine import application_owned_cpu_child_relay as cpu
+    authority=owner._node_backend_authority
+    request=node.frame_value(authority,event)['request']
+    try:
+        reply=cpu.process_cpu_controller_event(owner,event)
+        state,_=node._fresh(authority);cap=owner._cpu_relays[request['request_id']]
+        deadline=cpu._controller_deadline(cpu._CONTROLLERS[cap])
+        send_frame(state['channel'],reply,absolute_deadline=deadline)
+        node._fresh(authority);cpu._controller_deadline(cpu._CONTROLLERS[cap])
+    except BaseException:
+        cap=getattr(owner,'_cpu_relays',{}).get(request.get('request_id'))
+        if cap is not None:cpu._retain(cap)
+        raise
+
+
 def _controller_reply(owner, deadline, expected_kind):
     """Sole controller reader, with the original absolute CPU/drain budget."""
     authority = getattr(owner, '_node_backend_authority', None)
@@ -261,6 +277,26 @@ def _controller_reply(owner, deadline, expected_kind):
             if frame.get('kind') == 'main_preflight_request':
                 _preflight_controller_event(owner, event)
                 continue
+            if frame.get('kind')=='main_cpu_child_request':
+                _cpu_controller_event(owner,event)
+                continue
+            if frame.get('kind')=='source_cpu_settled' and getattr(owner,'_cpu_awaiting_settlement',None):
+                from backend.engine import application_owned_cpu_child_relay as cpu
+                if getattr(owner,'_cpu_settlement',None) is not None:raise HandshakeError('Original SOURCE CPU settlement replayed')
+                owner._cpu_settlement=cpu.admit_controller_settlement(owner,frame)
+                if expected_kind=='source_cpu_settled':return owner._cpu_settlement
+                if expected_kind=='managed_drain_proof':continue
+                raise HandshakeError('Original SOURCE CPU settlement unexpected')
+            if frame.get('kind')=='main_drain_request' and expected_kind=='source_cpu_settled':
+                # Receipt is already independently published; only accepted
+                # finish/settlement may complete inside this original drain.
+                exit_deadline=prepare_drain(owner,frame)
+                event=_receive_admitted_backend_exit(owner,exit_deadline)
+                observe_backend_exit(owner,event,absolute_deadline=exit_deadline)
+                settled=getattr(owner,'_cpu_settlement',None)
+                if settled is None:raise HandshakeError('Original SOURCE CPU drain lacks final settlement')
+                if time.monotonic()>=deadline:raise HandshakeError('Original SOURCE CPU settlement is late')
+                return settled
         if frame.get('kind') != expected_kind:
             raise HandshakeError('Original controller reply kind differs')
         return frame
@@ -274,7 +310,9 @@ def execute_cpu(owner, capability):
         bootstrap=update._json(update._read(owner.root/lease.LEASES/owner.nonce/'bootstrap-receipt.json'))
         request=execution.request(owner,capability,bootstrap['epoch'])
     intent=owner._begin_cpu_execution(request,capability)
-    if owner._writer_epoch is not None:
+    source_cpu=(getattr(owner,'_node_backend_authority',None) is not None and owner._writer_epoch is not None
+        and bootstrap['backend_frozen'] is False and capability['plan'].get('kind')=='owned_cpu_ocr_known_image_plan')
+    if owner._writer_epoch is not None and not source_cpu:
         # CPU descriptor propagation is verified separately by its helper.
         # This blocking row remains until complete adapter coverage is proven.
         owner._writer_epoch.block_unsupported('owned_cpu_worker',
@@ -286,7 +324,19 @@ def execute_cpu(owner, capability):
         raise HandshakeError('CPU forwarding capability differs')
     proof=execution.encoded_proof(frame['proof_b64'])
     receipt=execution.verify_completion(owner,intent,proof)
-    owner._publish_cpu_execution(receipt)
+    receipt_sha=owner._publish_cpu_execution(receipt)
+    if source_cpu:
+        from backend.engine import application_owned_cpu_child_relay as cpu
+        cap=owner._cpu_relays[request['request_id']]
+        try:
+            ack=cpu.admit_controller_publication(owner,proof,receipt,receipt_sha)
+            state,_=node._fresh(owner._node_backend_authority)
+            deadline=cpu._controller_deadline(cpu._CONTROLLERS[cap]);owner._cpu_awaiting_settlement=request['request_id']
+            send_frame(state['channel'],ack,absolute_deadline=deadline)
+            node._fresh(owner._node_backend_authority);cpu._controller_deadline(cpu._CONTROLLERS[cap])
+            _controller_reply(owner,deadline,'source_cpu_settled')
+        except BaseException:
+            cpu._retain(cap);raise
     return receipt
 
 
@@ -392,6 +442,9 @@ def _receive_admitted_backend_exit(owner, absolute_deadline):
             _preflight_controller_event(owner, event)
             _exit_remaining(absolute_deadline)
             continue
+        if (frame.get('kind')=='main_cpu_child_request' and isinstance(request,dict) and request.get('action')=='finish'):
+            _cpu_controller_event(owner,event);_exit_remaining(absolute_deadline)
+            continue
         raise HandshakeError('Original admitted backend exit event kind differs')
 
 
@@ -466,6 +519,7 @@ def run(args):
                         exit_event = _receive_admitted_backend_exit(owner, deadline)
                         observe_backend_exit(owner, exit_event, absolute_deadline=deadline)
                     elif frame.get('kind') == 'main_preflight_request': _preflight_controller_event(owner, event)
+                    elif frame.get('kind')=='main_cpu_child_request':_cpu_controller_event(owner,event)
                     elif frame.get('kind') == 'main_backend_exit': observe_backend_exit(owner, event)
                     else: raise HandshakeError('Private main descriptor ended or replayed after readiness')
                 if owner._process.poll() is not None: owner.observe_exit(); failed = True

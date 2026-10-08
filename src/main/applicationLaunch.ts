@@ -22,6 +22,10 @@ function preflightRelayActionDeadline(rowDeadline:number,drainDeadline:number|nu
  if(!Number.isFinite(deadline)||deadline<=now)throw new Error('Original preflight transport deadline expired');
  return deadline;
 }
+function sourceCpuRelayBound(plan:any):number {
+ if(!Number.isSafeInteger(plan.budget_ms)||plan.budget_ms<1||plan.budget_ms>60000||typeof plan.deadline_monotonic!=='number'||!Number.isFinite(plan.deadline_monotonic)||plan.deadline_monotonic<=0)throw new Error('Original fixed SOURCE CPU plan differs');
+ return performance.now()+plan.budget_ms;
+}
 const canonical=(value:any):string=>value===null||typeof value!=='object'?JSON.stringify(value):Array.isArray(value)?'['+value.map(canonical).join(',')+']':'{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+canonical(value[k])).join(',')+'}';
 function fields(value:any,expected:string[]):void {if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).sort().join('|')!==[...expected].sort().join('|'))throw new Error('Private launch fields differ');}
 function identity(value:any):void {fields(value,['pid','created_at','command_sha256']);if(!Number.isSafeInteger(value.pid)||value.pid<1||!Number.isFinite(value.created_at)||value.created_at<=0||!HEX64.test(value.command_sha256))throw new Error('Private launch process identity differs');}
@@ -101,13 +105,19 @@ export class OwnedApplicationLaunch {
  type RelayPending={request:any;requestHash:string;row:{phase:string;plan:string;registration:any;child:any;deadline:number};deadline:number;timer:NodeJS.Timeout};
  type BackendPending={kind:string;deadline:number;resolve:(raw:Buffer)=>void;reject:(error:Error)=>void;timer:NodeJS.Timeout};
  type DrainAdmitted={expected:any;resolve:()=>void;reject:(error:Error)=>void;timer:NodeJS.Timeout};
+ type CpuRow={phase:string;plan:string;registration:any;child:any;deadline:number};
+ type CpuPending={request:any;requestHash:string;row:CpuRow;deadline:number;timer:NodeJS.Timeout;delivery?:Promise<void>;delivered?:()=>void;deliveryFailed?:(error:Error)=>void};
+ type CpuFlow={request:any;requestHash:string;deadline:number;completionHash:string|null;publication:any;phase:string;timer:NodeJS.Timeout;delivery?:Promise<void>;delivered?:()=>void;deliveryFailed?:(error:Error)=>void};
+ const cpuRows=new Map<string,CpuRow>();
  // These holders are shared by the two original reader closures. Keep their
  // declared union types on one private mutable object, so closure assignments
  // are visible to strict TypeScript control flow without type assertions.
- const pendingState:{relayPending:RelayPending|null;backendPending:BackendPending|null;drainAdmitted:DrainAdmitted|null}={relayPending:null,backendPending:null,drainAdmitted:null};
+ const pendingState:{relayPending:RelayPending|null;backendPending:BackendPending|null;drainAdmitted:DrainAdmitted|null;cpuPending:CpuPending|null;cpuFlow:CpuFlow|null}={relayPending:null,backendPending:null,drainAdmitted:null,cpuPending:null,cpuFlow:null};
  const invalidate=()=>{if(failed)return;failed=true;const error=new Error('Original owned backend channel/ownership ended');
   this.pendingDrain?.reject(error);this.exitReject?.(error);pendingState.backendPending?.reject(error);pendingState.drainAdmitted?.reject(error);
   if(pendingState.relayPending)clearTimeout(pendingState.relayPending.timer);if(pendingState.backendPending)clearTimeout(pendingState.backendPending.timer);if(pendingState.drainAdmitted)clearTimeout(pendingState.drainAdmitted.timer);
+  if(pendingState.cpuPending)clearTimeout(pendingState.cpuPending.timer);if(pendingState.cpuFlow)clearTimeout(pendingState.cpuFlow.timer);
+  pendingState.cpuPending?.deliveryFailed?.(error);pendingState.cpuFlow?.deliveryFailed?.(error);
   if(exitTimer!==null){clearTimeout(exitTimer);exitTimer=null;}
   // Keep the original pending rows and handles; a transport loss never repairs
   // or adopts a child, releases a writer, or restarts a backend.
@@ -124,7 +134,8 @@ export class OwnedApplicationLaunch {
    this.drainDeadline===admitted.outerDeadline&&performance.now()<admitted.deadline&&
    hash(canonical(admitted.receipt))===admitted.receiptHash&&hash(canonical(admitted.request))===admitted.requestHash&&
    this.pendingDrain===null&&pendingState.relayPending===null&&pendingState.backendPending===null&&pendingState.drainAdmitted===null&&
-   [...relayRows.values()].every(row=>row.phase==='finished');
+   [...relayRows.values()].every(row=>row.phase==='finished')&&pendingState.cpuPending===null&&
+   [...cpuRows.values()].every(row=>row.phase==='finished')&&(!pendingState.cpuFlow||pendingState.cpuFlow.phase==='finished');
   if(!exact())throw new Error('Original backend end retains pending, changed or late ownership');
   this.bindingCurrent();if(!exact())throw new Error('Original backend end ownership changed during validation');
   return admitted!.deadline;
@@ -140,7 +151,46 @@ export class OwnedApplicationLaunch {
  // Exactly one reader for the original backend channel. Fixed preflight data
  // is forwarded with its original Python number tokens, never decoded/reminted
  // as a controller capability. Controller will mint one receive event itself.
- void (async()=>{while(true){const raw=await frames.read(null),parsed=parsePrivateDocument(raw),request=parsed.value;freshBackend();
+ void (async()=>{while(true){const raw=await frames.read(null),parsed=parsePrivateDocument(raw),request=parsed.value;
+  // A fast original backend may answer in the same write callback. Keep the
+  // original ACK/post-send validation serialized within its existing timer;
+  // buffered data cannot renew the deadline or precede that confirmation.
+  if(pendingState.cpuPending?.delivery)await pendingState.cpuPending.delivery;
+  if(pendingState.cpuFlow?.delivery)await pendingState.cpuFlow.delivery;
+  freshBackend();
+  if(request.kind==='backend_cpu_child_request'){
+   fields(request,['schema_version','kind','action','nonce','epoch','binding_sha256','backend_claim_sha256','request_id','payload']);
+   const flow=pendingState.cpuFlow;
+   if(!this.writer||claim.frozen!==false||!flow||pendingState.cpuPending||request.schema_version!==1||request.nonce!==this.nonce||request.epoch!==epoch||request.binding_sha256!==hash(canonical(this.binding))||request.backend_claim_sha256!==this.backendClaimHash||request.request_id!==flow.request.request_id||!['reserve','bind','finish'].includes(request.action)||this.drainRequest&&request.action!=='finish')throw new Error('Original SOURCE CPU request binding/phase differs');
+   let row=cpuRows.get(request.request_id);
+   if(request.action==='reserve'){
+    if(row||cpuRows.size!==0||flow.phase!=='executing')throw new Error('Original SOURCE CPU reservation replayed');
+    fields(request.payload,['cpu_request','budget_ms','deadline_monotonic','workdir','gate_fd','command']);
+    const deadline=Math.min(flow.deadline,sourceCpuRelayBound(request.payload));
+    if(canonical(request.payload.cpu_request)!==canonical(flow.request)||typeof request.payload.workdir!=='string'||!request.payload.workdir.startsWith('/')||!Number.isSafeInteger(request.payload.gate_fd)||request.payload.gate_fd<3||request.payload.gate_fd>8192||!Array.isArray(request.payload.command)||request.payload.command.length!==12||request.payload.command.some((item:any)=>typeof item!=='string'))throw new Error('Original fixed SOURCE CPU intent/command differs');
+    const match=/"payload":(.*),"request_id":/.exec(parsed.canonical);if(!match)throw new Error('Original SOURCE CPU canonical plan unavailable');
+    row={phase:'reserve_sent',plan:match[1],registration:null,child:null,deadline};cpuRows.set(request.request_id,row);
+    clearTimeout(flow.timer);flow.deadline=deadline;flow.timer=setTimeout(invalidate,deadline-performance.now());
+   }else{
+    if(!row)throw new Error('Original SOURCE CPU reservation unavailable');
+    fields(request.payload,['registration','child','plan_sha256',...(request.action==='finish'?['returncode','completion_sha256','receipt_sha256']:[])]);identity(request.payload.child);
+    if(canonical(request.payload.registration)!==canonical(row.registration)||request.payload.plan_sha256!==hash(row.plan)||request.action==='bind'&&(row.phase!=='reserved'||flow.phase!=='executing')||request.action==='finish'&&(row.phase!=='bound'||flow.phase!=='publication_sent'||canonical(request.payload.child)!==canonical(row.child)||request.payload.returncode!==0||request.payload.completion_sha256!==flow.completionHash||request.payload.receipt_sha256!==flow.publication.receipt_sha256))throw new Error('Original SOURCE CPU child/output sequence differs');
+    if(request.action==='bind')row.child=request.payload.child;row.phase=request.action+'_sent';
+   }
+   const deadline=preflightRelayActionDeadline(row.deadline,this.drainDeadline),timer=setTimeout(invalidate,deadline-performance.now());
+   pendingState.cpuPending={request,requestHash:hash(parsed.canonical),row,deadline,timer};
+   await this.frames.sendCanonical('{"kind":"main_cpu_child_request","nonce":'+JSON.stringify(this.nonce)+',"request":'+parsed.canonical+',"schema_version":1}',deadline);
+   freshBackend();if(performance.now()>=Math.min(deadline,this.drainDeadline??Infinity))throw new Error('Original SOURCE CPU request send late');continue;
+  }
+  if(request.kind==='backend_source_cpu_settled'){
+   const flow=pendingState.cpuFlow,row=flow&&cpuRows.get(flow.request.request_id);
+   fields(request,['schema_version','kind','nonce','request_id','request_sha256','completion_sha256','receipt_sha256']);
+   if(!flow||flow.phase!=='publication_sent'||!row||row.phase!=='finished'||pendingState.cpuPending||request.schema_version!==1||request.nonce!==this.nonce||request.request_id!==flow.request.request_id||request.request_sha256!==flow.requestHash||request.completion_sha256!==flow.completionHash||request.receipt_sha256!==flow.publication.receipt_sha256)throw new Error('Original SOURCE CPU settlement incomplete, foreign or replayed');
+   const deadline=preflightRelayActionDeadline(flow.deadline,this.drainDeadline);freshBackend();
+   await this.frames.send({...request,kind:'source_cpu_settled'},deadline);freshBackend();
+   if(performance.now()>=Math.min(deadline,this.drainDeadline??Infinity))throw new Error('Original SOURCE CPU settlement send late');
+   flow.phase='finished';clearTimeout(flow.timer);continue;
+  }
   if(request.kind==='backend_preflight_request'){
    fields(request,['schema_version','kind','action','nonce','epoch','binding_sha256','backend_claim_sha256','request_id','payload']);
    if(!this.writer||pendingState.relayPending||request.schema_version!==1||request.nonce!==this.nonce||request.epoch!==epoch||request.binding_sha256!==hash(canonical(this.binding))||request.backend_claim_sha256!==this.backendClaimHash||!HEX32.test(request.request_id)||!['reserve','bind','finish'].includes(request.action)||this.drainRequest&&request.action!=='finish')throw new Error('Original preflight request binding/phase differs');
@@ -171,6 +221,25 @@ export class OwnedApplicationLaunch {
  // Exactly one reader for the controller channel, including while CPU/drain
  // work waits for a backend response. No nested Frames.read or renewed budget.
  void (async()=>{while(true){const request=parsePrivateDocument(await this.frames.read(null)).value;
+ if(request.kind==='controller_cpu_child_reply'){
+  freshBackend();fields(request,['schema_version','kind','nonce','epoch','request_id','action','request_sha256','payload']);const pending=pendingState.cpuPending;
+  if(!pending||request.schema_version!==1||request.nonce!==this.nonce||request.epoch!==epoch||request.request_id!==pending.request.request_id||request.action!==pending.request.action||request.request_sha256!==pending.requestHash)throw new Error('Original SOURCE CPU child ACK differs or replayed');
+  const deadline=preflightRelayActionDeadline(pending.deadline,this.drainDeadline);
+  pending.delivery=new Promise<void>((resolve,reject)=>{pending.delivered=resolve;pending.deliveryFailed=reject;});void pending.delivery.catch(()=>{});
+  if(request.action==='reserve'){fields(request.payload,['writer_id','registration_sha256']);if(!HEX32.test(request.payload.writer_id)||!HEX64.test(request.payload.registration_sha256))throw new Error('Original SOURCE CPU registration differs');pending.row.registration=request.payload;pending.row.phase='reserved';}
+  else{fields(request.payload,['status']);if(request.payload.status!==(request.action==='bind'?'bound':'direct_exited'))throw new Error('Original SOURCE CPU child status differs');pending.row.phase=request.action==='bind'?'bound':'finished';}
+  await frames.send(request,deadline);freshBackend();if(performance.now()>=Math.min(deadline,this.drainDeadline??Infinity))throw new Error('Original SOURCE CPU child ACK send late');
+  clearTimeout(pending.timer);pendingState.cpuPending=null;pending.delivered!();continue;
+ }
+ if(request.kind==='controller_cpu_publication_ack'){
+  freshBackend();const flow=pendingState.cpuFlow;
+  fields(request,['schema_version','kind','nonce','request_id','request_sha256','completion_sha256','receipt_sha256']);
+  if(!flow||flow.phase!=='proof_sent'||flow.publication!==null||request.schema_version!==1||request.nonce!==this.nonce||request.request_id!==flow.request.request_id||request.request_sha256!==flow.requestHash||request.completion_sha256!==flow.completionHash||!HEX64.test(request.receipt_sha256))throw new Error('Original SOURCE CPU publication ACK differs or replayed');
+  const deadline=preflightRelayActionDeadline(flow.deadline,this.drainDeadline);flow.publication=request;flow.phase='publication_sent';
+  flow.delivery=new Promise<void>((resolve,reject)=>{flow.delivered=resolve;flow.deliveryFailed=reject;});void flow.delivery.catch(()=>{});
+  await frames.send(request,deadline);freshBackend();if(performance.now()>=Math.min(deadline,this.drainDeadline??Infinity))throw new Error('Original SOURCE CPU publication send late');
+  flow.delivered!();flow.delivery=undefined;continue;
+ }
  if(request.kind==='controller_preflight_reply'){
   freshBackend();fields(request,['schema_version','kind','nonce','epoch','request_id','action','request_sha256','payload']);const pending=pendingState.relayPending;
   if(!pending||request.schema_version!==1||request.nonce!==this.nonce||request.epoch!==epoch||request.request_id!==pending.request.request_id||request.action!==pending.request.action||request.request_sha256!==pending.requestHash)throw new Error('Original preflight acknowledgement differs, expired or replayed');
@@ -213,11 +282,18 @@ export class OwnedApplicationLaunch {
  if(cpuExecuted||this.drainRequest)throw new Error('CPU request replay or closed writer admission');cpuExecuted=true;
  fields(request,['schema_version','kind','challenge','request_id','nonce','epoch','binding_sha256','backend_claim_sha256','workspace_id','project_id','plan_sha256']);
  if(request.schema_version!==1||request.kind!=='cpu_execution_request'||!HEX64.test(request.challenge)||!HEX32.test(request.request_id)||request.nonce!==this.nonce||request.epoch!==epoch||request.binding_sha256!==hash(canonical(this.binding))||request.backend_claim_sha256!==this.backendClaimHash||!HEX32.test(request.workspace_id)||!HEX32.test(request.project_id)||!HEX64.test(request.plan_sha256))throw new Error('Foreign CPU execution request');
- freshBackend();const response=backendReply('cpu_execution_completed',performance.now()+210000);await frames.send(request);
+ freshBackend();const transportDeadline=performance.now()+210000;
+ const sourceCpu=!!this.writer&&claim.frozen===false;
+ if(sourceCpu)pendingState.cpuFlow={request,requestHash:hash(canonical(request)),deadline:transportDeadline,completionHash:null,publication:null,phase:'executing',timer:setTimeout(invalidate,transportDeadline-performance.now())};
+ const response=backendReply('cpu_execution_completed',transportDeadline);await frames.send(request,transportDeadline);
  void (async()=>{const completedRaw=await response,completed=parsePrivateDocument(completedRaw,32768).value;
   fields(completed,['schema_version','kind','request','backend_proof','output_path','output_sha256','semantic_output','worker_pid','runtime_source_sha256']);
   if(completed.schema_version!==1||completed.kind!=='cpu_execution_completed'||canonical(completed.request)!==canonical(request)||canonical(completed.backend_proof)!==canonical(claim)||!HEX64.test(completed.output_sha256)||!HEX64.test(completed.runtime_source_sha256)||!Number.isSafeInteger(completed.worker_pid)||completed.worker_pid<1)throw new Error('CPU execution completion differs');
-  freshBackend();await this.frames.send({schema_version:1,kind:'cpu_execution_proof',nonce:this.nonce,proof_b64:completedRaw.toString('base64')});
+  freshBackend();const flow=pendingState.cpuFlow;
+  if(sourceCpu){const row=flow&&cpuRows.get(request.request_id);if(!flow||flow.phase!=='executing'||!row||row.phase!=='bound'||completed.worker_pid!==row.child.pid||performance.now()>=Math.min(flow.deadline,this.drainDeadline??Infinity))throw new Error('Original SOURCE CPU proof lacks exact bound child');flow.completionHash=hash(completedRaw);flow.phase='proof_sent';}
+  const deadline=flow?preflightRelayActionDeadline(flow.deadline,this.drainDeadline):transportDeadline;
+  await this.frames.send({schema_version:1,kind:'cpu_execution_proof',nonce:this.nonce,proof_b64:completedRaw.toString('base64')},deadline);
+  freshBackend();if(performance.now()>=Math.min(deadline,this.drainDeadline??Infinity))throw new Error('Original CPU proof send late');
  })().catch(invalidate);
  }})().catch(invalidate);
  }

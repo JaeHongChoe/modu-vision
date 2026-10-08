@@ -559,14 +559,31 @@ def frozen_worker_main(argv=None):
 
 def execute_backend(frame, proof, root):
     """Only the authenticated cache consumer calls this, under its shared life."""
+    from backend.engine import application_launch_handshake as handshake
     from backend.engine.application_launch_handshake import owned_cpu_writer_scope
+    cache=handshake._CACHE
+    if (proof.get('frozen') is False and cache is not None and 'writer' in cache.get('challenge',{})):
+        from backend.engine import application_owned_cpu_child_relay as cpu
+        producer=cpu.admit_backend_source_cpu(frame,proof,root)
+        try:
+            completed=_execute_backend_admitted(frame,proof,root,(),source_producer=producer)
+            cpu.completion_ready(producer,completed)
+            cpu.finish_backend_source_cpu(producer,completed)
+            return completed
+        except BaseException:
+            cpu._retain(producer);raise
     # Admit before snapshot, output, home/cache or worker side effects. Retain
     # the original writer OFD through outcome and all output/source validation.
     with owned_cpu_writer_scope() as writer_pass_fds:
         return _execute_backend_admitted(frame, proof, root, writer_pass_fds)
 
 
-def _execute_backend_admitted(frame, proof, root, writer_pass_fds):
+def _execute_backend_admitted(frame, proof, root, writer_pass_fds, *, source_producer=None):
+    def source_current():
+        if source_producer is not None:
+            from backend.engine import application_owned_cpu_child_relay as cpu
+            cpu._original(source_producer)
+    source_current()
     if proof['frozen']:
         inventory,_=_frozen_inventory()
         if inventory['build_identity_sha256']!=proof['build_identity_sha256']:
@@ -578,12 +595,14 @@ def _execute_backend_admitted(frame, proof, root, writer_pass_fds):
     _live_origin(root,row,original)
     capability = admit_plan(root,frame['workspace_id'],frame['project_id'],frame['plan_sha256'])
     if update._canonical(capability)!=update._canonical(intent['capability']): raise ExecutionError('Reviewed project capability changed')
+    source_current()
     directory = Path(capability['project_path']); outputs=update._unlinked(directory/OUTPUTS)
     outputs.mkdir(parents=True,exist_ok=True)
     with _retained_snapshot(outputs,frame['request_id']) as temporary:
         temporary=Path(temporary)
         copied=admit_plan(root,frame['workspace_id'],frame['project_id'],frame['plan_sha256'],copy_to=temporary)
         if update._canonical(copied)!=update._canonical(capability): raise ExecutionError('CPU snapshot capability changed')
+        source_current()
         _checkpoint('before_cpu_worker')
         plan=capability['plan']; request_path=temporary/'request.json'; output=temporary/'result.json'
         request_path.write_bytes(update._canonical({'package':str(temporary/'package'),'image':str(temporary/'input.png')}))
@@ -618,19 +637,26 @@ def _execute_backend_admitted(frame, proof, root, writer_pass_fds):
             update.migration._sync_directories(temporary,recursive=False)
             command=[sys.executable,'--owned-application-cpu-worker','--request-file',str(worker_request),
                 '--request-sha256',update._sha(capsule)]
-        outcome=execute_owned_process(command,
-            deadline_ms=plan['deadline_ms'],env=environment,cwd=temporary,pass_fds=writer_pass_fds)
+        if source_producer is not None:
+            from backend.engine import application_owned_cpu_child_relay as cpu
+            cpu.reserve_backend_cpu_child(source_producer,temporary)
+            outcome=cpu.execute_source_process(source_producer,environment=environment)
+        else:
+            outcome=execute_owned_process(command,
+                deadline_ms=plan['deadline_ms'],env=environment,cwd=temporary,pass_fds=writer_pass_fds)
         if outcome['status']!='completed' or outcome['returncode']!=0:
             raise ExecutionError('Owned CPU execution failed or timed out; process-tree exit remains unverified')
         result=_json(_read(output,MAX_RESULT)); semantic=validate_result(result,capability)
         if update._sha(update._canonical(semantic))!=plan['semantic_output_sha256']:
             raise ExecutionError('Actual known-image semantic output differs from independent pin')
+        source_current()
         result['runtime_execution']={'device':'cpu','cpu_threads':1,'deadline_ms':plan['deadline_ms'],
             'isolated_process':True,'pid':outcome['pid'],'elapsed_ms':outcome['elapsed_ms']}
         # Recheck all original inputs/source while the exact private snapshot
         # still exists. No mutable package code was imported by the worker.
         after=admit_plan(root,frame['workspace_id'],frame['project_id'],frame['plan_sha256'])
         if update._canonical(after)!=update._canonical(capability): raise ExecutionError('CPU execution source changed')
+        source_current()
         raw=update._canonical(result)
         if len(raw)>MAX_RESULT: raise ExecutionError('CPU result exceeds publication bound')
         # Publication and the final original-owner check share the lifecycle
@@ -638,12 +664,14 @@ def _execute_backend_admitted(frame, proof, root, writer_pass_fds):
         # new public output; the backend lifespan still blocks cutover.
         with lease._transition_admission(root,frame['nonce']):
             _live_origin(root,lease._load(root),original)
+            source_current()
             path=outputs/(frame['request_id']+'.json'); update._unlinked(path)
             if path.exists(): raise ExecutionError('Foreign CPU output requires recovery')
             # Exclusive creation: interrupted output is not overwritten.
             fd=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL|getattr(os,'O_NOFOLLOW',0),0o600)
             with os.fdopen(fd,'wb') as writer: writer.write(raw);writer.flush();os.fsync(writer.fileno())
             update.migration._sync_directories(outputs,recursive=False)
+            source_current()
         _checkpoint('after_cpu_output')
         return {'schema_version':1,'kind':'cpu_execution_completed','request':frame,
             'backend_proof':proof,'output_path':OUTPUTS+'/'+path.name,'output_sha256':update._sha(raw),

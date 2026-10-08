@@ -258,7 +258,7 @@ class WriterEpoch:
             _refuse('original create-only authority capability is unavailable')
         self.root = root; self.nonce = nonce; self.snapshot_binding = binding
         self._pid = os.getpid(); self._thread = threading.current_thread()
-        self._raw = raw; self._pointer = pointer; self._handles = {}; self._node_handles = {}; self._preflight_handles = {}
+        self._raw = raw; self._pointer = pointer; self._handles = {}; self._node_handles = {}; self._preflight_handles = {}; self._cpu_handles = {}
 
     @classmethod
     def create(cls, root, nonce, *, expected_launch_sha256):
@@ -314,12 +314,15 @@ class WriterEpoch:
                 if u._canonical(value['binding']) != u._canonical(self.snapshot_binding): _refuse('authority binding changed')
                 yield value, directory
 
-    def _publish(self, value, directory, *, preflight_capability=None):
+    def _publish(self, value, directory, *, preflight_capability=None, cpu_capability=None):
         u = _update()
         def original_deadline():
             if preflight_capability is not None:
                 from backend.engine import application_preflight_child_relay as relay
                 relay._core_publication_deadline(preflight_capability, self)
+            if cpu_capability is not None:
+                from backend.engine import application_owned_cpu_child_relay as cpu
+                cpu._core_publication_deadline(cpu_capability, self)
         original_deadline()
         if (u._read(directory/'registry.json', DOCUMENT_LIMIT) != self._raw
                 or u._read(directory/'publication.json') != self._pointer): _refuse('registry CAS changed before publication')
@@ -338,14 +341,19 @@ class WriterEpoch:
         self._raw = raw; self._pointer = pointer
         return {'registry': value, 'registry_sha256': u._sha(raw)}
 
-    def _enroll(self, role, expected, *, unsupported, preflight_capability=None):
+    def _enroll(self, role, expected, *, unsupported, preflight_capability=None, cpu_capability=None):
         if role not in ROLES: _refuse('unsupported writer role cannot acquire authority')
         if preflight_capability is not None and (role != 'preflight' or unsupported):
             _refuse('original preflight capability cannot enroll another writer role')
+        if cpu_capability is not None and (role != 'owned_cpu_worker' or unsupported or preflight_capability is not None):
+            _refuse('original CPU capability cannot enroll another writer role')
         with self._admit(expected) as (value, directory):
             if preflight_capability is not None:
                 from backend.engine import application_preflight_child_relay as relay
                 relay._core_publication_deadline(preflight_capability, self, phase='creating')
+            if cpu_capability is not None:
+                from backend.engine import application_owned_cpu_child_relay as cpu
+                cpu._core_publication_deadline(cpu_capability, self, phase='creating')
             if value['state'] != 'open': _refuse('writer epoch is closed')
             if len(value['writers']) >= MAX_WRITERS: _refuse('writer count exceeds reviewed bound')
             identifier = uuid.uuid4().hex; child = directory/'writers'/identifier; child.mkdir(mode=0o700)
@@ -355,7 +363,7 @@ class WriterEpoch:
                 'reason_code': 'uncovered_protocol' if unsupported else None}
             row['registration_sha256'] = _update()._sha(_update()._canonical(_registration(value['binding'], row)))
             self._publish({**value, 'writers': [*value['writers'], row]}, directory,
-                preflight_capability=preflight_capability)
+                preflight_capability=preflight_capability, cpu_capability=cpu_capability)
             return Registration(identifier, row['registration_sha256'])
 
     def enroll(self, role, *, expected_registry_sha256):
@@ -368,15 +376,21 @@ class WriterEpoch:
         return self._enroll('preflight', expected_registry_sha256, unsupported=False,
             preflight_capability=capability)
 
+    def enroll_authenticated_cpu_child(self, capability, *, expected_registry_sha256):
+        from backend.engine import application_owned_cpu_child_relay as cpu
+        if type(capability) is not cpu.ControllerCpuRelay:
+            _refuse('original typed SOURCE CPU reservation capability is required')
+        return self._enroll('owned_cpu_worker', expected_registry_sha256, unsupported=False, cpu_capability=capability)
+
     def block_unsupported(self, role, *, expected_registry_sha256):
         return self._enroll(role, expected_registry_sha256, unsupported=True)
 
-    def _replace(self, value, directory, identifier, *, preflight_capability=None, **changes):
+    def _replace(self, value, directory, identifier, *, preflight_capability=None, cpu_capability=None, **changes):
         rows = [dict(r) for r in value['writers']]
         row = next((r for r in rows if r['writer_id'] == identifier), None)
         if row is None: _refuse('unknown original writer registration')
         row.update(changes)
-        return self._publish({**value, 'writers': rows}, directory, preflight_capability=preflight_capability)
+        return self._publish({**value, 'writers': rows}, directory, preflight_capability=preflight_capability, cpu_capability=cpu_capability)
 
     def bind_original_child(self, writer_id, process, *, expected_registry_sha256):
         if type(process) is not subprocess.Popen: _refuse('original child OS handle is required; caller exit JSON is not authority')
@@ -475,6 +489,35 @@ class WriterEpoch:
                 _refuse('original active preflight child is unavailable or unresolved')
             return self._replace(value, directory, writer_id, status='direct_exited', exit_code=0,
                 preflight_capability=capability)
+
+    def bind_authenticated_cpu_child(self, writer_id, capability, *, expected_registry_sha256):
+        from backend.engine import application_owned_cpu_child_relay as cpu
+        if type(capability) is not cpu.ControllerCpuRelay:
+            _refuse('original typed SOURCE CPU relay capability is required')
+        with self._admit(expected_registry_sha256) as (value, directory):
+            row = next((r for r in value['writers'] if r['writer_id'] == writer_id), None)
+            if (value['state'] != 'open' or row is None or row['role'] != 'owned_cpu_worker'
+                    or row['status'] != 'reserved' or writer_id in self._cpu_handles
+                    or writer_id in self._handles or writer_id in self._node_handles or writer_id in self._preflight_handles):
+                _refuse('original CPU registration already bound, closed or unresolved')
+            identity, registration = cpu._core_child_binding(capability, self, writer_id)
+            if row['registration_sha256'] != registration: _refuse('original CPU registration pin differs')
+            result = self._replace(value, directory, writer_id, status='active', process=identity, cpu_capability=capability)
+            self._cpu_handles[writer_id] = (capability, identity)
+            return result
+
+    def observe_authenticated_cpu_child_exit(self, writer_id, capability, *, expected_registry_sha256):
+        from backend.engine import application_owned_cpu_child_relay as cpu
+        if type(capability) is not cpu.ControllerCpuRelay:
+            _refuse('original typed SOURCE CPU relay capability is required')
+        with self._admit(expected_registry_sha256) as (value, directory):
+            original = self._cpu_handles.get(writer_id)
+            row = next((r for r in value['writers'] if r['writer_id'] == writer_id), None)
+            if (original is None or original[0] is not capability or row is None
+                    or row['role'] != 'owned_cpu_worker' or row['status'] != 'active'
+                    or row['process'] != original[1] or cpu._core_child_exit(capability, self, writer_id) != original[1]):
+                _refuse('original active CPU child is unavailable or unresolved')
+            return self._replace(value, directory, writer_id, status='direct_exited', exit_code=0, cpu_capability=capability)
 
     def mark_uncertain(self, writer_id, *, reason_code, expected_registry_sha256):
         if reason_code not in REASONS: _refuse('unsupported uncertainty reason code')

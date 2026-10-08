@@ -207,8 +207,11 @@ def test_returned_unsuccessful_cpu_outcome_is_sticky_before_admission_leaves(epo
             assert os.fstat(kwargs['pass_fds'][0]).st_ino == cache['writer_fd_identity'][1]
             return {'status': 'completed' if status=='nonzero' else status, 'returncode': 1}
         monkeypatch.setattr(deadline, 'execute_owned_process', observed)
+        # Explicit transport-only legacy body model: this incomplete cache
+        # grants no authenticated SOURCE producer/queue/enrollment authority.
         with pytest.raises(execution.ExecutionError, match='failed|timed out'):
-            execution.execute_backend(frame, {'frozen': False}, root)
+            with handshake.owned_cpu_writer_scope() as writer_pass_fds:
+                execution._execute_backend_admitted(frame, {'frozen': False}, root, writer_pass_fds)
         assert state.snapshot() == {'active_scopes': 0, 'unsupported': ['cpu_producer_unconfirmed']}
 
 
@@ -242,7 +245,7 @@ def test_actual_original_cpu_epoch_inherits_writer_inode_and_keeps_scope_through
     controlled_proof(monkeypatch)  # Setup only, no staged-canary or native acceptance.
     original_fixture = fixtures.fixture
     instrumentation = '''
- from backend.engine import runtime_deadline as rd,application_launch_execution as ex
+ from backend.engine import runtime_deadline as rd,application_launch_execution as ex,application_owned_cpu_child_relay as relay
  import psutil,stat
  original_spawn=rd.subprocess.Popen
  def observed_spawn(*args,**kwargs):
@@ -298,18 +301,19 @@ def test_actual_original_cpu_epoch_inherits_writer_inode_and_keeps_scope_through
     try:
         target,cpu=fixtures.wait_receipt(root,ack['nonce'],child)
         observation=wait_file(root/'projects/actual-cpu-writer-observation.json')
+        assert wait_file(root/'projects/actual-cpu-scope-returned.json')=={'active_scopes':0,'unsupported':[]}
         snapshot=inspect_epoch(root,ack['nonce']);writers=snapshot['registry']['writers']
         assert len(writers)==2
         backend,worker=sorted(writers,key=lambda row:row['role'])
         assert backend['role']=='backend' and backend['status']=='active'
         assert backend['process']==cpu['backend_process']
-        assert worker['role']=='owned_cpu_worker' and worker['status']=='unsupported'
-        assert worker['reason_code']=='uncovered_protocol'
-        assert worker['process'] is None
+        assert worker['role']=='owned_cpu_worker' and worker['status']=='direct_exited'
+        assert worker['reason_code'] is None and worker['exit_code']==0
+        assert worker['process']['pid']==cpu['worker_pid'] and worker['process']!=backend['process']
         lock=root/'.application-writer-epochs'/ack['nonce']/'writers'/backend['writer_id']/'ownership.lock'
         info=lock.stat()
         assert (observation['device'],observation['inode'])==(info.st_dev,info.st_ino)
-        assert observation['passed_count']==observation['active_scopes']==1
+        assert observation['passed_count']==3 and observation['active_scopes']==1
         assert len(observation['child_writer_open_refs'])==1
         assert observation['child_writer_open_refs'][0]['path']==str(lock)
         assert observation['worker_pid']==cpu['worker_pid']
@@ -334,6 +338,20 @@ def test_actual_original_cpu_epoch_inherits_writer_inode_and_keeps_scope_through
     assert final['state']=='recovery_required'
     final_writers=inspect_epoch(root,ack['nonce'])['registry']['writers']
     assert [(row['role'],row['status'],row['reason_code']) for row in final_writers]==[
-        ('backend','direct_exited',None),('owned_cpu_worker','unsupported','uncovered_protocol')]
+        ('backend','direct_exited',None),('owned_cpu_worker','direct_exited',None)]
     with pytest.raises(ValueError,match='launch ownership'):
         lease.assert_quiescent(root)
+
+
+def test_incomplete_controlled_cache_never_grants_authenticated_source_cpu(epoch,monkeypatch):
+    """Transport-only legacy controls cannot silently become a SOURCE adapter."""
+    with controlled_cache(epoch,monkeypatch) as (root,authority,state,cache):
+        touched=[]
+        def unsafe(*args,**kwargs):
+            touched.append('source_body');pytest.fail('Incomplete modeled cache minted SOURCE authority')
+        monkeypatch.setattr(execution,'_execute_backend_admitted',unsafe)
+        with pytest.raises(handshake.HandshakeError,match='SOURCE CPU producer admission is unavailable'):
+            execution.execute_backend({}, {'frozen':False},root)
+        assert touched==[] and state.snapshot()=={'active_scopes':0,'unsupported':[]}
+        rows=authority.snapshot()['registry']['writers']
+        assert len(rows)==1 and rows[0]['role']=='backend' and rows[0]['status']=='reserved'
