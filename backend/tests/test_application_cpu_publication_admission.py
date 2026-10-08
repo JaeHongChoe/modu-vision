@@ -62,6 +62,17 @@ def original(tmp_path, monkeypatch):
         return {'executable':'modeled-backend','executable_sha256':'5'*64,
                 'build_identity_sha256':None,'frozen':False}
     monkeypatch.setattr(h, '_executable', executable)
+    def modeled_pair(root, authority, frame, *, pinned_authority_sha256):
+        # Installation/executable/OS identities remain explicit models. The
+        # canonical validator and retained per-lease transition OFD still run.
+        fresh=update._launch_binding(root,authority,pinned_authority_sha256=pinned_authority_sha256)
+        if h._canonical(frame['binding']) != h._canonical(fresh):
+            raise h.HandshakeError('Committed backend launch pair changed')
+        main=lease._identity(os.getppid())
+        if not h._same_process(frame['main_process'],main) or not h._same_process(row['process'],main):
+            raise h.HandshakeError('Spawned main process birth or parent identity differs')
+        return fresh,h._executable(root,fresh,frame)
+    monkeypatch.setattr(update,'_backend_launch_binding',modeled_pair)
     proof=h._validate(tmp_path, values, challenge)
     anchor=os.open(tmp_path/'original-writer.lock',os.O_RDWR|os.O_CREAT|os.O_EXCL,0o600)
     os.set_inheritable(anchor,False); fcntl.flock(anchor,fcntl.LOCK_SH|fcntl.LOCK_NB)

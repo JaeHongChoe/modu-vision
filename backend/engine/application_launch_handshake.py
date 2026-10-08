@@ -705,16 +705,9 @@ def _validated_backend_admission(root, values, frame, *, validated=None,
                     or values['VISION_APPLICATION_GENERATION'] != binding['application_generation']
                     or values['VISION_APPLICATION_DATABASE_GENERATION'] != binding['database_generation_path']):
                 raise HandshakeError('Backend challenge application/database binding differs')
-            fresh = update._launch_binding(root, binding['authority_path'], pinned_authority_sha256=binding['authority_sha256'])
+            fresh, executable = update._backend_launch_binding(root, binding['authority_path'], frame,
+                                                              pinned_authority_sha256=binding['authority_sha256'])
             if _canonical(fresh) != _canonical(binding): raise HandshakeError('Committed backend launch pair changed')
-            try: main = lease._identity(os.getppid())
-            except Exception as exc:
-                import psutil
-                if not isinstance(exc, psutil.Error): raise
-                raise HandshakeError('Backend parent process identity is unavailable') from exc
-            if not _same_process(frame['main_process'], main) or not _same_process(record['process'], main):
-                raise HandshakeError('Backend challenge main process birth or parent identity differs')
-            executable = _executable(root, binding, frame)
             protocol[0] = record['protocol_version']
             if validated is not None: validated['protocol_version'] = record['protocol_version']
             return {'schema_version': 1, 'kind': 'backend_claim', 'challenge': frame['challenge'], 'epoch': frame['epoch'],

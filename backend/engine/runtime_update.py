@@ -729,8 +729,13 @@ def recover_update(root,intent,*,action='finish'):
         return _finish(root,intent)
 
 
-def _launch_binding(root,authority,*,pinned_authority_sha256):
-    """Derive fixed launch identities under the caller's installation admission."""
+def _launch_binding_pair(root,authority,backend_frame,*,pinned_authority_sha256):
+    """Freshly inspect one launch pair and its optional fixed backend row.
+
+    The validated intent never leaves this invocation as an input capability.
+    A backend frame selects fixed checks, not a supplied manifest or validator.
+    Each caller's original owner pre/post pass independently enters this path.
+    """
     root,owner=_root(root)
     validate_attachment(root);pointer=_pointer(root)
     if pointer is None:raise UpdateError('No owned portable application is installed')
@@ -743,7 +748,7 @@ def _launch_binding(root,authority,*,pinned_authority_sha256):
     executable=application/manifest['entrypoint']
     entrypoint=next(row for row in manifest['files'] if row['path']==manifest['entrypoint'])
     current=active_generation(root)
-    return {'installation_id':owner['installation_id'],'update_id':pointer['update_id'],
+    binding={'installation_id':owner['installation_id'],'update_id':pointer['update_id'],
         'application_generation':pointer['application_generation'],'database_pointer':pointer['database_pointer'],
         'database_generation_path':str(current[0]),'executable':str(executable),'executable_sha256':entrypoint['sha256'],
         'application_manifest_sha256':_sha(_read(application/'portable-application.json',MAX_APPLICATION_MANIFEST)),
@@ -751,6 +756,78 @@ def _launch_binding(root,authority,*,pinned_authority_sha256):
         'authority_path':record['authority_path'],'authority_sha256':record['authority_sha256'],
         'version':record['release']['version'],
         'runtime_packs':[row['path'] for row in record['release']['artifacts'] if row['kind']=='runtime_pack']}
+
+    if backend_frame is None:
+        return binding, None
+    from backend.engine.application_launch_handshake import HandshakeError, _same_process
+    from backend.engine import application_launch_lease as lease
+    # Preserve the original fresh-pair -> original parent -> executable order.
+    # Read the original lease afresh under the caller's retained transition
+    # OFD; no caller-provided record, manifest or admission marker is accepted.
+    if _canonical(backend_frame['binding']) != _canonical(binding):
+        raise HandshakeError('Committed backend launch pair changed')
+    original = lease._load(root)
+    if (original is None or original['nonce'] != backend_frame['nonce']
+            or original['state'] not in {'starting', 'ready'} or not original['spawn_attempted']
+            or original['process'] is None):
+        raise HandshakeError('Backend challenge has no current spawned main owner')
+    if _canonical(original['binding']) != _canonical(binding):
+        raise HandshakeError('Committed backend launch pair changed')
+    try: main = lease._identity(os.getppid())
+    except Exception as exc:
+        import psutil
+        if not isinstance(exc, psutil.Error): raise
+        raise HandshakeError('Backend parent process identity is unavailable') from exc
+    if not _same_process(backend_frame['main_process'], main) or not _same_process(original['process'], main):
+        raise HandshakeError('Backend challenge main process birth or parent identity differs')
+    application = root/GENERATIONS/binding['application_generation']/'application'
+    executable = backend_frame['backend_executable']
+    if not isinstance(executable, str) or not Path(executable).is_absolute() or str(Path(executable)) != executable:
+        raise HandshakeError('Backend executable must be an absolute current application row')
+    path = _unlinked(executable)
+    try: relative = path.relative_to(application).as_posix()
+    except ValueError as exc: raise HandshakeError('Backend executable is outside current application') from exc
+    rows = [row for row in manifest['files'] if row['path'] == relative and row['executable']]
+    if len(rows) != 1: raise HandshakeError('Backend executable is not an approved current application row')
+    row = rows[0]; _check_file(path, row)
+    import psutil, sys
+    command = psutil.Process(os.getpid()).cmdline()
+    frozen = bool(getattr(sys, 'frozen', False)); build = backend_frame['backend_build_identity_sha256']
+    if frozen:
+        if sys.executable != executable or not command or command[0] != executable or not _hex(build):
+            raise HandshakeError('Frozen backend executable or build identity differs')
+        receipt_path = path.parent/'backend-release.json'
+        receipt_rows = [item for item in manifest['files'] if item['path'] == receipt_path.relative_to(application).as_posix()]
+        if len(receipt_rows) != 1: raise HandshakeError('Frozen backend release receipt is not an approved application row')
+        _check_file(receipt_path, receipt_rows[0]); receipt = _json(_read(receipt_path, 8*1024**2))
+        inventory = _json(_read(Path(getattr(sys, '_MEIPASS', ''))/'backend-build-inventory.json', 8*1024**2))
+        if (not isinstance(receipt, dict) or receipt.get('schema_version') != 1 or receipt.get('executable') != path.name
+                or receipt.get('executable_sha256') != row['sha256'] or not isinstance(inventory, dict)
+                or inventory.get('build_identity_sha256') != build
+                or _canonical(receipt.get('inventory')) != _canonical(inventory)):
+            raise HandshakeError('Frozen backend release receipt or embedded inventory differs')
+    else:
+        if build is not None or not sys.argv or sys.argv[0] != executable or executable not in command[1:2]:
+            raise HandshakeError('Source backend must execute its approved script and cannot claim a frozen build')
+    return binding, {'executable': executable, 'executable_sha256': row['sha256'],
+            'build_identity_sha256': build, 'frozen': frozen}
+
+
+def _launch_binding(root,authority,*,pinned_authority_sha256):
+    """Derive fixed launch identities under the caller's installation admission."""
+    return _launch_binding_pair(root,authority,None,pinned_authority_sha256=pinned_authority_sha256)[0]
+
+
+def _backend_launch_binding(root,authority,frame,*,pinned_authority_sha256):
+    """Fixed backend inspection composed with a freshly validated launch pair.
+
+    No manifest, validation marker, callback or cached proof is accepted.
+    This plain result is evidence; original lease/backend admission remains
+    the sole authority and performs this entire inspection before and after.
+    """
+    if frame is None:
+        raise UpdateError('Backend launch inspection requires its original frame')
+    return _launch_binding_pair(root,authority,frame,pinned_authority_sha256=pinned_authority_sha256)
 
 
 def launch_plan(root,authority,*,pinned_authority_sha256):
