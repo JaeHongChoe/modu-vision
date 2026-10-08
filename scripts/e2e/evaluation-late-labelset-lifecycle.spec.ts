@@ -43,6 +43,41 @@ async function idleDefaultStores(api: Api, source: string, task: string) {
   return records;
 }
 
+// Installed only in the isolated test page. The exact original renderer fetch
+// runs through Electron main's authenticated network path. Its network200/body
+// completes before the test defers delivery of the SAME Response to the UI.
+function installOriginalRendererResponseHold({origin, source, secondSet, binding, key}: {
+  origin: string; source: string; secondSet: string; binding: string; key: string
+}) {
+  const target = window as any;
+  if (target[key]) throw Error('Original renderer hold already installed');
+  const previous = window.fetch;
+  let consumed = false;
+  const seen = new WeakSet<globalThis.Response>();
+  const wrapper: typeof window.fetch = async (input, init) => {
+    const address = new URL(input instanceof window.Request ? input.url : String(input), window.location.href);
+    const method = String(init?.method || (input instanceof window.Request ? input.method : 'GET')).toUpperCase();
+    const exact = address.origin === origin && address.pathname === '/api/evaluation/history'
+      && address.searchParams.get('source_dataset_path') === source && address.searchParams.get('task') === 'segmentation'
+      && address.searchParams.get('labelset_id') === secondSet && [...address.searchParams.keys()].length === 3;
+    if (!exact || method !== 'GET') return previous.call(window, input, init);
+    if (consumed) throw Error('Exact original held renderer GET must occur once');
+    consumed = true;
+    const response = await previous.call(window, input, init);
+    if (!(response instanceof window.Response) || seen.has(response) || response.bodyUsed || response.status !== 200
+      || response.redirected || response.url !== address.href) throw Error('Exact original renderer Response refused');
+    seen.add(response);
+    const bytes = Array.from(new Uint8Array(await response.clone().arrayBuffer()));
+    await target[binding]({phase: 'body', url: response.url, status: response.status, bytes,
+      original_response_object: true, redirected: response.redirected});
+    if (response.bodyUsed || !seen.has(response)) throw Error('Original renderer Response was consumed or replaced');
+    await target[binding]({phase: 'delivery', url: response.url, status: response.status,
+      same_original_response_object: true, original_body_unconsumed: true});
+    return response;
+  };
+  target[key] = {previous, wrapper}; window.fetch = wrapper;
+}
+
 async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceElectron: boolean, url?: string) {
   const source = path.join(w.root, 'late-labelset-originals'); fs.mkdirSync(source);
   const original = path.join(source, 'part.png'); fs.writeFileSync(original, png(64, 3, (x, y) => [x, y, 173]));
@@ -304,52 +339,74 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
   const openHolds = new Set<HeldRead>();
   const holdOlderSet = async (dimension: string): Promise<HeldRead> => {
     expect(await labelset.inputValue()).toBe('default');
-    const matches = (address: URL) => address.pathname === '/api/evaluation/history'
+    const known = [...storeReadTimes.keys()].find(request => {const address = new URL(request.url()); return request.method() === 'GET'
+      && address.pathname === '/api/evaluation/history' && address.searchParams.get('source_dataset_path') === source
+      && address.searchParams.get('task') === 'segmentation';});
+    expect(known).toBeDefined(); const origin = new URL(known!.url()).origin;
+    const matches = (address: URL) => address.origin === origin && address.pathname === '/api/evaluation/history'
       && address.searchParams.get('source_dataset_path') === source && address.searchParams.get('task') === 'segmentation'
-      && address.searchParams.get('labelset_id') === secondSet;
+      && address.searchParams.get('labelset_id') === secondSet && [...address.searchParams.keys()].length === 3;
     let heldRequest: Request | undefined, release!: () => void, complete!: () => void, failed!: (cause: unknown) => void;
-    let fetched!: (value: any) => void, rejected!: (cause: unknown) => void, count = 0;
+    let fetched!: (value: any) => void, rejected!: (cause: unknown) => void, count = 0, deliveredCount = 0, networkBody: any, rendererDelivery: any;
     const gate = new Promise<void>(resolve => release = resolve), done = new Promise<void>((resolve, reject) => {complete = resolve; failed = reject;});
     const original = new Promise<any>((resolve, reject) => {fetched = resolve; rejected = reject;});
-    // These handlers only suppress unhandled-rejection noise during a failed
-    // test; every successful phase awaits and asserts all original promises.
     void done.catch(() => undefined); void original.catch(() => undefined);
     const started = page.waitForRequest(request => request.method() === 'GET' && matches(new URL(request.url())), {timeout: 10_000});
-    const delivered = page.waitForResponse(response => response.request() === heldRequest, {timeout: 10_000});
-    void started.catch(() => undefined); void delivered.catch(() => undefined);
-    const handler = async (route: Route) => {
+    const network = page.waitForResponse(response => response.request().method() === 'GET' && matches(new URL(response.url())), {timeout: 10_000});
+    void started.catch(() => undefined); void network.catch(() => undefined);
+    const binding = '__moduVisionOriginalLateResponse_' + dimension, key = binding + '_fixture';
+    await page.exposeBinding(binding, async ({page: owner}, payload) => {
       try {
-        expect(route.request().method()).toBe('GET'); expect(matches(new URL(route.request().url()))).toBe(true);
-        heldRequest = route.request(); expect(++count).toBe(1);
-        const upstream = await withinOriginalDeadline(heldRequest, () => route.fetch({
-          timeout: Math.max(1, storeReadTimes.get(heldRequest!)!.deadline - performance.now()), maxRedirects: 0}));
-        expect(upstream.status()).toBe(200);
-        const raw = await withinOriginalDeadline(heldRequest, () => upstream.body());
-        const body = JSON.parse(raw.toString('utf8')); expect(body).toEqual(apiBefore[historyRoute('segmentation', secondSet)]);
-        const file = path.join(w.logs, `late-labelset-${dimension}-actual-held-backend-body.json`); fs.writeFileSync(file, raw); e.addFile(file);
-        fetched({source, task: 'segmentation', labelset_id: secondSet, backend_status: 200,
-          raw_body_path: file, raw_body_sha256: sha(raw), full_body: body, response_body_substituted: false});
-        await withinOriginalDeadline(heldRequest, () => gate);
-        await withinOriginalDeadline(heldRequest, () => route.fulfill({response: upstream})); complete();
-      } catch (cause) {rejected(cause); failed(cause);}
-    };
-    await page.route(matches, handler);
+        expect(owner).toBe(page);
+        if (payload.phase === 'body') {
+          heldRequest = await started; expect(heldRequest.method()).toBe('GET'); expect(matches(new URL(heldRequest.url()))).toBe(true);
+          expect(++count).toBe(1); expect(payload.url).toBe(heldRequest.url()); expect(payload.status).toBe(200);
+          expect(payload.original_response_object).toBe(true); expect(payload.redirected).toBe(false);
+          const raw = Buffer.from(payload.bytes); networkBody = await withinOriginalDeadline(heldRequest, () => readHistory(network));
+          expect((await network).request()).toBe(heldRequest);
+          expect(raw).toEqual(fs.readFileSync(networkBody.raw_body_path)); expect(sha(raw)).toBe(networkBody.raw_body_sha256);
+          const body = JSON.parse(raw.toString('utf8')); expect(body).toEqual(apiBefore[historyRoute('segmentation', secondSet)]);
+          const file = path.join(w.logs, `late-labelset-${dimension}-actual-held-backend-body.json`); fs.writeFileSync(file, raw); e.addFile(file);
+          fetched({source, task: 'segmentation', labelset_id: secondSet, backend_status: 200,
+            raw_body_path: file, raw_body_sha256: sha(raw), full_body: body, response_body_substituted: false,
+            transport: 'original authenticated renderer fetch; original network response is complete before UI promise release'});
+          await withinOriginalDeadline(heldRequest, () => gate);
+        } else {
+          expect(payload.phase).toBe('delivery'); expect(heldRequest).toBeDefined(); expect(count).toBe(1); expect(++deliveredCount).toBe(1);
+          expect(payload.url).toBe(heldRequest!.url()); expect(payload.status).toBe(200);
+          expect(payload.same_original_response_object).toBe(true); expect(payload.original_body_unconsumed).toBe(true);
+          const timing = storeReadTimes.get(heldRequest!)!, released = performance.now();
+          expect(timing.finished).toBeDefined(); expect(timing.finished!).toBeLessThanOrEqual(released); expect(released).toBeLessThanOrEqual(timing.deadline);
+          rendererDelivery = {request_started_ms: timing.started, original_network_finished_ms: timing.finished,
+            renderer_promise_released_ms: released, absolute_deadline_ms: timing.deadline,
+            same_original_response_object: true, original_body_unconsumed: true,
+            original_HTTP_response_was_not_delayed_until_after_abandonment: true}; complete();
+        }
+      } catch (cause) {rejected(cause); failed(cause); throw cause;}
+    });
+    await page.evaluate(installOriginalRendererResponseHold, {origin, source, secondSet, binding, key});
+    const restore = async () => page.evaluate(key => {const target = window as any, state = target[key];
+      if (!state || window.fetch !== state.wrapper) throw Error('Original fetch fixture custody differs');
+      window.fetch = state.previous; delete target[key];}, key);
     const held: HeldRead = {started, original, release,
       finish: async () => {
-        const originalBody = await original; release(); const [browserBody] = await Promise.all([readHistory(delivered), done]);
-        expect(browserBody.raw_body_sha256).toBe(originalBody.raw_body_sha256); expect(browserBody.full_body).toEqual(originalBody.full_body);
-        expect(count).toBe(1); const proof = {dimension, original: originalBody, delivered: browserBody,
-          actual_backend_and_client_200: true, exact_original_response_bytes: true}; lateReads.push(proof);
-        await page.unroute(matches, handler); openHolds.delete(held); return proof;
+        const request = await started, originalBody = await withinOriginalDeadline(request, () => original);
+        release(); await withinOriginalDeadline(request, () => done);
+        expect(count).toBe(1); expect(deliveredCount).toBe(1);
+        expect(networkBody.raw_body_sha256).toBe(originalBody.raw_body_sha256); expect(networkBody.full_body).toEqual(originalBody.full_body);
+        const proof = {dimension, original: originalBody, original_network_response: networkBody, renderer_promise_delivery: rendererDelivery,
+          actual_backend_and_client_network_200: true, exact_original_response_bytes: true,
+          deferred_same_renderer_Response_not_deferred_HTTP_arrival: true}; lateReads.push(proof);
+        await restore(); openHolds.delete(held); return proof;
       },
-      cleanup: async () => {release(); try {await done;} finally {await page.unroute(matches, handler); openHolds.delete(held);}}
+      cleanup: async () => {release(); try {await withinOriginalDeadline(await started, () => done);} finally {await restore(); openHolds.delete(held);}}
     };
     openHolds.add(held); return held;
   };
   const beginOlder = async (dimension: string) => {
     const held = await holdOlderSet(dimension); await labelset.selectOption(secondSet);
     const request = await held.started; expect(new URL(request.url()).searchParams.get('labelset_id')).toBe(secondSet);
-    await held.original; await expect(labelset).toHaveValue(secondSet); await expect(selector).toHaveCount(0); await expect(identity).toHaveCount(0);
+    await withinOriginalDeadline(request, () => held.original); await expect(labelset).toHaveValue(secondSet); await expect(selector).toHaveCount(0); await expect(identity).toHaveCount(0);
     return held;
   };
   const noRecord = async () => {await expect(selector).toHaveCount(0); await expect(identity).toHaveCount(0); await expect(result).toHaveCount(0);
@@ -404,7 +461,7 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
     const returnRead = historyResponse('segmentation', secondSet); await mountEvaluation(); const reopenedSecond = await readHistory(returnRead);
     await expect(labelset).toHaveValue(secondSet); await assertRecord(other); expect(await preferences()).toEqual(cancelPreferences); await unchanged();
     controls.push({action: 'native-evaluation-late-labelset-selection', dimension: 'cancel', actual_stage_leave: 0, actual_stage_return: 3,
-      older: cancelledViewLate, fresh_return_current: reopenedSecond, panel_absent_when_old_response_completed: true,
+      older: cancelledViewLate, fresh_return_current: reopenedSecond, panel_absent_when_original_renderer_promise_released: true,
       exact_preferences_preserved: true, abandonment_only: true, explicit_confirm_or_request_job_cancel_claimed: false});
     await selectSet('default'); await choose(selected);
 
@@ -417,7 +474,7 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
     await assertRecord(alternate); expect(await preferences()).toEqual(reopenPreferences); await capture('actual-reload-keeps-newer-exact-record-after-late-200', identity); await unchanged();
     controls.push({action: 'native-evaluation-late-labelset-selection', dimension: 'reopen', older: reopenLate, actual_renderer_reload: true,
       actual_reload_current: actualReload, preserved_record: alternate.record, full_preference_bytes_preserved: true,
-      old_response_completed_before_reload: true, no_reload_aborted_response_claimed_as_200: true});
+      original_renderer_promise_released_before_reload: true, no_reload_aborted_response_claimed_as_200: true});
 
     const handoffHeld = await beginOlder('handoff'); await selectSet('default'); await selector.selectOption(selected.record.evaluation_id); await assertRecord(selected);
     const handoffPreferences = await preferences(); await stages.nth(0).click(); await expect(summary).toHaveCount(0);
@@ -440,7 +497,8 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
       after: Object.fromEntries(Object.entries(roots).map(([key, root]) => [key, tree(root)])), apiAfter, mutations, controls, lateReads, historyBodies}, null, 2)); e.addFile(afterFile);
     e.note('late_saved_labelset_lifecycle', {feature: 'F023', requirements: ['S4-13'], action: 'native-evaluation-late-labelset-selection',
       cells: controls, sourceElectron, baseline, apiAfter, actual_source_UI: true, all_api_mutations: mutations,
-      original_unchanged_actual_backend_response_holds: lateReads, complete_scoped_history_reads: historyBodies,
+      original_unchanged_actual_backend_response_holds: lateReads,
+      held_transport_is_original_renderer_Response_delivery_not_late_HTTP_arrival: true, complete_scoped_history_reads: historyBodies,
       completed_store_reads: completedStoreReads, verified_store_reads: verifiedStoreReads, failed_store_reads: failedStoreReads,
       final_pending_store_reads: pendingStoreReads.size, final_unverified_store_reads: unverifiedStoreReads.size,
       full_unfiltered_project_original_annotation_settings_input_trees_preserved: true,
