@@ -130,3 +130,64 @@ test('the real export panel sends the selected remote profile and reads back the
  assert.ok(nodes(tree).some(row=>[].concat(row.props?.children||[]).some(value=>typeof value==='string'&&value.includes('Executed GPU server · GPU 선택 2 · cuda:0'))));
  compute.isLoaded=false;tree=render();assert.equal(nodes(tree).find(row=>row.type==='button'&&row.props.children==='전체 플로우 내보내기').props.disabled,true);
 });
+
+// SOURCE-only real SavedPackagePicker / real useDeliveryScope scheduling controls.
+// External catalog/selection interfaces are inert; no DOM, HTTP, app or model.
+function pickerRestoreFixture(options={}){
+ const h=harness(),cleanups=[],react={...h.react,useEffect:(fn,deps)=>h.react.useEffect(()=>{const cleanup=fn();cleanups.push(cleanup);return cleanup;},deps)};
+ const state={project,projectDir:'/project'},compute={transportRevision:0};
+ const realScope=load('../runtime/useDeliveryScope.ts',{react,'../../stores/useProjectStore':{useProjectStore:fn=>fn(state)},'../../stores/useComputeStore':{useComputeStore:fn=>fn(compute)}});
+ const rows=options.rows??['A','B'].map(packageRow),calls=[],opened=[];
+ let selected=options.selected===undefined?'B':options.selected,value=options.value??'',handoff=options.handoff===undefined?{kind:'export',jobId:'B',taskKey:'export:local:B',selectionId:'first'}:options.handoff,reads=0;
+ const api={packages:()=>{reads++;return options.catalog?options.catalog(reads,{packages:rows,selected_package_id:selected}):Promise.resolve({packages:rows,selected_package_id:selected});},select:id=>{calls.push(id);if(options.select)return options.select(id);selected=id;return Promise.resolve(rows.find(row=>row.package_id===id));}};
+ const m=load('../runtime/SavedPackagePicker.tsx',{...h.mocks,react,'../../services/productDeliveryApi':{productDeliveryApi:api},'./useDeliveryScope':realScope,'../training/useTaskHandoff':{useTaskHandoff:()=>handoff}});
+ const render=()=>h.render(()=>m.SavedPackagePicker({value,disabled:options.disabled??false,onChange:next=>{opened.push(next);value=next;}}));
+ return{render,calls,opened,rows,state,compute,get selected(){return selected;},get value(){return value;},get reads(){return reads;},setHandoff:next=>handoff=next,unmount:()=>cleanups.splice(0).forEach(fn=>fn?.())};
+}
+const pickerAlerts=tree=>nodes(tree).filter(node=>node.props.role==='alert').map(node=>String(node.props.children));
+const pickerSelect=tree=>nodes(tree).find(node=>node.type==='select'&&node.props['aria-label']==='배포할 저장 패키지');
+
+test('fresh catalog already-selected export restores the exact path without automatic selection writes',async()=>{
+ const f=pickerRestoreFixture();f.render();await settle();let tree=f.render();
+ assert.deepEqual(f.calls,[]);assert.deepEqual(f.opened,[f.rows[1].package_path]);assert.equal(f.selected,'B');assert.equal(pickerSelect(tree).props.value,'B');assert.deepEqual(pickerAlerts(tree),[]);
+ f.setHandoff({kind:'export',jobId:'B',taskKey:'export:local:B',selectionId:'second'});f.render();await settle();tree=f.render();assert.equal(f.reads,2);assert.deepEqual(f.calls,[]);assert.deepEqual(f.opened,[f.rows[1].package_path,f.rows[1].package_path]);
+ f.unmount();const remounted=pickerRestoreFixture();remounted.render();await settle();remounted.render();assert.deepEqual(remounted.calls,[]);assert.deepEqual(remounted.opened,[remounted.rows[1].package_path]);
+});
+test('empty picker reads the current backend selection without rewriting it and preserves an explicit old path',async()=>{
+ const restored=pickerRestoreFixture({handoff:null});restored.render();await settle();restored.render();assert.deepEqual(restored.calls,[]);assert.deepEqual(restored.opened,[restored.rows[1].package_path]);
+ const retained=pickerRestoreFixture({handoff:null,value:'/project/exports/flows/A'});retained.render();await settle();retained.render();assert.deepEqual(retained.calls,[]);assert.deepEqual(retained.opened,[]);assert.equal(retained.value,'/project/exports/flows/A');
+});
+test('a genuinely different backend selection still sends exactly one requested export selection',async t=>{
+ for(const selected of ['A',null,''])await t.test(`previous selection ${String(selected)}`,async()=>{
+  const f=pickerRestoreFixture({selected});f.render();await settle();const tree=f.render();assert.deepEqual(f.calls,['B']);assert.deepEqual(f.opened,[f.rows[1].package_path]);assert.equal(f.selected,'B');assert.equal(pickerSelect(tree).props.value,'B');
+ });
+});
+test('same selected ID cannot bypass missing, damaged or foreign-source target refusal',async t=>{
+ const variants=[{name:'missing',rows:[packageRow('A')]},{name:'damaged',rows:[packageRow('A'),{...packageRow('B'),integrity:'failed'}]},{name:'foreign',rows:[packageRow('A'),{...packageRow('B'),scope_matches:false}]}];
+ for(const item of variants)await t.test(item.name,async()=>{
+  const f=pickerRestoreFixture({rows:item.rows});f.render();await settle();const tree=f.render();assert.deepEqual(f.calls,[]);assert.deepEqual(f.opened,[]);assert.equal(f.value,'');assert.equal(pickerAlerts(tree).length,1);assert.match(pickerAlerts(tree)[0],item.name==='missing'?/찾지 못/:/무결성·소스/);
+ });
+});
+test('catalog and genuine selection failures remain visible without publishing a path',async t=>{
+ for(const item of [{name:'catalog',options:{catalog:async()=>{throw new Error('catalog refused');}}},{name:'select',options:{selected:'A',select:async()=>{throw new Error('selection refused');}}}])await t.test(item.name,async()=>{
+  const f=pickerRestoreFixture(item.options);f.render();await settle();const tree=f.render();assert.deepEqual(f.calls,item.name==='catalog'?[]:['B']);assert.deepEqual(f.opened,[]);assert.match(pickerAlerts(tree)[0],/refused/);
+ });
+});
+test('late catalog completion cannot restore or select after unmount or a changed source/transport scope',async t=>{
+ for(const change of ['unmount','source','transport'])await t.test(change,async()=>{
+  let finish;const pending=new Promise(resolve=>finish=resolve);const f=pickerRestoreFixture({catalog:(count,row)=>count===1?pending:Promise.resolve({packages:[],selected_package_id:null})});f.render();
+  if(change==='unmount')f.unmount();else{if(change==='source')f.state.project={...project,source_dataset_dir:'/other'};else f.compute.transportRevision++;f.setHandoff(null);f.render();}
+  finish({packages:f.rows,selected_package_id:'B'});await settle();assert.deepEqual(f.calls,[]);assert.deepEqual(f.opened,[]);assert.equal(f.value,'');
+ });
+});
+test('late genuine selection response cannot publish after unmount or a changed source/transport scope',async t=>{
+ for(const change of ['unmount','source','transport'])await t.test(change,async()=>{
+  let finish;const pending=new Promise(resolve=>finish=resolve);const f=pickerRestoreFixture({selected:'A',select:()=>pending,catalog:(count,row)=>Promise.resolve(count===1?row:{packages:[],selected_package_id:null})});f.render();await settle();assert.deepEqual(f.calls,['B']);
+  if(change==='unmount')f.unmount();else{if(change==='source')f.state.project={...project,source_dataset_dir:'/other'};else f.compute.transportRevision++;f.setHandoff(null);f.render();}
+  finish(f.rows[1]);await settle();assert.deepEqual(f.calls,['B']);assert.deepEqual(f.opened,[]);assert.equal(f.value,'');
+ });
+});
+test('explicit manual same-package selection remains a single intentional POST and clearing remains read-only',async()=>{
+ const f=pickerRestoreFixture();f.render();await settle();let tree=f.render();assert.deepEqual(f.calls,[]);pickerSelect(tree).props.onChange({target:{value:'B'}});await settle();tree=f.render();assert.deepEqual(f.calls,['B']);assert.deepEqual(f.opened,[f.rows[1].package_path,f.rows[1].package_path]);assert.equal(pickerSelect(tree).props.disabled,false);
+ pickerSelect(tree).props.onChange({target:{value:''}});assert.deepEqual(f.calls,['B']);assert.equal(f.value,'');assert.equal(f.opened.at(-1),'');
+});
