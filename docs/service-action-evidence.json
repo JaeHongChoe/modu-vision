@@ -3193,7 +3193,53 @@
        ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "31a3d1f9d4c58a5c9c26aa3e5717707e3fc7504c",
+         "kind": "click",
+         "action": "모델별 저장 평가",
+         "expected": "A controlled saved-history GET503 clears stale selector, complete record identity and results, disables reevaluation and preserves exact saved preferences; explicit Refresh after removing the owned route restores the same original record and Lot view.",
+         "observed": "browser: matching history503 removed stale record controls; deliberate real Refresh200 restored the originally selected historical ID, full identity, result and Lot preference. Five full protected trees, raw APIs and source pixels remained equal. No renderer writes occurred after baseline; five original fixture setup writes were retained.",
+         "reviewer": "Codex root read the complete original two-case report, source/archive maps, raw APIs, preferences, source pixel formula, all protected trees and owned teardown; visually reviewed the original source Electron failure and recovered identity screenshots. This verifies one controlled UI condition only; model quality, installed release and parent acceptance remain pending.",
+         "test": "scripts/e2e/saved-evaluation-record-error.spec.ts::saved evaluation history failure clears stale record and explicit refresh recovers exact original identity result and preference",
+         "receipt": "2026-10-08-saved-record-error-31a3d1f-browser.json",
+         "receipt_sha256": "3c7f8dee45a2a685e4c8d107f975da154fbab1f59b5fd62ebe2de8b3ad0cd603",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1b5bbe421f7b1cfd0bb34250e433717f4def8ed0166e97967cd62d51dacb3dcc"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f36c48d9d2d5475c7b21ad439a18448ea8ee92af14cf378f86c1165238c6d80f"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "31a3d1f9d4c58a5c9c26aa3e5717707e3fc7504c",
+         "kind": "click",
+         "action": "모델별 저장 평가",
+         "expected": "A controlled saved-history GET503 clears stale selector, complete record identity and results, disables reevaluation and preserves exact saved preferences; explicit Refresh after removing the owned route restores the same original record and Lot view.",
+         "observed": "electron: matching history503 removed stale record controls; deliberate real Refresh200 restored the originally selected historical ID, full identity, result and Lot preference. Five full protected trees, raw APIs and source pixels remained equal. No renderer writes occurred after baseline; five original fixture setup writes were retained.",
+         "reviewer": "Codex root read the complete original two-case report, source/archive maps, raw APIs, preferences, source pixel formula, all protected trees and owned teardown; visually reviewed the original source Electron failure and recovered identity screenshots. This verifies one controlled UI condition only; model quality, installed release and parent acceptance remain pending.",
+         "test": "scripts/e2e/saved-evaluation-record-error.spec.ts::native saved evaluation history failure clears stale record and explicit refresh recovers exact original identity result and preference",
+         "receipt": "2026-10-08-saved-record-error-31a3d1f-electron.json",
+         "receipt_sha256": "9bc76ce98306555f36b15c4b55f3e2675e07d1c73dddce281341d828ee4c3967",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "12ba28d2d55a6fd4d92a176d7dd8238c4f78691fbc731753a31699914993bc61"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "81b30e3fa4091cdeb6bceca5ee09fa81d23d6083b347c63cce9cf9fe2a1f9ad7"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
        "state": "verified",

@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "31a3d1f9d4c58a5c9c26aa3e5717707e3fc7504c",
+  "source_dirty": false,
+  "test": "scripts/e2e/saved-evaluation-record-error.spec.ts::native saved evaluation history failure clears stale record and explicit refresh recovers exact original identity result and preference",
+  "test_source_sha256": "5e6a5dbc88a0963f564dfb43786f3d955967c3e2f16a7da81ff9d1e36e8614e0",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "c19b54d46c04aa7bb2878951f8511725d28aee504940193428dbe2a3e17669dc",
+  "harness_sha256": "5a8ea1b5c81b536b5ef4058309f3691d00f16931f2f207fa42f1e5b7f9342231",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "12ba28d2d55a6fd4d92a176d7dd8238c4f78691fbc731753a31699914993bc61"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "81b30e3fa4091cdeb6bceca5ee09fa81d23d6083b347c63cce9cf9fe2a1f9ad7"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}
