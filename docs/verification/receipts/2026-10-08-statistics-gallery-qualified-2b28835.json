@@ -1,0 +1,119 @@
+{
+  "schema": "modu-vision.statistics-gallery-qualified-controls/v1",
+  "source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+  "source_dirty": false,
+  "spec_sha256": "a01d460d685e14234ef8b7a36e19cda1232d8be6c3d413b5f700ec9d62fcd47b",
+  "source_count": 2248,
+  "source_archive_before_after_equal": true,
+  "combined_GUI_cases_passed_once": 4,
+  "F021_browser_and_source_Electron_cases": 2,
+  "exact_cells": [
+    "F021.class-statistic-gallery-filter.error",
+    "F021.class-statistic-gallery-filter.empty",
+    "F021.class-statistic-gallery-filter.reopen"
+  ],
+  "requirements": [
+    "S3-07"
+  ],
+  "private_independent_qualification_sha256": "d2c464370b4e8af7042e221c9bdc94f75d5ab119efdd553e121861ebb3f6484c",
+  "readonly_qualifier_script_sha256": "c8d4820a369d1e4adddd1ecf291c194596b33f447068a43bc9a77b867ddac928",
+  "frozen_source_review_sha256": "ef4a9da31f3f1bce269d5b2ae369d21990a3abfab3b94f66f01b565f45c28bcc",
+  "frozen_source_receipt_sha256": "d408a75a3a559731fecd3028534e37791c46c54cb97e36f0fe04e7e7c3775b8e",
+  "frozen_pins_rehashed": 24,
+  "all_retained_regular_artifact_pins": 542,
+  "exact_source_harness_links": 2,
+  "case_controls": [
+    {
+      "mode": "browser",
+      "full_unfiltered_tree_counts": {
+        "source": 2,
+        "project": 7,
+        "annotations": 1
+      },
+      "complete_actual_API_records_equal": 13,
+      "controls": [
+        {
+          "action": "F021.class-statistic-gallery-filter",
+          "dimension": "error",
+          "exact_GET_503_count": 1,
+          "stale_statistic_chip_absent": true,
+          "real_refresh_200": true,
+          "complete_actual_statistic_record_equal": true
+        },
+        {
+          "action": "F021.class-statistic-gallery-filter",
+          "dimension": "empty",
+          "real_backend_status": 200,
+          "real_total": 0,
+          "real_items": [],
+          "observed_class_count": 1,
+          "class_filter_retained": true,
+          "response_simulated_to_create_empty": false
+        },
+        {
+          "action": "F021.class-statistic-gallery-filter",
+          "dimension": "reopen",
+          "actual_reload": true,
+          "volatile_filter_reset_to_all": true,
+          "unfiltered_complete_original_items_equal": true,
+          "reopened_class_items_equal": true
+        }
+      ],
+      "independent_png_formula": [
+        "64x64 RGB x,y,80",
+        "64x64 RGB x,y,81"
+      ],
+      "UUID_hash_and_original_annotation_records_equal": true
+    },
+    {
+      "mode": "electron",
+      "full_unfiltered_tree_counts": {
+        "source": 2,
+        "project": 7,
+        "annotations": 1
+      },
+      "complete_actual_API_records_equal": 13,
+      "controls": [
+        {
+          "action": "F021.class-statistic-gallery-filter",
+          "dimension": "error",
+          "exact_GET_503_count": 1,
+          "stale_statistic_chip_absent": true,
+          "real_refresh_200": true,
+          "complete_actual_statistic_record_equal": true
+        },
+        {
+          "action": "F021.class-statistic-gallery-filter",
+          "dimension": "empty",
+          "real_backend_status": 200,
+          "real_total": 0,
+          "real_items": [],
+          "observed_class_count": 1,
+          "class_filter_retained": true,
+          "response_simulated_to_create_empty": false
+        },
+        {
+          "action": "F021.class-statistic-gallery-filter",
+          "dimension": "reopen",
+          "actual_reload": true,
+          "volatile_filter_reset_to_all": true,
+          "unfiltered_complete_original_items_equal": true,
+          "reopened_class_items_equal": true
+        }
+      ],
+      "independent_png_formula": [
+        "64x64 RGB x,y,80",
+        "64x64 RGB x,y,81"
+      ],
+      "UUID_hash_and_original_annotation_records_equal": true
+    }
+  ],
+  "claim_limits": {
+    "case_only": true,
+    "live_HTTP_requery": false,
+    "complete_actual_API_reread_enforced_by_exact_pinned_passed_GUI_source": true,
+    "queue_other_cells_quality_model_GPU_physical_Windows_release_parent_acceptance": false,
+    "product_docs_ledger_Git_runtime_process_mutations": false
+  },
+  "original_process_teardown": "All original case cleanup and combined teardown verified; no escaped or unowned references, leftover processes or scan errors."
+}

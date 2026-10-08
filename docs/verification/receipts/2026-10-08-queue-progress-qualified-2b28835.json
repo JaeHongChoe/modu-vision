@@ -1,0 +1,117 @@
+{
+  "schema": "modu-vision.queue-progress-qualified-controls/v1",
+  "source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+  "source_dirty": false,
+  "spec_sha256": "d2c7b39a7f578866deb7b302618f03d63e005398cbee023600805ae793e9df7e",
+  "source_count": 2248,
+  "all_source_maps_equal_git_archive": true,
+  "exact_cells": [
+    "U015.saved-queue-selected-reopen.error",
+    "U015.saved-queue-selected-reopen.empty",
+    "U015.saved-queue-review-next.error",
+    "U015.saved-queue-skip-next.error",
+    "U015.saved-queue-open.empty",
+    "U015.saved-queue-stale-origin.error"
+  ],
+  "requirements": [
+    "S3-09",
+    "S4-13"
+  ],
+  "private_independent_qualification_sha256": "4c6427651c07958f22777e0b8a5bf17f4570f39cd8bb2a0abfa0b72a74c4a6af",
+  "readonly_qualifier_script_sha256": "a9f02b5a351dc211a71c1717a63e4507b0914a879119112aacf825d7b77d365d",
+  "frozen_source_sha256": "153650ac18e7ba5755ffd50e2a0ff0af6a398df1935dce0935faf7780b6c9f4d",
+  "frozen_pins_verified": 792,
+  "retained_failures": [
+    {
+      "manifest_sha256": "16e1d5bd067676d40da36ce33d9adc55486d6d31b61d52e30362a0dde008dd9d",
+      "pins_rehashed": 621,
+      "missing_or_changed": 0
+    },
+    {
+      "manifest_sha256": "20dd57c31e11c3669f7537a786a8db03e78bfdfd17d7399626e40c04987d1f24",
+      "pins_rehashed": 369,
+      "missing_or_changed": 0
+    },
+    {
+      "manifest_sha256": "32a7d39721ddef256a99d49f56c71e966da28b6639f7c6f422c13846a2f8b06a",
+      "pins_rehashed": 359,
+      "missing_or_changed": 0
+    }
+  ],
+  "old03c_fulltree_failure_retained_sha256": "82b2be398f3ac1b3e0a4957b8a5d5eaba988c5ee966a1052b86e5bb75faf442d",
+  "full_retained_artifact_pins": 542,
+  "exact_harness_source_links": 2,
+  "case_controls": [
+    {
+      "mode": "electron",
+      "full_unfiltered_tree_counts": {
+        "source": 3,
+        "project": 20,
+        "annotations": 4
+      },
+      "complete_protected_API_records": 22,
+      "idle_default_API_records": 8,
+      "all_critical_original_GETs_verified": 122,
+      "warm_nine_full_bodies_and_timings_retained": true,
+      "final_nine_completion_enforced_by_exact_passed_spec": true,
+      "final_fleet_runtime_raw_timing_rows_retained": false,
+      "original_absolute_GET_completion_deadline_ms": 10000,
+      "accepted_advances": 3,
+      "postbaseline_API_attempts": 5,
+      "queue_states": [
+        "reviewed",
+        "skipped",
+        "reviewed"
+      ],
+      "only_permitted_file_changes": "Exact original queue three canonical advances and new empty lock; complete remaining source/project/annotation file bytes preserved after final full API checks and teardown.",
+      "independent_PNG_formula": [
+        "64x64 RGB x,y,130",
+        "64x64 RGB x,y,131",
+        "64x64 RGB x,y,132"
+      ],
+      "image_UUID_hash_revision_and_full_annotation_records_equal": true,
+      "exact_older_origin_ID_and_full_binding_record_hash_preserved": true
+    },
+    {
+      "mode": "browser",
+      "full_unfiltered_tree_counts": {
+        "source": 3,
+        "project": 20,
+        "annotations": 4
+      },
+      "complete_protected_API_records": 22,
+      "idle_default_API_records": 8,
+      "all_critical_original_GETs_verified": 32,
+      "warm_nine_full_bodies_and_timings_retained": true,
+      "final_nine_completion_enforced_by_exact_passed_spec": true,
+      "final_fleet_runtime_raw_timing_rows_retained": false,
+      "original_absolute_GET_completion_deadline_ms": 10000,
+      "accepted_advances": 3,
+      "postbaseline_API_attempts": 5,
+      "queue_states": [
+        "reviewed",
+        "skipped",
+        "reviewed"
+      ],
+      "only_permitted_file_changes": "Exact original queue three canonical advances and new empty lock; complete remaining source/project/annotation file bytes preserved after final full API checks and teardown.",
+      "independent_PNG_formula": [
+        "64x64 RGB x,y,130",
+        "64x64 RGB x,y,131",
+        "64x64 RGB x,y,132"
+      ],
+      "image_UUID_hash_revision_and_full_annotation_records_equal": true,
+      "exact_older_origin_ID_and_full_binding_record_hash_preserved": true
+    }
+  ],
+  "claim_limits": {
+    "case_evidence_only": true,
+    "model_inference_or_GPU": false,
+    "human_label_quality_approval": false,
+    "physical_device_Windows_frozen_package_release": false,
+    "whole_writer_tree_or_parent_acceptance": false,
+    "live_HTTP_requery_by_qualifier": false,
+    "complete_API_response_equality_enforced_by_pinned_passed_GUI_source": true,
+    "P_docs_ledger_Git_source_runtime_process_mutations": false
+  },
+  "original_process_teardown": "All original case cleanup and combined teardown verified; no leftover, escaped or unowned references or scan error."
+}

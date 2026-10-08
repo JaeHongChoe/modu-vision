@@ -37,3 +37,44 @@ and unassisted pilot stay separate. The frozen72-hour run continues on its own
 source and elapsed clock; this execution does not complete its duration gate.
 
 The clean6246c26 native remote-resume selection case passed using the actual previously received terminal epoch checkpoint. The saved state reports next_epoch5/global_step160; its verified receipt and original journal/checkpoint hashes were unchanged. Actual native connection probe reached ready and selecting the state enabled resume with architecture controls locked. No compute was submitted. Report SHA256:fe5ebeddb11da86234a396bfcded87be1c56e359bc4a544587970a307298a0a0. Its one receipt/one screenshot raises retained executions to176 with371 screenshot hashes; no extra action scenario is promoted solely from this retained case.
+
+## 2026-10-08 original readers, queue progress and class gallery continuation
+
+The read-only impact analysis connection leak is repaired at `70a2a77`.
+Six original-handle controls and 44 related API/store/legacy/approval controls
+passed with complete source maps unchanged. The WAL controls keep an original
+writer open and verify the newest committed WAL revision; they do not replace
+normal reads with immutable/nolock reads or discard SQLite sidecars.
+The retained red/helper/baseline failures and the in-memory ASGI scope correction
+remain explicit in `2026-10-08-original-sqlite-impact-reader-70a2a77.json`.
+
+Clean committed source `2b288354ac4e56e9e23c11801f707fab8a10838b` executed four
+browser/source Electron cases once, without retries, in 72.677 seconds. All
+2,248 Git archive source inputs matched before, after and the retained checkout.
+The independent read-only queue and statistics qualifiers both passed complete
+unfiltered protected-file comparisons, actual API equality assertions, exact
+original PNG pixel formulas, all 542 retained regular artifacts, the two exact
+source harness links, strict GUI collection and original process teardown.
+
+| Existing action scenarios newly verified | Count | Preserved boundary |
+| --- | ---: | --- |
+| Saved queue selected reload error/empty, review retry error, skip retry error, exhausted open empty, older origin return error | 6 | Three canonical advances, five POST attempts including two controlled503 failures, exact origin ID/hash and complete original labels; queue review is not human label approval |
+| Class statistic gallery empty, error recovery and reopen | 3 | Real empty class/split intersection, real statistics refresh, exact original UUID/hash and full API/file records; no model training or quality approval |
+
+The queue source waits for original already-started reads under each original
+10-second completion deadline. Warm nine full response bodies/timings and all
+critical SQLite/impact reader completions are retained. Final nine completion
+is enforced by the exact passed source; final fleet/runtime timing rows were
+not separately retained and are not claimed as measured records.
+All earlier queue failures, including the previous03c full-file qualification
+failure, are retained and rehashed. No file exclusions or re-baselining hide
+those failures.
+
+Curated accounting is now **701 verified / 748 pending / 0 not-required** across
+207 declared actions. This adds exactly nine existing scenario cells and no
+new scope waivers. Original parent accounting remains 69 implementation
+verified / 13 pending / 0 finally accepted; the two separately authorized
+Windows actual-use waivers leave 11 required pending parents. Saved-evaluation
+selection, derived-history continuation and original preflight writer relay
+remain in progress. These component checks do not complete installed native,
+whole-writer/tree, publisher, physical-target, human-quality or parent gates.

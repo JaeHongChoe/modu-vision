@@ -1,0 +1,51 @@
+{
+  "schema": "modu-vision.original-sqlite-impact-reader-lifetime/v1",
+  "committed_code_source_sha": "70a2a77e932cc56676f6d52e6bdce1d9c40b519c",
+  "tested_base_commit": "03c87de7b4efd20aa1897e0c3935f39606a1eca9",
+  "source_dirty_at_execution": true,
+  "full_tested_source_inputs": 2247,
+  "full_tested_source_before_equals_after": true,
+  "committed_owned_sources_match_tested_bytes": {
+    "backend/engine/workflow_impact.py": "f050b3a8aca1a43dfdffc8785f5cf5804b6b1a077929145ef4786a0dbe2bdc3d",
+    "backend/tests/test_workflow_impact_connection_lifetime.py": "00e0ade87293daeaa7fae56c34fafb5660f57728025b5aec1c37611f7fb1cfe3"
+  },
+  "verified_controls": {
+    "focused-wal-green-01": {
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "pytest_seconds": 4.751,
+      "run_record_sha256": "6c10571af9b2d22fe61e13fb887afcef12557a9f11ff6f543e0bd18bd672ca63",
+      "junit_sha256": "a58dae475cdcab17c7a1e0f906f672cb8c3c352e61b526878ec51cd6a6697af9"
+    },
+    "related-api-01": {
+      "tests": 44,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "pytest_seconds": 10.721,
+      "run_record_sha256": "30f21a2c2ef30a7a4eb55bce6ce27aafd9f96341cdcaace7e469f5dc9cbb18f1",
+      "junit_sha256": "7a28adc2821701953e3703dbbfd91778f09bb41915606ac499df1375a162852f"
+    }
+  },
+  "scope": "Both original read-only SQLite connections close once on success and failure while preserving original transaction behavior and complete file bytes. Two controls hold the original writer open and verify the newest committed revision from a nonempty WAL; no immutable/nolock, checkpoint, deletion or WAL exclusions. Strong retained original handles prove closure independently of garbage collection.",
+  "execution": "Isolated temporary databases and in-memory ASGI TestClient requests; no listening service, Electron, training, inference, new worker or GPU execution.",
+  "private_freeze_sha256": "50ddf406117eed23c44291bd0ce75e682bccc31203e74ca1729ebdf14412d4ae",
+  "private_evidence_pins_verified": 884,
+  "independent_review_sha256": "83e059eaab66765c284ff2afdf98d28e966121c39c8bc6158c8971ad59d6ce14",
+  "independent_source_blockers": 0,
+  "retained_failures": [
+    "red01 helper argument error retained as invalid regression red",
+    "green01 incorrect assumption about normal RO WAL/SHM materialization retained; full baseline corrected before final same-source controls",
+    "related-nochild01 includes one in-memory ASGI call, annotated explicitly without rewriting start"
+  ],
+  "claim_limits": {
+    "actual_GUI_queue_custody": false,
+    "curated_scenarios_promoted_by_component_test": 0,
+    "clean_installed_native": false,
+    "whole_writer_coverage": false,
+    "whole_parent_acceptance": false,
+    "human_quality_approval": false
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+  "source_dirty": false,
+  "test": "scripts/e2e/statistics-gallery-filter-lifecycle.spec.ts::source Electron class statistic gallery empty recovery and reopen preserve complete owned evidence",
+  "test_source_sha256": "a01d460d685e14234ef8b7a36e19cda1232d8be6c3d413b5f700ec9d62fcd47b",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "76aa51de3c223ae8fec3708490247dea10c7caa7ac26d7aecfcd4a33fb1ee357",
+  "harness_sha256": "a2cb32b35a2b66f378f128ead8f32ca37c52c9aaa7dd1302e63909cdd512cbc5",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "1ad37c8af22ad69e0aa1e94d606a8c62cd3f577b64eec71989723ad5e36dd700"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "64cf92b52371ec0f88ab8b86bdd12b28beee6e03cdbee1e634b3d865c4600889"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "052570ba997fc9bc600946e63018614e6ee2ed0f43a6481f90255c153fb0fc6a"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "e45692e913a4f559b9b5d839a8cbb506326426a5025728164d322abee01da690"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

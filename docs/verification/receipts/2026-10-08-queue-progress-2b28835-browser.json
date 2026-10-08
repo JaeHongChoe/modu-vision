@@ -1,0 +1,60 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+  "source_dirty": false,
+  "test": "scripts/e2e/review-queue-progress-lifecycle.spec.ts::saved queue progress retries preserve labels and empty selection and origin failures retain exact saved records",
+  "test_source_sha256": "d2c7b39a7f578866deb7b302618f03d63e005398cbee023600805ae793e9df7e",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "76aa51de3c223ae8fec3708490247dea10c7caa7ac26d7aecfcd4a33fb1ee357",
+  "harness_sha256": "32997e9c4bb53358f5dd038137c3c019abe9d8b284b5c45295363b8d451e2b31",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "2893665430ede202f1233988a6c0944c512650fa5acc5cd176fbf29995291d33"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "3e0acf4db51efd20ee107cb6683c06e0140f9a75e30272ea850a6245982d0c1f"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "d97bf0f65d59d42bdd4e4159bf8d3333655d6bcfcd5f2a68ec991d5db06ec3a1"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "51f48f170824411968d9caffe0871eafac51b9af386b8e6108a9d6ec20a2c67d"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "18e3c0b3f20c8246753388471f75eb03ee4130d1bd0009f924d727be40e270fb"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "43870c54e724429885700b0f5f5b582fd7367359342ae78ab66526d3a0ebc8cd"
+    },
+    {
+      "id": "screenshot-6",
+      "sha256": "940bb63a3967094874e1500c656401528b653b5939cf9a7092e4c8005cb4c0a4"
+    },
+    {
+      "id": "screenshot-7",
+      "sha256": "4a4b5071176aa107972ae383eeffcef7d1a3d36672418673549380ed5bf1b889"
+    },
+    {
+      "id": "screenshot-8",
+      "sha256": "293a289ca0c86f755d0f78287efe63634d46f9e1a61573800aefa40c550ca8cd"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

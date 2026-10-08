@@ -2593,19 +2593,205 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-07",
+         "source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+         "kind": "click",
+         "action": "클래스별 이미지 ng",
+         "expected": "Exercise the exact existing empty state with complete source, saved records and annotations preserved.",
+         "observed": "browser: Actual statistics GET503 removed stale class chips and real refresh recovered complete counts. TrainOnly plus test yielded real GET200 total0. Reload reset the volatile filter, then explicit class selection reopened the same original item; full files, API records, UUIDs and annotation metadata retained. This reference qualifies only F021.class-statistic-gallery-filter.empty; controlled saved reports and PNG fixtures do not approve model quality.",
+         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending.",
+         "test": "scripts/e2e/statistics-gallery-filter-lifecycle.spec.ts::class statistic gallery empty recovery and reopen preserve complete owned evidence",
+         "receipt": "2026-10-08-statistics-gallery-2b28835-browser.json",
+         "receipt_sha256": "9c77bd39fd91c0cff2e6acaa196b0e32749ed5a3ce85fd2d00ff9f67aa82be98",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "e4cf9474027085e63bd9778d01e07546f52df6bafd0ddc3f2f22dac2359881d2"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "123cd244c3b963df89304664b2028235161e441896538706a34616013e9649a8"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "b91bc5ae595a925750306922c5d94f7311a48a8d3458e0998c54253387b4b905"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "58e8663abfdbedd58ad31013005e0205cf8cb721a69833bc4c19ab4a145dc89d"
+          }
+         ]
+        },
+        {
+         "task": "S3-07",
+         "source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+         "kind": "click",
+         "action": "클래스별 이미지 ng",
+         "expected": "Exercise the exact existing empty state with complete source, saved records and annotations preserved.",
+         "observed": "electron: Actual statistics GET503 removed stale class chips and real refresh recovered complete counts. TrainOnly plus test yielded real GET200 total0. Reload reset the volatile filter, then explicit class selection reopened the same original item; full files, API records, UUIDs and annotation metadata retained. This reference qualifies only F021.class-statistic-gallery-filter.empty; controlled saved reports and PNG fixtures do not approve model quality.",
+         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending.",
+         "test": "scripts/e2e/statistics-gallery-filter-lifecycle.spec.ts::source Electron class statistic gallery empty recovery and reopen preserve complete owned evidence",
+         "receipt": "2026-10-08-statistics-gallery-2b28835-electron.json",
+         "receipt_sha256": "4a15534ad6caedcacbbded5f71010024beb9540ab6c7e38b982eddcce75e28df",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1ad37c8af22ad69e0aa1e94d606a8c62cd3f577b64eec71989723ad5e36dd700"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "64cf92b52371ec0f88ab8b86bdd12b28beee6e03cdbee1e634b3d865c4600889"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "052570ba997fc9bc600946e63018614e6ee2ed0f43a6481f90255c153fb0fc6a"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "e45692e913a4f559b9b5d839a8cbb506326426a5025728164d322abee01da690"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
        "state": "pending"
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-07",
+         "source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+         "kind": "click",
+         "action": "클래스별 이미지 ng",
+         "expected": "Exercise the exact existing error state with complete source, saved records and annotations preserved.",
+         "observed": "browser: Actual statistics GET503 removed stale class chips and real refresh recovered complete counts. TrainOnly plus test yielded real GET200 total0. Reload reset the volatile filter, then explicit class selection reopened the same original item; full files, API records, UUIDs and annotation metadata retained. This reference qualifies only F021.class-statistic-gallery-filter.error; controlled saved reports and PNG fixtures do not approve model quality.",
+         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending.",
+         "test": "scripts/e2e/statistics-gallery-filter-lifecycle.spec.ts::class statistic gallery empty recovery and reopen preserve complete owned evidence",
+         "receipt": "2026-10-08-statistics-gallery-2b28835-browser.json",
+         "receipt_sha256": "9c77bd39fd91c0cff2e6acaa196b0e32749ed5a3ce85fd2d00ff9f67aa82be98",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "e4cf9474027085e63bd9778d01e07546f52df6bafd0ddc3f2f22dac2359881d2"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "123cd244c3b963df89304664b2028235161e441896538706a34616013e9649a8"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "b91bc5ae595a925750306922c5d94f7311a48a8d3458e0998c54253387b4b905"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "58e8663abfdbedd58ad31013005e0205cf8cb721a69833bc4c19ab4a145dc89d"
+          }
+         ]
+        },
+        {
+         "task": "S3-07",
+         "source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+         "kind": "click",
+         "action": "클래스별 이미지 ng",
+         "expected": "Exercise the exact existing error state with complete source, saved records and annotations preserved.",
+         "observed": "electron: Actual statistics GET503 removed stale class chips and real refresh recovered complete counts. TrainOnly plus test yielded real GET200 total0. Reload reset the volatile filter, then explicit class selection reopened the same original item; full files, API records, UUIDs and annotation metadata retained. This reference qualifies only F021.class-statistic-gallery-filter.error; controlled saved reports and PNG fixtures do not approve model quality.",
+         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending.",
+         "test": "scripts/e2e/statistics-gallery-filter-lifecycle.spec.ts::source Electron class statistic gallery empty recovery and reopen preserve complete owned evidence",
+         "receipt": "2026-10-08-statistics-gallery-2b28835-electron.json",
+         "receipt_sha256": "4a15534ad6caedcacbbded5f71010024beb9540ab6c7e38b982eddcce75e28df",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1ad37c8af22ad69e0aa1e94d606a8c62cd3f577b64eec71989723ad5e36dd700"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "64cf92b52371ec0f88ab8b86bdd12b28beee6e03cdbee1e634b3d865c4600889"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "052570ba997fc9bc600946e63018614e6ee2ed0f43a6481f90255c153fb0fc6a"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "e45692e913a4f559b9b5d839a8cbb506326426a5025728164d322abee01da690"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
        "state": "pending"
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-07",
+         "source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+         "kind": "click",
+         "action": "클래스별 이미지 ng",
+         "expected": "Exercise the exact existing reopen state with complete source, saved records and annotations preserved.",
+         "observed": "browser: Actual statistics GET503 removed stale class chips and real refresh recovered complete counts. TrainOnly plus test yielded real GET200 total0. Reload reset the volatile filter, then explicit class selection reopened the same original item; full files, API records, UUIDs and annotation metadata retained. This reference qualifies only F021.class-statistic-gallery-filter.reopen; controlled saved reports and PNG fixtures do not approve model quality.",
+         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending.",
+         "test": "scripts/e2e/statistics-gallery-filter-lifecycle.spec.ts::class statistic gallery empty recovery and reopen preserve complete owned evidence",
+         "receipt": "2026-10-08-statistics-gallery-2b28835-browser.json",
+         "receipt_sha256": "9c77bd39fd91c0cff2e6acaa196b0e32749ed5a3ce85fd2d00ff9f67aa82be98",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "e4cf9474027085e63bd9778d01e07546f52df6bafd0ddc3f2f22dac2359881d2"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "123cd244c3b963df89304664b2028235161e441896538706a34616013e9649a8"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "b91bc5ae595a925750306922c5d94f7311a48a8d3458e0998c54253387b4b905"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "58e8663abfdbedd58ad31013005e0205cf8cb721a69833bc4c19ab4a145dc89d"
+          }
+         ]
+        },
+        {
+         "task": "S3-07",
+         "source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+         "kind": "click",
+         "action": "클래스별 이미지 ng",
+         "expected": "Exercise the exact existing reopen state with complete source, saved records and annotations preserved.",
+         "observed": "electron: Actual statistics GET503 removed stale class chips and real refresh recovered complete counts. TrainOnly plus test yielded real GET200 total0. Reload reset the volatile filter, then explicit class selection reopened the same original item; full files, API records, UUIDs and annotation metadata retained. This reference qualifies only F021.class-statistic-gallery-filter.reopen; controlled saved reports and PNG fixtures do not approve model quality.",
+         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending.",
+         "test": "scripts/e2e/statistics-gallery-filter-lifecycle.spec.ts::source Electron class statistic gallery empty recovery and reopen preserve complete owned evidence",
+         "receipt": "2026-10-08-statistics-gallery-2b28835-electron.json",
+         "receipt_sha256": "4a15534ad6caedcacbbded5f71010024beb9540ab6c7e38b982eddcce75e28df",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1ad37c8af22ad69e0aa1e94d606a8c62cd3f577b64eec71989723ad5e36dd700"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "64cf92b52371ec0f88ab8b86bdd12b28beee6e03cdbee1e634b3d865c4600889"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "052570ba997fc9bc600946e63018614e6ee2ed0f43a6481f90255c153fb0fc6a"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "e45692e913a4f559b9b5d839a8cbb506326426a5025728164d322abee01da690"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
        "state": "verified",
@@ -24854,7 +25040,109 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+         "kind": "click",
+         "action": "현재 항목 열기",
+         "expected": "Exercise the exact existing empty state with complete source, saved records and annotations preserved.",
+         "observed": "electron: Actual list GET503 recovered, a real blank selection exposed no action, exact review/skip POST503 retries advanced only once, the exhausted queue disabled open, and saved origin retry retained the older exact evaluation ID and hash. Only three canonical queue advances and its empty lock changed; all originals and full labels retained. This reference qualifies only U015.saved-queue-open.empty; controlled saved reports and PNG fixtures do not approve model quality.",
+         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending.",
+         "test": "scripts/e2e/review-queue-progress-lifecycle.spec.ts::native saved queue progress retries and real empty states preserve complete originals labels and older origin",
+         "receipt": "2026-10-08-queue-progress-2b28835-electron.json",
+         "receipt_sha256": "04877e60a4bf47cec1679e9e8ee8f82980b3d55043874b2b92d81240bb7c498d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c65e6919acf4123e1fd567dfa6b8560a3cbfd023d0b470a5e1547f9f44ad64d4"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "40cc8d3869751e6e3c7f6b1c7d6d7f73d881878b58cd564cccdd212f7f47208b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "b07264f28ab968aedb4cffc11e12e82cc8572082c409fff545801a9cf256ddb7"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "73d7a5a5b7c21a51e2080dcaea16ae23b34f6b72c98fd34646f53aeaad7b17df"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "506d37a7746ee0c4f908c7eec3ca003a0373025810904f4ab850091f85b6fb85"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "b4a5939b7821688937901f1ab46384fdb1d61c5a21ff6b5704c0b2cd5573ff28"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "31218ba68197556310b0f4923d0de6349ab4f63d9523371d212628c8ac450fc6"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "bb903b56cc74251d26d8b2dd3cafadeee76f3b73f61d1af37832a337d626b58a"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "36879abcc445cf152b04c2d430e1fd6a328a942ee643b0a1a12dc46ce2f6c7e5"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+         "kind": "click",
+         "action": "현재 항목 열기",
+         "expected": "Exercise the exact existing empty state with complete source, saved records and annotations preserved.",
+         "observed": "browser: Actual list GET503 recovered, a real blank selection exposed no action, exact review/skip POST503 retries advanced only once, the exhausted queue disabled open, and saved origin retry retained the older exact evaluation ID and hash. Only three canonical queue advances and its empty lock changed; all originals and full labels retained. This reference qualifies only U015.saved-queue-open.empty; controlled saved reports and PNG fixtures do not approve model quality.",
+         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending.",
+         "test": "scripts/e2e/review-queue-progress-lifecycle.spec.ts::saved queue progress retries preserve labels and empty selection and origin failures retain exact saved records",
+         "receipt": "2026-10-08-queue-progress-2b28835-browser.json",
+         "receipt_sha256": "20f101ccb49bbb64154f007396c2a406aeeee89d1a0808376e3154e3fe4ad357",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2893665430ede202f1233988a6c0944c512650fa5acc5cd176fbf29995291d33"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3e0acf4db51efd20ee107cb6683c06e0140f9a75e30272ea850a6245982d0c1f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "d97bf0f65d59d42bdd4e4159bf8d3333655d6bcfcd5f2a68ec991d5db06ec3a1"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "51f48f170824411968d9caffe0871eafac51b9af386b8e6108a9d6ec20a2c67d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "18e3c0b3f20c8246753388471f75eb03ee4130d1bd0009f924d727be40e270fb"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "43870c54e724429885700b0f5f5b582fd7367359342ae78ab66526d3a0ebc8cd"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "940bb63a3967094874e1500c656401528b653b5939cf9a7092e4c8005cb4c0a4"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "4a4b5071176aa107972ae383eeffcef7d1a3d36672418673549380ed5bf1b889"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "293a289ca0c86f755d0f78287efe63634d46f9e1a61573800aefa40c550ca8cd"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
        "state": "pending"
@@ -25142,7 +25430,109 @@
        ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+         "kind": "click",
+         "action": "검토 완료 · 다음",
+         "expected": "Exercise the exact existing error state with complete source, saved records and annotations preserved.",
+         "observed": "electron: Actual list GET503 recovered, a real blank selection exposed no action, exact review/skip POST503 retries advanced only once, the exhausted queue disabled open, and saved origin retry retained the older exact evaluation ID and hash. Only three canonical queue advances and its empty lock changed; all originals and full labels retained. This reference qualifies only U015.saved-queue-review-next.error; controlled saved reports and PNG fixtures do not approve model quality.",
+         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending.",
+         "test": "scripts/e2e/review-queue-progress-lifecycle.spec.ts::native saved queue progress retries and real empty states preserve complete originals labels and older origin",
+         "receipt": "2026-10-08-queue-progress-2b28835-electron.json",
+         "receipt_sha256": "04877e60a4bf47cec1679e9e8ee8f82980b3d55043874b2b92d81240bb7c498d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c65e6919acf4123e1fd567dfa6b8560a3cbfd023d0b470a5e1547f9f44ad64d4"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "40cc8d3869751e6e3c7f6b1c7d6d7f73d881878b58cd564cccdd212f7f47208b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "b07264f28ab968aedb4cffc11e12e82cc8572082c409fff545801a9cf256ddb7"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "73d7a5a5b7c21a51e2080dcaea16ae23b34f6b72c98fd34646f53aeaad7b17df"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "506d37a7746ee0c4f908c7eec3ca003a0373025810904f4ab850091f85b6fb85"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "b4a5939b7821688937901f1ab46384fdb1d61c5a21ff6b5704c0b2cd5573ff28"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "31218ba68197556310b0f4923d0de6349ab4f63d9523371d212628c8ac450fc6"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "bb903b56cc74251d26d8b2dd3cafadeee76f3b73f61d1af37832a337d626b58a"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "36879abcc445cf152b04c2d430e1fd6a328a942ee643b0a1a12dc46ce2f6c7e5"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+         "kind": "click",
+         "action": "검토 완료 · 다음",
+         "expected": "Exercise the exact existing error state with complete source, saved records and annotations preserved.",
+         "observed": "browser: Actual list GET503 recovered, a real blank selection exposed no action, exact review/skip POST503 retries advanced only once, the exhausted queue disabled open, and saved origin retry retained the older exact evaluation ID and hash. Only three canonical queue advances and its empty lock changed; all originals and full labels retained. This reference qualifies only U015.saved-queue-review-next.error; controlled saved reports and PNG fixtures do not approve model quality.",
+         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending.",
+         "test": "scripts/e2e/review-queue-progress-lifecycle.spec.ts::saved queue progress retries preserve labels and empty selection and origin failures retain exact saved records",
+         "receipt": "2026-10-08-queue-progress-2b28835-browser.json",
+         "receipt_sha256": "20f101ccb49bbb64154f007396c2a406aeeee89d1a0808376e3154e3fe4ad357",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2893665430ede202f1233988a6c0944c512650fa5acc5cd176fbf29995291d33"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3e0acf4db51efd20ee107cb6683c06e0140f9a75e30272ea850a6245982d0c1f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "d97bf0f65d59d42bdd4e4159bf8d3333655d6bcfcd5f2a68ec991d5db06ec3a1"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "51f48f170824411968d9caffe0871eafac51b9af386b8e6108a9d6ec20a2c67d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "18e3c0b3f20c8246753388471f75eb03ee4130d1bd0009f924d727be40e270fb"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "43870c54e724429885700b0f5f5b582fd7367359342ae78ab66526d3a0ebc8cd"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "940bb63a3967094874e1500c656401528b653b5939cf9a7092e4c8005cb4c0a4"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "4a4b5071176aa107972ae383eeffcef7d1a3d36672418673549380ed5bf1b889"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "293a289ca0c86f755d0f78287efe63634d46f9e1a61573800aefa40c550ca8cd"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
        "state": "pending"
@@ -25338,7 +25728,109 @@
        ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+         "kind": "click",
+         "action": "보류 · 다음",
+         "expected": "Exercise the exact existing error state with complete source, saved records and annotations preserved.",
+         "observed": "electron: Actual list GET503 recovered, a real blank selection exposed no action, exact review/skip POST503 retries advanced only once, the exhausted queue disabled open, and saved origin retry retained the older exact evaluation ID and hash. Only three canonical queue advances and its empty lock changed; all originals and full labels retained. This reference qualifies only U015.saved-queue-skip-next.error; controlled saved reports and PNG fixtures do not approve model quality.",
+         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending.",
+         "test": "scripts/e2e/review-queue-progress-lifecycle.spec.ts::native saved queue progress retries and real empty states preserve complete originals labels and older origin",
+         "receipt": "2026-10-08-queue-progress-2b28835-electron.json",
+         "receipt_sha256": "04877e60a4bf47cec1679e9e8ee8f82980b3d55043874b2b92d81240bb7c498d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c65e6919acf4123e1fd567dfa6b8560a3cbfd023d0b470a5e1547f9f44ad64d4"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "40cc8d3869751e6e3c7f6b1c7d6d7f73d881878b58cd564cccdd212f7f47208b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "b07264f28ab968aedb4cffc11e12e82cc8572082c409fff545801a9cf256ddb7"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "73d7a5a5b7c21a51e2080dcaea16ae23b34f6b72c98fd34646f53aeaad7b17df"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "506d37a7746ee0c4f908c7eec3ca003a0373025810904f4ab850091f85b6fb85"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "b4a5939b7821688937901f1ab46384fdb1d61c5a21ff6b5704c0b2cd5573ff28"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "31218ba68197556310b0f4923d0de6349ab4f63d9523371d212628c8ac450fc6"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "bb903b56cc74251d26d8b2dd3cafadeee76f3b73f61d1af37832a337d626b58a"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "36879abcc445cf152b04c2d430e1fd6a328a942ee643b0a1a12dc46ce2f6c7e5"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+         "kind": "click",
+         "action": "보류 · 다음",
+         "expected": "Exercise the exact existing error state with complete source, saved records and annotations preserved.",
+         "observed": "browser: Actual list GET503 recovered, a real blank selection exposed no action, exact review/skip POST503 retries advanced only once, the exhausted queue disabled open, and saved origin retry retained the older exact evaluation ID and hash. Only three canonical queue advances and its empty lock changed; all originals and full labels retained. This reference qualifies only U015.saved-queue-skip-next.error; controlled saved reports and PNG fixtures do not approve model quality.",
+         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending.",
+         "test": "scripts/e2e/review-queue-progress-lifecycle.spec.ts::saved queue progress retries preserve labels and empty selection and origin failures retain exact saved records",
+         "receipt": "2026-10-08-queue-progress-2b28835-browser.json",
+         "receipt_sha256": "20f101ccb49bbb64154f007396c2a406aeeee89d1a0808376e3154e3fe4ad357",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2893665430ede202f1233988a6c0944c512650fa5acc5cd176fbf29995291d33"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3e0acf4db51efd20ee107cb6683c06e0140f9a75e30272ea850a6245982d0c1f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "d97bf0f65d59d42bdd4e4159bf8d3333655d6bcfcd5f2a68ec991d5db06ec3a1"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "51f48f170824411968d9caffe0871eafac51b9af386b8e6108a9d6ec20a2c67d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "18e3c0b3f20c8246753388471f75eb03ee4130d1bd0009f924d727be40e270fb"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "43870c54e724429885700b0f5f5b582fd7367359342ae78ab66526d3a0ebc8cd"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "940bb63a3967094874e1500c656401528b653b5939cf9a7092e4c8005cb4c0a4"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "4a4b5071176aa107972ae383eeffcef7d1a3d36672418673549380ed5bf1b889"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "293a289ca0c86f755d0f78287efe63634d46f9e1a61573800aefa40c550ca8cd"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
        "state": "pending"
@@ -25452,13 +25944,217 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+         "kind": "click",
+         "action": "저장 검토 큐 선택",
+         "expected": "Exercise the exact existing empty state with complete source, saved records and annotations preserved.",
+         "observed": "electron: Actual list GET503 recovered, a real blank selection exposed no action, exact review/skip POST503 retries advanced only once, the exhausted queue disabled open, and saved origin retry retained the older exact evaluation ID and hash. Only three canonical queue advances and its empty lock changed; all originals and full labels retained. This reference qualifies only U015.saved-queue-selected-reopen.empty; controlled saved reports and PNG fixtures do not approve model quality.",
+         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending.",
+         "test": "scripts/e2e/review-queue-progress-lifecycle.spec.ts::native saved queue progress retries and real empty states preserve complete originals labels and older origin",
+         "receipt": "2026-10-08-queue-progress-2b28835-electron.json",
+         "receipt_sha256": "04877e60a4bf47cec1679e9e8ee8f82980b3d55043874b2b92d81240bb7c498d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c65e6919acf4123e1fd567dfa6b8560a3cbfd023d0b470a5e1547f9f44ad64d4"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "40cc8d3869751e6e3c7f6b1c7d6d7f73d881878b58cd564cccdd212f7f47208b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "b07264f28ab968aedb4cffc11e12e82cc8572082c409fff545801a9cf256ddb7"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "73d7a5a5b7c21a51e2080dcaea16ae23b34f6b72c98fd34646f53aeaad7b17df"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "506d37a7746ee0c4f908c7eec3ca003a0373025810904f4ab850091f85b6fb85"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "b4a5939b7821688937901f1ab46384fdb1d61c5a21ff6b5704c0b2cd5573ff28"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "31218ba68197556310b0f4923d0de6349ab4f63d9523371d212628c8ac450fc6"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "bb903b56cc74251d26d8b2dd3cafadeee76f3b73f61d1af37832a337d626b58a"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "36879abcc445cf152b04c2d430e1fd6a328a942ee643b0a1a12dc46ce2f6c7e5"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+         "kind": "click",
+         "action": "저장 검토 큐 선택",
+         "expected": "Exercise the exact existing empty state with complete source, saved records and annotations preserved.",
+         "observed": "browser: Actual list GET503 recovered, a real blank selection exposed no action, exact review/skip POST503 retries advanced only once, the exhausted queue disabled open, and saved origin retry retained the older exact evaluation ID and hash. Only three canonical queue advances and its empty lock changed; all originals and full labels retained. This reference qualifies only U015.saved-queue-selected-reopen.empty; controlled saved reports and PNG fixtures do not approve model quality.",
+         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending.",
+         "test": "scripts/e2e/review-queue-progress-lifecycle.spec.ts::saved queue progress retries preserve labels and empty selection and origin failures retain exact saved records",
+         "receipt": "2026-10-08-queue-progress-2b28835-browser.json",
+         "receipt_sha256": "20f101ccb49bbb64154f007396c2a406aeeee89d1a0808376e3154e3fe4ad357",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2893665430ede202f1233988a6c0944c512650fa5acc5cd176fbf29995291d33"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3e0acf4db51efd20ee107cb6683c06e0140f9a75e30272ea850a6245982d0c1f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "d97bf0f65d59d42bdd4e4159bf8d3333655d6bcfcd5f2a68ec991d5db06ec3a1"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "51f48f170824411968d9caffe0871eafac51b9af386b8e6108a9d6ec20a2c67d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "18e3c0b3f20c8246753388471f75eb03ee4130d1bd0009f924d727be40e270fb"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "43870c54e724429885700b0f5f5b582fd7367359342ae78ab66526d3a0ebc8cd"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "940bb63a3967094874e1500c656401528b653b5939cf9a7092e4c8005cb4c0a4"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "4a4b5071176aa107972ae383eeffcef7d1a3d36672418673549380ed5bf1b889"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "293a289ca0c86f755d0f78287efe63634d46f9e1a61573800aefa40c550ca8cd"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
        "state": "pending"
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+         "kind": "click",
+         "action": "저장 검토 큐 선택",
+         "expected": "Exercise the exact existing error state with complete source, saved records and annotations preserved.",
+         "observed": "electron: Actual list GET503 recovered, a real blank selection exposed no action, exact review/skip POST503 retries advanced only once, the exhausted queue disabled open, and saved origin retry retained the older exact evaluation ID and hash. Only three canonical queue advances and its empty lock changed; all originals and full labels retained. This reference qualifies only U015.saved-queue-selected-reopen.error; controlled saved reports and PNG fixtures do not approve model quality.",
+         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending.",
+         "test": "scripts/e2e/review-queue-progress-lifecycle.spec.ts::native saved queue progress retries and real empty states preserve complete originals labels and older origin",
+         "receipt": "2026-10-08-queue-progress-2b28835-electron.json",
+         "receipt_sha256": "04877e60a4bf47cec1679e9e8ee8f82980b3d55043874b2b92d81240bb7c498d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c65e6919acf4123e1fd567dfa6b8560a3cbfd023d0b470a5e1547f9f44ad64d4"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "40cc8d3869751e6e3c7f6b1c7d6d7f73d881878b58cd564cccdd212f7f47208b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "b07264f28ab968aedb4cffc11e12e82cc8572082c409fff545801a9cf256ddb7"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "73d7a5a5b7c21a51e2080dcaea16ae23b34f6b72c98fd34646f53aeaad7b17df"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "506d37a7746ee0c4f908c7eec3ca003a0373025810904f4ab850091f85b6fb85"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "b4a5939b7821688937901f1ab46384fdb1d61c5a21ff6b5704c0b2cd5573ff28"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "31218ba68197556310b0f4923d0de6349ab4f63d9523371d212628c8ac450fc6"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "bb903b56cc74251d26d8b2dd3cafadeee76f3b73f61d1af37832a337d626b58a"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "36879abcc445cf152b04c2d430e1fd6a328a942ee643b0a1a12dc46ce2f6c7e5"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+         "kind": "click",
+         "action": "저장 검토 큐 선택",
+         "expected": "Exercise the exact existing error state with complete source, saved records and annotations preserved.",
+         "observed": "browser: Actual list GET503 recovered, a real blank selection exposed no action, exact review/skip POST503 retries advanced only once, the exhausted queue disabled open, and saved origin retry retained the older exact evaluation ID and hash. Only three canonical queue advances and its empty lock changed; all originals and full labels retained. This reference qualifies only U015.saved-queue-selected-reopen.error; controlled saved reports and PNG fixtures do not approve model quality.",
+         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending.",
+         "test": "scripts/e2e/review-queue-progress-lifecycle.spec.ts::saved queue progress retries preserve labels and empty selection and origin failures retain exact saved records",
+         "receipt": "2026-10-08-queue-progress-2b28835-browser.json",
+         "receipt_sha256": "20f101ccb49bbb64154f007396c2a406aeeee89d1a0808376e3154e3fe4ad357",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2893665430ede202f1233988a6c0944c512650fa5acc5cd176fbf29995291d33"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3e0acf4db51efd20ee107cb6683c06e0140f9a75e30272ea850a6245982d0c1f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "d97bf0f65d59d42bdd4e4159bf8d3333655d6bcfcd5f2a68ec991d5db06ec3a1"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "51f48f170824411968d9caffe0871eafac51b9af386b8e6108a9d6ec20a2c67d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "18e3c0b3f20c8246753388471f75eb03ee4130d1bd0009f924d727be40e270fb"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "43870c54e724429885700b0f5f5b582fd7367359342ae78ab66526d3a0ebc8cd"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "940bb63a3967094874e1500c656401528b653b5939cf9a7092e4c8005cb4c0a4"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "4a4b5071176aa107972ae383eeffcef7d1a3d36672418673549380ed5bf1b889"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "293a289ca0c86f755d0f78287efe63634d46f9e1a61573800aefa40c550ca8cd"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
        "state": "pending"
@@ -25668,7 +26364,109 @@
        ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-09",
+         "source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+         "kind": "click",
+         "action": "원래 평가·비교로 돌아가기",
+         "expected": "Exercise the exact existing error state with complete source, saved records and annotations preserved.",
+         "observed": "electron: Actual list GET503 recovered, a real blank selection exposed no action, exact review/skip POST503 retries advanced only once, the exhausted queue disabled open, and saved origin retry retained the older exact evaluation ID and hash. Only three canonical queue advances and its empty lock changed; all originals and full labels retained. This reference qualifies only U015.saved-queue-stale-origin.error; controlled saved reports and PNG fixtures do not approve model quality.",
+         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending.",
+         "test": "scripts/e2e/review-queue-progress-lifecycle.spec.ts::native saved queue progress retries and real empty states preserve complete originals labels and older origin",
+         "receipt": "2026-10-08-queue-progress-2b28835-electron.json",
+         "receipt_sha256": "04877e60a4bf47cec1679e9e8ee8f82980b3d55043874b2b92d81240bb7c498d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c65e6919acf4123e1fd567dfa6b8560a3cbfd023d0b470a5e1547f9f44ad64d4"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "40cc8d3869751e6e3c7f6b1c7d6d7f73d881878b58cd564cccdd212f7f47208b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "b07264f28ab968aedb4cffc11e12e82cc8572082c409fff545801a9cf256ddb7"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "73d7a5a5b7c21a51e2080dcaea16ae23b34f6b72c98fd34646f53aeaad7b17df"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "506d37a7746ee0c4f908c7eec3ca003a0373025810904f4ab850091f85b6fb85"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "b4a5939b7821688937901f1ab46384fdb1d61c5a21ff6b5704c0b2cd5573ff28"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "31218ba68197556310b0f4923d0de6349ab4f63d9523371d212628c8ac450fc6"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "bb903b56cc74251d26d8b2dd3cafadeee76f3b73f61d1af37832a337d626b58a"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "36879abcc445cf152b04c2d430e1fd6a328a942ee643b0a1a12dc46ce2f6c7e5"
+          }
+         ]
+        },
+        {
+         "task": "S3-09",
+         "source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+         "kind": "click",
+         "action": "원래 평가·비교로 돌아가기",
+         "expected": "Exercise the exact existing error state with complete source, saved records and annotations preserved.",
+         "observed": "browser: Actual list GET503 recovered, a real blank selection exposed no action, exact review/skip POST503 retries advanced only once, the exhausted queue disabled open, and saved origin retry retained the older exact evaluation ID and hash. Only three canonical queue advances and its empty lock changed; all originals and full labels retained. This reference qualifies only U015.saved-queue-stale-origin.error; controlled saved reports and PNG fixtures do not approve model quality.",
+         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending.",
+         "test": "scripts/e2e/review-queue-progress-lifecycle.spec.ts::saved queue progress retries preserve labels and empty selection and origin failures retain exact saved records",
+         "receipt": "2026-10-08-queue-progress-2b28835-browser.json",
+         "receipt_sha256": "20f101ccb49bbb64154f007396c2a406aeeee89d1a0808376e3154e3fe4ad357",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2893665430ede202f1233988a6c0944c512650fa5acc5cd176fbf29995291d33"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3e0acf4db51efd20ee107cb6683c06e0140f9a75e30272ea850a6245982d0c1f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "d97bf0f65d59d42bdd4e4159bf8d3333655d6bcfcd5f2a68ec991d5db06ec3a1"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "51f48f170824411968d9caffe0871eafac51b9af386b8e6108a9d6ec20a2c67d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "18e3c0b3f20c8246753388471f75eb03ee4130d1bd0009f924d727be40e270fb"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "43870c54e724429885700b0f5f5b582fd7367359342ae78ab66526d3a0ebc8cd"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "940bb63a3967094874e1500c656401528b653b5939cf9a7092e4c8005cb4c0a4"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "4a4b5071176aa107972ae383eeffcef7d1a3d36672418673549380ed5bf1b889"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "293a289ca0c86f755d0f78287efe63634d46f9e1a61573800aefa40c550ca8cd"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
        "state": "pending"
