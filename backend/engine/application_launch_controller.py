@@ -343,8 +343,18 @@ def execute_cpu(owner, capability):
 def prepare_drain(owner, frame):
     """Original private main channel only; close epoch before backend gate."""
     started = time.monotonic()
-    from backend.engine.application_launch_handshake import validate_drain_receipt
-    with lease._transition_admission(owner.root, owner.nonce):
+    from backend.engine.application_launch_handshake import validate_drain_receipt, _transition_admission_before_deadline
+    # Reject an unbounded/malformed budget before any wait. Retain the exact
+    # already-received frame and this original start clock throughout.
+    budget = frame.get('budget_ms') if type(frame) is dict else None
+    if type(budget) is not int or not 0 < budget <= 4000:
+        raise HandshakeError('Original main managed drain request differs or replayed')
+    deadline = started + budget/1000
+    authority = getattr(owner, '_node_backend_authority', None)
+    def entry_current():
+        if authority is not None: node._fresh(authority)
+    with _transition_admission_before_deadline(owner.root, owner.nonce, deadline,
+                                              before_attempt=entry_current):
         row = owner._owned(); owner._binding(row); owner._live(row, row['process'])
         proof = owner._authenticated_backend_proof
         names = {'schema_version', 'kind', 'nonce', 'epoch', 'binding_sha256', 'backend_claim_sha256', 'request_id', 'budget_ms'}

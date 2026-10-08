@@ -50,7 +50,8 @@ def test_original_guard_keeps_close_callable_and_propagates_abnormal_exit(epoch,
     assert digest(authority) == before
 
 
-@pytest.mark.parametrize('read_kind', ['busy_then_committed', 'unknown_member'])
+@pytest.mark.parametrize('read_kind', ['busy_then_committed', 'unknown_member',
+    'wrong_nonce', 'foreign_witness', 'late_identity'])
 def test_controlled_finish_reads_original_committed_lease_through_admission(tmp_path, monkeypatch, read_kind):
     from backend.tests import test_application_launch_quiescence_bridge as fixtures
     from backend.engine import application_launch_lease as lease
@@ -58,16 +59,38 @@ def test_controlled_finish_reads_original_committed_lease_through_admission(tmp_
     calls = []
     clock = [0.0]
     child_calls = []
+    identity_reads = []
     class OriginalChild:
+        # Explicit modeled controller witness; no OS process is created or
+        # authenticated here. The original managed main is a distinct PID.
+        pid = 912
         returncode = None
+        _original_cpu_fixture_nonce = 'a' * 32
+        _original_cpu_fixture_supervisor = {
+            'pid': 912, 'created_at': 1.0, 'command_sha256': 'b' * 64}
         def terminate(self):
             child_calls.append('terminate original test handle')
         def wait(self, timeout):
             child_calls.append(('wait original test handle', timeout))
             self.returncode = 0
     child = OriginalChild()
-    row = {'process': {'pid': 913}, 'exit_observation': {
-        'direct_child_pid': 913, 'process_tree_exit_verified': False}}
+    row = {'nonce': child._original_cpu_fixture_nonce,
+        'supervisor': dict(child._original_cpu_fixture_supervisor),
+        'state': 'recovery_required', 'claimed': True,
+        'ready_receipt_sha256': 'c' * 64,
+        'process': {'pid': 913}, 'exit_observation': {
+            'direct_child_pid': 913, 'direct_child_returncode': 0,
+            'process_tree_exit_verified': False}}
+    if read_kind == 'wrong_nonce':
+        row['nonce'] = 'd' * 32
+    if read_kind == 'foreign_witness':
+        row['supervisor']['created_at'] = 2.0
+    def original_identity(pid):
+        assert pid == child.pid == 912
+        identity_reads.append(pid)
+        if read_kind == 'late_identity':
+            clock[0] += 5
+        return dict(child._original_cpu_fixture_supervisor)
     def strict_unlocked_read(root):
         raise lease.LaunchLeaseError('Application launch ownership requires recovery: unknown lease history member')
     def admitted_read(root):
@@ -80,6 +103,7 @@ def test_controlled_finish_reads_original_committed_lease_through_admission(tmp_
         return row
     monkeypatch.setattr(lease, '_load', strict_unlocked_read)
     monkeypatch.setattr(lease, 'inspect_launch', admitted_read)
+    monkeypatch.setattr(lease, '_identity', original_identity)
     monkeypatch.setattr(fixtures, 'wait_file', lambda *args, **kwargs: b'{}')
     monkeypatch.setattr(fixtures, 'time', SimpleNamespace(
         monotonic=lambda: clock[0], sleep=lambda delay: clock.__setitem__(0, clock[0] + delay)))
@@ -87,8 +111,20 @@ def test_controlled_finish_reads_original_committed_lease_through_admission(tmp_
         with pytest.raises(lease.LaunchLeaseError, match='unknown lease history member'):
             fixtures.finish_managed(child, tmp_path)
         assert child_calls == []
+        assert identity_reads == []
+    elif read_kind in {'wrong_nonce', 'foreign_witness', 'late_identity'}:
+        with pytest.raises(AssertionError):
+            fixtures.finish_managed(child, tmp_path)
+        assert len(calls) == 2
+        assert child_calls == []
+        assert identity_reads == ([912] if read_kind == 'late_identity' else [])
+        assert child.returncode is None
+        assert not (tmp_path / 'projects' / 'exit.trigger').exists()
+        if read_kind == 'late_identity':
+            assert clock[0] >= 5  # Expiry is refused, never renewed.
     else:
         fixtures.finish_managed(child, tmp_path)
         assert len(calls) == 2
         assert child_calls == ['terminate original test handle', ('wait original test handle', 5)]
+        assert identity_reads == [912]
         assert clock[0] < 5  # Original absolute observation budget was retained.

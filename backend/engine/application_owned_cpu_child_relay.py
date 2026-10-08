@@ -737,11 +737,17 @@ def _core_child_binding(capability,epoch,writer_id):
 
 def _receipt_current(state):
     from backend.engine import application_launch_execution as execution,application_launch_lease as lease
+    from backend.engine.application_launch_handshake import _transition_admission_before_deadline
+    from backend.engine import application_node_writer_authority as node
     publication=state.get('publication')
     if publication is None:raise HandshakeError('Original SOURCE CPU output publication is unavailable')
     _controller_deadline(state)
     owner=state['owner'];request=state['plan']['cpu_request']
-    with lease._transition_admission(owner.root,owner.nonce):
+    deadline = _controller_deadline(state)
+    def entry_current():
+        _controller_deadline(state);node._fresh(state['node']);_controller_deadline(state)
+    with _transition_admission_before_deadline(owner.root,owner.nonce,deadline,
+                                              before_attempt=entry_current):
         row=owner._owned();value=row.get('cpu_execution')
         if (type(value) is not dict or value.get('request_id')!=request['request_id']
                 or value.get('request_sha256')!=_sha(request) or value.get('receipt_sha256')!=publication['receipt_sha256']):

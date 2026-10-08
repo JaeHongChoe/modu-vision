@@ -17,7 +17,7 @@ import sys
 import threading
 import time
 import weakref
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 
 MAX_FRAME = 65536
 MAX_DEADLINE = 210
@@ -332,8 +332,41 @@ def _owned_cpu_producer_scope(*, flow_device=_FIXED_CPU_PRODUCER):
         raise HandshakeError('Original owned CPU producer capability is unavailable')
     root, values = context
     validated = {}
-    if _validate(root, values, _CACHE['challenge'], validated=validated) != _CACHE['proof']:
+    # NEW fixed admission-only cap, captured once. This is not an inherited
+    # HTTP client timeout and cannot renew an execution or drain deadline.
+    entry_deadline = time.monotonic() + 1.0
+    original_cache = _CACHE; original_context = _context()
+    original_socket = original_cache.get('socket')
+    original_challenge = _canonical(original_cache['challenge'])
+    original_proof = _canonical(original_cache['proof'])
+    original_admission = original_cache['admission']
+    original_writer = tuple(original_cache.get(key) for key in
+                            ('writer_guard', 'writer_handle', 'writer_private_fd', 'writer_fd_identity'))
+    endpoint = None
+    if original_socket is not None:
+        from backend.engine.application_preflight_child_relay import _endpoint
+        endpoint = _endpoint(original_socket)
+    def entry_current():
+        current = _root_context()
+        if (_CACHE is not original_cache or current is None or current[0] != root
+                or current[1] != values or _context() != original_context
+                or original_cache['context'] != original_context or not original_cache['ready']
+                or original_cache['admission'] is not original_admission
+                or original_cache.get('socket') is not original_socket
+                or _canonical(original_cache['challenge']) != original_challenge
+                or _canonical(original_cache['proof']) != original_proof):
+            raise HandshakeError('Original CPU producer admission context changed')
+        writer = tuple(original_cache.get(key) for key in
+                       ('writer_guard', 'writer_handle', 'writer_private_fd', 'writer_fd_identity'))
+        if (writer[0] is not original_writer[0] or writer[1] is not original_writer[1]
+                or writer[2:] != original_writer[2:]):
+            raise HandshakeError('Original CPU producer admission writer changed')
+        if original_socket is not None and _endpoint(original_socket) != endpoint:
+            raise HandshakeError('Original CPU producer admission endpoint changed')
+    if _validate(root, values, _CACHE['challenge'], validated=validated,
+                 absolute_deadline=entry_deadline, before_acquire=entry_current) != _CACHE['proof']:
         raise HandshakeError('Original owned CPU producer process binding changed')
+    entry_current()
     if 'writer' not in _CACHE['challenge']:
         fields = {'writer_guard', 'writer_handle', 'writer_private_fd', 'writer_fd_identity'}
         if (validated.get('protocol_version') != 3 or not fields.issubset(_CACHE)
@@ -591,7 +624,48 @@ def _executable(root, binding, frame):
 
 
 @contextmanager
-def _validated_backend_admission(root, values, frame, *, validated=None):
+def _transition_admission_before_deadline(root, nonce, absolute_deadline, *, before_attempt=None):
+    """Retry only original mutex __enter__, never a yielded body or exit.
+
+    The caller supplies one captured absolute bound. Generic lease admission
+    remains nonblocking; this helper cannot read a new frame or create authority.
+    """
+    from backend.engine import application_launch_lease as lease
+    if absolute_deadline is None:
+        with lease._transition_admission(root, nonce):
+            yield
+        return
+    if type(absolute_deadline) not in (int, float) or not math.isfinite(absolute_deadline):
+        raise HandshakeError('Original transition entry deadline differs')
+    def remaining():
+        value = absolute_deadline - time.monotonic()
+        if value <= 0: raise HandshakeError('Original transition entry deadline expired')
+        return value
+    # ExitStack forwards body/GeneratorExit to the original context exactly
+    # once. Its exit, authentication and post-body failures are never retried.
+    with ExitStack() as stack:
+        while True:
+            remaining()
+            if before_attempt is not None: before_attempt()
+            remaining()
+            try:
+                stack.enter_context(lease._transition_admission(root, nonce))
+            except lease.LeaseTransitionBusy:
+                if before_attempt is not None: before_attempt()
+                time.sleep(min(.005, remaining()))
+                continue
+            break
+        remaining()
+        yield
+        remaining()
+    # A normal guard exit cannot turn an expired original action into success.
+    # Original body/exit exceptions propagate before this check, without retry.
+    remaining()
+
+
+@contextmanager
+def _validated_backend_admission(root, values, frame, *, validated=None,
+                                 absolute_deadline=None, before_acquire=None):
     """Full original backend authentication under one retained transition OFD.
 
     This is not a cached-proof or held-lock bypass. Every entry acquires the
@@ -607,7 +681,11 @@ def _validated_backend_admission(root, values, frame, *, validated=None):
                 or frame['backend_pid'] != os.getpid()): raise HandshakeError('Invalid or foreign backend challenge')
         _arguments(root)
     original_challenge()
-    with lease._transition_admission(root, frame['nonce']):
+    def before_attempt():
+        original_challenge()
+        if before_acquire is not None: before_acquire()
+    with _transition_admission_before_deadline(root, frame['nonce'], absolute_deadline,
+                                              before_attempt=before_attempt):
         protocol = [None]
         def original_owner():
             original_challenge()
@@ -663,8 +741,9 @@ def _validated_backend_admission(root, values, frame, *, validated=None):
                     pass  # Advisory diagnostics cannot replace the first body failure.
 
 
-def _validate(root, values, frame, *, validated=None):
-    with _validated_backend_admission(root, values, frame, validated=validated) as proof:
+def _validate(root, values, frame, *, validated=None, absolute_deadline=None, before_acquire=None):
+    with _validated_backend_admission(root, values, frame, validated=validated,
+                                      absolute_deadline=absolute_deadline, before_acquire=before_acquire) as proof:
         return proof
 
 
