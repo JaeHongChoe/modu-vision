@@ -105,6 +105,9 @@ jobs:
           backend/tests/test_service_s1_10.py
           backend/tests/test_service_s6_07.py
           backend/tests/test_sqlite_wal.py
+          backend/tests/test_runtime_deployment_connection_lifetime.py
+          backend/tests/test_runtime_deployment_sqlite_handles.py
+          backend/tests/test_runtime_update_recovery.py
           backend/tests/test_service_s1_02.py
           backend/tests/test_service_s7_01.py
           backend/tests/test_gui_execution_evidence.py
@@ -230,6 +233,7 @@ jobs:
           backend/tests/test_staged_canary_frozen_execution.py::test_staged_compiled_attempt_intent_blocks_crash_retry_without_spawning
           backend/tests/test_staged_canary_frozen_execution.py::test_install_coerced_review_schema_refuses_before_staging
           backend/tests/test_application_launch_execution.py
+          backend/tests/test_application_backend_intent_composition.py
           backend/tests/test_application_launch_quiescence.py
           backend/tests/test_application_node_writer_authority.py
           backend/tests/test_worker_preflight_writer_lifetime.py
