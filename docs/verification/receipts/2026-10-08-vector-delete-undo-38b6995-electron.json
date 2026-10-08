@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "38b69950e42257d75fa4d49fde6b9d6d1de57a6a",
+  "source_dirty": false,
+  "test": "scripts/e2e/vector-delete-undo-lifecycle.spec.ts::native vector delete undo invalid input failure cancellation and handoff preserve original saved labels",
+  "test_source_sha256": "e19eecac84ef0797c3c66634381f6a2c58c779cc1a9bb3b827bbbceb81909589",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "b43da78d4ba1aec44794c898a87b7cbdc2b80653ee157f2bf2517a443fac1010",
+  "harness_sha256": "2e5cab70b93fb7c25f60c21fae93b29d1a36a83a61263e0878f0ad38db590eef",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "73ccfc96a6d3079aaaa8900c37dfe301cb8efe52453a33c36c2ce111244e0aaa"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "81b3e51d545f9e46241129facd4c7c00e249dc38993af2165e2cba3182c4235c"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "9973954c61c4dbc0909e73d2ebcdd5574515ffc9aacaec6239b44cf41d41f945"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "e4710ef2a95b4ea05672b8d574f5453df26df9c757b5e730d04b3a327f7a5f72"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

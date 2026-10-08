@@ -37424,13 +37424,199 @@
        ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "38b69950e42257d75fa4d49fde6b9d6d1de57a6a",
+         "kind": "click",
+         "action": "Delete annotation then Undo (Ctrl+Z)",
+         "expected": "No selection and disabled history must not change the authoritative saved labels.",
+         "observed": "browser: After actual reload with three saved labels, disabled Undo/Redo and no-selection Delete, Backspace, Control+Z and Control+Y produced no immediate mutations, dirty save or label changes. Full raw API bodies, project/source trees and bytes remained identical. Full page write inventory is 7 (0 native setup, four saves including one controlled503, and three explicit automatic source segmentation imports with validate_images:false, each followed by real images200). All 65,536 original RGB pixels match [x,y,100]; full mask bytes/hashes are retained, with class semantics independently sampled only at three centers (1/2/3 to 0/2/3 to 1/2/3). No global-zero-writes or model execution claim.",
+         "reviewer": "Independent source peer and strict read-only original-case qualification; root original API, source-map, whole-report, cleanup, geometry, mask-byte and full-tree readback accepted for these four conditions. Human label/model quality, installed/frozen/Windows/device/release and whole feature acceptance remain separate.",
+         "test": "scripts/e2e/vector-delete-undo-lifecycle.spec.ts::vector delete undo invalid input failure cancellation and handoff preserve original saved labels",
+         "receipt": "2026-10-08-vector-delete-undo-38b6995-browser.json",
+         "receipt_sha256": "13c1f658283b8ec42e2333a763f6214c44a46d39c316705813380d6d3945d113",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "73a0b9b0168bb43932925fcb31a6682132d036ad9dbb129063dd634a54594e63"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "18a84dd6210a876d91e6539dac9c67fffcaa6f24354abf093beba37687d6b9ca"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "e212cbf8d6c4924e0d1e7133e62fd4012a78792c9044bc0ff925ad932d04fc87"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "fc899689c8e8971096f83b80b44d2e716b1c7cddfa90c314c1e3b17a23a45822"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "38b69950e42257d75fa4d49fde6b9d6d1de57a6a",
+         "kind": "click",
+         "action": "Delete annotation then Undo (Ctrl+Z)",
+         "expected": "No selection and disabled history must not change the authoritative saved labels.",
+         "observed": "electron: After actual reload with three saved labels, disabled Undo/Redo and no-selection Delete, Backspace, Control+Z and Control+Y produced no immediate mutations, dirty save or label changes. Full raw API bodies, project/source trees and bytes remained identical. Full page write inventory is 10 (3 native setup, four saves including one controlled503, and three explicit automatic source segmentation imports with validate_images:false, each followed by real images200). All 65,536 original RGB pixels match [x,y,100]; full mask bytes/hashes are retained, with class semantics independently sampled only at three centers (1/2/3 to 0/2/3 to 1/2/3). No global-zero-writes or model execution claim.",
+         "reviewer": "Independent source peer and strict read-only original-case qualification; root original API, source-map, whole-report, cleanup, geometry, mask-byte and full-tree readback accepted for these four conditions. Human label/model quality, installed/frozen/Windows/device/release and whole feature acceptance remain separate.",
+         "test": "scripts/e2e/vector-delete-undo-lifecycle.spec.ts::native vector delete undo invalid input failure cancellation and handoff preserve original saved labels",
+         "receipt": "2026-10-08-vector-delete-undo-38b6995-electron.json",
+         "receipt_sha256": "ce0ebe0e9580f1890648e158a6eca26c8c89a8813e427bcf9a15ecac9f830476",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "73ccfc96a6d3079aaaa8900c37dfe301cb8efe52453a33c36c2ce111244e0aaa"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "81b3e51d545f9e46241129facd4c7c00e249dc38993af2165e2cba3182c4235c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "9973954c61c4dbc0909e73d2ebcdd5574515ffc9aacaec6239b44cf41d41f945"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "e4710ef2a95b4ea05672b8d574f5453df26df9c757b5e730d04b3a327f7a5f72"
+          }
+         ]
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "38b69950e42257d75fa4d49fde6b9d6d1de57a6a",
+         "kind": "click",
+         "action": "Delete annotation then Undo (Ctrl+Z)",
+         "expected": "A controlled503 delete-save failure must retain the original saved baseline and exact retry bytes; real200 deletion and Undo restoration remain explicit.",
+         "observed": "browser: Actual bbox deletion left two draft labels; one exact controlled503 save retained the complete three-label server/API/file baseline. Undo restored three and Redo returned two without writes. Removing the fault and explicit Save sent the identical failed request bytes to the real service200; a later actual Undo plus explicit200 save restored every original annotation ID/object and original full mask bytes. Full page write inventory is 7 (0 native setup, four saves including one controlled503, and three explicit automatic source segmentation imports with validate_images:false, each followed by real images200). All 65,536 original RGB pixels match [x,y,100]; full mask bytes/hashes are retained, with class semantics independently sampled only at three centers (1/2/3 to 0/2/3 to 1/2/3). No global-zero-writes or model execution claim.",
+         "reviewer": "Independent source peer and strict read-only original-case qualification; root original API, source-map, whole-report, cleanup, geometry, mask-byte and full-tree readback accepted for these four conditions. Human label/model quality, installed/frozen/Windows/device/release and whole feature acceptance remain separate.",
+         "test": "scripts/e2e/vector-delete-undo-lifecycle.spec.ts::vector delete undo invalid input failure cancellation and handoff preserve original saved labels",
+         "receipt": "2026-10-08-vector-delete-undo-38b6995-browser.json",
+         "receipt_sha256": "13c1f658283b8ec42e2333a763f6214c44a46d39c316705813380d6d3945d113",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "73a0b9b0168bb43932925fcb31a6682132d036ad9dbb129063dd634a54594e63"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "18a84dd6210a876d91e6539dac9c67fffcaa6f24354abf093beba37687d6b9ca"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "e212cbf8d6c4924e0d1e7133e62fd4012a78792c9044bc0ff925ad932d04fc87"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "fc899689c8e8971096f83b80b44d2e716b1c7cddfa90c314c1e3b17a23a45822"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "38b69950e42257d75fa4d49fde6b9d6d1de57a6a",
+         "kind": "click",
+         "action": "Delete annotation then Undo (Ctrl+Z)",
+         "expected": "A controlled503 delete-save failure must retain the original saved baseline and exact retry bytes; real200 deletion and Undo restoration remain explicit.",
+         "observed": "electron: Actual bbox deletion left two draft labels; one exact controlled503 save retained the complete three-label server/API/file baseline. Undo restored three and Redo returned two without writes. Removing the fault and explicit Save sent the identical failed request bytes to the real service200; a later actual Undo plus explicit200 save restored every original annotation ID/object and original full mask bytes. Full page write inventory is 10 (3 native setup, four saves including one controlled503, and three explicit automatic source segmentation imports with validate_images:false, each followed by real images200). All 65,536 original RGB pixels match [x,y,100]; full mask bytes/hashes are retained, with class semantics independently sampled only at three centers (1/2/3 to 0/2/3 to 1/2/3). No global-zero-writes or model execution claim.",
+         "reviewer": "Independent source peer and strict read-only original-case qualification; root original API, source-map, whole-report, cleanup, geometry, mask-byte and full-tree readback accepted for these four conditions. Human label/model quality, installed/frozen/Windows/device/release and whole feature acceptance remain separate.",
+         "test": "scripts/e2e/vector-delete-undo-lifecycle.spec.ts::native vector delete undo invalid input failure cancellation and handoff preserve original saved labels",
+         "receipt": "2026-10-08-vector-delete-undo-38b6995-electron.json",
+         "receipt_sha256": "ce0ebe0e9580f1890648e158a6eca26c8c89a8813e427bcf9a15ecac9f830476",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "73ccfc96a6d3079aaaa8900c37dfe301cb8efe52453a33c36c2ce111244e0aaa"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "81b3e51d545f9e46241129facd4c7c00e249dc38993af2165e2cba3182c4235c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "9973954c61c4dbc0909e73d2ebcdd5574515ffc9aacaec6239b44cf41d41f945"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "e4710ef2a95b4ea05672b8d574f5453df26df9c757b5e730d04b3a327f7a5f72"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "38b69950e42257d75fa4d49fde6b9d6d1de57a6a",
+         "kind": "click",
+         "action": "Delete annotation then Undo (Ctrl+Z)",
+         "expected": "Actual explicit discard must reload authoritative saved labels without a write or invented history-reset claim.",
+         "observed": "browser: After unsaved bbox deletion, the actual image-review discard control reloaded the latest three saved server labels. Full project/source trees and raw current/labelset/annotation/metadata responses remained unchanged, with zero immediate mutations. This does not claim history reset. Full page write inventory is 7 (0 native setup, four saves including one controlled503, and three explicit automatic source segmentation imports with validate_images:false, each followed by real images200). All 65,536 original RGB pixels match [x,y,100]; full mask bytes/hashes are retained, with class semantics independently sampled only at three centers (1/2/3 to 0/2/3 to 1/2/3). No global-zero-writes or model execution claim.",
+         "reviewer": "Independent source peer and strict read-only original-case qualification; root original API, source-map, whole-report, cleanup, geometry, mask-byte and full-tree readback accepted for these four conditions. Human label/model quality, installed/frozen/Windows/device/release and whole feature acceptance remain separate.",
+         "test": "scripts/e2e/vector-delete-undo-lifecycle.spec.ts::vector delete undo invalid input failure cancellation and handoff preserve original saved labels",
+         "receipt": "2026-10-08-vector-delete-undo-38b6995-browser.json",
+         "receipt_sha256": "13c1f658283b8ec42e2333a763f6214c44a46d39c316705813380d6d3945d113",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "73a0b9b0168bb43932925fcb31a6682132d036ad9dbb129063dd634a54594e63"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "18a84dd6210a876d91e6539dac9c67fffcaa6f24354abf093beba37687d6b9ca"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "e212cbf8d6c4924e0d1e7133e62fd4012a78792c9044bc0ff925ad932d04fc87"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "fc899689c8e8971096f83b80b44d2e716b1c7cddfa90c314c1e3b17a23a45822"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "38b69950e42257d75fa4d49fde6b9d6d1de57a6a",
+         "kind": "click",
+         "action": "Delete annotation then Undo (Ctrl+Z)",
+         "expected": "Actual explicit discard must reload authoritative saved labels without a write or invented history-reset claim.",
+         "observed": "electron: After unsaved bbox deletion, the actual image-review discard control reloaded the latest three saved server labels. Full project/source trees and raw current/labelset/annotation/metadata responses remained unchanged, with zero immediate mutations. This does not claim history reset. Full page write inventory is 10 (3 native setup, four saves including one controlled503, and three explicit automatic source segmentation imports with validate_images:false, each followed by real images200). All 65,536 original RGB pixels match [x,y,100]; full mask bytes/hashes are retained, with class semantics independently sampled only at three centers (1/2/3 to 0/2/3 to 1/2/3). No global-zero-writes or model execution claim.",
+         "reviewer": "Independent source peer and strict read-only original-case qualification; root original API, source-map, whole-report, cleanup, geometry, mask-byte and full-tree readback accepted for these four conditions. Human label/model quality, installed/frozen/Windows/device/release and whole feature acceptance remain separate.",
+         "test": "scripts/e2e/vector-delete-undo-lifecycle.spec.ts::native vector delete undo invalid input failure cancellation and handoff preserve original saved labels",
+         "receipt": "2026-10-08-vector-delete-undo-38b6995-electron.json",
+         "receipt_sha256": "ce0ebe0e9580f1890648e158a6eca26c8c89a8813e427bcf9a15ecac9f830476",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "73ccfc96a6d3079aaaa8900c37dfe301cb8efe52453a33c36c2ce111244e0aaa"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "81b3e51d545f9e46241129facd4c7c00e249dc38993af2165e2cba3182c4235c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "9973954c61c4dbc0909e73d2ebcdd5574515ffc9aacaec6239b44cf41d41f945"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "e4710ef2a95b4ea05672b8d574f5453df26df9c757b5e730d04b3a327f7a5f72"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
        "state": "verified",
@@ -37456,7 +37642,69 @@
        ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "38b69950e42257d75fa4d49fde6b9d6d1de57a6a",
+         "kind": "click",
+         "action": "Delete annotation then Undo (Ctrl+Z)",
+         "expected": "Actual common-preparation entry, truth-review return and reload must retain exact restored labels and source identity.",
+         "observed": "browser: Actual stage2 to common-preparation stage3 showed the exact project and one original image; truth-review returned to stage2. Complete saved annotations, original source path/SHA/image UUID, full raw API responses and protected tree bytes remained identical through return and reload, with zero immediate handoff mutations. Full page write inventory is 7 (0 native setup, four saves including one controlled503, and three explicit automatic source segmentation imports with validate_images:false, each followed by real images200). All 65,536 original RGB pixels match [x,y,100]; full mask bytes/hashes are retained, with class semantics independently sampled only at three centers (1/2/3 to 0/2/3 to 1/2/3). No global-zero-writes or model execution claim.",
+         "reviewer": "Independent source peer and strict read-only original-case qualification; root original API, source-map, whole-report, cleanup, geometry, mask-byte and full-tree readback accepted for these four conditions. Human label/model quality, installed/frozen/Windows/device/release and whole feature acceptance remain separate.",
+         "test": "scripts/e2e/vector-delete-undo-lifecycle.spec.ts::vector delete undo invalid input failure cancellation and handoff preserve original saved labels",
+         "receipt": "2026-10-08-vector-delete-undo-38b6995-browser.json",
+         "receipt_sha256": "13c1f658283b8ec42e2333a763f6214c44a46d39c316705813380d6d3945d113",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "73a0b9b0168bb43932925fcb31a6682132d036ad9dbb129063dd634a54594e63"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "18a84dd6210a876d91e6539dac9c67fffcaa6f24354abf093beba37687d6b9ca"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "e212cbf8d6c4924e0d1e7133e62fd4012a78792c9044bc0ff925ad932d04fc87"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "fc899689c8e8971096f83b80b44d2e716b1c7cddfa90c314c1e3b17a23a45822"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "38b69950e42257d75fa4d49fde6b9d6d1de57a6a",
+         "kind": "click",
+         "action": "Delete annotation then Undo (Ctrl+Z)",
+         "expected": "Actual common-preparation entry, truth-review return and reload must retain exact restored labels and source identity.",
+         "observed": "electron: Actual stage2 to common-preparation stage3 showed the exact project and one original image; truth-review returned to stage2. Complete saved annotations, original source path/SHA/image UUID, full raw API responses and protected tree bytes remained identical through return and reload, with zero immediate handoff mutations. Full page write inventory is 10 (3 native setup, four saves including one controlled503, and three explicit automatic source segmentation imports with validate_images:false, each followed by real images200). All 65,536 original RGB pixels match [x,y,100]; full mask bytes/hashes are retained, with class semantics independently sampled only at three centers (1/2/3 to 0/2/3 to 1/2/3). No global-zero-writes or model execution claim.",
+         "reviewer": "Independent source peer and strict read-only original-case qualification; root original API, source-map, whole-report, cleanup, geometry, mask-byte and full-tree readback accepted for these four conditions. Human label/model quality, installed/frozen/Windows/device/release and whole feature acceptance remain separate.",
+         "test": "scripts/e2e/vector-delete-undo-lifecycle.spec.ts::native vector delete undo invalid input failure cancellation and handoff preserve original saved labels",
+         "receipt": "2026-10-08-vector-delete-undo-38b6995-electron.json",
+         "receipt_sha256": "ce0ebe0e9580f1890648e158a6eca26c8c89a8813e427bcf9a15ecac9f830476",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "73ccfc96a6d3079aaaa8900c37dfe301cb8efe52453a33c36c2ce111244e0aaa"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "81b3e51d545f9e46241129facd4c7c00e249dc38993af2165e2cba3182c4235c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "9973954c61c4dbc0909e73d2ebcdd5574515ffc9aacaec6239b44cf41d41f945"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "e4710ef2a95b4ea05672b8d574f5453df26df9c757b5e730d04b3a327f7a5f72"
+          }
+         ]
+        }
+       ]
       }
      }
     },
