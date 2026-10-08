@@ -658,6 +658,158 @@ def test_actual_source_cpu_then_managed_drain_and_original_node_exit_keeps_lease
     finally:finish_managed(child,root)
 
 
+def _assert_returned_cpu_settlement(observation, cpu, controller):
+    """Fixture evidence only; original typed settlement is never reminted here."""
+    assert type(observation) is dict and set(observation)=={'schema_version','kind','controller_process',
+        'receipt','request','completion','settlement','writer_snapshot'}
+    assert type(observation['schema_version']) is int and observation['schema_version']==1
+    assert observation['kind']=='original_source_cpu_controller_returned'
+    assert observation['controller_process']==controller and observation['receipt']==cpu
+    assert cpu['status']=='succeeded' and cpu['actual_cpu_execution_verified'] is True
+    assert cpu['backend_frozen'] is False and cpu['execution_scope']=='controlled_source_backend'
+    assert cpu['actual_application_inference_verified'] is False and cpu['release_ready'] is False
+    request=observation['request'];completion=observation['completion']
+    assert set(request)=={'schema_version','kind','challenge','request_id','nonce','epoch',
+        'binding_sha256','backend_claim_sha256','workspace_id','project_id','plan_sha256'}
+    assert type(request['schema_version']) is int and request['schema_version']==1
+    assert request['kind']=='cpu_execution_request' and sha(canonical(request))==cpu['request_sha256']
+    for name in ('request_id','nonce','epoch','backend_claim_sha256','workspace_id','project_id','plan_sha256'):
+        assert request[name]==cpu[name]
+    assert request['binding_sha256']==sha(canonical(cpu['binding']))
+    assert set(completion)=={'schema_version','kind','request','backend_proof','output_path','output_sha256',
+        'semantic_output','worker_pid','runtime_source_sha256'}
+    assert type(completion['schema_version']) is int and completion['schema_version']==1
+    assert completion['kind']=='cpu_execution_completed' and completion['request']==request
+    assert sha(canonical(completion['backend_proof']))==cpu['backend_claim_sha256']
+    assert completion['backend_proof']['process']==cpu['backend_process']
+    for name in ('output_path','output_sha256','semantic_output','worker_pid','runtime_source_sha256'):
+        assert completion[name]==cpu[name]
+    assert observation['settlement']=={'schema_version':1,'kind':'source_cpu_settled','nonce':cpu['nonce'],
+        'request_id':cpu['request_id'],'request_sha256':cpu['request_sha256'],
+        'completion_sha256':sha(canonical(completion)),'receipt_sha256':sha(canonical(cpu))}
+    snapshot=observation['writer_snapshot'];assert set(snapshot)=={'registry','registry_sha256'}
+    registry=snapshot['registry'];assert snapshot['registry_sha256']==sha(canonical(registry))
+    assert registry['state']=='open' and registry['binding']['nonce']==cpu['nonce']
+    assert registry['binding']['controller']==controller
+    assert registry['binding']['launch_binding_sha256']==sha(canonical(cpu['binding']))
+    writers=registry['writers'];assert len(writers)==2
+    backend=next(row for row in writers if row['role']=='backend')
+    assert backend['status']=='active' and backend['process']==cpu['backend_process'] and backend['exit_code'] is None
+    finished=next(row for row in writers if row['role']=='owned_cpu_worker')
+    assert finished['status']=='direct_exited' and finished['reason_code'] is None and finished['exit_code']==0
+    assert finished['process']['pid']==cpu['worker_pid'] and finished['process']!=backend['process']
+
+
+def _record_returned_cpu_settlement(owner, receipt):
+    """Called only after the original execute_cpu returned, not receipt publish."""
+    from backend.engine import application_owned_cpu_child_relay as relay
+    from backend.engine.application_launch_lease import _identity
+    capability=owner._cpu_relays[receipt['request_id']]
+    assert type(capability) is relay.ControllerCpuRelay
+    state=relay._CONTROLLERS[capability]
+    assert state['owner'] is owner and state['node'] is owner._node_backend_authority
+    assert state['epoch'] is owner._writer_epoch and state['pid']==os.getpid()
+    assert state['thread'] is threading.current_thread() and state['failed'] is False
+    assert state['phase']=='finished' and state['settled'] is True
+    publication=state['publication'];assert publication['receipt']==receipt
+    assert publication['receipt_sha256']==sha(canonical(receipt))
+    assert publication['completion_sha256']==sha(canonical(publication['completion']))
+    observation={'schema_version':1,'kind':'original_source_cpu_controller_returned',
+        'controller_process':_identity(os.getpid()),'receipt':receipt,'request':state['plan']['cpu_request'],
+        'completion':publication['completion'],'settlement':owner._cpu_settlement,
+        'writer_snapshot':owner._writer_epoch.snapshot()}
+    _assert_returned_cpu_settlement(observation,receipt,observation['controller_process'])
+    finished=next(row for row in observation['writer_snapshot']['registry']['writers']
+        if row['writer_id']==state['registration'].writer_id)
+    assert finished['process']==state['child'] and finished['role']=='owned_cpu_worker'
+    raw=canonical(observation);assert len(raw)<=65536
+    target=owner.root/'projects'/'source-cpu-controller-returned.json'
+    descriptor=os.open(target,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+    with os.fdopen(descriptor,'wb') as output:output.write(raw)
+
+
+def _source_cpu_settlement_fixture_prefix():
+    """Original controller executes once; only its returned typed state is noted."""
+    return '''from backend.engine import application_launch_controller as controller
+from backend.tests import test_application_launch_quiescence_bridge as fixture
+original_execute_cpu=controller.execute_cpu
+def execute_cpu(owner, capability):
+    receipt=original_execute_cpu(owner, capability)
+    fixture._record_returned_cpu_settlement(owner, receipt)
+    return receipt
+controller.execute_cpu=execute_cpu
+raise SystemExit(controller.main())
+'''
+
+
+def _wait_returned_cpu_settlement(root, nonce, child, cpu, deadline):
+    """Bounded read-only fixture barrier; observations cannot become authority."""
+    import stat
+    from backend.engine.application_launch_lease import inspect_launch, _identity, LeaseTransitionBusy
+    from backend.engine.application_launch_quiescence import inspect_epoch
+    target=root/'projects'/'source-cpu-controller-returned.json'
+    witness=getattr(child,'_original_cpu_fixture_supervisor',None)
+    assert type(deadline) in (int,float) and math.isfinite(deadline)
+    assert getattr(child,'_original_cpu_fixture_nonce',None)==nonce and witness is not None
+    assert child.pid==witness['pid']
+    while time.monotonic()<deadline:
+        assert child.poll() is None, 'Original controller died before CPU settlement observation'
+        assert _identity(child.pid)==witness and cpu['nonce']==nonce
+        assert time.monotonic()<deadline
+        try:
+            named=target.lstat()
+        except FileNotFoundError:
+            time.sleep(max(0,min(.01,deadline-time.monotonic())));continue
+        assert stat.S_ISREG(named.st_mode) and named.st_nlink==1 and 0<named.st_size<=65536
+        descriptor=os.open(target,os.O_RDONLY|os.O_NOFOLLOW)
+        try:
+            held=os.fstat(descriptor);assert (held.st_dev,held.st_ino,held.st_size)==(named.st_dev,named.st_ino,named.st_size)
+            with os.fdopen(descriptor,'rb',closefd=False) as file:raw=file.read(65537)
+            assert len(raw)==held.st_size and len(raw)<=65536
+        finally:os.close(descriptor)
+        def exact_pairs(pairs):
+            value={}
+            for key,item in pairs:
+                assert key not in value;value[key]=item
+            return value
+        observation=json.loads(raw,object_pairs_hook=exact_pairs)
+        _assert_returned_cpu_settlement(observation,cpu,witness)
+        try:
+            journal=inspect_launch(root);snapshot=inspect_epoch(root,nonce)
+        except LeaseTransitionBusy:
+            # Only original read-only entry busy; retain the original 50 s cap.
+            time.sleep(max(0,min(.01,deadline-time.monotonic())));continue
+        assert journal['state']=='ready' and journal['nonce']==nonce and journal['supervisor']==witness
+        assert journal['binding']==cpu['binding'] and journal['process']==cpu['main_process']
+        assert journal['writer_drain']['phase']=='enrolled'
+        assert snapshot==observation['writer_snapshot']
+        backend=next(row for row in snapshot['registry']['writers'] if row['role']=='backend')
+        assert journal['writer_drain']['writer_id']==backend['writer_id']
+        assert journal['writer_drain']['registration_sha256']==backend['registration_sha256']
+        execution=journal['cpu_execution']
+        assert execution['request_id']==cpu['request_id'] and execution['request_sha256']==cpu['request_sha256']
+        directory=root/'.application-launches'/nonce
+        receipt_raw=(directory/'cpu-execution-receipt.json').read_bytes()
+        assert execution['receipt_sha256']==sha(receipt_raw)==observation['settlement']['receipt_sha256']
+        assert json.loads(receipt_raw)==cpu
+        intent_raw=(directory/'cpu-execution-intent.json').read_bytes()
+        assert execution['intent_sha256']==sha(intent_raw)
+        assert json.loads(intent_raw)['request']==observation['request']
+        assert target.read_bytes()==raw and _identity(child.pid)==witness and child.poll() is None
+        assert time.monotonic()<deadline
+        return
+    pytest.fail('Original typed SOURCE CPU settlement did not return within the original receipt deadline')
+
+
+def _wait_receipt_and_cpu_settlement(root, nonce, child):
+    deadline=time.monotonic()+50
+    remaining=deadline-time.monotonic();assert remaining>0
+    target,cpu=wait_receipt(root,nonce,child,timeout=remaining)
+    assert time.monotonic()<deadline
+    _wait_returned_cpu_settlement(root,nonce,child,cpu,deadline)
+    return target,cpu
+
+
 def _assert_damaged_refusal(refusal, damage, cpu):
     """Exact captured protocol rejection, never a generic failure allowance."""
     assert damage in {'changed_nonce','identical_request_replay'}
@@ -701,8 +853,10 @@ def _assert_damaged_stop(result, damage, cpu, stderr):
         import re
         service=str(Path(__file__).resolve().parents[2]/'backend/engine/application_launch_handshake.py')
         rows=re.findall(r'^  File "([^"\n]+)", line [1-9][0-9]*, in ([^\n]+)$',stderr,re.M)
+        stdlib=str(Path(contextmanager.__code__.co_filename).resolve())
         assert rows==[(cpu['backend_executable'],'<module>'),(service,'backend_execution_service'),
-                      (service,'_validate_service_action'),(service,'_validate')]
+                      (service,'_validate_service_action'),(service,'_validate'),(stdlib,'__enter__'),
+                      (service,'_validated_backend_admission'),(service,'original_owner')]
         assert stderr.startswith('Traceback (most recent call last):\n')
         assert stderr.splitlines()[-1]=='backend.engine.application_launch_handshake.HandshakeError: Backend challenge has no current spawned main owner'
         assert stderr.count('Traceback (most recent call last):')==1
@@ -732,9 +886,9 @@ def _assert_damaged_registry(registry, damage, refusal, cpu, registry_sha256):
 def test_actual_controller_refuses_changed_and_replayed_original_main_drain_frames(tmp_path,monkeypatch,damage):
     """Owned real source channel; only the test-origin frame is intentionally damaged."""
     values=managed_stack(tmp_path,monkeypatch,damage=damage);root=values[0];projects=root/'projects'
-    child,ack=start_cpu_stack(values)
+    child,ack=start_cpu_stack(values,prefix=['-c',_source_cpu_settlement_fixture_prefix()])
     try:
-        _,cpu=wait_receipt(root,ack['nonce'],child)
+        _,cpu=_wait_receipt_and_cpu_settlement(root,ack['nonce'],child)
         assert cpu['semantic_output']['final_verdict']=='OK'
         controls={p:p.read_bytes() for p in [root/'application-active.json',root/'global-active.json']}
         (projects/'drain.trigger').touch()

@@ -13,6 +13,9 @@ from pathlib import Path
 
 import pytest
 
+# Test-only legacy controlled publication fixture; no staged canary acceptance.
+from backend.tests.test_application_launch_execution import controlled_canary_publication
+
 ROOT = Path(__file__).resolve().parents[2]
 
 
