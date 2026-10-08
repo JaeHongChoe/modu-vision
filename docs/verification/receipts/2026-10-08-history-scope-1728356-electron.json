@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "17283562e8a9ce5a2163bd4f7729be3e8bbb0575",
+  "source_dirty": false,
+  "test": "scripts/e2e/flow-history-scope-controls.spec.ts::native graph history stays scoped across empty queue reopen and project handoff",
+  "test_source_sha256": "00493a372f65b9bca15ebccbb18a13bf5cdcdbe5f776dcfb8f0a37335060cf60",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "18c5f8209e7dc5319b1d777b45c650bd9ba3cf1b7f653385cd8895f4da0c4fa0",
+  "harness_sha256": "34e7d245bae673dcebb604ff22d6599b7e1fc9fa975d040b82bf0cb2dd9336a8",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "a0709275a0c119a2e656b79cb222f5b10c96fb043ff1082762d262309202af20"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "395464ba317510831b58b51f96ffcf10bae2cb57f2e871cecf065e2fa86cdec2"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "57fa00d3bba03a01542bde1b8364de021b77ee97091c5d23801c0330bb54f884"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "3235fd8df413b4c25f08d515105cdca64a86099cef1d614fe24c91347c5d9da8"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

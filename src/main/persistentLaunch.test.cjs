@@ -16,7 +16,12 @@ test('persistent controller keeps running after updater acknowledgement streams 
   const result=await f.run(process.execPath,['-e',f.program(`process.stdout.write(JSON.stringify({status:'starting'})+'\\n')`),f.heartbeat]);
   assert.equal(JSON.parse(result.stdout).status,'starting');assert.equal(result.stderr,'');
   const call=f.calls[0];assert.equal(call.args[2].detached,true);assert.equal(call.args[2].shell,false);assert.deepEqual(call.args[2].stdio,['ignore','pipe','pipe']);assert.equal(call.args[2].env.VISION_HANDOFF_FD,undefined);assert.equal(call.args[2].env.HF_HUB_OFFLINE,'1');
-  for(let i=0;i<50&&!fs.existsSync(f.heartbeat);i++)await wait(20);const before=Number(fs.readFileSync(f.heartbeat));await wait(80);assert.ok(Number(fs.readFileSync(f.heartbeat))>before);assert.equal(call.child.exitCode,null);assert.equal(call.child.signalCode,null);
+  for(let i=0;i<50&&!fs.existsSync(f.heartbeat);i++)await wait(20);const before=Number(fs.readFileSync(f.heartbeat));
+  // Observe actual progress within a fixed bound; a loaded runner need not
+  // schedule the detached controller inside a single 80ms sample.
+  const deadline=performance.now()+1000;
+  while(Number(fs.readFileSync(f.heartbeat))<=before&&performance.now()<deadline)await wait(20);
+  assert.ok(Number(fs.readFileSync(f.heartbeat))>before);assert.equal(call.child.exitCode,null);assert.equal(call.child.signalCode,null);
  }finally{if(previous===undefined)delete process.env.VISION_HANDOFF_FD;else process.env.VISION_HANDOFF_FD=previous;}
 });
 for(const kind of ['oversized','multiple-json-lines','invalid-utf8'])test(`unconfirmed ${kind} response closes only updater streams and preserves the original controller`,async t=>{

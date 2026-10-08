@@ -13258,7 +13258,69 @@
        ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-05",
+         "source_sha": "17283562e8a9ce5a2163bd4f7729be3e8bbb0575",
+         "kind": "click",
+         "action": "플로우 노드 검색 · 플로우 미니맵 · 플로우 전체 맞춤",
+         "expected": "Actual recent-project A/B/A opens reset history and show only the current project graph. Project B search cannot select project A ROI; no old undo/redo replay. Two real source-summary GETs restore the shared dataset and only two intended project-open POSTs occur.",
+         "observed": "electron: Actual recent-project A/B/A opens reset history and show only the current project graph. Project B search cannot select project A ROI; no old undo/redo replay. Two real source-summary GETs restore the shared dataset and only two intended project-open POSTs occur.",
+         "reviewer": "Codex root actual clean-source browser/Electron execution and original graph/API/current file SHA readback; full feature and human acceptance remain pending",
+         "test": "scripts/e2e/flow-history-scope-controls.spec.ts::native graph history stays scoped across empty queue reopen and project handoff",
+         "receipt": "2026-10-08-history-scope-1728356-electron.json",
+         "receipt_sha256": "23c5402ea2dfb37ab555daefbc1b8a5c177868eeb8e8c77059a0038403ab3f17",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a0709275a0c119a2e656b79cb222f5b10c96fb043ff1082762d262309202af20"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "395464ba317510831b58b51f96ffcf10bae2cb57f2e871cecf065e2fa86cdec2"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "57fa00d3bba03a01542bde1b8364de021b77ee97091c5d23801c0330bb54f884"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "3235fd8df413b4c25f08d515105cdca64a86099cef1d614fe24c91347c5d9da8"
+          }
+         ]
+        },
+        {
+         "task": "S2-05",
+         "source_sha": "17283562e8a9ce5a2163bd4f7729be3e8bbb0575",
+         "kind": "click",
+         "action": "플로우 노드 검색 · 플로우 미니맵 · 플로우 전체 맞춤",
+         "expected": "Actual recent-project A/B/A opens reset history and show only the current project graph. Project B search cannot select project A ROI; no old undo/redo replay. Two real source-summary GETs restore the shared dataset and only two intended project-open POSTs occur.",
+         "observed": "browser: Actual recent-project A/B/A opens reset history and show only the current project graph. Project B search cannot select project A ROI; no old undo/redo replay. Two real source-summary GETs restore the shared dataset and only two intended project-open POSTs occur.",
+         "reviewer": "Codex root actual clean-source browser/Electron execution and original graph/API/current file SHA readback; full feature and human acceptance remain pending",
+         "test": "scripts/e2e/flow-history-scope-controls.spec.ts::empty scoped graph history reopens and hands off without accidental graph writes",
+         "receipt": "2026-10-08-history-scope-1728356-browser.json",
+         "receipt_sha256": "682f3553c4986c5cea5c19b5bf03f376c48e846307c7ba3db320de77332e6ba7",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9d8e0d33cc6695168286eefefce954b7e390bc5e9d54225c5da9e0f331595f2c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ce99b3c58bf726b7aaf89a6e8486933a3d9a52b2009a9d8cb064cc4058e815d0"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "72205cfe74e09f8cf9d72d075a1458c7f20e322e82003c2a9d2e0c64325336f9"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "bd8773bf5ec5de43053a316414c8ee9f060cca80569317bb5cb94874f2c94850"
+          }
+         ]
+        }
+       ]
       }
      }
     },
@@ -13507,7 +13569,69 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-05",
+         "source_sha": "17283562e8a9ce5a2163bd4f7729be3e8bbb0575",
+         "kind": "click",
+         "action": "Delete · Ctrl+Z · Ctrl+Shift+Z",
+         "expected": "Disabled Undo/Redo and real keyboard shortcuts leave the freshly restored exact graph unchanged; no API content write.",
+         "observed": "electron: Disabled Undo/Redo and real keyboard shortcuts leave the freshly restored exact graph unchanged; no API content write.",
+         "reviewer": "Codex root actual clean-source browser/Electron execution and original graph/API/current file SHA readback; full feature and human acceptance remain pending",
+         "test": "scripts/e2e/flow-history-scope-controls.spec.ts::native graph history stays scoped across empty queue reopen and project handoff",
+         "receipt": "2026-10-08-history-scope-1728356-electron.json",
+         "receipt_sha256": "23c5402ea2dfb37ab555daefbc1b8a5c177868eeb8e8c77059a0038403ab3f17",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a0709275a0c119a2e656b79cb222f5b10c96fb043ff1082762d262309202af20"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "395464ba317510831b58b51f96ffcf10bae2cb57f2e871cecf065e2fa86cdec2"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "57fa00d3bba03a01542bde1b8364de021b77ee97091c5d23801c0330bb54f884"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "3235fd8df413b4c25f08d515105cdca64a86099cef1d614fe24c91347c5d9da8"
+          }
+         ]
+        },
+        {
+         "task": "S2-05",
+         "source_sha": "17283562e8a9ce5a2163bd4f7729be3e8bbb0575",
+         "kind": "click",
+         "action": "Delete · Ctrl+Z · Ctrl+Shift+Z",
+         "expected": "Disabled Undo/Redo and real keyboard shortcuts leave the freshly restored exact graph unchanged; no API content write.",
+         "observed": "browser: Disabled Undo/Redo and real keyboard shortcuts leave the freshly restored exact graph unchanged; no API content write.",
+         "reviewer": "Codex root actual clean-source browser/Electron execution and original graph/API/current file SHA readback; full feature and human acceptance remain pending",
+         "test": "scripts/e2e/flow-history-scope-controls.spec.ts::empty scoped graph history reopens and hands off without accidental graph writes",
+         "receipt": "2026-10-08-history-scope-1728356-browser.json",
+         "receipt_sha256": "682f3553c4986c5cea5c19b5bf03f376c48e846307c7ba3db320de77332e6ba7",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9d8e0d33cc6695168286eefefce954b7e390bc5e9d54225c5da9e0f331595f2c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ce99b3c58bf726b7aaf89a6e8486933a3d9a52b2009a9d8cb064cc4058e815d0"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "72205cfe74e09f8cf9d72d075a1458c7f20e322e82003c2a9d2e0c64325336f9"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "bd8773bf5ec5de43053a316414c8ee9f060cca80569317bb5cb94874f2c94850"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
        "state": "pending"
@@ -13542,7 +13666,69 @@
        ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-05",
+         "source_sha": "17283562e8a9ce5a2163bd4f7729be3e8bbb0575",
+         "kind": "click",
+         "action": "Delete · Ctrl+Z · Ctrl+Shift+Z",
+         "expected": "Actual recent-project A/B/A opens reset history and show only the current project graph. Project B search cannot select project A ROI; no old undo/redo replay. Two real source-summary GETs restore the shared dataset and only two intended project-open POSTs occur.",
+         "observed": "electron: Actual recent-project A/B/A opens reset history and show only the current project graph. Project B search cannot select project A ROI; no old undo/redo replay. Two real source-summary GETs restore the shared dataset and only two intended project-open POSTs occur.",
+         "reviewer": "Codex root actual clean-source browser/Electron execution and original graph/API/current file SHA readback; full feature and human acceptance remain pending",
+         "test": "scripts/e2e/flow-history-scope-controls.spec.ts::native graph history stays scoped across empty queue reopen and project handoff",
+         "receipt": "2026-10-08-history-scope-1728356-electron.json",
+         "receipt_sha256": "23c5402ea2dfb37ab555daefbc1b8a5c177868eeb8e8c77059a0038403ab3f17",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a0709275a0c119a2e656b79cb222f5b10c96fb043ff1082762d262309202af20"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "395464ba317510831b58b51f96ffcf10bae2cb57f2e871cecf065e2fa86cdec2"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "57fa00d3bba03a01542bde1b8364de021b77ee97091c5d23801c0330bb54f884"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "3235fd8df413b4c25f08d515105cdca64a86099cef1d614fe24c91347c5d9da8"
+          }
+         ]
+        },
+        {
+         "task": "S2-05",
+         "source_sha": "17283562e8a9ce5a2163bd4f7729be3e8bbb0575",
+         "kind": "click",
+         "action": "Delete · Ctrl+Z · Ctrl+Shift+Z",
+         "expected": "Actual recent-project A/B/A opens reset history and show only the current project graph. Project B search cannot select project A ROI; no old undo/redo replay. Two real source-summary GETs restore the shared dataset and only two intended project-open POSTs occur.",
+         "observed": "browser: Actual recent-project A/B/A opens reset history and show only the current project graph. Project B search cannot select project A ROI; no old undo/redo replay. Two real source-summary GETs restore the shared dataset and only two intended project-open POSTs occur.",
+         "reviewer": "Codex root actual clean-source browser/Electron execution and original graph/API/current file SHA readback; full feature and human acceptance remain pending",
+         "test": "scripts/e2e/flow-history-scope-controls.spec.ts::empty scoped graph history reopens and hands off without accidental graph writes",
+         "receipt": "2026-10-08-history-scope-1728356-browser.json",
+         "receipt_sha256": "682f3553c4986c5cea5c19b5bf03f376c48e846307c7ba3db320de77332e6ba7",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9d8e0d33cc6695168286eefefce954b7e390bc5e9d54225c5da9e0f331595f2c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ce99b3c58bf726b7aaf89a6e8486933a3d9a52b2009a9d8cb064cc4058e815d0"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "72205cfe74e09f8cf9d72d075a1458c7f20e322e82003c2a9d2e0c64325336f9"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "bd8773bf5ec5de43053a316414c8ee9f060cca80569317bb5cb94874f2c94850"
+          }
+         ]
+        }
+       ]
       }
      }
     },
@@ -21648,7 +21834,69 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "17283562e8a9ce5a2163bd4f7729be3e8bbb0575",
+         "kind": "click",
+         "action": "플로우 실행 취소",
+         "expected": "Disabled Undo/Redo and real keyboard shortcuts leave the freshly restored exact graph unchanged; no API content write.",
+         "observed": "electron: Disabled Undo/Redo and real keyboard shortcuts leave the freshly restored exact graph unchanged; no API content write.",
+         "reviewer": "Codex root actual clean-source browser/Electron execution and original graph/API/current file SHA readback; full feature and human acceptance remain pending",
+         "test": "scripts/e2e/flow-history-scope-controls.spec.ts::native graph history stays scoped across empty queue reopen and project handoff",
+         "receipt": "2026-10-08-history-scope-1728356-electron.json",
+         "receipt_sha256": "23c5402ea2dfb37ab555daefbc1b8a5c177868eeb8e8c77059a0038403ab3f17",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a0709275a0c119a2e656b79cb222f5b10c96fb043ff1082762d262309202af20"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "395464ba317510831b58b51f96ffcf10bae2cb57f2e871cecf065e2fa86cdec2"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "57fa00d3bba03a01542bde1b8364de021b77ee97091c5d23801c0330bb54f884"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "3235fd8df413b4c25f08d515105cdca64a86099cef1d614fe24c91347c5d9da8"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "17283562e8a9ce5a2163bd4f7729be3e8bbb0575",
+         "kind": "click",
+         "action": "플로우 실행 취소",
+         "expected": "Disabled Undo/Redo and real keyboard shortcuts leave the freshly restored exact graph unchanged; no API content write.",
+         "observed": "browser: Disabled Undo/Redo and real keyboard shortcuts leave the freshly restored exact graph unchanged; no API content write.",
+         "reviewer": "Codex root actual clean-source browser/Electron execution and original graph/API/current file SHA readback; full feature and human acceptance remain pending",
+         "test": "scripts/e2e/flow-history-scope-controls.spec.ts::empty scoped graph history reopens and hands off without accidental graph writes",
+         "receipt": "2026-10-08-history-scope-1728356-browser.json",
+         "receipt_sha256": "682f3553c4986c5cea5c19b5bf03f376c48e846307c7ba3db320de77332e6ba7",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9d8e0d33cc6695168286eefefce954b7e390bc5e9d54225c5da9e0f331595f2c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ce99b3c58bf726b7aaf89a6e8486933a3d9a52b2009a9d8cb064cc4058e815d0"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "72205cfe74e09f8cf9d72d075a1458c7f20e322e82003c2a9d2e0c64325336f9"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "bd8773bf5ec5de43053a316414c8ee9f060cca80569317bb5cb94874f2c94850"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
        "state": "pending"
@@ -21660,10 +21908,134 @@
        "state": "pending"
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "17283562e8a9ce5a2163bd4f7729be3e8bbb0575",
+         "kind": "click",
+         "action": "플로우 실행 취소",
+         "expected": "Leaving and returning to the workflow, then actual app reload, restore the exact saved draft with empty history. Opening and closing the actual empty task center preserves same-context redo. Draft/project/image SHA values stay unchanged.",
+         "observed": "electron: Leaving and returning to the workflow, then actual app reload, restore the exact saved draft with empty history. Opening and closing the actual empty task center preserves same-context redo. Draft/project/image SHA values stay unchanged.",
+         "reviewer": "Codex root actual clean-source browser/Electron execution and original graph/API/current file SHA readback; full feature and human acceptance remain pending",
+         "test": "scripts/e2e/flow-history-scope-controls.spec.ts::native graph history stays scoped across empty queue reopen and project handoff",
+         "receipt": "2026-10-08-history-scope-1728356-electron.json",
+         "receipt_sha256": "23c5402ea2dfb37ab555daefbc1b8a5c177868eeb8e8c77059a0038403ab3f17",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a0709275a0c119a2e656b79cb222f5b10c96fb043ff1082762d262309202af20"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "395464ba317510831b58b51f96ffcf10bae2cb57f2e871cecf065e2fa86cdec2"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "57fa00d3bba03a01542bde1b8364de021b77ee97091c5d23801c0330bb54f884"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "3235fd8df413b4c25f08d515105cdca64a86099cef1d614fe24c91347c5d9da8"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "17283562e8a9ce5a2163bd4f7729be3e8bbb0575",
+         "kind": "click",
+         "action": "플로우 실행 취소",
+         "expected": "Leaving and returning to the workflow, then actual app reload, restore the exact saved draft with empty history. Opening and closing the actual empty task center preserves same-context redo. Draft/project/image SHA values stay unchanged.",
+         "observed": "browser: Leaving and returning to the workflow, then actual app reload, restore the exact saved draft with empty history. Opening and closing the actual empty task center preserves same-context redo. Draft/project/image SHA values stay unchanged.",
+         "reviewer": "Codex root actual clean-source browser/Electron execution and original graph/API/current file SHA readback; full feature and human acceptance remain pending",
+         "test": "scripts/e2e/flow-history-scope-controls.spec.ts::empty scoped graph history reopens and hands off without accidental graph writes",
+         "receipt": "2026-10-08-history-scope-1728356-browser.json",
+         "receipt_sha256": "682f3553c4986c5cea5c19b5bf03f376c48e846307c7ba3db320de77332e6ba7",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9d8e0d33cc6695168286eefefce954b7e390bc5e9d54225c5da9e0f331595f2c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ce99b3c58bf726b7aaf89a6e8486933a3d9a52b2009a9d8cb064cc4058e815d0"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "72205cfe74e09f8cf9d72d075a1458c7f20e322e82003c2a9d2e0c64325336f9"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "bd8773bf5ec5de43053a316414c8ee9f060cca80569317bb5cb94874f2c94850"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "17283562e8a9ce5a2163bd4f7729be3e8bbb0575",
+         "kind": "click",
+         "action": "플로우 실행 취소",
+         "expected": "Actual recent-project A/B/A opens reset history and show only the current project graph. Project B search cannot select project A ROI; no old undo/redo replay. Two real source-summary GETs restore the shared dataset and only two intended project-open POSTs occur.",
+         "observed": "electron: Actual recent-project A/B/A opens reset history and show only the current project graph. Project B search cannot select project A ROI; no old undo/redo replay. Two real source-summary GETs restore the shared dataset and only two intended project-open POSTs occur.",
+         "reviewer": "Codex root actual clean-source browser/Electron execution and original graph/API/current file SHA readback; full feature and human acceptance remain pending",
+         "test": "scripts/e2e/flow-history-scope-controls.spec.ts::native graph history stays scoped across empty queue reopen and project handoff",
+         "receipt": "2026-10-08-history-scope-1728356-electron.json",
+         "receipt_sha256": "23c5402ea2dfb37ab555daefbc1b8a5c177868eeb8e8c77059a0038403ab3f17",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a0709275a0c119a2e656b79cb222f5b10c96fb043ff1082762d262309202af20"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "395464ba317510831b58b51f96ffcf10bae2cb57f2e871cecf065e2fa86cdec2"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "57fa00d3bba03a01542bde1b8364de021b77ee97091c5d23801c0330bb54f884"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "3235fd8df413b4c25f08d515105cdca64a86099cef1d614fe24c91347c5d9da8"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "17283562e8a9ce5a2163bd4f7729be3e8bbb0575",
+         "kind": "click",
+         "action": "플로우 실행 취소",
+         "expected": "Actual recent-project A/B/A opens reset history and show only the current project graph. Project B search cannot select project A ROI; no old undo/redo replay. Two real source-summary GETs restore the shared dataset and only two intended project-open POSTs occur.",
+         "observed": "browser: Actual recent-project A/B/A opens reset history and show only the current project graph. Project B search cannot select project A ROI; no old undo/redo replay. Two real source-summary GETs restore the shared dataset and only two intended project-open POSTs occur.",
+         "reviewer": "Codex root actual clean-source browser/Electron execution and original graph/API/current file SHA readback; full feature and human acceptance remain pending",
+         "test": "scripts/e2e/flow-history-scope-controls.spec.ts::empty scoped graph history reopens and hands off without accidental graph writes",
+         "receipt": "2026-10-08-history-scope-1728356-browser.json",
+         "receipt_sha256": "682f3553c4986c5cea5c19b5bf03f376c48e846307c7ba3db320de77332e6ba7",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9d8e0d33cc6695168286eefefce954b7e390bc5e9d54225c5da9e0f331595f2c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ce99b3c58bf726b7aaf89a6e8486933a3d9a52b2009a9d8cb064cc4058e815d0"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "72205cfe74e09f8cf9d72d075a1458c7f20e322e82003c2a9d2e0c64325336f9"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "bd8773bf5ec5de43053a316414c8ee9f060cca80569317bb5cb94874f2c94850"
+          }
+         ]
+        }
+       ]
       }
      }
     },
@@ -21712,7 +22084,69 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "17283562e8a9ce5a2163bd4f7729be3e8bbb0575",
+         "kind": "click",
+         "action": "플로우 다시 실행",
+         "expected": "Disabled Undo/Redo and real keyboard shortcuts leave the freshly restored exact graph unchanged; no API content write.",
+         "observed": "electron: Disabled Undo/Redo and real keyboard shortcuts leave the freshly restored exact graph unchanged; no API content write.",
+         "reviewer": "Codex root actual clean-source browser/Electron execution and original graph/API/current file SHA readback; full feature and human acceptance remain pending",
+         "test": "scripts/e2e/flow-history-scope-controls.spec.ts::native graph history stays scoped across empty queue reopen and project handoff",
+         "receipt": "2026-10-08-history-scope-1728356-electron.json",
+         "receipt_sha256": "23c5402ea2dfb37ab555daefbc1b8a5c177868eeb8e8c77059a0038403ab3f17",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a0709275a0c119a2e656b79cb222f5b10c96fb043ff1082762d262309202af20"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "395464ba317510831b58b51f96ffcf10bae2cb57f2e871cecf065e2fa86cdec2"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "57fa00d3bba03a01542bde1b8364de021b77ee97091c5d23801c0330bb54f884"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "3235fd8df413b4c25f08d515105cdca64a86099cef1d614fe24c91347c5d9da8"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "17283562e8a9ce5a2163bd4f7729be3e8bbb0575",
+         "kind": "click",
+         "action": "플로우 다시 실행",
+         "expected": "Disabled Undo/Redo and real keyboard shortcuts leave the freshly restored exact graph unchanged; no API content write.",
+         "observed": "browser: Disabled Undo/Redo and real keyboard shortcuts leave the freshly restored exact graph unchanged; no API content write.",
+         "reviewer": "Codex root actual clean-source browser/Electron execution and original graph/API/current file SHA readback; full feature and human acceptance remain pending",
+         "test": "scripts/e2e/flow-history-scope-controls.spec.ts::empty scoped graph history reopens and hands off without accidental graph writes",
+         "receipt": "2026-10-08-history-scope-1728356-browser.json",
+         "receipt_sha256": "682f3553c4986c5cea5c19b5bf03f376c48e846307c7ba3db320de77332e6ba7",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9d8e0d33cc6695168286eefefce954b7e390bc5e9d54225c5da9e0f331595f2c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ce99b3c58bf726b7aaf89a6e8486933a3d9a52b2009a9d8cb064cc4058e815d0"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "72205cfe74e09f8cf9d72d075a1458c7f20e322e82003c2a9d2e0c64325336f9"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "bd8773bf5ec5de43053a316414c8ee9f060cca80569317bb5cb94874f2c94850"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
        "state": "pending"
@@ -21724,10 +22158,134 @@
        "state": "pending"
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "17283562e8a9ce5a2163bd4f7729be3e8bbb0575",
+         "kind": "click",
+         "action": "플로우 다시 실행",
+         "expected": "Leaving and returning to the workflow, then actual app reload, restore the exact saved draft with empty history. Opening and closing the actual empty task center preserves same-context redo. Draft/project/image SHA values stay unchanged.",
+         "observed": "electron: Leaving and returning to the workflow, then actual app reload, restore the exact saved draft with empty history. Opening and closing the actual empty task center preserves same-context redo. Draft/project/image SHA values stay unchanged.",
+         "reviewer": "Codex root actual clean-source browser/Electron execution and original graph/API/current file SHA readback; full feature and human acceptance remain pending",
+         "test": "scripts/e2e/flow-history-scope-controls.spec.ts::native graph history stays scoped across empty queue reopen and project handoff",
+         "receipt": "2026-10-08-history-scope-1728356-electron.json",
+         "receipt_sha256": "23c5402ea2dfb37ab555daefbc1b8a5c177868eeb8e8c77059a0038403ab3f17",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a0709275a0c119a2e656b79cb222f5b10c96fb043ff1082762d262309202af20"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "395464ba317510831b58b51f96ffcf10bae2cb57f2e871cecf065e2fa86cdec2"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "57fa00d3bba03a01542bde1b8364de021b77ee97091c5d23801c0330bb54f884"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "3235fd8df413b4c25f08d515105cdca64a86099cef1d614fe24c91347c5d9da8"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "17283562e8a9ce5a2163bd4f7729be3e8bbb0575",
+         "kind": "click",
+         "action": "플로우 다시 실행",
+         "expected": "Leaving and returning to the workflow, then actual app reload, restore the exact saved draft with empty history. Opening and closing the actual empty task center preserves same-context redo. Draft/project/image SHA values stay unchanged.",
+         "observed": "browser: Leaving and returning to the workflow, then actual app reload, restore the exact saved draft with empty history. Opening and closing the actual empty task center preserves same-context redo. Draft/project/image SHA values stay unchanged.",
+         "reviewer": "Codex root actual clean-source browser/Electron execution and original graph/API/current file SHA readback; full feature and human acceptance remain pending",
+         "test": "scripts/e2e/flow-history-scope-controls.spec.ts::empty scoped graph history reopens and hands off without accidental graph writes",
+         "receipt": "2026-10-08-history-scope-1728356-browser.json",
+         "receipt_sha256": "682f3553c4986c5cea5c19b5bf03f376c48e846307c7ba3db320de77332e6ba7",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9d8e0d33cc6695168286eefefce954b7e390bc5e9d54225c5da9e0f331595f2c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ce99b3c58bf726b7aaf89a6e8486933a3d9a52b2009a9d8cb064cc4058e815d0"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "72205cfe74e09f8cf9d72d075a1458c7f20e322e82003c2a9d2e0c64325336f9"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "bd8773bf5ec5de43053a316414c8ee9f060cca80569317bb5cb94874f2c94850"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "17283562e8a9ce5a2163bd4f7729be3e8bbb0575",
+         "kind": "click",
+         "action": "플로우 다시 실행",
+         "expected": "Actual recent-project A/B/A opens reset history and show only the current project graph. Project B search cannot select project A ROI; no old undo/redo replay. Two real source-summary GETs restore the shared dataset and only two intended project-open POSTs occur.",
+         "observed": "electron: Actual recent-project A/B/A opens reset history and show only the current project graph. Project B search cannot select project A ROI; no old undo/redo replay. Two real source-summary GETs restore the shared dataset and only two intended project-open POSTs occur.",
+         "reviewer": "Codex root actual clean-source browser/Electron execution and original graph/API/current file SHA readback; full feature and human acceptance remain pending",
+         "test": "scripts/e2e/flow-history-scope-controls.spec.ts::native graph history stays scoped across empty queue reopen and project handoff",
+         "receipt": "2026-10-08-history-scope-1728356-electron.json",
+         "receipt_sha256": "23c5402ea2dfb37ab555daefbc1b8a5c177868eeb8e8c77059a0038403ab3f17",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a0709275a0c119a2e656b79cb222f5b10c96fb043ff1082762d262309202af20"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "395464ba317510831b58b51f96ffcf10bae2cb57f2e871cecf065e2fa86cdec2"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "57fa00d3bba03a01542bde1b8364de021b77ee97091c5d23801c0330bb54f884"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "3235fd8df413b4c25f08d515105cdca64a86099cef1d614fe24c91347c5d9da8"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "17283562e8a9ce5a2163bd4f7729be3e8bbb0575",
+         "kind": "click",
+         "action": "플로우 다시 실행",
+         "expected": "Actual recent-project A/B/A opens reset history and show only the current project graph. Project B search cannot select project A ROI; no old undo/redo replay. Two real source-summary GETs restore the shared dataset and only two intended project-open POSTs occur.",
+         "observed": "browser: Actual recent-project A/B/A opens reset history and show only the current project graph. Project B search cannot select project A ROI; no old undo/redo replay. Two real source-summary GETs restore the shared dataset and only two intended project-open POSTs occur.",
+         "reviewer": "Codex root actual clean-source browser/Electron execution and original graph/API/current file SHA readback; full feature and human acceptance remain pending",
+         "test": "scripts/e2e/flow-history-scope-controls.spec.ts::empty scoped graph history reopens and hands off without accidental graph writes",
+         "receipt": "2026-10-08-history-scope-1728356-browser.json",
+         "receipt_sha256": "682f3553c4986c5cea5c19b5bf03f376c48e846307c7ba3db320de77332e6ba7",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9d8e0d33cc6695168286eefefce954b7e390bc5e9d54225c5da9e0f331595f2c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ce99b3c58bf726b7aaf89a6e8486933a3d9a52b2009a9d8cb064cc4058e815d0"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "72205cfe74e09f8cf9d72d075a1458c7f20e322e82003c2a9d2e0c64325336f9"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "bd8773bf5ec5de43053a316414c8ee9f060cca80569317bb5cb94874f2c94850"
+          }
+         ]
+        }
+       ]
       }
      }
     },

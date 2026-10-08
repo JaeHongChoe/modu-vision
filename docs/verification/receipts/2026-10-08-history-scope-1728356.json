@@ -1,0 +1,73 @@
+{
+  "schema": "modu-vision.source-history-scope/v1",
+  "source_sha": "17283562e8a9ce5a2163bd4f7729be3e8bbb0575",
+  "source_clean_before_after": true,
+  "source_count": 2205,
+  "source_inputs_unchanged": true,
+  "production_sources": {
+    "src/renderer/components/dataset/DatasetStudio.tsx": "40def65268609d4cc4ad1152564904a8deaf56219d6fc16e5549e56041614208"
+  },
+  "results": {
+    "actual_GUI_passed": 2,
+    "GUI_retries": 0,
+    "GUI_skipped": 0
+  },
+  "GUI_cases": [
+    {
+      "receipt": "docs/verification/receipts/2026-10-08-history-scope-1728356-electron.json",
+      "sha256": "23c5402ea2dfb37ab555daefbc1b8a5c177868eeb8e8c77059a0038403ab3f17",
+      "mode": "electron",
+      "test_source_sha256": "00493a372f65b9bca15ebccbb18a13bf5cdcdbe5f776dcfb8f0a37335060cf60",
+      "rendered_graph_readbacks": 6,
+      "current_raw_draft_project_image_hashes_verified": true,
+      "actual_source_summary_GETs": 2,
+      "intended_project_open_POSTs": 2,
+      "accidental_content_writes": 0
+    },
+    {
+      "receipt": "docs/verification/receipts/2026-10-08-history-scope-1728356-browser.json",
+      "sha256": "682f3553c4986c5cea5c19b5bf03f376c48e846307c7ba3db320de77332e6ba7",
+      "mode": "browser",
+      "test_source_sha256": "00493a372f65b9bca15ebccbb18a13bf5cdcdbe5f776dcfb8f0a37335060cf60",
+      "rendered_graph_readbacks": 6,
+      "current_raw_draft_project_image_hashes_verified": true,
+      "actual_source_summary_GETs": 2,
+      "intended_project_open_POSTs": 2,
+      "accidental_content_writes": 0
+    }
+  ],
+  "root_proof": {
+    "summary_sha256": "8478925e0cdf17f1ea7ed052a87e9be02ec23e5dcffecc95cf99c0fb224066eb",
+    "report_sha256": "18c5f8209e7dc5319b1d777b45c650bd9ba3cf1b7f653385cd8895f4da0c4fa0",
+    "teardown_sha256": "ddfbfa699b695057face3febb0e2ccdb02a050611604636ae12a1cf877fcaba8",
+    "candidate_review_sha256": "5c128daf454befa992d037d0f2342a75eef6c1fe73dbc03f7d4cb8679342c61f"
+  },
+  "verified_change": "A mounted Dataset Studio restores the current source after a same-folder project reset. The real source store suppresses stale responses and repeated restoration; actual browser and Electron project A/B/A transitions restore exact current graph and source.",
+  "verified_action_scenarios": {
+    "U012/undo": [
+      "empty",
+      "reopen",
+      "handoff"
+    ],
+    "U012/redo": [
+      "empty",
+      "reopen",
+      "handoff"
+    ],
+    "F064/native-keyboard-delete-undo-redo": [
+      "empty",
+      "handoff"
+    ],
+    "F064/graph-search-minimap-navigation": [
+      "handoff"
+    ]
+  },
+  "boundaries": {
+    "whole_parent_accepted": false,
+    "new_frozen_native_execution_verified": false,
+    "human_quality_approved": false,
+    "device_acceptance_verified": false,
+    "full_hosted_CI_verified": false
+  },
+  "scope": "Exact existing graph-history controls only. No added action IDs, inferred menus, activation, training, inference or whole-feature acceptance."
+}

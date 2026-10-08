@@ -32,7 +32,7 @@
 | S6-04 | 오프라인 설치와 업데이트 | POSIX 앱/DB cutover·복구·기존 home 인수, 영속 controller와 main/backend 인증 handshake를 구현하고 검증했다. 원래 backend epoch의 source CPU 기준 이미지 실행과 source candidate 활성 pointer 변경 전 검사·복구를 추가 검증했다. 정확한 compiled candidate worker의 A/OK 수학·두 pointer 변경 전 봉인·재실행 거절과 소스78b6b73의 실제 private frozen 앱 시작을 검증했다. 후속 소스 변경은 이 frozen 결과를 승계하지 않는다. 전체 writer/process-tree 종료 확인, OS installer adapter와 실제 publisher 서명은 계속 미완료이다. |
 | S6-05 | 공개 CI와 source 재현성 | 이전 소스의 hosted 성공·실패를 보존한다. 보호된 수동 candidate 검증 workflow와 source/artifact/환경 정책 gate를 추가했다. 실제 workflow 실행·서명·배포는 하지 않았고, 새 게시 소스의 전체 hosted 결과가 필요하다. |
 | S6-06 | 서명과 릴리스 채널 | 실제 Authenticode/publisher identity·서명 후 byte inventory·채널 승인 필요. |
-| S7-01 | 기존 기능 전체 coverage 계약 | 원래156개 ID를 유지한다. 현재207개 curated action의649개 시나리오 검증,800개 pending이다. 알려진 누락 메뉴/shortcut·남은 시나리오·전체 기능 수락을 이어간다. 행동 수와 전체 기능 완료 수는 다르다. |
+| S7-01 | 기존 기능 전체 coverage 계약 | 원래156개 ID를 유지한다. 현재207개 curated action의658개 시나리오 검증,791개 pending이다. 알려진 누락 메뉴/shortcut·남은 시나리오·전체 기능 수락을 이어간다. 행동 수와 전체 기능 완료 수는 다르다. |
 | S7-02 | 10모델군 실제 작업 시나리오 | 실제5 distinct learned chain은 완료. 10모델군 각각 사람이 검토한 정답과 대표 multi-task recipe 검증 필요. |
 | S7-03 | Windows 실제 설치와 사용 QA | Windows 실제 설치·사용 QA 사용자 면제. hosted Server2025 component 실행을 Win11 실사용 성공으로 세지 않음. |
 | S7-05 | 데이터 규모와 연속 운전 | 실제 browser/native에서10만 메타데이터·실제 이미지3장,3×120 keyset page·최대DOM32·응답120·tail UUID/SHA 재열기·파일 없는 항목 선택 거절을 검증했다. 10만 실제 사진 decode나 target 자원/택트 수락은 아니다. a184b1e의 동일 외장72시간 실행은 유지 중이며 이전 시간을 합산하지 않고 terminal receipt가 필요하다. |
@@ -453,3 +453,9 @@ compiled canary의 닫힌 protocol2/worker8개 필드를 화면 bridge에서 검
 - ID 누락·중복이 있는 기존 draft에서도 선택한 연결선 한 행만 편집·삭제한다. transient 배열/행 참조는 저장하지 않고, 저장된 ID를 자동으로 고치지 않으며 유효하지 않은 runtime 게시 거절을 유지한다.
 - 원래 bootstrap2개, Node39개, 좌표62개, 타입 검사3개와 실제 browser/source Electron 각1개가 통과했다. retry/skip0이며2200개 소스가 실행 전후 동일하고 소유한 GUI 프로세스의 종료를 확인했다. 초기 receipt 생성기의 경로 오타는 artifact 수집 오류로 보존했으며 실제 실행을 다시 성공한 것으로 세지 않았다.
 - 원래82/156 ID, 부모 구현69/13·Windows 면제2·필수 pending11·수락0, curated 행동207개·649verified/800pending을 유지한다. 최신 frozen native·full hosted CI·사람 품질·장비 수락은 추가하지 않는다. 근거: `../verification/receipts/2026-10-08-source-safety-6f08dbd.json`.
+
+## 프로젝트 전환과 그래프 이력 실제 재검증
+
+- clean `1728356`의 실제 browser/Electron2건이 retry0·skip0으로 통과했다. 실행 전후2205개 tracked 입력 SHA와 clean 상태를 보존했다. 같은 데이터 폴더를 공유하는 프로젝트 전환의 원본 재조회 누락을 수정하고, A/B/A 화면의 정확한 노드·연결·현재 프로젝트 및 draft/project/image SHA를 확인했다.
+- 기존 Undo/Redo의 empty·reopen·handoff6개, native keyboard delete/undo/redo의 empty·handoff2개, 검색의 handoff1개만 pending에서 verified로 변경했다. 의도한 project open2회 외 콘텐츠 저장·활성화·학습·추론 POST는0회였다.
+- curated 행동207개·658verified/791pending, 부모 구현69/13·Windows 면제2·필수 pending11·수락0이다. 소스 Electron 결과를 frozen native 배포·사람 품질·장비 수락으로 승계하지 않는다. 근거: `../verification/receipts/2026-10-08-history-scope-1728356.json`.
