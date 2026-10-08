@@ -31846,7 +31846,43 @@
        "state": "pending"
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "5870b2c1ae48089ac3e165eac635fd229b33b5e1",
+         "kind": "click",
+         "action": "portable 설치 폴더 선택",
+         "expected": "Reject current app home, its parent, child and linked home before the runner; permit one read-only inspection only after a separate explicit owned choice.",
+         "observed": "Four actual browser home choices were refused before the read-only runner; a separate fifth explicit choice performed one read-only inspection. Full API blocks, owned trees and both complete synthetic images remained exact; no post-baseline writes. Baseline link inode identity and a real OS directory dialog are not claimed.",
+         "reviewer": "Codex source-bound actual GUI and strict read-only artifact qualification; controlled fixture only, human quality, whole parent and release acceptance pending",
+         "test": "scripts/e2e/portable-home-refusal.spec.ts::portable home actual choice refuses current parent child and linked scopes before the read-only runner",
+         "receipt": "2026-10-09-s6-portable-home-5870b2c-browser.json",
+         "receipt_sha256": "6fd27f35e494ee7baad0ad419009464273155299349ab1a837d40f61b2a3f140",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "63a6f399502597e7b409a3ffc34e6c03d296a4aa6a2c874652c139b1a0a0ab91"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "cbf1b7526b0e0282beeea1936a171849c602bcc5eb5042758ebf0e586c2a0920"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "178e3ecbadfc5cc04c9942a134baf4d5256691ef7563e809e039502813702e73"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "afcd192cb31a16ea9c6b76c45cc5170c94f3c0e18d69ed1f28194bf118d50c9c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "c0ef0f4c0bdf0bbe0d5fceb2f5feece0b88ffb5c504e3adeff3b578c9f6f486b"
+          }
+         ]
+        }
+       ]
       },
       "error": {
        "state": "verified",
@@ -32041,7 +32077,35 @@
        ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "af0962a053ee534478922e4b6aa43c941f9a4864",
+         "kind": "click",
+         "action": "portable 상태 다시 읽기",
+         "expected": "An inspection error preserves the explicitly selected home and confirmation; only an explicit same-identity retry may reread the original state.",
+         "observed": "One controlled inspect failure retained the original selection and confirmation. The actual explicit retry returned the same committed fixture identity; complete 17 API records, owned project/source/portable/resource trees and original images remained equal with zero post-baseline writes. Four exact source-absent GET422 records are retained; the other 13 HTTP200 statuses and input values are enforced by the passed source. No portable installation or recovery transaction is claimed.",
+         "reviewer": "Codex source-bound actual GUI and strict read-only artifact qualification; controlled fixture only, human quality, whole parent and release acceptance pending",
+         "test": "scripts/e2e/portable-status-recovery.spec.ts::portable inspect error requires explicit same-identity retry and utility handoff preserves original state",
+         "receipt": "2026-10-09-s6-portable-status-af0962a-browser.json",
+         "receipt_sha256": "86628dffaad6730826dc121438ad6275bd39d8d711be03d0e2b783135f33ceef",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f840775db074c2fe4706c1f6dac37946a82ee019dca0470f63aa42f8b158a46a"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f4a9952551544f9e41e02b1efe0ce6bd225a41df04e32b50091cc3490bef1cf9"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "322084e0a7c1d648167c79b7ab52fa7d28e07650d23837c9045e627015561ba3"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
        "state": "pending"
@@ -32050,7 +32114,35 @@
        "state": "pending"
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "af0962a053ee534478922e4b6aa43c941f9a4864",
+         "kind": "click",
+         "action": "portable 상태 다시 읽기",
+         "expected": "Closing and reopening the utility must require a new explicit same-home selection and preserve the original durable state.",
+         "observed": "Actual utility close/remount discarded volatile selection; deliberate reselection read the same original committed identity through the read-only Manager. Full 17 APIs and all owned bytes remained equal, with zero post-baseline writes. UI values and original request-start 10-second GET completion bounds are enforced by the exact passed source; no raw GET clock rows or actual portable launch are claimed. The stale-handler negative is source-only.",
+         "reviewer": "Codex source-bound actual GUI and strict read-only artifact qualification; controlled fixture only, human quality, whole parent and release acceptance pending",
+         "test": "scripts/e2e/portable-status-recovery.spec.ts::portable inspect error requires explicit same-identity retry and utility handoff preserves original state",
+         "receipt": "2026-10-09-s6-portable-status-af0962a-browser.json",
+         "receipt_sha256": "86628dffaad6730826dc121438ad6275bd39d8d711be03d0e2b783135f33ceef",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "f840775db074c2fe4706c1f6dac37946a82ee019dca0470f63aa42f8b158a46a"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f4a9952551544f9e41e02b1efe0ce6bd225a41df04e32b50091cc3490bef1cf9"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "322084e0a7c1d648167c79b7ab52fa7d28e07650d23837c9045e627015561ba3"
+          }
+         ]
+        }
+       ]
       }
      }
     },
@@ -32693,13 +32785,61 @@
        "state": "pending"
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "c2f2e5fb52341ae9fcc13f6701d9ff3cc09d4193",
+         "kind": "click",
+         "action": "데이터 전환 전 설치 취소",
+         "expected": "A confirmed abort refusal retains the exact original pre-database intent and permits no repair, launch or implicit retry.",
+         "observed": "The actual existing abort control used explicit confirmation and the original Manager recover path; a controlled runner refusal retained the exact pre-database intent and all durable fixture bytes. Complete 10 APIs and before/error/after copies remained equal, with zero post-baseline writes and no launches. Original bridge 15-second clock rows are retained; standalone fixture reads do not have that explicit request-start bound. This is an inert runner/signature fixture, not an actual portable abort transaction.",
+         "reviewer": "Codex source-bound actual GUI and strict read-only artifact qualification; controlled fixture only, human quality, whole parent and release acceptance pending",
+         "test": "scripts/e2e/portable-abort-recovery.spec.ts::portable abort failure retains the exact pre-database intent and explicit reopen restores its disabled recovery",
+         "receipt": "2026-10-09-s6-portable-abort-c2f2e5f-browser.json",
+         "receipt_sha256": "ccad28641ec99d04d20e7c101f8a64e2330f274fccbe3f574cc101a9234a72e7",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3747283e6e21bf506df291dc4147f2dfdbcbaaa8edaa41605696393d75654693"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "9b95f854336519b838e1c60ecf05365d4795b058bf2581ace080b509f37b7a1f"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
        "state": "pending"
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-04",
+         "source_sha": "c2f2e5fb52341ae9fcc13f6701d9ff3cc09d4193",
+         "kind": "click",
+         "action": "데이터 전환 전 설치 취소",
+         "expected": "After an abort error, actual reload requires deliberate same-home reselection and retains the same original intent with recovery disabled until confirmation.",
+         "observed": "Actual UI reload cleared volatile state; explicit same-home reselection reread the original pre-database installation/update/fence and restored its disabled recovery controls. Full 10 APIs, owned trees, both original images and durable intent stayed exact with zero post-baseline writes. Renderer GET completion is source-enforced; no actual portable recovery, staged canary, signature approval or model execution is claimed.",
+         "reviewer": "Codex source-bound actual GUI and strict read-only artifact qualification; controlled fixture only, human quality, whole parent and release acceptance pending",
+         "test": "scripts/e2e/portable-abort-recovery.spec.ts::portable abort failure retains the exact pre-database intent and explicit reopen restores its disabled recovery",
+         "receipt": "2026-10-09-s6-portable-abort-c2f2e5f-browser.json",
+         "receipt_sha256": "ccad28641ec99d04d20e7c101f8a64e2330f274fccbe3f574cc101a9234a72e7",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3747283e6e21bf506df291dc4147f2dfdbcbaaa8edaa41605696393d75654693"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "9b95f854336519b838e1c60ecf05365d4795b058bf2581ace080b509f37b7a1f"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
        "state": "pending"
@@ -44122,8 +44262,53 @@
        ]
       },
       "cancel": {
-       "state": "pending",
-       "reason": "Native picker cancellation and its surrounding field preservation have not been exercised."
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "5870b2c1ae48089ac3e165eac635fd229b33b5e1",
+         "kind": "click",
+         "action": "팩 검증·보관",
+         "expected": "Null source and inventory choices preserve the entered paths and reviewed pin before any installation POST.",
+         "observed": "Actual browser choice handlers returned controlled null twice; all three original inputs, complete APIs, owned trees and original image bytes remained unchanged with no post-baseline writes. This does not exercise a real OS dialog or install/activate a runtime pack.",
+         "reviewer": "Codex source-bound actual GUI and strict read-only artifact qualification; controlled fixture only, human quality, whole parent and release acceptance pending",
+         "test": "scripts/e2e/runtime-pack-picker-cancel.spec.ts::runtime pack source and inventory null choices preserve exact inputs before any POST",
+         "receipt": "2026-10-09-s6-runtime-picker-5870b2c-browser.json",
+         "receipt_sha256": "fd762dbe7542211c53c8407b4e6510976a3436eb65a2ac9db64b6bb1d1ea5b25",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "09f020d2f22f5af6932921cfb13dfbd8566cfad095931a4e4fe31c1c6a4a45e8"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0c62273963a1de550974a8fb5c469881bc27cfdfd892d15ab081bb14520f4ad3"
+          }
+         ]
+        },
+        {
+         "task": "S6-03",
+         "source_sha": "5870b2c1ae48089ac3e165eac635fd229b33b5e1",
+         "kind": "click",
+         "action": "팩 검증·보관",
+         "expected": "Null source and inventory choices preserve the entered paths and reviewed pin before any installation POST.",
+         "observed": "Actual source Electron preload IPC choices returned controlled null twice and preserved the exact inputs, complete APIs and owned trees with no post-baseline writes. Native page/console/blocked-loopback capture was unavailable; native runtime error cleanliness is not accepted. No real OS dialog or install/activate transaction is claimed.",
+         "reviewer": "Codex source-bound actual GUI and strict read-only artifact qualification; controlled fixture only, human quality, whole parent and release acceptance pending",
+         "test": "scripts/e2e/runtime-pack-picker-cancel.spec.ts::native runtime pack original preload IPC null choices preserve exact inputs before any POST",
+         "receipt": "2026-10-09-s6-runtime-picker-5870b2c-electron.json",
+         "receipt_sha256": "d0de35c3b77e6bb739d0e51d926e74c32da57de8665182541c8d4ba33d9a64b2",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2483727a5bbd00770db8204fc6df3b09fc3d02519e5bbafa9c72eec9d68ce8ab"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e44f2604d649850f46402ca690f47cf44afd0d96081d787f5df91101671135e3"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
        "state": "verified",

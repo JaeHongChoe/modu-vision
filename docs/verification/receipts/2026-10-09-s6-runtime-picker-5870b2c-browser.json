@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "5870b2c1ae48089ac3e165eac635fd229b33b5e1",
+  "source_dirty": false,
+  "test": "scripts/e2e/runtime-pack-picker-cancel.spec.ts::runtime pack source and inventory null choices preserve exact inputs before any POST",
+  "test_source_sha256": "a92ee42e85d111ad63405e5cfba48ebf6d973e249df18e90a905ea0e9dde4aec",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "26023a5e8636e91ff7f7ab741046b7f52ff200ec5b7126356a682a0c772a4baa",
+  "harness_sha256": "e6455261cc97f1a90bf09f3ca3d4af6c27afd2f41d5cd114add878e48f9c8094",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "09f020d2f22f5af6932921cfb13dfbd8566cfad095931a4e4fe31c1c6a4a45e8"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "0c62273963a1de550974a8fb5c469881bc27cfdfd892d15ab081bb14520f4ad3"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

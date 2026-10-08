@@ -1,0 +1,44 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "5870b2c1ae48089ac3e165eac635fd229b33b5e1",
+  "source_dirty": false,
+  "test": "scripts/e2e/portable-home-refusal.spec.ts::portable home actual choice refuses current parent child and linked scopes before the read-only runner",
+  "test_source_sha256": "3235958c05cd4fafb306cc32f2435dcfaeb90ba900b76baa694e690bea1d36ce",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "26023a5e8636e91ff7f7ab741046b7f52ff200ec5b7126356a682a0c772a4baa",
+  "harness_sha256": "7971ed041c4caf2d813bc7fe692036b6dfbdc49970ebae2097a04b7cea708770",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "63a6f399502597e7b409a3ffc34e6c03d296a4aa6a2c874652c139b1a0a0ab91"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "cbf1b7526b0e0282beeea1936a171849c602bcc5eb5042758ebf0e586c2a0920"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "178e3ecbadfc5cc04c9942a134baf4d5256691ef7563e809e039502813702e73"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "afcd192cb31a16ea9c6b76c45cc5170c94f3c0e18d69ed1f28194bf118d50c9c"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "c0ef0f4c0bdf0bbe0d5fceb2f5feece0b88ffb5c504e3adeff3b578c9f6f486b"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

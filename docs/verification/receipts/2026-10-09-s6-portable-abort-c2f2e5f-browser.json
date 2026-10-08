@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "c2f2e5fb52341ae9fcc13f6701d9ff3cc09d4193",
+  "source_dirty": false,
+  "test": "scripts/e2e/portable-abort-recovery.spec.ts::portable abort failure retains the exact pre-database intent and explicit reopen restores its disabled recovery",
+  "test_source_sha256": "66dbbb47bdcdea8cbc82df6d414c63ca1c68ddfcb658aa498321ccd5b379cb92",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "847b1ccfd393e935590c86d1eb256228e9897b67e436d9991e372f225b72b3bf",
+  "harness_sha256": "03e7c1571d73920e26b027b20f6f54abd768bb4808d659d3b6a9fa763a963dc7",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "3747283e6e21bf506df291dc4147f2dfdbcbaaa8edaa41605696393d75654693"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "9b95f854336519b838e1c60ecf05365d4795b058bf2581ace080b509f37b7a1f"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}
