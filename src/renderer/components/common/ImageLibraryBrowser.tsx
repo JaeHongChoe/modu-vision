@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { AlertTriangle, Check, Search } from 'lucide-react';
 import { api, getProjectContextGeneration, subscribeProjectContext, resolveApiUrl, type LibraryImage, type LibraryQuery } from '../../services/api';
+import { workflowError } from '../../services/datasetWorkflow';
 import { columnsFor, nearEnd, visibleRows } from '../../utils/virtualWindow';
 
 interface Props {
@@ -77,7 +78,7 @@ export const ImageLibraryBrowser: React.FC<Props> = ({ selectedIds, onPick, onUn
     } catch (caught) {
       if (sequence !== request.current || epoch !== getProjectContextGeneration()) return;
       const status = (caught as { status?: number }).status;
-      const reason = caught instanceof Error ? caught.message : String(caught);
+      const reason = workflowError(caught);
       if (status === 409) unavailable.current?.(reason);
       setError(reason);
       setFinished(true);

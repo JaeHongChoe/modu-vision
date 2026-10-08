@@ -7,7 +7,8 @@ function browser(options={}){
  const react={useState(initial){const i=cursor++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return[slots[i],value=>{if(!mounted)lateUpdates.push(i);const next=typeof value==='function'?value(slots[i]):value;if(!Object.is(next,slots[i])){slots[i]=next;dirty=true;}}];},useRef(initial){const i=cursor++;return slots[i]??(slots[i]={current:initial});},useCallback(fn,deps){const i=cursor++;if(!same(slots[i]?.deps,deps))slots[i]={deps,fn};return slots[i].fn;},useEffect(fn,deps){const i=cursor++;if(!same(slots[i]?.deps,deps)){const previous=slots[i];slots[i]={deps,cleanup:previous?.cleanup};effects.push(()=>{slots[i].cleanup?.();slots[i].cleanup=fn();});}},useLayoutEffect(){cursor++;}};
  const file=path.join(__dirname,'ImageLibraryBrowser.tsx'),loaded=new Module(file,module);loaded.filename=file;loaded.paths=Module._nodeModulePaths(__dirname);const original=loaded.require.bind(loaded);const utilityFile=path.join(__dirname,'../../utils/virtualWindow.ts'),utility=new Module(utilityFile,module);utility.filename=utilityFile;utility._compile(ts.transpileModule(fs.readFileSync(utilityFile,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,utilityFile);
  react.useSyncExternalStore=(_subscribe,getSnapshot)=>{cursor++;return getSnapshot();};
- loaded.require=name=>name==='../../utils/virtualWindow'?utility.exports:name==='react'?react:name==='../../services/api'?{getProjectContextGeneration:()=>epoch,subscribeProjectContext:()=>()=>{},resolveApiUrl:x=>x,api:{library:{images:async query=>{calls.push({...query});if(options.respond)return options.respond(query,calls.length);const start=query.cursor?120:0;return{items:Array.from({length:120},(_,i)=>image(i+start)),next_cursor:query.cursor?'page-3':'page-2',complete_page:true,scanned_to:null};}}}}:original(name);
+ const formatFile=path.join(__dirname,'../../services/datasetWorkflow.ts'),formatRaw=fs.readFileSync(formatFile,'utf8'),formatAST=ts.createSourceFile(formatFile,formatRaw,ts.ScriptTarget.Latest,true),formatDeclaration=formatAST.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='workflowError');assert(formatDeclaration,'original production formatter missing');const formatter=new Module(formatFile,module);formatter._compile(ts.transpileModule(formatDeclaration.getText(formatAST),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,formatFile);
+ loaded.require=name=>name==='../../services/datasetWorkflow'?formatter.exports:name==='../../utils/virtualWindow'?utility.exports:name==='react'?react:name==='../../services/api'?{getProjectContextGeneration:()=>epoch,subscribeProjectContext:()=>()=>{},resolveApiUrl:x=>x,api:{library:{images:async query=>{calls.push({...query});if(options.respond)return options.respond(query,calls.length);const start=query.cursor?120:0;return{items:Array.from({length:120},(_,i)=>image(i+start)),next_cursor:query.cursor?'page-3':'page-2',complete_page:true,scanned_to:null};}}}}:original(name);
  loaded._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,file);
  const previousWindow=global.window;global.window={setTimeout:()=>1,clearTimeout(){}};
  function render(){cursor=0;dirty=false;tree=loaded.exports.ImageLibraryBrowser({selectedIds:selected,onPick:item=>picked.push(item),onUnavailable:reason=>unavailable.push(reason)});effects.splice(0).forEach(fn=>fn());return tree;}
@@ -52,4 +53,19 @@ test('error type is a separate filter and changing it discards the previous curs
 test('an accepted context change refreshes the list and discards the former namespace response',async()=>{
  let reject;const first=new Promise((_yes,no)=>{reject=no;});const b=browser({respond:(_query,count)=>count===1?first:pageAnswer(120)});
  try{await b.settle();b.contextChange();await b.settle();assert.equal(b.calls.length,2,'new namespace must request its own list');reject(Object.assign(Error('former namespace'),{status:409}));await b.settle();assert.deepEqual(b.unavailable,[]);assert(b.controls().some(n=>n.props?.role==='listitem'&&n.props.title==='120/part.png'));}finally{b.close();}
+});
+
+
+test('real 422 validation arrays identify the query field without echoing input or context',async()=>{
+ const refusal=Object.assign([{loc:['query','tag'],type:'string_too_long',msg:'String should have at most 256 characters',input:'private-operator-value',ctx:{max_length:256,secret:'private-secret'},url:'https://private.invalid'}],{status:422});
+ const b=browser({respond:async()=>{throw refusal;}});
+ try{await b.settle();const alert=b.controls().find(n=>n.props?.role==='alert');assert(alert);const texts=nodes(alert).filter(n=>n.type==='span').map(n=>n.props.children);assert.deepEqual(texts,['tag: String should have at most 256 characters']);assert.deepEqual(b.unavailable,[]);assert.deepEqual([...b.selected],['image-0']);}finally{b.close();}
+});
+test('structured 409 refusal retains its exact message and original unavailable callback',async()=>{
+ const b=browser({respond:async()=>{throw {status:409,message:'No validated dataset revision'};}});
+ try{await b.settle();assert.deepEqual(b.unavailable,['No validated dataset revision']);assert(b.controls().some(n=>n.type==='span'&&n.props.children==='No validated dataset revision'));assert.deepEqual([...b.selected],['image-0']);}finally{b.close();}
+});
+test('malformed structured errors display a safe fallback without stringifying objects',async()=>{
+ const b=browser({respond:async()=>{throw Object.assign([{input:'private-operator-value',msg:{secret:'private-secret'}}],{status:422});}});
+ try{await b.settle();assert(b.controls().some(n=>n.type==='span'&&n.props.children==='요청을 처리하지 못했습니다.'));assert.deepEqual(b.unavailable,[]);}finally{b.close();}
 });
