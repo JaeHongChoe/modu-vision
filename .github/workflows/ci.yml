@@ -236,6 +236,8 @@ jobs:
           backend/tests/test_application_runtime_home_paths.py
           backend/tests/test_application_cpu_writer_lifetime.py
           backend/tests/test_application_drain_transition_busy.py
+          backend/tests/test_application_start_identity.py
+          backend/tests/test_flow_writer_lifetime.py
           backend/tests/test_application_launch_controller.py
           backend/tests/test_application_launch_lease.py
           backend/tests/test_application_launch_electron.py::test_owned_main_spawn_uses_derived_private_environment_without_inherited_authority
