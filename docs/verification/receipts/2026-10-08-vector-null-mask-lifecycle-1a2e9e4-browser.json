@@ -1,0 +1,60 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "1a2e9e420c444c2f1ec6eedec9d94ec9b7615939",
+  "source_dirty": false,
+  "test": "scripts/e2e/vector-label-lifecycle.spec.ts::vector empty input service failures and explicit stage handoff preserve exact original labels",
+  "test_source_sha256": "9f28943f680e05dba42037c0b6de10a2750161f6d321d12169b177c7b2cb08be",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "b610be4ac3963667669a18a2685e7839a6e60daae7ad850b6bc18e411c60f703",
+  "harness_sha256": "193b04d1da55b7ca3eaf788583c0461237bd69df87387e93709a44bd85706aaf",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "5ceb2a43e5572b73b80d6041438ee605cdd3f8bce3f17587b17e29b2c6d2b5c4"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "a680ee224ec6f5f58ac82059e6a1139a179c76200c23062839c4e191a8359c4f"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "27f4834a8b8f25dcdb5ab5e8655e742b93c195aafa96fd7bc4bda15d594bd027"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "cdd0c3315bcb0ff6571096a0cc550a1883a760b339e6e3b35615cca31e256e58"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "8845cdd91c7ea1d00aa76e1f426a2829300d9e81407c1446868845316df1cd6d"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "f785ebdef4d9e18af0a53fd0c836dfedd5434c6098f995ef11afc201b136185f"
+    },
+    {
+      "id": "screenshot-6",
+      "sha256": "8c2f1cc258c1fa8321db88b5589f310682f53268672c8c884edbcc0d2db12c06"
+    },
+    {
+      "id": "screenshot-7",
+      "sha256": "2ef3bb8295d1b79dacd8e37df1363d74837d5f03378af99642eb1b5f5eedbfd5"
+    },
+    {
+      "id": "screenshot-8",
+      "sha256": "ef8bbef25c5602aeeff5456ec1c87ab186202bf5287d88456f615b3546d7aa0f"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

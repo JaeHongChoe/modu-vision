@@ -35921,7 +35921,109 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "1a2e9e420c444c2f1ec6eedec9d94ec9b7615939",
+         "kind": "click",
+         "action": "바운딩 박스 (BBox - 2)",
+         "expected": "Actual vector pointer completion without a current image must create no labels, dirty save or mutation and must preserve the full empty-project/source baseline.",
+         "observed": "Actual browser: Actual positive pointer input/Enter with no selected current image left zero annotations, no dirty save or page API mutation, and the complete original empty-project and harness source trees/raw project+labelset bodies unchanged. The disk harness dataset itself is not claimed empty. First bbox-only save has literal mask_file/raster/hash null. Later mixed polygon/OBB saves retain full PNG bytes and hashes with only three independent class-center samples; full mask-pixel semantics are not claimed. Original generated256RGB bytes, source path/SHA/image UUID and needs_review metadata are preserved. The full page write inventories were9 browser/13 source Electron: save503three, real200three, exact owned-source segmentation validate_imagesfalse reimportthree, plus native fixture setupfour. Browser external fixture setupfour is separately retained in original API calls. No training/inference/download request or whole-mutations-zero claim.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this exact nine-condition source UI lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows/installed-release and parent acceptance remain separate.",
+         "test": "scripts/e2e/vector-label-lifecycle.spec.ts::vector empty input service failures and explicit stage handoff preserve exact original labels",
+         "receipt": "2026-10-08-vector-null-mask-lifecycle-1a2e9e4-browser.json",
+         "receipt_sha256": "e094f5b39fa0011b1c7787e0bcf6e52a2ed40a3640d25260099dd61058f745b0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "5ceb2a43e5572b73b80d6041438ee605cdd3f8bce3f17587b17e29b2c6d2b5c4"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a680ee224ec6f5f58ac82059e6a1139a179c76200c23062839c4e191a8359c4f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "27f4834a8b8f25dcdb5ab5e8655e742b93c195aafa96fd7bc4bda15d594bd027"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "cdd0c3315bcb0ff6571096a0cc550a1883a760b339e6e3b35615cca31e256e58"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "8845cdd91c7ea1d00aa76e1f426a2829300d9e81407c1446868845316df1cd6d"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "f785ebdef4d9e18af0a53fd0c836dfedd5434c6098f995ef11afc201b136185f"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "8c2f1cc258c1fa8321db88b5589f310682f53268672c8c884edbcc0d2db12c06"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "2ef3bb8295d1b79dacd8e37df1363d74837d5f03378af99642eb1b5f5eedbfd5"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "ef8bbef25c5602aeeff5456ec1c87ab186202bf5287d88456f615b3546d7aa0f"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "1a2e9e420c444c2f1ec6eedec9d94ec9b7615939",
+         "kind": "click",
+         "action": "바운딩 박스 (BBox - 2)",
+         "expected": "Actual vector pointer completion without a current image must create no labels, dirty save or mutation and must preserve the full empty-project/source baseline.",
+         "observed": "Actual source Electron: Actual positive pointer input/Enter with no selected current image left zero annotations, no dirty save or page API mutation, and the complete original empty-project and harness source trees/raw project+labelset bodies unchanged. The disk harness dataset itself is not claimed empty. First bbox-only save has literal mask_file/raster/hash null. Later mixed polygon/OBB saves retain full PNG bytes and hashes with only three independent class-center samples; full mask-pixel semantics are not claimed. Original generated256RGB bytes, source path/SHA/image UUID and needs_review metadata are preserved. The full page write inventories were9 browser/13 source Electron: save503three, real200three, exact owned-source segmentation validate_imagesfalse reimportthree, plus native fixture setupfour. Browser external fixture setupfour is separately retained in original API calls. No training/inference/download request or whole-mutations-zero claim.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this exact nine-condition source UI lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows/installed-release and parent acceptance remain separate.",
+         "test": "scripts/e2e/vector-label-lifecycle.spec.ts::native vector empty input service failures and explicit stage handoff preserve exact original labels",
+         "receipt": "2026-10-08-vector-null-mask-lifecycle-1a2e9e4-electron.json",
+         "receipt_sha256": "18b5a9dea8a858926650cb0dfcb6a018210cb732aaeebbe1b4a9511bec159eeb",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "bdf02ec590dc8715227655f313dbfd87204ca1a5374cc2ff2592d129468e11f3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a6e5eef78c09add99a203720a327f9b73749bc769d7ee2808a79507ab3e5e6a3"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f60e87a28c193c062b55eca2f2e775a89c3a66095fd08604b0538bebacba22cc"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "902592f9307032e21f4dc6fba8faecfc62172399c6c9e38885584344cf7f4f30"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "d2b031b5338f97c72b50111261efbe22516815900c54a983a3af2cd96bbd34a5"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "6a33e24dc4009a1ddcc16a71ce99f3af4ca43ba47ece1169e020a745c6267a06"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "a1dd5850fcbd8cec0dc93543f6775d9ff79023a330198736607794eeaa531340"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "49bfccd2bf569e9140f998e7ef02dd3908f6e26688893affc39e1f36b52c2848"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "6cc44427b1e19c7ccecd705d58c0147d3548b5d00647a42c786e1b3915944407"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
        "state": "verified",
@@ -35981,7 +36083,109 @@
        ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "1a2e9e420c444c2f1ec6eedec9d94ec9b7615939",
+         "kind": "click",
+         "action": "바운딩 박스 (BBox - 2)",
+         "expected": "A controlled503 annotation save must retain the full original server baseline and unsaved exact geometry, then explicit original200 retry must receive the same complete request and retain prior saved IDs.",
+         "observed": "Actual browser: One exact controlled503 annotation-save response retained the complete raw server API/full file baseline and unsaved BBox[20,20,70,60], Solder Bridge class1. After removing that fault, an explicit Save reached the original service200 with the same canonical full request. Newly stored labels retain every prior saved full annotation ID/object. This is a declared transport fault, not an observed backend outage. First bbox-only save has literal mask_file/raster/hash null. Later mixed polygon/OBB saves retain full PNG bytes and hashes with only three independent class-center samples; full mask-pixel semantics are not claimed. Original generated256RGB bytes, source path/SHA/image UUID and needs_review metadata are preserved. The full page write inventories were9 browser/13 source Electron: save503three, real200three, exact owned-source segmentation validate_imagesfalse reimportthree, plus native fixture setupfour. Browser external fixture setupfour is separately retained in original API calls. No training/inference/download request or whole-mutations-zero claim.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this exact nine-condition source UI lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows/installed-release and parent acceptance remain separate.",
+         "test": "scripts/e2e/vector-label-lifecycle.spec.ts::vector empty input service failures and explicit stage handoff preserve exact original labels",
+         "receipt": "2026-10-08-vector-null-mask-lifecycle-1a2e9e4-browser.json",
+         "receipt_sha256": "e094f5b39fa0011b1c7787e0bcf6e52a2ed40a3640d25260099dd61058f745b0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "5ceb2a43e5572b73b80d6041438ee605cdd3f8bce3f17587b17e29b2c6d2b5c4"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a680ee224ec6f5f58ac82059e6a1139a179c76200c23062839c4e191a8359c4f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "27f4834a8b8f25dcdb5ab5e8655e742b93c195aafa96fd7bc4bda15d594bd027"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "cdd0c3315bcb0ff6571096a0cc550a1883a760b339e6e3b35615cca31e256e58"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "8845cdd91c7ea1d00aa76e1f426a2829300d9e81407c1446868845316df1cd6d"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "f785ebdef4d9e18af0a53fd0c836dfedd5434c6098f995ef11afc201b136185f"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "8c2f1cc258c1fa8321db88b5589f310682f53268672c8c884edbcc0d2db12c06"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "2ef3bb8295d1b79dacd8e37df1363d74837d5f03378af99642eb1b5f5eedbfd5"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "ef8bbef25c5602aeeff5456ec1c87ab186202bf5287d88456f615b3546d7aa0f"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "1a2e9e420c444c2f1ec6eedec9d94ec9b7615939",
+         "kind": "click",
+         "action": "바운딩 박스 (BBox - 2)",
+         "expected": "A controlled503 annotation save must retain the full original server baseline and unsaved exact geometry, then explicit original200 retry must receive the same complete request and retain prior saved IDs.",
+         "observed": "Actual source Electron: One exact controlled503 annotation-save response retained the complete raw server API/full file baseline and unsaved BBox[20,20,70,60], Solder Bridge class1. After removing that fault, an explicit Save reached the original service200 with the same canonical full request. Newly stored labels retain every prior saved full annotation ID/object. This is a declared transport fault, not an observed backend outage. First bbox-only save has literal mask_file/raster/hash null. Later mixed polygon/OBB saves retain full PNG bytes and hashes with only three independent class-center samples; full mask-pixel semantics are not claimed. Original generated256RGB bytes, source path/SHA/image UUID and needs_review metadata are preserved. The full page write inventories were9 browser/13 source Electron: save503three, real200three, exact owned-source segmentation validate_imagesfalse reimportthree, plus native fixture setupfour. Browser external fixture setupfour is separately retained in original API calls. No training/inference/download request or whole-mutations-zero claim.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this exact nine-condition source UI lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows/installed-release and parent acceptance remain separate.",
+         "test": "scripts/e2e/vector-label-lifecycle.spec.ts::native vector empty input service failures and explicit stage handoff preserve exact original labels",
+         "receipt": "2026-10-08-vector-null-mask-lifecycle-1a2e9e4-electron.json",
+         "receipt_sha256": "18b5a9dea8a858926650cb0dfcb6a018210cb732aaeebbe1b4a9511bec159eeb",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "bdf02ec590dc8715227655f313dbfd87204ca1a5374cc2ff2592d129468e11f3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a6e5eef78c09add99a203720a327f9b73749bc769d7ee2808a79507ab3e5e6a3"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f60e87a28c193c062b55eca2f2e775a89c3a66095fd08604b0538bebacba22cc"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "902592f9307032e21f4dc6fba8faecfc62172399c6c9e38885584344cf7f4f30"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "d2b031b5338f97c72b50111261efbe22516815900c54a983a3af2cd96bbd34a5"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "6a33e24dc4009a1ddcc16a71ce99f3af4ca43ba47ece1169e020a745c6267a06"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "a1dd5850fcbd8cec0dc93543f6775d9ff79023a330198736607794eeaa531340"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "49bfccd2bf569e9140f998e7ef02dd3908f6e26688893affc39e1f36b52c2848"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "6cc44427b1e19c7ccecd705d58c0147d3548b5d00647a42c786e1b3915944407"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
        "state": "verified",
@@ -36064,7 +36268,109 @@
        ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "1a2e9e420c444c2f1ec6eedec9d94ec9b7615939",
+         "kind": "click",
+         "action": "바운딩 박스 (BBox - 2)",
+         "expected": "Actual common-model-preparation stage entry and truth-review return must retain complete saved labels, original source/metadata identity and all protected file bytes, with no mutations in the immediate stage slice.",
+         "observed": "Actual browser: After real200 save of BBox[20,20,70,60], Solder Bridge class1, the actual common model preparation stage showed the exact project and one original image; its truth-review button returned to labeling with complete raw project/labelset/annotation/metadata replies and entire protected project/source trees/bytes unchanged. Final reload retained all three original saved IDs/shapes. Immediate handoff mutation slices were empty; automatic annotationsChanged source reimports are separately declared and verified. First bbox-only save has literal mask_file/raster/hash null. Later mixed polygon/OBB saves retain full PNG bytes and hashes with only three independent class-center samples; full mask-pixel semantics are not claimed. Original generated256RGB bytes, source path/SHA/image UUID and needs_review metadata are preserved. The full page write inventories were9 browser/13 source Electron: save503three, real200three, exact owned-source segmentation validate_imagesfalse reimportthree, plus native fixture setupfour. Browser external fixture setupfour is separately retained in original API calls. No training/inference/download request or whole-mutations-zero claim.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this exact nine-condition source UI lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows/installed-release and parent acceptance remain separate.",
+         "test": "scripts/e2e/vector-label-lifecycle.spec.ts::vector empty input service failures and explicit stage handoff preserve exact original labels",
+         "receipt": "2026-10-08-vector-null-mask-lifecycle-1a2e9e4-browser.json",
+         "receipt_sha256": "e094f5b39fa0011b1c7787e0bcf6e52a2ed40a3640d25260099dd61058f745b0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "5ceb2a43e5572b73b80d6041438ee605cdd3f8bce3f17587b17e29b2c6d2b5c4"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a680ee224ec6f5f58ac82059e6a1139a179c76200c23062839c4e191a8359c4f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "27f4834a8b8f25dcdb5ab5e8655e742b93c195aafa96fd7bc4bda15d594bd027"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "cdd0c3315bcb0ff6571096a0cc550a1883a760b339e6e3b35615cca31e256e58"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "8845cdd91c7ea1d00aa76e1f426a2829300d9e81407c1446868845316df1cd6d"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "f785ebdef4d9e18af0a53fd0c836dfedd5434c6098f995ef11afc201b136185f"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "8c2f1cc258c1fa8321db88b5589f310682f53268672c8c884edbcc0d2db12c06"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "2ef3bb8295d1b79dacd8e37df1363d74837d5f03378af99642eb1b5f5eedbfd5"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "ef8bbef25c5602aeeff5456ec1c87ab186202bf5287d88456f615b3546d7aa0f"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "1a2e9e420c444c2f1ec6eedec9d94ec9b7615939",
+         "kind": "click",
+         "action": "바운딩 박스 (BBox - 2)",
+         "expected": "Actual common-model-preparation stage entry and truth-review return must retain complete saved labels, original source/metadata identity and all protected file bytes, with no mutations in the immediate stage slice.",
+         "observed": "Actual source Electron: After real200 save of BBox[20,20,70,60], Solder Bridge class1, the actual common model preparation stage showed the exact project and one original image; its truth-review button returned to labeling with complete raw project/labelset/annotation/metadata replies and entire protected project/source trees/bytes unchanged. Final reload retained all three original saved IDs/shapes. Immediate handoff mutation slices were empty; automatic annotationsChanged source reimports are separately declared and verified. First bbox-only save has literal mask_file/raster/hash null. Later mixed polygon/OBB saves retain full PNG bytes and hashes with only three independent class-center samples; full mask-pixel semantics are not claimed. Original generated256RGB bytes, source path/SHA/image UUID and needs_review metadata are preserved. The full page write inventories were9 browser/13 source Electron: save503three, real200three, exact owned-source segmentation validate_imagesfalse reimportthree, plus native fixture setupfour. Browser external fixture setupfour is separately retained in original API calls. No training/inference/download request or whole-mutations-zero claim.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this exact nine-condition source UI lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows/installed-release and parent acceptance remain separate.",
+         "test": "scripts/e2e/vector-label-lifecycle.spec.ts::native vector empty input service failures and explicit stage handoff preserve exact original labels",
+         "receipt": "2026-10-08-vector-null-mask-lifecycle-1a2e9e4-electron.json",
+         "receipt_sha256": "18b5a9dea8a858926650cb0dfcb6a018210cb732aaeebbe1b4a9511bec159eeb",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "bdf02ec590dc8715227655f313dbfd87204ca1a5374cc2ff2592d129468e11f3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a6e5eef78c09add99a203720a327f9b73749bc769d7ee2808a79507ab3e5e6a3"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f60e87a28c193c062b55eca2f2e775a89c3a66095fd08604b0538bebacba22cc"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "902592f9307032e21f4dc6fba8faecfc62172399c6c9e38885584344cf7f4f30"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "d2b031b5338f97c72b50111261efbe22516815900c54a983a3af2cd96bbd34a5"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "6a33e24dc4009a1ddcc16a71ce99f3af4ca43ba47ece1169e020a745c6267a06"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "a1dd5850fcbd8cec0dc93543f6775d9ff79023a330198736607794eeaa531340"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "49bfccd2bf569e9140f998e7ef02dd3908f6e26688893affc39e1f36b52c2848"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "6cc44427b1e19c7ccecd705d58c0147d3548b5d00647a42c786e1b3915944407"
+          }
+         ]
+        }
+       ]
       }
      }
     },
@@ -36097,7 +36403,109 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "1a2e9e420c444c2f1ec6eedec9d94ec9b7615939",
+         "kind": "click",
+         "action": "다각형 폴리곤 (Polygon - 4)",
+         "expected": "Actual vector pointer completion without a current image must create no labels, dirty save or mutation and must preserve the full empty-project/source baseline.",
+         "observed": "Actual browser: Actual positive pointer input/Enter with no selected current image left zero annotations, no dirty save or page API mutation, and the complete original empty-project and harness source trees/raw project+labelset bodies unchanged. The disk harness dataset itself is not claimed empty. First bbox-only save has literal mask_file/raster/hash null. Later mixed polygon/OBB saves retain full PNG bytes and hashes with only three independent class-center samples; full mask-pixel semantics are not claimed. Original generated256RGB bytes, source path/SHA/image UUID and needs_review metadata are preserved. The full page write inventories were9 browser/13 source Electron: save503three, real200three, exact owned-source segmentation validate_imagesfalse reimportthree, plus native fixture setupfour. Browser external fixture setupfour is separately retained in original API calls. No training/inference/download request or whole-mutations-zero claim.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this exact nine-condition source UI lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows/installed-release and parent acceptance remain separate.",
+         "test": "scripts/e2e/vector-label-lifecycle.spec.ts::vector empty input service failures and explicit stage handoff preserve exact original labels",
+         "receipt": "2026-10-08-vector-null-mask-lifecycle-1a2e9e4-browser.json",
+         "receipt_sha256": "e094f5b39fa0011b1c7787e0bcf6e52a2ed40a3640d25260099dd61058f745b0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "5ceb2a43e5572b73b80d6041438ee605cdd3f8bce3f17587b17e29b2c6d2b5c4"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a680ee224ec6f5f58ac82059e6a1139a179c76200c23062839c4e191a8359c4f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "27f4834a8b8f25dcdb5ab5e8655e742b93c195aafa96fd7bc4bda15d594bd027"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "cdd0c3315bcb0ff6571096a0cc550a1883a760b339e6e3b35615cca31e256e58"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "8845cdd91c7ea1d00aa76e1f426a2829300d9e81407c1446868845316df1cd6d"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "f785ebdef4d9e18af0a53fd0c836dfedd5434c6098f995ef11afc201b136185f"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "8c2f1cc258c1fa8321db88b5589f310682f53268672c8c884edbcc0d2db12c06"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "2ef3bb8295d1b79dacd8e37df1363d74837d5f03378af99642eb1b5f5eedbfd5"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "ef8bbef25c5602aeeff5456ec1c87ab186202bf5287d88456f615b3546d7aa0f"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "1a2e9e420c444c2f1ec6eedec9d94ec9b7615939",
+         "kind": "click",
+         "action": "다각형 폴리곤 (Polygon - 4)",
+         "expected": "Actual vector pointer completion without a current image must create no labels, dirty save or mutation and must preserve the full empty-project/source baseline.",
+         "observed": "Actual source Electron: Actual positive pointer input/Enter with no selected current image left zero annotations, no dirty save or page API mutation, and the complete original empty-project and harness source trees/raw project+labelset bodies unchanged. The disk harness dataset itself is not claimed empty. First bbox-only save has literal mask_file/raster/hash null. Later mixed polygon/OBB saves retain full PNG bytes and hashes with only three independent class-center samples; full mask-pixel semantics are not claimed. Original generated256RGB bytes, source path/SHA/image UUID and needs_review metadata are preserved. The full page write inventories were9 browser/13 source Electron: save503three, real200three, exact owned-source segmentation validate_imagesfalse reimportthree, plus native fixture setupfour. Browser external fixture setupfour is separately retained in original API calls. No training/inference/download request or whole-mutations-zero claim.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this exact nine-condition source UI lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows/installed-release and parent acceptance remain separate.",
+         "test": "scripts/e2e/vector-label-lifecycle.spec.ts::native vector empty input service failures and explicit stage handoff preserve exact original labels",
+         "receipt": "2026-10-08-vector-null-mask-lifecycle-1a2e9e4-electron.json",
+         "receipt_sha256": "18b5a9dea8a858926650cb0dfcb6a018210cb732aaeebbe1b4a9511bec159eeb",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "bdf02ec590dc8715227655f313dbfd87204ca1a5374cc2ff2592d129468e11f3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a6e5eef78c09add99a203720a327f9b73749bc769d7ee2808a79507ab3e5e6a3"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f60e87a28c193c062b55eca2f2e775a89c3a66095fd08604b0538bebacba22cc"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "902592f9307032e21f4dc6fba8faecfc62172399c6c9e38885584344cf7f4f30"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "d2b031b5338f97c72b50111261efbe22516815900c54a983a3af2cd96bbd34a5"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "6a33e24dc4009a1ddcc16a71ce99f3af4ca43ba47ece1169e020a745c6267a06"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "a1dd5850fcbd8cec0dc93543f6775d9ff79023a330198736607794eeaa531340"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "49bfccd2bf569e9140f998e7ef02dd3908f6e26688893affc39e1f36b52c2848"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "6cc44427b1e19c7ccecd705d58c0147d3548b5d00647a42c786e1b3915944407"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
        "state": "verified",
@@ -36157,7 +36565,109 @@
        ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "1a2e9e420c444c2f1ec6eedec9d94ec9b7615939",
+         "kind": "click",
+         "action": "다각형 폴리곤 (Polygon - 4)",
+         "expected": "A controlled503 annotation save must retain the full original server baseline and unsaved exact geometry, then explicit original200 retry must receive the same complete request and retain prior saved IDs.",
+         "observed": "Actual browser: One exact controlled503 annotation-save response retained the complete raw server API/full file baseline and unsaved polygon[120,30]/[180,30]/[150,80] with identical points, Scratch class2. After removing that fault, an explicit Save reached the original service200 with the same canonical full request. Newly stored labels retain every prior saved full annotation ID/object. This is a declared transport fault, not an observed backend outage. First bbox-only save has literal mask_file/raster/hash null. Later mixed polygon/OBB saves retain full PNG bytes and hashes with only three independent class-center samples; full mask-pixel semantics are not claimed. Original generated256RGB bytes, source path/SHA/image UUID and needs_review metadata are preserved. The full page write inventories were9 browser/13 source Electron: save503three, real200three, exact owned-source segmentation validate_imagesfalse reimportthree, plus native fixture setupfour. Browser external fixture setupfour is separately retained in original API calls. No training/inference/download request or whole-mutations-zero claim.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this exact nine-condition source UI lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows/installed-release and parent acceptance remain separate.",
+         "test": "scripts/e2e/vector-label-lifecycle.spec.ts::vector empty input service failures and explicit stage handoff preserve exact original labels",
+         "receipt": "2026-10-08-vector-null-mask-lifecycle-1a2e9e4-browser.json",
+         "receipt_sha256": "e094f5b39fa0011b1c7787e0bcf6e52a2ed40a3640d25260099dd61058f745b0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "5ceb2a43e5572b73b80d6041438ee605cdd3f8bce3f17587b17e29b2c6d2b5c4"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a680ee224ec6f5f58ac82059e6a1139a179c76200c23062839c4e191a8359c4f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "27f4834a8b8f25dcdb5ab5e8655e742b93c195aafa96fd7bc4bda15d594bd027"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "cdd0c3315bcb0ff6571096a0cc550a1883a760b339e6e3b35615cca31e256e58"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "8845cdd91c7ea1d00aa76e1f426a2829300d9e81407c1446868845316df1cd6d"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "f785ebdef4d9e18af0a53fd0c836dfedd5434c6098f995ef11afc201b136185f"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "8c2f1cc258c1fa8321db88b5589f310682f53268672c8c884edbcc0d2db12c06"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "2ef3bb8295d1b79dacd8e37df1363d74837d5f03378af99642eb1b5f5eedbfd5"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "ef8bbef25c5602aeeff5456ec1c87ab186202bf5287d88456f615b3546d7aa0f"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "1a2e9e420c444c2f1ec6eedec9d94ec9b7615939",
+         "kind": "click",
+         "action": "다각형 폴리곤 (Polygon - 4)",
+         "expected": "A controlled503 annotation save must retain the full original server baseline and unsaved exact geometry, then explicit original200 retry must receive the same complete request and retain prior saved IDs.",
+         "observed": "Actual source Electron: One exact controlled503 annotation-save response retained the complete raw server API/full file baseline and unsaved polygon[120,30]/[180,30]/[150,80] with identical points, Scratch class2. After removing that fault, an explicit Save reached the original service200 with the same canonical full request. Newly stored labels retain every prior saved full annotation ID/object. This is a declared transport fault, not an observed backend outage. First bbox-only save has literal mask_file/raster/hash null. Later mixed polygon/OBB saves retain full PNG bytes and hashes with only three independent class-center samples; full mask-pixel semantics are not claimed. Original generated256RGB bytes, source path/SHA/image UUID and needs_review metadata are preserved. The full page write inventories were9 browser/13 source Electron: save503three, real200three, exact owned-source segmentation validate_imagesfalse reimportthree, plus native fixture setupfour. Browser external fixture setupfour is separately retained in original API calls. No training/inference/download request or whole-mutations-zero claim.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this exact nine-condition source UI lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows/installed-release and parent acceptance remain separate.",
+         "test": "scripts/e2e/vector-label-lifecycle.spec.ts::native vector empty input service failures and explicit stage handoff preserve exact original labels",
+         "receipt": "2026-10-08-vector-null-mask-lifecycle-1a2e9e4-electron.json",
+         "receipt_sha256": "18b5a9dea8a858926650cb0dfcb6a018210cb732aaeebbe1b4a9511bec159eeb",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "bdf02ec590dc8715227655f313dbfd87204ca1a5374cc2ff2592d129468e11f3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a6e5eef78c09add99a203720a327f9b73749bc769d7ee2808a79507ab3e5e6a3"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f60e87a28c193c062b55eca2f2e775a89c3a66095fd08604b0538bebacba22cc"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "902592f9307032e21f4dc6fba8faecfc62172399c6c9e38885584344cf7f4f30"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "d2b031b5338f97c72b50111261efbe22516815900c54a983a3af2cd96bbd34a5"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "6a33e24dc4009a1ddcc16a71ce99f3af4ca43ba47ece1169e020a745c6267a06"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "a1dd5850fcbd8cec0dc93543f6775d9ff79023a330198736607794eeaa531340"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "49bfccd2bf569e9140f998e7ef02dd3908f6e26688893affc39e1f36b52c2848"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "6cc44427b1e19c7ccecd705d58c0147d3548b5d00647a42c786e1b3915944407"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
        "state": "verified",
@@ -36240,7 +36750,109 @@
        ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "1a2e9e420c444c2f1ec6eedec9d94ec9b7615939",
+         "kind": "click",
+         "action": "다각형 폴리곤 (Polygon - 4)",
+         "expected": "Actual common-model-preparation stage entry and truth-review return must retain complete saved labels, original source/metadata identity and all protected file bytes, with no mutations in the immediate stage slice.",
+         "observed": "Actual browser: After real200 save of polygon[120,30]/[180,30]/[150,80] with identical points, Scratch class2, the actual common model preparation stage showed the exact project and one original image; its truth-review button returned to labeling with complete raw project/labelset/annotation/metadata replies and entire protected project/source trees/bytes unchanged. Final reload retained all three original saved IDs/shapes. Immediate handoff mutation slices were empty; automatic annotationsChanged source reimports are separately declared and verified. First bbox-only save has literal mask_file/raster/hash null. Later mixed polygon/OBB saves retain full PNG bytes and hashes with only three independent class-center samples; full mask-pixel semantics are not claimed. Original generated256RGB bytes, source path/SHA/image UUID and needs_review metadata are preserved. The full page write inventories were9 browser/13 source Electron: save503three, real200three, exact owned-source segmentation validate_imagesfalse reimportthree, plus native fixture setupfour. Browser external fixture setupfour is separately retained in original API calls. No training/inference/download request or whole-mutations-zero claim.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this exact nine-condition source UI lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows/installed-release and parent acceptance remain separate.",
+         "test": "scripts/e2e/vector-label-lifecycle.spec.ts::vector empty input service failures and explicit stage handoff preserve exact original labels",
+         "receipt": "2026-10-08-vector-null-mask-lifecycle-1a2e9e4-browser.json",
+         "receipt_sha256": "e094f5b39fa0011b1c7787e0bcf6e52a2ed40a3640d25260099dd61058f745b0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "5ceb2a43e5572b73b80d6041438ee605cdd3f8bce3f17587b17e29b2c6d2b5c4"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a680ee224ec6f5f58ac82059e6a1139a179c76200c23062839c4e191a8359c4f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "27f4834a8b8f25dcdb5ab5e8655e742b93c195aafa96fd7bc4bda15d594bd027"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "cdd0c3315bcb0ff6571096a0cc550a1883a760b339e6e3b35615cca31e256e58"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "8845cdd91c7ea1d00aa76e1f426a2829300d9e81407c1446868845316df1cd6d"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "f785ebdef4d9e18af0a53fd0c836dfedd5434c6098f995ef11afc201b136185f"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "8c2f1cc258c1fa8321db88b5589f310682f53268672c8c884edbcc0d2db12c06"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "2ef3bb8295d1b79dacd8e37df1363d74837d5f03378af99642eb1b5f5eedbfd5"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "ef8bbef25c5602aeeff5456ec1c87ab186202bf5287d88456f615b3546d7aa0f"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "1a2e9e420c444c2f1ec6eedec9d94ec9b7615939",
+         "kind": "click",
+         "action": "다각형 폴리곤 (Polygon - 4)",
+         "expected": "Actual common-model-preparation stage entry and truth-review return must retain complete saved labels, original source/metadata identity and all protected file bytes, with no mutations in the immediate stage slice.",
+         "observed": "Actual source Electron: After real200 save of polygon[120,30]/[180,30]/[150,80] with identical points, Scratch class2, the actual common model preparation stage showed the exact project and one original image; its truth-review button returned to labeling with complete raw project/labelset/annotation/metadata replies and entire protected project/source trees/bytes unchanged. Final reload retained all three original saved IDs/shapes. Immediate handoff mutation slices were empty; automatic annotationsChanged source reimports are separately declared and verified. First bbox-only save has literal mask_file/raster/hash null. Later mixed polygon/OBB saves retain full PNG bytes and hashes with only three independent class-center samples; full mask-pixel semantics are not claimed. Original generated256RGB bytes, source path/SHA/image UUID and needs_review metadata are preserved. The full page write inventories were9 browser/13 source Electron: save503three, real200three, exact owned-source segmentation validate_imagesfalse reimportthree, plus native fixture setupfour. Browser external fixture setupfour is separately retained in original API calls. No training/inference/download request or whole-mutations-zero claim.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this exact nine-condition source UI lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows/installed-release and parent acceptance remain separate.",
+         "test": "scripts/e2e/vector-label-lifecycle.spec.ts::native vector empty input service failures and explicit stage handoff preserve exact original labels",
+         "receipt": "2026-10-08-vector-null-mask-lifecycle-1a2e9e4-electron.json",
+         "receipt_sha256": "18b5a9dea8a858926650cb0dfcb6a018210cb732aaeebbe1b4a9511bec159eeb",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "bdf02ec590dc8715227655f313dbfd87204ca1a5374cc2ff2592d129468e11f3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a6e5eef78c09add99a203720a327f9b73749bc769d7ee2808a79507ab3e5e6a3"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f60e87a28c193c062b55eca2f2e775a89c3a66095fd08604b0538bebacba22cc"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "902592f9307032e21f4dc6fba8faecfc62172399c6c9e38885584344cf7f4f30"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "d2b031b5338f97c72b50111261efbe22516815900c54a983a3af2cd96bbd34a5"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "6a33e24dc4009a1ddcc16a71ce99f3af4ca43ba47ece1169e020a745c6267a06"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "a1dd5850fcbd8cec0dc93543f6775d9ff79023a330198736607794eeaa531340"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "49bfccd2bf569e9140f998e7ef02dd3908f6e26688893affc39e1f36b52c2848"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "6cc44427b1e19c7ccecd705d58c0147d3548b5d00647a42c786e1b3915944407"
+          }
+         ]
+        }
+       ]
       }
      }
     },
@@ -36273,7 +36885,109 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "1a2e9e420c444c2f1ec6eedec9d94ec9b7615939",
+         "kind": "click",
+         "action": "회전 바운딩 박스 (Rotated BBox OBB - 3)",
+         "expected": "Actual vector pointer completion without a current image must create no labels, dirty save or mutation and must preserve the full empty-project/source baseline.",
+         "observed": "Actual browser: Actual positive pointer input/Enter with no selected current image left zero annotations, no dirty save or page API mutation, and the complete original empty-project and harness source trees/raw project+labelset bodies unchanged. The disk harness dataset itself is not claimed empty. First bbox-only save has literal mask_file/raster/hash null. Later mixed polygon/OBB saves retain full PNG bytes and hashes with only three independent class-center samples; full mask-pixel semantics are not claimed. Original generated256RGB bytes, source path/SHA/image UUID and needs_review metadata are preserved. The full page write inventories were9 browser/13 source Electron: save503three, real200three, exact owned-source segmentation validate_imagesfalse reimportthree, plus native fixture setupfour. Browser external fixture setupfour is separately retained in original API calls. No training/inference/download request or whole-mutations-zero claim.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this exact nine-condition source UI lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows/installed-release and parent acceptance remain separate.",
+         "test": "scripts/e2e/vector-label-lifecycle.spec.ts::vector empty input service failures and explicit stage handoff preserve exact original labels",
+         "receipt": "2026-10-08-vector-null-mask-lifecycle-1a2e9e4-browser.json",
+         "receipt_sha256": "e094f5b39fa0011b1c7787e0bcf6e52a2ed40a3640d25260099dd61058f745b0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "5ceb2a43e5572b73b80d6041438ee605cdd3f8bce3f17587b17e29b2c6d2b5c4"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a680ee224ec6f5f58ac82059e6a1139a179c76200c23062839c4e191a8359c4f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "27f4834a8b8f25dcdb5ab5e8655e742b93c195aafa96fd7bc4bda15d594bd027"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "cdd0c3315bcb0ff6571096a0cc550a1883a760b339e6e3b35615cca31e256e58"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "8845cdd91c7ea1d00aa76e1f426a2829300d9e81407c1446868845316df1cd6d"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "f785ebdef4d9e18af0a53fd0c836dfedd5434c6098f995ef11afc201b136185f"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "8c2f1cc258c1fa8321db88b5589f310682f53268672c8c884edbcc0d2db12c06"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "2ef3bb8295d1b79dacd8e37df1363d74837d5f03378af99642eb1b5f5eedbfd5"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "ef8bbef25c5602aeeff5456ec1c87ab186202bf5287d88456f615b3546d7aa0f"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "1a2e9e420c444c2f1ec6eedec9d94ec9b7615939",
+         "kind": "click",
+         "action": "회전 바운딩 박스 (Rotated BBox OBB - 3)",
+         "expected": "Actual vector pointer completion without a current image must create no labels, dirty save or mutation and must preserve the full empty-project/source baseline.",
+         "observed": "Actual source Electron: Actual positive pointer input/Enter with no selected current image left zero annotations, no dirty save or page API mutation, and the complete original empty-project and harness source trees/raw project+labelset bodies unchanged. The disk harness dataset itself is not claimed empty. First bbox-only save has literal mask_file/raster/hash null. Later mixed polygon/OBB saves retain full PNG bytes and hashes with only three independent class-center samples; full mask-pixel semantics are not claimed. Original generated256RGB bytes, source path/SHA/image UUID and needs_review metadata are preserved. The full page write inventories were9 browser/13 source Electron: save503three, real200three, exact owned-source segmentation validate_imagesfalse reimportthree, plus native fixture setupfour. Browser external fixture setupfour is separately retained in original API calls. No training/inference/download request or whole-mutations-zero claim.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this exact nine-condition source UI lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows/installed-release and parent acceptance remain separate.",
+         "test": "scripts/e2e/vector-label-lifecycle.spec.ts::native vector empty input service failures and explicit stage handoff preserve exact original labels",
+         "receipt": "2026-10-08-vector-null-mask-lifecycle-1a2e9e4-electron.json",
+         "receipt_sha256": "18b5a9dea8a858926650cb0dfcb6a018210cb732aaeebbe1b4a9511bec159eeb",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "bdf02ec590dc8715227655f313dbfd87204ca1a5374cc2ff2592d129468e11f3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a6e5eef78c09add99a203720a327f9b73749bc769d7ee2808a79507ab3e5e6a3"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f60e87a28c193c062b55eca2f2e775a89c3a66095fd08604b0538bebacba22cc"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "902592f9307032e21f4dc6fba8faecfc62172399c6c9e38885584344cf7f4f30"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "d2b031b5338f97c72b50111261efbe22516815900c54a983a3af2cd96bbd34a5"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "6a33e24dc4009a1ddcc16a71ce99f3af4ca43ba47ece1169e020a745c6267a06"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "a1dd5850fcbd8cec0dc93543f6775d9ff79023a330198736607794eeaa531340"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "49bfccd2bf569e9140f998e7ef02dd3908f6e26688893affc39e1f36b52c2848"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "6cc44427b1e19c7ccecd705d58c0147d3548b5d00647a42c786e1b3915944407"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
        "state": "verified",
@@ -36333,7 +37047,109 @@
        ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "1a2e9e420c444c2f1ec6eedec9d94ec9b7615939",
+         "kind": "click",
+         "action": "회전 바운딩 박스 (Rotated BBox OBB - 3)",
+         "expected": "A controlled503 annotation save must retain the full original server baseline and unsaved exact geometry, then explicit original200 retry must receive the same complete request and retain prior saved IDs.",
+         "observed": "Actual browser: One exact controlled503 annotation-save response retained the complete raw server API/full file baseline and unsaved OBB[110,170,80,40,30], independent direction315, Crack class3. After removing that fault, an explicit Save reached the original service200 with the same canonical full request. Newly stored labels retain every prior saved full annotation ID/object. This is a declared transport fault, not an observed backend outage. First bbox-only save has literal mask_file/raster/hash null. Later mixed polygon/OBB saves retain full PNG bytes and hashes with only three independent class-center samples; full mask-pixel semantics are not claimed. Original generated256RGB bytes, source path/SHA/image UUID and needs_review metadata are preserved. The full page write inventories were9 browser/13 source Electron: save503three, real200three, exact owned-source segmentation validate_imagesfalse reimportthree, plus native fixture setupfour. Browser external fixture setupfour is separately retained in original API calls. No training/inference/download request or whole-mutations-zero claim.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this exact nine-condition source UI lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows/installed-release and parent acceptance remain separate.",
+         "test": "scripts/e2e/vector-label-lifecycle.spec.ts::vector empty input service failures and explicit stage handoff preserve exact original labels",
+         "receipt": "2026-10-08-vector-null-mask-lifecycle-1a2e9e4-browser.json",
+         "receipt_sha256": "e094f5b39fa0011b1c7787e0bcf6e52a2ed40a3640d25260099dd61058f745b0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "5ceb2a43e5572b73b80d6041438ee605cdd3f8bce3f17587b17e29b2c6d2b5c4"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a680ee224ec6f5f58ac82059e6a1139a179c76200c23062839c4e191a8359c4f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "27f4834a8b8f25dcdb5ab5e8655e742b93c195aafa96fd7bc4bda15d594bd027"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "cdd0c3315bcb0ff6571096a0cc550a1883a760b339e6e3b35615cca31e256e58"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "8845cdd91c7ea1d00aa76e1f426a2829300d9e81407c1446868845316df1cd6d"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "f785ebdef4d9e18af0a53fd0c836dfedd5434c6098f995ef11afc201b136185f"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "8c2f1cc258c1fa8321db88b5589f310682f53268672c8c884edbcc0d2db12c06"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "2ef3bb8295d1b79dacd8e37df1363d74837d5f03378af99642eb1b5f5eedbfd5"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "ef8bbef25c5602aeeff5456ec1c87ab186202bf5287d88456f615b3546d7aa0f"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "1a2e9e420c444c2f1ec6eedec9d94ec9b7615939",
+         "kind": "click",
+         "action": "회전 바운딩 박스 (Rotated BBox OBB - 3)",
+         "expected": "A controlled503 annotation save must retain the full original server baseline and unsaved exact geometry, then explicit original200 retry must receive the same complete request and retain prior saved IDs.",
+         "observed": "Actual source Electron: One exact controlled503 annotation-save response retained the complete raw server API/full file baseline and unsaved OBB[110,170,80,40,30], independent direction315, Crack class3. After removing that fault, an explicit Save reached the original service200 with the same canonical full request. Newly stored labels retain every prior saved full annotation ID/object. This is a declared transport fault, not an observed backend outage. First bbox-only save has literal mask_file/raster/hash null. Later mixed polygon/OBB saves retain full PNG bytes and hashes with only three independent class-center samples; full mask-pixel semantics are not claimed. Original generated256RGB bytes, source path/SHA/image UUID and needs_review metadata are preserved. The full page write inventories were9 browser/13 source Electron: save503three, real200three, exact owned-source segmentation validate_imagesfalse reimportthree, plus native fixture setupfour. Browser external fixture setupfour is separately retained in original API calls. No training/inference/download request or whole-mutations-zero claim.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this exact nine-condition source UI lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows/installed-release and parent acceptance remain separate.",
+         "test": "scripts/e2e/vector-label-lifecycle.spec.ts::native vector empty input service failures and explicit stage handoff preserve exact original labels",
+         "receipt": "2026-10-08-vector-null-mask-lifecycle-1a2e9e4-electron.json",
+         "receipt_sha256": "18b5a9dea8a858926650cb0dfcb6a018210cb732aaeebbe1b4a9511bec159eeb",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "bdf02ec590dc8715227655f313dbfd87204ca1a5374cc2ff2592d129468e11f3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a6e5eef78c09add99a203720a327f9b73749bc769d7ee2808a79507ab3e5e6a3"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f60e87a28c193c062b55eca2f2e775a89c3a66095fd08604b0538bebacba22cc"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "902592f9307032e21f4dc6fba8faecfc62172399c6c9e38885584344cf7f4f30"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "d2b031b5338f97c72b50111261efbe22516815900c54a983a3af2cd96bbd34a5"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "6a33e24dc4009a1ddcc16a71ce99f3af4ca43ba47ece1169e020a745c6267a06"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "a1dd5850fcbd8cec0dc93543f6775d9ff79023a330198736607794eeaa531340"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "49bfccd2bf569e9140f998e7ef02dd3908f6e26688893affc39e1f36b52c2848"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "6cc44427b1e19c7ccecd705d58c0147d3548b5d00647a42c786e1b3915944407"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
        "state": "verified",
@@ -36416,7 +37232,109 @@
        ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "1a2e9e420c444c2f1ec6eedec9d94ec9b7615939",
+         "kind": "click",
+         "action": "회전 바운딩 박스 (Rotated BBox OBB - 3)",
+         "expected": "Actual common-model-preparation stage entry and truth-review return must retain complete saved labels, original source/metadata identity and all protected file bytes, with no mutations in the immediate stage slice.",
+         "observed": "Actual browser: After real200 save of OBB[110,170,80,40,30], independent direction315, Crack class3, the actual common model preparation stage showed the exact project and one original image; its truth-review button returned to labeling with complete raw project/labelset/annotation/metadata replies and entire protected project/source trees/bytes unchanged. Final reload retained all three original saved IDs/shapes. Immediate handoff mutation slices were empty; automatic annotationsChanged source reimports are separately declared and verified. First bbox-only save has literal mask_file/raster/hash null. Later mixed polygon/OBB saves retain full PNG bytes and hashes with only three independent class-center samples; full mask-pixel semantics are not claimed. Original generated256RGB bytes, source path/SHA/image UUID and needs_review metadata are preserved. The full page write inventories were9 browser/13 source Electron: save503three, real200three, exact owned-source segmentation validate_imagesfalse reimportthree, plus native fixture setupfour. Browser external fixture setupfour is separately retained in original API calls. No training/inference/download request or whole-mutations-zero claim.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this exact nine-condition source UI lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows/installed-release and parent acceptance remain separate.",
+         "test": "scripts/e2e/vector-label-lifecycle.spec.ts::vector empty input service failures and explicit stage handoff preserve exact original labels",
+         "receipt": "2026-10-08-vector-null-mask-lifecycle-1a2e9e4-browser.json",
+         "receipt_sha256": "e094f5b39fa0011b1c7787e0bcf6e52a2ed40a3640d25260099dd61058f745b0",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "5ceb2a43e5572b73b80d6041438ee605cdd3f8bce3f17587b17e29b2c6d2b5c4"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a680ee224ec6f5f58ac82059e6a1139a179c76200c23062839c4e191a8359c4f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "27f4834a8b8f25dcdb5ab5e8655e742b93c195aafa96fd7bc4bda15d594bd027"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "cdd0c3315bcb0ff6571096a0cc550a1883a760b339e6e3b35615cca31e256e58"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "8845cdd91c7ea1d00aa76e1f426a2829300d9e81407c1446868845316df1cd6d"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "f785ebdef4d9e18af0a53fd0c836dfedd5434c6098f995ef11afc201b136185f"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "8c2f1cc258c1fa8321db88b5589f310682f53268672c8c884edbcc0d2db12c06"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "2ef3bb8295d1b79dacd8e37df1363d74837d5f03378af99642eb1b5f5eedbfd5"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "ef8bbef25c5602aeeff5456ec1c87ab186202bf5287d88456f615b3546d7aa0f"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "1a2e9e420c444c2f1ec6eedec9d94ec9b7615939",
+         "kind": "click",
+         "action": "회전 바운딩 박스 (Rotated BBox OBB - 3)",
+         "expected": "Actual common-model-preparation stage entry and truth-review return must retain complete saved labels, original source/metadata identity and all protected file bytes, with no mutations in the immediate stage slice.",
+         "observed": "Actual source Electron: After real200 save of OBB[110,170,80,40,30], independent direction315, Crack class3, the actual common model preparation stage showed the exact project and one original image; its truth-review button returned to labeling with complete raw project/labelset/annotation/metadata replies and entire protected project/source trees/bytes unchanged. Final reload retained all three original saved IDs/shapes. Immediate handoff mutation slices were empty; automatic annotationsChanged source reimports are separately declared and verified. First bbox-only save has literal mask_file/raster/hash null. Later mixed polygon/OBB saves retain full PNG bytes and hashes with only three independent class-center samples; full mask-pixel semantics are not claimed. Original generated256RGB bytes, source path/SHA/image UUID and needs_review metadata are preserved. The full page write inventories were9 browser/13 source Electron: save503three, real200three, exact owned-source segmentation validate_imagesfalse reimportthree, plus native fixture setupfour. Browser external fixture setupfour is separately retained in original API calls. No training/inference/download request or whole-mutations-zero claim.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this exact nine-condition source UI lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows/installed-release and parent acceptance remain separate.",
+         "test": "scripts/e2e/vector-label-lifecycle.spec.ts::native vector empty input service failures and explicit stage handoff preserve exact original labels",
+         "receipt": "2026-10-08-vector-null-mask-lifecycle-1a2e9e4-electron.json",
+         "receipt_sha256": "18b5a9dea8a858926650cb0dfcb6a018210cb732aaeebbe1b4a9511bec159eeb",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "bdf02ec590dc8715227655f313dbfd87204ca1a5374cc2ff2592d129468e11f3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "a6e5eef78c09add99a203720a327f9b73749bc769d7ee2808a79507ab3e5e6a3"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "f60e87a28c193c062b55eca2f2e775a89c3a66095fd08604b0538bebacba22cc"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "902592f9307032e21f4dc6fba8faecfc62172399c6c9e38885584344cf7f4f30"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "d2b031b5338f97c72b50111261efbe22516815900c54a983a3af2cd96bbd34a5"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "6a33e24dc4009a1ddcc16a71ce99f3af4ca43ba47ece1169e020a745c6267a06"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "a1dd5850fcbd8cec0dc93543f6775d9ff79023a330198736607794eeaa531340"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "49bfccd2bf569e9140f998e7ef02dd3908f6e26688893affc39e1f36b52c2848"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "6cc44427b1e19c7ccecd705d58c0147d3548b5d00647a42c786e1b3915944407"
+          }
+         ]
+        }
+       ]
       }
      }
     },

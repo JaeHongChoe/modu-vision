@@ -1,0 +1,60 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "1a2e9e420c444c2f1ec6eedec9d94ec9b7615939",
+  "source_dirty": false,
+  "test": "scripts/e2e/vector-label-lifecycle.spec.ts::native vector empty input service failures and explicit stage handoff preserve exact original labels",
+  "test_source_sha256": "9f28943f680e05dba42037c0b6de10a2750161f6d321d12169b177c7b2cb08be",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "b610be4ac3963667669a18a2685e7839a6e60daae7ad850b6bc18e411c60f703",
+  "harness_sha256": "17c053b902cc2a65b1d2091260817f25c42225b72ef77ceafd1b2d8a9f492a26",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "bdf02ec590dc8715227655f313dbfd87204ca1a5374cc2ff2592d129468e11f3"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "a6e5eef78c09add99a203720a327f9b73749bc769d7ee2808a79507ab3e5e6a3"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "f60e87a28c193c062b55eca2f2e775a89c3a66095fd08604b0538bebacba22cc"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "902592f9307032e21f4dc6fba8faecfc62172399c6c9e38885584344cf7f4f30"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "d2b031b5338f97c72b50111261efbe22516815900c54a983a3af2cd96bbd34a5"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "6a33e24dc4009a1ddcc16a71ce99f3af4ca43ba47ece1169e020a745c6267a06"
+    },
+    {
+      "id": "screenshot-6",
+      "sha256": "a1dd5850fcbd8cec0dc93543f6775d9ff79023a330198736607794eeaa531340"
+    },
+    {
+      "id": "screenshot-7",
+      "sha256": "49bfccd2bf569e9140f998e7ef02dd3908f6e26688893affc39e1f36b52c2848"
+    },
+    {
+      "id": "screenshot-8",
+      "sha256": "6cc44427b1e19c7ccecd705d58c0147d3548b5d00647a42c786e1b3915944407"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}
