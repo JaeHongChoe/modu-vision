@@ -478,6 +478,106 @@ Path(result).write_text(json.dumps({'runtime_digest':'controlled','results':{'tr
         'whole_writer_coverage':False,'process_tree_exit_verified':False,'lease_release':False,'actual_stage_math_verified':False}))
 
 
+def _preflight_authenticate_return_script():
+    """Advisory test facts after the original call; never retry or mint authority."""
+    return '''import sys,json
+from backend.engine import application_launch_controller as controller,application_launch_lease as lease,application_launch_quiescence as q
+original_authenticate=controller.authenticate
+def observed_authenticate(owner,row):
+ result=original_authenticate(owner,row)
+ try:
+  journal=lease._load(owner.root);snapshot=q.inspect_epoch(owner.root,owner.nonce)
+  fact={'schema_version':1,'kind':'original_authenticate_returned','nonce':owner.nonce,
+   'controller':journal['supervisor'],'main_process':row['process'],'backend_process':result,
+   'binding':row['binding'],'writer_id':journal['writer_drain']['writer_id'],
+   'registration_sha256':journal['writer_drain']['registration_sha256'],'registry_sha256':snapshot['registry_sha256']}
+  with (owner.root/'projects/preflight-controller-authenticate-returned.json').open('x') as output:
+   json.dump(fact,output,sort_keys=True);output.write('\\n')
+ except BaseException:pass
+ return result
+controller.authenticate=observed_authenticate
+raise SystemExit(controller.main(sys.argv[1:]))
+'''
+
+
+def _preflight_bootstrap_remaining(absolute_deadline):
+    assert type(absolute_deadline) is float and math.isfinite(absolute_deadline)
+    remaining=absolute_deadline-time.monotonic()
+    assert remaining>0,'Original preflight bootstrap deadline expired'
+    return remaining
+
+
+def _wait_preflight_bootstrap_json(path,child,absolute_deadline,*,observer=False):
+    from backend.engine import runtime_update as update
+    while True:
+        _preflight_bootstrap_remaining(absolute_deadline)
+        assert child.poll() is None,'Original controller ended before preflight admission'
+        if path.exists():
+            raw=update._read(path,65536)  # Original regular/no-follow bounded reader.
+            # The observer writes a newline last; an incomplete advisory file
+            # never admits POST and remains inside the same original deadline.
+            if not observer or raw.endswith(b'\n'):
+                value=json.loads(raw);_preflight_bootstrap_remaining(absolute_deadline)
+                return value
+        time.sleep(min(.01,_preflight_bootstrap_remaining(absolute_deadline)))
+
+
+def _assert_preflight_authenticate_settlement(fact,journal,bootstrap,snapshot,inspection,ack,server,controller_identity):
+    from backend.engine import runtime_update as update
+    assert set(fact)=={'schema_version','kind','nonce','controller','main_process','backend_process',
+                      'binding','writer_id','registration_sha256','registry_sha256'}
+    assert type(fact['schema_version']) is int and fact['schema_version']==1
+    assert fact['kind']=='original_authenticate_returned' and fact['nonce']==journal['nonce']==bootstrap['nonce']==ack['nonce']
+    assert journal['state']=='ready' and journal['protocol_version']==4 and journal['claimed'] is True
+    assert fact['controller']==journal['supervisor']==controller_identity
+    assert fact['main_process']==journal['process']==bootstrap['main_process']
+    assert fact['backend_process']==bootstrap['backend_process'] and fact['backend_process']['pid']==server['pid']
+    assert fact['binding']==journal['binding']==bootstrap['binding']
+    binding=journal['binding']
+    assert (binding['installation_id'],binding['update_id'],binding['database_pointer']['fence'])==(
+        ack['installation_id'],ack['update_id'],ack['database_fence'])
+    drain=journal['writer_drain']
+    assert drain['phase']=='enrolled' and all(drain[k] is None for k in ('request','receipt','backend_exit'))
+    assert (fact['writer_id'],fact['registration_sha256'])==(drain['writer_id'],drain['registration_sha256'])
+    registry=snapshot['registry'];epoch=registry['binding']
+    assert registry['state']=='open' and len(registry['writers'])==1
+    assert epoch['nonce']==ack['nonce'] and epoch['controller']==controller_identity
+    assert epoch['launch_binding_sha256']==update._sha(update._canonical(binding))
+    assert fact['registry_sha256']==snapshot['registry_sha256']
+    writer=registry['writers'][0]
+    assert writer['role']=='backend' and writer['status']=='active' and writer['process']==bootstrap['backend_process']
+    assert writer['exit_code'] is None and writer['reason_code'] is None
+    assert (writer['writer_id'],writer['registration_sha256'])==(fact['writer_id'],fact['registration_sha256'])
+    assert inspection['status']=='ready' and inspection['nonce']==ack['nonce']
+    assert inspection['bootstrap_binding_verified'] is True and inspection['readiness']=='authenticated_controller_binding_only'
+    assert (inspection['installation_id'],inspection['update_id'],inspection['database_fence'])==(
+        ack['installation_id'],ack['update_id'],ack['database_fence'])
+    assert all(inspection[k] is False for k in ('native_app_handshake_verified','backend_handshake_verified',
+        'actual_application_inference_verified','release_ready'))
+
+
+def _wait_preflight_authenticate_settlement(root,child,ack,server,bootstrap,value,current,absolute_deadline):
+    from backend.engine import application_launch_controller as controller,application_launch_lease as lease
+    from backend.engine import application_launch_quiescence as q,runtime_update as update
+    fact=_wait_preflight_bootstrap_json(root/'projects/preflight-controller-authenticate-returned.json',child,absolute_deadline,observer=True)
+    args=SimpleNamespace(root=root,authority=value['authority'],pinned_authority_sha256=value['pinned_authority_sha256'],
+        expected_installation_id=ack['installation_id'],expected_update_id=current['update_id'],
+        expected_database_fence=str(current['database_pointer']['fence']))
+    _preflight_bootstrap_remaining(absolute_deadline)
+    # These existing readers use shared installation admission and immutable
+    # byte checks; they do not compete for the writer/lease transition mutex.
+    with controller._inspection_snapshot(root):
+        inspection=controller.inspect(args);journal=lease._load(root)
+        fresh=update._json(update._read(root/lease.LEASES/ack['nonce']/'bootstrap-receipt.json'))
+        assert fresh==bootstrap
+        snapshot=q.inspect_epoch(root,ack['nonce'])
+        identity=lease._identity(child.pid)
+        _assert_preflight_authenticate_settlement(fact,journal,bootstrap,snapshot,inspection,ack,server,identity)
+    _preflight_bootstrap_remaining(absolute_deadline)
+    assert child.poll() is None
+    return fact  # Observation only; no reconstructed controller capability.
+
+
 def test_actual_authenticated_source_preflight_cpu_preserves_guard_through_real_stages(tmp_path,monkeypatch):
     """Original source controller/backend descriptors plus real preflight CPU.
 
@@ -552,7 +652,8 @@ def test_actual_authenticated_source_preflight_cpu_preserves_guard_through_real_
     values=managed_stack(tmp_path,monkeypatch);root,value,current,project,reviewed,pin=values
     protected={str(path):sha(path.read_bytes()) for path in (root/'application-active.json',root/'global-active.json',project/'project.json',project/reviewed['input_path'],project/reviewed['package_path']/'manifest.json')}
     # No known-image flags: this exact admitted epoch executes only preflight.
-    child=subprocess.Popen([sys.executable,'-m','backend.engine.application_launch_controller',*controller_arguments(root,value,current)],
+    bootstrap_deadline=time.monotonic()+h.MAX_DEADLINE
+    child=subprocess.Popen([sys.executable,'-c',_preflight_authenticate_return_script(),*controller_arguments(root,value,current)],
         cwd=Path(__file__).resolve().parents[2],stdout=subprocess.PIPE,stderr=subprocess.PIPE,start_new_session=True)
     assert select.select([child.stdout],[],[],10)[0],'Original controller acknowledgement missing'
     raw=child.stdout.readline(65537);assert raw,'Original controller refused source preflight fixture'
@@ -562,11 +663,13 @@ def test_actual_authenticated_source_preflight_cpu_preserves_guard_through_real_
         # 'starting' acknowledges the original main spawn, not ASGI readiness.
         # Observe cold source startup within the unchanged controller bootstrap
         # bound, rather than borrowing the post-ready five-second leaf helper.
-        server=wait_file(root/'projects/managed-server.json',seconds=h.MAX_DEADLINE);base=f"http://127.0.0.1:{server['port']}"
-        bootstrap=wait_file(root/'.application-launches'/ack['nonce']/'bootstrap-receipt.json')
+        server=_wait_preflight_bootstrap_json(root/'projects/managed-server.json',child,bootstrap_deadline);base=f"http://127.0.0.1:{server['port']}"
+        bootstrap=_wait_preflight_bootstrap_json(root/'.application-launches'/ack['nonce']/'bootstrap-receipt.json',child,bootstrap_deadline)
         assert bootstrap['nonce']==ack['nonce'] and bootstrap['backend_process']['pid']==server['pid']
         original_binding=bootstrap['binding']
+        _wait_preflight_authenticate_settlement(root,child,ack,server,bootstrap,value,current,bootstrap_deadline)
         request=urllib.request.Request(base+'/api/workers/local/preflight',data=json.dumps({'task':'classification','device':'cpu'}).encode(),headers={'Content-Type':'application/json'},method='POST')
+        _preflight_bootstrap_remaining(bootstrap_deadline)
         try:
             with urllib.request.urlopen(request,timeout=10) as response:assert response.status==202;started=json.load(response)
         except urllib.error.HTTPError as exc:
