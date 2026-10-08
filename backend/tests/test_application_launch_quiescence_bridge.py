@@ -658,7 +658,39 @@ def test_actual_source_cpu_then_managed_drain_and_original_node_exit_keeps_lease
     finally:finish_managed(child,root)
 
 
-def _assert_returned_cpu_settlement(observation, cpu, controller):
+def _assert_writer_snapshot_raw(snapshot, registry_raw, publication_raw):
+    """Exact evidence bytes only; decoded values never replace durable pins."""
+    assert type(snapshot) is dict and set(snapshot)=={'registry','registry_sha256'}
+    assert type(registry_raw) is bytes and 0<len(registry_raw)<=65536
+    assert type(publication_raw) is bytes and 0<len(publication_raw)<=65536
+    def exact_pairs(pairs):
+        value={}
+        for key,item in pairs:
+            assert key not in value;value[key]=item
+        return value
+    registry=json.loads(registry_raw,object_pairs_hook=exact_pairs)
+    publication=json.loads(publication_raw,object_pairs_hook=exact_pairs)
+    assert registry==snapshot['registry'] and sha(registry_raw)==snapshot['registry_sha256']
+    assert type(registry['revision']) is int and registry['revision']>0
+    assert type(publication['schema_version']) is int and publication['schema_version']==1
+    assert type(publication['revision']) is int
+    assert publication=={'schema_version':1,'nonce':registry['binding']['nonce'],
+        'revision':registry['revision'],'registry_sha256':snapshot['registry_sha256']}
+
+
+def _writer_snapshot_raw_evidence(root, nonce):
+    """Read original validated publication before/after; never mint authority."""
+    from backend.engine import application_launch_quiescence as quiescence
+    snapshot=quiescence.inspect_epoch(root,nonce)
+    directory=quiescence._path(root,nonce);update=quiescence._update()
+    registry_raw=update._read(directory/'registry.json',quiescence.DOCUMENT_LIMIT)
+    publication_raw=update._read(directory/'publication.json')
+    assert quiescence.inspect_epoch(root,nonce)==snapshot
+    _assert_writer_snapshot_raw(snapshot,registry_raw,publication_raw)
+    return snapshot,registry_raw,publication_raw
+
+
+def _assert_returned_cpu_settlement(observation, cpu, controller, *, registry_raw, publication_raw):
     """Fixture evidence only; original typed settlement is never reminted here."""
     assert type(observation) is dict and set(observation)=={'schema_version','kind','controller_process',
         'receipt','request','completion','settlement','writer_snapshot'}
@@ -688,7 +720,8 @@ def _assert_returned_cpu_settlement(observation, cpu, controller):
         'request_id':cpu['request_id'],'request_sha256':cpu['request_sha256'],
         'completion_sha256':sha(canonical(completion)),'receipt_sha256':sha(canonical(cpu))}
     snapshot=observation['writer_snapshot'];assert set(snapshot)=={'registry','registry_sha256'}
-    registry=snapshot['registry'];assert snapshot['registry_sha256']==sha(canonical(registry))
+    _assert_writer_snapshot_raw(snapshot,registry_raw,publication_raw)
+    registry=snapshot['registry']
     assert registry['state']=='open' and registry['binding']['nonce']==cpu['nonce']
     assert registry['binding']['controller']==controller
     assert registry['binding']['launch_binding_sha256']==sha(canonical(cpu['binding']))
@@ -714,11 +747,15 @@ def _record_returned_cpu_settlement(owner, receipt):
     publication=state['publication'];assert publication['receipt']==receipt
     assert publication['receipt_sha256']==sha(canonical(receipt))
     assert publication['completion_sha256']==sha(canonical(publication['completion']))
+    snapshot,registry_raw,publication_raw=_writer_snapshot_raw_evidence(owner.root,receipt['nonce'])
+    assert registry_raw==owner._writer_epoch._raw and publication_raw==owner._writer_epoch._pointer
+    assert owner._writer_epoch.snapshot()==snapshot
     observation={'schema_version':1,'kind':'original_source_cpu_controller_returned',
         'controller_process':_identity(os.getpid()),'receipt':receipt,'request':state['plan']['cpu_request'],
         'completion':publication['completion'],'settlement':owner._cpu_settlement,
-        'writer_snapshot':owner._writer_epoch.snapshot()}
-    _assert_returned_cpu_settlement(observation,receipt,observation['controller_process'])
+        'writer_snapshot':snapshot}
+    _assert_returned_cpu_settlement(observation,receipt,observation['controller_process'],
+        registry_raw=registry_raw,publication_raw=publication_raw)
     finished=next(row for row in observation['writer_snapshot']['registry']['writers']
         if row['writer_id']==state['registration'].writer_id)
     assert finished['process']==state['child'] and finished['role']=='owned_cpu_worker'
@@ -746,7 +783,6 @@ def _wait_returned_cpu_settlement(root, nonce, child, cpu, deadline):
     """Bounded read-only fixture barrier; observations cannot become authority."""
     import stat
     from backend.engine.application_launch_lease import inspect_launch, _identity, LeaseTransitionBusy
-    from backend.engine.application_launch_quiescence import inspect_epoch
     target=root/'projects'/'source-cpu-controller-returned.json'
     witness=getattr(child,'_original_cpu_fixture_supervisor',None)
     assert type(deadline) in (int,float) and math.isfinite(deadline)
@@ -773,12 +809,13 @@ def _wait_returned_cpu_settlement(root, nonce, child, cpu, deadline):
                 assert key not in value;value[key]=item
             return value
         observation=json.loads(raw,object_pairs_hook=exact_pairs)
-        _assert_returned_cpu_settlement(observation,cpu,witness)
         try:
-            journal=inspect_launch(root);snapshot=inspect_epoch(root,nonce)
+            journal=inspect_launch(root);snapshot,registry_raw,publication_raw=_writer_snapshot_raw_evidence(root,nonce)
         except LeaseTransitionBusy:
             # Only original read-only entry busy; retain the original 50 s cap.
             time.sleep(max(0,min(.01,deadline-time.monotonic())));continue
+        assert time.monotonic()<deadline
+        _assert_returned_cpu_settlement(observation,cpu,witness,registry_raw=registry_raw,publication_raw=publication_raw)
         assert journal['state']=='ready' and journal['nonce']==nonce and journal['supervisor']==witness
         assert journal['binding']==cpu['binding'] and journal['process']==cpu['main_process']
         assert journal['writer_drain']['phase']=='enrolled'
