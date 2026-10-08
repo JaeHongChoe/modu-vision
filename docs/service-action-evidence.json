@@ -2597,61 +2597,69 @@
        "evidence": [
         {
          "task": "S3-07",
-         "source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+         "source_sha": "dd8d3d0ae90060a945d94912edb108787de69103",
          "kind": "click",
          "action": "클래스별 이미지 ng",
          "expected": "Exercise the exact existing empty state with complete source, saved records and annotations preserved.",
          "observed": "browser: Actual statistics GET503 removed stale class chips and real refresh recovered complete counts. TrainOnly plus test yielded real GET200 total0. Reload reset the volatile filter, then explicit class selection reopened the same original item; full files, API records, UUIDs and annotation metadata retained. This reference qualifies only F021.class-statistic-gallery-filter.empty; controlled saved reports and PNG fixtures do not approve model quality.",
-         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending.",
+         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending. The entire original empty control was rerun and independently qualified in the new exact source case; its existing verified state is unchanged.",
          "test": "scripts/e2e/statistics-gallery-filter-lifecycle.spec.ts::class statistic gallery empty recovery and reopen preserve complete owned evidence",
-         "receipt": "2026-10-08-statistics-gallery-2b28835-browser.json",
-         "receipt_sha256": "9c77bd39fd91c0cff2e6acaa196b0e32749ed5a3ce85fd2d00ff9f67aa82be98",
+         "receipt": "2026-10-08-statistics-class-cancel-dd8d3d0-browser.json",
+         "receipt_sha256": "9736cdaf93debb133861b14c49087be929a1b8addd9c27617a995a88a65b75b5",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "e4cf9474027085e63bd9778d01e07546f52df6bafd0ddc3f2f22dac2359881d2"
+           "sha256": "d4caf10aca0f23be86389c406b51019e6c650b74f554de121ddce380e1241d01"
           },
           {
            "id": "screenshot-1",
-           "sha256": "123cd244c3b963df89304664b2028235161e441896538706a34616013e9649a8"
+           "sha256": "75232646e53e5fe10cb3bb58b692748212a10ce6832acb80e8d9c7aece6642fb"
           },
           {
            "id": "screenshot-2",
-           "sha256": "b91bc5ae595a925750306922c5d94f7311a48a8d3458e0998c54253387b4b905"
+           "sha256": "6a0abe1a3f7adac4fcda0efc5419226a7a02dc5427aa718c3666be4d9c2f17c9"
           },
           {
            "id": "screenshot-3",
-           "sha256": "58e8663abfdbedd58ad31013005e0205cf8cb721a69833bc4c19ab4a145dc89d"
+           "sha256": "567b5da710686460fd726369867c11cdf58b2fc5d39e3181fd13285e5add64a7"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "ef4b159ac1c386993114829a3686a0be37626c17a8dd9e924a6b97f6fc4fc063"
           }
          ]
         },
         {
          "task": "S3-07",
-         "source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+         "source_sha": "dd8d3d0ae90060a945d94912edb108787de69103",
          "kind": "click",
          "action": "클래스별 이미지 ng",
          "expected": "Exercise the exact existing empty state with complete source, saved records and annotations preserved.",
          "observed": "electron: Actual statistics GET503 removed stale class chips and real refresh recovered complete counts. TrainOnly plus test yielded real GET200 total0. Reload reset the volatile filter, then explicit class selection reopened the same original item; full files, API records, UUIDs and annotation metadata retained. This reference qualifies only F021.class-statistic-gallery-filter.empty; controlled saved reports and PNG fixtures do not approve model quality.",
-         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending.",
+         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending. The entire original empty control was rerun and independently qualified in the new exact source case; its existing verified state is unchanged.",
          "test": "scripts/e2e/statistics-gallery-filter-lifecycle.spec.ts::source Electron class statistic gallery empty recovery and reopen preserve complete owned evidence",
-         "receipt": "2026-10-08-statistics-gallery-2b28835-electron.json",
-         "receipt_sha256": "4a15534ad6caedcacbbded5f71010024beb9540ab6c7e38b982eddcce75e28df",
+         "receipt": "2026-10-08-statistics-class-cancel-dd8d3d0-electron.json",
+         "receipt_sha256": "22c7be2c6c18b31242074c8431469f453cce53b79f440154eae58b5fee755b3d",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "1ad37c8af22ad69e0aa1e94d606a8c62cd3f577b64eec71989723ad5e36dd700"
+           "sha256": "5dc788cf6735b751ef9c759a63507b9b8fef3c6a247c7effbdbe4d8d14dddc32"
           },
           {
            "id": "screenshot-1",
-           "sha256": "64cf92b52371ec0f88ab8b86bdd12b28beee6e03cdbee1e634b3d865c4600889"
+           "sha256": "89e6f8dd9d3316f910be980ce2d826bafafff8b51ab746a74e053bb25b3dc5be"
           },
           {
            "id": "screenshot-2",
-           "sha256": "052570ba997fc9bc600946e63018614e6ee2ed0f43a6481f90255c153fb0fc6a"
+           "sha256": "a97d5bbe30c5dc5bc62b63b1021b3ce3cca25b7d806a46a7f872de0992c45bb9"
           },
           {
            "id": "screenshot-3",
-           "sha256": "e45692e913a4f559b9b5d839a8cbb506326426a5025728164d322abee01da690"
+           "sha256": "a156440b4dea9ebbbadbf21c9903304ef8c7a0dbfa634fad339e6644987b7638"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "fe592946866d50c69a28545bf567b65cff0c410920321f53d74030c102716b46"
           }
          ]
         }
@@ -2665,129 +2673,215 @@
        "evidence": [
         {
          "task": "S3-07",
-         "source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+         "source_sha": "dd8d3d0ae90060a945d94912edb108787de69103",
          "kind": "click",
          "action": "클래스별 이미지 ng",
          "expected": "Exercise the exact existing error state with complete source, saved records and annotations preserved.",
          "observed": "browser: Actual statistics GET503 removed stale class chips and real refresh recovered complete counts. TrainOnly plus test yielded real GET200 total0. Reload reset the volatile filter, then explicit class selection reopened the same original item; full files, API records, UUIDs and annotation metadata retained. This reference qualifies only F021.class-statistic-gallery-filter.error; controlled saved reports and PNG fixtures do not approve model quality.",
-         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending.",
+         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending. The entire original error control was rerun and independently qualified in the new exact source case; its existing verified state is unchanged.",
          "test": "scripts/e2e/statistics-gallery-filter-lifecycle.spec.ts::class statistic gallery empty recovery and reopen preserve complete owned evidence",
-         "receipt": "2026-10-08-statistics-gallery-2b28835-browser.json",
-         "receipt_sha256": "9c77bd39fd91c0cff2e6acaa196b0e32749ed5a3ce85fd2d00ff9f67aa82be98",
+         "receipt": "2026-10-08-statistics-class-cancel-dd8d3d0-browser.json",
+         "receipt_sha256": "9736cdaf93debb133861b14c49087be929a1b8addd9c27617a995a88a65b75b5",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "e4cf9474027085e63bd9778d01e07546f52df6bafd0ddc3f2f22dac2359881d2"
+           "sha256": "d4caf10aca0f23be86389c406b51019e6c650b74f554de121ddce380e1241d01"
           },
           {
            "id": "screenshot-1",
-           "sha256": "123cd244c3b963df89304664b2028235161e441896538706a34616013e9649a8"
+           "sha256": "75232646e53e5fe10cb3bb58b692748212a10ce6832acb80e8d9c7aece6642fb"
           },
           {
            "id": "screenshot-2",
-           "sha256": "b91bc5ae595a925750306922c5d94f7311a48a8d3458e0998c54253387b4b905"
+           "sha256": "6a0abe1a3f7adac4fcda0efc5419226a7a02dc5427aa718c3666be4d9c2f17c9"
           },
           {
            "id": "screenshot-3",
-           "sha256": "58e8663abfdbedd58ad31013005e0205cf8cb721a69833bc4c19ab4a145dc89d"
+           "sha256": "567b5da710686460fd726369867c11cdf58b2fc5d39e3181fd13285e5add64a7"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "ef4b159ac1c386993114829a3686a0be37626c17a8dd9e924a6b97f6fc4fc063"
           }
          ]
         },
         {
          "task": "S3-07",
-         "source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+         "source_sha": "dd8d3d0ae90060a945d94912edb108787de69103",
          "kind": "click",
          "action": "클래스별 이미지 ng",
          "expected": "Exercise the exact existing error state with complete source, saved records and annotations preserved.",
          "observed": "electron: Actual statistics GET503 removed stale class chips and real refresh recovered complete counts. TrainOnly plus test yielded real GET200 total0. Reload reset the volatile filter, then explicit class selection reopened the same original item; full files, API records, UUIDs and annotation metadata retained. This reference qualifies only F021.class-statistic-gallery-filter.error; controlled saved reports and PNG fixtures do not approve model quality.",
-         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending.",
+         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending. The entire original error control was rerun and independently qualified in the new exact source case; its existing verified state is unchanged.",
          "test": "scripts/e2e/statistics-gallery-filter-lifecycle.spec.ts::source Electron class statistic gallery empty recovery and reopen preserve complete owned evidence",
-         "receipt": "2026-10-08-statistics-gallery-2b28835-electron.json",
-         "receipt_sha256": "4a15534ad6caedcacbbded5f71010024beb9540ab6c7e38b982eddcce75e28df",
+         "receipt": "2026-10-08-statistics-class-cancel-dd8d3d0-electron.json",
+         "receipt_sha256": "22c7be2c6c18b31242074c8431469f453cce53b79f440154eae58b5fee755b3d",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "1ad37c8af22ad69e0aa1e94d606a8c62cd3f577b64eec71989723ad5e36dd700"
+           "sha256": "5dc788cf6735b751ef9c759a63507b9b8fef3c6a247c7effbdbe4d8d14dddc32"
           },
           {
            "id": "screenshot-1",
-           "sha256": "64cf92b52371ec0f88ab8b86bdd12b28beee6e03cdbee1e634b3d865c4600889"
+           "sha256": "89e6f8dd9d3316f910be980ce2d826bafafff8b51ab746a74e053bb25b3dc5be"
           },
           {
            "id": "screenshot-2",
-           "sha256": "052570ba997fc9bc600946e63018614e6ee2ed0f43a6481f90255c153fb0fc6a"
+           "sha256": "a97d5bbe30c5dc5bc62b63b1021b3ce3cca25b7d806a46a7f872de0992c45bb9"
           },
           {
            "id": "screenshot-3",
-           "sha256": "e45692e913a4f559b9b5d839a8cbb506326426a5025728164d322abee01da690"
+           "sha256": "a156440b4dea9ebbbadbf21c9903304ef8c7a0dbfa634fad339e6644987b7638"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "fe592946866d50c69a28545bf567b65cff0c410920321f53d74030c102716b46"
           }
          ]
         }
        ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-07",
+         "source_sha": "dd8d3d0ae90060a945d94912edb108787de69103",
+         "kind": "click",
+         "action": "클래스별 이미지 ng",
+         "expected": "Clearing the existing class badge restores both original classification images with an actual unfiltered GET200; all saved labels, raw API records and files remain unchanged.",
+         "observed": "browser: original TrainOnly class badge × cleared; real unfiltered GET200 returned both exact original items, the badge disappeared, both original buttons were visible, and all13 raw API records, trees, UUIDs and complete original64x64 CRC-checked pixels remained equal. Post-baseline writes:0.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/statistics-gallery-filter-lifecycle.spec.ts::class statistic gallery empty recovery and reopen preserve complete owned evidence",
+         "receipt": "2026-10-08-statistics-class-cancel-dd8d3d0-browser.json",
+         "receipt_sha256": "9736cdaf93debb133861b14c49087be929a1b8addd9c27617a995a88a65b75b5",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d4caf10aca0f23be86389c406b51019e6c650b74f554de121ddce380e1241d01"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "75232646e53e5fe10cb3bb58b692748212a10ce6832acb80e8d9c7aece6642fb"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6a0abe1a3f7adac4fcda0efc5419226a7a02dc5427aa718c3666be4d9c2f17c9"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "567b5da710686460fd726369867c11cdf58b2fc5d39e3181fd13285e5add64a7"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "ef4b159ac1c386993114829a3686a0be37626c17a8dd9e924a6b97f6fc4fc063"
+          }
+         ]
+        },
+        {
+         "task": "S3-07",
+         "source_sha": "dd8d3d0ae90060a945d94912edb108787de69103",
+         "kind": "click",
+         "action": "클래스별 이미지 ng",
+         "expected": "Clearing the existing class badge restores both original classification images with an actual unfiltered GET200; all saved labels, raw API records and files remain unchanged.",
+         "observed": "electron: original TrainOnly class badge × cleared; real unfiltered GET200 returned both exact original items, the badge disappeared, both original buttons were visible, and all13 raw API records, trees, UUIDs and complete original64x64 CRC-checked pixels remained equal. Post-baseline writes:0.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/statistics-gallery-filter-lifecycle.spec.ts::source Electron class statistic gallery empty recovery and reopen preserve complete owned evidence",
+         "receipt": "2026-10-08-statistics-class-cancel-dd8d3d0-electron.json",
+         "receipt_sha256": "22c7be2c6c18b31242074c8431469f453cce53b79f440154eae58b5fee755b3d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "5dc788cf6735b751ef9c759a63507b9b8fef3c6a247c7effbdbe4d8d14dddc32"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "89e6f8dd9d3316f910be980ce2d826bafafff8b51ab746a74e053bb25b3dc5be"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "a97d5bbe30c5dc5bc62b63b1021b3ce3cca25b7d806a46a7f872de0992c45bb9"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "a156440b4dea9ebbbadbf21c9903304ef8c7a0dbfa634fad339e6644987b7638"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "fe592946866d50c69a28545bf567b65cff0c410920321f53d74030c102716b46"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
        "state": "verified",
        "evidence": [
         {
          "task": "S3-07",
-         "source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+         "source_sha": "dd8d3d0ae90060a945d94912edb108787de69103",
          "kind": "click",
          "action": "클래스별 이미지 ng",
          "expected": "Exercise the exact existing reopen state with complete source, saved records and annotations preserved.",
          "observed": "browser: Actual statistics GET503 removed stale class chips and real refresh recovered complete counts. TrainOnly plus test yielded real GET200 total0. Reload reset the volatile filter, then explicit class selection reopened the same original item; full files, API records, UUIDs and annotation metadata retained. This reference qualifies only F021.class-statistic-gallery-filter.reopen; controlled saved reports and PNG fixtures do not approve model quality.",
-         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending.",
+         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending. The entire original reopen control was rerun and independently qualified in the new exact source case; its existing verified state is unchanged.",
          "test": "scripts/e2e/statistics-gallery-filter-lifecycle.spec.ts::class statistic gallery empty recovery and reopen preserve complete owned evidence",
-         "receipt": "2026-10-08-statistics-gallery-2b28835-browser.json",
-         "receipt_sha256": "9c77bd39fd91c0cff2e6acaa196b0e32749ed5a3ce85fd2d00ff9f67aa82be98",
+         "receipt": "2026-10-08-statistics-class-cancel-dd8d3d0-browser.json",
+         "receipt_sha256": "9736cdaf93debb133861b14c49087be929a1b8addd9c27617a995a88a65b75b5",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "e4cf9474027085e63bd9778d01e07546f52df6bafd0ddc3f2f22dac2359881d2"
+           "sha256": "d4caf10aca0f23be86389c406b51019e6c650b74f554de121ddce380e1241d01"
           },
           {
            "id": "screenshot-1",
-           "sha256": "123cd244c3b963df89304664b2028235161e441896538706a34616013e9649a8"
+           "sha256": "75232646e53e5fe10cb3bb58b692748212a10ce6832acb80e8d9c7aece6642fb"
           },
           {
            "id": "screenshot-2",
-           "sha256": "b91bc5ae595a925750306922c5d94f7311a48a8d3458e0998c54253387b4b905"
+           "sha256": "6a0abe1a3f7adac4fcda0efc5419226a7a02dc5427aa718c3666be4d9c2f17c9"
           },
           {
            "id": "screenshot-3",
-           "sha256": "58e8663abfdbedd58ad31013005e0205cf8cb721a69833bc4c19ab4a145dc89d"
+           "sha256": "567b5da710686460fd726369867c11cdf58b2fc5d39e3181fd13285e5add64a7"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "ef4b159ac1c386993114829a3686a0be37626c17a8dd9e924a6b97f6fc4fc063"
           }
          ]
         },
         {
          "task": "S3-07",
-         "source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+         "source_sha": "dd8d3d0ae90060a945d94912edb108787de69103",
          "kind": "click",
          "action": "클래스별 이미지 ng",
          "expected": "Exercise the exact existing reopen state with complete source, saved records and annotations preserved.",
          "observed": "electron: Actual statistics GET503 removed stale class chips and real refresh recovered complete counts. TrainOnly plus test yielded real GET200 total0. Reload reset the volatile filter, then explicit class selection reopened the same original item; full files, API records, UUIDs and annotation metadata retained. This reference qualifies only F021.class-statistic-gallery-filter.reopen; controlled saved reports and PNG fixtures do not approve model quality.",
-         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending.",
+         "reviewer": "Codex independent read-only qualifier and root all-source archive/file/API/pixel readback plus strict once-passed clean browser/source Electron receipt and original process teardown; human quality, physical targets and full parent acceptance pending. The entire original reopen control was rerun and independently qualified in the new exact source case; its existing verified state is unchanged.",
          "test": "scripts/e2e/statistics-gallery-filter-lifecycle.spec.ts::source Electron class statistic gallery empty recovery and reopen preserve complete owned evidence",
-         "receipt": "2026-10-08-statistics-gallery-2b28835-electron.json",
-         "receipt_sha256": "4a15534ad6caedcacbbded5f71010024beb9540ab6c7e38b982eddcce75e28df",
+         "receipt": "2026-10-08-statistics-class-cancel-dd8d3d0-electron.json",
+         "receipt_sha256": "22c7be2c6c18b31242074c8431469f453cce53b79f440154eae58b5fee755b3d",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "1ad37c8af22ad69e0aa1e94d606a8c62cd3f577b64eec71989723ad5e36dd700"
+           "sha256": "5dc788cf6735b751ef9c759a63507b9b8fef3c6a247c7effbdbe4d8d14dddc32"
           },
           {
            "id": "screenshot-1",
-           "sha256": "64cf92b52371ec0f88ab8b86bdd12b28beee6e03cdbee1e634b3d865c4600889"
+           "sha256": "89e6f8dd9d3316f910be980ce2d826bafafff8b51ab746a74e053bb25b3dc5be"
           },
           {
            "id": "screenshot-2",
-           "sha256": "052570ba997fc9bc600946e63018614e6ee2ed0f43a6481f90255c153fb0fc6a"
+           "sha256": "a97d5bbe30c5dc5bc62b63b1021b3ce3cca25b7d806a46a7f872de0992c45bb9"
           },
           {
            "id": "screenshot-3",
-           "sha256": "e45692e913a4f559b9b5d839a8cbb506326426a5025728164d322abee01da690"
+           "sha256": "a156440b4dea9ebbbadbf21c9903304ef8c7a0dbfa634fad339e6644987b7638"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "fe592946866d50c69a28545bf567b65cff0c410920321f53d74030c102716b46"
           }
          ]
         }
@@ -37783,16 +37877,616 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "브러시 마스크 (Brush - 5)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo empty preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "electron: exact brush-class-mask.empty passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::native raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-electron.json",
+         "receipt_sha256": "e92da594b234bd046bce77831e897151a97649d55fcb321b500f5f3eb6254fce",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c102bf48cf5f82535e3bb1d43eff0bfab4423b0350d8653edb50e2eb6d806308"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5a16e1aec0b7ade98c06c420b6f9353670e9702fbac52dfd0557f4d4e95673e9"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "db200a2dad46d10fa92713aa9c46e437bec572868cb9cf994d9d635b7ad3e288"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "ce6bcdaddcdda69f7eb8432d071d7face545d3dfde98b6e4597bba2665029228"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e53d3f4bd3a5c62c27cce2ee8597d748f347b7f1680e5f436991590afbd0c072"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "54495c9cd54ee577e4438e123cd60947be1409b20f6a3ac9d7cfe6f1f638b61c"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "dce0e0cb4c7dbc3eb0d8836e4ab9c3514c3b08e4723783b84633383d0cfce706"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "e609644e341f69e0dbf88a41c4eb4343623de6bc87afa9d77c401b4d1cb57528"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "71b446c747da49ed7378146971457b6de3693c714b98bbc2c6663aecba1ccc2c"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "6c08948b6aa635a497337b22b5d7a2169d6331c2978b46ccfd1252c84f232787"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "d575639e47bff17d642422169660c9ffefdbf7ce185fa7f9ef007af6f727030e"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "브러시 마스크 (Brush - 5)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo empty preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "browser: exact brush-class-mask.empty passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-browser.json",
+         "receipt_sha256": "870d279d9e9bb881c9faa130495182869c0fd6974d129bdf9b29c644c8c39c14",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "904d59a455168926067a129a9cf5bf76d569329070a715f5effd0ed116979320"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f44de95961bf73169043df6a6486a7b7b20501b588bb4e7f71b8fe0b10c67c74"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "9b4e2d7a04041ed5cf798963e18942591b26c59be570d02031f8b5892f8aeac0"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "f624a7fa1b9a29ba94aa57ac21bf4a7746fdbc1eb7185334bdb8b54f820ed380"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "1f7fc62377ace43f932cb5f135d9e5351e457436e5e1280d90c0c03bb60fdc5a"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "01f78afec05b3ecbd48ff95a24f8c02c5881164d0994ba944d979e9477a379b0"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "6df8ae78eec2b42887d27bd0b206fbd0c6558d66156a21907d54bc696756f0cb"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "94f80ff6c067840fc7b1ac19fce9ada0caba19c6dafdadf98ed776db765f0d10"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "082517d84e55e5e47b8cc24357a35e759879624a775ffffcb8e4e3661dbb9f0a"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "5a658879faede39645c4b1f67b41d73be4f5005c79cc649371def17ce96e53ad"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "e72b2b3f72eb0e65bdb49a147eb529c5c108ac2219ab2f97dd493e4da1162fa5"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "브러시 마스크 (Brush - 5)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo invalid preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "electron: exact brush-class-mask.invalid passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::native raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-electron.json",
+         "receipt_sha256": "e92da594b234bd046bce77831e897151a97649d55fcb321b500f5f3eb6254fce",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c102bf48cf5f82535e3bb1d43eff0bfab4423b0350d8653edb50e2eb6d806308"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5a16e1aec0b7ade98c06c420b6f9353670e9702fbac52dfd0557f4d4e95673e9"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "db200a2dad46d10fa92713aa9c46e437bec572868cb9cf994d9d635b7ad3e288"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "ce6bcdaddcdda69f7eb8432d071d7face545d3dfde98b6e4597bba2665029228"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e53d3f4bd3a5c62c27cce2ee8597d748f347b7f1680e5f436991590afbd0c072"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "54495c9cd54ee577e4438e123cd60947be1409b20f6a3ac9d7cfe6f1f638b61c"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "dce0e0cb4c7dbc3eb0d8836e4ab9c3514c3b08e4723783b84633383d0cfce706"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "e609644e341f69e0dbf88a41c4eb4343623de6bc87afa9d77c401b4d1cb57528"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "71b446c747da49ed7378146971457b6de3693c714b98bbc2c6663aecba1ccc2c"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "6c08948b6aa635a497337b22b5d7a2169d6331c2978b46ccfd1252c84f232787"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "d575639e47bff17d642422169660c9ffefdbf7ce185fa7f9ef007af6f727030e"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "브러시 마스크 (Brush - 5)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo invalid preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "browser: exact brush-class-mask.invalid passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-browser.json",
+         "receipt_sha256": "870d279d9e9bb881c9faa130495182869c0fd6974d129bdf9b29c644c8c39c14",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "904d59a455168926067a129a9cf5bf76d569329070a715f5effd0ed116979320"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f44de95961bf73169043df6a6486a7b7b20501b588bb4e7f71b8fe0b10c67c74"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "9b4e2d7a04041ed5cf798963e18942591b26c59be570d02031f8b5892f8aeac0"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "f624a7fa1b9a29ba94aa57ac21bf4a7746fdbc1eb7185334bdb8b54f820ed380"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "1f7fc62377ace43f932cb5f135d9e5351e457436e5e1280d90c0c03bb60fdc5a"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "01f78afec05b3ecbd48ff95a24f8c02c5881164d0994ba944d979e9477a379b0"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "6df8ae78eec2b42887d27bd0b206fbd0c6558d66156a21907d54bc696756f0cb"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "94f80ff6c067840fc7b1ac19fce9ada0caba19c6dafdadf98ed776db765f0d10"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "082517d84e55e5e47b8cc24357a35e759879624a775ffffcb8e4e3661dbb9f0a"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "5a658879faede39645c4b1f67b41d73be4f5005c79cc649371def17ce96e53ad"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "e72b2b3f72eb0e65bdb49a147eb529c5c108ac2219ab2f97dd493e4da1162fa5"
+          }
+         ]
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "브러시 마스크 (Brush - 5)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo error preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "electron: exact brush-class-mask.error passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::native raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-electron.json",
+         "receipt_sha256": "e92da594b234bd046bce77831e897151a97649d55fcb321b500f5f3eb6254fce",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c102bf48cf5f82535e3bb1d43eff0bfab4423b0350d8653edb50e2eb6d806308"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5a16e1aec0b7ade98c06c420b6f9353670e9702fbac52dfd0557f4d4e95673e9"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "db200a2dad46d10fa92713aa9c46e437bec572868cb9cf994d9d635b7ad3e288"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "ce6bcdaddcdda69f7eb8432d071d7face545d3dfde98b6e4597bba2665029228"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e53d3f4bd3a5c62c27cce2ee8597d748f347b7f1680e5f436991590afbd0c072"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "54495c9cd54ee577e4438e123cd60947be1409b20f6a3ac9d7cfe6f1f638b61c"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "dce0e0cb4c7dbc3eb0d8836e4ab9c3514c3b08e4723783b84633383d0cfce706"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "e609644e341f69e0dbf88a41c4eb4343623de6bc87afa9d77c401b4d1cb57528"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "71b446c747da49ed7378146971457b6de3693c714b98bbc2c6663aecba1ccc2c"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "6c08948b6aa635a497337b22b5d7a2169d6331c2978b46ccfd1252c84f232787"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "d575639e47bff17d642422169660c9ffefdbf7ce185fa7f9ef007af6f727030e"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "브러시 마스크 (Brush - 5)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo error preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "browser: exact brush-class-mask.error passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-browser.json",
+         "receipt_sha256": "870d279d9e9bb881c9faa130495182869c0fd6974d129bdf9b29c644c8c39c14",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "904d59a455168926067a129a9cf5bf76d569329070a715f5effd0ed116979320"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f44de95961bf73169043df6a6486a7b7b20501b588bb4e7f71b8fe0b10c67c74"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "9b4e2d7a04041ed5cf798963e18942591b26c59be570d02031f8b5892f8aeac0"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "f624a7fa1b9a29ba94aa57ac21bf4a7746fdbc1eb7185334bdb8b54f820ed380"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "1f7fc62377ace43f932cb5f135d9e5351e457436e5e1280d90c0c03bb60fdc5a"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "01f78afec05b3ecbd48ff95a24f8c02c5881164d0994ba944d979e9477a379b0"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "6df8ae78eec2b42887d27bd0b206fbd0c6558d66156a21907d54bc696756f0cb"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "94f80ff6c067840fc7b1ac19fce9ada0caba19c6dafdadf98ed776db765f0d10"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "082517d84e55e5e47b8cc24357a35e759879624a775ffffcb8e4e3661dbb9f0a"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "5a658879faede39645c4b1f67b41d73be4f5005c79cc649371def17ce96e53ad"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "e72b2b3f72eb0e65bdb49a147eb529c5c108ac2219ab2f97dd493e4da1162fa5"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "브러시 마스크 (Brush - 5)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo cancel preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "electron: exact brush-class-mask.cancel passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::native raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-electron.json",
+         "receipt_sha256": "e92da594b234bd046bce77831e897151a97649d55fcb321b500f5f3eb6254fce",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c102bf48cf5f82535e3bb1d43eff0bfab4423b0350d8653edb50e2eb6d806308"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5a16e1aec0b7ade98c06c420b6f9353670e9702fbac52dfd0557f4d4e95673e9"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "db200a2dad46d10fa92713aa9c46e437bec572868cb9cf994d9d635b7ad3e288"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "ce6bcdaddcdda69f7eb8432d071d7face545d3dfde98b6e4597bba2665029228"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e53d3f4bd3a5c62c27cce2ee8597d748f347b7f1680e5f436991590afbd0c072"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "54495c9cd54ee577e4438e123cd60947be1409b20f6a3ac9d7cfe6f1f638b61c"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "dce0e0cb4c7dbc3eb0d8836e4ab9c3514c3b08e4723783b84633383d0cfce706"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "e609644e341f69e0dbf88a41c4eb4343623de6bc87afa9d77c401b4d1cb57528"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "71b446c747da49ed7378146971457b6de3693c714b98bbc2c6663aecba1ccc2c"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "6c08948b6aa635a497337b22b5d7a2169d6331c2978b46ccfd1252c84f232787"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "d575639e47bff17d642422169660c9ffefdbf7ce185fa7f9ef007af6f727030e"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "브러시 마스크 (Brush - 5)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo cancel preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "browser: exact brush-class-mask.cancel passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-browser.json",
+         "receipt_sha256": "870d279d9e9bb881c9faa130495182869c0fd6974d129bdf9b29c644c8c39c14",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "904d59a455168926067a129a9cf5bf76d569329070a715f5effd0ed116979320"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f44de95961bf73169043df6a6486a7b7b20501b588bb4e7f71b8fe0b10c67c74"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "9b4e2d7a04041ed5cf798963e18942591b26c59be570d02031f8b5892f8aeac0"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "f624a7fa1b9a29ba94aa57ac21bf4a7746fdbc1eb7185334bdb8b54f820ed380"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "1f7fc62377ace43f932cb5f135d9e5351e457436e5e1280d90c0c03bb60fdc5a"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "01f78afec05b3ecbd48ff95a24f8c02c5881164d0994ba944d979e9477a379b0"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "6df8ae78eec2b42887d27bd0b206fbd0c6558d66156a21907d54bc696756f0cb"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "94f80ff6c067840fc7b1ac19fce9ada0caba19c6dafdadf98ed776db765f0d10"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "082517d84e55e5e47b8cc24357a35e759879624a775ffffcb8e4e3661dbb9f0a"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "5a658879faede39645c4b1f67b41d73be4f5005c79cc649371def17ce96e53ad"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "e72b2b3f72eb0e65bdb49a147eb529c5c108ac2219ab2f97dd493e4da1162fa5"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
        "state": "verified",
@@ -37818,7 +38512,157 @@
        ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "브러시 마스크 (Brush - 5)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo handoff preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "electron: exact brush-class-mask.handoff passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::native raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-electron.json",
+         "receipt_sha256": "e92da594b234bd046bce77831e897151a97649d55fcb321b500f5f3eb6254fce",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c102bf48cf5f82535e3bb1d43eff0bfab4423b0350d8653edb50e2eb6d806308"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5a16e1aec0b7ade98c06c420b6f9353670e9702fbac52dfd0557f4d4e95673e9"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "db200a2dad46d10fa92713aa9c46e437bec572868cb9cf994d9d635b7ad3e288"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "ce6bcdaddcdda69f7eb8432d071d7face545d3dfde98b6e4597bba2665029228"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e53d3f4bd3a5c62c27cce2ee8597d748f347b7f1680e5f436991590afbd0c072"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "54495c9cd54ee577e4438e123cd60947be1409b20f6a3ac9d7cfe6f1f638b61c"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "dce0e0cb4c7dbc3eb0d8836e4ab9c3514c3b08e4723783b84633383d0cfce706"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "e609644e341f69e0dbf88a41c4eb4343623de6bc87afa9d77c401b4d1cb57528"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "71b446c747da49ed7378146971457b6de3693c714b98bbc2c6663aecba1ccc2c"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "6c08948b6aa635a497337b22b5d7a2169d6331c2978b46ccfd1252c84f232787"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "d575639e47bff17d642422169660c9ffefdbf7ce185fa7f9ef007af6f727030e"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "브러시 마스크 (Brush - 5)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo handoff preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "browser: exact brush-class-mask.handoff passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-browser.json",
+         "receipt_sha256": "870d279d9e9bb881c9faa130495182869c0fd6974d129bdf9b29c644c8c39c14",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "904d59a455168926067a129a9cf5bf76d569329070a715f5effd0ed116979320"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f44de95961bf73169043df6a6486a7b7b20501b588bb4e7f71b8fe0b10c67c74"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "9b4e2d7a04041ed5cf798963e18942591b26c59be570d02031f8b5892f8aeac0"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "f624a7fa1b9a29ba94aa57ac21bf4a7746fdbc1eb7185334bdb8b54f820ed380"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "1f7fc62377ace43f932cb5f135d9e5351e457436e5e1280d90c0c03bb60fdc5a"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "01f78afec05b3ecbd48ff95a24f8c02c5881164d0994ba944d979e9477a379b0"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "6df8ae78eec2b42887d27bd0b206fbd0c6558d66156a21907d54bc696756f0cb"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "94f80ff6c067840fc7b1ac19fce9ada0caba19c6dafdadf98ed776db765f0d10"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "082517d84e55e5e47b8cc24357a35e759879624a775ffffcb8e4e3661dbb9f0a"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "5a658879faede39645c4b1f67b41d73be4f5005c79cc649371def17ce96e53ad"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "e72b2b3f72eb0e65bdb49a147eb529c5c108ac2219ab2f97dd493e4da1162fa5"
+          }
+         ]
+        }
+       ]
       }
      }
     },
@@ -37851,16 +38695,616 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "마스크 지우개 (Eraser - 6)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo empty preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "electron: exact erase-selected-mask.empty passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::native raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-electron.json",
+         "receipt_sha256": "e92da594b234bd046bce77831e897151a97649d55fcb321b500f5f3eb6254fce",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c102bf48cf5f82535e3bb1d43eff0bfab4423b0350d8653edb50e2eb6d806308"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5a16e1aec0b7ade98c06c420b6f9353670e9702fbac52dfd0557f4d4e95673e9"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "db200a2dad46d10fa92713aa9c46e437bec572868cb9cf994d9d635b7ad3e288"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "ce6bcdaddcdda69f7eb8432d071d7face545d3dfde98b6e4597bba2665029228"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e53d3f4bd3a5c62c27cce2ee8597d748f347b7f1680e5f436991590afbd0c072"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "54495c9cd54ee577e4438e123cd60947be1409b20f6a3ac9d7cfe6f1f638b61c"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "dce0e0cb4c7dbc3eb0d8836e4ab9c3514c3b08e4723783b84633383d0cfce706"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "e609644e341f69e0dbf88a41c4eb4343623de6bc87afa9d77c401b4d1cb57528"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "71b446c747da49ed7378146971457b6de3693c714b98bbc2c6663aecba1ccc2c"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "6c08948b6aa635a497337b22b5d7a2169d6331c2978b46ccfd1252c84f232787"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "d575639e47bff17d642422169660c9ffefdbf7ce185fa7f9ef007af6f727030e"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "마스크 지우개 (Eraser - 6)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo empty preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "browser: exact erase-selected-mask.empty passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-browser.json",
+         "receipt_sha256": "870d279d9e9bb881c9faa130495182869c0fd6974d129bdf9b29c644c8c39c14",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "904d59a455168926067a129a9cf5bf76d569329070a715f5effd0ed116979320"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f44de95961bf73169043df6a6486a7b7b20501b588bb4e7f71b8fe0b10c67c74"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "9b4e2d7a04041ed5cf798963e18942591b26c59be570d02031f8b5892f8aeac0"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "f624a7fa1b9a29ba94aa57ac21bf4a7746fdbc1eb7185334bdb8b54f820ed380"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "1f7fc62377ace43f932cb5f135d9e5351e457436e5e1280d90c0c03bb60fdc5a"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "01f78afec05b3ecbd48ff95a24f8c02c5881164d0994ba944d979e9477a379b0"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "6df8ae78eec2b42887d27bd0b206fbd0c6558d66156a21907d54bc696756f0cb"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "94f80ff6c067840fc7b1ac19fce9ada0caba19c6dafdadf98ed776db765f0d10"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "082517d84e55e5e47b8cc24357a35e759879624a775ffffcb8e4e3661dbb9f0a"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "5a658879faede39645c4b1f67b41d73be4f5005c79cc649371def17ce96e53ad"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "e72b2b3f72eb0e65bdb49a147eb529c5c108ac2219ab2f97dd493e4da1162fa5"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "마스크 지우개 (Eraser - 6)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo invalid preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "electron: exact erase-selected-mask.invalid passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::native raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-electron.json",
+         "receipt_sha256": "e92da594b234bd046bce77831e897151a97649d55fcb321b500f5f3eb6254fce",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c102bf48cf5f82535e3bb1d43eff0bfab4423b0350d8653edb50e2eb6d806308"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5a16e1aec0b7ade98c06c420b6f9353670e9702fbac52dfd0557f4d4e95673e9"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "db200a2dad46d10fa92713aa9c46e437bec572868cb9cf994d9d635b7ad3e288"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "ce6bcdaddcdda69f7eb8432d071d7face545d3dfde98b6e4597bba2665029228"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e53d3f4bd3a5c62c27cce2ee8597d748f347b7f1680e5f436991590afbd0c072"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "54495c9cd54ee577e4438e123cd60947be1409b20f6a3ac9d7cfe6f1f638b61c"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "dce0e0cb4c7dbc3eb0d8836e4ab9c3514c3b08e4723783b84633383d0cfce706"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "e609644e341f69e0dbf88a41c4eb4343623de6bc87afa9d77c401b4d1cb57528"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "71b446c747da49ed7378146971457b6de3693c714b98bbc2c6663aecba1ccc2c"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "6c08948b6aa635a497337b22b5d7a2169d6331c2978b46ccfd1252c84f232787"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "d575639e47bff17d642422169660c9ffefdbf7ce185fa7f9ef007af6f727030e"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "마스크 지우개 (Eraser - 6)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo invalid preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "browser: exact erase-selected-mask.invalid passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-browser.json",
+         "receipt_sha256": "870d279d9e9bb881c9faa130495182869c0fd6974d129bdf9b29c644c8c39c14",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "904d59a455168926067a129a9cf5bf76d569329070a715f5effd0ed116979320"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f44de95961bf73169043df6a6486a7b7b20501b588bb4e7f71b8fe0b10c67c74"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "9b4e2d7a04041ed5cf798963e18942591b26c59be570d02031f8b5892f8aeac0"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "f624a7fa1b9a29ba94aa57ac21bf4a7746fdbc1eb7185334bdb8b54f820ed380"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "1f7fc62377ace43f932cb5f135d9e5351e457436e5e1280d90c0c03bb60fdc5a"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "01f78afec05b3ecbd48ff95a24f8c02c5881164d0994ba944d979e9477a379b0"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "6df8ae78eec2b42887d27bd0b206fbd0c6558d66156a21907d54bc696756f0cb"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "94f80ff6c067840fc7b1ac19fce9ada0caba19c6dafdadf98ed776db765f0d10"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "082517d84e55e5e47b8cc24357a35e759879624a775ffffcb8e4e3661dbb9f0a"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "5a658879faede39645c4b1f67b41d73be4f5005c79cc649371def17ce96e53ad"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "e72b2b3f72eb0e65bdb49a147eb529c5c108ac2219ab2f97dd493e4da1162fa5"
+          }
+         ]
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "마스크 지우개 (Eraser - 6)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo error preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "electron: exact erase-selected-mask.error passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::native raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-electron.json",
+         "receipt_sha256": "e92da594b234bd046bce77831e897151a97649d55fcb321b500f5f3eb6254fce",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c102bf48cf5f82535e3bb1d43eff0bfab4423b0350d8653edb50e2eb6d806308"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5a16e1aec0b7ade98c06c420b6f9353670e9702fbac52dfd0557f4d4e95673e9"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "db200a2dad46d10fa92713aa9c46e437bec572868cb9cf994d9d635b7ad3e288"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "ce6bcdaddcdda69f7eb8432d071d7face545d3dfde98b6e4597bba2665029228"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e53d3f4bd3a5c62c27cce2ee8597d748f347b7f1680e5f436991590afbd0c072"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "54495c9cd54ee577e4438e123cd60947be1409b20f6a3ac9d7cfe6f1f638b61c"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "dce0e0cb4c7dbc3eb0d8836e4ab9c3514c3b08e4723783b84633383d0cfce706"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "e609644e341f69e0dbf88a41c4eb4343623de6bc87afa9d77c401b4d1cb57528"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "71b446c747da49ed7378146971457b6de3693c714b98bbc2c6663aecba1ccc2c"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "6c08948b6aa635a497337b22b5d7a2169d6331c2978b46ccfd1252c84f232787"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "d575639e47bff17d642422169660c9ffefdbf7ce185fa7f9ef007af6f727030e"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "마스크 지우개 (Eraser - 6)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo error preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "browser: exact erase-selected-mask.error passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-browser.json",
+         "receipt_sha256": "870d279d9e9bb881c9faa130495182869c0fd6974d129bdf9b29c644c8c39c14",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "904d59a455168926067a129a9cf5bf76d569329070a715f5effd0ed116979320"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f44de95961bf73169043df6a6486a7b7b20501b588bb4e7f71b8fe0b10c67c74"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "9b4e2d7a04041ed5cf798963e18942591b26c59be570d02031f8b5892f8aeac0"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "f624a7fa1b9a29ba94aa57ac21bf4a7746fdbc1eb7185334bdb8b54f820ed380"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "1f7fc62377ace43f932cb5f135d9e5351e457436e5e1280d90c0c03bb60fdc5a"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "01f78afec05b3ecbd48ff95a24f8c02c5881164d0994ba944d979e9477a379b0"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "6df8ae78eec2b42887d27bd0b206fbd0c6558d66156a21907d54bc696756f0cb"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "94f80ff6c067840fc7b1ac19fce9ada0caba19c6dafdadf98ed776db765f0d10"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "082517d84e55e5e47b8cc24357a35e759879624a775ffffcb8e4e3661dbb9f0a"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "5a658879faede39645c4b1f67b41d73be4f5005c79cc649371def17ce96e53ad"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "e72b2b3f72eb0e65bdb49a147eb529c5c108ac2219ab2f97dd493e4da1162fa5"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "마스크 지우개 (Eraser - 6)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo cancel preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "electron: exact erase-selected-mask.cancel passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::native raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-electron.json",
+         "receipt_sha256": "e92da594b234bd046bce77831e897151a97649d55fcb321b500f5f3eb6254fce",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c102bf48cf5f82535e3bb1d43eff0bfab4423b0350d8653edb50e2eb6d806308"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5a16e1aec0b7ade98c06c420b6f9353670e9702fbac52dfd0557f4d4e95673e9"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "db200a2dad46d10fa92713aa9c46e437bec572868cb9cf994d9d635b7ad3e288"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "ce6bcdaddcdda69f7eb8432d071d7face545d3dfde98b6e4597bba2665029228"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e53d3f4bd3a5c62c27cce2ee8597d748f347b7f1680e5f436991590afbd0c072"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "54495c9cd54ee577e4438e123cd60947be1409b20f6a3ac9d7cfe6f1f638b61c"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "dce0e0cb4c7dbc3eb0d8836e4ab9c3514c3b08e4723783b84633383d0cfce706"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "e609644e341f69e0dbf88a41c4eb4343623de6bc87afa9d77c401b4d1cb57528"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "71b446c747da49ed7378146971457b6de3693c714b98bbc2c6663aecba1ccc2c"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "6c08948b6aa635a497337b22b5d7a2169d6331c2978b46ccfd1252c84f232787"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "d575639e47bff17d642422169660c9ffefdbf7ce185fa7f9ef007af6f727030e"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "마스크 지우개 (Eraser - 6)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo cancel preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "browser: exact erase-selected-mask.cancel passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-browser.json",
+         "receipt_sha256": "870d279d9e9bb881c9faa130495182869c0fd6974d129bdf9b29c644c8c39c14",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "904d59a455168926067a129a9cf5bf76d569329070a715f5effd0ed116979320"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f44de95961bf73169043df6a6486a7b7b20501b588bb4e7f71b8fe0b10c67c74"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "9b4e2d7a04041ed5cf798963e18942591b26c59be570d02031f8b5892f8aeac0"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "f624a7fa1b9a29ba94aa57ac21bf4a7746fdbc1eb7185334bdb8b54f820ed380"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "1f7fc62377ace43f932cb5f135d9e5351e457436e5e1280d90c0c03bb60fdc5a"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "01f78afec05b3ecbd48ff95a24f8c02c5881164d0994ba944d979e9477a379b0"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "6df8ae78eec2b42887d27bd0b206fbd0c6558d66156a21907d54bc696756f0cb"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "94f80ff6c067840fc7b1ac19fce9ada0caba19c6dafdadf98ed776db765f0d10"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "082517d84e55e5e47b8cc24357a35e759879624a775ffffcb8e4e3661dbb9f0a"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "5a658879faede39645c4b1f67b41d73be4f5005c79cc649371def17ce96e53ad"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "e72b2b3f72eb0e65bdb49a147eb529c5c108ac2219ab2f97dd493e4da1162fa5"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
        "state": "verified",
@@ -37886,7 +39330,157 @@
        ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "마스크 지우개 (Eraser - 6)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo handoff preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "electron: exact erase-selected-mask.handoff passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::native raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-electron.json",
+         "receipt_sha256": "e92da594b234bd046bce77831e897151a97649d55fcb321b500f5f3eb6254fce",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c102bf48cf5f82535e3bb1d43eff0bfab4423b0350d8653edb50e2eb6d806308"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5a16e1aec0b7ade98c06c420b6f9353670e9702fbac52dfd0557f4d4e95673e9"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "db200a2dad46d10fa92713aa9c46e437bec572868cb9cf994d9d635b7ad3e288"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "ce6bcdaddcdda69f7eb8432d071d7face545d3dfde98b6e4597bba2665029228"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e53d3f4bd3a5c62c27cce2ee8597d748f347b7f1680e5f436991590afbd0c072"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "54495c9cd54ee577e4438e123cd60947be1409b20f6a3ac9d7cfe6f1f638b61c"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "dce0e0cb4c7dbc3eb0d8836e4ab9c3514c3b08e4723783b84633383d0cfce706"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "e609644e341f69e0dbf88a41c4eb4343623de6bc87afa9d77c401b4d1cb57528"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "71b446c747da49ed7378146971457b6de3693c714b98bbc2c6663aecba1ccc2c"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "6c08948b6aa635a497337b22b5d7a2169d6331c2978b46ccfd1252c84f232787"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "d575639e47bff17d642422169660c9ffefdbf7ce185fa7f9ef007af6f727030e"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "마스크 지우개 (Eraser - 6)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo handoff preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "browser: exact erase-selected-mask.handoff passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-browser.json",
+         "receipt_sha256": "870d279d9e9bb881c9faa130495182869c0fd6974d129bdf9b29c644c8c39c14",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "904d59a455168926067a129a9cf5bf76d569329070a715f5effd0ed116979320"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f44de95961bf73169043df6a6486a7b7b20501b588bb4e7f71b8fe0b10c67c74"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "9b4e2d7a04041ed5cf798963e18942591b26c59be570d02031f8b5892f8aeac0"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "f624a7fa1b9a29ba94aa57ac21bf4a7746fdbc1eb7185334bdb8b54f820ed380"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "1f7fc62377ace43f932cb5f135d9e5351e457436e5e1280d90c0c03bb60fdc5a"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "01f78afec05b3ecbd48ff95a24f8c02c5881164d0994ba944d979e9477a379b0"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "6df8ae78eec2b42887d27bd0b206fbd0c6558d66156a21907d54bc696756f0cb"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "94f80ff6c067840fc7b1ac19fce9ada0caba19c6dafdadf98ed776db765f0d10"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "082517d84e55e5e47b8cc24357a35e759879624a775ffffcb8e4e3661dbb9f0a"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "5a658879faede39645c4b1f67b41d73be4f5005c79cc649371def17ce96e53ad"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "e72b2b3f72eb0e65bdb49a147eb529c5c108ac2219ab2f97dd493e4da1162fa5"
+          }
+         ]
+        }
+       ]
       }
      }
     },
@@ -37919,16 +39513,616 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "Undo (Ctrl+Z) then Redo (Ctrl+Y)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo empty preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "electron: exact mask-undo-redo.empty passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::native raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-electron.json",
+         "receipt_sha256": "e92da594b234bd046bce77831e897151a97649d55fcb321b500f5f3eb6254fce",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c102bf48cf5f82535e3bb1d43eff0bfab4423b0350d8653edb50e2eb6d806308"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5a16e1aec0b7ade98c06c420b6f9353670e9702fbac52dfd0557f4d4e95673e9"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "db200a2dad46d10fa92713aa9c46e437bec572868cb9cf994d9d635b7ad3e288"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "ce6bcdaddcdda69f7eb8432d071d7face545d3dfde98b6e4597bba2665029228"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e53d3f4bd3a5c62c27cce2ee8597d748f347b7f1680e5f436991590afbd0c072"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "54495c9cd54ee577e4438e123cd60947be1409b20f6a3ac9d7cfe6f1f638b61c"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "dce0e0cb4c7dbc3eb0d8836e4ab9c3514c3b08e4723783b84633383d0cfce706"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "e609644e341f69e0dbf88a41c4eb4343623de6bc87afa9d77c401b4d1cb57528"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "71b446c747da49ed7378146971457b6de3693c714b98bbc2c6663aecba1ccc2c"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "6c08948b6aa635a497337b22b5d7a2169d6331c2978b46ccfd1252c84f232787"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "d575639e47bff17d642422169660c9ffefdbf7ce185fa7f9ef007af6f727030e"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "Undo (Ctrl+Z) then Redo (Ctrl+Y)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo empty preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "browser: exact mask-undo-redo.empty passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-browser.json",
+         "receipt_sha256": "870d279d9e9bb881c9faa130495182869c0fd6974d129bdf9b29c644c8c39c14",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "904d59a455168926067a129a9cf5bf76d569329070a715f5effd0ed116979320"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f44de95961bf73169043df6a6486a7b7b20501b588bb4e7f71b8fe0b10c67c74"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "9b4e2d7a04041ed5cf798963e18942591b26c59be570d02031f8b5892f8aeac0"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "f624a7fa1b9a29ba94aa57ac21bf4a7746fdbc1eb7185334bdb8b54f820ed380"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "1f7fc62377ace43f932cb5f135d9e5351e457436e5e1280d90c0c03bb60fdc5a"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "01f78afec05b3ecbd48ff95a24f8c02c5881164d0994ba944d979e9477a379b0"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "6df8ae78eec2b42887d27bd0b206fbd0c6558d66156a21907d54bc696756f0cb"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "94f80ff6c067840fc7b1ac19fce9ada0caba19c6dafdadf98ed776db765f0d10"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "082517d84e55e5e47b8cc24357a35e759879624a775ffffcb8e4e3661dbb9f0a"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "5a658879faede39645c4b1f67b41d73be4f5005c79cc649371def17ce96e53ad"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "e72b2b3f72eb0e65bdb49a147eb529c5c108ac2219ab2f97dd493e4da1162fa5"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "Undo (Ctrl+Z) then Redo (Ctrl+Y)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo invalid preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "electron: exact mask-undo-redo.invalid passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::native raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-electron.json",
+         "receipt_sha256": "e92da594b234bd046bce77831e897151a97649d55fcb321b500f5f3eb6254fce",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c102bf48cf5f82535e3bb1d43eff0bfab4423b0350d8653edb50e2eb6d806308"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5a16e1aec0b7ade98c06c420b6f9353670e9702fbac52dfd0557f4d4e95673e9"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "db200a2dad46d10fa92713aa9c46e437bec572868cb9cf994d9d635b7ad3e288"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "ce6bcdaddcdda69f7eb8432d071d7face545d3dfde98b6e4597bba2665029228"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e53d3f4bd3a5c62c27cce2ee8597d748f347b7f1680e5f436991590afbd0c072"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "54495c9cd54ee577e4438e123cd60947be1409b20f6a3ac9d7cfe6f1f638b61c"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "dce0e0cb4c7dbc3eb0d8836e4ab9c3514c3b08e4723783b84633383d0cfce706"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "e609644e341f69e0dbf88a41c4eb4343623de6bc87afa9d77c401b4d1cb57528"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "71b446c747da49ed7378146971457b6de3693c714b98bbc2c6663aecba1ccc2c"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "6c08948b6aa635a497337b22b5d7a2169d6331c2978b46ccfd1252c84f232787"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "d575639e47bff17d642422169660c9ffefdbf7ce185fa7f9ef007af6f727030e"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "Undo (Ctrl+Z) then Redo (Ctrl+Y)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo invalid preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "browser: exact mask-undo-redo.invalid passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-browser.json",
+         "receipt_sha256": "870d279d9e9bb881c9faa130495182869c0fd6974d129bdf9b29c644c8c39c14",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "904d59a455168926067a129a9cf5bf76d569329070a715f5effd0ed116979320"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f44de95961bf73169043df6a6486a7b7b20501b588bb4e7f71b8fe0b10c67c74"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "9b4e2d7a04041ed5cf798963e18942591b26c59be570d02031f8b5892f8aeac0"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "f624a7fa1b9a29ba94aa57ac21bf4a7746fdbc1eb7185334bdb8b54f820ed380"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "1f7fc62377ace43f932cb5f135d9e5351e457436e5e1280d90c0c03bb60fdc5a"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "01f78afec05b3ecbd48ff95a24f8c02c5881164d0994ba944d979e9477a379b0"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "6df8ae78eec2b42887d27bd0b206fbd0c6558d66156a21907d54bc696756f0cb"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "94f80ff6c067840fc7b1ac19fce9ada0caba19c6dafdadf98ed776db765f0d10"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "082517d84e55e5e47b8cc24357a35e759879624a775ffffcb8e4e3661dbb9f0a"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "5a658879faede39645c4b1f67b41d73be4f5005c79cc649371def17ce96e53ad"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "e72b2b3f72eb0e65bdb49a147eb529c5c108ac2219ab2f97dd493e4da1162fa5"
+          }
+         ]
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "Undo (Ctrl+Z) then Redo (Ctrl+Y)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo error preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "electron: exact mask-undo-redo.error passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::native raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-electron.json",
+         "receipt_sha256": "e92da594b234bd046bce77831e897151a97649d55fcb321b500f5f3eb6254fce",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c102bf48cf5f82535e3bb1d43eff0bfab4423b0350d8653edb50e2eb6d806308"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5a16e1aec0b7ade98c06c420b6f9353670e9702fbac52dfd0557f4d4e95673e9"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "db200a2dad46d10fa92713aa9c46e437bec572868cb9cf994d9d635b7ad3e288"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "ce6bcdaddcdda69f7eb8432d071d7face545d3dfde98b6e4597bba2665029228"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e53d3f4bd3a5c62c27cce2ee8597d748f347b7f1680e5f436991590afbd0c072"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "54495c9cd54ee577e4438e123cd60947be1409b20f6a3ac9d7cfe6f1f638b61c"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "dce0e0cb4c7dbc3eb0d8836e4ab9c3514c3b08e4723783b84633383d0cfce706"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "e609644e341f69e0dbf88a41c4eb4343623de6bc87afa9d77c401b4d1cb57528"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "71b446c747da49ed7378146971457b6de3693c714b98bbc2c6663aecba1ccc2c"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "6c08948b6aa635a497337b22b5d7a2169d6331c2978b46ccfd1252c84f232787"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "d575639e47bff17d642422169660c9ffefdbf7ce185fa7f9ef007af6f727030e"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "Undo (Ctrl+Z) then Redo (Ctrl+Y)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo error preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "browser: exact mask-undo-redo.error passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-browser.json",
+         "receipt_sha256": "870d279d9e9bb881c9faa130495182869c0fd6974d129bdf9b29c644c8c39c14",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "904d59a455168926067a129a9cf5bf76d569329070a715f5effd0ed116979320"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f44de95961bf73169043df6a6486a7b7b20501b588bb4e7f71b8fe0b10c67c74"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "9b4e2d7a04041ed5cf798963e18942591b26c59be570d02031f8b5892f8aeac0"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "f624a7fa1b9a29ba94aa57ac21bf4a7746fdbc1eb7185334bdb8b54f820ed380"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "1f7fc62377ace43f932cb5f135d9e5351e457436e5e1280d90c0c03bb60fdc5a"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "01f78afec05b3ecbd48ff95a24f8c02c5881164d0994ba944d979e9477a379b0"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "6df8ae78eec2b42887d27bd0b206fbd0c6558d66156a21907d54bc696756f0cb"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "94f80ff6c067840fc7b1ac19fce9ada0caba19c6dafdadf98ed776db765f0d10"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "082517d84e55e5e47b8cc24357a35e759879624a775ffffcb8e4e3661dbb9f0a"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "5a658879faede39645c4b1f67b41d73be4f5005c79cc649371def17ce96e53ad"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "e72b2b3f72eb0e65bdb49a147eb529c5c108ac2219ab2f97dd493e4da1162fa5"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "Undo (Ctrl+Z) then Redo (Ctrl+Y)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo cancel preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "electron: exact mask-undo-redo.cancel passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::native raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-electron.json",
+         "receipt_sha256": "e92da594b234bd046bce77831e897151a97649d55fcb321b500f5f3eb6254fce",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c102bf48cf5f82535e3bb1d43eff0bfab4423b0350d8653edb50e2eb6d806308"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5a16e1aec0b7ade98c06c420b6f9353670e9702fbac52dfd0557f4d4e95673e9"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "db200a2dad46d10fa92713aa9c46e437bec572868cb9cf994d9d635b7ad3e288"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "ce6bcdaddcdda69f7eb8432d071d7face545d3dfde98b6e4597bba2665029228"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e53d3f4bd3a5c62c27cce2ee8597d748f347b7f1680e5f436991590afbd0c072"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "54495c9cd54ee577e4438e123cd60947be1409b20f6a3ac9d7cfe6f1f638b61c"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "dce0e0cb4c7dbc3eb0d8836e4ab9c3514c3b08e4723783b84633383d0cfce706"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "e609644e341f69e0dbf88a41c4eb4343623de6bc87afa9d77c401b4d1cb57528"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "71b446c747da49ed7378146971457b6de3693c714b98bbc2c6663aecba1ccc2c"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "6c08948b6aa635a497337b22b5d7a2169d6331c2978b46ccfd1252c84f232787"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "d575639e47bff17d642422169660c9ffefdbf7ce185fa7f9ef007af6f727030e"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "Undo (Ctrl+Z) then Redo (Ctrl+Y)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo cancel preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "browser: exact mask-undo-redo.cancel passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-browser.json",
+         "receipt_sha256": "870d279d9e9bb881c9faa130495182869c0fd6974d129bdf9b29c644c8c39c14",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "904d59a455168926067a129a9cf5bf76d569329070a715f5effd0ed116979320"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f44de95961bf73169043df6a6486a7b7b20501b588bb4e7f71b8fe0b10c67c74"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "9b4e2d7a04041ed5cf798963e18942591b26c59be570d02031f8b5892f8aeac0"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "f624a7fa1b9a29ba94aa57ac21bf4a7746fdbc1eb7185334bdb8b54f820ed380"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "1f7fc62377ace43f932cb5f135d9e5351e457436e5e1280d90c0c03bb60fdc5a"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "01f78afec05b3ecbd48ff95a24f8c02c5881164d0994ba944d979e9477a379b0"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "6df8ae78eec2b42887d27bd0b206fbd0c6558d66156a21907d54bc696756f0cb"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "94f80ff6c067840fc7b1ac19fce9ada0caba19c6dafdadf98ed776db765f0d10"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "082517d84e55e5e47b8cc24357a35e759879624a775ffffcb8e4e3661dbb9f0a"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "5a658879faede39645c4b1f67b41d73be4f5005c79cc649371def17ce96e53ad"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "e72b2b3f72eb0e65bdb49a147eb529c5c108ac2219ab2f97dd493e4da1162fa5"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
        "state": "verified",
@@ -37954,7 +40148,157 @@
        ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "Undo (Ctrl+Z) then Redo (Ctrl+Y)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo handoff preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "electron: exact mask-undo-redo.handoff passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::native raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-electron.json",
+         "receipt_sha256": "e92da594b234bd046bce77831e897151a97649d55fcb321b500f5f3eb6254fce",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c102bf48cf5f82535e3bb1d43eff0bfab4423b0350d8653edb50e2eb6d806308"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "5a16e1aec0b7ade98c06c420b6f9353670e9702fbac52dfd0557f4d4e95673e9"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "db200a2dad46d10fa92713aa9c46e437bec572868cb9cf994d9d635b7ad3e288"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "ce6bcdaddcdda69f7eb8432d071d7face545d3dfde98b6e4597bba2665029228"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "e53d3f4bd3a5c62c27cce2ee8597d748f347b7f1680e5f436991590afbd0c072"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "54495c9cd54ee577e4438e123cd60947be1409b20f6a3ac9d7cfe6f1f638b61c"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "dce0e0cb4c7dbc3eb0d8836e4ab9c3514c3b08e4723783b84633383d0cfce706"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "e609644e341f69e0dbf88a41c4eb4343623de6bc87afa9d77c401b4d1cb57528"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "71b446c747da49ed7378146971457b6de3693c714b98bbc2c6663aecba1ccc2c"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "6c08948b6aa635a497337b22b5d7a2169d6331c2978b46ccfd1252c84f232787"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "d575639e47bff17d642422169660c9ffefdbf7ce185fa7f9ef007af6f727030e"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+         "kind": "click",
+         "action": "Undo (Ctrl+Z) then Redo (Ctrl+Y)",
+         "expected": "Actual brush, selected-class eraser and Undo/Redo handoff preserve the original other-class data and exact server state; deliberate saves and explicit discard/stage handoff obey their original boundaries.",
+         "observed": "browser: exact mask-undo-redo.handoff passed; original source pixels, two ordered RGBA class layers, all saved class-composite pixels, raw API records and three unfiltered trees were independently matched. Controlled503 is followed by the same deliberately accepted raw200 request; explicit cancellation/handoff does not save a draft.",
+         "reviewer": "Codex root independently read the exact original report/source/archive, full raw APIs, protected trees, independent pixel decoder and original owned cleanup; visually reviewed the original source Electron screenshots. Controlled GUI condition only; human quality, installed release, physical equipment and parent acceptance are pending.",
+         "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+         "receipt": "2026-10-08-raster-lifecycle15-817f71f-browser.json",
+         "receipt_sha256": "870d279d9e9bb881c9faa130495182869c0fd6974d129bdf9b29c644c8c39c14",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "904d59a455168926067a129a9cf5bf76d569329070a715f5effd0ed116979320"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "f44de95961bf73169043df6a6486a7b7b20501b588bb4e7f71b8fe0b10c67c74"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "9b4e2d7a04041ed5cf798963e18942591b26c59be570d02031f8b5892f8aeac0"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "f624a7fa1b9a29ba94aa57ac21bf4a7746fdbc1eb7185334bdb8b54f820ed380"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "cb77af747202903d0de024a1770b43a9ac79188831d4be24e58d3a43da261dfe"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "1f7fc62377ace43f932cb5f135d9e5351e457436e5e1280d90c0c03bb60fdc5a"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "01f78afec05b3ecbd48ff95a24f8c02c5881164d0994ba944d979e9477a379b0"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "6df8ae78eec2b42887d27bd0b206fbd0c6558d66156a21907d54bc696756f0cb"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "94f80ff6c067840fc7b1ac19fce9ada0caba19c6dafdadf98ed776db765f0d10"
+          },
+          {
+           "id": "screenshot-11",
+           "sha256": "082517d84e55e5e47b8cc24357a35e759879624a775ffffcb8e4e3661dbb9f0a"
+          },
+          {
+           "id": "screenshot-12",
+           "sha256": "5a658879faede39645c4b1f67b41d73be4f5005c79cc649371def17ce96e53ad"
+          },
+          {
+           "id": "screenshot-13",
+           "sha256": "a1d90acd8ab57cc71c203a63ea8e60a71f35b80e6f741faa199108e6a137f86c"
+          },
+          {
+           "id": "screenshot-14",
+           "sha256": "e72b2b3f72eb0e65bdb49a147eb529c5c108ac2219ab2f97dd493e4da1162fa5"
+          }
+         ]
+        }
+       ]
       }
      }
     },

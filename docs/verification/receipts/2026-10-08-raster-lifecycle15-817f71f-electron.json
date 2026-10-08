@@ -1,0 +1,84 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "817f71f9f0f73df329738b0e374510a388f6326b",
+  "source_dirty": false,
+  "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::native raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
+  "test_source_sha256": "5f81545cd446471d593fab71f54f32609e07918a8a31fa78e356d40e39347890",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "d632adda746e2e76ea7ae9cdc6b6e9713fabb76e6f329ecd6943b46db10e370c",
+  "harness_sha256": "d42310dd365e0c96769b63e4aff98ccde6eae0d15d7a53130b9a00b4eab72a4e",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "c102bf48cf5f82535e3bb1d43eff0bfab4423b0350d8653edb50e2eb6d806308"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "5a16e1aec0b7ade98c06c420b6f9353670e9702fbac52dfd0557f4d4e95673e9"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "db200a2dad46d10fa92713aa9c46e437bec572868cb9cf994d9d635b7ad3e288"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "ce6bcdaddcdda69f7eb8432d071d7face545d3dfde98b6e4597bba2665029228"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "7ac33cf40dc6498e78e6464bba8b8a05ae860962b1aac2d4f7baad84efb0e301"
+    },
+    {
+      "id": "screenshot-6",
+      "sha256": "e53d3f4bd3a5c62c27cce2ee8597d748f347b7f1680e5f436991590afbd0c072"
+    },
+    {
+      "id": "screenshot-7",
+      "sha256": "54495c9cd54ee577e4438e123cd60947be1409b20f6a3ac9d7cfe6f1f638b61c"
+    },
+    {
+      "id": "screenshot-8",
+      "sha256": "dce0e0cb4c7dbc3eb0d8836e4ab9c3514c3b08e4723783b84633383d0cfce706"
+    },
+    {
+      "id": "screenshot-9",
+      "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+    },
+    {
+      "id": "screenshot-10",
+      "sha256": "e609644e341f69e0dbf88a41c4eb4343623de6bc87afa9d77c401b4d1cb57528"
+    },
+    {
+      "id": "screenshot-11",
+      "sha256": "71b446c747da49ed7378146971457b6de3693c714b98bbc2c6663aecba1ccc2c"
+    },
+    {
+      "id": "screenshot-12",
+      "sha256": "6c08948b6aa635a497337b22b5d7a2169d6331c2978b46ccfd1252c84f232787"
+    },
+    {
+      "id": "screenshot-13",
+      "sha256": "176bf385c2d650ed20defc76217aac134c1446363f4a556a0e9af9b5fc871b0a"
+    },
+    {
+      "id": "screenshot-14",
+      "sha256": "d575639e47bff17d642422169660c9ffefdbf7ce185fa7f9ef007af6f727030e"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}
