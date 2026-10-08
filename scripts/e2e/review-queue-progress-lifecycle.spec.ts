@@ -28,6 +28,30 @@ const sorted = (value: any): any => Array.isArray(value) ? value.map(sorted) : v
   ? Object.fromEntries(Object.keys(value).sort().map(key => [key, sorted(value[key])])) : value;
 const canonical = (value: any) => JSON.stringify(sorted(value));
 
+async function initializeIdleEvaluationStores(api: Api, source: string, task: string) {
+  const params = new URLSearchParams({source_dataset_path: source, task}).toString();
+  const endpoints = ['/api/model-deployments/active?' + new URLSearchParams({source_dataset_path: source, task: 'ocr'}),
+    '/api/model-deployments/active?' + params, '/api/model-deployments/history?' + params,
+    '/api/fleet/targets', '/api/fleet/capabilities', '/api/fleet/rollouts',
+    '/api/runtime-services/capture-groups', '/api/runtime-services'];
+  const records: Record<string, any> = {};
+  // Each declared request is a GET. The constructors materialize this owned
+  // fixture's empty default stores; no service, deployment or job is started.
+  for (const endpoint of endpoints) records[endpoint] = await api(endpoint, undefined, 'GET');
+  for (const endpoint of endpoints.filter(value => value.startsWith('/api/model-deployments/active?')))
+    expect(records[endpoint]).toEqual({active: null, field_runtime_applied: false});
+  expect(records['/api/model-deployments/history?' + params]).toEqual({revisions: []});
+  expect(records['/api/fleet/targets']).toEqual({targets: []});
+  expect(records['/api/fleet/rollouts']).toEqual({rollouts: []});
+  expect(records['/api/fleet/capabilities']).toMatchObject({authentication: 'desktop_process_capability', actor_role: 'local_owner'});
+  expect(records['/api/runtime-services/capture-groups']).toEqual({policy: null, groups: [], total: 0});
+  expect(records['/api/runtime-services']).toMatchObject({runtime: {status: 'stopped'}, active: null, history: [],
+    adapter_config: {enabled: false, modbus: null, mes: null},
+    native_install: {prepared: false, registered: false, enabled: false, running: false, verified: false},
+    recovery: {active: null, pending: null, last_operation: null}, runtime_build: null});
+  return records;
+}
+
 async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceElectron: boolean, url?: string) {
   const source = path.join(w.root, 'queue-progress-originals'); fs.mkdirSync(source);
   const originals = ['error', 'disagreement', 'threshold'].map((name, index) => {
@@ -79,11 +103,41 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
   const actor = 'Owned queue lifecycle operator';
   await page.getByRole('textbox', {name: '작업자·검토자 이름', exact: true}).fill(actor);
   await page.getByRole('button', {name: '이미지 정보·검토', exact: true}).click();
+  // A first real evaluation visit reads the model/fleet/runtime default stores.
+  // Wait for those exact requests before returning to labeling. In particular,
+  // model approval reads can overlap while SQLite WAL/SHM files are transient.
+  const evaluationDefaultReads = () => {
+    const targets = [
+      ['/api/model-deployments/active', true], ['/api/model-deployments/history', true],
+      ['/api/fleet/targets', false], ['/api/fleet/capabilities', false], ['/api/fleet/rollouts', false],
+      ['/api/runtime-services/capture-groups', false], ['/api/runtime-services', false],
+    ] as const;
+    return targets.map(([endpoint, scoped]) => page.waitForResponse(response => {
+      const address = new URL(response.url());
+      return response.request().method() === 'GET' && address.pathname === endpoint
+        && (!scoped || (address.searchParams.get('source_dataset_path') === source && address.searchParams.get('task') === project.task));
+    }));
+  };
+  const completeEvaluationDefaults = async (waiting: ReturnType<typeof evaluationDefaultReads>) => {
+    const responses = await Promise.all(waiting), observed = [];
+    for (const response of responses) {expect(response.status()).toBe(200); observed.push({endpoint: new URL(response.url()).pathname, body: await response.json()});}
+    return observed;
+  };
+  const warmEvaluationReads = evaluationDefaultReads();
+  await stages.getByRole('button').nth(3).click();
+  const initialEvaluationReads = await completeEvaluationDefaults(warmEvaluationReads);
+  const warmHistorySummary = page.locator('summary').filter({hasText: /^평가 이력 · 제품\/Lot별 오류$/});
+  if (await warmHistorySummary.locator('..').getAttribute('open') === null) await warmHistorySummary.click();
+  await expect(page.getByRole('combobox', {name: '모델별 저장 평가', exact: true})).toHaveValue(alternate.record.evaluation_id);
+  await mountPanel(); await expect(choice).toHaveValue(initialQueue.id); await expect(open).toBeEnabled();
+  expect(await api(queueEndpoint)).toEqual(initialQueue);
+  const idleEvaluationDefaults = await initializeIdleEvaluationStores(api, source, project.task);
   // Real default initialization and all complete API reads precede the baseline.
   const apiBefore: Record<string, any> = {};
   const protectedEndpoints = ['/api/team-data', '/api/team-data/readiness', '/api/dataset/metadata?limit=100',
     '/api/project/preferences', '/api/dataset/versions', '/api/dataset/metadata/split', '/api/data-workbench/review-evaluations',
     '/api/project/labelsets'];
+  Object.assign(apiBefore, idleEvaluationDefaults);
   for (const endpoint of protectedEndpoints) apiBefore[endpoint] = await api(endpoint);
   expect(apiBefore['/api/project/labelsets'].labelsets.map((row: any) => row.id)).toEqual(['default']);
   const metadata = apiBefore['/api/dataset/metadata?limit=100'].items; expect(metadata).toHaveLength(3);
@@ -102,7 +156,7 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
   const queueLockRelative = path.posix.join(path.posix.dirname(path.posix.dirname(queueRelative)), 'review_queue.lock');
   expect(treesBefore.project[queueRelative]).toBe(sha(canonical(initialQueue)));
   expect(treesBefore.project[queueLockRelative]).toBeUndefined();
-  const baseline = {roots, treesBefore, apiBefore, initialQueue, origin, alternate, metadata};
+  const baseline = {roots, treesBefore, apiBefore, initialQueue, origin, alternate, metadata, initialEvaluationReads};
   const beforeFile = path.join(w.logs, 'queue-progress-protected-before.json'); fs.writeFileSync(beforeFile, JSON.stringify(baseline, null, 2)); e.addFile(beforeFile);
   for (const [name, root] of Object.entries(roots)) for (const relative of Object.keys(treesBefore[name])) {
     const snapshot = path.join(w.logs, 'queue-progress-protected-before', name, relative);
@@ -269,6 +323,7 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
         && address.searchParams.get('source_dataset_path') === source && address.searchParams.get('task') === project.task
         && (address.searchParams.get('labelset_id') || 'default') === origin.record.binding.labelset_id;
     });
+    const finalEvaluationReads = evaluationDefaultReads();
     await returnOrigin.click(); const confirmed = await realOrigin; expect(confirmed.status()).toBe(200); expect(await confirmed.json()).toEqual(expectedQueue);
     const historyResponse = await realHistory; expect(historyResponse.status()).toBe(200);
     const savedHistory = await historyResponse.json(); expect(savedHistory.items.find((row: any) => row.evaluation_id === origin.record.evaluation_id)).toEqual(origin.record);
@@ -277,6 +332,7 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
     if (await originDetails.getAttribute('open') === null) await originDetails.locator('summary').click();
     expect(JSON.parse(await originDetails.locator('pre').innerText())).toEqual({evaluation_id: origin.record.evaluation_id,
       evidence_sha256: origin.record.evidence_sha256, binding: origin.record.binding});
+    await completeEvaluationDefaults(finalEvaluationReads);
     await unchanged(); await capture('real-200-exact-older-origin-hash', originDetails);
     controls.push({action: 'U015.saved-queue-stale-origin', dimension: 'error', exact_GET_503_count: originFailures,
       labeling_stage_preserved_on_failure: true, real_200_retry: true, older_origin_id: origin.record.evaluation_id,
