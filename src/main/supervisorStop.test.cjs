@@ -14,9 +14,9 @@ function backend({exitsOnStdinClose}){const proc=new EventEmitter();proc.pid='no
   proc.stdin={end:()=>{proc.events.push('stdin closed');if(exitsOnStdinClose)setImmediate(()=>{proc.exitCode=0;proc.emit('exit',0,null);});}};
   proc.kill=signal=>{proc.events.push(signal);return true;};return proc;}
 // (a recorder, not a throwing trap: forceStop's own try/catch would swallow a throw)
-async function stop(platform,proc,commands){const previous=Object.getOwnPropertyDescriptor(process,'platform');const before=signalledAnywhere.length;let supervisor;
+async function stop(platform,proc,commands,expectUnverified=false){const previous=Object.getOwnPropertyDescriptor(process,'platform');const before=signalledAnywhere.length;let supervisor;
   Object.defineProperty(process,'platform',{value:platform});
-  try{const {BackendSupervisor}=load(commands);supervisor=new BackendSupervisor({gracefulShutdownTimeoutMs:30,autoRestart:false});supervisor.childProcess=proc;supervisor.state='HEALTHY';await supervisor.stopBackend();
+  try{const {BackendSupervisor}=load(commands);supervisor=new BackendSupervisor({gracefulShutdownTimeoutMs:30,autoRestart:false});supervisor.childProcess=proc;supervisor.state='HEALTHY';if(expectUnverified){await assert.rejects(supervisor.stopBackend(),/Original backend exit is unverified/);assert.equal(supervisor.childProcess,proc);assert.equal(supervisor.getStatusInfo().state,'STOPPING');}else await supervisor.stopBackend();
    assert.deepEqual(signalledAnywhere.slice(before),[],'no process number is ever signalled');return supervisor;}
   finally{Object.defineProperty(process,'platform',previous);if(supervisor)supervisor.childProcess=null;}}
 test('the backend keeps stdin as its stop channel and opens no console window',()=>{const {backendSpawnOptions}=load([]);
@@ -35,5 +35,5 @@ test('a force-stopped backend that exits after a restart started its successor i
  successor.emit('exit',1,null);assert.equal(crashes.length,1,'the tracked backend exiting is a crash');
  supervisor.childProcess=null;assert.deepEqual(signalledAnywhere,[]);});  // nothing is left for the exit hook to stop
 test('a backend that does not stop is forced to stop alone, through its own handle',async()=>{for(const platform of ['win32','linux']){const commands=[],proc=backend({exitsOnStdinClose:false});
-  await stop(platform,proc,commands);assert.deepEqual(commands,[],`${platform}: no taskkill of the process tree`);
+  await stop(platform,proc,commands,true);assert.deepEqual(commands,[],`${platform}: no taskkill of the process tree`);
   assert.deepEqual(proc.events,platform==='win32'?['stdin closed','SIGKILL']:['stdin closed','SIGTERM','SIGKILL']);}});

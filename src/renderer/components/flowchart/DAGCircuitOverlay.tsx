@@ -12,7 +12,7 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import type { FlowEdge, FlowNode, FlowchartExecutionStep } from '../../types';
 import { FLOW_NODE_WIDTH } from './flowchartViewport';
-import { flowEdgeKey, flowEdgeSourcePort, flowNodePorts } from './flowchartGraph';
+import { flowEdgeKey, flowEdgeSourcePort, flowNodePorts, type FlowEdgeSelection } from './flowchartGraph';
 
 interface DAGCircuitOverlayProps {
   nodes: FlowNode[];
@@ -20,11 +20,11 @@ interface DAGCircuitOverlayProps {
   activeRunningNodeId: string | null;
   finalVerdict?: 'OK' | 'NG' | 'REVIEW';
   routedOutputNodeId?: string;
-  selectedEdgeId?: string | null;
+  selectedEdgeIndex?: number | null;
   /** Each connection's own validation problems (S2-05). */
   edgeIssues?: Map<string, string[]>;
   executionSteps?: FlowchartExecutionStep[];
-  onSelectEdge?: (edgeId: string) => void;
+  onSelectEdge?: (selection: FlowEdgeSelection) => void;
 }
 
 export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
@@ -33,7 +33,7 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
   activeRunningNodeId,
   finalVerdict,
   routedOutputNodeId,
-  selectedEdgeId,
+  selectedEdgeIndex,
   edgeIssues,
   executionSteps,
   onSelectEdge,
@@ -137,7 +137,7 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
         const sourcePort = flowEdgeSourcePort(sourceNode, edge, targetNode);
         const p1 = getPortCoord(edge.source, 'out', sourcePort, sourcePortCount);
         const p2 = getPortCoord(edge.target, 'in', 0, targetPortCount);
-        const issues = edgeIssues?.get(flowEdgeKey(edge, index)) || [];
+        const issues = edgeIssues?.get(flowEdgeKey(edge, index, edges)) || [];
 
         const pathD = generatePcbPath(p1.x, p1.y, p2.x, p2.y);
         const isActive = activeRunningNodeId === edge.source;
@@ -163,7 +163,7 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
         const midY = (p1.y + p2.y) / 2;
 
         return (
-          <g key={flowEdgeKey(edge, index)} className="transition-all duration-300">
+          <g key={index} className="transition-all duration-300">
             {/* Layer 1: PCB Substrate Base Copper (Wide 5px) */}
             <path
               d={pathD}
@@ -188,7 +188,7 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
               data-flow-to={`${edge.target}:in:0`}
               fill="none"
               stroke={traceColor}
-              strokeWidth={selectedEdgeId === edge.id || issues.length ? 3 : 2}
+              strokeWidth={selectedEdgeIndex === index || issues.length ? 3 : 2}
               strokeDasharray={issues.length ? '2 3' : edge.isBranch && !isVerdictBranch ? '6 3' : undefined}
               strokeLinecap="round"
             />
@@ -202,11 +202,11 @@ export const DAGCircuitOverlay: React.FC<DAGCircuitOverlayProps> = ({
               role="button"
               tabIndex={0}
               aria-label={`Select connection ${edge.source} to ${edge.target}${edge.isBranch ? ` when ${edge.isBranch}` : ''}${issues.length ? `: ${issues.join(' / ')}` : ''}`}
-              onClick={() => onSelectEdge?.(edge.id)}
+              onClick={() => onSelectEdge?.({ index, edge, edges })}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
                   event.preventDefault();
-                  onSelectEdge?.(edge.id);
+                  onSelectEdge?.({ index, edge, edges });
                 }
               }}
             />

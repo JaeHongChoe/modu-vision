@@ -60,7 +60,7 @@ import { computeFlowchartViewport, readableFlowScale, FLOW_NODE_WIDTH } from './
 import { getFlowchartModelReferences, getFlowchartModelTask, pipelineMatchesTask, recoverThenLoadFlowchart, singleModelAutoBinding } from './flowchartStartup';
 import { flowRecipeLabel, flowRunSourceLabel } from './flowHandoff';
 import { flowExecutionOptions, type FlowExecutionChoice } from './flowExecution';
-import { connectFlowNodes, decisionReachedOnlyByConditions, decisionRulePatch, flowIssuesByTarget, layoutFlowchart, locateFlowIssue, nodeClassChoices, removeFlowNode, shouldShowThreshold, updateFlowEdgeBranch, updateFlowEdgePayload, validateFlowchartGraph, type FlowPortPayload } from './flowchartGraph';
+import { connectFlowNodes, decisionReachedOnlyByConditions, decisionRulePatch, flowIssuesByTarget, layoutFlowchart, locateFlowIssue, nodeClassChoices, removeFlowNode, removeFlowEdge, selectFlowEdge, selectedFlowEdge, flowEdgeKey, shouldShowThreshold, updateFlowEdgeData, updateFlowEdgeBranch, updateFlowEdgePayload, validateFlowchartGraph, type FlowPortPayload, type FlowEdgeSelection } from './flowchartGraph';
 
 const verifyModelReferences = async (
   sourceFolder: string,
@@ -209,7 +209,7 @@ export const FlowchartStudio: React.FC = () => {
   const [connectionSourceId, setConnectionSourceId] = useState<string | null>(null);
   // The payloads of the output port the connection started from: the wrong port is refused when the target is clicked.
   const [connectionPayloads, setConnectionPayloads] = useState<FlowPortPayload[] | undefined>(undefined);
-  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  const [selectedEdgeSelection, setSelectedEdgeSelection] = useState<FlowEdgeSelection | null>(null);
   const [editorError, setEditorError] = useState<string | null>(null);
   const [modelCatalog, setModelCatalog] = useState<FlowModelCatalogItem[]>([]);
   const [modelCatalogLoading, setModelCatalogLoading] = useState(false);
@@ -354,7 +354,7 @@ export const FlowchartStudio: React.FC = () => {
       if (action === 'undo' ? !canUndo : action === 'redo' ? !canRedo : true) return;
       event.preventDefault();
       if (action === 'undo') undo(); else redo();
-      setSelectedEdgeId(null);
+      setSelectedEdgeSelection(null);
       setConnectionSourceId(null);
       setEditorError(null);
     };
@@ -364,7 +364,7 @@ export const FlowchartStudio: React.FC = () => {
 
   const applyHistoryAction = (action: 'undo' | 'redo') => {
     if (action === 'undo') undo(); else redo();
-    setSelectedEdgeId(null);
+    setSelectedEdgeSelection(null);
     setConnectionSourceId(null);
     setEditorError(null);
   };
@@ -487,7 +487,7 @@ export const FlowchartStudio: React.FC = () => {
     await verifyModelReferences(folderPath,getFlowchartModelReferences(next));
     if(!current()||!idle())throw new Error('프로젝트 또는 그래프가 바뀌었습니다. 레시피를 다시 여세요.');
     replacePipeline(next,{baseVersionId:observedBase});selectNode(next.nodes.find(node=>node.data.node_type==='fixed_roi')?.id||next.nodes.find(node=>node.data.model_job_id)?.id||null);
-    setSelectedVersionId('');setSelectedEdgeId(null);setZoomScale(null);setActionValidationError(null);setActiveTab('edit');closeRecipe();
+    setSelectedVersionId('');setSelectedEdgeSelection(null);setZoomScale(null);setActionValidationError(null);setActiveTab('edit');closeRecipe();
   };
   const handleSingleModel=()=>openRecipe('single');
   const handleDetectorRoi=()=>openRecipe('detector');
@@ -566,7 +566,7 @@ export const FlowchartStudio: React.FC = () => {
       setZoomScale(null);
       try { await verifyCurrentPipeline(opened, folderPath); setModelCheck({ status: 'ready' }); }
       catch { setModelCheck({ status: 'blocked', reason: 'saved_model_mismatch' }); }
-      setSelectedEdgeId(null);
+      setSelectedEdgeSelection(null);
       setActionValidationError(null);
       setActiveTab('edit');
     } catch (cause) {
@@ -646,7 +646,7 @@ export const FlowchartStudio: React.FC = () => {
   };
 
   const selectedNode = pipeline?.nodes.find((n) => n.id === selectedNodeId);
-  const selectedEdge = pipeline?.edges.find((edge) => edge.id === selectedEdgeId);
+  const selectedEdge = pipeline && selectedEdgeSelection ? selectedFlowEdge(pipeline, selectedEdgeSelection) : null;
 
   const updateFixedRoiField = (field: 'x' | 'y' | 'width' | 'height', rawValue: string) => {
     if (!selectedNode || selectedNode.data.node_type !== 'fixed_roi') return;
@@ -729,7 +729,7 @@ export const FlowchartStudio: React.FC = () => {
     replacePipeline({ ...pipeline, nodes: [...existingNodes, node] });
     selectNode(id);
     focusFlowNode(id);
-    setSelectedEdgeId(null);
+    setSelectedEdgeSelection(null);
     setEditorError(null);
   };
 
@@ -737,7 +737,7 @@ export const FlowchartStudio: React.FC = () => {
     if (graphEditingDisabled) return;
     setConnectionSourceId(nodeId);
     setConnectionPayloads(payloads);
-    setSelectedEdgeId(null);
+    setSelectedEdgeSelection(null);
     selectNode(nodeId);
     setEditorError(null);
   };
@@ -765,7 +765,7 @@ export const FlowchartStudio: React.FC = () => {
       const focus = next.nodes[Math.min(Math.max(0, index), next.nodes.length - 1)];
       replacePipeline(next);
       selectNode(focus?.id || null);
-      setSelectedEdgeId(null);
+      setSelectedEdgeSelection(null);
       setEditorError(null);
       if (connectionSourceId === id) setConnectionSourceId(null);
       if (focus) focusFlowNode(focus.id);
@@ -775,17 +775,37 @@ export const FlowchartStudio: React.FC = () => {
   };
   const deleteSelectedNode = () => deleteEditableNode(selectedNode?.id);
 
+  const commitSelectedEdge = (next: FlowchartPipeline) => {
+    if (!pipeline || !selectedEdgeSelection || !selectedFlowEdge(pipeline, selectedEdgeSelection)) return;
+    const index = selectedEdgeSelection.index;
+    replacePipeline(next);
+    setSelectedEdgeSelection({ index, edge: next.edges[index], edges: next.edges });
+  };
+  const changeEdgeData = (patch: Parameters<typeof updateFlowEdgeData>[2]) => {
+    if (!pipeline || !selectedEdgeSelection) return;
+    try {
+      commitSelectedEdge(updateFlowEdgeData(pipeline, selectedEdgeSelection, patch));
+      setEditorError(null);
+    } catch (error) {
+      setEditorError(error instanceof Error ? error.message : '연결선을 바꿀 수 없습니다.');
+    }
+  };
+
   const deleteSelectedEdge = () => {
-    if (!pipeline || !selectedEdgeId) return;
-    replacePipeline({ ...pipeline, edges: pipeline.edges.filter((edge) => edge.id !== selectedEdgeId) });
-    setSelectedEdgeId(null);
-    setEditorError(null);
+    if (!pipeline || !selectedEdgeSelection) return;
+    try {
+      replacePipeline(removeFlowEdge(pipeline, selectedEdgeSelection));
+      setSelectedEdgeSelection(null);
+      setEditorError(null);
+    } catch (error) {
+      setEditorError(error instanceof Error ? error.message : '연결선을 삭제할 수 없습니다.');
+    }
   };
 
   const changeEdgeBranch = (branch: 'pass' | 'fail' | 'review' | 'default') => {
-    if (!pipeline || !selectedEdgeId) return;
+    if (!pipeline || !selectedEdgeSelection) return;
     try {
-      replacePipeline(updateFlowEdgeBranch(pipeline, selectedEdgeId, branch));
+      commitSelectedEdge(updateFlowEdgeBranch(pipeline, selectedEdgeSelection, branch));
       setEditorError(null);
     } catch (error) {
       setEditorError(error instanceof Error ? error.message : '분기를 바꿀 수 없습니다.');
@@ -793,9 +813,9 @@ export const FlowchartStudio: React.FC = () => {
   };
 
   const changeEdgePayload = (payload: 'image' | 'roi' | 'result') => {
-    if (!pipeline || !selectedEdgeId) return;
+    if (!pipeline || !selectedEdgeSelection) return;
     try {
-      replacePipeline(updateFlowEdgePayload(pipeline, selectedEdgeId, payload));
+      commitSelectedEdge(updateFlowEdgePayload(pipeline, selectedEdgeSelection, payload));
       setEditorError(null);
     } catch (error) {
       setEditorError(error instanceof Error ? error.message : '전달 데이터 형식을 바꿀 수 없습니다.');
@@ -878,7 +898,7 @@ export const FlowchartStudio: React.FC = () => {
     event.currentTarget.setPointerCapture(event.pointerId);
     beginHistoryGroup();
     selectNode(node.id);
-    setSelectedEdgeId(null);
+    setSelectedEdgeSelection(null);
   };
 
   const dragNode = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -1106,11 +1126,11 @@ export const FlowchartStudio: React.FC = () => {
             onClick={() => {
               setActiveTab('edit');
               if (graphIssue.kind === 'edge') {
-                setSelectedEdgeId(graphIssue.id);
+                if (pipeline) setSelectedEdgeSelection(selectFlowEdge(pipeline, graphIssue.id));
                 selectNode(null);
               } else {
                 selectNode(graphIssue.id);
-                setSelectedEdgeId(null);
+                setSelectedEdgeSelection(null);
                 window.requestAnimationFrame(() => {
                   const element = [...(canvasRef.current?.querySelectorAll<HTMLElement>('[data-flow-node-id]') || [])]
                     .find((item) => item.dataset.flowNodeId === graphIssue.id);
@@ -1255,7 +1275,7 @@ export const FlowchartStudio: React.FC = () => {
       <section role="tabpanel" id="flow-panel-edit" aria-labelledby="flow-area-edit" hidden={activeTab!=='edit'} className={activeTab==='edit'?'flex min-h-[240px] flex-1 shrink-0 flex-col overflow-hidden':undefined}>
         <FlowGraphNavigator key={`${scopeKey}:${pipeline?.id}`} nodes={positionedNodes} viewport={displayViewport}
           canvasRef={canvasRef} selectedNodeId={selectedNodeId} disabled={dragViewport!==null||isRoiEditing||isLoading}
-          onSelect={id=>{selectNode(id);setSelectedEdgeId(null);}} />
+          onSelect={id=>{selectNode(id);setSelectedEdgeSelection(null);}} />
         <div className="min-h-[240px] shrink-0 flex-1 flex overflow-hidden">
           <aside aria-label="검사 노드 팔레트" className="w-40 shrink-0 border-r border-slate-700 bg-[#101722] p-3 space-y-2 overflow-auto text-xs">
             <h3 className="font-semibold text-slate-200">검사 노드</h3>
@@ -1304,10 +1324,10 @@ export const FlowchartStudio: React.FC = () => {
                   activeRunningNodeId={activeRunningNodeId}
                   finalVerdict={canvasResult?.final_verdict}
                   routedOutputNodeId={canvasResult?.routed_output_node_id}
-                  selectedEdgeId={selectedEdgeId}
+                  selectedEdgeIndex={selectedEdge ? selectedEdgeSelection?.index : null}
                   edgeIssues={flowIssues?.edges}
                   executionSteps={canvasResult?.execution_steps}
-                  onSelectEdge={(edgeId) => { setSelectedEdgeId(edgeId); selectNode(null); }}
+                  onSelectEdge={(selection) => { setSelectedEdgeSelection(selection); selectNode(null); }}
                 />
               )}
 
@@ -1349,7 +1369,7 @@ export const FlowchartStudio: React.FC = () => {
                       isConnectionSource={connectionSourceId === node.id}
                       editingDisabled={graphEditingDisabled}
                       onRemove={node.data.node_type !== 'input' && node.data.node_type !== 'decision' ? () => deleteEditableNode(node.id) : undefined}
-                      onSelect={() => { selectNode(node.id); setSelectedEdgeId(null); }}
+                      onSelect={() => { selectNode(node.id); setSelectedEdgeSelection(null); }}
                       onConnectStart={(payloads) => startConnection(node.id, payloads)}
                       onConnectFinish={() => finishConnection(node.id)}
                       issues={flowIssues?.nodes.get(node.id)}
@@ -1372,7 +1392,7 @@ export const FlowchartStudio: React.FC = () => {
                 {selectedEdge ? '선택한 연결선의 조건과 전달 데이터' : selectedNode ? `선택한 노드 · ${selectedNode.data.label}` : '그래프의 노드나 연결선을 선택하세요.'}
               </p>
               {(() => {
-                const selectedIssues = selectedEdge ? flowIssues?.edges.get(selectedEdge.id) : selectedNode ? flowIssues?.nodes.get(selectedNode.id) : undefined;
+                const selectedIssues = selectedEdge ? flowIssues?.edges.get(flowEdgeKey(selectedEdge, selectedEdgeSelection!.index, pipeline!.edges)) : selectedNode ? flowIssues?.nodes.get(selectedNode.id) : undefined;
                 return selectedIssues?.length ? (
                   <ul aria-label="선택한 항목의 문제" className="mt-2 space-y-1 rounded border border-amber-600/70 bg-amber-950/30 p-2 text-xs text-amber-200">
                     {selectedIssues.map((message, index) => <li key={index}>{message}</li>)}
@@ -1391,11 +1411,10 @@ export const FlowchartStudio: React.FC = () => {
                 <div>
                   <label className="text-[#94A3B8] block mb-1">연결선 이름</label>
                   <input type="text" value={selectedEdge.label || ''}
-                    onChange={(event) => pipeline && replacePipeline({ ...pipeline, edges: pipeline.edges.map((edge) =>
-                      edge.id === selectedEdge.id ? { ...edge, label: event.target.value } : edge) })}
+                    onChange={(event) => changeEdgeData({ label: event.target.value })}
                     className="w-full bg-[#1A212E] border border-[#2B3547] rounded px-2.5 py-1.5 text-[#F8FAFC]" />
                 </div>
-                {['detection_crop','inspection'].includes(pipeline?.nodes.find((node) => node.id===selectedEdge.source)?.data.node_type || '') && <div className="space-y-2"><label className="block">클래스 조건<select value={selectedEdge.predicate?.operator || ''} onChange={(e) => pipeline && replacePipeline({...pipeline,edges:pipeline.edges.map((edge) => edge.id===selectedEdge.id?{...edge,isBranch:undefined,predicate:e.target.value?{kind:'class',operator:e.target.value as 'present'|'absent',class_name:edge.predicate?.class_name || '',min_confidence:edge.predicate?.min_confidence || 0}:undefined}:edge)})} className="ml-2 rounded bg-slate-800 p-1"><option value="">사용 안 함</option><option value="present">클래스 있음</option><option value="absent">클래스 없음</option></select></label>{selectedEdge.predicate && <><input aria-label="분기 클래스 이름" placeholder="클래스 이름" list="flow-predicate-classes" value={selectedEdge.predicate.class_name} onChange={(e) => pipeline && replacePipeline({...pipeline,edges:pipeline.edges.map((edge) => edge.id===selectedEdge.id?{...edge,predicate:{...selectedEdge.predicate!,class_name:e.target.value}}:edge)})} className="w-full rounded bg-slate-800 p-1" /><datalist id="flow-predicate-classes">{(modelCatalog.find((row) => row.job_id===pipeline?.nodes.find((node) => node.id===selectedEdge.source)?.data.model_job_id)?.class_names || []).map((name) => <option key={name} value={name} />)}</datalist><label>최소 신뢰도<input type="number" min="0" max="1" step="0.05" value={selectedEdge.predicate.min_confidence || 0} onChange={(e) => pipeline && replacePipeline({...pipeline,edges:pipeline.edges.map((edge) => edge.id===selectedEdge.id?{...edge,predicate:{...selectedEdge.predicate!,min_confidence:Number(e.target.value)}}:edge)})} className="ml-2 w-20 rounded bg-slate-800 p-1" /></label></>}</div>}
+                {['detection_crop','inspection'].includes(pipeline?.nodes.find((node) => node.id===selectedEdge.source)?.data.node_type || '') && <div className="space-y-2"><label className="block">클래스 조건<select value={selectedEdge.predicate?.operator || ''} onChange={(e) => changeEdgeData({isBranch:undefined,predicate:e.target.value?{kind:'class',operator:e.target.value as 'present'|'absent',class_name:selectedEdge.predicate?.class_name || '',min_confidence:selectedEdge.predicate?.min_confidence || 0}:undefined})} className="ml-2 rounded bg-slate-800 p-1"><option value="">사용 안 함</option><option value="present">클래스 있음</option><option value="absent">클래스 없음</option></select></label>{selectedEdge.predicate && <><input aria-label="분기 클래스 이름" placeholder="클래스 이름" list="flow-predicate-classes" value={selectedEdge.predicate.class_name} onChange={(e) => changeEdgeData({predicate:{...selectedEdge.predicate!,class_name:e.target.value}})} className="w-full rounded bg-slate-800 p-1" /><datalist id="flow-predicate-classes">{(modelCatalog.find((row) => row.job_id===pipeline?.nodes.find((node) => node.id===selectedEdge.source)?.data.model_job_id)?.class_names || []).map((name) => <option key={name} value={name} />)}</datalist><label>최소 신뢰도<input type="number" min="0" max="1" step="0.05" value={selectedEdge.predicate.min_confidence || 0} onChange={(e) => changeEdgeData({predicate:{...selectedEdge.predicate!,min_confidence:Number(e.target.value)}})} className="ml-2 w-20 rounded bg-slate-800 p-1" /></label></>}</div>}
                 {(['detection_crop', 'inspection', 'blob_measure', 'measurement', 'aggregate'].includes(pipeline?.nodes.find((node) => node.id === selectedEdge.source)?.data.node_type || '')) && (
                   <div>
                     <label className="text-[#94A3B8] block mb-1">다음 노드 실행 조건</label>

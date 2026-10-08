@@ -322,7 +322,47 @@ function classIdIssue(pipeline: FlowchartPipeline, node: FlowNode, models: FlowM
 }
 
 /** The key a connection's problems are filed under: its id, or its position for saved data without one. */
-export const flowEdgeKey = (edge: FlowEdge, index: number): string => edge.id || `\u0000${index}`;
+/** Canvas identity only. An ambiguous stored ID never identifies a row to edit. */
+export function flowEdgeKey(edge: FlowEdge, index: number, edges?: FlowEdge[]): string {
+  if (edge.id && (!edges || edges.filter(item => item.id === edge.id).length === 1)) return edge.id;
+  let key = `\u0000${index}`;
+  while (edges?.some(item => item.id === key)) key += '\u0000';
+  return key;
+}
+
+/** A process-local selection of the exact immutable editor snapshot, never saved in the graph. */
+export interface FlowEdgeSelection { readonly index: number; readonly edge: FlowEdge; readonly edges: readonly FlowEdge[] }
+
+export function selectFlowEdge(pipeline: FlowchartPipeline, key: string): FlowEdgeSelection {
+  const found = pipeline.edges.flatMap((edge, index) => flowEdgeKey(edge, index, pipeline.edges) === key ? [index] : []);
+  if (found.length !== 1) throw new Error('연결선을 다시 선택하세요. 저장된 ID가 없거나 중복되었습니다.');
+  const index = found[0];
+  return { index, edge: pipeline.edges[index], edges: pipeline.edges };
+}
+
+export function selectedFlowEdge(pipeline: FlowchartPipeline, selection: FlowEdgeSelection | null): FlowEdge | null {
+  return selection && pipeline.edges === selection.edges && Number.isInteger(selection.index)
+    && selection.index >= 0 && pipeline.edges[selection.index] === selection.edge ? selection.edge : null;
+}
+
+function edgeSelectionIndex(pipeline: FlowchartPipeline, selection: string | FlowEdgeSelection): number {
+  if (typeof selection === 'string') {
+    const found = pipeline.edges.flatMap((edge, index) => edge.id === selection ? [index] : []);
+    if (selection && found.length === 1) return found[0];
+  } else if (selectedFlowEdge(pipeline, selection)) return selection.index;
+  throw new Error('연결선을 다시 선택하세요. 선택 후 그래프가 바뀌었거나 ID가 중복되었습니다.');
+}
+
+export function updateFlowEdgeData(pipeline: FlowchartPipeline, selection: string | FlowEdgeSelection,
+  patch: Partial<Pick<FlowEdge, 'label' | 'predicate' | 'isBranch' | 'payload_type'>>): FlowchartPipeline {
+  const index = edgeSelectionIndex(pipeline, selection);
+  return { ...pipeline, edges: pipeline.edges.map((edge, ordinal) => ordinal === index ? { ...edge, ...patch } : edge) };
+}
+
+export function removeFlowEdge(pipeline: FlowchartPipeline, selection: string | FlowEdgeSelection): FlowchartPipeline {
+  const index = edgeSelectionIndex(pipeline, selection);
+  return { ...pipeline, edges: pipeline.edges.filter((_, ordinal) => ordinal !== index) };
+}
 
 /** 을 after a final consonant, 를 after a vowel or a Latin abbreviation (ROI). */
 const objectParticle = (word: string): string => {
@@ -369,12 +409,12 @@ export function flowGraphIssues(pipeline: FlowchartPipeline, { first = false, mo
   if (blobs.length + measurements.length > 8 && report('Blob·기하 측정 노드는 합계 최대 8개입니다.')) return issues;
   if (aggregates.length > 4 && report('결과 집계 노드는 최대 4개입니다.')) return issues;
   if (inputs.length !== 1 || decisions.length !== 1) return issues;  // the checks below need the one input and decision
-  const edgeIds = new Set<string>();
+  const edgeIdCounts = new Map<string, number>();
+  for (const edge of pipeline.edges) edgeIdCounts.set(edge.id, (edgeIdCounts.get(edge.id) || 0) + 1);
   const connections = new Set<string>();
   for (const [index, edge] of pipeline.edges.entries()) {
     const issue = guarded('연결선의 저장된 조건·데이터 형식을 확인하세요.', () => {
-      if (!edge.id || edgeIds.has(edge.id)) return '연결선 ID가 중복되었거나 비었습니다.';
-      edgeIds.add(edge.id);
+      if (!edge.id || edgeIdCounts.get(edge.id)! > 1) return '연결선 ID가 중복되었거나 비었습니다.';
       if (!nodes.has(edge.source) || !nodes.has(edge.target) || edge.source === edge.target) return '연결선의 시작 또는 끝 노드가 올바르지 않습니다.';
       const pair = `${edge.source}\0${edge.target}`;
       if (connections.has(pair)) return '같은 노드 사이의 연결선이 중복되었습니다.';
@@ -404,7 +444,7 @@ export function flowGraphIssues(pipeline: FlowchartPipeline, { first = false, mo
       }
       return null;
     });
-    if (issue && report(issue, 'edge', flowEdgeKey(edge, index))) return issues;
+    if (issue && report(issue, 'edge', flowEdgeKey(edge, index, pipeline.edges))) return issues;
   }
   const inputId = inputs[0].id;
   const decisionId = decisions[0].id;
@@ -622,8 +662,7 @@ export function locateFlowIssue(
 ): { kind: 'node' | 'edge'; id: string } | null {
   if (!message) return null;
   const first = flowGraphIssues(pipeline, { first: true, models, sourceSize })[0];
-  // A connection saved without an id has only a positional key on the canvas; there is nothing to select.
-  const selectable = first?.kind === 'node' || pipeline.edges.some((edge) => edge.id && edge.id === first?.id);
+  const selectable = first?.kind === 'node' || pipeline.edges.some((edge, index) => flowEdgeKey(edge, index, pipeline.edges) === first?.id);
   if (first && first.message === message && first.id && first.kind !== 'graph' && selectable) return { kind: first.kind, id: first.id };
   const named = pipeline.nodes.find((node) => message.startsWith(`${node.data.label}:`));
   if (named) return { kind: 'node', id: named.id };
@@ -644,7 +683,7 @@ export function locateFlowIssue(
       const allowed = allowedPayloads(from, to);
       return !allowed.length || Boolean(item.payload_type && !allowed.includes(item.payload_type));
     });
-    if (edge) return { kind: 'edge', id: edge.id };
+    if (edge) return { kind: 'edge', id: flowEdgeKey(edge, pipeline.edges.indexOf(edge), pipeline.edges) };
   }
   const type = message.includes('출력 분기') || message.includes('판정') ? 'decision'
     : message.includes('입력') ? 'input' : null;
@@ -712,33 +751,34 @@ export function removeFlowNode(pipeline: FlowchartPipeline, nodeId: string): Flo
   };
 }
 
-export function updateFlowEdgeBranch(pipeline: FlowchartPipeline, edgeId: string, branch: Branch): FlowchartPipeline {
-  const edge = pipeline.edges.find((item) => item.id === edgeId);
+export function updateFlowEdgeBranch(pipeline: FlowchartPipeline, selection: string | FlowEdgeSelection, branch: Branch): FlowchartPipeline {
+  const index = edgeSelectionIndex(pipeline, selection);
+  const edge = pipeline.edges[index];
   const sourceType = pipeline.nodes.find((node) => node.id === edge?.source)?.data.node_type;
   if (!edge || (!resultTypes.includes(sourceType as FlowNodeType) && sourceType !== 'decision')) throw new Error('결과 또는 판정 연결선만 분기를 바꿀 수 있습니다.');
   if (sourceType !== 'decision') return {
-    ...pipeline, edges: pipeline.edges.map((item) => item.id === edgeId ? { ...item, isBranch: branch, predicate: undefined } : item),
+    ...pipeline, edges: pipeline.edges.map((item, ordinal) => ordinal === index ? { ...item, isBranch: branch, predicate: undefined } : item),
   };
   const previous = edge.isBranch;
   return {
     ...pipeline,
-    edges: pipeline.edges.map((item) => {
-      if (item.id === edgeId) return { ...item, isBranch: branch, predicate: undefined };
+    edges: pipeline.edges.map((item, ordinal) => {
+      if (ordinal === index) return { ...item, isBranch: branch, predicate: undefined };
       if (item.source === edge.source && item.isBranch === branch) return { ...item, isBranch: previous };
       return item;
     }),
   };
 }
 
-export function updateFlowEdgePayload(pipeline: FlowchartPipeline, edgeId: string, payload: NonNullable<FlowEdge['payload_type']>): FlowchartPipeline {
-  const edge = pipeline.edges.find((item) => item.id === edgeId);
-  if (!edge) throw new Error('연결선을 찾을 수 없습니다.');
+export function updateFlowEdgePayload(pipeline: FlowchartPipeline, selection: string | FlowEdgeSelection, payload: NonNullable<FlowEdge['payload_type']>): FlowchartPipeline {
+  const index = edgeSelectionIndex(pipeline, selection);
+  const edge = pipeline.edges[index];
   const sourceType = pipeline.nodes.find((node) => node.id === edge.source)?.data.node_type;
   const targetType = pipeline.nodes.find((node) => node.id === edge.target)?.data.node_type;
   if (!allowedPayloads(sourceType as FlowNodeType, targetType as FlowNodeType).includes(payload)) {
     throw new Error('이 노드 연결에서 지원하지 않는 데이터 형식입니다.');
   }
-  return { ...pipeline, edges: pipeline.edges.map((item) => item.id === edgeId ? { ...item, payload_type: payload } : item) };
+  return { ...pipeline, edges: pipeline.edges.map((item, ordinal) => ordinal === index ? { ...item, payload_type: payload } : item) };
 }
 
 const finite=(value: unknown): value is number => typeof value==='number' && Number.isFinite(value);

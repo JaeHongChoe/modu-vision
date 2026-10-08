@@ -15,6 +15,12 @@ def _points(value, minimum=2):
     return coordinates
 
 
+def _source_size(value):
+    if not isinstance(value, (list, tuple)) or len(value) != 2 or any(type(v) is not int or v < 1 for v in value):
+        raise ValueError('Measurement source_size must be two positive whole native pixel dimensions')
+    return tuple(value)
+
+
 def threshold_unit(params) -> str:
     """The unit the node's limits are written in: declared, or (older flows) millimetres when a calibration is set."""
     unit = params.get('threshold_unit')
@@ -24,6 +30,7 @@ def threshold_unit(params) -> str:
 
 
 def validate_measurement_params(params, source_size=None):
+    if source_size is not None: _source_size(source_size)
     from backend.engine.spatial_calibration import is_calibration_ref
     calibration = params.get('calibration')
     reference = params.get('calibration_ref')
@@ -50,6 +57,8 @@ def validate_measurement_params(params, source_size=None):
             raise ValueError('Calibration source dimensions differ from the inspected image')
     paths = params.get('paths', [])
     if not isinstance(paths, list) or len(paths) > 64: raise ValueError('Measurement paths must be a list with at most 64 entries')
+    if not paths and any(key in params for key in ('min_length', 'max_length')):
+        raise ValueError('Measurement length bounds require a source path')
     seen = set()
     for path in paths:
         if not isinstance(path, dict) or not isinstance(path.get('id'), str) or not path['id'] or path['id'] in seen:
@@ -156,6 +165,7 @@ def measure_geometry(params, *, source_size, polygons=(), masks=(), scope=None):
     instead of comparing pixels with millimetres. Referenced calibrations also require all measured geometry to
     lie in their valid plane region; a domain failure refuses the measurement, without clipping or changing units.
     """
+    source_size = _source_size(source_size)
     if scope is None:
         from backend.engine.spatial_calibration import current_scope
         scope = current_scope()
@@ -185,14 +195,16 @@ def measure_geometry(params, *, source_size, polygons=(), masks=(), scope=None):
                      'verdict': 'OK' if params.get('min_length', 0) <= judged <= params.get('max_length', math.inf) else 'NG'})
     for polygon in polygons:
         points = _points(polygon['points'], minimum=3)
+        if np.any(points < 0) or np.any(points > np.asarray(source_size)):
+            raise ValueError(f"Area polygon {polygon['id']} extends outside the source image")
         _require_plane_points(points, region, f"Area polygon {polygon['id']}")
         area_px = abs(float(np.dot(points[:, 0], np.roll(points[:, 1], 1)) - np.dot(points[:, 1], np.roll(points[:, 0], 1)))) / 2
         rows.append({**common, 'id': polygon['id'], 'kind': 'area', 'area_px': area_px, 'measurement_source': 'source_polygon'})
     for entry in masks:
         mask = np.asarray(entry['mask'])
         if mask.ndim != 2 or not np.isfinite(mask).all(): raise ValueError('Area mask must be a finite source-resolution 2D raster')
+        bbox = _source_mask_bbox(entry, mask, source_size)
         if region is not None:
-            bbox = _source_mask_bbox(entry, mask, source_size)
             # Inspect the source plane's intersection in this raster. The complete mask is still counted below;
             # even one nonzero pixel outside the intersection refuses the whole measurement.
             x1, y1, x2, y2 = [max(0, min(limit, edge - origin)) for edge, origin, limit in

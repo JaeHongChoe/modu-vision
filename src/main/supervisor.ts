@@ -123,6 +123,7 @@ export class BackendSupervisor extends EventEmitter {
   private startTime: number | null = null;
 
   private isShuttingDown = false;
+  private stoppingPromise: Promise<void> | null = null;
   private restartCount = 0;
   private restartTimestamps: number[] = [];
 
@@ -226,6 +227,11 @@ export class BackendSupervisor extends EventEmitter {
       });
     }
 
+    // A stop request or force signal is not proof that the original handle exited.
+    // Do not overlap a successor with that unresolved backend.
+    if (this.childProcess && this.childProcess.exitCode === null && this.childProcess.signalCode === null) {
+      throw new Error('Previous backend exit is unverified; wait for its original exit event');
+    }
     this.isShuttingDown = false;
     this.setState('STARTING');
     const apiToken = randomBytes(32).toString('hex');
@@ -345,58 +351,48 @@ export class BackendSupervisor extends EventEmitter {
   }
 
   public async stopBackend(): Promise<void> {
-    if (this.state === 'STOPPED' && !this.childProcess) {
-      return;
-    }
+    if (this.stoppingPromise) return this.stoppingPromise;
+    if (this.state === 'STOPPED' && !this.childProcess) return;
 
     this.isShuttingDown = true;
     this.setState('STOPPING');
-
     const proc = this.childProcess;
-    if (!proc || !proc.pid || proc.killed || proc.exitCode !== null || proc.signalCode !== null) {
+    // ChildProcess.killed only means a signal was requested, not an exit.
+    if (!proc || !proc.pid || proc.exitCode !== null || proc.signalCode !== null) {
       this.cleanupState();
       return;
     }
 
     const pid = proc.pid;
     console.log(`[Supervisor] Initiating graceful shutdown for PID ${pid}...`);
-
-    await new Promise<void>((resolve) => {
-      let forceKillTimer: NodeJS.Timeout | null = null;
-
+    this.stoppingPromise = new Promise<void>((resolve, reject) => {
       const onExit = (code: number | null, signal: string | null) => {
-        if (forceKillTimer) clearTimeout(forceKillTimer);
-        console.log(`[Supervisor] Daemon PID ${pid} exited cleanly (code: ${code}, signal: ${signal})`);
+        clearTimeout(forceKillTimer);
+        console.log(`[Supervisor] Daemon PID ${pid} exited (code: ${code}, signal: ${signal})`);
+        if (this.childProcess === proc) this.cleanupState();
         resolve();
       };
-
-      proc.once('exit', onExit);
-
-      // 1. Graceful FastAPI / Uvicorn shutdown: closing stdin asks for it on every platform. POSIX also gets SIGTERM;
-      //    on Windows a signal from Node terminates the process outright, which would skip the shutdown sequence.
-      try {
-        proc.stdin?.end();
-      } catch (e) {
-        // The pipe may already be closed
-      }
-      if (process.platform !== 'win32') {
-        try {
-          proc.kill('SIGTERM');
-        } catch (e) {
-          // Process might already be terminating
-        }
-      }
-
-      // 2. 4.0-second timeout fallback -> force stop of the backend process only
-      forceKillTimer = setTimeout(() => {
+      // Install the timer before requesting shutdown: a controlled or native
+      // close may synchronously deliver exit. Keep the original exit listener
+      // after timeout so only that same handle can finish late cleanup.
+      const forceKillTimer = setTimeout(() => {
         console.warn(`[Supervisor] Daemon PID ${pid} did not exit within ${this.config.gracefulShutdownTimeoutMs}ms. Forcing it to stop.`);
-        proc.removeListener('exit', onExit);
         forceStop(proc);
-        resolve();
+        try {
+          if (this.childProcess === proc) this.ownedApplicationLaunch?.refuse();
+        } catch (error) {
+          console.error('[Supervisor] Owned launch refusal failed; exit remains unverified:', error);
+        }
+        reject(new Error('Original backend exit is unverified after the shutdown deadline'));
       }, this.config.gracefulShutdownTimeoutMs);
+      proc.once('exit', onExit);
+      try { proc.stdin?.end(); } catch { /* A closed pipe is not exit proof. */ }
+      if (process.platform !== 'win32') {
+        try { proc.kill('SIGTERM'); } catch { /* Retain the original handle. */ }
+      }
     });
-
-    this.cleanupState();
+    try { await this.stoppingPromise; }
+    finally { this.stoppingPromise = null; }
   }
 
   public async restart(): Promise<number> {

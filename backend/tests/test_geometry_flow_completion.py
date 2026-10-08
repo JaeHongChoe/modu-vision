@@ -41,7 +41,8 @@ def test_curves_and_area_use_anisotropic_source_pixel_calibration():
          'paths': [{'id': 'line', 'points': [[0, 0], [3, 0], [3, 4]], 'interpolation': 'polyline'},
                    {'id': 'curve', 'points': [[0, 0], [0, 4], [3, 4], [3, 0]], 'interpolation': 'bezier'}]},
         source_size=[100, 80], polygons=[{'id': 'part', 'points': [[10, 10], [30, 10], [30, 20], [10, 20]]}],
-        masks=[{'id': 'class_2', 'mask': np.ones((3, 4), np.uint8)}],
+        masks=[{'id': 'class_2', 'mask': np.ones((3, 4), np.uint8), 'bbox': [0, 0, 4, 3],
+                'source_transform': [[1, 0, 0], [0, 1, 0], [0, 0, 1]]}],
     )
     rows = {row['id']: row for row in result}
     assert rows['line']['length_px'] == 7

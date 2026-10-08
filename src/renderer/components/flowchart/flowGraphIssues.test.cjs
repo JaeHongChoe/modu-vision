@@ -4,6 +4,57 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 function compile(file,mocks={}){const name=path.join(__dirname,file);const m=new Module(name,module);m.filename=name;m.paths=Module._nodeModulePaths(__dirname);const original=m.require.bind(m);
   m.require=ref=>ref in mocks?mocks[ref]:original(ref);m._compile(ts.transpileModule(fs.readFileSync(name,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,name);return m.exports;}
 const graph=compile('flowchartGraph.ts');
+test('legacy duplicate IDs cannot silently edit multiple connections through the old ID API',()=>{
+ const saved=valid();saved.edges[3]={...saved.edges[3],id:'e3'};
+ const before=JSON.stringify(saved);
+ assert.throws(()=>graph.updateFlowEdgeBranch(saved,'e3','fail'),/연결선.*다시 선택/);
+ assert.throws(()=>graph.updateFlowEdgePayload(saved,'e3','result'),/연결선.*다시 선택/);
+ assert.equal(JSON.stringify(saved),before,'ambiguous selection preserves the original graph');
+});
+test('each legacy duplicate connection has a distinct transient canvas key without changing persisted IDs',()=>{
+ const saved=valid();saved.edges[3]={...saved.edges[3],id:'e3'};
+ const before=JSON.stringify(saved);
+ assert.notEqual(graph.flowEdgeKey(saved.edges[2],2,saved.edges),graph.flowEdgeKey(saved.edges[3],3,saved.edges));
+ assert.equal(JSON.stringify(saved),before);
+});
+test('transient row keys cannot collide with a literal legacy stored ID',()=>{
+ const saved=valid();saved.edges[0]={...saved.edges[0],id:'\u00002'};saved.edges[2]={...saved.edges[2],id:''};
+ const first=graph.flowEdgeKey(saved.edges[0],0,saved.edges),missing=graph.flowEdgeKey(saved.edges[2],2,saved.edges);
+ assert.notEqual(first,missing);assert.equal(graph.selectFlowEdge(saved,missing).edge,saved.edges[2]);
+ assert.equal(saved.edges[0].id,'\u00002');assert.equal(saved.edges[2].id,'');
+});
+test('a selected legacy row edits and deletes only that exact connection while retaining its stored ID',()=>{
+ const saved=valid();saved.edges[2]={...saved.edges[2],id:'',label:'missing'};saved.edges[3]={...saved.edges[3],id:'e1',label:'second'};
+ const original=JSON.stringify(saved);
+ const second=graph.selectFlowEdge(saved,graph.flowEdgeKey(saved.edges[3],3,saved.edges));
+ const edited=graph.updateFlowEdgeData(saved,second,{label:'changed',predicate:{kind:'class',operator:'present',class_name:'NG'}});
+ assert.equal(edited.edges[3].label,'changed');assert.equal(edited.edges[3].id,'e1');assert.equal(edited.edges[0],saved.edges[0]);assert.equal(edited.edges[2],saved.edges[2]);
+ assert.equal(edited.edges[0].predicate,undefined);
+ const missing=graph.selectFlowEdge(saved,graph.flowEdgeKey(saved.edges[2],2,saved.edges));
+ const payload=graph.updateFlowEdgePayload(saved,missing,'result');assert.equal(payload.edges[2].id,'');assert.equal(payload.edges[3],saved.edges[3]);
+ const branched=graph.updateFlowEdgeBranch(saved,missing,'fail');assert.equal(branched.edges[2].isBranch,'fail');assert.equal(branched.edges[3].isBranch,undefined);
+ const removed=graph.removeFlowEdge(saved,second);assert.deepEqual(removed.edges,[saved.edges[0],saved.edges[1],saved.edges[2],saved.edges[4]]);
+ assert.equal(JSON.stringify(saved),original,'row derivation and explicit edits never mutate the original graph');
+ assert.match(graph.validateFlowchartGraph(branched),/연결선 ID/,'editor repair does not allow execution of missing IDs');
+});
+test('a stale legacy row selection cannot edit a shifted or replaced connection',()=>{
+ const saved=valid();saved.edges[2]={...saved.edges[2],id:''};
+ const selection=graph.selectFlowEdge(saved,graph.flowEdgeKey(saved.edges[2],2,saved.edges));
+ for(const next of [{...saved,edges:[saved.edges[4],...saved.edges]},{...saved,edges:saved.edges.map((e,i)=>i===2?{...e,label:'new original'}:e)}]){
+  const before=JSON.stringify(next);assert.equal(graph.selectedFlowEdge(next,selection),null);
+  assert.throws(()=>graph.removeFlowEdge(next,selection),/연결선.*다시 선택/);
+  assert.throws(()=>graph.updateFlowEdgeData(next,selection,{label:'wrong'}),/연결선.*다시 선택/);
+  assert.equal(JSON.stringify(next),before);
+ }
+});
+test('decision branch swapping with duplicate stored IDs affects the selected row and its distinct counterpart only',()=>{
+ const saved=valid();saved.nodes.push(node('out2','output'));saved.edges[4]={...saved.edges[4],id:'dup',isBranch:'pass'};
+ saved.edges.push({id:'dup',source:'judge',target:'out2',payload_type:'result',isBranch:'fail'});
+ const chosen=graph.selectFlowEdge(saved,graph.flowEdgeKey(saved.edges[5],5,saved.edges));
+ const next=graph.updateFlowEdgeBranch(saved,chosen,'pass');
+ assert.equal(next.edges[4].isBranch,'fail');assert.equal(next.edges[5].isBranch,'pass');assert.deepEqual(next.edges.slice(0,4),saved.edges.slice(0,4));
+ assert.deepEqual(next.edges.slice(4).map(e=>e.id),['dup','dup']);
+});
 test('original-image bounds mark a fixed ROI before execution without using model resize dimensions',()=>{
  const p=valid();p.nodes.push(node('roi','fixed_roi',{params:{roi_bbox:[4,4,64,40]}}));p.edges[0]={...p.edges[0],target:'roi'};p.edges.push({id:'crop',source:'roi',target:'seg',payload_type:'roi'});
  const marked=graph.flowIssuesByTarget(p,undefined,[48,48]);assert.match(marked.nodes.get('roi')?.[0]||'',/원본 48×48.*경계/);
@@ -98,12 +149,13 @@ test('S2-05 review P3: the refusal takes the object particle of what the target 
  const draft={id:'p',name:'p',nodes:[node('in','input'),node('out','output'),node('blob','blob_measure')],edges:[]};
  assert.throws(()=>graph.connectFlowNodes(draft,'in','out'),/out 입력은 판정을 받으며/);
  assert.throws(()=>graph.connectFlowNodes(draft,'in','blob'),/blob 입력은 결과를 받으며/);});
-test('S2-05 review P3: a connection saved without an id shows its problem on its own wire, with nothing to jump to',()=>{
+test('S2-05: a connection saved without an id shows its own problem and can be selected for explicit repair',()=>{
  const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');
  const saved=valid();saved.edges[2]={...saved.edges[2],id:''};
  const {edges}=graph.flowIssuesByTarget(saved);const key=graph.flowEdgeKey(saved.edges[2],2);
  assert.deepEqual([...edges.keys()],[key]);assert.match(edges.get(key)[0],/연결선 ID가 중복되었거나 비었습니다/);
- assert.equal(graph.locateFlowIssue(saved,graph.validateFlowchartGraph(saved)),null,'no connection to select');
+ assert.deepEqual(graph.locateFlowIssue(saved,graph.validateFlowchartGraph(saved)),{kind:'edge',id:key});
+ assert.equal(graph.selectFlowEdge(saved,key).edge,saved.edges[2],'the issue selects the precise saved row');
  assert.equal(graph.flowEdgeKey(saved.edges[0],0),'e1','a saved id is the key');
  const {DAGCircuitOverlay}=compile('DAGCircuitOverlay.tsx',{'./flowchartViewport':{FLOW_NODE_WIDTH:272},'./flowchartGraph':graph});
  const html=renderToStaticMarkup(React.createElement(DAGCircuitOverlay,{nodes:saved.nodes,edges:saved.edges,activeRunningNodeId:null,edgeIssues:edges}));
