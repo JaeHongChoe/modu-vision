@@ -144,6 +144,7 @@ class _OwnedGroup:
         self.observation_failed = False
         self.termination_attempted = False
         self.termination_failed = False
+        self._leader_command_unavailable = False
         if os.name == 'posix':
             try:
                 group, session = os.getpgid(process.pid), os.getsid(process.pid)
@@ -160,6 +161,7 @@ class _OwnedGroup:
             except module.Error: pass
 
     def leader_matches(self):
+        self._leader_command_unavailable = False
         if self.process.poll() is not None: return False
         if os.name == 'posix' and self.group is None: return False
         errors = (OSError,) if self.module is None else (OSError,self.module.Error)
@@ -168,7 +170,17 @@ class _OwnedGroup:
                     or os.getsid(self.process.pid) != self.session): return False
             if self.module is not None:
                 current = self.module.Process(self.process.pid)
-                if self.leader is None or (current.create_time(),tuple(current.cmdline())) != self.leader: return False
+                if self.leader is None: return False
+                birth, command = current.create_time(), tuple(current.cmdline())
+                if (birth,command) != self.leader:
+                    # Linux may report an empty command during the original
+                    # child's exit while its birth/session/group still match.
+                    # This fact applies only to observation of that unreaped
+                    # POSIX child. It never grants signals or child enrollment.
+                    self._leader_command_unavailable = (os.name == 'posix' and self.leader is not None
+                        and bool(self.leader[1]) and birth == self.leader[0] and not command
+                        and self.process.returncode is None)
+                    return False
             return True
         except errors: return False
 
@@ -197,7 +209,9 @@ class _OwnedGroup:
         for pid, row in rows.items():
             if row['state'].startswith('Z'): continue
             if pid == self.process.pid:
-                if not live_leader: self.unknown.add(pid)
+                if not live_leader and not (self._leader_command_unavailable and self.process.returncode is None
+                        and row.get('session') == self.session):
+                    self.unknown.add(pid)
                 continue
             if live_leader and self.module is not None and (self.group is None or row['session'] == self.session):
                 try:
