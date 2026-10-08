@@ -152,17 +152,44 @@ def controller_fixture(root,value,current,*,prefix=None):
     return child,acknowledgement
 
 
-def stop_controlled_stack(child,root):
+def capture_controlled_main(child,root):
+    """Retain exact ready fixture identity before inducing backend loss.
+
+    The existing read-only stable-publication guard never takes the transition
+    mutex. It refuses a concurrent byte change; no journal or lock is modified.
+    """
+    from backend.engine.application_launch_controller import _inspection_snapshot
+    from backend.engine.application_launch_lease import _load,_identity
+    assert child.poll() is None
+    with _inspection_snapshot(root):
+        row=_load(root)
+        assert row['state']=='ready' and _identity(child.pid)==row['supervisor']
+        process=row['process']
+        assert process is not None and _identity(process['pid'])==process
+        assert psutil.Process(process['pid']).ppid()==child.pid
+        assert os.getpgid(process['pid'])==process['pid']
+        captured=dict(process)
+    return captured
+
+
+def stop_controlled_stack(child,root,*,process=None):
     from backend.engine.application_launch_lease import inspect_launch,_identity
-    row=inspect_launch(root); process=row.get('process')
-    if process is not None:
-        try:
-            assert _identity(process['pid'])==process and psutil.Process(process['pid']).ppid()==child.pid
-            assert os.getpgid(process['pid'])==process['pid']
-            os.killpg(process['pid'],signal.SIGTERM)  # Only the fixture's proven private group.
-        except psutil.NoSuchProcess:pass
-    if child.poll() is None:child.terminate()
-    child.wait(timeout=10)
+    try:
+        # Ready tests retain their original main identity before backend loss.
+        # Other legacy fixtures still require the original guarded inspection.
+        if process is None:
+            row=inspect_launch(root); process=row.get('process')
+        if process is not None:
+            try:
+                assert _identity(process['pid'])==process and psutil.Process(process['pid']).ppid()==child.pid
+                assert os.getpgid(process['pid'])==process['pid']
+                os.killpg(process['pid'],signal.SIGTERM)  # Only the fixture's proven private group.
+            except psutil.NoSuchProcess:pass
+    finally:
+        # This is the original directly spawned Popen, never a journal PID.
+        # A refused/busy inspection cannot skip this owned handle's cleanup.
+        if child.poll() is None:child.terminate()
+        child.wait(timeout=10)
 
 
 def wait_lifecycle(root,value,current,status,timeout=15):
@@ -178,10 +205,11 @@ def wait_lifecycle(root,value,current,status,timeout=15):
 
 def test_persistent_real_descriptor_stack_survives_updater_disconnect_and_never_qualifies_inference(tmp_path):
     from backend.engine.application_launch_lease import assert_quiescent
-    root,value,current=stack_fixture(tmp_path);child,ack=controller_fixture(root,value,current)
+    root,value,current=stack_fixture(tmp_path);child,ack=controller_fixture(root,value,current);captured=None
     try:
         assert ack['status']=='starting' and ack['bootstrap_binding_verified'] is False
         ready=wait_lifecycle(root,value,current,'ready')
+        captured=capture_controlled_main(child,root)
         assert ready['bootstrap_binding_verified'] is True and ready['readiness']=='authenticated_controller_binding_only'
         assert child.poll() is None
         assert all(ready[key] is False for key in ('native_app_handshake_verified','backend_handshake_verified','actual_application_inference_verified','release_ready'))
@@ -194,7 +222,7 @@ def test_persistent_real_descriptor_stack_survives_updater_disconnect_and_never_
         observed=wait_lifecycle(root,value,current,'recovery_required')
         assert observed['bootstrap_binding_verified'] is False and child.poll() is None
         with pytest.raises(ValueError):assert_quiescent(root)
-    finally:stop_controlled_stack(child,root)
+    finally:stop_controlled_stack(child,root,process=captured)
 
 
 def test_duplicate_private_claim_stays_durably_recovery_required_after_pipe_loss(tmp_path):
@@ -210,9 +238,10 @@ def test_duplicate_private_claim_stays_durably_recovery_required_after_pipe_loss
 
 def test_live_controller_keeps_original_handles_when_recovery_transition_mutex_is_busy(tmp_path):
     from backend.engine.application_launch_lease import _transition_admission
-    root,value,current=stack_fixture(tmp_path);child,ack=controller_fixture(root,value,current)
+    root,value,current=stack_fixture(tmp_path);child,ack=controller_fixture(root,value,current);captured=None
     try:
         wait_lifecycle(root,value,current,'ready')
+        captured=capture_controlled_main(child,root)
         marker=json.loads((root/'projects'/'controlled-stack-ready.json').read_bytes())
         backend=psutil.Process(marker['backend']);assert backend.ppid()==marker['main']
         with _transition_admission(root,ack['nonce']):
@@ -221,7 +250,7 @@ def test_live_controller_keeps_original_handles_when_recovery_transition_mutex_i
             assert child.poll() is None
         recovery=wait_lifecycle(root,value,current,'recovery_required')
         assert recovery['bootstrap_binding_verified'] is False and child.poll() is None
-    finally:stop_controlled_stack(child,root)
+    finally:stop_controlled_stack(child,root,process=captured)
 
 
 def test_bootstrap_sidecar_interruption_is_not_repaired_and_controller_remains_persistent(tmp_path):

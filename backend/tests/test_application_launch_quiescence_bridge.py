@@ -550,6 +550,32 @@ def _fixture_terminal_main_exited(child, row, deadline):
     return True
 
 
+def _fixture_readonly_managed_launch(root):
+    """Observe exact publication without taking the controller transition mutex.
+
+    This fixture observation cannot edit/recover a lease or grant PID authority.
+    A changing two-file publication is not usable; only the caller's existing
+    absolute observation budget may try a later coherent read.
+    """
+    from backend.engine.application_launch_controller import _inspection_snapshot
+    from backend.engine.application_launch_lease import _load, _public, LaunchLeaseError
+    from backend.engine.application_launch_handshake import HandshakeError
+    try:
+        with _inspection_snapshot(root):
+            row = _load(root)
+        return _public(row) if row else {'state': 'absent', 'release_ready': False}
+    except HandshakeError as exc:
+        if str(exc) not in {
+                'Launch publication changed during read-only inspection',
+                'Launch journal or receipt changed during read-only inspection',
+                'Launch sidecar publication changed during read-only inspection'}:
+            raise
+    except LaunchLeaseError as exc:
+        if str(exc) != 'Application launch ownership requires recovery: ownership publication interrupted or changed':
+            raise
+    return None
+
+
 def finish_managed(child, root):
     # Cooperative only for this test-owned backend/main; original controller
     # Popen may be stopped only after its authenticated original main is reaped.
@@ -557,29 +583,29 @@ def finish_managed(child, root):
     projects=root/'projects';(projects/'drain.trigger').touch()
     # An already-authenticated original main exit cannot publish a later
     # ordinary-stop file. Observe that fact only inside the original first5s.
-    from backend.engine.application_launch_lease import inspect_launch, LeaseTransitionBusy
+    from backend.engine.application_launch_lease import LeaseTransitionBusy
     first_deadline=time.monotonic()+5
     while not (projects/'ordinary-stop-requested.json').is_file():
         if time.monotonic()>=first_deadline:
             pytest.fail('Missing controlled original fixture output: '+str(projects/'ordinary-stop-requested.json'))
-        try:row=inspect_launch(root)
+        try:row=_fixture_readonly_managed_launch(root)
         except LeaseTransitionBusy:
             time.sleep(max(0,min(.05,first_deadline-time.monotonic())));continue
-        if _fixture_terminal_main_exited(child,row,first_deadline):
+        if row is not None and _fixture_terminal_main_exited(child,row,first_deadline):
             child.terminate();child.wait(timeout=5);return
         time.sleep(max(0,min(.01,first_deadline-time.monotonic())))
     wait_file(projects/'ordinary-stop-requested.json',seconds=5,absolute_deadline=first_deadline)
     (projects/'exit.trigger').touch()
     wait_file(projects/'managed-stop-result.json',seconds=7)
     deadline=time.monotonic()+5
-    from backend.engine.application_launch_lease import inspect_launch, LeaseTransitionBusy
+    from backend.engine.application_launch_lease import LeaseTransitionBusy
     while time.monotonic()<deadline:
-        try: row=inspect_launch(root)
+        try: row=_fixture_readonly_managed_launch(root)
         except LeaseTransitionBusy:
             # Only the original nonblocking publication mutex may be retried,
             # within this same absolute five-second observation deadline.
             time.sleep(.05);continue
-        if row.get('exit_observation',{}):
+        if row is not None and row.get('exit_observation',{}):
             assert row['exit_observation']['direct_child_pid']==row['process']['pid']
             assert row['exit_observation']['process_tree_exit_verified'] is False
             child.terminate();child.wait(timeout=5);return

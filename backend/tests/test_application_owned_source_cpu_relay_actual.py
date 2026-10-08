@@ -465,7 +465,7 @@ def _fixture_failure_observer(tmp_path,delegate):
     from backend.tests import test_application_launch_execution as fixtures
     code=ast.parse(fixtures._source_callback_failure_suffix().replace('\n ','\n').lstrip())
     closure=next(n for n in code.body if isinstance(n,ast.FunctionDef))
-    namespace={'original_failure_execute':delegate,'Path':Path,'json':json,'root':tmp_path,
+    namespace={'original_failure_execute':delegate,'Path':Path,'json':json,'original_failure_root':tmp_path,
                'relay':types.SimpleNamespace(_CACHE_TICKETS={},_PRODUCERS={}),
                'h':types.SimpleNamespace(_CACHE={'admission':types.SimpleNamespace(snapshot=lambda:{'active_scopes':0,'unsupported':[]})})}
     exec(compile(ast.Module(body=[closure],type_ignores=[]),'<original-source-failure-observer>','exec'),namespace)

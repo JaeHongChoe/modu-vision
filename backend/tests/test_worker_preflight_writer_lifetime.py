@@ -336,9 +336,10 @@ def test_failed_thread_construction_cleans_reservation_under_original_ticket(epo
         monkeypatch.setattr(routes_training,'training_job_manager',SimpleNamespace(local_queue_waiting=lambda:False))
         monkeypatch.setattr(routes,'_STATE',{'running':None,'last':None});monkeypatch.setattr(p,'plan',lambda *args:('train',))
         def construct(*_,**__):raise RuntimeError('controlled thread construction failure')
-        monkeypatch.setattr(threading,'Thread',construct)
-        with pytest.raises(RuntimeError,match='construction'):
-            routes.start_preflight(routes.PreflightRequest(task='classification'),SimpleNamespace(state=SimpleNamespace(account_user=None)))
+        with monkeypatch.context() as failed_construction:
+            failed_construction.setattr(threading,'Thread',construct)
+            with pytest.raises(RuntimeError,match='construction'):
+                routes.start_preflight(routes.PreflightRequest(task='classification'),SimpleNamespace(state=SimpleNamespace(account_user=None)))
         assert not held[0] and observed==[1] and routes._STATE['running'] is None
         assert state.snapshot()=={'active_scopes':0,'unsupported':['cpu_producer_unconfirmed']}
 
