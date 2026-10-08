@@ -10,6 +10,18 @@ const LIMIT=65536,HEX32=/^[a-f0-9]{32}$/,HEX64=/^[a-f0-9]{64}$/;
 const APPLICATION_MANIFEST_LIMIT=8*1024**2,APPLICATION_MEMBER_LIMIT=20000;
 const CONTEXT=['VISION_APPLICATION_LAUNCH_FD','VISION_APPLICATION_LAUNCH_NONCE','VISION_APPLICATION_GENERATION','VISION_APPLICATION_DATABASE_GENERATION','VISION_APPLICATION_BACKEND_FD'];
 const hash=(raw:Buffer|string)=>createHash('sha256').update(raw).digest('hex');
+// Python's absolute producer clock is data here, never a Node clock origin.
+// Controller/backend alone authorize its expiry. This separately bounds only
+// the original Node transport lifetime; bind/finish cannot renew this row.
+function preflightRelayBound(plan:any):number {
+ if(!Number.isSafeInteger(plan.budget_ms)||plan.budget_ms<1||plan.budget_ms>900000||typeof plan.deadline_monotonic!=='number'||!Number.isFinite(plan.deadline_monotonic)||plan.deadline_monotonic<=0)throw new Error('Original fixed preflight plan differs');
+ return performance.now()+plan.budget_ms;
+}
+function preflightRelayActionDeadline(rowDeadline:number,drainDeadline:number|null):number {
+ const now=performance.now(),deadline=Math.min(rowDeadline,now+10000,drainDeadline??Infinity);
+ if(!Number.isFinite(deadline)||deadline<=now)throw new Error('Original preflight transport deadline expired');
+ return deadline;
+}
 const canonical=(value:any):string=>value===null||typeof value!=='object'?JSON.stringify(value):Array.isArray(value)?'['+value.map(canonical).join(',')+']':'{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+canonical(value[k])).join(',')+'}';
 function fields(value:any,expected:string[]):void {if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).sort().join('|')!==[...expected].sort().join('|'))throw new Error('Private launch fields differ');}
 function identity(value:any):void {fields(value,['pid','created_at','command_sha256']);if(!Number.isSafeInteger(value.pid)||value.pid<1||!Number.isFinite(value.created_at)||value.created_at<=0||!HEX64.test(value.command_sha256))throw new Error('Private launch process identity differs');}
@@ -46,20 +58,23 @@ class Frames {
  constructor(readonly channel:Duplex){channel.on('data',(chunk:Buffer)=>{if(this.failure)return;this.buffer=Buffer.concat([this.buffer,chunk]);while(this.buffer.includes(10)){const at=this.buffer.indexOf(10);if(at+1>LIMIT){this.fail(new Error('Private frame exceeds its bound'));return;}const raw=this.buffer.subarray(0,at);this.buffer=this.buffer.subarray(at+1);if(this.waiting){const pending=this.waiting;this.waiting=null;if(pending.timer)clearTimeout(pending.timer);pending.resolve(raw);}else{this.queue.push(raw);if(this.queue.length>2){this.fail(new Error('Unexpected private frame replay'));return;}}}if(this.buffer.length>=LIMIT)this.fail(new Error('Private frame exceeds its bound'));});channel.on('error',(e)=>this.fail(e));channel.on('end',()=>this.fail(new Error('Private descriptor ended')));channel.on('close',()=>this.fail(new Error('Private descriptor closed')));}
  fail(error:Error){this.failure=error;if(this.waiting){const pending=this.waiting;this.waiting=null;if(pending.timer)clearTimeout(pending.timer);pending.reject(error);}}
  async read(timeout:number|null=210000):Promise<Buffer>{if(this.failure)throw this.failure;if(this.queue.length)return this.queue.shift()!;if(this.waiting)throw new Error('Concurrent private frame read');return new Promise((resolve,reject)=>{const timer=timeout===null?null:setTimeout(()=>{this.waiting=null;reject(new Error('Private descriptor timeout'));},timeout);this.waiting={resolve,reject,timer};});}
- async send(value:any):Promise<void>{if(this.failure)throw this.failure;const raw=Buffer.from(canonical(value)+'\n');if(raw.length>LIMIT)throw new Error('Private frame exceeds its bound');await new Promise<void>((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('Private send timeout')),10000);this.channel.write(raw,error=>{clearTimeout(timer);error?reject(error):resolve();});});}
+ async send(value:any,absoluteDeadline?:number):Promise<void>{return this.sendCanonical(canonical(value),absoluteDeadline);}
+ async sendCanonical(value:string,absoluteDeadline?:number):Promise<void>{if(this.failure)throw this.failure;const deadline=Math.min(performance.now()+10000,absoluteDeadline??Infinity),raw=Buffer.from(value+'\n');parsePrivateDocument(raw);if(raw.length>LIMIT)throw new Error('Private frame exceeds its bound');const remaining=deadline-performance.now();if(!Number.isFinite(remaining)||remaining<=0)throw new Error('Original private send deadline expired');await new Promise<void>((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('Private send timeout')),remaining);this.channel.write(raw,error=>{clearTimeout(timer);error?reject(error):performance.now()>=deadline?reject(new Error('Original private send completed late')):resolve();});});}
  assertEmpty(){if(this.failure)throw this.failure;if(this.queue.length||this.buffer.length)throw new Error('Unexpected private frame replay');}
 }
 
 export class OwnedApplicationLaunch {
  readonly projects:string;readonly auth:string;private usedBackend=false;
  private backend:ChildProcess|null=null;private backendProof:any=null;private backendClaimHash='';private backendEpoch='';
- private pendingDrain:{id:string;resolve:(receipt:any)=>void;reject:(error:Error)=>void;timer:NodeJS.Timeout}|null=null;
+ private pendingDrain:{id:string;deadline:number;resolve:(receipt:any)=>void;reject:(error:Error)=>void;timer:NodeJS.Timeout}|null=null;
  private drainRequest:any=null;private drainReceipt:any=null;private backendExitFrame:any=null;
+ private drainDeadline:number|null=null;
  private exitAcknowledged=false;
  private exitResolve:(()=>void)|null=null;private exitReject:((error:Error)=>void)|null=null;private exitConfirmation:Promise<void>|null=null;
  constructor(readonly root:string,readonly nonce:string,readonly binding:any,readonly mainProcess:any,private challenge:string,private frames:Frames,private writer?:any){this.projects=path.join(root,'projects');this.auth=path.join(root,'auth');}
  get requiresWriterDrain():boolean{return this.writer!==undefined;}
- private current():void {validateBinding(this.root,this.nonce,this.binding,this.mainProcess);this.frames.assertEmpty();}
+ private bindingCurrent():void {validateBinding(this.root,this.nonce,this.binding,this.mainProcess);}
+ private current():void {this.bindingCurrent();this.frames.assertEmpty();}
  executable(file:string):{sha256:string;build:string|null} {this.current();const application=path.join(this.root,'.application-generations',this.binding.application_generation,'application');const manifest=parsePrivateDocument(stable(path.join(application,'portable-application.json'),APPLICATION_MANIFEST_LIMIT) as Buffer,APPLICATION_MANIFEST_LIMIT).value;
  const relative=path.relative(application,file).split(path.sep).join('/');if(path.isAbsolute(relative)||relative.startsWith('../')||relative==='..')throw new Error('Backend executable escapes committed application');
  const rows=manifest.files.filter((row:any)=>row.path===relative&&row.executable===true);if(rows.length!==1)throw new Error('Backend executable is not a committed row');stable(file,1024**3,rows[0]);
@@ -77,14 +92,74 @@ export class OwnedApplicationLaunch {
  // One closed controller-origin execution request may follow readiness. Idle
  // waiting has no timeout; unsolicited backend data still invalidates ownership.
  this.backend=proc;this.backendProof=claim;this.backendEpoch=epoch;this.backendClaimHash=hash(parsePrivateDocument(claimRaw).canonical);
- let executing=false;const invalidate=()=>{const error=new Error('Original owned backend channel/ownership ended');this.pendingDrain?.reject(error);this.exitReject?.(error);this.frames.channel.destroy();};
+ let failed=false,cpuExecuted=false;const relayRows=new Map<string,{phase:string;plan:string;registration:any;child:any;deadline:number}>();
+ type RelayPending={request:any;requestHash:string;row:{phase:string;plan:string;registration:any;child:any;deadline:number};deadline:number;timer:NodeJS.Timeout};
+ type BackendPending={kind:string;deadline:number;resolve:(raw:Buffer)=>void;reject:(error:Error)=>void;timer:NodeJS.Timeout};
+ type DrainAdmitted={expected:any;resolve:()=>void;reject:(error:Error)=>void;timer:NodeJS.Timeout};
+ // These holders are shared by the two original reader closures. Keep their
+ // declared union types on one private mutable object, so closure assignments
+ // are visible to strict TypeScript control flow without type assertions.
+ const pendingState:{relayPending:RelayPending|null;backendPending:BackendPending|null;drainAdmitted:DrainAdmitted|null}={relayPending:null,backendPending:null,drainAdmitted:null};
+ const invalidate=()=>{if(failed)return;failed=true;const error=new Error('Original owned backend channel/ownership ended');
+  this.pendingDrain?.reject(error);this.exitReject?.(error);pendingState.backendPending?.reject(error);pendingState.drainAdmitted?.reject(error);
+  if(pendingState.relayPending)clearTimeout(pendingState.relayPending.timer);if(pendingState.backendPending)clearTimeout(pendingState.backendPending.timer);if(pendingState.drainAdmitted)clearTimeout(pendingState.drainAdmitted.timer);
+  // Keep the original pending rows and handles; a transport loss never repairs
+  // or adopts a child, releases a writer, or restarts a backend.
+  this.frames.channel.destroy();channel.destroy();};
+ const freshBackend=()=>{if(failed||this.backend!==proc||proc.stdio[3]!==channel||proc.pid!==claim.process.pid||proc.exitCode!==null||proc.signalCode!==null)throw new Error('Original backend handle/channel differs');this.bindingCurrent();};
+ const backendReply=(kind:string,deadline:number):Promise<Buffer>=>{freshBackend();if(pendingState.backendPending||deadline<=performance.now())throw new Error('Original backend response is concurrent or late');return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{reject(new Error('Original backend response deadline expired'));invalidate();},deadline-performance.now());pendingState.backendPending={kind,deadline,resolve,reject,timer};});};
  proc.once('exit',(code,signal)=>{
   if(!this.drainReceipt||code!==0||signal!==null){invalidate();return;}
   this.backendExitFrame={schema_version:1,kind:'main_backend_exit',nonce:this.nonce,epoch,request_id:this.drainRequest.request_id,challenge:this.drainRequest.challenge,backend_process:claim.process,returncode:code,signal};
   void this.frames.send(this.backendExitFrame).catch(invalidate);
  });
- const backendClosed=()=>{if(!this.drainReceipt)invalidate();};channel.once('close',backendClosed);channel.once('end',backendClosed);channel.once('error',invalidate);channel.on('data',()=>{if(!executing)invalidate();});
- void (async()=>{let cpuExecuted=false;while(true){const request=parsePrivateDocument(await this.frames.read(null)).value;
+ const backendClosed=()=>{if(!this.drainReceipt)invalidate();};channel.once('close',backendClosed);channel.once('end',backendClosed);channel.once('error',invalidate);
+ // Exactly one reader for the original backend channel. Fixed preflight data
+ // is forwarded with its original Python number tokens, never decoded/reminted
+ // as a controller capability. Controller will mint one receive event itself.
+ void (async()=>{while(true){const raw=await frames.read(null),parsed=parsePrivateDocument(raw),request=parsed.value;freshBackend();
+  if(request.kind==='backend_preflight_request'){
+   fields(request,['schema_version','kind','action','nonce','epoch','binding_sha256','backend_claim_sha256','request_id','payload']);
+   if(!this.writer||pendingState.relayPending||request.schema_version!==1||request.nonce!==this.nonce||request.epoch!==epoch||request.binding_sha256!==hash(canonical(this.binding))||request.backend_claim_sha256!==this.backendClaimHash||!HEX32.test(request.request_id)||!['reserve','bind','finish'].includes(request.action)||this.drainRequest&&request.action!=='finish')throw new Error('Original preflight request binding/phase differs');
+   let row=relayRows.get(request.request_id);
+   if(request.action==='reserve'){
+    if(row||relayRows.size>=128)throw new Error('Original preflight reservation is replayed or exceeds its bound');
+    fields(request.payload,['task','device','stages','workdir','source_sha256','budget_ms','deadline_monotonic','command']);
+    const deadline=preflightRelayBound(request.payload);
+    if(!HEX64.test(request.payload.source_sha256)||!Array.isArray(request.payload.command)||request.payload.command.length!==18)throw new Error('Original fixed preflight plan differs');
+    // parsePrivateDocument preserves the original nested canonical plan too.
+    const plan=parsePrivateDocument(Buffer.from(parsed.canonical)).canonical;
+    const match=/"payload":(.*),"request_id":/.exec(plan);if(!match)throw new Error('Original canonical preflight plan is unavailable');
+    row={phase:'reserve_sent',plan:match[1],registration:null,child:null,deadline};relayRows.set(request.request_id,row);
+   }else{
+    if(!row)throw new Error('Original preflight reservation is unavailable');
+    fields(request.payload,['registration','child','plan_sha256',...(request.action==='finish'?['returncode','cleanup_confirmed']:[])]);identity(request.payload.child);
+    if(canonical(request.payload.registration)!==canonical(row.registration)||request.payload.plan_sha256!==hash(row.plan)||request.action==='bind'&&row.phase!=='reserved'||request.action==='finish'&&(row.phase!=='bound'||canonical(request.payload.child)!==canonical(row.child)||request.payload.returncode!==0||request.payload.cleanup_confirmed!==true))throw new Error('Original preflight child sequence or cleanup differs');
+    if(request.action==='bind')row.child=request.payload.child;row.phase=request.action+'_sent';
+   }
+   const deadline=preflightRelayActionDeadline(row.deadline,this.drainDeadline),remaining=deadline-performance.now();
+   const timer=setTimeout(invalidate,remaining);pendingState.relayPending={request,requestHash:hash(parsed.canonical),row,deadline,timer};
+   await this.frames.sendCanonical('{"kind":"main_preflight_request","nonce":'+JSON.stringify(this.nonce)+',"request":'+parsed.canonical+',"schema_version":1}',deadline);freshBackend();if(performance.now()>=Math.min(deadline,this.drainDeadline??Infinity))throw new Error('Original preflight request send completed late');continue;
+  }
+  const pending=pendingState.backendPending;
+  if(!pending||request.kind!==pending.kind||performance.now()>=pending.deadline)throw new Error('Original backend response is unsolicited, replayed or late');
+  clearTimeout(pending.timer);pendingState.backendPending=null;pending.resolve(raw);
+ }})().catch(invalidate);
+ // Exactly one reader for the controller channel, including while CPU/drain
+ // work waits for a backend response. No nested Frames.read or renewed budget.
+ void (async()=>{while(true){const request=parsePrivateDocument(await this.frames.read(null)).value;
+ if(request.kind==='controller_preflight_reply'){
+  freshBackend();fields(request,['schema_version','kind','nonce','epoch','request_id','action','request_sha256','payload']);const pending=pendingState.relayPending;
+  if(!pending||request.schema_version!==1||request.nonce!==this.nonce||request.epoch!==epoch||request.request_id!==pending.request.request_id||request.action!==pending.request.action||request.request_sha256!==pending.requestHash)throw new Error('Original preflight acknowledgement differs, expired or replayed');
+  const replyDeadline=preflightRelayActionDeadline(pending.deadline,this.drainDeadline);
+  if(request.action==='reserve'){fields(request.payload,['writer_id','registration_sha256']);if(!HEX32.test(request.payload.writer_id)||!HEX64.test(request.payload.registration_sha256))throw new Error('Original child registration differs');pending.row.registration=request.payload;pending.row.phase='reserved';}
+  else{fields(request.payload,['status']);if(request.payload.status!==(request.action==='bind'?'bound':'direct_exited'))throw new Error('Original child status acknowledgement differs');pending.row.phase=request.action==='bind'?'bound':'finished';}
+  await frames.send(request,replyDeadline);freshBackend();if(performance.now()>=Math.min(replyDeadline,this.drainDeadline??Infinity))throw new Error('Original preflight acknowledgement send completed late');clearTimeout(pending.timer);pendingState.relayPending=null;continue;
+ }
+ if(request.kind==='managed_drain_admitted'){
+  const pending=pendingState.drainAdmitted;if(!pending||!this.pendingDrain||performance.now()>=this.pendingDrain.deadline||canonical(request)!==canonical(pending.expected))throw new Error('Original controller drain acknowledgement differs, expired or replayed');
+  clearTimeout(pending.timer);pendingState.drainAdmitted=null;pending.resolve();continue;
+ }
  if(request.kind==='backend_exit_observed'){
   fields(request,['schema_version','kind','nonce','request_id','exit_sha256']);
   if(this.exitAcknowledged||!this.exitResolve||!this.exitConfirmation||request.schema_version!==1||request.nonce!==this.nonce||!this.backendExitFrame||request.request_id!==this.backendExitFrame.request_id||request.exit_sha256!==hash(canonical(this.backendExitFrame)))throw new Error('Original Node exit acknowledgement differs or replayed');
@@ -93,37 +168,37 @@ export class OwnedApplicationLaunch {
  if(request.kind==='backend_drain_request'){
   fields(request,['schema_version','kind','challenge','request_id','nonce','epoch','binding_sha256','backend_claim_sha256','writer_id','registration_sha256','closed_registry_sha256','budget_ms']);
   if(!this.writer||!this.pendingDrain||this.drainRequest||request.schema_version!==1||request.nonce!==this.nonce||request.epoch!==epoch||request.request_id!==this.pendingDrain.id||!HEX64.test(request.challenge)||request.binding_sha256!==hash(canonical(this.binding))||request.backend_claim_sha256!==this.backendClaimHash||request.writer_id!==this.writer.writer_id||request.registration_sha256!==this.writer.registration_sha256||!HEX64.test(request.closed_registry_sha256)||!Number.isSafeInteger(request.budget_ms)||request.budget_ms<1||request.budget_ms>4000)throw new Error('Foreign or replayed managed drain request');
-  validateBinding(this.root,this.nonce,this.binding,this.mainProcess);this.frames.assertEmpty();frames.assertEmpty();this.drainRequest=request;executing=true;
-  await frames.send(request);const raw=await frames.read(request.budget_ms),receipt=parsePrivateDocument(raw,16384).value;
-  fields(receipt,['schema_version','kind','request','backend_proof','status','active_scopes','unsupported','scope','whole_writer_coverage','process_tree_exit_verified','can_release_launch_lease']);
-  if(receipt.schema_version!==1||receipt.kind!=='backend_managed_drain'||canonical(receipt.request)!==canonical(request)||canonical(receipt.backend_proof)!==canonical(claim)||!['managed_scopes_drained','refused'].includes(receipt.status)||!Number.isSafeInteger(receipt.active_scopes)||receipt.active_scopes<0||!Array.isArray(receipt.unsupported)||receipt.scope!=='reviewed_foreground_scopes_only'||receipt.whole_writer_coverage!==false||receipt.process_tree_exit_verified!==false||receipt.can_release_launch_lease!==false||receipt.status==='managed_scopes_drained'&&(receipt.active_scopes!==0||receipt.unsupported.length!==0))throw new Error('Managed backend drain exceeds its exact scope');
-  frames.assertEmpty();await this.frames.send({schema_version:1,kind:'managed_drain_proof',nonce:this.nonce,proof_b64:raw.toString('base64')});
-  const admitted=parsePrivateDocument(await this.frames.read(request.budget_ms)).value;
-  const expected={schema_version:1,kind:'managed_drain_admitted',nonce:this.nonce,request_id:request.request_id,receipt_sha256:hash(raw),status:receipt.status};
-  if(canonical(admitted)!==canonical(expected))throw new Error('Original controller drain acknowledgement differs');executing=false;
-  const pending=this.pendingDrain;if(!pending)throw new Error('Original shutdown budget already expired');clearTimeout(pending.timer);this.pendingDrain=null;
-  if(receipt.status!=='managed_scopes_drained'){pending.reject(new Error('Backend retains uncovered or active writers'));continue;}
-  this.drainReceipt=receipt;this.exitConfirmation=new Promise<void>((resolve,reject)=>{this.exitResolve=resolve;this.exitReject=reject;});
-  // A rejection is observed immediately even if stop fails before awaiting exit.
-  void this.exitConfirmation.catch(()=>{});pending.resolve(receipt);continue;
+  freshBackend();this.drainRequest=request;const deadline=Math.min(this.pendingDrain.deadline,performance.now()+request.budget_ms);
+  const response=backendReply('backend_managed_drain',deadline);await frames.send(request,deadline);
+  void (async()=>{const raw=await response,receipt=parsePrivateDocument(raw,16384).value;
+   fields(receipt,['schema_version','kind','request','backend_proof','status','active_scopes','unsupported','scope','whole_writer_coverage','process_tree_exit_verified','can_release_launch_lease']);
+   if(receipt.schema_version!==1||receipt.kind!=='backend_managed_drain'||canonical(receipt.request)!==canonical(request)||canonical(receipt.backend_proof)!==canonical(claim)||!['managed_scopes_drained','refused'].includes(receipt.status)||!Number.isSafeInteger(receipt.active_scopes)||receipt.active_scopes<0||!Array.isArray(receipt.unsupported)||receipt.scope!=='reviewed_foreground_scopes_only'||receipt.whole_writer_coverage!==false||receipt.process_tree_exit_verified!==false||receipt.can_release_launch_lease!==false||receipt.status==='managed_scopes_drained'&&(receipt.active_scopes!==0||receipt.unsupported.length!==0))throw new Error('Managed backend drain exceeds its exact scope');
+   freshBackend();const expected={schema_version:1,kind:'managed_drain_admitted',nonce:this.nonce,request_id:request.request_id,receipt_sha256:hash(raw),status:receipt.status};
+   const admission=new Promise<void>((resolve,reject)=>{const remaining=deadline-performance.now();if(remaining<=0){reject(new Error('Original drain acknowledgement deadline expired'));return;}const timer=setTimeout(()=>{reject(new Error('Original drain acknowledgement deadline expired'));invalidate();},remaining);pendingState.drainAdmitted={expected,resolve,reject,timer};});
+   await this.frames.send({schema_version:1,kind:'managed_drain_proof',nonce:this.nonce,proof_b64:raw.toString('base64')},deadline);await admission;
+   const pending=this.pendingDrain;if(!pending)throw new Error('Original shutdown budget already expired');clearTimeout(pending.timer);this.pendingDrain=null;
+   if(receipt.status!=='managed_scopes_drained'){pending.reject(new Error('Backend retains uncovered or active writers'));return;}
+   this.drainReceipt=receipt;this.exitConfirmation=new Promise<void>((resolve,reject)=>{this.exitResolve=resolve;this.exitReject=reject;});void this.exitConfirmation.catch(()=>{});pending.resolve(receipt);
+  })().catch(invalidate);continue;
  }
  if(cpuExecuted||this.drainRequest)throw new Error('CPU request replay or closed writer admission');cpuExecuted=true;
  fields(request,['schema_version','kind','challenge','request_id','nonce','epoch','binding_sha256','backend_claim_sha256','workspace_id','project_id','plan_sha256']);
- if(request.schema_version!==1||request.kind!=='cpu_execution_request'||!HEX64.test(request.challenge)||!HEX32.test(request.request_id)||request.nonce!==this.nonce||request.epoch!==epoch||request.binding_sha256!==hash(canonical(this.binding))||request.backend_claim_sha256!==hash(parsePrivateDocument(claimRaw).canonical)||!HEX32.test(request.workspace_id)||!HEX32.test(request.project_id)||!HEX64.test(request.plan_sha256))throw new Error('Foreign CPU execution request');
- validateBinding(this.root,this.nonce,this.binding,this.mainProcess);this.frames.assertEmpty();frames.assertEmpty();executing=true;
- await frames.send(request);const completedRaw=await frames.read();const completed=parsePrivateDocument(completedRaw,32768).value;
- fields(completed,['schema_version','kind','request','backend_proof','output_path','output_sha256','semantic_output','worker_pid','runtime_source_sha256']);
- if(completed.schema_version!==1||completed.kind!=='cpu_execution_completed'||canonical(completed.request)!==canonical(request)||canonical(completed.backend_proof)!==canonical(claim)||!HEX64.test(completed.output_sha256)||!HEX64.test(completed.runtime_source_sha256)||!Number.isSafeInteger(completed.worker_pid)||completed.worker_pid<1)throw new Error('CPU execution completion differs');
- frames.assertEmpty();validateBinding(this.root,this.nonce,this.binding,this.mainProcess);
- await this.frames.send({schema_version:1,kind:'cpu_execution_proof',nonce:this.nonce,proof_b64:completedRaw.toString('base64')});executing=false;
- }
+ if(request.schema_version!==1||request.kind!=='cpu_execution_request'||!HEX64.test(request.challenge)||!HEX32.test(request.request_id)||request.nonce!==this.nonce||request.epoch!==epoch||request.binding_sha256!==hash(canonical(this.binding))||request.backend_claim_sha256!==this.backendClaimHash||!HEX32.test(request.workspace_id)||!HEX32.test(request.project_id)||!HEX64.test(request.plan_sha256))throw new Error('Foreign CPU execution request');
+ freshBackend();const response=backendReply('cpu_execution_completed',performance.now()+210000);await frames.send(request);
+ void (async()=>{const completedRaw=await response,completed=parsePrivateDocument(completedRaw,32768).value;
+  fields(completed,['schema_version','kind','request','backend_proof','output_path','output_sha256','semantic_output','worker_pid','runtime_source_sha256']);
+  if(completed.schema_version!==1||completed.kind!=='cpu_execution_completed'||canonical(completed.request)!==canonical(request)||canonical(completed.backend_proof)!==canonical(claim)||!HEX64.test(completed.output_sha256)||!HEX64.test(completed.runtime_source_sha256)||!Number.isSafeInteger(completed.worker_pid)||completed.worker_pid<1)throw new Error('CPU execution completion differs');
+  freshBackend();await this.frames.send({schema_version:1,kind:'cpu_execution_proof',nonce:this.nonce,proof_b64:completedRaw.toString('base64')});
  })().catch(invalidate);
+ }})().catch(invalidate);
  }
  async prepareBackendDrain(proc:ChildProcess,budgetMs:number):Promise<any>{
-  if(!this.writer||proc!==this.backend||!this.backendProof||this.pendingDrain||this.drainRequest||!Number.isSafeInteger(budgetMs)||budgetMs<1||budgetMs>4000)throw new Error('Original enrolled backend drain capability is unavailable');
+  const deadline=performance.now()+budgetMs;
+  if(!this.writer||proc!==this.backend||!this.backendProof||this.pendingDrain||this.drainRequest||this.drainDeadline!==null||!Number.isSafeInteger(budgetMs)||budgetMs<1||budgetMs>4000)throw new Error('Original enrolled backend drain capability is unavailable');
+  this.drainDeadline=deadline;
   validateBinding(this.root,this.nonce,this.binding,this.mainProcess);const id=randomBytes(16).toString('hex');
-  const result=new Promise<any>((resolve,reject)=>{const timer=setTimeout(()=>{if(this.pendingDrain?.id===id)this.pendingDrain=null;reject(new Error('Original managed shutdown budget expired'));},budgetMs);this.pendingDrain={id,resolve,reject,timer};});
-  void this.frames.send({schema_version:1,kind:'main_drain_request',nonce:this.nonce,epoch:this.backendEpoch,binding_sha256:hash(canonical(this.binding)),backend_claim_sha256:this.backendClaimHash,request_id:id,budget_ms:budgetMs}).catch(error=>this.pendingDrain?.reject(error));
+  const result=new Promise<any>((resolve,reject)=>{const remaining=deadline-performance.now();if(remaining<=0){reject(new Error('Original managed shutdown budget expired'));return;}const timer=setTimeout(()=>{if(this.pendingDrain?.id===id)this.pendingDrain=null;reject(new Error('Original managed shutdown budget expired'));},remaining);this.pendingDrain={id,deadline,resolve,reject,timer};});
+  void this.frames.send({schema_version:1,kind:'main_drain_request',nonce:this.nonce,epoch:this.backendEpoch,binding_sha256:hash(canonical(this.binding)),backend_claim_sha256:this.backendClaimHash,request_id:id,budget_ms:Math.max(1,Math.floor(deadline-performance.now()))},deadline).catch(error=>this.pendingDrain?.reject(error));
   return result;
  }
  async confirmBackendExit(proc:ChildProcess):Promise<void>{if(proc!==this.backend||!this.exitConfirmation||!this.backendExitFrame)throw new Error('Original backend clean exit is unobserved');await this.exitConfirmation;}

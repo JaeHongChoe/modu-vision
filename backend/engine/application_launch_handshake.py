@@ -456,13 +456,18 @@ def read_frame(sock, deadline_seconds):
         raise HandshakeError('Invalid private descriptor frame: ' + str(exc)) from exc
 
 
-def send_frame(sock, value):
+def send_frame(sock, value, *, absolute_deadline=None):
     """Write one bounded canonical object without an unbounded peer wait."""
     try:
+        deadline = _deadline(10)
+        if absolute_deadline is not None:
+            if type(absolute_deadline) not in (int, float) or not math.isfinite(absolute_deadline):
+                raise HandshakeError('Original private send deadline differs')
+            deadline = min(deadline, absolute_deadline)
         if not isinstance(value, dict): raise HandshakeError('Private descriptor frame must be an object')
         raw = _canonical(value) + b'\n'
         if len(raw) > MAX_FRAME: raise HandshakeError('Private descriptor frame exceeds 65536 bytes')
-        deadline = _deadline(10); offset = 0
+        offset = 0
         while offset < len(raw):
             remaining = deadline - time.monotonic()
             if remaining <= 0 or not select.select([], [sock], [], max(0, remaining))[1]:
@@ -470,6 +475,7 @@ def send_frame(sock, value):
             sent = sock.send(raw[offset:], getattr(socket, 'MSG_DONTWAIT', 0))
             if sent <= 0: raise HandshakeError('Private descriptor closed while sending frame')
             offset += sent
+        if time.monotonic() >= deadline: raise HandshakeError('Original private send completed after its deadline')
     except (OSError, ValueError, UnicodeError, RecursionError) as exc:
         if isinstance(exc, HandshakeError): raise
         raise HandshakeError('Cannot send private descriptor frame: ' + str(exc)) from exc
@@ -662,6 +668,8 @@ def early_backend_bootstrap():
         _CACHE = {'context': _context(), 'root': root, 'socket': sock, 'challenge': frame, 'proof': proof,
             'ready': False, 'writer_guard': guard, 'writer_handle': handle, 'writer_private_fd': private_fd, 'writer_fd_identity': fd_identity,
             'admission': BackendWorkAdmission()}
+        from backend.engine.application_preflight_child_relay import BackendRelayQueue
+        _CACHE['preflight_queue'] = BackendRelayQueue(sock)
         return dict(proof)
     except (OSError, ValueError, KeyError, TypeError, StopIteration) as exc:
         if isinstance(exc, HandshakeError): raise
@@ -681,6 +689,52 @@ def backend_bootstrap_ready():
     return {**proof, 'kind': 'backend_ready'}
 
 
+def _validate_service_action(original_cache, deadline):
+    """Read-only exact binding checks within one existing channel deadline.
+
+    Publication mutex contention changes no authority or record. Only that
+    named transient can wait, on the same cached endpoint/context and absolute
+    budget; every structural failure immediately refuses without repair.
+    """
+    from backend.engine.application_launch_lease import LeaseTransitionBusy
+    from backend.engine.application_preflight_child_relay import BackendRelayQueue
+    original_queue = original_cache.get('preflight_queue')
+    original_socket = original_cache.get('socket')
+    if type(original_queue) is not BackendRelayQueue:
+        raise HandshakeError('Original service action queue is unavailable')
+    def endpoint():
+        if (original_cache.get('preflight_queue') is not original_queue
+                or original_cache.get('socket') is not original_socket):
+            raise HandshakeError('Original service action queue/socket changed')
+        original_queue._fresh(original_socket, reader=True)
+    if type(deadline) not in (int, float) or not math.isfinite(deadline):
+        raise HandshakeError('Original service action deadline is invalid')
+    while True:
+        context = _root_context()
+        if (_CACHE is not original_cache or context is None
+                or _context() != original_cache['context'] or not original_cache['ready']):
+            raise HandshakeError('Original service action cache/context differs')
+        endpoint()
+        if time.monotonic() >= deadline:
+            raise HandshakeError('Original service binding verification deadline expired')
+        try:
+            proof = _validate(original_cache['root'], context[1], original_cache['challenge'])
+        except LeaseTransitionBusy:
+            endpoint()
+            remaining = deadline-time.monotonic()
+            if remaining <= 0:
+                raise HandshakeError('Original service binding verification deadline expired')
+            time.sleep(min(.005, remaining))
+            continue
+        if (_CACHE is not original_cache or _context() != original_cache['context']
+                or proof != original_cache['proof']):
+            raise HandshakeError('Original service action binding changed')
+        endpoint()
+        if time.monotonic() >= deadline:
+            raise HandshakeError('Original service binding verification completed late')
+        return proof
+
+
 def backend_execution_service(stop_event=None):
     """Consume at most one controller-origin CPU request after admitted ready.
 
@@ -691,18 +745,70 @@ def backend_execution_service(stop_event=None):
     if _CACHE is None or not _CACHE['ready']:raise HandshakeError('CPU consumer requires original admitted backend readiness')
     from backend.engine.migration_guard import maintenance_guard
     from backend.engine.application_launch_execution import execute_backend
-    root=_CACHE['root'];sock=_CACHE['socket'];executed=False;drained=False
+    original_cache = _CACHE
+    root=original_cache['root'];sock=original_cache['socket'];proof=original_cache['proof'];executed=False;drained=False
+    from backend.engine.application_preflight_child_relay import BackendRelayQueue
+    queue = _CACHE['preflight_queue']
+    if type(queue) is not BackendRelayQueue: raise HandshakeError('Original backend sole reader queue differs')
+    queue.claim_reader(); pending = None; cpu = None; drain = None
     try:
         with maintenance_guard(root):
             while stop_event is None or not stop_event.is_set():
-                if not select.select([sock],[],[],.2)[0]:continue
-                if drained:raise HandshakeError('Managed drain request replay requires recovery')
                 context=_root_context()
-                if context is None or _context()!=_CACHE['context']:raise HandshakeError('CPU backend process context changed')
-                proof=_validate(root,context[1],_CACHE['challenge'])
-                if proof!=_CACHE['proof']:raise HandshakeError('CPU backend original process binding changed')
-                frame=read_frame(sock,10)
+                if _CACHE is not original_cache or context is None or _context()!=original_cache['context']:raise HandshakeError('CPU backend process context changed')
+                # Idle polling holds no publication mutex. Exact endpoint and
+                # context remain fresh; full binding reads surround each real
+                # authenticated channel action inside its original deadline.
+                queue._fresh(sock, reader=True)
+                if pending is None:
+                    pending = queue.take(sock)
+                    if pending is not None:
+                        outgoing, deadline = queue.outgoing(pending)
+                        if (time.monotonic() >= deadline or drained and outgoing['action'] != 'finish'):
+                            raise HandshakeError('Original preflight exchange is late or admission is closed')
+                        deadline = min(deadline, _CACHE.get('preflight_drain_deadline', float('inf')))
+                        proof = _validate_service_action(original_cache, deadline)
+                        send_frame(sock, outgoing, absolute_deadline=deadline)
+                        _validate_service_action(original_cache, deadline)
+                if cpu is not None and cpu['done'].is_set():
+                    if cpu['error'] is not None: raise HandshakeError('Original CPU execution callback failed') from cpu['error']
+                    proof = _validate_service_action(original_cache, cpu['deadline'])
+                    send_frame(sock, cpu['result'], absolute_deadline=cpu['deadline'])
+                    _validate_service_action(original_cache, cpu['deadline']); cpu = None
+                if drain is not None:
+                    # Keep this sole reader available for an already accepted
+                    # child's final ACK while admission waits. One original
+                    # deadline; no second socket reader or refreshed budget.
+                    snapshot = _CACHE['admission'].snapshot()
+                    if not snapshot['active_scopes'] or snapshot['unsupported'] or time.monotonic() >= drain['deadline']:
+                        completed = {'schema_version': 1, 'kind': 'backend_managed_drain', 'request': drain['frame'],
+                            'backend_proof': proof, 'status': 'refused' if snapshot['active_scopes'] or snapshot['unsupported'] else 'managed_scopes_drained',
+                            **snapshot, 'scope': 'reviewed_foreground_scopes_only', 'whole_writer_coverage': False,
+                            'process_tree_exit_verified': False, 'can_release_launch_lease': False}
+                        proof = _validate_service_action(original_cache, drain['deadline'])
+                        validate_drain_receipt(completed, drain['frame'], backend_process=proof['process'])
+                        send_frame(sock, completed, absolute_deadline=drain['deadline'])
+                        _validate_service_action(original_cache, drain['deadline']); drain = None
+                if pending is not None:
+                    _, deadline = queue.outgoing(pending)
+                    if time.monotonic() >= deadline: raise HandshakeError('Original preflight exchange deadline expired')
+                wait = .02 if pending is not None or cpu is not None or drain is not None else .2
+                if not select.select([sock],[],[],wait)[0]:continue
+                budget = 10
+                if pending is not None: budget = min(budget, queue.outgoing(pending)[1]-time.monotonic())
+                if drain is not None: budget = min(budget, drain['deadline']-time.monotonic())
+                if budget <= 0: raise HandshakeError('Original private service request deadline expired')
+                deadline = time.monotonic()+budget
+                proof = _validate_service_action(original_cache, deadline)
+                frame=read_frame(sock,deadline-time.monotonic())
+                proof = _validate_service_action(original_cache, deadline)
+                if frame.get('kind') == 'controller_preflight_reply':
+                    if pending is None: raise HandshakeError('Original preflight reply is unsolicited or replayed')
+                    queue.complete(pending, frame); pending = None
+                    continue
                 if frame.get('kind') == 'backend_drain_request':
+                    if drained:raise HandshakeError('Managed drain request replay requires recovery')
+                    started = time.monotonic()
                     writer = _CACHE['challenge'].get('writer')
                     if writer is None or _CACHE['writer_guard'] is None:
                         raise HandshakeError('Managed drain requires original retained writer admission')
@@ -715,17 +821,25 @@ def backend_execution_service(stop_event=None):
                     if snapshot['registry']['state'] != 'closed' or snapshot['registry_sha256'] != frame['closed_registry_sha256']:
                         raise HandshakeError('Managed drain requires original closed writer epoch')
                     state = _CACHE['admission']; state.close(); drained = True
-                    completed = {'schema_version': 1, 'kind': 'backend_managed_drain', 'request': frame,
-                        'backend_proof': proof, **state.drain(frame['budget_ms']/1000),
-                        'scope': 'reviewed_foreground_scopes_only', 'whole_writer_coverage': False,
-                        'process_tree_exit_verified': False, 'can_release_launch_lease': False}
-                    validate_drain_receipt(completed, frame, backend_process=proof['process'])
+                    drain = {'frame': frame, 'deadline': started+frame['budget_ms']/1000}
+                    _CACHE['preflight_drain_deadline'] = drain['deadline']
+                    queue.close_admission(drain['deadline'])
                 else:
-                    if executed:raise HandshakeError('CPU private request replay requires recovery')
+                    if executed or drained:raise HandshakeError('CPU private request replay or closed admission requires recovery')
                     executed=True
-                    completed=execute_backend(frame,proof,root)
-                send_frame(sock,completed)
+                    cpu = {'done': threading.Event(), 'result': None, 'error': None, 'deadline': time.monotonic()+210}
+                    execution = cpu
+                    def work(request=frame, authenticated=proof, state=execution):
+                        try: state['result'] = execute_backend(request,authenticated,root)
+                        except BaseException as exc:
+                            _CACHE['admission'].uncovered('cpu_producer_unconfirmed'); state['error'] = exc
+                        finally: state['done'].set()
+                    execution['thread'] = threading.Thread(target=work, name='owned-controller-cpu', daemon=True)
+                    _CACHE['original_cpu_execution'] = execution  # Strong retained original callback, never receipt adoption.
+                    execution['thread'].start()
     except BaseException:
+        queue.abandon(HandshakeError('Original backend private service is unresolved'))
+        _CACHE['admission'].uncovered('cpu_producer_unconfirmed')
         # Closing this original endpoint tells main/controller to retain durable
         # recovery. It never proves worker descendants exited or clears a lease.
         try:sock.shutdown(socket.SHUT_RDWR)

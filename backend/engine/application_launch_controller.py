@@ -229,6 +229,42 @@ def _cpu_capability(args, root):
     return admit_plan(root,*values)
 
 
+def _preflight_controller_event(owner, event):
+    from backend.engine import application_preflight_child_relay as relay
+    authority = owner._node_backend_authority
+    request = node.frame_value(authority, event)['request']
+    try:
+        reply = relay.process_controller_event(owner, event)
+        state, _ = node._fresh(authority)
+        cap = owner._preflight_relays[request['request_id']]
+        deadline = relay._deadline(relay._CONTROLLERS[cap])
+        send_frame(state['channel'], reply, absolute_deadline=deadline)
+        node._fresh(authority)
+        relay._deadline(relay._CONTROLLERS[cap])
+    except BaseException:
+        cap = getattr(owner, '_preflight_relays', {}).get(request.get('request_id'))
+        if cap is not None: relay._retain(cap)
+        raise
+
+
+def _controller_reply(owner, deadline, expected_kind):
+    """Sole controller reader, with the original absolute CPU/drain budget."""
+    authority = getattr(owner, '_node_backend_authority', None)
+    while True:
+        remaining = deadline-time.monotonic()
+        if remaining <= 0: raise HandshakeError('Original controller reply deadline expired')
+        if authority is None: frame = read_frame(owner._bootstrap_channel, remaining)
+        else:
+            event = node.receive_frame(authority, remaining)
+            frame = node.frame_value(authority, event)
+            if frame.get('kind') == 'main_preflight_request':
+                _preflight_controller_event(owner, event)
+                continue
+        if frame.get('kind') != expected_kind:
+            raise HandshakeError('Original controller reply kind differs')
+        return frame
+
+
 def execute_cpu(owner, capability):
     """Dispatch exactly once through the original authenticated main/backend."""
     from backend.engine import application_launch_execution as execution
@@ -243,7 +279,7 @@ def execute_cpu(owner, capability):
         owner._writer_epoch.block_unsupported('owned_cpu_worker',
             expected_registry_sha256=owner._writer_epoch.snapshot()['registry_sha256'])
     send_frame(owner._bootstrap_channel,request)
-    frame=read_frame(owner._bootstrap_channel,210)
+    frame=_controller_reply(owner,time.monotonic()+210,'cpu_execution_proof')
     if (set(frame)!={'schema_version','kind','nonce','proof_b64'} or type(frame['schema_version']) is not int
             or frame['schema_version']!=1 or frame['kind']!='cpu_execution_proof' or frame['nonce']!=owner.nonce):
         raise HandshakeError('CPU forwarding capability differs')
@@ -283,10 +319,10 @@ def prepare_drain(owner, frame):
         'writer_id': drain['writer_id'], 'registration_sha256': drain['registration_sha256'],
         'closed_registry_sha256': closed['registry_sha256'], 'budget_ms': remaining}
     owner.publish_writer_drain(phase='closing', request=request)
-    send_frame(owner._bootstrap_channel, request)
+    send_frame(owner._bootstrap_channel, request, absolute_deadline=started+frame['budget_ms']/1000)
     remaining = frame['budget_ms']/1000 - (time.monotonic()-started)
     if remaining <= 0: raise HandshakeError('Original managed shutdown budget expired before response')
-    reply = read_frame(owner._bootstrap_channel, remaining)
+    reply = _controller_reply(owner, started+frame['budget_ms']/1000, 'managed_drain_proof')
     if (set(reply) != {'schema_version', 'kind', 'nonce', 'proof_b64'} or type(reply['schema_version']) is not int
             or reply['schema_version'] != 1 or reply['kind'] != 'managed_drain_proof' or reply['nonce'] != owner.nonce):
         raise HandshakeError('Original main managed drain forwarding differs')
@@ -314,7 +350,7 @@ def prepare_drain(owner, frame):
     if time.monotonic() >= deadline:
         raise HandshakeError('Original managed shutdown budget expired before acknowledgement')
     send_frame(owner._bootstrap_channel, {'schema_version': 1, 'kind': 'managed_drain_admitted',
-        'nonce': owner.nonce, 'request_id': request['request_id'], 'receipt_sha256': update._sha(decoded), 'status': receipt['status']})
+        'nonce': owner.nonce, 'request_id': request['request_id'], 'receipt_sha256': update._sha(decoded), 'status': receipt['status']}, absolute_deadline=deadline)
     if receipt['status'] != 'managed_scopes_drained': raise HandshakeError('Backend managed scope retains uncovered/active writers')
 
 
@@ -375,6 +411,7 @@ def run(args):
                     event = node.receive_frame(owner._node_backend_authority, 4)
                     frame = node.frame_value(owner._node_backend_authority, event)
                     if frame.get('kind') == 'main_drain_request': prepare_drain(owner, frame)
+                    elif frame.get('kind') == 'main_preflight_request': _preflight_controller_event(owner, event)
                     elif frame.get('kind') == 'main_backend_exit': observe_backend_exit(owner, event)
                     else: raise HandshakeError('Private main descriptor ended or replayed after readiness')
                 if owner._process.poll() is not None: owner.observe_exit(); failed = True

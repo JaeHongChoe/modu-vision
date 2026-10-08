@@ -208,6 +208,27 @@ def frame_value(authority, event):
     return copy.deepcopy(_event(authority, event)['frame'])
 
 
+def consume_preflight_receive(authority, event):
+    """One original channel event; raw request dictionaries never mint a relay."""
+    state, row = _fresh(authority); received = _event(authority, event)
+    if state['phase'] != 'bound' or state['proof'] is None:
+        raise HandshakeError('Original preflight relay is unavailable')
+    frame = received['frame']
+    if (type(frame) is not dict or set(frame) != {'schema_version', 'kind', 'nonce', 'request'}
+            or type(frame['schema_version']) is not int or frame['schema_version'] != 1
+            or frame['kind'] != 'main_preflight_request' or frame['nonce'] != row['nonce']):
+        raise HandshakeError('Original preflight forwarding event differs')
+    if (state['deadline'] is not None and (frame['request'].get('action') != 'finish'
+            or _now() >= state['deadline'])):
+        raise HandshakeError('Original preflight admission closed or drain deadline expired')
+    backend = state['proof']['process']
+    if _lease()._identity(backend['pid']) != backend or _parent_pid(backend['pid']) != state['main'].pid:
+        raise HandshakeError('Original preflight backend birth/command/parent differs')
+    _fresh(authority)
+    received['used'] = True  # Consume before any enrollment/publication.
+    return copy.deepcopy(frame['request']), copy.deepcopy(state['proof'])
+
+
 def seal_authentication(authority, event):
     from backend.engine import application_launch_controller as controller
     state, row = _fresh(authority); received = _event(authority, event)

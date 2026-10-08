@@ -163,6 +163,8 @@ def _start_preflight_admitted(req, request, ticket):
                 if heartbeat_failed.is_set(): ticket.unconfirmed()
                 def publish_finished():
                     release_reserved()
+                    from backend.engine.application_preflight_child_relay import finish_ticket_child
+                    finish_ticket_child(ticket)
                     with _LOCK:
                         _STATE['running'], _STATE['last'] = None, {**outcome, 'finished_at': time.time()}
                 ticket.finish(before_leave=publish_finished)

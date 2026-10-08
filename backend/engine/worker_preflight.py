@@ -476,8 +476,14 @@ def run_preflight(task: str, device: str, stages: tuple[str, ...], *, store: Opt
                 # Keep original custody without probing or retrying that fd.
                 if not entered or exc is not body_error: ticket.retain_unconfirmed()
                 raise
+    except BaseException:
+        from backend.engine.application_preflight_child_relay import retain_ticket_child
+        retain_ticket_child(ticket)
+        raise
     finally:
-        if own_ticket and ticket._phase != 'unresolved': ticket.finish()
+        if own_ticket and ticket._phase != 'unresolved':
+            from backend.engine.application_preflight_child_relay import finish_ticket_child
+            ticket.finish(before_leave=lambda: finish_ticket_child(ticket))
 
 
 def _run_preflight_admitted(task, device, stages, *, store, worker_id, timeout, workdir_root, ticket, inherited):
@@ -497,11 +503,15 @@ def _run_preflight_admitted(task, device, stages, *, store, worker_id, timeout, 
         command = [sys.executable, '-m', 'backend.engine.worker_preflight', '--task', task, '--device', device,
                    '--stages', ','.join(stages), '--workdir', folder, '--exit-with-parent', '--deadline', f'{limit + 30:.0f}']
         timed_out = False
+        from backend.engine import application_preflight_child_relay as relay
+        holder = relay.reserve_backend_child(ticket, task=task, device=device, stages=stages, workdir=run,
+            limit=limit, deadline=started+limit)
         with open(run / 'preflight.log', 'w', encoding='utf-8') as log:
             # cwd is the run folder: a stage that writes relative folders writes them here, never into the installed app.
-            child = subprocess.Popen(command, cwd=folder, stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT,
+            child = (relay.launch_backend_child(holder, log=log, environment=_child_environment(), inherited=inherited)
+                if holder is not None else subprocess.Popen(command, cwd=folder, stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT,
                                      env=_child_environment(), **({'close_fds': True, 'pass_fds': inherited} if inherited else {}),
-                                     **session_isolation())
+                                     **session_isolation()))
             with _CHILDREN_LOCK:
                 _CHILDREN.add(child)
             try:
@@ -542,6 +552,8 @@ def _run_preflight_admitted(task, device, stages, *, store, worker_id, timeout, 
             recorded[stage] = store.record(worker_id, answer['runtime_digest'], task, stage, device, passed=row['passed'] is True,
                                            reason=str(row.get('reason') or ''), seconds=float(row.get('seconds') or 0),
                                            evidence=row.get('evidence'))
+    if holder is not None:
+        relay.record_backend_child_cleanup(holder, child, workspace_removed=not run.exists())
     return {'task': task, 'device': device, 'runtime_digest': answer['runtime_digest'], 'architecture': preflight_architecture(task),
             'results': recorded}
 
@@ -588,6 +600,44 @@ def _exit_when_parent_goes(deadline: Optional[float]) -> None:
         timer.start()
 
 
+def _wait_writer_gate(fd, request_id, workdir, seconds):
+    """Consume one original inherited pipe before model imports or stage writes.
+
+    This data validates inherited custody; it is not registry/exit authority and
+    never opens another writer lock or reconstructs a parent capability.
+    """
+    import select
+    import stat
+    if (type(fd) is not int or not 3 <= fd <= 8192 or type(request_id) is not str
+            or len(request_id) != 32 or any(c not in '0123456789abcdef' for c in request_id)
+            or type(seconds) not in (int, float) or not math.isfinite(seconds) or not 0 < seconds <= 930):
+        raise ValueError('Original preflight startup gate parameters differ')
+    deadline = time.monotonic()+seconds; raw = bytearray()
+    try:
+        if not stat.S_ISFIFO(os.fstat(fd).st_mode): raise ValueError('Original preflight startup gate is not a pipe')
+        while not raw.endswith(b'\n'):
+            remaining = deadline-time.monotonic()
+            if remaining <= 0 or not select.select([fd], [], [], remaining)[0]:
+                raise ValueError('Original preflight startup gate expired')
+            chunk = os.read(fd, 2049-len(raw))
+            if not chunk or len(raw)+len(chunk) > 2048: raise ValueError('Original preflight startup gate ended or exceeds its bound')
+            raw.extend(chunk)
+        gate = json.loads(raw)
+        names = {'request_id', 'parent_pid', 'writer_fd', 'writer_identity', 'deadline'}
+        if (type(gate) is not dict or set(gate) != names or gate['request_id'] != request_id
+                or type(gate['parent_pid']) is not int or gate['parent_pid'] != os.getppid()
+                or type(gate['writer_fd']) is not int or not 3 <= gate['writer_fd'] <= 8192
+                or type(gate['deadline']) not in (int, float) or not math.isfinite(gate['deadline'])
+                or time.monotonic() >= gate['deadline'] or str(Path.cwd()) != str(workdir)):
+            raise ValueError('Original preflight startup gate binding differs')
+        info = os.fstat(gate['writer_fd'])
+        if (not stat.S_ISREG(info.st_mode) or stat.S_IMODE(info.st_mode) != 0o600 or info.st_uid != os.getuid()
+                or info.st_size != 0 or info.st_nlink != 1 or gate['writer_identity'] != [info.st_dev, info.st_ino]):
+            raise ValueError('Original inherited preflight writer OFD differs')
+    finally:
+        os.close(fd)  # Any ambiguous original close fails this child; never retry.
+
+
 def main(argv: Optional[list[str]] = None) -> int:
     import argparse
     parser = argparse.ArgumentParser(description='Run one worker preflight (the app starts this; it is not a user command).')
@@ -597,9 +647,14 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument('--workdir', required=True, type=Path)
     parser.add_argument('--exit-with-parent', action='store_true', help='exit when stdin closes (the app owns this process)')
     parser.add_argument('--deadline', type=float, default=None, help='seconds after which this process exits')
+    parser.add_argument('--writer-gate-fd', type=int, default=None)
+    parser.add_argument('--writer-request', default=None)
     options = parser.parse_args(argv)
     if options.exit_with_parent:
         _exit_when_parent_goes(options.deadline)
+    if options.writer_gate_fd is not None or options.writer_request is not None:
+        if not options.exit_with_parent: raise ValueError('Original writer gate requires the parent watchdog')
+        _wait_writer_gate(options.writer_gate_fd, options.writer_request, options.workdir, options.deadline)
     stages = tuple(item for item in options.stages.split(',') if item)
     # Explicit CI diagnostics are enabled before the expensive stage imports.
     # Normal application runs keep their existing logging and time budgets.
