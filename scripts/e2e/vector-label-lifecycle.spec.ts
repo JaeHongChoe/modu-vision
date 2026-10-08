@@ -149,13 +149,20 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   const retried=await save(200),saved=await value(query);expect(saved.annotations).toHaveLength(i+1);
   assertShape(saved.annotations.find((a:any)=>a.type===tool.type),tool);
   for(const previous of prior.annotations)expect(saved.annotations.find((a:any)=>a.id===previous.id)).toEqual(previous);
-  const maskBytes=fs.readFileSync(saved.mask_file);evidence.addFile(saved.mask_file);
-  const raster=await page.evaluate(async(data)=>{
-   const image=new Image();await new Promise<void>((resolve,reject)=>{image.onload=()=>resolve();image.onerror=()=>reject(Error('Original class raster decode failed'));image.src=data;});
-   const canvas=document.createElement('canvas');canvas.width=image.width;canvas.height=image.height;const context=canvas.getContext('2d')!;context.drawImage(image,0,0);
-   return {width:image.width,height:image.height,classes:[[45,40],[150,45],[110,170]].map(([x,y])=>context.getImageData(x,y,1,1).data[0])};
-  },'data:image/png;base64,'+maskBytes.toString('base64'));
-  expect(raster).toEqual({width:256,height:256,classes:[1,i>=1?2:0,i>=2?3:0]});
+  let maskBytes:Buffer|null=null,raster:{width:number;height:number;classes:number[]}|null=null;
+  if(i===0&&tool.type==='bbox'){
+   // The original backend deliberately stores bbox-only vector labels without a raster.
+   expect(saved.mask_file).toBe(null);
+  }else{
+   expect(typeof saved.mask_file).toBe('string');expect(saved.mask_file.length).toBeGreaterThan(0);
+   maskBytes=fs.readFileSync(saved.mask_file);evidence.addFile(saved.mask_file);
+   raster=await page.evaluate(async(data)=>{
+    const image=new Image();await new Promise<void>((resolve,reject)=>{image.onload=()=>resolve();image.onerror=()=>reject(Error('Original class raster decode failed'));image.src=data;});
+    const canvas=document.createElement('canvas');canvas.width=image.width;canvas.height=image.height;const context=canvas.getContext('2d')!;context.drawImage(image,0,0);
+    return {width:image.width,height:image.height,classes:[[45,40],[150,45],[110,170]].map(([x,y])=>context.getImageData(x,y,1,1).data[0])};
+   },'data:image/png;base64,'+maskBytes.toString('base64'));
+   expect(raster).toEqual({width:256,height:256,classes:[1,i>=1?2:0,i>=2?3:0]});
+  }
   const failedBody=JSON.parse(failed!.request!),retryBody=JSON.parse(retried.request!);expect(retryBody).toEqual(failedBody);
   const handoff=await protect(tool.action+'-before-handoff'),writeStart=writes.length;
   await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(2).click();
@@ -165,7 +172,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   await expect(page.getByTitle(tool.title,{exact:true})).toBeVisible();await expect(page.getByTitle('Delete annotation',{exact:true})).toHaveCount(i+1);
   const returned=await exactProtected(handoff);expect(writes.slice(writeStart)).toEqual([]);
   expect(sha(fs.readFileSync(imagePath))).toBe(sourceSha);await screenshot(tool.action+'-handoff-stage3-truth-review-return');
-  cells.push({action:'U030.'+tool.action,dimension:'handoff',retry:retried,saved,raster,mask_sha256:sha(maskBytes),metadata,source_sha256:sourceSha,handoff,atTraining,returned,mutations:writes.slice(writeStart)});
+  cells.push({action:'U030.'+tool.action,dimension:'handoff',retry:retried,saved,raster,mask_sha256:maskBytes===null?null:sha(maskBytes),metadata,source_sha256:sourceSha,handoff,atTraining,returned,mutations:writes.slice(writeStart)});
  }
  await page.reload();await expect(page.getByTitle('Delete annotation',{exact:true})).toHaveCount(3);
  const reopened=await value(query);for(const tool of tools)assertShape(reopened.annotations.find((a:any)=>a.type===tool.type),tool);
