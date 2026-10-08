@@ -29,9 +29,9 @@ def test_real_controller_enrolls_backend_before_actual_cpu_and_retains_blocking_
     """The existing source controller lacked a writer epoch despite real CPU success."""
     values = cpu_stack(tmp_path)
     root = values[0]
-    child, ack = start_cpu_stack(values)
+    child, ack = start_cpu_stack(values, prefix=['-c', _source_cpu_settlement_fixture_prefix()])
     try:
-        _, cpu = wait_receipt(root, ack['nonce'], child)
+        _, cpu = _wait_receipt_and_cpu_settlement(root, ack['nonce'], child)
         assert cpu['semantic_output']['final_verdict'] == 'OK'
         directory = root / '.application-writer-epochs' / ack['nonce']
         assert (directory / 'registry.json').is_file(), 'Actual controller never enrolled its backend before spawn'

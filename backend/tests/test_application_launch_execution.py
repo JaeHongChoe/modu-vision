@@ -289,18 +289,21 @@ def wait_recovery(root,nonce,child,timeout=40):
 def _source_callback_failure_suffix():
     """Test-only facts after original failure; never mint/retry or mask it."""
     return ''' from backend.engine import application_launch_execution as ex,application_owned_cpu_child_relay as relay,application_launch_handshake as h
+ from pathlib import Path
+ import json
+ original_failure_root=Path(os.environ['VISION_AI_STUDIO_USER_DATA_DIR'])
  original_failure_execute=ex.execute_backend
  def failed_source(*args,**kwargs):
   try:return original_failure_execute(*args,**kwargs)
   except BaseException as error:
    try:
     cap=relay._CACHE_TICKETS.get(id(h._CACHE));s=relay._PRODUCERS.get(cap) if cap is not None else None
-    results=Path(root)/'projects/cpu-known-image/delivery/launch-known-image/results'
+    results=original_failure_root/'projects/cpu-known-image/delivery/launch-known-image/results'
     snapshots=sorted(p.name for p in results.glob('.owned-cpu-*'))
     fact={'error_type':type(error).__name__,'error':str(error),'request_id':args[0]['request_id'],
      'admission':h._CACHE['admission'].snapshot(),'producer':None if s is None else {'phase':s['phase'],'counted':s['counted'],'private_acquired':s['private'] is not None},
      'snapshot_names':snapshots,'result_exists':any((results/name/'result.json').exists() for name in snapshots)}
-    with (Path(root)/'projects/source-callback-failure.json').open('x') as writer:json.dump(fact,writer,sort_keys=True)
+    with (original_failure_root/'projects/source-callback-failure.json').open('x') as writer:json.dump(fact,writer,sort_keys=True)
    except BaseException:pass
    raise
  ex.execute_backend=failed_source

@@ -6,6 +6,7 @@ fixtures qualify admission ordering only; real authenticated OCR is separate.
 from contextlib import contextmanager
 import inspect
 import json
+import math
 import os
 from pathlib import Path
 import subprocess
@@ -167,7 +168,17 @@ def controlled_cache(epoch, monkeypatch):
         monkeypatch.setattr(handshake, '_CACHE', cache)
         monkeypatch.setattr(handshake, '_root_context', lambda: (root, {}))
         monkeypatch.setattr(handshake, '_context', lambda: context)
-        def valid(*_, validated): validated['protocol_version'] = 4; return proof
+        def valid(*_, validated, absolute_deadline=None, before_acquire=None):
+            # Explicit bounded-entry model, not original owner authentication.
+            if absolute_deadline is not None:
+                assert type(absolute_deadline) in (int, float) and math.isfinite(absolute_deadline)
+                assert time.monotonic() < absolute_deadline
+            if before_acquire is not None:
+                assert callable(before_acquire)
+                before_acquire()
+            if absolute_deadline is not None: assert time.monotonic() < absolute_deadline
+            validated['protocol_version'] = 4
+            return proof
         monkeypatch.setattr(handshake, '_validate', valid)
         try: yield root, authority, state, cache
         finally: os.close(private)

@@ -166,9 +166,11 @@ def test_actual_known_source_cpu_typed_relay_preserves_original_fences_through_f
         finish_managed(child,root)
     final=lease._load(root)
     assert final['state']=='recovery_required'
-    final_writers=inspect_epoch(root,ack['nonce'])['registry']['writers']
+    final_snapshot=inspect_epoch(root,ack['nonce'])
+    final_writers=final_snapshot['registry']['writers']
+    shutdown_observation=_source_cpu_post_shutdown_observation(root,final,final_snapshot,child)
     assert [(row['role'],row['status'],row['reason_code']) for row in final_writers]==[
-        ('backend','direct_exited',None),('owned_cpu_worker','direct_exited',None)]
+        ('backend','direct_exited',None),('owned_cpu_worker','direct_exited',None)], shutdown_observation
     with pytest.raises(ValueError,match='launch ownership'):
         lease.assert_quiescent(root)
     assert child.returncode is not None
@@ -178,6 +180,35 @@ def test_actual_known_source_cpu_typed_relay_preserves_original_fences_through_f
           'controlled_source_fixture':True,'component_only':True,'whole_writer_coverage':False,
           'process_tree_exit_verified':False,'can_release_launch_lease':False,'release_ready':False}
     with (root/'projects/actual-source-cpu-post-finish-proof.json').open('x') as output:json.dump(post,output,indent=2)
+
+
+def _source_cpu_post_shutdown_observation(root, final, snapshot, child):
+    """Failure context only; never qualify rows, adopt a PID or alter cleanup."""
+    serialized='Original post-shutdown diagnostic is unavailable'
+    try:
+        stop=None;stop_error=None;stop_sha=None;stop_bytes=None
+        try:
+            path=root/'projects/managed-stop-result.json'
+            fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW)
+            with os.fdopen(fd,'rb') as reader:raw=reader.read(65537)
+            if len(raw)>65536:raise ValueError('Original stop observation exceeds diagnostic bound')
+            stop=json.loads(raw)
+            stop_sha=__import__('hashlib').sha256(raw).hexdigest();stop_bytes=len(raw)
+        except BaseException as error:stop_error=type(error).__name__
+        observation={'schema':'modu-vision.original-source-cpu-shutdown-observation/v1',
+                     'original_managed_stop':stop,'original_lease_state':final,
+                     'original_managed_stop_error_type':stop_error,'original_managed_stop_sha256':stop_sha,
+                     'original_managed_stop_bytes':stop_bytes,'original_writer_snapshot':snapshot,
+                     'original_retained_controller_pid':child.pid,
+                     'original_retained_controller_returncode':child.returncode,
+                     'qualification':False,'whole_writer_coverage':False,'process_tree_exit_verified':False,
+                     'can_release_launch_lease':False,'release_ready':False}
+        serialized=json.dumps(observation,sort_keys=True)
+        with (root/'projects/actual-source-cpu-shutdown-observation.json').open('x') as output:output.write(serialized)
+    except BaseException:
+        # Diagnostic failures preserve the original row assertion and outcome.
+        pass
+    return serialized
 
 
 class _FixtureClock:
