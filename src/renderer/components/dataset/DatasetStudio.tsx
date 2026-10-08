@@ -42,6 +42,7 @@ export const DatasetStudio: React.FC = () => {
   const { task, language, projectDir, openImageForLabeling, project } = useProjectStore();
   const {
     folderPath,
+    datasetKey,
     hasSelectedFolder,
     importError,
     sourceSaveError,
@@ -151,7 +152,7 @@ export const DatasetStudio: React.FC = () => {
 
   useEffect(() => {
     if (folderPath) ensureImported(task).catch(() => {});
-  }, [folderPath, task, ensureImported]);
+  }, [folderPath, datasetKey, task, ensureImported]);
 
   const handleSelectFolder = async () => {
     setImageOpenError(null);
