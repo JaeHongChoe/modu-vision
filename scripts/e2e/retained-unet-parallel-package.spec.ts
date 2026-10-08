@@ -226,7 +226,7 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
     expect(record).toMatchObject({version: 1, context: draftContext, base_version_id: initial.version_id, active_version_id: null});
     expect(record.pipeline).toEqual(draftGraph); expect(record.draft_sha256).toMatch(/^[a-f0-9]{64}$/);
     drafts.push({started, finished: Date.now(), request, response: record});
-    await expect(page.getByRole('status').filter({hasText: '초안 저장됨 · 실행본 활성화 전'})).toBeVisible();
+    await expect(page.getByRole('status').filter({hasText: /^초안 저장됨 · 실행본 활성화 전$/})).toBeVisible();
     await settle();
   };
   const roiDraft = (identity: string, box: number[]) => {draftGraph.nodes.find((row: any) => row.id === identity).data.params.roi_bbox = box;};
