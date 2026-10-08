@@ -338,7 +338,7 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
       const reply = await responseSnapshot(await failed); assertSavedHistoryFailure(reply, scope);
       await expect(history.getByRole('alert')).toHaveText('Controlled saved evaluation record history GET failure');
       await expect(selector).toHaveCount(0); await expect(identity).toHaveCount(0); await expect(result).toHaveCount(0);
-      await expect(reevaluate).toBeDisabled(); await expect(group).toHaveValue('lot');
+      await expect(reevaluate).toBeDisabled(); await expect(group).toHaveCount(0);
       assertSavedPreferences({all: await preferences(), record: await recordPreference(), view: await viewPreference()}, savedPreferences, selectedId);
       failedState = await unchanged(); await readFaults(); expect(failureReplies.length).toBeGreaterThan(0);
       expect(matchingFaultRequests.length).toBe(failureReplies.length); assertNoSavedRecordWrites(mutations);
