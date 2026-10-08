@@ -106,7 +106,10 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   await expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name);
   const details = page.locator('details').filter({has: page.locator('summary').filter({hasText: '작업 센터 · 현재 프로젝트'})}).first();
   const summary = details.locator('summary').first(), select = details.getByLabel('저장 작업 다시 열기', {exact: true});
-  const open = async () => {if (await details.getAttribute('open') === null) await summary.click();};
+  const open = async () => {
+    if (await details.count() === 0) await page.getByRole('navigation', {name: '프로젝트 작업 공간', exact: true}).getByRole('button', {name: '작업 센터', exact: true}).click();
+    else if (await details.getAttribute('open') === null) await summary.click();
+  };
   const close = async () => {if (await details.getAttribute('open') !== null) await summary.click();};
   const empty = async () => {await expect(summary).toContainText('현재 프로젝트 0개'); await expect(select.locator('option')).toHaveCount(1); await expect(select).toHaveValue(''); await expect(details.getByRole('button', {name: '비교 작업·결과 열기', exact: true})).toHaveCount(0);};
   const controlled: Array<{phase: string; read_index: number; method: string; url: string; request_body: string | null; status: number; raw: string}> = [];
