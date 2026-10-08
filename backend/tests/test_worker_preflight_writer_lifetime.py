@@ -6,6 +6,7 @@ qualify complete writers, process-tree exit, accelerator or release acceptance.
 from contextlib import contextmanager
 import copy
 import json
+import math
 import os
 from pathlib import Path
 import subprocess
@@ -129,7 +130,17 @@ def test_exact_legacy_ticket_compatibility_is_counted_but_has_no_enrolled_fence(
     with controlled_cache(epoch,monkeypatch) as (_,_,state,cache):
         cache['challenge']={}
         for name in ('writer_guard','writer_handle','writer_private_fd','writer_fd_identity'):cache[name]=None
-        def valid(*_,validated):validated['protocol_version']=protocol;return cache['proof']
+        def valid(*_,validated,absolute_deadline=None,before_acquire=None):
+            # Model the original bounded-entry arguments, never owner authentication.
+            if absolute_deadline is not None:
+                assert type(absolute_deadline) in (int,float) and math.isfinite(absolute_deadline)
+                assert h.time.monotonic() < absolute_deadline
+            if before_acquire is not None:
+                assert callable(before_acquire)
+                before_acquire()
+            if absolute_deadline is not None: assert h.time.monotonic() < absolute_deadline
+            validated['protocol_version']=protocol
+            return cache['proof']
         monkeypatch.setattr(h,'_validate',valid)
         if protocol==2:
             with pytest.raises(ValueError,match='legacy|unsupported|partial'):ticket()

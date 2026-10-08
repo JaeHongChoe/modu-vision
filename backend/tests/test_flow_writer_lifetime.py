@@ -2,6 +2,7 @@
 from contextlib import contextmanager
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import subprocess
@@ -59,7 +60,15 @@ def writer_capability(tmp_path,monkeypatch):
         protocol=[4]
         monkeypatch.setattr(handshake,'_root_context',lambda:(root,{}))
         monkeypatch.setattr(handshake,'_context',lambda:())
-        def validate(*_,validated=None):
+        def validate(*_,validated=None,absolute_deadline=None,before_acquire=None):
+            # Model the original bounded-entry arguments, never owner authentication.
+            if absolute_deadline is not None:
+                assert type(absolute_deadline) in (int,float) and math.isfinite(absolute_deadline)
+                assert handshake.time.monotonic() < absolute_deadline
+            if before_acquire is not None:
+                assert callable(before_acquire)
+                before_acquire()
+            if absolute_deadline is not None: assert handshake.time.monotonic() < absolute_deadline
             if validated is not None: validated['protocol_version']=protocol[0]
             return proof
         monkeypatch.setattr(handshake,'_validate',validate)

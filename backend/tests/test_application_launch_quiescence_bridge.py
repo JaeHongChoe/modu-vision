@@ -3,6 +3,7 @@ import asyncio
 from contextlib import contextmanager
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import select
@@ -164,7 +165,15 @@ def test_original_private_lock_reference_survives_exposed_guard_fd_reuse(tmp_pat
         proof={'nonce':owner.nonce};context=(root,{})
         monkeypatch.setattr(handshake,'_root_context',lambda:context)
         monkeypatch.setattr(handshake,'_context',lambda:())
-        def validate(*_,validated=None):
+        def validate(*_,validated=None,absolute_deadline=None,before_acquire=None):
+            # Model the original bounded-entry arguments, never owner authentication.
+            if absolute_deadline is not None:
+                assert type(absolute_deadline) in (int,float) and math.isfinite(absolute_deadline)
+                assert handshake.time.monotonic() < absolute_deadline
+            if before_acquire is not None:
+                assert callable(before_acquire)
+                before_acquire()
+            if absolute_deadline is not None: assert handshake.time.monotonic() < absolute_deadline
             if validated is not None:validated['protocol_version']=4
             return proof
         monkeypatch.setattr(handshake,'_validate',validate)
