@@ -9,6 +9,17 @@
 - S7-05의72시간 검사는 외장 저장소의 기존 실행을 계속 유지하고, 완주 판정은 마지막에 확인한다. 같은 실행의 소스·모델·시작 시각을 바꾸거나 이전 실행 시간을 합산하지 않는다.
 - 독립적으로 가능한 구현·CI·앱 실행 검증은 종료를 기다리지 않는다. 현재 actual CPU 기준 이미지 실행, S7-01 화면의 실패·취소·전달 시나리오와 공개 CI 실패 원인을 병행한다.
 
+## 2026-10-08 실행 잠금과 종료 기록 후속 작업
+
+| 소스 | 이번에 구현하고 확인한 범위 | 계속 남은 작업 |
+|---|---|---|
+| `85600b7` | 원래 controller가 backend를 실행 전에 등록하고, backend/main의 비공개 채널로 작업 접수 중단과 종료 결과를 확인한다. writer core·제어 경로22개, Node 종료10개 검사 통과. | 전체 background·local·remote writer 등록, 원래 Node child authority와 core 연결, 전체 process-tree 종료·설치 adapter. |
+| `9b74433` | 실행별 임시 홈을 일반 사용자 데이터 inventory·hash·기존 home 인수 대상에서 제외한다. 실제 경로·symlink 거절을 포함한 관련94개 검사 통과. 기존 active DB 이관은 이미 선언된 scope만 복사했으며, 이번 수정으로 새 DB 복사 문제를 해결했다고 주장하지 않는다. | 실제 설치 home·운영 장비 및 전체 수락. |
+| `0c6a77e` | 원래 CPU writer 잠금의 private duplicate를 실제 worker와 남은 descendant에 전달하고, 결과 검증·정리까지 producer lifetime을 유지한다. 종료 결과 게시의 짧은 transition contention만 기존4초 안에서 재검증·재시도한다. 기존 lease와 새 실패 검사46개, 실제 CPU·drain·원래 Node/backend exit 통합49개 통과. | core의 backend row는 reserved, CPU row는 unsupported로 유지한다. 전체 writer/tree 종료나 launch lease 해제는 아직 승인하지 않는다. |
+| `56effc7` | 검증한 writer·임시 홈·CPU lifetime·drain 실패 검사6개 파일을 source CI에 추가한다. 기존 queue·권한·timeout은 유지한다. | 정확한 최신 게시 소스의 전체 hosted CI 결과. |
+
+각 gate는 실행 당시 dirty source의 전후 manifest와 정확한 변경 파일 hash에 연결한다. 이 결과를 후속 소스의 clean commit·frozen/native·서명·공정 품질 수락으로 확대하지 않는다. 상세 근거는 `docs/verification/receipts/2026-10-08-original-writer-drain-0c6a77e.json`이다. 부모 구현 집계69/13과 curated658/791은 유지한다. 플로우 producer와 남은 Linux 실패는 별도 작업으로 진행한다.
+
 ## 단계별 집계
 
 | 단계 | 전체 | 구현 확인 | 미완료 |

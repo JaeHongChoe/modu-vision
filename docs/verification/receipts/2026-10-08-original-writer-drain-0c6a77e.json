@@ -1,0 +1,306 @@
+{
+  "schema": "modu-vision.original-writer-drain-source/v1",
+  "source_commits": {
+    "enrollment_and_private_drain": "85600b747bcdf5c22b0df473e851f23d9369ddd3",
+    "runtime_home_classifiers": "9b74433e8204252bb168a364c1701348ec5ae68a",
+    "original_cpu_transport_and_bounded_publication": "0c6a77e92318dcd143783992c0f246c4bd195a7d",
+    "source_ci_selectors": "56effc71e5deff33bec32c1afdd3c3d0d86a2c66"
+  },
+  "source_clean_claim": false,
+  "gates": [
+    {
+      "name": "core-controls",
+      "base_commit": "ebdd19464e2ea61f33db630642ba22503ce47f0c",
+      "source_dirty_at_execution": true,
+      "source_inputs": 2213,
+      "source_inputs_unchanged": true,
+      "exit_code": 0,
+      "elapsed_seconds": 33.531940415967256,
+      "passed": 22,
+      "failed": 0,
+      "skipped": 0,
+      "raw_log_sha256": "eb369d37344a366e5c1a0f9fe66fdec2df5f98c81f9914e5003b87d97fd35dda",
+      "run_record_sha256": "3d40e484aca0af93526b62af540e73071045c744c408bfc92c7199382b4f87a1",
+      "source_manifest_sha256": "82a21b2d0840ba5e2f3507cc90aceac0b989011e93757cd5a6ac80d1ed89eab0",
+      "argv": [
+        "${PYTHON_EXECUTABLE}",
+        "-m",
+        "pytest",
+        "backend/tests/test_application_launch_quiescence.py",
+        "backend/tests/test_application_writer_control_paths.py",
+        "-q",
+        "--basetemp",
+        "${PRIVATE_EVIDENCE_ROOT}/writer-closure-root-evidence/core-controls/tmp/pytest",
+        "--junitxml",
+        "${PRIVATE_EVIDENCE_ROOT}/writer-closure-root-evidence/core-controls/results.xml"
+      ],
+      "cwd": "${SOURCE_REPO}"
+    },
+    {
+      "name": "node-stop",
+      "base_commit": "ebdd19464e2ea61f33db630642ba22503ce47f0c",
+      "source_dirty_at_execution": true,
+      "source_inputs": 2213,
+      "source_inputs_unchanged": true,
+      "exit_code": 0,
+      "elapsed_seconds": 0.84767504199408,
+      "passed": 10,
+      "failed": 0,
+      "skipped": 0,
+      "raw_log_sha256": "6a1f862c4840bc77416a38ad58f1225da0ab08424ec13555878312c079483689",
+      "run_record_sha256": "30592979bfbf926c7596030d1c3efd0ad4e019c4cd44ff3621894c974a51a1a4",
+      "source_manifest_sha256": "82a21b2d0840ba5e2f3507cc90aceac0b989011e93757cd5a6ac80d1ed89eab0",
+      "argv": [
+        "/opt/homebrew/bin/node",
+        "--test",
+        "src/main/supervisorStop.test.cjs",
+        "src/main/supervisorStopExit.test.cjs"
+      ],
+      "cwd": "${SOURCE_REPO}"
+    },
+    {
+      "name": "main-types",
+      "base_commit": "ebdd19464e2ea61f33db630642ba22503ce47f0c",
+      "source_dirty_at_execution": true,
+      "source_inputs": 2213,
+      "source_inputs_unchanged": true,
+      "exit_code": 0,
+      "elapsed_seconds": 1.2874828330241144,
+      "passed": null,
+      "failed": 0,
+      "skipped": 0,
+      "raw_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "run_record_sha256": "e686653b20794c6066696c92d9147bba0fe5b3b2af78844c627e936b7fa5e153",
+      "source_manifest_sha256": "82a21b2d0840ba5e2f3507cc90aceac0b989011e93757cd5a6ac80d1ed89eab0",
+      "argv": [
+        "/opt/homebrew/bin/node",
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "-p",
+        "build/tsconfig.node.json",
+        "--tsBuildInfoFile",
+        "${PRIVATE_EVIDENCE_ROOT}/writer-closure-root-evidence/main-types/tmp/main.tsbuildinfo"
+      ],
+      "cwd": "${SOURCE_REPO}"
+    },
+    {
+      "name": "node-bootstrap",
+      "base_commit": "ebdd19464e2ea61f33db630642ba22503ce47f0c",
+      "source_dirty_at_execution": true,
+      "source_inputs": 2213,
+      "source_inputs_unchanged": true,
+      "exit_code": 0,
+      "elapsed_seconds": 0.3910524579696357,
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "raw_log_sha256": "135f53e90553397fb251d825d8ec2144c063a4ca7d2b766c99807d83bdecf61e",
+      "run_record_sha256": "9630d371f766b306e67d7f6e28e4fd48bd85daaf067736a4bf077f1779b474e1",
+      "source_manifest_sha256": "82a21b2d0840ba5e2f3507cc90aceac0b989011e93757cd5a6ac80d1ed89eab0",
+      "argv": [
+        "/opt/homebrew/bin/node",
+        "scripts/verify-supervisor.js",
+        "--owned-bootstrap-order"
+      ],
+      "cwd": "${SOURCE_REPO}"
+    },
+    {
+      "name": "runtime-homes-green",
+      "base_commit": "85600b747bcdf5c22b0df473e851f23d9369ddd3",
+      "source_dirty_at_execution": true,
+      "source_inputs": 2214,
+      "source_inputs_unchanged": true,
+      "exit_code": 0,
+      "elapsed_seconds": 64.76305991696427,
+      "passed": 94,
+      "failed": 0,
+      "skipped": 0,
+      "raw_log_sha256": "f201420605db7833f27b7dff3a63d7d96784e71d3e3b1a01ded7b02b34c89874",
+      "run_record_sha256": "225453fa335598e539b4d213476d446c55e9f575185dd70b59104310617ae2e5",
+      "source_manifest_sha256": "d882448924011540e0826d7d1f21916f0cb7a6cdb2ead835a7942a3b222d87db",
+      "argv": [
+        "${PYTHON_EXECUTABLE}",
+        "-m",
+        "pytest",
+        "backend/tests/test_application_runtime_home_paths.py",
+        "backend/tests/test_application_writer_control_paths.py",
+        "backend/tests/test_installed_home_adoption.py",
+        "backend/tests/test_global_migration.py",
+        "-q",
+        "--basetemp",
+        "${PRIVATE_EVIDENCE_ROOT}/writer-closure-root-evidence/runtime-homes-green/tmp/pytest",
+        "--junitxml",
+        "${PRIVATE_EVIDENCE_ROOT}/writer-closure-root-evidence/runtime-homes-green/results.xml"
+      ],
+      "cwd": "${SOURCE_REPO}"
+    },
+    {
+      "name": "drain-contention-final",
+      "base_commit": "9b74433e8204252bb168a364c1701348ec5ae68a",
+      "source_dirty_at_execution": true,
+      "source_inputs": 2215,
+      "source_inputs_unchanged": true,
+      "exit_code": 0,
+      "elapsed_seconds": 74.42074158298783,
+      "passed": 46,
+      "failed": 0,
+      "skipped": 0,
+      "raw_log_sha256": "80900aea91bfaf3b37bc1c6523ff018865e6fb7c7907ff0a274f4389106a2e17",
+      "run_record_sha256": "a2415ab08b08c3770a0748565f26b8d93161212cd0fbc28536b096664e0fb533",
+      "source_manifest_sha256": "afeec17b3d421cbe0880ab5a0598117ab75b26e785027a137e2d4644578b17a3",
+      "argv": [
+        "${PYTHON_EXECUTABLE}",
+        "-m",
+        "pytest",
+        "backend/tests/test_application_drain_transition_busy.py",
+        "backend/tests/test_application_launch_lease.py",
+        "-q",
+        "--junitxml=${PRIVATE_EVIDENCE_ROOT}/writer-closure-root-evidence/drain-contention-final/results.xml"
+      ],
+      "cwd": "${SOURCE_REPO}"
+    },
+    {
+      "name": "cpu-bridge-composed",
+      "base_commit": "9b74433e8204252bb168a364c1701348ec5ae68a",
+      "source_dirty_at_execution": true,
+      "source_inputs": 2216,
+      "source_inputs_unchanged": true,
+      "exit_code": 0,
+      "elapsed_seconds": 187.44319387496216,
+      "passed": 49,
+      "failed": 0,
+      "skipped": 0,
+      "raw_log_sha256": "608205fd3409e5123368d32a214a89d00d4f6e70423cc0247f2aaa95c5ed74ef",
+      "run_record_sha256": "625418d956f47d3a7123dcc3412520700853fb0e1e9110de922cc01ccb97a6bb",
+      "source_manifest_sha256": "f5b0caaa1b6eefdf06d8e86071958719252e7df673485b6c2626ed013cc9addc",
+      "argv": [
+        "${PYTHON_EXECUTABLE}",
+        "-m",
+        "pytest",
+        "backend/tests/test_application_cpu_writer_lifetime.py",
+        "backend/tests/test_application_launch_quiescence_bridge.py",
+        "-q",
+        "--basetemp=${PRIVATE_EVIDENCE_ROOT}/writer-closure-root-evidence/cpu-bridge-composed/tmp/pytest",
+        "--junitxml=${PRIVATE_EVIDENCE_ROOT}/writer-closure-root-evidence/cpu-bridge-composed/results.xml"
+      ],
+      "cwd": "${SOURCE_REPO}"
+    },
+    {
+      "name": "ci-writer-selection",
+      "base_commit": "9b74433e8204252bb168a364c1701348ec5ae68a",
+      "source_dirty_at_execution": true,
+      "source_inputs": 2214,
+      "source_inputs_unchanged": true,
+      "exit_code": 0,
+      "elapsed_seconds": 7.42232520901598,
+      "passed": 20,
+      "failed": 0,
+      "skipped": 0,
+      "raw_log_sha256": "9a38174f91e9a1f497bf84f9b81ba613e21b0b3d414978fb5b066f10a2ce85c4",
+      "run_record_sha256": "98217724f5aa1aa91315ab4993a089bd1f982add53ebeba42ca709e06beaa61b",
+      "source_manifest_sha256": "67f281d321d98de01a8125d64950e1c8fc961594e8f02dd0797791833d76a922",
+      "argv": [
+        "${PYTHON_EXECUTABLE}",
+        "-m",
+        "pytest",
+        "backend/tests/test_source_ci_model_lanes.py",
+        "backend/tests/test_service_ci_dependencies.py",
+        "-q",
+        "--junitxml=${PRIVATE_EVIDENCE_ROOT}/writer-closure-root-evidence/ci-writer-selection/results.xml"
+      ],
+      "cwd": "${SOURCE_REPO}"
+    }
+  ],
+  "source_sha256": {
+    "backend/engine/application_launch_quiescence.py": "037dadb2065d78796b9d3cc94b6193fa00975ab500a2cb4a8ffecceda7d0073c",
+    "backend/engine/application_launch_lease.py": "3a7348bce5b6f9a295fb4255b8f11bc15d68367da6507ed7e3f9f5a1a720b1d1",
+    "backend/engine/application_launch_controller.py": "809d31b60167da9ceb3057d681179d15315b89ba39422b5d119cbd54c2069d75",
+    "backend/engine/application_launch_handshake.py": "75cf7ff31e37a0a955ae7db66f9675191bba1b55c7dfb7d122bdd1f8f1cf9344",
+    "backend/engine/application_launch_execution.py": "14521ef4227ef81686cba552cad2094bf45b8821ac1b15571dd1c984ada41659",
+    "backend/engine/runtime_deadline.py": "23218a3bb0216e3f5874bde9b7b9462233e4ba46b2736ef86f1034b32b36d1c6",
+    "backend/engine/global_migration.py": "41e92593cb28f5b2dbc0f20154212ae557e55710d314d29c6c08a85f9a342b44",
+    "backend/engine/installed_home_adoption.py": "ac28eb04f1fed24b4cc1cea0697da9289266732f102ee2747ca80bf4c5c62b69",
+    "backend/engine/global_store_paths.py": "48da88a635e3dbaec444c313232fb678b92630b92c94484a9999ea3f837c6120",
+    "src/main/applicationLaunch.ts": "cd679b03c6a1f60f4e6fe0653f7a301a77ef4d74c07e22b5b279379b42a4141c",
+    "src/main/supervisor.ts": "f3097f08ff02f06db39c27ba299d4ec57a9f6d1151f656971491c12d6553e656",
+    "backend/main.py": "59016d34b5851d55f2b609cf3a78902bea178f2da5432618555d27c7425cade4",
+    "backend/tests/test_application_launch_quiescence.py": "78c4d107bc5ebefaf8358cf991daf73beb45f3fd33b738ce876e275bdfb0bf52",
+    "backend/tests/test_application_launch_quiescence_bridge.py": "3133da8601b348198ba6e2fbc6cb6e37926074a1f99ab302aa22b5d8e830d88a",
+    "backend/tests/test_application_writer_control_paths.py": "5bb3edff9b6d1175c5696233596cc18706bea06d9d54ecd88d6d2d4b3bb1d963",
+    "backend/tests/test_application_runtime_home_paths.py": "eb85e3ef1f34bd3363ca66de15bb5011206b6ce89c48c15fecbe92016310aec7",
+    "backend/tests/test_application_cpu_writer_lifetime.py": "8971cafe1a8e22d083f20acde297882846b108bee5217937beb73342023afc9c",
+    "backend/tests/test_application_drain_transition_busy.py": "3d799e7596e80bf418d5c9cf781163bf19c89b692244058f86672d0c350c7704"
+  },
+  "independent_reviews": [
+    {
+      "name": "runtime-homes-independent-review.json",
+      "sha256": "6ef92bbc3a002152f971773f194f6877b5dacc2fbb7802c76bbf6327b82a9bf6",
+      "scope": "exact reviewed component; original actual CPU/bridge gate is separately bound"
+    },
+    {
+      "name": "drain-contention-independent-review.json",
+      "sha256": "6c1b16ab1a5fba9bd6a228b13ec3ed77c4fa2d1dac89f1a682833d5d11194a05",
+      "scope": "exact reviewed component; original actual CPU/bridge gate is separately bound"
+    },
+    {
+      "name": "CPU producer freeze7532 review",
+      "sha256": "1be3a1f4c61afd0b8aca8e625379ef88e6e283b22b1fb7cee7efabe2eb004ec1",
+      "scope": "exact three source files; inherited failed ACK remains preserved and is not a green acceptance"
+    }
+  ],
+  "scope": {
+    "original_backend_enrolled_before_spawn": true,
+    "actual_source_cpu_math_and_original_writer_transport": true,
+    "original_node_backend_exit_and_python_main_popen_exit": true,
+    "runtime_homes_excluded_from_inventory_and_adoption": true,
+    "whole_writer_coverage": false,
+    "process_tree_exit_verified": false,
+    "launch_lease_release": false,
+    "native_application_acceptance": false,
+    "publisher_approved": false,
+    "model_quality_approved": false,
+    "latest_hosted_ci_completed": false
+  },
+  "accounting": {
+    "parent_implementation_verified": 69,
+    "parent_implementation_pending": 13,
+    "parent_accepted": 0,
+    "windows_only_waived": 2,
+    "required_pending_parents": 11,
+    "curated_actions": 207,
+    "curated_verified_dimensions": 658,
+    "curated_pending_dimensions": 791,
+    "na": 0
+  },
+  "negative_evidence": {
+    "runtime_home_red": {
+      "tests": 5,
+      "failures": 5
+    },
+    "stable_drain_contention_red": {
+      "tests": 7,
+      "failures": 4,
+      "passed": 3
+    },
+    "original_cpu_producer_ack_failure_preserved": true,
+    "diagnostic_exact_failure": "typed transition contention during drained receipt publication; the specific competing holder was not identified by delegate traces",
+    "first_drain_test_setup_failure_and_first_green_injection_failure_preserved": true
+  },
+  "lifetime_result": {
+    "original_backend_exit_code": 0,
+    "original_backend_exit_signal": null,
+    "original_main_exit_code": 0,
+    "durable_writer_drain_phase": "backend_exited",
+    "durable_lease_state": "recovery_required",
+    "core_backend_row": "reserved",
+    "core_cpu_worker_row": "unsupported/uncovered_protocol",
+    "active_migrated_database_copy_claim": false
+  },
+  "limits": [
+    "Core/backend rows and nonempty epoch history retain the update fence. Node handle exit is not substituted for the core Python Popen authority.",
+    "Foreground scopes and fixed CPU transport are reviewed; startup, background, other local and remote producer protocols remain uncovered.",
+    "Runtime-home classifiers exclude inventory/hash and ordinary adoption/backup eligibility; active migrated database copies were already limited to declared scopes.",
+    "Candidate source manifests were captured before and after each execution. They were dirty snapshots and are not whole clean-commit or newer native/CI acceptance.",
+    "The 4-second original stop deadline is unchanged. Only typed acquisition contention retries the original validated publication within its remaining budget."
+  ]
+}
