@@ -29,3 +29,9 @@ S6-03의 inert runtime pack API/GUI는 source `5284df6e979d4d4ceadc0a8256b5a9017
 2026-10-08 추가 판정: S1-08과 S7-04는 독립 검토와 최신 소스의 실제 회귀를 거쳐 **구현만 verified**로 옮겼다. migration26개, 장애 matrix61개와 focused44개가 통과했다. 다른8개 gate·실 사용자 home·지원하지 않는 worker·물리 target·실 publisher update는 pending을 유지한다. 공개 receipt는 `2026-10-08-migration-implementation-1a9b830.json`과 `2026-10-08-software-fault-matrix-213e9b7.json`이다. 원래 전체 수락이나 면제의 의미를 바꾸지 않는다.
 
 2026-10-09 추가 실행 snapshot: curated 행동은 **207개·검증 760개·pending 689개·not_required 0개**다. source `d5409cb9e0828a7ab55667fcf6e660fc268c5cb6`의 깨끗한 browser와 source Electron 두 사례를 독립적으로 읽어 `F024.apply-draft.error`, `F024.apply-draft.cancel`, `F024.edit-start.error` 세 차원을 추가 연결했다. 초안 유지, 기존 비교창 닫기, 정확한503 거절 뒤 명시적200 편집권 복구를 확인했으며 초안 삭제·영속 저장·장비·모델 품질·전체 기능 수락을 뜻하지 않는다. 공개 근거는 `2026-10-09-team-draft-lease-error-d5409cb-summary.json` 및 모드별 GUI receipt다. 부모는 구현69·pending13·종합 수락0을 유지한다. 행동 registry에는 기존 `PackageLibraryPanel` 소스 변경으로 인한 binding 오류 한 개가 남아 있으며, 해당 OpenVINO 실행을 통과시키고 근거를 연결하기 전까지 registry 전체를 정상으로 보고하지 않는다.
+
+## 2026-10-09: current package-library binding
+
+- Exact original native cases at clean b53eede passed 2/2 without retries. Seven existing F099 library scenarios retain their prior history and add current-source receipts.
+- PackageLibraryPanel source binding is current; counts remain 760 verified / 689 pending, with no parent or human quality acceptance.
+- Scope: `../verification/receipts/2026-10-09-f099-library-b53eede-summary.json`.

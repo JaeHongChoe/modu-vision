@@ -31,7 +31,7 @@
   "src/renderer/components/labeling/CandidateProviderControls.tsx": "1f2512051cbd189893f925821f86b300eda4ed25d0b4d7e68b8fab10e0daf2b0",
   "src/renderer/components/labeling/ModelAssistPanel.tsx": "27d386e4f53e09159bbbdc3713c80abbbd5fa6ae9dd9a80dd44c5581ed59febc",
   "src/renderer/components/inference/RuntimeOptimizationPanel.tsx": "89ebe9a26ee74a9699705cd6d533301ad579bbb01a5f5a40fb0b5417d2adcfff",
-  "src/renderer/components/inference/PackageLibraryPanel.tsx": "f4e6397f52beacccd17120c9868560c5b789069fbf0a3f5a81b48541c6c75b59",
+  "src/renderer/components/inference/PackageLibraryPanel.tsx": "e6eaa53f27415cd1be5e10e5b620565762bd43bdd4f3265d4ea33d5fc000b3b8",
   "src/renderer/components/runtime/RuntimeServicePanel.tsx": "8e6f6defd490e4a055a09f143da98f3b2d1c8cd33c3e869ab08c49b8090d5144",
   "src/renderer/components/flowchart/FlowGraphNavigator.tsx": "656832c214f41742d5bc0f66c9f8983c5fb6892cfaf3b42b48ee353f282da20a",
   "src/renderer/components/training/TrainingController.tsx": "dfa19004f1d27401bce082d2d983ec33c09ba65a3516c20cffd975259364a539",
@@ -17098,6 +17098,32 @@
            "sha256": "ac20fd805ecbec1a7a0818bb48ad3f4bee71a1cb37c030b60f4e9d88745affb0"
           }
          ]
+        },
+        {
+         "task": "S6-03",
+         "source_sha": "b53eede96175c2d70d731fbb585bc46c29cd9798",
+         "kind": "click",
+         "action": "새로고침 · 다시 열기",
+         "expected": "Reopen the exact saved converted package and matching review.",
+         "observed": "Actual native library refreshed, reopened the exact approved IR package and displayed its saved review after reload; current manifest, review and protected file hashes matched. Executed once at clean b53eede with exact owned cleanup. No frozen distribution, signing, physical target or human quality acceptance.",
+         "reviewer": "Codex independent original raw/source-qualified seven-scenario review; no human quality, device, distribution or parent acceptance",
+         "test": "scripts/e2e/converted-flow-review.spec.ts::native actual converted flow review, library reopen and managed IR execution",
+         "receipt": "2026-10-09-f099-library-b53eede-reopen-electron.json",
+         "receipt_sha256": "7e759add5224adda4406c1ce03ac7c6c25bf70ba09c1172e76fcfb4297498b48",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b83098d94e126e2c4659986f90ed899aa8b51c6f9c5fd9855f10330c6b7e9844"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "780b4997bcd202f0ce3234e5d5152ff93e36b4ab2b188d7f43dcf6ab8c747a5b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "18d5e36a522e267ebcb8d5b4415bd9ec07497f6e94c1ac35e03409998a9836f4"
+          }
+         ]
         }
        ]
       },
@@ -17161,6 +17187,64 @@
          ],
          "expected": "Actual empty project inventory returns no packages and no reopen control.",
          "observed": "Actual empty project inventory returns no packages and no reopen control."
+        },
+        {
+         "task": "S6-03",
+         "source_sha": "b53eede96175c2d70d731fbb585bc46c29cd9798",
+         "kind": "click",
+         "action": "Actual source UI controls with exact package or generated archive readback",
+         "reviewer": "Codex independent original raw/source-qualified seven-scenario review; no human quality, device, distribution or parent acceptance",
+         "test": "scripts/e2e/actual-ir-review-controls.spec.ts::native actual IR candidate review and library controls preserve exact original bindings",
+         "receipt": "2026-10-09-f099-library-b53eede-controls-electron.json",
+         "receipt_sha256": "950ef673690bd45428a605f3939cdae438d4b779010366dd23c7fbcb0766ad8c",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a28dda556a5c71c6b0dc0784919fb34359966c985a7d9d14b0233a84c5e0b4c0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e67ffca3a51f14136c5e8d98d9adfdb52429cc059664f7708fb919829c8b02bb"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6291418c6cbfea419bda66a7b1c3dedfe931dc16f9a3c7033307af1d41deb487"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "2c5a80d9c3dd043c189194c33281b62d2cf22660d170ee19b2c6fb7070f5082b"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "90aff5af26ff376b75c4c5d3d14383be2527a4750438932eab0ac2e5f6d933c2"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "a784de247895ff6fde953ce640f271c02fcd70da31f298264f36654b95a8cdf3"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "48f677e8be0c7c02b03e3e0f520635e246026314f187c01e1dd5300d60afe33a"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ceecb108bd065c52aad1b847de841f2384876b0c4ac042a6ea6d614accece949"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "8812596c588f3291552fa9277c379c37aa62a9646ecef288bc8e66868376af4b"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "267720d5c608cd1e4b799f2188d3dad90f8c632330dfb0c456e880de1ae4c2d6"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "2ac7c9be6789c6e9680bcdc8bf0d3b8cb838aae029867fcbcdf79b711057f183"
+          }
+         ],
+         "expected": "Actual empty project inventory returns no packages and no reopen control.",
+         "observed": "Actual empty project inventory returns no packages and no reopen control. Reexecuted once at clean b53eede on the current PackageLibraryPanel bytes; original protected files and exact owned cleanup retained."
         }
        ]
       },
@@ -17224,6 +17308,64 @@
          ],
          "expected": "Controlled failed-integrity/wrong-scope metadata for the real saved IR row disables its actions and emits no selection POST; physical corruption is not claimed.",
          "observed": "Controlled failed-integrity/wrong-scope metadata for the real saved IR row disables its actions and emits no selection POST; physical corruption is not claimed."
+        },
+        {
+         "task": "S6-03",
+         "source_sha": "b53eede96175c2d70d731fbb585bc46c29cd9798",
+         "kind": "click",
+         "action": "Actual source UI controls with exact package or generated archive readback",
+         "reviewer": "Codex independent original raw/source-qualified seven-scenario review; no human quality, device, distribution or parent acceptance",
+         "test": "scripts/e2e/actual-ir-review-controls.spec.ts::native actual IR candidate review and library controls preserve exact original bindings",
+         "receipt": "2026-10-09-f099-library-b53eede-controls-electron.json",
+         "receipt_sha256": "950ef673690bd45428a605f3939cdae438d4b779010366dd23c7fbcb0766ad8c",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a28dda556a5c71c6b0dc0784919fb34359966c985a7d9d14b0233a84c5e0b4c0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e67ffca3a51f14136c5e8d98d9adfdb52429cc059664f7708fb919829c8b02bb"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6291418c6cbfea419bda66a7b1c3dedfe931dc16f9a3c7033307af1d41deb487"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "2c5a80d9c3dd043c189194c33281b62d2cf22660d170ee19b2c6fb7070f5082b"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "90aff5af26ff376b75c4c5d3d14383be2527a4750438932eab0ac2e5f6d933c2"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "a784de247895ff6fde953ce640f271c02fcd70da31f298264f36654b95a8cdf3"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "48f677e8be0c7c02b03e3e0f520635e246026314f187c01e1dd5300d60afe33a"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ceecb108bd065c52aad1b847de841f2384876b0c4ac042a6ea6d614accece949"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "8812596c588f3291552fa9277c379c37aa62a9646ecef288bc8e66868376af4b"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "267720d5c608cd1e4b799f2188d3dad90f8c632330dfb0c456e880de1ae4c2d6"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "2ac7c9be6789c6e9680bcdc8bf0d3b8cb838aae029867fcbcdf79b711057f183"
+          }
+         ],
+         "expected": "Controlled failed-integrity/wrong-scope metadata for the real saved IR row disables its actions and emits no selection POST; physical corruption is not claimed.",
+         "observed": "Controlled failed-integrity/wrong-scope metadata for the real saved IR row disables its actions and emits no selection POST; physical corruption is not claimed. Reexecuted once at clean b53eede on the current PackageLibraryPanel bytes; original protected files and exact owned cleanup retained."
         }
        ]
       },
@@ -17287,6 +17429,64 @@
          ],
          "expected": "One exact library GET receives controlled503 before backend dispatch and emits no selection POST.",
          "observed": "One exact library GET receives controlled503 before backend dispatch and emits no selection POST."
+        },
+        {
+         "task": "S6-03",
+         "source_sha": "b53eede96175c2d70d731fbb585bc46c29cd9798",
+         "kind": "click",
+         "action": "Actual source UI controls with exact package or generated archive readback",
+         "reviewer": "Codex independent original raw/source-qualified seven-scenario review; no human quality, device, distribution or parent acceptance",
+         "test": "scripts/e2e/actual-ir-review-controls.spec.ts::native actual IR candidate review and library controls preserve exact original bindings",
+         "receipt": "2026-10-09-f099-library-b53eede-controls-electron.json",
+         "receipt_sha256": "950ef673690bd45428a605f3939cdae438d4b779010366dd23c7fbcb0766ad8c",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a28dda556a5c71c6b0dc0784919fb34359966c985a7d9d14b0233a84c5e0b4c0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e67ffca3a51f14136c5e8d98d9adfdb52429cc059664f7708fb919829c8b02bb"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6291418c6cbfea419bda66a7b1c3dedfe931dc16f9a3c7033307af1d41deb487"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "2c5a80d9c3dd043c189194c33281b62d2cf22660d170ee19b2c6fb7070f5082b"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "90aff5af26ff376b75c4c5d3d14383be2527a4750438932eab0ac2e5f6d933c2"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "a784de247895ff6fde953ce640f271c02fcd70da31f298264f36654b95a8cdf3"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "48f677e8be0c7c02b03e3e0f520635e246026314f187c01e1dd5300d60afe33a"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ceecb108bd065c52aad1b847de841f2384876b0c4ac042a6ea6d614accece949"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "8812596c588f3291552fa9277c379c37aa62a9646ecef288bc8e66868376af4b"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "267720d5c608cd1e4b799f2188d3dad90f8c632330dfb0c456e880de1ae4c2d6"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "2ac7c9be6789c6e9680bcdc8bf0d3b8cb838aae029867fcbcdf79b711057f183"
+          }
+         ],
+         "expected": "One exact library GET receives controlled503 before backend dispatch and emits no selection POST.",
+         "observed": "One exact library GET receives controlled503 before backend dispatch and emits no selection POST. Reexecuted once at clean b53eede on the current PackageLibraryPanel bytes; original protected files and exact owned cleanup retained."
         }
        ]
       },
@@ -17350,6 +17550,64 @@
          ],
          "expected": "Actual close and empty-project switch prevents stale IR row/review repaint after the held exact original UI request settles with a controlled authenticated snapshot; original delayed backend HTTP provenance is not claimed.",
          "observed": "Actual close and empty-project switch prevents stale IR row/review repaint after the held exact original UI request settles with a controlled authenticated snapshot; original delayed backend HTTP provenance is not claimed."
+        },
+        {
+         "task": "S6-03",
+         "source_sha": "b53eede96175c2d70d731fbb585bc46c29cd9798",
+         "kind": "click",
+         "action": "Actual source UI controls with exact package or generated archive readback",
+         "reviewer": "Codex independent original raw/source-qualified seven-scenario review; no human quality, device, distribution or parent acceptance",
+         "test": "scripts/e2e/actual-ir-review-controls.spec.ts::native actual IR candidate review and library controls preserve exact original bindings",
+         "receipt": "2026-10-09-f099-library-b53eede-controls-electron.json",
+         "receipt_sha256": "950ef673690bd45428a605f3939cdae438d4b779010366dd23c7fbcb0766ad8c",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a28dda556a5c71c6b0dc0784919fb34359966c985a7d9d14b0233a84c5e0b4c0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e67ffca3a51f14136c5e8d98d9adfdb52429cc059664f7708fb919829c8b02bb"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6291418c6cbfea419bda66a7b1c3dedfe931dc16f9a3c7033307af1d41deb487"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "2c5a80d9c3dd043c189194c33281b62d2cf22660d170ee19b2c6fb7070f5082b"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "90aff5af26ff376b75c4c5d3d14383be2527a4750438932eab0ac2e5f6d933c2"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "a784de247895ff6fde953ce640f271c02fcd70da31f298264f36654b95a8cdf3"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "48f677e8be0c7c02b03e3e0f520635e246026314f187c01e1dd5300d60afe33a"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ceecb108bd065c52aad1b847de841f2384876b0c4ac042a6ea6d614accece949"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "8812596c588f3291552fa9277c379c37aa62a9646ecef288bc8e66868376af4b"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "267720d5c608cd1e4b799f2188d3dad90f8c632330dfb0c456e880de1ae4c2d6"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "2ac7c9be6789c6e9680bcdc8bf0d3b8cb838aae029867fcbcdf79b711057f183"
+          }
+         ],
+         "expected": "Actual close and empty-project switch prevents stale IR row/review repaint after the held exact original UI request settles with a controlled authenticated snapshot; original delayed backend HTTP provenance is not claimed.",
+         "observed": "Actual close and empty-project switch prevents stale IR row/review repaint after the held exact original UI request settles with a controlled authenticated snapshot; original delayed backend HTTP provenance is not claimed. Reexecuted once at clean b53eede on the current PackageLibraryPanel bytes; original protected files and exact owned cleanup retained."
         }
        ]
       },
@@ -17405,6 +17663,32 @@
           {
            "id": "screenshot-2",
            "sha256": "ac20fd805ecbec1a7a0818bb48ad3f4bee71a1cb37c030b60f4e9d88745affb0"
+          }
+         ]
+        },
+        {
+         "task": "S6-03",
+         "source_sha": "b53eede96175c2d70d731fbb585bc46c29cd9798",
+         "kind": "click",
+         "action": "새로고침 · 다시 열기",
+         "expected": "Reopen the exact saved converted package and matching review.",
+         "observed": "Actual native library refreshed, reopened the exact approved IR package and displayed its saved review after reload; current manifest, review and protected file hashes matched. Executed once at clean b53eede with exact owned cleanup. No frozen distribution, signing, physical target or human quality acceptance.",
+         "reviewer": "Codex independent original raw/source-qualified seven-scenario review; no human quality, device, distribution or parent acceptance",
+         "test": "scripts/e2e/converted-flow-review.spec.ts::native actual converted flow review, library reopen and managed IR execution",
+         "receipt": "2026-10-09-f099-library-b53eede-reopen-electron.json",
+         "receipt_sha256": "7e759add5224adda4406c1ce03ac7c6c25bf70ba09c1172e76fcfb4297498b48",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b83098d94e126e2c4659986f90ed899aa8b51c6f9c5fd9855f10330c6b7e9844"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "780b4997bcd202f0ce3234e5d5152ff93e36b4ab2b188d7f43dcf6ab8c747a5b"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "18d5e36a522e267ebcb8d5b4415bd9ec07497f6e94c1ac35e03409998a9836f4"
           }
          ]
         }
@@ -17470,6 +17754,64 @@
          ],
          "expected": "Actual saved IR selection carries exact package ID/path/base revision with independent saved runtime-review hash/device binding; service Apply remains disabled and no service write occurs.",
          "observed": "Actual saved IR selection carries exact package ID/path/base revision with independent saved runtime-review hash/device binding; service Apply remains disabled and no service write occurs."
+        },
+        {
+         "task": "S6-03",
+         "source_sha": "b53eede96175c2d70d731fbb585bc46c29cd9798",
+         "kind": "click",
+         "action": "Actual source UI controls with exact package or generated archive readback",
+         "reviewer": "Codex independent original raw/source-qualified seven-scenario review; no human quality, device, distribution or parent acceptance",
+         "test": "scripts/e2e/actual-ir-review-controls.spec.ts::native actual IR candidate review and library controls preserve exact original bindings",
+         "receipt": "2026-10-09-f099-library-b53eede-controls-electron.json",
+         "receipt_sha256": "950ef673690bd45428a605f3939cdae438d4b779010366dd23c7fbcb0766ad8c",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a28dda556a5c71c6b0dc0784919fb34359966c985a7d9d14b0233a84c5e0b4c0"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e67ffca3a51f14136c5e8d98d9adfdb52429cc059664f7708fb919829c8b02bb"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6291418c6cbfea419bda66a7b1c3dedfe931dc16f9a3c7033307af1d41deb487"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "2c5a80d9c3dd043c189194c33281b62d2cf22660d170ee19b2c6fb7070f5082b"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "90aff5af26ff376b75c4c5d3d14383be2527a4750438932eab0ac2e5f6d933c2"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "a784de247895ff6fde953ce640f271c02fcd70da31f298264f36654b95a8cdf3"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "48f677e8be0c7c02b03e3e0f520635e246026314f187c01e1dd5300d60afe33a"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ceecb108bd065c52aad1b847de841f2384876b0c4ac042a6ea6d614accece949"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "8812596c588f3291552fa9277c379c37aa62a9646ecef288bc8e66868376af4b"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "267720d5c608cd1e4b799f2188d3dad90f8c632330dfb0c456e880de1ae4c2d6"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "2ac7c9be6789c6e9680bcdc8bf0d3b8cb838aae029867fcbcdf79b711057f183"
+          }
+         ],
+         "expected": "Actual saved IR selection carries exact package ID/path/base revision with independent saved runtime-review hash/device binding; service Apply remains disabled and no service write occurs.",
+         "observed": "Actual saved IR selection carries exact package ID/path/base revision with independent saved runtime-review hash/device binding; service Apply remains disabled and no service write occurs. Reexecuted once at clean b53eede on the current PackageLibraryPanel bytes; original protected files and exact owned cleanup retained."
         }
        ]
       }

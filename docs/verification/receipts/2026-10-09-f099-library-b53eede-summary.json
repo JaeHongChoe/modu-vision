@@ -1,0 +1,55 @@
+{
+  "schema": "modu-vision.curated-action-execution-summary/v1",
+  "source_sha": "b53eede96175c2d70d731fbb585bc46c29cd9798",
+  "actual_case_results": {
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0,
+    "retries": 0,
+    "source_dirty": false,
+    "source_files": 2318
+  },
+  "qualified_cells": [
+    "F099.actual-ir-library-review-reopen.success",
+    "F099.actual-ir-library-review-reopen.empty",
+    "F099.actual-ir-library-review-reopen.invalid",
+    "F099.actual-ir-library-review-reopen.error",
+    "F099.actual-ir-library-review-reopen.cancel",
+    "F099.actual-ir-library-review-reopen.reopen",
+    "F099.actual-ir-library-review-reopen.handoff"
+  ],
+  "gui_receipts": [
+    {
+      "receipt": "2026-10-09-f099-library-b53eede-controls-electron.json",
+      "sha256": "950ef673690bd45428a605f3939cdae438d4b779010366dd23c7fbcb0766ad8c"
+    },
+    {
+      "receipt": "2026-10-09-f099-library-b53eede-reopen-electron.json",
+      "sha256": "7e759add5224adda4406c1ce03ac7c6c25bf70ba09c1172e76fcfb4297498b48"
+    }
+  ],
+  "independent_qualification_sha256": "c9247650babe4eabf20264a1a4e22e38ee3622f79d4b493a51f8eb8166f8104f",
+  "prior_qualification_sha256": "721f799500d4f9f3172c7f1fef9bbae593caed32e312074b0c96885d92a7c4c5",
+  "raw_pin_count_correction_sha256": "d828ac87745dbf338ff00dd48cc66d429d121cc0d9874e892cf3f10d194ea5c7",
+  "unique_original_raw_pins": 3767,
+  "source_binding": {
+    "path": "src/renderer/components/inference/PackageLibraryPanel.tsx",
+    "old_sha256": "f4e6397f52beacccd17120c9868560c5b789069fbf0a3f5a81b48541c6c75b59",
+    "new_sha256": "e6eaa53f27415cd1be5e10e5b620565762bd43bdd4f3265d4ea33d5fc000b3b8"
+  },
+  "retained_history_entries": 9,
+  "appended_history_entries": 7,
+  "curated_new_verified_cells": 0,
+  "accepted_parents": 0,
+  "limits": [
+    "The current component hash qualifies existing row actions/reload and five controlled library dimensions. The changed already-selected task-center handoff noPOST branch is source-covered by existing inert panel tests; these native cases do not directly drive it.",
+    "Cancel transport is a controlled authenticated snapshot and exact original callback settlement, not delayed original backend provenance.",
+    "IR review controls carry initialized synthetic all-OK weights and permissive synthetic reviews; no human truth/quality, physical device, GPU, Windows, installed/frozen distribution or whole-process-tree approval. Backend health advertises MPS; actual observed conversion/managed execution binds OpenVINO CPU.",
+    "Original hashes() compares all regular protected files and refuses links; no before inventory of empty directories/full unrelated project/API/state is exported by these older specs, so this report does not extend their preservation claims.",
+    "Native page/console/blocked-request capture is unavailable in the original harness; cleanliness is not inferred from absent captures."
+  ],
+  "quality_approved": false,
+  "installed_release_approved": false,
+  "windows_approved": false,
+  "overall_action_registry_valid": true
+}
