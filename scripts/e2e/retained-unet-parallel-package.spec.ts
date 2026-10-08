@@ -267,8 +267,12 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   const results: any[] = [], runs: any[] = [];
   const run = async (item: any, capacity: number) => {
     await page.getByRole('button', {name: /이미지 변경/}).click();
-    await page.getByRole('button', {name: path.basename(item.relative_path) + ' 검사 이미지 선택', exact: true}).click();
-    await page.getByRole('button', {name: '선택 확정', exact: true}).click();
+    const picker = page.getByRole('dialog', {name: '검사 대상 이미지 선택', exact: true});
+    await picker.getByLabel('이미지 검색', {exact: true}).fill(path.basename(item.relative_path));
+    const originalImage = picker.getByRole('listitem', {name: item.relative_path, exact: true});
+    await expect(originalImage).toHaveCount(1); await originalImage.click();
+    await expect(originalImage).toHaveAttribute('aria-pressed', 'true');
+    await picker.getByRole('button', {name: '선택 확정', exact: true}).click();
     await page.getByRole('tab', {name: '테스트', exact: true}).click();
     await page.getByLabel('플로우 실행 위치', {exact: true}).selectOption('local_cpu');
     const started = Date.now(), responsePromise = page.waitForResponse(response => new URL(response.url()).pathname === '/api/flowchart/run'
