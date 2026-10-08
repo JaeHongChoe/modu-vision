@@ -8,7 +8,7 @@ An adapter must enroll before spawning and keep writer_guard around every write
 and explicitly propagate its descriptor to descendants. Uncovered writers must
 be recorded as blocking, including deliberately detached jobs and services.
 """
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
 import os
 from pathlib import Path
@@ -189,6 +189,7 @@ def _locked(path, expected, *, exclusive):
     if os.name != 'posix': _refuse('writer lifetime lock protocol requires POSIX')
     import fcntl
     u = _update(); path = u._unlinked(path)
+    close_fd = os.close  # Original admitted callable survives module teardown.
     fd = os.open(path, os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK)
     try:
         before = os.fstat(fd); _lock_stat(before, expected)
@@ -203,7 +204,7 @@ def _locked(path, expected, *, exclusive):
     finally:
         # No explicit LOCK_UN: forked or explicitly passed descendant references
         # retain this same open-file-description lock until their last close.
-        os.close(fd)
+        close_fd(fd)
 
 
 def inspect_epoch(root, nonce):
@@ -226,22 +227,24 @@ def writer_guard(root, nonce, writer_id, *, expected_registration_sha256):
     """Admit before any writer import/side effect; pass_fds is explicit, never env."""
     u = _update()
     if not u._hex(writer_id, 32) or not u._hex(expected_registration_sha256): _refuse('invalid writer registration pin')
-    with store_admission(root):
-        value, _, _ = _load(root, nonce); directory = _path(root, nonce)
-        with _locked(directory/'authority.lock', value['authority_lock_identity'], exclusive=True):
-            value, _, _ = _load(root, nonce)
-            if value['state'] != 'open': _refuse('writer epoch is closed')
-            row = next((r for r in value['writers'] if r['writer_id'] == writer_id), None)
-            if row is None or row['registration_sha256'] != expected_registration_sha256: _refuse('writer registration pin differs')
-            if row['status'] not in {'reserved', 'active'}: _refuse('writer registration is unresolved or already exited')
-            lifetime = _locked(directory/'writers'/writer_id/'ownership.lock', row['lock_identity'], exclusive=False)
-            fd = lifetime.__enter__()
-    # The registry mutex and installation admission are released; this original
-    # lock remains held through the writer's entire mutable lifetime.
-    class Guard:
-        pass_fds = (fd,)
-    try: yield Guard()
-    finally: lifetime.__exit__(None, None, None)
+    # Retain the lifetime beyond the short registry/installation admission.
+    # ExitStack forwards the actual exception, including GeneratorExit during
+    # interpreter shutdown, rather than inventing a normal context return.
+    with ExitStack() as lifetime:
+        with store_admission(root):
+            value, _, _ = _load(root, nonce); directory = _path(root, nonce)
+            with _locked(directory/'authority.lock', value['authority_lock_identity'], exclusive=True):
+                value, _, _ = _load(root, nonce)
+                if value['state'] != 'open': _refuse('writer epoch is closed')
+                row = next((r for r in value['writers'] if r['writer_id'] == writer_id), None)
+                if row is None or row['registration_sha256'] != expected_registration_sha256: _refuse('writer registration pin differs')
+                if row['status'] not in {'reserved', 'active'}: _refuse('writer registration is unresolved or already exited')
+                fd = lifetime.enter_context(_locked(directory/'writers'/writer_id/'ownership.lock', row['lock_identity'], exclusive=False))
+        # No registry mutation or explicit unlock; inherited references retain
+        # the same open-file-description lock after this original fd closes.
+        class Guard:
+            pass_fds = (fd,)
+        yield Guard()
 
 
 class WriterEpoch:

@@ -489,6 +489,16 @@ def test_actual_authenticated_source_preflight_cpu_preserves_guard_through_real_
  from backend.engine import worker_preflight as wp
  import subprocess,psutil
  app.include_router(rw.router)
+ @app.middleware('http')
+ async def preserve_preflight_first_error(request,call_next):
+  try:return await call_next(request)
+  except BaseException:
+   if request.url.path=='/api/workers/local/preflight':
+    try:
+     import traceback
+     (projects/'preflight-first-backend-error.txt').write_text(traceback.format_exc())
+    except BaseException:pass  # Diagnostic failure cannot replace original cause.
+   raise
  original_spawn=subprocess.Popen
  def observed_spawn(command,*args,**kwargs):
   child=original_spawn(command,*args,**kwargs)
@@ -545,7 +555,15 @@ def test_actual_authenticated_source_preflight_cpu_preserves_guard_through_real_
         assert bootstrap['nonce']==ack['nonce'] and bootstrap['backend_process']['pid']==server['pid']
         original_binding=bootstrap['binding']
         request=urllib.request.Request(base+'/api/workers/local/preflight',data=json.dumps({'task':'classification','device':'cpu'}).encode(),headers={'Content-Type':'application/json'},method='POST')
-        with urllib.request.urlopen(request,timeout=10) as response:assert response.status==202;started=json.load(response)
+        try:
+            with urllib.request.urlopen(request,timeout=10) as response:assert response.status==202;started=json.load(response)
+        except urllib.error.HTTPError as exc:
+            failure=root/'projects/preflight-first-backend-error.txt'
+            try: detail=failure.read_text() if failure.is_file() else 'Original backend first-error artifact is unavailable'
+            except OSError as read_error: detail='Original backend first-error artifact could not be read: '+type(read_error).__name__
+            try: body=exc.read().decode(errors='replace')
+            except OSError as read_error: body='Original HTTP error body could not be read: '+type(read_error).__name__
+            pytest.fail('Original preflight HTTP '+str(exc.code)+' '+body+'\n'+detail)
         until=time.monotonic()+90
         while time.monotonic()<until:
             with urllib.request.urlopen(base+'/api/workers',timeout=10) as response:status=json.load(response)
@@ -598,9 +616,8 @@ def test_actual_authenticated_source_preflight_cpu_preserves_guard_through_real_
             wait_file(projects/'managed-stop-result.json',seconds=7)
             until=time.monotonic()+5
             while time.monotonic()<until:
-                try: final=lease._load(root)
-                except lease.LaunchLeaseError as exc:
-                    if str(exc) != 'Application launch ownership requires recovery: ownership publication interrupted or changed':raise
+                try: final=lease.inspect_launch(root)
+                except lease.LeaseTransitionBusy:
                     time.sleep(.01);continue
                 assert final['nonce']==ack['nonce']
                 if original_binding is not None:assert final['binding']==original_binding

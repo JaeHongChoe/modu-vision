@@ -521,9 +521,13 @@ def finish_managed(child, root):
     (projects/'exit.trigger').touch()
     wait_file(projects/'managed-stop-result.json',seconds=7)
     deadline=time.monotonic()+5
-    from backend.engine.application_launch_lease import _load
+    from backend.engine.application_launch_lease import inspect_launch, LeaseTransitionBusy
     while time.monotonic()<deadline:
-        row=_load(root)
+        try: row=inspect_launch(root)
+        except LeaseTransitionBusy:
+            # Only the original nonblocking publication mutex may be retried,
+            # within this same absolute five-second observation deadline.
+            time.sleep(.05);continue
         if row.get('exit_observation',{}):
             assert row['exit_observation']['direct_child_pid']==row['process']['pid']
             assert row['exit_observation']['process_tree_exit_verified'] is False
