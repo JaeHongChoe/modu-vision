@@ -16,6 +16,7 @@ from types import SimpleNamespace
 
 import pytest
 from backend.tests.test_application_launch_quiescence import epoch, digest
+from backend.tests.test_application_backend_intent_composition import _allow_original_intent_validator_workers
 from backend.engine import application_owned_cpu_child_relay as cpu
 
 pytestmark=pytest.mark.no_child
@@ -34,7 +35,7 @@ def original_cpu(epoch,tmp_path,monkeypatch):
     q,root,_,core=epoch
     def forbidden(*args,**kwargs):raise AssertionError('No child/thread/model runtime is authorized')
     monkeypatch.setattr(subprocess,'Popen',forbidden)
-    monkeypatch.setattr(threading.Thread,'start',forbidden)
+    _allow_original_intent_validator_workers(monkeypatch)
     registration=core.enroll('backend',expected_registry_sha256=digest(core))
     binding=core.snapshot_binding
     sha=lambda value:hashlib.sha256(cpu._canonical(value)).hexdigest()
