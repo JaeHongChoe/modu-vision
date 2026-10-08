@@ -56,7 +56,7 @@ function validateBackend(directory, platform = process.platform, arch = process.
     if (digest(file)!==row.sha256) throw new Error('Frozen dependency checksum differs: ' + row.path);
   }
   const acceptance = release.acceptance;
-  if (requireAcceptance && (!acceptance || acceptance.status!=='passed' || acceptance.executable_sha256!==release.executable_sha256 || acceptance.build_identity_sha256!==release.inventory.build_identity_sha256 || targetPlatform(acceptance.platform)!==targetPlatform(platform) || targetArch(acceptance.architecture)!==targetArch(arch) || !acceptance.frozen || !acceptance.health || !acceptance.restart_health)) throw new Error('Run native frozen-backend launch/restart acceptance on the actual target before packaging');
+  if (requireAcceptance && (!acceptance || acceptance.status!=='passed' || acceptance.executable_sha256!==release.executable_sha256 || acceptance.build_identity_sha256!==release.inventory.build_identity_sha256 || targetPlatform(acceptance.platform)!==targetPlatform(platform) || targetArch(acceptance.architecture)!==targetArch(arch) || acceptance.frozen!==true || !['ok','ready'].includes(acceptance.health?.status) || !['ok','ready'].includes(acceptance.restart_health?.status))) throw new Error('Run native frozen-backend launch/restart acceptance on the actual target before packaging');
   return {executable,release,build_identity_sha256:release.inventory.build_identity_sha256,executable_sha256:release.executable_sha256,offline:release.inventory.offline};
 }
 function readiness(options) {

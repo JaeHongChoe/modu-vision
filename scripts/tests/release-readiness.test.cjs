@@ -22,3 +22,37 @@ test('a caller boolean cannot substitute for reviewed Windows target and quality
 test('failed artifact identity retains an explicit non-ready release result',()=>{
  const f=fixture('darwin');try{fs.writeFileSync(f.binary,'changed after inventory');const result=f.readiness();assert.equal(result.status,'failed');assert.equal(result.release_ready,false);}finally{f.close();}
 });
+
+for(const field of ['health','restart_health'])for(const status of [null,'error','foreign']){
+ test('packaging refuses '+field+' '+(status===null?'without a status':status),()=>{
+  const f=fixture('darwin');try{
+   const file=path.join(f.root,'backend-release.json'),release=JSON.parse(fs.readFileSync(file,'utf8'));
+   release.acceptance[field]=status===null?{}:{status};fs.writeFileSync(file,JSON.stringify(release));
+   const result=f.readiness();assert.equal(result.status,'failed');assert.match(result.error,/launch\/restart acceptance/);assert.equal(result.release_ready,false);
+  }finally{f.close();}
+ });
+}
+for(const frozen of ['false','true',1]){
+ test('packaging refuses non-boolean frozen '+JSON.stringify(frozen),()=>{
+  const f=fixture('darwin');try{
+   const file=path.join(f.root,'backend-release.json'),release=JSON.parse(fs.readFileSync(file,'utf8'));
+   release.acceptance.frozen=frozen;fs.writeFileSync(file,JSON.stringify(release));
+   const result=f.readiness();assert.equal(result.status,'failed');assert.match(result.error,/launch\/restart acceptance/);assert.equal(result.release_ready,false);
+  }finally{f.close();}
+ });
+}
+for(const status of ['ok','ready']){
+ test('packaging retains the original successful health contract '+status,()=>{
+  const f=fixture('darwin');try{
+   const file=path.join(f.root,'backend-release.json'),release=JSON.parse(fs.readFileSync(file,'utf8'));
+   release.acceptance.health.status=status;release.acceptance.restart_health.status=status;fs.writeFileSync(file,JSON.stringify(release));
+   const result=f.readiness();assert.equal(result.status,'runtime_ready');assert.equal(result.release_ready,false);
+  }finally{f.close();}
+ });
+}
+test('source workflow selects the owned parallel-intent cleanup regressions exactly once',()=>{
+ const source=fs.readFileSync(path.resolve(__dirname,'../../.github/workflows/ci.yml'),'utf8');
+ const selection=source.split('\n').filter(line=>line.trim()==='backend/tests/test_runtime_update_parallel_intent.py');
+ assert.equal(selection.length,1);
+ assert.ok(source.includes('backend/tests/test_application_backend_intent_composition.py'));
+});
