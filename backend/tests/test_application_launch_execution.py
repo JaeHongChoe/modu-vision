@@ -310,6 +310,30 @@ def _source_callback_failure_suffix():
 '''
 
 
+def _source_callback_spurious_wake_suffix():
+    """Artifact-drift fixture only: observe lawful original queue wakeups.
+
+    This preserves the original wait, authentication loop and absolute budget.
+    It does not prove the default production callback wakes within five seconds.
+    """
+    return ''' from backend.engine import application_owned_cpu_child_relay as relay,application_launch_handshake as h
+ import math
+ original_source_queue_init=relay.CpuRelayQueue.__init__
+ def source_queue_spurious_wake(self,*args,**kwargs):
+  original_source_queue_init(self,*args,**kwargs)
+  if type(self) is relay.CpuRelayQueue and self._cache is h._CACHE:
+   original_source_condition=self._condition
+   original_source_wait=original_source_condition.wait
+   def source_observed_wait(timeout=None):
+    observed=timeout
+    if type(timeout) in (int,float) and math.isfinite(timeout) and timeout>0:
+     observed=min(timeout,.01)
+    return original_source_wait(observed)
+   original_source_condition.wait=source_observed_wait
+ relay.CpuRelayQueue.__init__=source_queue_spurious_wake
+'''
+
+
 def _source_input_first_refusal_script():
     return '''from backend.engine import application_launch_controller as c,application_launch_lease as l
 from pathlib import Path
@@ -665,7 +689,8 @@ def test_actual_cpu_math_cannot_qualify_mismatched_or_changed_reviewed_inputs(tm
     suffix=''
     if failure=='artifact-drift':
         suffix=" from backend.engine import application_launch_execution as e\n from pathlib import Path\n def change(point):\n  if point=='before_cpu_worker':\n   target=Path(os.environ['VISION_AI_STUDIO_USER_DATA_DIR'])/'projects/cpu-known-image/delivery/launch-known-image/input.png'\n   target.write_bytes(target.read_bytes()+b'controlled post-snapshot drift')\n e._checkpoint=change\n"
-    if failure=='artifact-drift':suffix+=_source_callback_failure_suffix()
+    if failure=='artifact-drift':
+        suffix+=_source_callback_spurious_wake_suffix()+_source_callback_failure_suffix()
     values=cpu_stack(tmp_path,backend_suffix=suffix);root,_,_,project,reviewed,_=values
     if failure=='semantic-mismatch':
         reviewed['semantic_output_sha256']=sha(canonical({**EXPECTED_OUTPUT,'recognized_texts':['B']}))
