@@ -121,59 +121,104 @@ def _deadline(state):
     return limit
 
 
-def _original(capability):
+def _current_source_producer(capability):
     from backend.engine import application_launch_handshake as h
     state=_PRODUCERS.get(capability) if type(capability) is BackendCpuProducer else None
     if (state is None or capability not in _ACTIVE or state['phase']=='unresolved'
             or state['pid']!=os.getpid() or state['thread'] is not threading.current_thread()):
         raise HandshakeError('Original SOURCE CPU process/thread producer is unavailable')
-    def current():
-        if (capability not in _ACTIVE or state['phase']=='unresolved' or state['pid']!=os.getpid()
-                or state['thread'] is not threading.current_thread()):
-            raise HandshakeError('Original SOURCE CPU process/thread producer changed')
-        _deadline(state);cache=h._CACHE
-        if (cache is not state['cache'] or h._context()!=state['context'] or not cache['ready']
-                or cache['proof']!=state['proof'] or cache['socket'] is not state['socket']
-                or _endpoint(cache['socket'])!=state['endpoint']
-                or h._root_context()!=state['root_context']
-                or cache['challenge'] is not state['challenge']
-                or _canonical(cache['challenge'])!=state['challenge_bytes']
-                or cache['admission'] is not state['admission']
-                or cache.get('original_cpu_execution') is not state['execution']
-                or state['execution'].get('thread') is not state['thread']
-                or state['execution'].get('done') is not state['done']
-                or state['done'].is_set()
-                or state['execution'].get('deadline')!=state['execution_deadline']
-                or cache['writer_private_fd']!=state['anchor']
-                or cache['writer_fd_identity']!=state['anchor_identity']
-                or _fd_identity(state['anchor'])!=state['anchor_identity']
-                or (not state.get('private_closed',False) and _fd_identity(state['private'])!=state['anchor_identity'])
-                or state.get('private_closed',False) and state['phase']!='closing'):
-            raise HandshakeError('Original SOURCE CPU cache/channel/OFD changed')
-        if state.get('snapshot_fd') is not None and not state.get('snapshot_closed',False):_snapshot_handle_current(state)
-        if state.get('snapshot_closed',False) and state['phase']!='closing':
-            raise HandshakeError('Original SOURCE CPU snapshot closed outside final ACK')
-        if state.get('guard_fd') is not None and not state.get('guard_closed',False):
-            if _fd_identity(state['guard_fd'])!=state['guard_identity']:
-                raise HandshakeError('Original SOURCE CPU child fence changed')
-        _deadline(state)
+    if (capability not in _ACTIVE or state['phase']=='unresolved' or state['pid']!=os.getpid()
+            or state['thread'] is not threading.current_thread()):
+        raise HandshakeError('Original SOURCE CPU process/thread producer changed')
+    _deadline(state);cache=h._CACHE
+    if (cache is not state['cache'] or h._context()!=state['context'] or not cache['ready']
+            or cache['proof']!=state['proof'] or cache['socket'] is not state['socket']
+            or _endpoint(cache['socket'])!=state['endpoint']
+            or h._root_context()!=state['root_context']
+            or cache['challenge'] is not state['challenge']
+            or _canonical(cache['challenge'])!=state['challenge_bytes']
+            or cache['admission'] is not state['admission']
+            or cache.get('original_cpu_execution') is not state['execution']
+            or state['execution'].get('thread') is not state['thread']
+            or state['execution'].get('done') is not state['done']
+            or state['done'].is_set()
+            or state['execution'].get('deadline')!=state['execution_deadline']
+            or cache['writer_private_fd']!=state['anchor']
+            or cache['writer_fd_identity']!=state['anchor_identity']
+            or _fd_identity(state['anchor'])!=state['anchor_identity']
+            or (not state.get('private_closed',False) and _fd_identity(state['private'])!=state['anchor_identity'])
+            or state.get('private_closed',False) and state['phase']!='closing'):
+        raise HandshakeError('Original SOURCE CPU cache/channel/OFD changed')
+    if state.get('snapshot_fd') is not None and not state.get('snapshot_closed',False):_snapshot_handle_current(state)
+    if state.get('snapshot_closed',False) and state['phase']!='closing':
+        raise HandshakeError('Original SOURCE CPU snapshot closed outside final ACK')
+    if state.get('guard_fd') is not None and not state.get('guard_closed',False):
+        if _fd_identity(state['guard_fd'])!=state['guard_identity']:
+            raise HandshakeError('Original SOURCE CPU child fence changed')
+    _deadline(state)
+    return state
+
+
+def _original(capability):
+    from backend.engine import application_launch_handshake as h
     try:
         from backend.engine.application_launch_lease import LeaseTransitionBusy
         while True:
-            current()
+            state=_current_source_producer(capability)
             validated={}
             try:
                 proof=h._validate(state['root_context'][0],state['root_context'][1],state['challenge'],validated=validated)
             except LeaseTransitionBusy:
                 # This is only a read-only wait for the original publication
                 # mutex; no CAS, replay, owner repair or renewed producer budget.
-                current()
+                state=_current_source_producer(capability)
                 time.sleep(min(.005,_deadline(state)-time.monotonic()))
                 continue
             if proof!=state['proof'] or validated.get('protocol_version')!=4:
                 raise HandshakeError('Original SOURCE CPU owner authentication changed')
-            current()
+            state=_current_source_producer(capability)
             return state
+    except BaseException:
+        _retain(capability)
+        raise
+
+
+@contextmanager
+def source_publication_admission(capability):
+    """One real authentication mutex; original typed lifetime never leaves.
+
+    Only acquisition-busy reads can wait, within the same original producer
+    deadline. Once the body begins there is no publication retry or lock drop.
+    """
+    from backend.engine import application_launch_handshake as h
+    from backend.engine.application_launch_lease import LeaseTransitionBusy
+    entered=False
+    def current():
+        state=_current_source_producer(capability)
+        if (state['phase']!='active' or state['counted'] is not True
+                or state['admission'].snapshot()['active_scopes']<1):
+            raise HandshakeError('Original SOURCE CPU publication count/phase changed')
+        return state
+    try:
+        while True:
+            state=current();validated={}
+            try:
+                with h._validated_backend_admission(state['root_context'][0],state['root_context'][1],
+                                                    state['challenge'],validated=validated) as proof:
+                    entered=True
+                    if proof!=state['proof'] or validated.get('protocol_version')!=4:
+                        raise HandshakeError('Original SOURCE CPU owner authentication changed')
+                    current()
+                    yield
+                    current()
+                # Authentication itself may consume the last original budget;
+                # no completion/finalization can follow a late successful read.
+                current()
+                return
+            except LeaseTransitionBusy:
+                if entered:raise
+                state=current()
+                time.sleep(min(.005,_deadline(state)-time.monotonic()))
     except BaseException:
         _retain(capability)
         raise

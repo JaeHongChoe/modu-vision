@@ -662,16 +662,18 @@ def _execute_backend_admitted(frame, proof, root, writer_pass_fds, *, source_pro
         # Publication and the final original-owner check share the lifecycle
         # transition admission. Recovery cannot win between the check and a
         # new public output; the backend lifespan still blocks cutover.
-        with lease._transition_admission(root,frame['nonce']):
+        publication = (cpu.source_publication_admission(source_producer) if source_producer is not None
+                       else lease._transition_admission(root,frame['nonce']))
+        with publication:
             _live_origin(root,lease._load(root),original)
-            source_current()
+            if source_producer is not None: cpu._current_source_producer(source_producer)
             path=outputs/(frame['request_id']+'.json'); update._unlinked(path)
             if path.exists(): raise ExecutionError('Foreign CPU output requires recovery')
             # Exclusive creation: interrupted output is not overwritten.
             fd=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL|getattr(os,'O_NOFOLLOW',0),0o600)
             with os.fdopen(fd,'wb') as writer: writer.write(raw);writer.flush();os.fsync(writer.fileno())
             update.migration._sync_directories(outputs,recursive=False)
-            source_current()
+            if source_producer is not None: cpu._current_source_producer(source_producer)
         _checkpoint('after_cpu_output')
         return {'schema_version':1,'kind':'cpu_execution_completed','request':frame,
             'backend_proof':proof,'output_path':OUTPUTS+'/'+path.name,'output_sha256':update._sha(raw),

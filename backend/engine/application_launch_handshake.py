@@ -590,45 +590,82 @@ def _executable(root, binding, frame):
             'build_identity_sha256': build, 'frozen': frozen}
 
 
-def _validate(root, values, frame, *, validated=None):
+@contextmanager
+def _validated_backend_admission(root, values, frame, *, validated=None):
+    """Full original backend authentication under one retained transition OFD.
+
+    This is not a cached-proof or held-lock bypass. Every entry acquires the
+    original mutex and rechecks all original owner evidence before and after
+    its body; no transferable admission marker is accepted.
+    """
     from backend.engine import application_launch_lease as lease, runtime_update as update
-    expected_fields = _CHALLENGE_FIELDS | ({'writer'} if 'writer' in frame else set())
-    if (set(frame) != expected_fields or type(frame['schema_version']) is not int or frame['schema_version'] != 1
-            or frame['kind'] != 'backend_challenge' or not _hex(frame['challenge']) or not _hex(frame['epoch'], 32)
-            or frame['nonce'] != values['VISION_APPLICATION_LAUNCH_NONCE'] or type(frame['backend_pid']) is not int
-            or frame['backend_pid'] != os.getpid()): raise HandshakeError('Invalid or foreign backend challenge')
-    _arguments(root)
+    def original_challenge():
+        expected_fields = _CHALLENGE_FIELDS | ({'writer'} if 'writer' in frame else set())
+        if (set(frame) != expected_fields or type(frame['schema_version']) is not int or frame['schema_version'] != 1
+                or frame['kind'] != 'backend_challenge' or not _hex(frame['challenge']) or not _hex(frame['epoch'], 32)
+                or frame['nonce'] != values['VISION_APPLICATION_LAUNCH_NONCE'] or type(frame['backend_pid']) is not int
+                or frame['backend_pid'] != os.getpid()): raise HandshakeError('Invalid or foreign backend challenge')
+        _arguments(root)
+    original_challenge()
     with lease._transition_admission(root, frame['nonce']):
-        record = lease._load(root)
-        if (record is None or record['nonce'] != frame['nonce'] or record['state'] not in {'starting', 'ready'}
-                or not record['spawn_attempted'] or record['process'] is None):
-            raise HandshakeError('Backend challenge has no current spawned main owner')
-        binding = record['binding']
-        if 'writer' in frame:
-            drain = record.get('writer_drain')
-            expected = {k: drain[k] for k in ('writer_id', 'registration_sha256', 'registration_registry_sha256')} if drain else None
-            if expected is None or _canonical(frame['writer']) != _canonical(expected):
-                raise HandshakeError('Backend writer registration differs from original controller')
-        elif record['protocol_version'] == 4:
-            raise HandshakeError('Enrolled backend requires exact private writer registration')
-        if (_canonical(frame['binding']) != _canonical(binding)
-                or values['VISION_APPLICATION_GENERATION'] != binding['application_generation']
-                or values['VISION_APPLICATION_DATABASE_GENERATION'] != binding['database_generation_path']):
-            raise HandshakeError('Backend challenge application/database binding differs')
-        fresh = update._launch_binding(root, binding['authority_path'], pinned_authority_sha256=binding['authority_sha256'])
-        if _canonical(fresh) != _canonical(binding): raise HandshakeError('Committed backend launch pair changed')
-        try: main = lease._identity(os.getppid())
-        except Exception as exc:
-            import psutil
-            if not isinstance(exc, psutil.Error): raise
-            raise HandshakeError('Backend parent process identity is unavailable') from exc
-        if not _same_process(frame['main_process'], main) or not _same_process(record['process'], main):
-            raise HandshakeError('Backend challenge main process birth or parent identity differs')
-        executable = _executable(root, binding, frame)
-        if validated is not None: validated['protocol_version'] = record['protocol_version']
-        return {'schema_version': 1, 'kind': 'backend_claim', 'challenge': frame['challenge'], 'epoch': frame['epoch'],
-            'nonce': frame['nonce'], 'binding_sha256': hashlib.sha256(_canonical(binding)).hexdigest(),
-            'process': lease._identity(os.getpid()), **executable}
+        protocol = [None]
+        def original_owner():
+            original_challenge()
+            record = lease._load(root)
+            if (record is None or record['nonce'] != frame['nonce'] or record['state'] not in {'starting', 'ready'}
+                    or not record['spawn_attempted'] or record['process'] is None):
+                raise HandshakeError('Backend challenge has no current spawned main owner')
+            binding = record['binding']
+            if 'writer' in frame:
+                drain = record.get('writer_drain')
+                expected = {k: drain[k] for k in ('writer_id', 'registration_sha256', 'registration_registry_sha256')} if drain else None
+                if expected is None or _canonical(frame['writer']) != _canonical(expected):
+                    raise HandshakeError('Backend writer registration differs from original controller')
+            elif record['protocol_version'] == 4:
+                raise HandshakeError('Enrolled backend requires exact private writer registration')
+            if (_canonical(frame['binding']) != _canonical(binding)
+                    or values['VISION_APPLICATION_GENERATION'] != binding['application_generation']
+                    or values['VISION_APPLICATION_DATABASE_GENERATION'] != binding['database_generation_path']):
+                raise HandshakeError('Backend challenge application/database binding differs')
+            fresh = update._launch_binding(root, binding['authority_path'], pinned_authority_sha256=binding['authority_sha256'])
+            if _canonical(fresh) != _canonical(binding): raise HandshakeError('Committed backend launch pair changed')
+            try: main = lease._identity(os.getppid())
+            except Exception as exc:
+                import psutil
+                if not isinstance(exc, psutil.Error): raise
+                raise HandshakeError('Backend parent process identity is unavailable') from exc
+            if not _same_process(frame['main_process'], main) or not _same_process(record['process'], main):
+                raise HandshakeError('Backend challenge main process birth or parent identity differs')
+            executable = _executable(root, binding, frame)
+            protocol[0] = record['protocol_version']
+            if validated is not None: validated['protocol_version'] = record['protocol_version']
+            return {'schema_version': 1, 'kind': 'backend_claim', 'challenge': frame['challenge'], 'epoch': frame['epoch'],
+                'nonce': frame['nonce'], 'binding_sha256': hashlib.sha256(_canonical(binding)).hexdigest(),
+                'process': lease._identity(os.getpid()), **executable}
+
+        before = original_owner(); original_protocol = protocol[0]
+        body_error = None
+        try:
+            yield before
+        except BaseException as exc:
+            body_error = exc
+            raise
+        finally:
+            try:
+                after = original_owner()
+                if after != before or protocol[0] != original_protocol:
+                    raise HandshakeError('Original backend authentication changed during admission')
+            except BaseException as exc:
+                if body_error is None: raise
+                try:
+                    body_error.add_note('Original backend post-body authentication also refused: ' + str(exc))
+                except BaseException:
+                    pass  # Advisory diagnostics cannot replace the first body failure.
+
+
+def _validate(root, values, frame, *, validated=None):
+    with _validated_backend_admission(root, values, frame, validated=validated) as proof:
+        return proof
 
 
 def _no_replay(sock, *, ready=False):

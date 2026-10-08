@@ -124,6 +124,10 @@ def start_cpu_stack(values, *, prefix=None, extra=None):
         pytest.fail('CPU request was not admitted: '+child.stderr.read(4096).decode())
     ack = json.loads(raw); child.stdout.close(); child.stderr.close()
     assert ack['status']=='starting', ack
+    # Test-only retained witness for this exact original controller handle.
+    from backend.engine.application_launch_lease import _identity
+    child._original_cpu_fixture_nonce = ack['nonce']
+    child._original_cpu_fixture_supervisor = _identity(child.pid)
     return child, ack
 
 
@@ -282,15 +286,79 @@ def wait_recovery(root,nonce,child,timeout=40):
     pytest.fail('Expected durable recovery_required')
 
 
+def _source_callback_failure_suffix():
+    """Test-only facts after original failure; never mint/retry or mask it."""
+    return ''' from backend.engine import application_launch_execution as ex,application_owned_cpu_child_relay as relay,application_launch_handshake as h
+ original_failure_execute=ex.execute_backend
+ def failed_source(*args,**kwargs):
+  try:return original_failure_execute(*args,**kwargs)
+  except BaseException as error:
+   try:
+    cap=relay._CACHE_TICKETS.get(id(h._CACHE));s=relay._PRODUCERS.get(cap) if cap is not None else None
+    results=Path(root)/'projects/cpu-known-image/delivery/launch-known-image/results'
+    snapshots=sorted(p.name for p in results.glob('.owned-cpu-*'))
+    fact={'error_type':type(error).__name__,'error':str(error),'request_id':args[0]['request_id'],
+     'admission':h._CACHE['admission'].snapshot(),'producer':None if s is None else {'phase':s['phase'],'counted':s['counted'],'private_acquired':s['private'] is not None},
+     'snapshot_names':snapshots,'result_exists':any((results/name/'result.json').exists() for name in snapshots)}
+    with (Path(root)/'projects/source-callback-failure.json').open('x') as writer:json.dump(fact,writer,sort_keys=True)
+   except BaseException:pass
+   raise
+ ex.execute_backend=failed_source
+'''
+
+
+def _source_input_first_refusal_script():
+    return '''from backend.engine import application_launch_controller as c,application_launch_lease as l
+from pathlib import Path
+import json,sys
+original=l.LaunchSupervisor.recovery
+def first(self,reason):
+ result=original(self,reason)
+ try:
+  with (self.root/'projects/source-input-first-refusal.json').open('x') as writer:json.dump(result,writer,sort_keys=True)
+ except BaseException:pass
+ return result
+l.LaunchSupervisor.recovery=first
+raise SystemExit(c.main(sys.argv[1:]))
+'''
+
+
+def _wait_source_callback_failure(root, *, name='source-callback-failure.json'):
+    deadline=time.monotonic()+5;path=root/'projects'/name
+    while time.monotonic()<deadline:
+        if path.is_file():return json.loads(path.read_bytes())
+        time.sleep(.01)
+    pytest.fail('Missing exact original source failure observation: '+str(path))
+
+
+def _assert_source_callback_refusal(failure, kind, snapshots, request_id):
+    assert kind=='deadline' and failure['request_id']==request_id
+    assert set(failure)=={'error_type','error','request_id','admission','producer','snapshot_names','result_exists'}
+    assert failure['error_type']=='HandshakeError' and failure['error'] in {
+        'Original SOURCE CPU admission deadline expired','Original SOURCE CPU producer deadline expired'}
+    assert failure['result_exists'] is False
+    assert failure['snapshot_names']==sorted(p.name for p in snapshots)
+    if failure['producer'] is None:
+        # Before a successful original mint, no private snapshot/count exists.
+        assert snapshots==[] and failure['admission']=={'active_scopes':0,'unsupported':[]}
+    else:
+        assert failure['producer']=={'phase':'unresolved','counted':True,'private_acquired':True}
+        assert failure['admission']=={'active_scopes':1,'unsupported':['cpu_producer_unconfirmed']}
+        for snapshot in snapshots:assert snapshot.is_dir() and not snapshot.is_symlink()
+
+
 def test_cpu_timeout_retains_exact_private_snapshot_and_never_qualifies_or_unlocks(tmp_path):
     from backend.engine.application_launch_lease import assert_quiescent
-    values=cpu_stack(tmp_path,deadline_ms=1);root=values[0];project=values[3]
+    values=cpu_stack(tmp_path,deadline_ms=1,backend_suffix=_source_callback_failure_suffix());root=values[0];project=values[3]
     child,ack=start_cpu_stack(values)
     try:
         row=wait_recovery(root,ack['nonce'],child)
         assert row['cpu_execution']['receipt_sha256'] is None
         assert not (root/'.application-launches'/ack['nonce']/'cpu-execution-receipt.json').exists()
-        assert list((project/'delivery/launch-known-image/results').glob('.owned-cpu-*')), 'Ambiguous worker snapshot was deleted'
+        failure=_wait_source_callback_failure(root)
+        request_id=row['cpu_execution']['request_id']
+        snapshots=list((project/'delivery/launch-known-image/results').glob('.owned-cpu-*'))
+        _assert_source_callback_refusal(failure,'deadline',snapshots,request_id)
         with pytest.raises(ValueError):assert_quiescent(root)
         assert child.poll() is None
     finally:stop_stack(child,root)
@@ -547,22 +615,24 @@ raise SystemExit(c.main(sys.argv[1:]))
 def test_reviewed_package_python_cannot_shadow_snapshotted_current_runtime(tmp_path):
     suffix=""" import os,json
  os.environ.update(OPENAI_API_KEY='controlled-parent-secret',CUDA_VISIBLE_DEVICES='controlled-inherited-gpu',NVIDIA_VISIBLE_DEVICES='all')
- from backend.engine import runtime_deadline as d
+ from backend.engine import application_owned_cpu_child_relay as relay
  from pathlib import Path
- original=d.execute_owned_process
+ original=relay.subprocess.Popen
  def closed(command,**options):
+  if not options.get('pass_fds'):return original(command,**options)
+  assert len(options['pass_fds'])==3 and len(command)==12
   env=options['env'];private=Path(options['cwd'])
   assert 'OPENAI_API_KEY' not in env and 'PYTHONPATH' not in env
   assert Path(env['HOME']).is_relative_to(private) and env['HF_HUB_OFFLINE']=='1'
   assert all(env[key]=='1' for key in ('OMP_NUM_THREADS','MKL_NUM_THREADS','OPENBLAS_NUM_THREADS'))
   assert command[1:3]==['-I','-B']
-  command=list(command);probe=private/'worker-env-proof.json'
-  telemetry='import os,json;from pathlib import Path;Path('+repr(str(probe))+').write_text(json.dumps({key:os.environ.get(key) for key in ("CUDA_VISIBLE_DEVICES","NVIDIA_VISIBLE_DEVICES")}));'
-  command[command.index('-c')+1]=telemetry+command[command.index('-c')+1]
-  outcome=original(command,**options)
-  assert json.loads(probe.read_bytes())=={'CUDA_VISIBLE_DEVICES':'','NVIDIA_VISIBLE_DEVICES':'none'}
-  return outcome
- d.execute_owned_process=closed
+  assert env['CUDA_VISIBLE_DEVICES']=='' and env['NVIDIA_VISIBLE_DEVICES']=='none'
+  child=original(command,**options)  # Exactly once; fixed command/kwargs unchanged.
+  with (private/'worker-env-proof.json').open('x') as writer:
+   json.dump({'CUDA_VISIBLE_DEVICES':env['CUDA_VISIBLE_DEVICES'],'NVIDIA_VISIBLE_DEVICES':env['NVIDIA_VISIBLE_DEVICES'],
+    'pid':child.pid,'command':command,'pass_fds':list(options['pass_fds'])},writer,sort_keys=True)
+  return child
+ relay.subprocess.Popen=closed
 """
     values=cpu_stack(tmp_path,backend_suffix=suffix);root,value,current,project,reviewed,pin=values
     package=project/PACKAGE_FOR_TEST;target=package/'backend/engine/flow_package_runtime.py';marker=tmp_path/'package-code-executed'
@@ -578,6 +648,10 @@ def test_reviewed_package_python_cannot_shadow_snapshotted_current_runtime(tmp_p
         _,receipt=wait_receipt(root,ack['nonce'],child)
         assert receipt['semantic_output']==EXPECTED_OUTPUT and not marker.exists()
         snapshot=project/'delivery/launch-known-image/results'/('.owned-cpu-'+receipt['request_id'])
+        environment=json.loads((snapshot/'worker-env-proof.json').read_bytes())
+        assert environment['CUDA_VISIBLE_DEVICES']=='' and environment['NVIDIA_VISIBLE_DEVICES']=='none'
+        assert environment['pid']==receipt['worker_pid'] and len(environment['pass_fds'])==3
+        assert environment['command'][1:4]==['-I','-B','-X'] and len(environment['command'])==12
         assert (snapshot/'package/backend/engine/flow_package_runtime.py').read_bytes()==poison
         assert (snapshot/'runtime/backend/engine/flow_package_runtime.py').read_bytes()==(REPOSITORY/'backend/engine/flow_package_runtime.py').read_bytes()
     finally:stop_stack(child,root)
@@ -588,19 +662,36 @@ def test_actual_cpu_math_cannot_qualify_mismatched_or_changed_reviewed_inputs(tm
     suffix=''
     if failure=='artifact-drift':
         suffix=" from backend.engine import application_launch_execution as e\n from pathlib import Path\n def change(point):\n  if point=='before_cpu_worker':\n   target=Path(os.environ['VISION_AI_STUDIO_USER_DATA_DIR'])/'projects/cpu-known-image/delivery/launch-known-image/input.png'\n   target.write_bytes(target.read_bytes()+b'controlled post-snapshot drift')\n e._checkpoint=change\n"
+    if failure=='artifact-drift':suffix+=_source_callback_failure_suffix()
     values=cpu_stack(tmp_path,backend_suffix=suffix);root,_,_,project,reviewed,_=values
     if failure=='semantic-mismatch':
         reviewed['semantic_output_sha256']=sha(canonical({**EXPECTED_OUTPUT,'recognized_texts':['B']}))
         (project/'delivery/launch-known-image/plan.json').write_bytes(canonical(reviewed))
         values=(*values[:-1],sha(canonical(reviewed)))
-    child,ack=start_cpu_stack(values)
+    prefix=None
+    if failure=='artifact-drift':
+        prefix=['-c',_source_input_first_refusal_script()]
+    child,ack=start_cpu_stack(values,prefix=prefix)
     try:
         row=wait_recovery(root,ack['nonce'],child)
         assert row['cpu_execution']['receipt_sha256'] is None
         snapshots=list((project/'delivery/launch-known-image/results').glob('.owned-cpu-*'))
         assert len(snapshots)==1
-        actual=json.loads((snapshots[0]/'result.json').read_bytes())
-        assert actual['crops'][0]['recognized_text']=='A' and actual['image_id']=='owned-cpu-known-image'
+        if failure=='semantic-mismatch':
+            actual=json.loads((snapshots[0]/'result.json').read_bytes())
+            assert actual['crops'][0]['recognized_text']=='A' and actual['image_id']=='owned-cpu-known-image'
+        else:
+            first=_wait_source_callback_failure(root,name='source-input-first-refusal.json')
+            assert first['state']=='recovery_required' and first['nonce']==ack['nonce']
+            assert first['reason']=='Private bootstrap or execution refused: Reviewed execution artifact checksum differs'
+            assert first['cpu_execution']['receipt_sha256'] is None
+            assert not (snapshots[0]/'result.json').exists()
+            assert sha((snapshots[0]/'input.png').read_bytes())==reviewed['input_sha256']
+            failure_receipt=_wait_source_callback_failure(root)
+            assert failure_receipt['request_id']==row['cpu_execution']['request_id']
+            assert failure_receipt['admission']=={'active_scopes':1,'unsupported':['cpu_producer_unconfirmed']}
+            assert failure_receipt['producer']['counted'] is True and failure_receipt['producer']['phase']=='unresolved'
+            assert failure_receipt['result_exists'] is False
         assert not (root/'.application-launches'/ack['nonce']/'cpu-execution-receipt.json').exists()
         from backend.engine.application_launch_lease import assert_quiescent
         with pytest.raises(ValueError):assert_quiescent(root)

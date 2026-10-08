@@ -242,6 +242,7 @@ jobs:
           backend/tests/test_application_owned_cpu_controller_relay.py
           backend/tests/test_application_owned_cpu_node_relay.py
           backend/tests/test_application_owned_source_cpu_relay_actual.py
+          backend/tests/test_application_cpu_publication_admission.py
           backend/tests/test_application_drain_transition_busy.py
           backend/tests/test_application_start_identity.py
           backend/tests/test_flow_writer_lifetime.py

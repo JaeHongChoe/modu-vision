@@ -42,7 +42,11 @@ def test_real_controller_enrolls_backend_before_actual_cpu_and_retains_blocking_
         assert row['status'] == 'active' and row['process'] == cpu['backend_process']
         assert row['process']['pid'] != child.pid
         # A Node child receipt must never stand for a retained Python Popen.
-        assert all(r['status'] != 'direct_exited' for r in rows)
+        assert row['status'] != 'direct_exited'
+        assert len(rows)==2
+        cpu_writer=next(r for r in rows if r['role']=='owned_cpu_worker')
+        assert cpu_writer['status']=='direct_exited' and cpu_writer['exit_code']==0 and cpu_writer['reason_code'] is None
+        assert cpu_writer['process']['pid']==cpu['worker_pid'] and cpu_writer['process']!=row['process']
         journal = json.loads((root / '.application-launches' / ack['nonce'] / 'journal.json').read_bytes())
         assert row['process']['pid'] != journal['process']['pid'] == cpu['main_process']['pid']
         assert journal['writer_drain']['registration_sha256'] == row['registration_sha256']
@@ -504,12 +508,37 @@ fs.writeFileSync(path.join(launch.projects,'managed-stop-result.json'),JSON.stri
     return fixtures.cpu_stack(tmp_path)
 
 
-def wait_file(path, *, seconds=5):
+def wait_file(path, *, seconds=5, absolute_deadline=None):
     deadline=time.monotonic()+seconds
+    if absolute_deadline is not None:deadline=min(deadline,absolute_deadline)
     while time.monotonic()<deadline:
-        if path.is_file():return path.read_bytes()
-        time.sleep(.01)
+        if path.is_file():
+            raw=path.read_bytes()
+            if absolute_deadline is not None:assert time.monotonic()<deadline
+            return raw
+        time.sleep(.01 if absolute_deadline is None else max(0,min(.01,deadline-time.monotonic())))
     pytest.fail('Missing controlled original fixture output: '+str(path))
+
+
+def _fixture_terminal_main_exited(child, row, deadline):
+    """Inspector data only; the retained original Popen is cleanup authority."""
+    from backend.engine.application_launch_lease import _identity
+    assert time.monotonic()<deadline
+    nonce=getattr(child,'_original_cpu_fixture_nonce',None)
+    witness=getattr(child,'_original_cpu_fixture_supervisor',None)
+    assert type(nonce) is str and len(nonce)==32 and witness is not None
+    assert row['nonce']==nonce and row['supervisor']==witness and child.pid==witness['pid']
+    assert _identity(child.pid)==witness
+    assert time.monotonic()<deadline
+    observed=row.get('exit_observation')
+    if observed is None:return False
+    assert row['state']=='recovery_required' and row['claimed'] is True
+    assert type(row['ready_receipt_sha256']) is str and len(row['ready_receipt_sha256'])==64
+    assert set(observed)=={'direct_child_pid','direct_child_returncode','process_tree_exit_verified'}
+    assert type(observed['direct_child_pid']) is int and observed['direct_child_pid']==row['process']['pid']
+    assert type(observed['direct_child_returncode']) is int and observed['process_tree_exit_verified'] is False
+    assert time.monotonic()<deadline
+    return True
 
 
 def finish_managed(child, root):
@@ -517,7 +546,20 @@ def finish_managed(child, root):
     # Popen may be stopped only after its authenticated original main is reaped.
     if child.returncode is not None:return
     projects=root/'projects';(projects/'drain.trigger').touch()
-    wait_file(projects/'ordinary-stop-requested.json',seconds=5)
+    # An already-authenticated original main exit cannot publish a later
+    # ordinary-stop file. Observe that fact only inside the original first5s.
+    from backend.engine.application_launch_lease import inspect_launch, LeaseTransitionBusy
+    first_deadline=time.monotonic()+5
+    while not (projects/'ordinary-stop-requested.json').is_file():
+        if time.monotonic()>=first_deadline:
+            pytest.fail('Missing controlled original fixture output: '+str(projects/'ordinary-stop-requested.json'))
+        try:row=inspect_launch(root)
+        except LeaseTransitionBusy:
+            time.sleep(max(0,min(.05,first_deadline-time.monotonic())));continue
+        if _fixture_terminal_main_exited(child,row,first_deadline):
+            child.terminate();child.wait(timeout=5);return
+        time.sleep(max(0,min(.01,first_deadline-time.monotonic())))
+    wait_file(projects/'ordinary-stop-requested.json',seconds=5,absolute_deadline=first_deadline)
     (projects/'exit.trigger').touch()
     wait_file(projects/'managed-stop-result.json',seconds=7)
     deadline=time.monotonic()+5
@@ -660,7 +702,7 @@ def _assert_damaged_stop(result, damage, cpu, stderr):
 
 
 def _assert_damaged_registry(registry, damage, refusal, cpu, registry_sha256):
-    """Known CPU remains unsupported; original backend cannot become exited."""
+    """Already finished typed CPU stays exact; damaged backend cannot exit."""
     assert registry['state']==('open' if damage=='changed_nonce' else 'closed')
     assert registry['binding']['nonce']==cpu['nonce']
     assert registry['binding']['launch_binding_sha256']==sha(canonical(cpu['binding']))
@@ -669,9 +711,10 @@ def _assert_damaged_registry(registry, damage, refusal, cpu, registry_sha256):
     assert backend['status']=='active' and backend['process']==cpu['backend_process'] and backend['exit_code'] is None
     assert backend['writer_id']==refusal['writer_drain']['writer_id']
     assert backend['registration_sha256']==refusal['writer_drain']['registration_sha256']
-    unresolved=next(row for row in writers if row['role']=='owned_cpu_worker')
-    assert unresolved['status']=='unsupported' and unresolved['reason_code']=='uncovered_protocol'
-    assert unresolved['process'] is None and unresolved['exit_code'] is None
+    finished=next(row for row in writers if row['role']=='owned_cpu_worker')
+    assert finished['status']=='direct_exited' and finished['reason_code'] is None
+    assert finished['exit_code']==0 and finished['process']['pid']==cpu['worker_pid']
+    assert finished['process']!=backend['process']
     if damage=='identical_request_replay':
         assert refusal['writer_drain']['request']['closed_registry_sha256']==registry_sha256
 
