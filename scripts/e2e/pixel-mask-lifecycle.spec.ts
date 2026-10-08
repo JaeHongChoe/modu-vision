@@ -32,12 +32,14 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   python(`import hashlib,json,pathlib,sys,numpy as np
 from PIL import Image
 root=pathlib.Path(sys.argv[1]); source=pathlib.Path(sys.argv[2]); rows=[]
-for image in sorted(source.glob('*.png')):
+for image in sorted(source.rglob('*.png')):
  with Image.open(image) as im: w,h=im.size
  pixels=np.zeros((h,w),np.uint8); pixels[4:12,3:15]=7
- name=image.name+'.mask.png'; Image.fromarray(pixels).save(root/name)
- rows.append({'file_name':image.name,'mask_file':name,'width':w,'height':h,'source_sha256':hashlib.sha256(image.read_bytes()).hexdigest()})
+ relative=image.relative_to(source).as_posix(); name='masks/'+relative+'.mask.png'; (root/name).parent.mkdir(parents=True,exist_ok=True); Image.fromarray(pixels).save(root/name)
+ rows.append({'file_name':relative,'mask_file':name,'width':w,'height':h,'source_sha256':hashlib.sha256(image.read_bytes()).hexdigest()})
 (root/'mask_manifest.json').write_text(json.dumps({'schema_version':1,'classes':[{'id':0,'name':'background','color':'#000000'},{'id':7,'name':'ControlledScratch','color':'#f59e0b'}],'images':rows}))`, [valid, workspace.dataset]);
+  const fixtureManifest = JSON.parse(fs.readFileSync(path.join(valid, 'mask_manifest.json'), 'utf8'));
+  expect(fixtureManifest.images.map((row: any) => row.file_name).sort()).toEqual(workspace.images.map(image => path.relative(workspace.dataset, image.path).split(path.sep).join('/')).sort());
   fs.writeFileSync(path.join(invalid, 'mask_manifest.json'), JSON.stringify({schema_version: 99, classes: [], images: []}));
   const project = await api('/api/project/create', {name: 'Owned pixel mask lifecycle', task: 'segmentation'});
   const active = await api('/api/project/update', {source_dataset_dir: workspace.dataset}, 'PUT');
