@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "kind": "offline_model_lifecycle_declared_record_integrity_not_runtime_or_quality_acceptance",
+  "integrated_source_sha": "0a383091b68bc9b85a9423a611972d90bbf16c4d",
+  "actual_isolated_validation_source_sha": "ecd654638c117de5f2ade1829b336f43dad4893a",
+  "owned_sources": {
+    "scripts/check_model_lifecycle.py": {
+      "size": 26688,
+      "sha256": "03fee5d8a9c39cbd59cd394f8484f86881a67a8a45190a651021fad94a033e18"
+    },
+    "backend/tests/test_model_lifecycle_evidence.py": {
+      "size": 23177,
+      "sha256": "c06aefb58a204b1aba40d0a81a66bb6531392606254379ce739a35ac6fe889f8"
+    }
+  },
+  "local_actual_validation": {
+    "platform": "macOS arm64 isolated source CPU",
+    "synthetic_control_tests": 26,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "source_count": 2350,
+    "source_before_after_equal": true,
+    "clean_source_after": true,
+    "elapsed_seconds": 0.9911000728607178,
+    "raw_log_sha256": "d230644eddb0bb4c6220d771a5ed32531b35298985889093a9707350d66522e5",
+    "raw_junit_sha256": "265129e3f362ac8dadda3496f1d95899aa52003e5d0beec333b387c43688ced0"
+  },
+  "independent_source_review": {
+    "freeze_sha256": "50e533fe06d2486e1b3fe9486afbed89609d80a98323e68a8b83b51b537670d3",
+    "review_sha256": "b8c152698ef29ba86ab608e27a630a47203d992a0b54366d0f52952f9e582ced",
+    "remaining_source_blockers": 0
+  },
+  "refusal_controls": [
+    "Malformed producer objects and excessive JSON nesting",
+    "Foreign immutable split digest even when all downstream copies agree",
+    "Duplicate graph node and edge identities",
+    "Foreign parity node, edge, or routed output",
+    "Duplicate per-image parity branch and selected edge identities"
+  ],
+  "scope": {
+    "raw_artifact_byte_and_causal_join_checker": true,
+    "original_model_artifact_chain_executed_here": false,
+    "actual_model_or_app_or_export_execution_here": false,
+    "human_truth_or_quality_or_target_approval": false,
+    "installed_target_or_signing_or_release_approval": false,
+    "parent_acceptance_promoted": false,
+    "prepared_family_inputs_supported": false,
+    "gan_adoption_supported": false,
+    "original_diagnostics_retained": true
+  }
+}
