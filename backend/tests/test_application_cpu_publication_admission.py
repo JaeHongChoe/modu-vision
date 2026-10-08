@@ -103,12 +103,20 @@ def original(tmp_path, monkeypatch):
     monkeypatch.setattr(q,'writer_guard',guard)
     ticket=cpu.admit_backend_source_cpu(frame,proof,tmp_path)
     state=cpu._PRODUCERS[ticket]
-    monkeypatch.setattr(cpu, 'reserve_backend_cpu_child', lambda cap,path: state.update(snapshot=Path(path)))
+    monkeypatch.setattr(cpu, 'reserve_backend_cpu_child', lambda cap,path: state.update(snapshot=Path(path),phase='reserved'))
     def math(cap, *, environment):
         assert cap is ticket and environment['CUDA_VISIBLE_DEVICES']==''
+        # Model the executor's original reserved -> active_child -> child_exited
+        # transition; no real child, OS/handle or mathematical proof is claimed.
+        assert state['phase']=='reserved'
+        state['phase']='active_child'
         (state['snapshot']/'result.json').write_bytes(update._canonical({'modeled_math':True}))
+        state['phase']='child_exited'
         return {'status':'completed','returncode':0,'pid':456,'elapsed_ms':1}
     monkeypatch.setattr(cpu, 'execute_source_process', math)
+    # Standalone publication controls begin at the explicitly modeled original
+    # successful-child exit; execution controls reset to initial active below.
+    state['phase']='child_exited'
     try:
         yield {'root':tmp_path,'row':row,'binding':binding,'challenge':challenge,'values':values,
                'frame':frame,'proof':proof,'ticket':ticket,'state':state,'cache':cache,'admission':admission,
@@ -121,13 +129,14 @@ def original(tmp_path, monkeypatch):
 
 def test_original_source_publication_uses_one_real_transition_without_self_wait(original):
     o=original
+    o['state']['phase']='active'
     result=execution._execute_backend_admitted(o['frame'],o['proof'],o['root'],(),source_producer=o['ticket'])
     assert result['kind']=='cpu_execution_completed'
     assert result['semantic_output']==o['semantic']
     assert (o['project']/result['output_path']).is_file()
     assert o['sleeps']==[] and o['clock'][0]==100.0
     assert o['admission'].snapshot()=={'active_scopes':1,'unsupported':[]}
-    assert o['state']['phase']=='active'
+    assert o['state']['phase']=='child_exited'
 
 
 def retained(o):
@@ -148,6 +157,21 @@ def test_typed_publication_retains_one_original_lock_full_auth_and_count(origina
     with lease._transition_admission(o['root'],o['frame']['nonce']):pass
     assert o['admission'].snapshot()=={'active_scopes':1,'unsupported':[]}
     assert o['clock'][0]==100.0 and o['sleeps']==[]
+
+
+@pytest.mark.parametrize('phase',['active','reserved','spawning','active_child','waiting_publication','closing','finishing','finished','unresolved'])
+@pytest.mark.parametrize('when',['before','after'])
+def test_publication_accepts_only_exact_child_exited_phase_before_and_after(original,phase,when):
+    o=original;entered=[]
+    assert o['state']['phase']=='child_exited'
+    if when=='before':o['state']['phase']=phase
+    with pytest.raises(h.HandshakeError):
+        with cpu.source_publication_admission(o['ticket']):
+            entered.append(True)
+            if when=='after':o['state']['phase']=phase
+            else:pytest.fail('Non-exited original phase admitted publication')
+    assert entered==([True] if when=='after' else [])
+    retained(o)
 
 
 @pytest.mark.parametrize('raw',[{},123,None,True])
@@ -265,7 +289,7 @@ def test_original_named_lock_replacement_is_refused_without_adoption(original):
 
 @pytest.mark.parametrize('failure',['sync-error','late-sync','owner-loss'])
 def test_partial_create_only_output_keeps_original_count_and_custody(original,monkeypatch,failure):
-    o=original;sync=update.migration._sync_directories
+    o=original;o['state']['phase']='active';sync=update.migration._sync_directories
     def fail(path,**kwargs):
         sync(path,**kwargs)
         output=o['project']/execution.OUTPUTS/(o['frame']['request_id']+'.json')

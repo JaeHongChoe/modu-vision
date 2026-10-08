@@ -195,7 +195,7 @@ def source_publication_admission(capability):
     entered=False
     def current():
         state=_current_source_producer(capability)
-        if (state['phase']!='active' or state['counted'] is not True
+        if (state['phase']!='child_exited' or state['counted'] is not True
                 or state['admission'].snapshot()['active_scopes']<1):
             raise HandshakeError('Original SOURCE CPU publication count/phase changed')
         return state
