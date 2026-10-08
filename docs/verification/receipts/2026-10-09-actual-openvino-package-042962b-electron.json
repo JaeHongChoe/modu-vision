@@ -1,0 +1,36 @@
+{
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "13c6a933af0a6f1bc34c4fbece900f056d84b07e7eb9f92b4051602410c7dcf7"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "415d65878f456811e9706a5a770fced0bd582226cf15915a205e1c5c9299211a"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "925b06f9c9d977b7be63fa7e9ae5b1fc41f7feeba1347c8f271afbb7d1d3f7b7"
+    }
+  ],
+  "attempts": 1,
+  "expected_status": "passed",
+  "harness_sha256": "5366ca9a5841dd0d52f621f44a04b339c1d60a9577ada1c6e3bdf9e0bd0f99b1",
+  "independent_review_accepted": false,
+  "mode": "electron",
+  "platform": {
+    "arch": "arm64",
+    "os": "darwin",
+    "release": "27.0.0"
+  },
+  "quality_approved": false,
+  "report_sha256": "667a63157eba39f498e7619ddec9be73dd13d94e50705887484532e37a24c915",
+  "result": "expected",
+  "schema": "modu-vision.gui-execution/v1",
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred",
+  "source_dirty": false,
+  "source_sha": "042962ba1b92ee9f624eff41c04f4ab080089f86",
+  "status": "passed",
+  "test": "scripts/e2e/package-library-real-optimization.spec.ts::native actual OpenVINO job preserves full original package and reopens exact IR evidence",
+  "test_source_sha256": "425166f60ce8d244955acb89e2f74198abc8188258d3fa32be289e5d10b99400"
+}

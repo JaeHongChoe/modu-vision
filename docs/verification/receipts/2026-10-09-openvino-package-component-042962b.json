@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "kind": "scoped_component_execution_not_complete_feature_acceptance",
+  "component": "original source Electron package library OpenVINO job and exact IR reopen",
+  "source_sha": "042962ba1b92ee9f624eff41c04f4ab080089f86",
+  "source_count": 2317,
+  "qualification_sha256": "4e850f0aadfb3598650c7328719adb71828d187bcc6b60a703b63890a78af7d6",
+  "root_original_readback": {
+    "sha256": "90e05edd3908a30d1f44028d29e165748ee74413b2ab6acc66df0278202df580",
+    "original_unique_hashes_checked": 4666,
+    "UNet": 3382,
+    "OpenVINO": 1284,
+    "scope": "Independent root readback of both original qualifications and all original artifact pins; no actual rerun."
+  },
+  "gui_receipts": [
+    {
+      "path": "docs/verification/receipts/2026-10-09-actual-openvino-package-042962b-electron.json",
+      "sha256": "5df0a053416637b881547d369012b633db2d2cbdc2389200a729cc5810c2c9d2",
+      "mode": "electron"
+    }
+  ],
+  "mapping": {
+    "requirements": [
+      "S6-03",
+      "S7-02"
+    ],
+    "related_parent": "F099",
+    "existing_action_ids": [
+      "actual-ir-independent-candidate",
+      "actual-ir-library-review-reopen"
+    ],
+    "scope": "Supplemental executed component evidence only. Existing action/parent/requirement states and all prior histories are preserved. Optimization cancellation is not exercised.",
+    "requirement_status_preserved": {
+      "S6-03": "in_progress",
+      "S7-02": "planned"
+    }
+  },
+  "execution": {
+    "modes": [
+      "electron"
+    ],
+    "expected_passes": 1,
+    "retries": 0,
+    "device": "openvino:CPU",
+    "actual_job_completed": true,
+    "exact_candidate_IR_reopened": true,
+    "original_package": {
+      "manifest_sha256": "31d8c572ef2fd15097690a638a48b83e90f2cc43c3396dd45463285592600304",
+      "file_count": 266,
+      "approval_present": false,
+      "catalog_parity_status": "not_run"
+    },
+    "candidate_package": {
+      "manifest_sha256": "df040ccd9f415afe8637775c909db829a65802ac30b9eea5d509177e63eb44ce",
+      "file_count": 273,
+      "approval_present": false,
+      "catalog_parity_status": "not_run"
+    },
+    "complete_original_package_model_input_custody_qualified": true,
+    "post_baseline_mutating_requests": 5,
+    "declared_hydration_imports": 0,
+    "eager_original_response_count": 176,
+    "clocked_full_request_count": 176,
+    "thumbnail_decoded_text_count": 4,
+    "thumbnail_network_JPEG_binary_or_MIME_captured": false,
+    "thumbnail_reference_scope": "Reconstructed original-encoder reference from preserved synthetic PNGs matches four decoded text bodies; original network JPEG bytes or MIME custody is not asserted.",
+    "original_response_identity_scope": "asserted by exact passed test source; saved raw byte/status/clock consistency independently checked",
+    "captured_original_owned_cleanup_qualified": true
+  },
+  "limits": {
+    "quality_approved": false,
+    "independent_review_accepted": false,
+    "human_truth_approved": false,
+    "new_training": false,
+    "installed_or_compiled_target_accepted": false,
+    "publisher_signing_or_OS_installation_accepted": false,
+    "GPU_or_Windows_device_acceptance": false,
+    "whole_writer_tree_or_lease_release_accepted": false,
+    "parent_or_all_model_families_accepted": false,
+    "curated_cell_delta": 0,
+    "fixture_api_deadline_is_source_asserted_not_exported_clock": true,
+    "model_initialized_not_trained": true,
+    "native_page_console_blocked_loopback_capture": "unavailable",
+    "native_runtime_error_cleanliness": false,
+    "new_cells_promoted": 0,
+    "quality_human_signing_install_deploy_GPU_Windows_acceptance": false,
+    "saved_localStorage_handoff_is_spec_asserted_not_separate_dump": true,
+    "synthetic_NG_is_missed": true,
+    "worker_Popen_exit_custody": false
+  },
+  "remaining": [
+    "Model weights are initialized synthetic controls, not a new completed training run; the synthetic NG is missed.",
+    "Native page, console and blocked-loopback capture unavailable; native runtime error cleanliness not accepted.",
+    "Fixture API deadlines and saved localStorage handoff are enforced by the passed specification without separate exported raw clock/storage dumps. Worker Popen exit custody is not independently established.",
+    "Exact macOS arm64 source Electron CPU component only; representative quality, human approval, other hardware and final release acceptance remain separate."
+  ]
+}

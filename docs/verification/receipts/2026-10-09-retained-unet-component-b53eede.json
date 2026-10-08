@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "kind": "scoped_component_execution_not_complete_feature_acceptance",
+  "component": "retained original same-provenance UNet two ROI parallel aggregate and standalone package",
+  "source_sha": "b53eede96175c2d70d731fbb585bc46c29cd9798",
+  "source_count": 2318,
+  "spec_sha256": "718e6b1744dc20055a1507eee57b406440734d87478b90893abb782bd439dafe",
+  "report_sha256": "45f0d6de5647c8578529f5ac943813b3174f3bf17804b4d432038eb339ab80a6",
+  "qualification_sha256": "b7572db6b5a42da159c9a8454cbe3a060cd2a5203a7846e92a6f03d5388ae1c5",
+  "root_original_readback": {
+    "sha256": "90e05edd3908a30d1f44028d29e165748ee74413b2ab6acc66df0278202df580",
+    "original_unique_hashes_checked": 4666,
+    "UNet": 3382,
+    "OpenVINO": 1284,
+    "scope": "Independent root readback of both original qualifications and all original artifact pins; no actual rerun."
+  },
+  "gui_receipts": [
+    {
+      "path": "docs/verification/receipts/2026-10-09-retained-unet-b53eede-browser.json",
+      "sha256": "9df699ae3a4b14df3c1544fff18b895b72ef87568d3cde0641bf9ae6e2a05ff4",
+      "mode": "browser"
+    },
+    {
+      "path": "docs/verification/receipts/2026-10-09-retained-unet-b53eede-electron.json",
+      "sha256": "2ebd6c3865dfbc70d78a21e0b1e9810951fab0b0554be4a6af581c4781e967fd",
+      "mode": "electron"
+    }
+  ],
+  "mapping": {
+    "requirements": [
+      "S7-02"
+    ],
+    "related_parent_subscopes": [
+      "F069",
+      "F091"
+    ],
+    "existing_curated_action_mapping": [],
+    "scope": "Functional S7-02 subscenario only. Original 207-action registry and SOURCE plan have no explicit retained-UNet parallel/aggregate/package action cell; related fixed-ROI/parallel parent scopes remain pending.",
+    "requirement_status_preserved": {
+      "S7-02": "planned"
+    },
+    "related_parent_states_preserved": {
+      "F069": {
+        "implementation": "pending",
+        "gui": "pending",
+        "persist": "pending",
+        "reopen": "pending",
+        "failure": "pending",
+        "handoff": "pending",
+        "target": "pending"
+      },
+      "F091": {
+        "implementation": "pending",
+        "gui": "pending",
+        "persist": "pending",
+        "reopen": "pending",
+        "failure": "pending",
+        "handoff": "pending",
+        "target": "pending"
+      }
+    }
+  },
+  "execution": {
+    "modes": [
+      "browser",
+      "electron"
+    ],
+    "expected_passes": 2,
+    "whole_report_errors_retries_skips_flaky": 0,
+    "source_maps_current_archive_before_after_equal": true,
+    "full_unfiltered_project_source_model_trees_qualified": true,
+    "original_unique_artifact_pins": 3382,
+    "whole_original_teardown_empty": true,
+    "per_mode": [
+      {
+        "mode": "browser",
+        "retained_source_files": 96,
+        "retained_model_files": 12,
+        "copied_model_files": 4,
+        "unchanged_API_records": 25,
+        "actual_app_runs": 4,
+        "original_independent_package_executions": 2,
+        "ROI_class_mask_bytes_exact": true,
+        "original_probability_tolerance": 1e-06,
+        "original_score_tolerance": 0.0001,
+        "source_request_capacity": [
+          2,
+          2,
+          1,
+          1
+        ],
+        "declared_renderer_writes": {
+          "/api/flowchart/draft": 5,
+          "/api/flowchart/execution-resources": 1,
+          "/api/flowchart/models/verify": 6,
+          "/api/flowchart/pipeline": 1,
+          "/api/flowchart/run": 4
+        },
+        "separate_readonly_POSTs": {
+          "diff": 2,
+          "library_resolve": 3
+        },
+        "declared_setup_writes": 7,
+        "complete_project_directories_guard": true,
+        "source_original_timestamp_and_SHA_guard": true,
+        "note_ns_binary64_projection_only_raw_binding_precise": true
+      },
+      {
+        "mode": "electron",
+        "retained_source_files": 96,
+        "retained_model_files": 12,
+        "copied_model_files": 4,
+        "unchanged_API_records": 25,
+        "actual_app_runs": 4,
+        "original_independent_package_executions": 2,
+        "ROI_class_mask_bytes_exact": true,
+        "original_probability_tolerance": 1e-06,
+        "original_score_tolerance": 0.0001,
+        "source_request_capacity": [
+          2,
+          2,
+          1,
+          1
+        ],
+        "declared_renderer_writes": {
+          "/api/flowchart/draft": 5,
+          "/api/flowchart/execution-resources": 2,
+          "/api/flowchart/models/verify": 6,
+          "/api/flowchart/pipeline": 1,
+          "/api/flowchart/run": 4
+        },
+        "separate_readonly_POSTs": {
+          "diff": 2,
+          "library_resolve": 3
+        },
+        "declared_setup_writes": 7,
+        "complete_project_directories_guard": true,
+        "source_original_timestamp_and_SHA_guard": true,
+        "note_ns_binary64_projection_only_raw_binding_precise": true
+      }
+    ],
+    "independent_package_executions_per_mode": 2,
+    "same_checkpoint_branches": 2,
+    "cases_total_app_runs": 8,
+    "cases_total_independent_package_executions": 4
+  },
+  "limits": {
+    "quality_approved": false,
+    "independent_review_accepted": false,
+    "human_truth_approved": false,
+    "new_training": false,
+    "installed_or_compiled_target_accepted": false,
+    "publisher_signing_or_OS_installation_accepted": false,
+    "GPU_or_Windows_device_acceptance": false,
+    "whole_writer_tree_or_lease_release_accepted": false,
+    "parent_or_all_model_families_accepted": false,
+    "curated_cell_delta": 0,
+    "browser_console_error_cleanliness": false,
+    "native_runtime_error_cleanliness": false,
+    "native_page_console_capture": "unavailable",
+    "original_request_Response_identity_independently_reconstructable_from_saved_notes": false,
+    "model_quality_or_target_acceptance": false
+  },
+  "remaining": [
+    "Actual original synthetic validation cohort overlaps training validation; measured TP140/TN3956/FP0/FN0 per image is not human quality acceptance.",
+    "Same retained completed UNet checkpoint is reused by both branches; this is not five distinct checkpoints or all ten model families.",
+    "Source Electron and browser desktop shim actual; no compiled/installed/publisher/OS dialog/GPU/Windows/whole-tree process authority acceptance.",
+    "Browser original console contains one known404 resource error; native console/page capture unavailable. Both original teardown/owned services closed; no cleanliness inferred beyond captured records.",
+    "Source same-Request/Response identity assertions are executed by original spec. Saved raw request/response/hash/deadline tuples are independently rechecked; serialized notes do not independently reconstruct object identity."
+  ]
+}
