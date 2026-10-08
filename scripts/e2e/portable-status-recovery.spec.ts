@@ -131,9 +131,9 @@ test('portable inspect error requires explicit same-identity retry and utility h
       launchPortableUpdate: refused, inspectPortableLaunch: refused});
   });
   try {
-    await page.goto(renderer.url);
+    await page.goto(renderer.url); await settle();
     const created = await page.request.post(renderer.origin + '/api/project/create', {data: {name: 'Owned portable inspect lifecycle', task: 'classification'}, timeout: 10_000});
-    expect(created.status()).toBe(200); const createdProject = await created.json();
+    expect(created.status()).toBe(200); const createdProject = await created.json(); await settle();
     await page.reload();
     const open = async () => {
       await page.getByRole('button', {name: '패키지·장치·진단', exact: true}).click();
