@@ -1,0 +1,1021 @@
+{
+  "schema": "modu-vision.ir-export-clean-controls/v1",
+  "source_sha": "ed0500583fe054c3dae44818418920e6e1c5172e",
+  "results": {
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "retries": 0,
+    "elapsed_seconds": 116.94994787499309,
+    "source_inputs": 2192,
+    "source_unchanged": true,
+    "clean_before_after": true
+  },
+  "cases": [
+    {
+      "feature": "F099",
+      "mode": "electron",
+      "receipt": "docs/verification/receipts/2026-10-08-f099-ir-export-ed05005-electron.json",
+      "receipt_sha256": "63fbd952882afd3348b75c848f3406410e9eb73ddbe895fcd7a751ca46259863",
+      "observed_controls": {
+        "actions": {
+          "actual-ir-independent-candidate": [
+            "cancel",
+            "handoff"
+          ],
+          "actual-ir-explicit-runtime-review": [
+            "empty",
+            "invalid",
+            "error",
+            "cancel",
+            "reopen"
+          ],
+          "actual-ir-library-review-reopen": [
+            "empty",
+            "invalid",
+            "error",
+            "cancel",
+            "handoff"
+          ]
+        },
+        "dimensions": {
+          "review_empty": {
+            "blank_reviewer": true,
+            "approval_disabled": true,
+            "approval_POSTs": 0,
+            "candidate_manifest_sha256": "a6f6ca9bfb89e28591a662270ebac9fbac565855fcc95ebd8fe3f44c22748d80"
+          },
+          "review_invalid": {
+            "actual_numeric_input": -0.001,
+            "negative_drift_disabled": true,
+            "extra_approval_POST": 0,
+            "backend_validation_or_transport_error_claimed": false,
+            "approval_package_published": false,
+            "candidate_unchanged": true
+          },
+          "review_error": {
+            "controlled_status": 503,
+            "exact_path": "/api/export/flow/optimization-jobs/bb30b1f4d43842fbaf652fb79b520e1f/approve",
+            "payload": {
+              "reviewer": "Synthetic IR control authority",
+              "reason": "Two actual CPU/IR heldout controls; no human truth or manufacturing quality acceptance",
+              "holdout_reviewed": true,
+              "maximum_absolute_drift": 0.001,
+              "approval_revision_ids": {
+                "job_candidate": "08e70fb9256447039644e436d171deff"
+              }
+            },
+            "backend_dispatch": false,
+            "unchanged_original_job": true,
+            "unchanged_candidate": true,
+            "approval_publication": false
+          },
+          "review_cancel": {
+            "completed_unsent_draft_closed": true,
+            "actual_delivery_close": true,
+            "extra_approval_POST": 0,
+            "actual_same_package_optimization_reselected": true,
+            "reopened_job_id": "bb30b1f4d43842fbaf652fb79b520e1f",
+            "reviewer_reason_checkbox_reset": true,
+            "candidate_files_unchanged": true,
+            "inflight_request_cancellation": false
+          },
+          "review_reopen": {
+            "completed_unsent_draft_closed": true,
+            "actual_delivery_close": true,
+            "extra_approval_POST": 0,
+            "actual_same_package_optimization_reselected": true,
+            "reopened_job_id": "bb30b1f4d43842fbaf652fb79b520e1f",
+            "reviewer_reason_checkbox_reset": true,
+            "candidate_files_unchanged": true,
+            "inflight_request_cancellation": false
+          },
+          "library_empty": {
+            "actual_empty_project": {
+              "schema_version": 1,
+              "id": "463fc67b",
+              "name": "Empty IR library controls",
+              "task": "classification",
+              "project_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-47f6eb6b-r0/projects/empty-ir-library",
+              "dataset_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-47f6eb6b-r0/projects/empty-ir-library/dataset",
+              "models_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-47f6eb6b-r0/projects/empty-ir-library/models",
+              "reports_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-47f6eb6b-r0/projects/empty-ir-library/reports",
+              "annotations_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-47f6eb6b-r0/projects/empty-ir-library/annotations",
+              "active_labelset_id": "default",
+              "description": "",
+              "active_preset": "fast",
+              "source_dataset_dir": null,
+              "created_at": "2026-10-08T00:43:47Z",
+              "updated_at": "2026-10-08T00:43:47Z"
+            },
+            "real_inventory": {
+              "packages": [],
+              "selected_package_id": null,
+              "scope": {
+                "project_id": "463fc67b",
+                "source_dataset_path": null,
+                "task": "classification"
+              }
+            },
+            "reopen_control_absent": true
+          },
+          "library_invalid": {
+            "package_id": "a2882ab57a5738b52460b6d1e16b79ad",
+            "original_manifest_sha256": "a79817bb6b300a69647b13be3f9fb899ab25d46f74afbcf3f2ab0c9fb494c01b",
+            "controlled_metadata_integrity": "failed",
+            "controlled_scope_matches": false,
+            "all_row_actions_disabled": true,
+            "extra_select_POST": 0,
+            "actual_backend_integrity_corruption_or_target_failure": false
+          },
+          "library_error": {
+            "controlled_status": 503,
+            "exact_GET": "/api/product-delivery/packages",
+            "backend_dispatch": false,
+            "extra_select_POST": 0
+          },
+          "library_cancel": {
+            "old_request_url": "http://127.0.0.1:53701/api/product-delivery/packages",
+            "disposition": {
+              "kind": "response",
+              "status": 200,
+              "finished": null
+            },
+            "handler_disposition": {
+              "kind": "controlled_fulfilled"
+            },
+            "real_authenticated_snapshot_package_id": "a2882ab57a5738b52460b6d1e16b79ad",
+            "old_ui_response_controlled": true,
+            "original_delayed_HTTP_provenance_verified": false,
+            "actual_view_close_and_empty_project_switch": true,
+            "zero_stale_ir_row_or_review_repaint": true,
+            "extra_select_POST": 0
+          },
+          "library_handoff": {
+            "select_path": "/api/product-delivery/packages/a2882ab57a5738b52460b6d1e16b79ad/select",
+            "actual_select_response": {
+              "package_id": "a2882ab57a5738b52460b6d1e16b79ad",
+              "name": "approved_runtime_66593ac51257475297e5a3b99f6acb7e",
+              "package_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-47f6eb6b-r0/converted-contract/workspaces/approval/exports/flows/approved_runtime_66593ac51257475297e5a3b99f6acb7e",
+              "integrity": "verified",
+              "scope_matches": true,
+              "parity": {
+                "status": "not_run"
+              },
+              "optimization_jobs": [],
+              "manifest_sha256": "a79817bb6b300a69647b13be3f9fb899ab25d46f74afbcf3f2ab0c9fb494c01b",
+              "pipeline_id": "single_segmentation",
+              "version_id": "53f5d7f7f8394310b715a5d2dbbc2f4a",
+              "recipe_task": "classification",
+              "created_at": "2026-10-08T00:43:25Z",
+              "models": [
+                {
+                  "job_id": "job_candidate",
+                  "task": "classification",
+                  "checkpoint": "models/job_candidate/best_model.pt"
+                }
+              ],
+              "runtime": {
+                "deadline_ms": null,
+                "device": "openvino:CPU",
+                "cpu_threads": 1
+              },
+              "approval_present": true,
+              "total_files": 270
+            },
+            "displayed_package_id": "a2882ab57a5738b52460b6d1e16b79ad",
+            "displayed_package_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-47f6eb6b-r0/converted-contract/workspaces/approval/exports/flows/approved_runtime_66593ac51257475297e5a3b99f6acb7e",
+            "displayed_base_flow_revision": "flowapproval_53eba7e0c4a549928a050f141df5f60d",
+            "independently_saved_runtime_review": {
+              "base_revision_id": "flowapproval_53eba7e0c4a549928a050f141df5f60d",
+              "approval_sha256": "3bb797ee4f876c3f458b022795bf1c30c22fa5998e81012f841963966a7646f2",
+              "evaluation_sha256": "8dfae46c693fa48f6f57c04d2759c5d04d1616eae24df4b4aa84eb8a9e1453af",
+              "truth_sha256": "2e9e33726928a07c9a672a24a1315aedcf475fb75b6ed027549eb446bfd2d1d3",
+              "graph_sha256": "22c5afc681637fd38132b73f45938c385ffc276f98a4d38aa2e2d7fda44390c8",
+              "cohort_sha256": "b759ea93d2f4cbb8465bd2011dacc4044f4e64ac1388b2a3269d753845fc8e12",
+              "policy": {
+                "policy_id": "synthetic-service-authority",
+                "revision": 1,
+                "minimum_normal": 1,
+                "minimum_defect": 1,
+                "maximum_escape_rate": 1,
+                "maximum_overkill_rate": 1,
+                "maximum_review_rate": 0
+              },
+              "policy_sha256": "87c7c7ddba8ac014353eae1c9c782f56dcf09affe42f6a8c91e91ac1d0fb2282",
+              "manifest_sha256": "a79817bb6b300a69647b13be3f9fb899ab25d46f74afbcf3f2ab0c9fb494c01b",
+              "runtime_acceptance_sha256": "444d98115548de13ebbeed1164eed18f0c047a55b7bc6abd0c9b00f0320e8314",
+              "runtime_cohort_sha256": "8997886c5f867d57fbbf01d7053d998fd77396a74fb186daa36d9fde5d00bcde",
+              "device": "openvino:CPU",
+              "model_approval_revisions": [
+                {
+                  "revision_id": "08e70fb9256447039644e436d171deff",
+                  "job_id": "job_candidate",
+                  "task": "classification",
+                  "checkpoint_sha256": "56ad0c5dcbd33deb7e482da444e3eda71787088c8fd3e600f612c577f815997c"
+                }
+              ],
+              "metrics": {
+                "escape_rate": 1,
+                "overkill_rate": 0,
+                "review_rate": 0,
+                "normal_count": 1,
+                "defect_count": 1,
+                "confusion": {
+                  "OK": {
+                    "OK": 1,
+                    "NG": 0,
+                    "REVIEW": 0
+                  },
+                  "NG": {
+                    "OK": 1,
+                    "NG": 0,
+                    "REVIEW": 0
+                  }
+                }
+              },
+              "outputs": [
+                {
+                  "relative_path": "test/OK/ok_00.png",
+                  "image_sha256": "47c0b232b83e0aaf92d46f39b9066c67528fc4c31fc88bc50d7d8e2291137145",
+                  "truth_sha256": "57529a7868a5123f8c6c25ed25945cf11918dcfff451348da040822d38258d87",
+                  "truth": "OK",
+                  "decision": "OK",
+                  "output_sha256": "692c8afb35e81911ebb4965a66c85625575951a3a5463c437280e6cbec817db4"
+                },
+                {
+                  "relative_path": "test/NG/ng_00.png",
+                  "image_sha256": "4a0945534329d26ce523a2f096e203aae59a9fffaec71895599fa3ef42d23f22",
+                  "truth_sha256": "a3c7aaa352fe782c40a7cf1011e48a55a8ab7923b629596a5b5513775e18c1dc",
+                  "truth": "NG",
+                  "decision": "OK",
+                  "output_sha256": "c62426f9a1f2fb8e859edbb14c7621e16e9880ce93f6b261836c2be7ecf754c6"
+                }
+              ],
+              "review_revision_id": "runtimeflow_f0b13807adb046bbb2147b333c4a0bba",
+              "review_valid": true,
+              "device_accepted": false
+            },
+            "service_device_or_manifest_display_handoff_claimed": false,
+            "applied": false
+          }
+        },
+        "candidate_cancel": {
+          "job_id": "31c3e4cf645d425582a03d690e395ab8",
+          "terminal": "cancelled",
+          "result": null,
+          "candidate_published": false
+        },
+        "candidate_handoff": {
+          "job_id": "bb30b1f4d43842fbaf652fb79b520e1f",
+          "status": "completed",
+          "result": {
+            "status": "success",
+            "package_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-47f6eb6b-r0/converted-contract/workspaces/approval/exports/flows/openvino_bb30b1f4d43842fbaf652fb79b520e1f",
+            "models": [
+              {
+                "job_id": "job_candidate",
+                "task": "classification",
+                "checkpoint": "models/job_candidate/best_model.pt",
+                "checkpoint_sha256": "56ad0c5dcbd33deb7e482da444e3eda71787088c8fd3e600f612c577f815997c",
+                "directory": "models/job_candidate/openvino",
+                "role": "model",
+                "schema_version": 1,
+                "precision": "fp32",
+                "device": "CPU",
+                "input_shape": [
+                  1,
+                  3,
+                  32,
+                  32
+                ],
+                "dynamic_spatial": false,
+                "output_tree": {
+                  "type": "tensor",
+                  "dtype": "float32"
+                },
+                "metrics": {
+                  "calibration_count": 0,
+                  "validation_count": 2,
+                  "max_absolute_error": 0,
+                  "mean_absolute_error": 0,
+                  "output_argmax_disagreement_fraction": 0,
+                  "output_argmax_axis": -1,
+                  "latency_mean_ms": 9.79506250587292,
+                  "latency_p95_ms": 16.86683185689617,
+                  "reference_latency_mean_ms": 15.857771009905264,
+                  "measured_speedup": 1.6189555707681567,
+                  "artifact_bytes": 6181803,
+                  "validation_image_count": 2
+                },
+                "quality_approved": false,
+                "openvino_version": "2026.4.1-22982-e213a147257-releases/2026/4",
+                "quantized_operation_count": 0
+              }
+            ],
+            "quality_approved": false,
+            "source_manifest_sha256": "d1f365c80fe2af3916a9318c1cfb8916d55d1b6c04089bcd18493956fd10f30e",
+            "candidate_manifest_sha256": "a6f6ca9bfb89e28591a662270ebac9fbac565855fcc95ebd8fe3f44c22748d80",
+            "heldout_flow_count": 2,
+            "heldout_flow_passed_count": 2
+          },
+          "same_job_precision_view": true,
+          "heldout_image_sha256": [
+            "47c0b232b83e0aaf92d46f39b9066c67528fc4c31fc88bc50d7d8e2291137145",
+            "4a0945534329d26ce523a2f096e203aae59a9fffaec71895599fa3ef42d23f22"
+          ]
+        },
+        "observed_writes": [
+          {
+            "method": "POST",
+            "pathname": "/api/product-delivery/packages/1485fb85a1ff26ca24b6dde17eb1b6f4/select",
+            "body": null
+          },
+          {
+            "method": "POST",
+            "pathname": "/api/export/flow/optimize",
+            "body": {
+              "package_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-47f6eb6b-r0/converted-contract/workspaces/approval/exports/flows/original_cpu_control",
+              "source_dataset_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-47f6eb6b-r0/converted-contract/source",
+              "precision": "fp32",
+              "device": "CPU",
+              "cpu_threads": 1,
+              "calibration_images": [],
+              "validation_images": [
+                "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-47f6eb6b-r0/converted-contract/source/test/OK/ok_00.png",
+                "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-47f6eb6b-r0/converted-contract/source/test/NG/ng_00.png"
+              ]
+            }
+          },
+          {
+            "method": "POST",
+            "pathname": "/api/export/flow/optimization-jobs/31c3e4cf645d425582a03d690e395ab8/cancel",
+            "body": null
+          },
+          {
+            "method": "POST",
+            "pathname": "/api/export/flow/optimize",
+            "body": {
+              "package_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-47f6eb6b-r0/converted-contract/workspaces/approval/exports/flows/original_cpu_control",
+              "source_dataset_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-47f6eb6b-r0/converted-contract/source",
+              "precision": "fp32",
+              "device": "CPU",
+              "cpu_threads": 1,
+              "calibration_images": [],
+              "validation_images": [
+                "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-47f6eb6b-r0/converted-contract/source/test/OK/ok_00.png",
+                "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-47f6eb6b-r0/converted-contract/source/test/NG/ng_00.png"
+              ]
+            }
+          },
+          {
+            "method": "POST",
+            "pathname": "/api/export/flow/optimization-jobs/bb30b1f4d43842fbaf652fb79b520e1f/approve",
+            "body": {
+              "reviewer": "Synthetic IR control authority",
+              "reason": "Two actual CPU/IR heldout controls; no human truth or manufacturing quality acceptance",
+              "holdout_reviewed": true,
+              "maximum_absolute_drift": 0.001,
+              "approval_revision_ids": {
+                "job_candidate": "08e70fb9256447039644e436d171deff"
+              }
+            }
+          },
+          {
+            "method": "POST",
+            "pathname": "/api/product-delivery/packages/1485fb85a1ff26ca24b6dde17eb1b6f4/select",
+            "body": null
+          },
+          {
+            "method": "POST",
+            "pathname": "/api/product-delivery/packages/1485fb85a1ff26ca24b6dde17eb1b6f4/select",
+            "body": null
+          },
+          {
+            "method": "POST",
+            "pathname": "/api/product-delivery/packages/1485fb85a1ff26ca24b6dde17eb1b6f4/select",
+            "body": null
+          },
+          {
+            "method": "POST",
+            "pathname": "/api/export/flow/optimization-jobs/bb30b1f4d43842fbaf652fb79b520e1f/approve",
+            "body": {
+              "reviewer": "Synthetic IR control authority",
+              "reason": "Two actual CPU/IR heldout controls; no human truth or manufacturing quality acceptance",
+              "holdout_reviewed": true,
+              "maximum_absolute_drift": 0.001,
+              "approval_revision_ids": {
+                "job_candidate": "08e70fb9256447039644e436d171deff"
+              }
+            }
+          },
+          {
+            "method": "POST",
+            "pathname": "/api/flow-evaluations/approvals/flowapproval_53eba7e0c4a549928a050f141df5f60d/runtime-preview",
+            "body": {
+              "package_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-47f6eb6b-r0/converted-contract/workspaces/approval/exports/flows/approved_runtime_66593ac51257475297e5a3b99f6acb7e",
+              "device": "openvino:CPU"
+            }
+          },
+          {
+            "method": "POST",
+            "pathname": "/api/flow-evaluations/approvals/flowapproval_53eba7e0c4a549928a050f141df5f60d/runtime-preview",
+            "body": {
+              "package_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-47f6eb6b-r0/converted-contract/workspaces/approval/exports/flows/approved_runtime_66593ac51257475297e5a3b99f6acb7e",
+              "device": "openvino:CPU"
+            }
+          },
+          {
+            "method": "POST",
+            "pathname": "/api/flow-evaluations/approvals/flowapproval_53eba7e0c4a549928a050f141df5f60d/runtime-review",
+            "body": {
+              "package_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-47f6eb6b-r0/converted-contract/workspaces/approval/exports/flows/approved_runtime_66593ac51257475297e5a3b99f6acb7e",
+              "device": "openvino:CPU",
+              "reviewer": "Synthetic IR control authority",
+              "reason": "Actual frozen synthetic OK/NG control; not human truth or manufacturing quality acceptance",
+              "holdout_reviewed": true,
+              "expected_revision": null
+            }
+          },
+          {
+            "method": "POST",
+            "pathname": "/api/flow-evaluations/approvals/flowapproval_53eba7e0c4a549928a050f141df5f60d/runtime-preview",
+            "body": {
+              "package_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-47f6eb6b-r0/converted-contract/workspaces/approval/exports/flows/approved_runtime_66593ac51257475297e5a3b99f6acb7e",
+              "device": "openvino:CPU"
+            }
+          },
+          {
+            "method": "POST",
+            "pathname": "/api/product-delivery/packages/1485fb85a1ff26ca24b6dde17eb1b6f4/select",
+            "body": null
+          },
+          {
+            "method": "POST",
+            "pathname": "/api/product-delivery/packages/1485fb85a1ff26ca24b6dde17eb1b6f4/select",
+            "body": null
+          },
+          {
+            "method": "POST",
+            "pathname": "/api/product-delivery/packages/a2882ab57a5738b52460b6d1e16b79ad/select",
+            "body": null
+          },
+          {
+            "method": "POST",
+            "pathname": "/api/product-delivery/packages/1485fb85a1ff26ca24b6dde17eb1b6f4/select",
+            "body": null
+          },
+          {
+            "method": "POST",
+            "pathname": "/api/flow-evaluations/approvals/flowapproval_53eba7e0c4a549928a050f141df5f60d/runtime-preview",
+            "body": {
+              "package_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-47f6eb6b-r0/converted-contract/workspaces/approval/exports/flows/approved_runtime_66593ac51257475297e5a3b99f6acb7e",
+              "device": "openvino:CPU"
+            }
+          },
+          {
+            "method": "POST",
+            "pathname": "/api/product-delivery/packages/a2882ab57a5738b52460b6d1e16b79ad/select",
+            "body": null
+          },
+          {
+            "method": "POST",
+            "pathname": "/api/product-delivery/packages/1485fb85a1ff26ca24b6dde17eb1b6f4/select",
+            "body": null
+          }
+        ],
+        "images_models_candidate_approved_package_and_policy_unchanged": true,
+        "synthetic_all_OK_model_misses_NG": true,
+        "human_quality_approved": false,
+        "managed_service_writes": []
+      },
+      "owned_cleanup": {
+        "electron_alive": false,
+        "backends": [
+          {
+            "port": 53701,
+            "pid": 85337,
+            "port_closed": true,
+            "pid_alive": false
+          }
+        ],
+        "logged_backend_pids": [
+          85337
+        ],
+        "logged_backend_pids_alive": [],
+        "backend_restarted": false,
+        "escaped": [],
+        "unowned_references": [],
+        "scan_error": null,
+        "close_timed_out": false
+      }
+    },
+    {
+      "feature": "F117",
+      "mode": "browser",
+      "receipt": "docs/verification/receipts/2026-10-08-f117-ir-export-ed05005-browser.json",
+      "receipt_sha256": "0980e0a181143e5861fec940c9c70074cfdbb840d902ab209bb2331a269516e2",
+      "observed_controls": {
+        "action": "format-export-bundle",
+        "verified_dimensions": [
+          "empty",
+          "error",
+          "reopen"
+        ],
+        "pending_dimensions": {
+          "cancel": "No export-specific Cancel control or cancellable download acknowledgement exists in DatasetWorkflowPanel; common panel dismissal is completed-view reopen only."
+        },
+        "empty": {
+          "project": {
+            "schema_version": 1,
+            "id": "b8b8c16b",
+            "name": "Owned zero-image export",
+            "task": "segmentation",
+            "project_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/0-d1cb7c05-r0/projects/owned_zero-image_export",
+            "dataset_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/0-d1cb7c05-r0/projects/owned_zero-image_export/dataset",
+            "models_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/0-d1cb7c05-r0/projects/owned_zero-image_export/models",
+            "reports_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/0-d1cb7c05-r0/projects/owned_zero-image_export/reports",
+            "annotations_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/0-d1cb7c05-r0/projects/owned_zero-image_export/annotations",
+            "active_labelset_id": "default",
+            "description": "",
+            "active_preset": "fast",
+            "source_dataset_dir": null,
+            "created_at": "2026-10-08T00:42:56Z",
+            "updated_at": "2026-10-08T00:42:56Z"
+          },
+          "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/0-d1cb7c05-r0/empty-export-source",
+          "metadata": [],
+          "versions": {
+            "versions": []
+          },
+          "annotation_tree": {
+            "by_dataset/6655bc4187cabbc2/metadata/workflow.json": "ac39ced502434a400d2e8c130fff3b68fd17ea24d63979793fad076eee9cfa1e"
+          },
+          "project_sha256": "ae84c208ba9f573f154067985df043cd01bb143dc5f9f6e83ac24b49b106a141",
+          "zero_image_export_allowed": true,
+          "archive_member_count": 0,
+          "manifest_document_count": 0,
+          "source_unchanged": true,
+          "useful_dataset_or_quality_accepted": false
+        },
+        "error": {
+          "path": "/api/dataset/formats/export",
+          "body": {
+            "format": "yolo"
+          },
+          "status": 503,
+          "backend_dispatch": false,
+          "export_artifact_created": false,
+          "extra_download": 0,
+          "selected_format": "yolo",
+          "button_reenabled": true,
+          "download_transport_failure_verified": false
+        },
+        "reopen": [
+          {
+            "name": "completed-view-close-open",
+            "format": "yolo",
+            "notice_preserved": true,
+            "extra_export_POST": 0,
+            "extra_download": 0,
+            "zip_sha256": "374ab3ccbae78a53b10fe3530dfd39a1664e73f57f91fe67d6359779ae9a3b1b"
+          },
+          {
+            "name": "actual-renderer-reload",
+            "format": "labelme",
+            "transient_notice_cleared": true,
+            "persisted_zip_sha256": "374ab3ccbae78a53b10fe3530dfd39a1664e73f57f91fe67d6359779ae9a3b1b",
+            "extra_export_POST": 0,
+            "extra_download": 0
+          }
+        ],
+        "source_images": [
+          {
+            "label": "ok",
+            "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/0-d1cb7c05-r0/dataset/ok/sample-ok.png",
+            "bytes": 96,
+            "sha256": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e"
+          },
+          {
+            "label": "ng",
+            "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/0-d1cb7c05-r0/dataset/ng/sample-ng.png",
+            "bytes": 103,
+            "sha256": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da"
+          }
+        ],
+        "export_receipts": [
+          {
+            "format": "labelme",
+            "request": {
+              "format": "labelme"
+            },
+            "status": 200,
+            "response": {
+              "format": "labelme",
+              "image_count": 0,
+              "annotation_count": 0,
+              "payload": {
+                "format": "labelme",
+                "documents": []
+              },
+              "download_url": "/api/dataset/formats/download/annotations_d31d452783044cdeb578183f54edad62"
+            },
+            "downloaded_zip": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/0-d1cb7c05-r0/logs/empty-labelme.zip",
+            "downloaded_sha256": "8739c76e681f900923b900c9df0ef75cf421d39cabb54650c4b9ad19b6a76d85",
+            "source_zip": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/0-d1cb7c05-r0/projects/owned_zero-image_export/exports/annotations_d31d452783044cdeb578183f54edad62.zip",
+            "source_sha256": "8739c76e681f900923b900c9df0ef75cf421d39cabb54650c4b9ad19b6a76d85",
+            "members": {}
+          },
+          {
+            "format": "yolo",
+            "request": {
+              "format": "yolo"
+            },
+            "status": 200,
+            "response": {
+              "format": "yolo",
+              "image_count": 2,
+              "annotation_count": 2,
+              "payload": {
+                "format": "yolo",
+                "classes": [
+                  "ControlledBox"
+                ],
+                "images": [
+                  {
+                    "file_name": "ng/sample-ng.png",
+                    "width": 32,
+                    "height": 32
+                  },
+                  {
+                    "file_name": "ok/sample-ok.png",
+                    "width": 32,
+                    "height": 32
+                  }
+                ],
+                "labels": {
+                  "ng/sample-ng.txt": "0 0.328125 0.375 0.46875 0.5",
+                  "ok/sample-ok.txt": "0 0.328125 0.375 0.46875 0.5"
+                },
+                "studio_classes": [
+                  {
+                    "label": "ControlledBox",
+                    "category_id": 7,
+                    "color": "#f59e0b"
+                  }
+                ]
+              },
+              "download_url": "/api/dataset/formats/download/annotations_dbef5deec73f4c86bd14006ccc00cc29"
+            },
+            "downloaded_zip": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/0-d1cb7c05-r0/logs/completed-yolo.zip",
+            "downloaded_sha256": "374ab3ccbae78a53b10fe3530dfd39a1664e73f57f91fe67d6359779ae9a3b1b",
+            "source_zip": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/0-d1cb7c05-r0/projects/owned_export_lifecycle/exports/annotations_dbef5deec73f4c86bd14006ccc00cc29.zip",
+            "source_sha256": "374ab3ccbae78a53b10fe3530dfd39a1664e73f57f91fe67d6359779ae9a3b1b",
+            "members": {
+              "classes.txt": {
+                "bytes": 13,
+                "sha256": "e0d43729ea2b602c956d7cc57de7672a5f88ee5ebac9a7ca2a8112eae5dd470e",
+                "text": "ControlledBox"
+              },
+              "image_manifest.json": {
+                "bytes": 162,
+                "sha256": "3bc77e4c964c5dbf4d85069d4c800358829e4c6de5d63a568e07cab741e19efd",
+                "text": "[\n  {\n    \"file_name\": \"ng/sample-ng.png\",\n    \"width\": 32,\n    \"height\": 32\n  },\n  {\n    \"file_name\": \"ok/sample-ok.png\",\n    \"width\": 32,\n    \"height\": 32\n  }\n]"
+              },
+              "ng/sample-ng.txt": {
+                "bytes": 28,
+                "sha256": "bc94afaa8b08ff3d305eb997ab730b20b16476b179a1e4bef988ed9a709f51c1",
+                "text": "0 0.328125 0.375 0.46875 0.5"
+              },
+              "ok/sample-ok.txt": {
+                "bytes": 28,
+                "sha256": "bc94afaa8b08ff3d305eb997ab730b20b16476b179a1e4bef988ed9a709f51c1",
+                "text": "0 0.328125 0.375 0.46875 0.5"
+              },
+              "studio_classes.json": {
+                "bytes": 86,
+                "sha256": "7ccab9bbb2b1adf7a18b29b40047ef9702a7972a3af391b6dba3c670b21aedb4",
+                "text": "[\n  {\n    \"label\": \"ControlledBox\",\n    \"category_id\": 7,\n    \"color\": \"#f59e0b\"\n  }\n]"
+              }
+            }
+          }
+        ],
+        "observed_export_requests": [
+          {
+            "method": "POST",
+            "path": "/api/dataset/formats/export",
+            "body": {
+              "format": "labelme"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/api/dataset/formats/export",
+            "body": {
+              "format": "yolo"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/api/dataset/formats/export",
+            "body": {
+              "format": "yolo"
+            }
+          }
+        ],
+        "completed_downloads": 2,
+        "actual_generated_zip_members_verified": true,
+        "annotation_metadata_or_model_control_writes": [],
+        "human_label_truth": false,
+        "quality_accepted": false
+      },
+      "owned_cleanup": {
+        "exited": true,
+        "exitCode": 0,
+        "signal": null,
+        "exitedBeforeStop": false,
+        "forced": false,
+        "forcedReason": null,
+        "groupAlive": false,
+        "escaped": [],
+        "unownedReferences": [],
+        "scanError": null,
+        "durationMs": 957,
+        "stoppedAt": "2026-10-08T00:43:00.301Z",
+        "healthy_at_end": true,
+        "port_closed": true,
+        "pid_alive": false
+      }
+    },
+    {
+      "feature": "F117",
+      "mode": "electron",
+      "receipt": "docs/verification/receipts/2026-10-08-f117-ir-export-ed05005-electron.json",
+      "receipt_sha256": "4018f88877819f26c2a89621fd1bbac2573dd9a50538fb6a932952899d0b3d14",
+      "observed_controls": {
+        "action": "format-export-bundle",
+        "verified_dimensions": [
+          "empty",
+          "error",
+          "reopen"
+        ],
+        "pending_dimensions": {
+          "cancel": "No export-specific Cancel control or cancellable download acknowledgement exists in DatasetWorkflowPanel; common panel dismissal is completed-view reopen only."
+        },
+        "empty": {
+          "project": {
+            "schema_version": 1,
+            "id": "0835c7f3",
+            "name": "Owned zero-image export",
+            "task": "segmentation",
+            "project_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-bc6eee02-r0/userData/projects/owned_zero-image_export",
+            "dataset_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-bc6eee02-r0/userData/projects/owned_zero-image_export/dataset",
+            "models_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-bc6eee02-r0/userData/projects/owned_zero-image_export/models",
+            "reports_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-bc6eee02-r0/userData/projects/owned_zero-image_export/reports",
+            "annotations_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-bc6eee02-r0/userData/projects/owned_zero-image_export/annotations",
+            "active_labelset_id": "default",
+            "description": "",
+            "active_preset": "fast",
+            "source_dataset_dir": null,
+            "created_at": "2026-10-08T00:44:31Z",
+            "updated_at": "2026-10-08T00:44:31Z"
+          },
+          "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-bc6eee02-r0/empty-export-source",
+          "metadata": [],
+          "versions": {
+            "versions": []
+          },
+          "annotation_tree": {
+            "by_dataset/b9255bcd184ce827/metadata/workflow.json": "ac39ced502434a400d2e8c130fff3b68fd17ea24d63979793fad076eee9cfa1e"
+          },
+          "project_sha256": "6cd882bcfa9470c4bb22d2967b46e94ecafab69db2a64aedb0a984215bfc34fd",
+          "zero_image_export_allowed": true,
+          "archive_member_count": 0,
+          "manifest_document_count": 0,
+          "source_unchanged": true,
+          "useful_dataset_or_quality_accepted": false
+        },
+        "error": {
+          "path": "/api/dataset/formats/export",
+          "body": {
+            "format": "yolo"
+          },
+          "status": 503,
+          "backend_dispatch": false,
+          "export_artifact_created": false,
+          "extra_download": 0,
+          "selected_format": "yolo",
+          "button_reenabled": true,
+          "download_transport_failure_verified": false
+        },
+        "reopen": [
+          {
+            "name": "completed-view-close-open",
+            "format": "yolo",
+            "notice_preserved": true,
+            "extra_export_POST": 0,
+            "extra_download": 0,
+            "zip_sha256": "1b4177f1a6d482d0e143c4d47ee2d0af0fc777f2c6eeddfee7a0407efee02390"
+          },
+          {
+            "name": "actual-renderer-reload",
+            "format": "labelme",
+            "transient_notice_cleared": true,
+            "persisted_zip_sha256": "1b4177f1a6d482d0e143c4d47ee2d0af0fc777f2c6eeddfee7a0407efee02390",
+            "extra_export_POST": 0,
+            "extra_download": 0
+          }
+        ],
+        "source_images": [
+          {
+            "label": "ok",
+            "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-bc6eee02-r0/dataset/ok/sample-ok.png",
+            "bytes": 96,
+            "sha256": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e"
+          },
+          {
+            "label": "ng",
+            "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-bc6eee02-r0/dataset/ng/sample-ng.png",
+            "bytes": 103,
+            "sha256": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da"
+          }
+        ],
+        "export_receipts": [
+          {
+            "format": "labelme",
+            "request": {
+              "format": "labelme"
+            },
+            "status": 200,
+            "response": {
+              "format": "labelme",
+              "image_count": 0,
+              "annotation_count": 0,
+              "payload": {
+                "format": "labelme",
+                "documents": []
+              },
+              "download_url": "/api/dataset/formats/download/annotations_55b96601b80d4bbe9b6487e4cc65146f"
+            },
+            "downloaded_zip": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-bc6eee02-r0/logs/empty-labelme.zip",
+            "downloaded_sha256": "8739c76e681f900923b900c9df0ef75cf421d39cabb54650c4b9ad19b6a76d85",
+            "source_zip": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-bc6eee02-r0/userData/projects/owned_zero-image_export/exports/annotations_55b96601b80d4bbe9b6487e4cc65146f.zip",
+            "source_sha256": "8739c76e681f900923b900c9df0ef75cf421d39cabb54650c4b9ad19b6a76d85",
+            "members": {}
+          },
+          {
+            "format": "yolo",
+            "request": {
+              "format": "yolo"
+            },
+            "status": 200,
+            "response": {
+              "format": "yolo",
+              "image_count": 2,
+              "annotation_count": 2,
+              "payload": {
+                "format": "yolo",
+                "classes": [
+                  "ControlledBox"
+                ],
+                "images": [
+                  {
+                    "file_name": "ng/sample-ng.png",
+                    "width": 32,
+                    "height": 32
+                  },
+                  {
+                    "file_name": "ok/sample-ok.png",
+                    "width": 32,
+                    "height": 32
+                  }
+                ],
+                "labels": {
+                  "ng/sample-ng.txt": "0 0.328125 0.375 0.46875 0.5",
+                  "ok/sample-ok.txt": "0 0.328125 0.375 0.46875 0.5"
+                },
+                "studio_classes": [
+                  {
+                    "label": "ControlledBox",
+                    "category_id": 7,
+                    "color": "#f59e0b"
+                  }
+                ]
+              },
+              "download_url": "/api/dataset/formats/download/annotations_366a7070b09c4381941a7ab774b0818b"
+            },
+            "downloaded_zip": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-bc6eee02-r0/logs/completed-yolo.zip",
+            "downloaded_sha256": "1b4177f1a6d482d0e143c4d47ee2d0af0fc777f2c6eeddfee7a0407efee02390",
+            "source_zip": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/ir-export-root-adapter/clean-source-01/ws/1-bc6eee02-r0/userData/projects/owned_export_lifecycle/exports/annotations_366a7070b09c4381941a7ab774b0818b.zip",
+            "source_sha256": "1b4177f1a6d482d0e143c4d47ee2d0af0fc777f2c6eeddfee7a0407efee02390",
+            "members": {
+              "classes.txt": {
+                "bytes": 13,
+                "sha256": "e0d43729ea2b602c956d7cc57de7672a5f88ee5ebac9a7ca2a8112eae5dd470e",
+                "text": "ControlledBox"
+              },
+              "image_manifest.json": {
+                "bytes": 162,
+                "sha256": "3bc77e4c964c5dbf4d85069d4c800358829e4c6de5d63a568e07cab741e19efd",
+                "text": "[\n  {\n    \"file_name\": \"ng/sample-ng.png\",\n    \"width\": 32,\n    \"height\": 32\n  },\n  {\n    \"file_name\": \"ok/sample-ok.png\",\n    \"width\": 32,\n    \"height\": 32\n  }\n]"
+              },
+              "ng/sample-ng.txt": {
+                "bytes": 28,
+                "sha256": "bc94afaa8b08ff3d305eb997ab730b20b16476b179a1e4bef988ed9a709f51c1",
+                "text": "0 0.328125 0.375 0.46875 0.5"
+              },
+              "ok/sample-ok.txt": {
+                "bytes": 28,
+                "sha256": "bc94afaa8b08ff3d305eb997ab730b20b16476b179a1e4bef988ed9a709f51c1",
+                "text": "0 0.328125 0.375 0.46875 0.5"
+              },
+              "studio_classes.json": {
+                "bytes": 86,
+                "sha256": "7ccab9bbb2b1adf7a18b29b40047ef9702a7972a3af391b6dba3c670b21aedb4",
+                "text": "[\n  {\n    \"label\": \"ControlledBox\",\n    \"category_id\": 7,\n    \"color\": \"#f59e0b\"\n  }\n]"
+              }
+            }
+          }
+        ],
+        "observed_export_requests": [
+          {
+            "method": "POST",
+            "path": "/api/dataset/formats/export",
+            "body": {
+              "format": "labelme"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/api/dataset/formats/export",
+            "body": {
+              "format": "yolo"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/api/dataset/formats/export",
+            "body": {
+              "format": "yolo"
+            }
+          }
+        ],
+        "completed_downloads": 2,
+        "actual_generated_zip_members_verified": true,
+        "annotation_metadata_or_model_control_writes": [],
+        "human_label_truth": false,
+        "quality_accepted": false
+      },
+      "owned_cleanup": {
+        "electron_alive": false,
+        "backends": [
+          {
+            "port": 53793,
+            "pid": 85844,
+            "port_closed": true,
+            "pid_alive": false
+          }
+        ],
+        "logged_backend_pids": [
+          85844
+        ],
+        "logged_backend_pids_alive": [],
+        "backend_restarted": false,
+        "escaped": [],
+        "unowned_references": [],
+        "scan_error": null,
+        "close_timed_out": false
+      }
+    }
+  ],
+  "proof_hashes": {
+    "command.json": "f142c91c6c639bbfa83eeceab5f7c475e474c22f35df700b97aa4683066ecbec",
+    "result.log": "7e978314690d15b7e71261a261183650b8c9da6cfb658a332c7280f5d458559a",
+    "source-before.json": "70e9b82e47f4c8218d5d5f0e074803bc1f0000f3892cc81064ccfcec779c78cc",
+    "source-after.json": "70e9b82e47f4c8218d5d5f0e074803bc1f0000f3892cc81064ccfcec779c78cc"
+  },
+  "report_sha256": "0eb584cc448f9953a5edd457d074e46836d09e5bd25820dad7e5e4fdec640cb4",
+  "teardown_sha256": "5e5829c1439d3bae00a92c01d7701a27245475bb3cbd550f24d684f80e80d0d2",
+  "root_reviews": {
+    "F117": "a70a5f7a5ee1965ede88512da4f411d1460f2210edc6a0f0f1e100b5e03f64c0",
+    "F099": "20c6c92b666d0a19beb260075ba43b06a34600fae6fac677418319003ed21e4a"
+  },
+  "independent_F099_review_sha256": "e3da91c1b6a70b1880e8d5a55d567f25957d58876992718e6bdfa9f6905e3aeb",
+  "acceptance": {
+    "new_existing_curated_scenarios": 15,
+    "curated_actions_added": 0,
+    "quality": false,
+    "human_truth": false,
+    "installed_target": false,
+    "publisher_or_release": false,
+    "whole_tree": false,
+    "whole_feature": false
+  },
+  "scope": [
+    "Actual two-input CPU/OpenVINO parity does not establish quality: generated all-OK weights miss NG.",
+    "Synthetic precision/full-flow review is fixture authority; no managed service is applied.",
+    "Approval/library503 and metadata corruption are exact controlled UI inputs, not physical backend corruption.",
+    "Library old UI response is a controlled authenticated snapshot; original delayed HTTP provenance is false.",
+    "F117 export cancel remains pending because no export-specific cancellation or acknowledgement exists."
+  ]
+}

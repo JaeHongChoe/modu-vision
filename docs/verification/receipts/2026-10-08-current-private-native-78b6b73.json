@@ -1,0 +1,179 @@
+{
+  "schema": "modu-vision.fresh-current-private-native-controlled-cpu/v1",
+  "source_sha": "78b6b73a7451964d47eaf206e22ec10c42e266af",
+  "source_scope": "Clean current78b source checkout during compile, assembly and original native execution. Exact existing frontend/Electron machine bytes reused only after456 current source pins match; fresh backend compiled from current source. This is a private controlled committed pair, not the OS installer or publisher release.",
+  "current_root_production_readback": {
+    "source_head": "ed0500583fe054c3dae44818418920e6e1c5172e",
+    "private_frozen_base": "78b6b73a7451964d47eaf206e22ec10c42e266af",
+    "backend_resource_pins_current": 339,
+    "frontend_source_pins_current": 456,
+    "all_matched": true,
+    "binary_sha256": "3ecd1e5ab6875b49f56cfc40ffe94325c1e18e81992f93b7719677d0f9d0a93f",
+    "build_identity_sha256": "cc38deb87171b5496e910255489b4f48a4ee11b9f9183e3f651338401191adc5",
+    "scope": "Exact current production resources and frontend sources match this fresh private candidate; later source UI specs/docs do not alter those production inputs. No whole acceptance or new code transferred."
+  },
+  "test": "backend/tests/test_application_launch_electron.py::test_actual_private_electron_original_controller_backend_epoch_and_cpu_pins",
+  "test_sha256": "e654907447b0ee2bc48bf426e05be2531da2041f30b356edd0b1466145798b63",
+  "actual_execution": {
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "pytest_case_seconds": 489.168,
+    "runner_seconds": 490.75782324996544,
+    "source_inputs": 2183,
+    "source_before_after_same": true,
+    "clean_before_after": true,
+    "original_controller_main_backend_chain": true,
+    "normal_appkit_quit": true,
+    "registered_original_processes_exited": true
+  },
+  "artifact_binding": {
+    "backend_binary_sha256": "3ecd1e5ab6875b49f56cfc40ffe94325c1e18e81992f93b7719677d0f9d0a93f",
+    "backend_build_identity_sha256": "cc38deb87171b5496e910255489b4f48a4ee11b9f9183e3f651338401191adc5",
+    "compiled_binding_sha256": "0a1cc96be08016ba885c65045ca12c71aac3462a350eaa3605d88c9b27da5950",
+    "supplier_manifest_sha256": "5a39f2eff216ea2ad395bbecb8b88572540b1c68d52e7bfddf7fc3660b0494f6",
+    "bundle_artifact_pins_sha256": "2018efcc9e1cfe5e27a7c3d4d97fd1b35894c30c8504e4a2f93953dcfc507d26",
+    "archive_sha256": "ee4fd1a37f7c2f340ed688b74510b44d555f3d54acd1bf0056a223198040dddb",
+    "archive_bytes": 660567097,
+    "frontend_source_count": 456,
+    "backend_resource_count": 339,
+    "backend_exported_source_count": 335,
+    "compiled_files": 11729,
+    "compiled_links": 95
+  },
+  "controlled_cpu": {
+    "semantic_output": {
+      "defective_roi_count": 0,
+      "final_verdict": "OK",
+      "recognized_texts": [
+        "A"
+      ],
+      "roi_count": 1,
+      "routed_output_node_id": "output"
+    },
+    "epoch": "e7d2db94f32fa878504359509c6c661d",
+    "output_sha256": "984ee9d72dfc884a7afab21e676e02e1d771fd7992f1b45c5a7f2813c2494b01",
+    "receipt_sha256": "732ca2582e472ff0b753e67b6aa11e783b8a8b301ab43ed9dbe23caf7fd39201",
+    "input_pins": {
+      "projects/cpu-known-image/delivery/launch-known-image/input.png": "e27b492665b0e46239625a584b7568968e3bce694c89b274670a7099e236e5ee",
+      "projects/cpu-known-image/delivery/launch-known-image/package/manifest.json": "11152385644463642005f63383f119486971304a8a2fea301db0a98eadf26985",
+      "projects/cpu-known-image/delivery/launch-known-image/package/models/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/best_model.pt": "9e6ba9c218c98fb39ffb2c50713b5972e1796d4a3631a50959185067ede4c47f",
+      "projects/cpu-known-image/delivery/launch-known-image/package/pipeline.json": "ca67a4948f34f1556d8bafaccc3337badcc11f3031e15e68ddadf9c413852213",
+      "projects/cpu-known-image/project.json": "79b2e16b07b3ed1f3168feec8765f3dff230d6b8461584c8814374f110b10f70"
+    },
+    "pointers_preserved": {
+      "application-active.json": "e9c76ec271a117df0573f4f5f6c06b734d976620575ab95251f5905f5e94c7f3",
+      "global-active.json": "5c44908932886ccd561d7a899d777df85bfbe122c0e15dc302941cedaecb5741"
+    },
+    "bootstrap_exact_main_backend_epoch_binding": true,
+    "compiled_readbacks": [
+      {
+        "actual_application_inference_verified": false,
+        "actual_cpu_execution_verified": true,
+        "database_fence": 2,
+        "execution_scope": "controlled_frozen_backend",
+        "installation_id": "0e9346c1efaa411590a13a08028eca5d",
+        "model_quality_approved": false,
+        "native_app_handshake_verified": false,
+        "nonce": "2dcd1973456447a694c337d70af70020",
+        "owned_backend_execution_origin_verified": true,
+        "plan_sha256": "b0b989d1a2170b3103ddbcb9e7a98429849834a0884dcb5595b69bf59ab4edfd",
+        "receipt_sha256": "732ca2582e472ff0b753e67b6aa11e783b8a8b301ab43ed9dbe23caf7fd39201",
+        "release_ready": false,
+        "schema_version": 1,
+        "status": "verified",
+        "update_id": "da728eaf87c2457381b128e11c564abd",
+        "worker_process_tree_exit_verified": false
+      },
+      {
+        "actual_application_inference_verified": false,
+        "actual_cpu_execution_verified": true,
+        "database_fence": 2,
+        "execution_scope": "controlled_frozen_backend",
+        "installation_id": "0e9346c1efaa411590a13a08028eca5d",
+        "model_quality_approved": false,
+        "native_app_handshake_verified": false,
+        "nonce": "2dcd1973456447a694c337d70af70020",
+        "owned_backend_execution_origin_verified": true,
+        "plan_sha256": "b0b989d1a2170b3103ddbcb9e7a98429849834a0884dcb5595b69bf59ab4edfd",
+        "receipt_sha256": "732ca2582e472ff0b753e67b6aa11e783b8a8b301ab43ed9dbe23caf7fd39201",
+        "release_ready": false,
+        "schema_version": 1,
+        "status": "verified",
+        "update_id": "da728eaf87c2457381b128e11c564abd",
+        "worker_process_tree_exit_verified": false
+      }
+    ]
+  },
+  "cleanup": {
+    "durable_state": "recovery_required",
+    "nonce": "2dcd1973456447a694c337d70af70020",
+    "normal_quit_requested": true,
+    "original_backend_exited": true,
+    "original_controller_reaped": true,
+    "original_main_exited": true,
+    "whole_tree_exit_verified": false
+  },
+  "proof_hashes": {
+    "freeze": "4279c8fb451c49403356047df3538146dedfab05775e44111e4e3eb553a7317b",
+    "proof_index": "d4e38fad839010ea01172a6a45e3eb0c9a46af5e6bcd77cf35d69b656379e8d5",
+    "actual_native_proof": "e61380748353145f3efd3e68e9933883547019870f38593b7e62c51f28169116",
+    "actual_native_xml": "a1b4f8cc5de887534240bab0b631a162fcc326a9af9132d987381c15d0511abd",
+    "actual_native_log": "2501b6b2e6d96dc918ceae392fa4226eadf65db2defd99346d572adb17847bb3",
+    "actual_native_start_argv": "b4be5ec832741d5846dea74727d7b1f01b43045fb65fb4381d827dc02ffc3b33",
+    "root_review": "29cd13f6240f7dcc2efac1a5c9e07a54d3939ea397caf3b60a647e08b67f48f9",
+    "post_native_artifact_verification": "7cfff4101affcf0bb22dcbd638b6ba14aaaf05f546cbeaaaf0b1d95985771c83"
+  },
+  "root_proof_pins_rehashed": 65,
+  "acceptance": {
+    "actual_private_controller_electron_frozen_backend_startup": true,
+    "controlled_cpu_execution": true,
+    "whole_process_tree": false,
+    "managed_writer_drain": false,
+    "installed_release": false,
+    "OS_registration": false,
+    "publisher": false,
+    "ordinary_backend_device_configuration": false,
+    "post_start_environment_mutations": false,
+    "native_target_matrix": false,
+    "model_quality": false,
+    "release": false,
+    "whole_parent": false
+  },
+  "retained_failures": [
+    "First runner lacked Node in private native PATH and failed during fixture preparation before controller/app admission. Corrected only runner PATH and existing pinned TS prerequisites; original native test/binary/assembly/deadlines were unchanged and the next fixture was fresh.",
+    "Private proof sealer initially read build identity from receipt instead of bootstrap. Schema correction affected the private sealer only; actual original pass/log/proof and artifact bytes were unchanged."
+  ],
+  "scope": {
+    "GPU_dispatch": false,
+    "Windows_qualified": false,
+    "actual_controlled_CPU_output": {
+      "defective_roi_count": 0,
+      "final_verdict": "OK",
+      "recognized_texts": [
+        "A"
+      ],
+      "roi_count": 1,
+      "routed_output_node_id": "output"
+    },
+    "compiler_standard_ad_hoc_MachO_signature_operations_present": true,
+    "durable_lease_cleared": false,
+    "fresh_build_identity": "cc38deb87171b5496e910255489b4f48a4ee11b9f9183e3f651338401191adc5",
+    "fresh_compiled_binary": "3ecd1e5ab6875b49f56cfc40ffe94325c1e18e81992f93b7719677d0f9d0a93f",
+    "fresh_native_gate_original_unmodified": true,
+    "fresh_source_base": "78b6b73a7451964d47eaf206e22ec10c42e266af",
+    "human_model_quality_approved": false,
+    "installed_release_accepted": false,
+    "native_first_attempt": "Runner prerequisite mistake retained: missing Node under compiler PATH; actual controller/app admission not reached. Corrected to original native PATH with existing pinned TS dependencies; test/artifact/budgets unchanged; fresh fixture.",
+    "new_product_source_edits": false,
+    "old_coherent4_or_primary9_execution_proof_transferred": false,
+    "only_prior_frontend_electron_machine_bytes_reused_after_456_current_source_pins_match": true,
+    "ordinary_device_config_accepted": false,
+    "physical_native_target_matrix_accepted": false,
+    "post_exec_MPL_hook_writer_qualified": false,
+    "public_license_distribution_approved": false,
+    "publisher_signing_Keychain_account_or_service_used": false,
+    "source_test_sha256": "e654907447b0ee2bc48bf426e05be2531da2041f30b356edd0b1466145798b63",
+    "whole_tree_exit_qualified": false
+  }
+}

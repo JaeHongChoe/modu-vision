@@ -1,0 +1,68 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "ed0500583fe054c3dae44818418920e6e1c5172e",
+  "source_dirty": false,
+  "test": "scripts/e2e/actual-ir-review-controls.spec.ts::native actual IR candidate review and library controls preserve exact original bindings",
+  "test_source_sha256": "ff630b7c878cd2bfc295f441eca3ca6400346c32a945b5b35ef1642ef549ca23",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "0eb584cc448f9953a5edd457d074e46836d09e5bd25820dad7e5e4fdec640cb4",
+  "harness_sha256": "d2cae8dfdf5fb0b17898bf0929a029ba588c6aacc79f66cd85b734f4d35f1b7a",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "ebb5b2c81f843651b7a7f95e749d4f9310d6ae2ccb9a45f5161c36c854ff9ce5"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "0064b76ffeeedcbc6e98b66158b52185a1af04d4fd32d0f038b19eb71fe45dd3"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "32e6dbb50193d75ed41c9bf3a454c7b1e63e5d21ec7b8db29bb4830fa77796aa"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "5131eb77e23d789457757b432278c3e53d9642afed0ce1b7f5ea0f9505913f41"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "aaf3c2f96f11207ad90e2a0cc821adaed0693c986ab0048bb07177e7f084a699"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "dfe55df48f6f471b1ff2915e7dbb86c973e8f88c5df0fbfae0f6560b7b1ba764"
+    },
+    {
+      "id": "screenshot-6",
+      "sha256": "a4be29d455e2c69e0df3afac5b2fc90090c106869f96cfd74cbdb01b3bfcc822"
+    },
+    {
+      "id": "screenshot-7",
+      "sha256": "94e326398401ea92bd4a29b3084d21991de940876806c4d942d76d393e91c55d"
+    },
+    {
+      "id": "screenshot-8",
+      "sha256": "e34e3facae3154c64514e0694179a17693e74ceeb4349666e8242ca1f3ab0527"
+    },
+    {
+      "id": "screenshot-9",
+      "sha256": "b8a85385a3927519f9e6a99bb57f8b1056cf26f1178fe11a8090a472386afdab"
+    },
+    {
+      "id": "screenshot-10",
+      "sha256": "35ed07588371152aba244600483ce2e494f22752ed64e5f4d09de2f8f61356fd"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

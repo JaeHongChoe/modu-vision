@@ -1,0 +1,44 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "ed0500583fe054c3dae44818418920e6e1c5172e",
+  "source_dirty": false,
+  "test": "scripts/e2e/label-export-lifecycle.spec.ts::native label export empty bundle, error and completed view reopen preserve generated labels",
+  "test_source_sha256": "34c24ca72466bd8bfb81795e959678d41afb62d4c35a93b4bf3a85ec65330efa",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "0eb584cc448f9953a5edd457d074e46836d09e5bd25820dad7e5e4fdec640cb4",
+  "harness_sha256": "0a69b47399c9fb59daee9ed2108ea0271387a9a77f4a890a5d01f8bbffb0b243",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "465e6fd5ef34268bb67c5e2b8c30557ba9814384ace14332eea215b27c938931"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "7655fcb2968ce4bc89b41d225c02b8ab9204f5a31807ecc6cd27146a7607ca67"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "6d5d8061c2d53d42c64ce47664e5b10e682377dae3bfed6d2491c187f4e40579"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "744921ad4c60e1a7aa4445401fd74142581079dad3b3a60fd354890a5a54f9ba"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "9924c4b4d1895e41c14490ef25b7109756b0689ed4547b3dc102b6e8954090f7"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

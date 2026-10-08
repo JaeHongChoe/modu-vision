@@ -14333,7 +14333,67 @@
        ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "ed0500583fe054c3dae44818418920e6e1c5172e",
+         "kind": "click",
+         "action": "Actual source UI controls with exact package or generated archive readback",
+         "reviewer": "Root frozen source/proof and clean replay review; independent F099 raw-proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/actual-ir-review-controls.spec.ts::native actual IR candidate review and library controls preserve exact original bindings",
+         "receipt": "2026-10-08-f099-ir-export-ed05005-electron.json",
+         "receipt_sha256": "63fbd952882afd3348b75c848f3406410e9eb73ddbe895fcd7a751ca46259863",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "ebb5b2c81f843651b7a7f95e749d4f9310d6ae2ccb9a45f5161c36c854ff9ce5"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0064b76ffeeedcbc6e98b66158b52185a1af04d4fd32d0f038b19eb71fe45dd3"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "32e6dbb50193d75ed41c9bf3a454c7b1e63e5d21ec7b8db29bb4830fa77796aa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "5131eb77e23d789457757b432278c3e53d9642afed0ce1b7f5ea0f9505913f41"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "aaf3c2f96f11207ad90e2a0cc821adaed0693c986ab0048bb07177e7f084a699"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "dfe55df48f6f471b1ff2915e7dbb86c973e8f88c5df0fbfae0f6560b7b1ba764"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "a4be29d455e2c69e0df3afac5b2fc90090c106869f96cfd74cbdb01b3bfcc822"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "94e326398401ea92bd4a29b3084d21991de940876806c4d942d76d393e91c55d"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "e34e3facae3154c64514e0694179a17693e74ceeb4349666e8242ca1f3ab0527"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "b8a85385a3927519f9e6a99bb57f8b1056cf26f1178fe11a8090a472386afdab"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "35ed07588371152aba244600483ce2e494f22752ed64e5f4d09de2f8f61356fd"
+          }
+         ],
+         "expected": "Actual original conversion job cancellation reaches its own terminal cancelled journal, null result and absent candidate; this does not prove the entire process tree exited.",
+         "observed": "Actual original conversion job cancellation reaches its own terminal cancelled journal, null result and absent candidate; this does not prove the entire process tree exited."
+        }
+       ]
       },
       "reopen": {
        "state": "verified",
@@ -14367,7 +14427,67 @@
        ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "ed0500583fe054c3dae44818418920e6e1c5172e",
+         "kind": "click",
+         "action": "Actual source UI controls with exact package or generated archive readback",
+         "reviewer": "Root frozen source/proof and clean replay review; independent F099 raw-proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/actual-ir-review-controls.spec.ts::native actual IR candidate review and library controls preserve exact original bindings",
+         "receipt": "2026-10-08-f099-ir-export-ed05005-electron.json",
+         "receipt_sha256": "63fbd952882afd3348b75c848f3406410e9eb73ddbe895fcd7a751ca46259863",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "ebb5b2c81f843651b7a7f95e749d4f9310d6ae2ccb9a45f5161c36c854ff9ce5"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0064b76ffeeedcbc6e98b66158b52185a1af04d4fd32d0f038b19eb71fe45dd3"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "32e6dbb50193d75ed41c9bf3a454c7b1e63e5d21ec7b8db29bb4830fa77796aa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "5131eb77e23d789457757b432278c3e53d9642afed0ce1b7f5ea0f9505913f41"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "aaf3c2f96f11207ad90e2a0cc821adaed0693c986ab0048bb07177e7f084a699"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "dfe55df48f6f471b1ff2915e7dbb86c973e8f88c5df0fbfae0f6560b7b1ba764"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "a4be29d455e2c69e0df3afac5b2fc90090c106869f96cfd74cbdb01b3bfcc822"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "94e326398401ea92bd4a29b3084d21991de940876806c4d942d76d393e91c55d"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "e34e3facae3154c64514e0694179a17693e74ceeb4349666e8242ca1f3ab0527"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "b8a85385a3927519f9e6a99bb57f8b1056cf26f1178fe11a8090a472386afdab"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "35ed07588371152aba244600483ce2e494f22752ed64e5f4d09de2f8f61356fd"
+          }
+         ],
+         "expected": "A different actual completed two-input CPU-to-IR job supplies exact heldout parity and package/model/input hashes to the same precision review; synthetic all-OK model misses NG and quality stays false.",
+         "observed": "A different actual completed two-input CPU-to-IR job supplies exact heldout parity and package/model/input hashes to the same precision review; synthetic all-OK model misses NG and quality stays false."
+        }
+       ]
       }
      }
     },
@@ -14434,19 +14554,319 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "ed0500583fe054c3dae44818418920e6e1c5172e",
+         "kind": "click",
+         "action": "Actual source UI controls with exact package or generated archive readback",
+         "reviewer": "Root frozen source/proof and clean replay review; independent F099 raw-proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/actual-ir-review-controls.spec.ts::native actual IR candidate review and library controls preserve exact original bindings",
+         "receipt": "2026-10-08-f099-ir-export-ed05005-electron.json",
+         "receipt_sha256": "63fbd952882afd3348b75c848f3406410e9eb73ddbe895fcd7a751ca46259863",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "ebb5b2c81f843651b7a7f95e749d4f9310d6ae2ccb9a45f5161c36c854ff9ce5"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0064b76ffeeedcbc6e98b66158b52185a1af04d4fd32d0f038b19eb71fe45dd3"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "32e6dbb50193d75ed41c9bf3a454c7b1e63e5d21ec7b8db29bb4830fa77796aa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "5131eb77e23d789457757b432278c3e53d9642afed0ce1b7f5ea0f9505913f41"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "aaf3c2f96f11207ad90e2a0cc821adaed0693c986ab0048bb07177e7f084a699"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "dfe55df48f6f471b1ff2915e7dbb86c973e8f88c5df0fbfae0f6560b7b1ba764"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "a4be29d455e2c69e0df3afac5b2fc90090c106869f96cfd74cbdb01b3bfcc822"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "94e326398401ea92bd4a29b3084d21991de940876806c4d942d76d393e91c55d"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "e34e3facae3154c64514e0694179a17693e74ceeb4349666e8242ca1f3ab0527"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "b8a85385a3927519f9e6a99bb57f8b1056cf26f1178fe11a8090a472386afdab"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "35ed07588371152aba244600483ce2e494f22752ed64e5f4d09de2f8f61356fd"
+          }
+         ],
+         "expected": "Blank reviewer disables the actual approval button and emits zero approval POSTs.",
+         "observed": "Blank reviewer disables the actual approval button and emits zero approval POSTs."
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "ed0500583fe054c3dae44818418920e6e1c5172e",
+         "kind": "click",
+         "action": "Actual source UI controls with exact package or generated archive readback",
+         "reviewer": "Root frozen source/proof and clean replay review; independent F099 raw-proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/actual-ir-review-controls.spec.ts::native actual IR candidate review and library controls preserve exact original bindings",
+         "receipt": "2026-10-08-f099-ir-export-ed05005-electron.json",
+         "receipt_sha256": "63fbd952882afd3348b75c848f3406410e9eb73ddbe895fcd7a751ca46259863",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "ebb5b2c81f843651b7a7f95e749d4f9310d6ae2ccb9a45f5161c36c854ff9ce5"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0064b76ffeeedcbc6e98b66158b52185a1af04d4fd32d0f038b19eb71fe45dd3"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "32e6dbb50193d75ed41c9bf3a454c7b1e63e5d21ec7b8db29bb4830fa77796aa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "5131eb77e23d789457757b432278c3e53d9642afed0ce1b7f5ea0f9505913f41"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "aaf3c2f96f11207ad90e2a0cc821adaed0693c986ab0048bb07177e7f084a699"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "dfe55df48f6f471b1ff2915e7dbb86c973e8f88c5df0fbfae0f6560b7b1ba764"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "a4be29d455e2c69e0df3afac5b2fc90090c106869f96cfd74cbdb01b3bfcc822"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "94e326398401ea92bd4a29b3084d21991de940876806c4d942d76d393e91c55d"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "e34e3facae3154c64514e0694179a17693e74ceeb4349666e8242ca1f3ab0527"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "b8a85385a3927519f9e6a99bb57f8b1056cf26f1178fe11a8090a472386afdab"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "35ed07588371152aba244600483ce2e494f22752ed64e5f4d09de2f8f61356fd"
+          }
+         ],
+         "expected": "Actual negative drift input disables approval without a POST or candidate change.",
+         "observed": "Actual negative drift input disables approval without a POST or candidate change."
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "ed0500583fe054c3dae44818418920e6e1c5172e",
+         "kind": "click",
+         "action": "Actual source UI controls with exact package or generated archive readback",
+         "reviewer": "Root frozen source/proof and clean replay review; independent F099 raw-proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/actual-ir-review-controls.spec.ts::native actual IR candidate review and library controls preserve exact original bindings",
+         "receipt": "2026-10-08-f099-ir-export-ed05005-electron.json",
+         "receipt_sha256": "63fbd952882afd3348b75c848f3406410e9eb73ddbe895fcd7a751ca46259863",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "ebb5b2c81f843651b7a7f95e749d4f9310d6ae2ccb9a45f5161c36c854ff9ce5"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0064b76ffeeedcbc6e98b66158b52185a1af04d4fd32d0f038b19eb71fe45dd3"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "32e6dbb50193d75ed41c9bf3a454c7b1e63e5d21ec7b8db29bb4830fa77796aa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "5131eb77e23d789457757b432278c3e53d9642afed0ce1b7f5ea0f9505913f41"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "aaf3c2f96f11207ad90e2a0cc821adaed0693c986ab0048bb07177e7f084a699"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "dfe55df48f6f471b1ff2915e7dbb86c973e8f88c5df0fbfae0f6560b7b1ba764"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "a4be29d455e2c69e0df3afac5b2fc90090c106869f96cfd74cbdb01b3bfcc822"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "94e326398401ea92bd4a29b3084d21991de940876806c4d942d76d393e91c55d"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "e34e3facae3154c64514e0694179a17693e74ceeb4349666e8242ca1f3ab0527"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "b8a85385a3927519f9e6a99bb57f8b1056cf26f1178fe11a8090a472386afdab"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "35ed07588371152aba244600483ce2e494f22752ed64e5f4d09de2f8f61356fd"
+          }
+         ],
+         "expected": "One exact valid approval POST receives controlled503 before backend dispatch; original job/candidate remain and no approval package is published.",
+         "observed": "One exact valid approval POST receives controlled503 before backend dispatch; original job/candidate remain and no approval package is published."
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "ed0500583fe054c3dae44818418920e6e1c5172e",
+         "kind": "click",
+         "action": "Actual source UI controls with exact package or generated archive readback",
+         "reviewer": "Root frozen source/proof and clean replay review; independent F099 raw-proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/actual-ir-review-controls.spec.ts::native actual IR candidate review and library controls preserve exact original bindings",
+         "receipt": "2026-10-08-f099-ir-export-ed05005-electron.json",
+         "receipt_sha256": "63fbd952882afd3348b75c848f3406410e9eb73ddbe895fcd7a751ca46259863",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "ebb5b2c81f843651b7a7f95e749d4f9310d6ae2ccb9a45f5161c36c854ff9ce5"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0064b76ffeeedcbc6e98b66158b52185a1af04d4fd32d0f038b19eb71fe45dd3"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "32e6dbb50193d75ed41c9bf3a454c7b1e63e5d21ec7b8db29bb4830fa77796aa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "5131eb77e23d789457757b432278c3e53d9642afed0ce1b7f5ea0f9505913f41"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "aaf3c2f96f11207ad90e2a0cc821adaed0693c986ab0048bb07177e7f084a699"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "dfe55df48f6f471b1ff2915e7dbb86c973e8f88c5df0fbfae0f6560b7b1ba764"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "a4be29d455e2c69e0df3afac5b2fc90090c106869f96cfd74cbdb01b3bfcc822"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "94e326398401ea92bd4a29b3084d21991de940876806c4d942d76d393e91c55d"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "e34e3facae3154c64514e0694179a17693e74ceeb4349666e8242ca1f3ab0527"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "b8a85385a3927519f9e6a99bb57f8b1056cf26f1178fe11a8090a472386afdab"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "35ed07588371152aba244600483ce2e494f22752ed64e5f4d09de2f8f61356fd"
+          }
+         ],
+         "expected": "Closing the completed unsent review emits no approval POST; selecting the same original package again resets reviewer/reason/checkbox and keeps the same job/candidate.",
+         "observed": "Closing the completed unsent review emits no approval POST; selecting the same original package again resets reviewer/reason/checkbox and keeps the same job/candidate."
+        }
+       ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "ed0500583fe054c3dae44818418920e6e1c5172e",
+         "kind": "click",
+         "action": "Actual source UI controls with exact package or generated archive readback",
+         "reviewer": "Root frozen source/proof and clean replay review; independent F099 raw-proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/actual-ir-review-controls.spec.ts::native actual IR candidate review and library controls preserve exact original bindings",
+         "receipt": "2026-10-08-f099-ir-export-ed05005-electron.json",
+         "receipt_sha256": "63fbd952882afd3348b75c848f3406410e9eb73ddbe895fcd7a751ca46259863",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "ebb5b2c81f843651b7a7f95e749d4f9310d6ae2ccb9a45f5161c36c854ff9ce5"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0064b76ffeeedcbc6e98b66158b52185a1af04d4fd32d0f038b19eb71fe45dd3"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "32e6dbb50193d75ed41c9bf3a454c7b1e63e5d21ec7b8db29bb4830fa77796aa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "5131eb77e23d789457757b432278c3e53d9642afed0ce1b7f5ea0f9505913f41"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "aaf3c2f96f11207ad90e2a0cc821adaed0693c986ab0048bb07177e7f084a699"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "dfe55df48f6f471b1ff2915e7dbb86c973e8f88c5df0fbfae0f6560b7b1ba764"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "a4be29d455e2c69e0df3afac5b2fc90090c106869f96cfd74cbdb01b3bfcc822"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "94e326398401ea92bd4a29b3084d21991de940876806c4d942d76d393e91c55d"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "e34e3facae3154c64514e0694179a17693e74ceeb4349666e8242ca1f3ab0527"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "b8a85385a3927519f9e6a99bb57f8b1056cf26f1178fe11a8090a472386afdab"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "35ed07588371152aba244600483ce2e494f22752ed64e5f4d09de2f8f61356fd"
+          }
+         ],
+         "expected": "Actual same-package optimization reselect restores the exact completed job while resetting the unsent review; this is not in-flight request cancellation.",
+         "observed": "Actual same-package optimization reselect restores the exact completed job while resetting the unsent review; this is not in-flight request cancellation."
+        }
+       ]
       },
       "handoff": {
        "state": "verified",
@@ -14570,16 +14990,256 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "ed0500583fe054c3dae44818418920e6e1c5172e",
+         "kind": "click",
+         "action": "Actual source UI controls with exact package or generated archive readback",
+         "reviewer": "Root frozen source/proof and clean replay review; independent F099 raw-proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/actual-ir-review-controls.spec.ts::native actual IR candidate review and library controls preserve exact original bindings",
+         "receipt": "2026-10-08-f099-ir-export-ed05005-electron.json",
+         "receipt_sha256": "63fbd952882afd3348b75c848f3406410e9eb73ddbe895fcd7a751ca46259863",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "ebb5b2c81f843651b7a7f95e749d4f9310d6ae2ccb9a45f5161c36c854ff9ce5"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0064b76ffeeedcbc6e98b66158b52185a1af04d4fd32d0f038b19eb71fe45dd3"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "32e6dbb50193d75ed41c9bf3a454c7b1e63e5d21ec7b8db29bb4830fa77796aa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "5131eb77e23d789457757b432278c3e53d9642afed0ce1b7f5ea0f9505913f41"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "aaf3c2f96f11207ad90e2a0cc821adaed0693c986ab0048bb07177e7f084a699"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "dfe55df48f6f471b1ff2915e7dbb86c973e8f88c5df0fbfae0f6560b7b1ba764"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "a4be29d455e2c69e0df3afac5b2fc90090c106869f96cfd74cbdb01b3bfcc822"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "94e326398401ea92bd4a29b3084d21991de940876806c4d942d76d393e91c55d"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "e34e3facae3154c64514e0694179a17693e74ceeb4349666e8242ca1f3ab0527"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "b8a85385a3927519f9e6a99bb57f8b1056cf26f1178fe11a8090a472386afdab"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "35ed07588371152aba244600483ce2e494f22752ed64e5f4d09de2f8f61356fd"
+          }
+         ],
+         "expected": "Actual empty project inventory returns no packages and no reopen control.",
+         "observed": "Actual empty project inventory returns no packages and no reopen control."
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "ed0500583fe054c3dae44818418920e6e1c5172e",
+         "kind": "click",
+         "action": "Actual source UI controls with exact package or generated archive readback",
+         "reviewer": "Root frozen source/proof and clean replay review; independent F099 raw-proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/actual-ir-review-controls.spec.ts::native actual IR candidate review and library controls preserve exact original bindings",
+         "receipt": "2026-10-08-f099-ir-export-ed05005-electron.json",
+         "receipt_sha256": "63fbd952882afd3348b75c848f3406410e9eb73ddbe895fcd7a751ca46259863",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "ebb5b2c81f843651b7a7f95e749d4f9310d6ae2ccb9a45f5161c36c854ff9ce5"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0064b76ffeeedcbc6e98b66158b52185a1af04d4fd32d0f038b19eb71fe45dd3"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "32e6dbb50193d75ed41c9bf3a454c7b1e63e5d21ec7b8db29bb4830fa77796aa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "5131eb77e23d789457757b432278c3e53d9642afed0ce1b7f5ea0f9505913f41"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "aaf3c2f96f11207ad90e2a0cc821adaed0693c986ab0048bb07177e7f084a699"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "dfe55df48f6f471b1ff2915e7dbb86c973e8f88c5df0fbfae0f6560b7b1ba764"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "a4be29d455e2c69e0df3afac5b2fc90090c106869f96cfd74cbdb01b3bfcc822"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "94e326398401ea92bd4a29b3084d21991de940876806c4d942d76d393e91c55d"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "e34e3facae3154c64514e0694179a17693e74ceeb4349666e8242ca1f3ab0527"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "b8a85385a3927519f9e6a99bb57f8b1056cf26f1178fe11a8090a472386afdab"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "35ed07588371152aba244600483ce2e494f22752ed64e5f4d09de2f8f61356fd"
+          }
+         ],
+         "expected": "Controlled failed-integrity/wrong-scope metadata for the real saved IR row disables its actions and emits no selection POST; physical corruption is not claimed.",
+         "observed": "Controlled failed-integrity/wrong-scope metadata for the real saved IR row disables its actions and emits no selection POST; physical corruption is not claimed."
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "ed0500583fe054c3dae44818418920e6e1c5172e",
+         "kind": "click",
+         "action": "Actual source UI controls with exact package or generated archive readback",
+         "reviewer": "Root frozen source/proof and clean replay review; independent F099 raw-proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/actual-ir-review-controls.spec.ts::native actual IR candidate review and library controls preserve exact original bindings",
+         "receipt": "2026-10-08-f099-ir-export-ed05005-electron.json",
+         "receipt_sha256": "63fbd952882afd3348b75c848f3406410e9eb73ddbe895fcd7a751ca46259863",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "ebb5b2c81f843651b7a7f95e749d4f9310d6ae2ccb9a45f5161c36c854ff9ce5"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0064b76ffeeedcbc6e98b66158b52185a1af04d4fd32d0f038b19eb71fe45dd3"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "32e6dbb50193d75ed41c9bf3a454c7b1e63e5d21ec7b8db29bb4830fa77796aa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "5131eb77e23d789457757b432278c3e53d9642afed0ce1b7f5ea0f9505913f41"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "aaf3c2f96f11207ad90e2a0cc821adaed0693c986ab0048bb07177e7f084a699"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "dfe55df48f6f471b1ff2915e7dbb86c973e8f88c5df0fbfae0f6560b7b1ba764"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "a4be29d455e2c69e0df3afac5b2fc90090c106869f96cfd74cbdb01b3bfcc822"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "94e326398401ea92bd4a29b3084d21991de940876806c4d942d76d393e91c55d"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "e34e3facae3154c64514e0694179a17693e74ceeb4349666e8242ca1f3ab0527"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "b8a85385a3927519f9e6a99bb57f8b1056cf26f1178fe11a8090a472386afdab"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "35ed07588371152aba244600483ce2e494f22752ed64e5f4d09de2f8f61356fd"
+          }
+         ],
+         "expected": "One exact library GET receives controlled503 before backend dispatch and emits no selection POST.",
+         "observed": "One exact library GET receives controlled503 before backend dispatch and emits no selection POST."
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "ed0500583fe054c3dae44818418920e6e1c5172e",
+         "kind": "click",
+         "action": "Actual source UI controls with exact package or generated archive readback",
+         "reviewer": "Root frozen source/proof and clean replay review; independent F099 raw-proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/actual-ir-review-controls.spec.ts::native actual IR candidate review and library controls preserve exact original bindings",
+         "receipt": "2026-10-08-f099-ir-export-ed05005-electron.json",
+         "receipt_sha256": "63fbd952882afd3348b75c848f3406410e9eb73ddbe895fcd7a751ca46259863",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "ebb5b2c81f843651b7a7f95e749d4f9310d6ae2ccb9a45f5161c36c854ff9ce5"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0064b76ffeeedcbc6e98b66158b52185a1af04d4fd32d0f038b19eb71fe45dd3"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "32e6dbb50193d75ed41c9bf3a454c7b1e63e5d21ec7b8db29bb4830fa77796aa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "5131eb77e23d789457757b432278c3e53d9642afed0ce1b7f5ea0f9505913f41"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "aaf3c2f96f11207ad90e2a0cc821adaed0693c986ab0048bb07177e7f084a699"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "dfe55df48f6f471b1ff2915e7dbb86c973e8f88c5df0fbfae0f6560b7b1ba764"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "a4be29d455e2c69e0df3afac5b2fc90090c106869f96cfd74cbdb01b3bfcc822"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "94e326398401ea92bd4a29b3084d21991de940876806c4d942d76d393e91c55d"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "e34e3facae3154c64514e0694179a17693e74ceeb4349666e8242ca1f3ab0527"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "b8a85385a3927519f9e6a99bb57f8b1056cf26f1178fe11a8090a472386afdab"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "35ed07588371152aba244600483ce2e494f22752ed64e5f4d09de2f8f61356fd"
+          }
+         ],
+         "expected": "Actual close and empty-project switch prevents stale IR row/review repaint after the held exact original UI request settles with a controlled authenticated snapshot; original delayed backend HTTP provenance is not claimed.",
+         "observed": "Actual close and empty-project switch prevents stale IR row/review repaint after the held exact original UI request settles with a controlled authenticated snapshot; original delayed backend HTTP provenance is not claimed."
+        }
+       ]
       },
       "reopen": {
        "state": "verified",
@@ -14639,7 +15299,67 @@
        ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S6-03",
+         "source_sha": "ed0500583fe054c3dae44818418920e6e1c5172e",
+         "kind": "click",
+         "action": "Actual source UI controls with exact package or generated archive readback",
+         "reviewer": "Root frozen source/proof and clean replay review; independent F099 raw-proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/actual-ir-review-controls.spec.ts::native actual IR candidate review and library controls preserve exact original bindings",
+         "receipt": "2026-10-08-f099-ir-export-ed05005-electron.json",
+         "receipt_sha256": "63fbd952882afd3348b75c848f3406410e9eb73ddbe895fcd7a751ca46259863",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "ebb5b2c81f843651b7a7f95e749d4f9310d6ae2ccb9a45f5161c36c854ff9ce5"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0064b76ffeeedcbc6e98b66158b52185a1af04d4fd32d0f038b19eb71fe45dd3"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "32e6dbb50193d75ed41c9bf3a454c7b1e63e5d21ec7b8db29bb4830fa77796aa"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "5131eb77e23d789457757b432278c3e53d9642afed0ce1b7f5ea0f9505913f41"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "aaf3c2f96f11207ad90e2a0cc821adaed0693c986ab0048bb07177e7f084a699"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "dfe55df48f6f471b1ff2915e7dbb86c973e8f88c5df0fbfae0f6560b7b1ba764"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "a4be29d455e2c69e0df3afac5b2fc90090c106869f96cfd74cbdb01b3bfcc822"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "94e326398401ea92bd4a29b3084d21991de940876806c4d942d76d393e91c55d"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "e34e3facae3154c64514e0694179a17693e74ceeb4349666e8242ca1f3ab0527"
+          },
+          {
+           "id": "screenshot-9",
+           "sha256": "b8a85385a3927519f9e6a99bb57f8b1056cf26f1178fe11a8090a472386afdab"
+          },
+          {
+           "id": "screenshot-10",
+           "sha256": "35ed07588371152aba244600483ce2e494f22752ed64e5f4d09de2f8f61356fd"
+          }
+         ],
+         "expected": "Actual saved IR selection carries exact package ID/path/base revision with independent saved runtime-review hash/device binding; service Apply remains disabled and no service write occurs.",
+         "observed": "Actual saved IR selection carries exact package ID/path/base revision with independent saved runtime-review hash/device binding; service Apply remains disabled and no service write occurs."
+        }
+       ]
       }
      }
     },
@@ -16654,7 +17374,77 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "ed0500583fe054c3dae44818418920e6e1c5172e",
+         "kind": "click",
+         "action": "Actual source UI controls with exact package or generated archive readback",
+         "reviewer": "Root frozen source/proof and clean replay review; independent F099 raw-proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/label-export-lifecycle.spec.ts::label export zero-image bundle, transport error and completed view reopen preserve generated source",
+         "receipt": "2026-10-08-f117-ir-export-ed05005-browser.json",
+         "receipt_sha256": "0980e0a181143e5861fec940c9c70074cfdbb840d902ab209bb2331a269516e2",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4f437d431a580ae64a5e687760953d4204c133189ed7a2d869fddd709463f4ca"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "131352960d293f26e02b2745d2c0273c8963852bb58350d55781f8e3f6d449e4"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "442b34c2618af2befc82326729a337e10aff46e2c40860b904b13dde153a5fd6"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "a60573fbd332085cfc7f3f86be01d389158afb180a1480cd91251d5ad8d8be19"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "57302407ad5d8c0408f8d900488dc0110ca5b61e9f624a84da41a8422c83498b"
+          }
+         ],
+         "expected": "An actual zero-image project exports a zero-member LabelMe ZIP without changing project, source, labels or versions; useful dataset quality is not accepted.",
+         "observed": "An actual zero-image project exports a zero-member LabelMe ZIP without changing project, source, labels or versions; useful dataset quality is not accepted."
+        },
+        {
+         "task": "S3-05",
+         "source_sha": "ed0500583fe054c3dae44818418920e6e1c5172e",
+         "kind": "click",
+         "action": "Actual source UI controls with exact package or generated archive readback",
+         "reviewer": "Root frozen source/proof and clean replay review; independent F099 raw-proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/label-export-lifecycle.spec.ts::native label export empty bundle, error and completed view reopen preserve generated labels",
+         "receipt": "2026-10-08-f117-ir-export-ed05005-electron.json",
+         "receipt_sha256": "4018f88877819f26c2a89621fd1bbac2573dd9a50538fb6a932952899d0b3d14",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "465e6fd5ef34268bb67c5e2b8c30557ba9814384ace14332eea215b27c938931"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "7655fcb2968ce4bc89b41d225c02b8ab9204f5a31807ecc6cd27146a7607ca67"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6d5d8061c2d53d42c64ce47664e5b10e682377dae3bfed6d2491c187f4e40579"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "744921ad4c60e1a7aa4445401fd74142581079dad3b3a60fd354890a5a54f9ba"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "9924c4b4d1895e41c14490ef25b7109756b0689ed4547b3dc102b6e8954090f7"
+          }
+         ],
+         "expected": "An actual zero-image project exports a zero-member LabelMe ZIP without changing project, source, labels or versions; useful dataset quality is not accepted.",
+         "observed": "An actual zero-image project exports a zero-member LabelMe ZIP without changing project, source, labels or versions; useful dataset quality is not accepted."
+        }
+       ]
       },
       "invalid": {
        "state": "verified",
@@ -16700,13 +17490,153 @@
        ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "ed0500583fe054c3dae44818418920e6e1c5172e",
+         "kind": "click",
+         "action": "Actual source UI controls with exact package or generated archive readback",
+         "reviewer": "Root frozen source/proof and clean replay review; independent F099 raw-proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/label-export-lifecycle.spec.ts::label export zero-image bundle, transport error and completed view reopen preserve generated source",
+         "receipt": "2026-10-08-f117-ir-export-ed05005-browser.json",
+         "receipt_sha256": "0980e0a181143e5861fec940c9c70074cfdbb840d902ab209bb2331a269516e2",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4f437d431a580ae64a5e687760953d4204c133189ed7a2d869fddd709463f4ca"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "131352960d293f26e02b2745d2c0273c8963852bb58350d55781f8e3f6d449e4"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "442b34c2618af2befc82326729a337e10aff46e2c40860b904b13dde153a5fd6"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "a60573fbd332085cfc7f3f86be01d389158afb180a1480cd91251d5ad8d8be19"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "57302407ad5d8c0408f8d900488dc0110ca5b61e9f624a84da41a8422c83498b"
+          }
+         ],
+         "expected": "One exact export POST receives controlled503 before backend dispatch; no artifact or download appears, format remains and export becomes enabled again.",
+         "observed": "One exact export POST receives controlled503 before backend dispatch; no artifact or download appears, format remains and export becomes enabled again."
+        },
+        {
+         "task": "S3-05",
+         "source_sha": "ed0500583fe054c3dae44818418920e6e1c5172e",
+         "kind": "click",
+         "action": "Actual source UI controls with exact package or generated archive readback",
+         "reviewer": "Root frozen source/proof and clean replay review; independent F099 raw-proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/label-export-lifecycle.spec.ts::native label export empty bundle, error and completed view reopen preserve generated labels",
+         "receipt": "2026-10-08-f117-ir-export-ed05005-electron.json",
+         "receipt_sha256": "4018f88877819f26c2a89621fd1bbac2573dd9a50538fb6a932952899d0b3d14",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "465e6fd5ef34268bb67c5e2b8c30557ba9814384ace14332eea215b27c938931"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "7655fcb2968ce4bc89b41d225c02b8ab9204f5a31807ecc6cd27146a7607ca67"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6d5d8061c2d53d42c64ce47664e5b10e682377dae3bfed6d2491c187f4e40579"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "744921ad4c60e1a7aa4445401fd74142581079dad3b3a60fd354890a5a54f9ba"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "9924c4b4d1895e41c14490ef25b7109756b0689ed4547b3dc102b6e8954090f7"
+          }
+         ],
+         "expected": "One exact export POST receives controlled503 before backend dispatch; no artifact or download appears, format remains and export becomes enabled again.",
+         "observed": "One exact export POST receives controlled503 before backend dispatch; no artifact or download appears, format remains and export becomes enabled again."
+        }
+       ]
       },
       "cancel": {
        "state": "pending"
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "ed0500583fe054c3dae44818418920e6e1c5172e",
+         "kind": "click",
+         "action": "Actual source UI controls with exact package or generated archive readback",
+         "reviewer": "Root frozen source/proof and clean replay review; independent F099 raw-proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/label-export-lifecycle.spec.ts::label export zero-image bundle, transport error and completed view reopen preserve generated source",
+         "receipt": "2026-10-08-f117-ir-export-ed05005-browser.json",
+         "receipt_sha256": "0980e0a181143e5861fec940c9c70074cfdbb840d902ab209bb2331a269516e2",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "4f437d431a580ae64a5e687760953d4204c133189ed7a2d869fddd709463f4ca"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "131352960d293f26e02b2745d2c0273c8963852bb58350d55781f8e3f6d449e4"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "442b34c2618af2befc82326729a337e10aff46e2c40860b904b13dde153a5fd6"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "a60573fbd332085cfc7f3f86be01d389158afb180a1480cd91251d5ad8d8be19"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "57302407ad5d8c0408f8d900488dc0110ca5b61e9f624a84da41a8422c83498b"
+          }
+         ],
+         "expected": "The completed actual YOLO ZIP retains exact normalized labels and source/download SHA through panel close/open and renderer reload; reload resets transient view, with no new export/download.",
+         "observed": "The completed actual YOLO ZIP retains exact normalized labels and source/download SHA through panel close/open and renderer reload; reload resets transient view, with no new export/download."
+        },
+        {
+         "task": "S3-05",
+         "source_sha": "ed0500583fe054c3dae44818418920e6e1c5172e",
+         "kind": "click",
+         "action": "Actual source UI controls with exact package or generated archive readback",
+         "reviewer": "Root frozen source/proof and clean replay review; independent F099 raw-proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/label-export-lifecycle.spec.ts::native label export empty bundle, error and completed view reopen preserve generated labels",
+         "receipt": "2026-10-08-f117-ir-export-ed05005-electron.json",
+         "receipt_sha256": "4018f88877819f26c2a89621fd1bbac2573dd9a50538fb6a932952899d0b3d14",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "465e6fd5ef34268bb67c5e2b8c30557ba9814384ace14332eea215b27c938931"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "7655fcb2968ce4bc89b41d225c02b8ab9204f5a31807ecc6cd27146a7607ca67"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6d5d8061c2d53d42c64ce47664e5b10e682377dae3bfed6d2491c187f4e40579"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "744921ad4c60e1a7aa4445401fd74142581079dad3b3a60fd354890a5a54f9ba"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "9924c4b4d1895e41c14490ef25b7109756b0689ed4547b3dc102b6e8954090f7"
+          }
+         ],
+         "expected": "The completed actual YOLO ZIP retains exact normalized labels and source/download SHA through panel close/open and renderer reload; reload resets transient view, with no new export/download.",
+         "observed": "The completed actual YOLO ZIP retains exact normalized labels and source/download SHA through panel close/open and renderer reload; reload resets transient view, with no new export/download."
+        }
+       ]
       },
       "handoff": {
        "state": "verified",

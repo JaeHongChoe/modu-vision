@@ -32,7 +32,7 @@
 | S6-04 | 오프라인 설치와 업데이트 | POSIX 앱/DB cutover·복구·기존 home 인수, 영속 controller와 main/backend 인증 handshake를 구현하고 검증했다. 원래 backend epoch의 source CPU 기준 이미지 실행과 source candidate 활성 pointer 변경 전 검사·복구를 추가 검증했다. 정확한 compiled candidate worker의 A/OK 수학·두 pointer 변경 전 봉인·재실행 거절을 검증했다. 전체 process-tree 종료 확인, OS installer adapter와 native packaged positive startup을 이어간다. 실 publisher 서명은 별도 조건이다. |
 | S6-05 | 공개 CI와 source 재현성 | 이전 소스의 hosted 성공·실패를 보존한다. 보호된 수동 candidate 검증 workflow와 source/artifact/환경 정책 gate를 추가했다. 실제 workflow 실행·서명·배포는 하지 않았고, 새 게시 소스의 전체 hosted 결과가 필요하다. |
 | S6-06 | 서명과 릴리스 채널 | 실제 Authenticode/publisher identity·서명 후 byte inventory·채널 승인 필요. |
-| S7-01 | 기존 기능 전체 coverage 계약 | 원래156개 ID를 유지한다. 현재207개 curated action의634개 시나리오 검증,815개 pending이다. 알려진 누락 메뉴/shortcut·남은 시나리오·전체 기능 수락을 이어간다. 행동 수와 전체 기능 완료 수는 다르다. |
+| S7-01 | 기존 기능 전체 coverage 계약 | 원래156개 ID를 유지한다. 현재207개 curated action의649개 시나리오 검증,800개 pending이다. 알려진 누락 메뉴/shortcut·남은 시나리오·전체 기능 수락을 이어간다. 행동 수와 전체 기능 완료 수는 다르다. |
 | S7-02 | 10모델군 실제 작업 시나리오 | 실제5 distinct learned chain은 완료. 10모델군 각각 사람이 검토한 정답과 대표 multi-task recipe 검증 필요. |
 | S7-03 | Windows 실제 설치와 사용 QA | Windows 실제 설치·사용 QA 사용자 면제. hosted Server2025 component 실행을 Win11 실사용 성공으로 세지 않음. |
 | S7-05 | 데이터 규모와 연속 운전 | 실제 browser/native에서10만 메타데이터·실제 이미지3장,3×120 keyset page·최대DOM32·응답120·tail UUID/SHA 재열기·파일 없는 항목 선택 거절을 검증했다. 10만 실제 사진 decode나 target 자원/택트 수락은 아니다. a184b1e의 동일 외장72시간 실행은 유지 중이며 이전 시간을 합산하지 않고 terminal receipt가 필요하다. |
@@ -431,3 +431,17 @@ compiled canary의 닫힌 protocol2/worker8개 필드를 화면 bridge에서 검
 - clean `f3895ec` browser/source Electron4건이 retry 없이 통과했고2185개 소스가 동일했다. 실제 원본 이미지 SHA·UUID·revision·annotation handoff와 평가 record/evidence SHA를 확인했다.
 - 제안 라벨은 적용하지 않았고 물리 annotation tree·metadata·versions가 그대로였다. 저장 평가 fixture의9개 report와 입력도 동일했고 재평가·학습·job 쓰기는0개였다. 폴더 응답·선택 오류503·optional preference 손상은 통제 입력이며 취소는 완료된 미전송 화면 닫기/선택 popup Escape이다.
 - 기존207개 curated 행동의634개 시나리오 verified/815개 pending이다. F059 group error와 부모 구현69/13, 전체 수락0은 유지한다.
+
+
+## 2026-10-08 실제 IR 검토·라벨 내보내기15개
+
+- clean `ed05005` browser1/source Electron2가 retry 없이 통과하고2192개 소스가 동일했다. 실제 conversion cancel journal과 별도 CPU→IR 두 입력 비교, 정확한 저장 package/runtime review 선택을 확인했다. generated allOK가 NG를 놓쳤고 사람의 품질 승인은 거짓이다. 서비스 적용 쓰기는0개다.
+- LabelMe 빈 ZIP과 실제 YOLO ZIP5개 멤버·정규화 라벨·source/download SHA, exact controlled503 뒤 회복·재열기를 검증했다. 원본 이미지·라벨·metadata·versions는 동일하며 export cancel은 pending이다.
+- 기존207개 curated 행동의649개 시나리오 verified/800개 pending이다. 부모 구현69/13, 전체 수락0과 Windows 면제2건은 유지한다.
+
+
+## 2026-10-08 최신 clean 소스의 실제 private native 앱
+
+- clean `78b6b73`의2183개 소스가 compile·assembly·original native 실행 전후 동일했다. 새 backend binary `3ecd1e5a`/build `cc38deb8`와339 resource·335 raw source export를 봉인했고 기존 frontend/Electron machine bytes는456개 최신 소스 pin 일치 뒤 재사용했다.
+- 원래 test가 실제 frozen controller→Electron→backend epoch에서 controlled CPU A/OK/1ROI/0defect와 동일 receipt 재조회2회를 확인했다.489.168초1pass/0skip이며 정상 AppKit 종료·원래 main/backend/controller 종료를 확인했다.
+- 실제 lease는 `recovery_required`를 유지한다. 전체 writer/process-tree 종료·OS installer·일반 장치 설정·post-start 환경·publisher·사람의 품질·설치 릴리스 수락은 별도 미완료이다. 초기 runner Node 부재와 private proof schema 수정 기록은 보존하며 과거 실행 성공을 새 binary로 옮기지 않았다.
