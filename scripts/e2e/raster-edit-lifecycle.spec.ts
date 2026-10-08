@@ -47,6 +47,25 @@ export function assertOnlySelectedRasterChanged(after:any[],before:any[]){
  assertTwoClasses(after);assertTwoClasses(before);expect(after[0].mask_rle).not.toBe(before[0].mask_rle);
  expect(after[0]).toEqual({...before[0],mask_rle:after[0].mask_rle});expect(after[1]).toEqual(before[1]);
 }
+// Wire-only schema normal form: AnnotationItem.model_dump() materializes
+// declared optional nulls that JSON requests may omit. Stored records and
+// complete raw API/file snapshots retain their original exact comparisons.
+export function assertWireRasterRecordsEqual(wire:any[],stored:any[]){
+ const declared=['id','type','label','category_id','bbox','rotated_bbox','polygon','points','mask_rle','is_normal','color','text','direction_deg'];
+ const nullable=['id','bbox','rotated_bbox','polygon','points','mask_rle','is_normal','color','text','direction_deg'];
+ expect(wire).toHaveLength(stored.length);
+ for(let i=0;i<wire.length;i++){
+  for(const key of Object.keys(wire[i]))expect(declared.includes(key)).toBe(true);
+  const normalized={...wire[i]};
+  for(const key of nullable)if(!Object.prototype.hasOwnProperty.call(wire[i],key)&&stored[i][key]===null)normalized[key]=null;
+  expect(Object.keys(normalized).sort()).toEqual(Object.keys(stored[i]).sort());
+  expect(normalized).toEqual(stored[i]);
+ }
+}
+export function assertOnlySelectedWireRasterChanged(wire:any[],before:any[]){
+ assertTwoClasses(wire);assertTwoClasses(before);expect(typeof wire[0].mask_rle).toBe('string');expect(wire[0].mask_rle.length).toBeGreaterThan(0);expect(wire[0].mask_rle).not.toBe(before[0].mask_rle);
+ assertWireRasterRecordsEqual(wire,[{...before[0],mask_rle:wire[0].mask_rle},before[1]]);
+}
 export function assertPaintCountChange(after:number,before:number,operation:'brush'|'eraser'){
  expect(after).toBeGreaterThan(0);if(operation==='brush')expect(after).toBeGreaterThan(before);else expect(after).toBeLessThan(before);
 }
@@ -357,7 +376,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
    expect(Object.keys(body).sort()).toEqual(['expected_revision','actor','image_id','image_path','annotations','image_width','image_height'].sort());expect(body.actor).toBe('operator');
    expect(body.image_id).toBe('part');expect(body.image_path).toBe(imagePath);expect(body.image_width).toBe(256);expect(body.image_height).toBe(256);
    expect(body.expected_revision).toBe(JSON.parse(before.state.api.metadata.body).revision);
-   if(operation==='undo')expect(body.annotations).toEqual(restoreRecord.annotations);else assertOnlySelectedRasterChanged(body.annotations,prior.annotations);
+   if(operation==='undo')assertWireRasterRecordsEqual(body.annotations,restoreRecord.annotations);else assertOnlySelectedWireRasterChanged(body.annotations,prior.annotations);
    const failedOracle=await oracle(action+'-failed-draft',{...body,mask_file:null},false);
    if(operation!=='undo')assertPaintCountChange(failedOracle.layers[0].painted,priorOracle.layers[0].painted,operation);
    else expect(failedOracle.layers.map((x:any)=>[x.rle_sha256,x.alpha_sha256])).toEqual(restoreRecord.oracle.layers.map((x:any)=>[x.rle_sha256,x.alpha_sha256]));

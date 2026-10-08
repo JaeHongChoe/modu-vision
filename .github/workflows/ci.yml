@@ -234,6 +234,7 @@ jobs:
           backend/tests/test_application_node_writer_authority.py
           backend/tests/test_worker_preflight_writer_lifetime.py
           backend/tests/test_application_launch_quiescence_bridge.py
+          backend/tests/test_writer_guard_finalization.py
           backend/tests/test_application_writer_control_paths.py
           backend/tests/test_application_runtime_home_paths.py
           backend/tests/test_application_cpu_writer_lifetime.py
