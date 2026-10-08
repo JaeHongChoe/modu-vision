@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "6f08dbdaadac25fdcce0d182d188ddf3feb503d7",
+  "source_dirty": false,
+  "test": "scripts/e2e/flow-legacy-edge-repair.spec.ts::native legacy wire repair preserves exact saved draft and runtime identity refusal",
+  "test_source_sha256": "f2813b9c954333290b0232fad3326ddbd1a2e2ea9b91c5157a1ce92562616fc7",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "8aaa63e2ff4287298f8bafad530b75d3d6a99e987cf769b38ffa783f0ae1b382",
+  "harness_sha256": "5ba27c07383a8fdc5946eac52eec29e0a887550d06e16104f8f7ca802d1997f4",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "0b2b721c7b5b54a6dfe717fc951ffbf27e5d3b18f59c9c052b09532266859c55"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "45c009563e96452b2cd851b85ce0a65dfc8186697ca5670d0c25b85ccecda5b2"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

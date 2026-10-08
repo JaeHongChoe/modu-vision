@@ -29,7 +29,7 @@
 | S5-01 | 독립 검사 서비스 | 독립 서비스의 SCM 등록·권한·Session0·재부팅과 실제 장치 검증 필요. |
 | S6-02 | Windows CPU 설치 프로그램 | 현재 Windows unsigned NSIS/portable 빌드·CPU 패키지 실행은 통과. non-admin 설치·제거·SCM 분리와 실제 설치 QA는 미검증/면제. |
 | S6-03 | 선택형 GPU와 runtime pack | pydicom·OpenVINO·CUDA12·CTC의 개별 범위 근거를 유지한다. Studio의 프로젝트별 비활성 설치·별도 pin·실제 변조 거절·재시도·재열기는 clean5284df6 browser2/native3, backend83, renderer907개로 검증했다. 자동 활성화·frozen/native 배포 조합·실 publisher·대표 품질은 별도 조건이다. |
-| S6-04 | 오프라인 설치와 업데이트 | POSIX 앱/DB cutover·복구·기존 home 인수, 영속 controller와 main/backend 인증 handshake를 구현하고 검증했다. 원래 backend epoch의 source CPU 기준 이미지 실행과 source candidate 활성 pointer 변경 전 검사·복구를 추가 검증했다. 정확한 compiled candidate worker의 A/OK 수학·두 pointer 변경 전 봉인·재실행 거절을 검증했다. 전체 process-tree 종료 확인, OS installer adapter와 native packaged positive startup을 이어간다. 실 publisher 서명은 별도 조건이다. |
+| S6-04 | 오프라인 설치와 업데이트 | POSIX 앱/DB cutover·복구·기존 home 인수, 영속 controller와 main/backend 인증 handshake를 구현하고 검증했다. 원래 backend epoch의 source CPU 기준 이미지 실행과 source candidate 활성 pointer 변경 전 검사·복구를 추가 검증했다. 정확한 compiled candidate worker의 A/OK 수학·두 pointer 변경 전 봉인·재실행 거절과 소스78b6b73의 실제 private frozen 앱 시작을 검증했다. 후속 소스 변경은 이 frozen 결과를 승계하지 않는다. 전체 writer/process-tree 종료 확인, OS installer adapter와 실제 publisher 서명은 계속 미완료이다. |
 | S6-05 | 공개 CI와 source 재현성 | 이전 소스의 hosted 성공·실패를 보존한다. 보호된 수동 candidate 검증 workflow와 source/artifact/환경 정책 gate를 추가했다. 실제 workflow 실행·서명·배포는 하지 않았고, 새 게시 소스의 전체 hosted 결과가 필요하다. |
 | S6-06 | 서명과 릴리스 채널 | 실제 Authenticode/publisher identity·서명 후 byte inventory·채널 승인 필요. |
 | S7-01 | 기존 기능 전체 coverage 계약 | 원래156개 ID를 유지한다. 현재207개 curated action의649개 시나리오 검증,800개 pending이다. 알려진 누락 메뉴/shortcut·남은 시나리오·전체 기능 수락을 이어간다. 행동 수와 전체 기능 완료 수는 다르다. |
@@ -445,3 +445,11 @@ compiled canary의 닫힌 protocol2/worker8개 필드를 화면 bridge에서 검
 - clean `78b6b73`의2183개 소스가 compile·assembly·original native 실행 전후 동일했다. 새 backend binary `3ecd1e5a`/build `cc38deb8`와339 resource·335 raw source export를 봉인했고 기존 frontend/Electron machine bytes는456개 최신 소스 pin 일치 뒤 재사용했다.
 - 원래 test가 실제 frozen controller→Electron→backend epoch에서 controlled CPU A/OK/1ROI/0defect와 동일 receipt 재조회2회를 확인했다.489.168초1pass/0skip이며 정상 AppKit 종료·원래 main/backend/controller 종료를 확인했다.
 - 실제 lease는 `recovery_required`를 유지한다. 전체 writer/process-tree 종료·OS installer·일반 장치 설정·post-start 환경·publisher·사람의 품질·설치 릴리스 수락은 별도 미완료이다. 초기 runner Node 부재와 private proof schema 수정 기록은 보존하며 과거 실행 성공을 새 binary로 옮기지 않았다.
+
+## 2026-10-08 원래 backend 종료·좌표 범위·기존 연결선 편집
+
+- clean `6f08dbd`에서 원래 ChildProcess의 직접 종료를 기다리도록 수정했다. signal 요청만으로 종료를 계산하지 않고, 동시에 호출한 stop은 같은 종료 약속을 기다린다. 원래4초 예산을 유지하며 종료가 불확실하면 후속 backend 시작을 거절한다. 직접 자식 종료 확인은 전체 writer drain 또는 process-tree 종료 확인이 아니다.
+- 모든 calibration에서 양의 정수 원본 크기·polygon 경계·mask/bbox 매핑을 검사한다. 잘못된 좌표를 clip하거나 변환을 추정하지 않는다. 실제 생성 이미지 API의422·정상 경계200 및 기존 cropped-mask fixture 보존을 확인했다.
+- ID 누락·중복이 있는 기존 draft에서도 선택한 연결선 한 행만 편집·삭제한다. transient 배열/행 참조는 저장하지 않고, 저장된 ID를 자동으로 고치지 않으며 유효하지 않은 runtime 게시 거절을 유지한다.
+- 원래 bootstrap2개, Node39개, 좌표62개, 타입 검사3개와 실제 browser/source Electron 각1개가 통과했다. retry/skip0이며2200개 소스가 실행 전후 동일하고 소유한 GUI 프로세스의 종료를 확인했다. 초기 receipt 생성기의 경로 오타는 artifact 수집 오류로 보존했으며 실제 실행을 다시 성공한 것으로 세지 않았다.
+- 원래82/156 ID, 부모 구현69/13·Windows 면제2·필수 pending11·수락0, curated 행동207개·649verified/800pending을 유지한다. 최신 frozen native·full hosted CI·사람 품질·장비 수락은 추가하지 않는다. 근거: `../verification/receipts/2026-10-08-source-safety-6f08dbd.json`.

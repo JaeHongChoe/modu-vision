@@ -1,0 +1,171 @@
+{
+  "schema": "modu-vision.source-stop-geometry-legacy-repair/v1",
+  "source_sha": "6f08dbdaadac25fdcce0d182d188ddf3feb503d7",
+  "source_clean_before_after": true,
+  "source_count": 2200,
+  "source_inputs_unchanged": true,
+  "production_sources": {
+    "src/main/supervisor.ts": "7ae2dc327c3d39e52972e30d5690c7a2dad2a6e7fcedfe7c645e27e8938d8ae6",
+    "backend/engine/geometry_measurement.py": "0aebe91fa3eeb2f1c7fa5e1bc4855ad07e872321e5861a69f952888bf1a092d8",
+    "src/renderer/components/flowchart/flowchartGraph.ts": "6243ad045d305177de33dd638a1c3f5e02440931345479c43582ee3f6ee4d76b",
+    "src/renderer/components/flowchart/DAGCircuitOverlay.tsx": "744885f6336b2a5adde90b592106e711d33b6db2e5d844042400f30ce1749d05",
+    "src/renderer/components/flowchart/FlowchartStudio.tsx": "1802afbe566356090cc2cad0215ac78c8bcb67c1039d6294f14b12b48f9e7ae3"
+  },
+  "results": {
+    "node_passed": 39,
+    "node_failed": 0,
+    "node_skipped": 0,
+    "original_bootstrap_passed": 2,
+    "geometry_passed": 62,
+    "geometry_failed": 0,
+    "geometry_skipped": 0,
+    "types_exit_codes": [
+      0,
+      0,
+      0
+    ],
+    "actual_GUI_passed": 2,
+    "GUI_retries": 0,
+    "GUI_skipped": 0
+  },
+  "runs": [
+    {
+      "argv": [
+        "/opt/homebrew/bin/node",
+        "--test",
+        "src/main/supervisorStop.test.cjs",
+        "src/main/supervisorStopExit.test.cjs",
+        "src/renderer/components/flowchart/flowGraphIssues.test.cjs"
+      ],
+      "cwd": "/Users/kai/.codex/private-research/modu-vision/codex-two-hour-20261003/workspace",
+      "exit_code": 0,
+      "elapsed_seconds": 0.7576062089647166,
+      "log_sha256": "134c90622f395f39a002c29b3a9a0d3a29d442db0f21b7e798bf66d6722f4882"
+    },
+    {
+      "argv": [
+        "/opt/homebrew/bin/node",
+        "scripts/verify-supervisor.js",
+        "--owned-bootstrap-order"
+      ],
+      "cwd": "/Users/kai/.codex/private-research/modu-vision/codex-two-hour-20261003/workspace",
+      "exit_code": 0,
+      "elapsed_seconds": 0.2811259999871254,
+      "log_sha256": "7b8d5ff03a08785a2c6aa5124b550da8807e29ed4ad5282ed93b40c3b6a598a2"
+    },
+    {
+      "argv": [
+        "/opt/homebrew/bin/node",
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "-p",
+        "build/tsconfig.node.json"
+      ],
+      "cwd": "/Users/kai/.codex/private-research/modu-vision/codex-two-hour-20261003/workspace",
+      "exit_code": 0,
+      "elapsed_seconds": 0.8225812090095133,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "argv": [
+        "/opt/homebrew/bin/node",
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.json"
+      ],
+      "cwd": "/Users/kai/.codex/private-research/modu-vision/codex-two-hour-20261003/workspace",
+      "exit_code": 0,
+      "elapsed_seconds": 6.23877741699107,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "argv": [
+        "/opt/homebrew/bin/node",
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "-p",
+        "scripts/e2e/fixtures/tsconfig.json"
+      ],
+      "cwd": "/Users/kai/.codex/private-research/modu-vision/codex-two-hour-20261003/workspace",
+      "exit_code": 0,
+      "elapsed_seconds": 1.6659034169861116,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "argv": [
+        "/Users/kai/Desktop/modu-vision/.venv/bin/python",
+        "-m",
+        "pytest",
+        "backend/tests/test_geometry_source_bounds.py",
+        "-q",
+        "--basetemp",
+        "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/remaining-app-20261007/safety-composition-clean-evidence/geometry/tmp/pytest",
+        "--junitxml",
+        "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/remaining-app-20261007/safety-composition-clean-evidence/geometry/results.xml"
+      ],
+      "cwd": "/Users/kai/.codex/private-research/modu-vision/codex-two-hour-20261003/workspace",
+      "exit_code": 0,
+      "elapsed_seconds": 6.417029457981698,
+      "log_sha256": "d9ee719dd806868e3f25c5bd328b40bf787416bac48fc942c224f332ec7e3c93"
+    },
+    {
+      "argv": [
+        "/opt/homebrew/bin/node",
+        "node_modules/@playwright/test/cli.js",
+        "test",
+        "scripts/e2e/flow-legacy-edge-repair.spec.ts",
+        "--project=browser",
+        "--project=electron",
+        "--workers=1"
+      ],
+      "cwd": "/Users/kai/.codex/private-research/modu-vision/codex-two-hour-20261003/workspace",
+      "exit_code": 0,
+      "elapsed_seconds": 46.70244725001976,
+      "log_sha256": "1d8d5444118561ef5c662e89658b00f3761554a62b38b4649400b3c57fddcc4a"
+    }
+  ],
+  "GUI_cases": [
+    {
+      "receipt": "docs/verification/receipts/2026-10-08-legacy-edge-repair-6f08dbd-browser.json",
+      "sha256": "24b7d79dd65eaa2f7ebb50c002100b7c915a071eb05c88fc5ffcada3e5e44eed",
+      "mode": "browser",
+      "test_source_sha256": "f2813b9c954333290b0232fad3326ddbd1a2e2ea9b91c5157a1ce92562616fc7"
+    },
+    {
+      "receipt": "docs/verification/receipts/2026-10-08-legacy-edge-repair-6f08dbd-electron.json",
+      "sha256": "33dd36f8c43da98c0725a6a8cf53282dd9558da516067c823b60c5d8365506bb",
+      "mode": "electron",
+      "test_source_sha256": "f2813b9c954333290b0232fad3326ddbd1a2e2ea9b91c5157a1ce92562616fc7"
+    }
+  ],
+  "root_proof": {
+    "summary_sha256": "4bdece42ef2a6d11f2e2bc5c5e147f18f13b585d30d2f045d7f16e9aa3b45240",
+    "report_sha256": "8aaa63e2ff4287298f8bafad530b75d3d6a99e987cf769b38ffa783f0ae1b382",
+    "teardown_sha256": "dc8249c2b8391877814ae8181ae24fc2ca383118c825f4d39805b36a0d9f78b8",
+    "stop_composition_sha256": "033e585def1e9e79ac5811a497d88725d26dbe7c6dcba88d3a94ed64c125b602",
+    "geometry_review_sha256": "1108d75e4cf5cda8c0c9c41b3cd545efb989fee7eeff7a23775d3c8e24c79637",
+    "edge_review_sha256": "d7d04828fe353397d16b10f07a325e794e206152ebb06db54e2a33129c7c8b8b"
+  },
+  "verified_changes": {
+    "stop": "Concurrent stop callers await the original ChildProcess exit; killed is signal intent, not exit. No successor starts while original exit is unknown. Original 4-second stop budget retained.",
+    "geometry": "Positive integer source dimensions; every calibration validates supplied polygon against original image bounds and exact mask/bbox mapping. No clipping or inferred coordinate transforms.",
+    "legacy_edges": "Exact transient original-array/index/row-reference selection modifies only selected duplicate or missing-ID row. Stored IDs remain unchanged and invalid runtime publication remains refused."
+  },
+  "boundaries": {
+    "human_quality_approved": false,
+    "whole_writer_shutdown_verified": false,
+    "whole_process_tree_exit_verified": false,
+    "new_frozen_native_execution_verified": false,
+    "full_hosted_CI_verified": false,
+    "whole_parent_accepted": false,
+    "parent_implementation_verified": 69,
+    "parent_implementation_pending": 13,
+    "Windows_waived": 2,
+    "required_pending_parents": 11,
+    "curated_actions": 207,
+    "verified_action_scenarios": 649,
+    "pending_action_scenarios": 800
+  },
+  "scope": "Bounded clean source regressions. Fresh native78b proof remains historical after these source changes. Stop direct-child observation is not authenticated writer drain. GUI figures are exact legacy-row source app execution only; no new curated scenarios or full feature acceptance."
+}

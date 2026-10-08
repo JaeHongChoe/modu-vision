@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "6f08dbdaadac25fdcce0d182d188ddf3feb503d7",
+  "source_dirty": false,
+  "test": "scripts/e2e/flow-legacy-edge-repair.spec.ts::legacy missing and duplicate wire IDs allow exact row repair without rewriting saved identity",
+  "test_source_sha256": "f2813b9c954333290b0232fad3326ddbd1a2e2ea9b91c5157a1ce92562616fc7",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "8aaa63e2ff4287298f8bafad530b75d3d6a99e987cf769b38ffa783f0ae1b382",
+  "harness_sha256": "ffc497efe28be82eee5bd6143f78a2ea257d0a0a30e300e99fd1458579f03193",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "e1deb1d94f1679e0c141101f482e9f6ae249c120b030cee1003afd566766f123"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "dae5ce6bd9a4caaa18eb0d153b175711e88408233581a243d14e964bb1e3c8f4"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}
