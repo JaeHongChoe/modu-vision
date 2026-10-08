@@ -131,7 +131,9 @@ def _endpoint(channel):
     info = os.fstat(channel.fileno())
     if not stat.S_ISSOCK(info.st_mode):
         raise HandshakeError('Original Node endpoint is not a socket')
-    return (channel.fileno(), info.st_dev, info.st_ino, info.st_mode, info.st_uid)
+    # Darwin peer close changes socket permission bits, not the held endpoint.
+    # Keep fixed file type alongside the original descriptor/inode/owner.
+    return (channel.fileno(), info.st_dev, info.st_ino, stat.S_IFMT(info.st_mode), info.st_uid)
 
 
 def capture_original_main(authority, row):
