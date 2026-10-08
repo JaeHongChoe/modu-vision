@@ -43,7 +43,9 @@ export function assertSourcePixels(raw:Buffer,blue=100){
  }
  expect(cursor).toBe(raw.length);expect(header).toBeDefined();expect(header!.readUInt32BE(0)).toBe(256);expect(header!.readUInt32BE(4)).toBe(256);expect([...header!.subarray(8)]).toEqual([8,2,0,0,0]);
  const pixels=inflateSync(Buffer.concat(data));expect(pixels.length).toBe(256*769);
- for(let y=0;y<256;y++){expect(pixels[y*769]).toBe(0);for(let x=0;x<256;x++)expect([...pixels.subarray(y*769+1+x*3,y*769+4+x*3)]).toEqual([x,y,blue]);}
+ const expected=Buffer.alloc(256*769);
+ for(let y=0;y<256;y++)for(let x=0;x<256;x++){const offset=y*769+1+x*3;expected[offset]=x;expected[offset+1]=y;expected[offset+2]=blue;}
+ expect(pixels.equals(expected)).toBe(true);
  return {width:256,height:256,pixels:65536,channels:3};
 }
 export function assertAnomalyImport(value:any){
