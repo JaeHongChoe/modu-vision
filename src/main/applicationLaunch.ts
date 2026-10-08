@@ -53,10 +53,14 @@ function stable(file:string,limit=LIMIT,expected?:{size:number;sha256:string}):B
 }
 const document=(file:string)=>parsePrivateDocument(stable(file) as Buffer);
 
+class PrivateFrameEnd extends Error {
+ constructor(readonly owner:Frames,readonly channel:Duplex,readonly event:'end'|'close'){super(event==='end'?'Private descriptor ended':'Private descriptor closed');}
+}
 class Frames {
- private buffer=Buffer.alloc(0);private queue:Buffer[]=[];private waiting:{resolve:(raw:Buffer)=>void;reject:(error:Error)=>void;timer:NodeJS.Timeout|null}|null=null;private failure:Error|null=null;
- constructor(readonly channel:Duplex){channel.on('data',(chunk:Buffer)=>{if(this.failure)return;this.buffer=Buffer.concat([this.buffer,chunk]);while(this.buffer.includes(10)){const at=this.buffer.indexOf(10);if(at+1>LIMIT){this.fail(new Error('Private frame exceeds its bound'));return;}const raw=this.buffer.subarray(0,at);this.buffer=this.buffer.subarray(at+1);if(this.waiting){const pending=this.waiting;this.waiting=null;if(pending.timer)clearTimeout(pending.timer);pending.resolve(raw);}else{this.queue.push(raw);if(this.queue.length>2){this.fail(new Error('Unexpected private frame replay'));return;}}}if(this.buffer.length>=LIMIT)this.fail(new Error('Private frame exceeds its bound'));});channel.on('error',(e)=>this.fail(e));channel.on('end',()=>this.fail(new Error('Private descriptor ended')));channel.on('close',()=>this.fail(new Error('Private descriptor closed')));}
- fail(error:Error){this.failure=error;if(this.waiting){const pending=this.waiting;this.waiting=null;if(pending.timer)clearTimeout(pending.timer);pending.reject(error);}}
+ private buffer=Buffer.alloc(0);private queue:Buffer[]=[];private waiting:{resolve:(raw:Buffer)=>void;reject:(error:Error)=>void;timer:NodeJS.Timeout|null}|null=null;private failure:Error|null=null;private originalEndFailure:PrivateFrameEnd|null=null;
+ constructor(readonly channel:Duplex){const ended=(event:'end'|'close')=>{if(this.failure)return;const error=new PrivateFrameEnd(this,channel,event);this.originalEndFailure=error;this.fail(error);};channel.on('data',(chunk:Buffer)=>{if(this.failure)return;this.buffer=Buffer.concat([this.buffer,chunk]);while(this.buffer.includes(10)){const at=this.buffer.indexOf(10);if(at+1>LIMIT){this.fail(new Error('Private frame exceeds its bound'));return;}const raw=this.buffer.subarray(0,at);this.buffer=this.buffer.subarray(at+1);if(this.waiting){const pending=this.waiting;this.waiting=null;if(pending.timer)clearTimeout(pending.timer);pending.resolve(raw);}else{this.queue.push(raw);if(this.queue.length>2){this.fail(new Error('Unexpected private frame replay'));return;}}}if(this.buffer.length>=LIMIT)this.fail(new Error('Private frame exceeds its bound'));});channel.on('error',(e)=>this.fail(e));channel.on('end',()=>ended('end'));channel.on('close',()=>ended('close'));}
+ fail(error:Error){if(this.failure)return;this.failure=error;if(this.waiting){const pending=this.waiting;this.waiting=null;if(pending.timer)clearTimeout(pending.timer);pending.reject(error);}}
+ originalEmptyEnd(error:unknown):boolean {return error===this.failure&&error===this.originalEndFailure&&error instanceof PrivateFrameEnd&&error.constructor===PrivateFrameEnd&&error.owner===this&&error.channel===this.channel&&this.waiting===null&&this.queue.length===0&&this.buffer.length===0;}
  async read(timeout:number|null=210000):Promise<Buffer>{if(this.failure)throw this.failure;if(this.queue.length)return this.queue.shift()!;if(this.waiting)throw new Error('Concurrent private frame read');return new Promise((resolve,reject)=>{const timer=timeout===null?null:setTimeout(()=>{this.waiting=null;reject(new Error('Private descriptor timeout'));},timeout);this.waiting={resolve,reject,timer};});}
  async send(value:any,absoluteDeadline?:number):Promise<void>{return this.sendCanonical(canonical(value),absoluteDeadline);}
  async sendCanonical(value:string,absoluteDeadline?:number):Promise<void>{if(this.failure)throw this.failure;const deadline=Math.min(performance.now()+10000,absoluteDeadline??Infinity),raw=Buffer.from(value+'\n');parsePrivateDocument(raw);if(raw.length>LIMIT)throw new Error('Private frame exceeds its bound');const remaining=deadline-performance.now();if(!Number.isFinite(remaining)||remaining<=0)throw new Error('Original private send deadline expired');await new Promise<void>((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('Private send timeout')),remaining);this.channel.write(raw,error=>{clearTimeout(timer);error?reject(error):performance.now()>=deadline?reject(new Error('Original private send completed late')):resolve();});});}
@@ -92,7 +96,8 @@ export class OwnedApplicationLaunch {
  // One closed controller-origin execution request may follow readiness. Idle
  // waiting has no timeout; unsolicited backend data still invalidates ownership.
  this.backend=proc;this.backendProof=claim;this.backendEpoch=epoch;this.backendClaimHash=hash(parsePrivateDocument(claimRaw).canonical);
- let failed=false,cpuExecuted=false;const relayRows=new Map<string,{phase:string;plan:string;registration:any;child:any;deadline:number}>();
+ let failed=false,cpuExecuted=false,cleanExitObserved=false;const relayRows=new Map<string,{phase:string;plan:string;registration:any;child:any;deadline:number}>();
+ let admittedDrain:{receipt:any;request:any;receiptHash:string;requestHash:string;deadline:number;outerDeadline:number}|null=null,exitTimer:NodeJS.Timeout|null=null;
  type RelayPending={request:any;requestHash:string;row:{phase:string;plan:string;registration:any;child:any;deadline:number};deadline:number;timer:NodeJS.Timeout};
  type BackendPending={kind:string;deadline:number;resolve:(raw:Buffer)=>void;reject:(error:Error)=>void;timer:NodeJS.Timeout};
  type DrainAdmitted={expected:any;resolve:()=>void;reject:(error:Error)=>void;timer:NodeJS.Timeout};
@@ -103,17 +108,35 @@ export class OwnedApplicationLaunch {
  const invalidate=()=>{if(failed)return;failed=true;const error=new Error('Original owned backend channel/ownership ended');
   this.pendingDrain?.reject(error);this.exitReject?.(error);pendingState.backendPending?.reject(error);pendingState.drainAdmitted?.reject(error);
   if(pendingState.relayPending)clearTimeout(pendingState.relayPending.timer);if(pendingState.backendPending)clearTimeout(pendingState.backendPending.timer);if(pendingState.drainAdmitted)clearTimeout(pendingState.drainAdmitted.timer);
+  if(exitTimer!==null){clearTimeout(exitTimer);exitTimer=null;}
   // Keep the original pending rows and handles; a transport loss never repairs
   // or adopts a child, releases a writer, or restarts a backend.
   this.frames.channel.destroy();channel.destroy();};
  const freshBackend=()=>{if(failed||this.backend!==proc||proc.stdio[3]!==channel||proc.pid!==claim.process.pid||proc.exitCode!==null||proc.signalCode!==null)throw new Error('Original backend handle/channel differs');this.bindingCurrent();};
+ // A genuine empty backend EOF may end only this reader after the controller
+ // admitted the original drain. It grants no exit, ACK, writer or lease release.
+ // Keep the other reader for the exact retained ChildProcess exit and its ACK.
+ const cleanDrainCurrent=()=>{
+  const admitted=admittedDrain;
+  const exact=()=>!failed&&this.backend===proc&&proc.stdio[3]===channel&&proc.pid===claim.process.pid&&
+   (proc.exitCode===null&&proc.signalCode===null||cleanExitObserved&&proc.exitCode===0&&proc.signalCode===null)&&
+   admitted!==null&&this.drainReceipt===admitted.receipt&&this.drainRequest===admitted.request&&
+   this.drainDeadline===admitted.outerDeadline&&performance.now()<admitted.deadline&&
+   hash(canonical(admitted.receipt))===admitted.receiptHash&&hash(canonical(admitted.request))===admitted.requestHash&&
+   this.pendingDrain===null&&pendingState.relayPending===null&&pendingState.backendPending===null&&pendingState.drainAdmitted===null&&
+   [...relayRows.values()].every(row=>row.phase==='finished');
+  if(!exact())throw new Error('Original backend end retains pending, changed or late ownership');
+  this.bindingCurrent();if(!exact())throw new Error('Original backend end ownership changed during validation');
+  return admitted!.deadline;
+ };
  const backendReply=(kind:string,deadline:number):Promise<Buffer>=>{freshBackend();if(pendingState.backendPending||deadline<=performance.now())throw new Error('Original backend response is concurrent or late');return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{reject(new Error('Original backend response deadline expired'));invalidate();},deadline-performance.now());pendingState.backendPending={kind,deadline,resolve,reject,timer};});};
  proc.once('exit',(code,signal)=>{
-  if(!this.drainReceipt||code!==0||signal!==null){invalidate();return;}
+  if(!admittedDrain||code!==0||signal!==null||proc.exitCode!==code||proc.signalCode!==signal){invalidate();return;}
+  cleanExitObserved=true;let deadline:number;try{deadline=cleanDrainCurrent();}catch{invalidate();return;}
   this.backendExitFrame={schema_version:1,kind:'main_backend_exit',nonce:this.nonce,epoch,request_id:this.drainRequest.request_id,challenge:this.drainRequest.challenge,backend_process:claim.process,returncode:code,signal};
-  void this.frames.send(this.backendExitFrame).catch(invalidate);
+  void this.frames.send(this.backendExitFrame,deadline).then(()=>{cleanDrainCurrent();}).catch(invalidate);
  });
- const backendClosed=()=>{if(!this.drainReceipt)invalidate();};channel.once('close',backendClosed);channel.once('end',backendClosed);channel.once('error',invalidate);
+ const backendClosed=()=>{try{cleanDrainCurrent();}catch{invalidate();}};channel.once('close',backendClosed);channel.once('end',backendClosed);channel.once('error',invalidate);
  // Exactly one reader for the original backend channel. Fixed preflight data
  // is forwarded with its original Python number tokens, never decoded/reminted
  // as a controller capability. Controller will mint one receive event itself.
@@ -144,7 +167,7 @@ export class OwnedApplicationLaunch {
   const pending=pendingState.backendPending;
   if(!pending||request.kind!==pending.kind||performance.now()>=pending.deadline)throw new Error('Original backend response is unsolicited, replayed or late');
   clearTimeout(pending.timer);pendingState.backendPending=null;pending.resolve(raw);
- }})().catch(invalidate);
+ }})().catch(error=>{try{if(!frames.originalEmptyEnd(error))throw error;cleanDrainCurrent();}catch{invalidate();}});
  // Exactly one reader for the controller channel, including while CPU/drain
  // work waits for a backend response. No nested Frames.read or renewed budget.
  void (async()=>{while(true){const request=parsePrivateDocument(await this.frames.read(null)).value;
@@ -161,9 +184,10 @@ export class OwnedApplicationLaunch {
   clearTimeout(pending.timer);pendingState.drainAdmitted=null;pending.resolve();continue;
  }
  if(request.kind==='backend_exit_observed'){
+  cleanDrainCurrent();if(!cleanExitObserved)throw new Error('Original backend exit has not occurred');
   fields(request,['schema_version','kind','nonce','request_id','exit_sha256']);
   if(this.exitAcknowledged||!this.exitResolve||!this.exitConfirmation||request.schema_version!==1||request.nonce!==this.nonce||!this.backendExitFrame||request.request_id!==this.backendExitFrame.request_id||request.exit_sha256!==hash(canonical(this.backendExitFrame)))throw new Error('Original Node exit acknowledgement differs or replayed');
-  this.exitAcknowledged=true;const resolve=this.exitResolve;this.exitResolve=null;resolve();continue;
+  cleanDrainCurrent();this.exitAcknowledged=true;if(exitTimer!==null){clearTimeout(exitTimer);exitTimer=null;}const resolve=this.exitResolve;this.exitResolve=null;resolve();continue;
  }
  if(request.kind==='backend_drain_request'){
   fields(request,['schema_version','kind','challenge','request_id','nonce','epoch','binding_sha256','backend_claim_sha256','writer_id','registration_sha256','closed_registry_sha256','budget_ms']);
@@ -176,9 +200,14 @@ export class OwnedApplicationLaunch {
    freshBackend();const expected={schema_version:1,kind:'managed_drain_admitted',nonce:this.nonce,request_id:request.request_id,receipt_sha256:hash(raw),status:receipt.status};
    const admission=new Promise<void>((resolve,reject)=>{const remaining=deadline-performance.now();if(remaining<=0){reject(new Error('Original drain acknowledgement deadline expired'));return;}const timer=setTimeout(()=>{reject(new Error('Original drain acknowledgement deadline expired'));invalidate();},remaining);pendingState.drainAdmitted={expected,resolve,reject,timer};});
    await this.frames.send({schema_version:1,kind:'managed_drain_proof',nonce:this.nonce,proof_b64:raw.toString('base64')},deadline);await admission;
+   if(performance.now()>=deadline)throw new Error('Original drain admission completed late');
    const pending=this.pendingDrain;if(!pending)throw new Error('Original shutdown budget already expired');clearTimeout(pending.timer);this.pendingDrain=null;
    if(receipt.status!=='managed_scopes_drained'){pending.reject(new Error('Backend retains uncovered or active writers'));return;}
-   this.drainReceipt=receipt;this.exitConfirmation=new Promise<void>((resolve,reject)=>{this.exitResolve=resolve;this.exitReject=reject;});void this.exitConfirmation.catch(()=>{});pending.resolve(receipt);
+   this.drainReceipt=receipt;admittedDrain={receipt,request,receiptHash:hash(canonical(receipt)),requestHash:hash(canonical(request)),deadline,outerDeadline:this.drainDeadline!};this.exitConfirmation=new Promise<void>((resolve,reject)=>{this.exitResolve=resolve;this.exitReject=reject;});void this.exitConfirmation.catch(()=>{});
+   // Admission does not renew the shutdown window. Even silent EOF/exit/ACK
+   // must refuse at the same original effective drain bound.
+   exitTimer=setTimeout(invalidate,Math.max(0,deadline-performance.now()));
+   try{cleanDrainCurrent();pending.resolve(receipt);}catch(error){pending.reject(error as Error);throw error;}
   })().catch(invalidate);continue;
  }
  if(cpuExecuted||this.drainRequest)throw new Error('CPU request replay or closed writer admission');cpuExecuted=true;

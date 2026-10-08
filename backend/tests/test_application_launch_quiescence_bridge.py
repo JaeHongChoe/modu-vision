@@ -364,30 +364,24 @@ assert.equal(s.childProcess,null);console.log(JSON.stringify({case:process.argv[
 
 
 def test_actual_node_dispatcher_refuses_identical_exit_ack_replay():
-    """Actual class/reader; readiness/receipt inputs are controlled source fixtures."""
-    script=r'''
-const assert=require('node:assert/strict'),fs=require('node:fs'),Module=require('node:module'),path=require('node:path'),ts=require('typescript'),{EventEmitter}=require('node:events'),{Duplex,PassThrough}=require('node:stream'),{createHash}=require('node:crypto');
-const file=path.resolve('src/main/applicationLaunch.ts'),m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(path.dirname(file));m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,file);
-const canon=v=>v===null||typeof v!=='object'?JSON.stringify(v):Array.isArray(v)?'['+v.map(canon).join(',')+']':'{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+canon(v[k])).join(',')+'}',hash=v=>createHash('sha256').update(canon(v)).digest('hex');
-(async()=>{
-const nonce='1'.repeat(32),binding={controlled:true},identity={pid:101,created_at:1,command_sha256:'2'.repeat(64)},executable='/controlled/backend';
-let pending,resolveCalls=0;const queue=[],channel=new PassThrough(),frames={channel,assertEmpty(){},send:async()=>{},read:async()=>queue.length?queue.shift():new Promise(r=>pending=r)};
-const backendChannel=new Duplex({read(){},write(raw,encoding,done){const request=JSON.parse(raw);const claim={schema_version:1,kind:'backend_claim',challenge:request.challenge,epoch:request.epoch,nonce,binding_sha256:hash(binding),process:identity,executable,executable_sha256:'3'.repeat(64),build_identity_sha256:null,frozen:false};done();queueMicrotask(()=>this.push(canon(claim)+'\n'+canon({...claim,kind:'backend_ready'})+'\n'));}});
-const p=new EventEmitter();Object.assign(p,{pid:101,stdio:[null,null,null,backendChannel]});
-const launch=new m.exports.OwnedApplicationLaunch('/controlled',nonce,binding,identity,'4'.repeat(64),frames,{writer_id:'5'.repeat(32)});
-// Only filesystem artifact validation is controlled here. The dispatched
-// reader branch and one-use consumption below are the actual source method.
-launch.current=()=>{};launch.executable=()=>({sha256:'3'.repeat(64),build:null});await launch.bindBackend(p,executable,null);
-launch.backendExitFrame={schema_version:1,kind:'main_backend_exit',nonce,request_id:'6'.repeat(32)};
-launch.exitConfirmation=Promise.resolve();launch.exitResolve=()=>resolveCalls++;
-const ack={schema_version:1,kind:'backend_exit_observed',nonce,request_id:'6'.repeat(32),exit_sha256:hash(launch.backendExitFrame)};
-pending(Buffer.from(canon(ack)));await new Promise(r=>setImmediate(r));assert.equal(resolveCalls,1);assert.equal(channel.destroyed,false);
-pending(Buffer.from(canon(ack)));await new Promise(r=>setImmediate(r));assert.equal(resolveCalls,1,'Identical acknowledgement was consumed twice');assert.equal(channel.destroyed,true,'Replay did not invalidate original private channel');backendChannel.destroy();channel.destroy();
-console.log(JSON.stringify({identical_ack_replay_refused:true,actual_dispatcher:true,modeled_handles_only:true}));
-})().catch(e=>{console.error(e.stack);process.exitCode=1;});
-'''
-    result=subprocess.run(['node','-e',script],cwd=Path(__file__).resolve().parents[2],capture_output=True,text=True,timeout=5)
+    """Actual readers, genuine modeled admitted drain/exit/ACK; no application.
+
+    The former fixture directly fabricated backendExitFrame, exitConfirmation
+    and exitResolve. Those values cannot replace original admitted lifecycle.
+    Storage/process validation remains explicitly modeled, while real source
+    Frames and bindBackend perform the drain, exact retained exit and one-use
+    ACK branches. Replay must retain one callback and invalidate the channel.
+    """
+    from backend.tests.test_application_backend_end_lifetime import CONTROL
+    source=Path(__file__).resolve().parents[2]/'src/main/applicationLaunch.ts'
+    result=subprocess.run(['node','-e',CONTROL,str(source),'replayed-exit-ack'],
+        cwd=Path(__file__).resolve().parents[2],capture_output=True,text=True,timeout=5)
     assert result.returncode==0,result.stdout+result.stderr
+    receipt=json.loads(result.stdout)
+    assert receipt['identical_ack_replay_refused'] is True
+    assert receipt['resolve_calls']==1,'Identical acknowledgement was consumed twice'
+    assert receipt['actual_dispatcher'] is True and receipt['modeled_handles_only'] is True
+    assert receipt['application'] is False and receipt['cpu'] is False
 
 
 def managed_stack(tmp_path, monkeypatch, *, uncovered=False, damage=None):
