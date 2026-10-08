@@ -85,6 +85,7 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
     '/api/project/preferences', '/api/dataset/versions', '/api/dataset/metadata/split', '/api/data-workbench/review-evaluations',
     '/api/project/labelsets'];
   for (const endpoint of protectedEndpoints) apiBefore[endpoint] = await api(endpoint);
+  expect(apiBefore['/api/project/labelsets'].labelsets.map((row: any) => row.id)).toEqual(['default']);
   const metadata = apiBefore['/api/dataset/metadata?limit=100'].items; expect(metadata).toHaveLength(3);
   expect(apiBefore['/api/team-data'].settings).toMatchObject({revision: 1, editing_enabled: false, review_enabled: false});
   expect(apiBefore['/api/data-workbench/review-evaluations'].evaluations.map((row: any) => row.id))
@@ -262,7 +263,12 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
     } finally {await page.unroute('**' + queueEndpoint, failOrigin);}
     expect(originFailures).toBe(1); await unchanged();
     const realOrigin = page.waitForResponse(response => response.request().method() === 'GET' && new URL(response.url()).pathname === queueEndpoint);
-    const realHistory = page.waitForResponse(response => response.request().method() === 'GET' && new URL(response.url()).pathname === '/api/evaluation/history');
+    const realHistory = page.waitForResponse(response => {
+      const address = new URL(response.url());
+      return response.request().method() === 'GET' && address.pathname === '/api/evaluation/history'
+        && address.searchParams.get('source_dataset_path') === source && address.searchParams.get('task') === project.task
+        && (address.searchParams.get('labelset_id') || 'default') === origin.record.binding.labelset_id;
+    });
     await returnOrigin.click(); const confirmed = await realOrigin; expect(confirmed.status()).toBe(200); expect(await confirmed.json()).toEqual(expectedQueue);
     const historyResponse = await realHistory; expect(historyResponse.status()).toBe(200);
     const savedHistory = await historyResponse.json(); expect(savedHistory.items.find((row: any) => row.evaluation_id === origin.record.evaluation_id)).toEqual(origin.record);
