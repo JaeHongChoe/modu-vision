@@ -750,10 +750,48 @@ def backend_execution_service(stop_event=None):
     from backend.engine.application_preflight_child_relay import BackendRelayQueue
     queue = _CACHE['preflight_queue']
     if type(queue) is not BackendRelayQueue: raise HandshakeError('Original backend sole reader queue differs')
-    queue.claim_reader(); pending = None; cpu = None; drain = None
+    queue.claim_reader(); pending = None; cpu = None; drain = None; closing_deadline = None; closing_unsupported = None
+    original_admission = original_cache['admission']
+    original_context = original_cache['context']
+    original_proof = _canonical(proof); original_challenge = _canonical(original_cache['challenge'])
+
+    def closing_current():
+        # The post-send terminal receipt permits only bounded local stopping.
+        # It cannot authorize another frame, repair the owner, clear unsupported
+        # work, or establish any writer/tree/lease acceptance.
+        context = _root_context()
+        if (type(stop_event) is not threading.Event or _CACHE is not original_cache
+                or context is None or context[0] != root or _context() != original_context
+                or original_cache['context'] != original_context or not original_cache['ready']
+                or original_cache['root'] != root or original_cache['socket'] is not sock
+                or original_cache['preflight_queue'] is not queue
+                or original_cache['admission'] is not original_admission
+                or _canonical(original_cache['proof']) != original_proof
+                or _canonical(original_cache['challenge']) != original_challenge
+                or original_cache.get('preflight_drain_deadline') != closing_deadline
+                or queue._closed_deadline != closing_deadline):
+            raise HandshakeError('Original terminal service closing context changed')
+        queue._fresh(sock, reader=True)
+        if time.monotonic() >= closing_deadline:
+            raise HandshakeError('Original terminal service closing deadline expired')
+        snapshot = original_admission.snapshot()
+        if (not original_admission._closed or not set(closing_unsupported).issubset(snapshot['unsupported'])
+                or pending is not None or cpu is not None or drain is not None
+                or queue._active is not None or snapshot['active_scopes'] != 0):
+            raise HandshakeError('Original terminal service closing still has accepted work')
+
     try:
         with maintenance_guard(root):
-            while stop_event is None or not stop_event.is_set():
+            while True:
+                if closing_deadline is not None:
+                    closing_current()
+                    if stop_event.is_set():
+                        closing_current()
+                        return
+                    stop_event.wait(min(.02, closing_deadline-time.monotonic()))
+                    closing_current()
+                    continue
+                if stop_event is not None and stop_event.is_set(): return
                 context=_root_context()
                 if _CACHE is not original_cache or context is None or _context()!=original_cache['context']:raise HandshakeError('CPU backend process context changed')
                 # Idle polling holds no publication mutex. Exact endpoint and
@@ -788,7 +826,10 @@ def backend_execution_service(stop_event=None):
                         proof = _validate_service_action(original_cache, drain['deadline'])
                         validate_drain_receipt(completed, drain['frame'], backend_process=proof['process'])
                         send_frame(sock, completed, absolute_deadline=drain['deadline'])
-                        _validate_service_action(original_cache, drain['deadline']); drain = None
+                        _validate_service_action(original_cache, drain['deadline'])
+                        closing_deadline = drain['deadline']; closing_unsupported = tuple(completed['unsupported']); drain = None
+                        closing_current()
+                        continue
                 if pending is not None:
                     _, deadline = queue.outgoing(pending)
                     if time.monotonic() >= deadline: raise HandshakeError('Original preflight exchange deadline expired')
@@ -839,7 +880,7 @@ def backend_execution_service(stop_event=None):
                     execution['thread'].start()
     except BaseException:
         queue.abandon(HandshakeError('Original backend private service is unresolved'))
-        _CACHE['admission'].uncovered('cpu_producer_unconfirmed')
+        original_admission.uncovered('cpu_producer_unconfirmed')
         # Closing this original endpoint tells main/controller to retain durable
         # recovery. It never proves worker descendants exited or clears a lease.
         try:sock.shutdown(socket.SHUT_RDWR)
