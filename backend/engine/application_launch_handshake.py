@@ -14,7 +14,9 @@ from pathlib import Path
 import select
 import socket
 import sys
+import threading
 import time
+from contextlib import contextmanager
 
 MAX_FRAME = 65536
 MAX_DEADLINE = 210
@@ -24,6 +26,121 @@ _CONTEXT_NAMES = ('VISION_AI_STUDIO_USER_DATA_DIR', 'VISION_APPLICATION_LAUNCH_N
 _CHALLENGE_FIELDS = {'schema_version', 'kind', 'challenge', 'epoch', 'nonce', 'binding',
     'main_process', 'backend_pid', 'backend_executable', 'backend_build_identity_sha256'}
 _CACHE = None
+
+
+class BackendWorkAdmission:
+    """Only the reviewed foreground scopes; no background/tree exit authority."""
+    def __init__(self):
+        self._condition = threading.Condition()
+        self._closed = False
+        self._active = 0
+        self._unsupported = set()
+
+    def enter(self, scope):
+        with self._condition:
+            if self._closed: return False
+            self._active += 1
+            # Even GET can create projects or recover jobs. Uncovered requests
+            # still work normally, but cannot qualify a clean managed drain.
+            if not (scope.get('type') == 'http' and scope.get('path') in {'/health', '/api/errors'}):
+                self._unsupported.add('uncovered_request_protocol')
+            return True
+
+    def leave(self):
+        with self._condition:
+            if self._active < 1: raise HandshakeError('Accepted scope lifetime is unbalanced')
+            self._active -= 1
+            self._condition.notify_all()
+
+    def response(self, status):
+        if status == 202: self.uncovered('accepted_background_work')
+
+    def uncovered(self, reason):
+        if reason not in {'uncovered_request_protocol', 'accepted_background_work', 'startup_background_protocols', 'cpu_producer_unconfirmed'}:
+            raise HandshakeError('Unknown uncovered writer protocol')
+        with self._condition: self._unsupported.add(reason)
+
+    @contextmanager
+    def producer(self):
+        with self._condition:
+            if self._closed: raise HandshakeError('Original backend producer admission is closed')
+            self._active += 1
+        try: yield
+        except BaseException:
+            self.uncovered('cpu_producer_unconfirmed')
+            raise
+        finally: self.leave()
+
+    def close(self):
+        with self._condition: self._closed = True
+
+    def snapshot(self):
+        with self._condition:
+            return {'active_scopes': self._active, 'unsupported': sorted(self._unsupported)}
+
+    def drain(self, seconds):
+        if type(seconds) not in (int, float) or not math.isfinite(seconds) or not 0 < seconds <= 4:
+            raise HandshakeError('Managed drain budget must be positive and at most four seconds')
+        deadline = time.monotonic() + seconds
+        with self._condition:
+            if not self._closed: raise HandshakeError('Managed admission must close before draining')
+            while self._active and not self._unsupported:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0: break
+                self._condition.wait(remaining)
+            return {'status': 'refused' if self._active or self._unsupported else 'managed_scopes_drained',
+                'active_scopes': self._active, 'unsupported': sorted(self._unsupported)}
+
+
+def backend_work_admission():
+    return _CACHE.get('admission') if _CACHE is not None else None
+
+
+@contextmanager
+def owned_cpu_writer_scope():
+    """One fixed CPU producer; duplicate original OFD, never expose its anchor.
+
+    The bootstrap private duplicate is the capability. Inode checks detect
+    storage changes, not OFD equivalence. Arbitrary trusted-process descriptor
+    table mutation is outside this private in-process contract.
+    """
+    context = _root_context()
+    if _CACHE is None:
+        if context is not None: raise HandshakeError('Owned CPU producer has no original cached writer admission')
+        yield ()  # Ordinary unowned/export compatibility, no owned authority.
+        return
+    if context is None or _context() != _CACHE['context'] or not _CACHE['ready']:
+        raise HandshakeError('Original owned CPU producer capability is unavailable')
+    root, values = context
+    validated = {}
+    if _validate(root, values, _CACHE['challenge'], validated=validated) != _CACHE['proof']:
+        raise HandshakeError('Original owned CPU producer process binding changed')
+    if 'writer' not in _CACHE['challenge']:
+        fields = {'writer_guard', 'writer_handle', 'writer_private_fd', 'writer_fd_identity'}
+        if (validated.get('protocol_version') != 3 or not fields.issubset(_CACHE)
+                or any(_CACHE[k] is not None for k in fields)):
+            raise HandshakeError('Original legacy CPU producer capability is partial or unsupported')
+        # Original authenticated protocol3 compatibility: count the accepted
+        # producer, but do not invent an enrolled lock or descendant fence.
+        with _CACHE['admission'].producer(): yield ()
+        return
+    if any(_CACHE.get(k) is None for k in ('writer_guard', 'writer_handle', 'writer_private_fd', 'writer_fd_identity')):
+        raise HandshakeError('Original enrolled CPU producer capability is partial')
+    writer = _CACHE['challenge']['writer']
+    from backend.engine.application_launch_quiescence import writer_guard
+    with writer_guard(root, _CACHE['proof']['nonce'], writer['writer_id'],
+            expected_registration_sha256=writer['registration_sha256']):
+        # Temporary guard linearizes OPEN admission. The exposed Guard number
+        # cannot become authority after close/reuse; duplicate only the private
+        # anchor that bootstrap obtained directly from the acquired original OFD.
+        anchor = _CACHE['writer_private_fd']
+        info = os.fstat(anchor)
+        if (info.st_dev, info.st_ino) != _CACHE['writer_fd_identity']:
+            raise HandshakeError('Original backend writer descriptor identity changed')
+        with _CACHE['admission'].producer():
+            transport = os.dup(anchor)
+            try: yield (transport,)
+            finally: os.close(transport)
 
 
 class HandshakeError(ValueError):
@@ -37,6 +154,52 @@ def _canonical(value):
 
 def _hex(value, length=64):
     return isinstance(value, str) and len(value) == length and all(c in '0123456789abcdef' for c in value)
+
+
+def validate_drain_request(frame, *, nonce, epoch, binding, writer_id, registration_sha256):
+    names = {'schema_version', 'kind', 'challenge', 'request_id', 'nonce', 'epoch', 'binding_sha256',
+        'backend_claim_sha256', 'writer_id', 'registration_sha256', 'closed_registry_sha256', 'budget_ms'}
+    if (not isinstance(frame, dict) or set(frame) != names or type(frame['schema_version']) is not int
+            or frame['schema_version'] != 1 or frame['kind'] != 'backend_drain_request'
+            or not _hex(frame['challenge']) or not _hex(frame['request_id'], 32)
+            or frame['nonce'] != nonce or frame['epoch'] != epoch
+            or frame['binding_sha256'] != hashlib.sha256(_canonical(binding)).hexdigest()
+            or not _hex(frame['backend_claim_sha256']) or frame['writer_id'] != writer_id
+            or frame['registration_sha256'] != registration_sha256 or not _hex(frame['closed_registry_sha256'])
+            or type(frame['budget_ms']) is not int or not 0 < frame['budget_ms'] <= 4000):
+        raise HandshakeError('Foreign or invalid managed drain request')
+    return frame
+
+
+def validate_drain_receipt(frame, request, *, backend_process):
+    names = {'schema_version', 'kind', 'request', 'backend_proof', 'status', 'active_scopes', 'unsupported',
+        'scope', 'whole_writer_coverage', 'process_tree_exit_verified', 'can_release_launch_lease'}
+    if (not isinstance(frame, dict) or set(frame) != names or type(frame['schema_version']) is not int
+            or frame['schema_version'] != 1 or frame['kind'] != 'backend_managed_drain'
+            or _canonical(frame['request']) != _canonical(request) or not isinstance(frame['backend_proof'], dict)
+            or not _same_process(frame['backend_proof'].get('process'), backend_process)
+            or hashlib.sha256(_canonical(frame['backend_proof'])).hexdigest() != request['backend_claim_sha256']
+            or not isinstance(frame['status'], str) or frame['status'] not in {'managed_scopes_drained', 'refused'} or type(frame['active_scopes']) is not int
+            or frame['active_scopes'] < 0 or not isinstance(frame['unsupported'], list)
+            or any(not isinstance(x, str) for x in frame['unsupported']) or frame['unsupported'] != sorted(set(frame['unsupported']))
+            or any(x not in {'uncovered_request_protocol', 'accepted_background_work', 'startup_background_protocols', 'cpu_producer_unconfirmed'} for x in frame['unsupported'])
+            or frame['scope'] != 'reviewed_foreground_scopes_only'
+            or any(frame[x] is not False for x in ('whole_writer_coverage', 'process_tree_exit_verified', 'can_release_launch_lease'))
+            or frame['status'] == 'managed_scopes_drained' and (frame['active_scopes'] != 0 or frame['unsupported'])):
+        raise HandshakeError('Managed drain proof is changed or exceeds its scope')
+    return frame
+
+
+def validate_backend_exit(frame, request, backend_process):
+    expected = {'schema_version': 1, 'kind': 'main_backend_exit', 'nonce': request['nonce'],
+        'epoch': request['epoch'], 'request_id': request['request_id'], 'challenge': request['challenge'],
+        'backend_process': backend_process, 'returncode': 0, 'signal': None}
+    if (not isinstance(frame, dict) or set(frame) != set(expected)
+            or not _same_process(frame['backend_process'], backend_process)
+            or type(frame['schema_version']) is not int or type(frame['returncode']) is not int
+            or any(frame[k] != v for k, v in expected.items() if k != 'backend_process')):
+        raise HandshakeError('Original Node backend handle exit frame differs')
+    return frame
 
 
 def _deadline(seconds):
@@ -202,9 +365,10 @@ def _executable(root, binding, frame):
             'build_identity_sha256': build, 'frozen': frozen}
 
 
-def _validate(root, values, frame):
+def _validate(root, values, frame, *, validated=None):
     from backend.engine import application_launch_lease as lease, runtime_update as update
-    if (set(frame) != _CHALLENGE_FIELDS or type(frame['schema_version']) is not int or frame['schema_version'] != 1
+    expected_fields = _CHALLENGE_FIELDS | ({'writer'} if 'writer' in frame else set())
+    if (set(frame) != expected_fields or type(frame['schema_version']) is not int or frame['schema_version'] != 1
             or frame['kind'] != 'backend_challenge' or not _hex(frame['challenge']) or not _hex(frame['epoch'], 32)
             or frame['nonce'] != values['VISION_APPLICATION_LAUNCH_NONCE'] or type(frame['backend_pid']) is not int
             or frame['backend_pid'] != os.getpid()): raise HandshakeError('Invalid or foreign backend challenge')
@@ -215,6 +379,13 @@ def _validate(root, values, frame):
                 or not record['spawn_attempted'] or record['process'] is None):
             raise HandshakeError('Backend challenge has no current spawned main owner')
         binding = record['binding']
+        if 'writer' in frame:
+            drain = record.get('writer_drain')
+            expected = {k: drain[k] for k in ('writer_id', 'registration_sha256', 'registration_registry_sha256')} if drain else None
+            if expected is None or _canonical(frame['writer']) != _canonical(expected):
+                raise HandshakeError('Backend writer registration differs from original controller')
+        elif record['protocol_version'] == 4:
+            raise HandshakeError('Enrolled backend requires exact private writer registration')
         if (_canonical(frame['binding']) != _canonical(binding)
                 or values['VISION_APPLICATION_GENERATION'] != binding['application_generation']
                 or values['VISION_APPLICATION_DATABASE_GENERATION'] != binding['database_generation_path']):
@@ -229,6 +400,7 @@ def _validate(root, values, frame):
         if not _same_process(frame['main_process'], main) or not _same_process(record['process'], main):
             raise HandshakeError('Backend challenge main process birth or parent identity differs')
         executable = _executable(root, binding, frame)
+        if validated is not None: validated['protocol_version'] = record['protocol_version']
         return {'schema_version': 1, 'kind': 'backend_claim', 'challenge': frame['challenge'], 'epoch': frame['epoch'],
             'nonce': frame['nonce'], 'binding_sha256': hashlib.sha256(_canonical(binding)).hexdigest(),
             'process': lease._identity(os.getpid()), **executable}
@@ -257,8 +429,20 @@ def early_backend_bootstrap():
         if context is None: return None
         root, values = context; sock = _transport(values['VISION_APPLICATION_BACKEND_FD'])
         frame = read_frame(sock, 210); proof = _validate(root, values, frame)
+        guard = None; handle = None; fd_identity = None; private_fd = None
+        if 'writer' in frame:
+            from backend.engine.application_launch_quiescence import writer_guard, inspect_epoch
+            writer = frame['writer']; snapshot = inspect_epoch(root, frame['nonce'])
+            if snapshot['registry_sha256'] != writer['registration_registry_sha256']:
+                raise HandshakeError('Backend initial writer registry changed before admission')
+            guard = writer_guard(root, frame['nonce'], writer['writer_id'], expected_registration_sha256=writer['registration_sha256'])
+            handle = guard.__enter__()  # Retained before claim/mutable imports.
+            info = os.fstat(handle.pass_fds[0]); fd_identity = (info.st_dev, info.st_ino)
+            private_fd = os.dup(handle.pass_fds[0])  # Original acquired OFD, never exported.
         _no_replay(sock); send_frame(sock, proof)
-        _CACHE = {'context': _context(), 'root': root, 'socket': sock, 'challenge': frame, 'proof': proof, 'ready': False}
+        _CACHE = {'context': _context(), 'root': root, 'socket': sock, 'challenge': frame, 'proof': proof,
+            'ready': False, 'writer_guard': guard, 'writer_handle': handle, 'writer_private_fd': private_fd, 'writer_fd_identity': fd_identity,
+            'admission': BackendWorkAdmission()}
         return dict(proof)
     except (OSError, ValueError, KeyError, TypeError, StopIteration) as exc:
         if isinstance(exc, HandshakeError): raise
@@ -288,18 +472,39 @@ def backend_execution_service(stop_event=None):
     if _CACHE is None or not _CACHE['ready']:raise HandshakeError('CPU consumer requires original admitted backend readiness')
     from backend.engine.migration_guard import maintenance_guard
     from backend.engine.application_launch_execution import execute_backend
-    root=_CACHE['root'];sock=_CACHE['socket'];executed=False
+    root=_CACHE['root'];sock=_CACHE['socket'];executed=False;drained=False
     try:
         with maintenance_guard(root):
             while stop_event is None or not stop_event.is_set():
                 if not select.select([sock],[],[],.2)[0]:continue
-                if executed:raise HandshakeError('CPU private request replay requires recovery')
+                if drained:raise HandshakeError('Managed drain request replay requires recovery')
                 context=_root_context()
                 if context is None or _context()!=_CACHE['context']:raise HandshakeError('CPU backend process context changed')
                 proof=_validate(root,context[1],_CACHE['challenge'])
                 if proof!=_CACHE['proof']:raise HandshakeError('CPU backend original process binding changed')
-                frame=read_frame(sock,10);executed=True
-                completed=execute_backend(frame,proof,root)
+                frame=read_frame(sock,10)
+                if frame.get('kind') == 'backend_drain_request':
+                    writer = _CACHE['challenge'].get('writer')
+                    if writer is None or _CACHE['writer_guard'] is None:
+                        raise HandshakeError('Managed drain requires original retained writer admission')
+                    validate_drain_request(frame, nonce=proof['nonce'], epoch=proof['epoch'], binding=_CACHE['challenge']['binding'],
+                        writer_id=writer['writer_id'], registration_sha256=writer['registration_sha256'])
+                    if frame['backend_claim_sha256'] != hashlib.sha256(_canonical(proof)).hexdigest():
+                        raise HandshakeError('Managed drain original backend claim changed')
+                    from backend.engine.application_launch_quiescence import inspect_epoch
+                    snapshot = inspect_epoch(root, frame['nonce'])
+                    if snapshot['registry']['state'] != 'closed' or snapshot['registry_sha256'] != frame['closed_registry_sha256']:
+                        raise HandshakeError('Managed drain requires original closed writer epoch')
+                    state = _CACHE['admission']; state.close(); drained = True
+                    completed = {'schema_version': 1, 'kind': 'backend_managed_drain', 'request': frame,
+                        'backend_proof': proof, **state.drain(frame['budget_ms']/1000),
+                        'scope': 'reviewed_foreground_scopes_only', 'whole_writer_coverage': False,
+                        'process_tree_exit_verified': False, 'can_release_launch_lease': False}
+                    validate_drain_receipt(completed, frame, backend_process=proof['process'])
+                else:
+                    if executed:raise HandshakeError('CPU private request replay requires recovery')
+                    executed=True
+                    completed=execute_backend(frame,proof,root)
                 send_frame(sock,completed)
     except BaseException:
         # Closing this original endpoint tells main/controller to retain durable

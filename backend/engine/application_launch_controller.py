@@ -165,8 +165,11 @@ def _proof(raw):
 
 def authenticate(owner, row):
     channel = owner._bootstrap_channel; challenge = secrets.token_hex(32); binding = row['binding']
-    send_frame(channel, {'schema_version': 1, 'kind': 'main_challenge', 'challenge': challenge,
-        'nonce': row['nonce'], 'binding': binding, 'process': row['process'], 'transport': owner._bootstrap_transport})
+    main_challenge = {'schema_version': 1, 'kind': 'main_challenge', 'challenge': challenge,
+        'nonce': row['nonce'], 'binding': binding, 'process': row['process'], 'transport': owner._bootstrap_transport}
+    if row.get('writer_drain') is not None:
+        main_challenge['writer'] = {k: row['writer_drain'][k] for k in ('writer_id', 'registration_sha256', 'registration_registry_sha256')}
+    send_frame(channel, main_challenge)
     claim = read_frame(channel, 210)
     expected = {'schema_version': 1, 'kind': 'main_claim', 'challenge': challenge, 'nonce': row['nonce'],
         'binding_sha256': update._sha(update._canonical(binding)), 'pid': row['process']['pid']}
@@ -226,6 +229,11 @@ def execute_cpu(owner, capability):
         bootstrap=update._json(update._read(owner.root/lease.LEASES/owner.nonce/'bootstrap-receipt.json'))
         request=execution.request(owner,capability,bootstrap['epoch'])
     intent=owner._begin_cpu_execution(request,capability)
+    if owner._writer_epoch is not None:
+        # CPU ownership/deadline is verified by its existing helper. Its writer
+        # descriptor propagation is not yet covered by this first bridge.
+        owner._writer_epoch.block_unsupported('owned_cpu_worker',
+            expected_registry_sha256=owner._writer_epoch.snapshot()['registry_sha256'])
     send_frame(owner._bootstrap_channel,request)
     frame=read_frame(owner._bootstrap_channel,210)
     if (set(frame)!={'schema_version','kind','nonce','proof_b64'} or type(frame['schema_version']) is not int
@@ -237,6 +245,68 @@ def execute_cpu(owner, capability):
     return receipt
 
 
+def prepare_drain(owner, frame):
+    """Original private main channel only; close epoch before backend gate."""
+    started = time.monotonic()
+    from backend.engine.application_launch_handshake import validate_drain_receipt
+    with lease._transition_admission(owner.root, owner.nonce):
+        row = owner._owned(); owner._binding(row); owner._live(row, row['process'])
+        proof = owner._authenticated_backend_proof
+        names = {'schema_version', 'kind', 'nonce', 'epoch', 'binding_sha256', 'backend_claim_sha256', 'request_id', 'budget_ms'}
+        if (set(frame) != names or type(frame['schema_version']) is not int or frame['schema_version'] != 1
+                or frame['kind'] != 'main_drain_request' or frame['nonce'] != owner.nonce
+                or frame['epoch'] != proof['epoch'] or frame['binding_sha256'] != proof['binding_sha256']
+                or frame['backend_claim_sha256'] != update._sha(update._canonical(proof))
+                or not update._hex(frame['request_id'], 32) or type(frame['budget_ms']) is not int
+                or not 0 < frame['budget_ms'] <= 4000 or owner._writer_epoch is None
+                or row.get('writer_drain', {}).get('phase') != 'enrolled'):
+            raise HandshakeError('Original main managed drain request differs or replayed')
+        drain = row['writer_drain']
+    snapshot = owner._writer_epoch.snapshot()
+    owner._writer_epoch.close_epoch(expected_registry_sha256=snapshot['registry_sha256'])
+    closed = owner._writer_epoch.snapshot()
+    remaining = frame['budget_ms'] - int((time.monotonic()-started)*1000)
+    if remaining <= 0: raise HandshakeError('Original managed shutdown budget expired before gate')
+    request = {'schema_version': 1, 'kind': 'backend_drain_request', 'challenge': secrets.token_hex(32),
+        'request_id': frame['request_id'], 'nonce': owner.nonce, 'epoch': proof['epoch'],
+        'binding_sha256': proof['binding_sha256'], 'backend_claim_sha256': frame['backend_claim_sha256'],
+        'writer_id': drain['writer_id'], 'registration_sha256': drain['registration_sha256'],
+        'closed_registry_sha256': closed['registry_sha256'], 'budget_ms': remaining}
+    owner.publish_writer_drain(phase='closing', request=request)
+    send_frame(owner._bootstrap_channel, request)
+    remaining = frame['budget_ms']/1000 - (time.monotonic()-started)
+    if remaining <= 0: raise HandshakeError('Original managed shutdown budget expired before response')
+    reply = read_frame(owner._bootstrap_channel, remaining)
+    if (set(reply) != {'schema_version', 'kind', 'nonce', 'proof_b64'} or type(reply['schema_version']) is not int
+            or reply['schema_version'] != 1 or reply['kind'] != 'managed_drain_proof' or reply['nonce'] != owner.nonce):
+        raise HandshakeError('Original main managed drain forwarding differs')
+    raw = reply['proof_b64']
+    if not isinstance(raw, str) or len(raw) > 32768: raise HandshakeError('Managed drain proof is unbounded')
+    try: decoded = base64.b64decode(raw, validate=True); receipt = update._json(decoded)
+    except (ValueError, TypeError, RecursionError) as exc: raise HandshakeError('Invalid managed drain proof') from exc
+    if len(decoded) > 16384 or update._canonical(receipt) != decoded: raise HandshakeError('Managed drain proof is not bounded/canonical')
+    validate_drain_receipt(receipt, request, backend_process=proof['process'])
+    owner.publish_writer_drain(phase='drained' if receipt['status'] == 'managed_scopes_drained' else 'refused', receipt=receipt)
+    send_frame(owner._bootstrap_channel, {'schema_version': 1, 'kind': 'managed_drain_admitted',
+        'nonce': owner.nonce, 'request_id': request['request_id'], 'receipt_sha256': update._sha(decoded), 'status': receipt['status']})
+    if receipt['status'] != 'managed_scopes_drained': raise HandshakeError('Backend managed scope retains uncovered/active writers')
+
+
+def observe_backend_exit(owner, frame):
+    from backend.engine.application_launch_handshake import validate_backend_exit
+    with lease._transition_admission(owner.root, owner.nonce):
+        row = owner._owned(); owner._binding(row)
+        drain = row.get('writer_drain')
+        if drain is None or drain['phase'] != 'drained': raise HandshakeError('Backend exit lacks admitted original drain')
+        proof = owner._authenticated_backend_proof
+        validate_backend_exit(frame, drain['request'], proof['process'])
+    # This authenticated original Node handle observation is deliberately not
+    # passed to WriterEpoch.observe_original_child_exit (Python Popen only).
+    owner.publish_writer_drain(phase='backend_exited', backend_exit=frame)
+    send_frame(owner._bootstrap_channel, {'schema_version': 1, 'kind': 'backend_exit_observed',
+        'nonce': owner.nonce, 'request_id': frame['request_id'], 'exit_sha256': update._sha(update._canonical(frame))})
+
+
 def run(args):
     root, _ = update._root(args.root)
     with store_admission(root, exclusive=True):
@@ -244,7 +314,9 @@ def run(args):
         _expected(binding, args)
         capability=_cpu_capability(args,root)
         owner = lease.LaunchSupervisor.reserve(root, args.authority, pinned_authority_sha256=args.pinned_authority_sha256)
-        try: row = owner.start(bootstrap=True)
+        try:
+            owner.enroll_backend_writer()
+            row = owner.start(bootstrap=True)
         except Exception as exc:
             # Reservation already owns a durable nonce. An interrupted spawn
             # must keep the original handles, even if its journal is ambiguous.
@@ -252,7 +324,7 @@ def run(args):
             except (ValueError, OSError, psutil.Error): pass
             row = {'state': 'recovery_required', 'nonce': owner.nonce}
     _emit(_result(binding, row))
-    backend = None; failed = row['state'] != 'starting'; pending_reason = None
+    backend = None; failed = row['state'] != 'starting'; pending_reason = None; direct_exit_recorded = False
     if not failed:
         try:
             backend = authenticate(owner, row)
@@ -265,19 +337,26 @@ def run(args):
     while True:
         if not failed:
             try:
+                if select.select([owner._bootstrap_channel], [], [], 0)[0]:
+                    frame = read_frame(owner._bootstrap_channel, 4)
+                    if frame.get('kind') == 'main_drain_request': prepare_drain(owner, frame)
+                    elif frame.get('kind') == 'main_backend_exit': observe_backend_exit(owner, frame)
+                    else: raise HandshakeError('Private main descriptor ended or replayed after readiness')
                 if owner._process.poll() is not None: owner.observe_exit(); failed = True
                 elif not _same_identity(row['process'], row['process']['pid']):
                     raise HandshakeError('Authenticated main process birth or command changed')
-                elif backend is not None and (not _same_identity(backend, backend['pid'])
+                elif backend is not None and owner._owned().get('writer_drain', {}).get('phase') != 'backend_exited' and (not _same_identity(backend, backend['pid'])
                         or psutil.Process(backend['pid']).ppid() != row['process']['pid']):
                     raise HandshakeError('Authenticated backend ownership changed')
-                elif select.select([owner._bootstrap_channel], [], [], 0)[0]:
-                    raise HandshakeError('Private main descriptor ended or replayed after readiness')
             except Exception as exc:
                 pending_reason = 'Process-tree ownership is unresolved: '+str(exc); failed = True
         if pending_reason is not None:
             try: owner.recovery(pending_reason); pending_reason = None
             except Exception: pass
+        if not direct_exit_recorded and owner._process is not None and owner._process.poll() is not None:
+            try:
+                owner.observe_exit(); direct_exit_recorded = True; failed = True
+            except Exception: pass  # Ambiguous journal keeps original ownership.
         time.sleep(.2)
 
 

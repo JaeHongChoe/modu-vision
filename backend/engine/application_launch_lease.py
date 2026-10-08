@@ -26,7 +26,7 @@ LEASES = '.application-launches'
 RUNTIME_HOMES = '.application-runtime-homes'
 DATABASE_LOCK = 'application-database-ownership.lock'
 TRANSITION_LOCK = 'transition.lock'
-CONTROL_PATHS = {ACTIVE_LEASE, LEASES, DATABASE_LOCK}
+CONTROL_PATHS = {ACTIVE_LEASE, LEASES, DATABASE_LOCK, '.application-writer-epochs'}
 STATES = {'reserved', 'starting', 'ready', 'exited', 'recovery_required'}
 
 
@@ -142,9 +142,10 @@ def _record(root, nonce, *, record=None):
     if record is None: record = update._json(update._read(directory/'journal.json'))
     names = {'schema_version', 'protocol_version', 'nonce', 'revision', 'state', 'binding', 'supervisor', 'process',
         'spawn_attempted', 'claimed', 'ready_receipt_sha256', 'exit_observation', 'known_image_receipt_sha256', 'reason', 'transition_lock_identity'}
-    if isinstance(record, dict) and record.get('protocol_version') == 3: names.add('cpu_execution')
+    if isinstance(record, dict) and record.get('protocol_version') in (3, 4): names.add('cpu_execution')
+    if isinstance(record, dict) and record.get('protocol_version') == 4: names.add('writer_drain')
     if (not isinstance(record, dict) or set(record) != names or type(record['schema_version']) is not int
-            or record['schema_version'] != 1 or type(record['protocol_version']) is not int or record['protocol_version'] not in (2, 3)
+            or record['schema_version'] != 1 or type(record['protocol_version']) is not int or record['protocol_version'] not in (2, 3, 4)
             or record['nonce'] != nonce or type(record['revision']) is not int or record['revision'] < 1
             or record['state'] not in STATES or not _identity_shape(record['supervisor'])
             or record['process'] is not None and not _identity_shape(record['process'])
@@ -207,6 +208,30 @@ def _record(root, nonce, *, record=None):
     if record.get('cpu_execution') is not None:
         from backend.engine.application_launch_execution import validate_sealed_execution
         expected_members.update(validate_sealed_execution(record, directory))
+    if record.get('protocol_version') == 4:
+        if record['state'] == 'exited': _refuse('writer epoch release has no qualified adapter')
+        drain = record['writer_drain']
+        required = {'writer_id', 'registration_sha256', 'registration_registry_sha256', 'phase', 'request', 'receipt', 'backend_exit'}
+        if (not isinstance(drain, dict) or set(drain) != required or not update._hex(drain['writer_id'], 32)
+                or any(not update._hex(drain[k]) for k in ('registration_sha256', 'registration_registry_sha256'))
+                or not isinstance(drain['phase'], str) or drain['phase'] not in {'enrolled', 'closing', 'drained', 'backend_exited', 'refused'}):
+            _refuse('invalid writer drain admission')
+        if drain['phase'] == 'enrolled' and any(drain[k] is not None for k in ('request', 'receipt', 'backend_exit')):
+            _refuse('unrequested writer drain evidence')
+        if drain['phase'] != 'enrolled':
+            from backend.engine.application_launch_handshake import validate_drain_request, validate_drain_receipt, validate_backend_exit
+            if not bootstrap.exists(): _refuse('writer drain has no authenticated backend')
+            boot = update._json(update._read(bootstrap))
+            validate_drain_request(drain['request'], nonce=nonce, epoch=boot['epoch'], binding=binding,
+                writer_id=drain['writer_id'], registration_sha256=drain['registration_sha256'])
+            if drain['receipt'] is not None:
+                validate_drain_receipt(drain['receipt'], drain['request'], backend_process=boot['backend_process'])
+            if drain['phase'] in {'drained', 'backend_exited'} and (drain['receipt'] is None or drain['receipt']['status'] != 'managed_scopes_drained'):
+                _refuse('unproved managed backend drain')
+            if drain['backend_exit'] is not None:
+                validate_backend_exit(drain['backend_exit'], drain['request'], boot['backend_process'])
+            if (drain['phase'] == 'backend_exited') != (drain['backend_exit'] is not None):
+                _refuse('unbound original backend exit observation')
     if {p.name for p in directory.iterdir()} != expected_members: _refuse('unknown lease history member')
     return record
 
@@ -347,6 +372,11 @@ def assert_quiescent(root):
         return {'status': 'quiescent', 'nonce': None}
     if found != root: _refuse('explicit installation root required')
     with store_admission(root, exclusive=True):
+        epochs = _update()._unlinked(root/'.application-writer-epochs')
+        if epochs.exists():
+            if not epochs.is_dir(): _refuse('writer epoch control is not a directory')
+            with os.scandir(epochs) as entries:
+                if next(entries, None) is not None: _refuse('writer epoch ownership remains unresolved')
         row = _load(root)
         if row is not None and row['state'] != 'exited': _refuse('durable '+row['state']+' lease')
         with _database_lock(root, create=False): pass
@@ -378,6 +408,7 @@ class LaunchSupervisor:
         self.nonce = nonce; self._process = None; self._lock = None; self._snapshot = None
         self._bootstrap_channel = None
         self._bootstrap_transport = None
+        self._writer_epoch = None
 
     @classmethod
     def reserve(cls, root, authority, *, pinned_authority_sha256):
@@ -417,6 +448,8 @@ class LaunchSupervisor:
         with store_admission(self.root, exclusive=True):
             row = self._owned()
             if row['state'] != 'reserved' or row['spawn_attempted']: raise LaunchLeaseError('A started or ambiguous launch cannot be cancelled')
+            if row.get('writer_drain') is not None or self._writer_epoch is not None:
+                raise LaunchLeaseError('An enrolled writer epoch cannot be cancelled or released')
             self._binding(row)
             return self._persist(row, state='exited', exit_observation={'never_spawned': True})
 
@@ -465,6 +498,38 @@ class LaunchSupervisor:
                 raise
             finally:
                 if child_channel is not None: child_channel.close()
+
+    def enroll_backend_writer(self):
+        """Create-only original controller capability; never reconstruct from JSON."""
+        from backend.engine.application_launch_quiescence import WriterEpoch
+        with store_admission(self.root, exclusive=True):
+            row = self._owned(); self._binding(row)
+            if row['state'] != 'reserved' or row['spawn_attempted'] or self._writer_epoch is not None:
+                raise LaunchLeaseError('Backend writer enrollment must precede the only main spawn')
+            epoch = WriterEpoch.create(self.root, self.nonce, expected_launch_sha256=_update()._sha(_update()._canonical(row)))
+            registration = epoch.enroll('backend', expected_registry_sha256=epoch.snapshot()['registry_sha256'])
+            snapshot = epoch.snapshot()
+            drain = {'writer_id': registration.writer_id, 'registration_sha256': registration.registration_sha256,
+                'registration_registry_sha256': snapshot['registry_sha256'], 'phase': 'enrolled',
+                'request': None, 'receipt': None, 'backend_exit': None}
+            self._writer_epoch = epoch
+            return self._persist(self._owned(), protocol_version=4, writer_drain=drain)
+
+    def publish_writer_drain(self, *, phase, request=None, receipt=None, backend_exit=None):
+        with _transition_admission(self.root, self.nonce):
+            row = self._owned(); self._binding(row)
+            if row['protocol_version'] != 4 or self._writer_epoch is None:
+                raise LaunchLeaseError('Writer drain requires the original enrolled controller')
+            old = row['writer_drain']
+            transitions = {'enrolled': {'closing'}, 'closing': {'drained', 'refused'}, 'drained': {'backend_exited'}}
+            if phase not in transitions.get(old['phase'], set()): raise LaunchLeaseError('Writer drain replay or phase differs')
+            if phase != 'backend_exited': self._live(row, row['process'])
+            updated = {**old, 'phase': phase}
+            for key, value in (('request', request), ('receipt', receipt), ('backend_exit', backend_exit)):
+                if value is not None:
+                    if old[key] is not None: raise LaunchLeaseError('Writer drain evidence replay differs')
+                    updated[key] = value
+            return self._persist(row, writer_drain=updated)
 
     def _live(self, row, process):
         if self._process is None: raise LaunchLeaseError('Original supervisor OS child handle is unavailable')
@@ -525,7 +590,7 @@ class LaunchSupervisor:
             update._write(path,intent);_checkpoint('after_cpu_execution_intent')
             state={'request_id':request['request_id'],'request_sha256':update._sha(update._canonical(request)),
                 'intent_sha256':update._sha(update._read(path)),'receipt_sha256':None}
-            self._persist(row,protocol_version=3,cpu_execution=state)
+            self._persist(row,protocol_version=max(3,row['protocol_version']),cpu_execution=state)
             return intent
 
     def _publish_cpu_execution(self, receipt):

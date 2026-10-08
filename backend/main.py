@@ -32,7 +32,7 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 # Owned application authentication precedes SCM and all mutable server imports.
-from backend.engine.application_launch_handshake import early_backend_bootstrap, backend_bootstrap_ready
+from backend.engine.application_launch_handshake import early_backend_bootstrap, backend_bootstrap_ready, backend_work_admission
 early_backend_bootstrap()
 
 # SCM must connect its dispatcher before importing Studio/GPU application code.
@@ -208,6 +208,25 @@ class ProjectContextMiddleware:
             current_project_context.reset(token)
 
 
+class OwnedWorkAdmissionMiddleware:
+    """Close HTTP/WS entries before project resolution can perform writes."""
+    def __init__(self, app, admission):
+        self.app, self.admission = app, admission
+
+    async def __call__(self, scope, receive, send):
+        if scope['type'] not in {'http', 'websocket'} or self.admission is None:
+            return await self.app(scope, receive, send)
+        if not self.admission.enter(scope):
+            if scope['type'] == 'websocket':
+                return await send({'type': 'websocket.close', 'code': 1013})
+            return await JSONResponse({'detail': 'Owned backend admission is closed for drain'}, status_code=409)(scope, receive, send)
+        async def tracked_send(message):
+            if message['type'] == 'http.response.start': self.admission.response(message['status'])
+            await send(message)
+        try: await self.app(scope, receive, tracked_send)
+        finally: self.admission.leave()
+
+
 class DesktopApiAuthMiddleware:
     """Require the Electron process capability for HTTP and WebSocket API access."""
 
@@ -279,6 +298,10 @@ async def _admitted_lifespan(app: FastAPI):
     from backend.api.routes_workers import stop_for_shutdown as stop_worker_preflight
     execution_stop=None;execution_thread=None
     try:
+        admission = getattr(app.state, 'owned_work_admission', None)
+        if admission is not None:
+            # Recovery, sweep and detached training need their own adapters.
+            admission.uncovered('startup_background_protocols')
         # Startup may partially recover workers before a failure or supervisor
         # EOF. Cleanup must also run when the suspended lifespan is finalized
         # without Uvicorn's normal shutdown notification.
@@ -345,6 +368,7 @@ def _admitted_create_app(project_dir: Optional[str] = None, shared_auth_dir: Opt
     # Standalone invocations generate one too, so a missing environment variable
     # never silently disables API authorization.
     app.state.api_token = os.environ.get("VISION_AI_STUDIO_API_TOKEN") or secrets.token_urlsafe(32)
+    app.state.owned_work_admission = backend_work_admission()
     from backend.engine.shared_accounts import AccountStore
     app.state.accounts=AccountStore(Path(shared_auth_dir)/'accounts.sqlite') if shared_auth_dir else None
     from backend.engine.migration_guard import ProjectMaintenanceMiddleware
@@ -501,6 +525,7 @@ def _admitted_create_app(project_dir: Optional[str] = None, shared_auth_dir: Opt
     app.include_router(report_router)
     app.include_router(telemetry_router)
 
+    app.add_middleware(OwnedWorkAdmissionMiddleware, admission=app.state.owned_work_admission)
     return app
 
 

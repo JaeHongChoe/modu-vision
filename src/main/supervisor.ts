@@ -353,6 +353,7 @@ export class BackendSupervisor extends EventEmitter {
   public async stopBackend(): Promise<void> {
     if (this.stoppingPromise) return this.stoppingPromise;
     if (this.state === 'STOPPED' && !this.childProcess) return;
+    const shutdownStarted = performance.now();
 
     this.isShuttingDown = true;
     this.setState('STOPPING');
@@ -366,16 +367,41 @@ export class BackendSupervisor extends EventEmitter {
     const pid = proc.pid;
     console.log(`[Supervisor] Initiating graceful shutdown for PID ${pid}...`);
     this.stoppingPromise = new Promise<void>((resolve, reject) => {
+      const owned = this.ownedApplicationLaunch;
+      let expired = false, prepared = false, drainError: Error | null = null;
+      const refuse = () => {
+        try { owned?.refuse(); }
+        catch (error) { console.error('[Supervisor] Owned drain refusal failed; ownership stays unresolved:', error); }
+      };
       const onExit = (code: number | null, signal: string | null) => {
-        clearTimeout(forceKillTimer);
         console.log(`[Supervisor] Daemon PID ${pid} exited (code: ${code}, signal: ${signal})`);
-        if (this.childProcess === proc) this.cleanupState();
-        resolve();
+        const finish = () => {
+          clearTimeout(forceKillTimer);
+          if (this.childProcess === proc) this.cleanupState();
+          drainError ? reject(drainError) : resolve();
+        };
+        if (!expired && owned?.requiresWriterDrain && prepared && code === 0 && signal === null) {
+          // Keep the original main/controller channel until it authenticates
+          // this same Node ChildProcess exit. The original timer still runs.
+          void owned.confirmBackendExit(proc).then(finish, error => {
+            drainError = error instanceof Error ? error : new Error(String(error));
+            refuse(); finish();
+          });
+        } else {
+          if (!expired && owned?.requiresWriterDrain && !drainError)
+            drainError = new Error('Original backend clean exit lacks admitted managed drain');
+          finish();
+        }
       };
       // Install the timer before requesting shutdown: a controlled or native
       // close may synchronously deliver exit. Keep the original exit listener
       // after timeout so only that same handle can finish late cleanup.
       const forceKillTimer = setTimeout(() => {
+        expired = true;
+        drainError = new Error('Original backend exit is unverified after the shutdown deadline');
+        // A controlled/native kill can synchronously emit the original exit.
+        // Refuse before invoking any process operation so it cannot resolve.
+        reject(drainError);
         console.warn(`[Supervisor] Daemon PID ${pid} did not exit within ${this.config.gracefulShutdownTimeoutMs}ms. Forcing it to stop.`);
         forceStop(proc);
         try {
@@ -383,13 +409,25 @@ export class BackendSupervisor extends EventEmitter {
         } catch (error) {
           console.error('[Supervisor] Owned launch refusal failed; exit remains unverified:', error);
         }
-        reject(new Error('Original backend exit is unverified after the shutdown deadline'));
-      }, this.config.gracefulShutdownTimeoutMs);
+      }, Math.max(0, this.config.gracefulShutdownTimeoutMs - (performance.now() - shutdownStarted)));
       proc.once('exit', onExit);
-      try { proc.stdin?.end(); } catch { /* A closed pipe is not exit proof. */ }
-      if (process.platform !== 'win32') {
-        try { proc.kill('SIGTERM'); } catch { /* Retain the original handle. */ }
-      }
+      const requestOriginalStop = () => {
+        if (expired || proc.exitCode !== null || proc.signalCode !== null) return;
+        try { proc.stdin?.end(); } catch { /* A closed pipe is not exit proof. */ }
+        if (process.platform !== 'win32') {
+          try { proc.kill('SIGTERM'); } catch { /* Retain the original handle. */ }
+        }
+      };
+      if (owned?.requiresWriterDrain) {
+        const remaining = Math.floor(this.config.gracefulShutdownTimeoutMs - (performance.now() - shutdownStarted));
+        void owned.prepareBackendDrain(proc, remaining).then(() => {
+          if (expired) return; prepared = true; requestOriginalStop();
+        }, error => {
+          if (expired) return;
+          drainError = error instanceof Error ? error : new Error(String(error));
+          refuse(); requestOriginalStop();
+        });
+      } else requestOriginalStop();
     });
     try { await this.stoppingPromise; }
     finally { this.stoppingPromise = null; }

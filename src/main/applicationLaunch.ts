@@ -52,7 +52,13 @@ class Frames {
 
 export class OwnedApplicationLaunch {
  readonly projects:string;readonly auth:string;private usedBackend=false;
- constructor(readonly root:string,readonly nonce:string,readonly binding:any,readonly mainProcess:any,private challenge:string,private frames:Frames){this.projects=path.join(root,'projects');this.auth=path.join(root,'auth');}
+ private backend:ChildProcess|null=null;private backendProof:any=null;private backendClaimHash='';private backendEpoch='';
+ private pendingDrain:{id:string;resolve:(receipt:any)=>void;reject:(error:Error)=>void;timer:NodeJS.Timeout}|null=null;
+ private drainRequest:any=null;private drainReceipt:any=null;private backendExitFrame:any=null;
+ private exitAcknowledged=false;
+ private exitResolve:(()=>void)|null=null;private exitReject:((error:Error)=>void)|null=null;private exitConfirmation:Promise<void>|null=null;
+ constructor(readonly root:string,readonly nonce:string,readonly binding:any,readonly mainProcess:any,private challenge:string,private frames:Frames,private writer?:any){this.projects=path.join(root,'projects');this.auth=path.join(root,'auth');}
+ get requiresWriterDrain():boolean{return this.writer!==undefined;}
  private current():void {validateBinding(this.root,this.nonce,this.binding,this.mainProcess);this.frames.assertEmpty();}
  executable(file:string):{sha256:string;build:string|null} {this.current();const application=path.join(this.root,'.application-generations',this.binding.application_generation,'application');const manifest=parsePrivateDocument(stable(path.join(application,'portable-application.json'),APPLICATION_MANIFEST_LIMIT) as Buffer,APPLICATION_MANIFEST_LIMIT).value;
  const relative=path.relative(application,file).split(path.sep).join('/');if(path.isAbsolute(relative)||relative.startsWith('../')||relative==='..')throw new Error('Backend executable escapes committed application');
@@ -63,15 +69,45 @@ export class OwnedApplicationLaunch {
  backendEnvironment(env:NodeJS.ProcessEnv):NodeJS.ProcessEnv {const result={...env};for(const key of CONTEXT)delete result[key];return {...result,VISION_AI_STUDIO_USER_DATA_DIR:this.root,VISION_APPLICATION_LAUNCH_NONCE:this.nonce,VISION_APPLICATION_GENERATION:this.binding.application_generation,VISION_APPLICATION_DATABASE_GENERATION:this.binding.database_generation_path,VISION_APPLICATION_BACKEND_FD:'3'};}
  async bindBackend(proc:ChildProcess,executable:string,build:string|null):Promise<void>{if(this.usedBackend)throw new Error('Owned backend restart requires a new reconciled controller epoch');this.usedBackend=true;this.current();const artifact=this.executable(executable);if(artifact.build!==build||!Number.isSafeInteger(proc.pid)||!proc.stdio[3])throw new Error('Owned backend executable or private descriptor differs');
  const channel=proc.stdio[3] as Duplex,frames=new Frames(channel),challenge=randomBytes(32).toString('hex'),epoch=randomBytes(16).toString('hex');
- await frames.send({schema_version:1,kind:'backend_challenge',challenge,epoch,nonce:this.nonce,binding:this.binding,main_process:this.mainProcess,backend_pid:proc.pid,backend_executable:executable,backend_build_identity_sha256:build});
+ await frames.send({schema_version:1,kind:'backend_challenge',challenge,epoch,nonce:this.nonce,binding:this.binding,main_process:this.mainProcess,backend_pid:proc.pid,backend_executable:executable,backend_build_identity_sha256:build,...(this.writer?{writer:this.writer}:{})});
  const claimRaw=await frames.read(),readyRaw=await frames.read(),claim=parsePrivateDocument(claimRaw).value,ready=parsePrivateDocument(readyRaw).value;
  const names=['schema_version','kind','challenge','epoch','nonce','binding_sha256','process','executable','executable_sha256','build_identity_sha256','frozen'];fields(claim,names);fields(ready,names);identity(claim.process);identity(ready.process);
  if(claim.schema_version!==1||ready.schema_version!==1||claim.kind!=='backend_claim'||ready.kind!=='backend_ready'||canonical({...claim,kind:'backend_ready'})!==canonical(ready)||ready.challenge!==challenge||ready.epoch!==epoch||ready.nonce!==this.nonce||ready.binding_sha256!==hash(canonical(this.binding))||ready.process.pid!==proc.pid||ready.executable!==executable||ready.executable_sha256!==artifact.sha256||ready.build_identity_sha256!==build||typeof ready.frozen!=='boolean'||ready.frozen!==(build!==null))throw new Error('Backend private readiness binding differs');
  this.current();frames.assertEmpty();await this.frames.send({schema_version:1,kind:'backend_proof',challenge:this.challenge,nonce:this.nonce,claim_b64:claimRaw.toString('base64'),ready_b64:readyRaw.toString('base64')});
  // One closed controller-origin execution request may follow readiness. Idle
  // waiting has no timeout; unsolicited backend data still invalidates ownership.
- let executing=false;const invalidate=()=>this.frames.channel.destroy();proc.once('exit',invalidate);channel.once('close',invalidate);channel.once('end',invalidate);channel.once('error',invalidate);channel.on('data',()=>{if(!executing)invalidate();});
- void (async()=>{const request=parsePrivateDocument(await this.frames.read(null)).value;
+ this.backend=proc;this.backendProof=claim;this.backendEpoch=epoch;this.backendClaimHash=hash(parsePrivateDocument(claimRaw).canonical);
+ let executing=false;const invalidate=()=>{const error=new Error('Original owned backend channel/ownership ended');this.pendingDrain?.reject(error);this.exitReject?.(error);this.frames.channel.destroy();};
+ proc.once('exit',(code,signal)=>{
+  if(!this.drainReceipt||code!==0||signal!==null){invalidate();return;}
+  this.backendExitFrame={schema_version:1,kind:'main_backend_exit',nonce:this.nonce,epoch,request_id:this.drainRequest.request_id,challenge:this.drainRequest.challenge,backend_process:claim.process,returncode:code,signal};
+  void this.frames.send(this.backendExitFrame).catch(invalidate);
+ });
+ const backendClosed=()=>{if(!this.drainReceipt)invalidate();};channel.once('close',backendClosed);channel.once('end',backendClosed);channel.once('error',invalidate);channel.on('data',()=>{if(!executing)invalidate();});
+ void (async()=>{let cpuExecuted=false;while(true){const request=parsePrivateDocument(await this.frames.read(null)).value;
+ if(request.kind==='backend_exit_observed'){
+  fields(request,['schema_version','kind','nonce','request_id','exit_sha256']);
+  if(this.exitAcknowledged||!this.exitResolve||!this.exitConfirmation||request.schema_version!==1||request.nonce!==this.nonce||!this.backendExitFrame||request.request_id!==this.backendExitFrame.request_id||request.exit_sha256!==hash(canonical(this.backendExitFrame)))throw new Error('Original Node exit acknowledgement differs or replayed');
+  this.exitAcknowledged=true;const resolve=this.exitResolve;this.exitResolve=null;resolve();continue;
+ }
+ if(request.kind==='backend_drain_request'){
+  fields(request,['schema_version','kind','challenge','request_id','nonce','epoch','binding_sha256','backend_claim_sha256','writer_id','registration_sha256','closed_registry_sha256','budget_ms']);
+  if(!this.writer||!this.pendingDrain||this.drainRequest||request.schema_version!==1||request.nonce!==this.nonce||request.epoch!==epoch||request.request_id!==this.pendingDrain.id||!HEX64.test(request.challenge)||request.binding_sha256!==hash(canonical(this.binding))||request.backend_claim_sha256!==this.backendClaimHash||request.writer_id!==this.writer.writer_id||request.registration_sha256!==this.writer.registration_sha256||!HEX64.test(request.closed_registry_sha256)||!Number.isSafeInteger(request.budget_ms)||request.budget_ms<1||request.budget_ms>4000)throw new Error('Foreign or replayed managed drain request');
+  validateBinding(this.root,this.nonce,this.binding,this.mainProcess);this.frames.assertEmpty();frames.assertEmpty();this.drainRequest=request;executing=true;
+  await frames.send(request);const raw=await frames.read(request.budget_ms),receipt=parsePrivateDocument(raw,16384).value;
+  fields(receipt,['schema_version','kind','request','backend_proof','status','active_scopes','unsupported','scope','whole_writer_coverage','process_tree_exit_verified','can_release_launch_lease']);
+  if(receipt.schema_version!==1||receipt.kind!=='backend_managed_drain'||canonical(receipt.request)!==canonical(request)||canonical(receipt.backend_proof)!==canonical(claim)||!['managed_scopes_drained','refused'].includes(receipt.status)||!Number.isSafeInteger(receipt.active_scopes)||receipt.active_scopes<0||!Array.isArray(receipt.unsupported)||receipt.scope!=='reviewed_foreground_scopes_only'||receipt.whole_writer_coverage!==false||receipt.process_tree_exit_verified!==false||receipt.can_release_launch_lease!==false||receipt.status==='managed_scopes_drained'&&(receipt.active_scopes!==0||receipt.unsupported.length!==0))throw new Error('Managed backend drain exceeds its exact scope');
+  frames.assertEmpty();await this.frames.send({schema_version:1,kind:'managed_drain_proof',nonce:this.nonce,proof_b64:raw.toString('base64')});
+  const admitted=parsePrivateDocument(await this.frames.read(request.budget_ms)).value;
+  const expected={schema_version:1,kind:'managed_drain_admitted',nonce:this.nonce,request_id:request.request_id,receipt_sha256:hash(raw),status:receipt.status};
+  if(canonical(admitted)!==canonical(expected))throw new Error('Original controller drain acknowledgement differs');executing=false;
+  const pending=this.pendingDrain;if(!pending)throw new Error('Original shutdown budget already expired');clearTimeout(pending.timer);this.pendingDrain=null;
+  if(receipt.status!=='managed_scopes_drained'){pending.reject(new Error('Backend retains uncovered or active writers'));continue;}
+  this.drainReceipt=receipt;this.exitConfirmation=new Promise<void>((resolve,reject)=>{this.exitResolve=resolve;this.exitReject=reject;});
+  // A rejection is observed immediately even if stop fails before awaiting exit.
+  void this.exitConfirmation.catch(()=>{});pending.resolve(receipt);continue;
+ }
+ if(cpuExecuted||this.drainRequest)throw new Error('CPU request replay or closed writer admission');cpuExecuted=true;
  fields(request,['schema_version','kind','challenge','request_id','nonce','epoch','binding_sha256','backend_claim_sha256','workspace_id','project_id','plan_sha256']);
  if(request.schema_version!==1||request.kind!=='cpu_execution_request'||!HEX64.test(request.challenge)||!HEX32.test(request.request_id)||request.nonce!==this.nonce||request.epoch!==epoch||request.binding_sha256!==hash(canonical(this.binding))||request.backend_claim_sha256!==hash(parsePrivateDocument(claimRaw).canonical)||!HEX32.test(request.workspace_id)||!HEX32.test(request.project_id)||!HEX64.test(request.plan_sha256))throw new Error('Foreign CPU execution request');
  validateBinding(this.root,this.nonce,this.binding,this.mainProcess);this.frames.assertEmpty();frames.assertEmpty();executing=true;
@@ -80,9 +116,17 @@ export class OwnedApplicationLaunch {
  if(completed.schema_version!==1||completed.kind!=='cpu_execution_completed'||canonical(completed.request)!==canonical(request)||canonical(completed.backend_proof)!==canonical(claim)||!HEX64.test(completed.output_sha256)||!HEX64.test(completed.runtime_source_sha256)||!Number.isSafeInteger(completed.worker_pid)||completed.worker_pid<1)throw new Error('CPU execution completion differs');
  frames.assertEmpty();validateBinding(this.root,this.nonce,this.binding,this.mainProcess);
  await this.frames.send({schema_version:1,kind:'cpu_execution_proof',nonce:this.nonce,proof_b64:completedRaw.toString('base64')});executing=false;
- await this.frames.read(null);throw new Error('CPU request replay requires recovery');
+ }
  })().catch(invalidate);
  }
+ async prepareBackendDrain(proc:ChildProcess,budgetMs:number):Promise<any>{
+  if(!this.writer||proc!==this.backend||!this.backendProof||this.pendingDrain||this.drainRequest||!Number.isSafeInteger(budgetMs)||budgetMs<1||budgetMs>4000)throw new Error('Original enrolled backend drain capability is unavailable');
+  validateBinding(this.root,this.nonce,this.binding,this.mainProcess);const id=randomBytes(16).toString('hex');
+  const result=new Promise<any>((resolve,reject)=>{const timer=setTimeout(()=>{if(this.pendingDrain?.id===id)this.pendingDrain=null;reject(new Error('Original managed shutdown budget expired'));},budgetMs);this.pendingDrain={id,resolve,reject,timer};});
+  void this.frames.send({schema_version:1,kind:'main_drain_request',nonce:this.nonce,epoch:this.backendEpoch,binding_sha256:hash(canonical(this.binding)),backend_claim_sha256:this.backendClaimHash,request_id:id,budget_ms:budgetMs}).catch(error=>this.pendingDrain?.reject(error));
+  return result;
+ }
+ async confirmBackendExit(proc:ChildProcess):Promise<void>{if(proc!==this.backend||!this.exitConfirmation||!this.backendExitFrame)throw new Error('Original backend clean exit is unobserved');await this.exitConfirmation;}
  refuse(){this.frames.channel.destroy();}
 }
 
@@ -118,11 +162,13 @@ export async function authenticateMainLaunch(env:NodeJS.ProcessEnv=process.env):
  if(env.VISION_APPLICATION_BACKEND_FD!==undefined||!fd||! /^[1-9]\d*$/.test(fd)||Number(fd)<3||Number(fd)>8192||!nonce||!HEX32.test(nonce)||!HEX32.test(env.VISION_APPLICATION_GENERATION||'')||!env.VISION_APPLICATION_DATABASE_GENERATION)throw new Error('Incomplete owned main launch context');
  const descriptor=fs.fstatSync(Number(fd),{bigint:true});if(process.platform==='win32'||!descriptor.isSocket())throw new Error('Owned main descriptor must be a POSIX stream socket');
  const channel=new net.Socket({fd:Number(fd),readable:true,writable:true}),frames=new Frames(channel);
- try{if(channel.remoteAddress||channel.localAddress)throw new Error('Owned main descriptor cannot be an Internet socket');const frame=parsePrivateDocument(await frames.read()).value;fields(frame,['schema_version','kind','challenge','nonce','binding','process','transport']);identity(frame.process);
+ try{if(channel.remoteAddress||channel.localAddress)throw new Error('Owned main descriptor cannot be an Internet socket');const frame=parsePrivateDocument(await frames.read()).value;fields(frame,['schema_version','kind','challenge','nonce','binding','process','transport',...('writer'in frame?['writer']:[])]);identity(frame.process);
+ if('writer'in frame){fields(frame.writer,['writer_id','registration_sha256','registration_registry_sha256']);if(!HEX32.test(frame.writer.writer_id)||!HEX64.test(frame.writer.registration_sha256)||!HEX64.test(frame.writer.registration_registry_sha256))throw new Error('Original backend writer registration differs');const journal=document(path.join(configured,'.application-launches',nonce,'journal.json')).value;
+ if(journal.protocol_version!==4||journal.writer_drain?.phase!=='enrolled'||['writer_id','registration_sha256','registration_registry_sha256'].some(k=>journal.writer_drain[k]!==frame.writer[k]))throw new Error('Original writer journal registration differs');}
  fields(frame.transport,['device','inode','family','type','anonymous']);if(frame.transport.family!=='AF_UNIX'||frame.transport.type!=='SOCK_STREAM'||frame.transport.anonymous!==true||typeof frame.transport.device!=='string'||typeof frame.transport.inode!=='string'||!/^(0|[1-9]\d{0,19})$/.test(frame.transport.device)||!/^(0|[1-9]\d{0,19})$/.test(frame.transport.inode)||frame.transport.device!==BigInt.asUintN(64,descriptor.dev).toString()||frame.transport.inode!==descriptor.ino.toString())throw new Error('Original controller anonymous descriptor identity differs');
  if(frame.schema_version!==1||frame.kind!=='main_challenge'||!HEX64.test(frame.challenge)||frame.nonce!==nonce||frame.process.pid!==process.pid||frame.binding.application_generation!==env.VISION_APPLICATION_GENERATION||frame.binding.database_generation_path!==env.VISION_APPLICATION_DATABASE_GENERATION)throw new Error('Main private challenge differs');
  validateBinding(configured,nonce,frame.binding,frame.process);frames.assertEmpty();await frames.send({schema_version:1,kind:'main_claim',challenge:frame.challenge,nonce,binding_sha256:hash(canonical(frame.binding)),pid:process.pid});
  const admitted=parsePrivateDocument(await frames.read()).value;const expected={schema_version:1,kind:'main_admitted',challenge:frame.challenge,nonce,binding_sha256:hash(canonical(frame.binding)),pid:process.pid};if(canonical(admitted)!==canonical(expected))throw new Error('Original controller admission differs');frames.assertEmpty();
- return new OwnedApplicationLaunch(configured,nonce,frame.binding,frame.process,frame.challenge,frames);
+ return new OwnedApplicationLaunch(configured,nonce,frame.binding,frame.process,frame.challenge,frames,frame.writer);
  }catch(error){channel.destroy();throw error;}
 }

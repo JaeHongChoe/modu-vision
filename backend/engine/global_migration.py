@@ -11,7 +11,8 @@ class GlobalMigrationError(ValueError):pass
 _SCOPES={'ledger','leases','profiles','accounts','context','local_journals','remote_journals'}
 _EXCLUDED={OWNER_FILE,POINTER_FILE,'.global-generations','.global-migrations','.global-generation.json','migration_admission.lock', '.installed-home-adoption'}
 _APPLICATION_CONTROL={'application-active.json','application-update-pending.json','.application-updates','.application-generations',
-                      'application-launch-lease.json','.application-launches','application-database-ownership.lock'}
+                      'application-launch-lease.json','.application-launches','application-database-ownership.lock',
+                      '.application-writer-epochs'}
 
 def digest(value):return hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 
