@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 from fastapi import HTTPException
@@ -119,7 +120,7 @@ def _analyze(project):
             except (ValueError,OSError,KeyError):evaluations.append({'evaluation_id':path.stem,'state':'changed'})
     approvals=[];database=root/'model_deployments.sqlite3'
     if database.is_file() and not database.is_symlink():
-        with sqlite3.connect(f'file:{database}?mode=ro',uri=True) as connection:
+        with closing(sqlite3.connect(f'file:{database}?mode=ro',uri=True)) as connection, connection:
             connection.row_factory=sqlite3.Row
             for row in connection.execute('SELECT revisions.* FROM active_revisions JOIN revisions ON revisions.revision_id=active_revisions.revision_id'):
                 scope_matches=row['source_dataset_path']==source
@@ -301,7 +302,7 @@ def legacy_impact(project):
     database = root/'model_deployments.sqlite3'
     if database.is_file() and not database.is_symlink():
         try:
-            with sqlite3.connect(f'file:{database}?mode=ro', uri=True) as connection:
+            with closing(sqlite3.connect(f'file:{database}?mode=ro', uri=True)) as connection, connection:
                 connection.row_factory = sqlite3.Row
                 for row in connection.execute('SELECT * FROM revisions ORDER BY created_at, revision_id'):
                     revision = dict(row)
