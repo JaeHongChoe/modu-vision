@@ -109,6 +109,51 @@ function assertReadonlyDiffs(records: ReadonlyDiff[], origin: string, initialVer
   }
 }
 
+type ReadonlyResolve = ReadonlyDiff & {run_index: number};
+type ResolveRunScope = {run_index: number; requested_capacity: number; selected_relative_path: string;
+  prior_relative_path: string | null; before_resolves: number; after_resolves: number; opened: number; finished: number};
+
+function assertResolveRunScopes(scopes: ResolveRunScope[], original: any) {
+  expect(original.cohort).toHaveLength(2); expect(scopes).toHaveLength(4);
+  const selected = [0, 1, 0, 1], capacities = [2, 2, 1, 1];
+  for (const [index, scope] of scopes.entries()) {
+    expect(Object.keys(scope).sort()).toEqual(['after_resolves', 'before_resolves', 'finished', 'opened', 'prior_relative_path', 'requested_capacity', 'run_index', 'selected_relative_path']);
+    expect(scope.run_index).toBe(index); expect(scope.requested_capacity).toBe(capacities[index]);
+    expect(scope.selected_relative_path).toBe(original.cohort[selected[index]].relative_path);
+    expect(scope.prior_relative_path).toBe(index ? original.cohort[selected[index - 1]].relative_path : null);
+    expect(scope.before_resolves).toBe(Math.max(0, index - 1)); expect(scope.after_resolves).toBe(index);
+    expect(Number.isFinite(scope.opened)).toBe(true); expect(Number.isFinite(scope.finished)).toBe(true);
+    expect(scope.finished).toBeGreaterThanOrEqual(scope.opened);
+  }
+}
+
+function assertReadonlyResolves(records: ReadonlyResolve[], scopes: ResolveRunScope[], origin: string, original: any, validated: any) {
+  assertResolveRunScopes(scopes, original); expect(records).toHaveLength(3);
+  expect(new Set(records.map(row => row.request)).size).toBe(3); expect(new Set(records.map(row => row.response)).size).toBe(3);
+  expect(validated.library.active).toBe(true); expect(validated.library.source_root).toBe(original.source_dataset_path);
+  for (const [index, row] of [...records].sort((a, b) => a.ordinal - b.ordinal).entries()) {
+    const scope = scopes[index + 1], originalImage = original.cohort[index % 2];
+    const matches = validated.library.items.filter((item: any) => item.relative_path === originalImage.relative_path);
+    expect(matches).toHaveLength(1); const item = matches[0]; expect(item.sha256).toBe(originalImage.image_sha256);
+    expect(item.valid).toBe(1); expect(item.image_uuid).toMatch(/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/);
+    const selection = {image_uuid: item.image_uuid, sha256: item.sha256}, expectedRequest = {selections: [selection]};
+    expect(row.ordinal).toBe(index); expect(row.run_index).toBe(index + 1);
+    expect(row.method).toBe('POST'); expect(row.request.method()).toBe('POST');
+    expect(row.url).toBe(origin + '/api/dataset/library/resolve'); expect(row.request.url()).toBe(row.url);
+    expect(row.request.postData()).toBe(row.request_raw); expect(JSON.parse(row.request_raw)).toEqual(expectedRequest); expect(row.body).toEqual(expectedRequest);
+    expect(row.request_sha256).toBe(sha(row.request_raw)); expect(row.request_bytes).toBe(Buffer.byteLength(row.request_raw));
+    expect(Number.isFinite(row.started)).toBe(true); expect(row.started).toBeGreaterThanOrEqual(scope.opened);
+    expect(row.deadline).toBe(row.started + 10_000); expect(row.finished).toBeGreaterThanOrEqual(row.started);
+    expect(row.finished).toBeLessThanOrEqual(row.deadline); expect(row.finished).toBeLessThanOrEqual(scope.finished);
+    expect(row.response.request()).toBe(row.request); expect(row.response.status()).toBe(200); expect(row.status).toBe(200);
+    expect(row.response_sha256).toBe(sha(row.response_raw)); expect(row.response_bytes).toBe(Buffer.byteLength(row.response_raw));
+    expect(JSON.parse(row.response_raw)).toEqual(row.reply);
+    expect(row.reply).toEqual({revision_id: validated.library.revision_id, active: true, results: [{...selection, status: 'found',
+      current: {relative_path: item.relative_path, image_uuid: item.image_uuid, sha256: item.sha256, valid: 1,
+        file_path: path.join(original.source_dataset_path, item.relative_path)}, candidates: []}]});
+  }
+}
+
 async function prepareValidatedRetainedRevision(api: Api, setup: Api, original: any, project: any) {
   // The legacy summary import does not create an active validated index.
   // Use the original durable job and explicit acceptance before the baseline;
@@ -227,6 +272,19 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
       .finally(() => {readonlyDiffPending.delete(operation);});
     readonlyDiffPending.add(operation);
   };
+  const readonlyResolves: ReadonlyResolve[] = [], readonlyResolvePending = new Set<Promise<void>>(), readonlyResolveFailures: string[] = [];
+  const resolveRunScopes: ResolveRunScope[] = []; let resolveRunScope: ResolveRunScope | null = null, readonlyResolveOrdinal = 0;
+  const captureReadonlyResolve = (request: Request) => {
+    const ordinal = readonlyResolveOrdinal++, started = Date.now(), scope = resolveRunScope;
+    let operation: Promise<void>;
+    // Reuse the original same-Request/Response full-body transport capture and
+    // one immutable request-start10s deadline. Scope is captured before await.
+    operation = captureOriginalReadonlyDiff(request, ordinal, started).then(record => {
+      expect(scope).not.toBeNull(); expect(scope!.run_index).toBeGreaterThan(0);
+      readonlyResolves.push({...record, run_index: scope!.run_index});
+    }).catch(error => {readonlyResolveFailures.push(String(error));}).finally(() => {readonlyResolvePending.delete(operation);});
+    readonlyResolvePending.add(operation);
+  };
   const pending = new Set<Request>(), readTimes = new Map<Request, number>(), finishedReads: any[] = [], readFailures: string[] = [];
   const startRead = (request: Request) => {if (request.method() === 'GET' && new URL(request.url()).pathname.startsWith('/api/')) {
     pending.add(request); readTimes.set(request, Date.now());
@@ -264,7 +322,8 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   page.on('request', startRead); page.on('requestfinished', request => {void finishRead(request);});
   page.on('requestfailed', request => {if (pending.delete(request)) readFailures.push('Failed original read ' + request.url());});
   const settle = async () => {await expect.poll(() => pending.size, {timeout: 10_000}).toBe(0); expect(readFailures).toEqual([]);
-    await Promise.all([...readonlyDiffPending]); expect(readonlyDiffFailures).toEqual([]);};
+    await Promise.all([...readonlyDiffPending]); expect(readonlyDiffFailures).toEqual([]);
+    await Promise.all([...readonlyResolvePending]); expect(readonlyResolveFailures).toEqual([]);};
   if (url) await page.goto(url); else await page.reload();
   await openFlow(); await settle();
   const scoped = new URLSearchParams({source_dataset_path: source, task: 'segmentation'});
@@ -299,6 +358,7 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   const writes: Array<{method: string; url: string; body: any; request: Request}> = [];
   const observeWrite = (request: Request) => {if (new URL(request.url()).pathname.startsWith('/api/') && !['GET', 'HEAD', 'OPTIONS'].includes(request.method())) {
     if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/flowchart/pipeline/diff') captureReadonlyDiff(request);
+    else if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/dataset/library/resolve') captureReadonlyResolve(request);
     else writes.push({method: request.method(), url: request.url(), body: request.postDataJSON(), request});
   }};
   page.on('request', observeWrite);
@@ -355,6 +415,10 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
 
   const results: any[] = [], runs: any[] = [];
   const run = async (item: any, capacity: number) => {
+    const runIndex = runs.length, scope: ResolveRunScope = {run_index: runIndex, requested_capacity: capacity,
+      selected_relative_path: item.relative_path, prior_relative_path: runIndex ? runs[runIndex - 1].original.relative_path : null,
+      before_resolves: readonlyResolveOrdinal, after_resolves: -1, opened: Date.now(), finished: -1};
+    expect(resolveRunScope).toBeNull(); resolveRunScope = scope;
     await page.getByRole('button', {name: /이미지 변경/}).click();
     const picker = page.getByRole('dialog', {name: '검사 대상 이미지 선택', exact: true});
     await picker.getByLabel('이미지 검색', {exact: true}).fill(path.basename(item.relative_path));
@@ -362,6 +426,9 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
     await expect(originalImage).toHaveCount(1); await originalImage.click();
     await expect(originalImage).toHaveAttribute('aria-pressed', 'true');
     await picker.getByRole('button', {name: '선택 확정', exact: true}).click();
+    await settle(); scope.after_resolves = readonlyResolveOrdinal; scope.finished = Date.now();
+    expect(scope.after_resolves - scope.before_resolves).toBe(runIndex === 0 ? 0 : 1);
+    resolveRunScopes.push(scope); resolveRunScope = null;
     await page.getByRole('tab', {name: '테스트', exact: true}).click();
     await page.getByLabel('플로우 실행 위치', {exact: true}).selectOption('local_cpu');
     const started = Date.now(), responsePromise = page.waitForResponse(response => new URL(response.url()).pathname === '/api/flowchart/run'
@@ -436,6 +503,8 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   const observedOrigins = [...new Set(finishedReads.map(row => new URL(row.url).origin))]; expect(observedOrigins).toHaveLength(1);
   assertReadonlyDiffs(readonlyDiffs, observedOrigins[0], initial.version_id, saved.version_id, initialGraphRecord.pipeline || initialGraphRecord, exactPipeline);
   const readonlyDiffRecords = readonlyDiffs.sort((a, b) => a.ordinal - b.ordinal).map(({request: _request, response: _response, ...row}) => row);
+  assertReadonlyResolves(readonlyResolves, resolveRunScopes, observedOrigins[0], original, validatedRevision);
+  const readonlyResolveRecords = readonlyResolves.sort((a, b) => a.ordinal - b.ordinal).map(({request: _request, response: _response, ...row}) => row);
   for (const write of writes) {
     const endpoint = new URL(write.url).pathname;
     expect(['/api/flowchart/models/verify', '/api/flowchart/execution-resources', '/api/flowchart/pipeline', '/api/flowchart/run', '/api/flowchart/draft']).toContain(endpoint);
@@ -461,13 +530,13 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
     initial, setupWrites, validatedRevision, saved, savedList, exactPipeline, graphSha, roots, before, after, apiBefore, apiAfter, changed, changesBefore, changesAfter,
     resourcesBefore, resourcesParallel, restoredResources, drafts, persistedDraft, draft_raw: {relative_path: draftRelative, bytes: draftRaw.length, sha256: sha(draftRaw)}, runs, packageProof,
     writes: writes.map(({request: _request, ...record}) => record), explicit_restore_write: {method: 'PUT', endpoint: '/api/flowchart/execution-resources',
-      body: {device: 'cpu', device_slots: 1}, response: restoredResources}, finishedReads, readonlyDiffRecords,
+      body: {device: 'cpu', device_slots: 1}, response: restoredResources}, finishedReads, readonlyDiffRecords, readonlyResolveRecords, resolveRunScopes,
     actual_source_electron: sourceElectron, compiled_backend_covered: false, actual_os_dialog: false,
     original_training_reused: true, new_training: false, original_validation_overlap: true,
     model_quality_approved: false, whole_flow_approved: false, release_approved: false, target_device_accepted: false});
   const finalFile = path.join(workspace.logs, 'retained-unet-final.json'); fs.writeFileSync(finalFile, JSON.stringify({before, after, apiBefore, apiAfter,
     validatedRevision, drafts, persistedDraft, draft_raw: {relative_path: draftRelative, bytes: draftRaw.length, sha256: sha(draftRaw)},
-    runs, packageProof, changesBefore, changesAfter, changed, readonlyDiffRecords}, null, 2)); evidence.addFile(finalFile);
+    runs, packageProof, changesBefore, changesAfter, changed, readonlyDiffRecords, readonlyResolveRecords, resolveRunScopes}, null, 2)); evidence.addFile(finalFile);
 }
 
 const browserApi = (request: APIRequestContext, origin: string): Api => async (route, body, method = body === undefined ? 'GET' : 'POST') => {
