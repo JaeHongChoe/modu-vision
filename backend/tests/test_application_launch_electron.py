@@ -115,7 +115,41 @@ def test_unsafe_owned_runtime_home_refuses_before_spawn_and_preserves_foreign_fi
     original = foreign/'preserve.txt'
     original.write_text('Controlled foreign bytes')
     if unsafe == 'linked-parent':
+        # The canonical global-path guard refuses this link before launch admission.
+        # A refusal cannot publish recovery through the deliberately unsafe root.
         parent.symlink_to(foreign, target_is_directory=True)
+        def original_tree():
+            result = {}
+            for path in (root, *sorted(root.rglob('*'))):
+                info = path.lstat()
+                relative = path.relative_to(root).as_posix()
+                identity = (info.st_dev, info.st_ino, info.st_mode, info.st_uid)
+                if stat.S_ISLNK(info.st_mode):
+                    result[relative] = (identity, 'link', os.readlink(path))
+                elif stat.S_ISREG(info.st_mode):
+                    result[relative] = (identity, 'file', path.read_bytes())
+                else:
+                    assert stat.S_ISDIR(info.st_mode)
+                    result[relative] = (identity, 'directory')
+            return result
+        before = original_tree()
+        original_foreign = original.read_bytes()
+        assert owner._process is owner._lock is owner._bootstrap_channel is None
+        refusal = '^Global control paths cannot follow links$'
+        with pytest.raises(ValueError, match=refusal):
+            owner.start(bootstrap=True)
+        assert not captured
+        with pytest.raises(ValueError, match=refusal):
+            lease.inspect_launch(root)
+        with pytest.raises(ValueError, match=refusal):
+            owner.close()
+        assert owner._process is owner._lock is owner._bootstrap_channel is None
+        assert original_tree() == before
+        assert original.read_bytes() == original_foreign
+        assert list(foreign.iterdir()) == [original]
+        assert parent.is_symlink() and os.readlink(parent) == str(foreign)
+        # This temporary unsafe fixture stays intact; no restoration admits it.
+        return
     elif unsafe == 'public-parent':
         parent.mkdir(mode=0o755)
         parent.chmod(0o755)
