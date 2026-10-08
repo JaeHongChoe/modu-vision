@@ -466,7 +466,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   independent_PIL_entire_class_pixels_from_original_RGBA_alpha_and_order:true,ideal_brush_geometry_or_human_quality_claim:false,
   declared_successful_dirty_save_imports:4,controlled503_then_deliberate_same_raw200:true,full_unfiltered_project_original_source_and_harness_dataset_custody:true,
   whole_workspace_or_userData_store_preservation_claim:false,training_inference_Gpu_download_job_execution:false,installed_windows_physical_or_release_acceptance:false};
- const proof=path.join(workspace.logs,'raster-edit-lifecycle-proof.json');fs.writeFileSync(proof,JSON.stringify(notes),{flag:'wx'});evidence.addFile(proof);evidence.note('raster_edit_lifecycle',notes);
+ const proof=path.join(workspace.logs,'raster-edit-lifecycle-proof.json');fs.writeFileSync(proof,JSON.stringify(notes),{flag:'wx'});evidence.addFile(proof);evidence.note('raster_edit_lifecycle',{proof_path:proof,proof_sha256:sha(fs.readFileSync(proof)),proof_size:fs.statSync(proof).size});
 }
 test('raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels',async({page,request,renderer,workspace,evidence})=>{
  await installDesktopHostShim(page,renderer.port);
