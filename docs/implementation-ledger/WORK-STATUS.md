@@ -507,3 +507,10 @@ compiled canary의 닫힌 protocol2/worker8개 필드를 화면 bridge에서 검
 ### 2026-10-08 파생 정렬·밝기 저장 수명주기 actual clean UI8
 
 `c969d40`의 clean browser·source Electron 파생 편집2건은 original timeout·0 retry로 통과했다. 같은68.99초 batch의 별도 queue-progress2건은 실패하여 미완료로 유지한다. Git archive2229개와 source 전후 hash, original process 종료·빈 teardown을 확인했다. invalid 각도181/밝기4.1의 저장 비활성·0 POST, 유효 미전송 설정 stage 이탈 후 기본값 복원, 각각503 보존→실제200 새 버전, reload 후 정확한 버전·원본 SHA/UUID/revision·전체 PNG·라벨 geometry·보존 출처8항목만 검증으로 올렸다. 원본/annotation/report/split 전체 tree와 API 정책·검토·설정·버전을 보존하고 workbench는 기존 seed와 의도한5파일×2 출력만 증가했다. independent PIL pixel/decoded RGB와 수학적 회전 좌표를 root 재검증했다. curated692/757, 부모69/13·전체 품질/장치/배포 수락은 유지한다. 근거: `docs/verification/receipts/2026-10-08-derived-lifecycle-c969d40.json`.
+
+
+## 2026-10-09 실제 UI 추가 검증과 source CI fixture 정리
+
+- 데이터셋 미선택 상태 3개와 작업 센터의 empty·foreign-source 거절·503 복구 3개를 원본 browser/source Electron 실행 기록으로 확인했다. 최신 행동 집계는 **771 verified / 678 pending / 0 not-required**, 207개 행동이다. 부모 집계는 구현69·pending13·종합 수락0이며 Windows 전용2개 면제로 요청 범위11개가 남는다.
+- 소스`5a35ded`의 전체 Linux CPU CI는5실패·1오류를 남겼다. 원본 로그·JUnit과 실패는 보존한다. source`6f3d81f`의 관련 실제 CPU 검사13개와 변경·재전송 거절2개, source`8d46544`의 실제 preflight/constructor scope 검사2개가 각각 깨끗한 고정 소스에서 통과했다. 각 실행의 원래 deadline과 assertion, source 전후 hash를 유지했다.
+- 변경은 테스트의 원래 observer 연결·준비·정리 순서이며 제품 권한·잠금 정책은 바꾸지 않았다. 로컬 통과는 전체 Linux CI 성공이나 설치형 앱 시작 시간 문제 해결을 뜻하지 않는다. 새 게시 소스의 전체 hosted CI를 이어서 확인한다. 상세 근거: `../verification/receipts/2026-10-09-hosted-fixture-repair-8d46544.json`.

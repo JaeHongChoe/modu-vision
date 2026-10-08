@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "kind": "hosted_failure_and_scoped_local_fixture_repair_not_hosted_acceptance",
+  "original_hosted_run": {
+    "url": "https://github.com/JaeHongChoe/modu-vision/actions/runs/37844350131",
+    "source_sha": "5a35dedcc4497eb6d17ad3443a21f36ee1dc1a09",
+    "conclusion": "failure",
+    "cpu_passed": 3815,
+    "cpu_failed": 5,
+    "cpu_errors": 1,
+    "cpu_skipped": 17,
+    "original_log_sha256": "fe269ba435761166dbda62d407b82cd976d1f8e9084e692d03c85cb9823a2e90",
+    "original_junit_sha256": "4a5cfd3539782c45609c6b6a06b47360e57e6df9a06318b1edddf884e907fceb"
+  },
+  "fixture_changes": [
+    "Correct one observer namespace key used by original failure callback.",
+    "Limit injected Thread constructor failure to original route invocation, before original cleanup.",
+    "Retain original process handles and noncompeting read-only cleanup observations.",
+    "Wait for original controller authentication return and verify exact active registration before the single original preflight POST."
+  ],
+  "local_actual_runs": [
+    {
+      "source_sha": "6f3d81f47658e8d91f51440f1d6087039e0f5838",
+      "platform": "macOS arm64 isolated source CPU",
+      "passed_cases": 13,
+      "failed_cases": 0,
+      "errors": 0,
+      "skipped_cases": 0,
+      "elapsed_seconds": 104.57554697990417,
+      "source_count": 2341,
+      "source_before_after_equal": true,
+      "clean_source_after": true,
+      "original_deadlines_unchanged": true,
+      "log_sha256": "40c04a24351f42a99fe46b0d6fb1595b0ab5738746b7eade20824db552fbfb9a",
+      "junit_sha256": "b42cd213e8a62e928566510966f7ea8b6391d2c8ac969bf005d48ad3cd194b4a"
+    },
+    {
+      "source_sha": "6f3d81f47658e8d91f51440f1d6087039e0f5838",
+      "platform": "macOS arm64 isolated source CPU",
+      "passed_cases": 2,
+      "failed_cases": 0,
+      "errors": 0,
+      "skipped_cases": 0,
+      "elapsed_seconds": 57.24124884605408,
+      "source_count": 2341,
+      "source_before_after_equal": true,
+      "clean_source_after": true,
+      "original_deadlines_unchanged": true,
+      "log_sha256": "3ffdd992edd60e77f23e5d7443d91438677a8afeb4b5b1a2130bd30903801510",
+      "junit_sha256": "a5ecebe2f45f6550252a5b51db06a57ca98dee11991b0193d67ca4e30943c871"
+    },
+    {
+      "source_sha": "8d465448ce493349bc14ceec7c421846d15dbd84",
+      "platform": "macOS arm64 isolated source CPU",
+      "passed_cases": 2,
+      "failed_cases": 0,
+      "errors": 0,
+      "skipped_cases": 0,
+      "elapsed_seconds": 25.804988145828247,
+      "source_count": 2341,
+      "source_before_after_equal": true,
+      "clean_source_after": true,
+      "original_deadlines_unchanged": true,
+      "log_sha256": "b0f45be151afeb447162673b80f1bd96a4aa3ae2e9b0d8f8e9660a1b872238ae",
+      "junit_sha256": "01fb51083908ccbd0e4fd636698e24ebaefd7c346e4d15dd394383f1e587ebe2"
+    }
+  ],
+  "scope": {
+    "production_sources_changed": false,
+    "original_test_assertions_and_deadlines_preserved": true,
+    "linux_hosted_cause_fully_established": false,
+    "newest_complete_hosted_CI_passed": false,
+    "whole_writer_tree_or_lease_acceptance": false,
+    "model_quality_or_hardware_or_signing_or_release_approval": false,
+    "parent_acceptance_promoted": false,
+    "original_failures_retained": true
+  }
+}
