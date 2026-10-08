@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "9b248a69afd787cd9f2e39524e9458936185b15f",
+  "source_dirty": false,
+  "test": "scripts/e2e/dataset-source-empty-controls.spec.ts::source-less classification project keeps readiness and grouped split controls unavailable after reload",
+  "test_source_sha256": "f211c2ed28f55351691517c550b99bd4bb4719d785562435eea8cf3099f464a1",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "6f65f09265a6ad7090fc755c463e42bdb7c855683bf4dfc111f9671a55ae90b0",
+  "harness_sha256": "039bbb72e051004b7daa259c24a2b556a15b43cf6df461701e71c931b7ee78e3",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "6a75946ba74dc1c06bd1fbd43d8c24e1e202698331f9a02c566abaf943d256a5"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "b88317c9f9d560067da6df2377122704d9dfe9335690d3ddf2e0696af6fcef7b"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

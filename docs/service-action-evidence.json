@@ -25434,7 +25434,53 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-07",
+         "source_sha": "9b248a69afd787cd9f2e39524e9458936185b15f",
+         "kind": "click",
+         "action": "준비 상태 진단",
+         "expected": "A selected source-null project has no readiness region or diagnosis control before and after the original reload.",
+         "observed": "electron: A selected source-null project has no readiness region or diagnosis control before and after the original reload. Complete original APIs, unfiltered trees, before byte copies and original PNG pixels remain unchanged; zero post-baseline writes. UI state follows the passed source assertions and screenshots, without independent OCR or a forced disabled-control click.",
+         "reviewer": "Root separately granted independent readonly qualification of the original full report, raw request-body clocks, original byte copies, complete PNGs, strict GUI objects and owned teardown. Native error cleanliness, installed target, human quality and parent acceptance remain pending.",
+         "test": "scripts/e2e/dataset-source-empty-controls.spec.ts::source Electron no selected original keeps readiness and grouped split controls unavailable after reload",
+         "receipt": "2026-10-09-dataset-source-empty-9b248a6-electron.json",
+         "receipt_sha256": "79abd059b8a975b567e93bdff3a432b1aa2b9c6e3f6f150e449685c6bb7bc33f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "07f60f841bbb97835385e3755fd21e221c72c64a21feb067aac0e2348bc86931"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "dd7b1024e20f9a0b85bf31e69c85a82a57d675bccb7229cfd28165f83c158af2"
+          }
+         ]
+        },
+        {
+         "task": "S3-07",
+         "source_sha": "9b248a69afd787cd9f2e39524e9458936185b15f",
+         "kind": "click",
+         "action": "준비 상태 진단",
+         "expected": "A selected source-null project has no readiness region or diagnosis control before and after the original reload.",
+         "observed": "browser: A selected source-null project has no readiness region or diagnosis control before and after the original reload. Complete original APIs, unfiltered trees, before byte copies and original PNG pixels remain unchanged; zero post-baseline writes. UI state follows the passed source assertions and screenshots, without independent OCR or a forced disabled-control click.",
+         "reviewer": "Root separately granted independent readonly qualification of the original full report, raw request-body clocks, original byte copies, complete PNGs, strict GUI objects and owned teardown. Native error cleanliness, installed target, human quality and parent acceptance remain pending.",
+         "test": "scripts/e2e/dataset-source-empty-controls.spec.ts::source-less classification project keeps readiness and grouped split controls unavailable after reload",
+         "receipt": "2026-10-09-dataset-source-empty-9b248a6-browser.json",
+         "receipt_sha256": "603352e407d68652e8bdeba6ed226b10e9b7ea313a5f3518accbade5356869ee",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "6a75946ba74dc1c06bd1fbd43d8c24e1e202698331f9a02c566abaf943d256a5"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "b88317c9f9d560067da6df2377122704d9dfe9335690d3ddf2e0696af6fcef7b"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
        "state": "verified",
@@ -25622,7 +25668,53 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-07",
+         "source_sha": "9b248a69afd787cd9f2e39524e9458936185b15f",
+         "kind": "click",
+         "action": "분할 미리보기",
+         "expected": "A selected source-null project keeps its workflow entry disabled and its inner grouped split preview control absent before and after reload.",
+         "observed": "electron: A selected source-null project keeps its workflow entry disabled and its inner grouped split preview control absent before and after reload. Complete original APIs, unfiltered trees, before byte copies and original PNG pixels remain unchanged; zero post-baseline writes. UI state follows the passed source assertions and screenshots, without independent OCR or a forced disabled-control click.",
+         "reviewer": "Root separately granted independent readonly qualification of the original full report, raw request-body clocks, original byte copies, complete PNGs, strict GUI objects and owned teardown. Native error cleanliness, installed target, human quality and parent acceptance remain pending.",
+         "test": "scripts/e2e/dataset-source-empty-controls.spec.ts::source Electron no selected original keeps readiness and grouped split controls unavailable after reload",
+         "receipt": "2026-10-09-dataset-source-empty-9b248a6-electron.json",
+         "receipt_sha256": "79abd059b8a975b567e93bdff3a432b1aa2b9c6e3f6f150e449685c6bb7bc33f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "07f60f841bbb97835385e3755fd21e221c72c64a21feb067aac0e2348bc86931"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "dd7b1024e20f9a0b85bf31e69c85a82a57d675bccb7229cfd28165f83c158af2"
+          }
+         ]
+        },
+        {
+         "task": "S3-07",
+         "source_sha": "9b248a69afd787cd9f2e39524e9458936185b15f",
+         "kind": "click",
+         "action": "분할 미리보기",
+         "expected": "A selected source-null project keeps its workflow entry disabled and its inner grouped split preview control absent before and after reload.",
+         "observed": "browser: A selected source-null project keeps its workflow entry disabled and its inner grouped split preview control absent before and after reload. Complete original APIs, unfiltered trees, before byte copies and original PNG pixels remain unchanged; zero post-baseline writes. UI state follows the passed source assertions and screenshots, without independent OCR or a forced disabled-control click.",
+         "reviewer": "Root separately granted independent readonly qualification of the original full report, raw request-body clocks, original byte copies, complete PNGs, strict GUI objects and owned teardown. Native error cleanliness, installed target, human quality and parent acceptance remain pending.",
+         "test": "scripts/e2e/dataset-source-empty-controls.spec.ts::source-less classification project keeps readiness and grouped split controls unavailable after reload",
+         "receipt": "2026-10-09-dataset-source-empty-9b248a6-browser.json",
+         "receipt_sha256": "603352e407d68652e8bdeba6ed226b10e9b7ea313a5f3518accbade5356869ee",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "6a75946ba74dc1c06bd1fbd43d8c24e1e202698331f9a02c566abaf943d256a5"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "b88317c9f9d560067da6df2377122704d9dfe9335690d3ddf2e0696af6fcef7b"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
        "state": "verified",
@@ -25806,7 +25898,53 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-07",
+         "source_sha": "9b248a69afd787cd9f2e39524e9458936185b15f",
+         "kind": "click",
+         "action": "분할 적용",
+         "expected": "A selected source-null project keeps its workflow entry disabled and its inner grouped split apply control absent before and after reload.",
+         "observed": "electron: A selected source-null project keeps its workflow entry disabled and its inner grouped split apply control absent before and after reload. Complete original APIs, unfiltered trees, before byte copies and original PNG pixels remain unchanged; zero post-baseline writes. UI state follows the passed source assertions and screenshots, without independent OCR or a forced disabled-control click.",
+         "reviewer": "Root separately granted independent readonly qualification of the original full report, raw request-body clocks, original byte copies, complete PNGs, strict GUI objects and owned teardown. Native error cleanliness, installed target, human quality and parent acceptance remain pending.",
+         "test": "scripts/e2e/dataset-source-empty-controls.spec.ts::source Electron no selected original keeps readiness and grouped split controls unavailable after reload",
+         "receipt": "2026-10-09-dataset-source-empty-9b248a6-electron.json",
+         "receipt_sha256": "79abd059b8a975b567e93bdff3a432b1aa2b9c6e3f6f150e449685c6bb7bc33f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "07f60f841bbb97835385e3755fd21e221c72c64a21feb067aac0e2348bc86931"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "dd7b1024e20f9a0b85bf31e69c85a82a57d675bccb7229cfd28165f83c158af2"
+          }
+         ]
+        },
+        {
+         "task": "S3-07",
+         "source_sha": "9b248a69afd787cd9f2e39524e9458936185b15f",
+         "kind": "click",
+         "action": "분할 적용",
+         "expected": "A selected source-null project keeps its workflow entry disabled and its inner grouped split apply control absent before and after reload.",
+         "observed": "browser: A selected source-null project keeps its workflow entry disabled and its inner grouped split apply control absent before and after reload. Complete original APIs, unfiltered trees, before byte copies and original PNG pixels remain unchanged; zero post-baseline writes. UI state follows the passed source assertions and screenshots, without independent OCR or a forced disabled-control click.",
+         "reviewer": "Root separately granted independent readonly qualification of the original full report, raw request-body clocks, original byte copies, complete PNGs, strict GUI objects and owned teardown. Native error cleanliness, installed target, human quality and parent acceptance remain pending.",
+         "test": "scripts/e2e/dataset-source-empty-controls.spec.ts::source-less classification project keeps readiness and grouped split controls unavailable after reload",
+         "receipt": "2026-10-09-dataset-source-empty-9b248a6-browser.json",
+         "receipt_sha256": "603352e407d68652e8bdeba6ed226b10e9b7ea313a5f3518accbade5356869ee",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "6a75946ba74dc1c06bd1fbd43d8c24e1e202698331f9a02c566abaf943d256a5"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "b88317c9f9d560067da6df2377122704d9dfe9335690d3ddf2e0696af6fcef7b"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
        "state": "verified",

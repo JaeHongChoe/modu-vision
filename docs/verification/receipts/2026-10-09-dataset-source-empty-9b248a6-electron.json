@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "9b248a69afd787cd9f2e39524e9458936185b15f",
+  "source_dirty": false,
+  "test": "scripts/e2e/dataset-source-empty-controls.spec.ts::source Electron no selected original keeps readiness and grouped split controls unavailable after reload",
+  "test_source_sha256": "f211c2ed28f55351691517c550b99bd4bb4719d785562435eea8cf3099f464a1",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "6f65f09265a6ad7090fc755c463e42bdb7c855683bf4dfc111f9671a55ae90b0",
+  "harness_sha256": "fb873e6a9958f6f6f93483a5246e20b375e77a733e7934f85ccfb3e5ac310c97",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "07f60f841bbb97835385e3755fd21e221c72c64a21feb067aac0e2348bc86931"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "dd7b1024e20f9a0b85bf31e69c85a82a57d675bccb7229cfd28165f83c158af2"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

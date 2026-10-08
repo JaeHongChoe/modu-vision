@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "kind": "scoped_existing_action_execution_not_parent_acceptance",
+  "source_sha": "9b248a69afd787cd9f2e39524e9458936185b15f",
+  "source_count": 2337,
+  "test_source_sha256": "f211c2ed28f55351691517c550b99bd4bb4719d785562435eea8cf3099f464a1",
+  "qualification_sha256": "f9c2ae7d511f4acf87c6cb3175cb3c3d214afe87e5d757369cdef2bd1b4e8e94",
+  "cells": [
+    "U013.readiness-diagnose.empty",
+    "U013.group-split-preview.empty",
+    "U013.group-split-apply.empty"
+  ],
+  "requirement_owners": "S3-07",
+  "gui_receipts": [
+    {
+      "path": "docs/verification/receipts/2026-10-09-dataset-source-empty-9b248a6-electron.json",
+      "sha256": "79abd059b8a975b567e93bdff3a432b1aa2b9c6e3f6f150e449685c6bb7bc33f",
+      "mode": "electron"
+    },
+    {
+      "path": "docs/verification/receipts/2026-10-09-dataset-source-empty-9b248a6-browser.json",
+      "sha256": "603352e407d68652e8bdeba6ed226b10e9b7ea313a5f3518accbade5356869ee",
+      "mode": "browser"
+    }
+  ],
+  "execution": {
+    "modes": [
+      "browser",
+      "electron"
+    ],
+    "whole_expected_passes": 2,
+    "retries": 0,
+    "original_source_archive_and_before_after_equal": true,
+    "full_original_owned_cleanup_checked": true,
+    "selected_source_dataset_dir": null,
+    "snapshots_per_mode": 4,
+    "full_raw_APIs_per_snapshot": 8,
+    "full_unfiltered_trees_per_snapshot": 3,
+    "original_before_byte_copies_checked": true,
+    "project_dataset_subtree_overlap_explicit": true,
+    "original_harness_RGB_pixels_per_mode": 2048,
+    "fixture_fullbody_clocks_per_mode": 41,
+    "observed_fullbody_clocks": {
+      "browser": 18,
+      "electron": 59
+    },
+    "original_absolute_budget_ms": 10000,
+    "post_baseline_writes_per_mode": 0,
+    "declared_native_setup_writes": 1,
+    "declared_browser_setup_writes": 0,
+    "readiness_region_and_diagnose_control_absent": true,
+    "workflow_entry_visible_disabled": true,
+    "inner_grouped_split_preview_and_apply_controls_absent": true,
+    "owning_UI_state_from_passed_source_assertions_and_screenshots": true,
+    "independent_OCR_performed": false,
+    "local_and_session_storage_values_exported": false,
+    "local_and_session_storage_hashes_checked": true,
+    "original_preobserver_request_count": 0,
+    "preobserver_full_request_clock_claim": false
+  },
+  "limits": {
+    "quality_approved": false,
+    "independent_review_accepted": false,
+    "native_page_console_blocked_capture": "unavailable",
+    "native_runtime_error_cleanliness": false,
+    "OPTIONS_response_cleanliness": false,
+    "XML_error_cleanliness_claim": false,
+    "forced_disabled_control_click": false,
+    "zero_image_backend_diagnosis_or_split_refusal": false,
+    "cancellation_or_handoff_exercised": false,
+    "model_training_GPU_execution": false,
+    "installed_compiled_OS_signing_publisher_Windows_accepted": false,
+    "human_or_parent_or_final_acceptance": false,
+    "whole_writer_tree_or_lease_acceptance": false,
+    "failed_preparations_retained": true
+  }
+}
