@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "kind": "scoped_existing_action_execution_not_parent_acceptance",
+  "source_sha": "339c5af916b9bf5d85f302fb57c96e916955f21d",
+  "source_count": 2323,
+  "test_source_sha256": "89a67a7be597cf0a5c5ebc6919380b2fc36df9459861989c110ff9d1d447a718",
+  "qualification_sha256": "9db7abcc8dd77ca3fec782cd529e1603b88ed1d325957d6a00ddffae6fddc704",
+  "cells": [
+    "U013.group-split-apply.invalid",
+    "U013.group-split-apply.error"
+  ],
+  "requirement_owners": [
+    "S3-07",
+    "S3-01"
+  ],
+  "gui_receipts": [
+    {
+      "path": "docs/verification/receipts/2026-10-09-group-split-apply-refusal-339c5af-electron.json",
+      "sha256": "2d42f507ca7bf0e1b17e76cc7ce94ac68178f89bed0c881bb73ccca59b3e578e",
+      "mode": "electron"
+    },
+    {
+      "path": "docs/verification/receipts/2026-10-09-group-split-apply-refusal-339c5af-browser.json",
+      "sha256": "451716c488c441da5ed2e00c3482e8a0abc4856f73410a354daf0a59c054c39d",
+      "mode": "browser"
+    }
+  ],
+  "execution": {
+    "modes": [
+      "browser",
+      "electron"
+    ],
+    "whole_expected_passes": 2,
+    "retries": 0,
+    "original_source_archive_and_before_after_equal": true,
+    "full_original_owned_cleanup_checked": true,
+    "complete_source_RGB_pixels_per_mode": 2048,
+    "invalid_blank_actor_additional_POSTs": 0,
+    "post_baseline_POSTs_per_mode": 4,
+    "preview_POST200": 1,
+    "controlled_apply_POST503": 1,
+    "explicit_same_body_apply_POST200": 1,
+    "automatic_import_POST200": 1,
+    "automatic_gallery_GET200_per_mode": 2,
+    "fixture_fullbody_clocks_per_mode": 92,
+    "request_and_body_absolute_budget_ms": 10000,
+    "all_original_raw_API_records_per_snapshot": 14,
+    "saved_split_and_one_exact_backup_qualified": true
+  },
+  "limits": {
+    "quality_approved": false,
+    "independent_review_accepted": false,
+    "native_page_console_blocked_capture": "unavailable",
+    "native_runtime_error_cleanliness": false,
+    "human_model_device_quality_accepted": false,
+    "model_training_or_execution_newly_qualified": false,
+    "installed_compiled_OS_signing_publisher_Windows_GPU_accepted": false,
+    "whole_writer_tree_or_lease_release_accepted": false,
+    "parent_or_final_acceptance": false,
+    "UI_OCR_or_separate_transient_storage_capture": false,
+    "source_failed_preparations_retained": true
+  }
+}

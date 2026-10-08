@@ -25108,7 +25108,53 @@
        "state": "pending"
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-08",
+         "source_sha": "339c5af916b9bf5d85f302fb57c96e916955f21d",
+         "kind": "click",
+         "action": "초안 저장",
+         "expected": "Original owning draft PUT503 preserves saved graph and every protected source/project/harness byte; explicit same-body PUT200 changes only the declared draft file/API. No active pipeline or model execution is added.",
+         "observed": "electron: Original owning draft PUT503 preserves saved graph and every protected source/project/harness byte; explicit same-body PUT200 changes only the declared draft file/API. No active pipeline or model execution is added.",
+         "reviewer": "Root separately granted independent readonly qualification, full raw API/body clocks and original byte copies, complete PNG pixels, strict original GUI receipts and owned teardown; native error cleanliness, human quality, installed target and parent acceptance remain pending.",
+         "test": "scripts/e2e/flow-draft-save-error.spec.ts::native owning draft PUT503 retains original source and explicit save200 readback",
+         "receipt": "2026-10-09-flow-draft-save-error-339c5af-electron.json",
+         "receipt_sha256": "c37bbc7de1b2861f5650b9f84675d7da3b00ced72ae904164e35d9c996c4ceff",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "9b7675b33304074d189978d26bf56fb2bb7e9ebb208170c9cee7cb3ff65687d6"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "cb5c953abf5ab64719e054ffde21bf784dc881c902bdc7e68f88309f9f5d7d30"
+          }
+         ]
+        },
+        {
+         "task": "S2-08",
+         "source_sha": "339c5af916b9bf5d85f302fb57c96e916955f21d",
+         "kind": "click",
+         "action": "초안 저장",
+         "expected": "Original owning draft PUT503 preserves saved graph and every protected source/project/harness byte; explicit same-body PUT200 changes only the declared draft file/API. No active pipeline or model execution is added.",
+         "observed": "browser: Original owning draft PUT503 preserves saved graph and every protected source/project/harness byte; explicit same-body PUT200 changes only the declared draft file/API. No active pipeline or model execution is added.",
+         "reviewer": "Root separately granted independent readonly qualification, full raw API/body clocks and original byte copies, complete PNG pixels, strict original GUI receipts and owned teardown; native error cleanliness, human quality, installed target and parent acceptance remain pending.",
+         "test": "scripts/e2e/flow-draft-save-error.spec.ts::owning draft PUT503 preserves saved graph and explicitly recovers same dirty edit",
+         "receipt": "2026-10-09-flow-draft-save-error-339c5af-browser.json",
+         "receipt_sha256": "2a099919ab8d4a6e789677c2923c6c144b1c6a3228b348d2d8ec83e55c869150",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "354b7588f01c7e9f3686aed1d16361b025f09854833e095cfa7b04ca02f3dc55"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "6777efd5b62a0039734580779412682411c47e6bc433e8ed4ce0dfb37d32a1ae"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
        "state": "pending"
@@ -25671,10 +25717,118 @@
        "state": "pending"
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-07",
+         "source_sha": "339c5af916b9bf5d85f302fb57c96e916955f21d",
+         "kind": "click",
+         "action": "분할 적용",
+         "expected": "Whitespace actor is refused with zero additional POSTs; original saved split, labels, full APIs and byte trees stay exact.",
+         "observed": "electron: Whitespace actor is refused with zero additional POSTs; original saved split, labels, full APIs and byte trees stay exact.",
+         "reviewer": "Root separately granted independent readonly qualification, full raw API/body clocks and original byte copies, complete PNG pixels, strict original GUI receipts and owned teardown; native error cleanliness, human quality, installed target and parent acceptance remain pending.",
+         "test": "scripts/e2e/group-split-apply-refusal-lifecycle.spec.ts::source Electron grouped split blank actor and exact failed apply preserve originals before explicit retry",
+         "receipt": "2026-10-09-group-split-apply-refusal-339c5af-electron.json",
+         "receipt_sha256": "2d42f507ca7bf0e1b17e76cc7ce94ac68178f89bed0c881bb73ccca59b3e578e",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "06e8c4a9ea37d3861d34d230841c409494a2f652a44cc16d854a99fa843bc5fe"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "95ce658e6466d14272ccc94f96c22b132174d81ddb74f670cecf40f92cc8f2e2"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6633e42df041cbab9ef3b1c5507aaba4dbd19bc3eb85012775b8f3f68ca36305"
+          }
+         ]
+        },
+        {
+         "task": "S3-07",
+         "source_sha": "339c5af916b9bf5d85f302fb57c96e916955f21d",
+         "kind": "click",
+         "action": "분할 적용",
+         "expected": "Whitespace actor is refused with zero additional POSTs; original saved split, labels, full APIs and byte trees stay exact.",
+         "observed": "browser: Whitespace actor is refused with zero additional POSTs; original saved split, labels, full APIs and byte trees stay exact.",
+         "reviewer": "Root separately granted independent readonly qualification, full raw API/body clocks and original byte copies, complete PNG pixels, strict original GUI receipts and owned teardown; native error cleanliness, human quality, installed target and parent acceptance remain pending.",
+         "test": "scripts/e2e/group-split-apply-refusal-lifecycle.spec.ts::grouped split blank actor and exact failed apply preserve originals before explicit retry",
+         "receipt": "2026-10-09-group-split-apply-refusal-339c5af-browser.json",
+         "receipt_sha256": "451716c488c441da5ed2e00c3482e8a0abc4856f73410a354daf0a59c054c39d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "5a489f183639a058510a871eb6f284b95a917042d136297843f4ed93e97b5295"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e332ee326127a6e0e5da6494b24edccc41879238047e48d31cc24668f5fce404"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "892da991055a618402cbd4f89b14985ca6dd7a8d72fd141fb4b7c314ffe2121a"
+          }
+         ]
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-07",
+         "source_sha": "339c5af916b9bf5d85f302fb57c96e916955f21d",
+         "kind": "click",
+         "action": "분할 적용",
+         "expected": "Original apply POST503 preserves prior saved split; explicit same-body POST200 creates the declared split and one exact backup, followed by one declared import and two gallery GET200 readbacks.",
+         "observed": "electron: Original apply POST503 preserves prior saved split; explicit same-body POST200 creates the declared split and one exact backup, followed by one declared import and two gallery GET200 readbacks.",
+         "reviewer": "Root separately granted independent readonly qualification, full raw API/body clocks and original byte copies, complete PNG pixels, strict original GUI receipts and owned teardown; native error cleanliness, human quality, installed target and parent acceptance remain pending.",
+         "test": "scripts/e2e/group-split-apply-refusal-lifecycle.spec.ts::source Electron grouped split blank actor and exact failed apply preserve originals before explicit retry",
+         "receipt": "2026-10-09-group-split-apply-refusal-339c5af-electron.json",
+         "receipt_sha256": "2d42f507ca7bf0e1b17e76cc7ce94ac68178f89bed0c881bb73ccca59b3e578e",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "06e8c4a9ea37d3861d34d230841c409494a2f652a44cc16d854a99fa843bc5fe"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "95ce658e6466d14272ccc94f96c22b132174d81ddb74f670cecf40f92cc8f2e2"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6633e42df041cbab9ef3b1c5507aaba4dbd19bc3eb85012775b8f3f68ca36305"
+          }
+         ]
+        },
+        {
+         "task": "S3-07",
+         "source_sha": "339c5af916b9bf5d85f302fb57c96e916955f21d",
+         "kind": "click",
+         "action": "분할 적용",
+         "expected": "Original apply POST503 preserves prior saved split; explicit same-body POST200 creates the declared split and one exact backup, followed by one declared import and two gallery GET200 readbacks.",
+         "observed": "browser: Original apply POST503 preserves prior saved split; explicit same-body POST200 creates the declared split and one exact backup, followed by one declared import and two gallery GET200 readbacks.",
+         "reviewer": "Root separately granted independent readonly qualification, full raw API/body clocks and original byte copies, complete PNG pixels, strict original GUI receipts and owned teardown; native error cleanliness, human quality, installed target and parent acceptance remain pending.",
+         "test": "scripts/e2e/group-split-apply-refusal-lifecycle.spec.ts::grouped split blank actor and exact failed apply preserve originals before explicit retry",
+         "receipt": "2026-10-09-group-split-apply-refusal-339c5af-browser.json",
+         "receipt_sha256": "451716c488c441da5ed2e00c3482e8a0abc4856f73410a354daf0a59c054c39d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "5a489f183639a058510a871eb6f284b95a917042d136297843f4ed93e97b5295"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e332ee326127a6e0e5da6494b24edccc41879238047e48d31cc24668f5fce404"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "892da991055a618402cbd4f89b14985ca6dd7a8d72fd141fb4b7c314ffe2121a"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
        "state": "pending"

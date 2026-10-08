@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "339c5af916b9bf5d85f302fb57c96e916955f21d",
+  "source_dirty": false,
+  "test": "scripts/e2e/group-split-apply-refusal-lifecycle.spec.ts::grouped split blank actor and exact failed apply preserve originals before explicit retry",
+  "test_source_sha256": "89a67a7be597cf0a5c5ebc6919380b2fc36df9459861989c110ff9d1d447a718",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "512c75f6c906563f3fdf66f6978676d413b24a78e0f016b3da19a5f5918e26e0",
+  "harness_sha256": "7c134869e0a7a51891283f3b7a8b540c2370a113f20c4f421c75411775d6b694",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "5a489f183639a058510a871eb6f284b95a917042d136297843f4ed93e97b5295"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "e332ee326127a6e0e5da6494b24edccc41879238047e48d31cc24668f5fce404"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "892da991055a618402cbd4f89b14985ca6dd7a8d72fd141fb4b7c314ffe2121a"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

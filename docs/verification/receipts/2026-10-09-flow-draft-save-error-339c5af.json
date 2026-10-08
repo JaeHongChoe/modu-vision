@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "kind": "scoped_existing_action_execution_not_parent_acceptance",
+  "source_sha": "339c5af916b9bf5d85f302fb57c96e916955f21d",
+  "source_count": 2323,
+  "test_source_sha256": "3105e55861117a450720f64e7d372190de095f7bbe82b15edb6e5b30525fa1fd",
+  "qualification_sha256": "c4c55828105741f76d7b90d0e81712aa00b5fd13bb4d850b8688f7f7d2872627",
+  "cells": [
+    "U012.save-draft.error"
+  ],
+  "requirement_owners": "S2-08",
+  "gui_receipts": [
+    {
+      "path": "docs/verification/receipts/2026-10-09-flow-draft-save-error-339c5af-electron.json",
+      "sha256": "c37bbc7de1b2861f5650b9f84675d7da3b00ced72ae904164e35d9c996c4ceff",
+      "mode": "electron"
+    },
+    {
+      "path": "docs/verification/receipts/2026-10-09-flow-draft-save-error-339c5af-browser.json",
+      "sha256": "2a099919ab8d4a6e789677c2923c6c144b1c6a3228b348d2d8ec83e55c869150",
+      "mode": "browser"
+    }
+  ],
+  "execution": {
+    "modes": [
+      "browser",
+      "electron"
+    ],
+    "whole_expected_passes": 2,
+    "retries": 0,
+    "original_source_archive_and_before_after_equal": true,
+    "full_original_owned_cleanup_checked": true,
+    "complete_source_RGB_pixels_per_mode": 131072,
+    "owning_draft_PUT503_per_mode": 1,
+    "explicit_same_body_PUT200_per_mode": 1,
+    "post_baseline_writes_per_mode": 2,
+    "declared_native_setup_writes": 4,
+    "declared_browser_setup_writes": 0,
+    "fixture_fullbody_clocks_per_mode": 40,
+    "observed_fullbody_clocks": {
+      "electron": 85,
+      "browser": 43
+    },
+    "request_and_body_absolute_budget_ms": 10000,
+    "all_original_raw_API_records_per_snapshot": 12,
+    "only_owning_draft_file_and_API_changes": true,
+    "original_saved_graph_source_harness_and_other_project_bytes_preserved": true,
+    "exact_incidental_GET409_and_GET404_per_mode": 1,
+    "decoded_thumbnail_text_rows_per_mode": 2,
+    "650ms_quiet_interval_independently_measured": false
+  },
+  "limits": {
+    "quality_approved": false,
+    "independent_review_accepted": false,
+    "native_page_console_blocked_capture": "unavailable",
+    "native_runtime_error_cleanliness": false,
+    "human_model_device_quality_accepted": false,
+    "model_training_or_execution_newly_qualified": false,
+    "installed_compiled_OS_signing_publisher_Windows_GPU_accepted": false,
+    "whole_writer_tree_or_lease_release_accepted": false,
+    "parent_or_final_acceptance": false,
+    "UI_OCR_or_separate_transient_storage_capture": false,
+    "source_failed_preparations_retained": true,
+    "network_JPEG_binary_or_MIME_custody": false
+  }
+}

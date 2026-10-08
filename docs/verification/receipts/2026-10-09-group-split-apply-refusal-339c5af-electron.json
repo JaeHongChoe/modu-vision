@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "339c5af916b9bf5d85f302fb57c96e916955f21d",
+  "source_dirty": false,
+  "test": "scripts/e2e/group-split-apply-refusal-lifecycle.spec.ts::source Electron grouped split blank actor and exact failed apply preserve originals before explicit retry",
+  "test_source_sha256": "89a67a7be597cf0a5c5ebc6919380b2fc36df9459861989c110ff9d1d447a718",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "512c75f6c906563f3fdf66f6978676d413b24a78e0f016b3da19a5f5918e26e0",
+  "harness_sha256": "4440209d585163e06cbf8d9080a1acf709e54717e063d1b9b61aa956cbe9edd9",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "06e8c4a9ea37d3861d34d230841c409494a2f652a44cc16d854a99fa843bc5fe"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "95ce658e6466d14272ccc94f96c22b132174d81ddb74f670cecf40f92cc8f2e2"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "6633e42df041cbab9ef3b1c5507aaba4dbd19bc3eb85012775b8f3f68ca36305"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}
