@@ -2756,6 +2756,14 @@
           "receipt_sha256": "8f7e10cb23f987e040d7916d9e8a808f71b0a1248d9014a0d373bc4212a96513",
           "result": "Root browser1/sourceElectron1 passed38.84s/retry0 with2161 same sources. Preview/apply empty/invalid/error six dimensions verified with real422/409/200 and exact controlled503.",
           "scope": "Synthetic source UI controls only; no human picker/label truth/model quality/installed/publisher/hardware/whole acceptance."
+        },
+        {
+          "kind": "clean-source-label-and-saved-report-lifecycle",
+          "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+          "receipt": "docs/verification/receipts/2026-10-08-label-saved-view-f3895ec.json",
+          "receipt_sha256": "9fcc3bafbc58520dac7634f46bce25f27da95838ec2de0c382265211bb32d9d9",
+          "result": "Clean browser/source Electron4 passed without retry;2185 source inputs unchanged. Fifteen existing F117/F059 dimensions observed.",
+          "scope": "Exact original records, unapplied labels, controlled dialog/preference/503 and selection Escape; no model/human truth/installed target or parent acceptance."
         }
       ],
       "file_actions": {
@@ -3876,6 +3884,14 @@
           "receipt_sha256": "083e9d91db7e94fae2c1c5f7c5eefdc1e98ebee0e309b6a36b2ce90ba4e8fb83",
           "result": "412 integrated backend,922 renderer/main,39 scope/registry,29 candidate validation regressions and7 clean browser/native GUI cases passed. Individual software evidence only.",
           "scope": "Explicit POSIX owned installed-home adoption, finite immutable logical snapshots, update/migration launch guards, fail-closed persistent launch foundation, protected manual candidate validation workflow, actual saved evaluation and100k-metadata GUI controls. Only controlled software fixtures; no actual user installed-home adoption or native authenticated updated-app launch. Native caller/controller and actual acceptance remain pending."
+        },
+        {
+          "kind": "clean-source-label-and-saved-report-lifecycle",
+          "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+          "receipt": "docs/verification/receipts/2026-10-08-label-saved-view-f3895ec.json",
+          "receipt_sha256": "9fcc3bafbc58520dac7634f46bce25f27da95838ec2de0c382265211bb32d9d9",
+          "result": "Clean browser/source Electron4 passed without retry;2185 source inputs unchanged. Fifteen existing F117/F059 dimensions observed.",
+          "scope": "Exact original records, unapplied labels, controlled dialog/preference/503 and selection Escape; no model/human truth/installed target or parent acceptance."
         }
       ],
       "file_actions": {
@@ -6114,6 +6130,14 @@
           "receipt_sha256": "ca9987628ddae1428d602af374cf4de676037ac74a08cb51ab9320c8ad61b899",
           "result": "Five unchanged original source app tests red5→green5,79.95s and763 exact committed source inputs unchanged. Controlled CPU A/OK results delivered; stale/foreign/partial/shadow refusal preserved.",
           "scope": "Source controller/TypeScript/backend path on isolated offline CPU Linux image. Original deadlines preserved; actual compiled/native/installed target, whole process tree, latest full hosted CI and quality acceptance remain separate."
+        },
+        {
+          "kind": "clean-source-label-and-saved-report-lifecycle",
+          "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+          "receipt": "docs/verification/receipts/2026-10-08-label-saved-view-f3895ec.json",
+          "receipt_sha256": "9fcc3bafbc58520dac7634f46bce25f27da95838ec2de0c382265211bb32d9d9",
+          "result": "Clean browser/source Electron4 passed without retry;2185 source inputs unchanged. Fifteen existing F117/F059 dimensions observed.",
+          "scope": "Exact original records, unapplied labels, controlled dialog/preference/503 and selection Escape; no model/human truth/installed target or parent acceptance."
         }
       ],
       "file_actions": {
@@ -6138,7 +6162,7 @@
       },
       "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts",
       "remaining": [
-        "207 curated actions have619 verified and830 pending scenarios. Metadata picker error/cancel/handoff now exercised in clean browser and native Electron at fe92877. Omitted menus/shortcuts, unexecuted dimensions and full156-feature target acceptance remain pending."
+        "207 curated actions have634 verified and815 pending scenarios. Metadata picker error/cancel/handoff now exercised in clean browser and native Electron at fe92877. Omitted menus/shortcuts, unexecuted dimensions and full156-feature target acceptance remain pending."
       ]
     },
     {

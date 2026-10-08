@@ -1,0 +1,56 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+  "source_dirty": false,
+  "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
+  "test_source_sha256": "ce727ab1417ca1aa696379cb565ce4b0cc92049451f2360ae57bf4cff2105d2a",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "e40432394fd9dc8b72e2d11181cee00d9fe86d40d48a1dc16ce55d7b7266c55e",
+  "harness_sha256": "ef62dcb904768f0b127073dd4a364f83fec03aad98bdafb7709653d22993f6a5",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "d7af7e9009572370bb7fdcb02b42900325834f731cf923c3e25558fc72c108ec"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "129ac697c3a11fc09b57198d59e83d82ce0083b656da4cb39af6d5eabdcd8f0c"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "078277c58cbb80a958d559a1e83113529665bb2fd02df5be118a7c290668b5c0"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "95011273c375e7045d84aed4f5c3c3d95c0f0d316cee9c3ce6734e9662601134"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "dba9da19cb7851cb6e45536c39b0a404f5bc66b4cb2a7777b38b34bdfe58e34b"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "034c197703f273c76dcf337fc813e99ffb10bf212250a4431daee18aca50f215"
+    },
+    {
+      "id": "screenshot-6",
+      "sha256": "ec043c205a5e6fe4ea455bc0a68eab843f3afb12dd53c8b27a18d58a2da39ab8"
+    },
+    {
+      "id": "screenshot-7",
+      "sha256": "ea405f9ddfa3595e77d28657fd7a645a41d886e729f2be5bf69ce113c7ee43a1"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

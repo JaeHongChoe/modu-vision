@@ -11568,13 +11568,295 @@
        ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::native saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
+         "receipt": "2026-10-08-f059-lifecycle-f3895ec-electron.json",
+         "receipt_sha256": "033f318a9ef49b07793bc2528d15c545b17f97b8b1a242470481c74299314231",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b3b0629d679a2eccc53dd08371b6e1bbba55942f83169a89d5c39cd6f0129248"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "becce50c9e8bbd6c03b006123a914ff8f46a293804a12acc772dbaa99f209841"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "322ebc1ef5d42189a257ff702a0e7f145ae6dc2046c9ab465b5ce83e3359f728"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "fd18e7664d16ad2114b2b2041eb85a2991d5154ce6fd4623607b172da5c12981"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "69bbfb11b9dbea8ab527ba1164b8f7a946a668cf91cebff5fe7c3ad1e8ce0ecb"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "31710e49894c76111dad5460ea43f5d0ae7e95c0aba52779bf5e6d17d3fa5feb"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "9690ac226a9b04924d4bcde6c21c06f848649740fffa293f7a551cbe3bfb26e1"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "783f7375b192c1c391bab868de7206d3f6cc6f7598547e0243778db8caa2504f"
+          }
+         ],
+         "expected": "A controlled unknown optional persisted task is refused on actual reload; the whole view falls back and no unknown task reaches history requests.",
+         "observed": "A controlled unknown optional persisted task is refused on actual reload; the whole view falls back and no unknown task reaches history requests."
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
+         "receipt": "2026-10-08-f059-lifecycle-f3895ec-browser.json",
+         "receipt_sha256": "3621b1067dcf169cd980fef5c25366412ba8a708d222c3a78b937b97972a80ca",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d7af7e9009572370bb7fdcb02b42900325834f731cf923c3e25558fc72c108ec"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "129ac697c3a11fc09b57198d59e83d82ce0083b656da4cb39af6d5eabdcd8f0c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "078277c58cbb80a958d559a1e83113529665bb2fd02df5be118a7c290668b5c0"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "95011273c375e7045d84aed4f5c3c3d95c0f0d316cee9c3ce6734e9662601134"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "dba9da19cb7851cb6e45536c39b0a404f5bc66b4cb2a7777b38b34bdfe58e34b"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "034c197703f273c76dcf337fc813e99ffb10bf212250a4431daee18aca50f215"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "ec043c205a5e6fe4ea455bc0a68eab843f3afb12dd53c8b27a18d58a2da39ab8"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ea405f9ddfa3595e77d28657fd7a645a41d886e729f2be5bf69ce113c7ee43a1"
+          }
+         ],
+         "expected": "A controlled unknown optional persisted task is refused on actual reload; the whole view falls back and no unknown task reaches history requests.",
+         "observed": "A controlled unknown optional persisted task is refused on actual reload; the whole view falls back and no unknown task reaches history requests."
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::native saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
+         "receipt": "2026-10-08-f059-lifecycle-f3895ec-electron.json",
+         "receipt_sha256": "033f318a9ef49b07793bc2528d15c545b17f97b8b1a242470481c74299314231",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b3b0629d679a2eccc53dd08371b6e1bbba55942f83169a89d5c39cd6f0129248"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "becce50c9e8bbd6c03b006123a914ff8f46a293804a12acc772dbaa99f209841"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "322ebc1ef5d42189a257ff702a0e7f145ae6dc2046c9ab465b5ce83e3359f728"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "fd18e7664d16ad2114b2b2041eb85a2991d5154ce6fd4623607b172da5c12981"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "69bbfb11b9dbea8ab527ba1164b8f7a946a668cf91cebff5fe7c3ad1e8ce0ecb"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "31710e49894c76111dad5460ea43f5d0ae7e95c0aba52779bf5e6d17d3fa5feb"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "9690ac226a9b04924d4bcde6c21c06f848649740fffa293f7a551cbe3bfb26e1"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "783f7375b192c1c391bab868de7206d3f6cc6f7598547e0243778db8caa2504f"
+          }
+         ],
+         "expected": "One exact selected-family history GET is controlled503 before backend dispatch; stale identity/group disappear and reevaluation is disabled, then explicit choice recovers.",
+         "observed": "One exact selected-family history GET is controlled503 before backend dispatch; stale identity/group disappear and reevaluation is disabled, then explicit choice recovers."
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
+         "receipt": "2026-10-08-f059-lifecycle-f3895ec-browser.json",
+         "receipt_sha256": "3621b1067dcf169cd980fef5c25366412ba8a708d222c3a78b937b97972a80ca",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d7af7e9009572370bb7fdcb02b42900325834f731cf923c3e25558fc72c108ec"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "129ac697c3a11fc09b57198d59e83d82ce0083b656da4cb39af6d5eabdcd8f0c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "078277c58cbb80a958d559a1e83113529665bb2fd02df5be118a7c290668b5c0"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "95011273c375e7045d84aed4f5c3c3d95c0f0d316cee9c3ce6734e9662601134"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "dba9da19cb7851cb6e45536c39b0a404f5bc66b4cb2a7777b38b34bdfe58e34b"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "034c197703f273c76dcf337fc813e99ffb10bf212250a4431daee18aca50f215"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "ec043c205a5e6fe4ea455bc0a68eab843f3afb12dd53c8b27a18d58a2da39ab8"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ea405f9ddfa3595e77d28657fd7a645a41d886e729f2be5bf69ce113c7ee43a1"
+          }
+         ],
+         "expected": "One exact selected-family history GET is controlled503 before backend dispatch; stale identity/group disappear and reevaluation is disabled, then explicit choice recovers.",
+         "observed": "One exact selected-family history GET is controlled503 before backend dispatch; stale identity/group disappear and reevaluation is disabled, then explicit choice recovers."
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::native saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
+         "receipt": "2026-10-08-f059-lifecycle-f3895ec-electron.json",
+         "receipt_sha256": "033f318a9ef49b07793bc2528d15c545b17f97b8b1a242470481c74299314231",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b3b0629d679a2eccc53dd08371b6e1bbba55942f83169a89d5c39cd6f0129248"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "becce50c9e8bbd6c03b006123a914ff8f46a293804a12acc772dbaa99f209841"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "322ebc1ef5d42189a257ff702a0e7f145ae6dc2046c9ab465b5ce83e3359f728"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "fd18e7664d16ad2114b2b2041eb85a2991d5154ce6fd4623607b172da5c12981"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "69bbfb11b9dbea8ab527ba1164b8f7a946a668cf91cebff5fe7c3ad1e8ce0ecb"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "31710e49894c76111dad5460ea43f5d0ae7e95c0aba52779bf5e6d17d3fa5feb"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "9690ac226a9b04924d4bcde6c21c06f848649740fffa293f7a551cbe3bfb26e1"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "783f7375b192c1c391bab868de7206d3f6cc6f7598547e0243778db8caa2504f"
+          }
+         ],
+         "expected": "Actual selection popup followed by Escape preserves the same family, preference bytes and saved report, with no extra GET; no request/job cancellation claim.",
+         "observed": "Actual selection popup followed by Escape preserves the same family, preference bytes and saved report, with no extra GET; no request/job cancellation claim."
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
+         "receipt": "2026-10-08-f059-lifecycle-f3895ec-browser.json",
+         "receipt_sha256": "3621b1067dcf169cd980fef5c25366412ba8a708d222c3a78b937b97972a80ca",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d7af7e9009572370bb7fdcb02b42900325834f731cf923c3e25558fc72c108ec"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "129ac697c3a11fc09b57198d59e83d82ce0083b656da4cb39af6d5eabdcd8f0c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "078277c58cbb80a958d559a1e83113529665bb2fd02df5be118a7c290668b5c0"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "95011273c375e7045d84aed4f5c3c3d95c0f0d316cee9c3ce6734e9662601134"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "dba9da19cb7851cb6e45536c39b0a404f5bc66b4cb2a7777b38b34bdfe58e34b"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "034c197703f273c76dcf337fc813e99ffb10bf212250a4431daee18aca50f215"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "ec043c205a5e6fe4ea455bc0a68eab843f3afb12dd53c8b27a18d58a2da39ab8"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ea405f9ddfa3595e77d28657fd7a645a41d886e729f2be5bf69ce113c7ee43a1"
+          }
+         ],
+         "expected": "Actual selection popup followed by Escape preserves the same family, preference bytes and saved report, with no extra GET; no request/job cancellation claim.",
+         "observed": "Actual selection popup followed by Escape preserves the same family, preference bytes and saved report, with no extra GET; no request/job cancellation claim."
+        }
+       ]
       },
       "reopen": {
        "state": "verified",
@@ -11620,7 +11902,101 @@
        ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::native saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
+         "receipt": "2026-10-08-f059-lifecycle-f3895ec-electron.json",
+         "receipt_sha256": "033f318a9ef49b07793bc2528d15c545b17f97b8b1a242470481c74299314231",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b3b0629d679a2eccc53dd08371b6e1bbba55942f83169a89d5c39cd6f0129248"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "becce50c9e8bbd6c03b006123a914ff8f46a293804a12acc772dbaa99f209841"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "322ebc1ef5d42189a257ff702a0e7f145ae6dc2046c9ab465b5ce83e3359f728"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "fd18e7664d16ad2114b2b2041eb85a2991d5154ce6fd4623607b172da5c12981"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "69bbfb11b9dbea8ab527ba1164b8f7a946a668cf91cebff5fe7c3ad1e8ce0ecb"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "31710e49894c76111dad5460ea43f5d0ae7e95c0aba52779bf5e6d17d3fa5feb"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "9690ac226a9b04924d4bcde6c21c06f848649740fffa293f7a551cbe3bfb26e1"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "783f7375b192c1c391bab868de7206d3f6cc6f7598547e0243778db8caa2504f"
+          }
+         ],
+         "expected": "Actual workflow stage0 then3 preserves the exact classification record, evidence SHA, labelset and group preference.",
+         "observed": "Actual workflow stage0 then3 preserves the exact classification record, evidence SHA, labelset and group preference."
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
+         "receipt": "2026-10-08-f059-lifecycle-f3895ec-browser.json",
+         "receipt_sha256": "3621b1067dcf169cd980fef5c25366412ba8a708d222c3a78b937b97972a80ca",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d7af7e9009572370bb7fdcb02b42900325834f731cf923c3e25558fc72c108ec"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "129ac697c3a11fc09b57198d59e83d82ce0083b656da4cb39af6d5eabdcd8f0c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "078277c58cbb80a958d559a1e83113529665bb2fd02df5be118a7c290668b5c0"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "95011273c375e7045d84aed4f5c3c3d95c0f0d316cee9c3ce6734e9662601134"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "dba9da19cb7851cb6e45536c39b0a404f5bc66b4cb2a7777b38b34bdfe58e34b"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "034c197703f273c76dcf337fc813e99ffb10bf212250a4431daee18aca50f215"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "ec043c205a5e6fe4ea455bc0a68eab843f3afb12dd53c8b27a18d58a2da39ab8"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ea405f9ddfa3595e77d28657fd7a645a41d886e729f2be5bf69ce113c7ee43a1"
+          }
+         ],
+         "expected": "Actual workflow stage0 then3 preserves the exact classification record, evidence SHA, labelset and group preference.",
+         "observed": "Actual workflow stage0 then3 preserves the exact classification record, evidence SHA, labelset and group preference."
+        }
+       ]
       }
      }
     },
@@ -11673,16 +12049,298 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::native saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
+         "receipt": "2026-10-08-f059-lifecycle-f3895ec-electron.json",
+         "receipt_sha256": "033f318a9ef49b07793bc2528d15c545b17f97b8b1a242470481c74299314231",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b3b0629d679a2eccc53dd08371b6e1bbba55942f83169a89d5c39cd6f0129248"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "becce50c9e8bbd6c03b006123a914ff8f46a293804a12acc772dbaa99f209841"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "322ebc1ef5d42189a257ff702a0e7f145ae6dc2046c9ab465b5ce83e3359f728"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "fd18e7664d16ad2114b2b2041eb85a2991d5154ce6fd4623607b172da5c12981"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "69bbfb11b9dbea8ab527ba1164b8f7a946a668cf91cebff5fe7c3ad1e8ce0ecb"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "31710e49894c76111dad5460ea43f5d0ae7e95c0aba52779bf5e6d17d3fa5feb"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "9690ac226a9b04924d4bcde6c21c06f848649740fffa293f7a551cbe3bfb26e1"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "783f7375b192c1c391bab868de7206d3f6cc6f7598547e0243778db8caa2504f"
+          }
+         ],
+         "expected": "The controlled classification report has no predictions or grouped binary errors; the visible table stays empty and invents no binary counts.",
+         "observed": "The controlled classification report has no predictions or grouped binary errors; the visible table stays empty and invents no binary counts."
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
+         "receipt": "2026-10-08-f059-lifecycle-f3895ec-browser.json",
+         "receipt_sha256": "3621b1067dcf169cd980fef5c25366412ba8a708d222c3a78b937b97972a80ca",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d7af7e9009572370bb7fdcb02b42900325834f731cf923c3e25558fc72c108ec"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "129ac697c3a11fc09b57198d59e83d82ce0083b656da4cb39af6d5eabdcd8f0c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "078277c58cbb80a958d559a1e83113529665bb2fd02df5be118a7c290668b5c0"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "95011273c375e7045d84aed4f5c3c3d95c0f0d316cee9c3ce6734e9662601134"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "dba9da19cb7851cb6e45536c39b0a404f5bc66b4cb2a7777b38b34bdfe58e34b"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "034c197703f273c76dcf337fc813e99ffb10bf212250a4431daee18aca50f215"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "ec043c205a5e6fe4ea455bc0a68eab843f3afb12dd53c8b27a18d58a2da39ab8"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ea405f9ddfa3595e77d28657fd7a645a41d886e729f2be5bf69ce113c7ee43a1"
+          }
+         ],
+         "expected": "The controlled classification report has no predictions or grouped binary errors; the visible table stays empty and invents no binary counts.",
+         "observed": "The controlled classification report has no predictions or grouped binary errors; the visible table stays empty and invents no binary counts."
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::native saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
+         "receipt": "2026-10-08-f059-lifecycle-f3895ec-electron.json",
+         "receipt_sha256": "033f318a9ef49b07793bc2528d15c545b17f97b8b1a242470481c74299314231",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b3b0629d679a2eccc53dd08371b6e1bbba55942f83169a89d5c39cd6f0129248"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "becce50c9e8bbd6c03b006123a914ff8f46a293804a12acc772dbaa99f209841"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "322ebc1ef5d42189a257ff702a0e7f145ae6dc2046c9ab465b5ce83e3359f728"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "fd18e7664d16ad2114b2b2041eb85a2991d5154ce6fd4623607b172da5c12981"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "69bbfb11b9dbea8ab527ba1164b8f7a946a668cf91cebff5fe7c3ad1e8ce0ecb"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "31710e49894c76111dad5460ea43f5d0ae7e95c0aba52779bf5e6d17d3fa5feb"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "9690ac226a9b04924d4bcde6c21c06f848649740fffa293f7a551cbe3bfb26e1"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "783f7375b192c1c391bab868de7206d3f6cc6f7598547e0243778db8caa2504f"
+          }
+         ],
+         "expected": "A controlled unknown optional persisted group is refused on actual reload; fallback group and whole-view preference are valid.",
+         "observed": "A controlled unknown optional persisted group is refused on actual reload; fallback group and whole-view preference are valid."
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
+         "receipt": "2026-10-08-f059-lifecycle-f3895ec-browser.json",
+         "receipt_sha256": "3621b1067dcf169cd980fef5c25366412ba8a708d222c3a78b937b97972a80ca",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d7af7e9009572370bb7fdcb02b42900325834f731cf923c3e25558fc72c108ec"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "129ac697c3a11fc09b57198d59e83d82ce0083b656da4cb39af6d5eabdcd8f0c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "078277c58cbb80a958d559a1e83113529665bb2fd02df5be118a7c290668b5c0"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "95011273c375e7045d84aed4f5c3c3d95c0f0d316cee9c3ce6734e9662601134"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "dba9da19cb7851cb6e45536c39b0a404f5bc66b4cb2a7777b38b34bdfe58e34b"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "034c197703f273c76dcf337fc813e99ffb10bf212250a4431daee18aca50f215"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "ec043c205a5e6fe4ea455bc0a68eab843f3afb12dd53c8b27a18d58a2da39ab8"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ea405f9ddfa3595e77d28657fd7a645a41d886e729f2be5bf69ce113c7ee43a1"
+          }
+         ],
+         "expected": "A controlled unknown optional persisted group is refused on actual reload; fallback group and whole-view preference are valid.",
+         "observed": "A controlled unknown optional persisted group is refused on actual reload; fallback group and whole-view preference are valid."
+        }
+       ]
       },
       "error": {
        "state": "pending"
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::native saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
+         "receipt": "2026-10-08-f059-lifecycle-f3895ec-electron.json",
+         "receipt_sha256": "033f318a9ef49b07793bc2528d15c545b17f97b8b1a242470481c74299314231",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b3b0629d679a2eccc53dd08371b6e1bbba55942f83169a89d5c39cd6f0129248"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "becce50c9e8bbd6c03b006123a914ff8f46a293804a12acc772dbaa99f209841"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "322ebc1ef5d42189a257ff702a0e7f145ae6dc2046c9ab465b5ce83e3359f728"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "fd18e7664d16ad2114b2b2041eb85a2991d5154ce6fd4623607b172da5c12981"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "69bbfb11b9dbea8ab527ba1164b8f7a946a668cf91cebff5fe7c3ad1e8ce0ecb"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "31710e49894c76111dad5460ea43f5d0ae7e95c0aba52779bf5e6d17d3fa5feb"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "9690ac226a9b04924d4bcde6c21c06f848649740fffa293f7a551cbe3bfb26e1"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "783f7375b192c1c391bab868de7206d3f6cc6f7598547e0243778db8caa2504f"
+          }
+         ],
+         "expected": "Actual group popup followed by Escape leaves its exact choice, preference bytes and saved report unchanged, with no extra GET.",
+         "observed": "Actual group popup followed by Escape leaves its exact choice, preference bytes and saved report unchanged, with no extra GET."
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
+         "receipt": "2026-10-08-f059-lifecycle-f3895ec-browser.json",
+         "receipt_sha256": "3621b1067dcf169cd980fef5c25366412ba8a708d222c3a78b937b97972a80ca",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d7af7e9009572370bb7fdcb02b42900325834f731cf923c3e25558fc72c108ec"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "129ac697c3a11fc09b57198d59e83d82ce0083b656da4cb39af6d5eabdcd8f0c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "078277c58cbb80a958d559a1e83113529665bb2fd02df5be118a7c290668b5c0"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "95011273c375e7045d84aed4f5c3c3d95c0f0d316cee9c3ce6734e9662601134"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "dba9da19cb7851cb6e45536c39b0a404f5bc66b4cb2a7777b38b34bdfe58e34b"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "034c197703f273c76dcf337fc813e99ffb10bf212250a4431daee18aca50f215"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "ec043c205a5e6fe4ea455bc0a68eab843f3afb12dd53c8b27a18d58a2da39ab8"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ea405f9ddfa3595e77d28657fd7a645a41d886e729f2be5bf69ce113c7ee43a1"
+          }
+         ],
+         "expected": "Actual group popup followed by Escape leaves its exact choice, preference bytes and saved report unchanged, with no extra GET.",
+         "observed": "Actual group popup followed by Escape leaves its exact choice, preference bytes and saved report unchanged, with no extra GET."
+        }
+       ]
       },
       "reopen": {
        "state": "verified",
@@ -11728,7 +12386,101 @@
        ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::native saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
+         "receipt": "2026-10-08-f059-lifecycle-f3895ec-electron.json",
+         "receipt_sha256": "033f318a9ef49b07793bc2528d15c545b17f97b8b1a242470481c74299314231",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b3b0629d679a2eccc53dd08371b6e1bbba55942f83169a89d5c39cd6f0129248"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "becce50c9e8bbd6c03b006123a914ff8f46a293804a12acc772dbaa99f209841"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "322ebc1ef5d42189a257ff702a0e7f145ae6dc2046c9ab465b5ce83e3359f728"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "fd18e7664d16ad2114b2b2041eb85a2991d5154ce6fd4623607b172da5c12981"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "69bbfb11b9dbea8ab527ba1164b8f7a946a668cf91cebff5fe7c3ad1e8ce0ecb"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "31710e49894c76111dad5460ea43f5d0ae7e95c0aba52779bf5e6d17d3fa5feb"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "9690ac226a9b04924d4bcde6c21c06f848649740fffa293f7a551cbe3bfb26e1"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "783f7375b192c1c391bab868de7206d3f6cc6f7598547e0243778db8caa2504f"
+          }
+         ],
+         "expected": "After actual workflow stage leave/return, the same ground_truth group and record/evidence SHA are retained.",
+         "observed": "After actual workflow stage leave/return, the same ground_truth group and record/evidence SHA are retained."
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
+         "receipt": "2026-10-08-f059-lifecycle-f3895ec-browser.json",
+         "receipt_sha256": "3621b1067dcf169cd980fef5c25366412ba8a708d222c3a78b937b97972a80ca",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "d7af7e9009572370bb7fdcb02b42900325834f731cf923c3e25558fc72c108ec"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "129ac697c3a11fc09b57198d59e83d82ce0083b656da4cb39af6d5eabdcd8f0c"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "078277c58cbb80a958d559a1e83113529665bb2fd02df5be118a7c290668b5c0"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "95011273c375e7045d84aed4f5c3c3d95c0f0d316cee9c3ce6734e9662601134"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "dba9da19cb7851cb6e45536c39b0a404f5bc66b4cb2a7777b38b34bdfe58e34b"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "034c197703f273c76dcf337fc813e99ffb10bf212250a4431daee18aca50f215"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "ec043c205a5e6fe4ea455bc0a68eab843f3afb12dd53c8b27a18d58a2da39ab8"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ea405f9ddfa3595e77d28657fd7a645a41d886e729f2be5bf69ce113c7ee43a1"
+          }
+         ],
+         "expected": "After actual workflow stage leave/return, the same ground_truth group and record/evidence SHA are retained.",
+         "observed": "After actual workflow stage leave/return, the same ground_truth group and record/evidence SHA are retained."
+        }
+       ]
       }
      }
     },
@@ -16056,13 +16808,175 @@
        "state": "pending"
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::label exchange folder and unsent preview lifecycle preserve exact original handoff",
+         "receipt": "2026-10-08-f117-lifecycle-f3895ec-browser.json",
+         "receipt_sha256": "f45bde46899e3fe071dc7a87d3ff60da6ed522f71e6b8803356a5f72e3375d5e",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a84a2b7dd65fa18b3810b0449d74376bb92bad0e0d9aa3a0c6dc2af9c159f409"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3abe47574496548a04ff8bf540a0fe45960c0f6ca76a4d6d35ac3840b773e7d1"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "e6bfaa6ebdc94e781cb5da00fa8b63a39b195d23a0813e95be206a7c69fafacb"
+          }
+         ],
+         "expected": "Controlled native/browser folder exception is visible; previous exact folder and unapplied preview remain unchanged.",
+         "observed": "Controlled native/browser folder exception is visible; previous exact folder and unapplied preview remain unchanged."
+        },
+        {
+         "task": "S3-05",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::native label exchange folder and unsent preview lifecycle preserve original handoff",
+         "receipt": "2026-10-08-f117-lifecycle-f3895ec-electron.json",
+         "receipt_sha256": "dca51497712e033231d12312d49c3576495f7453c5ac430f0ea69aee0f5f8171",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "0f0270c7d9972c12c0e7a9e4b736f4a675f863729d492cfd8ee0658ed0396b45"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ce41f57488e225eaea5779c679bf1ca8f6499fbcdfffc45225fa5a4069aaf224"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "d045105989b274e6b51763f831b92a8d06f0cde42b9a70b489b6478472c925dc"
+          }
+         ],
+         "expected": "Controlled native/browser folder exception is visible; previous exact folder and unapplied preview remain unchanged.",
+         "observed": "Controlled native/browser folder exception is visible; previous exact folder and unapplied preview remain unchanged."
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::label exchange folder and unsent preview lifecycle preserve exact original handoff",
+         "receipt": "2026-10-08-f117-lifecycle-f3895ec-browser.json",
+         "receipt_sha256": "f45bde46899e3fe071dc7a87d3ff60da6ed522f71e6b8803356a5f72e3375d5e",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a84a2b7dd65fa18b3810b0449d74376bb92bad0e0d9aa3a0c6dc2af9c159f409"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3abe47574496548a04ff8bf540a0fe45960c0f6ca76a4d6d35ac3840b773e7d1"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "e6bfaa6ebdc94e781cb5da00fa8b63a39b195d23a0813e95be206a7c69fafacb"
+          }
+         ],
+         "expected": "Controlled folder cancel leaves the exact completed unsent preview and folder unchanged, without preview/apply writes.",
+         "observed": "Controlled folder cancel leaves the exact completed unsent preview and folder unchanged, without preview/apply writes."
+        },
+        {
+         "task": "S3-05",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::native label exchange folder and unsent preview lifecycle preserve original handoff",
+         "receipt": "2026-10-08-f117-lifecycle-f3895ec-electron.json",
+         "receipt_sha256": "dca51497712e033231d12312d49c3576495f7453c5ac430f0ea69aee0f5f8171",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "0f0270c7d9972c12c0e7a9e4b736f4a675f863729d492cfd8ee0658ed0396b45"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ce41f57488e225eaea5779c679bf1ca8f6499fbcdfffc45225fa5a4069aaf224"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "d045105989b274e6b51763f831b92a8d06f0cde42b9a70b489b6478472c925dc"
+          }
+         ],
+         "expected": "Controlled folder cancel leaves the exact completed unsent preview and folder unchanged, without preview/apply writes.",
+         "observed": "Controlled folder cancel leaves the exact completed unsent preview and folder unchanged, without preview/apply writes."
+        }
+       ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::label exchange folder and unsent preview lifecycle preserve exact original handoff",
+         "receipt": "2026-10-08-f117-lifecycle-f3895ec-browser.json",
+         "receipt_sha256": "f45bde46899e3fe071dc7a87d3ff60da6ed522f71e6b8803356a5f72e3375d5e",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a84a2b7dd65fa18b3810b0449d74376bb92bad0e0d9aa3a0c6dc2af9c159f409"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3abe47574496548a04ff8bf540a0fe45960c0f6ca76a4d6d35ac3840b773e7d1"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "e6bfaa6ebdc94e781cb5da00fa8b63a39b195d23a0813e95be206a7c69fafacb"
+          }
+         ],
+         "expected": "After actual renderer reload the folder and preview reset; selecting the exact other folder produces a fresh actual preview.",
+         "observed": "After actual renderer reload the folder and preview reset; selecting the exact other folder produces a fresh actual preview."
+        },
+        {
+         "task": "S3-05",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::native label exchange folder and unsent preview lifecycle preserve original handoff",
+         "receipt": "2026-10-08-f117-lifecycle-f3895ec-electron.json",
+         "receipt_sha256": "dca51497712e033231d12312d49c3576495f7453c5ac430f0ea69aee0f5f8171",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "0f0270c7d9972c12c0e7a9e4b736f4a675f863729d492cfd8ee0658ed0396b45"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ce41f57488e225eaea5779c679bf1ca8f6499fbcdfffc45225fa5a4069aaf224"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "d045105989b274e6b51763f831b92a8d06f0cde42b9a70b489b6478472c925dc"
+          }
+         ],
+         "expected": "After actual renderer reload the folder and preview reset; selecting the exact other folder produces a fresh actual preview.",
+         "observed": "After actual renderer reload the folder and preview reset; selecting the exact other folder produces a fresh actual preview."
+        }
+       ]
       },
       "handoff": {
        "state": "pending"
@@ -16337,13 +17251,175 @@
        ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::label exchange folder and unsent preview lifecycle preserve exact original handoff",
+         "receipt": "2026-10-08-f117-lifecycle-f3895ec-browser.json",
+         "receipt_sha256": "f45bde46899e3fe071dc7a87d3ff60da6ed522f71e6b8803356a5f72e3375d5e",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a84a2b7dd65fa18b3810b0449d74376bb92bad0e0d9aa3a0c6dc2af9c159f409"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3abe47574496548a04ff8bf540a0fe45960c0f6ca76a4d6d35ac3840b773e7d1"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "e6bfaa6ebdc94e781cb5da00fa8b63a39b195d23a0813e95be206a7c69fafacb"
+          }
+         ],
+         "expected": "Closing a completed unsent preview sends no apply request and preserves annotations, metadata, versions and original image bytes.",
+         "observed": "Closing a completed unsent preview sends no apply request and preserves annotations, metadata, versions and original image bytes."
+        },
+        {
+         "task": "S3-05",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::native label exchange folder and unsent preview lifecycle preserve original handoff",
+         "receipt": "2026-10-08-f117-lifecycle-f3895ec-electron.json",
+         "receipt_sha256": "dca51497712e033231d12312d49c3576495f7453c5ac430f0ea69aee0f5f8171",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "0f0270c7d9972c12c0e7a9e4b736f4a675f863729d492cfd8ee0658ed0396b45"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ce41f57488e225eaea5779c679bf1ca8f6499fbcdfffc45225fa5a4069aaf224"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "d045105989b274e6b51763f831b92a8d06f0cde42b9a70b489b6478472c925dc"
+          }
+         ],
+         "expected": "Closing a completed unsent preview sends no apply request and preserves annotations, metadata, versions and original image bytes.",
+         "observed": "Closing a completed unsent preview sends no apply request and preserves annotations, metadata, versions and original image bytes."
+        }
+       ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::label exchange folder and unsent preview lifecycle preserve exact original handoff",
+         "receipt": "2026-10-08-f117-lifecycle-f3895ec-browser.json",
+         "receipt_sha256": "f45bde46899e3fe071dc7a87d3ff60da6ed522f71e6b8803356a5f72e3375d5e",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a84a2b7dd65fa18b3810b0449d74376bb92bad0e0d9aa3a0c6dc2af9c159f409"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3abe47574496548a04ff8bf540a0fe45960c0f6ca76a4d6d35ac3840b773e7d1"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "e6bfaa6ebdc94e781cb5da00fa8b63a39b195d23a0813e95be206a7c69fafacb"
+          }
+         ],
+         "expected": "Closing and reopening the panel retains the same folder and completed unapplied preview, without an additional request.",
+         "observed": "Closing and reopening the panel retains the same folder and completed unapplied preview, without an additional request."
+        },
+        {
+         "task": "S3-05",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::native label exchange folder and unsent preview lifecycle preserve original handoff",
+         "receipt": "2026-10-08-f117-lifecycle-f3895ec-electron.json",
+         "receipt_sha256": "dca51497712e033231d12312d49c3576495f7453c5ac430f0ea69aee0f5f8171",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "0f0270c7d9972c12c0e7a9e4b736f4a675f863729d492cfd8ee0658ed0396b45"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ce41f57488e225eaea5779c679bf1ca8f6499fbcdfffc45225fa5a4069aaf224"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "d045105989b274e6b51763f831b92a8d06f0cde42b9a70b489b6478472c925dc"
+          }
+         ],
+         "expected": "Closing and reopening the panel retains the same folder and completed unapplied preview, without an additional request.",
+         "observed": "Closing and reopening the panel retains the same folder and completed unapplied preview, without an additional request."
+        }
+       ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::label exchange folder and unsent preview lifecycle preserve exact original handoff",
+         "receipt": "2026-10-08-f117-lifecycle-f3895ec-browser.json",
+         "receipt_sha256": "f45bde46899e3fe071dc7a87d3ff60da6ed522f71e6b8803356a5f72e3375d5e",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a84a2b7dd65fa18b3810b0449d74376bb92bad0e0d9aa3a0c6dc2af9c159f409"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3abe47574496548a04ff8bf540a0fe45960c0f6ca76a4d6d35ac3840b773e7d1"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "e6bfaa6ebdc94e781cb5da00fa8b63a39b195d23a0813e95be206a7c69fafacb"
+          }
+         ],
+         "expected": "Actual stage2 handoff selects the exact original path, UUID and revision; raw image SHA and existing annotations match, with no label application.",
+         "observed": "Actual stage2 handoff selects the exact original path, UUID and revision; raw image SHA and existing annotations match, with no label application."
+        },
+        {
+         "task": "S3-05",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::native label exchange folder and unsent preview lifecycle preserve original handoff",
+         "receipt": "2026-10-08-f117-lifecycle-f3895ec-electron.json",
+         "receipt_sha256": "dca51497712e033231d12312d49c3576495f7453c5ac430f0ea69aee0f5f8171",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "0f0270c7d9972c12c0e7a9e4b736f4a675f863729d492cfd8ee0658ed0396b45"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ce41f57488e225eaea5779c679bf1ca8f6499fbcdfffc45225fa5a4069aaf224"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "d045105989b274e6b51763f831b92a8d06f0cde42b9a70b489b6478472c925dc"
+          }
+         ],
+         "expected": "Actual stage2 handoff selects the exact original path, UUID and revision; raw image SHA and existing annotations match, with no label application.",
+         "observed": "Actual stage2 handoff selects the exact original path, UUID and revision; raw image SHA and existing annotations match, with no label application."
+        }
+       ]
       }
      }
     },
@@ -16615,7 +17691,61 @@
        ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::label exchange folder and unsent preview lifecycle preserve exact original handoff",
+         "receipt": "2026-10-08-f117-lifecycle-f3895ec-browser.json",
+         "receipt_sha256": "f45bde46899e3fe071dc7a87d3ff60da6ed522f71e6b8803356a5f72e3375d5e",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a84a2b7dd65fa18b3810b0449d74376bb92bad0e0d9aa3a0c6dc2af9c159f409"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3abe47574496548a04ff8bf540a0fe45960c0f6ca76a4d6d35ac3840b773e7d1"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "e6bfaa6ebdc94e781cb5da00fa8b63a39b195d23a0813e95be206a7c69fafacb"
+          }
+         ],
+         "expected": "Abandoning the completed enabled apply control without clicking it leaves the physical annotation tree, versions and metadata unchanged.",
+         "observed": "Abandoning the completed enabled apply control without clicking it leaves the physical annotation tree, versions and metadata unchanged."
+        },
+        {
+         "task": "S3-05",
+         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "kind": "click",
+         "action": "Original source UI lifecycle and exact retained record handoff",
+         "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
+         "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::native label exchange folder and unsent preview lifecycle preserve original handoff",
+         "receipt": "2026-10-08-f117-lifecycle-f3895ec-electron.json",
+         "receipt_sha256": "dca51497712e033231d12312d49c3576495f7453c5ac430f0ea69aee0f5f8171",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "0f0270c7d9972c12c0e7a9e4b736f4a675f863729d492cfd8ee0658ed0396b45"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "ce41f57488e225eaea5779c679bf1ca8f6499fbcdfffc45225fa5a4069aaf224"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "d045105989b274e6b51763f831b92a8d06f0cde42b9a70b489b6478472c925dc"
+          }
+         ],
+         "expected": "Abandoning the completed enabled apply control without clicking it leaves the physical annotation tree, versions and metadata unchanged.",
+         "observed": "Abandoning the completed enabled apply control without clicking it leaves the physical annotation tree, versions and metadata unchanged."
+        }
+       ]
       },
       "reopen": {
        "state": "verified",

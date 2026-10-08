@@ -32,7 +32,7 @@
 | S6-04 | 오프라인 설치와 업데이트 | POSIX 앱/DB cutover·복구·기존 home 인수, 영속 controller와 main/backend 인증 handshake를 구현하고 검증했다. 원래 backend epoch의 source CPU 기준 이미지 실행과 source candidate 활성 pointer 변경 전 검사·복구를 추가 검증했다. 정확한 compiled candidate worker의 A/OK 수학·두 pointer 변경 전 봉인·재실행 거절을 검증했다. 전체 process-tree 종료 확인, OS installer adapter와 native packaged positive startup을 이어간다. 실 publisher 서명은 별도 조건이다. |
 | S6-05 | 공개 CI와 source 재현성 | 이전 소스의 hosted 성공·실패를 보존한다. 보호된 수동 candidate 검증 workflow와 source/artifact/환경 정책 gate를 추가했다. 실제 workflow 실행·서명·배포는 하지 않았고, 새 게시 소스의 전체 hosted 결과가 필요하다. |
 | S6-06 | 서명과 릴리스 채널 | 실제 Authenticode/publisher identity·서명 후 byte inventory·채널 승인 필요. |
-| S7-01 | 기존 기능 전체 coverage 계약 | 원래156개 ID를 유지한다. 현재207개 curated action의619개 시나리오 검증,830개 pending이다. 알려진 누락 메뉴/shortcut·남은 시나리오·전체 기능 수락을 이어간다. 행동 수와 전체 기능 완료 수는 다르다. |
+| S7-01 | 기존 기능 전체 coverage 계약 | 원래156개 ID를 유지한다. 현재207개 curated action의634개 시나리오 검증,815개 pending이다. 알려진 누락 메뉴/shortcut·남은 시나리오·전체 기능 수락을 이어간다. 행동 수와 전체 기능 완료 수는 다르다. |
 | S7-02 | 10모델군 실제 작업 시나리오 | 실제5 distinct learned chain은 완료. 10모델군 각각 사람이 검토한 정답과 대표 multi-task recipe 검증 필요. |
 | S7-03 | Windows 실제 설치와 사용 QA | Windows 실제 설치·사용 QA 사용자 면제. hosted Server2025 component 실행을 Win11 실사용 성공으로 세지 않음. |
 | S7-05 | 데이터 규모와 연속 운전 | 실제 browser/native에서10만 메타데이터·실제 이미지3장,3×120 keyset page·최대DOM32·응답120·tail UUID/SHA 재열기·파일 없는 항목 선택 거절을 검증했다. 10만 실제 사진 decode나 target 자원/택트 수락은 아니다. a184b1e의 동일 외장72시간 실행은 유지 중이며 이전 시간을 합산하지 않고 terminal receipt가 필요하다. |
@@ -424,3 +424,10 @@ compiled canary의 닫힌 protocol2/worker8개 필드를 화면 bridge에서 검
 - 원래5개 테스트를 clean `9e019e1`에서 그대로 실행해79.95초,5pass/0skip로 통과했다. 같은 실행의763개 입력 hash가 불변이며 CPU 격리 container가 종료됐다. 이전 `2e8667c`의5fail과 private setup 누락은 각각 보존한다.
 - 앞선 실패5개 모두 실제 A/OK 결과는 만들었으나 original leader UNKNOWN 때문에 publication이 거절됐다. production 변경은 runtime 판정 하나이고 테스트/TS bridge/dependency/deadline은 같다. stale receipt·foreign claim·부분 publication·package shadow 거절은 성공으로 바꾸지 않았다.
 - 현재 source 경로의 회귀 해결이며, 별도 최신 hosted CI와 새 compiled/native target 근거는 여전히 필요하다.
+
+
+## 2026-10-08 라벨 교환·저장 평가 화면15개
+
+- clean `f3895ec` browser/source Electron4건이 retry 없이 통과했고2185개 소스가 동일했다. 실제 원본 이미지 SHA·UUID·revision·annotation handoff와 평가 record/evidence SHA를 확인했다.
+- 제안 라벨은 적용하지 않았고 물리 annotation tree·metadata·versions가 그대로였다. 저장 평가 fixture의9개 report와 입력도 동일했고 재평가·학습·job 쓰기는0개였다. 폴더 응답·선택 오류503·optional preference 손상은 통제 입력이며 취소는 완료된 미전송 화면 닫기/선택 popup Escape이다.
+- 기존207개 curated 행동의634개 시나리오 verified/815개 pending이다. F059 group error와 부모 구현69/13, 전체 수락0은 유지한다.

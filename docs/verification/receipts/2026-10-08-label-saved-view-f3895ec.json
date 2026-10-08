@@ -1,0 +1,3947 @@
+{
+  "schema": "modu-vision.label-saved-view-clean-lifecycle/v1",
+  "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+  "results": {
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0,
+    "retries": 0,
+    "elapsed_seconds": 83.93389120796928,
+    "source_inputs": 2185,
+    "source_unchanged": true,
+    "clean_before_after": true
+  },
+  "cases": {
+    "F117": [
+      {
+        "mode": "browser",
+        "receipt": "docs/verification/receipts/2026-10-08-f117-lifecycle-f3895ec-browser.json",
+        "receipt_sha256": "f45bde46899e3fe071dc7a87d3ff60da6ed522f71e6b8803356a5f72e3375d5e",
+        "observed_controls": {
+          "record_id": "F117",
+          "actions": {
+            "format-import-folder": [
+              "cancel",
+              "error",
+              "reopen"
+            ],
+            "format-import-preview": [
+              "cancel",
+              "reopen",
+              "handoff"
+            ],
+            "format-import-reviewed-apply": [
+              "cancel"
+            ]
+          },
+          "project": {
+            "schema_version": 1,
+            "id": "03fc9a24",
+            "name": "Owned label exchange lifecycle",
+            "task": "segmentation",
+            "project_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/projects/owned_label_exchange_lifecycle",
+            "dataset_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/projects/owned_label_exchange_lifecycle/dataset",
+            "models_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/projects/owned_label_exchange_lifecycle/models",
+            "reports_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/projects/owned_label_exchange_lifecycle/reports",
+            "annotations_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/projects/owned_label_exchange_lifecycle/annotations",
+            "active_labelset_id": "default",
+            "description": "",
+            "active_preset": "fast",
+            "source_dataset_dir": null,
+            "created_at": "2026-10-08T00:22:47Z",
+            "updated_at": "2026-10-08T00:22:47Z"
+          },
+          "source_images": [
+            {
+              "label": "ok",
+              "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/dataset/ok/sample-ok.png",
+              "bytes": 96,
+              "sha256": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e"
+            },
+            {
+              "label": "ng",
+              "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/dataset/ng/sample-ng.png",
+              "bytes": 103,
+              "sha256": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da"
+            }
+          ],
+          "inputs": [
+            {
+              "directory": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/unsent-labelme-0",
+              "file": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/unsent-labelme-0/proposal.json",
+              "sha256": "8ce2b4397f36f5d0b91e0b3edd6aa91e98feff4f11e7e6323a0e2081a8f75ba3",
+              "image": {
+                "decode_error": null,
+                "image_uuid": "0db6c741-7ceb-50f0-b4bf-8b2a0b0001fd",
+                "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/dataset/ok/sample-ok.png",
+                "relative_path": "ok/sample-ok.png",
+                "content_hash": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e",
+                "content_version": 1,
+                "width": 32,
+                "height": 32,
+                "revision": 1,
+                "tags": [],
+                "product": "",
+                "lot": "",
+                "group": "",
+                "workflow_state": "unworked",
+                "usage_state": "active",
+                "reviewer": null,
+                "review_history": [],
+                "audit": [
+                  {
+                    "id": "eef81a28-f665-4821-a819-553bd53f199b",
+                    "at": "2026-10-08T00:22:48Z",
+                    "actor": "system",
+                    "action": "registered",
+                    "revision": 1,
+                    "changes": {
+                      "content_hash": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e"
+                    }
+                  }
+                ],
+                "annotation_hash": null,
+                "mask_hash": null,
+                "team": {
+                  "assignment": null,
+                  "edit_lease": null,
+                  "reviews": [],
+                  "review_status": "pending",
+                  "annotation_actor": null,
+                  "history": []
+                }
+              }
+            },
+            {
+              "directory": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/unsent-labelme-1",
+              "file": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/unsent-labelme-1/proposal.json",
+              "sha256": "95b60cebecc35d7f1305a79c93483b187c4738f7dd406e4dc40b136936b057cf",
+              "image": {
+                "decode_error": null,
+                "image_uuid": "df390ce9-cf10-5b39-b8be-d6e62d818c9a",
+                "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/dataset/ng/sample-ng.png",
+                "relative_path": "ng/sample-ng.png",
+                "content_hash": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da",
+                "content_version": 1,
+                "width": 32,
+                "height": 32,
+                "revision": 1,
+                "tags": [],
+                "product": "",
+                "lot": "",
+                "group": "",
+                "workflow_state": "unworked",
+                "usage_state": "active",
+                "reviewer": null,
+                "review_history": [],
+                "audit": [
+                  {
+                    "id": "a6ea6bbb-c9d2-4c6e-a588-2678ea228965",
+                    "at": "2026-10-08T00:22:48Z",
+                    "actor": "system",
+                    "action": "registered",
+                    "revision": 1,
+                    "changes": {
+                      "content_hash": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da"
+                    }
+                  }
+                ],
+                "annotation_hash": null,
+                "mask_hash": null,
+                "team": {
+                  "assignment": null,
+                  "edit_lease": null,
+                  "reviews": [],
+                  "review_status": "pending",
+                  "annotation_actor": null,
+                  "history": []
+                }
+              }
+            }
+          ],
+          "receipts": [
+            {
+              "request": {
+                "format": "labelme",
+                "import_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/unsent-labelme-0",
+                "mode": "preview",
+                "conflict_policy": "reject",
+                "actor": "controlled-label-lifecycle",
+                "expected_revisions": {}
+              },
+              "status": 200,
+              "response": {
+                "preview": [
+                  {
+                    "file_name": "ok/sample-ok.png",
+                    "image_uuid": "0db6c741-7ceb-50f0-b4bf-8b2a0b0001fd",
+                    "revision": 1,
+                    "existing_count": 0,
+                    "incoming_count": 1,
+                    "conflict": false,
+                    "annotations": [
+                      {
+                        "type": "bbox",
+                        "label": "ControlledProposal",
+                        "category_id": 1,
+                        "bbox": [
+                          3,
+                          4,
+                          18,
+                          20
+                        ]
+                      }
+                    ]
+                  }
+                ],
+                "applied": false,
+                "format": "labelme"
+              }
+            },
+            {
+              "request": {
+                "format": "labelme",
+                "import_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/unsent-labelme-1",
+                "mode": "preview",
+                "conflict_policy": "reject",
+                "actor": "controlled-label-lifecycle",
+                "expected_revisions": {}
+              },
+              "status": 200,
+              "response": {
+                "preview": [
+                  {
+                    "file_name": "ng/sample-ng.png",
+                    "image_uuid": "df390ce9-cf10-5b39-b8be-d6e62d818c9a",
+                    "revision": 1,
+                    "existing_count": 0,
+                    "incoming_count": 1,
+                    "conflict": false,
+                    "annotations": [
+                      {
+                        "type": "bbox",
+                        "label": "ControlledProposal",
+                        "category_id": 1,
+                        "bbox": [
+                          3,
+                          4,
+                          18,
+                          20
+                        ]
+                      }
+                    ]
+                  }
+                ],
+                "applied": false,
+                "format": "labelme"
+              }
+            },
+            {
+              "request": {
+                "format": "labelme",
+                "import_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/unsent-labelme-1",
+                "mode": "preview",
+                "conflict_policy": "reject",
+                "actor": "controlled-label-lifecycle",
+                "expected_revisions": {}
+              },
+              "status": 200,
+              "response": {
+                "preview": [
+                  {
+                    "file_name": "ng/sample-ng.png",
+                    "image_uuid": "df390ce9-cf10-5b39-b8be-d6e62d818c9a",
+                    "revision": 1,
+                    "existing_count": 0,
+                    "incoming_count": 1,
+                    "conflict": false,
+                    "annotations": [
+                      {
+                        "type": "bbox",
+                        "label": "ControlledProposal",
+                        "category_id": 1,
+                        "bbox": [
+                          3,
+                          4,
+                          18,
+                          20
+                        ]
+                      }
+                    ]
+                  }
+                ],
+                "applied": false,
+                "format": "labelme"
+              }
+            }
+          ],
+          "states": [
+            {
+              "name": "initial-folder-cancel",
+              "selected_folder": [
+                {
+                  "title": "",
+                  "text": "\ud3f4\ub354\ub97c \uc120\ud0dd\ud558\uc138\uc694"
+                },
+                {
+                  "title": "",
+                  "text": "mask_manifest.json \ud544\uc694"
+                }
+              ],
+              "preview": [],
+              "imports": 0,
+              "writes": 0
+            },
+            {
+              "name": "folder-cancel-preserves-unsent-preview",
+              "selected_folder": [
+                {
+                  "title": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/unsent-labelme-0",
+                  "text": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/unsent-labelme-0"
+                },
+                {
+                  "title": "",
+                  "text": "mask_manifest.json \ud544\uc694"
+                }
+              ],
+              "preview": [
+                "ok/sample-ok.png \u00b7 \uae30\uc874 0 / \uac00\uc838\uc62c 1"
+              ],
+              "imports": 1,
+              "writes": 0
+            },
+            {
+              "name": "folder-error-preserves-unsent-preview",
+              "selected_folder": [
+                {
+                  "title": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/unsent-labelme-0",
+                  "text": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/unsent-labelme-0"
+                },
+                {
+                  "title": "",
+                  "text": "mask_manifest.json \ud544\uc694"
+                }
+              ],
+              "preview": [
+                "ok/sample-ok.png \u00b7 \uae30\uc874 0 / \uac00\uc838\uc62c 1"
+              ],
+              "imports": 1,
+              "writes": 0
+            },
+            {
+              "name": "replacement-folder-clears-old-preview",
+              "selected_folder": [
+                {
+                  "title": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/unsent-labelme-1",
+                  "text": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/unsent-labelme-1"
+                },
+                {
+                  "title": "",
+                  "text": "mask_manifest.json \ud544\uc694"
+                }
+              ],
+              "preview": [],
+              "imports": 1,
+              "writes": 0
+            },
+            {
+              "name": "closed-completed-unsent-preview-reopened",
+              "selected_folder": [
+                {
+                  "title": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/unsent-labelme-1",
+                  "text": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/unsent-labelme-1"
+                },
+                {
+                  "title": "",
+                  "text": "mask_manifest.json \ud544\uc694"
+                }
+              ],
+              "preview": [
+                "ng/sample-ng.png \u00b7 \uae30\uc874 0 / \uac00\uc838\uc62c 1"
+              ],
+              "imports": 2,
+              "writes": 0
+            },
+            {
+              "name": "actual-reload-resets-folder-preview",
+              "selected_folder": [
+                {
+                  "title": "",
+                  "text": "\ud3f4\ub354\ub97c \uc120\ud0dd\ud558\uc138\uc694"
+                },
+                {
+                  "title": "",
+                  "text": "mask_manifest.json \ud544\uc694"
+                }
+              ],
+              "preview": [],
+              "imports": 2,
+              "writes": 0
+            }
+          ],
+          "folder_dialog_calls": [
+            {
+              "result": {
+                "kind": "cancel"
+              },
+              "options": {
+                "title": "\uac00\uc838\uc62c \ub77c\ubca8 \ud3f4\ub354 \uc120\ud0dd"
+              }
+            },
+            {
+              "result": {
+                "kind": "select",
+                "directory": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/unsent-labelme-0"
+              },
+              "options": {
+                "title": "\uac00\uc838\uc62c \ub77c\ubca8 \ud3f4\ub354 \uc120\ud0dd"
+              }
+            },
+            {
+              "result": {
+                "kind": "cancel"
+              },
+              "options": {
+                "title": "\uac00\uc838\uc62c \ub77c\ubca8 \ud3f4\ub354 \uc120\ud0dd"
+              }
+            },
+            {
+              "result": {
+                "kind": "error"
+              },
+              "options": {
+                "title": "\uac00\uc838\uc62c \ub77c\ubca8 \ud3f4\ub354 \uc120\ud0dd"
+              }
+            },
+            {
+              "result": {
+                "kind": "select",
+                "directory": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/unsent-labelme-1"
+              },
+              "options": {
+                "title": "\uac00\uc838\uc62c \ub77c\ubca8 \ud3f4\ub354 \uc120\ud0dd"
+              }
+            },
+            {
+              "result": {
+                "kind": "select",
+                "directory": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/unsent-labelme-1"
+              },
+              "options": {
+                "title": "\uac00\uc838\uc62c \ub77c\ubca8 \ud3f4\ub354 \uc120\ud0dd"
+              }
+            }
+          ],
+          "metadata_before": [
+            {
+              "decode_error": null,
+              "image_uuid": "df390ce9-cf10-5b39-b8be-d6e62d818c9a",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/dataset/ng/sample-ng.png",
+              "relative_path": "ng/sample-ng.png",
+              "content_hash": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da",
+              "content_version": 1,
+              "width": 32,
+              "height": 32,
+              "revision": 1,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "unworked",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "a6ea6bbb-c9d2-4c6e-a588-2678ea228965",
+                  "at": "2026-10-08T00:22:48Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da"
+                  }
+                }
+              ],
+              "annotation_hash": null,
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [],
+                "review_status": "pending",
+                "annotation_actor": null,
+                "history": []
+              }
+            },
+            {
+              "decode_error": null,
+              "image_uuid": "0db6c741-7ceb-50f0-b4bf-8b2a0b0001fd",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/dataset/ok/sample-ok.png",
+              "relative_path": "ok/sample-ok.png",
+              "content_hash": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e",
+              "content_version": 1,
+              "width": 32,
+              "height": 32,
+              "revision": 1,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "unworked",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "eef81a28-f665-4821-a819-553bd53f199b",
+                  "at": "2026-10-08T00:22:48Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e"
+                  }
+                }
+              ],
+              "annotation_hash": null,
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [],
+                "review_status": "pending",
+                "annotation_actor": null,
+                "history": []
+              }
+            }
+          ],
+          "metadata_after": [
+            {
+              "decode_error": null,
+              "image_uuid": "df390ce9-cf10-5b39-b8be-d6e62d818c9a",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/dataset/ng/sample-ng.png",
+              "relative_path": "ng/sample-ng.png",
+              "content_hash": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da",
+              "content_version": 1,
+              "width": 32,
+              "height": 32,
+              "revision": 1,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "unworked",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "a6ea6bbb-c9d2-4c6e-a588-2678ea228965",
+                  "at": "2026-10-08T00:22:48Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da"
+                  }
+                }
+              ],
+              "annotation_hash": null,
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [],
+                "review_status": "pending",
+                "annotation_actor": null,
+                "history": []
+              }
+            },
+            {
+              "decode_error": null,
+              "image_uuid": "0db6c741-7ceb-50f0-b4bf-8b2a0b0001fd",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/dataset/ok/sample-ok.png",
+              "relative_path": "ok/sample-ok.png",
+              "content_hash": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e",
+              "content_version": 1,
+              "width": 32,
+              "height": 32,
+              "revision": 1,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "unworked",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "eef81a28-f665-4821-a819-553bd53f199b",
+                  "at": "2026-10-08T00:22:48Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e"
+                  }
+                }
+              ],
+              "annotation_hash": null,
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [],
+                "review_status": "pending",
+                "annotation_actor": null,
+                "history": []
+              }
+            }
+          ],
+          "annotations_before": [
+            {
+              "image_id": "sample-ok",
+              "annotations": [],
+              "image_width": 32,
+              "image_height": 32,
+              "mask_file": null,
+              "metadata": {
+                "decode_error": null,
+                "image_uuid": "0db6c741-7ceb-50f0-b4bf-8b2a0b0001fd",
+                "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/dataset/ok/sample-ok.png",
+                "relative_path": "ok/sample-ok.png",
+                "content_hash": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e",
+                "content_version": 1,
+                "width": 32,
+                "height": 32,
+                "revision": 1,
+                "tags": [],
+                "product": "",
+                "lot": "",
+                "group": "",
+                "workflow_state": "unworked",
+                "usage_state": "active",
+                "reviewer": null,
+                "review_history": [],
+                "audit": [
+                  {
+                    "id": "eef81a28-f665-4821-a819-553bd53f199b",
+                    "at": "2026-10-08T00:22:48Z",
+                    "actor": "system",
+                    "action": "registered",
+                    "revision": 1,
+                    "changes": {
+                      "content_hash": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e"
+                    }
+                  }
+                ],
+                "annotation_hash": null,
+                "mask_hash": null,
+                "team": {
+                  "assignment": null,
+                  "edit_lease": null,
+                  "reviews": [],
+                  "review_status": "pending",
+                  "annotation_actor": null,
+                  "history": []
+                }
+              }
+            },
+            {
+              "image_id": "sample-ng",
+              "annotations": [],
+              "image_width": 32,
+              "image_height": 32,
+              "mask_file": null,
+              "metadata": {
+                "decode_error": null,
+                "image_uuid": "df390ce9-cf10-5b39-b8be-d6e62d818c9a",
+                "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/dataset/ng/sample-ng.png",
+                "relative_path": "ng/sample-ng.png",
+                "content_hash": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da",
+                "content_version": 1,
+                "width": 32,
+                "height": 32,
+                "revision": 1,
+                "tags": [],
+                "product": "",
+                "lot": "",
+                "group": "",
+                "workflow_state": "unworked",
+                "usage_state": "active",
+                "reviewer": null,
+                "review_history": [],
+                "audit": [
+                  {
+                    "id": "a6ea6bbb-c9d2-4c6e-a588-2678ea228965",
+                    "at": "2026-10-08T00:22:48Z",
+                    "actor": "system",
+                    "action": "registered",
+                    "revision": 1,
+                    "changes": {
+                      "content_hash": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da"
+                    }
+                  }
+                ],
+                "annotation_hash": null,
+                "mask_hash": null,
+                "team": {
+                  "assignment": null,
+                  "edit_lease": null,
+                  "reviews": [],
+                  "review_status": "pending",
+                  "annotation_actor": null,
+                  "history": []
+                }
+              }
+            }
+          ],
+          "annotations_after": [
+            {
+              "image_id": "sample-ok",
+              "annotations": [],
+              "image_width": 32,
+              "image_height": 32,
+              "mask_file": null,
+              "metadata": {
+                "decode_error": null,
+                "image_uuid": "0db6c741-7ceb-50f0-b4bf-8b2a0b0001fd",
+                "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/dataset/ok/sample-ok.png",
+                "relative_path": "ok/sample-ok.png",
+                "content_hash": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e",
+                "content_version": 1,
+                "width": 32,
+                "height": 32,
+                "revision": 1,
+                "tags": [],
+                "product": "",
+                "lot": "",
+                "group": "",
+                "workflow_state": "unworked",
+                "usage_state": "active",
+                "reviewer": null,
+                "review_history": [],
+                "audit": [
+                  {
+                    "id": "eef81a28-f665-4821-a819-553bd53f199b",
+                    "at": "2026-10-08T00:22:48Z",
+                    "actor": "system",
+                    "action": "registered",
+                    "revision": 1,
+                    "changes": {
+                      "content_hash": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e"
+                    }
+                  }
+                ],
+                "annotation_hash": null,
+                "mask_hash": null,
+                "team": {
+                  "assignment": null,
+                  "edit_lease": null,
+                  "reviews": [],
+                  "review_status": "pending",
+                  "annotation_actor": null,
+                  "history": []
+                }
+              }
+            },
+            {
+              "image_id": "sample-ng",
+              "annotations": [],
+              "image_width": 32,
+              "image_height": 32,
+              "mask_file": null,
+              "metadata": {
+                "decode_error": null,
+                "image_uuid": "df390ce9-cf10-5b39-b8be-d6e62d818c9a",
+                "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/dataset/ng/sample-ng.png",
+                "relative_path": "ng/sample-ng.png",
+                "content_hash": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da",
+                "content_version": 1,
+                "width": 32,
+                "height": 32,
+                "revision": 1,
+                "tags": [],
+                "product": "",
+                "lot": "",
+                "group": "",
+                "workflow_state": "unworked",
+                "usage_state": "active",
+                "reviewer": null,
+                "review_history": [],
+                "audit": [
+                  {
+                    "id": "a6ea6bbb-c9d2-4c6e-a588-2678ea228965",
+                    "at": "2026-10-08T00:22:48Z",
+                    "actor": "system",
+                    "action": "registered",
+                    "revision": 1,
+                    "changes": {
+                      "content_hash": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da"
+                    }
+                  }
+                ],
+                "annotation_hash": null,
+                "mask_hash": null,
+                "team": {
+                  "assignment": null,
+                  "edit_lease": null,
+                  "reviews": [],
+                  "review_status": "pending",
+                  "annotation_actor": null,
+                  "history": []
+                }
+              }
+            }
+          ],
+          "annotation_tree_before": {
+            "by_dataset/6625da8759fe7d93/metadata/workflow.json": "35c0910ac7011ce8fb15fe2a33f0d491d3fa29ee536ac33df442d4425e33cb12"
+          },
+          "annotation_tree_after": {
+            "by_dataset/6625da8759fe7d93/metadata/workflow.json": "35c0910ac7011ce8fb15fe2a33f0d491d3fa29ee536ac33df442d4425e33cb12"
+          },
+          "versions_before": {
+            "versions": []
+          },
+          "versions_after": {
+            "versions": []
+          },
+          "annotation_or_metadata_writes": [],
+          "handoff": {
+            "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-35affaf7-r0/dataset/ng/sample-ng.png",
+            "image_uuid": "df390ce9-cf10-5b39-b8be-d6e62d818c9a",
+            "revision": 1,
+            "source_sha256": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da",
+            "actual_raw_response_sha256": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da",
+            "raw_url": "http://127.0.0.1:51324/api/dataset/raw/sample-ng.png?file_path=%2FVolumes%2FModuVisionScratch-20261007-77052e76%2Fall-parent-closure%2Flabel-saved-view-root-adapter%2Fclean-source-01%2Fws%2F0-35affaf7-r0%2Fdataset%2Fng%2Fsample-ng.png",
+            "annotation_url": "http://127.0.0.1:51324/api/annotations/sample-ng?file_path=%2FVolumes%2FModuVisionScratch-20261007-77052e76%2Fall-parent-closure%2Flabel-saved-view-root-adapter%2Fclean-source-01%2Fws%2F0-35affaf7-r0%2Fdataset%2Fng%2Fsample-ng.png",
+            "annotations": [],
+            "stage": 2
+          },
+          "scope_cancel": {
+            "completed_unsent_preview_closed": true,
+            "inflight_transport_cancel_verified": false,
+            "zero_apply_POST": true
+          },
+          "actual_reload_resets_selected_folder_and_preview": true,
+          "replacement_folder_clears_previous_preview": true,
+          "source_ui": true,
+          "source_electron": false,
+          "native_folder_dialog_response_controlled": false,
+          "browser_folder_bridge_controlled": true,
+          "human_OS_picker_verified": false,
+          "generated_proposals_are_human_truth": false,
+          "label_or_review_write": false,
+          "actual_model_inference": false,
+          "quality_accepted": false,
+          "installed_target_verified": false,
+          "gpu_used": false,
+          "windows_excluded": true
+        },
+        "owned_cleanup": {
+          "exited": true,
+          "exitCode": 0,
+          "signal": null,
+          "exitedBeforeStop": false,
+          "forced": false,
+          "forcedReason": null,
+          "groupAlive": false,
+          "escaped": [],
+          "unownedReferences": [],
+          "scanError": null,
+          "durationMs": 2603,
+          "stoppedAt": "2026-10-08T00:22:53.608Z",
+          "healthy_at_end": true,
+          "port_closed": true,
+          "pid_alive": false
+        }
+      },
+      {
+        "mode": "electron",
+        "receipt": "docs/verification/receipts/2026-10-08-f117-lifecycle-f3895ec-electron.json",
+        "receipt_sha256": "dca51497712e033231d12312d49c3576495f7453c5ac430f0ea69aee0f5f8171",
+        "observed_controls": {
+          "record_id": "F117",
+          "actions": {
+            "format-import-folder": [
+              "cancel",
+              "error",
+              "reopen"
+            ],
+            "format-import-preview": [
+              "cancel",
+              "reopen",
+              "handoff"
+            ],
+            "format-import-reviewed-apply": [
+              "cancel"
+            ]
+          },
+          "project": {
+            "schema_version": 1,
+            "id": "fd270f1b",
+            "name": "Owned label exchange lifecycle",
+            "task": "segmentation",
+            "project_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/userData/projects/owned_label_exchange_lifecycle",
+            "dataset_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/userData/projects/owned_label_exchange_lifecycle/dataset",
+            "models_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/userData/projects/owned_label_exchange_lifecycle/models",
+            "reports_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/userData/projects/owned_label_exchange_lifecycle/reports",
+            "annotations_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/userData/projects/owned_label_exchange_lifecycle/annotations",
+            "active_labelset_id": "default",
+            "description": "",
+            "active_preset": "fast",
+            "source_dataset_dir": null,
+            "created_at": "2026-10-08T00:23:26Z",
+            "updated_at": "2026-10-08T00:23:26Z"
+          },
+          "source_images": [
+            {
+              "label": "ok",
+              "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/dataset/ok/sample-ok.png",
+              "bytes": 96,
+              "sha256": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e"
+            },
+            {
+              "label": "ng",
+              "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/dataset/ng/sample-ng.png",
+              "bytes": 103,
+              "sha256": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da"
+            }
+          ],
+          "inputs": [
+            {
+              "directory": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/unsent-labelme-0",
+              "file": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/unsent-labelme-0/proposal.json",
+              "sha256": "8ce2b4397f36f5d0b91e0b3edd6aa91e98feff4f11e7e6323a0e2081a8f75ba3",
+              "image": {
+                "decode_error": null,
+                "image_uuid": "6b3d82c8-0e11-5abc-9735-06526b8bd3aa",
+                "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/dataset/ok/sample-ok.png",
+                "relative_path": "ok/sample-ok.png",
+                "content_hash": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e",
+                "content_version": 1,
+                "width": 32,
+                "height": 32,
+                "revision": 1,
+                "tags": [],
+                "product": "",
+                "lot": "",
+                "group": "",
+                "workflow_state": "unworked",
+                "usage_state": "active",
+                "reviewer": null,
+                "review_history": [],
+                "audit": [
+                  {
+                    "id": "2cbaad15-bf9f-4679-befe-f50cc6f87521",
+                    "at": "2026-10-08T00:23:26Z",
+                    "actor": "system",
+                    "action": "registered",
+                    "revision": 1,
+                    "changes": {
+                      "content_hash": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e"
+                    }
+                  }
+                ],
+                "annotation_hash": null,
+                "mask_hash": null,
+                "team": {
+                  "assignment": null,
+                  "edit_lease": null,
+                  "reviews": [],
+                  "review_status": "pending",
+                  "annotation_actor": null,
+                  "history": []
+                }
+              }
+            },
+            {
+              "directory": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/unsent-labelme-1",
+              "file": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/unsent-labelme-1/proposal.json",
+              "sha256": "95b60cebecc35d7f1305a79c93483b187c4738f7dd406e4dc40b136936b057cf",
+              "image": {
+                "decode_error": null,
+                "image_uuid": "d71f382a-816e-566e-8bb5-0e8fd7b694ed",
+                "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/dataset/ng/sample-ng.png",
+                "relative_path": "ng/sample-ng.png",
+                "content_hash": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da",
+                "content_version": 1,
+                "width": 32,
+                "height": 32,
+                "revision": 1,
+                "tags": [],
+                "product": "",
+                "lot": "",
+                "group": "",
+                "workflow_state": "unworked",
+                "usage_state": "active",
+                "reviewer": null,
+                "review_history": [],
+                "audit": [
+                  {
+                    "id": "24e080e7-5858-4bc9-9eaa-6a73fc3fe595",
+                    "at": "2026-10-08T00:23:26Z",
+                    "actor": "system",
+                    "action": "registered",
+                    "revision": 1,
+                    "changes": {
+                      "content_hash": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da"
+                    }
+                  }
+                ],
+                "annotation_hash": null,
+                "mask_hash": null,
+                "team": {
+                  "assignment": null,
+                  "edit_lease": null,
+                  "reviews": [],
+                  "review_status": "pending",
+                  "annotation_actor": null,
+                  "history": []
+                }
+              }
+            }
+          ],
+          "receipts": [
+            {
+              "request": {
+                "format": "labelme",
+                "import_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/unsent-labelme-0",
+                "mode": "preview",
+                "conflict_policy": "reject",
+                "actor": "controlled-label-lifecycle",
+                "expected_revisions": {}
+              },
+              "status": 200,
+              "response": {
+                "preview": [
+                  {
+                    "file_name": "ok/sample-ok.png",
+                    "image_uuid": "6b3d82c8-0e11-5abc-9735-06526b8bd3aa",
+                    "revision": 1,
+                    "existing_count": 0,
+                    "incoming_count": 1,
+                    "conflict": false,
+                    "annotations": [
+                      {
+                        "type": "bbox",
+                        "label": "ControlledProposal",
+                        "category_id": 1,
+                        "bbox": [
+                          3,
+                          4,
+                          18,
+                          20
+                        ]
+                      }
+                    ]
+                  }
+                ],
+                "applied": false,
+                "format": "labelme"
+              }
+            },
+            {
+              "request": {
+                "format": "labelme",
+                "import_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/unsent-labelme-1",
+                "mode": "preview",
+                "conflict_policy": "reject",
+                "actor": "controlled-label-lifecycle",
+                "expected_revisions": {}
+              },
+              "status": 200,
+              "response": {
+                "preview": [
+                  {
+                    "file_name": "ng/sample-ng.png",
+                    "image_uuid": "d71f382a-816e-566e-8bb5-0e8fd7b694ed",
+                    "revision": 1,
+                    "existing_count": 0,
+                    "incoming_count": 1,
+                    "conflict": false,
+                    "annotations": [
+                      {
+                        "type": "bbox",
+                        "label": "ControlledProposal",
+                        "category_id": 1,
+                        "bbox": [
+                          3,
+                          4,
+                          18,
+                          20
+                        ]
+                      }
+                    ]
+                  }
+                ],
+                "applied": false,
+                "format": "labelme"
+              }
+            },
+            {
+              "request": {
+                "format": "labelme",
+                "import_dir": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/unsent-labelme-1",
+                "mode": "preview",
+                "conflict_policy": "reject",
+                "actor": "controlled-label-lifecycle",
+                "expected_revisions": {}
+              },
+              "status": 200,
+              "response": {
+                "preview": [
+                  {
+                    "file_name": "ng/sample-ng.png",
+                    "image_uuid": "d71f382a-816e-566e-8bb5-0e8fd7b694ed",
+                    "revision": 1,
+                    "existing_count": 0,
+                    "incoming_count": 1,
+                    "conflict": false,
+                    "annotations": [
+                      {
+                        "type": "bbox",
+                        "label": "ControlledProposal",
+                        "category_id": 1,
+                        "bbox": [
+                          3,
+                          4,
+                          18,
+                          20
+                        ]
+                      }
+                    ]
+                  }
+                ],
+                "applied": false,
+                "format": "labelme"
+              }
+            }
+          ],
+          "states": [
+            {
+              "name": "initial-folder-cancel",
+              "selected_folder": [
+                {
+                  "title": "",
+                  "text": "\ud3f4\ub354\ub97c \uc120\ud0dd\ud558\uc138\uc694"
+                },
+                {
+                  "title": "",
+                  "text": "mask_manifest.json \ud544\uc694"
+                }
+              ],
+              "preview": [],
+              "imports": 0,
+              "writes": 0
+            },
+            {
+              "name": "folder-cancel-preserves-unsent-preview",
+              "selected_folder": [
+                {
+                  "title": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/unsent-labelme-0",
+                  "text": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/unsent-labelme-0"
+                },
+                {
+                  "title": "",
+                  "text": "mask_manifest.json \ud544\uc694"
+                }
+              ],
+              "preview": [
+                "ok/sample-ok.png \u00b7 \uae30\uc874 0 / \uac00\uc838\uc62c 1"
+              ],
+              "imports": 1,
+              "writes": 0
+            },
+            {
+              "name": "folder-error-preserves-unsent-preview",
+              "selected_folder": [
+                {
+                  "title": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/unsent-labelme-0",
+                  "text": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/unsent-labelme-0"
+                },
+                {
+                  "title": "",
+                  "text": "mask_manifest.json \ud544\uc694"
+                }
+              ],
+              "preview": [
+                "ok/sample-ok.png \u00b7 \uae30\uc874 0 / \uac00\uc838\uc62c 1"
+              ],
+              "imports": 1,
+              "writes": 0
+            },
+            {
+              "name": "replacement-folder-clears-old-preview",
+              "selected_folder": [
+                {
+                  "title": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/unsent-labelme-1",
+                  "text": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/unsent-labelme-1"
+                },
+                {
+                  "title": "",
+                  "text": "mask_manifest.json \ud544\uc694"
+                }
+              ],
+              "preview": [],
+              "imports": 1,
+              "writes": 0
+            },
+            {
+              "name": "closed-completed-unsent-preview-reopened",
+              "selected_folder": [
+                {
+                  "title": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/unsent-labelme-1",
+                  "text": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/unsent-labelme-1"
+                },
+                {
+                  "title": "",
+                  "text": "mask_manifest.json \ud544\uc694"
+                }
+              ],
+              "preview": [
+                "ng/sample-ng.png \u00b7 \uae30\uc874 0 / \uac00\uc838\uc62c 1"
+              ],
+              "imports": 2,
+              "writes": 0
+            },
+            {
+              "name": "actual-reload-resets-folder-preview",
+              "selected_folder": [
+                {
+                  "title": "",
+                  "text": "\ud3f4\ub354\ub97c \uc120\ud0dd\ud558\uc138\uc694"
+                },
+                {
+                  "title": "",
+                  "text": "mask_manifest.json \ud544\uc694"
+                }
+              ],
+              "preview": [],
+              "imports": 2,
+              "writes": 0
+            }
+          ],
+          "folder_dialog_calls": [
+            {
+              "result": {
+                "kind": "cancel"
+              },
+              "options": {
+                "title": "\uac00\uc838\uc62c \ub77c\ubca8 \ud3f4\ub354 \uc120\ud0dd",
+                "properties": [
+                  "openDirectory",
+                  "createDirectory"
+                ]
+              }
+            },
+            {
+              "result": {
+                "kind": "select",
+                "directory": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/unsent-labelme-0"
+              },
+              "options": {
+                "title": "\uac00\uc838\uc62c \ub77c\ubca8 \ud3f4\ub354 \uc120\ud0dd",
+                "properties": [
+                  "openDirectory",
+                  "createDirectory"
+                ]
+              }
+            },
+            {
+              "result": {
+                "kind": "cancel"
+              },
+              "options": {
+                "title": "\uac00\uc838\uc62c \ub77c\ubca8 \ud3f4\ub354 \uc120\ud0dd",
+                "properties": [
+                  "openDirectory",
+                  "createDirectory"
+                ]
+              }
+            },
+            {
+              "result": {
+                "kind": "error"
+              },
+              "options": {
+                "title": "\uac00\uc838\uc62c \ub77c\ubca8 \ud3f4\ub354 \uc120\ud0dd",
+                "properties": [
+                  "openDirectory",
+                  "createDirectory"
+                ]
+              }
+            },
+            {
+              "result": {
+                "kind": "select",
+                "directory": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/unsent-labelme-1"
+              },
+              "options": {
+                "title": "\uac00\uc838\uc62c \ub77c\ubca8 \ud3f4\ub354 \uc120\ud0dd",
+                "properties": [
+                  "openDirectory",
+                  "createDirectory"
+                ]
+              }
+            },
+            {
+              "result": {
+                "kind": "select",
+                "directory": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/unsent-labelme-1"
+              },
+              "options": {
+                "title": "\uac00\uc838\uc62c \ub77c\ubca8 \ud3f4\ub354 \uc120\ud0dd",
+                "properties": [
+                  "openDirectory",
+                  "createDirectory"
+                ]
+              }
+            }
+          ],
+          "metadata_before": [
+            {
+              "decode_error": null,
+              "image_uuid": "d71f382a-816e-566e-8bb5-0e8fd7b694ed",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/dataset/ng/sample-ng.png",
+              "relative_path": "ng/sample-ng.png",
+              "content_hash": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da",
+              "content_version": 1,
+              "width": 32,
+              "height": 32,
+              "revision": 1,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "unworked",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "24e080e7-5858-4bc9-9eaa-6a73fc3fe595",
+                  "at": "2026-10-08T00:23:26Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da"
+                  }
+                }
+              ],
+              "annotation_hash": null,
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [],
+                "review_status": "pending",
+                "annotation_actor": null,
+                "history": []
+              }
+            },
+            {
+              "decode_error": null,
+              "image_uuid": "6b3d82c8-0e11-5abc-9735-06526b8bd3aa",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/dataset/ok/sample-ok.png",
+              "relative_path": "ok/sample-ok.png",
+              "content_hash": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e",
+              "content_version": 1,
+              "width": 32,
+              "height": 32,
+              "revision": 1,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "unworked",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "2cbaad15-bf9f-4679-befe-f50cc6f87521",
+                  "at": "2026-10-08T00:23:26Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e"
+                  }
+                }
+              ],
+              "annotation_hash": null,
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [],
+                "review_status": "pending",
+                "annotation_actor": null,
+                "history": []
+              }
+            }
+          ],
+          "metadata_after": [
+            {
+              "decode_error": null,
+              "image_uuid": "d71f382a-816e-566e-8bb5-0e8fd7b694ed",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/dataset/ng/sample-ng.png",
+              "relative_path": "ng/sample-ng.png",
+              "content_hash": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da",
+              "content_version": 1,
+              "width": 32,
+              "height": 32,
+              "revision": 1,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "unworked",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "24e080e7-5858-4bc9-9eaa-6a73fc3fe595",
+                  "at": "2026-10-08T00:23:26Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da"
+                  }
+                }
+              ],
+              "annotation_hash": null,
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [],
+                "review_status": "pending",
+                "annotation_actor": null,
+                "history": []
+              }
+            },
+            {
+              "decode_error": null,
+              "image_uuid": "6b3d82c8-0e11-5abc-9735-06526b8bd3aa",
+              "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/dataset/ok/sample-ok.png",
+              "relative_path": "ok/sample-ok.png",
+              "content_hash": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e",
+              "content_version": 1,
+              "width": 32,
+              "height": 32,
+              "revision": 1,
+              "tags": [],
+              "product": "",
+              "lot": "",
+              "group": "",
+              "workflow_state": "unworked",
+              "usage_state": "active",
+              "reviewer": null,
+              "review_history": [],
+              "audit": [
+                {
+                  "id": "2cbaad15-bf9f-4679-befe-f50cc6f87521",
+                  "at": "2026-10-08T00:23:26Z",
+                  "actor": "system",
+                  "action": "registered",
+                  "revision": 1,
+                  "changes": {
+                    "content_hash": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e"
+                  }
+                }
+              ],
+              "annotation_hash": null,
+              "mask_hash": null,
+              "team": {
+                "assignment": null,
+                "edit_lease": null,
+                "reviews": [],
+                "review_status": "pending",
+                "annotation_actor": null,
+                "history": []
+              }
+            }
+          ],
+          "annotations_before": [
+            {
+              "image_id": "sample-ok",
+              "annotations": [],
+              "image_width": 32,
+              "image_height": 32,
+              "mask_file": null,
+              "metadata": {
+                "decode_error": null,
+                "image_uuid": "6b3d82c8-0e11-5abc-9735-06526b8bd3aa",
+                "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/dataset/ok/sample-ok.png",
+                "relative_path": "ok/sample-ok.png",
+                "content_hash": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e",
+                "content_version": 1,
+                "width": 32,
+                "height": 32,
+                "revision": 1,
+                "tags": [],
+                "product": "",
+                "lot": "",
+                "group": "",
+                "workflow_state": "unworked",
+                "usage_state": "active",
+                "reviewer": null,
+                "review_history": [],
+                "audit": [
+                  {
+                    "id": "2cbaad15-bf9f-4679-befe-f50cc6f87521",
+                    "at": "2026-10-08T00:23:26Z",
+                    "actor": "system",
+                    "action": "registered",
+                    "revision": 1,
+                    "changes": {
+                      "content_hash": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e"
+                    }
+                  }
+                ],
+                "annotation_hash": null,
+                "mask_hash": null,
+                "team": {
+                  "assignment": null,
+                  "edit_lease": null,
+                  "reviews": [],
+                  "review_status": "pending",
+                  "annotation_actor": null,
+                  "history": []
+                }
+              }
+            },
+            {
+              "image_id": "sample-ng",
+              "annotations": [],
+              "image_width": 32,
+              "image_height": 32,
+              "mask_file": null,
+              "metadata": {
+                "decode_error": null,
+                "image_uuid": "d71f382a-816e-566e-8bb5-0e8fd7b694ed",
+                "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/dataset/ng/sample-ng.png",
+                "relative_path": "ng/sample-ng.png",
+                "content_hash": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da",
+                "content_version": 1,
+                "width": 32,
+                "height": 32,
+                "revision": 1,
+                "tags": [],
+                "product": "",
+                "lot": "",
+                "group": "",
+                "workflow_state": "unworked",
+                "usage_state": "active",
+                "reviewer": null,
+                "review_history": [],
+                "audit": [
+                  {
+                    "id": "24e080e7-5858-4bc9-9eaa-6a73fc3fe595",
+                    "at": "2026-10-08T00:23:26Z",
+                    "actor": "system",
+                    "action": "registered",
+                    "revision": 1,
+                    "changes": {
+                      "content_hash": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da"
+                    }
+                  }
+                ],
+                "annotation_hash": null,
+                "mask_hash": null,
+                "team": {
+                  "assignment": null,
+                  "edit_lease": null,
+                  "reviews": [],
+                  "review_status": "pending",
+                  "annotation_actor": null,
+                  "history": []
+                }
+              }
+            }
+          ],
+          "annotations_after": [
+            {
+              "image_id": "sample-ok",
+              "annotations": [],
+              "image_width": 32,
+              "image_height": 32,
+              "mask_file": null,
+              "metadata": {
+                "decode_error": null,
+                "image_uuid": "6b3d82c8-0e11-5abc-9735-06526b8bd3aa",
+                "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/dataset/ok/sample-ok.png",
+                "relative_path": "ok/sample-ok.png",
+                "content_hash": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e",
+                "content_version": 1,
+                "width": 32,
+                "height": 32,
+                "revision": 1,
+                "tags": [],
+                "product": "",
+                "lot": "",
+                "group": "",
+                "workflow_state": "unworked",
+                "usage_state": "active",
+                "reviewer": null,
+                "review_history": [],
+                "audit": [
+                  {
+                    "id": "2cbaad15-bf9f-4679-befe-f50cc6f87521",
+                    "at": "2026-10-08T00:23:26Z",
+                    "actor": "system",
+                    "action": "registered",
+                    "revision": 1,
+                    "changes": {
+                      "content_hash": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e"
+                    }
+                  }
+                ],
+                "annotation_hash": null,
+                "mask_hash": null,
+                "team": {
+                  "assignment": null,
+                  "edit_lease": null,
+                  "reviews": [],
+                  "review_status": "pending",
+                  "annotation_actor": null,
+                  "history": []
+                }
+              }
+            },
+            {
+              "image_id": "sample-ng",
+              "annotations": [],
+              "image_width": 32,
+              "image_height": 32,
+              "mask_file": null,
+              "metadata": {
+                "decode_error": null,
+                "image_uuid": "d71f382a-816e-566e-8bb5-0e8fd7b694ed",
+                "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/dataset/ng/sample-ng.png",
+                "relative_path": "ng/sample-ng.png",
+                "content_hash": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da",
+                "content_version": 1,
+                "width": 32,
+                "height": 32,
+                "revision": 1,
+                "tags": [],
+                "product": "",
+                "lot": "",
+                "group": "",
+                "workflow_state": "unworked",
+                "usage_state": "active",
+                "reviewer": null,
+                "review_history": [],
+                "audit": [
+                  {
+                    "id": "24e080e7-5858-4bc9-9eaa-6a73fc3fe595",
+                    "at": "2026-10-08T00:23:26Z",
+                    "actor": "system",
+                    "action": "registered",
+                    "revision": 1,
+                    "changes": {
+                      "content_hash": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da"
+                    }
+                  }
+                ],
+                "annotation_hash": null,
+                "mask_hash": null,
+                "team": {
+                  "assignment": null,
+                  "edit_lease": null,
+                  "reviews": [],
+                  "review_status": "pending",
+                  "annotation_actor": null,
+                  "history": []
+                }
+              }
+            }
+          ],
+          "annotation_tree_before": {
+            "by_dataset/2727d0760534e02e/metadata/workflow.json": "5e7f529b5cdcd99ded7f898c1c76fcb380ed4a81f9e7f681b00332151656dcb3"
+          },
+          "annotation_tree_after": {
+            "by_dataset/2727d0760534e02e/metadata/workflow.json": "5e7f529b5cdcd99ded7f898c1c76fcb380ed4a81f9e7f681b00332151656dcb3"
+          },
+          "versions_before": {
+            "versions": []
+          },
+          "versions_after": {
+            "versions": []
+          },
+          "annotation_or_metadata_writes": [],
+          "handoff": {
+            "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-00c8b940-r0/dataset/ng/sample-ng.png",
+            "image_uuid": "d71f382a-816e-566e-8bb5-0e8fd7b694ed",
+            "revision": 1,
+            "source_sha256": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da",
+            "actual_raw_response_sha256": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da",
+            "raw_url": "http://127.0.0.1:51880/api/dataset/raw/sample-ng.png?file_path=%2FVolumes%2FModuVisionScratch-20261007-77052e76%2Fall-parent-closure%2Flabel-saved-view-root-adapter%2Fclean-source-01%2Fws%2F1-00c8b940-r0%2Fdataset%2Fng%2Fsample-ng.png",
+            "annotation_url": "http://127.0.0.1:51880/api/annotations/sample-ng?file_path=%2FVolumes%2FModuVisionScratch-20261007-77052e76%2Fall-parent-closure%2Flabel-saved-view-root-adapter%2Fclean-source-01%2Fws%2F1-00c8b940-r0%2Fdataset%2Fng%2Fsample-ng.png",
+            "annotations": [],
+            "stage": 2
+          },
+          "scope_cancel": {
+            "completed_unsent_preview_closed": true,
+            "inflight_transport_cancel_verified": false,
+            "zero_apply_POST": true
+          },
+          "actual_reload_resets_selected_folder_and_preview": true,
+          "replacement_folder_clears_previous_preview": true,
+          "source_ui": true,
+          "source_electron": true,
+          "native_folder_dialog_response_controlled": true,
+          "browser_folder_bridge_controlled": false,
+          "human_OS_picker_verified": false,
+          "generated_proposals_are_human_truth": false,
+          "label_or_review_write": false,
+          "actual_model_inference": false,
+          "quality_accepted": false,
+          "installed_target_verified": false,
+          "gpu_used": false,
+          "windows_excluded": true
+        },
+        "owned_cleanup": {
+          "electron_alive": false,
+          "backends": [
+            {
+              "port": 51880,
+              "pid": 77163,
+              "port_closed": true,
+              "pid_alive": false
+            }
+          ],
+          "logged_backend_pids": [
+            77163
+          ],
+          "logged_backend_pids_alive": [],
+          "backend_restarted": false,
+          "escaped": [],
+          "unowned_references": [],
+          "scan_error": null,
+          "close_timed_out": false
+        }
+      }
+    ],
+    "F059": [
+      {
+        "mode": "electron",
+        "receipt": "docs/verification/receipts/2026-10-08-f059-lifecycle-f3895ec-electron.json",
+        "receipt_sha256": "033f318a9ef49b07793bc2528d15c545b17f97b8b1a242470481c74299314231",
+        "observed_controls": {
+          "feature": "F059",
+          "actions": [
+            "native-saved-evaluation-family",
+            "native-saved-evaluation-group"
+          ],
+          "dimensions": {
+            "family_invalid": {
+              "controlled_optional_preference_fault": {
+                "key": "vision-evaluation-view:[\"bc3c3c9a\",\"/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source\",\"evaluation_history\",\"\",\"local\",\"local\"]",
+                "original": {
+                  "version": 1,
+                  "key": "vision-evaluation-view:[\"bc3c3c9a\",\"/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source\",\"evaluation_history\",\"\",\"local\",\"local\"]",
+                  "task": "segmentation",
+                  "taskExplicit": true,
+                  "labelsetId": "default",
+                  "group": "lot"
+                },
+                "injected": {
+                  "version": 1,
+                  "key": "vision-evaluation-view:[\"bc3c3c9a\",\"/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source\",\"evaluation_history\",\"\",\"local\",\"local\"]",
+                  "task": "controlled-unknown-family",
+                  "taskExplicit": true,
+                  "labelsetId": "default",
+                  "group": "lot"
+                }
+              },
+              "actual_renderer_reload": true,
+              "fallback": {
+                "task": "segmentation",
+                "labelset_id": "",
+                "group": "product"
+              },
+              "requests": [
+                {
+                  "task": "ocr",
+                  "labelset": null,
+                  "source": "./datasets/synthetic"
+                },
+                {
+                  "task": "ocr",
+                  "labelset": null,
+                  "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source"
+                },
+                {
+                  "task": "segmentation",
+                  "labelset": null,
+                  "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source"
+                }
+              ],
+              "selected_evaluation_id": "evaluation_cef634860e7c418fb08c8367b019e962",
+              "evidence_sha256": "1705c4bf46576114fd173df1d41e3b61a3597930930ea3578ba49e00509e9a63"
+            },
+            "group_invalid": {
+              "controlled_optional_preference_fault": {
+                "key": "vision-evaluation-view:[\"bc3c3c9a\",\"/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source\",\"evaluation_history\",\"\",\"local\",\"local\"]",
+                "original": {
+                  "version": 1,
+                  "key": "vision-evaluation-view:[\"bc3c3c9a\",\"/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source\",\"evaluation_history\",\"\",\"local\",\"local\"]",
+                  "task": "segmentation",
+                  "taskExplicit": true,
+                  "labelsetId": "default",
+                  "group": "lot"
+                },
+                "injected": {
+                  "version": 1,
+                  "key": "vision-evaluation-view:[\"bc3c3c9a\",\"/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source\",\"evaluation_history\",\"\",\"local\",\"local\"]",
+                  "task": "segmentation",
+                  "taskExplicit": true,
+                  "labelsetId": "default",
+                  "group": "controlled-unknown-group"
+                }
+              },
+              "actual_renderer_reload": true,
+              "fallback": {
+                "task": "segmentation",
+                "labelset_id": "",
+                "group": "product"
+              },
+              "requests": [
+                {
+                  "task": "ocr",
+                  "labelset": null,
+                  "source": "./datasets/synthetic"
+                },
+                {
+                  "task": "ocr",
+                  "labelset": null,
+                  "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source"
+                },
+                {
+                  "task": "segmentation",
+                  "labelset": null,
+                  "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source"
+                }
+              ],
+              "selected_evaluation_id": "evaluation_cef634860e7c418fb08c8367b019e962",
+              "evidence_sha256": "1705c4bf46576114fd173df1d41e3b61a3597930930ea3578ba49e00509e9a63"
+            },
+            "family_error": {
+              "controlled_http_status": 503,
+              "requests": [
+                {
+                  "url": "/api/evaluation/history?source_dataset_path=%2FVolumes%2FModuVisionScratch-20261007-77052e76%2Fall-parent-closure%2Flabel-saved-view-root-adapter%2Fclean-source-01%2Fws%2F1-1eb24fdc-r0%2Fsaved-view-source&task=classification&labelset_id=default",
+                  "status": 503,
+                  "forwarded": false
+                }
+              ],
+              "stale_record_identity_and_group_absent": true,
+              "reevaluation_disabled": true,
+              "explicit_family_change_recovered": true,
+              "recovered_evaluation_id": "evaluation_cef634860e7c418fb08c8367b019e962",
+              "evidence_sha256": "1705c4bf46576114fd173df1d41e3b61a3597930930ea3578ba49e00509e9a63"
+            },
+            "family_cancel": {
+              "popup_clicked": true,
+              "escape_pressed": true,
+              "retained_choice": "segmentation",
+              "view_preference_bytes_unchanged": true,
+              "extra_history_requests": 0,
+              "evaluation_id": "evaluation_cef634860e7c418fb08c8367b019e962",
+              "evidence_sha256": "1705c4bf46576114fd173df1d41e3b61a3597930930ea3578ba49e00509e9a63",
+              "request_or_job_cancellation_claimed": false
+            },
+            "group_cancel": {
+              "popup_clicked": true,
+              "escape_pressed": true,
+              "retained_choice": "lot",
+              "view_preference_bytes_unchanged": true,
+              "extra_history_requests": 0,
+              "evaluation_id": "evaluation_cef634860e7c418fb08c8367b019e962",
+              "evidence_sha256": "1705c4bf46576114fd173df1d41e3b61a3597930930ea3578ba49e00509e9a63",
+              "request_or_job_cancellation_claimed": false
+            },
+            "group_empty": {
+              "evaluation_id": "evaluation_82bf16821bbb401f9aa40e55b73e0b4b",
+              "evidence_sha256": "9a5fae4031da4165ea603c29f53cae928c20d0a649bb4b66c8650f4cc3f9ad0f",
+              "test_predictions": [],
+              "independently_read_grouped_errors": {
+                "product": {},
+                "lot": {},
+                "ground_truth": {}
+              },
+              "visible_empty_table": true,
+              "fabricated_binary_counts": false
+            },
+            "family_handoff": {
+              "actual_workflow_stage_leave": 0,
+              "actual_workflow_stage_return": 3,
+              "task": "classification",
+              "labelset_id": "default",
+              "group": "ground_truth",
+              "evaluation_id": "evaluation_82bf16821bbb401f9aa40e55b73e0b4b",
+              "evidence_sha256": "9a5fae4031da4165ea603c29f53cae928c20d0a649bb4b66c8650f4cc3f9ad0f",
+              "view_preference_bytes_unchanged": true
+            },
+            "group_handoff": {
+              "actual_workflow_stage_leave": 0,
+              "actual_workflow_stage_return": 3,
+              "task": "classification",
+              "labelset_id": "default",
+              "group": "ground_truth",
+              "evaluation_id": "evaluation_82bf16821bbb401f9aa40e55b73e0b4b",
+              "evidence_sha256": "9a5fae4031da4165ea603c29f53cae928c20d0a649bb4b66c8650f4cc3f9ad0f",
+              "view_preference_bytes_unchanged": true
+            }
+          },
+          "group_error_pending_no_separate_transport_or_submit": true,
+          "project_id": "bc3c3c9a",
+          "fixture": {
+            "kind": "controlled_saved_report_display_fixture",
+            "items": [
+              {
+                "variant": "valid",
+                "labelset_id": "default",
+                "record": {
+                  "evaluation_id": "evaluation_dc48f6cf90e24031921dd5e2a0511347",
+                  "created_at": 1791419022.8443918,
+                  "binding": {
+                    "source_dataset_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source",
+                    "task": "segmentation",
+                    "labelset_id": "default",
+                    "fixture_kind": "controlled_display_only_no_model_inference"
+                  },
+                  "result": {
+                    "job_id": "controlled-display-0-valid",
+                    "task": "segmentation",
+                    "fixture_kind": "controlled_display_only_no_model_inference",
+                    "test_predictions": [
+                      {
+                        "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source/part.png",
+                        "file_name": "part.png",
+                        "pixel_evidence": {
+                          "truth_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAU0lEQVR4nO3SsQnAMAwAwY8weITsP15GcJfKYNQkkIBV/HUCI8RjkOCYEXqqMV7Wia8VwwXsb9CeHpxpvv6+IFxAoX8wdl0QLsAG2IAKDSRJYnEDuxkDPXDJiQQAAAAASUVORK5CYII=",
+                          "prediction_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAUklEQVR4nO3QMQrAIAxA0d8g9Aje/3g9gpubiEuFFszw/xYIITwwg2tGuBeRtiEUXxXDA2hAAoPytlCX+fn7g8hl0E58EB5AAzRAgxwGZmbGqAPa0gNFx/xlCwAAAABJRU5ErkJggg==",
+                          "per_class": {
+                            "Scratch": {
+                              "class_id": 7,
+                              "tp": 192,
+                              "fp": 64,
+                              "fn": 64,
+                              "truth_area_px": 256,
+                              "predicted_area_px": 256
+                            },
+                            "Crack": {
+                              "class_id": 23,
+                              "tp": 320,
+                              "fp": 64,
+                              "fn": 64,
+                              "truth_area_px": 384,
+                              "predicted_area_px": 384
+                            }
+                          },
+                          "shape": [
+                            64,
+                            64
+                          ],
+                          "coordinate_space": "model_input_px",
+                          "mapping": {
+                            "kind": "full_image_resize",
+                            "source_size": [
+                              64,
+                              64
+                            ]
+                          }
+                        },
+                        "image_sha256": "642d4bc477afaf140dabd6373b03f33e0c61f447706873aa3490cb61e754b7d9"
+                      }
+                    ]
+                  },
+                  "grouped_errors": {
+                    "product": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "lot": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "ground_truth": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    }
+                  },
+                  "evidence_sha256": "b4e31636aa57b20122635ca52c6560c303590dd3d79a9673f6b6c00fb17673e5"
+                },
+                "report_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/userData/projects/owned_saved_evaluation_view_controls/reports/evaluations/evaluation_dc48f6cf90e24031921dd5e2a0511347.json",
+                "report_sha256": "2c2bc0d9dea4963dd1656660d265128246bab307fe8ac5c494798980afbf2fd1",
+                "truth_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/controlled-evaluation-inputs/0-truth.png",
+                "prediction_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/controlled-evaluation-inputs/0-prediction.png"
+              },
+              {
+                "variant": "valid",
+                "labelset_id": "ls_edaa08ddeda9",
+                "record": {
+                  "evaluation_id": "evaluation_e7f70a521f6b41ba9b12d9b099556ec6",
+                  "created_at": 1791419022.845925,
+                  "binding": {
+                    "source_dataset_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source",
+                    "task": "segmentation",
+                    "labelset_id": "ls_edaa08ddeda9",
+                    "fixture_kind": "controlled_display_only_no_model_inference"
+                  },
+                  "result": {
+                    "job_id": "controlled-display-1-valid",
+                    "task": "segmentation",
+                    "fixture_kind": "controlled_display_only_no_model_inference",
+                    "test_predictions": [
+                      {
+                        "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source/part.png",
+                        "file_name": "part.png",
+                        "pixel_evidence": {
+                          "truth_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAT0lEQVR4nO3SsQkAIAxE0TMIjuD+4zmCnViIkMZCUMH/qgThkCMSAABT0EJ2e3G7aZMRIDoQHeiFDuIYknuop35gBOh+B2EM3MHXAUBvoAGM4wNB5hqSVQAAAABJRU5ErkJggg==",
+                          "prediction_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAVklEQVR4nO2TsQnAMAwEz8KQEbL/eBnBnbtgRIpAHFBxV0kqHulAIALtjYQj9WOp46vFMAAdUMBBz4Mz9dffG0Q9B0+s/1/vhDAAHaADdLDFgYiIcDMBu3oDRSYdY38AAAAASUVORK5CYII=",
+                          "per_class": {
+                            "Scratch": {
+                              "class_id": 7,
+                              "tp": 0,
+                              "fp": 256,
+                              "fn": 256,
+                              "truth_area_px": 256,
+                              "predicted_area_px": 256
+                            },
+                            "Crack": {
+                              "class_id": 23,
+                              "tp": 0,
+                              "fp": 384,
+                              "fn": 384,
+                              "truth_area_px": 384,
+                              "predicted_area_px": 384
+                            }
+                          },
+                          "shape": [
+                            64,
+                            64
+                          ],
+                          "coordinate_space": "model_input_px",
+                          "mapping": {
+                            "kind": "full_image_resize",
+                            "source_size": [
+                              64,
+                              64
+                            ]
+                          }
+                        },
+                        "image_sha256": "642d4bc477afaf140dabd6373b03f33e0c61f447706873aa3490cb61e754b7d9"
+                      }
+                    ]
+                  },
+                  "grouped_errors": {
+                    "product": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "lot": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "ground_truth": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    }
+                  },
+                  "evidence_sha256": "1e1c355056a6b30faf3b61a39a5de64dc287497f03d798b87d862c25139ecec0"
+                },
+                "report_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/userData/projects/owned_saved_evaluation_view_controls/reports/evaluations/evaluation_e7f70a521f6b41ba9b12d9b099556ec6.json",
+                "report_sha256": "98fb1db1a3b2a8f23865a30643d35515b4e629ce39a2b2662de70f28625f5585",
+                "truth_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/controlled-evaluation-inputs/1-truth.png",
+                "prediction_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/controlled-evaluation-inputs/1-prediction.png"
+              },
+              {
+                "variant": "missing_truth",
+                "labelset_id": "ls_edaa08ddeda9",
+                "record": {
+                  "evaluation_id": "evaluation_66ca7dc5147142a592e0affd1e8a4b64",
+                  "created_at": 1791419022.847408,
+                  "binding": {
+                    "source_dataset_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source",
+                    "task": "segmentation",
+                    "labelset_id": "ls_edaa08ddeda9",
+                    "fixture_kind": "controlled_display_only_no_model_inference"
+                  },
+                  "result": {
+                    "job_id": "controlled-display-1-missing_truth",
+                    "task": "segmentation",
+                    "fixture_kind": "controlled_display_only_no_model_inference",
+                    "test_predictions": [
+                      {
+                        "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source/part.png",
+                        "file_name": "part.png",
+                        "pixel_evidence": {
+                          "prediction_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAVklEQVR4nO2TsQnAMAwEz8KQEbL/eBnBnbtgRIpAHFBxV0kqHulAIALtjYQj9WOp46vFMAAdUMBBz4Mz9dffG0Q9B0+s/1/vhDAAHaADdLDFgYiIcDMBu3oDRSYdY38AAAAASUVORK5CYII=",
+                          "per_class": {
+                            "Scratch": {
+                              "class_id": 7,
+                              "tp": 0,
+                              "fp": 256,
+                              "fn": 256,
+                              "truth_area_px": 256,
+                              "predicted_area_px": 256
+                            },
+                            "Crack": {
+                              "class_id": 23,
+                              "tp": 0,
+                              "fp": 384,
+                              "fn": 384,
+                              "truth_area_px": 384,
+                              "predicted_area_px": 384
+                            }
+                          },
+                          "shape": [
+                            64,
+                            64
+                          ],
+                          "coordinate_space": "model_input_px",
+                          "mapping": {
+                            "kind": "full_image_resize",
+                            "source_size": [
+                              64,
+                              64
+                            ]
+                          }
+                        },
+                        "image_sha256": "642d4bc477afaf140dabd6373b03f33e0c61f447706873aa3490cb61e754b7d9"
+                      }
+                    ]
+                  },
+                  "grouped_errors": {
+                    "product": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "lot": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "ground_truth": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    }
+                  },
+                  "evidence_sha256": "669b8428205acf9353b6c7591f04451b4fc7372108fc6b20dd9904021879df50"
+                },
+                "report_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/userData/projects/owned_saved_evaluation_view_controls/reports/evaluations/evaluation_66ca7dc5147142a592e0affd1e8a4b64.json",
+                "report_sha256": "9c38a4b7644e67bfb7d936fd19cc08fd44016a6c6f8506ae5da2cf4a0cdccfbb",
+                "truth_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/controlled-evaluation-inputs/1-truth.png",
+                "prediction_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/controlled-evaluation-inputs/1-prediction.png"
+              },
+              {
+                "variant": "unequal_size",
+                "labelset_id": "ls_edaa08ddeda9",
+                "record": {
+                  "evaluation_id": "evaluation_64381b8b8783428ba93e27b1475283f4",
+                  "created_at": 1791419022.848246,
+                  "binding": {
+                    "source_dataset_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source",
+                    "task": "segmentation",
+                    "labelset_id": "ls_edaa08ddeda9",
+                    "fixture_kind": "controlled_display_only_no_model_inference"
+                  },
+                  "result": {
+                    "job_id": "controlled-display-1-unequal_size",
+                    "task": "segmentation",
+                    "fixture_kind": "controlled_display_only_no_model_inference",
+                    "test_predictions": [
+                      {
+                        "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source/part.png",
+                        "file_name": "part.png",
+                        "pixel_evidence": {
+                          "truth_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAAAAABWESUoAAAAE0lEQVR4nGNgGAWjYBSMAgasAAAEIAABva+AFAAAAABJRU5ErkJggg==",
+                          "prediction_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAVklEQVR4nO2TsQnAMAwEz8KQEbL/eBnBnbtgRIpAHFBxV0kqHulAIALtjYQj9WOp46vFMAAdUMBBz4Mz9dffG0Q9B0+s/1/vhDAAHaADdLDFgYiIcDMBu3oDRSYdY38AAAAASUVORK5CYII=",
+                          "per_class": {
+                            "Scratch": {
+                              "class_id": 7,
+                              "tp": 0,
+                              "fp": 256,
+                              "fn": 256,
+                              "truth_area_px": 256,
+                              "predicted_area_px": 256
+                            },
+                            "Crack": {
+                              "class_id": 23,
+                              "tp": 0,
+                              "fp": 384,
+                              "fn": 384,
+                              "truth_area_px": 384,
+                              "predicted_area_px": 384
+                            }
+                          },
+                          "shape": [
+                            64,
+                            64
+                          ],
+                          "coordinate_space": "model_input_px",
+                          "mapping": {
+                            "kind": "full_image_resize",
+                            "source_size": [
+                              64,
+                              64
+                            ]
+                          }
+                        },
+                        "image_sha256": "642d4bc477afaf140dabd6373b03f33e0c61f447706873aa3490cb61e754b7d9"
+                      }
+                    ]
+                  },
+                  "grouped_errors": {
+                    "product": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "lot": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "ground_truth": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    }
+                  },
+                  "evidence_sha256": "5c9206bd316673d36dec7251438936ee25e765ac78670df0b66b12c2da4655de"
+                },
+                "report_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/userData/projects/owned_saved_evaluation_view_controls/reports/evaluations/evaluation_64381b8b8783428ba93e27b1475283f4.json",
+                "report_sha256": "fa400a8860da07c910d7d28b97f26b1d15b966e02cf53f5b60d9e0fa81c8fe2e",
+                "truth_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/controlled-evaluation-inputs/1-truth.png",
+                "prediction_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/controlled-evaluation-inputs/1-prediction.png"
+              },
+              {
+                "variant": "wrong_shape",
+                "labelset_id": "ls_edaa08ddeda9",
+                "record": {
+                  "evaluation_id": "evaluation_8b52e2db6ce34a178ac650702f98a432",
+                  "created_at": 1791419022.849681,
+                  "binding": {
+                    "source_dataset_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source",
+                    "task": "segmentation",
+                    "labelset_id": "ls_edaa08ddeda9",
+                    "fixture_kind": "controlled_display_only_no_model_inference"
+                  },
+                  "result": {
+                    "job_id": "controlled-display-1-wrong_shape",
+                    "task": "segmentation",
+                    "fixture_kind": "controlled_display_only_no_model_inference",
+                    "test_predictions": [
+                      {
+                        "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source/part.png",
+                        "file_name": "part.png",
+                        "pixel_evidence": {
+                          "truth_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAT0lEQVR4nO3SsQkAIAxE0TMIjuD+4zmCnViIkMZCUMH/qgThkCMSAABT0EJ2e3G7aZMRIDoQHeiFDuIYknuop35gBOh+B2EM3MHXAUBvoAGM4wNB5hqSVQAAAABJRU5ErkJggg==",
+                          "prediction_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAVklEQVR4nO2TsQnAMAwEz8KQEbL/eBnBnbtgRIpAHFBxV0kqHulAIALtjYQj9WOp46vFMAAdUMBBz4Mz9dffG0Q9B0+s/1/vhDAAHaADdLDFgYiIcDMBu3oDRSYdY38AAAAASUVORK5CYII=",
+                          "per_class": {
+                            "Scratch": {
+                              "class_id": 7,
+                              "tp": 0,
+                              "fp": 256,
+                              "fn": 256,
+                              "truth_area_px": 256,
+                              "predicted_area_px": 256
+                            },
+                            "Crack": {
+                              "class_id": 23,
+                              "tp": 0,
+                              "fp": 384,
+                              "fn": 384,
+                              "truth_area_px": 384,
+                              "predicted_area_px": 384
+                            }
+                          },
+                          "shape": [
+                            32,
+                            32
+                          ],
+                          "coordinate_space": "model_input_px",
+                          "mapping": {
+                            "kind": "full_image_resize",
+                            "source_size": [
+                              64,
+                              64
+                            ]
+                          }
+                        },
+                        "image_sha256": "642d4bc477afaf140dabd6373b03f33e0c61f447706873aa3490cb61e754b7d9"
+                      }
+                    ]
+                  },
+                  "grouped_errors": {
+                    "product": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "lot": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "ground_truth": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    }
+                  },
+                  "evidence_sha256": "483ab9a92dfcb6b85672621a285ac4a8916d378971df871c6f4bd408cb489630"
+                },
+                "report_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/userData/projects/owned_saved_evaluation_view_controls/reports/evaluations/evaluation_8b52e2db6ce34a178ac650702f98a432.json",
+                "report_sha256": "0f93b571d45681bfedef2f140a27249101d5200223d147b2f304e132a17c3475",
+                "truth_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/controlled-evaluation-inputs/1-truth.png",
+                "prediction_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/controlled-evaluation-inputs/1-prediction.png"
+              },
+              {
+                "variant": "missing_source_hash",
+                "labelset_id": "ls_edaa08ddeda9",
+                "record": {
+                  "evaluation_id": "evaluation_e554145b4a434fa5916538f8272428a8",
+                  "created_at": 1791419022.850139,
+                  "binding": {
+                    "source_dataset_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source",
+                    "task": "segmentation",
+                    "labelset_id": "ls_edaa08ddeda9",
+                    "fixture_kind": "controlled_display_only_no_model_inference"
+                  },
+                  "result": {
+                    "job_id": "controlled-display-1-missing_source_hash",
+                    "task": "segmentation",
+                    "fixture_kind": "controlled_display_only_no_model_inference",
+                    "test_predictions": [
+                      {
+                        "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source/part.png",
+                        "file_name": "part.png",
+                        "pixel_evidence": {
+                          "truth_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAT0lEQVR4nO3SsQkAIAxE0TMIjuD+4zmCnViIkMZCUMH/qgThkCMSAABT0EJ2e3G7aZMRIDoQHeiFDuIYknuop35gBOh+B2EM3MHXAUBvoAGM4wNB5hqSVQAAAABJRU5ErkJggg==",
+                          "prediction_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAVklEQVR4nO2TsQnAMAwEz8KQEbL/eBnBnbtgRIpAHFBxV0kqHulAIALtjYQj9WOp46vFMAAdUMBBz4Mz9dffG0Q9B0+s/1/vhDAAHaADdLDFgYiIcDMBu3oDRSYdY38AAAAASUVORK5CYII=",
+                          "per_class": {
+                            "Scratch": {
+                              "class_id": 7,
+                              "tp": 0,
+                              "fp": 256,
+                              "fn": 256,
+                              "truth_area_px": 256,
+                              "predicted_area_px": 256
+                            },
+                            "Crack": {
+                              "class_id": 23,
+                              "tp": 0,
+                              "fp": 384,
+                              "fn": 384,
+                              "truth_area_px": 384,
+                              "predicted_area_px": 384
+                            }
+                          },
+                          "shape": [
+                            64,
+                            64
+                          ],
+                          "coordinate_space": "model_input_px",
+                          "mapping": {
+                            "kind": "full_image_resize",
+                            "source_size": [
+                              64,
+                              64
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  "grouped_errors": {
+                    "product": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "lot": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "ground_truth": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    }
+                  },
+                  "evidence_sha256": "e621549ab00595dfadb7974d749bead23caeeb48929b26392230291b96e3ed47"
+                },
+                "report_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/userData/projects/owned_saved_evaluation_view_controls/reports/evaluations/evaluation_e554145b4a434fa5916538f8272428a8.json",
+                "report_sha256": "99f62deece289c98496ce261a0665eb08712393617738b2608416c62fd276c25",
+                "truth_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/controlled-evaluation-inputs/1-truth.png",
+                "prediction_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/controlled-evaluation-inputs/1-prediction.png"
+              },
+              {
+                "variant": "unsupported_mapping",
+                "labelset_id": "ls_edaa08ddeda9",
+                "record": {
+                  "evaluation_id": "evaluation_d6b3b14475e14901981943b13978801c",
+                  "created_at": 1791419022.8505511,
+                  "binding": {
+                    "source_dataset_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source",
+                    "task": "segmentation",
+                    "labelset_id": "ls_edaa08ddeda9",
+                    "fixture_kind": "controlled_display_only_no_model_inference"
+                  },
+                  "result": {
+                    "job_id": "controlled-display-1-unsupported_mapping",
+                    "task": "segmentation",
+                    "fixture_kind": "controlled_display_only_no_model_inference",
+                    "test_predictions": [
+                      {
+                        "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source/part.png",
+                        "file_name": "part.png",
+                        "pixel_evidence": {
+                          "truth_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAT0lEQVR4nO3SsQkAIAxE0TMIjuD+4zmCnViIkMZCUMH/qgThkCMSAABT0EJ2e3G7aZMRIDoQHeiFDuIYknuop35gBOh+B2EM3MHXAUBvoAGM4wNB5hqSVQAAAABJRU5ErkJggg==",
+                          "prediction_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAVklEQVR4nO2TsQnAMAwEz8KQEbL/eBnBnbtgRIpAHFBxV0kqHulAIALtjYQj9WOp46vFMAAdUMBBz4Mz9dffG0Q9B0+s/1/vhDAAHaADdLDFgYiIcDMBu3oDRSYdY38AAAAASUVORK5CYII=",
+                          "per_class": {
+                            "Scratch": {
+                              "class_id": 7,
+                              "tp": 0,
+                              "fp": 256,
+                              "fn": 256,
+                              "truth_area_px": 256,
+                              "predicted_area_px": 256
+                            },
+                            "Crack": {
+                              "class_id": 23,
+                              "tp": 0,
+                              "fp": 384,
+                              "fn": 384,
+                              "truth_area_px": 384,
+                              "predicted_area_px": 384
+                            }
+                          },
+                          "shape": [
+                            64,
+                            64
+                          ],
+                          "coordinate_space": "model_input_px",
+                          "mapping": {
+                            "kind": "unspecified_crop",
+                            "source_size": [
+                              64,
+                              64
+                            ]
+                          }
+                        },
+                        "image_sha256": "642d4bc477afaf140dabd6373b03f33e0c61f447706873aa3490cb61e754b7d9"
+                      }
+                    ]
+                  },
+                  "grouped_errors": {
+                    "product": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "lot": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "ground_truth": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    }
+                  },
+                  "evidence_sha256": "e787bd0921dd137307476903bf005ad48d9a99bb75f957446a4fc4cf7e1ab816"
+                },
+                "report_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/userData/projects/owned_saved_evaluation_view_controls/reports/evaluations/evaluation_d6b3b14475e14901981943b13978801c.json",
+                "report_sha256": "724bb39c4cf747d9edd0d1e95c380631e5c3def957e7123af3627c8209509357",
+                "truth_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/controlled-evaluation-inputs/1-truth.png",
+                "prediction_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/controlled-evaluation-inputs/1-prediction.png"
+              },
+              {
+                "variant": "selection_segmentation",
+                "labelset_id": "default",
+                "record": {
+                  "evaluation_id": "evaluation_cef634860e7c418fb08c8367b019e962",
+                  "created_at": 1791419022.8514078,
+                  "binding": {
+                    "source_dataset_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source",
+                    "task": "segmentation",
+                    "labelset_id": "default",
+                    "fixture_kind": "controlled_display_only_no_model_inference"
+                  },
+                  "result": {
+                    "job_id": "controlled-selection-segmentation",
+                    "task": "segmentation",
+                    "fixture_kind": "controlled_display_only_no_model_inference",
+                    "test_predictions": [
+                      {
+                        "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source/part.png",
+                        "file_name": "part.png",
+                        "pixel_evidence": {
+                          "truth_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAU0lEQVR4nO3SsQnAMAwAwY8weITsP15GcJfKYNQkkIBV/HUCI8RjkOCYEXqqMV7Wia8VwwXsb9CeHpxpvv6+IFxAoX8wdl0QLsAG2IAKDSRJYnEDuxkDPXDJiQQAAAAASUVORK5CYII=",
+                          "prediction_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAUklEQVR4nO3QMQrAIAxA0d8g9Aje/3g9gpubiEuFFszw/xYIITwwg2tGuBeRtiEUXxXDA2hAAoPytlCX+fn7g8hl0E58EB5AAzRAgxwGZmbGqAPa0gNFx/xlCwAAAABJRU5ErkJggg==",
+                          "per_class": {
+                            "Scratch": {
+                              "class_id": 7,
+                              "tp": 192,
+                              "fp": 64,
+                              "fn": 64,
+                              "truth_area_px": 256,
+                              "predicted_area_px": 256
+                            },
+                            "Crack": {
+                              "class_id": 23,
+                              "tp": 320,
+                              "fp": 64,
+                              "fn": 64,
+                              "truth_area_px": 384,
+                              "predicted_area_px": 384
+                            }
+                          },
+                          "shape": [
+                            64,
+                            64
+                          ],
+                          "coordinate_space": "model_input_px",
+                          "mapping": {
+                            "kind": "full_image_resize",
+                            "source_size": [
+                              64,
+                              64
+                            ]
+                          }
+                        },
+                        "image_sha256": "642d4bc477afaf140dabd6373b03f33e0c61f447706873aa3490cb61e754b7d9"
+                      }
+                    ]
+                  },
+                  "grouped_errors": {
+                    "product": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "lot": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "ground_truth": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    }
+                  },
+                  "evidence_sha256": "1705c4bf46576114fd173df1d41e3b61a3597930930ea3578ba49e00509e9a63"
+                },
+                "report_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/userData/projects/owned_saved_evaluation_view_controls/reports/evaluations/evaluation_cef634860e7c418fb08c8367b019e962.json",
+                "report_sha256": "6ab2f45b0112c0f64b32daf049523bffe72fbbc77bee8b9c88ebeecdde2de463"
+              },
+              {
+                "variant": "selection_classification",
+                "labelset_id": "default",
+                "record": {
+                  "evaluation_id": "evaluation_82bf16821bbb401f9aa40e55b73e0b4b",
+                  "created_at": 1791419022.8516748,
+                  "binding": {
+                    "source_dataset_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source",
+                    "task": "classification",
+                    "labelset_id": "default",
+                    "fixture_kind": "controlled_display_only_no_model_inference"
+                  },
+                  "result": {
+                    "job_id": "controlled-selection-classification",
+                    "task": "classification",
+                    "fixture_kind": "controlled_display_only_no_model_inference",
+                    "test_predictions": []
+                  },
+                  "grouped_errors": {
+                    "product": {},
+                    "lot": {},
+                    "ground_truth": {}
+                  },
+                  "evidence_sha256": "9a5fae4031da4165ea603c29f53cae928c20d0a649bb4b66c8650f4cc3f9ad0f"
+                },
+                "report_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/userData/projects/owned_saved_evaluation_view_controls/reports/evaluations/evaluation_82bf16821bbb401f9aa40e55b73e0b4b.json",
+                "report_sha256": "86f8ed5cd2d4c9147ba7fcf947f88324d5bd6dbe216ad23d3779473e8a387832"
+              }
+            ],
+            "inputs": [
+              {
+                "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/controlled-evaluation-inputs/0-prediction.png",
+                "sha256": "115e10d1b26ec9c5562a55db068210832181d4e1bb2f9e5a643a6f0b4dc70b2e"
+              },
+              {
+                "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/controlled-evaluation-inputs/0-truth.png",
+                "sha256": "201c48c4e7f73368f2e24a65b82808bf74bc003cb3a6e980717c6e6c1109adf4"
+              },
+              {
+                "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/controlled-evaluation-inputs/1-prediction.png",
+                "sha256": "17037a7f7df1939cdc2a1f665e35cfe2f7aae3c2cac9e1e6199d2af32b382c5c"
+              },
+              {
+                "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/controlled-evaluation-inputs/1-truth.png",
+                "sha256": "d550c8b6e2dbf4770f9712f74ef05c9789dcc5a44adcf38e6bff06a7533ba58c"
+              },
+              {
+                "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/controlled-evaluation-inputs/unequal-truth.png",
+                "sha256": "fe70b66dc65eb30141c7932818e28b15e182016d6172e79338864d1a4731c128"
+              }
+            ]
+          },
+          "original_source_sha256": "642d4bc477afaf140dabd6373b03f33e0c61f447706873aa3490cb61e754b7d9",
+          "project_json_sha256": "225ecad909bc4cbb4a1ba67b450b80ac60519b9ba64174a3a61f4ea3004b5fab",
+          "report_and_input_bytes_unchanged": true,
+          "evaluation_training_job_writes": [],
+          "history_queries": [
+            {
+              "task": "ocr",
+              "labelset": null,
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source"
+            },
+            {
+              "task": "segmentation",
+              "labelset": null,
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source"
+            },
+            {
+              "task": "segmentation",
+              "labelset": "default",
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source"
+            },
+            {
+              "task": "ocr",
+              "labelset": null,
+              "source": "./datasets/synthetic"
+            },
+            {
+              "task": "ocr",
+              "labelset": null,
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source"
+            },
+            {
+              "task": "segmentation",
+              "labelset": null,
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source"
+            },
+            {
+              "task": "segmentation",
+              "labelset": "default",
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source"
+            },
+            {
+              "task": "ocr",
+              "labelset": null,
+              "source": "./datasets/synthetic"
+            },
+            {
+              "task": "ocr",
+              "labelset": null,
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source"
+            },
+            {
+              "task": "segmentation",
+              "labelset": null,
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source"
+            },
+            {
+              "task": "segmentation",
+              "labelset": "default",
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source"
+            },
+            {
+              "task": "classification",
+              "labelset": "default",
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source"
+            },
+            {
+              "task": "segmentation",
+              "labelset": "default",
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source"
+            },
+            {
+              "task": "classification",
+              "labelset": "default",
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source"
+            },
+            {
+              "task": "ocr",
+              "labelset": null,
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source"
+            },
+            {
+              "task": "classification",
+              "labelset": "default",
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/1-1eb24fdc-r0/saved-view-source"
+            }
+          ],
+          "controlled_saved_reports": true,
+          "model_inference_executed": false,
+          "gpu_work_executed": false,
+          "human_label_approval": false,
+          "model_quality_approved": false,
+          "installed_native_or_windows_acceptance": false,
+          "whole_process_tree_verified": false,
+          "publisher_approved": false
+        },
+        "owned_cleanup": {
+          "electron_alive": false,
+          "backends": [
+            {
+              "port": 51911,
+              "pid": 77302,
+              "port_closed": true,
+              "pid_alive": false
+            }
+          ],
+          "logged_backend_pids": [
+            77302
+          ],
+          "logged_backend_pids_alive": [],
+          "backend_restarted": false,
+          "escaped": [],
+          "unowned_references": [],
+          "scan_error": null,
+          "close_timed_out": false
+        }
+      },
+      {
+        "mode": "browser",
+        "receipt": "docs/verification/receipts/2026-10-08-f059-lifecycle-f3895ec-browser.json",
+        "receipt_sha256": "3621b1067dcf169cd980fef5c25366412ba8a708d222c3a78b937b97972a80ca",
+        "observed_controls": {
+          "feature": "F059",
+          "actions": [
+            "native-saved-evaluation-family",
+            "native-saved-evaluation-group"
+          ],
+          "dimensions": {
+            "family_invalid": {
+              "controlled_optional_preference_fault": {
+                "key": "vision-evaluation-view:[\"012a474a\",\"/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source\",\"evaluation_history\",\"\",\"local\",\"local\"]",
+                "original": {
+                  "version": 1,
+                  "key": "vision-evaluation-view:[\"012a474a\",\"/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source\",\"evaluation_history\",\"\",\"local\",\"local\"]",
+                  "task": "segmentation",
+                  "taskExplicit": true,
+                  "labelsetId": "default",
+                  "group": "lot"
+                },
+                "injected": {
+                  "version": 1,
+                  "key": "vision-evaluation-view:[\"012a474a\",\"/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source\",\"evaluation_history\",\"\",\"local\",\"local\"]",
+                  "task": "controlled-unknown-family",
+                  "taskExplicit": true,
+                  "labelsetId": "default",
+                  "group": "lot"
+                }
+              },
+              "actual_renderer_reload": true,
+              "fallback": {
+                "task": "segmentation",
+                "labelset_id": "",
+                "group": "product"
+              },
+              "requests": [
+                {
+                  "task": "ocr",
+                  "labelset": null,
+                  "source": "./datasets/synthetic"
+                },
+                {
+                  "task": "ocr",
+                  "labelset": null,
+                  "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source"
+                },
+                {
+                  "task": "segmentation",
+                  "labelset": null,
+                  "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source"
+                }
+              ],
+              "selected_evaluation_id": "evaluation_0b19da82ab8f42b0876b69216f5fc429",
+              "evidence_sha256": "806a1c461dd084339f59eb2e2a0226b4b610c6a948d7872936fc1bc72ebfacb8"
+            },
+            "group_invalid": {
+              "controlled_optional_preference_fault": {
+                "key": "vision-evaluation-view:[\"012a474a\",\"/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source\",\"evaluation_history\",\"\",\"local\",\"local\"]",
+                "original": {
+                  "version": 1,
+                  "key": "vision-evaluation-view:[\"012a474a\",\"/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source\",\"evaluation_history\",\"\",\"local\",\"local\"]",
+                  "task": "segmentation",
+                  "taskExplicit": true,
+                  "labelsetId": "default",
+                  "group": "lot"
+                },
+                "injected": {
+                  "version": 1,
+                  "key": "vision-evaluation-view:[\"012a474a\",\"/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source\",\"evaluation_history\",\"\",\"local\",\"local\"]",
+                  "task": "segmentation",
+                  "taskExplicit": true,
+                  "labelsetId": "default",
+                  "group": "controlled-unknown-group"
+                }
+              },
+              "actual_renderer_reload": true,
+              "fallback": {
+                "task": "segmentation",
+                "labelset_id": "",
+                "group": "product"
+              },
+              "requests": [
+                {
+                  "task": "ocr",
+                  "labelset": null,
+                  "source": "./datasets/synthetic"
+                },
+                {
+                  "task": "ocr",
+                  "labelset": null,
+                  "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source"
+                },
+                {
+                  "task": "segmentation",
+                  "labelset": null,
+                  "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source"
+                }
+              ],
+              "selected_evaluation_id": "evaluation_0b19da82ab8f42b0876b69216f5fc429",
+              "evidence_sha256": "806a1c461dd084339f59eb2e2a0226b4b610c6a948d7872936fc1bc72ebfacb8"
+            },
+            "family_error": {
+              "controlled_http_status": 503,
+              "requests": [
+                {
+                  "url": "/api/evaluation/history?source_dataset_path=%2FVolumes%2FModuVisionScratch-20261007-77052e76%2Fall-parent-closure%2Flabel-saved-view-root-adapter%2Fclean-source-01%2Fws%2F0-b10df75f-r0%2Fsaved-view-source&task=classification&labelset_id=default",
+                  "status": 503,
+                  "forwarded": false
+                }
+              ],
+              "stale_record_identity_and_group_absent": true,
+              "reevaluation_disabled": true,
+              "explicit_family_change_recovered": true,
+              "recovered_evaluation_id": "evaluation_0b19da82ab8f42b0876b69216f5fc429",
+              "evidence_sha256": "806a1c461dd084339f59eb2e2a0226b4b610c6a948d7872936fc1bc72ebfacb8"
+            },
+            "family_cancel": {
+              "popup_clicked": true,
+              "escape_pressed": true,
+              "retained_choice": "segmentation",
+              "view_preference_bytes_unchanged": true,
+              "extra_history_requests": 0,
+              "evaluation_id": "evaluation_0b19da82ab8f42b0876b69216f5fc429",
+              "evidence_sha256": "806a1c461dd084339f59eb2e2a0226b4b610c6a948d7872936fc1bc72ebfacb8",
+              "request_or_job_cancellation_claimed": false
+            },
+            "group_cancel": {
+              "popup_clicked": true,
+              "escape_pressed": true,
+              "retained_choice": "lot",
+              "view_preference_bytes_unchanged": true,
+              "extra_history_requests": 0,
+              "evaluation_id": "evaluation_0b19da82ab8f42b0876b69216f5fc429",
+              "evidence_sha256": "806a1c461dd084339f59eb2e2a0226b4b610c6a948d7872936fc1bc72ebfacb8",
+              "request_or_job_cancellation_claimed": false
+            },
+            "group_empty": {
+              "evaluation_id": "evaluation_426bdfec02af4d3296ff0ad6d98a24f5",
+              "evidence_sha256": "1f538fccdbecded6a63f88a9d9ead7adf09847daacb34ae73a94fe41db570a91",
+              "test_predictions": [],
+              "independently_read_grouped_errors": {
+                "product": {},
+                "lot": {},
+                "ground_truth": {}
+              },
+              "visible_empty_table": true,
+              "fabricated_binary_counts": false
+            },
+            "family_handoff": {
+              "actual_workflow_stage_leave": 0,
+              "actual_workflow_stage_return": 3,
+              "task": "classification",
+              "labelset_id": "default",
+              "group": "ground_truth",
+              "evaluation_id": "evaluation_426bdfec02af4d3296ff0ad6d98a24f5",
+              "evidence_sha256": "1f538fccdbecded6a63f88a9d9ead7adf09847daacb34ae73a94fe41db570a91",
+              "view_preference_bytes_unchanged": true
+            },
+            "group_handoff": {
+              "actual_workflow_stage_leave": 0,
+              "actual_workflow_stage_return": 3,
+              "task": "classification",
+              "labelset_id": "default",
+              "group": "ground_truth",
+              "evaluation_id": "evaluation_426bdfec02af4d3296ff0ad6d98a24f5",
+              "evidence_sha256": "1f538fccdbecded6a63f88a9d9ead7adf09847daacb34ae73a94fe41db570a91",
+              "view_preference_bytes_unchanged": true
+            }
+          },
+          "group_error_pending_no_separate_transport_or_submit": true,
+          "project_id": "012a474a",
+          "fixture": {
+            "kind": "controlled_saved_report_display_fixture",
+            "items": [
+              {
+                "variant": "valid",
+                "labelset_id": "default",
+                "record": {
+                  "evaluation_id": "evaluation_589b154a88cc49d688e23852d778a566",
+                  "created_at": 1791418982.363486,
+                  "binding": {
+                    "source_dataset_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source",
+                    "task": "segmentation",
+                    "labelset_id": "default",
+                    "fixture_kind": "controlled_display_only_no_model_inference"
+                  },
+                  "result": {
+                    "job_id": "controlled-display-0-valid",
+                    "task": "segmentation",
+                    "fixture_kind": "controlled_display_only_no_model_inference",
+                    "test_predictions": [
+                      {
+                        "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source/part.png",
+                        "file_name": "part.png",
+                        "pixel_evidence": {
+                          "truth_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAU0lEQVR4nO3SsQnAMAwAwY8weITsP15GcJfKYNQkkIBV/HUCI8RjkOCYEXqqMV7Wia8VwwXsb9CeHpxpvv6+IFxAoX8wdl0QLsAG2IAKDSRJYnEDuxkDPXDJiQQAAAAASUVORK5CYII=",
+                          "prediction_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAUklEQVR4nO3QMQrAIAxA0d8g9Aje/3g9gpubiEuFFszw/xYIITwwg2tGuBeRtiEUXxXDA2hAAoPytlCX+fn7g8hl0E58EB5AAzRAgxwGZmbGqAPa0gNFx/xlCwAAAABJRU5ErkJggg==",
+                          "per_class": {
+                            "Scratch": {
+                              "class_id": 7,
+                              "tp": 192,
+                              "fp": 64,
+                              "fn": 64,
+                              "truth_area_px": 256,
+                              "predicted_area_px": 256
+                            },
+                            "Crack": {
+                              "class_id": 23,
+                              "tp": 320,
+                              "fp": 64,
+                              "fn": 64,
+                              "truth_area_px": 384,
+                              "predicted_area_px": 384
+                            }
+                          },
+                          "shape": [
+                            64,
+                            64
+                          ],
+                          "coordinate_space": "model_input_px",
+                          "mapping": {
+                            "kind": "full_image_resize",
+                            "source_size": [
+                              64,
+                              64
+                            ]
+                          }
+                        },
+                        "image_sha256": "642d4bc477afaf140dabd6373b03f33e0c61f447706873aa3490cb61e754b7d9"
+                      }
+                    ]
+                  },
+                  "grouped_errors": {
+                    "product": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "lot": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "ground_truth": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    }
+                  },
+                  "evidence_sha256": "783a31e454b5b21d27ce76f6a5c90d5ac54476c59b01d088cc8787ddf612ff45"
+                },
+                "report_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/projects/owned_saved_evaluation_view_controls/reports/evaluations/evaluation_589b154a88cc49d688e23852d778a566.json",
+                "report_sha256": "64ce7c2afd762c429e5ea1464ff6ad19774e3b01a578457fb9d49874df45029e",
+                "truth_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/controlled-evaluation-inputs/0-truth.png",
+                "prediction_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/controlled-evaluation-inputs/0-prediction.png"
+              },
+              {
+                "variant": "valid",
+                "labelset_id": "ls_3d2a8532b360",
+                "record": {
+                  "evaluation_id": "evaluation_d5c83ec8d7484bd29e9f076ca0521646",
+                  "created_at": 1791418982.364919,
+                  "binding": {
+                    "source_dataset_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source",
+                    "task": "segmentation",
+                    "labelset_id": "ls_3d2a8532b360",
+                    "fixture_kind": "controlled_display_only_no_model_inference"
+                  },
+                  "result": {
+                    "job_id": "controlled-display-1-valid",
+                    "task": "segmentation",
+                    "fixture_kind": "controlled_display_only_no_model_inference",
+                    "test_predictions": [
+                      {
+                        "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source/part.png",
+                        "file_name": "part.png",
+                        "pixel_evidence": {
+                          "truth_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAT0lEQVR4nO3SsQkAIAxE0TMIjuD+4zmCnViIkMZCUMH/qgThkCMSAABT0EJ2e3G7aZMRIDoQHeiFDuIYknuop35gBOh+B2EM3MHXAUBvoAGM4wNB5hqSVQAAAABJRU5ErkJggg==",
+                          "prediction_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAVklEQVR4nO2TsQnAMAwEz8KQEbL/eBnBnbtgRIpAHFBxV0kqHulAIALtjYQj9WOp46vFMAAdUMBBz4Mz9dffG0Q9B0+s/1/vhDAAHaADdLDFgYiIcDMBu3oDRSYdY38AAAAASUVORK5CYII=",
+                          "per_class": {
+                            "Scratch": {
+                              "class_id": 7,
+                              "tp": 0,
+                              "fp": 256,
+                              "fn": 256,
+                              "truth_area_px": 256,
+                              "predicted_area_px": 256
+                            },
+                            "Crack": {
+                              "class_id": 23,
+                              "tp": 0,
+                              "fp": 384,
+                              "fn": 384,
+                              "truth_area_px": 384,
+                              "predicted_area_px": 384
+                            }
+                          },
+                          "shape": [
+                            64,
+                            64
+                          ],
+                          "coordinate_space": "model_input_px",
+                          "mapping": {
+                            "kind": "full_image_resize",
+                            "source_size": [
+                              64,
+                              64
+                            ]
+                          }
+                        },
+                        "image_sha256": "642d4bc477afaf140dabd6373b03f33e0c61f447706873aa3490cb61e754b7d9"
+                      }
+                    ]
+                  },
+                  "grouped_errors": {
+                    "product": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "lot": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "ground_truth": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    }
+                  },
+                  "evidence_sha256": "c698c427122f6d77530063195e3c94b9531518bcda2ead4588a5f39a3acd71ba"
+                },
+                "report_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/projects/owned_saved_evaluation_view_controls/reports/evaluations/evaluation_d5c83ec8d7484bd29e9f076ca0521646.json",
+                "report_sha256": "79ef7242ec74a66830a963ae37313f338f9b5b546588340fbe4ab3a7db99ff7e",
+                "truth_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/controlled-evaluation-inputs/1-truth.png",
+                "prediction_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/controlled-evaluation-inputs/1-prediction.png"
+              },
+              {
+                "variant": "missing_truth",
+                "labelset_id": "ls_3d2a8532b360",
+                "record": {
+                  "evaluation_id": "evaluation_b0bdc66c579e45c5b84f28c0fdbcc4e0",
+                  "created_at": 1791418982.365807,
+                  "binding": {
+                    "source_dataset_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source",
+                    "task": "segmentation",
+                    "labelset_id": "ls_3d2a8532b360",
+                    "fixture_kind": "controlled_display_only_no_model_inference"
+                  },
+                  "result": {
+                    "job_id": "controlled-display-1-missing_truth",
+                    "task": "segmentation",
+                    "fixture_kind": "controlled_display_only_no_model_inference",
+                    "test_predictions": [
+                      {
+                        "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source/part.png",
+                        "file_name": "part.png",
+                        "pixel_evidence": {
+                          "prediction_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAVklEQVR4nO2TsQnAMAwEz8KQEbL/eBnBnbtgRIpAHFBxV0kqHulAIALtjYQj9WOp46vFMAAdUMBBz4Mz9dffG0Q9B0+s/1/vhDAAHaADdLDFgYiIcDMBu3oDRSYdY38AAAAASUVORK5CYII=",
+                          "per_class": {
+                            "Scratch": {
+                              "class_id": 7,
+                              "tp": 0,
+                              "fp": 256,
+                              "fn": 256,
+                              "truth_area_px": 256,
+                              "predicted_area_px": 256
+                            },
+                            "Crack": {
+                              "class_id": 23,
+                              "tp": 0,
+                              "fp": 384,
+                              "fn": 384,
+                              "truth_area_px": 384,
+                              "predicted_area_px": 384
+                            }
+                          },
+                          "shape": [
+                            64,
+                            64
+                          ],
+                          "coordinate_space": "model_input_px",
+                          "mapping": {
+                            "kind": "full_image_resize",
+                            "source_size": [
+                              64,
+                              64
+                            ]
+                          }
+                        },
+                        "image_sha256": "642d4bc477afaf140dabd6373b03f33e0c61f447706873aa3490cb61e754b7d9"
+                      }
+                    ]
+                  },
+                  "grouped_errors": {
+                    "product": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "lot": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "ground_truth": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    }
+                  },
+                  "evidence_sha256": "0f70c083229ba7eb7f43f92a5cb162dc8d1798e1c78474ec91db4358da810f6f"
+                },
+                "report_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/projects/owned_saved_evaluation_view_controls/reports/evaluations/evaluation_b0bdc66c579e45c5b84f28c0fdbcc4e0.json",
+                "report_sha256": "1757ccd58ab5bba8fef81eae5fdab2dde93301d50c73cf26863a1d8162c6953b",
+                "truth_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/controlled-evaluation-inputs/1-truth.png",
+                "prediction_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/controlled-evaluation-inputs/1-prediction.png"
+              },
+              {
+                "variant": "unequal_size",
+                "labelset_id": "ls_3d2a8532b360",
+                "record": {
+                  "evaluation_id": "evaluation_84cae1d63d8b47c4ae4dbc76f2108565",
+                  "created_at": 1791418982.3666759,
+                  "binding": {
+                    "source_dataset_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source",
+                    "task": "segmentation",
+                    "labelset_id": "ls_3d2a8532b360",
+                    "fixture_kind": "controlled_display_only_no_model_inference"
+                  },
+                  "result": {
+                    "job_id": "controlled-display-1-unequal_size",
+                    "task": "segmentation",
+                    "fixture_kind": "controlled_display_only_no_model_inference",
+                    "test_predictions": [
+                      {
+                        "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source/part.png",
+                        "file_name": "part.png",
+                        "pixel_evidence": {
+                          "truth_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAAAAABWESUoAAAAE0lEQVR4nGNgGAWjYBSMAgasAAAEIAABva+AFAAAAABJRU5ErkJggg==",
+                          "prediction_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAVklEQVR4nO2TsQnAMAwEz8KQEbL/eBnBnbtgRIpAHFBxV0kqHulAIALtjYQj9WOp46vFMAAdUMBBz4Mz9dffG0Q9B0+s/1/vhDAAHaADdLDFgYiIcDMBu3oDRSYdY38AAAAASUVORK5CYII=",
+                          "per_class": {
+                            "Scratch": {
+                              "class_id": 7,
+                              "tp": 0,
+                              "fp": 256,
+                              "fn": 256,
+                              "truth_area_px": 256,
+                              "predicted_area_px": 256
+                            },
+                            "Crack": {
+                              "class_id": 23,
+                              "tp": 0,
+                              "fp": 384,
+                              "fn": 384,
+                              "truth_area_px": 384,
+                              "predicted_area_px": 384
+                            }
+                          },
+                          "shape": [
+                            64,
+                            64
+                          ],
+                          "coordinate_space": "model_input_px",
+                          "mapping": {
+                            "kind": "full_image_resize",
+                            "source_size": [
+                              64,
+                              64
+                            ]
+                          }
+                        },
+                        "image_sha256": "642d4bc477afaf140dabd6373b03f33e0c61f447706873aa3490cb61e754b7d9"
+                      }
+                    ]
+                  },
+                  "grouped_errors": {
+                    "product": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "lot": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "ground_truth": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    }
+                  },
+                  "evidence_sha256": "d02143fae96d4566ae325893f6c7e96aa3da6af87848dfab2fd6ee53c94183d7"
+                },
+                "report_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/projects/owned_saved_evaluation_view_controls/reports/evaluations/evaluation_84cae1d63d8b47c4ae4dbc76f2108565.json",
+                "report_sha256": "e035b65d677775e4c68a69d0617da0c3add119ab0e58d372d9c1a57cc9741b7f",
+                "truth_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/controlled-evaluation-inputs/1-truth.png",
+                "prediction_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/controlled-evaluation-inputs/1-prediction.png"
+              },
+              {
+                "variant": "wrong_shape",
+                "labelset_id": "ls_3d2a8532b360",
+                "record": {
+                  "evaluation_id": "evaluation_328f4c8f87eb41799b57348fe1914a29",
+                  "created_at": 1791418982.3675132,
+                  "binding": {
+                    "source_dataset_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source",
+                    "task": "segmentation",
+                    "labelset_id": "ls_3d2a8532b360",
+                    "fixture_kind": "controlled_display_only_no_model_inference"
+                  },
+                  "result": {
+                    "job_id": "controlled-display-1-wrong_shape",
+                    "task": "segmentation",
+                    "fixture_kind": "controlled_display_only_no_model_inference",
+                    "test_predictions": [
+                      {
+                        "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source/part.png",
+                        "file_name": "part.png",
+                        "pixel_evidence": {
+                          "truth_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAT0lEQVR4nO3SsQkAIAxE0TMIjuD+4zmCnViIkMZCUMH/qgThkCMSAABT0EJ2e3G7aZMRIDoQHeiFDuIYknuop35gBOh+B2EM3MHXAUBvoAGM4wNB5hqSVQAAAABJRU5ErkJggg==",
+                          "prediction_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAVklEQVR4nO2TsQnAMAwEz8KQEbL/eBnBnbtgRIpAHFBxV0kqHulAIALtjYQj9WOp46vFMAAdUMBBz4Mz9dffG0Q9B0+s/1/vhDAAHaADdLDFgYiIcDMBu3oDRSYdY38AAAAASUVORK5CYII=",
+                          "per_class": {
+                            "Scratch": {
+                              "class_id": 7,
+                              "tp": 0,
+                              "fp": 256,
+                              "fn": 256,
+                              "truth_area_px": 256,
+                              "predicted_area_px": 256
+                            },
+                            "Crack": {
+                              "class_id": 23,
+                              "tp": 0,
+                              "fp": 384,
+                              "fn": 384,
+                              "truth_area_px": 384,
+                              "predicted_area_px": 384
+                            }
+                          },
+                          "shape": [
+                            32,
+                            32
+                          ],
+                          "coordinate_space": "model_input_px",
+                          "mapping": {
+                            "kind": "full_image_resize",
+                            "source_size": [
+                              64,
+                              64
+                            ]
+                          }
+                        },
+                        "image_sha256": "642d4bc477afaf140dabd6373b03f33e0c61f447706873aa3490cb61e754b7d9"
+                      }
+                    ]
+                  },
+                  "grouped_errors": {
+                    "product": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "lot": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "ground_truth": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    }
+                  },
+                  "evidence_sha256": "deaab913d0145ebb0a6ee7e0659724f5730e39babe855a41ff0ac6a99277933d"
+                },
+                "report_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/projects/owned_saved_evaluation_view_controls/reports/evaluations/evaluation_328f4c8f87eb41799b57348fe1914a29.json",
+                "report_sha256": "69cd1c256a0f3bfb9ce873af8127730694714bba1bd3e5d319bd28313ae50601",
+                "truth_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/controlled-evaluation-inputs/1-truth.png",
+                "prediction_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/controlled-evaluation-inputs/1-prediction.png"
+              },
+              {
+                "variant": "missing_source_hash",
+                "labelset_id": "ls_3d2a8532b360",
+                "record": {
+                  "evaluation_id": "evaluation_820341c7a0e940fab2cf2c842cbbb480",
+                  "created_at": 1791418982.36816,
+                  "binding": {
+                    "source_dataset_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source",
+                    "task": "segmentation",
+                    "labelset_id": "ls_3d2a8532b360",
+                    "fixture_kind": "controlled_display_only_no_model_inference"
+                  },
+                  "result": {
+                    "job_id": "controlled-display-1-missing_source_hash",
+                    "task": "segmentation",
+                    "fixture_kind": "controlled_display_only_no_model_inference",
+                    "test_predictions": [
+                      {
+                        "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source/part.png",
+                        "file_name": "part.png",
+                        "pixel_evidence": {
+                          "truth_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAT0lEQVR4nO3SsQkAIAxE0TMIjuD+4zmCnViIkMZCUMH/qgThkCMSAABT0EJ2e3G7aZMRIDoQHeiFDuIYknuop35gBOh+B2EM3MHXAUBvoAGM4wNB5hqSVQAAAABJRU5ErkJggg==",
+                          "prediction_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAVklEQVR4nO2TsQnAMAwEz8KQEbL/eBnBnbtgRIpAHFBxV0kqHulAIALtjYQj9WOp46vFMAAdUMBBz4Mz9dffG0Q9B0+s/1/vhDAAHaADdLDFgYiIcDMBu3oDRSYdY38AAAAASUVORK5CYII=",
+                          "per_class": {
+                            "Scratch": {
+                              "class_id": 7,
+                              "tp": 0,
+                              "fp": 256,
+                              "fn": 256,
+                              "truth_area_px": 256,
+                              "predicted_area_px": 256
+                            },
+                            "Crack": {
+                              "class_id": 23,
+                              "tp": 0,
+                              "fp": 384,
+                              "fn": 384,
+                              "truth_area_px": 384,
+                              "predicted_area_px": 384
+                            }
+                          },
+                          "shape": [
+                            64,
+                            64
+                          ],
+                          "coordinate_space": "model_input_px",
+                          "mapping": {
+                            "kind": "full_image_resize",
+                            "source_size": [
+                              64,
+                              64
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  "grouped_errors": {
+                    "product": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "lot": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "ground_truth": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    }
+                  },
+                  "evidence_sha256": "fac1870cd35ac772d40af9e5f959868bb9cdc3ffe87393e370bd18bb17600ba9"
+                },
+                "report_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/projects/owned_saved_evaluation_view_controls/reports/evaluations/evaluation_820341c7a0e940fab2cf2c842cbbb480.json",
+                "report_sha256": "dc1f481b306956ceb79eae3b28abc9d95b12856f1e459a6235fb9abe8ac13e0c",
+                "truth_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/controlled-evaluation-inputs/1-truth.png",
+                "prediction_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/controlled-evaluation-inputs/1-prediction.png"
+              },
+              {
+                "variant": "unsupported_mapping",
+                "labelset_id": "ls_3d2a8532b360",
+                "record": {
+                  "evaluation_id": "evaluation_1f60ef51e35b42cf8e9dabd664821678",
+                  "created_at": 1791418982.368549,
+                  "binding": {
+                    "source_dataset_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source",
+                    "task": "segmentation",
+                    "labelset_id": "ls_3d2a8532b360",
+                    "fixture_kind": "controlled_display_only_no_model_inference"
+                  },
+                  "result": {
+                    "job_id": "controlled-display-1-unsupported_mapping",
+                    "task": "segmentation",
+                    "fixture_kind": "controlled_display_only_no_model_inference",
+                    "test_predictions": [
+                      {
+                        "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source/part.png",
+                        "file_name": "part.png",
+                        "pixel_evidence": {
+                          "truth_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAT0lEQVR4nO3SsQkAIAxE0TMIjuD+4zmCnViIkMZCUMH/qgThkCMSAABT0EJ2e3G7aZMRIDoQHeiFDuIYknuop35gBOh+B2EM3MHXAUBvoAGM4wNB5hqSVQAAAABJRU5ErkJggg==",
+                          "prediction_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAVklEQVR4nO2TsQnAMAwEz8KQEbL/eBnBnbtgRIpAHFBxV0kqHulAIALtjYQj9WOp46vFMAAdUMBBz4Mz9dffG0Q9B0+s/1/vhDAAHaADdLDFgYiIcDMBu3oDRSYdY38AAAAASUVORK5CYII=",
+                          "per_class": {
+                            "Scratch": {
+                              "class_id": 7,
+                              "tp": 0,
+                              "fp": 256,
+                              "fn": 256,
+                              "truth_area_px": 256,
+                              "predicted_area_px": 256
+                            },
+                            "Crack": {
+                              "class_id": 23,
+                              "tp": 0,
+                              "fp": 384,
+                              "fn": 384,
+                              "truth_area_px": 384,
+                              "predicted_area_px": 384
+                            }
+                          },
+                          "shape": [
+                            64,
+                            64
+                          ],
+                          "coordinate_space": "model_input_px",
+                          "mapping": {
+                            "kind": "unspecified_crop",
+                            "source_size": [
+                              64,
+                              64
+                            ]
+                          }
+                        },
+                        "image_sha256": "642d4bc477afaf140dabd6373b03f33e0c61f447706873aa3490cb61e754b7d9"
+                      }
+                    ]
+                  },
+                  "grouped_errors": {
+                    "product": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "lot": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "ground_truth": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    }
+                  },
+                  "evidence_sha256": "398f537ca3f8efa29ca5371ba886aebb3f871feff1f8f6cb504a224759111662"
+                },
+                "report_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/projects/owned_saved_evaluation_view_controls/reports/evaluations/evaluation_1f60ef51e35b42cf8e9dabd664821678.json",
+                "report_sha256": "b4f366516c8acda1b9a0c0369d956319edbfad3e2763646f7105045593b1ffba",
+                "truth_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/controlled-evaluation-inputs/1-truth.png",
+                "prediction_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/controlled-evaluation-inputs/1-prediction.png"
+              },
+              {
+                "variant": "selection_segmentation",
+                "labelset_id": "default",
+                "record": {
+                  "evaluation_id": "evaluation_0b19da82ab8f42b0876b69216f5fc429",
+                  "created_at": 1791418982.369326,
+                  "binding": {
+                    "source_dataset_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source",
+                    "task": "segmentation",
+                    "labelset_id": "default",
+                    "fixture_kind": "controlled_display_only_no_model_inference"
+                  },
+                  "result": {
+                    "job_id": "controlled-selection-segmentation",
+                    "task": "segmentation",
+                    "fixture_kind": "controlled_display_only_no_model_inference",
+                    "test_predictions": [
+                      {
+                        "file_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source/part.png",
+                        "file_name": "part.png",
+                        "pixel_evidence": {
+                          "truth_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAU0lEQVR4nO3SsQnAMAwAwY8weITsP15GcJfKYNQkkIBV/HUCI8RjkOCYEXqqMV7Wia8VwwXsb9CeHpxpvv6+IFxAoX8wdl0QLsAG2IAKDSRJYnEDuxkDPXDJiQQAAAAASUVORK5CYII=",
+                          "prediction_mask": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAUklEQVR4nO3QMQrAIAxA0d8g9Aje/3g9gpubiEuFFszw/xYIITwwg2tGuBeRtiEUXxXDA2hAAoPytlCX+fn7g8hl0E58EB5AAzRAgxwGZmbGqAPa0gNFx/xlCwAAAABJRU5ErkJggg==",
+                          "per_class": {
+                            "Scratch": {
+                              "class_id": 7,
+                              "tp": 192,
+                              "fp": 64,
+                              "fn": 64,
+                              "truth_area_px": 256,
+                              "predicted_area_px": 256
+                            },
+                            "Crack": {
+                              "class_id": 23,
+                              "tp": 320,
+                              "fp": 64,
+                              "fn": 64,
+                              "truth_area_px": 384,
+                              "predicted_area_px": 384
+                            }
+                          },
+                          "shape": [
+                            64,
+                            64
+                          ],
+                          "coordinate_space": "model_input_px",
+                          "mapping": {
+                            "kind": "full_image_resize",
+                            "source_size": [
+                              64,
+                              64
+                            ]
+                          }
+                        },
+                        "image_sha256": "642d4bc477afaf140dabd6373b03f33e0c61f447706873aa3490cb61e754b7d9"
+                      }
+                    ]
+                  },
+                  "grouped_errors": {
+                    "product": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "lot": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    },
+                    "ground_truth": {
+                      "(unassigned)": {
+                        "samples": 1,
+                        "errors": 0,
+                        "misses": 0,
+                        "overkill": 0,
+                        "unknown_truth": 1
+                      }
+                    }
+                  },
+                  "evidence_sha256": "806a1c461dd084339f59eb2e2a0226b4b610c6a948d7872936fc1bc72ebfacb8"
+                },
+                "report_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/projects/owned_saved_evaluation_view_controls/reports/evaluations/evaluation_0b19da82ab8f42b0876b69216f5fc429.json",
+                "report_sha256": "850f2cda0dfa3720c41068e6bb232d18e7c629c8af7a0a8f05c3a6d7820d0b2e"
+              },
+              {
+                "variant": "selection_classification",
+                "labelset_id": "default",
+                "record": {
+                  "evaluation_id": "evaluation_426bdfec02af4d3296ff0ad6d98a24f5",
+                  "created_at": 1791418982.3695621,
+                  "binding": {
+                    "source_dataset_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source",
+                    "task": "classification",
+                    "labelset_id": "default",
+                    "fixture_kind": "controlled_display_only_no_model_inference"
+                  },
+                  "result": {
+                    "job_id": "controlled-selection-classification",
+                    "task": "classification",
+                    "fixture_kind": "controlled_display_only_no_model_inference",
+                    "test_predictions": []
+                  },
+                  "grouped_errors": {
+                    "product": {},
+                    "lot": {},
+                    "ground_truth": {}
+                  },
+                  "evidence_sha256": "1f538fccdbecded6a63f88a9d9ead7adf09847daacb34ae73a94fe41db570a91"
+                },
+                "report_path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/projects/owned_saved_evaluation_view_controls/reports/evaluations/evaluation_426bdfec02af4d3296ff0ad6d98a24f5.json",
+                "report_sha256": "b387b76ab07c092df1d8baa02b1c25bf99d0af67e7ed7dd87e51a4c24c127986"
+              }
+            ],
+            "inputs": [
+              {
+                "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/controlled-evaluation-inputs/0-prediction.png",
+                "sha256": "115e10d1b26ec9c5562a55db068210832181d4e1bb2f9e5a643a6f0b4dc70b2e"
+              },
+              {
+                "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/controlled-evaluation-inputs/0-truth.png",
+                "sha256": "201c48c4e7f73368f2e24a65b82808bf74bc003cb3a6e980717c6e6c1109adf4"
+              },
+              {
+                "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/controlled-evaluation-inputs/1-prediction.png",
+                "sha256": "17037a7f7df1939cdc2a1f665e35cfe2f7aae3c2cac9e1e6199d2af32b382c5c"
+              },
+              {
+                "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/controlled-evaluation-inputs/1-truth.png",
+                "sha256": "d550c8b6e2dbf4770f9712f74ef05c9789dcc5a44adcf38e6bff06a7533ba58c"
+              },
+              {
+                "path": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/controlled-evaluation-inputs/unequal-truth.png",
+                "sha256": "fe70b66dc65eb30141c7932818e28b15e182016d6172e79338864d1a4731c128"
+              }
+            ]
+          },
+          "original_source_sha256": "642d4bc477afaf140dabd6373b03f33e0c61f447706873aa3490cb61e754b7d9",
+          "project_json_sha256": "21320a54f7f799658f9cb8fddd1b0d20fdcba78658cd9eeeeba655c6cf64c231",
+          "report_and_input_bytes_unchanged": true,
+          "evaluation_training_job_writes": [],
+          "history_queries": [
+            {
+              "task": "ocr",
+              "labelset": null,
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source"
+            },
+            {
+              "task": "segmentation",
+              "labelset": null,
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source"
+            },
+            {
+              "task": "segmentation",
+              "labelset": "default",
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source"
+            },
+            {
+              "task": "ocr",
+              "labelset": null,
+              "source": "./datasets/synthetic"
+            },
+            {
+              "task": "ocr",
+              "labelset": null,
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source"
+            },
+            {
+              "task": "segmentation",
+              "labelset": null,
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source"
+            },
+            {
+              "task": "segmentation",
+              "labelset": "default",
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source"
+            },
+            {
+              "task": "ocr",
+              "labelset": null,
+              "source": "./datasets/synthetic"
+            },
+            {
+              "task": "ocr",
+              "labelset": null,
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source"
+            },
+            {
+              "task": "segmentation",
+              "labelset": null,
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source"
+            },
+            {
+              "task": "segmentation",
+              "labelset": "default",
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source"
+            },
+            {
+              "task": "classification",
+              "labelset": "default",
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source"
+            },
+            {
+              "task": "segmentation",
+              "labelset": "default",
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source"
+            },
+            {
+              "task": "classification",
+              "labelset": "default",
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source"
+            },
+            {
+              "task": "ocr",
+              "labelset": null,
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source"
+            },
+            {
+              "task": "classification",
+              "labelset": "default",
+              "source": "/Volumes/ModuVisionScratch-20261007-77052e76/all-parent-closure/label-saved-view-root-adapter/clean-source-01/ws/0-b10df75f-r0/saved-view-source"
+            }
+          ],
+          "controlled_saved_reports": true,
+          "model_inference_executed": false,
+          "gpu_work_executed": false,
+          "human_label_approval": false,
+          "model_quality_approved": false,
+          "installed_native_or_windows_acceptance": false,
+          "whole_process_tree_verified": false,
+          "publisher_approved": false
+        },
+        "owned_cleanup": {
+          "exited": true,
+          "exitCode": 0,
+          "signal": null,
+          "exitedBeforeStop": false,
+          "forced": false,
+          "forcedReason": null,
+          "groupAlive": false,
+          "escaped": [],
+          "unownedReferences": [],
+          "scanError": null,
+          "durationMs": 1137,
+          "stoppedAt": "2026-10-08T00:23:07.798Z",
+          "healthy_at_end": true,
+          "port_closed": true,
+          "pid_alive": false
+        }
+      }
+    ]
+  },
+  "proof_hashes": {
+    "command.json": "6173af0f9d18c79be92364b0a4771428d614a58700b0b154ff7948eba70ee492",
+    "result.log": "57aae810a88591c53b51342348e4499380aedc8c66d60132f5f39c6032b58e3b",
+    "source-before.json": "2513a40f4be95704e7ac75ce4a2563c2abecf0bbe25483ffe0d274b010cbe188",
+    "source-after.json": "2513a40f4be95704e7ac75ce4a2563c2abecf0bbe25483ffe0d274b010cbe188"
+  },
+  "report_sha256": "e40432394fd9dc8b72e2d11181cee00d9fe86d40d48a1dc16ce55d7b7266c55e",
+  "teardown_sha256": "015635c7c7c217dab076ed283ed9164d6f037840b5c6d78bfde5920ef028e025",
+  "root_reviews": {
+    "F117": "c237cd6bf4b736b4965468b90d54c39e8355a0b1b950ad01bd362e27aeffcfdd",
+    "F059": "2a101fd71687c0d9d75f8415e81694d832060bc0f9915ee71003a375ccd478dc"
+  },
+  "acceptance": {
+    "new_existing_curated_scenarios": 15,
+    "curated_actions_added": 0,
+    "quality": false,
+    "human_truth": false,
+    "model_inference": false,
+    "installed_target": false,
+    "publisher_or_release": false,
+    "whole_tree": false,
+    "whole_feature": false
+  },
+  "scope": [
+    "Folder responses and one exact503 are controlled inputs, while previews/readback/backend and source Electron are actual.",
+    "Cancel distinguishes completed unsent preview abandonment and selection popup Escape from in-flight HTTP/job cancellation.",
+    "Saved reports and proposed labels are generated display-only fixtures; no label apply or model run.",
+    "F059 group error remains pending because this synchronous aggregation has no separate transport failure control."
+  ]
+}
