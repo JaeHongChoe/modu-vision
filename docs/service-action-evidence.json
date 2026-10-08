@@ -48,7 +48,7 @@
   "src/renderer/components/flowchart/CustomNode.tsx": "c0219bf9a011c5a86c7122bd100f5e88259b425164cee6d6a3e93548482e7fad",
   "src/renderer/components/flowchart/ImageRoiEditor.tsx": "498b466db43f32795b63f7f5cabb5bed5549c67d7be5d3d1e611b037dbe0016c",
   "src/renderer/components/dataset/DatasetStudio.tsx": "40def65268609d4cc4ad1152564904a8deaf56219d6fc16e5549e56041614208",
-  "src/renderer/components/evaluation/EvaluationHistoryPanel.tsx": "aa5325b16c0f836c038b286679b20d25812580cc0992880f287754995d8eebca",
+  "src/renderer/components/evaluation/EvaluationHistoryPanel.tsx": "219173ae3e376dc839b6bdf1c0a41f10d49e571ccd99cdcfed4358a98a4d4923",
   "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx": "9ab0454b4433afdd10fc9c6cbcc12e0ac4c71e3f43e0ed0aa829cd687d38672e",
   "src/renderer/components/runtime/FleetPanel.tsx": "572144e60bbe38efc208ca2d2d19e87de58793da783269e5498970c1d97243ab",
   "src/renderer/components/runtime/PortableUpdatePanel.tsx": "4f747509c427ab35d41745d3da7f26e50a3c3f3a93acdca35beb5fee9145796b",
@@ -2983,16 +2983,322 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+         "kind": "click",
+         "action": "모델별 저장 평가",
+         "expected": "The actual OCR family with no stored reports returns an empty200 and shows no saved record.",
+         "observed": "browser: The actual OCR family with no stored reports returns an empty200 and shows no saved record. Full original files, complete annotations/settings/API records and controlled report hashes remained equal; no model-quality or installed-release acceptance inferred.",
+         "reviewer": "Root actual clean-source readback plus independent strict qualification, original cleanup and full unfiltered custody. Controlled fixtures; human quality and whole parent acceptance pending.",
+         "test": "scripts/e2e/saved-evaluation-selection-lifecycle.spec.ts::saved evaluation choices refuse missing preferences, empty scopes and catalog errors while actual picker dismissal and stage return preserve exact records",
+         "receipt": "2026-10-08-saved-selection-lifecycle-4ce9550-browser.json",
+         "receipt_sha256": "67f17fee2f466fba3448dd3bff86e7f8f0b3ba94630ebeaa8478f725cc66eb79",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "e3bcb32c5c703251c783b01128d5e5d35cbf3bf53cfda0e5cdedbe233d277591"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "bb8747c2b894696ac5bb1ef20443d33b1cb5e4f75722eb6f11e579887db3ff9f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8234127a9159fb32bd69d157ac4be2b02385ef1d1f3d190572cee4a9d1a83d5e"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "5c2c4d7ee6035ac374d6e94104abb39e568fa5d9637cc6133adb2d39675c053c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "0c98ce1e0615160b6af22df5d78ab656f397c4bdfeba7069e9381c967ab3d0e6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "6351e7e81789932fe46a26301bc0bc825a19c47a9c807bef2648d8774ea54f02"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "8a6b1d6a674661f7339782d1587687dcdaea15aa59432bbed428e612d18a6e94"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "0a6ec533b08171eb6522c06d8b48189886328abff3a02e4e4c0abf263e689688"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "4462dd909d742e6e0b20bdbc352ae7fea027f6e8cf851d5acc190ce5bf855997"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+         "kind": "click",
+         "action": "모델별 저장 평가",
+         "expected": "The actual OCR family with no stored reports returns an empty200 and shows no saved record.",
+         "observed": "electron: The actual OCR family with no stored reports returns an empty200 and shows no saved record. Full original files, complete annotations/settings/API records and controlled report hashes remained equal; no model-quality or installed-release acceptance inferred.",
+         "reviewer": "Root actual clean-source readback plus independent strict qualification, original cleanup and full unfiltered custody. Controlled fixtures; human quality and whole parent acceptance pending.",
+         "test": "scripts/e2e/saved-evaluation-selection-lifecycle.spec.ts::native saved evaluation choices refuse missing preferences, empty scopes and catalog errors while actual picker dismissal and stage return preserve exact records",
+         "receipt": "2026-10-08-saved-selection-lifecycle-4ce9550-electron.json",
+         "receipt_sha256": "7e65d958a4b6b1a95f1255b70db3a5c5bde1879fa5a9cd5b0f139e4847c9d379",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8eca2728a4ef0fc0dedcd1bf7e19d7f061d9f3199bab3f143088b517b1de19ab"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "fcbd1f525ea459de365442a1cf154f614d7da904a8e754b69a3d1855c9f8f38e"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "cd8a454a6a98a21b9c49a9d886baa225c440a119c1d6310897681659f6bb0ec3"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "1ca929c48055130f4662c8bf5f3f8572e1490874551e82a4742d793a5bacfe95"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "374de303f5a17cd311780a5a002a02f053931bf900d89d0eb2433849ff249150"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "16feb9d08acd134215c5c10d2fc05ca490f236b8876d7f33b3d2f54c23c851b5"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "5e7c3c062473bb48c361ae036fc61db4e7b84f7bc4aad68c7a8fa5e5ea3aa104"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "a22a4ae4bb94cb4b563ab3a478f7e2550f363e6e6c13f374768f4f5c9f470abf"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "588cba828fdeee0ca6754f6794b93e8cf348f41ca25812bcef416baf239865ad"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+         "kind": "click",
+         "action": "모델별 저장 평가",
+         "expected": "A missing optional stored record preference survives actual reload and refuses silent replacement; explicit valid selection restores the exact record.",
+         "observed": "browser: A missing optional stored record preference survives actual reload and refuses silent replacement; explicit valid selection restores the exact record. Full original files, complete annotations/settings/API records and controlled report hashes remained equal; no model-quality or installed-release acceptance inferred.",
+         "reviewer": "Root actual clean-source readback plus independent strict qualification, original cleanup and full unfiltered custody. Controlled fixtures; human quality and whole parent acceptance pending.",
+         "test": "scripts/e2e/saved-evaluation-selection-lifecycle.spec.ts::saved evaluation choices refuse missing preferences, empty scopes and catalog errors while actual picker dismissal and stage return preserve exact records",
+         "receipt": "2026-10-08-saved-selection-lifecycle-4ce9550-browser.json",
+         "receipt_sha256": "67f17fee2f466fba3448dd3bff86e7f8f0b3ba94630ebeaa8478f725cc66eb79",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "e3bcb32c5c703251c783b01128d5e5d35cbf3bf53cfda0e5cdedbe233d277591"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "bb8747c2b894696ac5bb1ef20443d33b1cb5e4f75722eb6f11e579887db3ff9f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8234127a9159fb32bd69d157ac4be2b02385ef1d1f3d190572cee4a9d1a83d5e"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "5c2c4d7ee6035ac374d6e94104abb39e568fa5d9637cc6133adb2d39675c053c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "0c98ce1e0615160b6af22df5d78ab656f397c4bdfeba7069e9381c967ab3d0e6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "6351e7e81789932fe46a26301bc0bc825a19c47a9c807bef2648d8774ea54f02"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "8a6b1d6a674661f7339782d1587687dcdaea15aa59432bbed428e612d18a6e94"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "0a6ec533b08171eb6522c06d8b48189886328abff3a02e4e4c0abf263e689688"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "4462dd909d742e6e0b20bdbc352ae7fea027f6e8cf851d5acc190ce5bf855997"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+         "kind": "click",
+         "action": "모델별 저장 평가",
+         "expected": "A missing optional stored record preference survives actual reload and refuses silent replacement; explicit valid selection restores the exact record.",
+         "observed": "electron: A missing optional stored record preference survives actual reload and refuses silent replacement; explicit valid selection restores the exact record. Full original files, complete annotations/settings/API records and controlled report hashes remained equal; no model-quality or installed-release acceptance inferred.",
+         "reviewer": "Root actual clean-source readback plus independent strict qualification, original cleanup and full unfiltered custody. Controlled fixtures; human quality and whole parent acceptance pending.",
+         "test": "scripts/e2e/saved-evaluation-selection-lifecycle.spec.ts::native saved evaluation choices refuse missing preferences, empty scopes and catalog errors while actual picker dismissal and stage return preserve exact records",
+         "receipt": "2026-10-08-saved-selection-lifecycle-4ce9550-electron.json",
+         "receipt_sha256": "7e65d958a4b6b1a95f1255b70db3a5c5bde1879fa5a9cd5b0f139e4847c9d379",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8eca2728a4ef0fc0dedcd1bf7e19d7f061d9f3199bab3f143088b517b1de19ab"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "fcbd1f525ea459de365442a1cf154f614d7da904a8e754b69a3d1855c9f8f38e"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "cd8a454a6a98a21b9c49a9d886baa225c440a119c1d6310897681659f6bb0ec3"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "1ca929c48055130f4662c8bf5f3f8572e1490874551e82a4742d793a5bacfe95"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "374de303f5a17cd311780a5a002a02f053931bf900d89d0eb2433849ff249150"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "16feb9d08acd134215c5c10d2fc05ca490f236b8876d7f33b3d2f54c23c851b5"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "5e7c3c062473bb48c361ae036fc61db4e7b84f7bc4aad68c7a8fa5e5ea3aa104"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "a22a4ae4bb94cb4b563ab3a478f7e2550f363e6e6c13f374768f4f5c9f470abf"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "588cba828fdeee0ca6754f6794b93e8cf348f41ca25812bcef416baf239865ad"
+          }
+         ]
+        }
+       ]
       },
       "error": {
        "state": "pending"
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+         "kind": "click",
+         "action": "모델별 저장 평가",
+         "expected": "Opening the actual record picker then Escape dismisses it with the exact choice and preferences unchanged; no request/job cancellation is claimed.",
+         "observed": "browser: Opening the actual record picker then Escape dismisses it with the exact choice and preferences unchanged; no request/job cancellation is claimed. Full original files, complete annotations/settings/API records and controlled report hashes remained equal; no model-quality or installed-release acceptance inferred.",
+         "reviewer": "Root actual clean-source readback plus independent strict qualification, original cleanup and full unfiltered custody. Controlled fixtures; human quality and whole parent acceptance pending.",
+         "test": "scripts/e2e/saved-evaluation-selection-lifecycle.spec.ts::saved evaluation choices refuse missing preferences, empty scopes and catalog errors while actual picker dismissal and stage return preserve exact records",
+         "receipt": "2026-10-08-saved-selection-lifecycle-4ce9550-browser.json",
+         "receipt_sha256": "67f17fee2f466fba3448dd3bff86e7f8f0b3ba94630ebeaa8478f725cc66eb79",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "e3bcb32c5c703251c783b01128d5e5d35cbf3bf53cfda0e5cdedbe233d277591"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "bb8747c2b894696ac5bb1ef20443d33b1cb5e4f75722eb6f11e579887db3ff9f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8234127a9159fb32bd69d157ac4be2b02385ef1d1f3d190572cee4a9d1a83d5e"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "5c2c4d7ee6035ac374d6e94104abb39e568fa5d9637cc6133adb2d39675c053c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "0c98ce1e0615160b6af22df5d78ab656f397c4bdfeba7069e9381c967ab3d0e6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "6351e7e81789932fe46a26301bc0bc825a19c47a9c807bef2648d8774ea54f02"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "8a6b1d6a674661f7339782d1587687dcdaea15aa59432bbed428e612d18a6e94"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "0a6ec533b08171eb6522c06d8b48189886328abff3a02e4e4c0abf263e689688"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "4462dd909d742e6e0b20bdbc352ae7fea027f6e8cf851d5acc190ce5bf855997"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+         "kind": "click",
+         "action": "모델별 저장 평가",
+         "expected": "Opening the actual record picker then Escape dismisses it with the exact choice and preferences unchanged; no request/job cancellation is claimed.",
+         "observed": "electron: Opening the actual record picker then Escape dismisses it with the exact choice and preferences unchanged; no request/job cancellation is claimed. Full original files, complete annotations/settings/API records and controlled report hashes remained equal; no model-quality or installed-release acceptance inferred.",
+         "reviewer": "Root actual clean-source readback plus independent strict qualification, original cleanup and full unfiltered custody. Controlled fixtures; human quality and whole parent acceptance pending.",
+         "test": "scripts/e2e/saved-evaluation-selection-lifecycle.spec.ts::native saved evaluation choices refuse missing preferences, empty scopes and catalog errors while actual picker dismissal and stage return preserve exact records",
+         "receipt": "2026-10-08-saved-selection-lifecycle-4ce9550-electron.json",
+         "receipt_sha256": "7e65d958a4b6b1a95f1255b70db3a5c5bde1879fa5a9cd5b0f139e4847c9d379",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8eca2728a4ef0fc0dedcd1bf7e19d7f061d9f3199bab3f143088b517b1de19ab"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "fcbd1f525ea459de365442a1cf154f614d7da904a8e754b69a3d1855c9f8f38e"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "cd8a454a6a98a21b9c49a9d886baa225c440a119c1d6310897681659f6bb0ec3"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "1ca929c48055130f4662c8bf5f3f8572e1490874551e82a4742d793a5bacfe95"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "374de303f5a17cd311780a5a002a02f053931bf900d89d0eb2433849ff249150"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "16feb9d08acd134215c5c10d2fc05ca490f236b8876d7f33b3d2f54c23c851b5"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "5e7c3c062473bb48c361ae036fc61db4e7b84f7bc4aad68c7a8fa5e5ea3aa104"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "a22a4ae4bb94cb4b563ab3a478f7e2550f363e6e6c13f374768f4f5c9f470abf"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "588cba828fdeee0ca6754f6794b93e8cf348f41ca25812bcef416baf239865ad"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
        "state": "verified",
@@ -3038,7 +3344,109 @@
        ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+         "kind": "click",
+         "action": "모델별 저장 평가",
+         "expected": "Dataset stage return retains the explicitly selected alternate record, complete identity, evidence hash, result and preferences.",
+         "observed": "browser: Dataset stage return retains the explicitly selected alternate record, complete identity, evidence hash, result and preferences. Full original files, complete annotations/settings/API records and controlled report hashes remained equal; no model-quality or installed-release acceptance inferred.",
+         "reviewer": "Root actual clean-source readback plus independent strict qualification, original cleanup and full unfiltered custody. Controlled fixtures; human quality and whole parent acceptance pending.",
+         "test": "scripts/e2e/saved-evaluation-selection-lifecycle.spec.ts::saved evaluation choices refuse missing preferences, empty scopes and catalog errors while actual picker dismissal and stage return preserve exact records",
+         "receipt": "2026-10-08-saved-selection-lifecycle-4ce9550-browser.json",
+         "receipt_sha256": "67f17fee2f466fba3448dd3bff86e7f8f0b3ba94630ebeaa8478f725cc66eb79",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "e3bcb32c5c703251c783b01128d5e5d35cbf3bf53cfda0e5cdedbe233d277591"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "bb8747c2b894696ac5bb1ef20443d33b1cb5e4f75722eb6f11e579887db3ff9f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8234127a9159fb32bd69d157ac4be2b02385ef1d1f3d190572cee4a9d1a83d5e"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "5c2c4d7ee6035ac374d6e94104abb39e568fa5d9637cc6133adb2d39675c053c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "0c98ce1e0615160b6af22df5d78ab656f397c4bdfeba7069e9381c967ab3d0e6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "6351e7e81789932fe46a26301bc0bc825a19c47a9c807bef2648d8774ea54f02"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "8a6b1d6a674661f7339782d1587687dcdaea15aa59432bbed428e612d18a6e94"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "0a6ec533b08171eb6522c06d8b48189886328abff3a02e4e4c0abf263e689688"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "4462dd909d742e6e0b20bdbc352ae7fea027f6e8cf851d5acc190ce5bf855997"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+         "kind": "click",
+         "action": "모델별 저장 평가",
+         "expected": "Dataset stage return retains the explicitly selected alternate record, complete identity, evidence hash, result and preferences.",
+         "observed": "electron: Dataset stage return retains the explicitly selected alternate record, complete identity, evidence hash, result and preferences. Full original files, complete annotations/settings/API records and controlled report hashes remained equal; no model-quality or installed-release acceptance inferred.",
+         "reviewer": "Root actual clean-source readback plus independent strict qualification, original cleanup and full unfiltered custody. Controlled fixtures; human quality and whole parent acceptance pending.",
+         "test": "scripts/e2e/saved-evaluation-selection-lifecycle.spec.ts::native saved evaluation choices refuse missing preferences, empty scopes and catalog errors while actual picker dismissal and stage return preserve exact records",
+         "receipt": "2026-10-08-saved-selection-lifecycle-4ce9550-electron.json",
+         "receipt_sha256": "7e65d958a4b6b1a95f1255b70db3a5c5bde1879fa5a9cd5b0f139e4847c9d379",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8eca2728a4ef0fc0dedcd1bf7e19d7f061d9f3199bab3f143088b517b1de19ab"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "fcbd1f525ea459de365442a1cf154f614d7da904a8e754b69a3d1855c9f8f38e"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "cd8a454a6a98a21b9c49a9d886baa225c440a119c1d6310897681659f6bb0ec3"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "1ca929c48055130f4662c8bf5f3f8572e1490874551e82a4742d793a5bacfe95"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "374de303f5a17cd311780a5a002a02f053931bf900d89d0eb2433849ff249150"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "16feb9d08acd134215c5c10d2fc05ca490f236b8876d7f33b3d2f54c23c851b5"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "5e7c3c062473bb48c361ae036fc61db4e7b84f7bc4aad68c7a8fa5e5ea3aa104"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "a22a4ae4bb94cb4b563ab3a478f7e2550f363e6e6c13f374768f4f5c9f470abf"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "588cba828fdeee0ca6754f6794b93e8cf348f41ca25812bcef416baf239865ad"
+          }
+         ]
+        }
+       ]
       }
      }
     },
@@ -3091,16 +3499,424 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+         "kind": "click",
+         "action": "평가 라벨 세트",
+         "expected": "The actual empty third labelset returns an empty200 without activating or replacing another set.",
+         "observed": "browser: The actual empty third labelset returns an empty200 without activating or replacing another set. Full original files, complete annotations/settings/API records and controlled report hashes remained equal; no model-quality or installed-release acceptance inferred.",
+         "reviewer": "Root actual clean-source readback plus independent strict qualification, original cleanup and full unfiltered custody. Controlled fixtures; human quality and whole parent acceptance pending.",
+         "test": "scripts/e2e/saved-evaluation-selection-lifecycle.spec.ts::saved evaluation choices refuse missing preferences, empty scopes and catalog errors while actual picker dismissal and stage return preserve exact records",
+         "receipt": "2026-10-08-saved-selection-lifecycle-4ce9550-browser.json",
+         "receipt_sha256": "67f17fee2f466fba3448dd3bff86e7f8f0b3ba94630ebeaa8478f725cc66eb79",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "e3bcb32c5c703251c783b01128d5e5d35cbf3bf53cfda0e5cdedbe233d277591"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "bb8747c2b894696ac5bb1ef20443d33b1cb5e4f75722eb6f11e579887db3ff9f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8234127a9159fb32bd69d157ac4be2b02385ef1d1f3d190572cee4a9d1a83d5e"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "5c2c4d7ee6035ac374d6e94104abb39e568fa5d9637cc6133adb2d39675c053c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "0c98ce1e0615160b6af22df5d78ab656f397c4bdfeba7069e9381c967ab3d0e6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "6351e7e81789932fe46a26301bc0bc825a19c47a9c807bef2648d8774ea54f02"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "8a6b1d6a674661f7339782d1587687dcdaea15aa59432bbed428e612d18a6e94"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "0a6ec533b08171eb6522c06d8b48189886328abff3a02e4e4c0abf263e689688"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "4462dd909d742e6e0b20bdbc352ae7fea027f6e8cf851d5acc190ce5bf855997"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+         "kind": "click",
+         "action": "평가 라벨 세트",
+         "expected": "The actual empty third labelset returns an empty200 without activating or replacing another set.",
+         "observed": "electron: The actual empty third labelset returns an empty200 without activating or replacing another set. Full original files, complete annotations/settings/API records and controlled report hashes remained equal; no model-quality or installed-release acceptance inferred.",
+         "reviewer": "Root actual clean-source readback plus independent strict qualification, original cleanup and full unfiltered custody. Controlled fixtures; human quality and whole parent acceptance pending.",
+         "test": "scripts/e2e/saved-evaluation-selection-lifecycle.spec.ts::native saved evaluation choices refuse missing preferences, empty scopes and catalog errors while actual picker dismissal and stage return preserve exact records",
+         "receipt": "2026-10-08-saved-selection-lifecycle-4ce9550-electron.json",
+         "receipt_sha256": "7e65d958a4b6b1a95f1255b70db3a5c5bde1879fa5a9cd5b0f139e4847c9d379",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8eca2728a4ef0fc0dedcd1bf7e19d7f061d9f3199bab3f143088b517b1de19ab"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "fcbd1f525ea459de365442a1cf154f614d7da904a8e754b69a3d1855c9f8f38e"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "cd8a454a6a98a21b9c49a9d886baa225c440a119c1d6310897681659f6bb0ec3"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "1ca929c48055130f4662c8bf5f3f8572e1490874551e82a4742d793a5bacfe95"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "374de303f5a17cd311780a5a002a02f053931bf900d89d0eb2433849ff249150"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "16feb9d08acd134215c5c10d2fc05ca490f236b8876d7f33b3d2f54c23c851b5"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "5e7c3c062473bb48c361ae036fc61db4e7b84f7bc4aad68c7a8fa5e5ea3aa104"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "a22a4ae4bb94cb4b563ab3a478f7e2550f363e6e6c13f374768f4f5c9f470abf"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "588cba828fdeee0ca6754f6794b93e8cf348f41ca25812bcef416baf239865ad"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+         "kind": "click",
+         "action": "평가 라벨 세트",
+         "expected": "A missing optional labelset preference survives actual reload with its alert; explicit valid choice restores the original saved set.",
+         "observed": "browser: A missing optional labelset preference survives actual reload with its alert; explicit valid choice restores the original saved set. Full original files, complete annotations/settings/API records and controlled report hashes remained equal; no model-quality or installed-release acceptance inferred.",
+         "reviewer": "Root actual clean-source readback plus independent strict qualification, original cleanup and full unfiltered custody. Controlled fixtures; human quality and whole parent acceptance pending.",
+         "test": "scripts/e2e/saved-evaluation-selection-lifecycle.spec.ts::saved evaluation choices refuse missing preferences, empty scopes and catalog errors while actual picker dismissal and stage return preserve exact records",
+         "receipt": "2026-10-08-saved-selection-lifecycle-4ce9550-browser.json",
+         "receipt_sha256": "67f17fee2f466fba3448dd3bff86e7f8f0b3ba94630ebeaa8478f725cc66eb79",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "e3bcb32c5c703251c783b01128d5e5d35cbf3bf53cfda0e5cdedbe233d277591"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "bb8747c2b894696ac5bb1ef20443d33b1cb5e4f75722eb6f11e579887db3ff9f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8234127a9159fb32bd69d157ac4be2b02385ef1d1f3d190572cee4a9d1a83d5e"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "5c2c4d7ee6035ac374d6e94104abb39e568fa5d9637cc6133adb2d39675c053c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "0c98ce1e0615160b6af22df5d78ab656f397c4bdfeba7069e9381c967ab3d0e6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "6351e7e81789932fe46a26301bc0bc825a19c47a9c807bef2648d8774ea54f02"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "8a6b1d6a674661f7339782d1587687dcdaea15aa59432bbed428e612d18a6e94"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "0a6ec533b08171eb6522c06d8b48189886328abff3a02e4e4c0abf263e689688"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "4462dd909d742e6e0b20bdbc352ae7fea027f6e8cf851d5acc190ce5bf855997"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+         "kind": "click",
+         "action": "평가 라벨 세트",
+         "expected": "A missing optional labelset preference survives actual reload with its alert; explicit valid choice restores the original saved set.",
+         "observed": "electron: A missing optional labelset preference survives actual reload with its alert; explicit valid choice restores the original saved set. Full original files, complete annotations/settings/API records and controlled report hashes remained equal; no model-quality or installed-release acceptance inferred.",
+         "reviewer": "Root actual clean-source readback plus independent strict qualification, original cleanup and full unfiltered custody. Controlled fixtures; human quality and whole parent acceptance pending.",
+         "test": "scripts/e2e/saved-evaluation-selection-lifecycle.spec.ts::native saved evaluation choices refuse missing preferences, empty scopes and catalog errors while actual picker dismissal and stage return preserve exact records",
+         "receipt": "2026-10-08-saved-selection-lifecycle-4ce9550-electron.json",
+         "receipt_sha256": "7e65d958a4b6b1a95f1255b70db3a5c5bde1879fa5a9cd5b0f139e4847c9d379",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8eca2728a4ef0fc0dedcd1bf7e19d7f061d9f3199bab3f143088b517b1de19ab"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "fcbd1f525ea459de365442a1cf154f614d7da904a8e754b69a3d1855c9f8f38e"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "cd8a454a6a98a21b9c49a9d886baa225c440a119c1d6310897681659f6bb0ec3"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "1ca929c48055130f4662c8bf5f3f8572e1490874551e82a4742d793a5bacfe95"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "374de303f5a17cd311780a5a002a02f053931bf900d89d0eb2433849ff249150"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "16feb9d08acd134215c5c10d2fc05ca490f236b8876d7f33b3d2f54c23c851b5"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "5e7c3c062473bb48c361ae036fc61db4e7b84f7bc4aad68c7a8fa5e5ea3aa104"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "a22a4ae4bb94cb4b563ab3a478f7e2550f363e6e6c13f374768f4f5c9f470abf"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "588cba828fdeee0ca6754f6794b93e8cf348f41ca25812bcef416baf239865ad"
+          }
+         ]
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+         "kind": "click",
+         "action": "평가 라벨 세트",
+         "expected": "A scoped catalog503 preserves a previously confirmed exact set and real full history; explicit refresh real200 restores its full catalog and record.",
+         "observed": "browser: A scoped catalog503 preserves a previously confirmed exact set and real full history; explicit refresh real200 restores its full catalog and record. Full original files, complete annotations/settings/API records and controlled report hashes remained equal; no model-quality or installed-release acceptance inferred.",
+         "reviewer": "Root actual clean-source readback plus independent strict qualification, original cleanup and full unfiltered custody. Controlled fixtures; human quality and whole parent acceptance pending.",
+         "test": "scripts/e2e/saved-evaluation-selection-lifecycle.spec.ts::saved evaluation choices refuse missing preferences, empty scopes and catalog errors while actual picker dismissal and stage return preserve exact records",
+         "receipt": "2026-10-08-saved-selection-lifecycle-4ce9550-browser.json",
+         "receipt_sha256": "67f17fee2f466fba3448dd3bff86e7f8f0b3ba94630ebeaa8478f725cc66eb79",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "e3bcb32c5c703251c783b01128d5e5d35cbf3bf53cfda0e5cdedbe233d277591"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "bb8747c2b894696ac5bb1ef20443d33b1cb5e4f75722eb6f11e579887db3ff9f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8234127a9159fb32bd69d157ac4be2b02385ef1d1f3d190572cee4a9d1a83d5e"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "5c2c4d7ee6035ac374d6e94104abb39e568fa5d9637cc6133adb2d39675c053c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "0c98ce1e0615160b6af22df5d78ab656f397c4bdfeba7069e9381c967ab3d0e6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "6351e7e81789932fe46a26301bc0bc825a19c47a9c807bef2648d8774ea54f02"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "8a6b1d6a674661f7339782d1587687dcdaea15aa59432bbed428e612d18a6e94"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "0a6ec533b08171eb6522c06d8b48189886328abff3a02e4e4c0abf263e689688"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "4462dd909d742e6e0b20bdbc352ae7fea027f6e8cf851d5acc190ce5bf855997"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+         "kind": "click",
+         "action": "평가 라벨 세트",
+         "expected": "A scoped catalog503 preserves a previously confirmed exact set and real full history; explicit refresh real200 restores its full catalog and record.",
+         "observed": "electron: A scoped catalog503 preserves a previously confirmed exact set and real full history; explicit refresh real200 restores its full catalog and record. Full original files, complete annotations/settings/API records and controlled report hashes remained equal; no model-quality or installed-release acceptance inferred.",
+         "reviewer": "Root actual clean-source readback plus independent strict qualification, original cleanup and full unfiltered custody. Controlled fixtures; human quality and whole parent acceptance pending.",
+         "test": "scripts/e2e/saved-evaluation-selection-lifecycle.spec.ts::native saved evaluation choices refuse missing preferences, empty scopes and catalog errors while actual picker dismissal and stage return preserve exact records",
+         "receipt": "2026-10-08-saved-selection-lifecycle-4ce9550-electron.json",
+         "receipt_sha256": "7e65d958a4b6b1a95f1255b70db3a5c5bde1879fa5a9cd5b0f139e4847c9d379",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8eca2728a4ef0fc0dedcd1bf7e19d7f061d9f3199bab3f143088b517b1de19ab"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "fcbd1f525ea459de365442a1cf154f614d7da904a8e754b69a3d1855c9f8f38e"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "cd8a454a6a98a21b9c49a9d886baa225c440a119c1d6310897681659f6bb0ec3"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "1ca929c48055130f4662c8bf5f3f8572e1490874551e82a4742d793a5bacfe95"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "374de303f5a17cd311780a5a002a02f053931bf900d89d0eb2433849ff249150"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "16feb9d08acd134215c5c10d2fc05ca490f236b8876d7f33b3d2f54c23c851b5"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "5e7c3c062473bb48c361ae036fc61db4e7b84f7bc4aad68c7a8fa5e5ea3aa104"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "a22a4ae4bb94cb4b563ab3a478f7e2550f363e6e6c13f374768f4f5c9f470abf"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "588cba828fdeee0ca6754f6794b93e8cf348f41ca25812bcef416baf239865ad"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+         "kind": "click",
+         "action": "평가 라벨 세트",
+         "expected": "Opening the actual labelset picker then Escape dismisses it with the exact choice and preferences unchanged; no request/job cancellation is claimed.",
+         "observed": "browser: Opening the actual labelset picker then Escape dismisses it with the exact choice and preferences unchanged; no request/job cancellation is claimed. Full original files, complete annotations/settings/API records and controlled report hashes remained equal; no model-quality or installed-release acceptance inferred.",
+         "reviewer": "Root actual clean-source readback plus independent strict qualification, original cleanup and full unfiltered custody. Controlled fixtures; human quality and whole parent acceptance pending.",
+         "test": "scripts/e2e/saved-evaluation-selection-lifecycle.spec.ts::saved evaluation choices refuse missing preferences, empty scopes and catalog errors while actual picker dismissal and stage return preserve exact records",
+         "receipt": "2026-10-08-saved-selection-lifecycle-4ce9550-browser.json",
+         "receipt_sha256": "67f17fee2f466fba3448dd3bff86e7f8f0b3ba94630ebeaa8478f725cc66eb79",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "e3bcb32c5c703251c783b01128d5e5d35cbf3bf53cfda0e5cdedbe233d277591"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "bb8747c2b894696ac5bb1ef20443d33b1cb5e4f75722eb6f11e579887db3ff9f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8234127a9159fb32bd69d157ac4be2b02385ef1d1f3d190572cee4a9d1a83d5e"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "5c2c4d7ee6035ac374d6e94104abb39e568fa5d9637cc6133adb2d39675c053c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "0c98ce1e0615160b6af22df5d78ab656f397c4bdfeba7069e9381c967ab3d0e6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "6351e7e81789932fe46a26301bc0bc825a19c47a9c807bef2648d8774ea54f02"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "8a6b1d6a674661f7339782d1587687dcdaea15aa59432bbed428e612d18a6e94"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "0a6ec533b08171eb6522c06d8b48189886328abff3a02e4e4c0abf263e689688"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "4462dd909d742e6e0b20bdbc352ae7fea027f6e8cf851d5acc190ce5bf855997"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+         "kind": "click",
+         "action": "평가 라벨 세트",
+         "expected": "Opening the actual labelset picker then Escape dismisses it with the exact choice and preferences unchanged; no request/job cancellation is claimed.",
+         "observed": "electron: Opening the actual labelset picker then Escape dismisses it with the exact choice and preferences unchanged; no request/job cancellation is claimed. Full original files, complete annotations/settings/API records and controlled report hashes remained equal; no model-quality or installed-release acceptance inferred.",
+         "reviewer": "Root actual clean-source readback plus independent strict qualification, original cleanup and full unfiltered custody. Controlled fixtures; human quality and whole parent acceptance pending.",
+         "test": "scripts/e2e/saved-evaluation-selection-lifecycle.spec.ts::native saved evaluation choices refuse missing preferences, empty scopes and catalog errors while actual picker dismissal and stage return preserve exact records",
+         "receipt": "2026-10-08-saved-selection-lifecycle-4ce9550-electron.json",
+         "receipt_sha256": "7e65d958a4b6b1a95f1255b70db3a5c5bde1879fa5a9cd5b0f139e4847c9d379",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8eca2728a4ef0fc0dedcd1bf7e19d7f061d9f3199bab3f143088b517b1de19ab"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "fcbd1f525ea459de365442a1cf154f614d7da904a8e754b69a3d1855c9f8f38e"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "cd8a454a6a98a21b9c49a9d886baa225c440a119c1d6310897681659f6bb0ec3"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "1ca929c48055130f4662c8bf5f3f8572e1490874551e82a4742d793a5bacfe95"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "374de303f5a17cd311780a5a002a02f053931bf900d89d0eb2433849ff249150"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "16feb9d08acd134215c5c10d2fc05ca490f236b8876d7f33b3d2f54c23c851b5"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "5e7c3c062473bb48c361ae036fc61db4e7b84f7bc4aad68c7a8fa5e5ea3aa104"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "a22a4ae4bb94cb4b563ab3a478f7e2550f363e6e6c13f374768f4f5c9f470abf"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "588cba828fdeee0ca6754f6794b93e8cf348f41ca25812bcef416baf239865ad"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
        "state": "verified",
@@ -3146,7 +3962,109 @@
        ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+         "kind": "click",
+         "action": "평가 라벨 세트",
+         "expected": "Dataset stage return retains the explicitly selected saved labelset and full record without changing the active project labelset.",
+         "observed": "browser: Dataset stage return retains the explicitly selected saved labelset and full record without changing the active project labelset. Full original files, complete annotations/settings/API records and controlled report hashes remained equal; no model-quality or installed-release acceptance inferred.",
+         "reviewer": "Root actual clean-source readback plus independent strict qualification, original cleanup and full unfiltered custody. Controlled fixtures; human quality and whole parent acceptance pending.",
+         "test": "scripts/e2e/saved-evaluation-selection-lifecycle.spec.ts::saved evaluation choices refuse missing preferences, empty scopes and catalog errors while actual picker dismissal and stage return preserve exact records",
+         "receipt": "2026-10-08-saved-selection-lifecycle-4ce9550-browser.json",
+         "receipt_sha256": "67f17fee2f466fba3448dd3bff86e7f8f0b3ba94630ebeaa8478f725cc66eb79",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "e3bcb32c5c703251c783b01128d5e5d35cbf3bf53cfda0e5cdedbe233d277591"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "bb8747c2b894696ac5bb1ef20443d33b1cb5e4f75722eb6f11e579887db3ff9f"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "8234127a9159fb32bd69d157ac4be2b02385ef1d1f3d190572cee4a9d1a83d5e"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "5c2c4d7ee6035ac374d6e94104abb39e568fa5d9637cc6133adb2d39675c053c"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "0c98ce1e0615160b6af22df5d78ab656f397c4bdfeba7069e9381c967ab3d0e6"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "6351e7e81789932fe46a26301bc0bc825a19c47a9c807bef2648d8774ea54f02"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "8a6b1d6a674661f7339782d1587687dcdaea15aa59432bbed428e612d18a6e94"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "0a6ec533b08171eb6522c06d8b48189886328abff3a02e4e4c0abf263e689688"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "4462dd909d742e6e0b20bdbc352ae7fea027f6e8cf851d5acc190ce5bf855997"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+         "kind": "click",
+         "action": "평가 라벨 세트",
+         "expected": "Dataset stage return retains the explicitly selected saved labelset and full record without changing the active project labelset.",
+         "observed": "electron: Dataset stage return retains the explicitly selected saved labelset and full record without changing the active project labelset. Full original files, complete annotations/settings/API records and controlled report hashes remained equal; no model-quality or installed-release acceptance inferred.",
+         "reviewer": "Root actual clean-source readback plus independent strict qualification, original cleanup and full unfiltered custody. Controlled fixtures; human quality and whole parent acceptance pending.",
+         "test": "scripts/e2e/saved-evaluation-selection-lifecycle.spec.ts::native saved evaluation choices refuse missing preferences, empty scopes and catalog errors while actual picker dismissal and stage return preserve exact records",
+         "receipt": "2026-10-08-saved-selection-lifecycle-4ce9550-electron.json",
+         "receipt_sha256": "7e65d958a4b6b1a95f1255b70db3a5c5bde1879fa5a9cd5b0f139e4847c9d379",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8eca2728a4ef0fc0dedcd1bf7e19d7f061d9f3199bab3f143088b517b1de19ab"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "fcbd1f525ea459de365442a1cf154f614d7da904a8e754b69a3d1855c9f8f38e"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "cd8a454a6a98a21b9c49a9d886baa225c440a119c1d6310897681659f6bb0ec3"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "1ca929c48055130f4662c8bf5f3f8572e1490874551e82a4742d793a5bacfe95"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "374de303f5a17cd311780a5a002a02f053931bf900d89d0eb2433849ff249150"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "16feb9d08acd134215c5c10d2fc05ca490f236b8876d7f33b3d2f54c23c851b5"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "5e7c3c062473bb48c361ae036fc61db4e7b84f7bc4aad68c7a8fa5e5ea3aa104"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "a22a4ae4bb94cb4b563ab3a478f7e2550f363e6e6c13f374768f4f5c9f470abf"
+          },
+          {
+           "id": "screenshot-8",
+           "sha256": "588cba828fdeee0ca6754f6794b93e8cf348f41ca25812bcef416baf239865ad"
+          }
+         ]
+        }
+       ]
       }
      }
     },
@@ -24448,16 +25366,250 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-08",
+         "source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+         "kind": "click",
+         "action": "파생 편집 기준 버전",
+         "expected": "An actual empty stored history GET200 shows only the original source with complete file/API state unchanged.",
+         "observed": "electron: An actual empty stored history GET200 shows only the original source with complete file/API state unchanged. Full original files, complete annotations/settings/API records and controlled report hashes remained equal; no model-quality or installed-release acceptance inferred.",
+         "reviewer": "Root actual clean-source readback plus independent strict qualification, original cleanup and full unfiltered custody. Controlled fixtures; human quality and whole parent acceptance pending.",
+         "test": "scripts/e2e/derived-history-selection-lifecycle.spec.ts::native derived history empty error Escape and Dataset handoff preserve complete versions and originals",
+         "receipt": "2026-10-08-derived-history-lifecycle-4ce9550-electron.json",
+         "receipt_sha256": "f51f9db6a72807611e92e6dc60204670540ba2bf1fd4ba9fd0a06c17b7f4851a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8ea174b1b6fea35543434eac832ce6390d42ba10df39b59efd485c9bea6c33f7"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3aaa9c408dda9d1b7ea8ea2fe04e152d6834e05e041d1b4fdbfe61f26021be41"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6f1e712fc70bbb10b9dc152bcc1a77cd0612b4918df298adb4d42dc0c1a423cc"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "bf8d692ccb4f1b7ea9a1c23e4fe6b962aa9b7c7fab7b11d461c185cff3bd79df"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "3e9215e48996cda130a46ade28f6b0cdb96c97aa2b0efe0e51b60a788a97b503"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "4b7f407b6d0496a9724596ad08c492ba7c60a5cbf99d210fc4678ce16184e4e5"
+          }
+         ]
+        },
+        {
+         "task": "S3-08",
+         "source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+         "kind": "click",
+         "action": "파생 편집 기준 버전",
+         "expected": "An actual empty stored history GET200 shows only the original source with complete file/API state unchanged.",
+         "observed": "browser: An actual empty stored history GET200 shows only the original source with complete file/API state unchanged. Full original files, complete annotations/settings/API records and controlled report hashes remained equal; no model-quality or installed-release acceptance inferred.",
+         "reviewer": "Root actual clean-source readback plus independent strict qualification, original cleanup and full unfiltered custody. Controlled fixtures; human quality and whole parent acceptance pending.",
+         "test": "scripts/e2e/derived-history-selection-lifecycle.spec.ts::derived history empty error Escape and Dataset handoff preserve exact versions and originals",
+         "receipt": "2026-10-08-derived-history-lifecycle-4ce9550-browser.json",
+         "receipt_sha256": "1998fef75cc167203da1a252282b72d26abd972ce807cf7300171a066d95786f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "496810fc4cb03f93375fc7af1c62eefe0a26ac681d0229c55fe7c3e85cd3ce22"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0cb9176a2ebcfce37221860728f10bf9d3b7945540f2e081b099b684a7e4ac23"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "c5b6cd9cc06c7fba15b92a86eaea355d2de5389f123e84d6d0bed0b00a8ed46c"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "1a7f77f21c60472dc2d9512d813932f6a5198133dba967befb441f4f15640f5d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "1fdaa8d3f0ea2633a5561c11b2c14005e6ad6effe127727207a3ebce3952c6b8"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "75d2b898da9e3dbc5b765a74eb04661ddbecd8f7e371764aef08715a25d47615"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
        "state": "pending"
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-08",
+         "source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+         "kind": "click",
+         "action": "파생 편집 기준 버전",
+         "expected": "Scoped history503 removes stale versions; actual reload real200 and explicit selection restore the complete saved version and hashes.",
+         "observed": "electron: Scoped history503 removes stale versions; actual reload real200 and explicit selection restore the complete saved version and hashes. Full original files, complete annotations/settings/API records and controlled report hashes remained equal; no model-quality or installed-release acceptance inferred.",
+         "reviewer": "Root actual clean-source readback plus independent strict qualification, original cleanup and full unfiltered custody. Controlled fixtures; human quality and whole parent acceptance pending.",
+         "test": "scripts/e2e/derived-history-selection-lifecycle.spec.ts::native derived history empty error Escape and Dataset handoff preserve complete versions and originals",
+         "receipt": "2026-10-08-derived-history-lifecycle-4ce9550-electron.json",
+         "receipt_sha256": "f51f9db6a72807611e92e6dc60204670540ba2bf1fd4ba9fd0a06c17b7f4851a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8ea174b1b6fea35543434eac832ce6390d42ba10df39b59efd485c9bea6c33f7"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3aaa9c408dda9d1b7ea8ea2fe04e152d6834e05e041d1b4fdbfe61f26021be41"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6f1e712fc70bbb10b9dc152bcc1a77cd0612b4918df298adb4d42dc0c1a423cc"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "bf8d692ccb4f1b7ea9a1c23e4fe6b962aa9b7c7fab7b11d461c185cff3bd79df"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "3e9215e48996cda130a46ade28f6b0cdb96c97aa2b0efe0e51b60a788a97b503"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "4b7f407b6d0496a9724596ad08c492ba7c60a5cbf99d210fc4678ce16184e4e5"
+          }
+         ]
+        },
+        {
+         "task": "S3-08",
+         "source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+         "kind": "click",
+         "action": "파생 편집 기준 버전",
+         "expected": "Scoped history503 removes stale versions; actual reload real200 and explicit selection restore the complete saved version and hashes.",
+         "observed": "browser: Scoped history503 removes stale versions; actual reload real200 and explicit selection restore the complete saved version and hashes. Full original files, complete annotations/settings/API records and controlled report hashes remained equal; no model-quality or installed-release acceptance inferred.",
+         "reviewer": "Root actual clean-source readback plus independent strict qualification, original cleanup and full unfiltered custody. Controlled fixtures; human quality and whole parent acceptance pending.",
+         "test": "scripts/e2e/derived-history-selection-lifecycle.spec.ts::derived history empty error Escape and Dataset handoff preserve exact versions and originals",
+         "receipt": "2026-10-08-derived-history-lifecycle-4ce9550-browser.json",
+         "receipt_sha256": "1998fef75cc167203da1a252282b72d26abd972ce807cf7300171a066d95786f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "496810fc4cb03f93375fc7af1c62eefe0a26ac681d0229c55fe7c3e85cd3ce22"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0cb9176a2ebcfce37221860728f10bf9d3b7945540f2e081b099b684a7e4ac23"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "c5b6cd9cc06c7fba15b92a86eaea355d2de5389f123e84d6d0bed0b00a8ed46c"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "1a7f77f21c60472dc2d9512d813932f6a5198133dba967befb441f4f15640f5d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "1fdaa8d3f0ea2633a5561c11b2c14005e6ad6effe127727207a3ebce3952c6b8"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "75d2b898da9e3dbc5b765a74eb04661ddbecd8f7e371764aef08715a25d47615"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-08",
+         "source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+         "kind": "click",
+         "action": "파생 편집 기준 버전",
+         "expected": "The actual derived-version picker Escape dismisses its choice popup and retains the selected version; no request/job cancellation is claimed.",
+         "observed": "electron: The actual derived-version picker Escape dismisses its choice popup and retains the selected version; no request/job cancellation is claimed. Full original files, complete annotations/settings/API records and controlled report hashes remained equal; no model-quality or installed-release acceptance inferred.",
+         "reviewer": "Root actual clean-source readback plus independent strict qualification, original cleanup and full unfiltered custody. Controlled fixtures; human quality and whole parent acceptance pending.",
+         "test": "scripts/e2e/derived-history-selection-lifecycle.spec.ts::native derived history empty error Escape and Dataset handoff preserve complete versions and originals",
+         "receipt": "2026-10-08-derived-history-lifecycle-4ce9550-electron.json",
+         "receipt_sha256": "f51f9db6a72807611e92e6dc60204670540ba2bf1fd4ba9fd0a06c17b7f4851a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8ea174b1b6fea35543434eac832ce6390d42ba10df39b59efd485c9bea6c33f7"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3aaa9c408dda9d1b7ea8ea2fe04e152d6834e05e041d1b4fdbfe61f26021be41"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6f1e712fc70bbb10b9dc152bcc1a77cd0612b4918df298adb4d42dc0c1a423cc"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "bf8d692ccb4f1b7ea9a1c23e4fe6b962aa9b7c7fab7b11d461c185cff3bd79df"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "3e9215e48996cda130a46ade28f6b0cdb96c97aa2b0efe0e51b60a788a97b503"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "4b7f407b6d0496a9724596ad08c492ba7c60a5cbf99d210fc4678ce16184e4e5"
+          }
+         ]
+        },
+        {
+         "task": "S3-08",
+         "source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+         "kind": "click",
+         "action": "파생 편집 기준 버전",
+         "expected": "The actual derived-version picker Escape dismisses its choice popup and retains the selected version; no request/job cancellation is claimed.",
+         "observed": "browser: The actual derived-version picker Escape dismisses its choice popup and retains the selected version; no request/job cancellation is claimed. Full original files, complete annotations/settings/API records and controlled report hashes remained equal; no model-quality or installed-release acceptance inferred.",
+         "reviewer": "Root actual clean-source readback plus independent strict qualification, original cleanup and full unfiltered custody. Controlled fixtures; human quality and whole parent acceptance pending.",
+         "test": "scripts/e2e/derived-history-selection-lifecycle.spec.ts::derived history empty error Escape and Dataset handoff preserve exact versions and originals",
+         "receipt": "2026-10-08-derived-history-lifecycle-4ce9550-browser.json",
+         "receipt_sha256": "1998fef75cc167203da1a252282b72d26abd972ce807cf7300171a066d95786f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "496810fc4cb03f93375fc7af1c62eefe0a26ac681d0229c55fe7c3e85cd3ce22"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0cb9176a2ebcfce37221860728f10bf9d3b7945540f2e081b099b684a7e4ac23"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "c5b6cd9cc06c7fba15b92a86eaea355d2de5389f123e84d6d0bed0b00a8ed46c"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "1a7f77f21c60472dc2d9512d813932f6a5198133dba967befb441f4f15640f5d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "1fdaa8d3f0ea2633a5561c11b2c14005e6ad6effe127727207a3ebce3952c6b8"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "75d2b898da9e3dbc5b765a74eb04661ddbecd8f7e371764aef08715a25d47615"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
        "state": "verified",
@@ -24491,7 +25643,85 @@
        ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-08",
+         "source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+         "kind": "click",
+         "action": "파생 편집 기준 버전",
+         "expected": "Dataset stage handoff retains original project/source; labeling remount defaults to original and explicit saved selection restores the exact complete version without training adoption.",
+         "observed": "electron: Dataset stage handoff retains original project/source; labeling remount defaults to original and explicit saved selection restores the exact complete version without training adoption. Full original files, complete annotations/settings/API records and controlled report hashes remained equal; no model-quality or installed-release acceptance inferred.",
+         "reviewer": "Root actual clean-source readback plus independent strict qualification, original cleanup and full unfiltered custody. Controlled fixtures; human quality and whole parent acceptance pending.",
+         "test": "scripts/e2e/derived-history-selection-lifecycle.spec.ts::native derived history empty error Escape and Dataset handoff preserve complete versions and originals",
+         "receipt": "2026-10-08-derived-history-lifecycle-4ce9550-electron.json",
+         "receipt_sha256": "f51f9db6a72807611e92e6dc60204670540ba2bf1fd4ba9fd0a06c17b7f4851a",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "8ea174b1b6fea35543434eac832ce6390d42ba10df39b59efd485c9bea6c33f7"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3aaa9c408dda9d1b7ea8ea2fe04e152d6834e05e041d1b4fdbfe61f26021be41"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6f1e712fc70bbb10b9dc152bcc1a77cd0612b4918df298adb4d42dc0c1a423cc"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "bf8d692ccb4f1b7ea9a1c23e4fe6b962aa9b7c7fab7b11d461c185cff3bd79df"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "3e9215e48996cda130a46ade28f6b0cdb96c97aa2b0efe0e51b60a788a97b503"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "4b7f407b6d0496a9724596ad08c492ba7c60a5cbf99d210fc4678ce16184e4e5"
+          }
+         ]
+        },
+        {
+         "task": "S3-08",
+         "source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+         "kind": "click",
+         "action": "파생 편집 기준 버전",
+         "expected": "Dataset stage handoff retains original project/source; labeling remount defaults to original and explicit saved selection restores the exact complete version without training adoption.",
+         "observed": "browser: Dataset stage handoff retains original project/source; labeling remount defaults to original and explicit saved selection restores the exact complete version without training adoption. Full original files, complete annotations/settings/API records and controlled report hashes remained equal; no model-quality or installed-release acceptance inferred.",
+         "reviewer": "Root actual clean-source readback plus independent strict qualification, original cleanup and full unfiltered custody. Controlled fixtures; human quality and whole parent acceptance pending.",
+         "test": "scripts/e2e/derived-history-selection-lifecycle.spec.ts::derived history empty error Escape and Dataset handoff preserve exact versions and originals",
+         "receipt": "2026-10-08-derived-history-lifecycle-4ce9550-browser.json",
+         "receipt_sha256": "1998fef75cc167203da1a252282b72d26abd972ce807cf7300171a066d95786f",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "496810fc4cb03f93375fc7af1c62eefe0a26ac681d0229c55fe7c3e85cd3ce22"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0cb9176a2ebcfce37221860728f10bf9d3b7945540f2e081b099b684a7e4ac23"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "c5b6cd9cc06c7fba15b92a86eaea355d2de5389f123e84d6d0bed0b00a8ed46c"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "1a7f77f21c60472dc2d9512d813932f6a5198133dba967befb441f4f15640f5d"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "1fdaa8d3f0ea2633a5561c11b2c14005e6ad6effe127727207a3ebce3952c6b8"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "75d2b898da9e3dbc5b765a74eb04661ddbecd8f7e371764aef08715a25d47615"
+          }
+         ]
+        }
+       ]
       }
      }
     }
@@ -33528,7 +34758,77 @@
        ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S7-01",
+         "source_sha": "101184d3b93980ccfe743d0351f37ac3c7e0e7ce",
+         "kind": "click",
+         "action": "태그·제품·Lot·오류 필터",
+         "expected": "Four actual257-character q/tag/product/lot queries return real422 with readable safe field-specific errors; clear and explicit valid recovery retain the original image UUID/SHA and preference bytes.",
+         "observed": "electron: Four actual257-character q/tag/product/lot queries return real422 with readable safe field-specific errors; clear and explicit valid recovery retain the original image UUID/SHA and preference bytes. Full original files, complete annotations/settings/API records and controlled report hashes remained equal; no model-quality or installed-release acceptance inferred.",
+         "reviewer": "Root actual clean-source readback plus independent strict qualification, original cleanup and full unfiltered custody. Controlled fixtures; human quality and whole parent acceptance pending.",
+         "test": "scripts/e2e/library-invalid-filter-lifecycle.spec.ts::native metadata filters reject genuine overlong queries and preserve the exact confirmed original",
+         "receipt": "2026-10-08-library-invalid-filter-readable-101184d-electron.json",
+         "receipt_sha256": "b8c8a53d80378b2959957459a7a41d4f1ef5d8e845061fbf29702277963a6f28",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1c9be4f552160c2157d28d6fd4f5e71faaa860a488ee86e5b8609f5c02a04292"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c9d4718a325a8ce802742a76dbe3eefff3ece832e369594370be5b2ade04f7fb"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "e16deaa24429166f9f99a2325585a2c4a1b4be29b5e2ab660a199410ae7bdba1"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "4216c5588d9d524fb85487d1ea8b0d7a43cc5cea292390b1551d46d1903ba6c2"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "44b9722b10a34710cd23c7b4009c3514627edadca8e33822ac42d774ca7ba34c"
+          }
+         ]
+        },
+        {
+         "task": "S7-01",
+         "source_sha": "101184d3b93980ccfe743d0351f37ac3c7e0e7ce",
+         "kind": "click",
+         "action": "태그·제품·Lot·오류 필터",
+         "expected": "Four actual257-character q/tag/product/lot queries return real422 with readable safe field-specific errors; clear and explicit valid recovery retain the original image UUID/SHA and preference bytes.",
+         "observed": "browser: Four actual257-character q/tag/product/lot queries return real422 with readable safe field-specific errors; clear and explicit valid recovery retain the original image UUID/SHA and preference bytes. Full original files, complete annotations/settings/API records and controlled report hashes remained equal; no model-quality or installed-release acceptance inferred.",
+         "reviewer": "Root actual clean-source readback plus independent strict qualification, original cleanup and full unfiltered custody. Controlled fixtures; human quality and whole parent acceptance pending.",
+         "test": "scripts/e2e/library-invalid-filter-lifecycle.spec.ts::metadata filters reject genuine overlong queries and preserve the exact confirmed original",
+         "receipt": "2026-10-08-library-invalid-filter-readable-101184d-browser.json",
+         "receipt_sha256": "4a10fbe306335ecc59c7135240407d21fa95ca17e96a71c51427d46b8d4f1dee",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "852a087109965eb940092da4e981fc1cd4b50e5de383bddefcf9870324374d29"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "54503746ea350d0c008180fdd477e2986b09d08b60807c84ef86abb5754694e8"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "e4263799f5a09806ffbfa1be659917c569ef93a6c497838ae1a3700a46b546ee"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "bdd1990a8e88f7a02fec28dcac4646033a52fdd44160c5b398c9aa64646a90f5"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "b6e849ecfd0ad32ea8c4b8a1bb823d04f15e17ffa51127475bbe95be856b967c"
+          }
+         ]
+        }
+       ]
       },
       "error": {
        "state": "verified",

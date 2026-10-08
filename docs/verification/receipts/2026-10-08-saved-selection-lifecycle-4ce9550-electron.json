@@ -1,0 +1,60 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+  "source_dirty": false,
+  "test": "scripts/e2e/saved-evaluation-selection-lifecycle.spec.ts::native saved evaluation choices refuse missing preferences, empty scopes and catalog errors while actual picker dismissal and stage return preserve exact records",
+  "test_source_sha256": "b070c56d87865609e908151e45837c94d63a47c61a7d9102bdb4320876d25f3a",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "a546529b3b5e729d29c6e42785aa989f141b316d38a9868a2f9d2b2e5dfe8641",
+  "harness_sha256": "0859fcba549bb85a06eb8259575f0d57556a12749cd0a4bd66c16b7788241a6f",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "8eca2728a4ef0fc0dedcd1bf7e19d7f061d9f3199bab3f143088b517b1de19ab"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "fcbd1f525ea459de365442a1cf154f614d7da904a8e754b69a3d1855c9f8f38e"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "cd8a454a6a98a21b9c49a9d886baa225c440a119c1d6310897681659f6bb0ec3"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "1ca929c48055130f4662c8bf5f3f8572e1490874551e82a4742d793a5bacfe95"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "374de303f5a17cd311780a5a002a02f053931bf900d89d0eb2433849ff249150"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "16feb9d08acd134215c5c10d2fc05ca490f236b8876d7f33b3d2f54c23c851b5"
+    },
+    {
+      "id": "screenshot-6",
+      "sha256": "5e7c3c062473bb48c361ae036fc61db4e7b84f7bc4aad68c7a8fa5e5ea3aa104"
+    },
+    {
+      "id": "screenshot-7",
+      "sha256": "a22a4ae4bb94cb4b563ab3a478f7e2550f363e6e6c13f374768f4f5c9f470abf"
+    },
+    {
+      "id": "screenshot-8",
+      "sha256": "588cba828fdeee0ca6754f6794b93e8cf348f41ca25812bcef416baf239865ad"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

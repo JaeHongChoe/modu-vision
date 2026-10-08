@@ -1,0 +1,48 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+  "source_dirty": false,
+  "test": "scripts/e2e/derived-history-selection-lifecycle.spec.ts::derived history empty error Escape and Dataset handoff preserve exact versions and originals",
+  "test_source_sha256": "25d309c8d13ad7ed0932d678f66c8ba70dec39b8bd4f163a12224f7fe4d7dc67",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "a546529b3b5e729d29c6e42785aa989f141b316d38a9868a2f9d2b2e5dfe8641",
+  "harness_sha256": "43a2d03a65862c8b91eacb34679ea84c4daf3f198f5916552364605b69e2d29d",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "496810fc4cb03f93375fc7af1c62eefe0a26ac681d0229c55fe7c3e85cd3ce22"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "0cb9176a2ebcfce37221860728f10bf9d3b7945540f2e081b099b684a7e4ac23"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "c5b6cd9cc06c7fba15b92a86eaea355d2de5389f123e84d6d0bed0b00a8ed46c"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "1a7f77f21c60472dc2d9512d813932f6a5198133dba967befb441f4f15640f5d"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "1fdaa8d3f0ea2633a5561c11b2c14005e6ad6effe127727207a3ebce3952c6b8"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "75d2b898da9e3dbc5b765a74eb04661ddbecd8f7e371764aef08715a25d47615"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}
