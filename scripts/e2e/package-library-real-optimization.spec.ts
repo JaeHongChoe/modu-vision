@@ -19,6 +19,36 @@ function requestBudget(method: string, pathname: string) {
   return method === 'POST' && /^\/api\/product-delivery\/packages\/[0-9a-f]{32}\/verify$/.test(pathname) ? 30_000 : READ_MS;
 }
 
+
+type ObservedClock = {started: number; budget: number; deadline: number; finished?: number; failure?: string};
+type CapturedResponse = {request: Request; reply: Response; status: number; clock?: ObservedClock; raw?: string;
+  reply_finished?: Error | null; body_captured_at?: number; error?: unknown; pending: Promise<void>};
+
+function captureOriginalResponse(reply: Response, clock: ObservedClock | undefined): CapturedResponse {
+  const request = reply.request();
+  // OPTIONS keeps its original exclusion from observed request clocks. Its full
+  // original body is retained, without inventing a request-start deadline.
+  expect(clock !== undefined || request.method() === 'OPTIONS').toBe(true);
+  const row: CapturedResponse = {request, reply, status: reply.status(), clock, pending: Promise.resolve()};
+  row.pending = (async () => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      // Start BOTH reads at the original response event, before any navigation.
+      const original = Promise.all([reply.text(), reply.finished()]).then(([raw, terminal]) => {
+        const captured = performance.now();
+        if (clock) expect(captured).toBeLessThanOrEqual(clock.deadline);
+        expect(terminal).toBeNull();
+        row.raw = raw; row.reply_finished = terminal; row.body_captured_at = captured;
+      });
+      if (clock) await Promise.race([original, new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(Error('Original response body exceeded its request-start deadline')), Math.max(0, clock.deadline - performance.now()));
+      })]);
+      else await original;
+    } catch (error) {row.error = error;} finally {clearTimeout(timer);}
+  })();
+  return row;
+}
+
 function tree(root: string): Record<string, string> {
   const result: Record<string, string> = {};
   const visit = (folder: string) => {
@@ -151,8 +181,8 @@ test('native actual OpenVINO job preserves full original package and reopens exa
   const providerBefore = {selected: OV_PROVIDER, realpath: fs.realpathSync(OV_PROVIDER), file_sha256: fileSha(fs.realpathSync(OV_PROVIDER)),
     config_sha256: fileSha(path.join(path.dirname(path.dirname(OV_PROVIDER)), 'pyvenv.cfg'))};
   const page = electronSession.window, backend = await electronSession.waitForBackend();
-  const apiCalls: any[] = [], writes: any[] = [], clocks = new Map<Request, {started: number; budget: number; deadline: number; finished?: number; failure?: string}>();
-  const reads: any[] = [], replies: any[] = [], writeRequests: Request[] = [];
+  const apiCalls: any[] = [], writes: any[] = [], clocks = new Map<Request, ObservedClock>();
+  const reads: any[] = [], replies: CapturedResponse[] = [], writeRequests: Request[] = [];
   const observed = (request: Request) => {
     const url = new URL(request.url()); if (!url.pathname.startsWith('/api/')) return;
     if (request.method() === 'OPTIONS') return;
@@ -161,7 +191,7 @@ test('native actual OpenVINO job preserves full original package and reopens exa
   };
   const finished = (request: Request) => {const row = clocks.get(request); if (row) row.finished = performance.now();};
   const failed = (request: Request) => {const row = clocks.get(request); if (row) {row.finished = performance.now(); row.failure = request.failure()?.errorText || 'unknown';}};
-  const response = (reply: Response) => {if (new URL(reply.url()).pathname.startsWith('/api/')) replies.push({request: reply.request(), reply, status: reply.status()});};
+  const response = (reply: Response) => {if (new URL(reply.url()).pathname.startsWith('/api/')) replies.push(captureOriginalResponse(reply, clocks.get(reply.request())));};
   page.on('request', observed); page.on('requestfinished', finished); page.on('requestfailed', failed); page.on('response', response);
   const api = async (route: string, body?: unknown, method = body === undefined ? 'GET' : 'POST') => {
     const value = await page.evaluate(async ({port, route, method, body, budget}) => {
@@ -188,6 +218,11 @@ test('native actual OpenVINO job preserves full original package and reopens exa
       expect(clock.failure).toBeUndefined(); expect(clock.budget).toBe(requestBudget(request.method(), new URL(request.url()).pathname)); expect(clock.deadline).toBe(clock.started + clock.budget);
       expect(clock.finished!).toBeLessThanOrEqual(clock.deadline);
       reads.push({request, method: request.method(), route: new URL(request.url()).pathname, query: new URL(request.url()).search, ...clock});
+    }
+    for (const row of replies) {
+      await row.pending; expect(row.error).toBeUndefined(); expect(typeof row.raw).toBe('string');
+      expect(row.reply.request()).toBe(row.request); expect(row.reply.status()).toBe(row.status); expect(row.reply_finished).toBeNull();
+      if (row.clock) expect(row.body_captured_at!).toBeLessThanOrEqual(row.clock.deadline);
     }
   };
   const library = () => page.getByRole('region', {name: '저장된 검사 패키지 보관함', exact: true});
@@ -360,10 +395,11 @@ test('native actual OpenVINO job preserves full original package and reopens exa
     expect(fileSha(path.join(path.dirname(path.dirname(OV_PROVIDER)), 'pyvenv.cfg'))).toBe(providerBefore.config_sha256);
     const non200: any[] = [];
     for (const row of replies.filter(row => row.status !== 200)) {expect(row.status).toBe(409); expect(row.request.method()).toBe('GET'); expect(new URL(row.request.url()).pathname).toBe(prerequisitePath);
-      const raw = await row.reply.text(); expect(JSON.parse(raw)).toEqual(prerequisite.response); non200.push({path: prerequisitePath, method: 'GET', status: 409, raw, response: JSON.parse(raw)});}
+      const raw = row.raw!; expect(JSON.parse(raw)).toEqual(prerequisite.response); non200.push({path: prerequisitePath, method: 'GET', status: 409, raw, response: JSON.parse(raw)});}
     const mutationReplies: any[] = [];
-    for (const request of writeRequests.slice(setupWriteRequests)) {const reply = await request.response(); expect(reply).not.toBeNull(); expect(reply!.status()).toBe(200); expect(await reply!.finished()).toBeNull();
-      const raw = await reply!.text(), body = JSON.parse(raw); mutationReplies.push({method: request.method(), path: new URL(request.url()).pathname, request: request.postData() ? request.postDataJSON() : null, status: 200, raw, response: body});
+    for (const request of writeRequests.slice(setupWriteRequests)) {const captured = replies.filter(row => row.request === request); expect(captured).toHaveLength(1); const row = captured[0], reply = row.reply;
+      expect(reply.request()).toBe(request); expect(reply.status()).toBe(200); expect(row.reply_finished).toBeNull(); expect(row.error).toBeUndefined();
+      const raw = row.raw!, body = JSON.parse(raw); mutationReplies.push({method: request.method(), path: new URL(request.url()).pathname, request: request.postData() ? request.postDataJSON() : null, status: 200, raw, response: body});
       if (new URL(request.url()).pathname === '/api/dataset/import') expect(body).toEqual(imported.response);}
     expect(inputIdentity(current, fixture.source, fixture.heldout)).toEqual(identity);
     const notes = {scope: 'actual original native conversion job and library reopen; additional boundary proof, zero new registry cells', beforeRecord,
@@ -373,6 +409,9 @@ test('native actual OpenVINO job preserves full original package and reopens exa
       original_UI_package_verify: {path: verifyPath, image: verificationImage, image_sha256: fileSha(verificationImage), actual: verification, hardware_after: hardwareAfter, expected_hardware: expectedHardware},
       complete_fixture_calls: apiCalls, complete_post_baseline_renderer_writes: writes, complete_post_baseline_mutation_responses: mutationReplies, exact_hydration_imports: imports, original_non200_responses: non200,
       observed_renderer_requests: reads.map(({request: _request, ...clock}) => clock),
+      eager_original_response_bodies: replies.map(row => ({method: row.request.method(), route: new URL(row.request.url()).pathname, query: new URL(row.request.url()).search,
+        status: row.status, raw: row.raw, raw_sha256: sha(row.raw!), raw_size: Buffer.byteLength(row.raw!), response_finished: row.reply_finished,
+        body_captured_at: row.body_captured_at, original_request_clock: row.clock ?? null, original_request_start_deadline_exported: row.clock !== undefined})),
       source_checkpoint_image_and_full_package_unchanged: true, selected_provider_readonly: providerBefore, original_prerequisite_409: prerequisite,
       models_initialized_not_trained: true, synthetic_NG_is_missed_by_all_OK_weights: true, model_quality_human_signing_deploy_GPU_Windows_accepted: false,
       runtime_pack_install_activation_signature_license_accepted: false, original_worker_Popen_exit_receipt_exported: false,
@@ -380,5 +419,8 @@ test('native actual OpenVINO job preserves full original package and reopens exa
       ordinary_renderer_requests_and_fixture_reads_original_started_15s: true, single_real_package_verify_original_started_30s_boundary: true, canonical_manifest_MAX8MiB_unchanged: true, new_cells_promoted: 0};
     const proof = path.join(w.logs, 'package-library-real-openvino-proof.json'); fs.writeFileSync(proof, JSON.stringify(notes, null, 2), {flag: 'wx'}); e.addFile(proof);
     e.note('package_library_real_openvino', {proof_path: proof, proof_sha256: fileSha(proof), proof_size: fs.statSync(proof).size});
-  } finally {page.off('request', observed); page.off('requestfinished', finished); page.off('requestfailed', failed); page.off('response', response);}
+  } finally {
+    page.off('request', observed); page.off('requestfinished', finished); page.off('requestfailed', failed); page.off('response', response);
+    for (const row of replies) {await row.pending; expect(row.error).toBeUndefined();}
+  }
 });
