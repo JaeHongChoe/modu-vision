@@ -1,0 +1,48 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "f7175f5b8bf0be6ee2a0bdc33dc5160506888923",
+  "source_dirty": false,
+  "test": "scripts/e2e/evaluation-late-labelset-lifecycle.spec.ts::native late saved labelset responses preserve current empty, refused and failed scopes through actual stage abandonment, reload and remount",
+  "test_source_sha256": "e6c663a3765ed64552470e0d3acd00174fdb16f11cc609be8a0253e394db62ad",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "8c1d9e7cefdfaabd7b9e33153609a988c351abb9a0ef10c99e11bb5c2dbe10c1",
+  "harness_sha256": "b29aced030e6cd696de370b4bbf8782a192c00360dc731940f74d584393ac1a6",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "a592cbdb7d483a22b9c61d2a163bc649c6338ce20818a08695f676c31b7d3f91"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "7fa5061c121a1bba288cfe918f321663c3d6fd97d0aac7a9b377ac5e6ee6e016"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "4075f3c0543bc8be38071ea73051aa880de87256672cdbd2e7cfd0e412ff1815"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "9cc5fad1be62b2106a470cdc4b359f2bcef5b4a189e4c20c5c301ae9d1200152"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "a5fe738633eeb82873ad4bf4936898e0136242b1b8daeeb5346bae718f7c4035"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "ea758506890542b1f7a515bd8839113a237940491ac0a0dc5478562c20057003"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

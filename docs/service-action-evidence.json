@@ -4117,22 +4117,490 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "f7175f5b8bf0be6ee2a0bdc33dc5160506888923",
+         "kind": "click",
+         "action": "평가 라벨 세트 · 늦은 조회 응답",
+         "expected": "Keep the actual empty selected labelset after the older original Response promise is delivered.",
+         "observed": "Actual browser: The current empty labelset returned real200 with no items. Delivery of the same previously completed second-labelset renderer Response left that empty scope unchanged. Original authenticated HTTP200/body completed before the deferred renderer promise delivered the same unconsumed Response. All scoped raw bytes, original10s request deadline, full34 protected API records and unfiltered file trees were independently verified; API mutations0. Controlled saved reports are display fixtures.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this six-condition display lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows and parent acceptance remain pending.",
+         "test": "scripts/e2e/evaluation-late-labelset-lifecycle.spec.ts::late saved labelset responses preserve current empty, refused and failed scopes through actual stage abandonment, reload and remount",
+         "receipt": "2026-10-08-late-original-response-lifecycle-f7175f5-browser.json",
+         "receipt_sha256": "cb845732b60de2ab37ea62a5eaa1db0bd0f64e33526585fb879897f76e6e575b",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b102d71b162c00cad56cc8bc93fd1a0f31acbe82a0018a4de4eccaed9955c638"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "d9f76221f787cfd13c3b226b20d0175f70d125a89426ee0e59ab3d4984db7779"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "55f3828a03921a1b6512f08f353057e1537423c03ccedd99f8471f865595c374"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "c019ef17d52714d540d9932b61fa431afa1e41d3b843a35f12d3b0c2b1b552a8"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "877952a706d2db90d8ba9d4a23e22721a4eeb1a99c95c860031220413250778f"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "26b5f9e08fbe4c88f38bbdddfbfd3256b867a7d0dc08d4495491b9cdace34b1d"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "f7175f5b8bf0be6ee2a0bdc33dc5160506888923",
+         "kind": "click",
+         "action": "평가 라벨 세트 · 늦은 조회 응답",
+         "expected": "Keep the actual empty selected labelset after the older original Response promise is delivered.",
+         "observed": "Actual source Electron: The current empty labelset returned real200 with no items. Delivery of the same previously completed second-labelset renderer Response left that empty scope unchanged. Original authenticated HTTP200/body completed before the deferred renderer promise delivered the same unconsumed Response. All scoped raw bytes, original10s request deadline, full34 protected API records and unfiltered file trees were independently verified; API mutations0. Controlled saved reports are display fixtures.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this six-condition display lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows and parent acceptance remain pending.",
+         "test": "scripts/e2e/evaluation-late-labelset-lifecycle.spec.ts::native late saved labelset responses preserve current empty, refused and failed scopes through actual stage abandonment, reload and remount",
+         "receipt": "2026-10-08-late-original-response-lifecycle-f7175f5-electron.json",
+         "receipt_sha256": "d3e06a06fa9d030636eb7dff8c26349431c18e2ddb71563d1cde77b4887e1080",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a592cbdb7d483a22b9c61d2a163bc649c6338ce20818a08695f676c31b7d3f91"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "7fa5061c121a1bba288cfe918f321663c3d6fd97d0aac7a9b377ac5e6ee6e016"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "4075f3c0543bc8be38071ea73051aa880de87256672cdbd2e7cfd0e412ff1815"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "9cc5fad1be62b2106a470cdc4b359f2bcef5b4a189e4c20c5c301ae9d1200152"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "a5fe738633eeb82873ad4bf4936898e0136242b1b8daeeb5346bae718f7c4035"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "ea758506890542b1f7a515bd8839113a237940491ac0a0dc5478562c20057003"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "f7175f5b8bf0be6ee2a0bdc33dc5160506888923",
+         "kind": "click",
+         "action": "평가 라벨 세트 · 늦은 조회 응답",
+         "expected": "Retain the refused exact optional remembered default record and recover only through explicit valid selection.",
+         "observed": "Actual browser: The current default GET returned real200 while the exact remembered record preference was deliberately unavailable. The older same Response delivery did not replace that invalid preference; an explicit valid record selection restored the exact saved record. Original authenticated HTTP200/body completed before the deferred renderer promise delivered the same unconsumed Response. All scoped raw bytes, original10s request deadline, full34 protected API records and unfiltered file trees were independently verified; API mutations0. Controlled saved reports are display fixtures.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this six-condition display lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows and parent acceptance remain pending.",
+         "test": "scripts/e2e/evaluation-late-labelset-lifecycle.spec.ts::late saved labelset responses preserve current empty, refused and failed scopes through actual stage abandonment, reload and remount",
+         "receipt": "2026-10-08-late-original-response-lifecycle-f7175f5-browser.json",
+         "receipt_sha256": "cb845732b60de2ab37ea62a5eaa1db0bd0f64e33526585fb879897f76e6e575b",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b102d71b162c00cad56cc8bc93fd1a0f31acbe82a0018a4de4eccaed9955c638"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "d9f76221f787cfd13c3b226b20d0175f70d125a89426ee0e59ab3d4984db7779"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "55f3828a03921a1b6512f08f353057e1537423c03ccedd99f8471f865595c374"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "c019ef17d52714d540d9932b61fa431afa1e41d3b843a35f12d3b0c2b1b552a8"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "877952a706d2db90d8ba9d4a23e22721a4eeb1a99c95c860031220413250778f"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "26b5f9e08fbe4c88f38bbdddfbfd3256b867a7d0dc08d4495491b9cdace34b1d"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "f7175f5b8bf0be6ee2a0bdc33dc5160506888923",
+         "kind": "click",
+         "action": "평가 라벨 세트 · 늦은 조회 응답",
+         "expected": "Retain the refused exact optional remembered default record and recover only through explicit valid selection.",
+         "observed": "Actual source Electron: The current default GET returned real200 while the exact remembered record preference was deliberately unavailable. The older same Response delivery did not replace that invalid preference; an explicit valid record selection restored the exact saved record. Original authenticated HTTP200/body completed before the deferred renderer promise delivered the same unconsumed Response. All scoped raw bytes, original10s request deadline, full34 protected API records and unfiltered file trees were independently verified; API mutations0. Controlled saved reports are display fixtures.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this six-condition display lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows and parent acceptance remain pending.",
+         "test": "scripts/e2e/evaluation-late-labelset-lifecycle.spec.ts::native late saved labelset responses preserve current empty, refused and failed scopes through actual stage abandonment, reload and remount",
+         "receipt": "2026-10-08-late-original-response-lifecycle-f7175f5-electron.json",
+         "receipt_sha256": "d3e06a06fa9d030636eb7dff8c26349431c18e2ddb71563d1cde77b4887e1080",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a592cbdb7d483a22b9c61d2a163bc649c6338ce20818a08695f676c31b7d3f91"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "7fa5061c121a1bba288cfe918f321663c3d6fd97d0aac7a9b377ac5e6ee6e016"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "4075f3c0543bc8be38071ea73051aa880de87256672cdbd2e7cfd0e412ff1815"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "9cc5fad1be62b2106a470cdc4b359f2bcef5b4a189e4c20c5c301ae9d1200152"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "a5fe738633eeb82873ad4bf4936898e0136242b1b8daeeb5346bae718f7c4035"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "ea758506890542b1f7a515bd8839113a237940491ac0a0dc5478562c20057003"
+          }
+         ]
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "f7175f5b8bf0be6ee2a0bdc33dc5160506888923",
+         "kind": "click",
+         "action": "평가 라벨 세트 · 늦은 조회 응답",
+         "expected": "Keep the current scoped503 error after older original Response promise delivery, then recover through actual refresh200.",
+         "observed": "Actual browser: One exact current default history GET was deliberately503. The older same Response delivery retained that error and no record; after removing the fault, an actual refresh returned200 and the full exact selected saved record. Original authenticated HTTP200/body completed before the deferred renderer promise delivered the same unconsumed Response. All scoped raw bytes, original10s request deadline, full34 protected API records and unfiltered file trees were independently verified; API mutations0. Controlled saved reports are display fixtures.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this six-condition display lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows and parent acceptance remain pending.",
+         "test": "scripts/e2e/evaluation-late-labelset-lifecycle.spec.ts::late saved labelset responses preserve current empty, refused and failed scopes through actual stage abandonment, reload and remount",
+         "receipt": "2026-10-08-late-original-response-lifecycle-f7175f5-browser.json",
+         "receipt_sha256": "cb845732b60de2ab37ea62a5eaa1db0bd0f64e33526585fb879897f76e6e575b",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b102d71b162c00cad56cc8bc93fd1a0f31acbe82a0018a4de4eccaed9955c638"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "d9f76221f787cfd13c3b226b20d0175f70d125a89426ee0e59ab3d4984db7779"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "55f3828a03921a1b6512f08f353057e1537423c03ccedd99f8471f865595c374"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "c019ef17d52714d540d9932b61fa431afa1e41d3b843a35f12d3b0c2b1b552a8"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "877952a706d2db90d8ba9d4a23e22721a4eeb1a99c95c860031220413250778f"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "26b5f9e08fbe4c88f38bbdddfbfd3256b867a7d0dc08d4495491b9cdace34b1d"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "f7175f5b8bf0be6ee2a0bdc33dc5160506888923",
+         "kind": "click",
+         "action": "평가 라벨 세트 · 늦은 조회 응답",
+         "expected": "Keep the current scoped503 error after older original Response promise delivery, then recover through actual refresh200.",
+         "observed": "Actual source Electron: One exact current default history GET was deliberately503. The older same Response delivery retained that error and no record; after removing the fault, an actual refresh returned200 and the full exact selected saved record. Original authenticated HTTP200/body completed before the deferred renderer promise delivered the same unconsumed Response. All scoped raw bytes, original10s request deadline, full34 protected API records and unfiltered file trees were independently verified; API mutations0. Controlled saved reports are display fixtures.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this six-condition display lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows and parent acceptance remain pending.",
+         "test": "scripts/e2e/evaluation-late-labelset-lifecycle.spec.ts::native late saved labelset responses preserve current empty, refused and failed scopes through actual stage abandonment, reload and remount",
+         "receipt": "2026-10-08-late-original-response-lifecycle-f7175f5-electron.json",
+         "receipt_sha256": "d3e06a06fa9d030636eb7dff8c26349431c18e2ddb71563d1cde77b4887e1080",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a592cbdb7d483a22b9c61d2a163bc649c6338ce20818a08695f676c31b7d3f91"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "7fa5061c121a1bba288cfe918f321663c3d6fd97d0aac7a9b377ac5e6ee6e016"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "4075f3c0543bc8be38071ea73051aa880de87256672cdbd2e7cfd0e412ff1815"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "9cc5fad1be62b2106a470cdc4b359f2bcef5b4a189e4c20c5c301ae9d1200152"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "a5fe738633eeb82873ad4bf4936898e0136242b1b8daeeb5346bae718f7c4035"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "ea758506890542b1f7a515bd8839113a237940491ac0a0dc5478562c20057003"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "f7175f5b8bf0be6ee2a0bdc33dc5160506888923",
+         "kind": "click",
+         "action": "평가 라벨 세트 · 늦은 조회 응답",
+         "expected": "Abandon the actual evaluation view for Dataset without persisting the later original Response promise delivery.",
+         "observed": "Actual browser: The actual Dataset stage made the evaluation panel absent before the same original Response promise was released. Returning to evaluation read the current second-labelset record and retained preference bytes. This is stage abandonment, with no explicit cancel dialog or job cancellation. Original authenticated HTTP200/body completed before the deferred renderer promise delivered the same unconsumed Response. All scoped raw bytes, original10s request deadline, full34 protected API records and unfiltered file trees were independently verified; API mutations0. Controlled saved reports are display fixtures.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this six-condition display lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows and parent acceptance remain pending.",
+         "test": "scripts/e2e/evaluation-late-labelset-lifecycle.spec.ts::late saved labelset responses preserve current empty, refused and failed scopes through actual stage abandonment, reload and remount",
+         "receipt": "2026-10-08-late-original-response-lifecycle-f7175f5-browser.json",
+         "receipt_sha256": "cb845732b60de2ab37ea62a5eaa1db0bd0f64e33526585fb879897f76e6e575b",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b102d71b162c00cad56cc8bc93fd1a0f31acbe82a0018a4de4eccaed9955c638"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "d9f76221f787cfd13c3b226b20d0175f70d125a89426ee0e59ab3d4984db7779"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "55f3828a03921a1b6512f08f353057e1537423c03ccedd99f8471f865595c374"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "c019ef17d52714d540d9932b61fa431afa1e41d3b843a35f12d3b0c2b1b552a8"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "877952a706d2db90d8ba9d4a23e22721a4eeb1a99c95c860031220413250778f"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "26b5f9e08fbe4c88f38bbdddfbfd3256b867a7d0dc08d4495491b9cdace34b1d"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "f7175f5b8bf0be6ee2a0bdc33dc5160506888923",
+         "kind": "click",
+         "action": "평가 라벨 세트 · 늦은 조회 응답",
+         "expected": "Abandon the actual evaluation view for Dataset without persisting the later original Response promise delivery.",
+         "observed": "Actual source Electron: The actual Dataset stage made the evaluation panel absent before the same original Response promise was released. Returning to evaluation read the current second-labelset record and retained preference bytes. This is stage abandonment, with no explicit cancel dialog or job cancellation. Original authenticated HTTP200/body completed before the deferred renderer promise delivered the same unconsumed Response. All scoped raw bytes, original10s request deadline, full34 protected API records and unfiltered file trees were independently verified; API mutations0. Controlled saved reports are display fixtures.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this six-condition display lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows and parent acceptance remain pending.",
+         "test": "scripts/e2e/evaluation-late-labelset-lifecycle.spec.ts::native late saved labelset responses preserve current empty, refused and failed scopes through actual stage abandonment, reload and remount",
+         "receipt": "2026-10-08-late-original-response-lifecycle-f7175f5-electron.json",
+         "receipt_sha256": "d3e06a06fa9d030636eb7dff8c26349431c18e2ddb71563d1cde77b4887e1080",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a592cbdb7d483a22b9c61d2a163bc649c6338ce20818a08695f676c31b7d3f91"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "7fa5061c121a1bba288cfe918f321663c3d6fd97d0aac7a9b377ac5e6ee6e016"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "4075f3c0543bc8be38071ea73051aa880de87256672cdbd2e7cfd0e412ff1815"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "9cc5fad1be62b2106a470cdc4b359f2bcef5b4a189e4c20c5c301ae9d1200152"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "a5fe738633eeb82873ad4bf4936898e0136242b1b8daeeb5346bae718f7c4035"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "ea758506890542b1f7a515bd8839113a237940491ac0a0dc5478562c20057003"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "f7175f5b8bf0be6ee2a0bdc33dc5160506888923",
+         "kind": "click",
+         "action": "평가 라벨 세트 · 늦은 조회 응답",
+         "expected": "Preserve the exact newer saved record and preferences through actual cold renderer reload after original Response promise delivery.",
+         "observed": "Actual browser: The newer alternate default record was selected before the older same Response promise was released. A subsequent actual cold renderer reload retained that exact ID, evidence hash, full record, labelset and grouping preferences; no aborted HTTP response was treated as200. Original authenticated HTTP200/body completed before the deferred renderer promise delivered the same unconsumed Response. All scoped raw bytes, original10s request deadline, full34 protected API records and unfiltered file trees were independently verified; API mutations0. Controlled saved reports are display fixtures.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this six-condition display lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows and parent acceptance remain pending.",
+         "test": "scripts/e2e/evaluation-late-labelset-lifecycle.spec.ts::late saved labelset responses preserve current empty, refused and failed scopes through actual stage abandonment, reload and remount",
+         "receipt": "2026-10-08-late-original-response-lifecycle-f7175f5-browser.json",
+         "receipt_sha256": "cb845732b60de2ab37ea62a5eaa1db0bd0f64e33526585fb879897f76e6e575b",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b102d71b162c00cad56cc8bc93fd1a0f31acbe82a0018a4de4eccaed9955c638"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "d9f76221f787cfd13c3b226b20d0175f70d125a89426ee0e59ab3d4984db7779"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "55f3828a03921a1b6512f08f353057e1537423c03ccedd99f8471f865595c374"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "c019ef17d52714d540d9932b61fa431afa1e41d3b843a35f12d3b0c2b1b552a8"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "877952a706d2db90d8ba9d4a23e22721a4eeb1a99c95c860031220413250778f"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "26b5f9e08fbe4c88f38bbdddfbfd3256b867a7d0dc08d4495491b9cdace34b1d"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "f7175f5b8bf0be6ee2a0bdc33dc5160506888923",
+         "kind": "click",
+         "action": "평가 라벨 세트 · 늦은 조회 응답",
+         "expected": "Preserve the exact newer saved record and preferences through actual cold renderer reload after original Response promise delivery.",
+         "observed": "Actual source Electron: The newer alternate default record was selected before the older same Response promise was released. A subsequent actual cold renderer reload retained that exact ID, evidence hash, full record, labelset and grouping preferences; no aborted HTTP response was treated as200. Original authenticated HTTP200/body completed before the deferred renderer promise delivered the same unconsumed Response. All scoped raw bytes, original10s request deadline, full34 protected API records and unfiltered file trees were independently verified; API mutations0. Controlled saved reports are display fixtures.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this six-condition display lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows and parent acceptance remain pending.",
+         "test": "scripts/e2e/evaluation-late-labelset-lifecycle.spec.ts::native late saved labelset responses preserve current empty, refused and failed scopes through actual stage abandonment, reload and remount",
+         "receipt": "2026-10-08-late-original-response-lifecycle-f7175f5-electron.json",
+         "receipt_sha256": "d3e06a06fa9d030636eb7dff8c26349431c18e2ddb71563d1cde77b4887e1080",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a592cbdb7d483a22b9c61d2a163bc649c6338ce20818a08695f676c31b7d3f91"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "7fa5061c121a1bba288cfe918f321663c3d6fd97d0aac7a9b377ac5e6ee6e016"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "4075f3c0543bc8be38071ea73051aa880de87256672cdbd2e7cfd0e412ff1815"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "9cc5fad1be62b2106a470cdc4b359f2bcef5b4a189e4c20c5c301ae9d1200152"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "a5fe738633eeb82873ad4bf4936898e0136242b1b8daeeb5346bae718f7c4035"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "ea758506890542b1f7a515bd8839113a237940491ac0a0dc5478562c20057003"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "f7175f5b8bf0be6ee2a0bdc33dc5160506888923",
+         "kind": "click",
+         "action": "평가 라벨 세트 · 늦은 조회 응답",
+         "expected": "Retain the current saved record after actual Dataset/evaluation remount while the older original Response promise is delivered.",
+         "observed": "Actual browser: After actual Dataset/evaluation remount, the fresh current default history returned200 and displayed its exact saved record. The older same Response promise then released without replacing the current scope; original source path/hash/UUID and active default project labelset were preserved. This proves saved-view context return only. Original authenticated HTTP200/body completed before the deferred renderer promise delivered the same unconsumed Response. All scoped raw bytes, original10s request deadline, full34 protected API records and unfiltered file trees were independently verified; API mutations0. Controlled saved reports are display fixtures.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this six-condition display lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows and parent acceptance remain pending.",
+         "test": "scripts/e2e/evaluation-late-labelset-lifecycle.spec.ts::late saved labelset responses preserve current empty, refused and failed scopes through actual stage abandonment, reload and remount",
+         "receipt": "2026-10-08-late-original-response-lifecycle-f7175f5-browser.json",
+         "receipt_sha256": "cb845732b60de2ab37ea62a5eaa1db0bd0f64e33526585fb879897f76e6e575b",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "b102d71b162c00cad56cc8bc93fd1a0f31acbe82a0018a4de4eccaed9955c638"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "d9f76221f787cfd13c3b226b20d0175f70d125a89426ee0e59ab3d4984db7779"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "55f3828a03921a1b6512f08f353057e1537423c03ccedd99f8471f865595c374"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "c019ef17d52714d540d9932b61fa431afa1e41d3b843a35f12d3b0c2b1b552a8"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "877952a706d2db90d8ba9d4a23e22721a4eeb1a99c95c860031220413250778f"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "26b5f9e08fbe4c88f38bbdddfbfd3256b867a7d0dc08d4495491b9cdace34b1d"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "f7175f5b8bf0be6ee2a0bdc33dc5160506888923",
+         "kind": "click",
+         "action": "평가 라벨 세트 · 늦은 조회 응답",
+         "expected": "Retain the current saved record after actual Dataset/evaluation remount while the older original Response promise is delivered.",
+         "observed": "Actual source Electron: After actual Dataset/evaluation remount, the fresh current default history returned200 and displayed its exact saved record. The older same Response promise then released without replacing the current scope; original source path/hash/UUID and active default project labelset were preserved. This proves saved-view context return only. Original authenticated HTTP200/body completed before the deferred renderer promise delivered the same unconsumed Response. All scoped raw bytes, original10s request deadline, full34 protected API records and unfiltered file trees were independently verified; API mutations0. Controlled saved reports are display fixtures.",
+         "reviewer": "Codex source peer and strict independent actual reader accepted this six-condition display lifecycle. Human label approval, model quality, training adoption, physical/frozen/Windows and parent acceptance remain pending.",
+         "test": "scripts/e2e/evaluation-late-labelset-lifecycle.spec.ts::native late saved labelset responses preserve current empty, refused and failed scopes through actual stage abandonment, reload and remount",
+         "receipt": "2026-10-08-late-original-response-lifecycle-f7175f5-electron.json",
+         "receipt_sha256": "d3e06a06fa9d030636eb7dff8c26349431c18e2ddb71563d1cde77b4887e1080",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "a592cbdb7d483a22b9c61d2a163bc649c6338ce20818a08695f676c31b7d3f91"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "7fa5061c121a1bba288cfe918f321663c3d6fd97d0aac7a9b377ac5e6ee6e016"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "4075f3c0543bc8be38071ea73051aa880de87256672cdbd2e7cfd0e412ff1815"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "9cc5fad1be62b2106a470cdc4b359f2bcef5b4a189e4c20c5c301ae9d1200152"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "a5fe738633eeb82873ad4bf4936898e0136242b1b8daeeb5346bae718f7c4035"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "ea758506890542b1f7a515bd8839113a237940491ac0a0dc5478562c20057003"
+          }
+         ]
+        }
+       ]
       }
      }
     }
