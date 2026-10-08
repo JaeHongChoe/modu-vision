@@ -15,6 +15,7 @@ import re
 import stat
 import socket
 import subprocess
+import time
 import uuid
 
 import psutil
@@ -56,6 +57,47 @@ def _identity(pid):
     process = psutil.Process(pid)
     return {'pid': pid, 'created_at': process.create_time(),
         'command_sha256': hashlib.sha256(_update()._canonical(process.cmdline())).hexdigest()}
+
+
+def _capture_original_child_identity(child):
+    """Bound the first identity only; never adopt or repair a recorded process.
+
+    A freshly exec'd Linux child can temporarily expose an empty command line.
+    Retain the sole original Popen and first observed birth while waiting for
+    two equal nonempty samples. Every read rechecks fresh birth, parent, session
+    and the original handle. Ambiguity keeps the persisted spawn intent closed.
+    """
+    deadline = time.monotonic()+.5
+    pid = child.pid
+    birth = psutil.Process(pid).create_time()
+    empty_command = hashlib.sha256(_update()._canonical([])).hexdigest()
+    previous = None
+
+    def original():
+        if child.pid != pid or child.poll() is not None: raise psutil.NoSuchProcess(pid)
+        fresh = psutil.Process(pid)
+        if fresh.create_time() != birth or fresh.ppid() != os.getpid():
+            raise LaunchLeaseError('Original child birth or parent changed during startup')
+        if os.getsid(pid) != pid or os.getpgid(pid) != pid:
+            raise LaunchLeaseError('Original child session changed during startup')
+
+    while True:
+        if time.monotonic() >= deadline: raise LaunchLeaseError('Original child identity sampling deadline exceeded')
+        original()
+        observed = _identity(pid)
+        original()
+        if (not _identity_shape(observed) or observed['pid'] != pid or observed['created_at'] != birth):
+            raise LaunchLeaseError('Original child identity changed during startup')
+        if time.monotonic() >= deadline: raise LaunchLeaseError('Original child identity sampling deadline exceeded')
+        if observed['command_sha256'] == empty_command:
+            if previous is not None: raise LaunchLeaseError('Original child command changed during startup')
+        elif previous is not None:
+            if observed != previous: raise LaunchLeaseError('Original child command changed during startup')
+            return observed
+        else: previous = observed
+        remaining = deadline-time.monotonic()
+        if remaining <= 0: raise LaunchLeaseError('Original child identity sampling deadline exceeded')
+        time.sleep(min(.005, remaining))
 
 
 def _identity_shape(value):
@@ -496,7 +538,7 @@ class LaunchSupervisor:
                     cwd=self.root, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                     close_fds=True, pass_fds=pass_fds, **session_isolation())
                 _checkpoint('after_spawn')
-                identity = _identity(self._process.pid)
+                identity = _capture_original_child_identity(self._process)
                 return self._persist(self._owned(), process=identity)
             except BaseException as exc:
                 # Even a pre-exec error retains the intent; no false no-spawn proof.
