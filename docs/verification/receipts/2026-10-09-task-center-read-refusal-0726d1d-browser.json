@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0726d1ddcba7b7c8198f6c29befe3c6aa2d2cf85",
+  "source_dirty": false,
+  "test": "scripts/e2e/task-center-empty-read-refusal.spec.ts::empty task center refuses foreign scope and exact read503 before explicit reopen",
+  "test_source_sha256": "a6ec58eac8ce8dcfcc84de7264a30a015b32810a6fb45eb7576817902441af36",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "ee2612710d60614ff8c40741753c52b790e47b2964c667e664cc000fda84236a",
+  "harness_sha256": "ed849f7ff1876a9e13fab09a02c91c96e1b1c6b9acab313866daea575d2495d5",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "78b09fa72d8a446177c1fa6376160a271ae197d6c440524aa5c8daa91376735a"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "e938bc2eb92844c4173db5c3548f79cd0cac452e305a1c4bb9d9e26035d5bc90"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "9752b2a197d63ef02d2bb806970c14c80586025a887a75cf389c5222f96198f4"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

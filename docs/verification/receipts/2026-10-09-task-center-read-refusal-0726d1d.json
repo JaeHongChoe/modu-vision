@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "kind": "scoped_existing_action_execution_not_parent_acceptance",
+  "source_sha": "0726d1ddcba7b7c8198f6c29befe3c6aa2d2cf85",
+  "source_count": 2336,
+  "test_source_sha256": "a6ec58eac8ce8dcfcc84de7264a30a015b32810a6fb45eb7576817902441af36",
+  "qualification_sha256": "acef7975adca1a8a402049510f75690a19582e036a12bb67a3c679057eb11c3a",
+  "reader_source_peer_sha256": "345614385fa3d9b8cb9b95464c2adb3efb51078b57b7a9337038634ba1c4332a",
+  "cells": [
+    "U003.completed-comparison-task-handoff.empty",
+    "U003.completed-comparison-task-handoff.invalid",
+    "U003.completed-comparison-task-handoff.error"
+  ],
+  "requirement_owner": "S2-09",
+  "gui_receipts": [
+    {
+      "path": "docs/verification/receipts/2026-10-09-task-center-read-refusal-0726d1d-electron.json",
+      "sha256": "7fa795b6a0445bb9a9909670dc4177094b9d5bd08e469d4aeb98bf2ac3c8d7dd",
+      "mode": "electron"
+    },
+    {
+      "path": "docs/verification/receipts/2026-10-09-task-center-read-refusal-0726d1d-browser.json",
+      "sha256": "4db746ac5047ff48f13937356ca0513dedc1ff5d44d5e94598dc7414a93b6718",
+      "mode": "browser"
+    }
+  ],
+  "execution": {
+    "modes": [
+      "browser",
+      "electron"
+    ],
+    "whole_expected_passes": 2,
+    "retries": 0,
+    "original_source_archive_and_before_after_equal": true,
+    "full_original_owned_cleanup_checked": true,
+    "snapshots_per_mode": 7,
+    "complete_raw_APIs_per_snapshot": 10,
+    "full_unfiltered_trees_per_snapshot": 2,
+    "before_regular_file_byte_copies_available": false,
+    "original_harness_RGB_pixels_per_mode": 2048,
+    "fixture_fullbody_clocks_per_mode": 75,
+    "original_request_start_absolute_budget_ms": 10000,
+    "post_observer_business_writes_per_mode": 0,
+    "declared_setup_writes_per_mode": 3,
+    "lawful_product_task_poll_ms": 2500,
+    "phase_cardinality": {
+      "electron": {
+        "initial": 3,
+        "invalid": 1,
+        "invalid-reopen": 1,
+        "error": 1,
+        "error-reopen": 1
+      },
+      "browser": {
+        "initial": 2,
+        "invalid": 1,
+        "invalid-reopen": 1,
+        "error": 1,
+        "error-reopen": 1
+      }
+    },
+    "all_observed_task_responses": {
+      "electron": 13,
+      "browser": 6
+    },
+    "separate_native_snapshot_GET200_count": 6,
+    "controlled_read503_per_mode": 1,
+    "OPTIONS_transport_requests_per_mode": 0,
+    "empty_selector_and_absent_comparison_action": true,
+    "foreign_source_response_refused": true,
+    "exact503_alert_then_explicit_real200_reopen": true,
+    "owning_UI_state_from_passed_source_assertions_and_three_screenshots_per_mode": true,
+    "independent_OCR_performed": false,
+    "browser_renderer_origin_separately_bound_to_original_HTTP_backend_relay": true,
+    "native_original_backend_origin_preserved": true
+  },
+  "limits": {
+    "quality_approved": false,
+    "independent_review_accepted": false,
+    "native_page_console_blocked_capture": "unavailable",
+    "native_runtime_error_cleanliness": false,
+    "browser_controlled503_console_preserved": true,
+    "OPTIONS_response_cleanliness_claim": false,
+    "completed_comparison_or_job_selected": false,
+    "comparison_or_model_execution": false,
+    "cancellation_exercised": false,
+    "before_file_byte_copies_claim": false,
+    "exported_DOM_timing_claim": false,
+    "installed_compiled_OS_signing_publisher_Windows_accepted": false,
+    "human_or_parent_or_final_acceptance": false,
+    "whole_writer_tree_or_lease_acceptance": false,
+    "prior_origin_reader_failure_and_original_failed_UI_preparations_retained": true
+  }
+}

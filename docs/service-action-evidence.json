@@ -22279,13 +22279,175 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-09",
+         "source_sha": "0726d1ddcba7b7c8198f6c29befe3c6aa2d2cf85",
+         "kind": "click",
+         "action": "저장 작업 다시 열기 · 비교 작업·결과 열기",
+         "expected": "An original empty own-project task list has an empty saved-task selector and no comparison open action, including focused Home/Enter input.",
+         "observed": "electron: An original empty own-project task list has an empty saved-task selector and no comparison open action, including focused Home/Enter input. All seven complete ten-API snapshots and both unfiltered trees remain equal; zero post-observer business writes. Original full-body request clocks and owned cleanup are checked. Before file byte copies were not exported.",
+         "reviewer": "Root separately granted original full-report and raw proof qualification. The source assertions and screenshots establish these existing controls; native error capture, completed job handoff, cancellation, installed runtime, model quality and parent acceptance are not claimed.",
+         "test": "scripts/e2e/task-center-empty-read-refusal.spec.ts::source Electron empty task center keeps project after invalid read and exact503",
+         "receipt": "2026-10-09-task-center-read-refusal-0726d1d-electron.json",
+         "receipt_sha256": "7fa795b6a0445bb9a9909670dc4177094b9d5bd08e469d4aeb98bf2ac3c8d7dd",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3570a7b6f77fbedaeedb1a7ef439aff063d16e2d7fddfeece9149747d2f33322"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3168efb60bbbf621edd29851a720b7a90ec1641a18765bb3946d80866c486283"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "34066c0cf9a9d83491aeb887d6ef580153732311a9df6fbf36bc817d946ebfa3"
+          }
+         ]
+        },
+        {
+         "task": "S2-09",
+         "source_sha": "0726d1ddcba7b7c8198f6c29befe3c6aa2d2cf85",
+         "kind": "click",
+         "action": "저장 작업 다시 열기 · 비교 작업·결과 열기",
+         "expected": "An original empty own-project task list has an empty saved-task selector and no comparison open action, including focused Home/Enter input.",
+         "observed": "browser: An original empty own-project task list has an empty saved-task selector and no comparison open action, including focused Home/Enter input. All seven complete ten-API snapshots and both unfiltered trees remain equal; zero post-observer business writes. Original full-body request clocks and owned cleanup are checked. Before file byte copies were not exported.",
+         "reviewer": "Root separately granted original full-report and raw proof qualification. The source assertions and screenshots establish these existing controls; native error capture, completed job handoff, cancellation, installed runtime, model quality and parent acceptance are not claimed.",
+         "test": "scripts/e2e/task-center-empty-read-refusal.spec.ts::empty task center refuses foreign scope and exact read503 before explicit reopen",
+         "receipt": "2026-10-09-task-center-read-refusal-0726d1d-browser.json",
+         "receipt_sha256": "4db746ac5047ff48f13937356ca0513dedc1ff5d44d5e94598dc7414a93b6718",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "78b09fa72d8a446177c1fa6376160a271ae197d6c440524aa5c8daa91376735a"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e938bc2eb92844c4173db5c3548f79cd0cac452e305a1c4bb9d9e26035d5bc90"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "9752b2a197d63ef02d2bb806970c14c80586025a887a75cf389c5222f96198f4"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-09",
+         "source_sha": "0726d1ddcba7b7c8198f6c29befe3c6aa2d2cf85",
+         "kind": "click",
+         "action": "저장 작업 다시 열기 · 비교 작업·결과 열기",
+         "expected": "A controlled GET200 task response with a foreign source dataset is rejected with the exact source-mismatch alert; the own-project empty selector remains and explicit reopen restores original GET200.",
+         "observed": "electron: A controlled GET200 task response with a foreign source dataset is rejected with the exact source-mismatch alert; the own-project empty selector remains and explicit reopen restores original GET200. All seven complete ten-API snapshots and both unfiltered trees remain equal; zero post-observer business writes. Original full-body request clocks and owned cleanup are checked. Before file byte copies were not exported.",
+         "reviewer": "Root separately granted original full-report and raw proof qualification. The source assertions and screenshots establish these existing controls; native error capture, completed job handoff, cancellation, installed runtime, model quality and parent acceptance are not claimed.",
+         "test": "scripts/e2e/task-center-empty-read-refusal.spec.ts::source Electron empty task center keeps project after invalid read and exact503",
+         "receipt": "2026-10-09-task-center-read-refusal-0726d1d-electron.json",
+         "receipt_sha256": "7fa795b6a0445bb9a9909670dc4177094b9d5bd08e469d4aeb98bf2ac3c8d7dd",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3570a7b6f77fbedaeedb1a7ef439aff063d16e2d7fddfeece9149747d2f33322"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3168efb60bbbf621edd29851a720b7a90ec1641a18765bb3946d80866c486283"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "34066c0cf9a9d83491aeb887d6ef580153732311a9df6fbf36bc817d946ebfa3"
+          }
+         ]
+        },
+        {
+         "task": "S2-09",
+         "source_sha": "0726d1ddcba7b7c8198f6c29befe3c6aa2d2cf85",
+         "kind": "click",
+         "action": "저장 작업 다시 열기 · 비교 작업·결과 열기",
+         "expected": "A controlled GET200 task response with a foreign source dataset is rejected with the exact source-mismatch alert; the own-project empty selector remains and explicit reopen restores original GET200.",
+         "observed": "browser: A controlled GET200 task response with a foreign source dataset is rejected with the exact source-mismatch alert; the own-project empty selector remains and explicit reopen restores original GET200. All seven complete ten-API snapshots and both unfiltered trees remain equal; zero post-observer business writes. Original full-body request clocks and owned cleanup are checked. Before file byte copies were not exported.",
+         "reviewer": "Root separately granted original full-report and raw proof qualification. The source assertions and screenshots establish these existing controls; native error capture, completed job handoff, cancellation, installed runtime, model quality and parent acceptance are not claimed.",
+         "test": "scripts/e2e/task-center-empty-read-refusal.spec.ts::empty task center refuses foreign scope and exact read503 before explicit reopen",
+         "receipt": "2026-10-09-task-center-read-refusal-0726d1d-browser.json",
+         "receipt_sha256": "4db746ac5047ff48f13937356ca0513dedc1ff5d44d5e94598dc7414a93b6718",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "78b09fa72d8a446177c1fa6376160a271ae197d6c440524aa5c8daa91376735a"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e938bc2eb92844c4173db5c3548f79cd0cac452e305a1c4bb9d9e26035d5bc90"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "9752b2a197d63ef02d2bb806970c14c80586025a887a75cf389c5222f96198f4"
+          }
+         ]
+        }
+       ]
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-09",
+         "source_sha": "0726d1ddcba7b7c8198f6c29befe3c6aa2d2cf85",
+         "kind": "click",
+         "action": "저장 작업 다시 열기 · 비교 작업·결과 열기",
+         "expected": "A controlled exact task GET503 preserves the current project, empty selector and complete protected state; explicit reopen restores the original GET200 and clears the alert.",
+         "observed": "electron: A controlled exact task GET503 preserves the current project, empty selector and complete protected state; explicit reopen restores the original GET200 and clears the alert. All seven complete ten-API snapshots and both unfiltered trees remain equal; zero post-observer business writes. Original full-body request clocks and owned cleanup are checked. Before file byte copies were not exported.",
+         "reviewer": "Root separately granted original full-report and raw proof qualification. The source assertions and screenshots establish these existing controls; native error capture, completed job handoff, cancellation, installed runtime, model quality and parent acceptance are not claimed.",
+         "test": "scripts/e2e/task-center-empty-read-refusal.spec.ts::source Electron empty task center keeps project after invalid read and exact503",
+         "receipt": "2026-10-09-task-center-read-refusal-0726d1d-electron.json",
+         "receipt_sha256": "7fa795b6a0445bb9a9909670dc4177094b9d5bd08e469d4aeb98bf2ac3c8d7dd",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "3570a7b6f77fbedaeedb1a7ef439aff063d16e2d7fddfeece9149747d2f33322"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "3168efb60bbbf621edd29851a720b7a90ec1641a18765bb3946d80866c486283"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "34066c0cf9a9d83491aeb887d6ef580153732311a9df6fbf36bc817d946ebfa3"
+          }
+         ]
+        },
+        {
+         "task": "S2-09",
+         "source_sha": "0726d1ddcba7b7c8198f6c29befe3c6aa2d2cf85",
+         "kind": "click",
+         "action": "저장 작업 다시 열기 · 비교 작업·결과 열기",
+         "expected": "A controlled exact task GET503 preserves the current project, empty selector and complete protected state; explicit reopen restores the original GET200 and clears the alert.",
+         "observed": "browser: A controlled exact task GET503 preserves the current project, empty selector and complete protected state; explicit reopen restores the original GET200 and clears the alert. All seven complete ten-API snapshots and both unfiltered trees remain equal; zero post-observer business writes. Original full-body request clocks and owned cleanup are checked. Before file byte copies were not exported.",
+         "reviewer": "Root separately granted original full-report and raw proof qualification. The source assertions and screenshots establish these existing controls; native error capture, completed job handoff, cancellation, installed runtime, model quality and parent acceptance are not claimed.",
+         "test": "scripts/e2e/task-center-empty-read-refusal.spec.ts::empty task center refuses foreign scope and exact read503 before explicit reopen",
+         "receipt": "2026-10-09-task-center-read-refusal-0726d1d-browser.json",
+         "receipt_sha256": "4db746ac5047ff48f13937356ca0513dedc1ff5d44d5e94598dc7414a93b6718",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "78b09fa72d8a446177c1fa6376160a271ae197d6c440524aa5c8daa91376735a"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e938bc2eb92844c4173db5c3548f79cd0cac452e305a1c4bb9d9e26035d5bc90"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "9752b2a197d63ef02d2bb806970c14c80586025a887a75cf389c5222f96198f4"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
        "state": "pending"

@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0726d1ddcba7b7c8198f6c29befe3c6aa2d2cf85",
+  "source_dirty": false,
+  "test": "scripts/e2e/task-center-empty-read-refusal.spec.ts::source Electron empty task center keeps project after invalid read and exact503",
+  "test_source_sha256": "a6ec58eac8ce8dcfcc84de7264a30a015b32810a6fb45eb7576817902441af36",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "ee2612710d60614ff8c40741753c52b790e47b2964c667e664cc000fda84236a",
+  "harness_sha256": "591c6d8342aa800397406565450812d6f2506bc4603b8f109021a2437550ab21",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "3570a7b6f77fbedaeedb1a7ef439aff063d16e2d7fddfeece9149747d2f33322"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "3168efb60bbbf621edd29851a720b7a90ec1641a18765bb3946d80866c486283"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "34066c0cf9a9d83491aeb887d6ef580153732311a9df6fbf36bc817d946ebfa3"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}
