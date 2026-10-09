@@ -1,0 +1,95 @@
+{
+  "schema": "modu-vision.scoped-archive-producer-controls/v1",
+  "products": {
+    "backend/engine/patch_evaluation_evidence.py": {
+      "size": 3833,
+      "sha256": "91964ced8b4cffe4838663f61b793b89eb42a69ddf2a5102799986ffd594eb15"
+    },
+    "backend/engine/core_evaluation_recipe.py": {
+      "size": 11442,
+      "sha256": "ebc79c85164a85a49647109fc3b37bea205a9846dac2d5c03008641b98bdde52"
+    },
+    "backend/tests/test_evaluation_archive_scope.py": {
+      "size": 14168,
+      "sha256": "079ddd4ff814ef2fe579b5d17541077556a12a2c8c159cb5ef99f40f8b53e757"
+    }
+  },
+  "independent_source_review_sha256": "4ee0605ecf638a303b231a50f1bdaf9f1d7e68dc884a4319a67d09e8a5008a58",
+  "independent_actual_readback_sha256": "e54a662dfb280cd8c27c6a7f3ccaa5570e3e5767aafa9314d014b59ac8345307",
+  "gates": [
+    {
+      "gate": "archive-scope-original-red-f01-60",
+      "source_sha": "0db1c79e7c2e790715630d507489b603c55ed34b",
+      "source_count": 2362,
+      "source_maps_equal": true,
+      "source_clean": true,
+      "exit_code": 1,
+      "elapsed_seconds": 6.51883602142334,
+      "tests": 5,
+      "failures": 3,
+      "errors": 0,
+      "skipped": 0,
+      "original_raw_sha256": {
+        "start.json": "aeb783424a8d96b338664f41d7f32925ac1b545ce93ea0a37f0ca1f949c2290b",
+        "run.json": "2092004ec112900598323cf8b5f77c1b0690fc3cea24f5388a96c42e74fd61c7",
+        "gate.log": "29c3d1682f3b711928fe75ae00a3e492d602604004ce4e4e8476811100a1f1bf",
+        "source-before.json": "e69a2b2b48f213e7a944ec4f02c30d4543beb421d709decba8a279f0b0192f57",
+        "source-after.json": "e69a2b2b48f213e7a944ec4f02c30d4543beb421d709decba8a279f0b0192f57",
+        "results.xml": "d087db5f104ba2b0b92cb349e69a7eca5bab93e32cebf881a30e75bfc2aafe3d"
+      }
+    },
+    {
+      "gate": "archive-scope-candidate-green-f01-61",
+      "source_sha": "a60e1341f051d90f26cd8e8b89461a1a28c72d43",
+      "source_count": 2362,
+      "source_maps_equal": true,
+      "source_clean": true,
+      "exit_code": 0,
+      "elapsed_seconds": 5.095041036605835,
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "original_raw_sha256": {
+        "start.json": "542540395057528017cfcf6624e77c69dfdb41a968fbe4b48d06a2a848f2a5ff",
+        "run.json": "56eaa23a99c1b5ad883aba715c5973a0c8dbe1b1e19a3bbb8946a5f841dfa87d",
+        "gate.log": "17e01a1ea844e05421d6c829ace7305f28211bff1c17705b3b11bb5ee46de399",
+        "source-before.json": "d7955911bedeaaf3e56b665684b4f2c9af464ebb9c2eec8c9fa081e11c90f86d",
+        "source-after.json": "d7955911bedeaaf3e56b665684b4f2c9af464ebb9c2eec8c9fa081e11c90f86d",
+        "results.xml": "e39e86c134a630fb660606d14ebe597482f0de5823b454bedbf73e5c6c2bb9e9"
+      }
+    },
+    {
+      "gate": "archive-scope-related-green-f01-62",
+      "source_sha": "a60e1341f051d90f26cd8e8b89461a1a28c72d43",
+      "source_count": 2362,
+      "source_maps_equal": true,
+      "source_clean": true,
+      "exit_code": 0,
+      "elapsed_seconds": 10.644134044647217,
+      "tests": 69,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "original_raw_sha256": {
+        "start.json": "9e7d4eed6bfbfc5b620a24805f6818c91da71a2fb382bdf3a8ca8af27997bae2",
+        "run.json": "9562dc1ecc957010eeff37ca8016828b520aeac3e6f3383fc6ff8c7fc1f18384",
+        "gate.log": "73766b7c7c76bad77eb0eb60ffdf999f6d3149d3dcad8f3e9f22a0c29e18b592",
+        "source-before.json": "d7955911bedeaaf3e56b665684b4f2c9af464ebb9c2eec8c9fa081e11c90f86d",
+        "source-after.json": "d7955911bedeaaf3e56b665684b4f2c9af464ebb9c2eec8c9fa081e11c90f86d",
+        "results.xml": "fdcc1c111455991d93cf7126cf293ef4155598b8f5d5b47e746cc1df63787ec0"
+      }
+    }
+  ],
+  "scope": "Patch/Core evaluation archives read existing request-scoped metadata and Core archive retains the saved split in the fingerprint. Explicit metadata overrides and all existing validation guards stay intact. Five new archive-only cases retain real metadata/history/fingerprints with an explicit controlled Core cohort validation/extraction seam; related69 checks include tiny bounded local CPU and in-process controlled transport, not a remote/GPU run.",
+  "limitations": [
+    "Three original causal failures are retained; the final five new and69 related checks pass without skips.",
+    "The failed original Patch F03 evaluation remains failed: a new empty metadata lock was added and its dataset fingerprint differed. No historical receipt was repaired or promoted.",
+    "These producer controls do not install missing request contexts or qualify any new original model lifecycle.",
+    "No model quality, human truth, target, curated action cell, signing or parent acceptance is inferred."
+  ],
+  "record_chain_verified": false,
+  "remote_gpu": false,
+  "model_quality_approved": false,
+  "parent_accepted": false
+}

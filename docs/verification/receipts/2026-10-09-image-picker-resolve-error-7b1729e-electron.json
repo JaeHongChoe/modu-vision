@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "7b1729e5264a3f77bc369bc1f95a36fab2ed2048",
+  "source_dirty": false,
+  "test": "scripts/e2e/image-picker-resolve-error.spec.ts::native saved image picker shows exact resolution refusal then explicitly reopens the same validated identity",
+  "test_source_sha256": "ae72d3db73088c121259ec44dcb48d6f6d2473a6fdcaeaf0ed0bfd0ec841e5a0",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "f30555ba57404b961a0807601bbf370c0c7a075d154b1d3f05f85023f4f0e229",
+  "harness_sha256": "3e0a9bc3cf7e10804b9ff8b57da8f5f6e863593f50b48ae9bf14a4380d31721f",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "1b3321a0a12b4ea1c02485a609d5d1d70f4ad694b6120308ae09a00ca42fb466"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "219bdd830681800ba4e29ee1a535bd32a6d48229320b712ff7a73d1479affab8"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

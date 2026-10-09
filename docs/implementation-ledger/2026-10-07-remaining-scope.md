@@ -35,3 +35,11 @@ S6-03의 inert runtime pack API/GUI는 source `5284df6e979d4d4ceadc0a8256b5a9017
 - Exact original native cases at clean b53eede passed 2/2 without retries. Seven existing F099 library scenarios retain their prior history and add current-source receipts.
 - PackageLibraryPanel source binding is current; counts remain 760 verified / 689 pending, with no parent or human quality acceptance.
 - Scope: `../verification/receipts/2026-10-09-f099-library-b53eede-summary.json`.
+
+## 2026-10-09: native saved-image resolution error
+
+- `F064.native-image-picker-keyboard-focus.error` 한 차원만 원래 pending에서 verified로 연결했다. 깨끗한 source `7b1729e5264a3f77bc369bc1f95a36fab2ed2048`의 native 단일 사례가 재시도 없이 통과했고 Root가 원본 화면·전체 API/파일 기록을 독립 확인했다.
+- 정확한 소유 resolve503 뒤 임시 선택은 null이고 확인 버튼은 비활성화됐다. Escape 후 명시적으로 다시 열어 동일 요청의 실제200과 원본 UUID·SHA·revision·선호값을 보존했다. 네 번의 전체9API·세 보호 root 및 원본 RGB 기록을 대조했다. 설정4회와 읽기 전용 resolve POST2회는 별도로 기록했다.
+- 공개 canonical GUI 영수증은 기존 strict collector가 만든 원본 그대로다. Native console·독립 keyboard/action trace는 미제공이며 키·focus 근거는 단일 통과 사례의 원래 assertions와 원본 화면 범위다. 초기 metadata null/빈 문자열 차이는 별도 보존했고 필드를 생략하지 않았다.
+- 이 시점의 curated snapshot은 검증776·pending673이다. 부모 구현69·pending13·종합 수락0, 기존 success/empty/cancel/reopen 근거와 다른 행동 상태는 유지한다. 모델·사람 품질·장비·release·전체 부모 수락으로 확대하지 않는다.
+- 공개 요약: `../verification/receipts/2026-10-09-image-picker-resolve-error-7b1729e-summary.json`.

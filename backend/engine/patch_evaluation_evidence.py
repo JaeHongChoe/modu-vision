@@ -11,6 +11,7 @@ def archive_patch_evaluation(project,checkpoint,dataset,result,*,execution):
     from backend.engine.evaluation_history import EvaluationHistory,evaluation_model_context
     from backend.engine.evaluation_evidence import evaluation_analysis
     from backend.engine.dataset_metadata import metadata_for_path
+    from backend.engine.annotation_storage import scoped_annotation_root
     from backend.api import routes_dataset
     checkpoint=Path(checkpoint);dataset=Path(dataset);source=Path(project['source_dataset_dir']).resolve()
     metadata=json.loads(checkpoint.with_name('model_meta.json').read_text());manifest=_patch_manifest_for_checkpoint(dataset,metadata);model_hash=sha(checkpoint)
@@ -28,7 +29,7 @@ def archive_patch_evaluation(project,checkpoint,dataset,result,*,execution):
             raise ValueError('Patch evaluation original source bytes changed')
         if row.get('model_sha256')!=model_hash or row.get('dataset_sha256')!=manifest.provenance['dataset_sha256'] or row.get('predicted_class') not in manifest.classes:
             raise ValueError('Patch evaluation outcome identity differs')
-        facts=metadata_for_path(Path(project['project_dir']),source,original,routes_dataset.STUDIO_ANNOTATIONS_DIR)
+        facts=metadata_for_path(Path(project['project_dir']),source,original,scoped_annotation_root(routes_dataset.STUDIO_ANNOTATIONS_DIR))
         row.update({key:facts.get(key) for key in ('image_uuid','file_path','content_hash','content_version','revision','product','lot','group','tags')})
         row.update(file_path=str(original),evaluation_file_path=str(dataset/name),thumbnail_url=f'/api/dataset/thumbnail/{original.name}?file_path={original}')
         cells[f"{row['ground_truth']}:{row['predicted_class']}"].append(str(original))

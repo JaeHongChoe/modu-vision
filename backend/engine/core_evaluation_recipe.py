@@ -110,6 +110,7 @@ def archive_core_evaluation(project,checkpoint,info,result,artifacts,runtime,out
     from backend.engine.evaluation_history import EvaluationHistory,evaluation_model_context
     from backend.engine.dataset_fingerprint import fingerprint_dataset
     from backend.engine.dataset_metadata import metadata_for_path
+    from backend.engine.annotation_storage import scoped_annotation_root
     from backend.api import routes_dataset
     if result.get('quality_approved') is not False:raise ValueError('Core evaluation cannot invent quality approval')
     identity=result.get('runtime_device_identity',{})
@@ -134,11 +135,12 @@ def archive_core_evaluation(project,checkpoint,info,result,artifacts,runtime,out
         'source':Path(project['source_dataset_dir']).resolve()}
     result=validate_result(result,spec,cohort,artifacts)
     meta=json.loads(Path(checkpoint).with_name('model_meta.json').read_text())
-    binding={'source_dataset_path':str(cohort['source']),'dataset_fingerprint':fingerprint_dataset(cohort['source']),
+    binding={'source_dataset_path':str(cohort['source']),'dataset_fingerprint':fingerprint_dataset(cohort['source'],
+        studio_root=routes_dataset.STUDIO_ANNOTATIONS_DIR,split_manifest=routes_dataset._split_manifest_file(cohort['source'])),
         'checkpoint_sha256':sha(checkpoint),**evaluation_model_context(Path(project['project_dir']),meta),
         **{key:result[key] for key in ('common_cohort','evaluation_binding_sha256','execution_target','compute_profile_id','execution_profile_sha256','device','runtime_device_identity','input_receipt')}}
     for row in result['test_predictions']:
-        metadata=metadata_for_path(Path(project['project_dir']),cohort['source'],Path(row['file_path']),routes_dataset.STUDIO_ANNOTATIONS_DIR)
+        metadata=metadata_for_path(Path(project['project_dir']),cohort['source'],Path(row['file_path']),scoped_annotation_root(routes_dataset.STUDIO_ANNOTATIONS_DIR))
         row.update({key:metadata[key] for key in ('image_uuid','content_hash','content_version','revision','tags','product','lot','group','workflow_state') if key in metadata})
         evidence=row.get('pixel_evidence')
         if isinstance(evidence,dict) and evidence.get('file_path') in artifacts:evidence['file_path']=str(artifacts[evidence['file_path']])

@@ -15717,7 +15717,31 @@
        "state": "pending"
       },
       "error": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-05",
+         "source_sha": "7b1729e5264a3f77bc369bc1f95a36fab2ed2048",
+         "kind": "click",
+         "action": "이미지 변경 · Shift+Tab · Tab · Escape · 로컬 파일 · 선택 확정",
+         "expected": "An owning saved-image resolution refusal clears only the temporary dialog selection and prevents confirmation; explicit reopen resolves the exact accepted original identity.",
+         "observed": "Native controlled resolve503 showed its error with temporary selection null and Confirm disabled. Escape and explicit reopen used real resolve200 with the identical request body and retained original UUID/hash/revision and owning preference. Four complete nine-API/three-root snapshots stayed exact after metadata initialization. Keyboard/focus checks are original assertions in the single passing case; native console and independent action trace were unavailable.",
+         "reviewer": "Root independent original execution, visual/raw qualification and strict canonical collector; source author performed separate stdlib raw readback. No human quality, device, release or parent acceptance.",
+         "test": "scripts/e2e/image-picker-resolve-error.spec.ts::native saved image picker shows exact resolution refusal then explicitly reopens the same validated identity",
+         "receipt": "2026-10-09-image-picker-resolve-error-7b1729e-electron.json",
+         "receipt_sha256": "de5bf21a418c4e3771ada0824d2d4cb502c3501e0d610af479dbd4461469611b",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1b3321a0a12b4ea1c02485a609d5d1d70f4ad694b6120308ae09a00ca42fb466"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "219bdd830681800ba4e29ee1a535bd32a6d48229320b712ff7a73d1479affab8"
+          }
+         ]
+        }
+       ]
       },
       "cancel": {
        "state": "verified",

@@ -1,0 +1,91 @@
+{
+  "accounting": {
+    "curated_pending_after": 673,
+    "curated_pending_before": 674,
+    "curated_verified_after": 776,
+    "curated_verified_before": 775,
+    "other_cells_and_parent_state_unchanged": true,
+    "parent_acceptance": 0,
+    "parent_implementation_pending": 13,
+    "parent_implementation_verified": 69
+  },
+  "actual": {
+    "attempts": 1,
+    "cases": 1,
+    "mode": "electron",
+    "original_teardown_clean": true,
+    "retries": 0,
+    "screenshots": [
+      {
+        "id": "screenshot-0",
+        "sha256": "1b3321a0a12b4ea1c02485a609d5d1d70f4ad694b6120308ae09a00ca42fb466"
+      },
+      {
+        "id": "screenshot-1",
+        "sha256": "219bdd830681800ba4e29ee1a535bd32a6d48229320b712ff7a73d1479affab8"
+      }
+    ],
+    "source_clean_and_unchanged": true,
+    "source_files_before_after": 2361,
+    "whole_report_errors": 0
+  },
+  "canonical_receipt": {
+    "file": "2026-10-09-image-picker-resolve-error-7b1729e-electron.json",
+    "origin": "Root strict existing GUI collector; original bytes copied without modification",
+    "sha256": "de5bf21a418c4e3771ada0824d2d4cb502c3501e0d610af479dbd4461469611b",
+    "size": 1218
+  },
+  "cells": [
+    "F064.native-image-picker-keyboard-focus.error"
+  ],
+  "date": "2026-10-09",
+  "independent_review_accepted": false,
+  "model_device_release_parent_acceptance": false,
+  "quality_approved": false,
+  "raw_custody": {
+    "before_copy_and_final_files_and_empty_directories_exact": true,
+    "complete_protected_apis_each": 9,
+    "complete_protected_roots_each": 3,
+    "complete_snapshot_groups": 4,
+    "fixture_api_calls": 45,
+    "fixture_setup_mutations": 4,
+    "full_synthetic_source_RGB_and_fixture_RGB_verified": true,
+    "original_responses": 93,
+    "owning_preference_bytes_retained": true,
+    "owning_readonly_resolve_posts": 2,
+    "postbaseline_other_business_writes": 0,
+    "preobserver_responses": 0,
+    "request_start_to_body_deadline_ms": 10000,
+    "response_statuses": {
+      "200": 89,
+      "404": 3,
+      "503": 1
+    },
+    "same_readonly_resolve_body_status_order": [
+      503,
+      200
+    ]
+  },
+  "roles": {
+    "actual_executor": "Codex Root",
+    "additional_raw_readback": "Source author used stdlib byte/JSON/PNG reads; its private reader main ran, no product/harness/collector main ran",
+    "canonical_collector_executor": "Codex Root",
+    "independent_execution_visual_and_raw_qualifier": "Codex Root",
+    "source_author": "Codex readiness UI author"
+  },
+  "root_independent_qualification_sha256": "b976e99b3c977f0dc786f3d0351a6222139ace39dad973f19ea709955f4550e8",
+  "schema": "modu-vision.scoped-native-error-readback/v1",
+  "scope_limits": [
+    "The 503 is deliberately injected for the owning authenticated renderer resolve; recovery200 is the actual native backend response.",
+    "Only the temporary picker selection clears; the globally accepted original image stays selected.",
+    "The initial listing has product/lot null; metadata-initialized protected baseline has empty strings. Both complete records are retained and no field is ignored.",
+    "Keyboard and focus checks belong to original test assertions plus one passed case and visible screenshots; independent keyboard event trace was not exported.",
+    "Native page/console/blocked-request capture and action trace are unavailable, not zero.",
+    "Whole project/source/harness-dataset roots were retained; this is not whole userData/workspace invariance or operating-target acceptance."
+  ],
+  "source_author_stdlib_readback_sha256": "e176248750147b33a0e1d113ef5f13a67291b92d4d53b9306e7796c1189bfa75",
+  "source_sha": "7b1729e5264a3f77bc369bc1f95a36fab2ed2048",
+  "task": "S2-05",
+  "test": "scripts/e2e/image-picker-resolve-error.spec.ts::native saved image picker shows exact resolution refusal then explicitly reopens the same validated identity",
+  "test_source_sha256": "ae72d3db73088c121259ec44dcb48d6f6d2473a6fdcaeaf0ed0bfd0ec841e5a0"
+}
