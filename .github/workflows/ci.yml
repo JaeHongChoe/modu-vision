@@ -308,6 +308,12 @@ jobs:
           backend/tests/test_service_s4_01_legacy.py
           backend/tests/test_service_s4_01_provenance.py
           backend/tests/test_service_s5_07.py
+      - name: Isolated flow outcome diagnostic controls
+        env:
+          MV_CI_RECORD_DIR: ${{ runner.temp }}/modu-ci-manifests
+        run: >-
+          python -m pytest -q --junitxml="$MV_CI_RECORD_DIR/ci-flow-outcome-diagnostic-pytest.xml"
+          backend/tests/test_flow_package_outcome_diagnostic.py
       - name: Core defect baseline evidence
         env:
           MV_CI_RECORD_DIR: ${{ runner.temp }}/modu-ci-manifests
