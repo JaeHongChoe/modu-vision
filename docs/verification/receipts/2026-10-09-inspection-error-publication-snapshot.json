@@ -1,0 +1,150 @@
+{
+  "CI": {
+    "complete_CPU_command_sha256": "bcc48453cbc55193ffc09ddfab2675bc657897eb509143ebb2d52264b71742fe",
+    "complete_CPU_selectors": 248,
+    "hosted_completion_pending": true,
+    "only_added_selector": "backend/tests/test_application_launch_inspection_snapshot.py",
+    "original_75_minute_jobs_and_workers_retained": true,
+    "original_CPU_selectors_retained": 247
+  },
+  "actual_candidate_files": {
+    ".github/workflows/ci.yml": {
+      "sha256": "63d5fe48aa90e3f31d518d4dbf90c08992e829276722e49fcbf2d0f3cf506edc",
+      "size": 23396
+    },
+    "backend/engine/application_launch_controller.py": {
+      "sha256": "6cb0968c304c733cce5f664a44de02b651b8db6c355e666014a11a825267a5c3",
+      "size": 37323
+    },
+    "backend/tests/test_application_launch_inspection_snapshot.py": {
+      "sha256": "140a75cec869a857fd4261c62e37af4339c0a73025ecb1c0dab01997241d589a",
+      "size": 9598
+    },
+    "backend/tests/test_source_ci_model_lanes.py": {
+      "sha256": "eb8a0c2db28d0d181ccfd75697ceb2577302e7108e47ac6bfea76220d1e78397",
+      "size": 18534
+    }
+  },
+  "actual_controls": {
+    "CI_contract": {
+      "elapsed_seconds": 7.42309308052063,
+      "failed": 0,
+      "junit": {
+        "sha256": "8281faa21a3439d41ba186914996ff60b3a3302941650ee965a45c5479d11f66",
+        "size": 3421
+      },
+      "passed": 19,
+      "raw_log": {
+        "sha256": "17533ff4f353f6f3a3d9b9219db67e16281d8618b1cd0692bacd061f6c551594",
+        "size": 254
+      },
+      "run": {
+        "sha256": "47117a9413b1960535ddc1131c08b6bf2cb597801a2773a94878b47934196af9",
+        "size": 157
+      },
+      "tests": 19
+    },
+    "causal_red": {
+      "elapsed_seconds": 1.5807311534881592,
+      "failed": 1,
+      "junit": {
+        "sha256": "d70e66a84c9f53a3bf0c53a9ae3bad43fa7cccff990d6ac8fe3712467c6cbacf",
+        "size": 2048
+      },
+      "passed": 0,
+      "raw_log": {
+        "sha256": "7f4b702653c201070276e252d7c690e56278aab2a499fc66bfcbd0dbc4d860b4",
+        "size": 2110
+      },
+      "run": {
+        "sha256": "e90c240a08850d0c39e6a063b9a38466f361dd26963b18c131ac41d06f35f070",
+        "size": 159
+      },
+      "tests": 1
+    },
+    "coupled_controller_lease_bridge": {
+      "elapsed_seconds": 175.35325694084167,
+      "failed": 0,
+      "junit": {
+        "sha256": "c86ec36af8c9a3474dc669483c21656f732618d04732aa11c3aed66176a12754",
+        "size": 21018
+      },
+      "passed": 126,
+      "raw_log": {
+        "sha256": "37300a396efd23b3934923c1aa9fffccf8ab733dff6c1962cd27e846c07b94f0",
+        "size": 352
+      },
+      "run": {
+        "sha256": "adc11d955acbb733d4d2fc5930c0f5282c860cb95af8f2fc65a4d58b17bed045",
+        "size": 159
+      },
+      "tests": 126
+    },
+    "new_regressions": {
+      "elapsed_seconds": 2.8766391277313232,
+      "failed": 0,
+      "junit": {
+        "sha256": "f5810c566f727b01744da2ba5d840ac6ea0c26d75e013abc8f698f367947e2e6",
+        "size": 6084
+      },
+      "passed": 35,
+      "raw_log": {
+        "sha256": "3b990bedb141c54fb633ed696bac1b2a2f2220ed5ecc27624772ee907b260caf",
+        "size": 257
+      },
+      "run": {
+        "sha256": "fc72b9b4622baceb89685f2fd75137882585eeef297e8109c48b6f0c789a72d7",
+        "size": 159
+      },
+      "tests": 35
+    },
+    "original_CPU_writer": {
+      "elapsed_seconds": 31.74210476875305,
+      "failed": 0,
+      "junit": {
+        "sha256": "2bc25f1665c783a030fa1f1813d854e0ec3b23d9d2007b7f5fc7f8bb3c24a26f",
+        "size": 411
+      },
+      "passed": 1,
+      "raw_log": {
+        "sha256": "7ad8cd0e8ce0041d8dd0f27f20b5adbad6c2e5ef80a48416bb71ee66631a4216",
+        "size": 261
+      },
+      "run": {
+        "sha256": "e2cb4587f1f31df3bf4e797bfe284e3d99c314113bc8f8f32865b10e3799f9d8",
+        "size": 158
+      },
+      "tests": 1
+    }
+  },
+  "base_source": "ae2869c6065355b6b85cb440ef7bb42f0bf310da",
+  "no_parent_model_quality_target_human_or_release_acceptance": true,
+  "preserved_negatives": {
+    "historical_hosted_CPU_writer_failure": {
+      "sha256": "891bdb42845f190f4817ea676f0e07272de750c750b67fb699c07cf375971ed3",
+      "size": 367281
+    },
+    "historical_member_identity_and_timing_unproven": true,
+    "initial_fixture_setup_failure_not_causal_red": true,
+    "local_pass_does_not_prove_hosted_failure_cause_or_hosted_completion": true
+  },
+  "schema_version": 1,
+  "scope": "Inspector body errors retain the original publication pointer namespace and receipt postchecks before propagation",
+  "semantics": {
+    "BaseException_precedence_unchanged": true,
+    "no_new_authority_retry_mutex_or_guard_relaxation": true,
+    "original_controlled_fixture_budgets_unchanged": true,
+    "original_postchecks_unchanged": true,
+    "unchanged_body_error_identity_preserved": true
+  },
+  "source_freezes": {
+    "CI": {
+      "sha256": "de4825b81bbb35268759c436e51fd3750ee023a1efca10338685cfeaaa1e3810",
+      "size": 275200
+    },
+    "controller": {
+      "sha256": "8669c6bc6f5e301e7fde92647f9183b42114962293126c5ede741f8c2205c9fa",
+      "size": 190063
+    }
+  }
+}

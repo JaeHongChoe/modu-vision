@@ -71,7 +71,13 @@ def _inspection_snapshot(root):
                     'cpu-execution-intent.json','cpu-execution-receipt.json'):
                 file = update._unlinked(directory/name)
                 snapshots[name] = update._read(file) if file.exists() else None
-        yield
+        body_error = None
+        try:
+            yield
+        except Exception as exc:
+            # A failed body still needs the same fresh publication checks.
+            # BaseException interruptions retain their original priority.
+            body_error = exc
         update._unlinked(path)
         after = update._read(path) if path.exists() else None
         if before != after: raise HandshakeError('Launch publication changed during read-only inspection')
@@ -83,6 +89,8 @@ def _inspection_snapshot(root):
                 file = update._unlinked(directory/name)
                 fresh = update._read(file) if file.exists() else None
                 if raw != fresh: raise HandshakeError('Launch journal or receipt changed during read-only inspection')
+        if body_error is not None:
+            raise body_error
 
 
 def inspect(args):
