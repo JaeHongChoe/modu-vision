@@ -333,6 +333,7 @@ jobs:
           path: |
             ${{ runner.temp }}/modu-ci-manifests
             ${{ runner.temp }}/modu-e2e
+            !${{ runner.temp }}/modu-e2e/**/ws/**
           retention-days: 14
           if-no-files-found: error
 
@@ -400,5 +401,6 @@ jobs:
           path: |
             ${{ runner.temp }}/modu-ci-manifests
             ${{ runner.temp }}/modu-e2e
+            !${{ runner.temp }}/modu-e2e/**/ws/**
           retention-days: 14
           if-no-files-found: error

@@ -235,7 +235,7 @@ def test_cpu_and_browser_ci_have_independent_original_bounds_and_complete_comman
         assert evidence['if'] == 'always()'
         assert evidence['uses'] == 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a'
         assert evidence['with']['retention-days'] == 14 and evidence['with']['if-no-files-found'] == 'error'
-        assert evidence['with']['path'] == '${{ runner.temp }}/modu-ci-manifests\n${{ runner.temp }}/modu-e2e\n'
+        assert evidence['with']['path'] == '${{ runner.temp }}/modu-ci-manifests\n${{ runner.temp }}/modu-e2e\n!${{ runner.temp }}/modu-e2e/**/ws/**\n'
         assert step(job, 'Record source, toolchain, and license inventory')['if'] == 'always()'
         assert step(job, 'Record source, toolchain, and license inventory')['env'] == {'MV_CI_RECORD_DIR': '${{ runner.temp }}/modu-ci-manifests'}
     cpu, browser = jobs['source'], jobs['browser']
@@ -253,3 +253,27 @@ def test_cpu_and_browser_ci_have_independent_original_bounds_and_complete_comman
     assert browser_step['env'] == {'MV_E2E_ARTIFACT_DIR': '${{ runner.temp }}/modu-e2e', 'MV_CI_RECORD_DIR': '${{ runner.temp }}/modu-ci-manifests'}
     assert step(cpu, 'Preserve evidence')['with']['name'] == 'linux-cpu-${{ github.sha }}'
     assert step(browser, 'Preserve evidence')['with']['name'] == 'linux-browser-${{ github.sha }}'
+
+
+@pytest.mark.parametrize('job_name', ['source', 'browser'])
+def test_ci_artifact_paths_exclude_all_owned_workspaces_and_retain_original_evidence(job_name):
+    """Source contract for the pinned uploader's documented negative-path rules.
+
+    This does not execute the uploader or assert that a hosted artifact is
+    secret-free. Local fixtures and failed-trace/report production remain intact.
+    """
+    workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
+    steps = [step for step in workflow['jobs'][job_name]['steps']
+             if step.get('name') == 'Preserve evidence']
+    assert len(steps) == 1
+    evidence = steps[0]
+    paths = evidence['with']['path'].splitlines()
+    exclusion = '!${{ runner.temp }}/modu-e2e/**/ws/**'
+    assert exclusion in paths, 'Private fixture keys, data, models and profiles must not be uploaded'
+    assert paths == ['${{ runner.temp }}/modu-ci-manifests',
+                     '${{ runner.temp }}/modu-e2e', exclusion]
+    assert evidence['uses'] == 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a'
+    assert evidence['with'].get('include-hidden-files', False) is False
+    assert evidence['if'] == 'always()'
+    assert evidence['with']['retention-days'] == 14
+    assert evidence['with']['if-no-files-found'] == 'error'
