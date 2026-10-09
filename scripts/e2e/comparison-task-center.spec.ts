@@ -9,6 +9,11 @@ import {png, openTaskCenter} from './qa/appFlow';
 const harness = require('./fixtures/harness.cjs');
 test.use({actionTimeout: 10_000});
 type OwnedApi = (route: string, body?: unknown) => Promise<any>;
+type NativeMetadataRead = (url: string, nonce: string, expiresAt: number, contextHeaders: Record<string,string>) => Promise<{
+  status: number; headers: Record<string,string>; body: number[];
+}>;
+const metadataDelegateParameter='mv_e2e_current_label_delegate';
+const metadataContextHeaderNames=['content-type','x-vision-project','x-vision-context'] as const;
 
 // Fresh reads of only this fixture's named originals and saved label/report files.
 // A full read has leaf FD/named and lexical ancestor guards; atime is excluded.
@@ -32,7 +37,7 @@ function ownedBytes(file: string, scope: string) {
   return {path:target,size:raw.length,sha256:crypto.createHash('sha256').update(raw).digest('hex'),identity:identity(before),raw};
 }
 
-async function exercise(page: Page, workspace: Workspace, evidence: Evidence, api: OwnedApi, native: boolean, startupUrl?: string) {
+async function exercise(page: Page, workspace: Workspace, evidence: Evidence, api: OwnedApi, native: boolean, startupUrl?: string, readNativeMetadata?: NativeMetadataRead) {
   const source = path.join(workspace.root, 'comparison-source');
   const originals: Record<string, string> = {};
   for (const split of ['train', 'val', 'test']) for (const [label, value] of [['OK', 220], ['NG', 40]] as const) {
@@ -253,15 +258,61 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   // Deliberately defer the first genuine metadata read. Leaving and returning
   // to the same editor cancels this request; no late label read or navigation.
   let capturedMetadata:any=null;
+  const nativeMetadataNonce=native?crypto.randomUUID():'';
+  let nativeMetadataUrl='',nativeDelegatedMetadataReads=0,nativeMetadataPreflights=0;
+  let nativeMetadataContextHeaders:Record<string,string>={};
   let release!:()=>void,metadataStarted=false,metadataReleased=false,metadataReads=0,annotationReads=0;
   const held=new Promise<void>(resolve=>{release=resolve;});
   const countAnnotation=(r:any)=>{if(r.method()==='GET'&&new URL(r.url()).pathname===`/api/annotations/${editRow.image_id}`)annotationReads++;};
   page.on('request',countAnnotation);
   await page.route(metadataRoute,async r=>{
-    if(!exactMetadata(r.request().url())){await r.continue();return;}
-    metadataReads++;const response=await r.fetch({maxRedirects:0,maxRetries:0,timeout:10_000});
-    expect(response.ok()).toBe(true);capturedMetadata=await response.json();expect(capturedMetadata).toEqual(savedMetadata);
-    metadataStarted=true;await held;await r.fulfill({response});metadataReleased=true;
+    const request=r.request(),address=new URL(request.url());
+    if(native&&address.searchParams.get(metadataDelegateParameter)===nativeMetadataNonce){
+      // Only this exact test-owned renderer delegate bypasses the held-response control.
+      const expected=new URL(nativeMetadataUrl);expected.searchParams.set(metadataDelegateParameter,nativeMetadataNonce);
+      expect(address.href).toBe(expected.href);
+      if(request.method()==='OPTIONS'){
+        expect(request.headers()['access-control-request-method']).toBe('GET');
+        nativeMetadataPreflights++;expect(nativeMetadataPreflights).toBeLessThanOrEqual(1);
+        await r.continue();return;
+      }
+      expect(request.method()).toBe('GET');
+      expect(metadataContextHeaderNames.every(name=>request.headers()[name]===nativeMetadataContextHeaders[name])).toBe(true);
+      nativeDelegatedMetadataReads++;expect(nativeDelegatedMetadataReads).toBe(1);
+      await r.continue();return;
+    }
+    if(!exactMetadata(request.url())){await r.continue();return;}
+    expect(request.method()).toBe('GET');expect(address.searchParams.has(metadataDelegateParameter)).toBe(false);
+    metadataReads++;expect(metadataReads).toBe(1);
+    let deliver:()=>Promise<void>;
+    if(native){
+      expect(readNativeMetadata).toBeTruthy();nativeMetadataUrl=request.url();
+      // Preserve only the renderer-visible project context; the main process
+      // supplies its hidden capability. Never read or copy capability headers.
+      const originalHeaders=request.headers();
+      nativeMetadataContextHeaders=Object.fromEntries(metadataContextHeaderNames.filter(name=>name in originalHeaders).map(name=>[name,originalHeaders[name]]));
+      const deadline=performance.now()+10_000;
+      const expiresAt=Date.now()+Math.max(0,Math.floor(deadline-performance.now()));
+      let timer:ReturnType<typeof setTimeout>|undefined;
+      let actual:Awaited<ReturnType<NativeMetadataRead>>;
+      try{
+        actual=await Promise.race([
+          readNativeMetadata!(nativeMetadataUrl,nativeMetadataNonce,expiresAt,nativeMetadataContextHeaders),
+          new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(new Error('Native metadata delegation exceeded original 10s deadline')),Math.max(0,Math.floor(deadline-performance.now())));}),
+        ]);
+        expect(performance.now()).toBeLessThan(deadline);
+      }finally{clearTimeout(timer);}
+      expect(actual.status>=200&&actual.status<300).toBe(true);
+      const body=Buffer.from(actual.body);capturedMetadata=JSON.parse(body.toString('utf8'));
+      expect(nativeDelegatedMetadataReads).toBe(1);
+      deliver=()=>r.fulfill({status:actual.status,headers:actual.headers,body});
+    }else{
+      const response=await r.fetch({maxRedirects:0,maxRetries:0,timeout:10_000});
+      expect(response.ok()).toBe(true);capturedMetadata=await response.json();
+      deliver=()=>r.fulfill({response});
+    }
+    expect(capturedMetadata).toEqual(savedMetadata);
+    metadataStarted=true;await held;await deliver();metadataReleased=true;
   });
   const cancelCustodyBefore=custody();
   const beforeCancelledOrigin=await originSnapshot();await reopen.click();await expect.poll(()=>metadataStarted).toBe(true);await expect(reopen).toBeDisabled();
@@ -271,7 +322,7 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   await expect(editReturn).toContainText(editRow.image_id);await expect(reopen).toBeEnabled();const readsBeforeRelease=annotationReads;
   const cancelledResponse=page.waitForResponse(r=>exactMetadata(r.url())&&r.request().method()==='GET',{timeout:10_000});
   release();await expect.poll(()=>metadataReleased).toBe(true);const delivered=await cancelledResponse;expect(delivered.ok()).toBe(true);await delivered.finished();await page.waitForTimeout(300);
-  expect(metadataReads).toBe(1);expect(annotationReads).toBe(readsBeforeRelease);expect(await originSnapshot()).toBe(beforeCancelledOrigin);await expect(editReturn.getByRole('alert')).toHaveCount(0);
+  expect(metadataReads).toBe(1);expect(nativeDelegatedMetadataReads).toBe(native?1:0);expect(annotationReads).toBe(readsBeforeRelease);expect(await originSnapshot()).toBe(beforeCancelledOrigin);await expect(editReturn.getByRole('alert')).toHaveCount(0);
   const cancelledLateAnnotationReads=annotationReads-readsBeforeRelease;expect(cancelledLateAnnotationReads).toBe(0);
   expect(await api(`/api/annotations/${editRow.image_id}?file_path=${encodeURIComponent(editRow.file_path)}`)).toEqual(afterLabels);
   const cancelCustodyAfter=custody();expect(cancelCustodyAfter).toEqual(cancelCustodyBefore);expect(posted).toBe(boundaryPosts);
@@ -282,7 +333,7 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
     image_id:editRow.image_id,image_uuid:savedMetadata.image_uuid,image_path:editRow.file_path,image_sha256:editRow.image_sha256,
     historical_revision:editRow.revision,current_revision:savedMetadata.revision,error_metadata_reads:errorMetadataReads,
     error:{before:errorCustodyBefore,after:errorCustodyAfter,origin_before:storedOrigin,origin_after:errorOriginAfter},
-    cancel:{before:cancelCustodyBefore,after:cancelCustodyAfter,original_response_read_once:true,original_response_delivered:true,late_annotation_reads:cancelledLateAnnotationReads},
+    cancel:{before:cancelCustodyBefore,after:cancelCustodyAfter,original_response_read_once:true,original_response_delivered:true,late_annotation_reads:cancelledLateAnnotationReads,native_renderer_delegated_reads:nativeDelegatedMetadataReads,native_preflight_requests:nativeMetadataPreflights},
     actual_gui:true,actual_owned_backend:true,actual_electron_main_preload:native,controlled_transport:true,
     no_new_comparison:true,full_source_and_saved_label_report_bytes_unchanged:true,model_quality_acceptance:false,physical_target_acceptance:false,complete_feature_acceptance:false});
   evidence.note('evidence_label_reopen_boundaries',{image_id:editRow.image_id,current_revision:capturedMetadata.revision,
@@ -325,5 +376,25 @@ test('native CPU comparison reopens the exact completed job from Task Center and
     });
     if (!response.ok) throw new Error(`Owned fixture API: HTTP ${response.status}`); return response.json();
   }, {port: backend.port, route, body});
-  await exercise(window, workspace, evidence, api, true);
+  const readNativeMetadata:NativeMetadataRead=async(url,nonce,expiresAt,contextHeaders)=>{
+    const address=new URL(url);expect(address.origin).toBe(`http://127.0.0.1:${backend.port}`);
+    expect(address.pathname).toBe('/api/dataset/metadata/image');
+    expect(address.searchParams.has(metadataDelegateParameter)).toBe(false);
+    expect(Object.keys(contextHeaders).every(name=>metadataContextHeaderNames.includes(name as typeof metadataContextHeaderNames[number]))).toBe(true);
+    return window.evaluate(async({url,nonce,parameter,expiresAt,contextHeaders})=>{
+      // A query marker grants no capability. The original trusted renderer/main
+      // request interceptor supplies authentication without exposing its token.
+      const address=new URL(url);address.searchParams.set(parameter,nonce);
+      const remaining=Math.floor(expiresAt-Date.now());
+      if(remaining<=0)throw new Error('Native metadata original deadline spent before request');
+      const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),remaining);
+      try{
+        const response=await fetch(address.href,{method:'GET',headers:contextHeaders,redirect:'error',cache:'no-store',signal:controller.signal});
+        const body=Array.from(new Uint8Array(await response.arrayBuffer()));
+        const headers:Record<string,string>={};response.headers.forEach((value,name)=>{headers[name]=value;});
+        return {status:response.status,headers,body};
+      }finally{clearTimeout(timer);}
+    },{url,nonce,parameter:metadataDelegateParameter,expiresAt,contextHeaders});
+  };
+  await exercise(window, workspace, evidence, api, true,undefined,readNativeMetadata);
 });
