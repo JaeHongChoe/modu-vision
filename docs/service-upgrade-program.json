@@ -6210,7 +6210,7 @@
       },
       "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts",
       "remaining": [
-        "207 curated actions have771 verified and678 pending scenarios. Exact existing graph-history empty/reopen/handoff controls were exercised in clean source browser and Electron at1728356, with current graph/source restoration and unchanged persisted hashes. Omitted menus/shortcuts, unexecuted dimensions and full156-feature target acceptance remain pending."
+        "207 curated actions have781 verified and668 pending scenarios. Exact existing graph-history empty/reopen/handoff controls were exercised in clean source browser and Electron at1728356, with current graph/source restoration and unchanged persisted hashes. Omitted menus/shortcuts, unexecuted dimensions and full156-feature target acceptance remain pending."
       ]
     },
     {

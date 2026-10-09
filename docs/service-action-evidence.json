@@ -18,7 +18,7 @@
   "src/renderer/components/dataset/DerivedDatasetPanel.tsx": "11263d7aa7052d4ede7782669f8976cbe4e5d0c9896404021acd5bd4299ccbcf",
   "src/renderer/components/dataset/DatasetWorkflowPanel.tsx": "11fe07f0e6453605b605265b2d6c55ea45d9b0dfe62d9db55123d14f298b740c",
   "src/renderer/components/labeling/AnnotationList.tsx": "8251d8bd4a4e2fcbcbd74147fb4cd6f72fb7c6943850328cc2baf22955c9172c",
-  "src/renderer/components/labeling/LabelingCanvas.tsx": "040fcce81d215d30fe4b8af625adf105fc0ef96a43f8f0c58286758fd97089a5",
+  "src/renderer/components/labeling/LabelingCanvas.tsx": "1a0a8976f97d7a6861126ee3d193715df7ef25bd91b41b92458a50366204ff85",
   "src/renderer/components/dataset/DataReadinessPanel.tsx": "9f54009858b71aea7b37e746cafa71c0feb8dc583f713a3c7d02440c5ea1289d",
   "src/renderer/components/labeling/LabelSetBar.tsx": "854df323cd31241c9549d9dbdf9cb338ad9e5bf55b508989dad4efbfccc74c7f",
   "src/renderer/components/dataset/ProjectPreferencePanel.tsx": "0b375b9ae1bd98ffd2c2c16ed5c3c7052b2f15bbfdb3e399d72f1ffb9ba1978e",
@@ -3038,39 +3038,47 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "530803ad4d8207c4f3d80ef59336a1eee92c6541",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "모델별 저장 평가",
          "expected": "Retain the exact chosen historical evaluation ID and evidence hash across refresh and reload.",
          "observed": "Native model-history selector kept the same controlled saved record and evidence hash; corrected screenshots show the selector inside the viewport. These seeded saved reports were not produced by model inference in this case.",
          "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
          "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
-         "receipt": "2026-10-08-saved-evaluation-refresh-530803a-electron.json",
-         "receipt_sha256": "4752008a156fb08c7e54bf27ed4e3196ee9c1b3c939ec6758eb776b813d2f744",
+         "receipt": "2026-10-09-gui05-evaluation-fd018f2-electron.json",
+         "receipt_sha256": "fec670874cc78f29e122b9e47c0fa7513cf98ee04df5fc964fa8553503fb370e",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "cb0901b3efa6d4c952e5944b3d75f770b527be6eebd4f85019cf2e70d4e05049"
+           "sha256": "62027dad5a5a028d8a7f686ceb0aadb13e9267c53af96b6124c3405627da35de"
           },
           {
            "id": "screenshot-1",
-           "sha256": "375fa316026a1670611f479fc28b8fe08690d15c81345f6951865fb37477bfdb"
+           "sha256": "46d6c3ae6e9275eb26e951a916a49a697bdd31d7f74e301d3603a79b96255ccb"
           },
           {
            "id": "screenshot-2",
-           "sha256": "97f8874f8dd4b7fea4ea5f6f7226937f51578f646a5aa8e8aef9c39bb9627fb0"
+           "sha256": "794728ca0dc9b076f36ad37b93c353310e9f91bbbdf141a81812549ee0852a90"
           },
           {
            "id": "screenshot-3",
-           "sha256": "5de552c9185b532255e0c55589a22f4a7a5721cb88fb0478e39b0aa1268523ec"
+           "sha256": "d362413b4b787f730753c48222c34feac180b852b02120565cb5b1fb45cc1e85"
           },
           {
            "id": "screenshot-4",
-           "sha256": "d3191a582aa8457547c072948aeeb5f3f6153916360acdd24722047d177ca5df"
+           "sha256": "42d0508bd4b2b5e612b21f398eefc183942fdbd28749f2c7f83e43754e31f08f"
           },
           {
            "id": "screenshot-5",
-           "sha256": "ec7d45a27eae910332b1596d0c5df2467ce02de960c9a86f3c6d9b167f130751"
+           "sha256": "2145aaec50a75b4c9636e4d99f413c56f36d2651b747d98072bad2a725cfbfd3"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "4d88768a9f987d40fba46db34ea2fe4b549b4ccd2d664b1856496c604331b853"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ce6d6a12a939bdf71ea32aa767bc2ddd1e8aabd2f4d2f5ff3eb19b3272c09d11"
           }
          ]
         }
@@ -3445,39 +3453,47 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "530803ad4d8207c4f3d80ef59336a1eee92c6541",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "모델별 저장 평가",
          "expected": "Retain the exact chosen historical evaluation ID and evidence hash across refresh and reload.",
          "observed": "Native model-history selector kept the same controlled saved record and evidence hash; corrected screenshots show the selector inside the viewport. These seeded saved reports were not produced by model inference in this case.",
          "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
          "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
-         "receipt": "2026-10-08-saved-evaluation-refresh-530803a-electron.json",
-         "receipt_sha256": "4752008a156fb08c7e54bf27ed4e3196ee9c1b3c939ec6758eb776b813d2f744",
+         "receipt": "2026-10-09-gui05-evaluation-fd018f2-electron.json",
+         "receipt_sha256": "fec670874cc78f29e122b9e47c0fa7513cf98ee04df5fc964fa8553503fb370e",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "cb0901b3efa6d4c952e5944b3d75f770b527be6eebd4f85019cf2e70d4e05049"
+           "sha256": "62027dad5a5a028d8a7f686ceb0aadb13e9267c53af96b6124c3405627da35de"
           },
           {
            "id": "screenshot-1",
-           "sha256": "375fa316026a1670611f479fc28b8fe08690d15c81345f6951865fb37477bfdb"
+           "sha256": "46d6c3ae6e9275eb26e951a916a49a697bdd31d7f74e301d3603a79b96255ccb"
           },
           {
            "id": "screenshot-2",
-           "sha256": "97f8874f8dd4b7fea4ea5f6f7226937f51578f646a5aa8e8aef9c39bb9627fb0"
+           "sha256": "794728ca0dc9b076f36ad37b93c353310e9f91bbbdf141a81812549ee0852a90"
           },
           {
            "id": "screenshot-3",
-           "sha256": "5de552c9185b532255e0c55589a22f4a7a5721cb88fb0478e39b0aa1268523ec"
+           "sha256": "d362413b4b787f730753c48222c34feac180b852b02120565cb5b1fb45cc1e85"
           },
           {
            "id": "screenshot-4",
-           "sha256": "d3191a582aa8457547c072948aeeb5f3f6153916360acdd24722047d177ca5df"
+           "sha256": "42d0508bd4b2b5e612b21f398eefc183942fdbd28749f2c7f83e43754e31f08f"
           },
           {
            "id": "screenshot-5",
-           "sha256": "ec7d45a27eae910332b1596d0c5df2467ce02de960c9a86f3c6d9b167f130751"
+           "sha256": "2145aaec50a75b4c9636e4d99f413c56f36d2651b747d98072bad2a725cfbfd3"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "4d88768a9f987d40fba46db34ea2fe4b549b4ccd2d664b1856496c604331b853"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ce6d6a12a939bdf71ea32aa767bc2ddd1e8aabd2f4d2f5ff3eb19b3272c09d11"
           }
          ]
         }
@@ -3600,39 +3616,47 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "530803ad4d8207c4f3d80ef59336a1eee92c6541",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "평가 라벨 세트",
          "expected": "Keep explicit historical labelset selection and only its scoped evaluation records.",
          "observed": "Native default and second-labelset choices survived actual refresh, stage return and reload with the exact selected ID. Controlled record bytes remained unchanged; no current labels were edited.",
          "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
          "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
-         "receipt": "2026-10-08-saved-evaluation-refresh-530803a-electron.json",
-         "receipt_sha256": "4752008a156fb08c7e54bf27ed4e3196ee9c1b3c939ec6758eb776b813d2f744",
+         "receipt": "2026-10-09-gui05-evaluation-fd018f2-electron.json",
+         "receipt_sha256": "fec670874cc78f29e122b9e47c0fa7513cf98ee04df5fc964fa8553503fb370e",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "cb0901b3efa6d4c952e5944b3d75f770b527be6eebd4f85019cf2e70d4e05049"
+           "sha256": "62027dad5a5a028d8a7f686ceb0aadb13e9267c53af96b6124c3405627da35de"
           },
           {
            "id": "screenshot-1",
-           "sha256": "375fa316026a1670611f479fc28b8fe08690d15c81345f6951865fb37477bfdb"
+           "sha256": "46d6c3ae6e9275eb26e951a916a49a697bdd31d7f74e301d3603a79b96255ccb"
           },
           {
            "id": "screenshot-2",
-           "sha256": "97f8874f8dd4b7fea4ea5f6f7226937f51578f646a5aa8e8aef9c39bb9627fb0"
+           "sha256": "794728ca0dc9b076f36ad37b93c353310e9f91bbbdf141a81812549ee0852a90"
           },
           {
            "id": "screenshot-3",
-           "sha256": "5de552c9185b532255e0c55589a22f4a7a5721cb88fb0478e39b0aa1268523ec"
+           "sha256": "d362413b4b787f730753c48222c34feac180b852b02120565cb5b1fb45cc1e85"
           },
           {
            "id": "screenshot-4",
-           "sha256": "d3191a582aa8457547c072948aeeb5f3f6153916360acdd24722047d177ca5df"
+           "sha256": "42d0508bd4b2b5e612b21f398eefc183942fdbd28749f2c7f83e43754e31f08f"
           },
           {
            "id": "screenshot-5",
-           "sha256": "ec7d45a27eae910332b1596d0c5df2467ce02de960c9a86f3c6d9b167f130751"
+           "sha256": "2145aaec50a75b4c9636e4d99f413c56f36d2651b747d98072bad2a725cfbfd3"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "4d88768a9f987d40fba46db34ea2fe4b549b4ccd2d664b1856496c604331b853"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ce6d6a12a939bdf71ea32aa767bc2ddd1e8aabd2f4d2f5ff3eb19b3272c09d11"
           }
          ]
         }
@@ -4063,39 +4087,47 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "530803ad4d8207c4f3d80ef59336a1eee92c6541",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "평가 라벨 세트",
          "expected": "Keep explicit historical labelset selection and only its scoped evaluation records.",
          "observed": "Native default and second-labelset choices survived actual refresh, stage return and reload with the exact selected ID. Controlled record bytes remained unchanged; no current labels were edited.",
          "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
          "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
-         "receipt": "2026-10-08-saved-evaluation-refresh-530803a-electron.json",
-         "receipt_sha256": "4752008a156fb08c7e54bf27ed4e3196ee9c1b3c939ec6758eb776b813d2f744",
+         "receipt": "2026-10-09-gui05-evaluation-fd018f2-electron.json",
+         "receipt_sha256": "fec670874cc78f29e122b9e47c0fa7513cf98ee04df5fc964fa8553503fb370e",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "cb0901b3efa6d4c952e5944b3d75f770b527be6eebd4f85019cf2e70d4e05049"
+           "sha256": "62027dad5a5a028d8a7f686ceb0aadb13e9267c53af96b6124c3405627da35de"
           },
           {
            "id": "screenshot-1",
-           "sha256": "375fa316026a1670611f479fc28b8fe08690d15c81345f6951865fb37477bfdb"
+           "sha256": "46d6c3ae6e9275eb26e951a916a49a697bdd31d7f74e301d3603a79b96255ccb"
           },
           {
            "id": "screenshot-2",
-           "sha256": "97f8874f8dd4b7fea4ea5f6f7226937f51578f646a5aa8e8aef9c39bb9627fb0"
+           "sha256": "794728ca0dc9b076f36ad37b93c353310e9f91bbbdf141a81812549ee0852a90"
           },
           {
            "id": "screenshot-3",
-           "sha256": "5de552c9185b532255e0c55589a22f4a7a5721cb88fb0478e39b0aa1268523ec"
+           "sha256": "d362413b4b787f730753c48222c34feac180b852b02120565cb5b1fb45cc1e85"
           },
           {
            "id": "screenshot-4",
-           "sha256": "d3191a582aa8457547c072948aeeb5f3f6153916360acdd24722047d177ca5df"
+           "sha256": "42d0508bd4b2b5e612b21f398eefc183942fdbd28749f2c7f83e43754e31f08f"
           },
           {
            "id": "screenshot-5",
-           "sha256": "ec7d45a27eae910332b1596d0c5df2467ce02de960c9a86f3c6d9b167f130751"
+           "sha256": "2145aaec50a75b4c9636e4d99f413c56f36d2651b747d98072bad2a725cfbfd3"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "4d88768a9f987d40fba46db34ea2fe4b549b4ccd2d664b1856496c604331b853"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ce6d6a12a939bdf71ea32aa767bc2ddd1e8aabd2f4d2f5ff3eb19b3272c09d11"
           }
          ]
         }
@@ -4218,39 +4250,47 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "530803ad4d8207c4f3d80ef59336a1eee92c6541",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "평가 라벨 세트 · 늦은 조회 응답",
          "expected": "Fence a previously selected labelset response after a newer explicit choice.",
          "observed": "The actual second-labelset GET was delayed unchanged, a default record was selected in the native app, then the old response completed200 without replacing the new labelset/ID. No mock result body was substituted.",
          "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
          "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
-         "receipt": "2026-10-08-saved-evaluation-refresh-530803a-electron.json",
-         "receipt_sha256": "4752008a156fb08c7e54bf27ed4e3196ee9c1b3c939ec6758eb776b813d2f744",
+         "receipt": "2026-10-09-gui05-evaluation-fd018f2-electron.json",
+         "receipt_sha256": "fec670874cc78f29e122b9e47c0fa7513cf98ee04df5fc964fa8553503fb370e",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "cb0901b3efa6d4c952e5944b3d75f770b527be6eebd4f85019cf2e70d4e05049"
+           "sha256": "62027dad5a5a028d8a7f686ceb0aadb13e9267c53af96b6124c3405627da35de"
           },
           {
            "id": "screenshot-1",
-           "sha256": "375fa316026a1670611f479fc28b8fe08690d15c81345f6951865fb37477bfdb"
+           "sha256": "46d6c3ae6e9275eb26e951a916a49a697bdd31d7f74e301d3603a79b96255ccb"
           },
           {
            "id": "screenshot-2",
-           "sha256": "97f8874f8dd4b7fea4ea5f6f7226937f51578f646a5aa8e8aef9c39bb9627fb0"
+           "sha256": "794728ca0dc9b076f36ad37b93c353310e9f91bbbdf141a81812549ee0852a90"
           },
           {
            "id": "screenshot-3",
-           "sha256": "5de552c9185b532255e0c55589a22f4a7a5721cb88fb0478e39b0aa1268523ec"
+           "sha256": "d362413b4b787f730753c48222c34feac180b852b02120565cb5b1fb45cc1e85"
           },
           {
            "id": "screenshot-4",
-           "sha256": "d3191a582aa8457547c072948aeeb5f3f6153916360acdd24722047d177ca5df"
+           "sha256": "42d0508bd4b2b5e612b21f398eefc183942fdbd28749f2c7f83e43754e31f08f"
           },
           {
            "id": "screenshot-5",
-           "sha256": "ec7d45a27eae910332b1596d0c5df2467ce02de960c9a86f3c6d9b167f130751"
+           "sha256": "2145aaec50a75b4c9636e4d99f413c56f36d2651b747d98072bad2a725cfbfd3"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "4d88768a9f987d40fba46db34ea2fe4b549b4ccd2d664b1856496c604331b853"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ce6d6a12a939bdf71ea32aa767bc2ddd1e8aabd2f4d2f5ff3eb19b3272c09d11"
           }
          ]
         }
@@ -13412,39 +13452,47 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "530803ad4d8207c4f3d80ef59336a1eee92c6541",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "평가 이력 모델 종류",
          "expected": "Keep the explicitly selected evaluation family separately from the current project task.",
          "observed": "Native segmentation/classification choices and exact selected controlled report survived reload and return to the original project. New project context started without the prior choice; context changes were initialized through owned helper API calls.",
          "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
          "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
-         "receipt": "2026-10-08-saved-evaluation-refresh-530803a-electron.json",
-         "receipt_sha256": "4752008a156fb08c7e54bf27ed4e3196ee9c1b3c939ec6758eb776b813d2f744",
+         "receipt": "2026-10-09-gui05-evaluation-fd018f2-electron.json",
+         "receipt_sha256": "fec670874cc78f29e122b9e47c0fa7513cf98ee04df5fc964fa8553503fb370e",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "cb0901b3efa6d4c952e5944b3d75f770b527be6eebd4f85019cf2e70d4e05049"
+           "sha256": "62027dad5a5a028d8a7f686ceb0aadb13e9267c53af96b6124c3405627da35de"
           },
           {
            "id": "screenshot-1",
-           "sha256": "375fa316026a1670611f479fc28b8fe08690d15c81345f6951865fb37477bfdb"
+           "sha256": "46d6c3ae6e9275eb26e951a916a49a697bdd31d7f74e301d3603a79b96255ccb"
           },
           {
            "id": "screenshot-2",
-           "sha256": "97f8874f8dd4b7fea4ea5f6f7226937f51578f646a5aa8e8aef9c39bb9627fb0"
+           "sha256": "794728ca0dc9b076f36ad37b93c353310e9f91bbbdf141a81812549ee0852a90"
           },
           {
            "id": "screenshot-3",
-           "sha256": "5de552c9185b532255e0c55589a22f4a7a5721cb88fb0478e39b0aa1268523ec"
+           "sha256": "d362413b4b787f730753c48222c34feac180b852b02120565cb5b1fb45cc1e85"
           },
           {
            "id": "screenshot-4",
-           "sha256": "d3191a582aa8457547c072948aeeb5f3f6153916360acdd24722047d177ca5df"
+           "sha256": "42d0508bd4b2b5e612b21f398eefc183942fdbd28749f2c7f83e43754e31f08f"
           },
           {
            "id": "screenshot-5",
-           "sha256": "ec7d45a27eae910332b1596d0c5df2467ce02de960c9a86f3c6d9b167f130751"
+           "sha256": "2145aaec50a75b4c9636e4d99f413c56f36d2651b747d98072bad2a725cfbfd3"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "4d88768a9f987d40fba46db34ea2fe4b549b4ccd2d664b1856496c604331b853"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ce6d6a12a939bdf71ea32aa767bc2ddd1e8aabd2f4d2f5ff3eb19b3272c09d11"
           }
          ]
         }
@@ -13455,39 +13503,47 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "530803ad4d8207c4f3d80ef59336a1eee92c6541",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "평가 이력 모델 종류",
          "expected": "Keep the explicitly selected evaluation family separately from the current project task.",
          "observed": "Native segmentation/classification choices and exact selected controlled report survived reload and return to the original project. New project context started without the prior choice; context changes were initialized through owned helper API calls.",
          "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
          "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
-         "receipt": "2026-10-08-saved-evaluation-refresh-530803a-electron.json",
-         "receipt_sha256": "4752008a156fb08c7e54bf27ed4e3196ee9c1b3c939ec6758eb776b813d2f744",
+         "receipt": "2026-10-09-gui05-evaluation-fd018f2-electron.json",
+         "receipt_sha256": "fec670874cc78f29e122b9e47c0fa7513cf98ee04df5fc964fa8553503fb370e",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "cb0901b3efa6d4c952e5944b3d75f770b527be6eebd4f85019cf2e70d4e05049"
+           "sha256": "62027dad5a5a028d8a7f686ceb0aadb13e9267c53af96b6124c3405627da35de"
           },
           {
            "id": "screenshot-1",
-           "sha256": "375fa316026a1670611f479fc28b8fe08690d15c81345f6951865fb37477bfdb"
+           "sha256": "46d6c3ae6e9275eb26e951a916a49a697bdd31d7f74e301d3603a79b96255ccb"
           },
           {
            "id": "screenshot-2",
-           "sha256": "97f8874f8dd4b7fea4ea5f6f7226937f51578f646a5aa8e8aef9c39bb9627fb0"
+           "sha256": "794728ca0dc9b076f36ad37b93c353310e9f91bbbdf141a81812549ee0852a90"
           },
           {
            "id": "screenshot-3",
-           "sha256": "5de552c9185b532255e0c55589a22f4a7a5721cb88fb0478e39b0aa1268523ec"
+           "sha256": "d362413b4b787f730753c48222c34feac180b852b02120565cb5b1fb45cc1e85"
           },
           {
            "id": "screenshot-4",
-           "sha256": "d3191a582aa8457547c072948aeeb5f3f6153916360acdd24722047d177ca5df"
+           "sha256": "42d0508bd4b2b5e612b21f398eefc183942fdbd28749f2c7f83e43754e31f08f"
           },
           {
            "id": "screenshot-5",
-           "sha256": "ec7d45a27eae910332b1596d0c5df2467ce02de960c9a86f3c6d9b167f130751"
+           "sha256": "2145aaec50a75b4c9636e4d99f413c56f36d2651b747d98072bad2a725cfbfd3"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "4d88768a9f987d40fba46db34ea2fe4b549b4ccd2d664b1856496c604331b853"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ce6d6a12a939bdf71ea32aa767bc2ddd1e8aabd2f4d2f5ff3eb19b3272c09d11"
           }
          ]
         }
@@ -13789,39 +13845,47 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "530803ad4d8207c4f3d80ef59336a1eee92c6541",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "평가 이력 모델 종류",
          "expected": "Keep the explicitly selected evaluation family separately from the current project task.",
          "observed": "Native segmentation/classification choices and exact selected controlled report survived reload and return to the original project. New project context started without the prior choice; context changes were initialized through owned helper API calls.",
          "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
          "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
-         "receipt": "2026-10-08-saved-evaluation-refresh-530803a-electron.json",
-         "receipt_sha256": "4752008a156fb08c7e54bf27ed4e3196ee9c1b3c939ec6758eb776b813d2f744",
+         "receipt": "2026-10-09-gui05-evaluation-fd018f2-electron.json",
+         "receipt_sha256": "fec670874cc78f29e122b9e47c0fa7513cf98ee04df5fc964fa8553503fb370e",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "cb0901b3efa6d4c952e5944b3d75f770b527be6eebd4f85019cf2e70d4e05049"
+           "sha256": "62027dad5a5a028d8a7f686ceb0aadb13e9267c53af96b6124c3405627da35de"
           },
           {
            "id": "screenshot-1",
-           "sha256": "375fa316026a1670611f479fc28b8fe08690d15c81345f6951865fb37477bfdb"
+           "sha256": "46d6c3ae6e9275eb26e951a916a49a697bdd31d7f74e301d3603a79b96255ccb"
           },
           {
            "id": "screenshot-2",
-           "sha256": "97f8874f8dd4b7fea4ea5f6f7226937f51578f646a5aa8e8aef9c39bb9627fb0"
+           "sha256": "794728ca0dc9b076f36ad37b93c353310e9f91bbbdf141a81812549ee0852a90"
           },
           {
            "id": "screenshot-3",
-           "sha256": "5de552c9185b532255e0c55589a22f4a7a5721cb88fb0478e39b0aa1268523ec"
+           "sha256": "d362413b4b787f730753c48222c34feac180b852b02120565cb5b1fb45cc1e85"
           },
           {
            "id": "screenshot-4",
-           "sha256": "d3191a582aa8457547c072948aeeb5f3f6153916360acdd24722047d177ca5df"
+           "sha256": "42d0508bd4b2b5e612b21f398eefc183942fdbd28749f2c7f83e43754e31f08f"
           },
           {
            "id": "screenshot-5",
-           "sha256": "ec7d45a27eae910332b1596d0c5df2467ce02de960c9a86f3c6d9b167f130751"
+           "sha256": "2145aaec50a75b4c9636e4d99f413c56f36d2651b747d98072bad2a725cfbfd3"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "4d88768a9f987d40fba46db34ea2fe4b549b4ccd2d664b1856496c604331b853"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ce6d6a12a939bdf71ea32aa767bc2ddd1e8aabd2f4d2f5ff3eb19b3272c09d11"
           }
          ]
         }
@@ -13936,39 +14000,47 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "530803ad4d8207c4f3d80ef59336a1eee92c6541",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "평가 오류 집계 기준",
          "expected": "Persist the explicit historical error grouping without overwriting results.",
          "observed": "Native Lot and ground-truth grouping choices survived reload and project return. Saved report and input hashes were unchanged, and no evaluation/training/job writes occurred.",
          "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
          "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
-         "receipt": "2026-10-08-saved-evaluation-refresh-530803a-electron.json",
-         "receipt_sha256": "4752008a156fb08c7e54bf27ed4e3196ee9c1b3c939ec6758eb776b813d2f744",
+         "receipt": "2026-10-09-gui05-evaluation-fd018f2-electron.json",
+         "receipt_sha256": "fec670874cc78f29e122b9e47c0fa7513cf98ee04df5fc964fa8553503fb370e",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "cb0901b3efa6d4c952e5944b3d75f770b527be6eebd4f85019cf2e70d4e05049"
+           "sha256": "62027dad5a5a028d8a7f686ceb0aadb13e9267c53af96b6124c3405627da35de"
           },
           {
            "id": "screenshot-1",
-           "sha256": "375fa316026a1670611f479fc28b8fe08690d15c81345f6951865fb37477bfdb"
+           "sha256": "46d6c3ae6e9275eb26e951a916a49a697bdd31d7f74e301d3603a79b96255ccb"
           },
           {
            "id": "screenshot-2",
-           "sha256": "97f8874f8dd4b7fea4ea5f6f7226937f51578f646a5aa8e8aef9c39bb9627fb0"
+           "sha256": "794728ca0dc9b076f36ad37b93c353310e9f91bbbdf141a81812549ee0852a90"
           },
           {
            "id": "screenshot-3",
-           "sha256": "5de552c9185b532255e0c55589a22f4a7a5721cb88fb0478e39b0aa1268523ec"
+           "sha256": "d362413b4b787f730753c48222c34feac180b852b02120565cb5b1fb45cc1e85"
           },
           {
            "id": "screenshot-4",
-           "sha256": "d3191a582aa8457547c072948aeeb5f3f6153916360acdd24722047d177ca5df"
+           "sha256": "42d0508bd4b2b5e612b21f398eefc183942fdbd28749f2c7f83e43754e31f08f"
           },
           {
            "id": "screenshot-5",
-           "sha256": "ec7d45a27eae910332b1596d0c5df2467ce02de960c9a86f3c6d9b167f130751"
+           "sha256": "2145aaec50a75b4c9636e4d99f413c56f36d2651b747d98072bad2a725cfbfd3"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "4d88768a9f987d40fba46db34ea2fe4b549b4ccd2d664b1856496c604331b853"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ce6d6a12a939bdf71ea32aa767bc2ddd1e8aabd2f4d2f5ff3eb19b3272c09d11"
           }
          ]
         }
@@ -14273,39 +14345,47 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "530803ad4d8207c4f3d80ef59336a1eee92c6541",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "평가 오류 집계 기준",
          "expected": "Persist the explicit historical error grouping without overwriting results.",
          "observed": "Native Lot and ground-truth grouping choices survived reload and project return. Saved report and input hashes were unchanged, and no evaluation/training/job writes occurred.",
          "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
          "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
-         "receipt": "2026-10-08-saved-evaluation-refresh-530803a-electron.json",
-         "receipt_sha256": "4752008a156fb08c7e54bf27ed4e3196ee9c1b3c939ec6758eb776b813d2f744",
+         "receipt": "2026-10-09-gui05-evaluation-fd018f2-electron.json",
+         "receipt_sha256": "fec670874cc78f29e122b9e47c0fa7513cf98ee04df5fc964fa8553503fb370e",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "cb0901b3efa6d4c952e5944b3d75f770b527be6eebd4f85019cf2e70d4e05049"
+           "sha256": "62027dad5a5a028d8a7f686ceb0aadb13e9267c53af96b6124c3405627da35de"
           },
           {
            "id": "screenshot-1",
-           "sha256": "375fa316026a1670611f479fc28b8fe08690d15c81345f6951865fb37477bfdb"
+           "sha256": "46d6c3ae6e9275eb26e951a916a49a697bdd31d7f74e301d3603a79b96255ccb"
           },
           {
            "id": "screenshot-2",
-           "sha256": "97f8874f8dd4b7fea4ea5f6f7226937f51578f646a5aa8e8aef9c39bb9627fb0"
+           "sha256": "794728ca0dc9b076f36ad37b93c353310e9f91bbbdf141a81812549ee0852a90"
           },
           {
            "id": "screenshot-3",
-           "sha256": "5de552c9185b532255e0c55589a22f4a7a5721cb88fb0478e39b0aa1268523ec"
+           "sha256": "d362413b4b787f730753c48222c34feac180b852b02120565cb5b1fb45cc1e85"
           },
           {
            "id": "screenshot-4",
-           "sha256": "d3191a582aa8457547c072948aeeb5f3f6153916360acdd24722047d177ca5df"
+           "sha256": "42d0508bd4b2b5e612b21f398eefc183942fdbd28749f2c7f83e43754e31f08f"
           },
           {
            "id": "screenshot-5",
-           "sha256": "ec7d45a27eae910332b1596d0c5df2467ce02de960c9a86f3c6d9b167f130751"
+           "sha256": "2145aaec50a75b4c9636e4d99f413c56f36d2651b747d98072bad2a725cfbfd3"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "4d88768a9f987d40fba46db34ea2fe4b549b4ccd2d664b1856496c604331b853"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ce6d6a12a939bdf71ea32aa767bc2ddd1e8aabd2f4d2f5ff3eb19b3272c09d11"
           }
          ]
         }
@@ -14420,39 +14500,47 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "530803ad4d8207c4f3d80ef59336a1eee92c6541",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "평가 이력 새로고침",
          "expected": "Refresh real scoped history without silently replacing the chosen evaluation.",
          "observed": "Native refresh returned200 and retained the exact ID/labelset. Temporarily removing the selected owned report showed its exact missing-ID alert and blank selector; replacement required another explicit choice. This was a controlled owned file-absence fault.",
          "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
          "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
-         "receipt": "2026-10-08-saved-evaluation-refresh-530803a-electron.json",
-         "receipt_sha256": "4752008a156fb08c7e54bf27ed4e3196ee9c1b3c939ec6758eb776b813d2f744",
+         "receipt": "2026-10-09-gui05-evaluation-fd018f2-electron.json",
+         "receipt_sha256": "fec670874cc78f29e122b9e47c0fa7513cf98ee04df5fc964fa8553503fb370e",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "cb0901b3efa6d4c952e5944b3d75f770b527be6eebd4f85019cf2e70d4e05049"
+           "sha256": "62027dad5a5a028d8a7f686ceb0aadb13e9267c53af96b6124c3405627da35de"
           },
           {
            "id": "screenshot-1",
-           "sha256": "375fa316026a1670611f479fc28b8fe08690d15c81345f6951865fb37477bfdb"
+           "sha256": "46d6c3ae6e9275eb26e951a916a49a697bdd31d7f74e301d3603a79b96255ccb"
           },
           {
            "id": "screenshot-2",
-           "sha256": "97f8874f8dd4b7fea4ea5f6f7226937f51578f646a5aa8e8aef9c39bb9627fb0"
+           "sha256": "794728ca0dc9b076f36ad37b93c353310e9f91bbbdf141a81812549ee0852a90"
           },
           {
            "id": "screenshot-3",
-           "sha256": "5de552c9185b532255e0c55589a22f4a7a5721cb88fb0478e39b0aa1268523ec"
+           "sha256": "d362413b4b787f730753c48222c34feac180b852b02120565cb5b1fb45cc1e85"
           },
           {
            "id": "screenshot-4",
-           "sha256": "d3191a582aa8457547c072948aeeb5f3f6153916360acdd24722047d177ca5df"
+           "sha256": "42d0508bd4b2b5e612b21f398eefc183942fdbd28749f2c7f83e43754e31f08f"
           },
           {
            "id": "screenshot-5",
-           "sha256": "ec7d45a27eae910332b1596d0c5df2467ce02de960c9a86f3c6d9b167f130751"
+           "sha256": "2145aaec50a75b4c9636e4d99f413c56f36d2651b747d98072bad2a725cfbfd3"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "4d88768a9f987d40fba46db34ea2fe4b549b4ccd2d664b1856496c604331b853"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ce6d6a12a939bdf71ea32aa767bc2ddd1e8aabd2f4d2f5ff3eb19b3272c09d11"
           }
          ]
         }
@@ -14463,77 +14551,93 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "530803ad4d8207c4f3d80ef59336a1eee92c6541",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "평가 이력 새로고침",
          "expected": "An actual refresh click in an empty second project returns200 and leaves no selector/identity/error while displaying the empty state.",
          "observed": "electron: An actual refresh click in an empty second project returns200 and leaves no selector/identity/error while displaying the empty state. Saved report and input bytes unchanged; no evaluation/training/job writes. Controlled reports and transport; no inference or human quality approval.",
          "reviewer": "Root exact-source GUI, screenshot, report/input hash and owned teardown readback; whole-feature independent acceptance remains pending.",
          "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
-         "receipt": "2026-10-08-saved-evaluation-refresh-530803a-electron.json",
-         "receipt_sha256": "4752008a156fb08c7e54bf27ed4e3196ee9c1b3c939ec6758eb776b813d2f744",
+         "receipt": "2026-10-09-gui05-evaluation-fd018f2-electron.json",
+         "receipt_sha256": "fec670874cc78f29e122b9e47c0fa7513cf98ee04df5fc964fa8553503fb370e",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "cb0901b3efa6d4c952e5944b3d75f770b527be6eebd4f85019cf2e70d4e05049"
+           "sha256": "62027dad5a5a028d8a7f686ceb0aadb13e9267c53af96b6124c3405627da35de"
           },
           {
            "id": "screenshot-1",
-           "sha256": "375fa316026a1670611f479fc28b8fe08690d15c81345f6951865fb37477bfdb"
+           "sha256": "46d6c3ae6e9275eb26e951a916a49a697bdd31d7f74e301d3603a79b96255ccb"
           },
           {
            "id": "screenshot-2",
-           "sha256": "97f8874f8dd4b7fea4ea5f6f7226937f51578f646a5aa8e8aef9c39bb9627fb0"
+           "sha256": "794728ca0dc9b076f36ad37b93c353310e9f91bbbdf141a81812549ee0852a90"
           },
           {
            "id": "screenshot-3",
-           "sha256": "5de552c9185b532255e0c55589a22f4a7a5721cb88fb0478e39b0aa1268523ec"
+           "sha256": "d362413b4b787f730753c48222c34feac180b852b02120565cb5b1fb45cc1e85"
           },
           {
            "id": "screenshot-4",
-           "sha256": "d3191a582aa8457547c072948aeeb5f3f6153916360acdd24722047d177ca5df"
+           "sha256": "42d0508bd4b2b5e612b21f398eefc183942fdbd28749f2c7f83e43754e31f08f"
           },
           {
            "id": "screenshot-5",
-           "sha256": "ec7d45a27eae910332b1596d0c5df2467ce02de960c9a86f3c6d9b167f130751"
+           "sha256": "2145aaec50a75b4c9636e4d99f413c56f36d2651b747d98072bad2a725cfbfd3"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "4d88768a9f987d40fba46db34ea2fe4b549b4ccd2d664b1856496c604331b853"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ce6d6a12a939bdf71ea32aa767bc2ddd1e8aabd2f4d2f5ff3eb19b3272c09d11"
           }
          ]
         },
         {
          "task": "S4-13",
-         "source_sha": "530803ad4d8207c4f3d80ef59336a1eee92c6541",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "평가 이력 새로고침",
          "expected": "An actual refresh click in an empty second project returns200 and leaves no selector/identity/error while displaying the empty state.",
          "observed": "browser: An actual refresh click in an empty second project returns200 and leaves no selector/identity/error while displaying the empty state. Saved report and input bytes unchanged; no evaluation/training/job writes. Controlled reports and transport; no inference or human quality approval.",
          "reviewer": "Root exact-source GUI, screenshot, report/input hash and owned teardown readback; whole-feature independent acceptance remains pending.",
          "test": "scripts/e2e/evaluation-selection.spec.ts::saved evaluation selection retains exact model and labelset and refuses unavailable records",
-         "receipt": "2026-10-08-saved-evaluation-refresh-530803a-browser.json",
-         "receipt_sha256": "bf9d0c984aa864387c00ed442d86a38c57f5af6e860295ee27169a8147de9103",
+         "receipt": "2026-10-09-gui05-evaluation-fd018f2-browser.json",
+         "receipt_sha256": "eab85094502eab984601cbb9db086c0d831148137c788a663c7f137be3626862",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "c53e23e6c3c4228d81e99baeae8a5019084b55157b8c4348be3850757fb9aed5"
+           "sha256": "2b3751a1e07f767157fa3db48c322b6d2b56459844a10de9dbd3aeb2e4b8878c"
           },
           {
            "id": "screenshot-1",
-           "sha256": "09a2aa8f6790f24a4b314fd66f09002fe466c853c34c376926360c2b18d6ae1f"
+           "sha256": "0f5ec84685471e7044d91841a114052ccda02fa91f878145cefe4f4ca0e6937d"
           },
           {
            "id": "screenshot-2",
-           "sha256": "5b9ca91079e3e937148eabd20902a5bed536b9e70efb13c83f82dee7b31d2742"
+           "sha256": "201e470020b1d4dd5cef59a5831388b02b655e5743590d4beef57decb5fe7ca6"
           },
           {
            "id": "screenshot-3",
-           "sha256": "07e8e4fd8161255c2d91d0a64406085670e33fa75da60c40f8d6073bfdc91e98"
+           "sha256": "bd825b8c293d7275b56d788d55cac384c1089e53bbfadee91a6a56f67ea218e3"
           },
           {
            "id": "screenshot-4",
-           "sha256": "c233c406de3a7b38c5815b9ae0f80aca8d10ad0553d110ea0c3aa61d15fef339"
+           "sha256": "e2575e300df262b2c2d836139125a6d2006ba4c0c6882878d684489d88c007a9"
           },
           {
            "id": "screenshot-5",
-           "sha256": "00def09aed54a58639cf13c6dc255441d75459857d02b645fd38c328972d4f38"
+           "sha256": "b5c91b9723fcbc0611bc34b6f5f0c6939de95b76b77d1a862044315ec51d6537"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "7296757b74c5ce0bcf9fabdf5d980ebc71220d871af4ce40fbdcc000f8c9f2af"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "455b604022f4a751fdb538436fea2b627e6afeb2eea8567c8abf2dbe2a03d522"
           }
          ]
         }
@@ -14544,39 +14648,47 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "530803ad4d8207c4f3d80ef59336a1eee92c6541",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "평가 이력 새로고침",
          "expected": "Refresh real scoped history without silently replacing the chosen evaluation.",
          "observed": "Native refresh returned200 and retained the exact ID/labelset. Temporarily removing the selected owned report showed its exact missing-ID alert and blank selector; replacement required another explicit choice. This was a controlled owned file-absence fault.",
          "reviewer": "Codex root retained native controls, source byte checks and independent pixel formula readback; controlled reports do not verify model inference. Human quality, external review and parent acceptance pending.",
          "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
-         "receipt": "2026-10-08-saved-evaluation-refresh-530803a-electron.json",
-         "receipt_sha256": "4752008a156fb08c7e54bf27ed4e3196ee9c1b3c939ec6758eb776b813d2f744",
+         "receipt": "2026-10-09-gui05-evaluation-fd018f2-electron.json",
+         "receipt_sha256": "fec670874cc78f29e122b9e47c0fa7513cf98ee04df5fc964fa8553503fb370e",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "cb0901b3efa6d4c952e5944b3d75f770b527be6eebd4f85019cf2e70d4e05049"
+           "sha256": "62027dad5a5a028d8a7f686ceb0aadb13e9267c53af96b6124c3405627da35de"
           },
           {
            "id": "screenshot-1",
-           "sha256": "375fa316026a1670611f479fc28b8fe08690d15c81345f6951865fb37477bfdb"
+           "sha256": "46d6c3ae6e9275eb26e951a916a49a697bdd31d7f74e301d3603a79b96255ccb"
           },
           {
            "id": "screenshot-2",
-           "sha256": "97f8874f8dd4b7fea4ea5f6f7226937f51578f646a5aa8e8aef9c39bb9627fb0"
+           "sha256": "794728ca0dc9b076f36ad37b93c353310e9f91bbbdf141a81812549ee0852a90"
           },
           {
            "id": "screenshot-3",
-           "sha256": "5de552c9185b532255e0c55589a22f4a7a5721cb88fb0478e39b0aa1268523ec"
+           "sha256": "d362413b4b787f730753c48222c34feac180b852b02120565cb5b1fb45cc1e85"
           },
           {
            "id": "screenshot-4",
-           "sha256": "d3191a582aa8457547c072948aeeb5f3f6153916360acdd24722047d177ca5df"
+           "sha256": "42d0508bd4b2b5e612b21f398eefc183942fdbd28749f2c7f83e43754e31f08f"
           },
           {
            "id": "screenshot-5",
-           "sha256": "ec7d45a27eae910332b1596d0c5df2467ce02de960c9a86f3c6d9b167f130751"
+           "sha256": "2145aaec50a75b4c9636e4d99f413c56f36d2651b747d98072bad2a725cfbfd3"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "4d88768a9f987d40fba46db34ea2fe4b549b4ccd2d664b1856496c604331b853"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ce6d6a12a939bdf71ea32aa767bc2ddd1e8aabd2f4d2f5ff3eb19b3272c09d11"
           }
          ]
         }
@@ -14587,168 +14699,388 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "530803ad4d8207c4f3d80ef59336a1eee92c6541",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "평가 이력 새로고침",
          "expected": "Controlled scoped503 removes stale selection/identity/results and disables reevaluation; explicit real200 retry restores the exact saved evaluation ID and evidence SHA.",
          "observed": "electron: Controlled scoped503 removes stale selection/identity/results and disables reevaluation; explicit real200 retry restores the exact saved evaluation ID and evidence SHA. Saved report and input bytes unchanged; no evaluation/training/job writes. Controlled reports and transport; no inference or human quality approval.",
          "reviewer": "Root exact-source GUI, screenshot, report/input hash and owned teardown readback; whole-feature independent acceptance remains pending.",
          "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
-         "receipt": "2026-10-08-saved-evaluation-refresh-530803a-electron.json",
-         "receipt_sha256": "4752008a156fb08c7e54bf27ed4e3196ee9c1b3c939ec6758eb776b813d2f744",
+         "receipt": "2026-10-09-gui05-evaluation-fd018f2-electron.json",
+         "receipt_sha256": "fec670874cc78f29e122b9e47c0fa7513cf98ee04df5fc964fa8553503fb370e",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "cb0901b3efa6d4c952e5944b3d75f770b527be6eebd4f85019cf2e70d4e05049"
+           "sha256": "62027dad5a5a028d8a7f686ceb0aadb13e9267c53af96b6124c3405627da35de"
           },
           {
            "id": "screenshot-1",
-           "sha256": "375fa316026a1670611f479fc28b8fe08690d15c81345f6951865fb37477bfdb"
+           "sha256": "46d6c3ae6e9275eb26e951a916a49a697bdd31d7f74e301d3603a79b96255ccb"
           },
           {
            "id": "screenshot-2",
-           "sha256": "97f8874f8dd4b7fea4ea5f6f7226937f51578f646a5aa8e8aef9c39bb9627fb0"
+           "sha256": "794728ca0dc9b076f36ad37b93c353310e9f91bbbdf141a81812549ee0852a90"
           },
           {
            "id": "screenshot-3",
-           "sha256": "5de552c9185b532255e0c55589a22f4a7a5721cb88fb0478e39b0aa1268523ec"
+           "sha256": "d362413b4b787f730753c48222c34feac180b852b02120565cb5b1fb45cc1e85"
           },
           {
            "id": "screenshot-4",
-           "sha256": "d3191a582aa8457547c072948aeeb5f3f6153916360acdd24722047d177ca5df"
+           "sha256": "42d0508bd4b2b5e612b21f398eefc183942fdbd28749f2c7f83e43754e31f08f"
           },
           {
            "id": "screenshot-5",
-           "sha256": "ec7d45a27eae910332b1596d0c5df2467ce02de960c9a86f3c6d9b167f130751"
+           "sha256": "2145aaec50a75b4c9636e4d99f413c56f36d2651b747d98072bad2a725cfbfd3"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "4d88768a9f987d40fba46db34ea2fe4b549b4ccd2d664b1856496c604331b853"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ce6d6a12a939bdf71ea32aa767bc2ddd1e8aabd2f4d2f5ff3eb19b3272c09d11"
           }
          ]
         },
         {
          "task": "S4-13",
-         "source_sha": "530803ad4d8207c4f3d80ef59336a1eee92c6541",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "평가 이력 새로고침",
          "expected": "Controlled scoped503 removes stale selection/identity/results and disables reevaluation; explicit real200 retry restores the exact saved evaluation ID and evidence SHA.",
          "observed": "browser: Controlled scoped503 removes stale selection/identity/results and disables reevaluation; explicit real200 retry restores the exact saved evaluation ID and evidence SHA. Saved report and input bytes unchanged; no evaluation/training/job writes. Controlled reports and transport; no inference or human quality approval.",
          "reviewer": "Root exact-source GUI, screenshot, report/input hash and owned teardown readback; whole-feature independent acceptance remains pending.",
          "test": "scripts/e2e/evaluation-selection.spec.ts::saved evaluation selection retains exact model and labelset and refuses unavailable records",
-         "receipt": "2026-10-08-saved-evaluation-refresh-530803a-browser.json",
-         "receipt_sha256": "bf9d0c984aa864387c00ed442d86a38c57f5af6e860295ee27169a8147de9103",
+         "receipt": "2026-10-09-gui05-evaluation-fd018f2-browser.json",
+         "receipt_sha256": "eab85094502eab984601cbb9db086c0d831148137c788a663c7f137be3626862",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "c53e23e6c3c4228d81e99baeae8a5019084b55157b8c4348be3850757fb9aed5"
+           "sha256": "2b3751a1e07f767157fa3db48c322b6d2b56459844a10de9dbd3aeb2e4b8878c"
           },
           {
            "id": "screenshot-1",
-           "sha256": "09a2aa8f6790f24a4b314fd66f09002fe466c853c34c376926360c2b18d6ae1f"
+           "sha256": "0f5ec84685471e7044d91841a114052ccda02fa91f878145cefe4f4ca0e6937d"
           },
           {
            "id": "screenshot-2",
-           "sha256": "5b9ca91079e3e937148eabd20902a5bed536b9e70efb13c83f82dee7b31d2742"
+           "sha256": "201e470020b1d4dd5cef59a5831388b02b655e5743590d4beef57decb5fe7ca6"
           },
           {
            "id": "screenshot-3",
-           "sha256": "07e8e4fd8161255c2d91d0a64406085670e33fa75da60c40f8d6073bfdc91e98"
+           "sha256": "bd825b8c293d7275b56d788d55cac384c1089e53bbfadee91a6a56f67ea218e3"
           },
           {
            "id": "screenshot-4",
-           "sha256": "c233c406de3a7b38c5815b9ae0f80aca8d10ad0553d110ea0c3aa61d15fef339"
+           "sha256": "e2575e300df262b2c2d836139125a6d2006ba4c0c6882878d684489d88c007a9"
           },
           {
            "id": "screenshot-5",
-           "sha256": "00def09aed54a58639cf13c6dc255441d75459857d02b645fd38c328972d4f38"
+           "sha256": "b5c91b9723fcbc0611bc34b6f5f0c6939de95b76b77d1a862044315ec51d6537"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "7296757b74c5ce0bcf9fabdf5d980ebc71220d871af4ce40fbdcc000f8c9f2af"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "455b604022f4a751fdb538436fea2b627e6afeb2eea8567c8abf2dbe2a03d522"
           }
          ]
         }
        ]
       },
       "cancel": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
+         "kind": "click",
+         "action": "평가 이력 새로고침",
+         "expected": "A held original refresh response released after leaving the evaluation stage must not alter the saved-choice map or replace the reopened selected record.",
+         "observed": "browser: Actual stage exit unmounted the view before the genuine 200 response was released; the full saved response matched the original records, choices remained unchanged and the exact selected evaluation returned. This is view-lifetime cancellation, not HTTP abort. Controlled source GUI case only; no model inference, real OS picker, physical device, installed target or human quality acceptance.",
+         "reviewer": "Root whole-case raw readback and independent limited child-meaning review; successful traces and native error capture are unavailable. Complete-feature independent acceptance remains pending.",
+         "test": "scripts/e2e/evaluation-selection.spec.ts::saved evaluation selection retains exact model and labelset and refuses unavailable records",
+         "receipt": "2026-10-09-gui05-evaluation-fd018f2-browser.json",
+         "receipt_sha256": "eab85094502eab984601cbb9db086c0d831148137c788a663c7f137be3626862",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2b3751a1e07f767157fa3db48c322b6d2b56459844a10de9dbd3aeb2e4b8878c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0f5ec84685471e7044d91841a114052ccda02fa91f878145cefe4f4ca0e6937d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "201e470020b1d4dd5cef59a5831388b02b655e5743590d4beef57decb5fe7ca6"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "bd825b8c293d7275b56d788d55cac384c1089e53bbfadee91a6a56f67ea218e3"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "e2575e300df262b2c2d836139125a6d2006ba4c0c6882878d684489d88c007a9"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "b5c91b9723fcbc0611bc34b6f5f0c6939de95b76b77d1a862044315ec51d6537"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "7296757b74c5ce0bcf9fabdf5d980ebc71220d871af4ce40fbdcc000f8c9f2af"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "455b604022f4a751fdb538436fea2b627e6afeb2eea8567c8abf2dbe2a03d522"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
+         "kind": "click",
+         "action": "평가 이력 새로고침",
+         "expected": "A held original refresh response released after leaving the evaluation stage must not alter the saved-choice map or replace the reopened selected record.",
+         "observed": "electron: Actual stage exit unmounted the view before the genuine 200 response was released; the full saved response matched the original records, choices remained unchanged and the exact selected evaluation returned. This is view-lifetime cancellation, not HTTP abort. Controlled source GUI case only; no model inference, real OS picker, physical device, installed target or human quality acceptance.",
+         "reviewer": "Root whole-case raw readback and independent limited child-meaning review; successful traces and native error capture are unavailable. Complete-feature independent acceptance remains pending.",
+         "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
+         "receipt": "2026-10-09-gui05-evaluation-fd018f2-electron.json",
+         "receipt_sha256": "fec670874cc78f29e122b9e47c0fa7513cf98ee04df5fc964fa8553503fb370e",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "62027dad5a5a028d8a7f686ceb0aadb13e9267c53af96b6124c3405627da35de"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "46d6c3ae6e9275eb26e951a916a49a697bdd31d7f74e301d3603a79b96255ccb"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "794728ca0dc9b076f36ad37b93c353310e9f91bbbdf141a81812549ee0852a90"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "d362413b4b787f730753c48222c34feac180b852b02120565cb5b1fb45cc1e85"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "42d0508bd4b2b5e612b21f398eefc183942fdbd28749f2c7f83e43754e31f08f"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "2145aaec50a75b4c9636e4d99f413c56f36d2651b747d98072bad2a725cfbfd3"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "4d88768a9f987d40fba46db34ea2fe4b549b4ccd2d664b1856496c604331b853"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ce6d6a12a939bdf71ea32aa767bc2ddd1e8aabd2f4d2f5ff3eb19b3272c09d11"
+          }
+         ]
+        }
+       ]
       },
       "reopen": {
        "state": "verified",
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "530803ad4d8207c4f3d80ef59336a1eee92c6541",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "평가 이력 새로고침",
          "expected": "An actual renderer reload after recovered refresh retains the original project/task/default labelset/Lot group and exact evaluation ID/evidence SHA.",
          "observed": "electron: An actual renderer reload after recovered refresh retains the original project/task/default labelset/Lot group and exact evaluation ID/evidence SHA. Saved report and input bytes unchanged; no evaluation/training/job writes. Controlled reports and transport; no inference or human quality approval.",
          "reviewer": "Root exact-source GUI, screenshot, report/input hash and owned teardown readback; whole-feature independent acceptance remains pending.",
          "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
-         "receipt": "2026-10-08-saved-evaluation-refresh-530803a-electron.json",
-         "receipt_sha256": "4752008a156fb08c7e54bf27ed4e3196ee9c1b3c939ec6758eb776b813d2f744",
+         "receipt": "2026-10-09-gui05-evaluation-fd018f2-electron.json",
+         "receipt_sha256": "fec670874cc78f29e122b9e47c0fa7513cf98ee04df5fc964fa8553503fb370e",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "cb0901b3efa6d4c952e5944b3d75f770b527be6eebd4f85019cf2e70d4e05049"
+           "sha256": "62027dad5a5a028d8a7f686ceb0aadb13e9267c53af96b6124c3405627da35de"
           },
           {
            "id": "screenshot-1",
-           "sha256": "375fa316026a1670611f479fc28b8fe08690d15c81345f6951865fb37477bfdb"
+           "sha256": "46d6c3ae6e9275eb26e951a916a49a697bdd31d7f74e301d3603a79b96255ccb"
           },
           {
            "id": "screenshot-2",
-           "sha256": "97f8874f8dd4b7fea4ea5f6f7226937f51578f646a5aa8e8aef9c39bb9627fb0"
+           "sha256": "794728ca0dc9b076f36ad37b93c353310e9f91bbbdf141a81812549ee0852a90"
           },
           {
            "id": "screenshot-3",
-           "sha256": "5de552c9185b532255e0c55589a22f4a7a5721cb88fb0478e39b0aa1268523ec"
+           "sha256": "d362413b4b787f730753c48222c34feac180b852b02120565cb5b1fb45cc1e85"
           },
           {
            "id": "screenshot-4",
-           "sha256": "d3191a582aa8457547c072948aeeb5f3f6153916360acdd24722047d177ca5df"
+           "sha256": "42d0508bd4b2b5e612b21f398eefc183942fdbd28749f2c7f83e43754e31f08f"
           },
           {
            "id": "screenshot-5",
-           "sha256": "ec7d45a27eae910332b1596d0c5df2467ce02de960c9a86f3c6d9b167f130751"
+           "sha256": "2145aaec50a75b4c9636e4d99f413c56f36d2651b747d98072bad2a725cfbfd3"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "4d88768a9f987d40fba46db34ea2fe4b549b4ccd2d664b1856496c604331b853"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ce6d6a12a939bdf71ea32aa767bc2ddd1e8aabd2f4d2f5ff3eb19b3272c09d11"
           }
          ]
         },
         {
          "task": "S4-13",
-         "source_sha": "530803ad4d8207c4f3d80ef59336a1eee92c6541",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "평가 이력 새로고침",
          "expected": "An actual renderer reload after recovered refresh retains the original project/task/default labelset/Lot group and exact evaluation ID/evidence SHA.",
          "observed": "browser: An actual renderer reload after recovered refresh retains the original project/task/default labelset/Lot group and exact evaluation ID/evidence SHA. Saved report and input bytes unchanged; no evaluation/training/job writes. Controlled reports and transport; no inference or human quality approval.",
          "reviewer": "Root exact-source GUI, screenshot, report/input hash and owned teardown readback; whole-feature independent acceptance remains pending.",
          "test": "scripts/e2e/evaluation-selection.spec.ts::saved evaluation selection retains exact model and labelset and refuses unavailable records",
-         "receipt": "2026-10-08-saved-evaluation-refresh-530803a-browser.json",
-         "receipt_sha256": "bf9d0c984aa864387c00ed442d86a38c57f5af6e860295ee27169a8147de9103",
+         "receipt": "2026-10-09-gui05-evaluation-fd018f2-browser.json",
+         "receipt_sha256": "eab85094502eab984601cbb9db086c0d831148137c788a663c7f137be3626862",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "c53e23e6c3c4228d81e99baeae8a5019084b55157b8c4348be3850757fb9aed5"
+           "sha256": "2b3751a1e07f767157fa3db48c322b6d2b56459844a10de9dbd3aeb2e4b8878c"
           },
           {
            "id": "screenshot-1",
-           "sha256": "09a2aa8f6790f24a4b314fd66f09002fe466c853c34c376926360c2b18d6ae1f"
+           "sha256": "0f5ec84685471e7044d91841a114052ccda02fa91f878145cefe4f4ca0e6937d"
           },
           {
            "id": "screenshot-2",
-           "sha256": "5b9ca91079e3e937148eabd20902a5bed536b9e70efb13c83f82dee7b31d2742"
+           "sha256": "201e470020b1d4dd5cef59a5831388b02b655e5743590d4beef57decb5fe7ca6"
           },
           {
            "id": "screenshot-3",
-           "sha256": "07e8e4fd8161255c2d91d0a64406085670e33fa75da60c40f8d6073bfdc91e98"
+           "sha256": "bd825b8c293d7275b56d788d55cac384c1089e53bbfadee91a6a56f67ea218e3"
           },
           {
            "id": "screenshot-4",
-           "sha256": "c233c406de3a7b38c5815b9ae0f80aca8d10ad0553d110ea0c3aa61d15fef339"
+           "sha256": "e2575e300df262b2c2d836139125a6d2006ba4c0c6882878d684489d88c007a9"
           },
           {
            "id": "screenshot-5",
-           "sha256": "00def09aed54a58639cf13c6dc255441d75459857d02b645fd38c328972d4f38"
+           "sha256": "b5c91b9723fcbc0611bc34b6f5f0c6939de95b76b77d1a862044315ec51d6537"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "7296757b74c5ce0bcf9fabdf5d980ebc71220d871af4ce40fbdcc000f8c9f2af"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "455b604022f4a751fdb538436fea2b627e6afeb2eea8567c8abf2dbe2a03d522"
           }
          ]
         }
        ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
+         "kind": "click",
+         "action": "평가 이력 새로고침",
+         "expected": "The selected original evidence image must retain evaluation/path/source identity and exact 64x64 RGBA on read-only viewer open, then return to the same selection and original-button focus.",
+         "observed": "browser: The real evidence-image GET 200 retained evaluation/path/source hash and 64x64 identity; the decoded 4096 RGBA hash matched the independent source formula. Closing the read-only viewer restored the selected identity and original-button focus. Controlled source GUI case only; no model inference, real OS picker, physical device, installed target or human quality acceptance.",
+         "reviewer": "Root whole-case raw readback and independent limited child-meaning review; successful traces and native error capture are unavailable. Complete-feature independent acceptance remains pending.",
+         "test": "scripts/e2e/evaluation-selection.spec.ts::saved evaluation selection retains exact model and labelset and refuses unavailable records",
+         "receipt": "2026-10-09-gui05-evaluation-fd018f2-browser.json",
+         "receipt_sha256": "eab85094502eab984601cbb9db086c0d831148137c788a663c7f137be3626862",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "2b3751a1e07f767157fa3db48c322b6d2b56459844a10de9dbd3aeb2e4b8878c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "0f5ec84685471e7044d91841a114052ccda02fa91f878145cefe4f4ca0e6937d"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "201e470020b1d4dd5cef59a5831388b02b655e5743590d4beef57decb5fe7ca6"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "bd825b8c293d7275b56d788d55cac384c1089e53bbfadee91a6a56f67ea218e3"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "e2575e300df262b2c2d836139125a6d2006ba4c0c6882878d684489d88c007a9"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "b5c91b9723fcbc0611bc34b6f5f0c6939de95b76b77d1a862044315ec51d6537"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "7296757b74c5ce0bcf9fabdf5d980ebc71220d871af4ce40fbdcc000f8c9f2af"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "455b604022f4a751fdb538436fea2b627e6afeb2eea8567c8abf2dbe2a03d522"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
+         "kind": "click",
+         "action": "평가 이력 새로고침",
+         "expected": "The selected original evidence image must retain evaluation/path/source identity and exact 64x64 RGBA on read-only viewer open, then return to the same selection and original-button focus.",
+         "observed": "electron: The real evidence-image GET 200 retained evaluation/path/source hash and 64x64 identity; the decoded 4096 RGBA hash matched the independent source formula. Closing the read-only viewer restored the selected identity and original-button focus. Controlled source GUI case only; no model inference, real OS picker, physical device, installed target or human quality acceptance.",
+         "reviewer": "Root whole-case raw readback and independent limited child-meaning review; successful traces and native error capture are unavailable. Complete-feature independent acceptance remains pending.",
+         "test": "scripts/e2e/evaluation-selection.spec.ts::native saved evaluation selection retains exact model and labelset and refuses unavailable records",
+         "receipt": "2026-10-09-gui05-evaluation-fd018f2-electron.json",
+         "receipt_sha256": "fec670874cc78f29e122b9e47c0fa7513cf98ee04df5fc964fa8553503fb370e",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "62027dad5a5a028d8a7f686ceb0aadb13e9267c53af96b6124c3405627da35de"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "46d6c3ae6e9275eb26e951a916a49a697bdd31d7f74e301d3603a79b96255ccb"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "794728ca0dc9b076f36ad37b93c353310e9f91bbbdf141a81812549ee0852a90"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "d362413b4b787f730753c48222c34feac180b852b02120565cb5b1fb45cc1e85"
+          },
+          {
+           "id": "screenshot-4",
+           "sha256": "42d0508bd4b2b5e612b21f398eefc183942fdbd28749f2c7f83e43754e31f08f"
+          },
+          {
+           "id": "screenshot-5",
+           "sha256": "2145aaec50a75b4c9636e4d99f413c56f36d2651b747d98072bad2a725cfbfd3"
+          },
+          {
+           "id": "screenshot-6",
+           "sha256": "4d88768a9f987d40fba46db34ea2fe4b549b4ccd2d664b1856496c604331b853"
+          },
+          {
+           "id": "screenshot-7",
+           "sha256": "ce6d6a12a939bdf71ea32aa767bc2ddd1e8aabd2f4d2f5ff3eb19b3272c09d11"
+          }
+         ]
+        }
+       ]
       }
      }
     }
@@ -20268,25 +20600,29 @@
        "evidence": [
         {
          "task": "S3-05",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::label exchange folder and unsent preview lifecycle preserve exact original handoff",
-         "receipt": "2026-10-08-f117-lifecycle-f3895ec-browser.json",
-         "receipt_sha256": "f45bde46899e3fe071dc7a87d3ff60da6ed522f71e6b8803356a5f72e3375d5e",
+         "receipt": "2026-10-09-gui05-folder-fd018f2-browser.json",
+         "receipt_sha256": "3b6993cbe059de3f0ba476b1fbc95c94ff2f9d8a454f4f473d46438f245273d6",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "a84a2b7dd65fa18b3810b0449d74376bb92bad0e0d9aa3a0c6dc2af9c159f409"
+           "sha256": "22f6c6c44335be0be80e51861abccc594fa017dde985f21341b526025890a00f"
           },
           {
            "id": "screenshot-1",
-           "sha256": "3abe47574496548a04ff8bf540a0fe45960c0f6ca76a4d6d35ac3840b773e7d1"
+           "sha256": "7b42b17b1ad56dd244246e66db06fa95ea63ebf700a93474862d89160d864388"
           },
           {
            "id": "screenshot-2",
-           "sha256": "e6bfaa6ebdc94e781cb5da00fa8b63a39b195d23a0813e95be206a7c69fafacb"
+           "sha256": "abfd103d99bc0b036eabacaf9b103047df5c8611a1c63b191bb810b233956794"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "8900430fd0631d397a5b33089bbed23cf789250cd5a6b665ae56859a0bae99c1"
           }
          ],
          "expected": "Controlled native/browser folder exception is visible; previous exact folder and unapplied preview remain unchanged.",
@@ -20294,25 +20630,29 @@
         },
         {
          "task": "S3-05",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::native label exchange folder and unsent preview lifecycle preserve original handoff",
-         "receipt": "2026-10-08-f117-lifecycle-f3895ec-electron.json",
-         "receipt_sha256": "dca51497712e033231d12312d49c3576495f7453c5ac430f0ea69aee0f5f8171",
+         "receipt": "2026-10-09-gui05-folder-fd018f2-electron.json",
+         "receipt_sha256": "0bd060bce2cbbb8dde2a49a81a926e03d5c6d4b030ee0c15fb5d6d7fc61e84f1",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "0f0270c7d9972c12c0e7a9e4b736f4a675f863729d492cfd8ee0658ed0396b45"
+           "sha256": "c39d47f870d2ade18173e4cff2b92066043ea978757e4c3b971db7b000283a83"
           },
           {
            "id": "screenshot-1",
-           "sha256": "ce41f57488e225eaea5779c679bf1ca8f6499fbcdfffc45225fa5a4069aaf224"
+           "sha256": "990f9d2b32c55e72f2ab2cade8b4de85fb1e7440e32dac7ba01b9e5346ff20cc"
           },
           {
            "id": "screenshot-2",
-           "sha256": "d045105989b274e6b51763f831b92a8d06f0cde42b9a70b489b6478472c925dc"
+           "sha256": "6d1db6b23e522601c149338a42bfdd3a89bfc029f4c70b3ac8d10b43bcb9d725"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "b7c53b1d12e64d7c65045511eca213d90ce9ead6429102e7def7cbc3fdcd6f12"
           }
          ],
          "expected": "Controlled native/browser folder exception is visible; previous exact folder and unapplied preview remain unchanged.",
@@ -20325,25 +20665,29 @@
        "evidence": [
         {
          "task": "S3-05",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::label exchange folder and unsent preview lifecycle preserve exact original handoff",
-         "receipt": "2026-10-08-f117-lifecycle-f3895ec-browser.json",
-         "receipt_sha256": "f45bde46899e3fe071dc7a87d3ff60da6ed522f71e6b8803356a5f72e3375d5e",
+         "receipt": "2026-10-09-gui05-folder-fd018f2-browser.json",
+         "receipt_sha256": "3b6993cbe059de3f0ba476b1fbc95c94ff2f9d8a454f4f473d46438f245273d6",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "a84a2b7dd65fa18b3810b0449d74376bb92bad0e0d9aa3a0c6dc2af9c159f409"
+           "sha256": "22f6c6c44335be0be80e51861abccc594fa017dde985f21341b526025890a00f"
           },
           {
            "id": "screenshot-1",
-           "sha256": "3abe47574496548a04ff8bf540a0fe45960c0f6ca76a4d6d35ac3840b773e7d1"
+           "sha256": "7b42b17b1ad56dd244246e66db06fa95ea63ebf700a93474862d89160d864388"
           },
           {
            "id": "screenshot-2",
-           "sha256": "e6bfaa6ebdc94e781cb5da00fa8b63a39b195d23a0813e95be206a7c69fafacb"
+           "sha256": "abfd103d99bc0b036eabacaf9b103047df5c8611a1c63b191bb810b233956794"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "8900430fd0631d397a5b33089bbed23cf789250cd5a6b665ae56859a0bae99c1"
           }
          ],
          "expected": "Controlled folder cancel leaves the exact completed unsent preview and folder unchanged, without preview/apply writes.",
@@ -20351,25 +20695,29 @@
         },
         {
          "task": "S3-05",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::native label exchange folder and unsent preview lifecycle preserve original handoff",
-         "receipt": "2026-10-08-f117-lifecycle-f3895ec-electron.json",
-         "receipt_sha256": "dca51497712e033231d12312d49c3576495f7453c5ac430f0ea69aee0f5f8171",
+         "receipt": "2026-10-09-gui05-folder-fd018f2-electron.json",
+         "receipt_sha256": "0bd060bce2cbbb8dde2a49a81a926e03d5c6d4b030ee0c15fb5d6d7fc61e84f1",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "0f0270c7d9972c12c0e7a9e4b736f4a675f863729d492cfd8ee0658ed0396b45"
+           "sha256": "c39d47f870d2ade18173e4cff2b92066043ea978757e4c3b971db7b000283a83"
           },
           {
            "id": "screenshot-1",
-           "sha256": "ce41f57488e225eaea5779c679bf1ca8f6499fbcdfffc45225fa5a4069aaf224"
+           "sha256": "990f9d2b32c55e72f2ab2cade8b4de85fb1e7440e32dac7ba01b9e5346ff20cc"
           },
           {
            "id": "screenshot-2",
-           "sha256": "d045105989b274e6b51763f831b92a8d06f0cde42b9a70b489b6478472c925dc"
+           "sha256": "6d1db6b23e522601c149338a42bfdd3a89bfc029f4c70b3ac8d10b43bcb9d725"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "b7c53b1d12e64d7c65045511eca213d90ce9ead6429102e7def7cbc3fdcd6f12"
           }
          ],
          "expected": "Controlled folder cancel leaves the exact completed unsent preview and folder unchanged, without preview/apply writes.",
@@ -20382,25 +20730,29 @@
        "evidence": [
         {
          "task": "S3-05",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::label exchange folder and unsent preview lifecycle preserve exact original handoff",
-         "receipt": "2026-10-08-f117-lifecycle-f3895ec-browser.json",
-         "receipt_sha256": "f45bde46899e3fe071dc7a87d3ff60da6ed522f71e6b8803356a5f72e3375d5e",
+         "receipt": "2026-10-09-gui05-folder-fd018f2-browser.json",
+         "receipt_sha256": "3b6993cbe059de3f0ba476b1fbc95c94ff2f9d8a454f4f473d46438f245273d6",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "a84a2b7dd65fa18b3810b0449d74376bb92bad0e0d9aa3a0c6dc2af9c159f409"
+           "sha256": "22f6c6c44335be0be80e51861abccc594fa017dde985f21341b526025890a00f"
           },
           {
            "id": "screenshot-1",
-           "sha256": "3abe47574496548a04ff8bf540a0fe45960c0f6ca76a4d6d35ac3840b773e7d1"
+           "sha256": "7b42b17b1ad56dd244246e66db06fa95ea63ebf700a93474862d89160d864388"
           },
           {
            "id": "screenshot-2",
-           "sha256": "e6bfaa6ebdc94e781cb5da00fa8b63a39b195d23a0813e95be206a7c69fafacb"
+           "sha256": "abfd103d99bc0b036eabacaf9b103047df5c8611a1c63b191bb810b233956794"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "8900430fd0631d397a5b33089bbed23cf789250cd5a6b665ae56859a0bae99c1"
           }
          ],
          "expected": "After actual renderer reload the folder and preview reset; selecting the exact other folder produces a fresh actual preview.",
@@ -20408,25 +20760,29 @@
         },
         {
          "task": "S3-05",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::native label exchange folder and unsent preview lifecycle preserve original handoff",
-         "receipt": "2026-10-08-f117-lifecycle-f3895ec-electron.json",
-         "receipt_sha256": "dca51497712e033231d12312d49c3576495f7453c5ac430f0ea69aee0f5f8171",
+         "receipt": "2026-10-09-gui05-folder-fd018f2-electron.json",
+         "receipt_sha256": "0bd060bce2cbbb8dde2a49a81a926e03d5c6d4b030ee0c15fb5d6d7fc61e84f1",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "0f0270c7d9972c12c0e7a9e4b736f4a675f863729d492cfd8ee0658ed0396b45"
+           "sha256": "c39d47f870d2ade18173e4cff2b92066043ea978757e4c3b971db7b000283a83"
           },
           {
            "id": "screenshot-1",
-           "sha256": "ce41f57488e225eaea5779c679bf1ca8f6499fbcdfffc45225fa5a4069aaf224"
+           "sha256": "990f9d2b32c55e72f2ab2cade8b4de85fb1e7440e32dac7ba01b9e5346ff20cc"
           },
           {
            "id": "screenshot-2",
-           "sha256": "d045105989b274e6b51763f831b92a8d06f0cde42b9a70b489b6478472c925dc"
+           "sha256": "6d1db6b23e522601c149338a42bfdd3a89bfc029f4c70b3ac8d10b43bcb9d725"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "b7c53b1d12e64d7c65045511eca213d90ce9ead6429102e7def7cbc3fdcd6f12"
           }
          ],
          "expected": "After actual renderer reload the folder and preview reset; selecting the exact other folder produces a fresh actual preview.",
@@ -20435,7 +20791,69 @@
        ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
+         "kind": "click",
+         "action": "라벨 폴더 선택",
+         "expected": "A delayed controlled host folder response must be discarded after a real project switch, while a fresh folder control remains usable and saved project inputs stay unchanged.",
+         "observed": "browser: The unresolved controlled folder reply crossed a real recent-project POST 200 switch and was refused in the destination project. A fresh folder selection worked, project return succeeded within the original 10s frame, and original metadata, annotation, versions and source bytes remained unchanged. No import or apply occurred. Controlled source GUI case only; no model inference, real OS picker, physical device, installed target or human quality acceptance.",
+         "reviewer": "Root whole-case raw readback and independent limited child-meaning review; successful traces and native error capture are unavailable. Complete-feature independent acceptance remains pending.",
+         "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::label exchange folder and unsent preview lifecycle preserve exact original handoff",
+         "receipt": "2026-10-09-gui05-folder-fd018f2-browser.json",
+         "receipt_sha256": "3b6993cbe059de3f0ba476b1fbc95c94ff2f9d8a454f4f473d46438f245273d6",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "22f6c6c44335be0be80e51861abccc594fa017dde985f21341b526025890a00f"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "7b42b17b1ad56dd244246e66db06fa95ea63ebf700a93474862d89160d864388"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "abfd103d99bc0b036eabacaf9b103047df5c8611a1c63b191bb810b233956794"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "8900430fd0631d397a5b33089bbed23cf789250cd5a6b665ae56859a0bae99c1"
+          }
+         ]
+        },
+        {
+         "task": "S3-05",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
+         "kind": "click",
+         "action": "라벨 폴더 선택",
+         "expected": "A delayed controlled host folder response must be discarded after a real project switch, while a fresh folder control remains usable and saved project inputs stay unchanged.",
+         "observed": "electron: The unresolved controlled folder reply crossed a real recent-project POST 200 switch and was refused in the destination project. A fresh folder selection worked, project return succeeded within the original 10s frame, and original metadata, annotation, versions and source bytes remained unchanged. No import or apply occurred. Controlled source GUI case only; no model inference, real OS picker, physical device, installed target or human quality acceptance.",
+         "reviewer": "Root whole-case raw readback and independent limited child-meaning review; successful traces and native error capture are unavailable. Complete-feature independent acceptance remains pending.",
+         "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::native label exchange folder and unsent preview lifecycle preserve original handoff",
+         "receipt": "2026-10-09-gui05-folder-fd018f2-electron.json",
+         "receipt_sha256": "0bd060bce2cbbb8dde2a49a81a926e03d5c6d4b030ee0c15fb5d6d7fc61e84f1",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c39d47f870d2ade18173e4cff2b92066043ea978757e4c3b971db7b000283a83"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "990f9d2b32c55e72f2ab2cade8b4de85fb1e7440e32dac7ba01b9e5346ff20cc"
+          },
+          {
+           "id": "screenshot-2",
+           "sha256": "6d1db6b23e522601c149338a42bfdd3a89bfc029f4c70b3ac8d10b43bcb9d725"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "b7c53b1d12e64d7c65045511eca213d90ce9ead6429102e7def7cbc3fdcd6f12"
+          }
+         ]
+        }
+       ]
       }
      }
     },
@@ -20711,25 +21129,29 @@
        "evidence": [
         {
          "task": "S3-05",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::label exchange folder and unsent preview lifecycle preserve exact original handoff",
-         "receipt": "2026-10-08-f117-lifecycle-f3895ec-browser.json",
-         "receipt_sha256": "f45bde46899e3fe071dc7a87d3ff60da6ed522f71e6b8803356a5f72e3375d5e",
+         "receipt": "2026-10-09-gui05-folder-fd018f2-browser.json",
+         "receipt_sha256": "3b6993cbe059de3f0ba476b1fbc95c94ff2f9d8a454f4f473d46438f245273d6",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "a84a2b7dd65fa18b3810b0449d74376bb92bad0e0d9aa3a0c6dc2af9c159f409"
+           "sha256": "22f6c6c44335be0be80e51861abccc594fa017dde985f21341b526025890a00f"
           },
           {
            "id": "screenshot-1",
-           "sha256": "3abe47574496548a04ff8bf540a0fe45960c0f6ca76a4d6d35ac3840b773e7d1"
+           "sha256": "7b42b17b1ad56dd244246e66db06fa95ea63ebf700a93474862d89160d864388"
           },
           {
            "id": "screenshot-2",
-           "sha256": "e6bfaa6ebdc94e781cb5da00fa8b63a39b195d23a0813e95be206a7c69fafacb"
+           "sha256": "abfd103d99bc0b036eabacaf9b103047df5c8611a1c63b191bb810b233956794"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "8900430fd0631d397a5b33089bbed23cf789250cd5a6b665ae56859a0bae99c1"
           }
          ],
          "expected": "Closing a completed unsent preview sends no apply request and preserves annotations, metadata, versions and original image bytes.",
@@ -20737,25 +21159,29 @@
         },
         {
          "task": "S3-05",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::native label exchange folder and unsent preview lifecycle preserve original handoff",
-         "receipt": "2026-10-08-f117-lifecycle-f3895ec-electron.json",
-         "receipt_sha256": "dca51497712e033231d12312d49c3576495f7453c5ac430f0ea69aee0f5f8171",
+         "receipt": "2026-10-09-gui05-folder-fd018f2-electron.json",
+         "receipt_sha256": "0bd060bce2cbbb8dde2a49a81a926e03d5c6d4b030ee0c15fb5d6d7fc61e84f1",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "0f0270c7d9972c12c0e7a9e4b736f4a675f863729d492cfd8ee0658ed0396b45"
+           "sha256": "c39d47f870d2ade18173e4cff2b92066043ea978757e4c3b971db7b000283a83"
           },
           {
            "id": "screenshot-1",
-           "sha256": "ce41f57488e225eaea5779c679bf1ca8f6499fbcdfffc45225fa5a4069aaf224"
+           "sha256": "990f9d2b32c55e72f2ab2cade8b4de85fb1e7440e32dac7ba01b9e5346ff20cc"
           },
           {
            "id": "screenshot-2",
-           "sha256": "d045105989b274e6b51763f831b92a8d06f0cde42b9a70b489b6478472c925dc"
+           "sha256": "6d1db6b23e522601c149338a42bfdd3a89bfc029f4c70b3ac8d10b43bcb9d725"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "b7c53b1d12e64d7c65045511eca213d90ce9ead6429102e7def7cbc3fdcd6f12"
           }
          ],
          "expected": "Closing a completed unsent preview sends no apply request and preserves annotations, metadata, versions and original image bytes.",
@@ -20768,25 +21194,29 @@
        "evidence": [
         {
          "task": "S3-05",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::label exchange folder and unsent preview lifecycle preserve exact original handoff",
-         "receipt": "2026-10-08-f117-lifecycle-f3895ec-browser.json",
-         "receipt_sha256": "f45bde46899e3fe071dc7a87d3ff60da6ed522f71e6b8803356a5f72e3375d5e",
+         "receipt": "2026-10-09-gui05-folder-fd018f2-browser.json",
+         "receipt_sha256": "3b6993cbe059de3f0ba476b1fbc95c94ff2f9d8a454f4f473d46438f245273d6",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "a84a2b7dd65fa18b3810b0449d74376bb92bad0e0d9aa3a0c6dc2af9c159f409"
+           "sha256": "22f6c6c44335be0be80e51861abccc594fa017dde985f21341b526025890a00f"
           },
           {
            "id": "screenshot-1",
-           "sha256": "3abe47574496548a04ff8bf540a0fe45960c0f6ca76a4d6d35ac3840b773e7d1"
+           "sha256": "7b42b17b1ad56dd244246e66db06fa95ea63ebf700a93474862d89160d864388"
           },
           {
            "id": "screenshot-2",
-           "sha256": "e6bfaa6ebdc94e781cb5da00fa8b63a39b195d23a0813e95be206a7c69fafacb"
+           "sha256": "abfd103d99bc0b036eabacaf9b103047df5c8611a1c63b191bb810b233956794"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "8900430fd0631d397a5b33089bbed23cf789250cd5a6b665ae56859a0bae99c1"
           }
          ],
          "expected": "Closing and reopening the panel retains the same folder and completed unapplied preview, without an additional request.",
@@ -20794,25 +21224,29 @@
         },
         {
          "task": "S3-05",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::native label exchange folder and unsent preview lifecycle preserve original handoff",
-         "receipt": "2026-10-08-f117-lifecycle-f3895ec-electron.json",
-         "receipt_sha256": "dca51497712e033231d12312d49c3576495f7453c5ac430f0ea69aee0f5f8171",
+         "receipt": "2026-10-09-gui05-folder-fd018f2-electron.json",
+         "receipt_sha256": "0bd060bce2cbbb8dde2a49a81a926e03d5c6d4b030ee0c15fb5d6d7fc61e84f1",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "0f0270c7d9972c12c0e7a9e4b736f4a675f863729d492cfd8ee0658ed0396b45"
+           "sha256": "c39d47f870d2ade18173e4cff2b92066043ea978757e4c3b971db7b000283a83"
           },
           {
            "id": "screenshot-1",
-           "sha256": "ce41f57488e225eaea5779c679bf1ca8f6499fbcdfffc45225fa5a4069aaf224"
+           "sha256": "990f9d2b32c55e72f2ab2cade8b4de85fb1e7440e32dac7ba01b9e5346ff20cc"
           },
           {
            "id": "screenshot-2",
-           "sha256": "d045105989b274e6b51763f831b92a8d06f0cde42b9a70b489b6478472c925dc"
+           "sha256": "6d1db6b23e522601c149338a42bfdd3a89bfc029f4c70b3ac8d10b43bcb9d725"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "b7c53b1d12e64d7c65045511eca213d90ce9ead6429102e7def7cbc3fdcd6f12"
           }
          ],
          "expected": "Closing and reopening the panel retains the same folder and completed unapplied preview, without an additional request.",
@@ -20825,25 +21259,29 @@
        "evidence": [
         {
          "task": "S3-05",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::label exchange folder and unsent preview lifecycle preserve exact original handoff",
-         "receipt": "2026-10-08-f117-lifecycle-f3895ec-browser.json",
-         "receipt_sha256": "f45bde46899e3fe071dc7a87d3ff60da6ed522f71e6b8803356a5f72e3375d5e",
+         "receipt": "2026-10-09-gui05-folder-fd018f2-browser.json",
+         "receipt_sha256": "3b6993cbe059de3f0ba476b1fbc95c94ff2f9d8a454f4f473d46438f245273d6",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "a84a2b7dd65fa18b3810b0449d74376bb92bad0e0d9aa3a0c6dc2af9c159f409"
+           "sha256": "22f6c6c44335be0be80e51861abccc594fa017dde985f21341b526025890a00f"
           },
           {
            "id": "screenshot-1",
-           "sha256": "3abe47574496548a04ff8bf540a0fe45960c0f6ca76a4d6d35ac3840b773e7d1"
+           "sha256": "7b42b17b1ad56dd244246e66db06fa95ea63ebf700a93474862d89160d864388"
           },
           {
            "id": "screenshot-2",
-           "sha256": "e6bfaa6ebdc94e781cb5da00fa8b63a39b195d23a0813e95be206a7c69fafacb"
+           "sha256": "abfd103d99bc0b036eabacaf9b103047df5c8611a1c63b191bb810b233956794"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "8900430fd0631d397a5b33089bbed23cf789250cd5a6b665ae56859a0bae99c1"
           }
          ],
          "expected": "Actual stage2 handoff selects the exact original path, UUID and revision; raw image SHA and existing annotations match, with no label application.",
@@ -20851,25 +21289,29 @@
         },
         {
          "task": "S3-05",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::native label exchange folder and unsent preview lifecycle preserve original handoff",
-         "receipt": "2026-10-08-f117-lifecycle-f3895ec-electron.json",
-         "receipt_sha256": "dca51497712e033231d12312d49c3576495f7453c5ac430f0ea69aee0f5f8171",
+         "receipt": "2026-10-09-gui05-folder-fd018f2-electron.json",
+         "receipt_sha256": "0bd060bce2cbbb8dde2a49a81a926e03d5c6d4b030ee0c15fb5d6d7fc61e84f1",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "0f0270c7d9972c12c0e7a9e4b736f4a675f863729d492cfd8ee0658ed0396b45"
+           "sha256": "c39d47f870d2ade18173e4cff2b92066043ea978757e4c3b971db7b000283a83"
           },
           {
            "id": "screenshot-1",
-           "sha256": "ce41f57488e225eaea5779c679bf1ca8f6499fbcdfffc45225fa5a4069aaf224"
+           "sha256": "990f9d2b32c55e72f2ab2cade8b4de85fb1e7440e32dac7ba01b9e5346ff20cc"
           },
           {
            "id": "screenshot-2",
-           "sha256": "d045105989b274e6b51763f831b92a8d06f0cde42b9a70b489b6478472c925dc"
+           "sha256": "6d1db6b23e522601c149338a42bfdd3a89bfc029f4c70b3ac8d10b43bcb9d725"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "b7c53b1d12e64d7c65045511eca213d90ce9ead6429102e7def7cbc3fdcd6f12"
           }
          ],
          "expected": "Actual stage2 handoff selects the exact original path, UUID and revision; raw image SHA and existing annotations match, with no label application.",
@@ -21151,25 +21593,29 @@
        "evidence": [
         {
          "task": "S3-05",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::label exchange folder and unsent preview lifecycle preserve exact original handoff",
-         "receipt": "2026-10-08-f117-lifecycle-f3895ec-browser.json",
-         "receipt_sha256": "f45bde46899e3fe071dc7a87d3ff60da6ed522f71e6b8803356a5f72e3375d5e",
+         "receipt": "2026-10-09-gui05-folder-fd018f2-browser.json",
+         "receipt_sha256": "3b6993cbe059de3f0ba476b1fbc95c94ff2f9d8a454f4f473d46438f245273d6",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "a84a2b7dd65fa18b3810b0449d74376bb92bad0e0d9aa3a0c6dc2af9c159f409"
+           "sha256": "22f6c6c44335be0be80e51861abccc594fa017dde985f21341b526025890a00f"
           },
           {
            "id": "screenshot-1",
-           "sha256": "3abe47574496548a04ff8bf540a0fe45960c0f6ca76a4d6d35ac3840b773e7d1"
+           "sha256": "7b42b17b1ad56dd244246e66db06fa95ea63ebf700a93474862d89160d864388"
           },
           {
            "id": "screenshot-2",
-           "sha256": "e6bfaa6ebdc94e781cb5da00fa8b63a39b195d23a0813e95be206a7c69fafacb"
+           "sha256": "abfd103d99bc0b036eabacaf9b103047df5c8611a1c63b191bb810b233956794"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "8900430fd0631d397a5b33089bbed23cf789250cd5a6b665ae56859a0bae99c1"
           }
          ],
          "expected": "Abandoning the completed enabled apply control without clicking it leaves the physical annotation tree, versions and metadata unchanged.",
@@ -21177,25 +21623,29 @@
         },
         {
          "task": "S3-05",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::native label exchange folder and unsent preview lifecycle preserve original handoff",
-         "receipt": "2026-10-08-f117-lifecycle-f3895ec-electron.json",
-         "receipt_sha256": "dca51497712e033231d12312d49c3576495f7453c5ac430f0ea69aee0f5f8171",
+         "receipt": "2026-10-09-gui05-folder-fd018f2-electron.json",
+         "receipt_sha256": "0bd060bce2cbbb8dde2a49a81a926e03d5c6d4b030ee0c15fb5d6d7fc61e84f1",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "0f0270c7d9972c12c0e7a9e4b736f4a675f863729d492cfd8ee0658ed0396b45"
+           "sha256": "c39d47f870d2ade18173e4cff2b92066043ea978757e4c3b971db7b000283a83"
           },
           {
            "id": "screenshot-1",
-           "sha256": "ce41f57488e225eaea5779c679bf1ca8f6499fbcdfffc45225fa5a4069aaf224"
+           "sha256": "990f9d2b32c55e72f2ab2cade8b4de85fb1e7440e32dac7ba01b9e5346ff20cc"
           },
           {
            "id": "screenshot-2",
-           "sha256": "d045105989b274e6b51763f831b92a8d06f0cde42b9a70b489b6478472c925dc"
+           "sha256": "6d1db6b23e522601c149338a42bfdd3a89bfc029f4c70b3ac8d10b43bcb9d725"
+          },
+          {
+           "id": "screenshot-3",
+           "sha256": "b7c53b1d12e64d7c65045511eca213d90ce9ead6429102e7def7cbc3fdcd6f12"
           }
          ],
          "expected": "Abandoning the completed enabled apply control without clicking it leaves the physical annotation tree, versions and metadata unchanged.",
