@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
+  "source_dirty": false,
+  "test": "scripts/e2e/team-assignment-controls.spec.ts::assignment project handoff A B A rejects a late A read and preserves unsent form custody",
+  "test_source_sha256": "7a176f24977c498b469b8a2063b102d4cabe6e5ab31dda709ccf6112aa3253c9",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "7321116dd2d90b3d96e948de6542afee935883ec1189611d76a807152cdb2114",
+  "harness_sha256": "ea285c603b79ece3de04a3cacc7acf1e3782334fc0b04c268224e5ad978c12cd",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "0bdad46fab6ca58e993e0fc51aa6028f4c657c508d2cc8682e794861b3b2d15c"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "8eef9361f27940f7f00f5b828043aa68d9135b7cac326d0f74fdaab8de98cb78"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

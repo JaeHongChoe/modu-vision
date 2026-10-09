@@ -216,6 +216,12 @@ def _model(checkpoint,verified=None):
         yield model
 
 
+def _prediction_device(device):
+    # The SDK accepts an explicit device without resetting caller CPU threads.
+    selected = str(device)
+    return torch.device('cpu') if selected == 'cpu' else selected
+
+
 def predict_yolo_array(checkpoint,image_rgb,*,device='cpu',threshold=.5,meta=None):
     if not isinstance(image_rgb,np.ndarray) or image_rgb.ndim!=3 or image_rgb.shape[2]!=3 or image_rgb.dtype!=np.uint8 or not image_rgb.shape[0] or not image_rgb.shape[1]:
         raise ValueError('YOLO OBB requires a nonempty uint8 RGB image')
@@ -228,7 +234,7 @@ def predict_yolo_array(checkpoint,image_rgb,*,device='cpu',threshold=.5,meta=Non
     height,width=image_rgb.shape[:2]
     # Ultralytics ndarray input uses BGR; app/flow contract is RGB.
     with _model(checkpoint,verified) as model:
-        results=model.predict(source=np.ascontiguousarray(image_rgb[:,:,::-1]),device=str(device),imgsz=meta['image_size'],conf=max(threshold,.001),max_det=10000,verbose=False,save=False)
+        results=model.predict(source=np.ascontiguousarray(image_rgb[:,:,::-1]),device=_prediction_device(device),imgsz=meta['image_size'],conf=max(threshold,.001),max_det=10000,verbose=False,save=False)
     detections=[]
     for result in results:
         obb=result.obb

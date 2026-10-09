@@ -165,16 +165,21 @@ def _next_migration_fence(root):
 def apply_migration(project_dir, expected_manifest_sha256=None, *, expected_source_sha256=None):
     from backend.engine.migration_guard import maintenance_guard
     from backend.engine.migration_inventory import project_snapshot, verified_backup, verify_backup
-    preview = preview_migration(project_dir)
-    if expected_manifest_sha256 and preview['manifest_sha256'] != expected_manifest_sha256:
+    # Reject unsupported or stale manifests before creating admission files.
+    # Full source snapshots require writer drain before inventory.
+    legacy = legacy_preview_migration(project_dir)
+    if expected_manifest_sha256 and legacy['manifest_sha256'] != expected_manifest_sha256:
         raise MigrationError('Project manifest changed since preview; preview again')
-    if expected_source_sha256 and preview['source_snapshot']['sha256'] != expected_source_sha256:
-        raise MigrationError('Migration source snapshot changed since dry-run; preview again')
-    if preview['blockers']:
-        raise MigrationError('; '.join(preview['blockers']))
     root = Path(project_dir).resolve()
     try:
         with maintenance_guard(root, exclusive=True), runtime_state_lock(root):
+            preview = preview_migration(project_dir)
+            if expected_manifest_sha256 and preview['manifest_sha256'] != expected_manifest_sha256:
+                raise MigrationError('Project manifest changed since preview; preview again')
+            if expected_source_sha256 and preview['source_snapshot']['sha256'] != expected_source_sha256:
+                raise MigrationError('Migration source snapshot changed since dry-run; preview again')
+            if preview['blockers']:
+                raise MigrationError('; '.join(preview['blockers']))
             locked = preview_migration(root)
             if locked['source_snapshot'] != preview['source_snapshot']:
                 raise MigrationError('Migration source changed while acquiring writer drain')

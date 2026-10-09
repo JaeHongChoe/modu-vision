@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from backend.engine.checkpoint_paths import set_active_project_models_dir, active_project_models_dir
 from backend.engine.annotation_storage import migrate_legacy_dataset_overlay
@@ -226,6 +226,13 @@ class ProjectOpenRequest(BaseModel):
 
 class LabelSetCreateRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=120)
+
+    @field_validator("name")
+    @classmethod
+    def reject_blank_name(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Label set name must not be blank")
+        return value
 
 
 class ProjectBackupRequest(BaseModel):

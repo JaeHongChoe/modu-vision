@@ -63,3 +63,151 @@ test('saved evaluation filters preserve exact class errors, score and area bins 
 test('native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic',{tag:'@electron'},async({electronSession,workspace,evidence})=>{
  const {window}=electronSession,backend=await electronSession.waitForBackend();const api:OwnedApi=(route,body,method)=>window.evaluate(async({port,route,body,method})=>{const response=await fetch(`http://127.0.0.1:${port}${route}`,{method:method||(body===undefined?'GET':'POST'),...(body===undefined?{}:{headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})});if(!response.ok)throw Error(`Owned filter fixture API: HTTP ${response.status}`);return response.json();},{port:backend.port,route,body,method});await exercise(window,workspace,evidence,api,true);
 });
+
+// SOURCE-only extension: actual execution and registry credit remain Root-owned.
+import handoffPath from 'node:path';
+import {createHash as handoffCreateHash} from 'node:crypto';
+import type {Request as HandoffRequest, Route as HandoffRoute} from '@playwright/test';
+import {png as handoffPng} from './qa/appFlow';
+type HandoffApi = (route:string,body?:unknown,method?:string)=>Promise<any>;
+const handoffHash=(bytes:Buffer)=>handoffCreateHash('sha256').update(bytes).digest('hex');
+const handoffTree=(root:string):Record<string,{sha256:string;size:number}>=>{
+ const rows:Record<string,{sha256:string;size:number}>={};
+ const walk=(dir:string)=>{for(const entry of fs.readdirSync(dir,{withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name))){
+  const file=handoffPath.join(dir,entry.name),info=fs.lstatSync(file);expect(info.isSymbolicLink()).toBe(false);
+  if(info.isDirectory())walk(file);else{expect(info.isFile()).toBe(true);const bytes=fs.readFileSync(file);rows[handoffPath.relative(root,file).split(handoffPath.sep).join('/') ]={sha256:handoffHash(bytes),size:bytes.length};}
+ }};walk(root);return rows;
+};
+async function handoffWithin<T>(promise:Promise<T>,deadline:number,label:string):Promise<T>{
+ const remaining=deadline-performance.now();if(remaining<=0)throw Error('Original 10s handoff frame expired: '+label);
+ let timer:ReturnType<typeof setTimeout>|undefined;
+ return Promise.race([promise,new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('Original 10s handoff frame expired: '+label)),remaining);})]).finally(()=>{if(timer)clearTimeout(timer);});
+}
+async function handoffProject(page:Page,scope:{project:any;source:string}){
+ const deadline=performance.now()+10_000;
+ await page.getByTitle('프로젝트 관리',{exact:true}).click();const dialog=page.getByRole('dialog',{name:'프로젝트 관리',exact:true});
+ await dialog.getByRole('button',{name:'최근 프로젝트',exact:true}).click();
+ const wire=page.waitForResponse(r=>r.request().method()==='POST'&&new URL(r.url()).pathname==='/api/project/open'&&r.request().postDataJSON()?.project_dir===scope.project.project_dir,{timeout:10_000});
+ const item=dialog.getByRole('button').filter({has:page.locator('span[title]').filter({hasText:scope.project.project_dir})});
+ await expect(item).toHaveCount(1);await expect(item).toBeEnabled();await item.click();
+ const response=await handoffWithin(wire,deadline,'project open');expect(response.status()).toBe(200);const bytes=await response.body();
+ expect(JSON.parse(bytes.toString('utf8'))).toEqual(scope.project);expect(await response.finished()).toBeNull();
+ await expect(dialog).toHaveCount(0);await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(scope.project.name);
+ return {project_id:scope.project.id,project_dir:scope.project.project_dir,status:200,response_sha256:handoffHash(bytes)};
+}
+async function handoffLabels(w:Workspace,api:HandoffApi,family:string,tag:'A'|'B'){
+ const source=handoffPath.join(w.root,family+'-handoff-'+tag);fs.mkdirSync(source);const image=handoffPath.join(source,'part.png');
+ fs.writeFileSync(image,handoffPng(256,3,(x,y)=>[x,y,tag==='A'?103:201]));
+ const project=await api('/api/project/create',{name:family+' handoff '+tag,task:'segmentation'});
+ await api('/api/project/update',{source_dataset_dir:source},'PUT');await api('/api/dataset/import',{folder_path:source,task:'segmentation'});
+ await api('/api/team-data/books',{expected_version:0,actor:'fixture-owner',title:'Handoff '+tag,categories:[{id:0,name:'OK',color:'#10b981'},{id:2,name:'Scratch',color:'#f59e0b'}]});
+ const saved=await api('/api/annotations/save',{image_id:'part',image_path:image,image_width:256,image_height:256,actor:'handoff-labeler-'+tag,
+  annotations:[{id:'handoff-original-'+tag,type:'bbox',label:'Scratch',category_id:2,bbox:[2,3,20,21]}]});
+ await api('/api/team-data');await api('/api/team-data/readiness');await api('/api/team-data/queue?offset=0&limit=30');
+ const activeProject=await api('/api/project/current');expect(activeProject.id).toBe(project.id);
+ return {tag,project:activeProject,source,image,uuid:saved.metadata.image_uuid,query:'/api/annotations/part?file_path='+encodeURIComponent(image),imageRoute:'/api/team-data/images/'+saved.metadata.image_uuid};
+}
+async function handoffEnterLabels(page:Page,scope:{image:string;tag:string},team:boolean){
+ await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(1).click();
+ await page.getByRole('button',{name:'집중 편집',exact:true}).click();
+ if(team){await page.getByRole('button',{name:'팀 작업 · 라벨 기준·검수',exact:true}).click();const dialog=page.getByRole('dialog',{name:'팀 데이터 작업',exact:true});
+  await dialog.getByRole('region',{name:'팀 작업 목록',exact:true}).getByRole('button',{name:'part.png',exact:true}).click();
+  await expect(dialog.getByRole('region',{name:'현재 이미지 팀 작업',exact:true})).toContainText('handoff-labeler-'+scope.tag);return dialog;
+ }
+ await expect(page.getByRole('region',{name:'라벨 연결 복구',exact:true})).toBeVisible();return null;
+}
+async function handoffLateRead(page:Page,origin:string,native:boolean,match:(u:URL)=>boolean){
+ const pattern=origin+'/api/**';let release!:()=>void,reached!:()=>void,finished!:()=>void;
+ const gate=new Promise<void>(r=>release=r),ready=new Promise<void>(r=>reached=r),done=new Promise<void>(r=>finished=r);
+ let captured:{status:number;bytes:Buffer;sha256:string;body:any}|undefined,primary:unknown,routeError:unknown,request:HandoffRequest|undefined,deadline=0,armed=true;
+ let resolveDisposition!:(row:{kind:'finished'|'failed';failure:string|null})=>void;
+ const disposition=new Promise<{kind:'finished'|'failed';failure:string|null}>(r=>resolveDisposition=r);
+ const ended=(r:HandoffRequest)=>{if(r===request)resolveDisposition({kind:'finished',failure:null});};
+ const failed=(r:HandoffRequest)=>{if(r===request)resolveDisposition({kind:'failed',failure:r.failure()?.errorText??null});};
+ page.on('requestfinished',ended);page.on('requestfailed',failed);
+ const handler=async(route:HandoffRoute)=>{
+  const own=route.request(),address=new URL(own.url());
+  if(!armed||own.method()!=='GET'||address.origin!==origin||address.searchParams.has('_modu_handoff_delegate')||!match(address)){await route.continue();return;}
+  armed=false;request=own;deadline=performance.now()+10_000;
+  try{
+   let bytes:Buffer,status:number,contentType:string|null;
+   if(native){
+    // This is a separate authenticated renderer GET, not original UI200 provenance.
+    const headers:Record<string,string>={};for(const name of ['content-type','x-vision-project','x-vision-context']){const value=await own.headerValue(name);if(value!==null)headers[name]=value;}
+    const delegate=new URL(own.url());delegate.searchParams.set('_modu_handoff_delegate',handoffCreateHash('sha256').update(own.url()+String(Date.now())).digest('hex'));
+    const snapshot=await page.evaluate(async({url,headers,remaining})=>{
+     const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),remaining);
+     try{const response=await fetch(url,{method:'GET',headers,signal:abort.signal});const raw=new Uint8Array(await response.arrayBuffer());
+      if(raw.length>1024*1024)throw Error('Controlled handoff snapshot exceeds 1MiB');let binary='';for(const byte of raw)binary+=String.fromCharCode(byte);
+      return {status:response.status,contentType:response.headers.get('content-type'),base64:btoa(binary)};
+     }finally{clearTimeout(timer);}
+    },{url:delegate.toString(),headers,remaining:Math.max(1,Math.floor(deadline-performance.now()))});
+    status=snapshot.status;contentType=snapshot.contentType;bytes=Buffer.from(snapshot.base64,'base64');
+   }else{const snapshot=await route.fetch({timeout:Math.max(1,Math.floor(deadline-performance.now()))});status=snapshot.status();contentType=snapshot.headers()['content-type']??null;bytes=await snapshot.body();}
+   expect(status).toBe(200);expect(bytes.length).toBeLessThanOrEqual(1024*1024);
+   captured={status,bytes,sha256:handoffHash(bytes),body:JSON.parse(bytes.toString('utf8'))};reached();
+   await handoffWithin(gate,deadline,'held read release');
+   try{await route.fulfill({status,body:bytes,headers:contentType?{'content-type':contentType}:{}});}catch(error){routeError=error;}
+  }catch(error){primary=error;reached();}finally{finished();}
+ };
+ await page.route(pattern,handler);
+ return {
+  ready:async()=>{await handoffWithin(ready,performance.now()+10_000,'captured original read');if(primary)throw primary;expect(captured).toBeTruthy();return captured!;},
+  finish:async()=>{release();await handoffWithin(done,deadline,'route completion');if(primary)throw primary;const row=await handoffWithin(disposition,deadline,'original Request disposition');
+   if(row.kind==='failed')expect(row.failure).toContain('ERR_ABORTED');else{if(routeError)throw routeError;const response=await request!.response();expect(response).not.toBeNull();expect(response!.status()).toBe(200);expect(handoffHash(await response!.body())).toBe(captured!.sha256);expect(await response!.finished()).toBeNull();}
+   await page.evaluate(()=>new Promise<void>(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>r()))));
+   return {request_disposition:row,captured_sha256:captured!.sha256,captured_bytes:captured!.bytes.length,snapshot_transport:native?'separate_authenticated_renderer_GET_controlled_original_UI_reply':'original_browser_request_actual_response',original_UI_response_delivered:row.kind==='finished',native_original_HTTP200_provenance:false};},
+  close:async()=>{release();if(!page.isClosed())await page.unroute(pattern,handler);page.off('requestfinished',ended);page.off('requestfailed',failed);},
+ };
+}
+async function savedFilterProjectHandoff(page:Page,w:Workspace,e:Evidence,api:HandoffApi,native:boolean,origin:string,url?:string){
+ const make=async(tag:'A'|'B')=>{
+  const source=path.join(w.root,'saved-filter-handoff-'+tag);fs.mkdirSync(source);for(let i=0;i<6;i++)fs.writeFileSync(path.join(source,`case-${i}.png`),handoffPng(16,3,(x,y)=>[x,y,(tag==='A'?30:130)+i]));
+  await api('/api/project/create',{name:'Saved filter handoff '+tag,task:'segmentation'});await api('/api/project/update',{source_dataset_dir:source},'PUT');await api('/api/dataset/import',{folder_path:source,task:'segmentation'});
+  const project=await api('/api/project/current');
+  const fixture=JSON.parse(execFileSync(harness.resolvePython(),[path.join(harness.REPO_ROOT,'scripts/e2e/fixtures/evaluation_filter_reports.py'),w.root,project.project_dir,source],{cwd:harness.REPO_ROOT,encoding:'utf8',timeout:30_000}));
+  await api('/api/team-data');await api('/api/team-data/readiness');await api('/api/team-data/queue?offset=0&limit=30');
+  const selected=fixture.items.find((r:any)=>r.variant==='full');expect(selected).toBeTruthy();expect(selected.record.binding.source_dataset_path).toBe(source);
+  return {tag,source,project,fixture,selected};
+ };
+ const A=await make('A'),B=await make('B');expect(A.project.id).not.toBe(B.project.id);expect(A.selected.record.evaluation_id).not.toBe(B.selected.record.evaluation_id);
+ const trees={A:{source:handoffTree(A.source),reports:handoffTree(path.join(A.project.project_dir,'reports','evaluations')),annotations:handoffTree(A.project.annotations_dir)},B:{source:handoffTree(B.source),reports:handoffTree(path.join(B.project.project_dir,'reports','evaluations')),annotations:handoffTree(B.project.annotations_dir)}};
+ await api('/api/project/open',{project_dir:A.project.project_dir});if(url)await page.goto(url);else await page.reload();
+ const summary=page.locator('summary').filter({hasText:/^평가 이력 · 제품\/Lot별 오류$/}),history=summary.locator('..'),family=history.getByLabel('평가 이력 모델 종류',{exact:true}),selector=history.getByLabel(/^모델별 저장 평가/);
+ const group=history.getByLabel('평가 오류 집계 기준',{exact:true});
+ const enter=async(scope:typeof A)=>{await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(3).click();if(await history.getAttribute('open')===null)await summary.click();await family.selectOption('detection');await expect(selector.locator('option[value="'+scope.selected.record.evaluation_id+'"]')).toHaveCount(1);await selector.selectOption(scope.selected.record.evaluation_id);
+  const detail=history.locator('details').filter({has:page.locator('summary').filter({hasText:'객체·픽셀·문자 오류와 분포 분석'})}).first();if(await detail.getAttribute('open')===null)await detail.locator('summary').first().click();return detail;};
+ const resultJSON=async()=>{const saved=history.locator('details').filter({has:page.locator('summary').filter({hasText:'저장된 평가 지표·이미지 결과'})}).first();if(await saved.getAttribute('open')===null)await saved.locator('summary').first().click();return JSON.parse(await saved.locator('pre').innerText());};
+ let detail=await enter(A);await group.selectOption('lot');await detail.getByLabel('평가 증거 클래스',{exact:true}).selectOption('Scratch');await detail.getByLabel('평가 증거 오류',{exact:true}).selectOption('fp');
+ expect(await detail.getByRole('button',{name:/^case-\d\.png · FN/}).allTextContents()).toEqual(['case-2.png · FN 0 / FP 1','case-5.png · FN 0 / FP 1']);
+ await detail.getByRole('button',{name:'점수 0.7에서 0.8 1개',exact:true}).click();expect(await detail.getByRole('button',{name:/^case-\d\.png · FN/}).allTextContents()).toEqual(['case-2.png · FN 0 / FP 1']);
+ const areaSummary=detail.locator('summary').filter({hasText:'결함 크기 분포 · 구간을 눌러 이미지 확인'});if(await areaSummary.locator('..').getAttribute('open')===null)await areaSummary.click();await detail.getByRole('button',{name:/^결함 면적 /}).nth(3).click();
+ expect(await resultJSON()).toEqual(A.selected.record.result);
+ const writes:Array<{method:string;path:string}>=[];const observe=(r:HandoffRequest)=>{const p=new URL(r.url()).pathname;if(r.method()!=='GET'&&/^\/api\/(evaluation|annotations|team-data|training|train|jobs|dataset\/metadata)(\/|$)/.test(p))writes.push({method:r.method(),path:p});};page.on('request',observe);
+ await family.selectOption('segmentation');const late=await handoffLateRead(page,origin,native,u=>u.pathname==='/api/evaluation/history'&&u.searchParams.get('source_dataset_path')===A.source&&u.searchParams.get('task')==='detection');let primary:unknown;
+ try{
+  await family.selectOption('detection');const captured=await late.ready();expect(captured.body.items).toHaveLength(3);expect(captured.body.items.map((r:any)=>r.evaluation_id).sort()).toEqual(A.fixture.items.map((r:any)=>r.record.evaluation_id).sort());for(const row of captured.body.items)expect(row.binding.source_dataset_path).toBe(A.source);
+  const toB=await handoffProject(page,B);detail=await enter(B);await group.selectOption('product');
+  await expect(detail.getByLabel('평가 증거 클래스',{exact:true})).toHaveValue('all');await expect(detail.getByLabel('평가 증거 오류',{exact:true})).toHaveValue('all');await expect(detail.getByLabel('ROC 검토 임계값',{exact:true})).toHaveValue('0.5');await expect(detail.getByRole('button',{name:/^case-\d\.png · FN/})).toHaveCount(6);
+  expect(await resultJSON()).toEqual(B.selected.record.result);const outcome=await late.finish();await expect(selector).toHaveValue(B.selected.record.evaluation_id);expect(await resultJSON()).toEqual(B.selected.record.result);await expect(group).toHaveValue('product');
+  await expect(selector.locator('option[value="'+A.selected.record.evaluation_id+'"]')).toHaveCount(0);await e.screenshot(page,`${native?'native':'browser'}-saved-filters-B-after-old-A-catalog`);
+  const toA=await handoffProject(page,A);detail=await enter(A);await expect(group).toHaveValue('lot');await expect(selector).toHaveValue(A.selected.record.evaluation_id);
+  await expect(detail.getByLabel('평가 증거 클래스',{exact:true})).toHaveValue('all');await expect(detail.getByLabel('평가 증거 오류',{exact:true})).toHaveValue('all');await expect(detail.getByLabel('ROC 검토 임계값',{exact:true})).toHaveValue('0.5');await expect(detail.getByRole('button',{name:/^case-\d\.png · FN/})).toHaveCount(6);expect(await resultJSON()).toEqual(A.selected.record.result);
+  expect(writes).toEqual([]);for(const scope of [A,B]){expect(handoffTree(scope.source)).toEqual(trees[scope.tag].source);expect(handoffTree(path.join(scope.project.project_dir,'reports','evaluations'))).toEqual(trees[scope.tag].reports);expect(handoffTree(scope.project.annotations_dir)).toEqual(trees[scope.tag].annotations);
+   for(const item of scope.fixture.items){expect(handoffHash(fs.readFileSync(item.report_path))).toBe(item.report_sha256);e.addFile(item.report_path);}for(const input of scope.fixture.inputs)expect(handoffHash(fs.readFileSync(input.path))).toBe(input.sha256);
+  }
+  await e.screenshot(page,`${native?'native':'browser'}-saved-filters-A-return-exact-record`);
+  e.note('saved_filter_project_handoff',{record_ids:['F049','F052','F054'],dimension:'handoff',projects:[A.project.id,B.project.id,A.project.id],evaluation_ids:[A.selected.record.evaluation_id,B.selected.record.evaluation_id,A.selected.record.evaluation_id],source_paths:[A.source,B.source,A.source],toB,toA,read_only_late_A:outcome,raw_A_catalog_sha256:captured.sha256,
+   A_class_error_score_area_filter_exercised:true,B_and_return_A_ephemeral_filters_reset:true,group_preferences_project_scoped:{A:'lot',B:'product'},saved_result_json_exact:true,business_mutations:writes,original_reports_images_annotations_namespace_hashes:trees,
+   controlled_reports_not_model_inference:true,actual_model_inference:false,quality_human_installed_target_parent_approval:false,source_electron:native});
+ }catch(error){primary=error;throw error;}finally{page.off('request',observe);try{await late.close();}catch(error){if(!primary)throw error;e.note('saved_filter_handoff_secondary_cleanup',{type:error instanceof Error?error.name:'unknown'});}}
+}
+test('saved filter project handoff A B A fences an old catalog and preserves exact report UUIDs',async({page,renderer,workspace,evidence})=>{
+ await installDesktopHostShim(page,renderer.port);const api:HandoffApi=async(route,body,method)=>{const r=await page.request.fetch(renderer.origin+route,{method:method||(body===undefined?'GET':'POST'),...(body===undefined?{}:{data:body})});expect(r.ok(),await r.text()).toBe(true);return r.json();};
+ await savedFilterProjectHandoff(page,workspace,evidence,api,false,renderer.origin,renderer.url);
+});
+test('native saved filter project handoff retains original sources filters and reports',{tag:'@electron'},async({electronSession,workspace,evidence})=>{
+ const page=electronSession.window,backend=await electronSession.waitForBackend(),origin=`http://127.0.0.1:${backend.port}`;
+ const api:HandoffApi=(route,body,method)=>page.evaluate(async({origin,route,body,method})=>{const r=await fetch(origin+route,{method:method||(body===undefined?'GET':'POST'),headers:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});if(!r.ok)throw Error(`Owned handoff fixture HTTP ${r.status}`);return r.json();},{origin,route,body,method});
+ await savedFilterProjectHandoff(page,workspace,evidence,api,true,origin);
+});

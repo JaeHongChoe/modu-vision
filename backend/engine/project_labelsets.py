@@ -68,6 +68,8 @@ def load_labelsets(project_dir: Path) -> dict[str, Any]:
 
 
 def create_labelset(project_dir: Path, name: str) -> dict[str, Any]:
+    if isinstance(name, str) and not str.strip(name):
+        raise ValueError("Label set name must not be blank")
     registry = load_labelsets(project_dir)
     source_id = registry["active_id"]
     source = labelset_root(project_dir, source_id)

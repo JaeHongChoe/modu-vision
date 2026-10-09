@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
+  "source_dirty": false,
+  "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::draft comparison project handoff A B A fences a late original annotation read",
+  "test_source_sha256": "eadcc691ced1568e3d7e97d480be0505efa85458f8441a72721518aad8165c01",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "7321116dd2d90b3d96e948de6542afee935883ec1189611d76a807152cdb2114",
+  "harness_sha256": "22400fa44a9d52901e9146144010321e1644976f28a2b62b9f5d0040bf42f78f",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "38a0888248b2ebd5098a0343fcca41aa1a06b3a31bf5c3fbcd04517a916781bb"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "7e4592bc491c389dfab89193510a81ecda20a696ffa1740a52c2191d71e30da8"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

@@ -300,7 +300,8 @@ def pyinstaller_command(root: Path, output: Path, target: str) -> list[str]:
     # Global scientific environments may contain notebook/GUI/browser tooling.
     # They are not backend dependencies and can drag multi-GB SDKs into hooks.
     for module in ('IPython','notebook','jupyterlab','nbconvert','PyQt5','PyQt6','PySide2','PySide6',
-                   'playwright','altair','bokeh','streamlit','tensorflow','keras','pytest','sitecustomize'):
+                   'playwright','altair','bokeh','streamlit','tensorflow','keras','pytest','sitecustomize',
+                   'panel','sphinx'):
         command.append('--exclude-module='+module)
     for module in ('uvicorn.logging', 'uvicorn.loops.auto', 'uvicorn.protocols.http.auto',
                    'uvicorn.protocols.websockets.auto', 'uvicorn.lifespan.on', 'python_multipart',

@@ -4831,29 +4831,29 @@
        "evidence": [
         {
          "task": "S3-04",
-         "source_sha": "3be69bbda8bc101c6f56f5bdb96f2312e9675244",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "작업 배정",
          "reviewer": "Root clean execution and independent frozen source/proof review; whole feature, human quality and installed target acceptance pending",
          "test": "scripts/e2e/team-assignment-controls.spec.ts::assignment empty invalid priority and exact POST failure preserve records before real retry",
-         "receipt": "2026-10-08-team-assignment-3be69bb-browser.json",
-         "receipt_sha256": "fd17d4084252c3f7640f4cc80eeb5558a70dd5505b227990e359a626ea396e8e",
+         "receipt": "2026-10-10-gui349-assignment-existing-browser.json",
+         "receipt_sha256": "47ca335cd947afa5ae5643f59352b14e1daed9a60c3205cf2284114e4496016e",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "507b458bff82b54ad20f79722978f09da4e6baec83887dc0f34756d0db57bae8"
+           "sha256": "0d9c1b397fdeae948bacc37ff7f496fca2c47f1763b9e4e5c6169d9f1f812c50"
           },
           {
            "id": "screenshot-1",
-           "sha256": "d0e524d8216c2e30c8a71ff10fa25cf1f3aa0c0d54994d4fe97f91f2f8261c01"
+           "sha256": "980eda250b4a1f213daf30f03ba643ded8ac99d79b425e656401a11a40705c62"
           },
           {
            "id": "screenshot-2",
-           "sha256": "fb0a83c3f3510256522031e57018e38a8fe687b4b64dcb2e20022ddd6aa36ec3"
+           "sha256": "af80693e6b2d9a3fb3234939274124dc2a2e7a527d186b0a9c2318a017af92f6"
           },
           {
            "id": "screenshot-3",
-           "sha256": "65c75e31499d5b3d74d6b9b8d8aa78361764cae2e0f6b04ae602d6e825ad9e6b"
+           "sha256": "c483032ec128dd764f1958bb38b937cbb7b34288d1142b02aeda22f4964da8d0"
           }
          ],
          "expected": "Explicit blank actor disables assignment with no POST and preserves selected UUID/revision.",
@@ -4861,29 +4861,29 @@
         },
         {
          "task": "S3-04",
-         "source_sha": "3be69bbda8bc101c6f56f5bdb96f2312e9675244",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "작업 배정",
          "reviewer": "Root clean execution and independent frozen source/proof review; whole feature, human quality and installed target acceptance pending",
          "test": "scripts/e2e/team-assignment-controls.spec.ts::native assignment empty invalid and exact POST failure preserve annotations before real retry",
-         "receipt": "2026-10-08-team-assignment-3be69bb-electron.json",
-         "receipt_sha256": "8dafb0f90708fbe7226efa3eb81b6af154a17323ef97902611dae3898cce856a",
+         "receipt": "2026-10-10-gui349-assignment-existing-electron.json",
+         "receipt_sha256": "f533d4ebdda51f5e0523cc4a357af0cdacc4e0f2983f1ed9aff6a2770f15ec38",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "a98c93188a5a870bb6b4a4f6b245a1a0f14da4cede9378d473ca98725bdd606f"
+           "sha256": "6af1c6e87eb12bca5ad1c07386c04913b75495b3ffc4740abfe6e5646f7f9d8d"
           },
           {
            "id": "screenshot-1",
-           "sha256": "0e59952942c3569f07f71557ef904299844b86c56299a62d481133505f8763f8"
+           "sha256": "884abe1e2e6469b33b4d1cd54be62e9b4d86ae0e05b31fe3195fd4c92c680066"
           },
           {
            "id": "screenshot-2",
-           "sha256": "f5688603088f70fac741f9ec4b5194f2f8a1a74f89f2a3639049e95298c98776"
+           "sha256": "4fbbc4f237d085d7991cdff62b89049bd8ab241c123d9c0289ed1757b576f3de"
           },
           {
            "id": "screenshot-3",
-           "sha256": "f08221a96ae3b04588debddd704056ea48b28e5acc3d5191a9f8447ca1d4c3fd"
+           "sha256": "248d63d639aa9781828c750e15fbf636ef94ed4caf776eae1a1a26a8e16367c3"
           }
          ],
          "expected": "Explicit blank actor disables assignment with no POST and preserves selected UUID/revision.",
@@ -4896,29 +4896,29 @@
        "evidence": [
         {
          "task": "S3-04",
-         "source_sha": "3be69bbda8bc101c6f56f5bdb96f2312e9675244",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "작업 배정",
          "reviewer": "Root clean execution and independent frozen source/proof review; whole feature, human quality and installed target acceptance pending",
          "test": "scripts/e2e/team-assignment-controls.spec.ts::assignment empty invalid priority and exact POST failure preserve records before real retry",
-         "receipt": "2026-10-08-team-assignment-3be69bb-browser.json",
-         "receipt_sha256": "fd17d4084252c3f7640f4cc80eeb5558a70dd5505b227990e359a626ea396e8e",
+         "receipt": "2026-10-10-gui349-assignment-existing-browser.json",
+         "receipt_sha256": "47ca335cd947afa5ae5643f59352b14e1daed9a60c3205cf2284114e4496016e",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "507b458bff82b54ad20f79722978f09da4e6baec83887dc0f34756d0db57bae8"
+           "sha256": "0d9c1b397fdeae948bacc37ff7f496fca2c47f1763b9e4e5c6169d9f1f812c50"
           },
           {
            "id": "screenshot-1",
-           "sha256": "d0e524d8216c2e30c8a71ff10fa25cf1f3aa0c0d54994d4fe97f91f2f8261c01"
+           "sha256": "980eda250b4a1f213daf30f03ba643ded8ac99d79b425e656401a11a40705c62"
           },
           {
            "id": "screenshot-2",
-           "sha256": "fb0a83c3f3510256522031e57018e38a8fe687b4b64dcb2e20022ddd6aa36ec3"
+           "sha256": "af80693e6b2d9a3fb3234939274124dc2a2e7a527d186b0a9c2318a017af92f6"
           },
           {
            "id": "screenshot-3",
-           "sha256": "65c75e31499d5b3d74d6b9b8d8aa78361764cae2e0f6b04ae602d6e825ad9e6b"
+           "sha256": "c483032ec128dd764f1958bb38b937cbb7b34288d1142b02aeda22f4964da8d0"
           }
          ],
          "expected": "Actual priority151 POST returns422 with input151/schema limit100; rendered priority constraint and unchanged selected record are confirmed.",
@@ -4926,29 +4926,29 @@
         },
         {
          "task": "S3-04",
-         "source_sha": "3be69bbda8bc101c6f56f5bdb96f2312e9675244",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "작업 배정",
          "reviewer": "Root clean execution and independent frozen source/proof review; whole feature, human quality and installed target acceptance pending",
          "test": "scripts/e2e/team-assignment-controls.spec.ts::native assignment empty invalid and exact POST failure preserve annotations before real retry",
-         "receipt": "2026-10-08-team-assignment-3be69bb-electron.json",
-         "receipt_sha256": "8dafb0f90708fbe7226efa3eb81b6af154a17323ef97902611dae3898cce856a",
+         "receipt": "2026-10-10-gui349-assignment-existing-electron.json",
+         "receipt_sha256": "f533d4ebdda51f5e0523cc4a357af0cdacc4e0f2983f1ed9aff6a2770f15ec38",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "a98c93188a5a870bb6b4a4f6b245a1a0f14da4cede9378d473ca98725bdd606f"
+           "sha256": "6af1c6e87eb12bca5ad1c07386c04913b75495b3ffc4740abfe6e5646f7f9d8d"
           },
           {
            "id": "screenshot-1",
-           "sha256": "0e59952942c3569f07f71557ef904299844b86c56299a62d481133505f8763f8"
+           "sha256": "884abe1e2e6469b33b4d1cd54be62e9b4d86ae0e05b31fe3195fd4c92c680066"
           },
           {
            "id": "screenshot-2",
-           "sha256": "f5688603088f70fac741f9ec4b5194f2f8a1a74f89f2a3639049e95298c98776"
+           "sha256": "4fbbc4f237d085d7991cdff62b89049bd8ab241c123d9c0289ed1757b576f3de"
           },
           {
            "id": "screenshot-3",
-           "sha256": "f08221a96ae3b04588debddd704056ea48b28e5acc3d5191a9f8447ca1d4c3fd"
+           "sha256": "248d63d639aa9781828c750e15fbf636ef94ed4caf776eae1a1a26a8e16367c3"
           }
          ],
          "expected": "Actual priority151 POST returns422 with input151/schema limit100; rendered priority constraint and unchanged selected record are confirmed.",
@@ -4961,29 +4961,29 @@
        "evidence": [
         {
          "task": "S3-04",
-         "source_sha": "3be69bbda8bc101c6f56f5bdb96f2312e9675244",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "작업 배정",
          "reviewer": "Root clean execution and independent frozen source/proof review; whole feature, human quality and installed target acceptance pending",
          "test": "scripts/e2e/team-assignment-controls.spec.ts::assignment empty invalid priority and exact POST failure preserve records before real retry",
-         "receipt": "2026-10-08-team-assignment-3be69bb-browser.json",
-         "receipt_sha256": "fd17d4084252c3f7640f4cc80eeb5558a70dd5505b227990e359a626ea396e8e",
+         "receipt": "2026-10-10-gui349-assignment-existing-browser.json",
+         "receipt_sha256": "47ca335cd947afa5ae5643f59352b14e1daed9a60c3205cf2284114e4496016e",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "507b458bff82b54ad20f79722978f09da4e6baec83887dc0f34756d0db57bae8"
+           "sha256": "0d9c1b397fdeae948bacc37ff7f496fca2c47f1763b9e4e5c6169d9f1f812c50"
           },
           {
            "id": "screenshot-1",
-           "sha256": "d0e524d8216c2e30c8a71ff10fa25cf1f3aa0c0d54994d4fe97f91f2f8261c01"
+           "sha256": "980eda250b4a1f213daf30f03ba643ded8ac99d79b425e656401a11a40705c62"
           },
           {
            "id": "screenshot-2",
-           "sha256": "fb0a83c3f3510256522031e57018e38a8fe687b4b64dcb2e20022ddd6aa36ec3"
+           "sha256": "af80693e6b2d9a3fb3234939274124dc2a2e7a527d186b0a9c2318a017af92f6"
           },
           {
            "id": "screenshot-3",
-           "sha256": "65c75e31499d5b3d74d6b9b8d8aa78361764cae2e0f6b04ae602d6e825ad9e6b"
+           "sha256": "c483032ec128dd764f1958bb38b937cbb7b34288d1142b02aeda22f4964da8d0"
           }
          ],
          "expected": "Exact valid assignment POST receives controlled503 before backend dispatch, leaves record unchanged, then explicit real200 retry increments only one assignment revision and preserves labels/mask.",
@@ -4991,29 +4991,29 @@
         },
         {
          "task": "S3-04",
-         "source_sha": "3be69bbda8bc101c6f56f5bdb96f2312e9675244",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "작업 배정",
          "reviewer": "Root clean execution and independent frozen source/proof review; whole feature, human quality and installed target acceptance pending",
          "test": "scripts/e2e/team-assignment-controls.spec.ts::native assignment empty invalid and exact POST failure preserve annotations before real retry",
-         "receipt": "2026-10-08-team-assignment-3be69bb-electron.json",
-         "receipt_sha256": "8dafb0f90708fbe7226efa3eb81b6af154a17323ef97902611dae3898cce856a",
+         "receipt": "2026-10-10-gui349-assignment-existing-electron.json",
+         "receipt_sha256": "f533d4ebdda51f5e0523cc4a357af0cdacc4e0f2983f1ed9aff6a2770f15ec38",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "a98c93188a5a870bb6b4a4f6b245a1a0f14da4cede9378d473ca98725bdd606f"
+           "sha256": "6af1c6e87eb12bca5ad1c07386c04913b75495b3ffc4740abfe6e5646f7f9d8d"
           },
           {
            "id": "screenshot-1",
-           "sha256": "0e59952942c3569f07f71557ef904299844b86c56299a62d481133505f8763f8"
+           "sha256": "884abe1e2e6469b33b4d1cd54be62e9b4d86ae0e05b31fe3195fd4c92c680066"
           },
           {
            "id": "screenshot-2",
-           "sha256": "f5688603088f70fac741f9ec4b5194f2f8a1a74f89f2a3639049e95298c98776"
+           "sha256": "4fbbc4f237d085d7991cdff62b89049bd8ab241c123d9c0289ed1757b576f3de"
           },
           {
            "id": "screenshot-3",
-           "sha256": "f08221a96ae3b04588debddd704056ea48b28e5acc3d5191a9f8447ca1d4c3fd"
+           "sha256": "248d63d639aa9781828c750e15fbf636ef94ed4caf776eae1a1a26a8e16367c3"
           }
          ],
          "expected": "Exact valid assignment POST receives controlled503 before backend dispatch, leaves record unchanged, then explicit real200 retry increments only one assignment revision and preserves labels/mask.",
@@ -5134,7 +5134,53 @@
        ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
+         "kind": "click",
+         "action": "작업 배정",
+         "expected": "Real recent-project A to B to A switch fences a late A read and retains exact image UUIDs and persisted assignments; unsent input is not submitted.",
+         "observed": "browser: A unsent assignment did not transfer. B and returning A kept their exact persisted assignment forms and original image records, input and annotations; no business write followed setup.",
+         "reviewer": "Root retained exact Source assertions and completed GUI execution; whole feature, human quality, installed target and parent acceptance remain separate.",
+         "test": "scripts/e2e/team-assignment-controls.spec.ts::assignment project handoff A B A rejects a late A read and preserves unsent form custody",
+         "receipt": "2026-10-10-gui349-assignment-handoff-browser.json",
+         "receipt_sha256": "ff708a35a3554594406d91e564a4f9ef1d25c2fbbac3ee99655f5daf67e198e7",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "0bdad46fab6ca58e993e0fc51aa6028f4c657c508d2cc8682e794861b3b2d15c"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "8eef9361f27940f7f00f5b828043aa68d9135b7cac326d0f74fdaab8de98cb78"
+          }
+         ]
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
+         "kind": "click",
+         "action": "작업 배정",
+         "expected": "Real recent-project A to B to A switch fences a late A read and retains exact image UUIDs and persisted assignments; unsent input is not submitted.",
+         "observed": "electron: A unsent assignment did not transfer. B and returning A kept their exact persisted assignment forms and original image records, input and annotations; no business write followed setup. Source Electron uses a separately authenticated renderer capture and controlled UI reply; original native HTTP200 provenance is not claimed.",
+         "reviewer": "Root retained exact Source assertions and completed GUI execution; whole feature, human quality, installed target and parent acceptance remain separate.",
+         "test": "scripts/e2e/team-assignment-controls.spec.ts::native assignment project handoff A B A retains exact UUID and read only records",
+         "receipt": "2026-10-10-gui349-assignment-handoff-electron.json",
+         "receipt_sha256": "da14a936b01000783e25eea761b7da9aa576fae622429645d397e3c5c04dbe21",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "77743d5d3396fb395caa30753572cf021715656b3e23f8093e575417ce30d964"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "6d365916e5cdb7dcaa8fab3beb3a64693f2fdc22b3fb57c24fc3c7da2ded2f18"
+          }
+         ]
+        }
+       ]
       }
      }
     },
@@ -5731,45 +5777,45 @@
        "evidence": [
         {
          "task": "S3-04",
-         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
          "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
          "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::native unsent reviews and local comparison retain exact original votes labels metadata and draft",
-         "receipt": "2026-10-08-team-draft-9e019e1-electron.json",
-         "receipt_sha256": "233cf25977ffab59e47e33edff597dcee56fb4e67aedb652347265fcca98fcf1",
+         "receipt": "2026-10-10-gui349-comparison-existing-electron.json",
+         "receipt_sha256": "a695b3ed1826233367074a4d833f625a30a919c0cc001f785b3f1f6ff7fb4939",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "513512c9a1dbda8f22f37efc9bea0b84d6495df61ec3bd72de3ad2ee2172037e"
+           "sha256": "bddd13819369831e9da68147c215a37fc1a52f109ad6d85e74f1aa9986284070"
           },
           {
            "id": "screenshot-1",
-           "sha256": "e862c89a53de4dfeee9f0e8985066733f6dba0f40b55dd520f1a8f7a25ba87a4"
+           "sha256": "60b35a7f835f89466bb4a7b78308cb8aab2bbe18284344ea5aeb448349952dab"
           },
           {
            "id": "screenshot-2",
-           "sha256": "f718d5c3dd5c4af3429d9a3e1b71ebd1bb5c600b9a52686ba065a2a1c1138b12"
+           "sha256": "2b83a74dff83fcc5b1652e61e579d604266599c430c24edec1687aedfa72a062"
           },
           {
            "id": "screenshot-3",
-           "sha256": "f4e5d911dd932182bc8374289fd1634a562421b81699d4f1265b2f36450ab2f6"
+           "sha256": "fa9fe4aa12fa326c54b5c9c4c94334b33b3a0503599a4500db3d6b1ee2dcaee5"
           },
           {
            "id": "screenshot-4",
-           "sha256": "a04cb04da90f53c50f09a79368432eb6b434fa5e927c09fc8eb9c8d880207cd6"
+           "sha256": "9e0b4c285bd278dc16589fde2ae0c77f3f51f84fc3915017a930c7594414106e"
           },
           {
            "id": "screenshot-5",
-           "sha256": "5e4ee11b336f5b224fdbf29807d8f0dd0b5e90aec68c160649b7fd21fa68f439"
+           "sha256": "67231de29aa5facf3883752ae17e6f6dbade787f825d141944d60c6c1ab7734c"
           },
           {
            "id": "screenshot-6",
-           "sha256": "c7b289603e42c2120809036d8b8108c592a320bd2224981044de33820015db3f"
+           "sha256": "f966643c0137847812cf896a60ec97018a4bab4ad87bc5114f94200a44a1a2de"
           },
           {
            "id": "screenshot-7",
-           "sha256": "49290c9ff26f6f78c90b4efb8d6e5bae7ecdd64c3ca7082386150bfd43134191"
+           "sha256": "43083e0d31578986770959203312eb9b0317475544c98b22bba864d97f4ff8fa"
           }
          ],
          "expected": "Without a local draft the comparison action is absent and all server records remain unchanged.",
@@ -5777,45 +5823,45 @@
         },
         {
          "task": "S3-04",
-         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
          "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
          "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::unsent reviews and private draft comparison preserve original votes labels and metadata through reload",
-         "receipt": "2026-10-08-team-draft-9e019e1-browser.json",
-         "receipt_sha256": "d5af4f9c15d5d09ed08038f2062de3d34b0e6a136342b9a6ee84fbd00743c5e4",
+         "receipt": "2026-10-10-gui349-comparison-existing-browser.json",
+         "receipt_sha256": "1e9432a0495b09b093dd9d10bd1a34e864bcd5ba9c398049da7745bc994da4f0",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "c06c29a7ddebf976f514f205e624ea5f2ea2a33dcb5417c2dd09e511f58eea1a"
+           "sha256": "9a00c739e1a22c703c1e790d384dc4999cda5dae403c73ead160808685c93832"
           },
           {
            "id": "screenshot-1",
-           "sha256": "03ec5f7814cc5db741d31851799e592a8607bb2b28c532de38d705d8e0565cd2"
+           "sha256": "bc5744669a6b4be3670a40a46339c1b7985d50f6f4e302e4dc6531a2fb3cd8c3"
           },
           {
            "id": "screenshot-2",
-           "sha256": "bc8d50016380a301dc294735010e5e08861d940dc5bffe8480ab9047f8cc323a"
+           "sha256": "8b1c581e76781ebfe92280dbfe08598b4ee970189dc20dd3cd0f9c020f8f6620"
           },
           {
            "id": "screenshot-3",
-           "sha256": "7800860d3ae9b1f1d5390cfedd5b902536c7fc001b6acfcb1653536fad5005da"
+           "sha256": "23d317a024ceb5dd4f7c8bf70d22b74f0469afe24bbb5ed6a77d000fbddfc2be"
           },
           {
            "id": "screenshot-4",
-           "sha256": "2d283a53bf53b343025a87cb05120bea7ceb332dbebf152da014fe9f1a5a109f"
+           "sha256": "d2afa79cc1c775641aafd2af713f1d42e073aa2d578367b48e12009d4669b6a2"
           },
           {
            "id": "screenshot-5",
-           "sha256": "2c720ffbeae0a487a47aaabf91650979a00cd20e3ca4efeebdeebad28eada090"
+           "sha256": "da453ade554130930a623db6bbf8a3eefc95941e0a44d4848f5fcb6e59a0b96c"
           },
           {
            "id": "screenshot-6",
-           "sha256": "19355495f2bd73693d52e260def6f9eb2b920955ce009b2272a50925175ac31e"
+           "sha256": "49204d349750695ac685a671667ad67322207110edea5c26edb95be31800ef8a"
           },
           {
            "id": "screenshot-7",
-           "sha256": "f5e598ea4c72f2e791ce1d267b82eb64f2cbedff14ed3b0a500cfad19f071d77"
+           "sha256": "6655bca72381bd0389dd1d830ae888004820179fcfaba871a7c0bf41435396c8"
           }
          ],
          "expected": "Without a local draft the comparison action is absent and all server records remain unchanged.",
@@ -5828,45 +5874,45 @@
        "evidence": [
         {
          "task": "S3-04",
-         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
          "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
          "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::native unsent reviews and local comparison retain exact original votes labels metadata and draft",
-         "receipt": "2026-10-08-team-draft-9e019e1-electron.json",
-         "receipt_sha256": "233cf25977ffab59e47e33edff597dcee56fb4e67aedb652347265fcca98fcf1",
+         "receipt": "2026-10-10-gui349-comparison-existing-electron.json",
+         "receipt_sha256": "a695b3ed1826233367074a4d833f625a30a919c0cc001f785b3f1f6ff7fb4939",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "513512c9a1dbda8f22f37efc9bea0b84d6495df61ec3bd72de3ad2ee2172037e"
+           "sha256": "bddd13819369831e9da68147c215a37fc1a52f109ad6d85e74f1aa9986284070"
           },
           {
            "id": "screenshot-1",
-           "sha256": "e862c89a53de4dfeee9f0e8985066733f6dba0f40b55dd520f1a8f7a25ba87a4"
+           "sha256": "60b35a7f835f89466bb4a7b78308cb8aab2bbe18284344ea5aeb448349952dab"
           },
           {
            "id": "screenshot-2",
-           "sha256": "f718d5c3dd5c4af3429d9a3e1b71ebd1bb5c600b9a52686ba065a2a1c1138b12"
+           "sha256": "2b83a74dff83fcc5b1652e61e579d604266599c430c24edec1687aedfa72a062"
           },
           {
            "id": "screenshot-3",
-           "sha256": "f4e5d911dd932182bc8374289fd1634a562421b81699d4f1265b2f36450ab2f6"
+           "sha256": "fa9fe4aa12fa326c54b5c9c4c94334b33b3a0503599a4500db3d6b1ee2dcaee5"
           },
           {
            "id": "screenshot-4",
-           "sha256": "a04cb04da90f53c50f09a79368432eb6b434fa5e927c09fc8eb9c8d880207cd6"
+           "sha256": "9e0b4c285bd278dc16589fde2ae0c77f3f51f84fc3915017a930c7594414106e"
           },
           {
            "id": "screenshot-5",
-           "sha256": "5e4ee11b336f5b224fdbf29807d8f0dd0b5e90aec68c160649b7fd21fa68f439"
+           "sha256": "67231de29aa5facf3883752ae17e6f6dbade787f825d141944d60c6c1ab7734c"
           },
           {
            "id": "screenshot-6",
-           "sha256": "c7b289603e42c2120809036d8b8108c592a320bd2224981044de33820015db3f"
+           "sha256": "f966643c0137847812cf896a60ec97018a4bab4ad87bc5114f94200a44a1a2de"
           },
           {
            "id": "screenshot-7",
-           "sha256": "49290c9ff26f6f78c90b4efb8d6e5bae7ecdd64c3ca7082386150bfd43134191"
+           "sha256": "43083e0d31578986770959203312eb9b0317475544c98b22bba864d97f4ff8fa"
           }
          ],
          "expected": "Controlled wrong source SHA in local draft is refused by actual comparison200; explicit confirmation cannot enable apply, and original server records are unchanged.",
@@ -5874,45 +5920,45 @@
         },
         {
          "task": "S3-04",
-         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
          "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
          "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::unsent reviews and private draft comparison preserve original votes labels and metadata through reload",
-         "receipt": "2026-10-08-team-draft-9e019e1-browser.json",
-         "receipt_sha256": "d5af4f9c15d5d09ed08038f2062de3d34b0e6a136342b9a6ee84fbd00743c5e4",
+         "receipt": "2026-10-10-gui349-comparison-existing-browser.json",
+         "receipt_sha256": "1e9432a0495b09b093dd9d10bd1a34e864bcd5ba9c398049da7745bc994da4f0",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "c06c29a7ddebf976f514f205e624ea5f2ea2a33dcb5417c2dd09e511f58eea1a"
+           "sha256": "9a00c739e1a22c703c1e790d384dc4999cda5dae403c73ead160808685c93832"
           },
           {
            "id": "screenshot-1",
-           "sha256": "03ec5f7814cc5db741d31851799e592a8607bb2b28c532de38d705d8e0565cd2"
+           "sha256": "bc5744669a6b4be3670a40a46339c1b7985d50f6f4e302e4dc6531a2fb3cd8c3"
           },
           {
            "id": "screenshot-2",
-           "sha256": "bc8d50016380a301dc294735010e5e08861d940dc5bffe8480ab9047f8cc323a"
+           "sha256": "8b1c581e76781ebfe92280dbfe08598b4ee970189dc20dd3cd0f9c020f8f6620"
           },
           {
            "id": "screenshot-3",
-           "sha256": "7800860d3ae9b1f1d5390cfedd5b902536c7fc001b6acfcb1653536fad5005da"
+           "sha256": "23d317a024ceb5dd4f7c8bf70d22b74f0469afe24bbb5ed6a77d000fbddfc2be"
           },
           {
            "id": "screenshot-4",
-           "sha256": "2d283a53bf53b343025a87cb05120bea7ceb332dbebf152da014fe9f1a5a109f"
+           "sha256": "d2afa79cc1c775641aafd2af713f1d42e073aa2d578367b48e12009d4669b6a2"
           },
           {
            "id": "screenshot-5",
-           "sha256": "2c720ffbeae0a487a47aaabf91650979a00cd20e3ca4efeebdeebad28eada090"
+           "sha256": "da453ade554130930a623db6bbf8a3eefc95941e0a44d4848f5fcb6e59a0b96c"
           },
           {
            "id": "screenshot-6",
-           "sha256": "19355495f2bd73693d52e260def6f9eb2b920955ce009b2272a50925175ac31e"
+           "sha256": "49204d349750695ac685a671667ad67322207110edea5c26edb95be31800ef8a"
           },
           {
            "id": "screenshot-7",
-           "sha256": "f5e598ea4c72f2e791ce1d267b82eb64f2cbedff14ed3b0a500cfad19f071d77"
+           "sha256": "6655bca72381bd0389dd1d830ae888004820179fcfaba871a7c0bf41435396c8"
           }
          ],
          "expected": "Controlled wrong source SHA in local draft is refused by actual comparison200; explicit confirmation cannot enable apply, and original server records are unchanged.",
@@ -5925,45 +5971,45 @@
        "evidence": [
         {
          "task": "S3-04",
-         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
          "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
          "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::native unsent reviews and local comparison retain exact original votes labels metadata and draft",
-         "receipt": "2026-10-08-team-draft-9e019e1-electron.json",
-         "receipt_sha256": "233cf25977ffab59e47e33edff597dcee56fb4e67aedb652347265fcca98fcf1",
+         "receipt": "2026-10-10-gui349-comparison-existing-electron.json",
+         "receipt_sha256": "a695b3ed1826233367074a4d833f625a30a919c0cc001f785b3f1f6ff7fb4939",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "513512c9a1dbda8f22f37efc9bea0b84d6495df61ec3bd72de3ad2ee2172037e"
+           "sha256": "bddd13819369831e9da68147c215a37fc1a52f109ad6d85e74f1aa9986284070"
           },
           {
            "id": "screenshot-1",
-           "sha256": "e862c89a53de4dfeee9f0e8985066733f6dba0f40b55dd520f1a8f7a25ba87a4"
+           "sha256": "60b35a7f835f89466bb4a7b78308cb8aab2bbe18284344ea5aeb448349952dab"
           },
           {
            "id": "screenshot-2",
-           "sha256": "f718d5c3dd5c4af3429d9a3e1b71ebd1bb5c600b9a52686ba065a2a1c1138b12"
+           "sha256": "2b83a74dff83fcc5b1652e61e579d604266599c430c24edec1687aedfa72a062"
           },
           {
            "id": "screenshot-3",
-           "sha256": "f4e5d911dd932182bc8374289fd1634a562421b81699d4f1265b2f36450ab2f6"
+           "sha256": "fa9fe4aa12fa326c54b5c9c4c94334b33b3a0503599a4500db3d6b1ee2dcaee5"
           },
           {
            "id": "screenshot-4",
-           "sha256": "a04cb04da90f53c50f09a79368432eb6b434fa5e927c09fc8eb9c8d880207cd6"
+           "sha256": "9e0b4c285bd278dc16589fde2ae0c77f3f51f84fc3915017a930c7594414106e"
           },
           {
            "id": "screenshot-5",
-           "sha256": "5e4ee11b336f5b224fdbf29807d8f0dd0b5e90aec68c160649b7fd21fa68f439"
+           "sha256": "67231de29aa5facf3883752ae17e6f6dbade787f825d141944d60c6c1ab7734c"
           },
           {
            "id": "screenshot-6",
-           "sha256": "c7b289603e42c2120809036d8b8108c592a320bd2224981044de33820015db3f"
+           "sha256": "f966643c0137847812cf896a60ec97018a4bab4ad87bc5114f94200a44a1a2de"
           },
           {
            "id": "screenshot-7",
-           "sha256": "49290c9ff26f6f78c90b4efb8d6e5bae7ecdd64c3ca7082386150bfd43134191"
+           "sha256": "43083e0d31578986770959203312eb9b0317475544c98b22bba864d97f4ff8fa"
           }
          ],
          "expected": "Exact comparison GET receives controlled503 before original dispatch, reports failure and retains exact original local draft/server records.",
@@ -5971,45 +6017,45 @@
         },
         {
          "task": "S3-04",
-         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
          "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
          "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::unsent reviews and private draft comparison preserve original votes labels and metadata through reload",
-         "receipt": "2026-10-08-team-draft-9e019e1-browser.json",
-         "receipt_sha256": "d5af4f9c15d5d09ed08038f2062de3d34b0e6a136342b9a6ee84fbd00743c5e4",
+         "receipt": "2026-10-10-gui349-comparison-existing-browser.json",
+         "receipt_sha256": "1e9432a0495b09b093dd9d10bd1a34e864bcd5ba9c398049da7745bc994da4f0",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "c06c29a7ddebf976f514f205e624ea5f2ea2a33dcb5417c2dd09e511f58eea1a"
+           "sha256": "9a00c739e1a22c703c1e790d384dc4999cda5dae403c73ead160808685c93832"
           },
           {
            "id": "screenshot-1",
-           "sha256": "03ec5f7814cc5db741d31851799e592a8607bb2b28c532de38d705d8e0565cd2"
+           "sha256": "bc5744669a6b4be3670a40a46339c1b7985d50f6f4e302e4dc6531a2fb3cd8c3"
           },
           {
            "id": "screenshot-2",
-           "sha256": "bc8d50016380a301dc294735010e5e08861d940dc5bffe8480ab9047f8cc323a"
+           "sha256": "8b1c581e76781ebfe92280dbfe08598b4ee970189dc20dd3cd0f9c020f8f6620"
           },
           {
            "id": "screenshot-3",
-           "sha256": "7800860d3ae9b1f1d5390cfedd5b902536c7fc001b6acfcb1653536fad5005da"
+           "sha256": "23d317a024ceb5dd4f7c8bf70d22b74f0469afe24bbb5ed6a77d000fbddfc2be"
           },
           {
            "id": "screenshot-4",
-           "sha256": "2d283a53bf53b343025a87cb05120bea7ceb332dbebf152da014fe9f1a5a109f"
+           "sha256": "d2afa79cc1c775641aafd2af713f1d42e073aa2d578367b48e12009d4669b6a2"
           },
           {
            "id": "screenshot-5",
-           "sha256": "2c720ffbeae0a487a47aaabf91650979a00cd20e3ca4efeebdeebad28eada090"
+           "sha256": "da453ade554130930a623db6bbf8a3eefc95941e0a44d4848f5fcb6e59a0b96c"
           },
           {
            "id": "screenshot-6",
-           "sha256": "19355495f2bd73693d52e260def6f9eb2b920955ce009b2272a50925175ac31e"
+           "sha256": "49204d349750695ac685a671667ad67322207110edea5c26edb95be31800ef8a"
           },
           {
            "id": "screenshot-7",
-           "sha256": "f5e598ea4c72f2e791ce1d267b82eb64f2cbedff14ed3b0a500cfad19f071d77"
+           "sha256": "6655bca72381bd0389dd1d830ae888004820179fcfaba871a7c0bf41435396c8"
           }
          ],
          "expected": "Exact comparison GET receives controlled503 before original dispatch, reports failure and retains exact original local draft/server records.",
@@ -6053,45 +6099,45 @@
        "evidence": [
         {
          "task": "S3-04",
-         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
          "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
          "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::native unsent reviews and local comparison retain exact original votes labels metadata and draft",
-         "receipt": "2026-10-08-team-draft-9e019e1-electron.json",
-         "receipt_sha256": "233cf25977ffab59e47e33edff597dcee56fb4e67aedb652347265fcca98fcf1",
+         "receipt": "2026-10-10-gui349-comparison-existing-electron.json",
+         "receipt_sha256": "a695b3ed1826233367074a4d833f625a30a919c0cc001f785b3f1f6ff7fb4939",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "513512c9a1dbda8f22f37efc9bea0b84d6495df61ec3bd72de3ad2ee2172037e"
+           "sha256": "bddd13819369831e9da68147c215a37fc1a52f109ad6d85e74f1aa9986284070"
           },
           {
            "id": "screenshot-1",
-           "sha256": "e862c89a53de4dfeee9f0e8985066733f6dba0f40b55dd520f1a8f7a25ba87a4"
+           "sha256": "60b35a7f835f89466bb4a7b78308cb8aab2bbe18284344ea5aeb448349952dab"
           },
           {
            "id": "screenshot-2",
-           "sha256": "f718d5c3dd5c4af3429d9a3e1b71ebd1bb5c600b9a52686ba065a2a1c1138b12"
+           "sha256": "2b83a74dff83fcc5b1652e61e579d604266599c430c24edec1687aedfa72a062"
           },
           {
            "id": "screenshot-3",
-           "sha256": "f4e5d911dd932182bc8374289fd1634a562421b81699d4f1265b2f36450ab2f6"
+           "sha256": "fa9fe4aa12fa326c54b5c9c4c94334b33b3a0503599a4500db3d6b1ee2dcaee5"
           },
           {
            "id": "screenshot-4",
-           "sha256": "a04cb04da90f53c50f09a79368432eb6b434fa5e927c09fc8eb9c8d880207cd6"
+           "sha256": "9e0b4c285bd278dc16589fde2ae0c77f3f51f84fc3915017a930c7594414106e"
           },
           {
            "id": "screenshot-5",
-           "sha256": "5e4ee11b336f5b224fdbf29807d8f0dd0b5e90aec68c160649b7fd21fa68f439"
+           "sha256": "67231de29aa5facf3883752ae17e6f6dbade787f825d141944d60c6c1ab7734c"
           },
           {
            "id": "screenshot-6",
-           "sha256": "c7b289603e42c2120809036d8b8108c592a320bd2224981044de33820015db3f"
+           "sha256": "f966643c0137847812cf896a60ec97018a4bab4ad87bc5114f94200a44a1a2de"
           },
           {
            "id": "screenshot-7",
-           "sha256": "49290c9ff26f6f78c90b4efb8d6e5bae7ecdd64c3ca7082386150bfd43134191"
+           "sha256": "43083e0d31578986770959203312eb9b0317475544c98b22bba864d97f4ff8fa"
           }
          ],
          "expected": "Actual canvas-created local draft survives reload byte-for-byte; real comparison200 shows exact base/current/local annotations, confirmation unset and apply disabled; no server write.",
@@ -6099,45 +6145,45 @@
         },
         {
          "task": "S3-04",
-         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
          "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
          "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::unsent reviews and private draft comparison preserve original votes labels and metadata through reload",
-         "receipt": "2026-10-08-team-draft-9e019e1-browser.json",
-         "receipt_sha256": "d5af4f9c15d5d09ed08038f2062de3d34b0e6a136342b9a6ee84fbd00743c5e4",
+         "receipt": "2026-10-10-gui349-comparison-existing-browser.json",
+         "receipt_sha256": "1e9432a0495b09b093dd9d10bd1a34e864bcd5ba9c398049da7745bc994da4f0",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "c06c29a7ddebf976f514f205e624ea5f2ea2a33dcb5417c2dd09e511f58eea1a"
+           "sha256": "9a00c739e1a22c703c1e790d384dc4999cda5dae403c73ead160808685c93832"
           },
           {
            "id": "screenshot-1",
-           "sha256": "03ec5f7814cc5db741d31851799e592a8607bb2b28c532de38d705d8e0565cd2"
+           "sha256": "bc5744669a6b4be3670a40a46339c1b7985d50f6f4e302e4dc6531a2fb3cd8c3"
           },
           {
            "id": "screenshot-2",
-           "sha256": "bc8d50016380a301dc294735010e5e08861d940dc5bffe8480ab9047f8cc323a"
+           "sha256": "8b1c581e76781ebfe92280dbfe08598b4ee970189dc20dd3cd0f9c020f8f6620"
           },
           {
            "id": "screenshot-3",
-           "sha256": "7800860d3ae9b1f1d5390cfedd5b902536c7fc001b6acfcb1653536fad5005da"
+           "sha256": "23d317a024ceb5dd4f7c8bf70d22b74f0469afe24bbb5ed6a77d000fbddfc2be"
           },
           {
            "id": "screenshot-4",
-           "sha256": "2d283a53bf53b343025a87cb05120bea7ceb332dbebf152da014fe9f1a5a109f"
+           "sha256": "d2afa79cc1c775641aafd2af713f1d42e073aa2d578367b48e12009d4669b6a2"
           },
           {
            "id": "screenshot-5",
-           "sha256": "2c720ffbeae0a487a47aaabf91650979a00cd20e3ca4efeebdeebad28eada090"
+           "sha256": "da453ade554130930a623db6bbf8a3eefc95941e0a44d4848f5fcb6e59a0b96c"
           },
           {
            "id": "screenshot-6",
-           "sha256": "19355495f2bd73693d52e260def6f9eb2b920955ce009b2272a50925175ac31e"
+           "sha256": "49204d349750695ac685a671667ad67322207110edea5c26edb95be31800ef8a"
           },
           {
            "id": "screenshot-7",
-           "sha256": "f5e598ea4c72f2e791ce1d267b82eb64f2cbedff14ed3b0a500cfad19f071d77"
+           "sha256": "6655bca72381bd0389dd1d830ae888004820179fcfaba871a7c0bf41435396c8"
           }
          ],
          "expected": "Actual canvas-created local draft survives reload byte-for-byte; real comparison200 shows exact base/current/local annotations, confirmation unset and apply disabled; no server write.",
@@ -6146,7 +6192,53 @@
        ]
       },
       "handoff": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-04",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
+         "kind": "click",
+         "action": "저장 전 초안 비교·복구",
+         "expected": "Real project A to B to A switch retains the exact private draft and original UUID/revision/source hash without applying labels or leaking an old A comparison.",
+         "observed": "browser: The exact private A draft survived reload and project switches. B showed no A draft or stale comparison; returning A matched its original image and raw draft with apply disabled. Original annotations and metadata were retained without business writes.",
+         "reviewer": "Root retained exact Source assertions and completed GUI execution; whole feature, human quality, installed target and parent acceptance remain separate.",
+         "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::draft comparison project handoff A B A fences a late original annotation read",
+         "receipt": "2026-10-10-gui349-comparison-handoff-browser.json",
+         "receipt_sha256": "1f1cb482cedd34de47d4c59861ed48b47392a352f786a7a6fe587a76a412a629",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "38a0888248b2ebd5098a0343fcca41aa1a06b3a31bf5c3fbcd04517a916781bb"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "7e4592bc491c389dfab89193510a81ecda20a696ffa1740a52c2191d71e30da8"
+          }
+         ]
+        },
+        {
+         "task": "S3-04",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
+         "kind": "click",
+         "action": "저장 전 초안 비교·복구",
+         "expected": "Real project A to B to A switch retains the exact private draft and original UUID/revision/source hash without applying labels or leaking an old A comparison.",
+         "observed": "electron: The exact private A draft survived reload and project switches. B showed no A draft or stale comparison; returning A matched its original image and raw draft with apply disabled. Original annotations and metadata were retained without business writes. Source Electron uses a separately authenticated renderer capture and controlled UI reply; original native HTTP200 provenance is not claimed.",
+         "reviewer": "Root retained exact Source assertions and completed GUI execution; whole feature, human quality, installed target and parent acceptance remain separate.",
+         "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::native draft comparison project handoff retains original UUID raw draft and labels",
+         "receipt": "2026-10-10-gui349-comparison-handoff-electron.json",
+         "receipt_sha256": "1fee0dc36aedf961c738d42e517b47ed82f244686a51a2195fe0dce70f14c0ad",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "1b3901f3f69f8cfccb8b205b53ebea30d6dcd2e56121f2dc027f33105c61daf2"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "135ce699d79ef205a684c799a146b135baa4185dcbce54cbeaee9fb7b377c8bb"
+          }
+         ]
+        }
+       ]
       }
      }
     },
@@ -6618,45 +6710,45 @@
        "evidence": [
         {
          "task": "S3-04",
-         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
          "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
          "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::native unsent reviews and local comparison retain exact original votes labels metadata and draft",
-         "receipt": "2026-10-08-team-draft-9e019e1-electron.json",
-         "receipt_sha256": "233cf25977ffab59e47e33edff597dcee56fb4e67aedb652347265fcca98fcf1",
+         "receipt": "2026-10-10-gui349-comparison-existing-electron.json",
+         "receipt_sha256": "a695b3ed1826233367074a4d833f625a30a919c0cc001f785b3f1f6ff7fb4939",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "513512c9a1dbda8f22f37efc9bea0b84d6495df61ec3bd72de3ad2ee2172037e"
+           "sha256": "bddd13819369831e9da68147c215a37fc1a52f109ad6d85e74f1aa9986284070"
           },
           {
            "id": "screenshot-1",
-           "sha256": "e862c89a53de4dfeee9f0e8985066733f6dba0f40b55dd520f1a8f7a25ba87a4"
+           "sha256": "60b35a7f835f89466bb4a7b78308cb8aab2bbe18284344ea5aeb448349952dab"
           },
           {
            "id": "screenshot-2",
-           "sha256": "f718d5c3dd5c4af3429d9a3e1b71ebd1bb5c600b9a52686ba065a2a1c1138b12"
+           "sha256": "2b83a74dff83fcc5b1652e61e579d604266599c430c24edec1687aedfa72a062"
           },
           {
            "id": "screenshot-3",
-           "sha256": "f4e5d911dd932182bc8374289fd1634a562421b81699d4f1265b2f36450ab2f6"
+           "sha256": "fa9fe4aa12fa326c54b5c9c4c94334b33b3a0503599a4500db3d6b1ee2dcaee5"
           },
           {
            "id": "screenshot-4",
-           "sha256": "a04cb04da90f53c50f09a79368432eb6b434fa5e927c09fc8eb9c8d880207cd6"
+           "sha256": "9e0b4c285bd278dc16589fde2ae0c77f3f51f84fc3915017a930c7594414106e"
           },
           {
            "id": "screenshot-5",
-           "sha256": "5e4ee11b336f5b224fdbf29807d8f0dd0b5e90aec68c160649b7fd21fa68f439"
+           "sha256": "67231de29aa5facf3883752ae17e6f6dbade787f825d141944d60c6c1ab7734c"
           },
           {
            "id": "screenshot-6",
-           "sha256": "c7b289603e42c2120809036d8b8108c592a320bd2224981044de33820015db3f"
+           "sha256": "f966643c0137847812cf896a60ec97018a4bab4ad87bc5114f94200a44a1a2de"
           },
           {
            "id": "screenshot-7",
-           "sha256": "49290c9ff26f6f78c90b4efb8d6e5bae7ecdd64c3ca7082386150bfd43134191"
+           "sha256": "43083e0d31578986770959203312eb9b0317475544c98b22bba864d97f4ff8fa"
           }
          ],
          "expected": "Closing a valid but unsent approve form sends no UI POST and retains exact original vote, annotation JSON, workflow metadata and source bytes.",
@@ -6664,45 +6756,45 @@
         },
         {
          "task": "S3-04",
-         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
          "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
          "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::unsent reviews and private draft comparison preserve original votes labels and metadata through reload",
-         "receipt": "2026-10-08-team-draft-9e019e1-browser.json",
-         "receipt_sha256": "d5af4f9c15d5d09ed08038f2062de3d34b0e6a136342b9a6ee84fbd00743c5e4",
+         "receipt": "2026-10-10-gui349-comparison-existing-browser.json",
+         "receipt_sha256": "1e9432a0495b09b093dd9d10bd1a34e864bcd5ba9c398049da7745bc994da4f0",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "c06c29a7ddebf976f514f205e624ea5f2ea2a33dcb5417c2dd09e511f58eea1a"
+           "sha256": "9a00c739e1a22c703c1e790d384dc4999cda5dae403c73ead160808685c93832"
           },
           {
            "id": "screenshot-1",
-           "sha256": "03ec5f7814cc5db741d31851799e592a8607bb2b28c532de38d705d8e0565cd2"
+           "sha256": "bc5744669a6b4be3670a40a46339c1b7985d50f6f4e302e4dc6531a2fb3cd8c3"
           },
           {
            "id": "screenshot-2",
-           "sha256": "bc8d50016380a301dc294735010e5e08861d940dc5bffe8480ab9047f8cc323a"
+           "sha256": "8b1c581e76781ebfe92280dbfe08598b4ee970189dc20dd3cd0f9c020f8f6620"
           },
           {
            "id": "screenshot-3",
-           "sha256": "7800860d3ae9b1f1d5390cfedd5b902536c7fc001b6acfcb1653536fad5005da"
+           "sha256": "23d317a024ceb5dd4f7c8bf70d22b74f0469afe24bbb5ed6a77d000fbddfc2be"
           },
           {
            "id": "screenshot-4",
-           "sha256": "2d283a53bf53b343025a87cb05120bea7ceb332dbebf152da014fe9f1a5a109f"
+           "sha256": "d2afa79cc1c775641aafd2af713f1d42e073aa2d578367b48e12009d4669b6a2"
           },
           {
            "id": "screenshot-5",
-           "sha256": "2c720ffbeae0a487a47aaabf91650979a00cd20e3ca4efeebdeebad28eada090"
+           "sha256": "da453ade554130930a623db6bbf8a3eefc95941e0a44d4848f5fcb6e59a0b96c"
           },
           {
            "id": "screenshot-6",
-           "sha256": "19355495f2bd73693d52e260def6f9eb2b920955ce009b2272a50925175ac31e"
+           "sha256": "49204d349750695ac685a671667ad67322207110edea5c26edb95be31800ef8a"
           },
           {
            "id": "screenshot-7",
-           "sha256": "f5e598ea4c72f2e791ce1d267b82eb64f2cbedff14ed3b0a500cfad19f071d77"
+           "sha256": "6655bca72381bd0389dd1d830ae888004820179fcfaba871a7c0bf41435396c8"
           }
          ],
          "expected": "Closing a valid but unsent approve form sends no UI POST and retains exact original vote, annotation JSON, workflow metadata and source bytes.",
@@ -6715,45 +6807,45 @@
        "evidence": [
         {
          "task": "S3-04",
-         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
          "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
          "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::native unsent reviews and local comparison retain exact original votes labels metadata and draft",
-         "receipt": "2026-10-08-team-draft-9e019e1-electron.json",
-         "receipt_sha256": "233cf25977ffab59e47e33edff597dcee56fb4e67aedb652347265fcca98fcf1",
+         "receipt": "2026-10-10-gui349-comparison-existing-electron.json",
+         "receipt_sha256": "a695b3ed1826233367074a4d833f625a30a919c0cc001f785b3f1f6ff7fb4939",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "513512c9a1dbda8f22f37efc9bea0b84d6495df61ec3bd72de3ad2ee2172037e"
+           "sha256": "bddd13819369831e9da68147c215a37fc1a52f109ad6d85e74f1aa9986284070"
           },
           {
            "id": "screenshot-1",
-           "sha256": "e862c89a53de4dfeee9f0e8985066733f6dba0f40b55dd520f1a8f7a25ba87a4"
+           "sha256": "60b35a7f835f89466bb4a7b78308cb8aab2bbe18284344ea5aeb448349952dab"
           },
           {
            "id": "screenshot-2",
-           "sha256": "f718d5c3dd5c4af3429d9a3e1b71ebd1bb5c600b9a52686ba065a2a1c1138b12"
+           "sha256": "2b83a74dff83fcc5b1652e61e579d604266599c430c24edec1687aedfa72a062"
           },
           {
            "id": "screenshot-3",
-           "sha256": "f4e5d911dd932182bc8374289fd1634a562421b81699d4f1265b2f36450ab2f6"
+           "sha256": "fa9fe4aa12fa326c54b5c9c4c94334b33b3a0503599a4500db3d6b1ee2dcaee5"
           },
           {
            "id": "screenshot-4",
-           "sha256": "a04cb04da90f53c50f09a79368432eb6b434fa5e927c09fc8eb9c8d880207cd6"
+           "sha256": "9e0b4c285bd278dc16589fde2ae0c77f3f51f84fc3915017a930c7594414106e"
           },
           {
            "id": "screenshot-5",
-           "sha256": "5e4ee11b336f5b224fdbf29807d8f0dd0b5e90aec68c160649b7fd21fa68f439"
+           "sha256": "67231de29aa5facf3883752ae17e6f6dbade787f825d141944d60c6c1ab7734c"
           },
           {
            "id": "screenshot-6",
-           "sha256": "c7b289603e42c2120809036d8b8108c592a320bd2224981044de33820015db3f"
+           "sha256": "f966643c0137847812cf896a60ec97018a4bab4ad87bc5114f94200a44a1a2de"
           },
           {
            "id": "screenshot-7",
-           "sha256": "49290c9ff26f6f78c90b4efb8d6e5bae7ecdd64c3ca7082386150bfd43134191"
+           "sha256": "43083e0d31578986770959203312eb9b0317475544c98b22bba864d97f4ff8fa"
           }
          ],
          "expected": "Actual reload and reopening approve controls keeps exactly the original fixture vote and records; previous unsent reason is not submitted.",
@@ -6761,45 +6853,45 @@
         },
         {
          "task": "S3-04",
-         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
          "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
          "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::unsent reviews and private draft comparison preserve original votes labels and metadata through reload",
-         "receipt": "2026-10-08-team-draft-9e019e1-browser.json",
-         "receipt_sha256": "d5af4f9c15d5d09ed08038f2062de3d34b0e6a136342b9a6ee84fbd00743c5e4",
+         "receipt": "2026-10-10-gui349-comparison-existing-browser.json",
+         "receipt_sha256": "1e9432a0495b09b093dd9d10bd1a34e864bcd5ba9c398049da7745bc994da4f0",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "c06c29a7ddebf976f514f205e624ea5f2ea2a33dcb5417c2dd09e511f58eea1a"
+           "sha256": "9a00c739e1a22c703c1e790d384dc4999cda5dae403c73ead160808685c93832"
           },
           {
            "id": "screenshot-1",
-           "sha256": "03ec5f7814cc5db741d31851799e592a8607bb2b28c532de38d705d8e0565cd2"
+           "sha256": "bc5744669a6b4be3670a40a46339c1b7985d50f6f4e302e4dc6531a2fb3cd8c3"
           },
           {
            "id": "screenshot-2",
-           "sha256": "bc8d50016380a301dc294735010e5e08861d940dc5bffe8480ab9047f8cc323a"
+           "sha256": "8b1c581e76781ebfe92280dbfe08598b4ee970189dc20dd3cd0f9c020f8f6620"
           },
           {
            "id": "screenshot-3",
-           "sha256": "7800860d3ae9b1f1d5390cfedd5b902536c7fc001b6acfcb1653536fad5005da"
+           "sha256": "23d317a024ceb5dd4f7c8bf70d22b74f0469afe24bbb5ed6a77d000fbddfc2be"
           },
           {
            "id": "screenshot-4",
-           "sha256": "2d283a53bf53b343025a87cb05120bea7ceb332dbebf152da014fe9f1a5a109f"
+           "sha256": "d2afa79cc1c775641aafd2af713f1d42e073aa2d578367b48e12009d4669b6a2"
           },
           {
            "id": "screenshot-5",
-           "sha256": "2c720ffbeae0a487a47aaabf91650979a00cd20e3ca4efeebdeebad28eada090"
+           "sha256": "da453ade554130930a623db6bbf8a3eefc95941e0a44d4848f5fcb6e59a0b96c"
           },
           {
            "id": "screenshot-6",
-           "sha256": "19355495f2bd73693d52e260def6f9eb2b920955ce009b2272a50925175ac31e"
+           "sha256": "49204d349750695ac685a671667ad67322207110edea5c26edb95be31800ef8a"
           },
           {
            "id": "screenshot-7",
-           "sha256": "f5e598ea4c72f2e791ce1d267b82eb64f2cbedff14ed3b0a500cfad19f071d77"
+           "sha256": "6655bca72381bd0389dd1d830ae888004820179fcfaba871a7c0bf41435396c8"
           }
          ],
          "expected": "Actual reload and reopening approve controls keeps exactly the original fixture vote and records; previous unsent reason is not submitted.",
@@ -7072,45 +7164,45 @@
        "evidence": [
         {
          "task": "S3-04",
-         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
          "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
          "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::native unsent reviews and local comparison retain exact original votes labels metadata and draft",
-         "receipt": "2026-10-08-team-draft-9e019e1-electron.json",
-         "receipt_sha256": "233cf25977ffab59e47e33edff597dcee56fb4e67aedb652347265fcca98fcf1",
+         "receipt": "2026-10-10-gui349-comparison-existing-electron.json",
+         "receipt_sha256": "a695b3ed1826233367074a4d833f625a30a919c0cc001f785b3f1f6ff7fb4939",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "513512c9a1dbda8f22f37efc9bea0b84d6495df61ec3bd72de3ad2ee2172037e"
+           "sha256": "bddd13819369831e9da68147c215a37fc1a52f109ad6d85e74f1aa9986284070"
           },
           {
            "id": "screenshot-1",
-           "sha256": "e862c89a53de4dfeee9f0e8985066733f6dba0f40b55dd520f1a8f7a25ba87a4"
+           "sha256": "60b35a7f835f89466bb4a7b78308cb8aab2bbe18284344ea5aeb448349952dab"
           },
           {
            "id": "screenshot-2",
-           "sha256": "f718d5c3dd5c4af3429d9a3e1b71ebd1bb5c600b9a52686ba065a2a1c1138b12"
+           "sha256": "2b83a74dff83fcc5b1652e61e579d604266599c430c24edec1687aedfa72a062"
           },
           {
            "id": "screenshot-3",
-           "sha256": "f4e5d911dd932182bc8374289fd1634a562421b81699d4f1265b2f36450ab2f6"
+           "sha256": "fa9fe4aa12fa326c54b5c9c4c94334b33b3a0503599a4500db3d6b1ee2dcaee5"
           },
           {
            "id": "screenshot-4",
-           "sha256": "a04cb04da90f53c50f09a79368432eb6b434fa5e927c09fc8eb9c8d880207cd6"
+           "sha256": "9e0b4c285bd278dc16589fde2ae0c77f3f51f84fc3915017a930c7594414106e"
           },
           {
            "id": "screenshot-5",
-           "sha256": "5e4ee11b336f5b224fdbf29807d8f0dd0b5e90aec68c160649b7fd21fa68f439"
+           "sha256": "67231de29aa5facf3883752ae17e6f6dbade787f825d141944d60c6c1ab7734c"
           },
           {
            "id": "screenshot-6",
-           "sha256": "c7b289603e42c2120809036d8b8108c592a320bd2224981044de33820015db3f"
+           "sha256": "f966643c0137847812cf896a60ec97018a4bab4ad87bc5114f94200a44a1a2de"
           },
           {
            "id": "screenshot-7",
-           "sha256": "49290c9ff26f6f78c90b4efb8d6e5bae7ecdd64c3ca7082386150bfd43134191"
+           "sha256": "43083e0d31578986770959203312eb9b0317475544c98b22bba864d97f4ff8fa"
           }
          ],
          "expected": "Closing a valid but unsent reject form sends no UI POST and retains exact original vote and label/metadata/source bytes.",
@@ -7118,45 +7210,45 @@
         },
         {
          "task": "S3-04",
-         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
          "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
          "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::unsent reviews and private draft comparison preserve original votes labels and metadata through reload",
-         "receipt": "2026-10-08-team-draft-9e019e1-browser.json",
-         "receipt_sha256": "d5af4f9c15d5d09ed08038f2062de3d34b0e6a136342b9a6ee84fbd00743c5e4",
+         "receipt": "2026-10-10-gui349-comparison-existing-browser.json",
+         "receipt_sha256": "1e9432a0495b09b093dd9d10bd1a34e864bcd5ba9c398049da7745bc994da4f0",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "c06c29a7ddebf976f514f205e624ea5f2ea2a33dcb5417c2dd09e511f58eea1a"
+           "sha256": "9a00c739e1a22c703c1e790d384dc4999cda5dae403c73ead160808685c93832"
           },
           {
            "id": "screenshot-1",
-           "sha256": "03ec5f7814cc5db741d31851799e592a8607bb2b28c532de38d705d8e0565cd2"
+           "sha256": "bc5744669a6b4be3670a40a46339c1b7985d50f6f4e302e4dc6531a2fb3cd8c3"
           },
           {
            "id": "screenshot-2",
-           "sha256": "bc8d50016380a301dc294735010e5e08861d940dc5bffe8480ab9047f8cc323a"
+           "sha256": "8b1c581e76781ebfe92280dbfe08598b4ee970189dc20dd3cd0f9c020f8f6620"
           },
           {
            "id": "screenshot-3",
-           "sha256": "7800860d3ae9b1f1d5390cfedd5b902536c7fc001b6acfcb1653536fad5005da"
+           "sha256": "23d317a024ceb5dd4f7c8bf70d22b74f0469afe24bbb5ed6a77d000fbddfc2be"
           },
           {
            "id": "screenshot-4",
-           "sha256": "2d283a53bf53b343025a87cb05120bea7ceb332dbebf152da014fe9f1a5a109f"
+           "sha256": "d2afa79cc1c775641aafd2af713f1d42e073aa2d578367b48e12009d4669b6a2"
           },
           {
            "id": "screenshot-5",
-           "sha256": "2c720ffbeae0a487a47aaabf91650979a00cd20e3ca4efeebdeebad28eada090"
+           "sha256": "da453ade554130930a623db6bbf8a3eefc95941e0a44d4848f5fcb6e59a0b96c"
           },
           {
            "id": "screenshot-6",
-           "sha256": "19355495f2bd73693d52e260def6f9eb2b920955ce009b2272a50925175ac31e"
+           "sha256": "49204d349750695ac685a671667ad67322207110edea5c26edb95be31800ef8a"
           },
           {
            "id": "screenshot-7",
-           "sha256": "f5e598ea4c72f2e791ce1d267b82eb64f2cbedff14ed3b0a500cfad19f071d77"
+           "sha256": "6655bca72381bd0389dd1d830ae888004820179fcfaba871a7c0bf41435396c8"
           }
          ],
          "expected": "Closing a valid but unsent reject form sends no UI POST and retains exact original vote and label/metadata/source bytes.",
@@ -7169,45 +7261,45 @@
        "evidence": [
         {
          "task": "S3-04",
-         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
          "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
          "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::native unsent reviews and local comparison retain exact original votes labels metadata and draft",
-         "receipt": "2026-10-08-team-draft-9e019e1-electron.json",
-         "receipt_sha256": "233cf25977ffab59e47e33edff597dcee56fb4e67aedb652347265fcca98fcf1",
+         "receipt": "2026-10-10-gui349-comparison-existing-electron.json",
+         "receipt_sha256": "a695b3ed1826233367074a4d833f625a30a919c0cc001f785b3f1f6ff7fb4939",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "513512c9a1dbda8f22f37efc9bea0b84d6495df61ec3bd72de3ad2ee2172037e"
+           "sha256": "bddd13819369831e9da68147c215a37fc1a52f109ad6d85e74f1aa9986284070"
           },
           {
            "id": "screenshot-1",
-           "sha256": "e862c89a53de4dfeee9f0e8985066733f6dba0f40b55dd520f1a8f7a25ba87a4"
+           "sha256": "60b35a7f835f89466bb4a7b78308cb8aab2bbe18284344ea5aeb448349952dab"
           },
           {
            "id": "screenshot-2",
-           "sha256": "f718d5c3dd5c4af3429d9a3e1b71ebd1bb5c600b9a52686ba065a2a1c1138b12"
+           "sha256": "2b83a74dff83fcc5b1652e61e579d604266599c430c24edec1687aedfa72a062"
           },
           {
            "id": "screenshot-3",
-           "sha256": "f4e5d911dd932182bc8374289fd1634a562421b81699d4f1265b2f36450ab2f6"
+           "sha256": "fa9fe4aa12fa326c54b5c9c4c94334b33b3a0503599a4500db3d6b1ee2dcaee5"
           },
           {
            "id": "screenshot-4",
-           "sha256": "a04cb04da90f53c50f09a79368432eb6b434fa5e927c09fc8eb9c8d880207cd6"
+           "sha256": "9e0b4c285bd278dc16589fde2ae0c77f3f51f84fc3915017a930c7594414106e"
           },
           {
            "id": "screenshot-5",
-           "sha256": "5e4ee11b336f5b224fdbf29807d8f0dd0b5e90aec68c160649b7fd21fa68f439"
+           "sha256": "67231de29aa5facf3883752ae17e6f6dbade787f825d141944d60c6c1ab7734c"
           },
           {
            "id": "screenshot-6",
-           "sha256": "c7b289603e42c2120809036d8b8108c592a320bd2224981044de33820015db3f"
+           "sha256": "f966643c0137847812cf896a60ec97018a4bab4ad87bc5114f94200a44a1a2de"
           },
           {
            "id": "screenshot-7",
-           "sha256": "49290c9ff26f6f78c90b4efb8d6e5bae7ecdd64c3ca7082386150bfd43134191"
+           "sha256": "43083e0d31578986770959203312eb9b0317475544c98b22bba864d97f4ff8fa"
           }
          ],
          "expected": "Actual reload and reopening reject controls retains original pending opinion and unchanged server records without submitting draft reason.",
@@ -7215,45 +7307,45 @@
         },
         {
          "task": "S3-04",
-         "source_sha": "9e019e13cb5534826a1497c71d4b0e8bfc36451f",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "미전송 검수 닫기·재열기와 보존 초안 비교",
          "reviewer": "Root exact source/raw manifest/hash review and clean browser/source Electron execution; no human truth or feature acceptance",
          "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::unsent reviews and private draft comparison preserve original votes labels and metadata through reload",
-         "receipt": "2026-10-08-team-draft-9e019e1-browser.json",
-         "receipt_sha256": "d5af4f9c15d5d09ed08038f2062de3d34b0e6a136342b9a6ee84fbd00743c5e4",
+         "receipt": "2026-10-10-gui349-comparison-existing-browser.json",
+         "receipt_sha256": "1e9432a0495b09b093dd9d10bd1a34e864bcd5ba9c398049da7745bc994da4f0",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "c06c29a7ddebf976f514f205e624ea5f2ea2a33dcb5417c2dd09e511f58eea1a"
+           "sha256": "9a00c739e1a22c703c1e790d384dc4999cda5dae403c73ead160808685c93832"
           },
           {
            "id": "screenshot-1",
-           "sha256": "03ec5f7814cc5db741d31851799e592a8607bb2b28c532de38d705d8e0565cd2"
+           "sha256": "bc5744669a6b4be3670a40a46339c1b7985d50f6f4e302e4dc6531a2fb3cd8c3"
           },
           {
            "id": "screenshot-2",
-           "sha256": "bc8d50016380a301dc294735010e5e08861d940dc5bffe8480ab9047f8cc323a"
+           "sha256": "8b1c581e76781ebfe92280dbfe08598b4ee970189dc20dd3cd0f9c020f8f6620"
           },
           {
            "id": "screenshot-3",
-           "sha256": "7800860d3ae9b1f1d5390cfedd5b902536c7fc001b6acfcb1653536fad5005da"
+           "sha256": "23d317a024ceb5dd4f7c8bf70d22b74f0469afe24bbb5ed6a77d000fbddfc2be"
           },
           {
            "id": "screenshot-4",
-           "sha256": "2d283a53bf53b343025a87cb05120bea7ceb332dbebf152da014fe9f1a5a109f"
+           "sha256": "d2afa79cc1c775641aafd2af713f1d42e073aa2d578367b48e12009d4669b6a2"
           },
           {
            "id": "screenshot-5",
-           "sha256": "2c720ffbeae0a487a47aaabf91650979a00cd20e3ca4efeebdeebad28eada090"
+           "sha256": "da453ade554130930a623db6bbf8a3eefc95941e0a44d4848f5fcb6e59a0b96c"
           },
           {
            "id": "screenshot-6",
-           "sha256": "19355495f2bd73693d52e260def6f9eb2b920955ce009b2272a50925175ac31e"
+           "sha256": "49204d349750695ac685a671667ad67322207110edea5c26edb95be31800ef8a"
           },
           {
            "id": "screenshot-7",
-           "sha256": "f5e598ea4c72f2e791ce1d267b82eb64f2cbedff14ed3b0a500cfad19f071d77"
+           "sha256": "6655bca72381bd0389dd1d830ae888004820179fcfaba871a7c0bf41435396c8"
           }
          ],
          "expected": "Actual reload and reopening reject controls retains original pending opinion and unchanged server records without submitting draft reason.",
@@ -12153,45 +12245,45 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "완료된 평가 결과 다시 불러오기 · 클래스별 지표",
          "expected": "Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Scratch TP1/FN1/FP2 and Crack TP1/FN0/FP0 displayed.",
          "observed": "browser: Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Scratch TP1/FN1/FP2 and Crack TP1/FN0/FP0 displayed. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
-         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-browser.json",
+         "receipt_sha256": "2f1072b9956f393dedc31eb35b142df1c614a442c1be65c28532e25ecce6e743",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+           "sha256": "83c32f047ab8011271d92a5089c91a0f5fb30c01086450a9d3fe486f02fb4327"
           },
           {
            "id": "screenshot-1",
-           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+           "sha256": "75bf9bb32af8e5d5105f654585bbb34d5490791020aa2dc26bd3f45bcbfc8945"
           }
          ]
         },
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "완료된 평가 결과 다시 불러오기 · 클래스별 지표",
          "expected": "Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Scratch TP1/FN1/FP2 and Crack TP1/FN0/FP0 displayed.",
          "observed": "electron: Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Scratch TP1/FN1/FP2 and Crack TP1/FN0/FP0 displayed. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
-         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-electron.json",
+         "receipt_sha256": "3f1b52f125afc71b2af222e7e10b62d313af43e02f9bf609911e64aabac3ebd2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+           "sha256": "b5daacc10fa8c21f1bd05c429945dde3cb611d22c85599a4004163b933c79dbe"
           },
           {
            "id": "screenshot-1",
-           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+           "sha256": "0b6ded10c9af4210edc24589461e29c0e22536c063dfe484506299babf67e5f0"
           }
          ]
         }
@@ -12202,45 +12294,45 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "완료된 평가 결과 다시 불러오기 · 클래스별 지표",
          "expected": "The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes.",
          "observed": "browser: The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
-         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-browser.json",
+         "receipt_sha256": "2f1072b9956f393dedc31eb35b142df1c614a442c1be65c28532e25ecce6e743",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+           "sha256": "83c32f047ab8011271d92a5089c91a0f5fb30c01086450a9d3fe486f02fb4327"
           },
           {
            "id": "screenshot-1",
-           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+           "sha256": "75bf9bb32af8e5d5105f654585bbb34d5490791020aa2dc26bd3f45bcbfc8945"
           }
          ]
         },
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "완료된 평가 결과 다시 불러오기 · 클래스별 지표",
          "expected": "The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes.",
          "observed": "electron: The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
-         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-electron.json",
+         "receipt_sha256": "3f1b52f125afc71b2af222e7e10b62d313af43e02f9bf609911e64aabac3ebd2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+           "sha256": "b5daacc10fa8c21f1bd05c429945dde3cb611d22c85599a4004163b933c79dbe"
           },
           {
            "id": "screenshot-1",
-           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+           "sha256": "0b6ded10c9af4210edc24589461e29c0e22536c063dfe484506299babf67e5f0"
           }
          ]
         }
@@ -12263,53 +12355,98 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "완료된 평가 결과 다시 불러오기 · 클래스별 지표",
          "expected": "Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds.",
          "observed": "browser: Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
-         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-browser.json",
+         "receipt_sha256": "2f1072b9956f393dedc31eb35b142df1c614a442c1be65c28532e25ecce6e743",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+           "sha256": "83c32f047ab8011271d92a5089c91a0f5fb30c01086450a9d3fe486f02fb4327"
           },
           {
            "id": "screenshot-1",
-           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+           "sha256": "75bf9bb32af8e5d5105f654585bbb34d5490791020aa2dc26bd3f45bcbfc8945"
           }
          ]
         },
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "완료된 평가 결과 다시 불러오기 · 클래스별 지표",
          "expected": "Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds.",
          "observed": "electron: Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
-         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-electron.json",
+         "receipt_sha256": "3f1b52f125afc71b2af222e7e10b62d313af43e02f9bf609911e64aabac3ebd2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+           "sha256": "b5daacc10fa8c21f1bd05c429945dde3cb611d22c85599a4004163b933c79dbe"
           },
           {
            "id": "screenshot-1",
-           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+           "sha256": "0b6ded10c9af4210edc24589461e29c0e22536c063dfe484506299babf67e5f0"
           }
          ]
         }
        ]
       },
       "handoff": {
-       "state": "pending",
-       "reason": "This dimension has not been exercised by the retained exact GUI case."
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
+         "kind": "click",
+         "action": "완료된 평가 결과 다시 불러오기 · 클래스별 지표",
+         "expected": "Real project A to B to A switch fences an old A saved catalog and preserves exact report UUIDs and bodies with scoped grouping.",
+         "observed": "browser: A class/error/score filters were exercised. B and returning A used their own exact reports with ephemeral filters reset; A lot and B product grouping stayed scoped. Controlled reports, images and annotations retained namespace/hash values with no business writes or model inference.",
+         "reviewer": "Root retained exact Source assertions and completed GUI execution; whole feature, human quality, installed target and parent acceptance remain separate.",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved filter project handoff A B A fences an old catalog and preserves exact report UUIDs",
+         "receipt": "2026-10-10-gui349-saved-filters-handoff-browser.json",
+         "receipt_sha256": "0baddade68000bd990e84ac52e8f50b8b8815dac509eee066467cc8020d6ed37",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c3c9ed86cc4cf3f856a3e233b91ea5ae9afd75d1177fdeb97b2cd2abdadfdde8"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e27fdd1402f76197ed7bd128cd7fb43ef26114e4060d8d339627c6f5d816ddef"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
+         "kind": "click",
+         "action": "완료된 평가 결과 다시 불러오기 · 클래스별 지표",
+         "expected": "Real project A to B to A switch fences an old A saved catalog and preserves exact report UUIDs and bodies with scoped grouping.",
+         "observed": "electron: A class/error/score filters were exercised. B and returning A used their own exact reports with ephemeral filters reset; A lot and B product grouping stayed scoped. Controlled reports, images and annotations retained namespace/hash values with no business writes or model inference. Source Electron uses a separately authenticated renderer capture and controlled UI reply; original native HTTP200 provenance is not claimed.",
+         "reviewer": "Root retained exact Source assertions and completed GUI execution; whole feature, human quality, installed target and parent acceptance remain separate.",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved filter project handoff retains original sources filters and reports",
+         "receipt": "2026-10-10-gui349-saved-filters-handoff-electron.json",
+         "receipt_sha256": "8b8f2ea550cbe9e35f559fe2cd8ef42f437df5a57d55ddb0362b6e097dab9d8d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c05beed42d0d8dfea8262e66776894e8e4845cc54ca23d2ea51feb2430010d7f"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "833134ec7228fd84ace30bf92c757d47116e2380eab15733319d7f99379cbc94"
+          }
+         ]
+        }
+       ]
       }
      }
     }
@@ -12568,45 +12705,45 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "클래스별 누락 FN·추가 FP 이미지",
          "expected": "Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Scratch FN exactly case1, FP exactly case2/case5; Crack FN0 is empty.",
          "observed": "browser: Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Scratch FN exactly case1, FP exactly case2/case5; Crack FN0 is empty. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
-         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-browser.json",
+         "receipt_sha256": "2f1072b9956f393dedc31eb35b142df1c614a442c1be65c28532e25ecce6e743",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+           "sha256": "83c32f047ab8011271d92a5089c91a0f5fb30c01086450a9d3fe486f02fb4327"
           },
           {
            "id": "screenshot-1",
-           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+           "sha256": "75bf9bb32af8e5d5105f654585bbb34d5490791020aa2dc26bd3f45bcbfc8945"
           }
          ]
         },
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "클래스별 누락 FN·추가 FP 이미지",
          "expected": "Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Scratch FN exactly case1, FP exactly case2/case5; Crack FN0 is empty.",
          "observed": "electron: Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Scratch FN exactly case1, FP exactly case2/case5; Crack FN0 is empty. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
-         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-electron.json",
+         "receipt_sha256": "3f1b52f125afc71b2af222e7e10b62d313af43e02f9bf609911e64aabac3ebd2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+           "sha256": "b5daacc10fa8c21f1bd05c429945dde3cb611d22c85599a4004163b933c79dbe"
           },
           {
            "id": "screenshot-1",
-           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+           "sha256": "0b6ded10c9af4210edc24589461e29c0e22536c063dfe484506299babf67e5f0"
           }
          ]
         }
@@ -12617,45 +12754,45 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "클래스별 누락 FN·추가 FP 이미지",
          "expected": "The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes.",
          "observed": "browser: The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
-         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-browser.json",
+         "receipt_sha256": "2f1072b9956f393dedc31eb35b142df1c614a442c1be65c28532e25ecce6e743",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+           "sha256": "83c32f047ab8011271d92a5089c91a0f5fb30c01086450a9d3fe486f02fb4327"
           },
           {
            "id": "screenshot-1",
-           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+           "sha256": "75bf9bb32af8e5d5105f654585bbb34d5490791020aa2dc26bd3f45bcbfc8945"
           }
          ]
         },
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "클래스별 누락 FN·추가 FP 이미지",
          "expected": "The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes.",
          "observed": "electron: The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
-         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-electron.json",
+         "receipt_sha256": "3f1b52f125afc71b2af222e7e10b62d313af43e02f9bf609911e64aabac3ebd2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+           "sha256": "b5daacc10fa8c21f1bd05c429945dde3cb611d22c85599a4004163b933c79dbe"
           },
           {
            "id": "screenshot-1",
-           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+           "sha256": "0b6ded10c9af4210edc24589461e29c0e22536c063dfe484506299babf67e5f0"
           }
          ]
         }
@@ -12678,53 +12815,98 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "클래스별 누락 FN·추가 FP 이미지",
          "expected": "Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds.",
          "observed": "browser: Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
-         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-browser.json",
+         "receipt_sha256": "2f1072b9956f393dedc31eb35b142df1c614a442c1be65c28532e25ecce6e743",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+           "sha256": "83c32f047ab8011271d92a5089c91a0f5fb30c01086450a9d3fe486f02fb4327"
           },
           {
            "id": "screenshot-1",
-           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+           "sha256": "75bf9bb32af8e5d5105f654585bbb34d5490791020aa2dc26bd3f45bcbfc8945"
           }
          ]
         },
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "클래스별 누락 FN·추가 FP 이미지",
          "expected": "Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds.",
          "observed": "electron: Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
-         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-electron.json",
+         "receipt_sha256": "3f1b52f125afc71b2af222e7e10b62d313af43e02f9bf609911e64aabac3ebd2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+           "sha256": "b5daacc10fa8c21f1bd05c429945dde3cb611d22c85599a4004163b933c79dbe"
           },
           {
            "id": "screenshot-1",
-           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+           "sha256": "0b6ded10c9af4210edc24589461e29c0e22536c063dfe484506299babf67e5f0"
           }
          ]
         }
        ]
       },
       "handoff": {
-       "state": "pending",
-       "reason": "This dimension has not been exercised by the retained exact GUI case."
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
+         "kind": "click",
+         "action": "클래스별 누락 FN·추가 FP 이미지",
+         "expected": "Real project A to B to A switch fences an old A saved catalog and preserves exact report UUIDs and bodies with scoped grouping.",
+         "observed": "browser: A class/error/score filters were exercised. B and returning A used their own exact reports with ephemeral filters reset; A lot and B product grouping stayed scoped. Controlled reports, images and annotations retained namespace/hash values with no business writes or model inference.",
+         "reviewer": "Root retained exact Source assertions and completed GUI execution; whole feature, human quality, installed target and parent acceptance remain separate.",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved filter project handoff A B A fences an old catalog and preserves exact report UUIDs",
+         "receipt": "2026-10-10-gui349-saved-filters-handoff-browser.json",
+         "receipt_sha256": "0baddade68000bd990e84ac52e8f50b8b8815dac509eee066467cc8020d6ed37",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c3c9ed86cc4cf3f856a3e233b91ea5ae9afd75d1177fdeb97b2cd2abdadfdde8"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e27fdd1402f76197ed7bd128cd7fb43ef26114e4060d8d339627c6f5d816ddef"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
+         "kind": "click",
+         "action": "클래스별 누락 FN·추가 FP 이미지",
+         "expected": "Real project A to B to A switch fences an old A saved catalog and preserves exact report UUIDs and bodies with scoped grouping.",
+         "observed": "electron: A class/error/score filters were exercised. B and returning A used their own exact reports with ephemeral filters reset; A lot and B product grouping stayed scoped. Controlled reports, images and annotations retained namespace/hash values with no business writes or model inference. Source Electron uses a separately authenticated renderer capture and controlled UI reply; original native HTTP200 provenance is not claimed.",
+         "reviewer": "Root retained exact Source assertions and completed GUI execution; whole feature, human quality, installed target and parent acceptance remain separate.",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved filter project handoff retains original sources filters and reports",
+         "receipt": "2026-10-10-gui349-saved-filters-handoff-electron.json",
+         "receipt_sha256": "8b8f2ea550cbe9e35f559fe2cd8ef42f437df5a57d55ddb0362b6e097dab9d8d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c05beed42d0d8dfea8262e66776894e8e4845cc54ca23d2ea51feb2430010d7f"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "833134ec7228fd84ace30bf92c757d47116e2380eab15733319d7f99379cbc94"
+          }
+         ]
+        }
+       ]
       }
      }
     }
@@ -12749,45 +12931,45 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "결과 확률 분포 · 구간 선택",
          "expected": "Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Score bins [0,1,0,1,0,0,1,1,1,1]; half-open upper endpoint and empty0.2–0.3 verified.",
          "observed": "browser: Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Score bins [0,1,0,1,0,0,1,1,1,1]; half-open upper endpoint and empty0.2–0.3 verified. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
-         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-browser.json",
+         "receipt_sha256": "2f1072b9956f393dedc31eb35b142df1c614a442c1be65c28532e25ecce6e743",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+           "sha256": "83c32f047ab8011271d92a5089c91a0f5fb30c01086450a9d3fe486f02fb4327"
           },
           {
            "id": "screenshot-1",
-           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+           "sha256": "75bf9bb32af8e5d5105f654585bbb34d5490791020aa2dc26bd3f45bcbfc8945"
           }
          ]
         },
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "결과 확률 분포 · 구간 선택",
          "expected": "Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Score bins [0,1,0,1,0,0,1,1,1,1]; half-open upper endpoint and empty0.2–0.3 verified.",
          "observed": "electron: Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Score bins [0,1,0,1,0,0,1,1,1,1]; half-open upper endpoint and empty0.2–0.3 verified. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
-         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-electron.json",
+         "receipt_sha256": "3f1b52f125afc71b2af222e7e10b62d313af43e02f9bf609911e64aabac3ebd2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+           "sha256": "b5daacc10fa8c21f1bd05c429945dde3cb611d22c85599a4004163b933c79dbe"
           },
           {
            "id": "screenshot-1",
-           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+           "sha256": "0b6ded10c9af4210edc24589461e29c0e22536c063dfe484506299babf67e5f0"
           }
          ]
         }
@@ -12798,45 +12980,45 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "결과 확률 분포 · 구간 선택",
          "expected": "The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes.",
          "observed": "browser: The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
-         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-browser.json",
+         "receipt_sha256": "2f1072b9956f393dedc31eb35b142df1c614a442c1be65c28532e25ecce6e743",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+           "sha256": "83c32f047ab8011271d92a5089c91a0f5fb30c01086450a9d3fe486f02fb4327"
           },
           {
            "id": "screenshot-1",
-           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+           "sha256": "75bf9bb32af8e5d5105f654585bbb34d5490791020aa2dc26bd3f45bcbfc8945"
           }
          ]
         },
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "결과 확률 분포 · 구간 선택",
          "expected": "The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes.",
          "observed": "electron: The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
-         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-electron.json",
+         "receipt_sha256": "3f1b52f125afc71b2af222e7e10b62d313af43e02f9bf609911e64aabac3ebd2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+           "sha256": "b5daacc10fa8c21f1bd05c429945dde3cb611d22c85599a4004163b933c79dbe"
           },
           {
            "id": "screenshot-1",
-           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+           "sha256": "0b6ded10c9af4210edc24589461e29c0e22536c063dfe484506299babf67e5f0"
           }
          ]
         }
@@ -12859,53 +13041,98 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "결과 확률 분포 · 구간 선택",
          "expected": "Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds.",
          "observed": "browser: Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
-         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-browser.json",
+         "receipt_sha256": "2f1072b9956f393dedc31eb35b142df1c614a442c1be65c28532e25ecce6e743",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+           "sha256": "83c32f047ab8011271d92a5089c91a0f5fb30c01086450a9d3fe486f02fb4327"
           },
           {
            "id": "screenshot-1",
-           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+           "sha256": "75bf9bb32af8e5d5105f654585bbb34d5490791020aa2dc26bd3f45bcbfc8945"
           }
          ]
         },
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "결과 확률 분포 · 구간 선택",
          "expected": "Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds.",
          "observed": "electron: Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
-         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-electron.json",
+         "receipt_sha256": "3f1b52f125afc71b2af222e7e10b62d313af43e02f9bf609911e64aabac3ebd2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+           "sha256": "b5daacc10fa8c21f1bd05c429945dde3cb611d22c85599a4004163b933c79dbe"
           },
           {
            "id": "screenshot-1",
-           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+           "sha256": "0b6ded10c9af4210edc24589461e29c0e22536c063dfe484506299babf67e5f0"
           }
          ]
         }
        ]
       },
       "handoff": {
-       "state": "pending",
-       "reason": "This dimension has not been exercised by the retained exact GUI case."
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S4-13",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
+         "kind": "click",
+         "action": "결과 확률 분포 · 구간 선택",
+         "expected": "Real project A to B to A switch fences an old A saved catalog and preserves exact report UUIDs and bodies with scoped grouping.",
+         "observed": "browser: A class/error/score filters were exercised. B and returning A used their own exact reports with ephemeral filters reset; A lot and B product grouping stayed scoped. Controlled reports, images and annotations retained namespace/hash values with no business writes or model inference.",
+         "reviewer": "Root retained exact Source assertions and completed GUI execution; whole feature, human quality, installed target and parent acceptance remain separate.",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved filter project handoff A B A fences an old catalog and preserves exact report UUIDs",
+         "receipt": "2026-10-10-gui349-saved-filters-handoff-browser.json",
+         "receipt_sha256": "0baddade68000bd990e84ac52e8f50b8b8815dac509eee066467cc8020d6ed37",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c3c9ed86cc4cf3f856a3e233b91ea5ae9afd75d1177fdeb97b2cd2abdadfdde8"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "e27fdd1402f76197ed7bd128cd7fb43ef26114e4060d8d339627c6f5d816ddef"
+          }
+         ]
+        },
+        {
+         "task": "S4-13",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
+         "kind": "click",
+         "action": "결과 확률 분포 · 구간 선택",
+         "expected": "Real project A to B to A switch fences an old A saved catalog and preserves exact report UUIDs and bodies with scoped grouping.",
+         "observed": "electron: A class/error/score filters were exercised. B and returning A used their own exact reports with ephemeral filters reset; A lot and B product grouping stayed scoped. Controlled reports, images and annotations retained namespace/hash values with no business writes or model inference. Source Electron uses a separately authenticated renderer capture and controlled UI reply; original native HTTP200 provenance is not claimed.",
+         "reviewer": "Root retained exact Source assertions and completed GUI execution; whole feature, human quality, installed target and parent acceptance remain separate.",
+         "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved filter project handoff retains original sources filters and reports",
+         "receipt": "2026-10-10-gui349-saved-filters-handoff-electron.json",
+         "receipt_sha256": "8b8f2ea550cbe9e35f559fe2cd8ef42f437df5a57d55ddb0362b6e097dab9d8d",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c05beed42d0d8dfea8262e66776894e8e4845cc54ca23d2ea51feb2430010d7f"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "833134ec7228fd84ace30bf92c757d47116e2380eab15733319d7f99379cbc94"
+          }
+         ]
+        }
+       ]
       }
      }
     }
@@ -12925,45 +13152,45 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "결함 크기 분포 · 구간 선택",
          "expected": "Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Original-pixel predicted areas4/16/36/49 and bins [1,0,0,1,0,0,0,1,0,1] verified.",
          "observed": "browser: Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Original-pixel predicted areas4/16/36/49 and bins [1,0,0,1,0,0,0,1,0,1] verified. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
-         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-browser.json",
+         "receipt_sha256": "2f1072b9956f393dedc31eb35b142df1c614a442c1be65c28532e25ecce6e743",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+           "sha256": "83c32f047ab8011271d92a5089c91a0f5fb30c01086450a9d3fe486f02fb4327"
           },
           {
            "id": "screenshot-1",
-           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+           "sha256": "75bf9bb32af8e5d5105f654585bbb34d5490791020aa2dc26bd3f45bcbfc8945"
           }
          ]
         },
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "결함 크기 분포 · 구간 선택",
          "expected": "Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Original-pixel predicted areas4/16/36/49 and bins [1,0,0,1,0,0,0,1,0,1] verified.",
          "observed": "electron: Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. Original-pixel predicted areas4/16/36/49 and bins [1,0,0,1,0,0,0,1,0,1] verified. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
-         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-electron.json",
+         "receipt_sha256": "3f1b52f125afc71b2af222e7e10b62d313af43e02f9bf609911e64aabac3ebd2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+           "sha256": "b5daacc10fa8c21f1bd05c429945dde3cb611d22c85599a4004163b933c79dbe"
           },
           {
            "id": "screenshot-1",
-           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+           "sha256": "0b6ded10c9af4210edc24589461e29c0e22536c063dfe484506299babf67e5f0"
           }
          ]
         }
@@ -12974,45 +13201,45 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "결함 크기 분포 · 구간 선택",
          "expected": "The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes.",
          "observed": "browser: The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
-         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-browser.json",
+         "receipt_sha256": "2f1072b9956f393dedc31eb35b142df1c614a442c1be65c28532e25ecce6e743",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+           "sha256": "83c32f047ab8011271d92a5089c91a0f5fb30c01086450a9d3fe486f02fb4327"
           },
           {
            "id": "screenshot-1",
-           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+           "sha256": "75bf9bb32af8e5d5105f654585bbb34d5490791020aa2dc26bd3f45bcbfc8945"
           }
          ]
         },
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "결함 크기 분포 · 구간 선택",
          "expected": "The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes.",
          "observed": "electron: The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
-         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-electron.json",
+         "receipt_sha256": "3f1b52f125afc71b2af222e7e10b62d313af43e02f9bf609911e64aabac3ebd2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+           "sha256": "b5daacc10fa8c21f1bd05c429945dde3cb611d22c85599a4004163b933c79dbe"
           },
           {
            "id": "screenshot-1",
-           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+           "sha256": "0b6ded10c9af4210edc24589461e29c0e22536c063dfe484506299babf67e5f0"
           }
          ]
         }
@@ -13035,45 +13262,45 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "결함 크기 분포 · 구간 선택",
          "expected": "Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds.",
          "observed": "browser: Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
-         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-browser.json",
+         "receipt_sha256": "2f1072b9956f393dedc31eb35b142df1c614a442c1be65c28532e25ecce6e743",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+           "sha256": "83c32f047ab8011271d92a5089c91a0f5fb30c01086450a9d3fe486f02fb4327"
           },
           {
            "id": "screenshot-1",
-           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+           "sha256": "75bf9bb32af8e5d5105f654585bbb34d5490791020aa2dc26bd3f45bcbfc8945"
           }
          ]
         },
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "결함 크기 분포 · 구간 선택",
          "expected": "Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds.",
          "observed": "electron: Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
-         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-electron.json",
+         "receipt_sha256": "3f1b52f125afc71b2af222e7e10b62d313af43e02f9bf609911e64aabac3ebd2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+           "sha256": "b5daacc10fa8c21f1bd05c429945dde3cb611d22c85599a4004163b933c79dbe"
           },
           {
            "id": "screenshot-1",
-           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+           "sha256": "0b6ded10c9af4210edc24589461e29c0e22536c063dfe484506299babf67e5f0"
           }
          ]
         }
@@ -13101,45 +13328,45 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "ROC 검토 임계값",
          "expected": "Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. AUC5/6; at0.75 TP2/FN1/FP0/TN2, at0 TP3/FN0/FP2/TN0, at1 TP0/FN3/FP0/TN2; unknown truth is excluded and unavailable binary truth has no slider.",
          "observed": "browser: Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. AUC5/6; at0.75 TP2/FN1/FP0/TN2, at0 TP3/FN0/FP2/TN0, at1 TP0/FN3/FP0/TN2; unknown truth is excluded and unavailable binary truth has no slider. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
-         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-browser.json",
+         "receipt_sha256": "2f1072b9956f393dedc31eb35b142df1c614a442c1be65c28532e25ecce6e743",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+           "sha256": "83c32f047ab8011271d92a5089c91a0f5fb30c01086450a9d3fe486f02fb4327"
           },
           {
            "id": "screenshot-1",
-           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+           "sha256": "75bf9bb32af8e5d5105f654585bbb34d5490791020aa2dc26bd3f45bcbfc8945"
           }
          ]
         },
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "ROC 검토 임계값",
          "expected": "Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. AUC5/6; at0.75 TP2/FN1/FP0/TN2, at0 TP3/FN0/FP2/TN0, at1 TP0/FN3/FP0/TN2; unknown truth is excluded and unavailable binary truth has no slider.",
          "observed": "electron: Loading the controlled saved report through real history controls displays exact independently computed arithmetic and clicking the applicable filters returns exact filenames. AUC5/6; at0.75 TP2/FN1/FP0/TN2, at0 TP3/FN0/FP2/TN0, at1 TP0/FN3/FP0/TN2; unknown truth is excluded and unavailable binary truth has no slider. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
-         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-electron.json",
+         "receipt_sha256": "3f1b52f125afc71b2af222e7e10b62d313af43e02f9bf609911e64aabac3ebd2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+           "sha256": "b5daacc10fa8c21f1bd05c429945dde3cb611d22c85599a4004163b933c79dbe"
           },
           {
            "id": "screenshot-1",
-           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+           "sha256": "0b6ded10c9af4210edc24589461e29c0e22536c063dfe484506299babf67e5f0"
           }
          ]
         }
@@ -13150,45 +13377,45 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "ROC 검토 임계값",
          "expected": "The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes.",
          "observed": "browser: The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
-         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-browser.json",
+         "receipt_sha256": "2f1072b9956f393dedc31eb35b142df1c614a442c1be65c28532e25ecce6e743",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+           "sha256": "83c32f047ab8011271d92a5089c91a0f5fb30c01086450a9d3fe486f02fb4327"
           },
           {
            "id": "screenshot-1",
-           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+           "sha256": "75bf9bb32af8e5d5105f654585bbb34d5490791020aa2dc26bd3f45bcbfc8945"
           }
          ]
         },
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "ROC 검토 임계값",
          "expected": "The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes.",
          "observed": "electron: The actual saved empty report and applicable zero-result filter show explicit empty state without training/evaluation writes. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
-         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-electron.json",
+         "receipt_sha256": "3f1b52f125afc71b2af222e7e10b62d313af43e02f9bf609911e64aabac3ebd2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+           "sha256": "b5daacc10fa8c21f1bd05c429945dde3cb611d22c85599a4004163b933c79dbe"
           },
           {
            "id": "screenshot-1",
-           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+           "sha256": "0b6ded10c9af4210edc24589461e29c0e22536c063dfe484506299babf67e5f0"
           }
          ]
         }
@@ -13211,45 +13438,45 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "ROC 검토 임계값",
          "expected": "Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds.",
          "observed": "browser: Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-browser.json",
-         "receipt_sha256": "1676c7a0925d092a1690a03339bbc6e5737913ec4162bd186f1941214c91401d",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-browser.json",
+         "receipt_sha256": "2f1072b9956f393dedc31eb35b142df1c614a442c1be65c28532e25ecce6e743",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "f2ad475fbb9c7a028d87281bedd5c2130ff433909a26f820b2792ac4cd510913"
+           "sha256": "83c32f047ab8011271d92a5089c91a0f5fb30c01086450a9d3fe486f02fb4327"
           },
           {
            "id": "screenshot-1",
-           "sha256": "46c692da47608627255dc5d6daecc5f94ae243fd893332e880231691388b28b2"
+           "sha256": "75bf9bb32af8e5d5105f654585bbb34d5490791020aa2dc26bd3f45bcbfc8945"
           }
          ]
         },
         {
          "task": "S4-13",
-         "source_sha": "369b8e13c2bac085d5f12c3e228a92cafa7c37d3",
+         "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
          "kind": "click",
          "action": "ROC 검토 임계값",
          "expected": "Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds.",
          "observed": "electron: Reopening the same saved record preserves original result JSON and source bytes; transient filters reset without changing model or flow thresholds. Executed actual GUI against owned backend; controlled saved display reports or metadata-only library. No model inference, quality, physical device or release acceptance inferred.",
          "reviewer": "Root exact source, arithmetic, screenshot and owned teardown review; independent full acceptance pending",
          "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
-         "receipt": "2026-10-08-evaluation-filter-369b8e1-electron.json",
-         "receipt_sha256": "8ed3b41994ad013473329dedebfaf452b311c0a0d22dee99d23f388388516c22",
+         "receipt": "2026-10-10-gui349-saved-filters-existing-electron.json",
+         "receipt_sha256": "3f1b52f125afc71b2af222e7e10b62d313af43e02f9bf609911e64aabac3ebd2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "478a0d133590b84e68dd6265d0c0697e773f64a314fc33f61f1e1884530401ed"
+           "sha256": "b5daacc10fa8c21f1bd05c429945dde3cb611d22c85599a4004163b933c79dbe"
           },
           {
            "id": "screenshot-1",
-           "sha256": "bdffbe08642d7f5e620dd75fb7d2f874599696d23378af0542bd32eaaf44a6f3"
+           "sha256": "0b6ded10c9af4210edc24589461e29c0e22536c063dfe484506299babf67e5f0"
           }
          ]
         }

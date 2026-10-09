@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "18c5278861e8fe4e454fca4f8a09ce648962fad7",
+  "source_dirty": false,
+  "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::native draft comparison project handoff retains original UUID raw draft and labels",
+  "test_source_sha256": "eadcc691ced1568e3d7e97d480be0505efa85458f8441a72721518aad8165c01",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "cac04d34891edab312867c442a16627c43d34cd4a1dc32a7fb7735ca1fc166de",
+  "harness_sha256": "00a28baed1e4a1fd869989d5696178d5e7cce1475ee4b07bc1bcae9046af5d17",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "1b3901f3f69f8cfccb8b205b53ebea30d6dcd2e56121f2dc027f33105c61daf2"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "135ce699d79ef205a684c799a146b135baa4185dcbce54cbeaee9fb7b377c8bb"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}
