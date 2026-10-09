@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "7290e4e431736cf4f95bc2fe01881961a7b83c9b",
+  "source_dirty": false,
+  "test": "scripts/e2e/direction-field-input-boundaries.spec.ts::native independent direction rejects invalid values and persists an intentional empty label",
+  "test_source_sha256": "7b454396e3fc3ea0a1e2ba2bffb551fff255d1557e38196de8e1aae4e555b699",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "a7912f674d4fea576772701a81b884ce7e4029c88f3f8cf669bda6eb3e07c788",
+  "harness_sha256": "70bb8f870f00cfee94bd46248c85db6a5af01d5090949f07c1974cda8ac4c51b",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "c96ef2c0a05cb313dfcd01160761315e7f20f9213ec702de76e8a4888d5ce5f3"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "c24137d0302072b2bd75eb63938df4d7882b0c4647b0acf82d53205dbc4a72dd"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

@@ -55,7 +55,7 @@ def _unique_object(rows):
         need(key not in result,'duplicate JSON object key');result[key]=value
     return result
 
-def _read_pin(root,path,pin,parse=False):
+def _read_pin(root,path,pin,parse=False,*,raw=False):
     """Fresh full raw hash through retained no-follow directory descriptors."""
     parts=relative(path);shape(pin,('sha256','size'))
     need(type(pin['size']) is int and 0<=pin['size']<=MAX_FILE_BYTES,'artifact size pin is invalid')
@@ -79,18 +79,19 @@ def _read_pin(root,path,pin,parse=False):
         fd=os.open(parts[-1],os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=directory);descriptors.append(fd)
         initial=os.fstat(fd);need(stat.S_ISREG(initial.st_mode),'artifact is not an original regular file')
         need(initial.st_size==pin['size'],'artifact size changed')
-        if parse:need(initial.st_size<=MAX_JSON_BYTES,'JSON artifact exceeds bound')
+        if parse or raw:need(initial.st_size<=MAX_JSON_BYTES,'JSON artifact exceeds bound')
         digest=hashlib.sha256();chunks=[];total=0
         while True:
             block=os.read(fd,1024*1024)
             if not block:break
             total+=len(block);need(total<=pin['size'],'artifact grew during read');digest.update(block)
-            if parse:chunks.append(block)
+            if parse or raw:chunks.append(block)
         need(total==pin['size'] and digest.hexdigest()==pin['sha256'],'artifact raw bytes changed')
         need(_identity(initial)==_identity(os.fstat(fd))==_identity(os.stat(parts[-1],dir_fd=directory,follow_symlinks=False)),'artifact identity changed during read')
         for parent,name,child in entries:
             need(_identity(os.fstat(child))==_identity(os.stat(name,dir_fd=parent,follow_symlinks=False)),'artifact parent was replaced')
         for ancestor,identity in ancestor_states:need(_identity(ancestor.lstat())==identity,'artifact root namespace changed')
+        if raw:return b''.join(chunks)
         if not parse:return None
         def nonfinite(value):raise Gap('nonfinite JSON number')
         try:
@@ -156,6 +157,145 @@ def _same_summary(left,right):
     if type(left) is list:return len(left)==len(right) and all(_same_summary(a,b) for a,b in zip(left,right))
     return left==right
 
+def _absolute_record_path(value):
+    """A producer identity, never an instruction to read outside copied pins."""
+    need(type(value) is str and value.startswith('/') and '\\' not in value and '\x00' not in value,
+         'family producer path is not a canonical absolute identity')
+    relative(value[1:])
+    return value
+
+def _prepared_family_inputs(binding,family,manifest,images,copies,file,pins):
+    """Join original OCR/Patch records to full raw-pinned copies only.
+
+    This is not a training loader, image decoder or live storage authorization.
+    Original producer paths are retained as identities and are never reopened.
+    """
+    if family not in ('ocr','patch_classification'):
+        raise Gap('prepared family format is not supported by this adapter','pending')
+    rows=binding.get('family_inputs')
+    need(type(rows) is list and 0<len(rows)<=MAX_FILES,'family input inventory is empty or malformed')
+    if any(type(row) is dict and 'restored_source_sha256' in row for row in rows):
+        raise Gap('relocated family input aliases require a separate adapter','pending')
+    if copies is None:raise Gap('prepared family input copies are unavailable','pending')
+    need(type(copies) is dict and copies,'family file mapping is empty or malformed')
+    need(binding.get('family_task')==family,'prepared family purpose differs from the completed task')
+    dataset=_absolute_record_path(binding['family_dataset_path'])
+    source=_absolute_record_path(manifest['source_dataset_dir'])
+    original_images={}
+    for row in manifest['files']:
+        if row.get('kind')!='image':continue
+        relative(row['relative_path']);original=_absolute_record_path(row['source_path'])
+        need(original==source+'/'+row['relative_path'] and original not in original_images,
+             'original dataset image identity is foreign or duplicated')
+        original_images[original]=row['sha256']
+    need(original_images==images,'family original source inventory differs from the immutable dataset')
+    version=_absolute_record_path(binding['version_dir'])
+    need(version.rsplit('/',1)[-1]==manifest['id'] and version.rsplit('/',2)[-2]=='versions',
+         'family snapshot version identity differs')
+    name='ocr.json' if family=='ocr' else 'patches.json'
+    manifest_path=dataset+'/'+name;snapshot=version+'/labels/family/'+family+'/'+name
+    by_relative={};identities=set();source_order=[]
+    for row in rows:
+        shape(row,('relative_path','source_path','sha256','snapshot_path'))
+        relative(row['relative_path']);original=_absolute_record_path(row['source_path'])
+        need(original==dataset+'/'+row['relative_path'],'family member path differs from its dataset identity')
+        need(row['relative_path'] not in by_relative and original not in identities,'duplicate family input member')
+        need(type(row['sha256']) is str and HEX.fullmatch(row['sha256']) is not None,'family member digest is invalid')
+        need(row['snapshot_path']==(snapshot if original==manifest_path else None),'family frozen snapshot identity differs')
+        identities.add(original);source_order.append(original);by_relative[row['relative_path']]=row
+        if row['snapshot_path'] is not None:identities.add(_absolute_record_path(row['snapshot_path']))
+    need(source_order==sorted(source_order),'family input order differs from the original producer')
+    need(name in by_relative,'family inventory has no original manifest member')
+    need(set(copies)==identities,'family copied inventory is incomplete or extra')
+    need(all(type(path) is str for path in copies.values()) and len(set(copies.values()))==len(copies),
+         'family copied inventory repeats an artifact identity')
+    for original,path in copies.items():
+        _absolute_record_path(original);relative(path);file(path,False)
+        expected=by_relative[name]['sha256'] if original==snapshot else by_relative[original[len(dataset)+1:]]['sha256']
+        need(pins[path]['sha256']==expected,'family copied bytes differ from the original inventory')
+    digest=hashlib.sha256(json.dumps(rows,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+    need(binding.get('family_inputs_sha256')==digest,'family input inventory digest differs from the original producer')
+    body=file(copies[manifest_path]);raw=file(copies[manifest_path],False,raw=True)
+    need(type(body) is dict and type(body.get('version')) is int and body['version']==1,'family manifest version differs')
+    need(file(copies[snapshot])==body,'frozen family manifest body differs')
+    entries=body.get('samples' if family=='ocr' else 'patches')
+    need(type(entries) is list and entries,'family manifest has no explicit labeled members')
+    hashes={};splits={};hash_splits={};counts={'train':0,'val':0,'test':0};characters=set()
+    if family=='patch_classification':
+        classes=body.get('classes')
+        need(type(classes) is list and len(classes)>=2 and all(type(label) is str and label and label==label.strip() for label in classes)
+             and len(set(classes))==len(classes) and body.get('normal_class') in classes,'Patch manifest class identity differs')
+        need(type(body.get('patch_size')) is int and body['patch_size']>0 and type(body.get('stride')) is int
+             and 1<=body['stride']<=body['patch_size'],'Patch manifest grid is invalid')
+    for entry in entries:
+        need(type(entry) is dict,'family manifest member is not an object')
+        image=entry.get('image');relative(image)
+        need(image!=name and image in by_relative,'family manifest references a missing input member')
+        digest=by_relative[image]['sha256'];split=entry.get('split')
+        need(type(split) is str and split in counts,'family manifest split is invalid')
+        need(image not in splits or family=='patch_classification' and splits[image]==split,'family image repeats or crosses partitions')
+        need(digest not in hash_splits or hash_splits[digest]==split,'identical family bytes cross partitions')
+        splits[image]=split;hash_splits[digest]=split;hashes[image]=digest;counts[split]+=1
+        if family=='ocr':
+            need(entry.get('source_sha256')==digest,'OCR manifest source digest differs')
+            label=entry.get('text')
+            need(type(label) is str and label.strip() and all(ord(char)>=32 for char in label),'OCR text identity is invalid')
+            if split=='train':characters.update(label)
+        else:
+            need((entry.get('source_sha256') is None or entry['source_sha256']==digest)
+                 and entry.get('label') in classes,'Patch label/source identity differs')
+            box=entry.get('box')
+            need(type(box) is list and len(box)==4 and all(type(value) is int for value in box)
+                 and 0<=box[0]<box[2] and 0<=box[1]<box[3],'Patch box identity is invalid')
+    need(counts['train']>0 and counts['val']>0,'family training partitions are incomplete')
+    if family=='ocr':
+        need(all(set(entry['text'])<=characters for entry in entries if entry['split']!='train'),
+             'OCR held-out text differs from the recorded training alphabet')
+    need(set(by_relative)=={name,*hashes},'family manifest and input inventory differ')
+    manifest_sha=pins[copies[manifest_path]]['sha256']
+    domain=b'ocr-dataset-v1\0'+raw if family=='ocr' else b'patch-classification-dataset-v1\0'+manifest_sha.encode('ascii')
+    digest=hashlib.sha256(domain)
+    for image,value in sorted(hashes.items()):digest.update(b'\0'+image.encode('utf-8')+b'\0'+value.encode('ascii'))
+    expected={'dataset_sha256':'sha256:'+digest.hexdigest(),'manifest_sha256':manifest_sha,
+              'source_sha256':dict(sorted(hashes.items())),'split_counts':counts,'source_image_count':len(hashes)}
+    if family=='patch_classification':expected['patch_count']=len(entries)
+    mapping=body.get('source_map')
+    if 'source_dataset_path' in body:
+        need(body['source_dataset_path']==source and type(mapping) is dict and set(mapping)==set(hashes),
+             'prepared family original source mapping differs')
+        originals=[]
+        for image,value in hashes.items():
+            row=shape(mapping[image],('source_relative_path','source_sha256'));relative(row['source_relative_path'])
+            original=source+'/'+row['source_relative_path']
+            need(row['source_sha256']==value==images.get(original),'prepared member belongs to another original source')
+            originals.append(row['source_relative_path'])
+        expected.update(source_dataset_path=source,source_map=mapping)
+    else:
+        if family=='patch_classification':
+            raise Gap('legacy Patch record has no producer original source mapping','pending')
+        need(dataset==source and mapping is None,'prepared family original source mapping is unavailable')
+        need(all(images.get(source+'/'+image)==value for image,value in hashes.items()),'family member belongs to another source')
+        originals=list(hashes)
+    need(type(binding.get('family_provenance')) is dict and canonical(binding['family_provenance'])==canonical(expected),
+         'family provenance differs from original manifest and member bytes')
+    if family=='ocr':
+        if 'family_dataset_sha256' not in binding:raise Gap('legacy OCR record has no family dataset digest','pending')
+        need(binding['family_dataset_sha256']==expected['dataset_sha256'],'OCR training family dataset digest differs')
+    if 'family_source_image_uuids' not in binding:raise Gap('legacy family record has no source UUID inventory','pending')
+    eligibility=binding['team_data']['eligibility']
+    need(type(eligibility) is list and all(type(row) is dict and type(row.get('relative_path')) is str
+         and type(row.get('image_uuid')) is str for row in eligibility),'family eligibility UUID inventory is malformed')
+    inventory={row['relative_path']:row['image_uuid'] for row in eligibility}
+    need(len(inventory)==len(eligibility),'family eligibility repeats an original path')
+    settings=binding['team_data'].get('settings')
+    if type(settings) is not dict or 'approved_only_training' not in settings:
+        raise Gap('legacy family record has no approved-only training setting','pending')
+    need(type(settings['approved_only_training']) is bool,'family approved-only training setting is malformed')
+    if settings['approved_only_training']:
+        need(all(path in inventory for path in originals),'family input is missing from the approved training inventory')
+    need(binding['family_source_image_uuids']==sorted({inventory[path] for path in originals if path in inventory}),
+         'family source UUID inventory differs')
+
 def verify_lifecycle(receipt,root):
     """Return integrity states only; no output writes, model loads or jobs."""
     report={'contract':'model_lifecycle_evidence_v1','state':'pending','record_chain_verified':False,
@@ -177,7 +317,7 @@ def verify_lifecycle(receipt,root):
     report['family']=family
     report['prerequisites'].append('human-reviewed representative '+TRUTH[FAMILIES.index(family)])
     report['prerequisites'].extend(('independent model-quality decision','target-specific runtime qualification'))
-    def file(path,parse=True):
+    def file(path,parse=True,*,raw=False):
         if path is None:raise Gap('missing artifact reference','pending')
         relative(path);used.add(path)
         if path not in pins:raise Gap('referenced artifact is not pinned')
@@ -185,7 +325,7 @@ def verify_lifecycle(receipt,root):
             error=failures[path]
             if isinstance(error,Gap):raise error
             raise Gap('artifact bytes or JSON are invalid') from error
-        return _read_pin(root,path,pins[path],parse)
+        return _read_pin(root,path,pins[path],parse,raw=True) if raw else _read_pin(root,path,pins[path],parse)
     def require(*stages):
         if any(report['stages'].get(stage,{}).get('state')!='verified' for stage in stages):raise Gap('required earlier record is unverified','pending')
     def stage(name,work):
@@ -219,7 +359,8 @@ def verify_lifecycle(receipt,root):
         need(body['scope']=={'project_id':manifest['project_id'],'source':manifest['source_dataset_dir'],'labelset_id':manifest['labelset_id']},'truth project/source/labelset differs')
         context['labels']=body;report['truth_kind']=refs['kind']
     def train():
-        require('dataset','labels');refs=shape(receipt['train'],('receipt','metadata','checkpoint'))
+        require('dataset','labels');refs=shape(receipt['train'],('receipt','metadata','checkpoint','family_files')
+            if type(receipt['train']) is dict and 'family_files' in receipt['train'] else ('receipt','metadata','checkpoint'))
         job=file(refs['receipt']);meta=file(refs['metadata']);file(refs['checkpoint'],False);manifest=context['dataset']
         required=('job_id','task','status','source_dataset_path','dataset_fingerprint','training_provenance','checkpoint_sha256')
         need(type(job) is dict and type(meta) is dict,'training receipt or metadata is not an object')
@@ -227,7 +368,6 @@ def verify_lifecycle(receipt,root):
         need(job['status']=='completed' and job['task']==family,'training is incomplete or family differs')
         cp=pins[refs['checkpoint']]['sha256'];binding=job['training_provenance']
         need(type(binding) is dict,'training provenance is not an object')
-        if binding.get('family_inputs'):raise Gap('prepared family input inventory format not yet supported','pending')
         need(job['checkpoint_sha256']==cp==meta['checkpoint_sha256'] and meta['task']==family,'checkpoint or metadata family differs')
         need(meta['training_provenance']==binding,'checkpoint metadata provenance differs')
         need(job['source_dataset_path']==manifest['source_dataset_dir'] and job['dataset_fingerprint']==manifest['dataset_fingerprint'],'training source differs')
@@ -243,6 +383,21 @@ def verify_lifecycle(receipt,root):
              binding['split_binding']==('saved_manifest' if split_rows else 'versioned_dataset_layout'),
              'training split differs from the original immutable manifest')
         need(binding['team_data']==context['labels'] and binding['team_data_sha256']==hashlib.sha256(canonical(context['labels'])).hexdigest(),'training truth receipt differs')
+        if 'family_inputs' in binding:need(type(binding['family_inputs']) is list,'family input inventory is not a list')
+        if binding.get('family_inputs') or any(key in binding for key in ('family_task','family_dataset_path','family_provenance')):
+            if family in ('ocr','patch_classification'):
+                if 'dataset_path' not in job or family=='ocr' and 'dataset_path' not in meta:
+                    raise Gap('legacy prepared training record has no dataset identity','pending')
+                need(type(job['dataset_path']) is str and job['dataset_path']==binding.get('family_dataset_path'),
+                     'prepared training dataset identities differ')
+                # Generic Patch metadata persists the entire original binding,
+                # already compared above, but does not add dataset_path itself.
+                if 'dataset_path' in meta:
+                    need(type(meta['dataset_path']) is str and meta['dataset_path']==job['dataset_path'],
+                         'prepared checkpoint metadata dataset identity differs')
+            _prepared_family_inputs(binding,family,manifest,context['images'],refs.get('family_files'),file,pins)
+        else:
+            need('family_files' not in refs,'family copies are declared without prepared input records')
         context.update(job=job,checkpoint=cp,binding=binding)
     def evaluation():
         require('train');body=file(receipt['eval']);binding=body['binding'];manifest=context['dataset'];job=context['job']

@@ -429,17 +429,34 @@ def request(owner, capability, epoch):
         'plan_sha256':capability['plan_sha256']}
 
 
-def validate_request(frame, proof, root):
-    if (not isinstance(frame,dict) or set(frame)!=REQUEST_FIELDS or type(frame['schema_version']) is not int
-            or frame['schema_version']!=1 or frame['kind']!='cpu_execution_request'
-            or any(not update._hex(frame[name],32) for name in ('request_id','nonce','epoch','workspace_id','project_id'))
-            or any(not update._hex(frame[name]) for name in ('challenge','binding_sha256','backend_claim_sha256','plan_sha256'))
-            or frame['nonce']!=proof['nonce'] or frame['epoch']!=proof['epoch'] or frame['binding_sha256']!=proof['binding_sha256']):
-        raise ExecutionError('Foreign or stale CPU execution request')
-    if frame['backend_claim_sha256']!=update._sha(update._canonical(proof)):
-        raise ExecutionError('CPU execution request has a different original backend claim')
+def validate_request(frame, proof, root, *, absolute_deadline=None):
+    # Only an explicit original action bound opts into typed mutex-entry retry.
+    # Generic callers keep the original nonblocking transition admission.
+    def current_request():
+        if (not isinstance(frame,dict) or set(frame)!=REQUEST_FIELDS or type(frame['schema_version']) is not int
+                or frame['schema_version']!=1 or frame['kind']!='cpu_execution_request'
+                or any(not update._hex(frame[name],32) for name in ('request_id','nonce','epoch','workspace_id','project_id'))
+                or any(not update._hex(frame[name]) for name in ('challenge','binding_sha256','backend_claim_sha256','plan_sha256'))
+                or frame['nonce']!=proof['nonce'] or frame['epoch']!=proof['epoch'] or frame['binding_sha256']!=proof['binding_sha256']):
+            raise ExecutionError('Foreign or stale CPU execution request')
+        if frame['backend_claim_sha256']!=update._sha(update._canonical(proof)):
+            raise ExecutionError('CPU execution request has a different original backend claim')
+    current_request()
     from backend.engine import application_launch_lease as lease
-    with lease._transition_admission(root, frame['nonce']):
+    if absolute_deadline is None:
+        admission = lease._transition_admission(root, frame['nonce'])
+    else:
+        from backend.engine.application_launch_handshake import _transition_admission_before_deadline
+        original_frame = update._canonical(frame)
+        original_proof = update._canonical(proof)
+        def before_attempt():
+            current_request()
+            if update._canonical(frame) != original_frame or update._canonical(proof) != original_proof:
+                raise ExecutionError('CPU request or backend claim changed during original transition entry')
+        admission = _transition_admission_before_deadline(root, frame['nonce'], absolute_deadline,
+            before_attempt=before_attempt)
+    with admission:
+        if absolute_deadline is not None: before_attempt()
         row = lease._load(root)
         path=root/lease.LEASES/frame['nonce']/'cpu-execution-intent.json'
         intent=_json(_read(path))

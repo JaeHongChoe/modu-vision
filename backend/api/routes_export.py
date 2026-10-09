@@ -515,6 +515,10 @@ def export_saved_flow(req: ExportFlowRequest, request: Request):
             )
     except (ValueError, OSError, RuntimeError, subprocess.TimeoutExpired) as exc:
         report = {**_failed_parity(exc, scope=scope, device=device, package=package), **target_identity}
+    # The route owns the selected target; the local parity engine reports
+    # runtime results without a target label. Retain that identity on every
+    # outcome before writing the package, library and response records.
+    report = {**report, **target_identity}
     # Every executed check leaves its receipt in the package and the library, including failures.
     flow_package_engine.write_parity_receipt(package, report)
     try:

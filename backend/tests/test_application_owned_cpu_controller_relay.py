@@ -68,8 +68,9 @@ def original_cpu(epoch,tmp_path,monkeypatch):
         'runtime_source_sha256':'2'*64}
     capability={'plan':plan,'plan_sha256':request['plan_sha256'],'project_path':str(project),'scope_key':'3'*32}
     intent={'request':request,'capability':capability}
-    def validate(frame,claim,actualroot):
+    def validate(frame,claim,actualroot,*,absolute_deadline):
         assert frame==request and claim==proof and actualroot==root
+        assert type(absolute_deadline) in (int,float) and absolute_deadline==fixed()['deadline_monotonic']
         return copy.deepcopy(intent)
     def admit(actualroot,workspace,projectid,digest):
         assert (actualroot,workspace,projectid,digest)==(root,request['workspace_id'],request['project_id'],request['plan_sha256'])

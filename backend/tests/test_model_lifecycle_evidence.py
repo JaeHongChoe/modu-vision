@@ -20,6 +20,46 @@ if MODULE.is_file():
 def canonical(value):return json.dumps(value,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()
 def sha(raw):return hashlib.sha256(raw).hexdigest()
 
+def family_record_model(family,labels,*,prepared=True):
+    """Pure records with original producer formulas; no image/model execution."""
+    source='/original/source';dataset='/original/project/dataset/'+family if prepared else source
+    version='/original/project/versions/version_1';name='ocr.json' if family=='ocr' else 'patches.json'
+    pixels={'train/검사.bin':b'synthetic original pixels; not an actual image/model run',
+            'val/b.bin':b'synthetic distinct held-out pixels; no image decoder used'}
+    originals={'train/검사.bin':'a.bin','val/b.bin':'b.bin'}
+    hashes={image:sha(raw) for image,raw in pixels.items()}
+    if not prepared:
+        pixels={originals[image]:raw for image,raw in pixels.items()};hashes={image:sha(raw) for image,raw in pixels.items()}
+        originals={image:image for image in pixels}
+    mapping={image:{'source_relative_path':originals[image],'source_sha256':hashes[image]} for image in pixels}
+    entries=[{'image':image,'split':'train' if index==0 else 'val','source_sha256':hashes[image],
+              **({'text':'가나' if index==0 else '가'} if family=='ocr' else {'label':'OK' if index==0 else 'NG','box':[0,0,2,2]})}
+             for index,image in enumerate(pixels)]
+    body={'version':1,('samples' if family=='ocr' else 'patches'):entries}
+    if family=='patch_classification':body.update(classes=['OK','NG'],normal_class='OK',patch_size=2,stride=2)
+    if prepared:body.update(source_dataset_path=source,source_map=mapping)
+    raw=(json.dumps(body,ensure_ascii=False,indent=2)+'\n').encode();manifest_sha=sha(raw)
+    digest=hashlib.sha256(b'ocr-dataset-v1\0'+raw if family=='ocr' else b'patch-classification-dataset-v1\0'+manifest_sha.encode('ascii'))
+    for image,value in sorted(hashes.items()):digest.update(b'\0'+image.encode()+b'\0'+value.encode())
+    provenance={'dataset_sha256':'sha256:'+digest.hexdigest(),'manifest_sha256':manifest_sha,
+                'source_sha256':dict(sorted(hashes.items())),'split_counts':{'train':1,'val':1,'test':0},'source_image_count':2}
+    if family=='patch_classification':provenance['patch_count']=2
+    if prepared:provenance.update(source_dataset_path=source,source_map=mapping)
+    snapshot=version+'/labels/family/'+family+'/'+name
+    rows=sorted([{'relative_path':name,'source_path':dataset+'/'+name,'sha256':manifest_sha,'snapshot_path':snapshot},
+                 *({'relative_path':image,'source_path':dataset+'/'+image,'sha256':value,'snapshot_path':None} for image,value in hashes.items())],
+                key=lambda row:row['source_path'])
+    copies={row['source_path']:'family/current/'+row['relative_path'] for row in rows}
+    copies[snapshot]='family/frozen/'+name
+    files={copies[dataset+'/'+name]:raw,copies[snapshot]:raw,
+           **{copies[dataset+'/'+image]:value for image,value in pixels.items()}}
+    inventory={row['relative_path']:row['image_uuid'] for row in labels['eligibility']}
+    binding={'family_task':family,'family_dataset_path':dataset,'version_dir':version,'family_provenance':provenance,
+             'family_inputs':rows,'family_inputs_sha256':sha(json.dumps(rows,sort_keys=True,separators=(',',':')).encode()),
+             'family_source_image_uuids':sorted({inventory[image] for image in originals.values() if image in inventory})}
+    if family=='ocr':binding['family_dataset_sha256']=provenance['dataset_sha256']
+    return {'binding':binding,'copies':copies,'files':files,'images':{source+'/'+originals[image]:hashes[image] for image in hashes}}
+
 class LifecycleEvidenceTests(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
@@ -269,5 +309,230 @@ class LifecycleEvidenceTests(unittest.TestCase):
             value={'b':'한글','a':1};expected=namespace[name](value)
             actual=sha(canonical(value)) if name=='_manifest_digest' else verifier.canonical(value)
             self.assertEqual(actual,expected)
+
+    def _prepare_family(self,family='ocr',*,prepared=True):
+        self.files={};self.receipt=self.fixture()
+        labels=json.loads((self.root/'version/team-data.json').read_bytes())
+        labels['settings']={'approved_only_training':True}
+        labels['eligibility']=[{'relative_path':'a.bin','image_uuid':'a'*64},{'relative_path':'b.bin','image_uuid':'b'*64}]
+        model=family_record_model(family,labels,prepared=prepared)
+        for path,raw in model['files'].items():self.put(path,raw)
+        heldout=b'synthetic distinct held-out pixels; no image decoder used';self.put('source/b.bin',heldout)
+        manifest=json.loads((self.root/'version/manifest.json').read_bytes())
+        manifest['files'].append({'origin':'source','kind':'image','relative_path':'b.bin','source_path':'/original/source/b.bin',
+                                 'sha256':sha(heldout),'size_bytes':len(heldout),'snapshot_path':None})
+        manifest['content_digest']=sha(canonical({key:value for key,value in manifest.items() if key!='content_digest'}))
+        self.put('version/manifest.json',manifest);self.put('version/team-data.json',labels)
+        self.receipt['dataset']['files']['source:b.bin']='source/b.bin'
+        self.receipt['family']=family;self.receipt['train']['family_files']=model['copies']
+        binding=json.loads((self.root/'model/job_receipt.json').read_bytes())['training_provenance']
+        binding.update(model['binding'],team_data=labels,team_data_sha256=sha(canonical(labels)),manifest_sha256=manifest['content_digest'],
+                       split_sha256=sha(json.dumps([{key:row[key] for key in ('origin','relative_path','sha256')} for row in manifest['files']],sort_keys=True,separators=(',',':')).encode()))
+        self._replace_family_binding(binding,family)
+        graph=json.loads((self.root/'saved/pipeline.json').read_bytes());graph['nodes'][0]['data']['task']=family
+        self.put('saved/pipeline.json',graph);self.put('package/pipeline.json',canonical(graph))
+        package=json.loads((self.root/'package/manifest.json').read_bytes());package['models'][0]['task']=family
+        for row in package['files']:row.update(self.files['package/'+row['path']])
+        self.put('package/manifest.json',package)
+        parity=json.loads((self.root/'package/parity_receipt.json').read_bytes())
+        parity.update(manifest_sha256=self.files['package/manifest.json']['sha256'],graph_sha256=self.files['package/pipeline.json']['sha256'])
+        self.put('package/parity_receipt.json',parity)
+        return model
+
+    def _replace_family_binding(self,binding,family=None):
+        family=family or self.receipt['family']
+        job=json.loads((self.root/'model/job_receipt.json').read_bytes())
+        job.update(task=family,training_provenance=binding,dataset_path=binding['family_dataset_path'])
+        self.put('model/job_receipt.json',job)
+        meta=json.loads((self.root/'model/model_meta.json').read_bytes())
+        meta.update(task=family,training_provenance=binding)
+        if family=='ocr':meta['dataset_path']=binding['family_dataset_path']
+        else:meta.pop('dataset_path',None)
+        self.put('model/model_meta.json',meta)
+        evaluation=json.loads((self.root/'evaluation.json').read_bytes())
+        evaluation['binding']['training_provenance']=binding;evaluation['result']['task']=family
+        evaluation['evidence_sha256']=sha(canonical({key:value for key,value in evaluation.items() if key!='evidence_sha256'}))
+        self.put('evaluation.json',evaluation)
+
+    def test_prepared_ocr_and_patch_keep_all_approval_flags_false(self):
+        for family in ('ocr','patch_classification'):
+            for prepared in (False,True):
+                with self.subTest(family=family,prepared=prepared):
+                    self._prepare_family(family,prepared=prepared);result=self.check()
+                    if family=='patch_classification' and not prepared:
+                        self.assertFalse(result['record_chain_verified'],result)
+                        self.assertEqual(result['stages']['train']['state'],'pending',result)
+                        continue
+                    self.assertTrue(result['record_chain_verified'],result)
+                    for field in ('runtime_execution_reproduced','human_truth_approved','model_quality_approved','target_execution_approved','parent_accepted'):
+                        self.assertIs(result[field],False)
+
+    def test_family_inventory_digest_uses_original_ascii_default(self):
+        self._prepare_family();binding=json.loads((self.root/'model/job_receipt.json').read_bytes())['training_provenance']
+        self.assertNotEqual(binding['family_inputs_sha256'],sha(canonical(binding['family_inputs'])))
+        tree=ast.parse((ROOT/'backend/engine/training_provenance.py').read_text())
+        producer=next(node for node in tree.body if isinstance(node,ast.FunctionDef) and node.name=='bind_family_training')
+        update=next(node for node in producer.body if isinstance(node,ast.Expr) and isinstance(node.value,ast.Call)
+                    and isinstance(node.value.func,ast.Attribute) and node.value.func.attr=='update')
+        expression=next(keyword.value for keyword in update.value.keywords if keyword.arg=='family_inputs_sha256')
+        original=eval(compile(ast.Expression(expression),'original-family-row-digest','eval'),{'hashlib':hashlib,'json':json,'rows':binding['family_inputs']})
+        self.assertEqual(original,binding['family_inputs_sha256']);self.assertTrue(self.check()['record_chain_verified'])
+        binding['family_inputs_sha256']=sha(canonical(binding['family_inputs']));self._replace_family_binding(binding);self.reject('train')
+
+    def test_family_current_and_frozen_bytes_must_both_match_raw_pins(self):
+        for family in ('ocr','patch_classification'):
+            for kind in ('current','frozen','image'):
+                with self.subTest(family=family,kind=kind):
+                    model=self._prepare_family(family);name='ocr.json' if family=='ocr' else 'patches.json'
+                    path=('family/'+kind+'/'+name if kind!='image' else 'family/current/train/검사.bin')
+                    self.put(path,(self.root/path).read_bytes()+b' ');self.reject('train')
+
+    def test_family_copy_map_is_exact_relative_and_one_to_one(self):
+        for mutation in ('missing','extra','absolute','traversal','duplicate'):
+            with self.subTest(mutation=mutation):
+                self._prepare_family();copies=self.receipt['train']['family_files'];keys=list(copies)
+                if mutation=='missing':del copies[keys[0]]
+                elif mutation=='extra':copies['/foreign/file']='source/a.bin'
+                elif mutation=='absolute':copies[keys[0]]='/foreign/file'
+                elif mutation=='traversal':copies[keys[0]]='family/../current/ocr.json'
+                else:copies[keys[1]]=copies[keys[0]]
+                self.reject('train')
+
+    def test_family_inventory_duplicates_extras_order_and_snapshot_refused(self):
+        mutations=[lambda rows:rows.append(copy.deepcopy(rows[0])),lambda rows:rows.reverse(),
+                   lambda rows:rows[0].update(snapshot_path='/foreign/labels/ocr.json'),
+                   lambda rows:rows[0].update(extra=True),lambda rows:rows[0].update(source_path='/foreign/ocr.json')]
+        for mutation in mutations:
+            with self.subTest(mutation=mutation):
+                self._prepare_family();binding=json.loads((self.root/'model/job_receipt.json').read_bytes())['training_provenance']
+                mutation(binding['family_inputs']);binding['family_inputs_sha256']=sha(json.dumps(binding['family_inputs'],sort_keys=True,separators=(',',':')).encode())
+                self._replace_family_binding(binding);self.reject('train')
+
+    def test_family_provenance_purpose_dataset_and_version_refused(self):
+        mutations=[lambda binding:binding.update(family_task='segmentation'),lambda binding:binding.update(family_dataset_path='/foreign/dataset'),
+                   lambda binding:binding.update(version_dir='/foreign/versions/other'),
+                   lambda binding:binding['family_provenance'].update(source_dataset_path='/foreign/source'),
+                   lambda binding:binding['family_provenance'].update(dataset_sha256='sha256:'+'0'*64),
+                   lambda binding:binding.update(family_source_image_uuids=['foreign'])]
+        for mutation in mutations:
+            with self.subTest(mutation=mutation):
+                self._prepare_family();binding=json.loads((self.root/'model/job_receipt.json').read_bytes())['training_provenance']
+                mutation(binding);self._replace_family_binding(binding);self.reject('train')
+
+    def test_family_legacy_unknown_and_relocated_aliases_stay_pending(self):
+        for mutation in ('missing_copies','legacy_uuid','alias','unsupported'):
+            with self.subTest(mutation=mutation):
+                self._prepare_family();binding=json.loads((self.root/'model/job_receipt.json').read_bytes())['training_provenance']
+                if mutation=='missing_copies':del self.receipt['train']['family_files']
+                elif mutation=='legacy_uuid':del binding['family_source_image_uuids']
+                elif mutation=='alias':binding['family_inputs'][0]['restored_source_sha256']=binding['family_inputs'][0]['sha256']
+                else:binding['family_task']='enhancement';self.receipt['family']='enhancement'
+                self._replace_family_binding(binding);result=self.reject('train')
+                self.assertEqual(result['stages']['train']['state'],'pending',result)
+
+    def test_family_missing_raw_copy_and_link_remain_refused_or_pending(self):
+        self._prepare_family();path=self.root/'family/frozen/ocr.json';path.unlink();self.reject('train')
+        self._prepare_family();path=self.root/'family/current/ocr.json';raw=path.read_bytes();path.unlink()
+        (self.root/'foreign.json').write_bytes(raw);path.symlink_to(self.root/'foreign.json');self.reject('train')
+
+    def test_family_map_cannot_hide_empty_or_malformed_inventory(self):
+        for value in ([],{},'',None):
+            with self.subTest(value=value):
+                self._prepare_family();binding=json.loads((self.root/'model/job_receipt.json').read_bytes())['training_provenance']
+                binding['family_inputs']=value;self._replace_family_binding(binding);self.reject('train')
+
+    def test_family_raw_manifest_read_keeps_full_hash_and_json_size_bound(self):
+        self._prepare_family();path='family/current/ocr.json';pin=self.files[path];raw=(self.root/path).read_bytes()
+        self.assertEqual(verifier._read_pin(self.root,path,pin,False,raw=True),raw)
+        self.assertNotEqual(raw,canonical(json.loads(raw)))
+        with patch.object(verifier,'MAX_JSON_BYTES',len(raw)-1):
+            with self.assertRaises(verifier.Gap):verifier._read_pin(self.root,path,pin,False,raw=True)
+        (self.root/path).write_bytes(raw+b' ')
+        with self.assertRaises(verifier.Gap):verifier._read_pin(self.root,path,pin,False,raw=True)
+
+    def test_family_foreign_mapping_cannot_hide_behind_coherent_manifest_digests(self):
+        self._prepare_family();copies=self.receipt['train']['family_files'];binding=json.loads((self.root/'model/job_receipt.json').read_bytes())['training_provenance']
+        path=copies[binding['family_dataset_path']+'/ocr.json'];body=json.loads((self.root/path).read_bytes())
+        body['source_map']['train/검사.bin']['source_relative_path']='foreign.bin'
+        raw=(json.dumps(body,ensure_ascii=False,indent=2)+'\n').encode();manifest_sha=sha(raw)
+        self.put(path,raw);self.put(copies[binding['version_dir']+'/labels/family/ocr/ocr.json'],raw)
+        next(row for row in binding['family_inputs'] if row['relative_path']=='ocr.json')['sha256']=manifest_sha
+        binding['family_inputs_sha256']=sha(json.dumps(binding['family_inputs'],sort_keys=True,separators=(',',':')).encode())
+        provenance=binding['family_provenance'];provenance.update(manifest_sha256=manifest_sha,source_map=body['source_map'])
+        digest=hashlib.sha256(b'ocr-dataset-v1\0'+raw)
+        for image,value in sorted(provenance['source_sha256'].items()):digest.update(b'\0'+image.encode()+b'\0'+value.encode())
+        provenance['dataset_sha256']='sha256:'+digest.hexdigest()
+        binding['family_dataset_sha256']=provenance['dataset_sha256']
+        self._replace_family_binding(binding);self.reject('train')
+
+    def test_prepared_train_joins_original_job_and_optional_patch_metadata(self):
+        for family in ('ocr','patch_classification'):
+            for path in ('model/job_receipt.json','model/model_meta.json'):
+                for mutation in ('foreign','missing','null'):
+                    with self.subTest(family=family,path=path,mutation=mutation):
+                        self._prepare_family(family)
+                        if mutation=='missing':self.change(path,lambda value:value.pop('dataset_path',None))
+                        else:self.change(path,lambda value:value.update(dataset_path=None if mutation=='null' else '/foreign/data'))
+                        if family=='patch_classification' and path=='model/model_meta.json' and mutation=='missing':
+                            self.assertTrue(self.check()['record_chain_verified'])
+                        else:
+                            result=self.reject('train')
+                            self.assertEqual(result['stages']['train']['state'],'pending' if mutation=='missing' else 'refused',result)
+        self._prepare_family('patch_classification')
+        job=json.loads((self.root/'model/job_receipt.json').read_bytes())
+        self.change('model/model_meta.json',lambda value:value.update(dataset_path=job['dataset_path']))
+        self.assertTrue(self.check()['record_chain_verified'])
+
+    def test_ocr_training_digest_joins_recomputed_manifest_and_member_bytes(self):
+        for mutation in ('foreign','missing','null'):
+            with self.subTest(mutation=mutation):
+                self._prepare_family();binding=json.loads((self.root/'model/job_receipt.json').read_bytes())['training_provenance']
+                if mutation=='missing':binding.pop('family_dataset_sha256')
+                else:binding['family_dataset_sha256']=None if mutation=='null' else 'sha256:'+'0'*64
+                self._replace_family_binding(binding);result=self.reject('train')
+                self.assertEqual(result['stages']['train']['state'],'pending' if mutation=='missing' else 'refused',result)
+
+    def test_approved_only_training_cannot_filter_a_missing_original_member(self):
+        for family in ('ocr','patch_classification'):
+            for approved in (True,False):
+                with self.subTest(family=family,approved=approved):
+                    self._prepare_family(family);binding=json.loads((self.root/'model/job_receipt.json').read_bytes())['training_provenance']
+                    labels=binding['team_data'];labels['settings']['approved_only_training']=approved
+                    labels['eligibility']=labels['eligibility'][:1]
+                    binding['family_source_image_uuids']=['a'*64];binding['team_data_sha256']=sha(canonical(labels))
+                    self.put('version/team-data.json',labels);self._replace_family_binding(binding)
+                    if approved:self.assertEqual(self.reject('train')['stages']['train']['state'],'refused')
+                    else:self.assertTrue(self.check()['record_chain_verified'])
+
+    def test_patch_optional_source_hash_null_omitted_and_wrong_claim(self):
+        for mutation in ('null','omitted','foreign'):
+            with self.subTest(mutation=mutation):
+                self._prepare_family('patch_classification');binding=json.loads((self.root/'model/job_receipt.json').read_bytes())['training_provenance']
+                copies=self.receipt['train']['family_files'];path=copies[binding['family_dataset_path']+'/patches.json']
+                body=json.loads((self.root/path).read_bytes())
+                if mutation=='omitted':body['patches'][0].pop('source_sha256')
+                else:body['patches'][0]['source_sha256']=None if mutation=='null' else '0'*64
+                raw=(json.dumps(body,ensure_ascii=False,indent=2)+'\n').encode();digest=sha(raw)
+                self.put(path,raw);self.put(copies[binding['version_dir']+'/labels/family/patch_classification/patches.json'],raw)
+                next(row for row in binding['family_inputs'] if row['relative_path']=='patches.json')['sha256']=digest
+                binding['family_inputs_sha256']=sha(json.dumps(binding['family_inputs'],sort_keys=True,separators=(',',':')).encode())
+                provenance=binding['family_provenance'];provenance['manifest_sha256']=digest
+                value=hashlib.sha256(b'patch-classification-dataset-v1\0'+digest.encode())
+                for image,member_sha in sorted(provenance['source_sha256'].items()):value.update(b'\0'+image.encode()+b'\0'+member_sha.encode())
+                provenance['dataset_sha256']='sha256:'+value.hexdigest()
+                self._replace_family_binding(binding)
+                if mutation=='foreign':self.assertEqual(self.reject('train')['stages']['train']['state'],'refused')
+                else:self.assertTrue(self.check()['record_chain_verified'])
+
+    def test_missing_or_malformed_prepared_training_settings_remain_unqualified(self):
+        for setting in (None,{}, {'approved_only_training':1}):
+            with self.subTest(setting=setting):
+                self._prepare_family();binding=json.loads((self.root/'model/job_receipt.json').read_bytes())['training_provenance']
+                labels=binding['team_data']
+                if setting is None:labels.pop('settings')
+                else:labels['settings']=setting
+                binding['team_data_sha256']=sha(canonical(labels));self.put('version/team-data.json',labels)
+                self._replace_family_binding(binding);result=self.reject('train')
+                self.assertEqual(result['stages']['train']['state'],'refused' if setting else 'pending',result)
 
 if __name__=='__main__':unittest.main()

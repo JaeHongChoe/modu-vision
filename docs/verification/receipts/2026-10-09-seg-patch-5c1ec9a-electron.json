@@ -1,0 +1,44 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "5c1ec9aa4bc3a19bcc813e2d68edf24e1f0835f6",
+  "source_dirty": false,
+  "test": "scripts/e2e/shared-source-seg-patch-aggregate-package.spec.ts::native same-source SEG and Patch CPU candidates run two ROI branches aggregate and original standalone package",
+  "test_source_sha256": "144285dfbe922f0734855dccd495d4a2bd205869e6fa8fa8bed382df571586c1",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "edcdfdee646cf089ddb58c9dc026ce0a31c9c5e44cddbbfb79f6e47950169fb1",
+  "harness_sha256": "2de65a501e7ce083150494a99a3cef25d1f291845785ebe0b7a9ad1ce071eb24",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "c5d1a70a3075218d4bd2ff17b1997124322120e34f12c90322bfefcca8f56361"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "8c9fc44d211c4946461a3f9fc472a9af43c1f4d21c90b68adbe259e3d077e42a"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "c3556000ae913bb0eb8ded13a369bdf76f1bcc9127bc1365e9e124bd7bbc10bd"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "d9fd88cad730fbdd5d410ed3b6c54c6ed674e70bf003995b17e8b8e6db9790a2"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "714051af107d6b93b647099b7621d2f3f9333b4b85d3e29486fe6bfc16c33288"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

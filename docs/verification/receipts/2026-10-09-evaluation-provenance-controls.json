@@ -1,0 +1,82 @@
+{
+  "schema": "modu-vision.scoped-evaluation-provenance-controls/v1",
+  "product_sha256": "cf223b5a298724de9a46952ccf7f751c5ad44d94965c6b9e3760b036e272c3dc",
+  "new_test_sha256": "52650505663537e017e2f01b04768576f8a141893bd2a11572597b1baa1e6f70",
+  "independent_source_review_sha256": "b8b93e1c1a874cbb7a7726d32344e46985cd410d1cca9df7770d2049f3a82e71",
+  "gates": [
+    {
+      "gate": "evaluation-context-original-red-f02-49",
+      "source_sha": "99caf1c12b5c6d1c070c65a124c8b75da8d024f2",
+      "source_count": 2360,
+      "source_maps_equal": true,
+      "source_clean": true,
+      "exit_code": 1,
+      "elapsed_seconds": 0.6784369945526123,
+      "tests": 1,
+      "failures": 1,
+      "errors": 0,
+      "original_raw_sha256": {
+        "start.json": "61ecadaa68fde4aef5e2872a2b3b97d98bbcdbeb80b560089b68312a94e1bc65",
+        "run.json": "d4ad8a353408972aa960466e6a9bff6e48e6a94e1d49f05035786c1794793a2b",
+        "gate.log": "a1394289cca2b6cb029b10aa6c0f6129ca3d7dcf8b5834109d637debe89acbcb",
+        "source-before.json": "75e74f05b6d0c7949f329acd081b7b398403f2cc876a4c32dd90565bc9a41264",
+        "source-after.json": "75e74f05b6d0c7949f329acd081b7b398403f2cc876a4c32dd90565bc9a41264",
+        "results.xml": "39dbe34457061f6329ee1c9f03610cc8ed8311df3ba01886a8bc50d1225c5d45"
+      },
+      "scope": "Original metadata-context causal RED and detached provenance safeguards; coupled cases use actual bounded local CPU and a controlled in-process transport, not a remote/GPU run."
+    },
+    {
+      "gate": "evaluation-context-green-f02-50",
+      "source_sha": "16b73bf72af2abe88483ed16bedb2bad57a84388",
+      "source_count": 2360,
+      "source_maps_equal": true,
+      "source_clean": true,
+      "exit_code": 0,
+      "elapsed_seconds": 0.5894708633422852,
+      "tests": 41,
+      "failures": 0,
+      "errors": 0,
+      "original_raw_sha256": {
+        "start.json": "2bb594489dd7c4e9b1b8f41367ad9d7b109c8139a5679bfb6c25e02a265c9b79",
+        "run.json": "5c6e4ce9cedfcee220791c3ca2e492cfd26ece8b20cbf5ee3ceee1af7a5c8253",
+        "gate.log": "e7bbff5e6e6fb3c49cf554793706ddc51a57a5cf1ab87e770bd34d3fd0e196df",
+        "source-before.json": "739a15381b84294dad52d0960d808d279659fdd92f9dd7d42ca33c3548500d0a",
+        "source-after.json": "739a15381b84294dad52d0960d808d279659fdd92f9dd7d42ca33c3548500d0a",
+        "results.xml": "1d22876c8f5a91666b371e48e5e2900f0d2ca14d53615689ac4f56d735524602"
+      },
+      "scope": "Original metadata-context causal RED and detached provenance safeguards; coupled cases use actual bounded local CPU and a controlled in-process transport, not a remote/GPU run."
+    },
+    {
+      "gate": "evaluation-context-coupled-f02-51",
+      "source_sha": "16b73bf72af2abe88483ed16bedb2bad57a84388",
+      "source_count": 2360,
+      "source_maps_equal": true,
+      "source_clean": true,
+      "exit_code": 0,
+      "elapsed_seconds": 10.975129842758179,
+      "tests": 19,
+      "failures": 0,
+      "errors": 0,
+      "original_raw_sha256": {
+        "start.json": "1b38360f8770ee5cbd2b211d7239055bad74afc6c2d275f61ed1e6f60ef2eea2",
+        "run.json": "53568dfa677ddf744c1d6d6226bd9d761b16500b21893b1113dad8f7819f74ad",
+        "gate.log": "f576674746483d791b45c2f5ab9bbe7f57fe41dbdc57fcd212379448f0092d18",
+        "source-before.json": "739a15381b84294dad52d0960d808d279659fdd92f9dd7d42ca33c3548500d0a",
+        "source-after.json": "739a15381b84294dad52d0960d808d279659fdd92f9dd7d42ca33c3548500d0a",
+        "results.xml": "ac9b35a61885c83c4abc5e58ea5ade5da3f4a192e224a5a7e6f4c1a458538603"
+      },
+      "scope": "Original metadata-context causal RED and detached provenance safeguards; coupled cases use actual bounded local CPU and a controlled in-process transport, not a remote/GPU run."
+    }
+  ],
+  "limitations": [
+    "The helper preserves only coherent detached original producer provenance; downstream strict raw artifact readers remain the authority.",
+    "Existing original Patch/classifier lifecycle wrappers remain partial; no replacement evaluation is claimed in this receipt.",
+    "Malformed, missing or foreign bindings remain absent; no original metadata is repaired.",
+    "No model-quality, human-truth, target, curated cell or parent acceptance."
+  ],
+  "record_chain_verified": false,
+  "runtime_execution_reproduced": false,
+  "remote_gpu": false,
+  "model_quality_approved": false,
+  "parent_accepted": false
+}

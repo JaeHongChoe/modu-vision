@@ -112,14 +112,111 @@ class EvaluationHistory:
                        and (labelset_id is None or row['binding'].get('labelset_id','default')==labelset_id)), key=lambda row: row['created_at'], reverse=True)
 
 
+def _evaluation_training_provenance(project_root, metadata):
+    """Record coherent owned lineage; downstream evidence still verifies its files.
+
+    This only reads original receipts. It never creates a training snapshot,
+    rebinds historical records, or declares runtime/model-quality approval.
+    """
+    binding = metadata.get('training_provenance')
+    if not isinstance(binding, dict) or not binding:
+        return None
+    try:
+        # Evaluation evidence must stay detached from mutable caller metadata.
+        recorded = json.loads(json.dumps(binding, ensure_ascii=False, allow_nan=False))
+        requested = Path(project_root)
+        if requested.is_symlink():
+            return None
+        root = requested.resolve()
+        identifier = recorded['dataset_version_id']
+        if (not isinstance(identifier, str) or not identifier.startswith('v_')
+                or Path(identifier).name != identifier or identifier in ('.', '..')):
+            return None
+        version = root / 'versions' / identifier
+        if ((root / 'versions').is_symlink() or version.is_symlink()
+                or not isinstance(recorded['version_dir'], str)
+                or recorded['version_dir'] != str(version.resolve())):
+            return None
+
+        def read_receipt(path):
+            if path.is_symlink() or not path.is_file():
+                raise ValueError('Evaluation lineage receipt is unavailable or linked')
+            return json.loads(path.read_text(encoding='utf-8'))
+
+        project = read_receipt(root / 'project.json')
+        manifest = read_receipt(version / 'manifest.json')
+        if not isinstance(project, dict) or not isinstance(manifest, dict):
+            return None
+        def sha256(value):
+            return isinstance(value, str) and len(value) == 64 and all(c in '0123456789abcdef' for c in value)
+
+        source = manifest['source_dataset_dir']
+        fingerprint = recorded['dataset_fingerprint']
+        labelset = recorded['labelset_id']
+        if (type(manifest.get('schema_version')) is not int or manifest['schema_version'] != 1
+                or not isinstance(project['id'], str) or not project['id']
+                or not isinstance(source, str) or not Path(source).is_absolute()
+                or str(Path(source).resolve()) != source
+                or not isinstance(fingerprint, str) or not fingerprint.startswith('v1:') or not sha256(fingerprint[3:])
+                or not isinstance(labelset, str) or not (labelset == 'default' or
+                    (labelset.startswith('ls_') and len(labelset) == 15 and all(c in '0123456789abcdef' for c in labelset[3:])))):
+            return None
+        unsigned = {key: value for key, value in manifest.items() if key != 'content_digest'}
+        digest = hashlib.sha256(canonical(unsigned)).hexdigest()
+        if (manifest['id'] != identifier or manifest['project_id'] != project['id']
+                or manifest['source_dataset_dir'] != project['source_dataset_dir']
+                or manifest.get('labelset_id', 'default') != recorded['labelset_id']
+                or manifest['dataset_fingerprint'] != recorded['dataset_fingerprint']
+                or manifest['content_digest'] != digest or recorded['manifest_sha256'] != digest):
+            return None
+        rows = manifest['files']
+        if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+            return None
+        for row in rows:
+            relative = row['relative_path']
+            if (row['origin'] not in ('source', 'studio', 'studio_scoped', 'split')
+                    or not isinstance(relative, str) or not relative or Path(relative).is_absolute()
+                    or '..' in Path(relative).parts or not sha256(row['sha256'])
+                    or type(row['size_bytes']) is not int or row['size_bytes'] < 0):
+                return None
+        split = [row['sha256'] for row in rows if row['origin'] == 'split']
+        split_digest = split[0] if len(split) == 1 else hashlib.sha256(json.dumps(
+            [{key: row[key] for key in ('origin', 'relative_path', 'sha256')} for row in rows],
+            sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+        if (recorded['split_sha256'] != split_digest
+                or recorded['split_binding'] != ('saved_manifest' if split else 'versioned_dataset_layout')):
+            return None
+        if 'team_data' in recorded:
+            team = recorded['team_data']
+            if not isinstance(team, dict) or not team:
+                return None
+            scope = team['scope']
+            if (not isinstance(scope, dict) or scope.get('project_id') != project['id']
+                    or scope.get('source') != manifest['source_dataset_dir']
+                    or scope.get('labelset_id') != recorded['labelset_id']
+                    or read_receipt(version / 'team-data.json') != team
+                    or recorded['team_data_sha256'] != hashlib.sha256(canonical(team)).hexdigest()):
+                return None
+        return recorded
+    except (OSError, ValueError, TypeError, KeyError, RecursionError):
+        # Legacy or malformed lineage remains absent, so strict consumers report
+        # the existing pending gap rather than accept a reconstructed binding.
+        return None
+
+
 def evaluation_model_context(project_root,metadata):
     from backend.engine.project_labelsets import load_labelsets
     thresholds={key:metadata[key] for key in ('optimal_threshold','threshold','probability_threshold','size_threshold','min_defect_area_px') if key in metadata}
     continuation=metadata.get('continuation') or metadata.get('warm_start') or {}
     parent=metadata.get('parent_job_id') or (continuation.get('parent_job_id') if isinstance(continuation,dict) else None)
-    return {'labelset_id':load_labelsets(Path(project_root))['active_id'],
-            'training_labelset_id':(metadata.get('training_provenance') or {}).get('labelset_id'),
-            'parent_job_id':parent,'threshold_settings':thresholds}
+    training = metadata.get('training_provenance')
+    context = {'labelset_id':load_labelsets(Path(project_root))['active_id'],
+               'training_labelset_id':training.get('labelset_id') if isinstance(training,dict) else None,
+               'parent_job_id':parent,'threshold_settings':thresholds}
+    lineage = _evaluation_training_provenance(project_root,metadata)
+    if lineage is not None:
+        context['training_provenance'] = lineage
+    return context
 
 
 class ComparisonJobs:

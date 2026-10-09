@@ -656,7 +656,8 @@ def validate_controller_plan(owner,value,proof):
             or type(value['workdir']) is not str or type(value['command']) is not list
             or len(_canonical(value))>16384):
         raise HandshakeError('Original SOURCE CPU plan or producer deadline differs')
-    request=value['cpu_request'];intent=execution.validate_request(request,proof,owner.root)
+    request=value['cpu_request'];intent=execution.validate_request(request,proof,owner.root,
+        absolute_deadline=value['deadline_monotonic'])
     capability=execution.admit_plan(owner.root,request['workspace_id'],request['project_id'],request['plan_sha256'])
     if _canonical(intent['capability'])!=_canonical(capability):
         raise HandshakeError('Original SOURCE CPU durable capability changed')

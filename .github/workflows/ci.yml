@@ -113,6 +113,9 @@ jobs:
           backend/tests/test_gui_execution_evidence.py
           backend/tests/test_gui_execution_receipt_collector.py
           backend/tests/test_action_evidence.py
+          backend/tests/test_model_lifecycle_evidence.py
+          backend/tests/test_flow_export_target_identity.py
+          backend/tests/test_evaluation_training_provenance.py
           backend/tests/test_segmentation_mask_folder_classes.py
           backend/tests/test_annotation_source_encoding.py
           backend/tests/test_annotation_truncated_source.py
@@ -248,6 +251,7 @@ jobs:
           backend/tests/test_application_owned_cpu_node_relay.py
           backend/tests/test_application_owned_source_cpu_relay_actual.py
           backend/tests/test_application_cpu_publication_admission.py
+          backend/tests/test_application_cpu_reserve_transition_deadline.py
           backend/tests/test_application_drain_transition_busy.py
           backend/tests/test_application_start_identity.py
           backend/tests/test_flow_writer_lifetime.py

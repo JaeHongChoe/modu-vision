@@ -237,7 +237,8 @@ def _terminal_fixture_case(tmp_path,monkeypatch):
         'process':{'pid':52,'created_at':2.0,'command_sha256':'c'*64},'claimed':True,'ready_receipt_sha256':'d'*64,
         'exit_observation':{'direct_child_pid':52,'direct_child_returncode':3,'process_tree_exit_verified':False}}
     monkeypatch.setattr(bridge,'time',clock)
-    monkeypatch.setattr(lease,'inspect_launch',lambda root:copy.deepcopy(row))
+    # Exact read-only fixture observation, not live lease/PID authority.
+    monkeypatch.setattr(bridge,'_fixture_readonly_managed_launch',lambda root:copy.deepcopy(row))
     monkeypatch.setattr(lease,'_identity',lambda pid:copy.deepcopy(child._original_cpu_fixture_supervisor))
     def impossible(*args,**kwargs):pytest.fail('Original ordinary-stop file is impossible after authenticated main exit')
     monkeypatch.setattr(bridge,'wait_file',impossible)
@@ -270,7 +271,7 @@ def test_fixture_terminal_foreign_uncertain_or_late_never_cleans_original_contro
     if damage=='missing_witness':del child._original_cpu_fixture_supervisor
     if damage=='late_inspect':
         def late(root):clock.now+=6;return row
-        monkeypatch.setattr(lease,'inspect_launch',late)
+        monkeypatch.setattr(bridge,'_fixture_readonly_managed_launch',late)
     if damage=='late_identity':
         def late(pid):clock.now+=6;return child._original_cpu_fixture_supervisor
         monkeypatch.setattr(lease,'_identity',late)
@@ -285,7 +286,7 @@ def test_fixture_terminal_only_original_typed_busy_retries_with_first_budget(tmp
         calls.append(clock.now)
         if len(calls)<3:raise lease.LeaseTransitionBusy('exact original publication mutex')
         return row
-    monkeypatch.setattr(lease,'inspect_launch',busy)
+    monkeypatch.setattr(bridge,'_fixture_readonly_managed_launch',busy)
     bridge.finish_managed(child,tmp_path)
     assert len(calls)==3 and child.calls==['terminate',('wait',5)] and clock.now<105
 
@@ -294,7 +295,7 @@ def test_fixture_terminal_only_original_typed_busy_retries_with_first_budget(tmp
 def test_fixture_terminal_structural_read_failure_does_not_retry_or_mask(tmp_path,monkeypatch,error):
     bridge,lease,clock,child,row=_terminal_fixture_case(tmp_path,monkeypatch);calls=[]
     def fail(root):calls.append(1);raise error
-    monkeypatch.setattr(lease,'inspect_launch',fail)
+    monkeypatch.setattr(bridge,'_fixture_readonly_managed_launch',fail)
     with pytest.raises(type(error)) as caught:bridge.finish_managed(child,tmp_path)
     assert caught.value is error and calls==[1] and child.calls==[]
 
@@ -302,7 +303,7 @@ def test_fixture_terminal_structural_read_failure_does_not_retry_or_mask(tmp_pat
 def test_fixture_terminal_busy_cannot_renew_original_first_five_seconds(tmp_path,monkeypatch):
     bridge,lease,clock,child,row=_terminal_fixture_case(tmp_path,monkeypatch);calls=[]
     def busy(root):calls.append(clock.now);raise lease.LeaseTransitionBusy('original remains busy')
-    monkeypatch.setattr(lease,'inspect_launch',busy)
+    monkeypatch.setattr(bridge,'_fixture_readonly_managed_launch',busy)
     with pytest.raises(pytest.fail.Exception):bridge.finish_managed(child,tmp_path)
     assert child.calls==[] and 105<=clock.now<=105.1 and calls[-1]<105
 
@@ -349,7 +350,7 @@ def test_fixture_terminal_original_file_read_must_finish_before_same_deadline(tm
 def test_fixture_terminal_busy_crossing_expiry_never_sleeps_negative_or_cleans(tmp_path,monkeypatch):
     bridge,lease,clock,child,row=_terminal_fixture_case(tmp_path,monkeypatch)
     def late_busy(root):clock.now=106;raise lease.LeaseTransitionBusy('original publication delayed')
-    monkeypatch.setattr(lease,'inspect_launch',late_busy)
+    monkeypatch.setattr(bridge,'_fixture_readonly_managed_launch',late_busy)
     original_sleep=clock.sleep
     def bounded_sleep(seconds):assert seconds>=0;original_sleep(seconds)
     clock.sleep=bounded_sleep

@@ -217,3 +217,78 @@ The exact clean source `0726d1ddcba7b7c8198f6c29befe3c6aa2d2cf85` passed once in
 Independent qualification SHA256 `acef7975adca1a8a402049510f75690a19582e036a12bb67a3c679057eb11c3a` and corrected-reader SOURCE peer SHA256 `345614385fa3d9b8cb9b95464c2adb3efb51078b57b7a9337038634ba1c4332a` bind the two exact original GUI receipts. Each mode retains seven snapshots with ten complete raw API responses and two whole unfiltered project/source trees, all 2,048 original harness RGB pixels and all 75 original fixture request/body clocks under the original absolute 10-second bound. The browser records six task responses; native records thirteen, comprising seven phase responses and six separately inventoried trusted-renderer snapshot GET200s. Every controlled phase has at least one exact full response. The original lawful 2,500-ms polling is inventoried. Three declared project/import setup writes precede each observer; post-observer business writes and OPTIONS transport requests are zero. Before regular-file byte copies were not exported and are not claimed. Owning UI state follows the original passed assertions and three screenshots per mode, without exported DOM timing or independent OCR.
 
 Curated accounting becomes **771 verified / 678 pending / 0 not-required** across 207 actions, adding exactly these three existing dimensions. All U013 evidence, every other cell and historical record, renderer source binding, program and parent bytes remain unchanged; all 82 parent states remain 69 implementation verified / 13 pending / 0 finally accepted. Browser controlled503 console output is preserved. Native page/console/blocked capture is unavailable, so native error cleanliness is not claimed. The original reader-origin refusal and failed preparations stay preserved. This evidence adds no completed comparison/model/job execution, cancellation, new training/GPU work, installed or compiled app, OS dialog/signing/publisher/Windows, human/model quality or whole-writer/tree/lease acceptance.
+
+## 2026-10-09 native model chains and four input/picker controls
+
+Clean source `a0266984f0eaf46f487967c1d34331e687fd75af` passed the
+retained learned-rotation to same-source OCR native flow and limited CPU package
+parity case once. The synthetic OCR result was NG and remains NG; no recognition
+quality threshold was substituted. Original rotation checkpoint, input hashes,
+saved graph, whole protected API/file snapshots and CPU package records stayed
+bound. The original raw OCR-template response and its later parsed-object alias
+are distinct and disclosed in the independent qualification.
+
+Clean source `5c1ec9aa4bc3a19bcc813e2d68edf24e1f0835f6` passed one native
+same-source SEG/Patch case once: sequential bounded local CPU training, two ROI
+branches, four actual GUI inspections at capacities two and one, and two fresh
+standalone CPU package comparisons. Complete class, probability, mask and outcome
+records matched. The exact 27 writes include both owning pre-save and post-save
+diff reads. This package builder is a helper, not a GUI export-button claim.
+
+The two clean native cases at
+`7290e4e431736cf4f95bc2fe01881961a7b83c9b` passed once without retries.
+Exactly U020.independent-direction-input.invalid/empty and
+F064.native-image-picker-keyboard-focus.empty/reopen become verified.
+Invalid direction input preserved all original records with zero owning writes.
+Intentional empty direction persisted through save/reopen while preserving the
+independent OBB angle, coordinates, other bbox, source and mask bytes. The picker
+refused blank/whitespace confirmation, preserved keyboard focus and reopened the
+exact accepted image UUID/hash/revision with only its declared read-only resolve.
+
+Independent GUI qualification SHA256
+`efe49b132d4fedf1a1114089bbb113a3a17e0ca525fafc7df7e0916dccf5e4e3`
+checks complete original API bodies, unfiltered protected trees and original
+byte copies, storage and all declared request/body clocks. Keyboard sequences
+are established by the exact executed source and passing assertions; screenshots
+show final/reopened states. Trace and native console/blocked captures are
+unavailable. One pre-observer picker project-list request lacks a full-body clock;
+it is not used to claim whole-run network completeness. Earlier direction
+coordinate/automatic-gallery-refresh failures stay retained.
+
+Curated accounting is **775 verified / 674 pending / 0 not-required** across
+207 actions. All other scenario cells, renderer bindings and 82 parent states
+stay unchanged: **69 implementation verified / 13 pending / 0 finally accepted**.
+The two authorized Windows actual-use waivers leave 11 required pending parents.
+
+Prepared OCR/Patch record joins passed 42 isolated regression controls, retaining
+the original 26. Original OCR copies verified all seven declared record stages;
+original classifier and Patch copies verified only dataset, labels and training,
+with missing qualifying evaluation and later stages still pending. Record
+reading is distinct from runtime reproduction and human quality approval.
+
+The exact export-target identity fix passed four regression controls after four
+original missing-identity failures. The CI fixture observer correction passed
+30 selected controls, preserving all original assertions. A real original mutex
+contention probe first failed with entry Busy; the bounded fix passed nine
+controls and 133 original coupled tests, including the original artifact-drift
+case. Generic entry remains nonblocking, body/exit errors are never retried and
+the original absolute deadline is never renewed.
+
+`2026-10-09-model-native-chain-and-records.json` binds each original clean
+execution source, raw log/map/report/JUnit hash and declared scope. The historical
+Linux run 37856083490 remains failed (26 failed, 3,794 passed, 17 skipped).
+Local controls do not establish a new Linux CI pass or the historical Busy
+callsite. The current compiled-positive timing failure and independent 72-hour
+clock remain pending; this continuation adds no signed/installed, physical-device,
+manufacturing-quality, human-pilot or final parent acceptance.
+
+### Evaluation history producer context
+
+The original missing-provenance failure was reproduced before the correction.
+The clean corrected source passed 41 new context controls and 19 existing
+source-handoff/label-history/CPU recipe controls. The prepared Patch manifest
+uses `size_bytes`; the rejected first candidate used a different field and stays
+retained separately. Coherent full original provenance now survives a fresh
+evaluation archive; malformed/foreign records stay absent. This adds no completed
+original model evaluation or parent approval. The scoped control receipt preserves
+the original RED and both corrected runs.

@@ -102,7 +102,9 @@ def test_controlled_finish_reads_original_committed_lease_through_admission(tmp_
             raise lease.LeaseTransitionBusy('Lease transition is busy; retry after it completes')
         return row
     monkeypatch.setattr(lease, '_load', strict_unlocked_read)
-    monkeypatch.setattr(lease, 'inspect_launch', admitted_read)
+    # Inert publication observation only; no controller/lease/PID authority.
+    # finish_managed now calls this exact read-only fixture boundary.
+    monkeypatch.setattr(fixtures, '_fixture_readonly_managed_launch', admitted_read)
     monkeypatch.setattr(lease, '_identity', original_identity)
     monkeypatch.setattr(fixtures, 'wait_file', lambda *args, **kwargs: b'{}')
     monkeypatch.setattr(fixtures, 'time', SimpleNamespace(

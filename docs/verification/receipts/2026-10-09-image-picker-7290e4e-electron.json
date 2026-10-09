@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "7290e4e431736cf4f95bc2fe01881961a7b83c9b",
+  "source_dirty": false,
+  "test": "scripts/e2e/image-picker-empty-reopen-focus.spec.ts::native image picker refuses empty selection and reopens the exact validated identity with keyboard focus",
+  "test_source_sha256": "44c6a0ae000e439f27a087295175adb22458aaa13f68a8b0dbb56701f2fa92fb",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "399e38ca3f1c4208147b89f4b3d7ee891c49ef85997e6426ca053fbf3b85e2ac",
+  "harness_sha256": "44a3dab874fe3f776e2685611a4b1891c286f20034f0cab4c05be0d85d8cd703",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "06da3942e97a85e5614a2c117b7f0b579067dd829cc36cb8487f9696e1f60502"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "63b514148f0cbc153bf7102e8b2a7e35c1ca3887b00e195319d948c242054426"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

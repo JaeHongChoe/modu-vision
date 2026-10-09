@@ -15687,7 +15687,31 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-05",
+         "source_sha": "7290e4e431736cf4f95bc2fe01881961a7b83c9b",
+         "kind": "click",
+         "action": "이미지 변경 · Shift+Tab · Tab · Escape · 로컬 파일 · 선택 확정",
+         "expected": "Refuse empty local selection while retaining the dialog keyboard focus boundary and opener.",
+         "observed": "Blank and whitespace kept Confirm disabled. Shift+Tab and Tab stayed inside the dialog; Escape returned focus to the original opener. Original source, saved files, APIs, selection and storage were unchanged.",
+         "reviewer": "Codex root native execution and independent original API/file/source qualification; human, model, target, release and parent acceptance pending",
+         "test": "scripts/e2e/image-picker-empty-reopen-focus.spec.ts::native image picker refuses empty selection and reopens the exact validated identity with keyboard focus",
+         "receipt": "2026-10-09-image-picker-7290e4e-electron.json",
+         "receipt_sha256": "9e0ee0ffc8e80195364f99ebf3eb08f7a7ea7f9bae4c63c931087406f1fb100e",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "06da3942e97a85e5614a2c117b7f0b579067dd829cc36cb8487f9696e1f60502"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "63b514148f0cbc153bf7102e8b2a7e35c1ca3887b00e195319d948c242054426"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
        "state": "pending"
@@ -15719,7 +15743,31 @@
        ]
       },
       "reopen": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S2-05",
+         "source_sha": "7290e4e431736cf4f95bc2fe01881961a7b83c9b",
+         "kind": "click",
+         "action": "이미지 변경 · Shift+Tab · Tab · Escape · 로컬 파일 · 선택 확정",
+         "expected": "Reopen the exact selected validated image identity and accepted revision with keyboard focus.",
+         "observed": "Native row selection and explicit confirmation retained original UUID, hash, relative path and accepted revision. Reopen performed only the declared read-only resolve POST and retained one owning preference key. Escape returned opener focus; whole protected API/file snapshots were unchanged.",
+         "reviewer": "Codex root native execution and independent original API/file/source qualification; human, model, target, release and parent acceptance pending",
+         "test": "scripts/e2e/image-picker-empty-reopen-focus.spec.ts::native image picker refuses empty selection and reopens the exact validated identity with keyboard focus",
+         "receipt": "2026-10-09-image-picker-7290e4e-electron.json",
+         "receipt_sha256": "9e0ee0ffc8e80195364f99ebf3eb08f7a7ea7f9bae4c63c931087406f1fb100e",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "06da3942e97a85e5614a2c117b7f0b579067dd829cc36cb8487f9696e1f60502"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "63b514148f0cbc153bf7102e8b2a7e35c1ca3887b00e195319d948c242054426"
+          }
+         ]
+        }
+       ]
       },
       "handoff": {
        "state": "pending"
@@ -31655,10 +31703,58 @@
        ]
       },
       "empty": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "7290e4e431736cf4f95bc2fe01881961a7b83c9b",
+         "kind": "click",
+         "action": "객체 독립 방향 라벨",
+         "expected": "Persist intentional empty direction while preserving the independent box angle and original coordinates.",
+         "observed": "Native empty input persisted absent direction through save and reopen, preserving box angle30, original source and mask bytes and the other bbox. Only exact owning label/workflow revisions changed; save and original gallery reimport were inventoried separately.",
+         "reviewer": "Codex root native execution and independent original API/file/source qualification; human, model, target, release and parent acceptance pending",
+         "test": "scripts/e2e/direction-field-input-boundaries.spec.ts::native independent direction rejects invalid values and persists an intentional empty label",
+         "receipt": "2026-10-09-direction-boundaries-7290e4e-electron.json",
+         "receipt_sha256": "6d0b4f8a776c84d14b79642e2cbc08bd797a3570d9c97bb9ecf50fc76549653b",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c96ef2c0a05cb313dfcd01160761315e7f20f9213ec702de76e8a4888d5ce5f3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c24137d0302072b2bd75eb63938df4d7882b0c4647b0acf82d53205dbc4a72dd"
+          }
+         ]
+        }
+       ]
       },
       "invalid": {
-       "state": "pending"
+       "state": "verified",
+       "evidence": [
+        {
+         "task": "S3-05",
+         "source_sha": "7290e4e431736cf4f95bc2fe01881961a7b83c9b",
+         "kind": "click",
+         "action": "객체 독립 방향 라벨",
+         "expected": "Reject invalid direction values without changing saved labels, geometry, metadata or storage.",
+         "observed": "Native nonfinite and out-of-range inputs preserved direction315 and independent OBB angle30. Complete original API, file and storage snapshots stayed equal; the exact invalid slice had zero business writes.",
+         "reviewer": "Codex root native execution and independent original API/file/source qualification; human, model, target, release and parent acceptance pending",
+         "test": "scripts/e2e/direction-field-input-boundaries.spec.ts::native independent direction rejects invalid values and persists an intentional empty label",
+         "receipt": "2026-10-09-direction-boundaries-7290e4e-electron.json",
+         "receipt_sha256": "6d0b4f8a776c84d14b79642e2cbc08bd797a3570d9c97bb9ecf50fc76549653b",
+         "artifacts": [
+          {
+           "id": "screenshot-0",
+           "sha256": "c96ef2c0a05cb313dfcd01160761315e7f20f9213ec702de76e8a4888d5ce5f3"
+          },
+          {
+           "id": "screenshot-1",
+           "sha256": "c24137d0302072b2bd75eb63938df4d7882b0c4647b0acf82d53205dbc4a72dd"
+          }
+         ]
+        }
+       ]
       },
       "error": {
        "state": "pending"

@@ -1,0 +1,347 @@
+{
+  "schema": "modu-vision.scoped-native-cpu-and-records/v1",
+  "native_model_cases": [
+    {
+      "gate": "rotation-native-f06-21",
+      "source_sha": "a0266984f0eaf46f487967c1d34331e687fd75af",
+      "source_count": 2356,
+      "source_maps_equal": true,
+      "source_clean": true,
+      "exit_code": 0,
+      "elapsed_seconds": 45.18527817726135,
+      "original_start_sha256": "1fcfec268e1125d72ae019d455e4fb8dca62cad35f9238f82b13ee909dcc7ccd",
+      "original_output_sha256": "fd8e972f4eee031a9cf7f392276b27abff1507bcb762ba3d45059669db2e3ffb",
+      "original_before_map_sha256": "9cf649f53444ee39a2ab00881e69063e7c6aa6ec1763f8581fc15913dba81550",
+      "original_after_map_sha256": "9cf649f53444ee39a2ab00881e69063e7c6aa6ec1763f8581fc15913dba81550",
+      "gui_receipt": "2026-10-09-retained-rotation-a026698-electron.json",
+      "gui_receipt_sha256": "58bf8c3fcafb11ff349df804a7d0c3b69f8ac3fc431f19a6c18361b0cdfc8a14",
+      "independent_original_qualification_sha256": "82f8274716f8a0c69544292c9fe3cdce38f754d504c05db704ce7a8b809ba942",
+      "scope": "Synthetic source Electron CPU flow and limited package comparison only; no GUI training-button or manufacturing-quality acceptance."
+    },
+    {
+      "gate": "shared-native-f07-29",
+      "source_sha": "5c1ec9aa4bc3a19bcc813e2d68edf24e1f0835f6",
+      "source_count": 2356,
+      "source_maps_equal": true,
+      "source_clean": true,
+      "exit_code": 0,
+      "elapsed_seconds": 89.45480394363403,
+      "original_start_sha256": "67f8b2c9f9144bf92a9f4bb7ca31dcf063d6e08060fc364b2abde55838599aa5",
+      "original_output_sha256": "8eb1e3bf352a392c84a5086127521f1b73528c8ed6fd7b144f850e2fe8c3f290",
+      "original_before_map_sha256": "b72f72db90965cbae9527b7cc009ae8ecaffe79476b3f80ff56ba6f9acd8d4f6",
+      "original_after_map_sha256": "b72f72db90965cbae9527b7cc009ae8ecaffe79476b3f80ff56ba6f9acd8d4f6",
+      "gui_receipt": "2026-10-09-seg-patch-5c1ec9a-electron.json",
+      "gui_receipt_sha256": "0cc87ddae2419a9f7af5b0743f9bff5de9242f9f4f8fb457c24e3a157f17fd20",
+      "independent_original_qualification_sha256": "f4d1e9a5a45cd592015a68658920872fd43afd0c3ac9822d7b62fab34867c739",
+      "scope": "Synthetic source Electron CPU flow and limited package comparison only; no GUI training-button or manufacturing-quality acceptance."
+    }
+  ],
+  "record_controls": [
+    {
+      "gate": "parity-target-fixed-green-13",
+      "source_sha": "8a188dd5f63aa1fc903de15bde1704c8677bd047",
+      "source_count": 2356,
+      "source_maps_equal": true,
+      "source_clean": true,
+      "exit_code": 0,
+      "elapsed_seconds": 9.813226222991943,
+      "original_start_sha256": "7f2c598bd16e72cbde726b8b53e1723b127c70b45dae831f53a277b5ae64cf57",
+      "original_output_sha256": "3beea672e0e45ce888e21ada2548a1279d90eb86a831b13552ba9159fa02a434",
+      "original_before_map_sha256": "de0d74c2ad47a9ac7c5178dc8c6feeb9328ca1b11f88e06b6a806ae52f6761ab",
+      "original_after_map_sha256": "de0d74c2ad47a9ac7c5178dc8c6feeb9328ca1b11f88e06b6a806ae52f6761ab",
+      "passed": 4,
+      "original_junit_sha256": "1008017e53decb8ccfd8c0f8a49681fedbcf75a09422c5519895c6c644ea8532"
+    },
+    {
+      "gate": "lifecycle-prepared-actual-f02-30",
+      "source_sha": "daf58af1607ffc1b0dbaf6441d48f4f865cbb480",
+      "source_count": 2356,
+      "source_maps_equal": true,
+      "source_clean": true,
+      "exit_code": 0,
+      "elapsed_seconds": 1.8101961612701416,
+      "original_start_sha256": "204cbb5648e9340f615a319dd5a1fb36573a00189126f67667193de2f8ee9a78",
+      "original_output_sha256": "31f9a03e8551d16534b10807e83a50fb0e303a61bd07c3d758e7a292cc10256e",
+      "original_before_map_sha256": "abde20724aeea06b84760296470faad509b7e00398f5b7131181afae812a545a",
+      "original_after_map_sha256": "abde20724aeea06b84760296470faad509b7e00398f5b7131181afae812a545a",
+      "passed": 42,
+      "original_junit_sha256": "b6dbc98d7683c7858ae71e21b291c467062e93c8fbf5b359049bfe11cdfb8efb"
+    },
+    {
+      "gate": "ci-contract-actual-f01-32",
+      "source_sha": "7c26d5bd6550d7ca98497b52b7c6368daa3b0ec0",
+      "source_count": 2356,
+      "source_maps_equal": true,
+      "source_clean": true,
+      "exit_code": 0,
+      "elapsed_seconds": 0.9253959655761719,
+      "original_start_sha256": "41f2ec1e3fc307d5a0d060c00e9e21b3000036d5cc51f592774b2df8ef54d4fe",
+      "original_output_sha256": "7f514b8a989e4d70d0a423b331d8c68ceeab93adc384a41ff7fed4e793a9c870",
+      "original_before_map_sha256": "718bf984eb77f33d9675607fc589ec3296d282b927507fb9b129f48593ef6061",
+      "original_after_map_sha256": "718bf984eb77f33d9675607fc589ec3296d282b927507fb9b129f48593ef6061",
+      "passed": 30,
+      "original_junit_sha256": "132454ce4dda4f09c024f9e5f67255f83fede603e0eda715b9689928f7176f1e"
+    },
+    {
+      "gate": "reserve-entry-causal-green-f01-44",
+      "source_sha": "1e7f79abc5dca3f51669c3ceb0192149b1de21ac",
+      "source_count": 2359,
+      "source_maps_equal": true,
+      "source_clean": true,
+      "exit_code": 0,
+      "elapsed_seconds": 0.648709774017334,
+      "original_start_sha256": "4d26a4de70bd71149fc68b351ecd37bfc1b4999bb255a1e4d3efbb9a78c4f45f",
+      "original_output_sha256": "076c8e3a990a044492610348c64e1d214c33b839d77b867a809e991c36704ad5",
+      "original_before_map_sha256": "e33fcd07a0a6da0658926a806bc036afbeb8c878fb64b8fc90c18342a123367a",
+      "original_after_map_sha256": "e33fcd07a0a6da0658926a806bc036afbeb8c878fb64b8fc90c18342a123367a",
+      "passed": 9,
+      "original_junit_sha256": "0cd3feb7cc000c5a7dc63229340165c229c2c86683a664179d900cfff85e8b24"
+    },
+    {
+      "gate": "reserve-entry-coupled-f01-45",
+      "source_sha": "1e7f79abc5dca3f51669c3ceb0192149b1de21ac",
+      "source_count": 2359,
+      "source_maps_equal": true,
+      "source_clean": true,
+      "exit_code": 0,
+      "elapsed_seconds": 38.89600205421448,
+      "original_start_sha256": "84f1f29b582f012ffdb14b0da73568365670b5388654629930dd14f9d8147854",
+      "original_output_sha256": "82a1cc63f579cd6a7c0d8e3edc783a5d19a3d97472527f656cdee65f8129d407",
+      "original_before_map_sha256": "e33fcd07a0a6da0658926a806bc036afbeb8c878fb64b8fc90c18342a123367a",
+      "original_after_map_sha256": "e33fcd07a0a6da0658926a806bc036afbeb8c878fb64b8fc90c18342a123367a",
+      "passed": 133,
+      "original_junit_sha256": "1769ae2bd79e9bd0c5b29f7d9d2963d4af1bca3c6d0ea7c8d7e86a42582ba229"
+    }
+  ],
+  "original_lifecycle_readbacks": [
+    {
+      "family": "classification",
+      "source_sha": "daf58af1607ffc1b0dbaf6441d48f4f865cbb480",
+      "source_count": 2356,
+      "source_maps_equal": true,
+      "source_clean": true,
+      "exit_code": 1,
+      "elapsed_seconds": 0.31807374954223633,
+      "original_start_sha256": "80d353bd4ffd5387a2f8905e1194f93e6367cd85842e774a7a61ec357375ef76",
+      "original_output_sha256": "8052c880918cec7d0ae8b127de3437172b002377012643a8fc00b930b995e7c0",
+      "original_before_map_sha256": "abde20724aeea06b84760296470faad509b7e00398f5b7131181afae812a545a",
+      "original_after_map_sha256": "abde20724aeea06b84760296470faad509b7e00398f5b7131181afae812a545a",
+      "original_wrapper_sha256": "75fc6a3bac75b23360c1f01558a69eabb07c2242fade5345f93f91bfb7dfdeac",
+      "original_wrapper_size": 5205,
+      "original_result": {
+        "contract": "model_lifecycle_evidence_v1",
+        "family": "classification",
+        "human_truth_approved": false,
+        "model_quality_approved": false,
+        "parent_accepted": false,
+        "prerequisites": [
+          "human-reviewed representative class_labels",
+          "independent model-quality decision",
+          "target-specific runtime qualification",
+          "eval: missing artifact reference",
+          "flow_or_adoption: required earlier record is unverified",
+          "export: required earlier record is unverified",
+          "target: required earlier record is unverified"
+        ],
+        "record_chain_verified": false,
+        "refusals": [],
+        "runtime_execution_reproduced": false,
+        "scope": "Declared durable record bytes and causal joins only; no runtime reproduction or human/quality/target approval; undeclared artifacts not checked",
+        "stages": {
+          "dataset": {
+            "scope": "record integrity/control only",
+            "state": "verified"
+          },
+          "eval": {
+            "reason": "missing artifact reference",
+            "state": "pending"
+          },
+          "export": {
+            "reason": "required earlier record is unverified",
+            "state": "pending"
+          },
+          "flow_or_adoption": {
+            "reason": "required earlier record is unverified",
+            "state": "pending"
+          },
+          "labels": {
+            "scope": "record integrity/control only",
+            "state": "verified"
+          },
+          "target": {
+            "reason": "required earlier record is unverified",
+            "state": "pending"
+          },
+          "train": {
+            "scope": "record integrity/control only",
+            "state": "verified"
+          }
+        },
+        "state": "pending",
+        "target_execution_approved": false,
+        "truth_kind": "synthetic_control"
+      }
+    },
+    {
+      "family": "ocr",
+      "source_sha": "7290e4e431736cf4f95bc2fe01881961a7b83c9b",
+      "source_count": 2358,
+      "source_maps_equal": true,
+      "source_clean": true,
+      "exit_code": 0,
+      "elapsed_seconds": 0.4098360538482666,
+      "original_start_sha256": "45dc7c6986dc9bb9db8e6739e2e50e3a61ce1513f617ab797127fa94dd53ee98",
+      "original_output_sha256": "c45d7ca061faf67133e881ec8411fbb4430bf92497e2b057bacd0d2aa1746ee7",
+      "original_before_map_sha256": "9e1f67b3f45cc51f8385bec3ca548411b2a1e6f0845a0fd5c2a0b8d2afd9af9c",
+      "original_after_map_sha256": "9e1f67b3f45cc51f8385bec3ca548411b2a1e6f0845a0fd5c2a0b8d2afd9af9c",
+      "original_wrapper_sha256": "bc4df781a8d0406c86ddd525b4bd63f5feae8170847fcdd8a7572ebaad37e014",
+      "original_wrapper_size": 76170,
+      "original_result": {
+        "contract": "model_lifecycle_evidence_v1",
+        "family": "ocr",
+        "human_truth_approved": false,
+        "model_quality_approved": false,
+        "parent_accepted": false,
+        "prerequisites": [
+          "human-reviewed representative text",
+          "independent model-quality decision",
+          "target-specific runtime qualification"
+        ],
+        "record_chain_verified": true,
+        "refusals": [],
+        "runtime_execution_reproduced": false,
+        "scope": "Declared durable record bytes and causal joins only; no runtime reproduction or human/quality/target approval; undeclared artifacts not checked",
+        "stages": {
+          "dataset": {
+            "scope": "record integrity/control only",
+            "state": "verified"
+          },
+          "eval": {
+            "scope": "record integrity/control only",
+            "state": "verified"
+          },
+          "export": {
+            "scope": "record integrity/control only",
+            "state": "verified"
+          },
+          "flow_or_adoption": {
+            "scope": "record integrity/control only",
+            "state": "verified"
+          },
+          "labels": {
+            "scope": "record integrity/control only",
+            "state": "verified"
+          },
+          "target": {
+            "scope": "record integrity/control only",
+            "state": "verified"
+          },
+          "train": {
+            "scope": "record integrity/control only",
+            "state": "verified"
+          }
+        },
+        "state": "verified",
+        "target_execution_approved": false,
+        "truth_kind": "synthetic_control"
+      }
+    },
+    {
+      "family": "patch_classification",
+      "source_sha": "7290e4e431736cf4f95bc2fe01881961a7b83c9b",
+      "source_count": 2358,
+      "source_maps_equal": true,
+      "source_clean": true,
+      "exit_code": 1,
+      "elapsed_seconds": 0.3432319164276123,
+      "original_start_sha256": "21c94ec835de0abff87c00a1a013a99757a7e07559a439e7ef88aa2e7ac3c927",
+      "original_output_sha256": "3cb0f3cd2fb83237aab63bcc107ee35c05011d403014497a62fcd958e4ff3d8d",
+      "original_before_map_sha256": "9e1f67b3f45cc51f8385bec3ca548411b2a1e6f0845a0fd5c2a0b8d2afd9af9c",
+      "original_after_map_sha256": "9e1f67b3f45cc51f8385bec3ca548411b2a1e6f0845a0fd5c2a0b8d2afd9af9c",
+      "original_wrapper_sha256": "0dcf1941eaab78f9ba4ea4862e8e226738e86a062f6fc12b0af0218a63eed961",
+      "original_wrapper_size": 10582,
+      "original_result": {
+        "contract": "model_lifecycle_evidence_v1",
+        "family": "patch_classification",
+        "human_truth_approved": false,
+        "model_quality_approved": false,
+        "parent_accepted": false,
+        "prerequisites": [
+          "human-reviewed representative patch_class_labels",
+          "independent model-quality decision",
+          "target-specific runtime qualification",
+          "eval: missing artifact reference",
+          "flow_or_adoption: required earlier record is unverified",
+          "export: required earlier record is unverified",
+          "target: required earlier record is unverified"
+        ],
+        "record_chain_verified": false,
+        "refusals": [],
+        "runtime_execution_reproduced": false,
+        "scope": "Declared durable record bytes and causal joins only; no runtime reproduction or human/quality/target approval; undeclared artifacts not checked",
+        "stages": {
+          "dataset": {
+            "scope": "record integrity/control only",
+            "state": "verified"
+          },
+          "eval": {
+            "reason": "missing artifact reference",
+            "state": "pending"
+          },
+          "export": {
+            "reason": "required earlier record is unverified",
+            "state": "pending"
+          },
+          "flow_or_adoption": {
+            "reason": "required earlier record is unverified",
+            "state": "pending"
+          },
+          "labels": {
+            "scope": "record integrity/control only",
+            "state": "verified"
+          },
+          "target": {
+            "reason": "required earlier record is unverified",
+            "state": "pending"
+          },
+          "train": {
+            "scope": "record integrity/control only",
+            "state": "verified"
+          }
+        },
+        "state": "pending",
+        "target_execution_approved": false,
+        "truth_kind": "synthetic_control"
+      }
+    }
+  ],
+  "causal_mutex_negative": {
+    "source_sha": "19c95e9814566ba609c85cd50e38f390daa2e869",
+    "source_count": 2359,
+    "source_maps_equal": true,
+    "source_clean": true,
+    "exit_code": 1,
+    "elapsed_seconds": 0.8409488201141357,
+    "original_start_sha256": "6922024111c789d92312d46d37c7422f58cec24b8bff69a56a3b2e79865beffe",
+    "original_output_sha256": "9e7fdc09a75bf71d9f06514bcf1c1bf44bb98ea9f7f3e4c504e9cbad394e9377",
+    "original_before_map_sha256": "48003212abe3770c3880d523ca5e4d7186f07e47995cb533b8c1c03e3e3960d1",
+    "original_after_map_sha256": "48003212abe3770c3880d523ca5e4d7186f07e47995cb533b8c1c03e3e3960d1"
+  },
+  "hosted_ci": {
+    "original_run_id": 37856083490,
+    "source_sha": "09ac99fb06b7f009900b3fc820aa743148cf4515",
+    "state": "failed",
+    "failed": 26,
+    "passed": 3794,
+    "skipped": 17,
+    "original_failure_log_sha256": "33924867e09a655632a66127fd614f017685a5a1001f84ee1ba77cebd570f5e2",
+    "new_exact_linux_ci_pass": false,
+    "historical_busy_callsite_proved": false
+  },
+  "accepted_parent_requirements": 0,
+  "human_truth_approved": false,
+  "model_quality_approved": false,
+  "installed_or_signed_target_qualified": false,
+  "remote_gpu": false,
+  "scope": "Local actual controls and original durable record joins; distinct gate source hashes remain original. Raw data, paths, checkpoints and packages stay private. Prior native, compiled timing and hosted-CI failures are retained."
+}

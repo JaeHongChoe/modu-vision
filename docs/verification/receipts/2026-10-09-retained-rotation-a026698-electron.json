@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "a0266984f0eaf46f487967c1d34331e687fd75af",
+  "source_dirty": false,
+  "test": "scripts/e2e/retained-rotation-inspection-package.spec.ts::native retained learned rotation executes the same-source synthetic OCR flow and limited CPU package parity",
+  "test_source_sha256": "c9bc76e09e6164a221ae0908409b1bbbe6209bf9d584f2cbb3056534bf63f700",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "bae35ac0e635543255187acacfced38e1bd5dea8862a6974e9843a861cc79a1a",
+  "harness_sha256": "62eec3c7db0657451dc6ffe4e4490f950211cf17429faceb8b3f8358742a3c72",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "b49d07a67b3c97d128644ef9b9c115ed0aa6c45d4a77f299cac4cfb7ef9b2565"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "f485b26650205c9e16309171e68845eacee4891255605829b75d1f179d0eeabb"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "d5dc80913694003147e95782a72b0a1cb4dbe001ced4c0d165d27f7ad3ad60b9"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}
