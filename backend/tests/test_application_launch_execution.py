@@ -166,6 +166,33 @@ def wait_receipt(root, nonce, child, timeout=50):
     pytest.fail('No actual CPU execution receipt')
 
 
+def _fixture_cpu_controls(root, nonce):
+    """One coherent read-only original publication, never a transition writer."""
+    from backend.engine.application_launch_controller import _inspection_snapshot
+    from backend.engine.application_launch_handshake import HandshakeError
+    from backend.engine import application_launch_lease as lease
+    try:
+        with _inspection_snapshot(root):
+            row = lease._load(root)
+            assert row is not None and row['nonce'] == nonce, 'Original CPU fixture launch changed'
+            if row.get('cpu_execution') is None:
+                return None
+            directory = root/'.application-launches'/nonce
+            controls = {p: p.read_bytes() for p in directory.iterdir() if p.is_file()}
+            pointer = root/'application-launch-lease.json'
+            controls[pointer] = pointer.read_bytes()
+        return row, controls
+    except (HandshakeError, lease.LaunchLeaseError) as exc:
+        if str(exc) in {
+            'ownership publication interrupted or changed',
+            'Launch publication changed during read-only inspection',
+            'Launch sidecar publication changed during read-only inspection',
+            'Launch journal or receipt changed during read-only inspection',
+        }:
+            return None
+        raise
+
+
 def test_real_cpu_ocr_runs_in_original_authenticated_backend_epoch_and_preserves_pins(tmp_path):
     values = cpu_stack(tmp_path,delay=8); root,value,current,project,reviewed,pin = values
     before = {p: sha(p.read_bytes()) for p in [project/'project.json', project/reviewed['input_path'],
@@ -173,13 +200,14 @@ def test_real_cpu_ocr_runs_in_original_authenticated_backend_epoch_and_preserves
     child,ack = start_cpu_stack(values)
     try:
         directory=root/'.application-launches'/ack['nonce'];until=time.monotonic()+15
+        coherent = None
         while time.monotonic()<until:
-            row=json.loads((directory/'journal.json').read_bytes())
-            if row.get('cpu_execution') is not None:break
+            coherent = _fixture_cpu_controls(root, ack['nonce'])
+            if coherent is not None:break
             time.sleep(.05)
+        assert coherent is not None, 'No coherent original CPU intent publication'
+        row, controls = coherent
         assert row.get('cpu_execution') is not None
-        controls={p:p.read_bytes() for p in directory.iterdir() if p.is_file()}
-        controls[root/'application-launch-lease.json']=(root/'application-launch-lease.json').read_bytes()
         for _ in range(4):
             observer=subprocess.run([sys.executable,'-m','backend.engine.application_launch_controller','--inspect',
                 *controller_arguments(root,value,current)],cwd=REPOSITORY,capture_output=True,timeout=15)

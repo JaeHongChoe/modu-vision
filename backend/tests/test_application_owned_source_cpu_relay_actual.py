@@ -24,7 +24,19 @@ def test_actual_known_source_cpu_typed_relay_preserves_original_fences_through_f
     original_fixture = fixtures.fixture
     instrumentation = '''
  from backend.engine import runtime_deadline as rd,application_launch_execution as ex,application_owned_cpu_child_relay as relay
- import psutil,stat
+ import psutil,stat,tempfile
+ def observe(name,data):
+  # Fixture-only complete-byte publication; the original reader still refuses
+  # malformed JSON and its original five-second deadline is unchanged.
+  target=projects/name
+  fd,temporary=tempfile.mkstemp(prefix='.'+name+'.',dir=projects)
+  try:
+   with os.fdopen(fd,'w',encoding='utf-8') as output:
+    json.dump(data,output,sort_keys=True);output.flush();os.fsync(output.fileno())
+   # Atomic create preserves the previous open('x') refusal on any target.
+   os.link(temporary,target,follow_symlinks=False)
+  finally:
+   os.unlink(temporary)
  original_spawn=rd.subprocess.Popen
  def observed_spawn(*args,**kwargs):
   child=original_spawn(*args,**kwargs)
@@ -33,27 +45,25 @@ def test_actual_known_source_cpu_typed_relay_preserves_original_fences_through_f
    info=os.fstat(passed[0]);writer=__import__('backend.engine.application_launch_handshake',fromlist=['_CACHE'])._CACHE['challenge']['writer']
    lock=root/'.application-writer-epochs'/os.environ['VISION_APPLICATION_LAUNCH_NONCE']/'writers'/writer['writer_id']/'ownership.lock'
    refs=[{'fd':f.fd,'path':f.path} for f in psutil.Process(child.pid).open_files() if f.path==str(lock)]
-   (projects/'actual-cpu-writer-observation.json').write_text(json.dumps({'worker_pid':child.pid,'device':info.st_dev,'inode':info.st_ino,
+   observe('actual-cpu-writer-observation.json',{'worker_pid':child.pid,'device':info.st_dev,'inode':info.st_ino,
     'child_writer_open_refs':refs,'active_scopes':state.snapshot()['active_scopes'],'passed_count':len(passed),'passed_fds':[{'fd':fd,'device':os.fstat(fd).st_dev,'inode':os.fstat(fd).st_ino,'file_type':stat.S_IFMT(os.fstat(fd).st_mode)} for fd in passed],
     'CUDA_VISIBLE_DEVICES':kwargs['env'].get('CUDA_VISIBLE_DEVICES'),'NVIDIA_VISIBLE_DEVICES':kwargs['env'].get('NVIDIA_VISIBLE_DEVICES'),
-    'OMP_NUM_THREADS':kwargs['env'].get('OMP_NUM_THREADS'),'cpu_command_prefix':args[0][:5]}))
+    'OMP_NUM_THREADS':kwargs['env'].get('OMP_NUM_THREADS'),'cpu_command_prefix':args[0][:5]})
   return child
  rd.subprocess.Popen=observed_spawn
  original_checkpoint=ex._checkpoint
  def observed_checkpoint(stage):
   if stage in ('before_cpu_worker','after_cpu_output'):
-   (projects/('actual-cpu-scope-'+stage+'.json')).write_text(json.dumps(state.snapshot()))
+   observe('actual-cpu-scope-'+stage+'.json',state.snapshot())
   return original_checkpoint(stage)
  ex._checkpoint=observed_checkpoint
  original_execute=ex.execute_backend
  def observed_execute(*args,**kwargs):
   result=original_execute(*args,**kwargs)
-  (projects/'actual-cpu-scope-returned.json').write_text(json.dumps(state.snapshot()))
+  observe('actual-cpu-scope-returned.json',state.snapshot())
   return result
  ex.execute_backend=observed_execute
  from backend.engine import application_owned_cpu_child_relay as relay
- def observe(name,data):
-  with (projects/name).open('x') as output:json.dump(data,output,sort_keys=True)
  original_exchange=relay._backend_cpu_exchange
  def observed_exchange(capability,action,payload):
   s=relay._PRODUCERS[capability]
