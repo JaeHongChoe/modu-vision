@@ -553,7 +553,8 @@ def _run_comparison(payload: ComparisonRequest, project, source, progress=None, 
         if cancelled and cancelled(): raise InterruptedError("Comparison cancelled by user")
         row = dict(image)
         from backend.engine.dataset_metadata import metadata_for_path
-        metadata = metadata_for_path(Path(project["project_dir"]), source, Path(image["file_path"]), routes_dataset.STUDIO_ANNOTATIONS_DIR)
+        from backend.engine.annotation_storage import scoped_annotation_root
+        metadata = metadata_for_path(Path(project["project_dir"]), source, Path(image["file_path"]), scoped_annotation_root(routes_dataset.STUDIO_ANNOTATIONS_DIR))
         row.update({key: metadata.get(key) for key in ("image_uuid", "content_hash", "content_version", "revision", "product", "lot", "group", "tags")})
         for key, model in (("incumbent", baseline), ("candidate", candidate)):
             if cancelled and cancelled():raise InterruptedError('Comparison cancelled before next model')

@@ -242,7 +242,7 @@ def test_cpu_and_browser_ci_have_independent_original_bounds_and_complete_comman
     assert step(cpu, 'Type checks, renderer regressions, and build') == step(browser, 'Type checks, renderer regressions, and build')
     assert step(cpu, 'Record source, toolchain, and license inventory') == step(browser, 'Record source, toolchain, and license inventory')
     cpu_step = step(cpu, 'CPU contract and recovery regressions')
-    assert hashlib.sha256(cpu_step['run'].encode()).hexdigest() == '75bc023522d6195b30cad8f50dbcf67c253229d92cd6a34582b2c54e5bd45707', 'Full original CPU command/selection must be unchanged'
+    assert hashlib.sha256(cpu_step['run'].encode()).hexdigest() == 'e205e0f10b3519e21359daa9d66fdc911833a8f6fb722e773a17ad74f4f5ac4d', 'Full original CPU command/selection must be unchanged'
     assert cpu_step['env'] == {'MV_CI_RECORD_DIR': '${{ runner.temp }}/modu-ci-manifests'}
     assert step(cpu, 'Core defect baseline evidence')['run'] == 'python scripts/service_baseline_evidence.py --output "$MV_CI_RECORD_DIR/ci-baseline-evidence.json"'
     assert not any(value.get('name') in {'Install test browser', 'Browser transport and flow checks'} for value in cpu['steps'])

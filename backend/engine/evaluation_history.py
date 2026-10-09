@@ -283,6 +283,7 @@ def archive_specialized_evaluation(project, checkpoint, source, result, *, task=
     """Archive actual family metrics without inventing OK/NG ground truth."""
     from backend.api.routes_model_comparisons import _fingerprint, _sha256
     from backend.engine.dataset_metadata import metadata_for_path
+    from backend.engine.annotation_storage import scoped_annotation_root
     from backend.api import routes_dataset
     checkpoint=Path(checkpoint);source=Path(source).resolve();dataset=Path(dataset_path or source).resolve()
     task=task or result.get('task')
@@ -316,7 +317,7 @@ def archive_specialized_evaluation(project, checkpoint, source, result, *, task=
             relative=sample.get('image')
             if not isinstance(relative,str):continue
             image,evaluation_image=original_image(relative)
-            metadata=metadata_for_path(Path(project['project_dir']),source,image,routes_dataset.STUDIO_ANNOTATIONS_DIR)
+            metadata=metadata_for_path(Path(project['project_dir']),source,image,scoped_annotation_root(routes_dataset.STUDIO_ANNOTATIONS_DIR))
             from backend.engine.evaluation_evidence import character_errors
             sample['character_evidence']=character_errors(sample.get('reference_text',''),sample.get('predicted_text',''))
             predictions.append({**sample,**{key:metadata.get(key) for key in ('image_uuid','file_path','content_hash','content_version','revision','product','lot','group','tags')},
@@ -333,7 +334,7 @@ def archive_specialized_evaluation(project, checkpoint, source, result, *, task=
                     except ValueError:raise ValueError('Evaluation sample escaped its prepared dataset')
                 if relative:
                     original,copied=original_image(relative)
-                    metadata=metadata_for_path(Path(project['project_dir']),source,original,routes_dataset.STUDIO_ANNOTATIONS_DIR)
+                    metadata=metadata_for_path(Path(project['project_dir']),source,original,scoped_annotation_root(routes_dataset.STUDIO_ANNOTATIONS_DIR))
                     sample.update({key:metadata.get(key) for key in ('image_uuid','file_path','content_hash','content_version','revision','product','lot','group','tags')})
                     sample['evaluation_file_path']=str(copied)
     payload['test_predictions']=predictions

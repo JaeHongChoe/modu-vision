@@ -1200,7 +1200,7 @@ def _run_common_evaluation(project,job_id,dataset_path,version_id,profile_id,dev
     from backend.engine.dataset_metadata import metadata_for_path
     from backend.api import routes_dataset
     for row in result['test_predictions']:
-        metadata=metadata_for_path(Path(project['project_dir']),cohort['source'],Path(row['file_path']),routes_dataset.STUDIO_ANNOTATIONS_DIR)
+        metadata=metadata_for_path(Path(project['project_dir']),cohort['source'],Path(row['file_path']),scoped_annotation_root(routes_dataset.STUDIO_ANNOTATIONS_DIR))
         row.update({key:metadata.get(key) for key in ('image_uuid','content_hash','content_version','revision','tags','product','lot','group','workflow_state')})
     from backend.engine.evaluation_evidence import evaluation_analysis
     result['analysis']=evaluation_analysis(result['test_predictions'],context.task,result['class_semantics']['roles'])
@@ -1291,7 +1291,7 @@ def run_or_load_evaluation(
         for prediction in result.get("test_predictions", []):
             path = prediction.get("file_path")
             if path and Path(path).is_file() and Path(path).resolve().is_relative_to(bound_source):
-                metadata = metadata_for_path(project_root, bound_source, Path(path), routes_dataset.STUDIO_ANNOTATIONS_DIR)
+                metadata = metadata_for_path(project_root, bound_source, Path(path), scoped_annotation_root(routes_dataset.STUDIO_ANNOTATIONS_DIR))
                 prediction.update({key: metadata.get(key) for key in ("image_uuid", "content_hash", "content_version", "revision", "tags", "product", "lot", "group", "workflow_state")})
         from backend.engine.evaluation_evidence import evaluation_analysis
         result['analysis']=evaluation_analysis(result.get('test_predictions',[]),task,(result.get('class_semantics') or {}).get('roles'))

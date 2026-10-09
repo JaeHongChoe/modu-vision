@@ -1,0 +1,116 @@
+{
+  "CI": {
+    "complete_CPU_command_sha256": "e205e0f10b3519e21359daa9d66fdc911833a8f6fb722e773a17ad74f4f5ac4d",
+    "complete_CPU_selected_paths": 247,
+    "hosted_completion_pending": true,
+    "independent_bounded_source_browser_jobs_retained": true,
+    "no_timeout_or_browser_core_guard_changes": true,
+    "only_added_selector": "backend/tests/test_evaluation_metadata_callsite_scope.py",
+    "original_CPU_selectors_order_retained": 246
+  },
+  "actual_candidate_files": {
+    ".github/workflows/ci.yml": {
+      "sha256": "96e0b8ed4aad937c842c3be0c7f17365d53c55c0b86928dfbadb1b01d537a166",
+      "size": 23325
+    },
+    "backend/api/routes_evaluation.py": {
+      "sha256": "874885d1a3e9e7d5ca90111ad50e226a5ebc3e60a19886688686967d36c88152",
+      "size": 88054
+    },
+    "backend/api/routes_model_comparisons.py": {
+      "sha256": "8c82d652927178a4e9499536c0c17ef6bf8b1e79bb2df1043d30d7b675664309",
+      "size": 53244
+    },
+    "backend/engine/evaluation_history.py": {
+      "sha256": "2a9d98660363611abf048bcb17de5702390dbbc74d3b47969c9b2d32c7e60a1b",
+      "size": 24051
+    },
+    "backend/tests/test_evaluation_metadata_callsite_scope.py": {
+      "sha256": "1d1f15de0f7a2b62a1503f85cf5b8eb06c2aa3aa9506b34608159734267adcfc",
+      "size": 3748
+    },
+    "backend/tests/test_source_ci_model_lanes.py": {
+      "sha256": "2cf7a8a70d06edf23e8c8b02e50d8b59ade9091edb01e7973bbde82e76c52fdf",
+      "size": 18534
+    }
+  },
+  "actual_controls": {
+    "CI_routing": {
+      "failed": 0,
+      "junit": {
+        "sha256": "e1df290e833ef78918e50177210b6c9cbd00b746d4fa703fc37b624e0af3d6f1",
+        "size": 3421
+      },
+      "passed": 19,
+      "raw_log": {
+        "sha256": "ee372ea30d4493b5b64fe41239880b81b3d1002e5b919a755290fce2f5f4aa0c",
+        "size": 252
+      },
+      "run": {
+        "sha256": "148b652659c310b930e96531ad0ec90bbf40bdfd328d5b63b772057bca626f87",
+        "size": 158
+      },
+      "tests": 19
+    },
+    "green": {
+      "failed": 0,
+      "junit": {
+        "sha256": "30ec3371a31dd7a3b47acda3d38f6a349d0d5967a10fe46a7574a01d32546ede",
+        "size": 14686
+      },
+      "passed": 84,
+      "raw_log": {
+        "sha256": "4cc1a50271e6c9f2a8b578b4bab36f073717a40e5b96e19c90c953c9e1196f37",
+        "size": 332
+      },
+      "run": {
+        "sha256": "7eeebdecf7aeedfe0ad481837ba6f4bb891b4ba1a095cdfdd1a72f8f6555d096",
+        "size": 159
+      },
+      "tests": 84
+    },
+    "red": {
+      "failed": 5,
+      "junit": {
+        "sha256": "3dad5e3f5f78399e5428966c8ab4d9f42e7644c1b783bc2a98e3129115895e08",
+        "size": 21607
+      },
+      "passed": 5,
+      "raw_log": {
+        "sha256": "a1ed2593a42074b64b83afa39886d1d4bfa1e8f7788ee0619f88bb860b7421cd",
+        "size": 17564
+      },
+      "run": {
+        "sha256": "d89cc4010f25ac2c886047eda8c199ce0cdb323d54de8347850e36b503771beb",
+        "size": 158
+      },
+      "tests": 10
+    }
+  },
+  "base_source": "3d9ca90c617e8f965136567ef5661eafa47be0fa",
+  "fix": {
+    "existing_annotation_storage_authority_and_guard_unchanged": true,
+    "five_original_metadata_call_expressions": true,
+    "full_protected_project_source_legacy_trees_unchanged": true,
+    "new_test_uses_production_AST_expression_and_real_revision_UUID_hash_metadata": true,
+    "scope_callers": [
+      "common evaluation",
+      "legacy evaluation",
+      "model comparison",
+      "specialized OCR history",
+      "specialized family history"
+    ],
+    "whole_API_model_execution_or_metric_quality_not_qualified": true
+  },
+  "independent_metadata_source_review": {
+    "sha256": "73d7afaa6ad5e4b95c1e530f817b3520c27af7ea5f54356fb998c97f89d3d7aa",
+    "size": 2999
+  },
+  "no_parent_model_quality_target_human_or_release_acceptance": true,
+  "schema_version": 1,
+  "scope": "five saved-metadata call expressions preserve existing request project annotation scope and legacy fallback; bounded regression controls",
+  "source_freeze": {
+    "sha256": "7f3db0526adbeb29ac0528305aea9bf1c2ccb41c62ce4c5669b621c71be6aa49",
+    "size": 160510
+  }
+}

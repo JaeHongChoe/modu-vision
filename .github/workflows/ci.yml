@@ -117,6 +117,7 @@ jobs:
           backend/tests/test_flow_export_target_identity.py
           backend/tests/test_evaluation_training_provenance.py
           backend/tests/test_evaluation_archive_scope.py
+          backend/tests/test_evaluation_metadata_callsite_scope.py
           backend/tests/test_segmentation_mask_folder_classes.py
           backend/tests/test_annotation_source_encoding.py
           backend/tests/test_annotation_truncated_source.py
