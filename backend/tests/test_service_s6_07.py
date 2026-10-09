@@ -43,16 +43,19 @@ def test_every_command_and_path_in_the_guide_is_real():
 def test_the_locked_install_commands_and_versions_are_the_ones_ci_runs():
     guide, readme = read('CONTRIBUTING.md'), read('README.md')
     for workflow, lock in (('windows-native.yml', 'requirements-windows-py313-cpu.lock'), ('ci.yml', 'requirements-ubuntu-py313-cpu.lock')):
-        text = ' '.join(read(f'.github/workflows/{workflow}').split())
-        installs = re.findall(r'python -m pip install ([^&;|\n]*?build/ci/[\w.-]+\.lock)', text)
-        assert installs == [f'--require-hashes --only-binary=:all: -r build/ci/{lock}'], (workflow, installs)
-        assert f'-m pip install {installs[0]}' in guide, lock  # the same arguments, whichever Python the shell names
-        assert 'npm ci' in text, workflow
         steps = yaml.safe_load(read(f'.github/workflows/{workflow}'))
-        versions = {key: str(step['with'][key]) for job in steps['jobs'].values() for step in job['steps']
-                    for key in ('python-version', 'node-version') if key in step.get('with', {})}
-        assert f"Python {versions['python-version']}" in guide and f"Node.js {versions['node-version']}" in guide, versions
-        assert f"**Python**: {versions['python-version']}" in readme and f"**Node.js**: {versions['node-version']}" in readme, versions
+        assert steps['jobs'], workflow
+        for job_name, job in steps['jobs'].items():
+            # Independent jobs each install their own environment and pinned versions.
+            text = ' '.join(' '.join(step.get('run', '').split()) for step in job['steps'])
+            installs = re.findall(r'python -m pip install ([^&;|\n]*?build/ci/[\w.-]+\.lock)', text)
+            assert installs == [f'--require-hashes --only-binary=:all: -r build/ci/{lock}'], (workflow, job_name, installs)
+            assert f'-m pip install {installs[0]}' in guide, lock  # the same arguments, whichever Python the shell names
+            assert 'npm ci' in text, (workflow, job_name)
+            versions = {key: str(step['with'][key]) for step in job['steps']
+                        for key in ('python-version', 'node-version') if key in step.get('with', {})}
+            assert f"Python {versions['python-version']}" in guide and f"Node.js {versions['node-version']}" in guide, (workflow, job_name, versions)
+            assert f"**Python**: {versions['python-version']}" in readme and f"**Node.js**: {versions['node-version']}" in readme, (workflow, job_name, versions)
     electron = json.loads(read('package.json'))['devDependencies']['electron'].split('.')[0]
     assert f'/ {electron} |' in guide and f'Electron {electron}' in readme, electron
     for document in (guide, readme):

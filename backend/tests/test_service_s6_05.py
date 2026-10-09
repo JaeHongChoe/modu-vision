@@ -101,11 +101,13 @@ def test_runtime_artifact_path_uses_step_context_instead_of_job_context():
     # YAML parsing alone cannot detect the rejection before a hosted job starts.
     for name in ["ci.yml", "windows-native.yml"]:
         workflow = yaml.safe_load((ROOT / ".github/workflows" / name).read_text(encoding="utf-8"))
+        e2e_steps = []
         for job in workflow["jobs"].values():
             assert all("runner." not in str(value) for value in job.get("env", {}).values()), name
-            e2e_steps = [step for step in job["steps"] if
-                         "test:e2e:browser" in step.get("run", "") or
-                         "test:e2e:electron" in step.get("run", "")]
-            assert e2e_steps, name
-            assert all(step.get("env", {}).get("MV_E2E_ARTIFACT_DIR") ==
-                       "${{ runner.temp }}/modu-e2e" for step in e2e_steps), name
+            e2e_steps.extend(step for step in job["steps"] if
+                             "test:e2e:browser" in step.get("run", "") or
+                             "test:e2e:electron" in step.get("run", ""))
+        # CPU-only jobs have no runtime E2E step; the workflow must still have one.
+        assert e2e_steps, name
+        assert all(step.get("env", {}).get("MV_E2E_ARTIFACT_DIR") ==
+                   "${{ runner.temp }}/modu-e2e" for step in e2e_steps), name
