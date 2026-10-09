@@ -7,9 +7,10 @@ import {installDesktopHostShim} from './fixtures/desktop-host-shim';
 
 type Api=(route:string,body?:unknown,method?:string)=>Promise<any>;
 type FolderResult={kind:'select';directory:string}|{kind:'cancel'}|{kind:'error'};
-type FolderControl={set:(result:FolderResult)=>Promise<void>;calls:()=>Promise<any[]>};
+type FolderControl={set:(result:FolderResult)=>Promise<void>;calls:()=>Promise<any[]>;defer:(result:FolderResult)=>Promise<void>;release:()=>Promise<void>};
 const endpoint='/api/dataset/formats/import';
 const errorText='Controlled label folder dialog failure';
+const withinFolderFrame=async<T>(work:Promise<T>,deadline:number):Promise<T>=>{const remaining=deadline-Date.now();if(remaining<=0)throw Error('Owned folder handoff absolute10s deadline exhausted');let timer:ReturnType<typeof setTimeout>|undefined;try{return await Promise.race([work,new Promise<T>((_,reject)=>{timer=setTimeout(()=>reject(Error('Owned folder handoff absolute10s deadline exhausted')),remaining);})]);}finally{if(timer)clearTimeout(timer);}};
 const sha=(file:string)=>createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const isImport=(request:Request)=>request.method()==='POST'&&new URL(request.url()).pathname===endpoint;
 test.use({actionTimeout:10_000});
@@ -26,7 +27,7 @@ function tree(root:string):Record<string,string>{
 // responses are controlled; preview and exact original-image handoff use the
 // actual source renderer/backend. Closing a completed preview abandons UI scope,
 // not an in-flight request, an annotation change, or a human review decision.
-async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,folder:FolderControl,native:boolean,url?:string){
+async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,folder:FolderControl,native:boolean,url?:string,apiOrigin?:string){
  const project=await api('/api/project/create',{name:'Owned label exchange lifecycle',task:'segmentation'});
  const active=await api('/api/project/update',{source_dataset_dir:workspace.dataset},'PUT');
  await api('/api/dataset/import',{folder_path:workspace.dataset,task:'segmentation'});
@@ -45,6 +46,13 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
    shapes:[{label:'ControlledProposal',points:[[3,4],[18,20]],shape_type:'rectangle',flags:{},group_id:null}]}));
   evidence.addFile(file);return{directory,file,sha256:sha(file),image};
  });
+ // Only the existing owned source is imported into a second isolated project.
+ // It provides a real recent-project GUI destination for the folder lifetime.
+ const handoffProject=await api('/api/project/create',{name:'Owned folder handoff destination',task:'segmentation'});
+ const handoffActive=await api('/api/project/update',{source_dataset_dir:workspace.dataset},'PUT');await api('/api/dataset/import',{folder_path:workspace.dataset,task:'segmentation'});await api('/api/team-data');await api('/api/team-data/readiness');
+ const handoffMetadata=(await api('/api/dataset/metadata?limit=10')).items;expect(handoffMetadata).toHaveLength(2);expect(handoffMetadata.map((row:any)=>row.file_path).sort()).toEqual(images.map((row:any)=>row.file_path).sort());
+ const handoffAnnotationRoot=handoffActive.annotations_dir||handoffProject.annotations_dir,handoffTree=tree(handoffAnnotationRoot),handoffVersions=await api('/api/dataset/versions');
+ await api('/api/project/open',{project_dir:project.project_dir});
  const navigate=async()=>{if(url)await page.goto(url);else await page.reload();await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(0).click();};
  await navigate();
  const toggle=page.getByRole('button',{name:'이미지 검토·그룹 분할·라벨 교환',exact:true});
@@ -102,6 +110,28 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   await navigate();await open();await expect(panel.getByText('폴더를 선택하세요',{exact:true})).toBeVisible();await expect(previewButton).toBeDisabled();await expect(apply).toBeDisabled();await expect(previewLine(images[1])).toHaveCount(0);expect(observed.length).toBe(closeCount);await remember('actual-reload-resets-folder-preview');
   await panel.getByLabel('데이터 작업자 이름',{exact:true}).fill('controlled-label-lifecycle');
   await setFolder({kind:'select',directory:inputs[1].directory});await capture(inputs[1]);
+  // A real GUI project switch occurs while the old host dialog promise is
+  // unresolved. Releasing it must not populate the new project's folder state.
+  const handoffFrame=Date.now()+10_000,left=()=>{const value=handoffFrame-Date.now();if(value<=0)throw Error('Owned folder handoff absolute10s deadline exhausted');return value;},handoffStart=await count();
+  const switchRecent=async(target:any)=>{
+   await page.getByTitle('프로젝트 관리',{exact:true}).click({timeout:left()});const dialog=page.getByRole('dialog',{name:'프로젝트 관리',exact:true});
+   const recent=dialog.getByRole('button').filter({has:page.locator('span[title]').filter({hasText:target.project_dir})});await expect(recent).toHaveCount(1,{timeout:left()});await expect(recent.locator('span[title]')).toHaveAttribute('title',target.project_dir,{timeout:left()});
+   const reply=page.waitForResponse(response=>{const request=response.request(),url=new URL(response.url());return request.method()==='POST'&&request.frame()===page.mainFrame()&&url.origin===apiOrigin&&url.pathname==='/api/project/open'&&request.postDataJSON().project_dir===target.project_dir;},{timeout:left()});
+   await recent.click({timeout:left()});const actual=await withinFolderFrame(reply,handoffFrame);expect(actual.status()).toBe(200);const body=await withinFolderFrame(actual.json(),handoffFrame);await withinFolderFrame(actual.finished(),handoffFrame);expect(body.project_dir).toBe(target.project_dir);await expect(dialog).toHaveCount(0,{timeout:left()});await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(target.name,{timeout:left()});
+   await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(0).click({timeout:left()});await withinFolderFrame(open(),handoffFrame);return{method:actual.request().method(),url:actual.url(),request:actual.request().postDataJSON(),status:actual.status(),project_dir:body.project_dir};
+  };
+  let folderHandoff:any;
+  await folder.defer({kind:'select',directory:inputs[0].directory});
+  try{
+   await panel.getByRole('button',{name:'라벨 폴더 선택',exact:true}).click({timeout:left()});await expect.poll(async()=>(await folder.calls()).length,{timeout:left()}).toBe(handoffStart.dialogs+1);await expect(panel.getByRole('button',{name:'라벨 폴더 선택',exact:true})).toBeDisabled({timeout:left()});
+   const switched=await switchRecent(handoffProject);await expect(panel.getByText('폴더를 선택하세요',{exact:true})).toBeVisible({timeout:left()});await expect(previewButton).toBeDisabled({timeout:left()});await expect(apply).toBeDisabled({timeout:left()});
+   await folder.release();await expect(panel.getByRole('button',{name:'라벨 폴더 선택',exact:true})).toBeEnabled({timeout:left()});await expect(selected(inputs[0].directory)).toHaveCount(0,{timeout:left()});await expect(panel.getByText('폴더를 선택하세요',{exact:true})).toBeVisible({timeout:left()});expect(observed.length).toBe(handoffStart.imports);expect(writes.length).toBe(handoffStart.writes);
+   await withinFolderFrame(setFolder({kind:'select',directory:inputs[1].directory}),handoffFrame);await expect(selected(inputs[1].directory)).toHaveAttribute('title',inputs[1].directory,{timeout:left()});await expect(apply).toBeDisabled({timeout:left()});
+   const actualHandoffMetadata=await withinFolderFrame(api('/api/dataset/metadata?limit=10'),handoffFrame);expect(actualHandoffMetadata.items).toEqual(handoffMetadata);expect(tree(handoffAnnotationRoot)).toEqual(handoffTree);expect(await withinFolderFrame(api('/api/dataset/versions'),handoffFrame)).toEqual(handoffVersions);
+   const returned=await switchRecent(project);await expect(panel.getByText('폴더를 선택하세요',{exact:true})).toBeVisible({timeout:left()});await expect(previewButton).toBeDisabled({timeout:left()});await expect(apply).toBeDisabled({timeout:left()});expect(observed.length).toBe(handoffStart.imports);expect(writes.length).toBe(handoffStart.writes);
+   expect(handoffFrame-Date.now()).toBeGreaterThan(0);folderHandoff={old_project_id:project.id,new_project_id:handoffProject.id,held_folder:inputs[0].directory,actual_project_open:switched,actual_project_return:returned,new_project_legitimate_folder:inputs[1].directory,stale_folder_absent:true,preview_and_apply_disabled:true,new_folder_control_usable:true,dialog_calls:(await withinFolderFrame(folder.calls(),handoffFrame)).slice(handoffStart.dialogs),no_import_or_label_writes:true,elapsed_ms:10_000-(handoffFrame-Date.now())};expect(handoffFrame-Date.now()).toBeGreaterThan(0);
+  }finally{await folder.release();}
+  await remember('late-folder-reply-fenced-after-real-project-handoff');await evidence.screenshot(page,`${native?'native':'browser'}-folder-project-handoff-stale-result-refused`);
   const image=images[1],rawPath='/api/dataset/raw/'+encodeURIComponent(path.basename(image.file_path));
   const rawWaiting=page.waitForResponse(response=>{const target=new URL(response.url());return target.pathname===rawPath&&target.searchParams.get('file_path')===image.file_path;});
   const annotationWaiting=page.waitForResponse(response=>{const target=new URL(response.url());return target.pathname==='/api/annotations/'+path.basename(image.file_path,'.png')&&target.searchParams.get('file_path')===image.file_path&&response.request().method()==='GET';});
@@ -120,8 +150,9 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   const afterLabels=await Promise.all(workspace.images.map(file=>api(annotation(file.path))));for(let index=0;index<afterLabels.length;index++){expect(afterLabels[index].annotations).toEqual(beforeLabels[index].annotations);expect(afterLabels[index].mask_file).toBe(beforeLabels[index].mask_file);}
   const afterMetadata=(await api('/api/dataset/metadata?limit=10')).items;expect(afterMetadata).toEqual(metadata.items);expect(tree(annotationRoot)).toEqual(beforeTree);expect(await api('/api/dataset/versions')).toEqual(beforeVersions);
   for(const file of workspace.images)expect(sha(file.path)).toBe(file.sha256);for(const input of inputs)expect(sha(input.file)).toBe(input.sha256);
-  evidence.note('label_exchange_lifecycle',{record_id:'F117',actions:{'format-import-folder':['cancel','error','reopen'],'format-import-preview':['cancel','reopen','handoff'],'format-import-reviewed-apply':['cancel']},project,source_images:workspace.images,inputs,receipts,states,folder_dialog_calls:folderCalls,metadata_before:metadata.items,metadata_after:afterMetadata,annotations_before:beforeLabels,annotations_after:afterLabels,annotation_tree_before:beforeTree,annotation_tree_after:tree(annotationRoot),versions_before:beforeVersions,versions_after:await api('/api/dataset/versions'),annotation_or_metadata_writes:writes,
+  evidence.note('label_exchange_lifecycle',{record_id:'F117',actions:{'format-import-folder':['cancel','error','reopen','handoff'],'format-import-preview':['cancel','reopen','handoff'],'format-import-reviewed-apply':['cancel']},project,source_images:workspace.images,inputs,receipts,states,folder_dialog_calls:folderCalls,metadata_before:metadata.items,metadata_after:afterMetadata,annotations_before:beforeLabels,annotations_after:afterLabels,annotation_tree_before:beforeTree,annotation_tree_after:tree(annotationRoot),versions_before:beforeVersions,versions_after:await api('/api/dataset/versions'),annotation_or_metadata_writes:writes,
    handoff:{file_path:image.file_path,image_uuid:image.image_uuid,revision:image.revision,source_sha256:image.content_hash,actual_raw_response_sha256:rawSha,raw_url:raw.url(),annotation_url:labels.url(),annotations:handoffLabels.annotations,stage:2},
+   folder_project_handoff:folderHandoff,
    scope_cancel:{completed_unsent_preview_closed:true,inflight_transport_cancel_verified:false,zero_apply_POST:true},actual_reload_resets_selected_folder_and_preview:true,replacement_folder_clears_previous_preview:true,source_ui:true,source_electron:native,native_folder_dialog_response_controlled:native,browser_folder_bridge_controlled:!native,human_OS_picker_verified:false,generated_proposals_are_human_truth:false,label_or_review_write:false,actual_model_inference:false,quality_accepted:false,installed_target_verified:false,gpu_used:false,windows_excluded:true});
  }finally{page.off('request',observe);}
 }
@@ -129,12 +160,12 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
 test('label exchange folder and unsent preview lifecycle preserve exact original handoff',async({page,renderer,workspace,evidence})=>{
  const api:Api=async(route,body,method)=>{const response=await page.request.fetch(renderer.origin+route,{method:method||(body===undefined?'GET':'POST'),...(body===undefined?{}:{data:body})});expect(response.ok(),await response.text()).toBe(true);return response.json();};
  await installDesktopHostShim(page,renderer.port);
- const folder:FolderControl={set:result=>page.evaluate(({result,errorText})=>{const target=window as any;target.__labelFolderCalls||=[];target.api.selectFolder=async(options:any)=>{target.__labelFolderCalls.push({result,options});if(result.kind==='error')throw Error(errorText);return result.kind==='select'?result.directory:null;};},{result,errorText}),calls:()=>page.evaluate(()=>(window as any).__labelFolderCalls||[])};
- await exercise(page,workspace,evidence,api,folder,false,renderer.url);
+ const folder:FolderControl={set:result=>page.evaluate(({result,errorText})=>{const target=window as any;target.__labelFolderCalls||=[];target.api.selectFolder=async(options:any)=>{target.__labelFolderCalls.push({result,options});if(result.kind==='error')throw Error(errorText);return result.kind==='select'?result.directory:null;};},{result,errorText}),calls:()=>page.evaluate(()=>(window as any).__labelFolderCalls||[]),defer:result=>page.evaluate(({result,errorText})=>{const target=window as any;target.__labelFolderCalls||=[];const gate=new Promise<void>(resolve=>target.__labelFolderRelease=resolve);target.api.selectFolder=async(options:any)=>{target.__labelFolderCalls.push({result,options});await gate;if(result.kind==='error')throw Error(errorText);return result.kind==='select'?result.directory:null;};},{result,errorText}),release:()=>page.evaluate(()=>{const target=window as any;target.__labelFolderRelease?.();target.__labelFolderRelease=undefined;})};
+ await exercise(page,workspace,evidence,api,folder,false,renderer.url,renderer.origin);
 });
 test('native label exchange folder and unsent preview lifecycle preserve original handoff',{tag:'@electron'},async({electronSession,workspace,evidence})=>{
  const page=electronSession.window,backend=await electronSession.waitForBackend();
  const api:Api=(route,body,method)=>page.evaluate(async({port,route,body,method})=>{const response=await fetch(`http://127.0.0.1:${port}${route}`,{method:method||(body===undefined?'GET':'POST'),...(body===undefined?{}:{headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})});if(!response.ok)throw Error(`Owned label lifecycle HTTP ${response.status}: ${await response.text()}`);return response.json();},{port:backend.port,route,body,method});
- const folder:FolderControl={set:result=>electronSession.app.evaluate(({dialog},{result,errorText})=>{const target=globalThis as any;target.__labelFolderCalls||=[];dialog.showOpenDialog=async(...args:any[])=>{target.__labelFolderCalls.push({result,options:args[args.length-1]});if(result.kind==='error')throw Error(errorText);return{canceled:result.kind==='cancel',filePaths:result.kind==='select'?[result.directory]:[]};};},{result,errorText}),calls:()=>electronSession.app.evaluate(()=>(globalThis as any).__labelFolderCalls||[])};
- await exercise(page,workspace,evidence,api,folder,true);
+ const folder:FolderControl={set:result=>electronSession.app.evaluate(({dialog},{result,errorText})=>{const target=globalThis as any;target.__labelFolderCalls||=[];dialog.showOpenDialog=async(...args:any[])=>{target.__labelFolderCalls.push({result,options:args[args.length-1]});if(result.kind==='error')throw Error(errorText);return{canceled:result.kind==='cancel',filePaths:result.kind==='select'?[result.directory]:[]};};},{result,errorText}),calls:()=>electronSession.app.evaluate(()=>(globalThis as any).__labelFolderCalls||[]),defer:result=>electronSession.app.evaluate(({dialog},{result,errorText})=>{const target=globalThis as any;target.__labelFolderCalls||=[];const gate=new Promise<void>(resolve=>target.__labelFolderRelease=resolve);dialog.showOpenDialog=async(...args:any[])=>{target.__labelFolderCalls.push({result,options:args[args.length-1]});await gate;if(result.kind==='error')throw Error(errorText);return{canceled:result.kind==='cancel',filePaths:result.kind==='select'?[result.directory]:[]};};},{result,errorText}),release:()=>electronSession.app.evaluate(()=>{const target=globalThis as any;target.__labelFolderRelease?.();target.__labelFolderRelease=undefined;})};
+ await exercise(page,workspace,evidence,api,folder,true,undefined,`http://127.0.0.1:${backend.port}`);
 });

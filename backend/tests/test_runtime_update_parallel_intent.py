@@ -2,13 +2,26 @@
 
 No real executor, thread, signature/OS/lease authority, archive or file I/O is
 exercised. The original validators are independently byte-pinned in the source
-receipt; these controls test orchestration and new namespace barriers only.
+receipt; these controls test orchestration and fresh namespace barriers only.
+
+Adapted owning schedule: completed signed bundle, one full fresh pre-namespace
+job, then two ZIP ranges and two installed ranges, then one full fresh post-
+namespace job in the same invocation-local max4 executor. Seven Futures are
+submitted: 1 bundle + 1 pre-namespace + 4 content + 1 post-namespace. Direct
+namespace controls retain their original default four-range schedule.
+Historical 35 names are retained;
+obsolete schedule assertions/ordinals are explicitly inventoried in the
+private Source receipt. This is not a byte-identical original35 pass claim.
 """
 import ast
 import copy
+from contextlib import contextmanager
+import hashlib
+import json
+import re
 from hashlib import sha256
 import io
-from pathlib import Path
+from pathlib import Path, PosixPath
 import stat
 import sys
 from types import SimpleNamespace
@@ -99,7 +112,8 @@ class ModelFuture:
     def done(self): return self.finished
     def result(self, timeout=None):
         assert timeout is None
-        if self.executor.world.result_interrupts:
+        if (self.executor.world.result_interrupts
+                and self.ordinal >= self.executor.world.result_interrupt_floor):
             raise self.executor.world.result_interrupts.pop(0)
         if not self.finished: self.finish()
         if self.error is not None: raise self.error
@@ -146,11 +160,44 @@ class ModelExecutor:
     def __exit__(self, *args): self.shutdown()
 
 
+class ModelZip:
+    """Invocation-local inert member reader; no real ZIP/file/CRC authority.
+
+    Each genuine call records its actual modeled boundary. No extra Future,
+    legacy portable call, pre-completed job or scheduling record is fabricated.
+    The new range AST still consumes every modeled regular member byte and
+    performs its real hashlib digest against the original row before returning.
+    """
+    def __init__(self, world, reader):
+        assert reader.getvalue() == b'modeled archive'
+        self.world = world
+        self.regular = {row['path']: b'abc' for row in world.manifest['files']}
+        self.links = {row['path']: row['target'].encode() for row in world.manifest.get('links', [])}
+        self.data = {'portable-application.json': world.archive_manifest_token,
+                     **self.regular, **self.links}
+    def __enter__(self): return self
+    def __exit__(self, *args): pass
+    def infolist(self): return [self.getinfo(name) for name in self.data]
+    def getinfo(self, name):
+        return SimpleNamespace(filename=name, file_size=len(self.data[name]),
+            external_attr=(stat.S_IFLNK if name in self.links else stat.S_IFREG) << 16,
+            flag_bits=0, is_dir=lambda: False)
+    def read(self, name): return self.data[name]
+    def open(self, name):
+        self.world.log.append(('zip_member', name))
+        stream = io.BytesIO(self.data[name]); original = stream.read
+        def read(*args):
+            if name in self.world.zip_errors: raise self.world.zip_errors[name]
+            return original(*args)
+        stream.read = read
+        return stream
+
+
 class World:
     def __init__(self):
         self.log = []; self.executors = []; self.scans = 0
         self.fence_held = True; self.max_pending = 0
-        self.wait_interrupts = []; self.result_interrupts = []
+        self.wait_interrupts = []; self.result_interrupts = []; self.result_interrupt_floor = 0
         self.event_interrupts = []; self.event_check_interrupts = []; self.shutdown_interrupts = []
         self.reject_submit = self.hidden_submit = -1; self.hidden = None; self.hidden_started = False
         self.submit_error = RuntimeError('original ordinary submit')
@@ -172,6 +219,8 @@ class World:
             'envelope_sha256': sha256(b'envelope').hexdigest(),
             'release': self.release, 'migration_id': None}
         self.root = ModelPath(self, 'root')
+        self.zip_errors = {}
+        self.archive_manifest_token = b'manifest'
 
     def guard_call(self, kind):
         self.log.append(('validator', kind))
@@ -207,24 +256,50 @@ class World:
         return {f for f in futures if f.done()}, {f for f in futures if not f.done()}
 
     def load(self):
+        # Every invocation loads the exact current product orchestration AST.
+        # Parsed manifest identity and archive/OS paths are declared inert
+        # providers, as in the old World; no raw JSON/signature/file authority
+        # or real ZIP CRC claim is made by this model module.
         tree = ast.parse(SOURCE.read_bytes())
         wanted = {'UpdateError', '_validated_intent', '_IntentCheckWork',
             '_intent_parallel_checks', '_intent_executor_close', '_intent_checks_join',
-            '_installed_intent_namespace', '_installed_intent_row'}
+            '_installed_intent_namespace', '_installed_intent_row', '_canonical',
+            '_sha', '_hex', '_fields', '_safe_path', '_application_namespaces',
+            '_intent_domain_ranges', '_intent_zip_metadata', '_intent_zip_range',
+            '_intent_installed_range', '_intent_overlap_error',
+            '_intent_namespace_range', '_intent_parallel_namespace'}
         definitions = [n for n in tree.body if isinstance(n, (ast.FunctionDef,
             ast.ClassDef)) and n.name in wanted]
+
+        @contextmanager
+        def original_archive_file(path, limit, **kwargs):
+            assert self.fence_held and limit == 1024**3 and kwargs == {}
+            self.log.append(('archive_before', path.value))
+            try:
+                yield io.BytesIO(b'modeled archive'), None
+            finally:
+                self.log.append(('archive_after', path.value))
+
+        def parsed_original_manifest(raw):
+            # Explicit original parsed-object provider, never a product receipt.
+            assert raw == self.archive_manifest_token
+            return self.manifest
+
         ns = {'_intent': lambda root, identifier: (self.record, self.root / 'update'),
-            'verify_release': self.verify_release,
-            '_sha': lambda b: sha256(b).hexdigest(), '_bundle': self.bundle,
-            '_portable': self.portable, '_unlinked': lambda path: path,
-            'GENERATIONS': 'generation', 'MAX_APPLICATION_MANIFEST': 8 * 1024**2,
-            '_read': lambda path, limit: self.manifest_bytes, '_native_layout': lambda m:
-                ({'alias': 'folder/r0'}, {'folder'}), '_check_file': self.check_file,
-            'stat': stat, 'os': SimpleNamespace(readlink=lambda path: self.aliases[path.value.rsplit('/application/', 1)[-1]]),
+            'verify_release': self.verify_release, '_bundle': self.bundle,
+            '_unlinked': lambda path: path, 'GENERATIONS': 'generation',
+            'MAX_APPLICATION_MANIFEST': 8 * 1024**2, 'MAX_APPLICATION_MEMBERS': 20000,
+            '_read': lambda path, limit: self.manifest_bytes,
+            '_file': original_archive_file, '_json': parsed_original_manifest,
+            '_native_layout': lambda m: ({'alias': 'folder/r0'}, {'folder'}),
+            '_check_file': self.check_file, 'stat': stat,
+            'os': SimpleNamespace(readlink=lambda path: self.aliases[path.value.rsplit('/application/', 1)[-1]]),
+            'zipfile': SimpleNamespace(ZipFile=lambda reader: ModelZip(self, reader)),
             'ThreadPoolExecutor': lambda **kwargs: ModelExecutor(self, **kwargs),
             'wait': self.wait, 'FIRST_COMPLETED': 'FIRST_COMPLETED',
             'threading': SimpleNamespace(Lock=ModelLock,
-                Event=lambda: ModelEvent(self)), 'migration': SimpleNamespace(_journal=self.journal)}
+                Event=lambda: ModelEvent(self)), 'migration': SimpleNamespace(_journal=self.journal),
+            'hashlib': hashlib, 'json': json, 're': re, 'PosixPath': PosixPath}
         exec(compile(ast.Module(body=definitions, type_ignores=[]), str(SOURCE), 'exec'), ns)
         return ns
 
@@ -250,31 +325,57 @@ class ParallelIntentControls(unittest.TestCase):
         w = World(); result = w.invoke()
         self.assertIs(result[0], w.record); self.assertIs(result[2], w.manifest)
         self.assertEqual(len(w.executors), 1)
+        self.assertEqual(len(w.executors[0].futures), 7)
+        self.assertEqual(w.scans, 2)
+        functions = [future.function.__self__.function.__name__ for future in w.executors[0].futures]
+        self.assertEqual(functions, ['bundle', '_intent_namespace_range']
+                         + ['_intent_zip_range'] * 2 + ['_intent_installed_range'] * 2
+                         + ['_intent_namespace_range'])
         first = next(i for i, x in enumerate(w.log) if x[0] == 'validator')
         self.assertEqual([x for x in w.log[:first] if x[0] == 'submit'],
-                         [('submit', 0), ('submit', 1)])
+                         [('submit', 0)])
+        self.assertLess(w.log.index(('future_done', 0)), w.log.index(('submit', 1)))
         self.assertEqual(w.max_pending, 4); self.assert_finished(w)
 
     def test_complete_pair_barrier_precedes_rows(self):
         w = World(); w.invoke()
-        self.assertIn(('submit', 2), w.log, 'original serial path has no parallel row admission')
-        firstrow = w.log.index(('submit', 2))
+        self.assertIn(('submit', 3), w.log, 'overlap stage must admit the second ZIP range')
+        firstrow = w.log.index(('submit', 3))
         self.assertIn(('future_done', 0), w.log[:firstrow])
-        self.assertIn(('future_done', 1), w.log[:firstrow])
+        self.assertLess(w.log.index(('future_done', 0)), w.log.index(('submit', 1)))
+        self.assertLess(w.log.index(('namespace', 1)), w.log.index(('zip_member', 'folder/r0')))
+        for ordinal in (1,):
+            self.assertLess(w.log.index(('namespace', 1)), w.log.index(('submit', ordinal)))
+            self.assertLess(w.log.index(('future_done', ordinal)), w.log.index(('submit', 2)))
+        for ordinal in range(2, 6):
+            self.assertLess(w.log.index(('namespace', 1)), w.log.index(('submit', ordinal)))
+            self.assertLess(w.log.index(('future_done', ordinal)), w.log.index(('namespace', 2)))
+        mode_positions = [i for i, event in enumerate(w.log) if event[0] == 'mode']
+        expected_modes = [row['path'].rsplit('/', 1)[-1] for row in w.rows]
+        self.assertEqual([w.log[i][1] for i in mode_positions], expected_modes * 2)
+        # The installed content ranges perform the first exact row modes;
+        # the original final mode loop follows the second fresh namespace.
+        firstmode = mode_positions[len(expected_modes)]
+        for ordinal in (6,):
+            self.assertLess(w.log.index(('namespace', 2)), w.log.index(('submit', ordinal)))
+            self.assertLess(w.log.index(('future_done', ordinal)), firstmode)
         self.assert_finished(w)
 
     def test_bundle_original_error_precedes_faster_portable(self):
         w = World(); first = OriginalFailure('bundle'); later = OriginalFailure('portable')
-        w.errors = {'bundle': first, 'portable': later}; w.order = [1, 0]
+        w.errors = {'bundle': first}; w.zip_errors['folder/r0'] = later; w.order = [1, 0]
         with self.assertRaises(BaseException) as got: w.invoke()
         self.assertIs(got.exception, first); self.assert_finished(w)
         self.assertFalse(any(x[0] == 'namespace' for x in w.log))
 
     def test_row_original_index_error_precedes_completion_order(self):
         w = World(); first = OriginalFailure('r0'); later = OriginalFailure('r2')
-        w.errors = {'folder/r0': first, 'folder/r2': later}; w.order = [1, 0, 4, 3, 2]
+        w.errors = {'folder/r0': first, 'folder/r6': later}; w.order = [0, 1, 5, 4, 3, 2, 6]
         with self.assertRaises(BaseException) as got: w.invoke()
         self.assertIs(got.exception, first); self.assert_finished(w)
+        self.assertIn(('validator', 'folder/r0'), w.log)
+        self.assertIn(('validator', 'folder/r6'), w.log)
+        self.assertLess(w.log.index(('validator', 'folder/r6')), w.log.index(('validator', 'folder/r0')))
 
     def test_hash_body_failure_cannot_be_replaced_by_same_row_mode(self):
         w = World(); first = OriginalFailure('hash'); w.errors['folder/r0'] = first
@@ -310,16 +411,17 @@ class ParallelIntentControls(unittest.TestCase):
         self.assertEqual(w.scans, 2); self.assert_finished(w)
 
     def test_submission_failure_joins_started_and_refuses_unverified_rows(self):
-        w = World(); w.reject_submit = 3
+        w = World(); w.reject_submit = 4
         with self.assertRaises(BaseException) as got: w.invoke()
         self.assertIs(got.exception, w.submit_error); self.assert_finished(w)
-        self.assertFalse(any(x == ('submit', 4) for x in w.log))
+        self.assertFalse(any(x == ('submit', 5) for x in w.log))
+        self.assertIn(('submit', 3), w.log)
 
     def test_hidden_submission_rejected_before_original_IO_but_known_joins(self):
-        w = World(); w.hidden_submit = 1
+        w = World(); w.hidden_submit = 2
         with self.assertRaises(BaseException) as got: w.invoke()
         self.assertIs(got.exception, w.submit_error); self.assert_finished(w)
-        self.assertNotIn(('validator', 'portable'), w.log)
+        self.assertNotIn(('zip_member', 'folder/r0'), w.log)
         self.assertIn(('validator', 'bundle'), w.log)
 
     def test_repeated_wait_interrupt_preserves_first_and_joins(self):
@@ -337,20 +439,20 @@ class ParallelIntentControls(unittest.TestCase):
         w = World(); w.invoke(); w.invoke()
         self.assertEqual(len(w.executors), 2)
         self.assertEqual(sum(x == ('validator', 'bundle') for x in w.log), 2)
-        self.assertEqual(sum(x == ('validator', 'portable') for x in w.log), 2)
+        self.assertEqual(sum(x == ('zip_member', 'folder/r0') for x in w.log), 2)
         self.assert_finished(w)
 
     def test_hidden_started_submit_waits_original_completion_event(self):
-        w = World(); w.hidden_submit = 1; w.hidden_started = True
+        w = World(); w.hidden_submit = 2; w.hidden_started = True
         with self.assertRaises(BaseException) as got: w.invoke()
         self.assertIs(got.exception, w.submit_error)
-        self.assertIn(('modeled_worker_started', 1), w.log)
-        self.assertEqual(w.log.count(('validator', 'portable')), 1)
+        self.assertIn(('modeled_worker_started', 2), w.log)
+        self.assertEqual(w.log.count(('zip_member', 'folder/r0')), 1)
         self.assertTrue(w.hidden.function.__self__.complete.is_set())
         self.assert_finished(w)
 
     def test_hidden_started_completion_wait_interrupts_keep_first(self):
-        w = World(); w.hidden_submit = 1; w.hidden_started = True
+        w = World(); w.hidden_submit = 2; w.hidden_started = True
         first = KeyboardInterrupt('event first'); w.event_interrupts = [first, SystemExit(4)]
         with self.assertRaises(BaseException) as got: w.invoke()
         self.assertIs(got.exception, first); self.assert_finished(w)
@@ -358,24 +460,26 @@ class ParallelIntentControls(unittest.TestCase):
 
     def test_repeated_result_interrupts_keep_first_without_abandon(self):
         w = World(); first = KeyboardInterrupt('result first')
-        w.result_interrupts = [first, SystemExit(4)]
+        w.result_interrupts = [first, SystemExit(4)]; w.result_interrupt_floor = 2
         with self.assertRaises(BaseException) as got: w.invoke()
         self.assertIs(got.exception, first); self.assert_finished(w)
         self.assertEqual(w.log.count(('validator', 'bundle')), 1)
-        self.assertEqual(w.log.count(('validator', 'portable')), 1)
+        self.assertEqual(w.log.count(('zip_member', 'folder/r0')), 1)
 
     def test_earlier_original_error_precedes_later_submission_error(self):
         w = World(); original = OriginalFailure('r0 earlier')
-        w.errors['folder/r0'] = original; w.reject_submit = 3
+        w.errors['folder/r0'] = original; w.reject_submit = 5
         with self.assertRaises(BaseException) as got: w.invoke()
         self.assertIs(got.exception, original); self.assert_finished(w)
+        self.assertIn(('submit', 4), w.log)
+        self.assertNotIn(('submit', 5), w.log)
 
     def test_bundle_original_error_precedes_hidden_portable_submit_failure(self):
         w = World(); original = OriginalFailure('bundle earlier')
-        w.errors['bundle'] = original; w.hidden_submit = 1
+        w.zip_errors['folder/r0'] = original; w.hidden_submit = 3
         with self.assertRaises(BaseException) as got: w.invoke()
         self.assertIs(got.exception, original); self.assert_finished(w)
-        self.assertNotIn(('validator', 'portable'), w.log)
+        self.assertNotIn(('zip_member', 'folder/r4'), w.log)
 
     def test_first_submit_rejection_starts_no_original_validation(self):
         w = World(); w.reject_submit = 0
@@ -430,7 +534,7 @@ class ParallelIntentControls(unittest.TestCase):
                 self.assertEqual(w.scans, 2); self.assert_finished(w)
 
     def test_schema_one_keeps_original_directory_semantics(self):
-        w = World(); w.manifest['schema_version'] = 1
+        w = World(); w.manifest['schema_version'] = 1; w.manifest.pop('links')
         w.members.remove('alias'); w.aliases = {}; w.members.append('original-dir')
         w.kinds['original-dir'] = 'dir'
         self.assertIs(w.invoke()[2], w.manifest); self.assert_finished(w)
@@ -455,17 +559,18 @@ class ParallelIntentControls(unittest.TestCase):
         w = World(); w.invoke()
         self.assertTrue(any(x[0] == 'shutdown' for x in w.log), 'original serial path has no executor cleanup barrier')
         shutdown = next(x for x in w.log if x[0] == 'shutdown')
-        self.assertEqual(shutdown[1], (True,) * 9)
+        self.assertEqual(shutdown[1], (True,) * 7)
         self.assert_finished(w)
 
     def test_worker_completion_event_does_not_substitute_future_done(self):
-        w = World(); w.delayed_future_marks = {0, 1}; w.invoke()
+        w = World(); w.delayed_future_marks = {0, 2}; w.invoke()
         self.assertIn(('worker_record_only', 0), w.log)
-        self.assertIn(('worker_record_only', 1), w.log)
-        row = w.log.index(('submit', 2))
-        for ordinal in (0, 1):
+        self.assertIn(('worker_record_only', 2), w.log)
+        row = w.log.index(('namespace', 2))
+        for ordinal in (0, 2):
             self.assertLess(w.log.index(('worker_record_only', ordinal)), w.log.index(('future_done', ordinal)))
             self.assertLess(w.log.index(('future_done', ordinal)), row)
+        self.assertLess(w.log.index(('future_done', 0)), w.log.index(('submit', 1)))
         self.assert_finished(w)
 
     def test_wait_caller_failure_preserved_even_if_original_worker_fails(self):
@@ -478,38 +583,41 @@ class ParallelIntentControls(unittest.TestCase):
         for shape in ('rejected', 'hidden-notstarted', 'hidden-started'):
             with self.subTest(shape=shape):
                 w = World(); first = KeyboardInterrupt('original submit caller')
-                w.submit_error = first; w.errors['bundle'] = OriginalFailure('earlier bundle worker')
-                if shape == 'rejected': w.reject_submit = 1
+                w.submit_error = first; w.zip_errors['folder/r0'] = OriginalFailure('earlier ZIP worker')
+                if shape == 'rejected': w.reject_submit = 3
                 else:
-                    w.hidden_submit = 1; w.hidden_started = shape == 'hidden-started'
+                    w.hidden_submit = 3; w.hidden_started = shape == 'hidden-started'
                 with self.assertRaises(BaseException) as got: w.invoke()
                 self.assertIs(got.exception, first); self.assert_finished(w)
                 self.assertEqual(w.log.count(('validator', 'bundle')), 1)
-                self.assertEqual(w.log.count(('validator', 'portable')), int(shape == 'hidden-started'))
+                self.assertEqual(w.log.count(('zip_member', 'folder/r4')), int(shape == 'hidden-started'))
 
     def test_submit_system_exit_preserves_caller_over_earlier_worker(self):
         for shape in ('rejected', 'hidden-notstarted', 'hidden-started'):
             with self.subTest(shape=shape):
                 w = World(); first = SystemExit('original submit caller')
-                w.submit_error = first; w.errors['bundle'] = OriginalFailure('earlier bundle worker')
-                if shape == 'rejected': w.reject_submit = 1
+                w.submit_error = first; w.zip_errors['folder/r0'] = OriginalFailure('earlier ZIP worker')
+                if shape == 'rejected': w.reject_submit = 3
                 else:
-                    w.hidden_submit = 1; w.hidden_started = shape == 'hidden-started'
+                    w.hidden_submit = 3; w.hidden_started = shape == 'hidden-started'
                 with self.assertRaises(BaseException) as got: w.invoke()
                 self.assertIs(got.exception, first); self.assert_finished(w)
                 self.assertEqual(w.log.count(('validator', 'bundle')), 1)
-                self.assertEqual(w.log.count(('validator', 'portable')), int(shape == 'hidden-started'))
+                self.assertEqual(w.log.count(('zip_member', 'folder/r4')), int(shape == 'hidden-started'))
 
     def test_ordinary_submit_error_keeps_original_worker_index_in_all_shapes(self):
         for shape in ('rejected', 'hidden-notstarted', 'hidden-started'):
             with self.subTest(shape=shape):
                 w = World(); first = OriginalFailure('earlier bundle worker')
-                w.errors['bundle'] = first
-                if shape == 'rejected': w.reject_submit = 1
+                w.zip_errors['folder/r0'] = first
+                if shape == 'rejected': w.reject_submit = 3
                 else:
-                    w.hidden_submit = 1; w.hidden_started = shape == 'hidden-started'
+                    w.hidden_submit = 3; w.hidden_started = shape == 'hidden-started'
                 with self.assertRaises(BaseException) as got: w.invoke()
                 self.assertIs(got.exception, first); self.assert_finished(w)
+                if shape == 'rejected': self.assertNotIn(('submit', 3), w.log)
+                else: self.assertIsNotNone(w.hidden)
+                self.assertEqual(w.log.count(('zip_member', 'folder/r4')), int(shape == 'hidden-started'))
 
     def test_fixed_original_API_refuses_supplied_authority_inputs(self):
         w = World(); fn = w.load()['_validated_intent']

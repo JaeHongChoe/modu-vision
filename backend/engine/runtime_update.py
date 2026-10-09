@@ -9,11 +9,12 @@ from contextlib import contextmanager
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from dataclasses import asdict, dataclass
 import base64
+import errno
 import hashlib
 import json
 import os
 import platform
-from pathlib import Path, PurePosixPath
+from pathlib import Path, PosixPath, PurePosixPath
 import re
 import shutil
 import stat
@@ -66,9 +67,34 @@ def _fields(value,names):
 
 
 def _unlinked(path):
-    path=Path(path).absolute()
-    if any(p.is_symlink() for p in (path,*path.parents)):raise UpdateError('Update storage cannot follow links')
-    return path
+    native_parent=type(path)is PosixPath
+    # Exact absolute native paths already have the original lexical value.
+    # This skips only a clone; every existing fresh stat below still runs.
+    # Other input kinds retain the original constructor/absolute fallback.
+    if not(os.name=='posix'and native_parent and path.is_absolute()):
+        path=Path(path).absolute()
+    current=os.fspath(path)
+    # Lexical native names are not filesystem authority: every existing stat
+    # below remains fresh. All other input kinds retain the original dirname.
+    native_parent=(native_parent and type(path)is PosixPath and type(current)is str
+        and current.startswith('/')and not current.startswith('///')
+        and '//'not in current[2:]and(current in('/','//')or not current.endswith('/')))
+    while True:
+        try:linked=stat.S_ISLNK(os.stat(current,follow_symlinks=False).st_mode)
+        except OSError as error:
+            # Preserve Path.is_symlink's selective missing/unusable-path
+            # errors; os.path.islink would also hide permission and I/O errors.
+            if not (getattr(error,'errno',None)in(errno.ENOENT,errno.ENOTDIR,errno.EBADF,errno.ELOOP)
+                    or getattr(error,'winerror',None)in(21,123,1921)):raise
+            linked=False
+        except ValueError:linked=False
+        if linked:raise UpdateError('Update storage cannot follow links')
+        if native_parent:
+            slash=current.rfind('/')
+            parent=current[:slash]if slash>1 else current[:slash+1]
+        else:parent=os.path.dirname(current)
+        if parent==current:return path
+        current=parent
 
 
 @contextmanager
@@ -229,9 +255,12 @@ def _safe_path(value):
 def _application_namespaces(names):
     namespaces={}
     for name in names:
-        parts=name.split('/')
+        parts=name.split('/');native_prefix=type(name)is str;end=0
         for count in range(1,len(parts)+1):
-            prefix='/'.join(parts[:count]);fold=prefix.casefold();kind='file' if count==len(parts) else 'directory'
+            if native_prefix:
+                end+=len(parts[count-1])+(count>1);prefix=name[:end]
+            else:prefix='/'.join(parts[:count])
+            fold=prefix.casefold();kind='file' if count==len(parts) else 'directory'
             prior=namespaces.get(fold)
             if prior and prior!=(prefix,kind):raise UpdateError('Portable file/directory/link namespace conflicts')
             namespaces[fold]=(prefix,kind)
@@ -669,12 +698,74 @@ def _intent_executor_close(executor,retained,first):
             if first is None:first=error
 
 
+def _intent_namespace_range(application,manifest,links,directories,paths):
+    actual=set();relative_prefix=None;native_names=type(application)is PosixPath
+    for path in paths:
+            if native_names and type(path)is PosixPath:
+                # A lexical display prefix is not filesystem validation authority.
+                # Every original guard below still runs fresh on this exact path.
+                if relative_prefix is None:
+                    relative_prefix=str(application)
+                    if not relative_prefix.endswith('/'):relative_prefix+='/'
+                member=str(path)
+                name=member[len(relative_prefix):]if(member.startswith(relative_prefix)and len(member)>len(relative_prefix)and(relative_prefix!='/'or not member.startswith('//')))else path.relative_to(application).as_posix()
+            else:name=path.relative_to(application).as_posix()
+            if path.is_symlink():
+                _unlinked(path.parent)
+                if name not in links or os.readlink(path)!=links[name]:raise UpdateError('Installed native link target changed')
+                actual.add(name)
+            else:
+                _unlinked(path)
+                if name in links:raise UpdateError('Installed native link replaced with a regular member')
+                if path.is_file():actual.add(name)
+                elif not path.is_dir():raise UpdateError('Installed application contains a special file')
+                elif manifest['schema_version']==2 and name not in directories:raise UpdateError('Installed native directory membership differs')
+    return actual
+
+
+def _intent_parallel_namespace(executor,application,manifest,retained,*,single_range=False):
+    # Fresh full enumeration and original per-path guards on each pass. The
+    # same invocation executor/work records are retained; no proof is reused.
+    links,directories=_native_layout(manifest) if manifest['schema_version']==2 else ({},set())
+    expected={row['path'] for row in manifest['files']}|set(links)|{'portable-application.json'}
+    paths=[];enumeration_error=None
+    try:
+        for path in application.rglob('*'):paths.append(path)
+    except BaseException as error:
+        enumeration_error=error
+    if enumeration_error is not None:
+        # Keep the original prefix-path error priority without submitting work
+        # after the caller has already observed incomplete enumeration.
+        _intent_namespace_range(application,manifest,links,directories,paths)
+        raise enumeration_error
+    # Owning full-tree scans use one retained job: fresh path checks are
+    # unchanged, while default direct controls retain the four-range schedule.
+    count=min(1 if single_range is True else 4,len(paths))
+    calls=[(_intent_namespace_range,(application,manifest,links,directories,
+            paths[len(paths)*ordinal//count:len(paths)*(ordinal+1)//count]),{})
+            for ordinal in range(count)]
+    values=_intent_parallel_checks(executor,calls,retained)
+    actual=set()
+    for value in values:actual.update(value)
+    # A later enumeration BaseException cannot replace an earlier original
+    # path error: unchanged work/Future custody joins/selects those errors first.
+    if actual!=expected:raise UpdateError('Installed application membership differs')
+
+
 def _installed_intent_namespace(application,manifest):
     links,directories=_native_layout(manifest) if manifest['schema_version']==2 else ({},set())
     expected={row['path'] for row in manifest['files']}|set(links)|{'portable-application.json'}
-    actual=set()
+    actual=set();relative_prefix=None;native_names=type(application)is PosixPath
     for path in application.rglob('*'):
-        name=path.relative_to(application).as_posix()
+        if native_names and type(path)is PosixPath:
+            # A lexical display prefix is not filesystem validation authority.
+            # Every original guard below still runs fresh on this exact path.
+            if relative_prefix is None:
+                relative_prefix=str(application)
+                if not relative_prefix.endswith('/'):relative_prefix+='/'
+            member=str(path)
+            name=member[len(relative_prefix):]if(member.startswith(relative_prefix)and len(member)>len(relative_prefix)and(relative_prefix!='/'or not member.startswith('//')))else path.relative_to(application).as_posix()
+        else:name=path.relative_to(application).as_posix()
         if path.is_symlink():
             _unlinked(path.parent)
             if name not in links or os.readlink(path)!=links[name]:raise UpdateError('Installed native link target changed')
@@ -694,32 +785,182 @@ def _installed_intent_row(application,row):
         raise UpdateError('Installed application executable mode changed')
 
 
+def _intent_domain_ranges(rows,floor):
+    """Two contiguous ranges; their original row identity/order is unchanged."""
+    if type(floor)is not int or floor not in (64*1024,1024**2):raise UpdateError('Invalid fixed intent range floor')
+    groups=[];offset=0;remaining=sum(max(row['size'],floor)for row in rows)
+    count=min(2,len(rows))
+    for ordinal in range(count):
+        left=count-ordinal;target=(remaining+left-1)//left;start=offset;weight=0
+        while offset<len(rows)-(left-1)and (offset==start or weight<target):
+            weight+=max(rows[offset]['size'],floor);offset+=1
+        groups.append(rows[start:offset]);remaining-=weight
+    return groups
+
+
+def _intent_zip_metadata(bundle,release):
+    members=bundle.infolist();names=[m.filename for m in members]
+    if (not 1<len(members)<=MAX_APPLICATION_MEMBERS+1 or len(names)!=len(set(n.casefold() for n in names))
+            or sum(m.file_size for m in members)>4*1024**3):raise UpdateError('Invalid portable archive bounds or duplicates')
+    for member in members:
+        _safe_path(member.filename);mode=member.external_attr>>16
+        if (member.is_dir() or member.flag_bits&1 or member.file_size>1024**3
+                or stat.S_IFMT(mode) not in (0,stat.S_IFREG,stat.S_IFLNK)):
+            raise UpdateError('Portable archive cannot contain special or encrypted files')
+    if ('portable-application.json' not in names or bundle.getinfo('portable-application.json').file_size>MAX_APPLICATION_MANIFEST
+            or stat.S_IFMT(bundle.getinfo('portable-application.json').external_attr>>16)not in (0,stat.S_IFREG)):
+        raise UpdateError('Portable application regular manifest missing or excessive')
+    raw=bundle.read('portable-application.json');manifest=_json(raw)
+    native=isinstance(manifest,dict) and manifest.get('schema_version')==2
+    _fields(manifest,{'schema_version','version','platform','arch','entrypoint','files'}|({'links'}if native else set()))
+    if type(manifest['schema_version'])is not int or manifest['schema_version']not in (1,2) or any(manifest[k]!=release[k] for k in ('version','platform','arch')):
+        raise UpdateError('Portable application target/version differs from signed release')
+    rows=manifest['files']
+    if not isinstance(rows,list) or not 0<len(rows)<=MAX_APPLICATION_MEMBERS:raise UpdateError('Invalid portable application inventory')
+    expected={};folded=set()
+    for row in rows:
+        _fields(row,{'path','sha256','size','executable'});name=_safe_path(row['path'])
+        if (name=='portable-application.json' or name.casefold() in folded or not _hex(row['sha256'])
+                or type(row['size'])is not int or not 0<=row['size']<=1024**3 or type(row['executable'])is not bool
+                or row['size']==0 and row['executable']):
+            raise UpdateError('Invalid portable application inventory')
+        folded.add(name.casefold());expected[name]=row
+    links,_=_native_layout(manifest) if native else ({},set())
+    if not native and any(stat.S_IFMT(member.external_attr>>16)not in (0,stat.S_IFREG)for member in members):
+        raise UpdateError('Portable schema1 archive cannot contain links')
+    if set(names)!=set(expected)|set(links)|{'portable-application.json'}:raise UpdateError('Portable application membership differs')
+    _application_namespaces([*expected,*links,'portable-application.json'])
+    _safe_path(manifest['entrypoint'])
+    if manifest['entrypoint'] not in expected or not expected[manifest['entrypoint']]['executable']:
+        raise UpdateError('Portable application entrypoint is not an executable inventory member')
+    # Validate each signed alias before creating a destination or any link.
+    for name,target in links.items():
+        member=bundle.getinfo(name);encoded=target.encode('utf-8')
+        if stat.S_IFMT(member.external_attr>>16)!=stat.S_IFLNK or member.file_size!=len(encoded)or bundle.read(name)!=encoded:
+            raise UpdateError('Native link archive type or target differs from signed inventory')
+    if any(stat.S_IFMT(bundle.getinfo(name).external_attr>>16)not in (0,stat.S_IFREG)for name in expected):
+        raise UpdateError('Canonical application inventory must contain only regular files')
+    return manifest,_sha(raw),expected
+
+
+def _intent_zip_range(archive,release,ordinal):
+    # This fixed internal worker reopens and rechecks the original archive;
+    # no supplied manifest, receipt, cache or authority marker is accepted.
+    if type(ordinal)is not int or not 0<=ordinal<2:raise UpdateError('Invalid fixed ZIP range ordinal')
+    manifest=None;manifest_sha=None;metadata_error=None;row_error=None;final_error=None
+    try:
+        with _file(archive,1024**3)as(reader,_),zipfile.ZipFile(reader)as bundle:
+            manifest,manifest_sha,expected=_intent_zip_metadata(bundle,release)
+            groups=_intent_domain_ranges(manifest['files'],64*1024)
+            selected=groups[ordinal]if ordinal<len(groups)else[]
+            indices={id(row):index for index,row in enumerate(manifest['files'])}
+            for row in selected:
+                try:
+                    name=row['path']
+                    if bundle.getinfo(name).file_size!=row['size']:raise UpdateError('Portable application size differs')
+                    digest=hashlib.sha256();total=0
+                    with bundle.open(name)as source:
+                        while chunk:=source.read(1024**2):
+                            total+=len(chunk)
+                            if total>row['size']:raise UpdateError('Portable application grew while unpacking')
+                            digest.update(chunk)
+                    if total!=row['size']or digest.hexdigest()!=row['sha256']:raise UpdateError('Portable application checksum differs')
+                except BaseException as error:
+                    row_error=(indices[id(row)],error);break
+    except BaseException as error:
+        if manifest is None:metadata_error=error
+        else:final_error=error
+    # Values are invocation-local bookkeeping. Every original error object
+    # survives; caller interruption/submission custody is owned by the unchanged
+    # _intent_parallel_checks machinery, before domain/index error selection.
+    return manifest,manifest_sha,metadata_error,row_error,final_error
+
+
+def _intent_installed_range(application,rows):
+    for index,row in rows:
+        try:_installed_intent_row(application,row)
+        except BaseException as error:return index,error
+    return None
+
+
+def _intent_overlap_error(values,manifest,manifest_sha,installed_pre_error):
+    zipped=values[:2]
+    for checked,checked_sha,metadata_error,_,_ in zipped:
+        if metadata_error is not None:return metadata_error
+        if checked_sha!=manifest_sha or _canonical(checked)!=_canonical(manifest):
+            return UpdateError('Original ZIP metadata changed within fresh invocation')
+    errors=[value[3]for value in zipped if value[3]is not None]
+    if errors:return min(errors,key=lambda value:value[0])[1]
+    for value in zipped:
+        if value[4]is not None:return value[4]
+    if len(zipped)==2:
+        if installed_pre_error is not None:return installed_pre_error
+        errors=[value for value in values[2:]if value is not None]
+        if errors:return min(errors,key=lambda value:value[0])[1]
+    return None
+
+
 def _validated_intent(root,identifier):
     record,directory=_intent(root,identifier)
     release,raw=verify_release(directory/'envelope.json',record['authority_path'],record['authority_sha256'],record['target'])
-    if _sha(raw)!=record['envelope_sha256'] or release!=record['release']:raise UpdateError('Application update release binding changed')
-    installer=next(row for row in release['artifacts'] if row['kind']=='installer')
+    if _sha(raw)!=record['envelope_sha256']or release!=record['release']:raise UpdateError('Application update release binding changed')
+    installer=next(row for row in release['artifacts']if row['kind']=='installer')
     executor=ThreadPoolExecutor(max_workers=4);retained=[];first=None;result=None
     try:
-        _,(manifest,manifest_sha)=_intent_parallel_checks(executor,[
-            (_bundle,(directory/'bundle',release),{}),
-            (_portable,(directory/'bundle'/installer['path'],release),{'destination':None}),
-        ],retained)
-        generation=_unlinked(root/GENERATIONS/identifier);application=generation/'application'
-        if _sha(_read(application/'portable-application.json',MAX_APPLICATION_MANIFEST))!=manifest_sha:raise UpdateError('Installed application manifest integrity differs')
-        _installed_intent_namespace(application,manifest)
-        _intent_parallel_checks(executor,[(_installed_intent_row,(application,row),{}) for row in manifest['files']],retained)
-        _installed_intent_namespace(application,manifest)
-        for row in manifest['files']:
-            if stat.S_IMODE((application/row['path']).stat().st_mode)!=(0o500 if row['executable'] else 0o400):
-                raise UpdateError('Installed application executable mode changed')
-        if record['migration_id'] is not None:
-            _,database=migration._journal(root,record['migration_id'])
-            if (database.get('installation_id')!=record['installation_id']
-                    or database.get('source_sha256')!=record['source_sha256']
-                    or database.get('previous_pointer')!=record['previous_database']):
-                raise UpdateError('Application update database intent binding changed')
-        result=record,directory,manifest
+        archive=directory/'bundle'/installer['path']
+        # Keep an original archive OFD alive after the signed raw check across
+        # bounded metadata, all jobs and original namespace/mode checks.
+        # Every worker additionally runs its own original _file pre/post guard.
+        # Signed raw bundle errors retain their original priority over archive
+        # open/ZIP parsing errors. No portable or installed read precedes it.
+        _intent_parallel_checks(executor,[(_bundle,(directory/'bundle',release),{})],retained)
+        with _file(archive,1024**3)as(reader,_),zipfile.ZipFile(reader)as bundle:
+            manifest,manifest_sha,_=_intent_zip_metadata(bundle,release)
+            installed_pre_error=None;application=None
+            try:
+                generation=_unlinked(root/GENERATIONS/identifier);application=generation/'application'
+                if _sha(_read(application/'portable-application.json',MAX_APPLICATION_MANIFEST))!=manifest_sha:raise UpdateError('Installed application manifest integrity differs')
+                _intent_parallel_namespace(executor,application,manifest,retained,single_range=True)
+            except BaseException as error:
+                # Caller interruption is never converted to a verifier result
+                # or a reason to launch more work. Ordinary pre-scan refusal is
+                # deferred solely to preserve original archive error priority.
+                if not isinstance(error,Exception):raise
+                installed_pre_error=error
+            calls=[(_intent_zip_range,(archive,release,ordinal),{})for ordinal in range(2)]
+            if installed_pre_error is None:
+                indices={id(row):index for index,row in enumerate(manifest['files'])}
+                groups=_intent_domain_ranges(manifest['files'],1024**2)
+                calls.extend((_intent_installed_range,(application,[(indices[id(row)],row)for row in group]),{})for group in groups)
+            stage_start=len(retained)
+            try:results=_intent_parallel_checks(executor,calls,retained)
+            except Exception as error:
+                # Original helper has already joined every started/hidden job.
+                # Only an exact ordinary submission failure may be preceded by
+                # a deferred domain error from earlier original work ordinals.
+                # Caller wait/result errors and KI/SystemExit keep their object.
+                checks=retained[stage_start:]
+                for index,work in enumerate(checks):
+                    if work.submission_error is error:
+                        earlier=checks[:index]
+                        if all(value.error is None for value in earlier):
+                            prior=_intent_overlap_error([value.value for value in earlier],manifest,manifest_sha,installed_pre_error)
+                            if prior is not None:raise prior
+                        break
+                raise
+            error=_intent_overlap_error(results,manifest,manifest_sha,installed_pre_error)
+            if error is not None:raise error
+            _intent_parallel_namespace(executor,application,manifest,retained,single_range=True)
+            for row in manifest['files']:
+                if stat.S_IMODE((application/row['path']).stat().st_mode)!=(0o500 if row['executable']else 0o400):
+                    raise UpdateError('Installed application executable mode changed')
+            if record['migration_id']is not None:
+                _,database=migration._journal(root,record['migration_id'])
+                if(database.get('installation_id')!=record['installation_id']
+                        or database.get('source_sha256')!=record['source_sha256']
+                        or database.get('previous_pointer')!=record['previous_database']):
+                    raise UpdateError('Application update database intent binding changed')
+            result=record,directory,manifest
     except BaseException as error:
         first=error
     finally:
