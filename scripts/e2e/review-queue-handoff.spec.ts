@@ -12,14 +12,14 @@ const sha=(file:string)=>crypto.createHash('sha256').update(fs.readFileSync(file
 
 // Read the actual base canvas at source-pixel centres. This is a decoded
 // synthetic image/coordinate readiness witness, not model or display-quality approval.
-async function canvasSourceCentres(page:Page){
- return page.locator('[data-canvas-container]').evaluate(container=>{
+async function canvasSourceCentres(page:Page,rasterPan={x:0,y:0}){
+ return page.locator('[data-canvas-container]').evaluate((container,rasterPan)=>{
   const canvas=container.querySelector('canvas'),hud=document.querySelector('[data-testid="canvas-hud"]') as HTMLElement|null;
   const rect=container.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
   const scale=Number(hud?.innerText.match(/scale\s*([\d.]+)\s*%/)?.[1]||0)/100;
   if(!canvas||!scale)return null;
   const ctx=canvas.getContext('2d');if(!ctx)return null;
-  const x0=(rect.width-64*scale)/2,y0=(rect.height-64*scale)/2;
+  const x0=(rect.width-64*scale)/2+rasterPan.x,y0=(rect.height-64*scale)/2+rasterPan.y;
   if(x0<0||y0<0)return null;
   const pixels:number[]=[];
   for(let y=0;y<64;y++)for(let x=0;x<64;x++){
@@ -27,8 +27,18 @@ async function canvasSourceCentres(page:Page){
    if(px<0||py<0||px>=canvas.width||py>=canvas.height)return null;
    pixels.push(...ctx.getImageData(px,py,1,1).data);
   }
-  return {scale,dpr,css_width:rect.width,css_height:rect.height,pixels};
- });
+  const transform=ctx.getTransform();
+  return {scale,dpr,css_width:rect.width,css_height:rect.height,backing_width:canvas.width,backing_height:canvas.height,transform:{a:transform.a,b:transform.b,c:transform.c,d:transform.d,e:transform.e,f:transform.f},offset_x:x0,offset_y:y0,pixels};
+ },rasterPan);
+}
+
+// The real 1:1 toolbar centers against fractional CSS extents. Align that
+// unchanged view with the backing-pixel grid using the existing middle-button pan.
+function canvasRasterAlignment(mapping:{scale:number;dpr:number;css_width:number;css_height:number;backing_width:number;backing_height:number;transform:{a:number;b:number;c:number;d:number;e:number;f:number}}){
+ const {scale,dpr,css_width,css_height,backing_width,backing_height,transform}=mapping;
+ if(scale!==1||![dpr,css_width,css_height].every(Number.isFinite)||dpr<=0||css_width<64||css_height<64||backing_width!==Math.floor(css_width*dpr)||backing_height!==Math.floor(css_height*dpr)||transform.a!==dpr||transform.d!==dpr||transform.b!==0||transform.c!==0||transform.e!==0||transform.f!==0)throw Error('Exact original 1:1 canvas backing transform required');
+ const x0=(css_width-64)/2,y0=(css_height-64)/2;
+ return {x:Math.round(x0*dpr)/dpr-x0,y:Math.round(y0*dpr)/dpr-y0};
 }
 
 async function exercise(page:Page,w:Workspace,e:Evidence,api:Api,native:boolean,url?:string){
@@ -64,13 +74,18 @@ async function exercise(page:Page,w:Workspace,e:Evidence,api:Api,native:boolean,
  await expect.poll(async()=>{const probe=await canvasSourceCentres(page);return probe?.pixels.every((value,index)=>index%4===2?value===100:index%4===3?value===255:true)||false;},{timeout:remainingCanvas()}).toBe(true);
  await page.getByTitle('바운딩 박스 (BBox - 2)',{exact:true}).click();
  await page.getByTitle('100% Zoom (1:1)',{exact:true}).click();await expect(page.getByTestId('canvas-hud')).toContainText('100%');
+ const beforeAlignment=await canvasSourceCentres(page);expect(beforeAlignment).not.toBeNull();
+ const rasterPan=canvasRasterAlignment(beforeAlignment!),panBounds=(await page.locator('[data-canvas-container]').boundingBox())!;
+ expect(panBounds.width).toBe(beforeAlignment!.css_width);expect(panBounds.height).toBe(beforeAlignment!.css_height);
+ const panStart={x:panBounds.x+panBounds.width/2,y:panBounds.y+panBounds.height/2},panEnd={x:panStart.x+rasterPan.x,y:panStart.y+rasterPan.y};
+ if(rasterPan.x!==0||rasterPan.y!==0){await page.mouse.move(panStart.x,panStart.y);await page.mouse.down({button:'middle'});await page.mouse.move(panEnd.x,panEnd.y);await page.mouse.up({button:'middle'});}
  const expectedPixels=Array.from({length:64*64},(_,index)=>[index%64,Math.floor(index/64),100,255]).flat();
- await expect.poll(async()=>{const probe=await canvasSourceCentres(page);return probe&&{scale:probe.scale,pixels:probe.pixels};},{timeout:remainingCanvas()}).toEqual({scale:1,pixels:expectedPixels});
- const canvasMapping=await canvasSourceCentres(page),canvasFinished=Date.now();expect(canvasMapping).not.toBeNull();
+ await expect.poll(async()=>{const probe=await canvasSourceCentres(page,rasterPan);return probe&&{scale:probe.scale,pixels:probe.pixels};},{timeout:remainingCanvas()}).toEqual({scale:1,pixels:expectedPixels});
+ const canvasMapping=await canvasSourceCentres(page,rasterPan),canvasFinished=Date.now();expect(canvasMapping).not.toBeNull();
  expect(canvasMapping!.scale).toBe(1);expect(canvasMapping!.pixels).toEqual(expectedPixels);expect(Date.now()).toBeLessThanOrEqual(canvasDeadline);
  const bounds=(await page.locator('[data-canvas-container]').boundingBox())!;
  expect(bounds.width).toBe(canvasMapping!.css_width);expect(bounds.height).toBe(canvasMapping!.css_height);
- const pt=(v:number)=>({x:bounds.x+(bounds.width-64)/2+v,y:bounds.y+(bounds.height-64)/2+v});const a=pt(10),b=pt(30);
+ const pt=(v:number)=>({x:bounds.x+canvasMapping!.offset_x+v,y:bounds.y+canvasMapping!.offset_y+v});const a=pt(10),b=pt(30);
  await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(b.x,b.y,{steps:6});await page.mouse.up();await expect(page.getByRole('button',{name:'Save Changes',exact:true})).toBeVisible();await page.getByRole('button',{name:'집중 편집',exact:true}).click();await page.locator('summary').filter({hasText:'저장 검토 큐 · 오류·불일치·임계값 우선'}).click();await expect(choice).toHaveValue(first.id);
  const review=panel.getByRole('button',{name:'검토 완료 · 다음',exact:true}),skip=panel.getByRole('button',{name:'보류 · 다음',exact:true}),prepare=panel.getByRole('button',{name:'수정·검수 데이터로 학습 준비',exact:true});
  await expect(review).toBeDisabled();await expect(skip).toBeDisabled();await expect(prepare).toBeDisabled();expect(await api('/api/data-workbench/review-queues/'+first.id)).toEqual(first);await e.screenshot(page,`${native?'native':'browser'}-queue-unsaved-guards`);
@@ -84,7 +99,7 @@ async function exercise(page:Page,w:Workspace,e:Evidence,api:Api,native:boolean,
  const permitted=await api('/api/team-data/readiness');expect(permitted.ready).toBe(true);expect(permitted.counts.approved).toBe(0);await prepare.click();await expect(page.getByRole('region',{name:'저장된 검토 큐'})).toHaveCount(0);
  expect((await api('/api/training/jobs')).jobs).toEqual([]);await stages.getByRole('button').nth(1).click();await page.locator('summary').filter({hasText:'저장 검토 큐 · 오류·불일치·임계값 우선'}).click();await expect(choice).toHaveValue(first.id);expect(await api('/api/data-workbench/review-queues/'+first.id)).toEqual(first);expect(await api('/api/data-workbench/review-queues/'+second.id)).toEqual(second);
  for(const input of inputs)expect(sha(input.file)).toBe(input.sha256);expect(sha(original.path)).toBe(original.sha256);expect(sha(alternate.path)).toBe(alternate.sha256);
- await e.screenshot(page,`${native?'native':'browser'}-queue-training-return`);e.note('saved_queue_handoff',{project_id:project.id,original,alternate,first,second,inputs,saved,blocked,permitted,canvas_mapping:{...canvasMapping,started:canvasBegan,deadline:canvasDeadline,finished:canvasFinished,source_centres_only:true},invalid_margin_422:true,alternate_queue_and_reload:true,exact_original_evaluation_return:true,actual_unsaved_annotation_blocks_actions:true,actual_readiness_gate:true,no_training_submitted:true,controlled_reports_not_model_inference:true,human_annotation_or_quality_approval:false,native});
+ await e.screenshot(page,`${native?'native':'browser'}-queue-training-return`);e.note('saved_queue_handoff',{project_id:project.id,original,alternate,first,second,inputs,saved,blocked,permitted,canvas_mapping:{...canvasMapping,alignment:{before:beforeAlignment,raster_pan:rasterPan,pointer_start:panStart,pointer_end:panEnd,performed:rasterPan.x!==0||rasterPan.y!==0,existing_middle_button_pan:true},started:canvasBegan,deadline:canvasDeadline,finished:canvasFinished,source_centres_only:true},invalid_margin_422:true,alternate_queue_and_reload:true,exact_original_evaluation_return:true,actual_unsaved_annotation_blocks_actions:true,actual_readiness_gate:true,no_training_submitted:true,controlled_reports_not_model_inference:true,human_annotation_or_quality_approval:false,native});
 }
 test('saved queue returns to exact evaluation and gates training on saved data and policy',async({page,request,renderer,workspace,evidence})=>{await installDesktopHostShim(page,renderer.port);const api:Api=async(route,body,method)=>{const r=await request.fetch(renderer.origin+route,{method:method||(body===undefined?'GET':'POST'),...(body===undefined?{}:{data:body})});expect(r.ok(),await r.text()).toBe(true);return r.json();};await exercise(page,workspace,evidence,api,false,renderer.url);});
 test('native saved queue returns to exact evaluation and gates training on saved data and policy',{tag:'@electron'},async({electronSession,workspace,evidence})=>{const {window}=electronSession,status=await electronSession.waitForBackend();const api:Api=(route,body,method)=>window.evaluate(async({port,route,body,method})=>{const r=await fetch(`http://127.0.0.1:${port}${route}`,{method:method||(body===undefined?'GET':'POST'),...(body===undefined?{}:{headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})});if(!r.ok)throw Error(`Owned queue handoff API ${r.status}: ${await r.text()}`);return r.json();},{port:status.port,route,body,method});await exercise(window,workspace,evidence,api,true);});
