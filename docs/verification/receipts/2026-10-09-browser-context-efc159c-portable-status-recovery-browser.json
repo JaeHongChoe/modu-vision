@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "efc159c490387decae0b2b6feee93053533f6885",
+  "source_dirty": false,
+  "test": "scripts/e2e/portable-status-recovery.spec.ts::portable inspect error requires explicit same-identity retry and utility handoff preserves original state",
+  "test_source_sha256": "605db49b00dd2674cf3f5458bab138d2b2f2e7ff851b1d192fd631f8708c3f99",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "5654a26c5a1d29db0d7d26c0d585424380514a75343b4781102e1425083b2e4d",
+  "harness_sha256": "d861e42c5e818137510f0bde7c08014f329a61adbc1440094807438b8e0ff9cc",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "bb7257e5dd29b0671650904ba7401c05e3f0b5e52b9e7e881d6b2fc972e039af"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "1593a07884353cd95935216aaf890a5b78a698a192b0849cb4e2fb5048217cd6"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "4ee1a5d7328f06371e2990b3c924c458a3a618db321534f68524f9714d549b3f"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

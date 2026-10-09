@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
+  "source_dirty": false,
+  "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
+  "test_source_sha256": "a6825c735b93a700c3a5bcee9a2e47f89c2adda0a7f7a4cec18226d8155fab4e",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "feed936b959f848a7ceba02096946292a8bd0880f514702bc949f0e59089d24e",
+  "harness_sha256": "09de738baf8c4486d9a8ebbea7dfa3637f4058f013bff4ec6e44a748032d83e6",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "4573e043f5a98210895d9aba32feea8a6b4351ef8b532150208415dc4076f644"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "9663e9391a2ca63b04333b24f43a91e103c9373f96f65ab4d3eb7b3049db705c"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "ef36eb6ff6551fb7c9197343739b965bd7033fd77157314236ff9576dd319309"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

@@ -1,0 +1,79 @@
+{
+  "schema": "modu-vision.flow-draft-stale-timer-regressions/v1",
+  "date": "2026-10-09",
+  "source_sha": "c86cdadde7326d1610c5c81fcea03d7211cfb74a",
+  "scope": "Original editable flow draft persistence; existing U012.save-draft.error evidence refresh only.",
+  "implementation": {
+    "source": "src/renderer/components/flowchart/FlowDraftControls.tsx",
+    "sha256": "3bd10fc68ea4ae2dc600dfad2b6c51b56d74d213f7483923107295aac303f5a8",
+    "change": "A queued650ms autosave rechecks the exact live graph, dirty state, failed target and original safe ownership guards before persistence. Manual retry and original save/readback guards remain unchanged."
+  },
+  "regressions": {
+    "causal_original_product": {
+      "tests": 2,
+      "passed": 0,
+      "failed": 2,
+      "skipped": 0,
+      "expected_failure": true,
+      "log_sha256": "ca1da0c46e4f40026628f5b30bcf5974687861fa4ce010cbd4f01d3bc0a97523"
+    },
+    "corrected_renderer_suite": {
+      "tests": 22,
+      "passed": 22,
+      "failed": 0,
+      "skipped": 0,
+      "original_cases": 9,
+      "new_cases": 13,
+      "log_sha256": "2b98e842c864164f90ff2952d493a13719a017c91464c62e172603d0142467f3"
+    },
+    "renderer_typecheck": {
+      "returncode": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "gui": [
+    {
+      "mode": "browser",
+      "source_electron": false,
+      "receipt": "2026-10-09-flow-draft-save-error-c86cdad-browser.json",
+      "receipt_sha256": "7b2d5d5e44bf2654dbc94f1622de22e739ba24cef5046a6b4b75b4ba87a426c0",
+      "test_source_sha256": "3105e55861117a450720f64e7d372190de095f7bbe82b15edb6e5b30525fa1fd",
+      "report_sha256": "08206ab4ce4f912da3dfbbd18f54aecb5ed5390d951d43dedd9429c32fc693c0",
+      "harness_sha256": "f893f1c662581b17d7b3cf8264da8a10bd1cf00ab155b5bd98ca4bdd6ddb2269",
+      "attempts": 1,
+      "observed": "One controlled owning draft PUT503 preserves saved graph and dirty edit; one explicit identical-body PUT200 persists the same edit. The original exact two-write, full API/tree/hash and source-pixel assertions pass. No active pipeline is added."
+    },
+    {
+      "mode": "electron",
+      "source_electron": true,
+      "receipt": "2026-10-09-flow-draft-save-error-c86cdad-electron.json",
+      "receipt_sha256": "720b321ea085ec79bcb3aa901aa127400f906f882a465653fc4769eba0d230e6",
+      "test_source_sha256": "3105e55861117a450720f64e7d372190de095f7bbe82b15edb6e5b30525fa1fd",
+      "report_sha256": "2f6aa73f3741f0887f6d3aed3d3f332f06331498937291ebaa7515b4cf28cf05",
+      "harness_sha256": "57419404d641c34c6fe08f160bcbfa7f089fec762318e7fd200f2a122cb95ffd",
+      "attempts": 1,
+      "observed": "One controlled owning draft PUT503 preserves saved graph and dirty edit; one explicit identical-body PUT200 persists the same edit. The original exact two-write, full API/tree/hash and source-pixel assertions pass. No active pipeline is added."
+    }
+  ],
+  "preserved_limits": {
+    "autosave_ms": 650,
+    "request_start_full_body_ms": 10000,
+    "original_case_timeout_ms": 160000,
+    "source_files_per_closed_gate": 2382,
+    "source_before_after_equal": true,
+    "new_scenario_promotions": 0,
+    "verified_count": 778,
+    "pending_count": 671
+  },
+  "limitations": {
+    "source_electron_is_installed_target": false,
+    "native_error_capture_cleanliness_qualified": false,
+    "whole_hosted_ci_passed": false,
+    "exact_timer_attribution_in_prior_hosted_failure_proven": false,
+    "runtime_or_device_acceptance": false,
+    "model_or_gpu_execution": false,
+    "quality_or_human_approval": false,
+    "parent_acceptance": false
+  },
+  "historical_failures_and_receipts_preserved": true
+}

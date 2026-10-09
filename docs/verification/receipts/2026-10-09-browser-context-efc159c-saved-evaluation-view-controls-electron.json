@@ -1,0 +1,56 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "efc159c490387decae0b2b6feee93053533f6885",
+  "source_dirty": false,
+  "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::native saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
+  "test_source_sha256": "44390aa9738f864c2ba284f901448b1fd836da62132772df5419283a817dfd41",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "dd3670846a956fe4fbf57bc2530e63e8cccaf1321416334104b1508a05af2064",
+  "harness_sha256": "4e3b483aba53069a1a4db92fb371a6be43f1e3fce8bec46f8feaf7ca0ebde78e",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "5d45a145f233dbc39344b576ea2d613c8b131bee7228d82c1970f221bf7a6745"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "ab2e85bc0053c92de4c35dda4051fd109071416b65d5629cd238e68d26239e7c"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "0cc8ea9e3166fb61c7ef3a078b0d949ba6dda8597436cef53e5f3a32cf1333d9"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "8cf040f3b99270b1894a89ec86dc2ed2b8e2bf63fefdc720bcad74228b335473"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "33748124022364faf5e20904e3316564d5b66c842867b861d553ee70d2882918"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "12a7f7e6e20498ed30071ea645bbd1e9d5a0f72d01fa3d81b188f5140e063f4f"
+    },
+    {
+      "id": "screenshot-6",
+      "sha256": "468dffd928e40789ee6900a58462f3e212a37863809509625169fced837957e5"
+    },
+    {
+      "id": "screenshot-7",
+      "sha256": "d3068d30ae50636b3ce3f1ce0f7fad5fdef314a1f9c8db0df234b7e53e5e0873"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

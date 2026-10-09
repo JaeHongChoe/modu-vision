@@ -13498,45 +13498,45 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "efc159c490387decae0b2b6feee93053533f6885",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::native saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
-         "receipt": "2026-10-08-f059-lifecycle-f3895ec-electron.json",
-         "receipt_sha256": "033f318a9ef49b07793bc2528d15c545b17f97b8b1a242470481c74299314231",
+         "receipt": "2026-10-09-browser-context-efc159c-saved-evaluation-view-controls-electron.json",
+         "receipt_sha256": "2e5b99d0cf6c03b3cd41056cf0c150f89c1289289eb8fa7d4d3a896fb7c77759",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "b3b0629d679a2eccc53dd08371b6e1bbba55942f83169a89d5c39cd6f0129248"
+           "sha256": "5d45a145f233dbc39344b576ea2d613c8b131bee7228d82c1970f221bf7a6745"
           },
           {
            "id": "screenshot-1",
-           "sha256": "becce50c9e8bbd6c03b006123a914ff8f46a293804a12acc772dbaa99f209841"
+           "sha256": "ab2e85bc0053c92de4c35dda4051fd109071416b65d5629cd238e68d26239e7c"
           },
           {
            "id": "screenshot-2",
-           "sha256": "322ebc1ef5d42189a257ff702a0e7f145ae6dc2046c9ab465b5ce83e3359f728"
+           "sha256": "0cc8ea9e3166fb61c7ef3a078b0d949ba6dda8597436cef53e5f3a32cf1333d9"
           },
           {
            "id": "screenshot-3",
-           "sha256": "fd18e7664d16ad2114b2b2041eb85a2991d5154ce6fd4623607b172da5c12981"
+           "sha256": "8cf040f3b99270b1894a89ec86dc2ed2b8e2bf63fefdc720bcad74228b335473"
           },
           {
            "id": "screenshot-4",
-           "sha256": "69bbfb11b9dbea8ab527ba1164b8f7a946a668cf91cebff5fe7c3ad1e8ce0ecb"
+           "sha256": "33748124022364faf5e20904e3316564d5b66c842867b861d553ee70d2882918"
           },
           {
            "id": "screenshot-5",
-           "sha256": "31710e49894c76111dad5460ea43f5d0ae7e95c0aba52779bf5e6d17d3fa5feb"
+           "sha256": "12a7f7e6e20498ed30071ea645bbd1e9d5a0f72d01fa3d81b188f5140e063f4f"
           },
           {
            "id": "screenshot-6",
-           "sha256": "9690ac226a9b04924d4bcde6c21c06f848649740fffa293f7a551cbe3bfb26e1"
+           "sha256": "468dffd928e40789ee6900a58462f3e212a37863809509625169fced837957e5"
           },
           {
            "id": "screenshot-7",
-           "sha256": "783f7375b192c1c391bab868de7206d3f6cc6f7598547e0243778db8caa2504f"
+           "sha256": "d3068d30ae50636b3ce3f1ce0f7fad5fdef314a1f9c8db0df234b7e53e5e0873"
           }
          ],
          "expected": "A controlled unknown optional persisted task is refused on actual reload; the whole view falls back and no unknown task reaches history requests.",
@@ -13544,45 +13544,45 @@
         },
         {
          "task": "S4-13",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "efc159c490387decae0b2b6feee93053533f6885",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
-         "receipt": "2026-10-08-f059-lifecycle-f3895ec-browser.json",
-         "receipt_sha256": "3621b1067dcf169cd980fef5c25366412ba8a708d222c3a78b937b97972a80ca",
+         "receipt": "2026-10-09-browser-context-efc159c-saved-evaluation-view-controls-browser.json",
+         "receipt_sha256": "2215fb0285e86219b05269db8de2643a18ea9e332b927513237bec1351434cd8",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "d7af7e9009572370bb7fdcb02b42900325834f731cf923c3e25558fc72c108ec"
+           "sha256": "06f6768c3d72b98b175b692f6b7e201f68e856fd985c7bd35c0e63eb2c277143"
           },
           {
            "id": "screenshot-1",
-           "sha256": "129ac697c3a11fc09b57198d59e83d82ce0083b656da4cb39af6d5eabdcd8f0c"
+           "sha256": "086c9eedcb0dc632d889fb3fb3b4258b82475f5f75cb3c23aeb94c28c42e4557"
           },
           {
            "id": "screenshot-2",
-           "sha256": "078277c58cbb80a958d559a1e83113529665bb2fd02df5be118a7c290668b5c0"
+           "sha256": "202bd931edb8f8983f15dd7403df1768d1ab062d65ae5f0e5a87c25ac5f9e637"
           },
           {
            "id": "screenshot-3",
-           "sha256": "95011273c375e7045d84aed4f5c3c3d95c0f0d316cee9c3ce6734e9662601134"
+           "sha256": "7f27e6690a525681ed34042f96bef87dcb1dd916b17c4d37b49bd2e0816eff0e"
           },
           {
            "id": "screenshot-4",
-           "sha256": "dba9da19cb7851cb6e45536c39b0a404f5bc66b4cb2a7777b38b34bdfe58e34b"
+           "sha256": "93cd486d2d6b00f054ddfff85be45727f7e7414bbaaf230310e91cd51d00f97a"
           },
           {
            "id": "screenshot-5",
-           "sha256": "034c197703f273c76dcf337fc813e99ffb10bf212250a4431daee18aca50f215"
+           "sha256": "f1202af3b89be61293e9257adc25c60809f3f4288a98ca2413c759f0b0126e18"
           },
           {
            "id": "screenshot-6",
-           "sha256": "ec043c205a5e6fe4ea455bc0a68eab843f3afb12dd53c8b27a18d58a2da39ab8"
+           "sha256": "8338eb73ded7834db1660128491553e9fbc774f9600fc882bc1c18fcaec3bf4c"
           },
           {
            "id": "screenshot-7",
-           "sha256": "ea405f9ddfa3595e77d28657fd7a645a41d886e729f2be5bf69ce113c7ee43a1"
+           "sha256": "4e3088bdf5f654ebe308294994c7f1462410ac420394a65fc680e82eabff32bc"
           }
          ],
          "expected": "A controlled unknown optional persisted task is refused on actual reload; the whole view falls back and no unknown task reaches history requests.",
@@ -13595,45 +13595,45 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "efc159c490387decae0b2b6feee93053533f6885",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::native saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
-         "receipt": "2026-10-08-f059-lifecycle-f3895ec-electron.json",
-         "receipt_sha256": "033f318a9ef49b07793bc2528d15c545b17f97b8b1a242470481c74299314231",
+         "receipt": "2026-10-09-browser-context-efc159c-saved-evaluation-view-controls-electron.json",
+         "receipt_sha256": "2e5b99d0cf6c03b3cd41056cf0c150f89c1289289eb8fa7d4d3a896fb7c77759",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "b3b0629d679a2eccc53dd08371b6e1bbba55942f83169a89d5c39cd6f0129248"
+           "sha256": "5d45a145f233dbc39344b576ea2d613c8b131bee7228d82c1970f221bf7a6745"
           },
           {
            "id": "screenshot-1",
-           "sha256": "becce50c9e8bbd6c03b006123a914ff8f46a293804a12acc772dbaa99f209841"
+           "sha256": "ab2e85bc0053c92de4c35dda4051fd109071416b65d5629cd238e68d26239e7c"
           },
           {
            "id": "screenshot-2",
-           "sha256": "322ebc1ef5d42189a257ff702a0e7f145ae6dc2046c9ab465b5ce83e3359f728"
+           "sha256": "0cc8ea9e3166fb61c7ef3a078b0d949ba6dda8597436cef53e5f3a32cf1333d9"
           },
           {
            "id": "screenshot-3",
-           "sha256": "fd18e7664d16ad2114b2b2041eb85a2991d5154ce6fd4623607b172da5c12981"
+           "sha256": "8cf040f3b99270b1894a89ec86dc2ed2b8e2bf63fefdc720bcad74228b335473"
           },
           {
            "id": "screenshot-4",
-           "sha256": "69bbfb11b9dbea8ab527ba1164b8f7a946a668cf91cebff5fe7c3ad1e8ce0ecb"
+           "sha256": "33748124022364faf5e20904e3316564d5b66c842867b861d553ee70d2882918"
           },
           {
            "id": "screenshot-5",
-           "sha256": "31710e49894c76111dad5460ea43f5d0ae7e95c0aba52779bf5e6d17d3fa5feb"
+           "sha256": "12a7f7e6e20498ed30071ea645bbd1e9d5a0f72d01fa3d81b188f5140e063f4f"
           },
           {
            "id": "screenshot-6",
-           "sha256": "9690ac226a9b04924d4bcde6c21c06f848649740fffa293f7a551cbe3bfb26e1"
+           "sha256": "468dffd928e40789ee6900a58462f3e212a37863809509625169fced837957e5"
           },
           {
            "id": "screenshot-7",
-           "sha256": "783f7375b192c1c391bab868de7206d3f6cc6f7598547e0243778db8caa2504f"
+           "sha256": "d3068d30ae50636b3ce3f1ce0f7fad5fdef314a1f9c8db0df234b7e53e5e0873"
           }
          ],
          "expected": "One exact selected-family history GET is controlled503 before backend dispatch; stale identity/group disappear and reevaluation is disabled, then explicit choice recovers.",
@@ -13641,45 +13641,45 @@
         },
         {
          "task": "S4-13",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "efc159c490387decae0b2b6feee93053533f6885",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
-         "receipt": "2026-10-08-f059-lifecycle-f3895ec-browser.json",
-         "receipt_sha256": "3621b1067dcf169cd980fef5c25366412ba8a708d222c3a78b937b97972a80ca",
+         "receipt": "2026-10-09-browser-context-efc159c-saved-evaluation-view-controls-browser.json",
+         "receipt_sha256": "2215fb0285e86219b05269db8de2643a18ea9e332b927513237bec1351434cd8",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "d7af7e9009572370bb7fdcb02b42900325834f731cf923c3e25558fc72c108ec"
+           "sha256": "06f6768c3d72b98b175b692f6b7e201f68e856fd985c7bd35c0e63eb2c277143"
           },
           {
            "id": "screenshot-1",
-           "sha256": "129ac697c3a11fc09b57198d59e83d82ce0083b656da4cb39af6d5eabdcd8f0c"
+           "sha256": "086c9eedcb0dc632d889fb3fb3b4258b82475f5f75cb3c23aeb94c28c42e4557"
           },
           {
            "id": "screenshot-2",
-           "sha256": "078277c58cbb80a958d559a1e83113529665bb2fd02df5be118a7c290668b5c0"
+           "sha256": "202bd931edb8f8983f15dd7403df1768d1ab062d65ae5f0e5a87c25ac5f9e637"
           },
           {
            "id": "screenshot-3",
-           "sha256": "95011273c375e7045d84aed4f5c3c3d95c0f0d316cee9c3ce6734e9662601134"
+           "sha256": "7f27e6690a525681ed34042f96bef87dcb1dd916b17c4d37b49bd2e0816eff0e"
           },
           {
            "id": "screenshot-4",
-           "sha256": "dba9da19cb7851cb6e45536c39b0a404f5bc66b4cb2a7777b38b34bdfe58e34b"
+           "sha256": "93cd486d2d6b00f054ddfff85be45727f7e7414bbaaf230310e91cd51d00f97a"
           },
           {
            "id": "screenshot-5",
-           "sha256": "034c197703f273c76dcf337fc813e99ffb10bf212250a4431daee18aca50f215"
+           "sha256": "f1202af3b89be61293e9257adc25c60809f3f4288a98ca2413c759f0b0126e18"
           },
           {
            "id": "screenshot-6",
-           "sha256": "ec043c205a5e6fe4ea455bc0a68eab843f3afb12dd53c8b27a18d58a2da39ab8"
+           "sha256": "8338eb73ded7834db1660128491553e9fbc774f9600fc882bc1c18fcaec3bf4c"
           },
           {
            "id": "screenshot-7",
-           "sha256": "ea405f9ddfa3595e77d28657fd7a645a41d886e729f2be5bf69ce113c7ee43a1"
+           "sha256": "4e3088bdf5f654ebe308294994c7f1462410ac420394a65fc680e82eabff32bc"
           }
          ],
          "expected": "One exact selected-family history GET is controlled503 before backend dispatch; stale identity/group disappear and reevaluation is disabled, then explicit choice recovers.",
@@ -13692,45 +13692,45 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "efc159c490387decae0b2b6feee93053533f6885",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::native saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
-         "receipt": "2026-10-08-f059-lifecycle-f3895ec-electron.json",
-         "receipt_sha256": "033f318a9ef49b07793bc2528d15c545b17f97b8b1a242470481c74299314231",
+         "receipt": "2026-10-09-browser-context-efc159c-saved-evaluation-view-controls-electron.json",
+         "receipt_sha256": "2e5b99d0cf6c03b3cd41056cf0c150f89c1289289eb8fa7d4d3a896fb7c77759",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "b3b0629d679a2eccc53dd08371b6e1bbba55942f83169a89d5c39cd6f0129248"
+           "sha256": "5d45a145f233dbc39344b576ea2d613c8b131bee7228d82c1970f221bf7a6745"
           },
           {
            "id": "screenshot-1",
-           "sha256": "becce50c9e8bbd6c03b006123a914ff8f46a293804a12acc772dbaa99f209841"
+           "sha256": "ab2e85bc0053c92de4c35dda4051fd109071416b65d5629cd238e68d26239e7c"
           },
           {
            "id": "screenshot-2",
-           "sha256": "322ebc1ef5d42189a257ff702a0e7f145ae6dc2046c9ab465b5ce83e3359f728"
+           "sha256": "0cc8ea9e3166fb61c7ef3a078b0d949ba6dda8597436cef53e5f3a32cf1333d9"
           },
           {
            "id": "screenshot-3",
-           "sha256": "fd18e7664d16ad2114b2b2041eb85a2991d5154ce6fd4623607b172da5c12981"
+           "sha256": "8cf040f3b99270b1894a89ec86dc2ed2b8e2bf63fefdc720bcad74228b335473"
           },
           {
            "id": "screenshot-4",
-           "sha256": "69bbfb11b9dbea8ab527ba1164b8f7a946a668cf91cebff5fe7c3ad1e8ce0ecb"
+           "sha256": "33748124022364faf5e20904e3316564d5b66c842867b861d553ee70d2882918"
           },
           {
            "id": "screenshot-5",
-           "sha256": "31710e49894c76111dad5460ea43f5d0ae7e95c0aba52779bf5e6d17d3fa5feb"
+           "sha256": "12a7f7e6e20498ed30071ea645bbd1e9d5a0f72d01fa3d81b188f5140e063f4f"
           },
           {
            "id": "screenshot-6",
-           "sha256": "9690ac226a9b04924d4bcde6c21c06f848649740fffa293f7a551cbe3bfb26e1"
+           "sha256": "468dffd928e40789ee6900a58462f3e212a37863809509625169fced837957e5"
           },
           {
            "id": "screenshot-7",
-           "sha256": "783f7375b192c1c391bab868de7206d3f6cc6f7598547e0243778db8caa2504f"
+           "sha256": "d3068d30ae50636b3ce3f1ce0f7fad5fdef314a1f9c8db0df234b7e53e5e0873"
           }
          ],
          "expected": "Actual selection popup followed by Escape preserves the same family, preference bytes and saved report, with no extra GET; no request/job cancellation claim.",
@@ -13738,45 +13738,45 @@
         },
         {
          "task": "S4-13",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "efc159c490387decae0b2b6feee93053533f6885",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
-         "receipt": "2026-10-08-f059-lifecycle-f3895ec-browser.json",
-         "receipt_sha256": "3621b1067dcf169cd980fef5c25366412ba8a708d222c3a78b937b97972a80ca",
+         "receipt": "2026-10-09-browser-context-efc159c-saved-evaluation-view-controls-browser.json",
+         "receipt_sha256": "2215fb0285e86219b05269db8de2643a18ea9e332b927513237bec1351434cd8",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "d7af7e9009572370bb7fdcb02b42900325834f731cf923c3e25558fc72c108ec"
+           "sha256": "06f6768c3d72b98b175b692f6b7e201f68e856fd985c7bd35c0e63eb2c277143"
           },
           {
            "id": "screenshot-1",
-           "sha256": "129ac697c3a11fc09b57198d59e83d82ce0083b656da4cb39af6d5eabdcd8f0c"
+           "sha256": "086c9eedcb0dc632d889fb3fb3b4258b82475f5f75cb3c23aeb94c28c42e4557"
           },
           {
            "id": "screenshot-2",
-           "sha256": "078277c58cbb80a958d559a1e83113529665bb2fd02df5be118a7c290668b5c0"
+           "sha256": "202bd931edb8f8983f15dd7403df1768d1ab062d65ae5f0e5a87c25ac5f9e637"
           },
           {
            "id": "screenshot-3",
-           "sha256": "95011273c375e7045d84aed4f5c3c3d95c0f0d316cee9c3ce6734e9662601134"
+           "sha256": "7f27e6690a525681ed34042f96bef87dcb1dd916b17c4d37b49bd2e0816eff0e"
           },
           {
            "id": "screenshot-4",
-           "sha256": "dba9da19cb7851cb6e45536c39b0a404f5bc66b4cb2a7777b38b34bdfe58e34b"
+           "sha256": "93cd486d2d6b00f054ddfff85be45727f7e7414bbaaf230310e91cd51d00f97a"
           },
           {
            "id": "screenshot-5",
-           "sha256": "034c197703f273c76dcf337fc813e99ffb10bf212250a4431daee18aca50f215"
+           "sha256": "f1202af3b89be61293e9257adc25c60809f3f4288a98ca2413c759f0b0126e18"
           },
           {
            "id": "screenshot-6",
-           "sha256": "ec043c205a5e6fe4ea455bc0a68eab843f3afb12dd53c8b27a18d58a2da39ab8"
+           "sha256": "8338eb73ded7834db1660128491553e9fbc774f9600fc882bc1c18fcaec3bf4c"
           },
           {
            "id": "screenshot-7",
-           "sha256": "ea405f9ddfa3595e77d28657fd7a645a41d886e729f2be5bf69ce113c7ee43a1"
+           "sha256": "4e3088bdf5f654ebe308294994c7f1462410ac420394a65fc680e82eabff32bc"
           }
          ],
          "expected": "Actual selection popup followed by Escape preserves the same family, preference bytes and saved report, with no extra GET; no request/job cancellation claim.",
@@ -13832,45 +13832,45 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "efc159c490387decae0b2b6feee93053533f6885",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::native saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
-         "receipt": "2026-10-08-f059-lifecycle-f3895ec-electron.json",
-         "receipt_sha256": "033f318a9ef49b07793bc2528d15c545b17f97b8b1a242470481c74299314231",
+         "receipt": "2026-10-09-browser-context-efc159c-saved-evaluation-view-controls-electron.json",
+         "receipt_sha256": "2e5b99d0cf6c03b3cd41056cf0c150f89c1289289eb8fa7d4d3a896fb7c77759",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "b3b0629d679a2eccc53dd08371b6e1bbba55942f83169a89d5c39cd6f0129248"
+           "sha256": "5d45a145f233dbc39344b576ea2d613c8b131bee7228d82c1970f221bf7a6745"
           },
           {
            "id": "screenshot-1",
-           "sha256": "becce50c9e8bbd6c03b006123a914ff8f46a293804a12acc772dbaa99f209841"
+           "sha256": "ab2e85bc0053c92de4c35dda4051fd109071416b65d5629cd238e68d26239e7c"
           },
           {
            "id": "screenshot-2",
-           "sha256": "322ebc1ef5d42189a257ff702a0e7f145ae6dc2046c9ab465b5ce83e3359f728"
+           "sha256": "0cc8ea9e3166fb61c7ef3a078b0d949ba6dda8597436cef53e5f3a32cf1333d9"
           },
           {
            "id": "screenshot-3",
-           "sha256": "fd18e7664d16ad2114b2b2041eb85a2991d5154ce6fd4623607b172da5c12981"
+           "sha256": "8cf040f3b99270b1894a89ec86dc2ed2b8e2bf63fefdc720bcad74228b335473"
           },
           {
            "id": "screenshot-4",
-           "sha256": "69bbfb11b9dbea8ab527ba1164b8f7a946a668cf91cebff5fe7c3ad1e8ce0ecb"
+           "sha256": "33748124022364faf5e20904e3316564d5b66c842867b861d553ee70d2882918"
           },
           {
            "id": "screenshot-5",
-           "sha256": "31710e49894c76111dad5460ea43f5d0ae7e95c0aba52779bf5e6d17d3fa5feb"
+           "sha256": "12a7f7e6e20498ed30071ea645bbd1e9d5a0f72d01fa3d81b188f5140e063f4f"
           },
           {
            "id": "screenshot-6",
-           "sha256": "9690ac226a9b04924d4bcde6c21c06f848649740fffa293f7a551cbe3bfb26e1"
+           "sha256": "468dffd928e40789ee6900a58462f3e212a37863809509625169fced837957e5"
           },
           {
            "id": "screenshot-7",
-           "sha256": "783f7375b192c1c391bab868de7206d3f6cc6f7598547e0243778db8caa2504f"
+           "sha256": "d3068d30ae50636b3ce3f1ce0f7fad5fdef314a1f9c8db0df234b7e53e5e0873"
           }
          ],
          "expected": "Actual workflow stage0 then3 preserves the exact classification record, evidence SHA, labelset and group preference.",
@@ -13878,45 +13878,45 @@
         },
         {
          "task": "S4-13",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "efc159c490387decae0b2b6feee93053533f6885",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
-         "receipt": "2026-10-08-f059-lifecycle-f3895ec-browser.json",
-         "receipt_sha256": "3621b1067dcf169cd980fef5c25366412ba8a708d222c3a78b937b97972a80ca",
+         "receipt": "2026-10-09-browser-context-efc159c-saved-evaluation-view-controls-browser.json",
+         "receipt_sha256": "2215fb0285e86219b05269db8de2643a18ea9e332b927513237bec1351434cd8",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "d7af7e9009572370bb7fdcb02b42900325834f731cf923c3e25558fc72c108ec"
+           "sha256": "06f6768c3d72b98b175b692f6b7e201f68e856fd985c7bd35c0e63eb2c277143"
           },
           {
            "id": "screenshot-1",
-           "sha256": "129ac697c3a11fc09b57198d59e83d82ce0083b656da4cb39af6d5eabdcd8f0c"
+           "sha256": "086c9eedcb0dc632d889fb3fb3b4258b82475f5f75cb3c23aeb94c28c42e4557"
           },
           {
            "id": "screenshot-2",
-           "sha256": "078277c58cbb80a958d559a1e83113529665bb2fd02df5be118a7c290668b5c0"
+           "sha256": "202bd931edb8f8983f15dd7403df1768d1ab062d65ae5f0e5a87c25ac5f9e637"
           },
           {
            "id": "screenshot-3",
-           "sha256": "95011273c375e7045d84aed4f5c3c3d95c0f0d316cee9c3ce6734e9662601134"
+           "sha256": "7f27e6690a525681ed34042f96bef87dcb1dd916b17c4d37b49bd2e0816eff0e"
           },
           {
            "id": "screenshot-4",
-           "sha256": "dba9da19cb7851cb6e45536c39b0a404f5bc66b4cb2a7777b38b34bdfe58e34b"
+           "sha256": "93cd486d2d6b00f054ddfff85be45727f7e7414bbaaf230310e91cd51d00f97a"
           },
           {
            "id": "screenshot-5",
-           "sha256": "034c197703f273c76dcf337fc813e99ffb10bf212250a4431daee18aca50f215"
+           "sha256": "f1202af3b89be61293e9257adc25c60809f3f4288a98ca2413c759f0b0126e18"
           },
           {
            "id": "screenshot-6",
-           "sha256": "ec043c205a5e6fe4ea455bc0a68eab843f3afb12dd53c8b27a18d58a2da39ab8"
+           "sha256": "8338eb73ded7834db1660128491553e9fbc774f9600fc882bc1c18fcaec3bf4c"
           },
           {
            "id": "screenshot-7",
-           "sha256": "ea405f9ddfa3595e77d28657fd7a645a41d886e729f2be5bf69ce113c7ee43a1"
+           "sha256": "4e3088bdf5f654ebe308294994c7f1462410ac420394a65fc680e82eabff32bc"
           }
          ],
          "expected": "Actual workflow stage0 then3 preserves the exact classification record, evidence SHA, labelset and group preference.",
@@ -13979,45 +13979,45 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "efc159c490387decae0b2b6feee93053533f6885",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::native saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
-         "receipt": "2026-10-08-f059-lifecycle-f3895ec-electron.json",
-         "receipt_sha256": "033f318a9ef49b07793bc2528d15c545b17f97b8b1a242470481c74299314231",
+         "receipt": "2026-10-09-browser-context-efc159c-saved-evaluation-view-controls-electron.json",
+         "receipt_sha256": "2e5b99d0cf6c03b3cd41056cf0c150f89c1289289eb8fa7d4d3a896fb7c77759",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "b3b0629d679a2eccc53dd08371b6e1bbba55942f83169a89d5c39cd6f0129248"
+           "sha256": "5d45a145f233dbc39344b576ea2d613c8b131bee7228d82c1970f221bf7a6745"
           },
           {
            "id": "screenshot-1",
-           "sha256": "becce50c9e8bbd6c03b006123a914ff8f46a293804a12acc772dbaa99f209841"
+           "sha256": "ab2e85bc0053c92de4c35dda4051fd109071416b65d5629cd238e68d26239e7c"
           },
           {
            "id": "screenshot-2",
-           "sha256": "322ebc1ef5d42189a257ff702a0e7f145ae6dc2046c9ab465b5ce83e3359f728"
+           "sha256": "0cc8ea9e3166fb61c7ef3a078b0d949ba6dda8597436cef53e5f3a32cf1333d9"
           },
           {
            "id": "screenshot-3",
-           "sha256": "fd18e7664d16ad2114b2b2041eb85a2991d5154ce6fd4623607b172da5c12981"
+           "sha256": "8cf040f3b99270b1894a89ec86dc2ed2b8e2bf63fefdc720bcad74228b335473"
           },
           {
            "id": "screenshot-4",
-           "sha256": "69bbfb11b9dbea8ab527ba1164b8f7a946a668cf91cebff5fe7c3ad1e8ce0ecb"
+           "sha256": "33748124022364faf5e20904e3316564d5b66c842867b861d553ee70d2882918"
           },
           {
            "id": "screenshot-5",
-           "sha256": "31710e49894c76111dad5460ea43f5d0ae7e95c0aba52779bf5e6d17d3fa5feb"
+           "sha256": "12a7f7e6e20498ed30071ea645bbd1e9d5a0f72d01fa3d81b188f5140e063f4f"
           },
           {
            "id": "screenshot-6",
-           "sha256": "9690ac226a9b04924d4bcde6c21c06f848649740fffa293f7a551cbe3bfb26e1"
+           "sha256": "468dffd928e40789ee6900a58462f3e212a37863809509625169fced837957e5"
           },
           {
            "id": "screenshot-7",
-           "sha256": "783f7375b192c1c391bab868de7206d3f6cc6f7598547e0243778db8caa2504f"
+           "sha256": "d3068d30ae50636b3ce3f1ce0f7fad5fdef314a1f9c8db0df234b7e53e5e0873"
           }
          ],
          "expected": "The controlled classification report has no predictions or grouped binary errors; the visible table stays empty and invents no binary counts.",
@@ -14025,45 +14025,45 @@
         },
         {
          "task": "S4-13",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "efc159c490387decae0b2b6feee93053533f6885",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
-         "receipt": "2026-10-08-f059-lifecycle-f3895ec-browser.json",
-         "receipt_sha256": "3621b1067dcf169cd980fef5c25366412ba8a708d222c3a78b937b97972a80ca",
+         "receipt": "2026-10-09-browser-context-efc159c-saved-evaluation-view-controls-browser.json",
+         "receipt_sha256": "2215fb0285e86219b05269db8de2643a18ea9e332b927513237bec1351434cd8",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "d7af7e9009572370bb7fdcb02b42900325834f731cf923c3e25558fc72c108ec"
+           "sha256": "06f6768c3d72b98b175b692f6b7e201f68e856fd985c7bd35c0e63eb2c277143"
           },
           {
            "id": "screenshot-1",
-           "sha256": "129ac697c3a11fc09b57198d59e83d82ce0083b656da4cb39af6d5eabdcd8f0c"
+           "sha256": "086c9eedcb0dc632d889fb3fb3b4258b82475f5f75cb3c23aeb94c28c42e4557"
           },
           {
            "id": "screenshot-2",
-           "sha256": "078277c58cbb80a958d559a1e83113529665bb2fd02df5be118a7c290668b5c0"
+           "sha256": "202bd931edb8f8983f15dd7403df1768d1ab062d65ae5f0e5a87c25ac5f9e637"
           },
           {
            "id": "screenshot-3",
-           "sha256": "95011273c375e7045d84aed4f5c3c3d95c0f0d316cee9c3ce6734e9662601134"
+           "sha256": "7f27e6690a525681ed34042f96bef87dcb1dd916b17c4d37b49bd2e0816eff0e"
           },
           {
            "id": "screenshot-4",
-           "sha256": "dba9da19cb7851cb6e45536c39b0a404f5bc66b4cb2a7777b38b34bdfe58e34b"
+           "sha256": "93cd486d2d6b00f054ddfff85be45727f7e7414bbaaf230310e91cd51d00f97a"
           },
           {
            "id": "screenshot-5",
-           "sha256": "034c197703f273c76dcf337fc813e99ffb10bf212250a4431daee18aca50f215"
+           "sha256": "f1202af3b89be61293e9257adc25c60809f3f4288a98ca2413c759f0b0126e18"
           },
           {
            "id": "screenshot-6",
-           "sha256": "ec043c205a5e6fe4ea455bc0a68eab843f3afb12dd53c8b27a18d58a2da39ab8"
+           "sha256": "8338eb73ded7834db1660128491553e9fbc774f9600fc882bc1c18fcaec3bf4c"
           },
           {
            "id": "screenshot-7",
-           "sha256": "ea405f9ddfa3595e77d28657fd7a645a41d886e729f2be5bf69ce113c7ee43a1"
+           "sha256": "4e3088bdf5f654ebe308294994c7f1462410ac420394a65fc680e82eabff32bc"
           }
          ],
          "expected": "The controlled classification report has no predictions or grouped binary errors; the visible table stays empty and invents no binary counts.",
@@ -14076,45 +14076,45 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "efc159c490387decae0b2b6feee93053533f6885",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::native saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
-         "receipt": "2026-10-08-f059-lifecycle-f3895ec-electron.json",
-         "receipt_sha256": "033f318a9ef49b07793bc2528d15c545b17f97b8b1a242470481c74299314231",
+         "receipt": "2026-10-09-browser-context-efc159c-saved-evaluation-view-controls-electron.json",
+         "receipt_sha256": "2e5b99d0cf6c03b3cd41056cf0c150f89c1289289eb8fa7d4d3a896fb7c77759",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "b3b0629d679a2eccc53dd08371b6e1bbba55942f83169a89d5c39cd6f0129248"
+           "sha256": "5d45a145f233dbc39344b576ea2d613c8b131bee7228d82c1970f221bf7a6745"
           },
           {
            "id": "screenshot-1",
-           "sha256": "becce50c9e8bbd6c03b006123a914ff8f46a293804a12acc772dbaa99f209841"
+           "sha256": "ab2e85bc0053c92de4c35dda4051fd109071416b65d5629cd238e68d26239e7c"
           },
           {
            "id": "screenshot-2",
-           "sha256": "322ebc1ef5d42189a257ff702a0e7f145ae6dc2046c9ab465b5ce83e3359f728"
+           "sha256": "0cc8ea9e3166fb61c7ef3a078b0d949ba6dda8597436cef53e5f3a32cf1333d9"
           },
           {
            "id": "screenshot-3",
-           "sha256": "fd18e7664d16ad2114b2b2041eb85a2991d5154ce6fd4623607b172da5c12981"
+           "sha256": "8cf040f3b99270b1894a89ec86dc2ed2b8e2bf63fefdc720bcad74228b335473"
           },
           {
            "id": "screenshot-4",
-           "sha256": "69bbfb11b9dbea8ab527ba1164b8f7a946a668cf91cebff5fe7c3ad1e8ce0ecb"
+           "sha256": "33748124022364faf5e20904e3316564d5b66c842867b861d553ee70d2882918"
           },
           {
            "id": "screenshot-5",
-           "sha256": "31710e49894c76111dad5460ea43f5d0ae7e95c0aba52779bf5e6d17d3fa5feb"
+           "sha256": "12a7f7e6e20498ed30071ea645bbd1e9d5a0f72d01fa3d81b188f5140e063f4f"
           },
           {
            "id": "screenshot-6",
-           "sha256": "9690ac226a9b04924d4bcde6c21c06f848649740fffa293f7a551cbe3bfb26e1"
+           "sha256": "468dffd928e40789ee6900a58462f3e212a37863809509625169fced837957e5"
           },
           {
            "id": "screenshot-7",
-           "sha256": "783f7375b192c1c391bab868de7206d3f6cc6f7598547e0243778db8caa2504f"
+           "sha256": "d3068d30ae50636b3ce3f1ce0f7fad5fdef314a1f9c8db0df234b7e53e5e0873"
           }
          ],
          "expected": "A controlled unknown optional persisted group is refused on actual reload; fallback group and whole-view preference are valid.",
@@ -14122,45 +14122,45 @@
         },
         {
          "task": "S4-13",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "efc159c490387decae0b2b6feee93053533f6885",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
-         "receipt": "2026-10-08-f059-lifecycle-f3895ec-browser.json",
-         "receipt_sha256": "3621b1067dcf169cd980fef5c25366412ba8a708d222c3a78b937b97972a80ca",
+         "receipt": "2026-10-09-browser-context-efc159c-saved-evaluation-view-controls-browser.json",
+         "receipt_sha256": "2215fb0285e86219b05269db8de2643a18ea9e332b927513237bec1351434cd8",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "d7af7e9009572370bb7fdcb02b42900325834f731cf923c3e25558fc72c108ec"
+           "sha256": "06f6768c3d72b98b175b692f6b7e201f68e856fd985c7bd35c0e63eb2c277143"
           },
           {
            "id": "screenshot-1",
-           "sha256": "129ac697c3a11fc09b57198d59e83d82ce0083b656da4cb39af6d5eabdcd8f0c"
+           "sha256": "086c9eedcb0dc632d889fb3fb3b4258b82475f5f75cb3c23aeb94c28c42e4557"
           },
           {
            "id": "screenshot-2",
-           "sha256": "078277c58cbb80a958d559a1e83113529665bb2fd02df5be118a7c290668b5c0"
+           "sha256": "202bd931edb8f8983f15dd7403df1768d1ab062d65ae5f0e5a87c25ac5f9e637"
           },
           {
            "id": "screenshot-3",
-           "sha256": "95011273c375e7045d84aed4f5c3c3d95c0f0d316cee9c3ce6734e9662601134"
+           "sha256": "7f27e6690a525681ed34042f96bef87dcb1dd916b17c4d37b49bd2e0816eff0e"
           },
           {
            "id": "screenshot-4",
-           "sha256": "dba9da19cb7851cb6e45536c39b0a404f5bc66b4cb2a7777b38b34bdfe58e34b"
+           "sha256": "93cd486d2d6b00f054ddfff85be45727f7e7414bbaaf230310e91cd51d00f97a"
           },
           {
            "id": "screenshot-5",
-           "sha256": "034c197703f273c76dcf337fc813e99ffb10bf212250a4431daee18aca50f215"
+           "sha256": "f1202af3b89be61293e9257adc25c60809f3f4288a98ca2413c759f0b0126e18"
           },
           {
            "id": "screenshot-6",
-           "sha256": "ec043c205a5e6fe4ea455bc0a68eab843f3afb12dd53c8b27a18d58a2da39ab8"
+           "sha256": "8338eb73ded7834db1660128491553e9fbc774f9600fc882bc1c18fcaec3bf4c"
           },
           {
            "id": "screenshot-7",
-           "sha256": "ea405f9ddfa3595e77d28657fd7a645a41d886e729f2be5bf69ce113c7ee43a1"
+           "sha256": "4e3088bdf5f654ebe308294994c7f1462410ac420394a65fc680e82eabff32bc"
           }
          ],
          "expected": "A controlled unknown optional persisted group is refused on actual reload; fallback group and whole-view preference are valid.",
@@ -14176,45 +14176,45 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "efc159c490387decae0b2b6feee93053533f6885",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::native saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
-         "receipt": "2026-10-08-f059-lifecycle-f3895ec-electron.json",
-         "receipt_sha256": "033f318a9ef49b07793bc2528d15c545b17f97b8b1a242470481c74299314231",
+         "receipt": "2026-10-09-browser-context-efc159c-saved-evaluation-view-controls-electron.json",
+         "receipt_sha256": "2e5b99d0cf6c03b3cd41056cf0c150f89c1289289eb8fa7d4d3a896fb7c77759",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "b3b0629d679a2eccc53dd08371b6e1bbba55942f83169a89d5c39cd6f0129248"
+           "sha256": "5d45a145f233dbc39344b576ea2d613c8b131bee7228d82c1970f221bf7a6745"
           },
           {
            "id": "screenshot-1",
-           "sha256": "becce50c9e8bbd6c03b006123a914ff8f46a293804a12acc772dbaa99f209841"
+           "sha256": "ab2e85bc0053c92de4c35dda4051fd109071416b65d5629cd238e68d26239e7c"
           },
           {
            "id": "screenshot-2",
-           "sha256": "322ebc1ef5d42189a257ff702a0e7f145ae6dc2046c9ab465b5ce83e3359f728"
+           "sha256": "0cc8ea9e3166fb61c7ef3a078b0d949ba6dda8597436cef53e5f3a32cf1333d9"
           },
           {
            "id": "screenshot-3",
-           "sha256": "fd18e7664d16ad2114b2b2041eb85a2991d5154ce6fd4623607b172da5c12981"
+           "sha256": "8cf040f3b99270b1894a89ec86dc2ed2b8e2bf63fefdc720bcad74228b335473"
           },
           {
            "id": "screenshot-4",
-           "sha256": "69bbfb11b9dbea8ab527ba1164b8f7a946a668cf91cebff5fe7c3ad1e8ce0ecb"
+           "sha256": "33748124022364faf5e20904e3316564d5b66c842867b861d553ee70d2882918"
           },
           {
            "id": "screenshot-5",
-           "sha256": "31710e49894c76111dad5460ea43f5d0ae7e95c0aba52779bf5e6d17d3fa5feb"
+           "sha256": "12a7f7e6e20498ed30071ea645bbd1e9d5a0f72d01fa3d81b188f5140e063f4f"
           },
           {
            "id": "screenshot-6",
-           "sha256": "9690ac226a9b04924d4bcde6c21c06f848649740fffa293f7a551cbe3bfb26e1"
+           "sha256": "468dffd928e40789ee6900a58462f3e212a37863809509625169fced837957e5"
           },
           {
            "id": "screenshot-7",
-           "sha256": "783f7375b192c1c391bab868de7206d3f6cc6f7598547e0243778db8caa2504f"
+           "sha256": "d3068d30ae50636b3ce3f1ce0f7fad5fdef314a1f9c8db0df234b7e53e5e0873"
           }
          ],
          "expected": "Actual group popup followed by Escape leaves its exact choice, preference bytes and saved report unchanged, with no extra GET.",
@@ -14222,45 +14222,45 @@
         },
         {
          "task": "S4-13",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "efc159c490387decae0b2b6feee93053533f6885",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
-         "receipt": "2026-10-08-f059-lifecycle-f3895ec-browser.json",
-         "receipt_sha256": "3621b1067dcf169cd980fef5c25366412ba8a708d222c3a78b937b97972a80ca",
+         "receipt": "2026-10-09-browser-context-efc159c-saved-evaluation-view-controls-browser.json",
+         "receipt_sha256": "2215fb0285e86219b05269db8de2643a18ea9e332b927513237bec1351434cd8",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "d7af7e9009572370bb7fdcb02b42900325834f731cf923c3e25558fc72c108ec"
+           "sha256": "06f6768c3d72b98b175b692f6b7e201f68e856fd985c7bd35c0e63eb2c277143"
           },
           {
            "id": "screenshot-1",
-           "sha256": "129ac697c3a11fc09b57198d59e83d82ce0083b656da4cb39af6d5eabdcd8f0c"
+           "sha256": "086c9eedcb0dc632d889fb3fb3b4258b82475f5f75cb3c23aeb94c28c42e4557"
           },
           {
            "id": "screenshot-2",
-           "sha256": "078277c58cbb80a958d559a1e83113529665bb2fd02df5be118a7c290668b5c0"
+           "sha256": "202bd931edb8f8983f15dd7403df1768d1ab062d65ae5f0e5a87c25ac5f9e637"
           },
           {
            "id": "screenshot-3",
-           "sha256": "95011273c375e7045d84aed4f5c3c3d95c0f0d316cee9c3ce6734e9662601134"
+           "sha256": "7f27e6690a525681ed34042f96bef87dcb1dd916b17c4d37b49bd2e0816eff0e"
           },
           {
            "id": "screenshot-4",
-           "sha256": "dba9da19cb7851cb6e45536c39b0a404f5bc66b4cb2a7777b38b34bdfe58e34b"
+           "sha256": "93cd486d2d6b00f054ddfff85be45727f7e7414bbaaf230310e91cd51d00f97a"
           },
           {
            "id": "screenshot-5",
-           "sha256": "034c197703f273c76dcf337fc813e99ffb10bf212250a4431daee18aca50f215"
+           "sha256": "f1202af3b89be61293e9257adc25c60809f3f4288a98ca2413c759f0b0126e18"
           },
           {
            "id": "screenshot-6",
-           "sha256": "ec043c205a5e6fe4ea455bc0a68eab843f3afb12dd53c8b27a18d58a2da39ab8"
+           "sha256": "8338eb73ded7834db1660128491553e9fbc774f9600fc882bc1c18fcaec3bf4c"
           },
           {
            "id": "screenshot-7",
-           "sha256": "ea405f9ddfa3595e77d28657fd7a645a41d886e729f2be5bf69ce113c7ee43a1"
+           "sha256": "4e3088bdf5f654ebe308294994c7f1462410ac420394a65fc680e82eabff32bc"
           }
          ],
          "expected": "Actual group popup followed by Escape leaves its exact choice, preference bytes and saved report unchanged, with no extra GET.",
@@ -14316,45 +14316,45 @@
        "evidence": [
         {
          "task": "S4-13",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "efc159c490387decae0b2b6feee93053533f6885",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::native saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
-         "receipt": "2026-10-08-f059-lifecycle-f3895ec-electron.json",
-         "receipt_sha256": "033f318a9ef49b07793bc2528d15c545b17f97b8b1a242470481c74299314231",
+         "receipt": "2026-10-09-browser-context-efc159c-saved-evaluation-view-controls-electron.json",
+         "receipt_sha256": "2e5b99d0cf6c03b3cd41056cf0c150f89c1289289eb8fa7d4d3a896fb7c77759",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "b3b0629d679a2eccc53dd08371b6e1bbba55942f83169a89d5c39cd6f0129248"
+           "sha256": "5d45a145f233dbc39344b576ea2d613c8b131bee7228d82c1970f221bf7a6745"
           },
           {
            "id": "screenshot-1",
-           "sha256": "becce50c9e8bbd6c03b006123a914ff8f46a293804a12acc772dbaa99f209841"
+           "sha256": "ab2e85bc0053c92de4c35dda4051fd109071416b65d5629cd238e68d26239e7c"
           },
           {
            "id": "screenshot-2",
-           "sha256": "322ebc1ef5d42189a257ff702a0e7f145ae6dc2046c9ab465b5ce83e3359f728"
+           "sha256": "0cc8ea9e3166fb61c7ef3a078b0d949ba6dda8597436cef53e5f3a32cf1333d9"
           },
           {
            "id": "screenshot-3",
-           "sha256": "fd18e7664d16ad2114b2b2041eb85a2991d5154ce6fd4623607b172da5c12981"
+           "sha256": "8cf040f3b99270b1894a89ec86dc2ed2b8e2bf63fefdc720bcad74228b335473"
           },
           {
            "id": "screenshot-4",
-           "sha256": "69bbfb11b9dbea8ab527ba1164b8f7a946a668cf91cebff5fe7c3ad1e8ce0ecb"
+           "sha256": "33748124022364faf5e20904e3316564d5b66c842867b861d553ee70d2882918"
           },
           {
            "id": "screenshot-5",
-           "sha256": "31710e49894c76111dad5460ea43f5d0ae7e95c0aba52779bf5e6d17d3fa5feb"
+           "sha256": "12a7f7e6e20498ed30071ea645bbd1e9d5a0f72d01fa3d81b188f5140e063f4f"
           },
           {
            "id": "screenshot-6",
-           "sha256": "9690ac226a9b04924d4bcde6c21c06f848649740fffa293f7a551cbe3bfb26e1"
+           "sha256": "468dffd928e40789ee6900a58462f3e212a37863809509625169fced837957e5"
           },
           {
            "id": "screenshot-7",
-           "sha256": "783f7375b192c1c391bab868de7206d3f6cc6f7598547e0243778db8caa2504f"
+           "sha256": "d3068d30ae50636b3ce3f1ce0f7fad5fdef314a1f9c8db0df234b7e53e5e0873"
           }
          ],
          "expected": "After actual workflow stage leave/return, the same ground_truth group and record/evidence SHA are retained.",
@@ -14362,45 +14362,45 @@
         },
         {
          "task": "S4-13",
-         "source_sha": "f3895ecd32b9723659beec945c672dc4fbce8d1f",
+         "source_sha": "efc159c490387decae0b2b6feee93053533f6885",
          "kind": "click",
          "action": "Original source UI lifecycle and exact retained record handoff",
          "reviewer": "Root exact-source and raw clean execution review plus independent private frozen source/proof review; no human truth or whole-feature acceptance",
          "test": "scripts/e2e/saved-evaluation-view-controls.spec.ts::saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices",
-         "receipt": "2026-10-08-f059-lifecycle-f3895ec-browser.json",
-         "receipt_sha256": "3621b1067dcf169cd980fef5c25366412ba8a708d222c3a78b937b97972a80ca",
+         "receipt": "2026-10-09-browser-context-efc159c-saved-evaluation-view-controls-browser.json",
+         "receipt_sha256": "2215fb0285e86219b05269db8de2643a18ea9e332b927513237bec1351434cd8",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "d7af7e9009572370bb7fdcb02b42900325834f731cf923c3e25558fc72c108ec"
+           "sha256": "06f6768c3d72b98b175b692f6b7e201f68e856fd985c7bd35c0e63eb2c277143"
           },
           {
            "id": "screenshot-1",
-           "sha256": "129ac697c3a11fc09b57198d59e83d82ce0083b656da4cb39af6d5eabdcd8f0c"
+           "sha256": "086c9eedcb0dc632d889fb3fb3b4258b82475f5f75cb3c23aeb94c28c42e4557"
           },
           {
            "id": "screenshot-2",
-           "sha256": "078277c58cbb80a958d559a1e83113529665bb2fd02df5be118a7c290668b5c0"
+           "sha256": "202bd931edb8f8983f15dd7403df1768d1ab062d65ae5f0e5a87c25ac5f9e637"
           },
           {
            "id": "screenshot-3",
-           "sha256": "95011273c375e7045d84aed4f5c3c3d95c0f0d316cee9c3ce6734e9662601134"
+           "sha256": "7f27e6690a525681ed34042f96bef87dcb1dd916b17c4d37b49bd2e0816eff0e"
           },
           {
            "id": "screenshot-4",
-           "sha256": "dba9da19cb7851cb6e45536c39b0a404f5bc66b4cb2a7777b38b34bdfe58e34b"
+           "sha256": "93cd486d2d6b00f054ddfff85be45727f7e7414bbaaf230310e91cd51d00f97a"
           },
           {
            "id": "screenshot-5",
-           "sha256": "034c197703f273c76dcf337fc813e99ffb10bf212250a4431daee18aca50f215"
+           "sha256": "f1202af3b89be61293e9257adc25c60809f3f4288a98ca2413c759f0b0126e18"
           },
           {
            "id": "screenshot-6",
-           "sha256": "ec043c205a5e6fe4ea455bc0a68eab843f3afb12dd53c8b27a18d58a2da39ab8"
+           "sha256": "8338eb73ded7834db1660128491553e9fbc774f9600fc882bc1c18fcaec3bf4c"
           },
           {
            "id": "screenshot-7",
-           "sha256": "ea405f9ddfa3595e77d28657fd7a645a41d886e729f2be5bf69ce113c7ee43a1"
+           "sha256": "4e3088bdf5f654ebe308294994c7f1462410ac420394a65fc680e82eabff32bc"
           }
          ],
          "expected": "After actual workflow stage leave/return, the same ground_truth group and record/evidence SHA are retained.",
@@ -25438,45 +25438,45 @@
        "evidence": [
         {
          "task": "S2-08",
-         "source_sha": "339c5af916b9bf5d85f302fb57c96e916955f21d",
+         "source_sha": "c86cdadde7326d1610c5c81fcea03d7211cfb74a",
          "kind": "click",
          "action": "초안 저장",
          "expected": "Original owning draft PUT503 preserves saved graph and every protected source/project/harness byte; explicit same-body PUT200 changes only the declared draft file/API. No active pipeline or model execution is added.",
          "observed": "electron: Original owning draft PUT503 preserves saved graph and every protected source/project/harness byte; explicit same-body PUT200 changes only the declared draft file/API. No active pipeline or model execution is added.",
          "reviewer": "Root separately granted independent readonly qualification, full raw API/body clocks and original byte copies, complete PNG pixels, strict original GUI receipts and owned teardown; native error cleanliness, human quality, installed target and parent acceptance remain pending.",
          "test": "scripts/e2e/flow-draft-save-error.spec.ts::native owning draft PUT503 retains original source and explicit save200 readback",
-         "receipt": "2026-10-09-flow-draft-save-error-339c5af-electron.json",
-         "receipt_sha256": "c37bbc7de1b2861f5650b9f84675d7da3b00ced72ae904164e35d9c996c4ceff",
+         "receipt": "2026-10-09-flow-draft-save-error-c86cdad-electron.json",
+         "receipt_sha256": "720b321ea085ec79bcb3aa901aa127400f906f882a465653fc4769eba0d230e6",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "9b7675b33304074d189978d26bf56fb2bb7e9ebb208170c9cee7cb3ff65687d6"
+           "sha256": "f9c1d9cde142c26373b31ac19dfba06413e770589d780a5f7702675577d02395"
           },
           {
            "id": "screenshot-1",
-           "sha256": "cb5c953abf5ab64719e054ffde21bf784dc881c902bdc7e68f88309f9f5d7d30"
+           "sha256": "fa57c21bb5604cab980424261855a22ead0ca50187ffdeddcff0e19d9c6c12f9"
           }
          ]
         },
         {
          "task": "S2-08",
-         "source_sha": "339c5af916b9bf5d85f302fb57c96e916955f21d",
+         "source_sha": "c86cdadde7326d1610c5c81fcea03d7211cfb74a",
          "kind": "click",
          "action": "초안 저장",
          "expected": "Original owning draft PUT503 preserves saved graph and every protected source/project/harness byte; explicit same-body PUT200 changes only the declared draft file/API. No active pipeline or model execution is added.",
          "observed": "browser: Original owning draft PUT503 preserves saved graph and every protected source/project/harness byte; explicit same-body PUT200 changes only the declared draft file/API. No active pipeline or model execution is added.",
          "reviewer": "Root separately granted independent readonly qualification, full raw API/body clocks and original byte copies, complete PNG pixels, strict original GUI receipts and owned teardown; native error cleanliness, human quality, installed target and parent acceptance remain pending.",
          "test": "scripts/e2e/flow-draft-save-error.spec.ts::owning draft PUT503 preserves saved graph and explicitly recovers same dirty edit",
-         "receipt": "2026-10-09-flow-draft-save-error-339c5af-browser.json",
-         "receipt_sha256": "2a099919ab8d4a6e789677c2923c6c144b1c6a3228b348d2d8ec83e55c869150",
+         "receipt": "2026-10-09-flow-draft-save-error-c86cdad-browser.json",
+         "receipt_sha256": "7b2d5d5e44bf2654dbc94f1622de22e739ba24cef5046a6b4b75b4ba87a426c0",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "354b7588f01c7e9f3686aed1d16361b025f09854833e095cfa7b04ca02f3dc55"
+           "sha256": "cd76923419760d66c514d8e82c2c9dce409fe3c25c5b1f0ea9f5477909cfcf89"
           },
           {
            "id": "screenshot-1",
-           "sha256": "6777efd5b62a0039734580779412682411c47e6bc433e8ed4ce0dfb37d32a1ae"
+           "sha256": "a0b473fba52c09ce18b33441a314ce26b1a9c9dfe1fb3160efd9fabb986a7bee"
           }
          ]
         }
@@ -28361,53 +28361,53 @@
         },
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "검토 완료 · 다음",
          "expected": "Unsaved annotation content blocks advancing the queue.",
          "observed": "browser: Actual canvas bbox10,10,30,30 made the editor dirty; Review disabled and saved cursor0/content remained exact. Label saved without approval.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-browser.json",
-         "receipt_sha256": "62bba9c79cdfc08380db0c7acea526a3d23a22e15baa3bb9f95a1de8c7e15edd",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-browser.json",
+         "receipt_sha256": "516209d718d1b4ebce11cf27e1c53fcde55f70e13ef7c71409dcb9ce31c3fad2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "7a44a26a23e0f8bae178bd64faf58983f600e34adf5da9a00dfdd09cd96d707e"
+           "sha256": "4573e043f5a98210895d9aba32feea8a6b4351ef8b532150208415dc4076f644"
           },
           {
            "id": "screenshot-1",
-           "sha256": "85cbbf41437f698ec2c2ef8dbd85dddcca82a570ee8bdb1ff950d9c93605e46c"
+           "sha256": "9663e9391a2ca63b04333b24f43a91e103c9373f96f65ab4d3eb7b3049db705c"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4b4119822ad2b89c8c5a72bc96d0ea1145a53e6f66ac06291ada7d064eebe3bf"
+           "sha256": "ef36eb6ff6551fb7c9197343739b965bd7033fd77157314236ff9576dd319309"
           }
          ]
         },
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "검토 완료 · 다음",
          "expected": "Unsaved annotation content blocks advancing the queue.",
          "observed": "electron: Actual canvas bbox10,10,30,30 made the editor dirty; Review disabled and saved cursor0/content remained exact. Label saved without approval.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-electron.json",
-         "receipt_sha256": "61699c64940b9d4b73590b3f4d0ef1d913ae305492e4f35b67a7255645c97f65",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-electron.json",
+         "receipt_sha256": "093310caced5188875727e58102f831a9a00f467994acc9fe471677d49533ad6",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "3193b364a7e3d55df7801aa40a708979ef2a277d580f830bb018f753a1e48d7c"
+           "sha256": "aaa4a7b6f89a1d135327908472e87873a7e892b6d055100606af88270136f94d"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c1e80ab27fa9ded376a520fa10f615fc0722c3ae05764331fa79857026fa1ffb"
+           "sha256": "da848a2cdd46632878e4ca7429bda9ad55560da9b52ad22507476d4a802eef43"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4916c2d4b864262a4d1b4ab19913a1b5f7c16f28c0f09a4989325d5f16e55f07"
+           "sha256": "0cb8c552171da5395d7aa54c6668fe3753feefbb6f71a6b6a454c96ba0c3b1f6"
           }
          ]
         }
@@ -28659,53 +28659,53 @@
        "evidence": [
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "보류 · 다음",
          "expected": "Unsaved annotation content blocks skipping the queue.",
          "observed": "browser: Actual dirty canvas content disabled Skip; original queue cursor0/content unchanged.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-browser.json",
-         "receipt_sha256": "62bba9c79cdfc08380db0c7acea526a3d23a22e15baa3bb9f95a1de8c7e15edd",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-browser.json",
+         "receipt_sha256": "516209d718d1b4ebce11cf27e1c53fcde55f70e13ef7c71409dcb9ce31c3fad2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "7a44a26a23e0f8bae178bd64faf58983f600e34adf5da9a00dfdd09cd96d707e"
+           "sha256": "4573e043f5a98210895d9aba32feea8a6b4351ef8b532150208415dc4076f644"
           },
           {
            "id": "screenshot-1",
-           "sha256": "85cbbf41437f698ec2c2ef8dbd85dddcca82a570ee8bdb1ff950d9c93605e46c"
+           "sha256": "9663e9391a2ca63b04333b24f43a91e103c9373f96f65ab4d3eb7b3049db705c"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4b4119822ad2b89c8c5a72bc96d0ea1145a53e6f66ac06291ada7d064eebe3bf"
+           "sha256": "ef36eb6ff6551fb7c9197343739b965bd7033fd77157314236ff9576dd319309"
           }
          ]
         },
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "보류 · 다음",
          "expected": "Unsaved annotation content blocks skipping the queue.",
          "observed": "electron: Actual dirty canvas content disabled Skip; original queue cursor0/content unchanged.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-electron.json",
-         "receipt_sha256": "61699c64940b9d4b73590b3f4d0ef1d913ae305492e4f35b67a7255645c97f65",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-electron.json",
+         "receipt_sha256": "093310caced5188875727e58102f831a9a00f467994acc9fe471677d49533ad6",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "3193b364a7e3d55df7801aa40a708979ef2a277d580f830bb018f753a1e48d7c"
+           "sha256": "aaa4a7b6f89a1d135327908472e87873a7e892b6d055100606af88270136f94d"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c1e80ab27fa9ded376a520fa10f615fc0722c3ae05764331fa79857026fa1ffb"
+           "sha256": "da848a2cdd46632878e4ca7429bda9ad55560da9b52ad22507476d4a802eef43"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4916c2d4b864262a4d1b4ab19913a1b5f7c16f28c0f09a4989325d5f16e55f07"
+           "sha256": "0cb8c552171da5395d7aa54c6668fe3753feefbb6f71a6b6a454c96ba0c3b1f6"
           }
          ]
         }
@@ -28875,53 +28875,53 @@
        "evidence": [
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "저장 검토 큐 선택",
          "expected": "Manual alternate queue choice persists its exact ID and cursor on reload.",
          "observed": "browser: Manually switched first/second/first queues. Reload retained first0/3 and second0/2 respectively; neither saved queue content nor original report bytes changed.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-browser.json",
-         "receipt_sha256": "62bba9c79cdfc08380db0c7acea526a3d23a22e15baa3bb9f95a1de8c7e15edd",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-browser.json",
+         "receipt_sha256": "516209d718d1b4ebce11cf27e1c53fcde55f70e13ef7c71409dcb9ce31c3fad2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "7a44a26a23e0f8bae178bd64faf58983f600e34adf5da9a00dfdd09cd96d707e"
+           "sha256": "4573e043f5a98210895d9aba32feea8a6b4351ef8b532150208415dc4076f644"
           },
           {
            "id": "screenshot-1",
-           "sha256": "85cbbf41437f698ec2c2ef8dbd85dddcca82a570ee8bdb1ff950d9c93605e46c"
+           "sha256": "9663e9391a2ca63b04333b24f43a91e103c9373f96f65ab4d3eb7b3049db705c"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4b4119822ad2b89c8c5a72bc96d0ea1145a53e6f66ac06291ada7d064eebe3bf"
+           "sha256": "ef36eb6ff6551fb7c9197343739b965bd7033fd77157314236ff9576dd319309"
           }
          ]
         },
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "저장 검토 큐 선택",
          "expected": "Manual alternate queue choice persists its exact ID and cursor on reload.",
          "observed": "electron: Manually switched first/second/first queues. Reload retained first0/3 and second0/2 respectively; neither saved queue content nor original report bytes changed.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-electron.json",
-         "receipt_sha256": "61699c64940b9d4b73590b3f4d0ef1d913ae305492e4f35b67a7255645c97f65",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-electron.json",
+         "receipt_sha256": "093310caced5188875727e58102f831a9a00f467994acc9fe471677d49533ad6",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "3193b364a7e3d55df7801aa40a708979ef2a277d580f830bb018f753a1e48d7c"
+           "sha256": "aaa4a7b6f89a1d135327908472e87873a7e892b6d055100606af88270136f94d"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c1e80ab27fa9ded376a520fa10f615fc0722c3ae05764331fa79857026fa1ffb"
+           "sha256": "da848a2cdd46632878e4ca7429bda9ad55560da9b52ad22507476d4a802eef43"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4916c2d4b864262a4d1b4ab19913a1b5f7c16f28c0f09a4989325d5f16e55f07"
+           "sha256": "0cb8c552171da5395d7aa54c6668fe3753feefbb6f71a6b6a454c96ba0c3b1f6"
           }
          ]
         }
@@ -29184,53 +29184,53 @@
         },
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "저장 검토 큐 선택",
          "expected": "Manual alternate queue choice persists its exact ID and cursor on reload.",
          "observed": "browser: Manually switched first/second/first queues. Reload retained first0/3 and second0/2 respectively; neither saved queue content nor original report bytes changed.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-browser.json",
-         "receipt_sha256": "62bba9c79cdfc08380db0c7acea526a3d23a22e15baa3bb9f95a1de8c7e15edd",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-browser.json",
+         "receipt_sha256": "516209d718d1b4ebce11cf27e1c53fcde55f70e13ef7c71409dcb9ce31c3fad2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "7a44a26a23e0f8bae178bd64faf58983f600e34adf5da9a00dfdd09cd96d707e"
+           "sha256": "4573e043f5a98210895d9aba32feea8a6b4351ef8b532150208415dc4076f644"
           },
           {
            "id": "screenshot-1",
-           "sha256": "85cbbf41437f698ec2c2ef8dbd85dddcca82a570ee8bdb1ff950d9c93605e46c"
+           "sha256": "9663e9391a2ca63b04333b24f43a91e103c9373f96f65ab4d3eb7b3049db705c"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4b4119822ad2b89c8c5a72bc96d0ea1145a53e6f66ac06291ada7d064eebe3bf"
+           "sha256": "ef36eb6ff6551fb7c9197343739b965bd7033fd77157314236ff9576dd319309"
           }
          ]
         },
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "저장 검토 큐 선택",
          "expected": "Manual alternate queue choice persists its exact ID and cursor on reload.",
          "observed": "electron: Manually switched first/second/first queues. Reload retained first0/3 and second0/2 respectively; neither saved queue content nor original report bytes changed.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-electron.json",
-         "receipt_sha256": "61699c64940b9d4b73590b3f4d0ef1d913ae305492e4f35b67a7255645c97f65",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-electron.json",
+         "receipt_sha256": "093310caced5188875727e58102f831a9a00f467994acc9fe471677d49533ad6",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "3193b364a7e3d55df7801aa40a708979ef2a277d580f830bb018f753a1e48d7c"
+           "sha256": "aaa4a7b6f89a1d135327908472e87873a7e892b6d055100606af88270136f94d"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c1e80ab27fa9ded376a520fa10f615fc0722c3ae05764331fa79857026fa1ffb"
+           "sha256": "da848a2cdd46632878e4ca7429bda9ad55560da9b52ad22507476d4a802eef43"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4916c2d4b864262a4d1b4ab19913a1b5f7c16f28c0f09a4989325d5f16e55f07"
+           "sha256": "0cb8c552171da5395d7aa54c6668fe3753feefbb6f71a6b6a454c96ba0c3b1f6"
           }
          ]
         }
@@ -29251,53 +29251,53 @@
        "evidence": [
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "원래 평가·비교로 돌아가기",
          "expected": "Return to the exact saved origin rather than the latest evaluation.",
          "observed": "browser: Opened older queue item and clicked origin return; stage4 selected the older exact evaluation and retained it on reload despite a newer evaluation existing.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-browser.json",
-         "receipt_sha256": "62bba9c79cdfc08380db0c7acea526a3d23a22e15baa3bb9f95a1de8c7e15edd",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-browser.json",
+         "receipt_sha256": "516209d718d1b4ebce11cf27e1c53fcde55f70e13ef7c71409dcb9ce31c3fad2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "7a44a26a23e0f8bae178bd64faf58983f600e34adf5da9a00dfdd09cd96d707e"
+           "sha256": "4573e043f5a98210895d9aba32feea8a6b4351ef8b532150208415dc4076f644"
           },
           {
            "id": "screenshot-1",
-           "sha256": "85cbbf41437f698ec2c2ef8dbd85dddcca82a570ee8bdb1ff950d9c93605e46c"
+           "sha256": "9663e9391a2ca63b04333b24f43a91e103c9373f96f65ab4d3eb7b3049db705c"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4b4119822ad2b89c8c5a72bc96d0ea1145a53e6f66ac06291ada7d064eebe3bf"
+           "sha256": "ef36eb6ff6551fb7c9197343739b965bd7033fd77157314236ff9576dd319309"
           }
          ]
         },
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "원래 평가·비교로 돌아가기",
          "expected": "Return to the exact saved origin rather than the latest evaluation.",
          "observed": "electron: Opened older queue item and clicked origin return; stage4 selected the older exact evaluation and retained it on reload despite a newer evaluation existing.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-electron.json",
-         "receipt_sha256": "61699c64940b9d4b73590b3f4d0ef1d913ae305492e4f35b67a7255645c97f65",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-electron.json",
+         "receipt_sha256": "093310caced5188875727e58102f831a9a00f467994acc9fe471677d49533ad6",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "3193b364a7e3d55df7801aa40a708979ef2a277d580f830bb018f753a1e48d7c"
+           "sha256": "aaa4a7b6f89a1d135327908472e87873a7e892b6d055100606af88270136f94d"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c1e80ab27fa9ded376a520fa10f615fc0722c3ae05764331fa79857026fa1ffb"
+           "sha256": "da848a2cdd46632878e4ca7429bda9ad55560da9b52ad22507476d4a802eef43"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4916c2d4b864262a4d1b4ab19913a1b5f7c16f28c0f09a4989325d5f16e55f07"
+           "sha256": "0cb8c552171da5395d7aa54c6668fe3753feefbb6f71a6b6a454c96ba0c3b1f6"
           }
          ]
         }
@@ -29460,53 +29460,53 @@
        "evidence": [
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "원래 평가·비교로 돌아가기",
          "expected": "Return to the exact saved origin rather than the latest evaluation.",
          "observed": "browser: Opened older queue item and clicked origin return; stage4 selected the older exact evaluation and retained it on reload despite a newer evaluation existing.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-browser.json",
-         "receipt_sha256": "62bba9c79cdfc08380db0c7acea526a3d23a22e15baa3bb9f95a1de8c7e15edd",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-browser.json",
+         "receipt_sha256": "516209d718d1b4ebce11cf27e1c53fcde55f70e13ef7c71409dcb9ce31c3fad2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "7a44a26a23e0f8bae178bd64faf58983f600e34adf5da9a00dfdd09cd96d707e"
+           "sha256": "4573e043f5a98210895d9aba32feea8a6b4351ef8b532150208415dc4076f644"
           },
           {
            "id": "screenshot-1",
-           "sha256": "85cbbf41437f698ec2c2ef8dbd85dddcca82a570ee8bdb1ff950d9c93605e46c"
+           "sha256": "9663e9391a2ca63b04333b24f43a91e103c9373f96f65ab4d3eb7b3049db705c"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4b4119822ad2b89c8c5a72bc96d0ea1145a53e6f66ac06291ada7d064eebe3bf"
+           "sha256": "ef36eb6ff6551fb7c9197343739b965bd7033fd77157314236ff9576dd319309"
           }
          ]
         },
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "원래 평가·비교로 돌아가기",
          "expected": "Return to the exact saved origin rather than the latest evaluation.",
          "observed": "electron: Opened older queue item and clicked origin return; stage4 selected the older exact evaluation and retained it on reload despite a newer evaluation existing.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-electron.json",
-         "receipt_sha256": "61699c64940b9d4b73590b3f4d0ef1d913ae305492e4f35b67a7255645c97f65",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-electron.json",
+         "receipt_sha256": "093310caced5188875727e58102f831a9a00f467994acc9fe471677d49533ad6",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "3193b364a7e3d55df7801aa40a708979ef2a277d580f830bb018f753a1e48d7c"
+           "sha256": "aaa4a7b6f89a1d135327908472e87873a7e892b6d055100606af88270136f94d"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c1e80ab27fa9ded376a520fa10f615fc0722c3ae05764331fa79857026fa1ffb"
+           "sha256": "da848a2cdd46632878e4ca7429bda9ad55560da9b52ad22507476d4a802eef43"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4916c2d4b864262a4d1b4ab19913a1b5f7c16f28c0f09a4989325d5f16e55f07"
+           "sha256": "0cb8c552171da5395d7aa54c6668fe3753feefbb6f71a6b6a454c96ba0c3b1f6"
           }
          ]
         }
@@ -29517,53 +29517,53 @@
        "evidence": [
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "원래 평가·비교로 돌아가기",
          "expected": "Return to the exact saved origin rather than the latest evaluation.",
          "observed": "browser: Opened older queue item and clicked origin return; stage4 selected the older exact evaluation and retained it on reload despite a newer evaluation existing.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-browser.json",
-         "receipt_sha256": "62bba9c79cdfc08380db0c7acea526a3d23a22e15baa3bb9f95a1de8c7e15edd",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-browser.json",
+         "receipt_sha256": "516209d718d1b4ebce11cf27e1c53fcde55f70e13ef7c71409dcb9ce31c3fad2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "7a44a26a23e0f8bae178bd64faf58983f600e34adf5da9a00dfdd09cd96d707e"
+           "sha256": "4573e043f5a98210895d9aba32feea8a6b4351ef8b532150208415dc4076f644"
           },
           {
            "id": "screenshot-1",
-           "sha256": "85cbbf41437f698ec2c2ef8dbd85dddcca82a570ee8bdb1ff950d9c93605e46c"
+           "sha256": "9663e9391a2ca63b04333b24f43a91e103c9373f96f65ab4d3eb7b3049db705c"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4b4119822ad2b89c8c5a72bc96d0ea1145a53e6f66ac06291ada7d064eebe3bf"
+           "sha256": "ef36eb6ff6551fb7c9197343739b965bd7033fd77157314236ff9576dd319309"
           }
          ]
         },
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "원래 평가·비교로 돌아가기",
          "expected": "Return to the exact saved origin rather than the latest evaluation.",
          "observed": "electron: Opened older queue item and clicked origin return; stage4 selected the older exact evaluation and retained it on reload despite a newer evaluation existing.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-electron.json",
-         "receipt_sha256": "61699c64940b9d4b73590b3f4d0ef1d913ae305492e4f35b67a7255645c97f65",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-electron.json",
+         "receipt_sha256": "093310caced5188875727e58102f831a9a00f467994acc9fe471677d49533ad6",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "3193b364a7e3d55df7801aa40a708979ef2a277d580f830bb018f753a1e48d7c"
+           "sha256": "aaa4a7b6f89a1d135327908472e87873a7e892b6d055100606af88270136f94d"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c1e80ab27fa9ded376a520fa10f615fc0722c3ae05764331fa79857026fa1ffb"
+           "sha256": "da848a2cdd46632878e4ca7429bda9ad55560da9b52ad22507476d4a802eef43"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4916c2d4b864262a4d1b4ab19913a1b5f7c16f28c0f09a4989325d5f16e55f07"
+           "sha256": "0cb8c552171da5395d7aa54c6668fe3753feefbb6f71a6b6a454c96ba0c3b1f6"
           }
          ]
         }
@@ -29581,53 +29581,53 @@
        "evidence": [
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "수정·검수 데이터로 학습 준비",
          "expected": "Only saved data satisfying the actual configured review policy can enter training preparation.",
          "observed": "browser: Dirty canvas disabled Prepare. Saved unapproved bbox plus fixture approved-only policy yielded eligible0 and actual readiness blocker. Separate permissive fixture policy allowed stage3, then return retained queues. No training job submitted and no human approval created.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-browser.json",
-         "receipt_sha256": "62bba9c79cdfc08380db0c7acea526a3d23a22e15baa3bb9f95a1de8c7e15edd",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-browser.json",
+         "receipt_sha256": "516209d718d1b4ebce11cf27e1c53fcde55f70e13ef7c71409dcb9ce31c3fad2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "7a44a26a23e0f8bae178bd64faf58983f600e34adf5da9a00dfdd09cd96d707e"
+           "sha256": "4573e043f5a98210895d9aba32feea8a6b4351ef8b532150208415dc4076f644"
           },
           {
            "id": "screenshot-1",
-           "sha256": "85cbbf41437f698ec2c2ef8dbd85dddcca82a570ee8bdb1ff950d9c93605e46c"
+           "sha256": "9663e9391a2ca63b04333b24f43a91e103c9373f96f65ab4d3eb7b3049db705c"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4b4119822ad2b89c8c5a72bc96d0ea1145a53e6f66ac06291ada7d064eebe3bf"
+           "sha256": "ef36eb6ff6551fb7c9197343739b965bd7033fd77157314236ff9576dd319309"
           }
          ]
         },
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "수정·검수 데이터로 학습 준비",
          "expected": "Only saved data satisfying the actual configured review policy can enter training preparation.",
          "observed": "electron: Dirty canvas disabled Prepare. Saved unapproved bbox plus fixture approved-only policy yielded eligible0 and actual readiness blocker. Separate permissive fixture policy allowed stage3, then return retained queues. No training job submitted and no human approval created.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-electron.json",
-         "receipt_sha256": "61699c64940b9d4b73590b3f4d0ef1d913ae305492e4f35b67a7255645c97f65",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-electron.json",
+         "receipt_sha256": "093310caced5188875727e58102f831a9a00f467994acc9fe471677d49533ad6",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "3193b364a7e3d55df7801aa40a708979ef2a277d580f830bb018f753a1e48d7c"
+           "sha256": "aaa4a7b6f89a1d135327908472e87873a7e892b6d055100606af88270136f94d"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c1e80ab27fa9ded376a520fa10f615fc0722c3ae05764331fa79857026fa1ffb"
+           "sha256": "da848a2cdd46632878e4ca7429bda9ad55560da9b52ad22507476d4a802eef43"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4916c2d4b864262a4d1b4ab19913a1b5f7c16f28c0f09a4989325d5f16e55f07"
+           "sha256": "0cb8c552171da5395d7aa54c6668fe3753feefbb6f71a6b6a454c96ba0c3b1f6"
           }
          ]
         }
@@ -29641,53 +29641,53 @@
        "evidence": [
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "수정·검수 데이터로 학습 준비",
          "expected": "Only saved data satisfying the actual configured review policy can enter training preparation.",
          "observed": "browser: Dirty canvas disabled Prepare. Saved unapproved bbox plus fixture approved-only policy yielded eligible0 and actual readiness blocker. Separate permissive fixture policy allowed stage3, then return retained queues. No training job submitted and no human approval created.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-browser.json",
-         "receipt_sha256": "62bba9c79cdfc08380db0c7acea526a3d23a22e15baa3bb9f95a1de8c7e15edd",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-browser.json",
+         "receipt_sha256": "516209d718d1b4ebce11cf27e1c53fcde55f70e13ef7c71409dcb9ce31c3fad2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "7a44a26a23e0f8bae178bd64faf58983f600e34adf5da9a00dfdd09cd96d707e"
+           "sha256": "4573e043f5a98210895d9aba32feea8a6b4351ef8b532150208415dc4076f644"
           },
           {
            "id": "screenshot-1",
-           "sha256": "85cbbf41437f698ec2c2ef8dbd85dddcca82a570ee8bdb1ff950d9c93605e46c"
+           "sha256": "9663e9391a2ca63b04333b24f43a91e103c9373f96f65ab4d3eb7b3049db705c"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4b4119822ad2b89c8c5a72bc96d0ea1145a53e6f66ac06291ada7d064eebe3bf"
+           "sha256": "ef36eb6ff6551fb7c9197343739b965bd7033fd77157314236ff9576dd319309"
           }
          ]
         },
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "수정·검수 데이터로 학습 준비",
          "expected": "Only saved data satisfying the actual configured review policy can enter training preparation.",
          "observed": "electron: Dirty canvas disabled Prepare. Saved unapproved bbox plus fixture approved-only policy yielded eligible0 and actual readiness blocker. Separate permissive fixture policy allowed stage3, then return retained queues. No training job submitted and no human approval created.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-electron.json",
-         "receipt_sha256": "61699c64940b9d4b73590b3f4d0ef1d913ae305492e4f35b67a7255645c97f65",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-electron.json",
+         "receipt_sha256": "093310caced5188875727e58102f831a9a00f467994acc9fe471677d49533ad6",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "3193b364a7e3d55df7801aa40a708979ef2a277d580f830bb018f753a1e48d7c"
+           "sha256": "aaa4a7b6f89a1d135327908472e87873a7e892b6d055100606af88270136f94d"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c1e80ab27fa9ded376a520fa10f615fc0722c3ae05764331fa79857026fa1ffb"
+           "sha256": "da848a2cdd46632878e4ca7429bda9ad55560da9b52ad22507476d4a802eef43"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4916c2d4b864262a4d1b4ab19913a1b5f7c16f28c0f09a4989325d5f16e55f07"
+           "sha256": "0cb8c552171da5395d7aa54c6668fe3753feefbb6f71a6b6a454c96ba0c3b1f6"
           }
          ]
         }
@@ -29698,53 +29698,53 @@
        "evidence": [
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "수정·검수 데이터로 학습 준비",
          "expected": "Only saved data satisfying the actual configured review policy can enter training preparation.",
          "observed": "browser: Dirty canvas disabled Prepare. Saved unapproved bbox plus fixture approved-only policy yielded eligible0 and actual readiness blocker. Separate permissive fixture policy allowed stage3, then return retained queues. No training job submitted and no human approval created.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-browser.json",
-         "receipt_sha256": "62bba9c79cdfc08380db0c7acea526a3d23a22e15baa3bb9f95a1de8c7e15edd",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-browser.json",
+         "receipt_sha256": "516209d718d1b4ebce11cf27e1c53fcde55f70e13ef7c71409dcb9ce31c3fad2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "7a44a26a23e0f8bae178bd64faf58983f600e34adf5da9a00dfdd09cd96d707e"
+           "sha256": "4573e043f5a98210895d9aba32feea8a6b4351ef8b532150208415dc4076f644"
           },
           {
            "id": "screenshot-1",
-           "sha256": "85cbbf41437f698ec2c2ef8dbd85dddcca82a570ee8bdb1ff950d9c93605e46c"
+           "sha256": "9663e9391a2ca63b04333b24f43a91e103c9373f96f65ab4d3eb7b3049db705c"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4b4119822ad2b89c8c5a72bc96d0ea1145a53e6f66ac06291ada7d064eebe3bf"
+           "sha256": "ef36eb6ff6551fb7c9197343739b965bd7033fd77157314236ff9576dd319309"
           }
          ]
         },
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "수정·검수 데이터로 학습 준비",
          "expected": "Only saved data satisfying the actual configured review policy can enter training preparation.",
          "observed": "electron: Dirty canvas disabled Prepare. Saved unapproved bbox plus fixture approved-only policy yielded eligible0 and actual readiness blocker. Separate permissive fixture policy allowed stage3, then return retained queues. No training job submitted and no human approval created.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-electron.json",
-         "receipt_sha256": "61699c64940b9d4b73590b3f4d0ef1d913ae305492e4f35b67a7255645c97f65",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-electron.json",
+         "receipt_sha256": "093310caced5188875727e58102f831a9a00f467994acc9fe471677d49533ad6",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "3193b364a7e3d55df7801aa40a708979ef2a277d580f830bb018f753a1e48d7c"
+           "sha256": "aaa4a7b6f89a1d135327908472e87873a7e892b6d055100606af88270136f94d"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c1e80ab27fa9ded376a520fa10f615fc0722c3ae05764331fa79857026fa1ffb"
+           "sha256": "da848a2cdd46632878e4ca7429bda9ad55560da9b52ad22507476d4a802eef43"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4916c2d4b864262a4d1b4ab19913a1b5f7c16f28c0f09a4989325d5f16e55f07"
+           "sha256": "0cb8c552171da5395d7aa54c6668fe3753feefbb6f71a6b6a454c96ba0c3b1f6"
           }
          ]
         }
@@ -29761,53 +29761,53 @@
        "evidence": [
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "수정·검수 데이터로 학습 준비",
          "expected": "Only saved data satisfying the actual configured review policy can enter training preparation.",
          "observed": "browser: Dirty canvas disabled Prepare. Saved unapproved bbox plus fixture approved-only policy yielded eligible0 and actual readiness blocker. Separate permissive fixture policy allowed stage3, then return retained queues. No training job submitted and no human approval created.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-browser.json",
-         "receipt_sha256": "62bba9c79cdfc08380db0c7acea526a3d23a22e15baa3bb9f95a1de8c7e15edd",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-browser.json",
+         "receipt_sha256": "516209d718d1b4ebce11cf27e1c53fcde55f70e13ef7c71409dcb9ce31c3fad2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "7a44a26a23e0f8bae178bd64faf58983f600e34adf5da9a00dfdd09cd96d707e"
+           "sha256": "4573e043f5a98210895d9aba32feea8a6b4351ef8b532150208415dc4076f644"
           },
           {
            "id": "screenshot-1",
-           "sha256": "85cbbf41437f698ec2c2ef8dbd85dddcca82a570ee8bdb1ff950d9c93605e46c"
+           "sha256": "9663e9391a2ca63b04333b24f43a91e103c9373f96f65ab4d3eb7b3049db705c"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4b4119822ad2b89c8c5a72bc96d0ea1145a53e6f66ac06291ada7d064eebe3bf"
+           "sha256": "ef36eb6ff6551fb7c9197343739b965bd7033fd77157314236ff9576dd319309"
           }
          ]
         },
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "수정·검수 데이터로 학습 준비",
          "expected": "Only saved data satisfying the actual configured review policy can enter training preparation.",
          "observed": "electron: Dirty canvas disabled Prepare. Saved unapproved bbox plus fixture approved-only policy yielded eligible0 and actual readiness blocker. Separate permissive fixture policy allowed stage3, then return retained queues. No training job submitted and no human approval created.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-electron.json",
-         "receipt_sha256": "61699c64940b9d4b73590b3f4d0ef1d913ae305492e4f35b67a7255645c97f65",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-electron.json",
+         "receipt_sha256": "093310caced5188875727e58102f831a9a00f467994acc9fe471677d49533ad6",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "3193b364a7e3d55df7801aa40a708979ef2a277d580f830bb018f753a1e48d7c"
+           "sha256": "aaa4a7b6f89a1d135327908472e87873a7e892b6d055100606af88270136f94d"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c1e80ab27fa9ded376a520fa10f615fc0722c3ae05764331fa79857026fa1ffb"
+           "sha256": "da848a2cdd46632878e4ca7429bda9ad55560da9b52ad22507476d4a802eef43"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4916c2d4b864262a4d1b4ab19913a1b5f7c16f28c0f09a4989325d5f16e55f07"
+           "sha256": "0cb8c552171da5395d7aa54c6668fe3753feefbb6f71a6b6a454c96ba0c3b1f6"
           }
          ]
         }
@@ -29825,53 +29825,53 @@
        "evidence": [
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "검토 큐 원본 평가",
          "expected": "An explicitly selected saved evaluation binds the new queue; empty selection cannot submit.",
          "observed": "browser: Empty disabled Create. Two distinct controlled original evaluations created different queues, retaining exact IDs, margin and priority content; no model inference or label approval claimed.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-browser.json",
-         "receipt_sha256": "62bba9c79cdfc08380db0c7acea526a3d23a22e15baa3bb9f95a1de8c7e15edd",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-browser.json",
+         "receipt_sha256": "516209d718d1b4ebce11cf27e1c53fcde55f70e13ef7c71409dcb9ce31c3fad2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "7a44a26a23e0f8bae178bd64faf58983f600e34adf5da9a00dfdd09cd96d707e"
+           "sha256": "4573e043f5a98210895d9aba32feea8a6b4351ef8b532150208415dc4076f644"
           },
           {
            "id": "screenshot-1",
-           "sha256": "85cbbf41437f698ec2c2ef8dbd85dddcca82a570ee8bdb1ff950d9c93605e46c"
+           "sha256": "9663e9391a2ca63b04333b24f43a91e103c9373f96f65ab4d3eb7b3049db705c"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4b4119822ad2b89c8c5a72bc96d0ea1145a53e6f66ac06291ada7d064eebe3bf"
+           "sha256": "ef36eb6ff6551fb7c9197343739b965bd7033fd77157314236ff9576dd319309"
           }
          ]
         },
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "검토 큐 원본 평가",
          "expected": "An explicitly selected saved evaluation binds the new queue; empty selection cannot submit.",
          "observed": "electron: Empty disabled Create. Two distinct controlled original evaluations created different queues, retaining exact IDs, margin and priority content; no model inference or label approval claimed.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-electron.json",
-         "receipt_sha256": "61699c64940b9d4b73590b3f4d0ef1d913ae305492e4f35b67a7255645c97f65",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-electron.json",
+         "receipt_sha256": "093310caced5188875727e58102f831a9a00f467994acc9fe471677d49533ad6",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "3193b364a7e3d55df7801aa40a708979ef2a277d580f830bb018f753a1e48d7c"
+           "sha256": "aaa4a7b6f89a1d135327908472e87873a7e892b6d055100606af88270136f94d"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c1e80ab27fa9ded376a520fa10f615fc0722c3ae05764331fa79857026fa1ffb"
+           "sha256": "da848a2cdd46632878e4ca7429bda9ad55560da9b52ad22507476d4a802eef43"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4916c2d4b864262a4d1b4ab19913a1b5f7c16f28c0f09a4989325d5f16e55f07"
+           "sha256": "0cb8c552171da5395d7aa54c6668fe3753feefbb6f71a6b6a454c96ba0c3b1f6"
           }
          ]
         }
@@ -29882,53 +29882,53 @@
        "evidence": [
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "검토 큐 원본 평가",
          "expected": "An explicitly selected saved evaluation binds the new queue; empty selection cannot submit.",
          "observed": "browser: Empty disabled Create. Two distinct controlled original evaluations created different queues, retaining exact IDs, margin and priority content; no model inference or label approval claimed.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-browser.json",
-         "receipt_sha256": "62bba9c79cdfc08380db0c7acea526a3d23a22e15baa3bb9f95a1de8c7e15edd",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-browser.json",
+         "receipt_sha256": "516209d718d1b4ebce11cf27e1c53fcde55f70e13ef7c71409dcb9ce31c3fad2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "7a44a26a23e0f8bae178bd64faf58983f600e34adf5da9a00dfdd09cd96d707e"
+           "sha256": "4573e043f5a98210895d9aba32feea8a6b4351ef8b532150208415dc4076f644"
           },
           {
            "id": "screenshot-1",
-           "sha256": "85cbbf41437f698ec2c2ef8dbd85dddcca82a570ee8bdb1ff950d9c93605e46c"
+           "sha256": "9663e9391a2ca63b04333b24f43a91e103c9373f96f65ab4d3eb7b3049db705c"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4b4119822ad2b89c8c5a72bc96d0ea1145a53e6f66ac06291ada7d064eebe3bf"
+           "sha256": "ef36eb6ff6551fb7c9197343739b965bd7033fd77157314236ff9576dd319309"
           }
          ]
         },
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "검토 큐 원본 평가",
          "expected": "An explicitly selected saved evaluation binds the new queue; empty selection cannot submit.",
          "observed": "electron: Empty disabled Create. Two distinct controlled original evaluations created different queues, retaining exact IDs, margin and priority content; no model inference or label approval claimed.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-electron.json",
-         "receipt_sha256": "61699c64940b9d4b73590b3f4d0ef1d913ae305492e4f35b67a7255645c97f65",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-electron.json",
+         "receipt_sha256": "093310caced5188875727e58102f831a9a00f467994acc9fe471677d49533ad6",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "3193b364a7e3d55df7801aa40a708979ef2a277d580f830bb018f753a1e48d7c"
+           "sha256": "aaa4a7b6f89a1d135327908472e87873a7e892b6d055100606af88270136f94d"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c1e80ab27fa9ded376a520fa10f615fc0722c3ae05764331fa79857026fa1ffb"
+           "sha256": "da848a2cdd46632878e4ca7429bda9ad55560da9b52ad22507476d4a802eef43"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4916c2d4b864262a4d1b4ab19913a1b5f7c16f28c0f09a4989325d5f16e55f07"
+           "sha256": "0cb8c552171da5395d7aa54c6668fe3753feefbb6f71a6b6a454c96ba0c3b1f6"
           }
          ]
         }
@@ -30049,53 +30049,53 @@
        "evidence": [
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "검토 큐 임계 주변 범위",
          "expected": "Invalid margin is rejected without a queue and correction changes exact threshold-near membership.",
          "observed": "browser: Margin2 returned actual422 with zero queues; .05 created three items, .01 created only error/disagreement; corrected request succeeded.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-browser.json",
-         "receipt_sha256": "62bba9c79cdfc08380db0c7acea526a3d23a22e15baa3bb9f95a1de8c7e15edd",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-browser.json",
+         "receipt_sha256": "516209d718d1b4ebce11cf27e1c53fcde55f70e13ef7c71409dcb9ce31c3fad2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "7a44a26a23e0f8bae178bd64faf58983f600e34adf5da9a00dfdd09cd96d707e"
+           "sha256": "4573e043f5a98210895d9aba32feea8a6b4351ef8b532150208415dc4076f644"
           },
           {
            "id": "screenshot-1",
-           "sha256": "85cbbf41437f698ec2c2ef8dbd85dddcca82a570ee8bdb1ff950d9c93605e46c"
+           "sha256": "9663e9391a2ca63b04333b24f43a91e103c9373f96f65ab4d3eb7b3049db705c"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4b4119822ad2b89c8c5a72bc96d0ea1145a53e6f66ac06291ada7d064eebe3bf"
+           "sha256": "ef36eb6ff6551fb7c9197343739b965bd7033fd77157314236ff9576dd319309"
           }
          ]
         },
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "검토 큐 임계 주변 범위",
          "expected": "Invalid margin is rejected without a queue and correction changes exact threshold-near membership.",
          "observed": "electron: Margin2 returned actual422 with zero queues; .05 created three items, .01 created only error/disagreement; corrected request succeeded.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-electron.json",
-         "receipt_sha256": "61699c64940b9d4b73590b3f4d0ef1d913ae305492e4f35b67a7255645c97f65",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-electron.json",
+         "receipt_sha256": "093310caced5188875727e58102f831a9a00f467994acc9fe471677d49533ad6",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "3193b364a7e3d55df7801aa40a708979ef2a277d580f830bb018f753a1e48d7c"
+           "sha256": "aaa4a7b6f89a1d135327908472e87873a7e892b6d055100606af88270136f94d"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c1e80ab27fa9ded376a520fa10f615fc0722c3ae05764331fa79857026fa1ffb"
+           "sha256": "da848a2cdd46632878e4ca7429bda9ad55560da9b52ad22507476d4a802eef43"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4916c2d4b864262a4d1b4ab19913a1b5f7c16f28c0f09a4989325d5f16e55f07"
+           "sha256": "0cb8c552171da5395d7aa54c6668fe3753feefbb6f71a6b6a454c96ba0c3b1f6"
           }
          ]
         }
@@ -30109,53 +30109,53 @@
        "evidence": [
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "검토 큐 임계 주변 범위",
          "expected": "Invalid margin is rejected without a queue and correction changes exact threshold-near membership.",
          "observed": "browser: Margin2 returned actual422 with zero queues; .05 created three items, .01 created only error/disagreement; corrected request succeeded.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-browser.json",
-         "receipt_sha256": "62bba9c79cdfc08380db0c7acea526a3d23a22e15baa3bb9f95a1de8c7e15edd",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-browser.json",
+         "receipt_sha256": "516209d718d1b4ebce11cf27e1c53fcde55f70e13ef7c71409dcb9ce31c3fad2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "7a44a26a23e0f8bae178bd64faf58983f600e34adf5da9a00dfdd09cd96d707e"
+           "sha256": "4573e043f5a98210895d9aba32feea8a6b4351ef8b532150208415dc4076f644"
           },
           {
            "id": "screenshot-1",
-           "sha256": "85cbbf41437f698ec2c2ef8dbd85dddcca82a570ee8bdb1ff950d9c93605e46c"
+           "sha256": "9663e9391a2ca63b04333b24f43a91e103c9373f96f65ab4d3eb7b3049db705c"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4b4119822ad2b89c8c5a72bc96d0ea1145a53e6f66ac06291ada7d064eebe3bf"
+           "sha256": "ef36eb6ff6551fb7c9197343739b965bd7033fd77157314236ff9576dd319309"
           }
          ]
         },
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "검토 큐 임계 주변 범위",
          "expected": "Invalid margin is rejected without a queue and correction changes exact threshold-near membership.",
          "observed": "electron: Margin2 returned actual422 with zero queues; .05 created three items, .01 created only error/disagreement; corrected request succeeded.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-electron.json",
-         "receipt_sha256": "61699c64940b9d4b73590b3f4d0ef1d913ae305492e4f35b67a7255645c97f65",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-electron.json",
+         "receipt_sha256": "093310caced5188875727e58102f831a9a00f467994acc9fe471677d49533ad6",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "3193b364a7e3d55df7801aa40a708979ef2a277d580f830bb018f753a1e48d7c"
+           "sha256": "aaa4a7b6f89a1d135327908472e87873a7e892b6d055100606af88270136f94d"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c1e80ab27fa9ded376a520fa10f615fc0722c3ae05764331fa79857026fa1ffb"
+           "sha256": "da848a2cdd46632878e4ca7429bda9ad55560da9b52ad22507476d4a802eef43"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4916c2d4b864262a4d1b4ab19913a1b5f7c16f28c0f09a4989325d5f16e55f07"
+           "sha256": "0cb8c552171da5395d7aa54c6668fe3753feefbb6f71a6b6a454c96ba0c3b1f6"
           }
          ]
         }
@@ -30166,53 +30166,53 @@
        "evidence": [
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "검토 큐 임계 주변 범위",
          "expected": "Invalid margin is rejected without a queue and correction changes exact threshold-near membership.",
          "observed": "browser: Margin2 returned actual422 with zero queues; .05 created three items, .01 created only error/disagreement; corrected request succeeded.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-browser.json",
-         "receipt_sha256": "62bba9c79cdfc08380db0c7acea526a3d23a22e15baa3bb9f95a1de8c7e15edd",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-browser.json",
+         "receipt_sha256": "516209d718d1b4ebce11cf27e1c53fcde55f70e13ef7c71409dcb9ce31c3fad2",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "7a44a26a23e0f8bae178bd64faf58983f600e34adf5da9a00dfdd09cd96d707e"
+           "sha256": "4573e043f5a98210895d9aba32feea8a6b4351ef8b532150208415dc4076f644"
           },
           {
            "id": "screenshot-1",
-           "sha256": "85cbbf41437f698ec2c2ef8dbd85dddcca82a570ee8bdb1ff950d9c93605e46c"
+           "sha256": "9663e9391a2ca63b04333b24f43a91e103c9373f96f65ab4d3eb7b3049db705c"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4b4119822ad2b89c8c5a72bc96d0ea1145a53e6f66ac06291ada7d064eebe3bf"
+           "sha256": "ef36eb6ff6551fb7c9197343739b965bd7033fd77157314236ff9576dd319309"
           }
          ]
         },
         {
          "task": "S3-09",
-         "source_sha": "ba5290000919c64b753c17c0397ab830e4eedb7c",
+         "source_sha": "e60919b48ffa1a9aba75d5a3a4b5fac7bd0cabd8",
          "kind": "click",
          "action": "검토 큐 임계 주변 범위",
          "expected": "Invalid margin is rejected without a queue and correction changes exact threshold-near membership.",
          "observed": "electron: Margin2 returned actual422 with zero queues; .05 created three items, .01 created only error/disagreement; corrected request succeeded.",
          "reviewer": "Codex root actual clean-source ba52900 browser/Electron re-execution of unchanged queue assertions after decode/Fit fixture wait; prior receipt retained historically; independent and human quality acceptance pending",
          "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
-         "receipt": "2026-10-07-review-queue-handoff-ba52900-electron.json",
-         "receipt_sha256": "61699c64940b9d4b73590b3f4d0ef1d913ae305492e4f35b67a7255645c97f65",
+         "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-electron.json",
+         "receipt_sha256": "093310caced5188875727e58102f831a9a00f467994acc9fe471677d49533ad6",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "3193b364a7e3d55df7801aa40a708979ef2a277d580f830bb018f753a1e48d7c"
+           "sha256": "aaa4a7b6f89a1d135327908472e87873a7e892b6d055100606af88270136f94d"
           },
           {
            "id": "screenshot-1",
-           "sha256": "c1e80ab27fa9ded376a520fa10f615fc0722c3ae05764331fa79857026fa1ffb"
+           "sha256": "da848a2cdd46632878e4ca7429bda9ad55560da9b52ad22507476d4a802eef43"
           },
           {
            "id": "screenshot-2",
-           "sha256": "4916c2d4b864262a4d1b4ab19913a1b5f7c16f28c0f09a4989325d5f16e55f07"
+           "sha256": "0cb8c552171da5395d7aa54c6668fe3753feefbb6f71a6b6a454c96ba0c3b1f6"
           }
          ]
         }
@@ -33275,27 +33275,27 @@
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "af0962a053ee534478922e4b6aa43c941f9a4864",
+         "source_sha": "efc159c490387decae0b2b6feee93053533f6885",
          "kind": "click",
          "action": "portable 상태 다시 읽기",
          "expected": "An inspection error preserves the explicitly selected home and confirmation; only an explicit same-identity retry may reread the original state.",
          "observed": "One controlled inspect failure retained the original selection and confirmation. The actual explicit retry returned the same committed fixture identity; complete 17 API records, owned project/source/portable/resource trees and original images remained equal with zero post-baseline writes. Four exact source-absent GET422 records are retained; the other 13 HTTP200 statuses and input values are enforced by the passed source. No portable installation or recovery transaction is claimed.",
          "reviewer": "Codex source-bound actual GUI and strict read-only artifact qualification; controlled fixture only, human quality, whole parent and release acceptance pending",
          "test": "scripts/e2e/portable-status-recovery.spec.ts::portable inspect error requires explicit same-identity retry and utility handoff preserves original state",
-         "receipt": "2026-10-09-s6-portable-status-af0962a-browser.json",
-         "receipt_sha256": "86628dffaad6730826dc121438ad6275bd39d8d711be03d0e2b783135f33ceef",
+         "receipt": "2026-10-09-browser-context-efc159c-portable-status-recovery-browser.json",
+         "receipt_sha256": "2de5a07be2aafd5b93f0cec6bbdc83c22a7f3c0e346f6d31d385cced1223b623",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "f840775db074c2fe4706c1f6dac37946a82ee019dca0470f63aa42f8b158a46a"
+           "sha256": "bb7257e5dd29b0671650904ba7401c05e3f0b5e52b9e7e881d6b2fc972e039af"
           },
           {
            "id": "screenshot-1",
-           "sha256": "f4a9952551544f9e41e02b1efe0ce6bd225a41df04e32b50091cc3490bef1cf9"
+           "sha256": "1593a07884353cd95935216aaf890a5b78a698a192b0849cb4e2fb5048217cd6"
           },
           {
            "id": "screenshot-2",
-           "sha256": "322084e0a7c1d648167c79b7ab52fa7d28e07650d23837c9045e627015561ba3"
+           "sha256": "4ee1a5d7328f06371e2990b3c924c458a3a618db321534f68524f9714d549b3f"
           }
          ]
         }
@@ -33312,27 +33312,27 @@
        "evidence": [
         {
          "task": "S6-04",
-         "source_sha": "af0962a053ee534478922e4b6aa43c941f9a4864",
+         "source_sha": "efc159c490387decae0b2b6feee93053533f6885",
          "kind": "click",
          "action": "portable 상태 다시 읽기",
          "expected": "Closing and reopening the utility must require a new explicit same-home selection and preserve the original durable state.",
          "observed": "Actual utility close/remount discarded volatile selection; deliberate reselection read the same original committed identity through the read-only Manager. Full 17 APIs and all owned bytes remained equal, with zero post-baseline writes. UI values and original request-start 10-second GET completion bounds are enforced by the exact passed source; no raw GET clock rows or actual portable launch are claimed. The stale-handler negative is source-only.",
          "reviewer": "Codex source-bound actual GUI and strict read-only artifact qualification; controlled fixture only, human quality, whole parent and release acceptance pending",
          "test": "scripts/e2e/portable-status-recovery.spec.ts::portable inspect error requires explicit same-identity retry and utility handoff preserves original state",
-         "receipt": "2026-10-09-s6-portable-status-af0962a-browser.json",
-         "receipt_sha256": "86628dffaad6730826dc121438ad6275bd39d8d711be03d0e2b783135f33ceef",
+         "receipt": "2026-10-09-browser-context-efc159c-portable-status-recovery-browser.json",
+         "receipt_sha256": "2de5a07be2aafd5b93f0cec6bbdc83c22a7f3c0e346f6d31d385cced1223b623",
          "artifacts": [
           {
            "id": "screenshot-0",
-           "sha256": "f840775db074c2fe4706c1f6dac37946a82ee019dca0470f63aa42f8b158a46a"
+           "sha256": "bb7257e5dd29b0671650904ba7401c05e3f0b5e52b9e7e881d6b2fc972e039af"
           },
           {
            "id": "screenshot-1",
-           "sha256": "f4a9952551544f9e41e02b1efe0ce6bd225a41df04e32b50091cc3490bef1cf9"
+           "sha256": "1593a07884353cd95935216aaf890a5b78a698a192b0849cb4e2fb5048217cd6"
           },
           {
            "id": "screenshot-2",
-           "sha256": "322084e0a7c1d648167c79b7ab52fa7d28e07650d23837c9045e627015561ba3"
+           "sha256": "4ee1a5d7328f06371e2990b3c924c458a3a618db321534f68524f9714d549b3f"
           }
          ]
         }
