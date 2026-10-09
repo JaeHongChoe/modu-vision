@@ -41,7 +41,7 @@ def test_public_collection_excludes_existing_authentic_weight_qualifications():
     assert not any('owned-model' in [tag.lstrip('@') for tag in row.get('tags', [])] for row in public_rows)
     assert not {row['id'] for row in public_rows} & {row['id'] for row in owned_rows}
     workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
-    commands = '\n'.join(step.get('run', '') for step in workflow['jobs']['source']['steps'])
+    commands = '\n'.join(step.get('run', '') for job in workflow['jobs'].values() for step in job['steps'])
     assert 'test:e2e:browser -- --grep-invert @owned-model' in commands
     assert 'ci-owned-model-selection.json' in commands and '--owned-selection' in commands
     windows = yaml.safe_load((ROOT / '.github/workflows/windows-native.yml').read_text())
@@ -64,7 +64,7 @@ def test_ci_recording_does_not_dirty_the_checkout_before_actual_gui_source_obser
     }
     for name,script in producers.items():
         p=bin_dir/name;p.write_text(script);p.chmod(0o700)
-    workflow=yaml.safe_load((ROOT/'.github/workflows/ci.yml').read_text());steps=workflow['jobs']['source']['steps']
+    workflow=yaml.safe_load((ROOT/'.github/workflows/ci.yml').read_text());steps=[step for job in workflow['jobs'].values() for step in job['steps']]
     environment={**os.environ,'PATH':str(bin_dir)+os.pathsep+os.environ['PATH'],'MV_CI_RECORD_DIR':str(records)}
     observation=None
     for name in ['CPU contract and recovery regressions','Core defect baseline evidence','Browser transport and flow checks']:
@@ -75,8 +75,8 @@ def test_ci_recording_does_not_dirty_the_checkout_before_actual_gui_source_obser
     assert all((records/name).is_file() for name in ['ci-pytest.xml','ci-baseline-evidence.json','ci-browser-selection.json','ci-owned-model-selection.json'])
     record_steps=[s for s in steps if s.get('name') in {'CPU contract and recovery regressions','Core defect baseline evidence','Browser transport and flow checks','Record source, toolchain, and license inventory'}]
     assert all(s.get('env',{}).get('MV_CI_RECORD_DIR')=='${{ runner.temp }}/modu-ci-manifests' for s in record_steps)
-    preserve=next(s for s in steps if s.get('name')=='Preserve evidence')['with']['path']
-    assert '${{ runner.temp }}/modu-ci-manifests' in preserve
+    preserves=[next(s for s in job['steps'] if s.get('name')=='Preserve evidence')['with']['path'] for job in workflow['jobs'].values()]
+    assert all('${{ runner.temp }}/modu-ci-manifests' in preserve for preserve in preserves)
 
 
 def test_receipt_distinguishes_selected_failed_and_unavailable_owned_models(tmp_path):
@@ -200,3 +200,56 @@ def test_all_explicit_ci_pytest_references_exist_and_select_real_functions():
                     assert isinstance(node,(ast.FunctionDef,ast.AsyncFunctionDef)) and name.startswith('test_'),reference
                 else:assert isinstance(node,ast.ClassDef) and name.startswith('Test'),reference
                 nodes=node.body
+
+
+def test_cpu_and_browser_ci_have_independent_original_bounds_and_complete_commands():
+    """Full CPU selection cannot consume the browser lane's original75min."""
+    import hashlib
+    workflow = yaml.safe_load((ROOT/'.github/workflows/ci.yml').read_text())
+    jobs = workflow['jobs']
+    assert set(jobs) == {'source', 'browser'}, 'CPU and browser require distinct hosted jobs'
+    assert workflow['permissions'] == {'contents': 'read'}
+    assert workflow['concurrency'] == {'group': 'source-${{ github.workflow }}-${{ github.ref }}',
+        'queue': 'max', 'cancel-in-progress': False}
+    assert 'secrets.' not in json.dumps(workflow)
+    def step(job, name):
+        values = [value for value in job['steps'] if value.get('name') == name]
+        assert len(values) == 1, name
+        return values[0]
+    for job in jobs.values():
+        assert job['runs-on'] == 'ubuntu-24.04' and job['timeout-minutes'] == 75
+        assert not any(key in job for key in ('needs', 'if', 'permissions', 'environment', 'strategy'))
+        assert job['env'] == {'OMP_NUM_THREADS': '2', 'MKL_NUM_THREADS': '2'}
+        checkout = job['steps'][0]
+        assert checkout == {'uses': 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1',
+            'with': {'persist-credentials': False}}
+        assert job['steps'][1] == {'uses': 'actions/setup-node@820762786026740c76f36085b0efc47a31fe5020',
+            'with': {'node-version': '24', 'cache': 'npm'}}
+        assert job['steps'][2] == {'uses': 'actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97',
+            'with': {'python-version': '3.13'}}
+        assert step(job, 'Install locked CPU environment')['run'] == 'python -m pip install --require-hashes --only-binary=:all: -r build/ci/requirements-ubuntu-py313-cpu.lock'
+        assert any(value.get('run') == 'npm ci' for value in job['steps'])
+        assert step(job, 'Prepare isolated CI records')['run'] == 'mkdir -p "${{ runner.temp }}/modu-ci-manifests"'
+        assert step(job, 'Check preserved scope and acceptance states')['run'] == 'python scripts/check_service_plan.py\npython scripts/check_action_evidence.py\n'
+        evidence = step(job, 'Preserve evidence')
+        assert evidence['if'] == 'always()'
+        assert evidence['uses'] == 'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a'
+        assert evidence['with']['retention-days'] == 14 and evidence['with']['if-no-files-found'] == 'error'
+        assert evidence['with']['path'] == '${{ runner.temp }}/modu-ci-manifests\n${{ runner.temp }}/modu-e2e\n'
+        assert step(job, 'Record source, toolchain, and license inventory')['if'] == 'always()'
+        assert step(job, 'Record source, toolchain, and license inventory')['env'] == {'MV_CI_RECORD_DIR': '${{ runner.temp }}/modu-ci-manifests'}
+    cpu, browser = jobs['source'], jobs['browser']
+    assert step(cpu, 'Type checks, renderer regressions, and build') == step(browser, 'Type checks, renderer regressions, and build')
+    assert step(cpu, 'Record source, toolchain, and license inventory') == step(browser, 'Record source, toolchain, and license inventory')
+    cpu_step = step(cpu, 'CPU contract and recovery regressions')
+    assert hashlib.sha256(cpu_step['run'].encode()).hexdigest() == '75bc023522d6195b30cad8f50dbcf67c253229d92cd6a34582b2c54e5bd45707', 'Full original CPU command/selection must be unchanged'
+    assert cpu_step['env'] == {'MV_CI_RECORD_DIR': '${{ runner.temp }}/modu-ci-manifests'}
+    assert step(cpu, 'Core defect baseline evidence')['run'] == 'python scripts/service_baseline_evidence.py --output "$MV_CI_RECORD_DIR/ci-baseline-evidence.json"'
+    assert not any(value.get('name') in {'Install test browser', 'Browser transport and flow checks'} for value in cpu['steps'])
+    assert not any(value.get('name') in {'CPU contract and recovery regressions', 'Core defect baseline evidence'} for value in browser['steps'])
+    assert step(browser, 'Install test browser')['run'] == 'npx playwright install --with-deps chromium'
+    browser_step = step(browser, 'Browser transport and flow checks')
+    assert hashlib.sha256(browser_step['run'].encode()).hexdigest() == 'a155441e6d8ce4c2a379046d015d1abfc75496abddd6652e36e5d59c385d9085', 'Original public/owned lists and public workers2 execution must be unchanged'
+    assert browser_step['env'] == {'MV_E2E_ARTIFACT_DIR': '${{ runner.temp }}/modu-e2e', 'MV_CI_RECORD_DIR': '${{ runner.temp }}/modu-ci-manifests'}
+    assert step(cpu, 'Preserve evidence')['with']['name'] == 'linux-cpu-${{ github.sha }}'
+    assert step(browser, 'Preserve evidence')['with']['name'] == 'linux-browser-${{ github.sha }}'

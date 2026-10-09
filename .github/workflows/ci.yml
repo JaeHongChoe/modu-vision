@@ -310,6 +310,63 @@ jobs:
         env:
           MV_CI_RECORD_DIR: ${{ runner.temp }}/modu-ci-manifests
         run: python scripts/service_baseline_evidence.py --output "$MV_CI_RECORD_DIR/ci-baseline-evidence.json"
+      - name: Record source, toolchain, and license inventory
+        if: always()
+        env:
+          MV_CI_RECORD_DIR: ${{ runner.temp }}/modu-ci-manifests
+        run: |
+          python scripts/write_ci_receipt.py --output "$MV_CI_RECORD_DIR/ci-receipt.json" --junit "$MV_CI_RECORD_DIR/ci-pytest.xml" --public-selection "$MV_CI_RECORD_DIR/ci-browser-selection.json" --owned-selection "$MV_CI_RECORD_DIR/ci-owned-model-selection.json" --e2e-root ${{ runner.temp }}/modu-e2e
+          python scripts/license_inventory.py --output "$MV_CI_RECORD_DIR/ci-license-inventory.json"
+      - name: Preserve evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: linux-cpu-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/modu-ci-manifests
+            ${{ runner.temp }}/modu-e2e
+          retention-days: 14
+          if-no-files-found: error
+
+  browser:
+    runs-on: ubuntu-24.04
+    # The recorded 5098dac run exhausted 35 minutes after CPU checks passed.
+    # Both lanes retain their full selected suites and isolated workspaces.
+    timeout-minutes: 75
+    env:
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+      - name: Prepare isolated CI records
+        run: mkdir -p "${{ runner.temp }}/modu-ci-manifests"
+      - name: Install locked CPU environment
+        run: >-
+          python -m pip install --require-hashes --only-binary=:all: -r build/ci/requirements-ubuntu-py313-cpu.lock
+      - run: npm ci
+      - name: Check preserved scope and acceptance states
+        run: |
+          python scripts/check_service_plan.py
+          python scripts/check_action_evidence.py
+      - name: Type checks, renderer regressions, and build
+        run: |
+          npm run typecheck
+          npm run typecheck:e2e
+          node scripts/verify-supervisor.js --owned-bootstrap-order
+          npm run test:renderer
+          npm run build
+          npm run test:e2e:harness
+          node --test scripts/acceptance/action_inventory.test.cjs
+          node --test scripts/tests/release-readiness.test.cjs scripts/tests/package-license-texts.test.cjs scripts/verify-release-recovery.cjs
       - name: Install test browser
         run: npx playwright install --with-deps chromium
       - name: Browser transport and flow checks
@@ -331,7 +388,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: linux-cpu-${{ github.sha }}
+          name: linux-browser-${{ github.sha }}
           path: |
             ${{ runner.temp }}/modu-ci-manifests
             ${{ runner.temp }}/modu-e2e

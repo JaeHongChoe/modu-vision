@@ -1,0 +1,93 @@
+{
+  "actual_candidate_files": {
+    ".github/workflows/ci.yml": {
+      "sha256": "57e26dfe973cf1641ece9fea2c4c6affb33e698de04e57f19d2c2ff7acbc4762",
+      "size": 23258
+    },
+    "backend/tests/test_source_ci_model_lanes.py": {
+      "sha256": "b45c4ae3ad675976aba695df4b0c846d6bacd57cb30493e21f30d05f5f169423",
+      "size": 18534
+    }
+  },
+  "actual_controls": {
+    "green": {
+      "failed": 0,
+      "junit": {
+        "sha256": "fdb4285dcee90e2ff1e26010a420cd79eb973062637c0564a41fce71403eb986",
+        "size": 3421
+      },
+      "passed": 19,
+      "raw_log": {
+        "sha256": "5e28e032bc597f12e5ad04ce2524c19aabb08912622d61901c7dd87628ec4766",
+        "size": 249
+      },
+      "run": {
+        "sha256": "72612d8037d05dd1b766da0e76647a0fb115af70672d06d488780442b3fc6c25",
+        "size": 158
+      }
+    },
+    "red": {
+      "cause": "original single job cannot satisfy independent routing",
+      "failed": 1,
+      "junit": {
+        "sha256": "bb8205596407cf1c76e72174e10644dcb69c67425612b228a9c8509e353eb73d",
+        "size": 1323
+      },
+      "raw_log": {
+        "sha256": "46eb15a5715e8dbab70b7535bc0c8768b02de2a0a1ee2522df31e066d1df06a1",
+        "size": 1319
+      },
+      "run": {
+        "sha256": "99a81f32158e834d88e7028f38ae549f27789ccf3ebf8dabcd431ca61346ca68",
+        "size": 159
+      }
+    }
+  },
+  "actual_source_regular": 2372,
+  "base_source": "f62a4501d6f98c684742b87c119c1300ad8f1573",
+  "candidate_source_freeze": {
+    "sha256": "25cd591fae7496e8f9af28976dd0fc9dd34a9075ef840bd6b1ed0682a6f926a9",
+    "size": 20230
+  },
+  "cause": {
+    "browser": {
+      "completed": false,
+      "selected": 233
+    },
+    "conclusion": "cancelled at original75minute bound",
+    "cpu": {
+      "failed": 0,
+      "passed": 3916,
+      "skipped": 17
+    },
+    "hosted_run_id": 37867161050,
+    "raw_full_log": {
+      "sha256": "2ee59792dd8631ee5a1a1e1242459abe4fdbd426a7d8111ce588177ebb779970",
+      "size": 414735
+    },
+    "source": "ae78cead019355712ba8b7c234a55c03ae59fed9"
+  },
+  "independent_source_peer": {
+    "sha256": "cd498fb68b86b5f66ce4301f1ae2b74f4c5d472327d0dd850476815ee93d5987",
+    "size": 3280
+  },
+  "no_parent_quality_target_human_or_overall_hosted_success": true,
+  "scheduling": {
+    "browser_workers": 2,
+    "cancel_in_progress": false,
+    "deployment_signing_gpu_or_new_external_service": false,
+    "full_cpu_core_and_browser_commands_preserved": true,
+    "jobs": [
+      "source",
+      "browser"
+    ],
+    "original_cpu_selected_paths": 246,
+    "permissions": {
+      "contents": "read"
+    },
+    "queue": "max",
+    "timeout_each_minutes": 75
+  },
+  "schema_version": 1,
+  "scope": "source CI scheduling and routing controls; hosted completion pending"
+}
