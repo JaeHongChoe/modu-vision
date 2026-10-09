@@ -182,6 +182,11 @@ jobs:
           backend/tests/test_selected_core_cohort_task.py
           backend/tests/test_version_metadata_registration.py
           backend/tests/test_anomaly_owned_evidence_output.py
+          backend/tests/test_data_workbench_readonly_storage.py
+          backend/tests/test_flow_result_bundle.py
+          backend/tests/test_rotated_detection_lifecycle_evidence.py
+          backend/tests/test_enhancement_gan_lifecycle_evidence.py
+          backend/tests/test_gan_generation_lifecycle_evidence.py
           backend/tests/test_service_s5_02.py
           backend/tests/test_service_s5_06.py
           backend/tests/test_service_s5_08_drift.py

@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "kind": "scoped_child_execution_not_parent_acceptance",
+  "requirement": "S7-05",
+  "source_sha": "a184b1e254e881c0af09f0f788c993b35da92c89",
+  "producer_bound_source_files": 685,
+  "status": "completed_original_controlled_cpu_queue_72h",
+  "started_utc": "2026-10-06T15:28:02Z",
+  "observer_finished_utc": "2026-10-09T15:28:06Z",
+  "elapsed_seconds": 259200.25419058307,
+  "original_duration_not_summed_from_prior_runs": true,
+  "actual_cpu_inference": true,
+  "held_synthetic_images": 1,
+  "cycles": 4305,
+  "completed": 4305,
+  "duplicate_requests_reconciled": 4305,
+  "backpressure_refusals_reconciled": 4305,
+  "pending_jobs": 0,
+  "job_attempts_each": 1,
+  "queue_events": {
+    "completed": 4305,
+    "queued": 4305,
+    "running": 4305
+  },
+  "durable_results": "REVIEW; exact original image/hash, cycle idempotency key and queued-running-completed sequence reconciled",
+  "sqlite_integrity": "ok",
+  "external_deliveries": 0,
+  "device_events": 0,
+  "original_child_exit_code": 0,
+  "maximum_observed_interval_seconds": 64.69890713691711,
+  "inference_ms": {
+    "maximum": 1292.1375409932807,
+    "minimum": 31.191749963909388,
+    "p95_nearest_rank": 72.87629100028425
+  },
+  "process_peak_rss_bytes": 517144576,
+  "raw_stat_custody_unchanged": true,
+  "original_source_namespace_files": 685,
+  "receipt_inputs": [
+    {
+      "role": "original_terminal_receipt",
+      "sha256": "c20ee55a96d93acba6a5b39e8cd661cfad044c4457d356b349a9ab12a9431890",
+      "size": 79679
+    },
+    {
+      "role": "original_zero_exit_observer",
+      "sha256": "a9271c403e89e1c7504fce399cbb9bd329fd83041497772b9ffbd3f9e3fab9d5",
+      "size": 16384
+    },
+    {
+      "role": "root_terminal_readback",
+      "sha256": "3674c3278a1f976da720b1248d5769ddf449e645eb5aad184e109177a1e7ca12",
+      "size": 306608
+    },
+    {
+      "role": "independent_retained_readback",
+      "sha256": "ad9e772c05c0c7ae9f8de58667ada9d19111d767bcd5cc751bfbc5998efdd0c8",
+      "size": 3752
+    }
+  ],
+  "parent_accepted": false,
+  "human_truth_approved": false,
+  "model_quality_approved": false,
+  "target_execution_approved": false,
+  "approved_field_service": false,
+  "hardware_delivery_exercised": false,
+  "current_public_source_requalified": false,
+  "reconnect_or_external_delivery_reproduced": false,
+  "renderer_action_states_changed": false,
+  "mapping_scope": "Original historical a184b1e controlled CPU inference/queue epoch only. Continuous duration, durable duplicate/backpressure/reopen controls are retained; no target RAM/p95/tact or whole current application qualification.",
+  "limitations": [
+    "One owned synthetic held image; no real-photo scale or independent human truth.",
+    "No camera/PLC, physical power loss, external delivery or reconnect was exercised.",
+    "The independent reviewer read retained files and immutable readonly SQLite; no repeated model run.",
+    "Historical progress and interrupted-run records remain separate and unchanged."
+  ]
+}

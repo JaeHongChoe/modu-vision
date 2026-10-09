@@ -6640,6 +6640,14 @@
           "receipt_sha256": "b026c57efa3286d794ccdd9454f4998f136fed76fc562ab7a3f478cffa51341f",
           "result": "Clean browser and native Electron each passed once;3 newly exercised U030 dimensions verified,207 actions/572 verified/877 pending.",
           "scope": "Actual metadata picker and decoded preview; no model inference, photo-scale,72h, hardware, human or complete-feature acceptance."
+        },
+        {
+          "kind": "original-controlled-cpu-queue-72h-terminal",
+          "source_sha": "a184b1e254e881c0af09f0f788c993b35da92c89",
+          "receipt": "docs/verification/receipts/2026-10-09-original-cpu-queue-72h-terminal-a184b1e.json",
+          "receipt_sha256": "a7a2f1254b6187920fa87f852b28198d6669052918abd706b73c2e5251049753",
+          "result": "The original 685-file source epoch completed one continuous 259200.254-second CPU queue run: 4305 completed jobs, 4305 duplicate requests and 4305 backpressure refusals; pending jobs 0 and original child exit 0. Raw source/input/SQLite custody was independently reconciled.",
+          "scope": "One owned synthetic held image with durable REVIEW results. Historical original epoch only; current public source, target RAM/p95/tact, real-photo scale, external delivery/reconnect, hardware, model quality, human approval and whole-parent acceptance remain unqualified. Renderer action states and counts are unchanged."
         }
       ],
       "file_actions": {
@@ -6660,7 +6668,7 @@
       },
       "proposed_test_file": "scripts/e2e/service-s7-05.spec.ts",
       "remaining": [
-        "Clean browser/native GUI at sourcefe92877 qualified100000 metadata rows with3 real32px images:3 ordered120-row pages, bounded DOM/response, exact tail search/reopen, missing-file refusal, controlled transport error/retry, cancel/late-response guard and exact test-preview identity handoff. This is not100000 actual-photo decode, target-RAM/p95/tact or completed72h acceptance. Preserve the same original endurance worker and wait for its terminal receipt."
+        "Clean browser/native GUI at sourcefe92877 qualified100000 metadata rows with3 real32px images:3 ordered120-row pages, bounded DOM/response, exact tail search/reopen, missing-file refusal, controlled transport error/retry, cancel/late-response guard and exact test-preview identity handoff. This is not 100000 actual-photo decode or target-RAM/p95/tact qualification. The original a184b1e/685-file controlled CPU queue completed its continuous 72-hour run; see the scoped terminal receipt. Target workload/RAM/disk/p95/tact, external delivery/reconnect and whole-parent qualification remain pending."
       ]
     },
     {

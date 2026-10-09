@@ -407,7 +407,10 @@ def compiled_candidate(tmp_path,binary,*,binary_runtime=False,deadline_ms=60000,
     archive=value['directory']/'application.zip'
     with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=3) as writer:
         writer.writestr('portable-application.json',update._canonical(application));writer.writestr(entry,inert)
-        for name,path in files:writer.write(path,name)
+        for name,path in files:writer.write(path,name,compresslevel=0 if name in (
+            prefix+'_internal/torch/lib/libtorch_cpu.dylib',
+            prefix+'_internal/_polars_runtime_32/_polars_runtime.abi3.so',
+            prefix+'_internal/llvmlite/binding/libllvmlite.dylib') else 3)
         for row in links:
             info=zipfile.ZipInfo(row['path']);info.external_attr=0o120777<<16;writer.writestr(info,row['target'].encode())
     value['payload'].update(size=archive.stat().st_size,sha256=digest(archive))

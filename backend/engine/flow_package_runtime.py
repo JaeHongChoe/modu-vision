@@ -520,7 +520,11 @@ def main() -> int:
     parser.add_argument("--deadline-ms",type=int,help="Hard wall time budget including model initialization")
     parser.add_argument("--cpu-threads",type=int)
     parser.add_argument("--output", type=Path, help="Write the complete JSON result here")
+    parser.add_argument("--output-bundle", type=Path,
+                        help="Write a NEW lossless bounded single-image result bundle; parent directory must exist")
     args = parser.parse_args()
+    if args.output_bundle and (args.output or args.batch or args.verify_only or args.preflight or args.show_preflight):
+        parser.error('--output-bundle requires single-image execution and cannot be combined with other output/modes')
     if args.batch and (args.image or args.image_id or args.verify_only or args.preflight or args.show_preflight):
         parser.error('--batch cannot be combined with single-image or verification commands')
     root = Path(__file__).resolve().parents[2]
@@ -545,11 +549,21 @@ def main() -> int:
             if args.image is None:
                 parser.error("--image is required unless --verify-only is set")
             result = run_flow_package(root, args.image, args.image_id, device=args.device,deadline_ms=args.deadline_ms,cpu_threads=args.cpu_threads)
-        payload = json.dumps(result, ensure_ascii=False, indent=2)
-        if args.output:
-            args.output.write_text(payload + "\n", encoding="utf-8")
+        if args.output_bundle:
+            if result.get('status') in ('timeout', 'cancelled'):
+                # An unconfirmed owned outcome is not a complete flow result.
+                # Preserve its original full body/exit convention, without
+                # publishing a successful result bundle or inventing lists.
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+                return 3 if result.get('status') == 'timeout' else 0
+            from backend.engine.flow_result_bundle import write_result_bundle
+            write_result_bundle(result, args.output_bundle)
         else:
-            print(payload)
+            payload = json.dumps(result, ensure_ascii=False, indent=2)
+            if args.output:
+                args.output.write_text(payload + "\n", encoding="utf-8")
+            else:
+                print(payload)
         if args.batch:
             return 2 if result['summary']['errors'] else 3 if result['summary']['timeouts'] or result['summary']['cancelled'] else 0
         return 3 if result.get('status')=='timeout' else 0

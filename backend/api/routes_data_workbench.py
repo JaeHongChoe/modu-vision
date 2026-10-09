@@ -124,7 +124,7 @@ def diagnose(req:DiagnosticRequest,request:Request):
 
 @router.get('/diagnostics')
 def saved_diagnostics(request:Request):
-    project,source=_context(request);path=dw._storage(project['project_dir'],source)/f"diagnostics_{project.get('active_labelset_id','default')}.json"
+    project,source=_context(request);path=dw._storage(project['project_dir'],source,create=False)/f"diagnostics_{project.get('active_labelset_id','default')}.json"
     if not path.is_file():return {'report':None}
     try:
         if path.is_symlink():raise ValueError('Diagnostic report cannot be a symbolic link')

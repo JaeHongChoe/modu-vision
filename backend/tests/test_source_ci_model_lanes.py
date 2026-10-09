@@ -242,7 +242,29 @@ def test_cpu_and_browser_ci_have_independent_original_bounds_and_complete_comman
     assert step(cpu, 'Type checks, renderer regressions, and build') == step(browser, 'Type checks, renderer regressions, and build')
     assert step(cpu, 'Record source, toolchain, and license inventory') == step(browser, 'Record source, toolchain, and license inventory')
     cpu_step = step(cpu, 'CPU contract and recovery regressions')
-    assert hashlib.sha256(cpu_step['run'].encode()).hexdigest() == 'bcc48453cbc55193ffc09ddfab2675bc657897eb509143ebb2d52264b71742fe', 'Full original CPU command/selection must be unchanged'
+    additional = (
+        'backend/tests/test_inspection_daemon_recovery.py',
+        'backend/tests/test_rotation_lifecycle_evidence.py',
+        'backend/tests/test_runtime_update_small_file_reads.py',
+        'backend/tests/test_runtime_update_large_file_readinto.py',
+        'backend/tests/test_runtime_update_safe_path_bound_regex.py',
+        'backend/tests/test_selected_core_cohort_task.py',
+        'backend/tests/test_version_metadata_registration.py',
+        'backend/tests/test_anomaly_owned_evidence_output.py',
+        'backend/tests/test_data_workbench_readonly_storage.py',
+        'backend/tests/test_flow_result_bundle.py',
+        'backend/tests/test_rotated_detection_lifecycle_evidence.py',
+        'backend/tests/test_enhancement_gan_lifecycle_evidence.py',
+        'backend/tests/test_gan_generation_lifecycle_evidence.py',
+    )
+    command = cpu_step['run']
+    marker = 'backend/tests/test_service_s5_01.py '
+    insertion = ' '.join(additional) + ' '
+    assert command.count(marker + insertion) == 1, 'Reviewed thirteen-module addition must remain at its original single insertion point'
+    assert all(command.split().count(reference) == 1 for reference in additional), 'Every added verified-control module must execute once'
+    preserved = command.replace(marker + insertion, marker, 1)
+    assert hashlib.sha256(preserved.encode()).hexdigest() == 'bcc48453cbc55193ffc09ddfab2675bc657897eb509143ebb2d52264b71742fe', 'Every original CPU selector, ordering and command bound must be preserved'
+    assert hashlib.sha256(command.encode()).hexdigest() == '79f5e7ed15715f1342f8524f49a8c50e9a7f2ae79ce304843c2cd39ec3109593', 'Complete original CPU command plus exactly thirteen published controls must remain unchanged'
     assert cpu_step['env'] == {'MV_CI_RECORD_DIR': '${{ runner.temp }}/modu-ci-manifests'}
     assert step(cpu, 'Core defect baseline evidence')['run'] == 'python scripts/service_baseline_evidence.py --output "$MV_CI_RECORD_DIR/ci-baseline-evidence.json"'
     assert not any(value.get('name') in {'Install test browser', 'Browser transport and flow checks'} for value in cpu['steps'])

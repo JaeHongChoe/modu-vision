@@ -2,6 +2,7 @@
 from __future__ import annotations
 import base64
 import copy
+import errno
 import hashlib
 import io
 import json
@@ -34,12 +35,21 @@ def _source_image(source,path):
     return path.resolve()
 
 
-def _storage(project,source):
+def _storage(project,source,*,create=True):
     project=Path(project).resolve();key=hashlib.sha256(str(Path(source).resolve()).encode()).hexdigest()[:24]
     root=project/'dataset'/'data_workbench'/key
     for path in (project/'dataset',project/'dataset'/'data_workbench',root):
         if path.is_symlink():raise ValueError('Project data storage cannot contain symbolic links')
-    root.mkdir(parents=True,exist_ok=True)
+    if create:
+        root.mkdir(parents=True,exist_ok=True)
+    else:
+        # A read lookup preserves even missing/empty directory namespaces.
+        # Existing non-directory paths retain mkdir's original class/errno.
+        if root.exists() and not root.is_dir():
+            raise FileExistsError(errno.EEXIST,os.strerror(errno.EEXIST),str(root))
+        for path in (project,project/'dataset',project/'dataset'/'data_workbench'):
+            if path.exists() and not path.is_dir():
+                raise NotADirectoryError(errno.ENOTDIR,os.strerror(errno.ENOTDIR),str(root))
     return root
 
 
@@ -220,7 +230,7 @@ def edit_image_and_annotations(image,annotations,operation):
 
 def read_derived(project,source,identifier,scope=None):
     if not re.fullmatch(r'derived_[0-9a-f]{32}',identifier):raise ValueError('Invalid derived version ID')
-    root=_storage(project,source);directory=root/'derived'/identifier;path=directory/'version.json'
+    root=_storage(project,source,create=False);directory=root/'derived'/identifier;path=directory/'version.json'
     if directory.is_symlink() or path.is_symlink() or not path.is_file():raise ValueError('Derived version not found in active source scope')
     record=json.loads(path.read_text(encoding='utf-8'));digest=record.pop('evidence_sha256',None)
     if digest!=hashlib.sha256(canonical(record)).hexdigest():raise ValueError('Derived version integrity failure')
@@ -242,7 +252,7 @@ def read_derived(project,source,identifier,scope=None):
 
 
 def derived_history(project,source,image_path,scope=None):
-    image=_source_image(source,image_path);root=_storage(project,source)/'derived';rows=[]
+    image=_source_image(source,image_path);root=_storage(project,source,create=False)/'derived';rows=[]
     for path in root.glob('derived_*/version.json'):
         if path.is_symlink() or path.parent.is_symlink():raise ValueError('Derived version cannot be a symbolic link')
         hint=json.loads(path.read_text(encoding='utf-8'))
@@ -302,9 +312,9 @@ def derive(project,source,image_path,annotations,operation,actor,expected_sha256
         if staging.exists():shutil.rmtree(staging)
 
 
-def _queue_path(project,source,identifier):
+def _queue_path(project,source,identifier,*,create=True):
     if not re.fullmatch(r'review_[0-9a-f]{32}',identifier):raise ValueError('Invalid review queue ID')
-    return _storage(project,source)/'review_queues'/(identifier+'.json')
+    return _storage(project,source,create=create)/'review_queues'/(identifier+'.json')
 
 
 def create_review_queue(project,source,task,labelset_id,rows,origin,threshold=.5,margin=.05):
@@ -338,7 +348,7 @@ def create_review_queue(project,source,task,labelset_id,rows,origin,threshold=.5
 
 
 def read_review_queue(project,source,task,labelset_id,identifier):
-    path=_queue_path(project,source,identifier)
+    path=_queue_path(project,source,identifier,create=False)
     if path.is_symlink() or not path.is_file():raise ValueError('Review queue not found in active source scope')
     queue=json.loads(path.read_text(encoding='utf-8'))
     if queue.get('scope')!={'source':str(Path(source).resolve()),'task':task,'labelset_id':labelset_id}:raise ValueError('Review queue scope changed')
@@ -349,7 +359,7 @@ def read_review_queue(project,source,task,labelset_id,identifier):
 
 
 def list_review_queues(project,source,task,labelset_id):
-    directory=_storage(project,source)/'review_queues';result=[]
+    directory=_storage(project,source,create=False)/'review_queues';result=[]
     for path in directory.glob('review_*.json'):
         try:result.append(read_review_queue(project,source,task,labelset_id,path.stem))
         except ValueError as exc:

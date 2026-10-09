@@ -475,11 +475,12 @@ def _fixture_failure_observer(tmp_path,delegate):
     import ast,types
     from backend.tests import test_application_launch_execution as fixtures
     code=ast.parse(fixtures._source_callback_failure_suffix().replace('\n ','\n').lstrip())
-    closure=next(n for n in code.body if isinstance(n,ast.FunctionDef))
+    publisher=next(n for n in code.body if isinstance(n,ast.FunctionDef) and n.name=='_atomic_fixture_json')
+    closure=next(n for n in code.body if isinstance(n,ast.FunctionDef) and n.name=='failed_source')
     namespace={'original_failure_execute':delegate,'Path':Path,'json':json,'original_failure_root':tmp_path,
                'relay':types.SimpleNamespace(_CACHE_TICKETS={},_PRODUCERS={}),
                'h':types.SimpleNamespace(_CACHE={'admission':types.SimpleNamespace(snapshot=lambda:{'active_scopes':0,'unsupported':[]})})}
-    exec(compile(ast.Module(body=[closure],type_ignores=[]),'<original-source-failure-observer>','exec'),namespace)
+    exec(compile(ast.Module(body=[publisher,closure],type_ignores=[]),'<original-source-failure-observer>','exec'),namespace)
     return namespace['failed_source']
 
 
@@ -493,7 +494,7 @@ def test_fixture_failure_diagnostics_delegate_once_and_never_replace_original_ex
     if damage=='existing-output':output.write_bytes(b'original retained fact')
     if damage=='failed-json-write':
         def fail(*args,**kwargs):raise OSError('Diagnostic write unavailable')
-        monkeypatch.setattr(json,'dump',fail)
+        monkeypatch.setattr(json,'dumps',fail)
     def original(*args,**kwargs):calls.append((args,kwargs));raise failure
     observe=_fixture_failure_observer(tmp_path,original)
     if damage=='missing-cache':observe.__globals__['h']._CACHE={}
@@ -502,6 +503,7 @@ def test_fixture_failure_diagnostics_delegate_once_and_never_replace_original_ex
     assert caught.value is failure and calls==[((request,proof,tmp_path),{})]
     if damage=='existing-output':assert output.read_bytes()==b'original retained fact'
     if damage=='none':assert json.loads(output.read_bytes())['request_id']==request['request_id']
+    if damage=='failed-json-write':assert not output.exists()
 
 
 def test_fixture_failure_diagnostics_success_returns_original_result_without_side_effect(tmp_path):
@@ -517,22 +519,24 @@ def test_fixture_first_refusal_observer_preserves_original_recovery_publication(
     import ast,types
     from backend.tests import test_application_launch_execution as fixtures
     code=ast.parse(fixtures._source_input_first_refusal_script())
-    closure=next(n for n in code.body if isinstance(n,ast.FunctionDef));calls=[];answer={'state':'recovery_required'}
+    publisher=next(n for n in code.body if isinstance(n,ast.FunctionDef) and n.name=='_atomic_fixture_json')
+    closure=next(n for n in code.body if isinstance(n,ast.FunctionDef) and n.name=='first');calls=[];answer={'state':'recovery_required'}
     failure=ValueError('Original recovery failed');(tmp_path/'projects').mkdir()
     def original(owner,reason):
         calls.append((owner,reason))
         if damage=='original-error':raise failure
         return answer
-    namespace={'original':original,'json':json};exec(compile(ast.Module(body=[closure],type_ignores=[]),'<original-first-refusal-observer>','exec'),namespace)
+    namespace={'original':original,'json':json};exec(compile(ast.Module(body=[publisher,closure],type_ignores=[]),'<original-first-refusal-observer>','exec'),namespace)
     if damage=='write-error':
         def fail(*args,**kwargs):raise OSError('Diagnostic write unavailable')
-        monkeypatch.setattr(json,'dump',fail)
+        monkeypatch.setattr(json,'dumps',fail)
     owner=types.SimpleNamespace(root=tmp_path)
     if damage=='original-error':
         with pytest.raises(ValueError) as caught:namespace['first'](owner,'exact original reason')
         assert caught.value is failure
     else:assert namespace['first'](owner,'exact original reason') is answer
     assert calls==[(owner,'exact original reason')]
+    if damage=='write-error':assert not (tmp_path/'projects/source-input-first-refusal.json').exists()
 
 
 @pytest.mark.parametrize('damage',['changed_nonce','identical_request_replay'])

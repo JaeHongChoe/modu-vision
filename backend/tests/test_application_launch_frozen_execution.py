@@ -247,7 +247,10 @@ fs.writeFileSync(path.join(launch.projects,'compiled-stack-ready.json'),JSON.str
     archive=new['directory']/'application.zip'
     with zipfile.ZipFile(archive,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=3) as writer:
         writer.writestr('portable-application.json',canonical(manifest))
-        for name,path in files:writer.write(path,name)
+        for name,path in files:writer.write(path,name,compresslevel=0 if name in (
+            prefix+'_internal/torch/lib/libtorch_cpu.dylib',
+            prefix+'_internal/_polars_runtime_32/_polars_runtime.abi3.so',
+            prefix+'_internal/llvmlite/binding/libllvmlite.dylib') else 3)
         for name,raw in extras.items():writer.writestr(name,raw)
         for row in links:
             info=zipfile.ZipInfo(row['path']);info.external_attr=(0o120777<<16);writer.writestr(info,row['target'].encode())
