@@ -40,7 +40,10 @@ export function FlowDraftControls({blocked=false,activeVersion=false,hasSavedVer
   };
   useEffect(()=>{
     if(!pipeline||!pipelineDirty||!safe()||failedTarget.current===pipeline)return;
-    const timer=setTimeout(()=>{if(useFlowchartStore.getState().pipeline===pipeline)void persist();},650);
+    const timer=setTimeout(()=>{
+      const state=useFlowchartStore.getState();
+      if(state.pipeline===pipeline&&state.pipelineDirty&&failedTarget.current!==pipeline&&safe())void persist();
+    },650);
     return()=>clearTimeout(timer);
   },[pipeline,pipelineDirty,isLoading,isSaving,isRunning,historyGroupStart,blocked,ownerKey,sourceReady]);
   useEffect(()=>()=>{
