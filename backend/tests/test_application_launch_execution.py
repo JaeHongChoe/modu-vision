@@ -28,6 +28,64 @@ EXPECTED_OUTPUT = {'final_verdict': 'OK', 'roi_count': 1, 'defective_roi_count':
                    'routed_output_node_id': 'output', 'recognized_texts': ['A']}
 
 
+def _atomic_fixture_json(path,value,*,exclusive=False,sort_keys=False):
+    """Publish complete test facts and retain the first failure on cleanup."""
+    import errno
+    import json
+    import os
+    import tempfile
+    from pathlib import Path
+
+    path=Path(path)
+    if exclusive:
+        try:os.lstat(path)
+        except FileNotFoundError:pass
+        else:raise FileExistsError(errno.EEXIST,os.strerror(errno.EEXIST),os.fspath(path))
+    raw=json.dumps(value,sort_keys=sort_keys).encode('utf-8')
+    descriptor,temporary=tempfile.mkstemp(prefix='.'+path.name+'-',suffix='.tmp',dir=path.parent)
+    primary=None
+    def retain_cleanup(error):
+        try:primary.add_note('Owned observation cleanup also failed: '+type(error).__name__)
+        except BaseException:pass
+    try:
+        try:
+            offset=0
+            while offset<len(raw):
+                written=os.write(descriptor,raw[offset:])
+                if written<=0:raise OSError('Owned fixture JSON write made no progress')
+                offset+=written
+            os.fsync(descriptor)
+        except BaseException as error:
+            primary=error
+            raise
+        finally:
+            try:os.close(descriptor)
+            except BaseException as error:
+                if primary is None:
+                    primary=error
+                    raise
+                retain_cleanup(error)
+        if exclusive:os.link(temporary,path)
+        else:os.replace(temporary,path)
+    except BaseException as error:
+        primary=error
+        raise
+    finally:
+        try:os.unlink(temporary)
+        except FileNotFoundError:pass
+        except BaseException as error:
+            if primary is None:raise
+            retain_cleanup(error)
+
+
+
+def _fixture_json_publisher_source(*,prefix=''):
+    """Embed this exact shared helper; backend scripts import no test module."""
+    import inspect
+    import textwrap
+    return textwrap.indent(inspect.getsource(_atomic_fixture_json),prefix)
+
+
 def cpu_stack(tmp_path, *, delay=0, deadline_ms=30000, backend_suffix=''):
     import numpy as np
     import torch
@@ -316,7 +374,7 @@ def wait_recovery(root,nonce,child,timeout=40):
 
 def _source_callback_failure_suffix():
     """Test-only facts after original failure; never mint/retry or mask it."""
-    return ''' from backend.engine import application_launch_execution as ex,application_owned_cpu_child_relay as relay,application_launch_handshake as h
+    return _fixture_json_publisher_source(prefix=' ')+''' from backend.engine import application_launch_execution as ex,application_owned_cpu_child_relay as relay,application_launch_handshake as h
  from pathlib import Path
  import json
  original_failure_root=Path(os.environ['VISION_AI_STUDIO_USER_DATA_DIR'])
@@ -331,7 +389,7 @@ def _source_callback_failure_suffix():
     fact={'error_type':type(error).__name__,'error':str(error),'request_id':args[0]['request_id'],
      'admission':h._CACHE['admission'].snapshot(),'producer':None if s is None else {'phase':s['phase'],'counted':s['counted'],'private_acquired':s['private'] is not None},
      'snapshot_names':snapshots,'result_exists':any((results/name/'result.json').exists() for name in snapshots)}
-    with (original_failure_root/'projects/source-callback-failure.json').open('x') as writer:json.dump(fact,writer,sort_keys=True)
+    _atomic_fixture_json(original_failure_root/'projects/source-callback-failure.json',fact,exclusive=True,sort_keys=True)
    except BaseException:pass
    raise
  ex.execute_backend=failed_source
@@ -365,14 +423,14 @@ def _source_callback_spurious_wake_suffix():
 
 
 def _source_input_first_refusal_script():
-    return '''from backend.engine import application_launch_controller as c,application_launch_lease as l
+    return _fixture_json_publisher_source()+'''from backend.engine import application_launch_controller as c,application_launch_lease as l
 from pathlib import Path
 import json,sys
 original=l.LaunchSupervisor.recovery
 def first(self,reason):
  result=original(self,reason)
  try:
-  with (self.root/'projects/source-input-first-refusal.json').open('x') as writer:json.dump(result,writer,sort_keys=True)
+  _atomic_fixture_json(self.root/'projects/source-input-first-refusal.json',result,exclusive=True,sort_keys=True)
  except BaseException:pass
  return result
 l.LaunchSupervisor.recovery=first
@@ -800,3 +858,198 @@ def controlled_canary_publication(monkeypatch):
     """
     from backend.tests.test_staged_update_canary import controlled_proof
     controlled_proof(monkeypatch)
+
+
+@pytest.mark.parametrize('exclusive',[False,True])
+def test_fixture_json_publishes_only_complete_fsynced_bytes_and_closed_descriptor(tmp_path,monkeypatch,exclusive):
+    target=tmp_path/'observed.json';old=b'{"previous":true}'
+    if not exclusive:target.write_bytes(old)
+    value={'actual_observation':True,'unicode':'실제','values':[1,2,3]}
+    real_fsync,real_link,real_replace=os.fsync,os.link,os.replace
+    events=[];observed_fd=[]
+    def observe_fsync(fd):
+        assert target.read_bytes()==old if not exclusive else not target.exists()
+        assert json.loads(os.pread(fd,65536,0))==value
+        observed_fd.append(fd);events.append('complete-fsync')
+        return real_fsync(fd)
+    def observe_publish(source,destination,*args,**kwargs):
+        assert events==['complete-fsync']
+        assert json.loads(Path(source).read_bytes())==value
+        with pytest.raises(OSError):os.fstat(observed_fd[0])
+        assert target.read_bytes()==old if not exclusive else not target.exists()
+        events.append('exclusive-link'if exclusive else'replace')
+        return (real_link if exclusive else real_replace)(source,destination,*args,**kwargs)
+    monkeypatch.setattr(os,'fsync',observe_fsync)
+    monkeypatch.setattr(os,'link'if exclusive else'replace',observe_publish)
+    _atomic_fixture_json(target,value,exclusive=exclusive)
+    assert events==['complete-fsync','exclusive-link'if exclusive else'replace']
+    assert json.loads(target.read_bytes())==value
+    assert sorted(p.name for p in tmp_path.iterdir())==['observed.json']
+
+
+@pytest.mark.parametrize('kind',['file','directory','dangling-link'])
+def test_fixture_json_exclusive_first_observation_never_overwrites_or_serializes_existing_target(tmp_path,kind):
+    target=tmp_path/'first.json';old=b'exact first observation'
+    if kind=='file':target.write_bytes(old)
+    elif kind=='directory':target.mkdir()
+    else:target.symlink_to('missing-original-target')
+    before=target.lstat()
+    with pytest.raises(FileExistsError):_atomic_fixture_json(target,object(),exclusive=True)
+    after=target.lstat()
+    assert (after.st_dev,after.st_ino,after.st_mode,after.st_size,after.st_mtime_ns)==(
+        before.st_dev,before.st_ino,before.st_mode,before.st_size,before.st_mtime_ns)
+    if kind=='file':assert target.read_bytes()==old
+    elif kind=='directory':assert target.is_dir()
+    else:assert os.readlink(target)=='missing-original-target'
+    assert sorted(p.name for p in tmp_path.iterdir())==['first.json']
+
+
+def test_fixture_json_serialization_failure_publishes_no_partial_or_temporary_name(tmp_path):
+    target=tmp_path/'first.json'
+    with pytest.raises(TypeError):_atomic_fixture_json(target,object(),exclusive=True)
+    assert list(tmp_path.iterdir())==[]
+
+
+@pytest.mark.parametrize('exclusive',[False,True])
+@pytest.mark.parametrize('error',[OSError('original fsync IO'),KeyboardInterrupt('original fsync KI'),SystemExit('original fsync SE')])
+def test_fixture_json_fsync_failure_preserves_exact_error_and_old_or_absent_observation(tmp_path,monkeypatch,exclusive,error):
+    target=tmp_path/'observed.json';old=b'{"previous":true}'
+    if not exclusive:target.write_bytes(old)
+    def failure(fd):raise error
+    monkeypatch.setattr(os,'fsync',failure)
+    with pytest.raises(type(error))as caught:_atomic_fixture_json(target,{'next':True},exclusive=exclusive)
+    assert caught.value is error
+    if exclusive:assert list(tmp_path.iterdir())==[]
+    else:
+        assert target.read_bytes()==old
+        assert sorted(p.name for p in tmp_path.iterdir())==['observed.json']
+
+
+def test_fixture_json_concurrent_exclusive_publication_keeps_the_actual_first_complete_bytes(tmp_path,monkeypatch):
+    target=tmp_path/'first.json';first=b'{"first":true}';real_link=os.link
+    def first_wins(source,destination,*args,**kwargs):
+        target.write_bytes(first)
+        return real_link(source,destination,*args,**kwargs)
+    monkeypatch.setattr(os,'link',first_wins)
+    with pytest.raises(FileExistsError):_atomic_fixture_json(target,{'later':True},exclusive=True)
+    assert target.read_bytes()==first
+    assert sorted(p.name for p in tmp_path.iterdir())==['first.json']
+
+
+@pytest.mark.parametrize('reader',['source-callback','writer-scope'])
+def test_observation_readers_still_reject_stable_malformed_json_without_retry(tmp_path,monkeypatch,reader):
+    projects=tmp_path/'projects';projects.mkdir();target=projects/'source-callback-failure.json'
+    target.write_bytes(b'')
+    def no_retry(*args):pytest.fail('Malformed observation JSON must not be retried')
+    monkeypatch.setattr(time,'sleep',no_retry)
+    with pytest.raises(json.JSONDecodeError):
+        if reader=='source-callback':_wait_source_callback_failure(tmp_path)
+        else:
+            from backend.tests.test_application_cpu_writer_lifetime import wait_file
+            wait_file(target)
+
+
+def test_observation_script_source_embeds_the_exact_single_atomic_publisher():
+    import ast
+    import inspect
+    helper=ast.parse(inspect.getsource(_atomic_fixture_json)).body[0]
+    for source in [_source_input_first_refusal_script(),'if True:\n'+_source_callback_failure_suffix()]:
+        tree=ast.parse(source)
+        found=[n for n in ast.walk(tree)if isinstance(n,ast.FunctionDef)and n.name=='_atomic_fixture_json']
+        assert len(found)==1 and ast.dump(found[0],include_attributes=False)==ast.dump(helper,include_attributes=False)
+
+
+@pytest.mark.parametrize('producer',['first-refusal','returned-scope'])
+def test_actual_generated_observation_callback_keeps_original_result_without_visible_partial_json(tmp_path,monkeypatch,producer):
+    """Actual test-owned callback body; inert original result is not CPU proof."""
+    import ast
+    import inspect
+    import io
+    from types import SimpleNamespace
+    from backend.tests import test_application_cpu_writer_lifetime as writer_fixtures
+
+    projects=tmp_path/'projects';projects.mkdir()
+    fact={'active_scopes':0,'unsupported':[]}if producer=='returned-scope'else{'state':'recovery_required','reason':'original input drift'}
+    target=projects/('actual-cpu-scope-returned.json'if producer=='returned-scope'else'source-input-first-refusal.json')
+    calls=[];visible_before_write=[];real_open=io.open
+    def observe_target_open(name,mode='r',*args,**kwargs):
+        opened=real_open(name,mode,*args,**kwargs)
+        if os.fspath(name)==os.fspath(target)and ('w'in mode or'x'in mode):
+            with real_open(target,'rb')as reader:visible_before_write.append(reader.read())
+        return opened
+    monkeypatch.setattr(io,'open',observe_target_open)
+    if producer=='first-refusal':
+        callback=next(n for n in ast.walk(ast.parse(_source_input_first_refusal_script()))
+            if isinstance(n,ast.FunctionDef)and n.name=='first')
+        def original(self,reason):
+            calls.append(('original-recovery',reason));return fact
+        namespace={'original':original,'json':json}
+        if '_atomic_fixture_json'in globals():namespace['_atomic_fixture_json']=_atomic_fixture_json
+        exec(compile(ast.Module(body=[callback],type_ignores=[]),'<actual test-owned first-refusal callback>','exec'),namespace)
+        result=namespace['first'](SimpleNamespace(root=tmp_path),'original input drift')
+        assert calls==[('original-recovery','original input drift')]and result is fact
+    else:
+        tree=ast.parse(inspect.getsource(writer_fixtures.test_actual_original_cpu_epoch_inherits_writer_inode_and_keeps_scope_through_output))
+        assignment=next(n for n in ast.walk(tree)if isinstance(n,ast.Assign)
+            and any(isinstance(t,ast.Name)and t.id=='instrumentation'for t in n.targets))
+        literal=assignment.value.right if isinstance(assignment.value,ast.BinOp)else assignment.value
+        assert isinstance(literal,ast.Constant)and type(literal.value)is str
+        callback=next(n for n in ast.walk(ast.parse('if True:\n'+literal.value))
+            if isinstance(n,ast.FunctionDef)and n.name=='observed_execute')
+        original_result=object()
+        def original_execute(*args,**kwargs):
+            assert args==('original request',)and kwargs=={};calls.append('original-execute');return original_result
+        class State:
+            def snapshot(self):calls.append('original-snapshot');return fact
+        namespace={'original_execute':original_execute,'state':State(),'projects':projects,'json':json}
+        if '_atomic_fixture_json'in globals():namespace['_atomic_fixture_json']=_atomic_fixture_json
+        exec(compile(ast.Module(body=[callback],type_ignores=[]),'<actual test-owned returned-scope callback>','exec'),namespace)
+        result=namespace['observed_execute']('original request')
+        assert result is original_result and calls==['original-execute','original-snapshot']
+    assert json.loads(target.read_bytes())==fact
+    assert visible_before_write==[], 'The original observation must never expose its empty final name before JSON serialization'
+
+
+@pytest.mark.parametrize('stage',['write','fsync','publish','close'])
+def test_atomic_observation_combined_cleanup_failures_keep_exact_first_error(tmp_path,monkeypatch,stage):
+    target=tmp_path/'first.json';primary=OSError('original '+stage)
+    closing=OSError('secondary close');unlinking=OSError('secondary unlink')
+    real_write,real_fsync,real_close,real_unlink=os.write,os.fsync,os.close,os.unlink
+    closed=[];unlinked=[]
+    def write(fd,raw):
+        if stage=='write':raise primary
+        return real_write(fd,raw)
+    def fsync(fd):
+        if stage=='fsync':raise primary
+        return real_fsync(fd)
+    def close(fd):
+        real_close(fd);closed.append(fd)
+        if stage=='close':raise primary
+        if stage in ('write','fsync'):raise closing
+    def link(*args,**kwargs):
+        assert stage=='publish'
+        raise primary
+    def unlink(path):
+        real_unlink(path);unlinked.append(path)
+        raise unlinking
+    monkeypatch.setattr(os,'write',write);monkeypatch.setattr(os,'fsync',fsync)
+    monkeypatch.setattr(os,'close',close);monkeypatch.setattr(os,'unlink',unlink)
+    if stage=='publish':monkeypatch.setattr(os,'link',link)
+    with pytest.raises(OSError) as caught:_atomic_fixture_json(target,{'fact':True},exclusive=True)
+    assert caught.value is primary
+    assert len(closed)==len(unlinked)==1
+    with pytest.raises(OSError):os.fstat(closed[0])
+    assert not target.exists() and list(tmp_path.iterdir())==[]
+    assert len(primary.__notes__)==(2 if stage in ('write','fsync') else 1)
+
+
+def test_atomic_observation_cleanup_only_failure_remains_visible_after_complete_publication(tmp_path,monkeypatch):
+    target=tmp_path/'first.json';error=OSError('owned cleanup failed');real_unlink=os.unlink
+    def unlink(path):
+        real_unlink(path)
+        raise error
+    monkeypatch.setattr(os,'unlink',unlink)
+    with pytest.raises(OSError) as caught:_atomic_fixture_json(target,{'fact':True},exclusive=True)
+    assert caught.value is error
+    assert json.loads(target.read_bytes())=={'fact':True}
+    assert sorted(p.name for p in tmp_path.iterdir())==['first.json']

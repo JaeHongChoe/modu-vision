@@ -23,10 +23,11 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from backend.api import routes_dataset
 from backend.api.routes_project import get_current_project
-from backend.engine.annotation_storage import dataset_annotation_dir, dataset_overlay_scopes
+from backend.engine.annotation_storage import dataset_annotation_dir, dataset_overlay_scopes, scoped_annotation_root
 from backend.engine.dataset_fingerprint import fingerprint_dataset
 from backend.engine.dataset_loaders import SUPPORTED_IMAGE_EXTENSIONS
 from backend.engine import dataset_metadata as metadata_engine
+from backend.engine import team_data as team_data_engine
 
 router = APIRouter(prefix="/api/dataset/versions", tags=["dataset-versions"])
 _VERSION_ID = re.compile(r"v_[0-9]{8}_[0-9]{6}_[a-f0-9]{8}\Z")
@@ -446,6 +447,17 @@ def create_version(req: VersionCreateRequest, request: Request):
     project = _current_project(request)
     source = _source_path(project, req.dataset_path)
     with _VERSION_LOCK:
+        # Registration owns metadata writes before the immutable inventory is made.
+        # External source links remain valid version inputs; metadata intentionally
+        # supports only images whose resolved path stays inside the selected source.
+        for image in _iter_files(source, source=True, project_dir=Path(project["project_dir"]).resolve()):
+            if image.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS and image.resolve().is_relative_to(source):
+                metadata_engine.metadata_for_path(Path(project["project_dir"]), source, image,
+                                                  scoped_annotation_root(routes_dataset.STUDIO_ANNOTATIONS_DIR))
+        # Capture the same committed policy that later eligibility reads use.
+        # The public producer fills missing defaults without replacing saved settings.
+        team_data_engine.workspace({**project, "annotations_dir": str(
+            scoped_annotation_root(routes_dataset.STUDIO_ANNOTATIONS_DIR))}, source)
         return _snapshot(project, source, req.name, req.note, "manual")
 
 

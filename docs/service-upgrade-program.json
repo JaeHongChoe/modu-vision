@@ -3205,6 +3205,14 @@
           "result": "Task112: actual official-weight DINO dense head training, paired image/mask augmentation, heldout pixel metrics, original-resolution overlap tiling, Blob recipe save/reopen and fresh offline candidate package parity. Two actual Chrome/macOS Electron cases pass1.2min;89 dense/mask/flow/legacy and77 terminal-publication/provenance/recovery cases pass.",
           "scope": "Original clauses/dependencies unchanged; implementation/contract/gui/persist/reopen/failure verified. Six unique controlled synthetic originals and two CPU epochs per app are software evidence, not representative defect quality. All frozen official encoder tensors remain exact. Actual UNet/DeepLab reconstruction retains logits/class order with downloads forbidden. Completion readers now wait for durable provenance; identical binding preserves checkpoint bytes. Root readback1de37c674852f8802553c387c9d097ad2340e2393abbf34dbc5bdf4ef46ef727 binds1426 source inputs/664 artifacts.",
           "platform": "Actual Chrome and macOS development Electron/main/preload/owned backend; GPU, representative quality, installed/physical target, independent handoff and final acceptance pending. Windows excluded."
+        },
+        {
+          "kind": "fresh CPU evaluation of retained original segmentation checkpoint",
+          "source_sha": "94771e5e12053726b62814760d5dd4d0090c81e8",
+          "receipt": "docs/verification/receipts/2026-10-09-original-segmentation-evaluation-239.json",
+          "receipt_sha256": "a02f7b7206150cfd0aff25a4a7c1c26f38ce421ab34e85234651288d5b3b1435",
+          "result": "A new genuine evaluation record binds retained training provenance and the original checkpoint. No training rerun, renderer action, runtime lifecycle collector completion, representative quality, physical target or complete family/parent approval is inferred.",
+          "scope": "Scoped child evidence only; existing parent status, acceptance_state, 69/13 implementation counts and all 1449 action states remain unchanged."
         }
       ],
       "file_actions": {
@@ -3519,6 +3527,14 @@
           "scope": "Backend72 and affected109 pass; one existing optional real-image QA is not selected. Renderer763 and production/E2E TypeScript pass.1197 source inputs,130 artifacts, two actual app cases, completed SQLite records/one attempt each, original/prepared hashes, checkpoint/completion receipt/evaluation/package identities and closed owned processes/ports are rechecked. Controlled geometry networks do not prove trained detection/OCR quality. Synthetic directional toy MAE9.9344 degrees is not representative quality approval.",
           "platform": "Owned macOS CPU, actual Chrome/development Electron/main/preload/backend and package process; Windows excluded.",
           "reference": "docs/verification/2026-10-04-remaining-integration-evidence.md"
+        },
+        {
+          "kind": "original rotation dataset labels train eval record integrity",
+          "source_sha": "94771e5e12053726b62814760d5dd4d0090c81e8",
+          "receipt": "docs/verification/receipts/2026-10-09-original-rotation-record-stages-242.json",
+          "receipt_sha256": "d6fdb07085df4d6c845c67055caed2be7af53fa122d41df7297fe33edc5772b6",
+          "result": "Only dataset/labels/train/eval record integrity is verified. The first partial collector exit remains1; flow_or_adoption/export/target are pending. Existing rotation native click receipts remain separate, and no new GUI/training/runtime/quality/parent state is promoted.",
+          "scope": "Scoped child evidence only; existing parent status, acceptance_state, 69/13 implementation counts and all 1449 action states remain unchanged."
         }
       ],
       "file_actions": {
@@ -4034,6 +4050,14 @@
           "receipt_sha256": "838f1afe1290e6290c04bb7387678969523b9526130151b187d727362f4fcbdc",
           "result": "Actual clean browser1/source Electron2 passed without retries,2137 source files unchanged. F024 queue-filter empty/error/cancel3 qualified. After own Studio/backend close, independent source CPU service completed one generated-image job; duplicate submission/readback preserved one result and same daemon epoch.",
           "scope": "Synthetic controlled weights/truth and exact source software slice only. Native transport provenance scoped; no IR apply, publisher/installer/account/reboot/hardware/quality/tree or parent acceptance."
+        },
+        {
+          "kind": "owned source CPU daemon interruption and durable outbox replay",
+          "source_sha": "b72c2e9774d0e88b5adaf1af96712d84c17c3c89",
+          "receipt": "docs/verification/receipts/2026-10-09-owned-daemon-recovery-238.json",
+          "receipt_sha256": "09ca918f188686f68a3f58cba697be1b31333cd864bed6d644a2667fa2a73011",
+          "result": "This actual source daemon regression supports bounded S5-01 recovery assertions. It is not a renderer click, hardware power loss, auto-start/device test or complete S5-01 acceptance; every existing requirement/action state is preserved.",
+          "scope": "Scoped child evidence only; existing parent status, acceptance_state, 69/13 implementation counts and all 1449 action states remain unchanged."
         }
       ],
       "file_actions": {
@@ -6281,6 +6305,22 @@
           "receipt_sha256": "cff0a4d73b7f6c6241f80642e2259cf04014adc3391cd1977db28ec9904af57a",
           "result": "Clean browser1/sourceElectron2 passed without retries with2143 unchanged sources. F024 assign3 and F099 actualIR apply5 scenarios qualified. Actual reviewed OpenVINO CPU input job completed; synthetic allOK weights miss syntheticNG and quality is false.",
           "scope": "Exact source software slice only. No installed publisher/device/OS registration/reboot/whole-tree/human quality or parent acceptance."
+        },
+        {
+          "kind": "fresh CPU evaluation of retained original segmentation checkpoint",
+          "source_sha": "94771e5e12053726b62814760d5dd4d0090c81e8",
+          "receipt": "docs/verification/receipts/2026-10-09-original-segmentation-evaluation-239.json",
+          "receipt_sha256": "a02f7b7206150cfd0aff25a4a7c1c26f38ce421ab34e85234651288d5b3b1435",
+          "result": "A new genuine evaluation record binds retained training provenance and the original checkpoint. No training rerun, renderer action, runtime lifecycle collector completion, representative quality, physical target or complete family/parent approval is inferred.",
+          "scope": "Scoped child evidence only; existing parent status, acceptance_state, 69/13 implementation counts and all 1449 action states remain unchanged."
+        },
+        {
+          "kind": "original rotation dataset labels train eval record integrity",
+          "source_sha": "94771e5e12053726b62814760d5dd4d0090c81e8",
+          "receipt": "docs/verification/receipts/2026-10-09-original-rotation-record-stages-242.json",
+          "receipt_sha256": "d6fdb07085df4d6c845c67055caed2be7af53fa122d41df7297fe33edc5772b6",
+          "result": "Only dataset/labels/train/eval record integrity is verified. The first partial collector exit remains1; flow_or_adoption/export/target are pending. Existing rotation native click receipts remain separate, and no new GUI/training/runtime/quality/parent state is promoted.",
+          "scope": "Scoped child evidence only; existing parent status, acceptance_state, 69/13 implementation counts and all 1449 action states remain unchanged."
         }
       ],
       "file_actions": {

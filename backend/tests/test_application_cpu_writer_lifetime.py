@@ -255,7 +255,7 @@ def test_actual_original_cpu_epoch_inherits_writer_inode_and_keeps_scope_through
 
     controlled_proof(monkeypatch)  # Setup only, no staged-canary or native acceptance.
     original_fixture = fixtures.fixture
-    instrumentation = '''
+    instrumentation = fixtures._fixture_json_publisher_source(prefix=' ')+'''
  from backend.engine import runtime_deadline as rd,application_launch_execution as ex,application_owned_cpu_child_relay as relay
  import psutil,stat
  original_spawn=rd.subprocess.Popen
@@ -266,22 +266,22 @@ def test_actual_original_cpu_epoch_inherits_writer_inode_and_keeps_scope_through
    info=os.fstat(passed[0]);writer=__import__('backend.engine.application_launch_handshake',fromlist=['_CACHE'])._CACHE['challenge']['writer']
    lock=root/'.application-writer-epochs'/os.environ['VISION_APPLICATION_LAUNCH_NONCE']/'writers'/writer['writer_id']/'ownership.lock'
    refs=[{'fd':f.fd,'path':f.path} for f in psutil.Process(child.pid).open_files() if f.path==str(lock)]
-   (projects/'actual-cpu-writer-observation.json').write_text(json.dumps({'worker_pid':child.pid,'device':info.st_dev,'inode':info.st_ino,
+   _atomic_fixture_json(projects/'actual-cpu-writer-observation.json',{'worker_pid':child.pid,'device':info.st_dev,'inode':info.st_ino,
     'child_writer_open_refs':refs,'active_scopes':state.snapshot()['active_scopes'],'passed_count':len(passed),
     'CUDA_VISIBLE_DEVICES':kwargs['env'].get('CUDA_VISIBLE_DEVICES'),'NVIDIA_VISIBLE_DEVICES':kwargs['env'].get('NVIDIA_VISIBLE_DEVICES'),
-    'OMP_NUM_THREADS':kwargs['env'].get('OMP_NUM_THREADS'),'cpu_command_prefix':args[0][:5]}))
+    'OMP_NUM_THREADS':kwargs['env'].get('OMP_NUM_THREADS'),'cpu_command_prefix':args[0][:5]})
   return child
  rd.subprocess.Popen=observed_spawn
  original_checkpoint=ex._checkpoint
  def observed_checkpoint(stage):
   if stage in ('before_cpu_worker','after_cpu_output'):
-   (projects/('actual-cpu-scope-'+stage+'.json')).write_text(json.dumps(state.snapshot()))
+   _atomic_fixture_json(projects/('actual-cpu-scope-'+stage+'.json'),state.snapshot())
   return original_checkpoint(stage)
  ex._checkpoint=observed_checkpoint
  original_execute=ex.execute_backend
  def observed_execute(*args,**kwargs):
   result=original_execute(*args,**kwargs)
-  (projects/'actual-cpu-scope-returned.json').write_text(json.dumps(state.snapshot()))
+  _atomic_fixture_json(projects/'actual-cpu-scope-returned.json',state.snapshot())
   return result
  ex.execute_backend=observed_execute
 '''

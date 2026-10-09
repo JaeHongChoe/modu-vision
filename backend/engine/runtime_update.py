@@ -11,6 +11,7 @@ from dataclasses import asdict, dataclass
 import base64
 import errno
 import hashlib
+import io
 import json
 import os
 import platform
@@ -34,6 +35,9 @@ UPDATES='.application-updates'
 GENERATIONS='.application-generations'
 CONTROL_PATHS={ACTIVE,PENDING,UPDATES,GENERATIONS,'application-launch-lease.json','.application-launches','application-database-ownership.lock'}
 MATRIX={'api_context','worker','runtime','dataset_index'}
+# Fixed lexical grammar only; this holds no path, bytes or verification proof.
+_SAFE_PATH_PART_MATCH=re.compile(r'[A-Za-z0-9_.@][A-Za-z0-9_. +@^\-()]{0,159}').fullmatch
+_SAFE_PATH_DEVICE_MATCH=re.compile(r'^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)',re.I).match
 
 
 class UpdateError(ValueError):pass
@@ -126,7 +130,12 @@ def _check_file(path,row,*,copy_to=None):
         if before.st_size!=row['size']:raise UpdateError('Update artifact size differs')
         writer=open(copy_to,'xb') if copy_to is not None else None
         try:
-            while chunk:=reader.read(1024**2):
+            read_size=min(1024**2,before.st_size+1)
+            buffer=bytearray(read_size)if(type(reader)is io.BufferedReader and copy_to is None and before.st_size>=1024**2)else None
+            view=memoryview(buffer)if buffer is not None else None
+            while True:
+                chunk=view[:reader.readinto(buffer)]if buffer is not None else reader.read(read_size)
+                if not chunk:break
                 total+=len(chunk)
                 if total>row['size']:raise UpdateError('Update artifact grew while reading')
                 digest.update(chunk)
@@ -246,6 +255,11 @@ def verify_release(envelope_path,authority_path,pinned_authority_sha256,target):
 def _safe_path(value):
     if not isinstance(value,str) or not 0<len(value)<=240:raise UpdateError('Invalid portable application path')
     parts=value.split('/')
+    if type(value)is str:
+        if any(p in ('.','..') or not _SAFE_PATH_PART_MATCH(p) or p.endswith(('.', ' '))
+                or _SAFE_PATH_DEVICE_MATCH(p) for p in parts):
+            raise UpdateError('Unsafe portable application path')
+        return value
     if any(p in ('.','..') or not re.fullmatch(r'[A-Za-z0-9_.@][A-Za-z0-9_. +@^\-()]{0,159}',p) or p.endswith(('.', ' '))
             or re.match(r'^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)',p,re.I) for p in parts):
         raise UpdateError('Unsafe portable application path')

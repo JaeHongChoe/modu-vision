@@ -268,8 +268,11 @@ class World:
             '_intent_domain_ranges', '_intent_zip_metadata', '_intent_zip_range',
             '_intent_installed_range', '_intent_overlap_error',
             '_intent_namespace_range', '_intent_parallel_namespace'}
-        definitions = [n for n in tree.body if isinstance(n, (ast.FunctionDef,
-            ast.ClassDef)) and n.name in wanted]
+        lexical_constants = {'_SAFE_PATH_PART_MATCH', '_SAFE_PATH_DEVICE_MATCH'}
+        definitions = [n for n in tree.body if
+            (isinstance(n, (ast.FunctionDef, ast.ClassDef)) and n.name in wanted)
+            or (isinstance(n, ast.Assign) and len(n.targets) == 1
+                and isinstance(n.targets[0], ast.Name) and n.targets[0].id in lexical_constants)]
 
         @contextmanager
         def original_archive_file(path, limit, **kwargs):

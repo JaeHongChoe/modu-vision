@@ -165,12 +165,12 @@ def _absolute_record_path(value):
     return value
 
 def _prepared_family_inputs(binding,family,manifest,images,copies,file,pins):
-    """Join original OCR/Patch records to full raw-pinned copies only.
+    """Join original OCR/Patch/Rotation records to full raw-pinned copies only.
 
     This is not a training loader, image decoder or live storage authorization.
     Original producer paths are retained as identities and are never reopened.
     """
-    if family not in ('ocr','patch_classification'):
+    if family not in ('ocr','patch_classification','rotation'):
         raise Gap('prepared family format is not supported by this adapter','pending')
     rows=binding.get('family_inputs')
     need(type(rows) is list and 0<len(rows)<=MAX_FILES,'family input inventory is empty or malformed')
@@ -192,7 +192,7 @@ def _prepared_family_inputs(binding,family,manifest,images,copies,file,pins):
     version=_absolute_record_path(binding['version_dir'])
     need(version.rsplit('/',1)[-1]==manifest['id'] and version.rsplit('/',2)[-2]=='versions',
          'family snapshot version identity differs')
-    name='ocr.json' if family=='ocr' else 'patches.json'
+    name={'ocr':'ocr.json','patch_classification':'patches.json','rotation':'rotation.json'}[family]
     manifest_path=dataset+'/'+name;snapshot=version+'/labels/family/'+family+'/'+name
     by_relative={};identities=set();source_order=[]
     for row in rows:
@@ -218,9 +218,9 @@ def _prepared_family_inputs(binding,family,manifest,images,copies,file,pins):
     body=file(copies[manifest_path]);raw=file(copies[manifest_path],False,raw=True)
     need(type(body) is dict and type(body.get('version')) is int and body['version']==1,'family manifest version differs')
     need(file(copies[snapshot])==body,'frozen family manifest body differs')
-    entries=body.get('samples' if family=='ocr' else 'patches')
+    entries=body.get('patches' if family=='patch_classification' else 'samples')
     need(type(entries) is list and entries,'family manifest has no explicit labeled members')
-    hashes={};splits={};hash_splits={};counts={'train':0,'val':0,'test':0};characters=set()
+    hashes={};splits={};hash_splits={};counts={'train':0,'val':0,'test':0};characters=set();rotation_rows=[]
     if family=='patch_classification':
         classes=body.get('classes')
         need(type(classes) is list and len(classes)>=2 and all(type(label) is str and label and label==label.strip() for label in classes)
@@ -241,26 +241,49 @@ def _prepared_family_inputs(binding,family,manifest,images,copies,file,pins):
             label=entry.get('text')
             need(type(label) is str and label.strip() and all(ord(char)>=32 for char in label),'OCR text identity is invalid')
             if split=='train':characters.update(label)
-        else:
+        elif family=='patch_classification':
             need((entry.get('source_sha256') is None or entry['source_sha256']==digest)
                  and entry.get('label') in classes,'Patch label/source identity differs')
             box=entry.get('box')
             need(type(box) is list and len(box)==4 and all(type(value) is int for value in box)
                  and 0<=box[0]<box[2] and 0<=box[1]<box[3],'Patch box identity is invalid')
+        else:
+            need(set(entry)=={'image','correction_deg','split','source_sha256'},
+                 'Rotation member differs from the supported original format')
+            angle=entry['correction_deg']
+            need(type(angle) in (int,float) and math.isfinite(angle) and -180<=angle<=180,
+                 'Rotation correction angle identity is invalid')
+            need(entry['source_sha256']==digest,'Rotation manifest source digest differs')
+            rotation_rows.append({'image':image,'correction_deg':(float(angle)+180)%360-180,
+                                  'split':split,'source_sha256':digest})
     need(counts['train']>0 and counts['val']>0,'family training partitions are incomplete')
     if family=='ocr':
         need(all(set(entry['text'])<=characters for entry in entries if entry['split']!='train'),
              'OCR held-out text differs from the recorded training alphabet')
     need(set(by_relative)=={name,*hashes},'family manifest and input inventory differ')
     manifest_sha=pins[copies[manifest_path]]['sha256']
-    domain=b'ocr-dataset-v1\0'+raw if family=='ocr' else b'patch-classification-dataset-v1\0'+manifest_sha.encode('ascii')
-    digest=hashlib.sha256(domain)
-    for image,value in sorted(hashes.items()):digest.update(b'\0'+image.encode('utf-8')+b'\0'+value.encode('ascii'))
-    expected={'dataset_sha256':'sha256:'+digest.hexdigest(),'manifest_sha256':manifest_sha,
-              'source_sha256':dict(sorted(hashes.items())),'split_counts':counts,'source_image_count':len(hashes)}
-    if family=='patch_classification':expected['patch_count']=len(entries)
+    if family=='rotation':
+        # Exact _manifest producer domain: ordered normalized correction rows,
+        # ASCII-default JSON and an unprefixed digest. This does not decode an
+        # image or confer angle truth/quality approval.
+        expected={'dataset_sha256':hashlib.sha256(json.dumps(rotation_rows,sort_keys=True,separators=(',',':')).encode()).hexdigest(),
+                  'source_sha256':hashes,'split_counts':counts,
+                  'angle_semantics':'counterclockwise_upright_correction_degrees_360'}
+    else:
+        domain=b'ocr-dataset-v1\0'+raw if family=='ocr' else b'patch-classification-dataset-v1\0'+manifest_sha.encode('ascii')
+        digest=hashlib.sha256(domain)
+        for image,value in sorted(hashes.items()):digest.update(b'\0'+image.encode('utf-8')+b'\0'+value.encode('ascii'))
+        expected={'dataset_sha256':'sha256:'+digest.hexdigest(),'manifest_sha256':manifest_sha,
+                  'source_sha256':dict(sorted(hashes.items())),'split_counts':counts,'source_image_count':len(hashes)}
+        if family=='patch_classification':expected['patch_count']=len(entries)
     mapping=body.get('source_map')
-    if 'source_dataset_path' in body:
+    if family=='rotation':
+        need(body.get('source_dataset_path')==source and 'source_map' not in body,
+             'Rotation original source mapping differs')
+        need(all(images.get(source+'/'+image)==value for image,value in hashes.items()),
+             'Rotation member belongs to another original source')
+        originals=list(hashes);expected['source_dataset_path']=source
+    elif 'source_dataset_path' in body:
         need(body['source_dataset_path']==source and type(mapping) is dict and set(mapping)==set(hashes),
              'prepared family original source mapping differs')
         originals=[]
@@ -385,8 +408,8 @@ def verify_lifecycle(receipt,root):
         need(binding['team_data']==context['labels'] and binding['team_data_sha256']==hashlib.sha256(canonical(context['labels'])).hexdigest(),'training truth receipt differs')
         if 'family_inputs' in binding:need(type(binding['family_inputs']) is list,'family input inventory is not a list')
         if binding.get('family_inputs') or any(key in binding for key in ('family_task','family_dataset_path','family_provenance')):
-            if family in ('ocr','patch_classification'):
-                if 'dataset_path' not in job or family=='ocr' and 'dataset_path' not in meta:
+            if family in ('ocr','patch_classification','rotation'):
+                if 'dataset_path' not in job or family in ('ocr','rotation') and 'dataset_path' not in meta:
                     raise Gap('legacy prepared training record has no dataset identity','pending')
                 need(type(job['dataset_path']) is str and job['dataset_path']==binding.get('family_dataset_path'),
                      'prepared training dataset identities differ')

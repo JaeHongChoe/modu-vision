@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "kind": "scoped_child_execution_not_parent_acceptance",
+  "public_source_base_sha": "94771e5e12053726b62814760d5dd4d0090c81e8",
+  "parent_accepted": false,
+  "human_truth_approved": false,
+  "model_quality_approved": false,
+  "target_execution_approved": false,
+  "renderer_action_states_changed": false,
+  "component": "fresh CPU evaluation of retained original segmentation checkpoint",
+  "source_sha": "94771e5e12053726b62814760d5dd4d0090c81e8",
+  "execution_source_count": 2408,
+  "status": "completed",
+  "absolute_budget_seconds": 125,
+  "harness_seconds": 8.433075665961951,
+  "worker_evaluation_seconds": 0.9662906670710072,
+  "original_source_files_preserved": 12,
+  "original_project_files_preserved": 71,
+  "originals_total_preserved": 83,
+  "full_source_before_after_equal": true,
+  "original_raw_namespace_and_identity_unchanged": true,
+  "actual_device": "cpu",
+  "torch_threads": 1,
+  "torch_interop_threads": 1,
+  "cv2_threads": 1,
+  "evaluation_id": "evaluation_f392562b2d3646b8a17447ed881dfe7c",
+  "evaluation_record_sha256": "4dc9d07f7118f734214cf3fcdf240f935a607c477a754f740ecbfe86717aa315",
+  "training_provenance_present": true,
+  "original_job_id": "job_1791504538_ea1648",
+  "checkpoint_sha256": "6843b566058af262ead960cf871a0581dc346a49562c2cb90ad13116500a0b3b",
+  "evaluated_split": "test",
+  "original_wrapper_rewritten": false,
+  "requirements": [
+    "S4-02",
+    "S7-02"
+  ],
+  "related_existing_rows": [
+    "F027"
+  ],
+  "receipt_inputs": [
+    {
+      "role": "closed_run",
+      "sha256": "cfbe2c6c9cb932462f48046c6525b238b14a6010ba252eff61b8295fff6fdef9",
+      "size": 145
+    },
+    {
+      "role": "harness_proof",
+      "sha256": "ea242e8ba1b92c99e6cb12d3d218f3b2737da959602a52d387827fe5f8281ac8",
+      "size": 2114
+    },
+    {
+      "role": "worker_proof",
+      "sha256": "cfda1e4d0efb9db8cda81065e67913248021f6c6074ce91e280617f93b7749ac",
+      "size": 1135
+    },
+    {
+      "role": "new_evaluation_record",
+      "sha256": "4dc9d07f7118f734214cf3fcdf240f935a607c477a754f740ecbfe86717aa315",
+      "size": 14112
+    }
+  ],
+  "mapping_scope": "A new genuine evaluation record binds retained training provenance and the original checkpoint. No training rerun, renderer action, runtime lifecycle collector completion, representative quality, physical target or complete family/parent approval is inferred."
+}

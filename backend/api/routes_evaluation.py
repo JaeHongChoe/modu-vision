@@ -934,7 +934,17 @@ def _evaluate_anomaly(
     dataset_dir: Path,
     device: torch.device,
     cancel=None,
+    *,
+    evidence_output_dir: Optional[Path] = None,
 ) -> Dict[str, Any]:
+    # Common evaluation owns this internal output path; API request schemas do
+    # not expose it. Legacy direct evaluation retains its model-local output.
+    owned_evidence_dir = Path(evidence_output_dir) if evidence_output_dir is not None else None
+    if owned_evidence_dir is not None:
+        if owned_evidence_dir.is_symlink() or any(parent.is_symlink() for parent in owned_evidence_dir.parents):
+            raise ValueError('Anomaly evidence output or ancestor is linked')
+        if not owned_evidence_dir.is_dir():
+            raise ValueError('Anomaly evidence output directory is unavailable')
     val_ds = _manifest_evaluation_dataset("anomaly", dataset_dir, tuple(meta.get("image_size", [256, 256])))
     if val_ds is None:
         selected_split = "test"
@@ -1015,15 +1025,22 @@ def _evaluate_anomaly(
         fixed_threshold=fixed_threshold,
         threshold_comparison='gt' if patch_scores else 'ge')
     import uuid
-    evidence_dir = model_pt.parent / "evaluation_maps"
+    evidence_dir = owned_evidence_dir if owned_evidence_dir is not None else model_pt.parent / "evaluation_maps"
     evidence_dir.mkdir(exist_ok=True)
+    if owned_evidence_dir is not None and (evidence_dir.is_symlink() or any(parent.is_symlink() for parent in evidence_dir.parents)):
+        raise ValueError('Anomaly evidence output or ancestor is linked')
     evidence_file = evidence_dir / ("anomaly_" + uuid.uuid4().hex + ".npz")
     evidence_arrays = {f"heatmap_{index}": value for index, value in enumerate(maps)}
     mask_index = 0
     for index, source in enumerate(mask_sources):
         if source is not None:
             evidence_arrays[f"mask_{index}"] = pixel_masks[mask_index]; mask_index += 1
-    np.savez_compressed(evidence_file, **evidence_arrays)
+    if owned_evidence_dir is None:
+        np.savez_compressed(evidence_file, **evidence_arrays)
+    else:
+        # A new immutable filename cannot replace an earlier output or a link.
+        with evidence_file.open('xb') as stream:
+            np.savez_compressed(stream, **evidence_arrays)
     evidence_hash = hashlib.sha256(evidence_file.read_bytes()).hexdigest()
     optimal_th = fixed_threshold
     from backend.engine.score_contract import state_score_spec

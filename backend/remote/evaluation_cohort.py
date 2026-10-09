@@ -177,8 +177,13 @@ def freeze_cohort(project, version_id, source, task, meta, context):
     source = Path(source)
     version_dir, manifest = _read_manifest(project, version_id)
     _require_active_labelset(project, manifest)
-    if task not in ('classification', 'detection', 'segmentation', 'anomaly') or manifest.get('task') != task or project.get('task') != task:
-        raise HTTPException(422, 'Common cohort task differs from active project or completed model')
+    # The editor can switch tasks while completed models remain in this project.
+    # Select truth by the saved version and completed model, never the editor mode.
+    core_tasks = ('classification', 'detection', 'segmentation', 'anomaly')
+    if (task not in core_tasks or project.get('task') not in core_tasks
+            or manifest.get('task') != task or meta.get('task') != task
+            or getattr(context, 'task', task) != task):
+        raise HTTPException(422, 'Common cohort task differs from saved version or completed model')
     if source.resolve() != Path(manifest['source_dataset_dir']).resolve() or source.resolve() != Path(project['source_dataset_dir']).resolve():
         raise HTTPException(409, 'Common cohort source differs from selected version or active project')
     verify = _verify(project, version_dir, manifest)
@@ -463,7 +468,17 @@ def worker_evaluate(spec, checkpoint, metadata, data, descriptor, run_dir, cance
     device,identity=target_identity(spec)
     evaluator={'classification':routes_evaluation._evaluate_classification,'detection':routes_evaluation._evaluate_detection,
                'segmentation':routes_evaluation._evaluate_segmentation,'anomaly':routes_evaluation._evaluate_anomaly}[spec['task']]
-    result=evaluator(checkpoint,metadata,data,device,cancel=cancel)
+    evidence_root = None
+    if spec['task'] == 'anomaly':
+        # This path is selected internally from the owning operation, never
+        # supplied by an evaluation request or by model metadata.
+        evidence_root = Path(run_dir) / 'outputs/evidence'
+        if evidence_root.is_symlink() or any(parent.is_symlink() for parent in evidence_root.parents):
+            raise ValueError('Common anomaly evidence output or ancestor is linked')
+        evidence_root.mkdir(parents=True, exist_ok=False)
+        result=evaluator(checkpoint,metadata,data,device,cancel=cancel,evidence_output_dir=evidence_root)
+    else:
+        result=evaluator(checkpoint,metadata,data,device,cancel=cancel)
     _,final_identity=target_identity(spec)
     if final_identity!=identity: raise ValueError('Evaluation runtime identity changed during execution')
     by_path={str((data/safe_relative(r['path'])).resolve()):r for r in descriptor['ordered_samples']}
@@ -476,11 +491,10 @@ def worker_evaluate(spec, checkpoint, metadata, data, descriptor, run_dir, cance
         row.update(sample_id=sample['sample_id'],input_sha256=sample['sha256'],truth_sha256=digest(sample['truth']))
         evidence=row.get('pixel_evidence')
         if spec['task']=='anomaly' and isinstance(evidence,dict):
-            original=plain_file(Path(evidence['file_path']),checkpoint.parent)
-            destination=run_dir/'outputs/evidence'/original.name
-            destination.parent.mkdir(parents=True,exist_ok=True)
-            shutil.copyfile(original,destination)
-            relative=destination.relative_to(run_dir).as_posix()
+            original=plain_file(Path(evidence['file_path']),evidence_root)
+            if original.parent.resolve() != evidence_root.resolve() or _sha256(original) != evidence.get('sha256'):
+                raise ValueError('Common anomaly evidence output binding changed')
+            relative=original.relative_to(run_dir).as_posix()
             evidence['file_path']=relative
             if relative not in artifacts: artifacts.append(relative)
             source_mask=evidence.get('source_mask')

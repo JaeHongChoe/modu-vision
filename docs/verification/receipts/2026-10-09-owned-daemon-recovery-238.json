@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "kind": "scoped_child_execution_not_parent_acceptance",
+  "public_source_base_sha": "94771e5e12053726b62814760d5dd4d0090c81e8",
+  "parent_accepted": false,
+  "human_truth_approved": false,
+  "model_quality_approved": false,
+  "target_execution_approved": false,
+  "renderer_action_states_changed": false,
+  "component": "owned source CPU daemon interruption and durable outbox replay",
+  "source_sha": "b72c2e9774d0e88b5adaf1af96712d84c17c3c89",
+  "execution_source_count": 2409,
+  "execution_source_kind": "clean Root-only private clone with one new test; public integration remains separate",
+  "test": "backend/tests/test_inspection_daemon_recovery.py::test_owned_real_cpu_daemon_restarts_committed_inbox_result_and_replays_outbox_once",
+  "test_cases": 1,
+  "failures": 0,
+  "errors": 0,
+  "skips": 0,
+  "elapsed_seconds": 26.248908124980517,
+  "absolute_case_cap_seconds": 240,
+  "full_source_before_after_equal": true,
+  "original_proof_sha256": "fb7d58c7e31e900bfa9f87205b988a110cab944d622aef1c42e69f5ee79e5e8c",
+  "observed_child_assertions": {
+    "owned_daemon_sigkill_returncode": -9,
+    "restarted_daemon_shutdown_returncode": 0,
+    "same_store_recovery": true,
+    "actual_inferences": 1,
+    "receiver_requests": 2,
+    "unique_business_results": 1,
+    "business_commit_before_crash": true,
+    "ack_sent_before_crash": false,
+    "post_exit_first_ack_wire_delivery": "unknown",
+    "job_before": "delivery_pending",
+    "job_after": "completed",
+    "outbox_before": "sending",
+    "outbox_after": "sent",
+    "outbox_attempts_after": 2
+  },
+  "not_verified": {
+    "physical_power_loss": true,
+    "boot_or_OS_service_registration": true,
+    "GPU_or_hardware": true,
+    "complete_process_tree": true,
+    "publisher_or_installed_target": true,
+    "quality_or_whole_parent": true
+  },
+  "requirements": [
+    "S5-01"
+  ],
+  "related_existing_rows": [
+    "F090",
+    "F091",
+    "F111"
+  ],
+  "receipt_inputs": [
+    {
+      "role": "closed_run",
+      "sha256": "ef2e867bf686732bafb6765c463c88aecf1adb5aa7d1f24445a5884add0f4c19",
+      "size": 773
+    },
+    {
+      "role": "original_proof",
+      "sha256": "fb7d58c7e31e900bfa9f87205b988a110cab944d622aef1c42e69f5ee79e5e8c",
+      "size": 62442
+    },
+    {
+      "role": "junit",
+      "sha256": "01aa340de703a874511dcd2724805537b3886480e9ba1a646021b00e0d4fdeec",
+      "size": 405
+    },
+    {
+      "role": "closed_start",
+      "sha256": "bc5bf96a18225be2b5d818926b4ce7c692c1082a312349ddabde100c0f2fc902",
+      "size": 5002
+    }
+  ],
+  "mapping_scope": "This actual source daemon regression supports bounded S5-01 recovery assertions. It is not a renderer click, hardware power loss, auto-start/device test or complete S5-01 acceptance; every existing requirement/action state is preserved."
+}

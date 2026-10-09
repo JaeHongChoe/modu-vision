@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "kind": "scoped_child_execution_not_parent_acceptance",
+  "public_source_base_sha": "94771e5e12053726b62814760d5dd4d0090c81e8",
+  "parent_accepted": false,
+  "human_truth_approved": false,
+  "model_quality_approved": false,
+  "target_execution_approved": false,
+  "renderer_action_states_changed": false,
+  "component": "original rotation dataset labels train eval record integrity",
+  "source_sha": "94771e5e12053726b62814760d5dd4d0090c81e8",
+  "source_identity_scope": "Root checker bytes pinned; original rotation records remain byte copies, no current-source runtime rerun claim",
+  "checker_sha256": "71f91f8a10805e6716720b0468fceae7639787535886f4bf1cc9aca60b2102c5",
+  "wrapper_sha256": "a3e86d743ec9357f37f68f0c84b1f69df54ecedfa18ea3f04e996b1c10e0802f",
+  "status": "partial_record_integrity",
+  "cli_returncode": 1,
+  "record_chain_verified": false,
+  "refusals": [],
+  "originals_preserved": 41,
+  "originals_and_copies_unchanged": true,
+  "stages": {
+    "dataset": {
+      "state": "verified",
+      "scope": "record integrity/control only",
+      "reason": null
+    },
+    "eval": {
+      "state": "verified",
+      "scope": "record integrity/control only",
+      "reason": null
+    },
+    "export": {
+      "state": "pending",
+      "scope": "record integrity/control only",
+      "reason": "required earlier record is unverified"
+    },
+    "flow_or_adoption": {
+      "state": "pending",
+      "scope": "record integrity/control only",
+      "reason": "missing stage reference"
+    },
+    "labels": {
+      "state": "verified",
+      "scope": "record integrity/control only",
+      "reason": null
+    },
+    "target": {
+      "state": "pending",
+      "scope": "record integrity/control only",
+      "reason": "required earlier record is unverified"
+    },
+    "train": {
+      "state": "verified",
+      "scope": "record integrity/control only",
+      "reason": null
+    }
+  },
+  "verified_record_stages": 4,
+  "pending_record_stages": 3,
+  "runtime_execution_reproduced": false,
+  "requirements": [
+    "S4-08",
+    "S7-02"
+  ],
+  "related_existing_rows": [
+    "F031"
+  ],
+  "receipt_inputs": [
+    {
+      "role": "closed_run",
+      "sha256": "a1a1532281c8b15105759074be523b711a81a15471a1e306efd469bf8f5787e2",
+      "size": 934
+    },
+    {
+      "role": "original_gate",
+      "sha256": "c08275bfdc90985f35e20038a4328ee63b356a272cd8f65207b890959f33cbad",
+      "size": 1326
+    },
+    {
+      "role": "closed_start",
+      "sha256": "bcaaa5277bf5265ccde8ad7edb484ee3570d7692d67bd790c7a425d997957c75",
+      "size": 37826
+    }
+  ],
+  "mapping_scope": "Only dataset/labels/train/eval record integrity is verified. The first partial collector exit remains1; flow_or_adoption/export/target are pending. Existing rotation native click receipts remain separate, and no new GUI/training/runtime/quality/parent state is promoted."
+}
