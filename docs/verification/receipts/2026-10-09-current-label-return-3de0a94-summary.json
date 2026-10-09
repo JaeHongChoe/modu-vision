@@ -1,0 +1,94 @@
+{
+  "schema": "modu-vision.current-label-return-controls/v1",
+  "source_sha": "3de0a9409adbbf88854cdb83b44e20e7ee490fde",
+  "test_source_sha256": "1a9a9e1f72fe9a78bca5683b025884f9b5651f341b4f1b5c1cb3b561aeb26f26",
+  "scope": "Executed browser and native current-label return error/cancel controls only; source/report/label bytes retained in the exact immediate scopes. Existing completed-job/evidence entries receive refreshed canonical bindings only. No whole-feature or parent acceptance.",
+  "new_cells": [
+    "U030.evidence-current-label-return.error",
+    "U030.evidence-current-label-return.cancel"
+  ],
+  "previous_bindings_refreshed": 46,
+  "modes": {
+    "browser": {
+      "gate": "current-label-browser-112",
+      "source_count": 2377,
+      "source_maps_equal": true,
+      "canonical_sha256": "09cdfa11c1dd9a96ef7299d43f94917bc6b5fd09f1fbc15950df57aa3c2ffe38",
+      "canonical_receipt": "2026-10-09-current-label-return-3de0a94-browser.json",
+      "report_sha256": "de21918615740f783901607a37c5a299171df07bc79b359627c54fef253d31a4",
+      "harness_sha256": "b1d7dfdcb47f048250293f4a62aa33f059df98f157ef1480ecbc8f9570d3fb93",
+      "original_run": {
+        "size": 157,
+        "sha256": "412cb2eb70eff86ed3fc3dc8a8de6d00a5cf84f54370f5abf8441528bebaa2b7"
+      },
+      "original_teardown": {
+        "size": 388,
+        "sha256": "37e31e508bde122d8dee1a6f5b0607683663d1463c4d2919cd0a9f8ad30260fd"
+      },
+      "controlled_metadata_status": 503,
+      "error_metadata_reads": 1,
+      "error_owned_10_file_identity_unchanged": true,
+      "error_origin_storage_unchanged": true,
+      "explicit_retry_succeeded": true,
+      "historical_revision": 1,
+      "current_revision": 2,
+      "image_sha256": "10fc92e29562f89710b9068d34c00c6acd037f8c7338cfb651830bf81306c9c4",
+      "cancel_owned_10_file_identity_unchanged": true,
+      "cancelled_metadata_reads": 1,
+      "late_annotation_reads": 0,
+      "new_editor_not_busy": true,
+      "new_deliberate_request_succeeds": true,
+      "native_capture_unavailable": false,
+      "all_runtime_errors_clean_claim": false
+    },
+    "electron": {
+      "gate": "current-label-native-113",
+      "source_count": 2377,
+      "source_maps_equal": true,
+      "canonical_sha256": "815f379104c4c5556288f1dcc495dd29be39b1e05536ade947f17dc9d9ad1212",
+      "canonical_receipt": "2026-10-09-current-label-return-3de0a94-electron.json",
+      "report_sha256": "0e4add50158cbcad3049bac9fe46a1fa686c240405b53e777b36d4ca7ec63990",
+      "harness_sha256": "f6c634eed765bf2c172d1ccb99ce80e07b8cac8134d2d8a45bc499e2e2c14e39",
+      "original_run": {
+        "size": 157,
+        "sha256": "f04e7d4a77bd5a1c03db6c0741529c30774b58e55693a44bcfcb012621b778e3"
+      },
+      "original_teardown": {
+        "size": 386,
+        "sha256": "44090a0975f7561edbf08ec579bef53401966369287a64f57fa703fbad187c9a"
+      },
+      "controlled_metadata_status": 503,
+      "error_metadata_reads": 1,
+      "error_owned_10_file_identity_unchanged": true,
+      "error_origin_storage_unchanged": true,
+      "explicit_retry_succeeded": true,
+      "historical_revision": 1,
+      "current_revision": 2,
+      "image_sha256": "10fc92e29562f89710b9068d34c00c6acd037f8c7338cfb651830bf81306c9c4",
+      "cancel_owned_10_file_identity_unchanged": true,
+      "cancelled_metadata_reads": 1,
+      "late_annotation_reads": 0,
+      "new_editor_not_busy": true,
+      "new_deliberate_request_succeeds": true,
+      "native_capture_unavailable": true,
+      "all_runtime_errors_clean_claim": false
+    }
+  },
+  "prior_source04_plan_preserved": true,
+  "source05_derived_from_original_mapping_sha256": "887e56eedbc2ca7e1b60c0700c9e188d20ec25e0d9ff4f486870c7313556ddd9",
+  "earlier_failures_preserved": true,
+  "complete_feature_accepted": false,
+  "parent_accepted": false,
+  "human_truth_approved": false,
+  "model_quality_approved": false,
+  "physical_target_accepted": false,
+  "release_accepted": false,
+  "runtime_full_error_cleanliness_accepted": false,
+  "limits": [
+    "Transport fault and deferred original metadata delivery are controlled fixtures; no backend malfunction inference.",
+    "Historical source revision1 remains distinct from current saved revision2.",
+    "Original browser capture contains explicit HTTP/empty-response console diagnostics; native page/console/blocked capture is unavailable.",
+    "No independent full workspace namespace, whole business mutation absence or continuous late-event absence is inferred from the scoped snapshots.",
+    "Model parity summary is an unchanged separate Root-prepared receipt and adds no curated GUI cell or parent acceptance."
+  ]
+}

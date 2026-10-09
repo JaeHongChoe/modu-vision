@@ -1,0 +1,116 @@
+{
+  "CI_hosted_completion_pending": true,
+  "actual_controls": {
+    "original_failed_cases": {
+      "all_tracked_source_bytes_unchanged": true,
+      "elapsed_seconds": 64.84686279296875,
+      "errors": 0,
+      "failed": 0,
+      "junit": {
+        "sha256": "bf7d0173ae654c8eca9610ec46f3004268ab1d1336275ea2dc14137015c4d4c5",
+        "size": 589
+      },
+      "passed": 2,
+      "pytest_seconds": 63.823,
+      "raw_stdout": {
+        "sha256": "1d9ab6c10a0ba2c3fe4092c3f459c985adcb3b072ad916a8fb9d8764ced3ad12",
+        "size": 266
+      },
+      "run": {
+        "sha256": "2642f4e44dd4c5d24b8837ec466b98151aca46843cd13d2697e91a6dc4775853",
+        "size": 157
+      },
+      "skipped": 0,
+      "source_after": {
+        "sha256": "56ef021c4b45b7698f79c1d3f3a9c6bde377a70f464a2aca7199dc96640f21c5",
+        "size": 297207
+      },
+      "source_before": {
+        "sha256": "56ef021c4b45b7698f79c1d3f3a9c6bde377a70f464a2aca7199dc96640f21c5",
+        "size": 297207
+      },
+      "source_sha": "f088339eb678e2a1bddb011a5dcefd70247a55db",
+      "start": {
+        "sha256": "23cfe969543817bcc3e20ee33db2656d9473a332359eb174577018b6306a8080",
+        "size": 5189
+      }
+    },
+    "related_original_guards": {
+      "all_tracked_source_bytes_unchanged": true,
+      "elapsed_seconds": 33.08998084068298,
+      "errors": 0,
+      "failed": 0,
+      "junit": {
+        "sha256": "1e4f459c0b4648a9e912ca9949a8d737f14f091ddbebabd1cc51fff2760677f7",
+        "size": 24304
+      },
+      "passed": 132,
+      "pytest_seconds": 32.056,
+      "raw_stdout": {
+        "sha256": "a15a3657ebeca469e50b99d143e4eb763d826e44fc00cb080c6866f5ad7bf444",
+        "size": 331
+      },
+      "run": {
+        "sha256": "4d506fcebf099273eb517c4e2b11d74b5e75ccea914f77b44412f45aef0e3cbd",
+        "size": 157
+      },
+      "skipped": 0,
+      "source_after": {
+        "sha256": "56ef021c4b45b7698f79c1d3f3a9c6bde377a70f464a2aca7199dc96640f21c5",
+        "size": 297207
+      },
+      "source_before": {
+        "sha256": "56ef021c4b45b7698f79c1d3f3a9c6bde377a70f464a2aca7199dc96640f21c5",
+        "size": 297207
+      },
+      "source_sha": "f088339eb678e2a1bddb011a5dcefd70247a55db",
+      "start": {
+        "sha256": "07d78d90544546bd3212129c98c20b10326cc7a5796399697556d1e990d93c1d",
+        "size": 4995
+      }
+    }
+  },
+  "fixture_changes": {
+    "coherent_original_inspection_and_lease_before_baseline": true,
+    "observation_full_JSON_fsync_then_exclusive_link_no_overwrite": true,
+    "only_four_existing_publication_race_messages_retry_within_original_15_seconds": true,
+    "original_controlled_CPU_deadlines_retained": true,
+    "production_implementation_unchanged": true,
+    "unknown_error_and_BaseException_propagation_retained": true
+  },
+  "historical_negative": {
+    "four_CPU_and_three_browser_failures_retained": true,
+    "hosted_run": 37875450234,
+    "local_pass_does_not_prove_historical_failure_timing_or_full_hosted_completion": true,
+    "raw_log": {
+      "sha256": "de0171c92acc7db3b6ed3e6c98b99b394a47ff6115f770b59e27d191d2522b18",
+      "size": 805188
+    },
+    "source_prefix": "3d9"
+  },
+  "independent_source_peer": {
+    "sha256": "be1a97f18913b89b590b92a28def41cac1828299174c0182911f0dd6c6b32af6",
+    "size": 3001
+  },
+  "no_parent_model_quality_target_human_or_release_acceptance": true,
+  "owned_relay_closed_readback": {
+    "active_scopes": 0,
+    "closed_state": {
+      "sha256": "d09006221a1e8ac9036df292494244010747d88f774f277da12a2a83f6389441",
+      "size": 39
+    },
+    "finish_ack": {
+      "sha256": "3f1d0d1116d18c93fe7153da9a85824b21a2d4f36e6e6e6fcc1a675b42b78b55",
+      "size": 5969
+    },
+    "original_guard_closed": true,
+    "original_result_exists": true
+  },
+  "schema_version": 1,
+  "scope": "Original bounded CPU writer tests after coherent fixture baseline and exclusive observation publication fixes",
+  "source_freeze": {
+    "sha256": "194192f8478a9925210bb27fee9b4ff1abda91c92af1d83335bd49cf79690716",
+    "size": 14827
+  },
+  "tested_source_sha": "f088339eb678e2a1bddb011a5dcefd70247a55db"
+}

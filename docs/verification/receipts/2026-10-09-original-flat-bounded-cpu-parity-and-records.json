@@ -1,0 +1,301 @@
+{
+  "CPU_threads": 1,
+  "GUI_hardware_quality_human_parent_acceptance": false,
+  "accepted_parent_requirements": 0,
+  "final_custody_reserve_seconds": 8,
+  "independent_actual_readback": {
+    "sha256": "486577cae23d9cd30508aa19f0af280ef90788f767721e9b9acc289007cdab7b",
+    "size": 3504
+  },
+  "local_cpu_only": true,
+  "original_whole_budget_seconds": 125,
+  "package_child_cap_seconds": 25,
+  "package_child_remaining_reserve_seconds": 10,
+  "prior_failed_or_uncertain_executions_preserved": true,
+  "record_integrity_controls": [
+    {
+      "bound_request": {
+        "sha256": "3c4ff244425168dca21851b372bffb90d569ac59c24d6af8744ba11085e8f592",
+        "size": 219198
+      },
+      "elapsed_seconds": 4.043994624982588,
+      "family": "classification",
+      "gate": "classification-lifecycle-flat-export-98",
+      "original_after": {
+        "sha256": "86bbd70b4dd4b633415c6f6d1c69e013ea0b18155a434cf8e512e8f5c925b860",
+        "size": 1583884
+      },
+      "original_before": {
+        "sha256": "86bbd70b4dd4b633415c6f6d1c69e013ea0b18155a434cf8e512e8f5c925b860",
+        "size": 1583884
+      },
+      "original_commands": {
+        "sha256": "dc37f55661fa8171d73b8e83c023a6952edb4d79741ebd2fe19e2aaa7830e2c3",
+        "size": 2544
+      },
+      "original_run": {
+        "sha256": "7dfa331e21ef45610c36227d629171e49e9287f41c00b43a57ad938ed5b46a10",
+        "size": 667
+      },
+      "original_strict_stderr": {
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size": 0
+      },
+      "original_strict_stdout": {
+        "sha256": "0e7ba30aca0877881941ea12dae53a3fc4ad3a79afd6f39b0bd82d9f837fb2da",
+        "size": 1185
+      },
+      "original_wrapper": {
+        "sha256": "a54328d900d26867e3cacec8dc4c49a17e6d830afab9e520be1114eeeb12c5b0",
+        "size": 42628
+      },
+      "result": {
+        "contract": "model_lifecycle_evidence_v1",
+        "family": "classification",
+        "human_truth_approved": false,
+        "model_quality_approved": false,
+        "parent_accepted": false,
+        "prerequisites": [
+          "human-reviewed representative class_labels",
+          "independent model-quality decision",
+          "target-specific runtime qualification"
+        ],
+        "record_chain_verified": true,
+        "refusals": [],
+        "runtime_execution_reproduced": false,
+        "scope": "Declared durable record bytes and causal joins only; no runtime reproduction or human/quality/target approval; undeclared artifacts not checked",
+        "stages": {
+          "dataset": {
+            "scope": "record integrity/control only",
+            "state": "verified"
+          },
+          "eval": {
+            "scope": "record integrity/control only",
+            "state": "verified"
+          },
+          "export": {
+            "scope": "record integrity/control only",
+            "state": "verified"
+          },
+          "flow_or_adoption": {
+            "scope": "record integrity/control only",
+            "state": "verified"
+          },
+          "labels": {
+            "scope": "record integrity/control only",
+            "state": "verified"
+          },
+          "target": {
+            "scope": "record integrity/control only",
+            "state": "verified"
+          },
+          "train": {
+            "scope": "record integrity/control only",
+            "state": "verified"
+          }
+        },
+        "state": "verified",
+        "target_execution_approved": false,
+        "truth_kind": "synthetic_control"
+      }
+    },
+    {
+      "bound_request": {
+        "sha256": "f5b8c9f0e81684b6977af6da77af88ea36b250292b07104cf4115e82713e9bbc",
+        "size": 225302
+      },
+      "elapsed_seconds": 5.696259708027355,
+      "family": "patch_classification",
+      "gate": "patch-lifecycle-flat-export-99",
+      "original_after": {
+        "sha256": "86bbd70b4dd4b633415c6f6d1c69e013ea0b18155a434cf8e512e8f5c925b860",
+        "size": 1583884
+      },
+      "original_before": {
+        "sha256": "86bbd70b4dd4b633415c6f6d1c69e013ea0b18155a434cf8e512e8f5c925b860",
+        "size": 1583884
+      },
+      "original_commands": {
+        "sha256": "4ab796373719688a6a2f6b3e30802921a15034fbd75e2ac72dbd87f7810e29f8",
+        "size": 2514
+      },
+      "original_run": {
+        "sha256": "a077e71949b83de133ede99e4f207b13d92b19667fdf5841d3b5486608424ac0",
+        "size": 673
+      },
+      "original_strict_stderr": {
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size": 0
+      },
+      "original_strict_stdout": {
+        "sha256": "06dcabdbb420ea393ccde0c71e694f8d845a333b36a7e25a9944f36802f51465",
+        "size": 1197
+      },
+      "original_wrapper": {
+        "sha256": "e50750d8fac84b387e3ab48a203b2548869eec214ad4c8ffc2e2c96475fa1cc0",
+        "size": 47999
+      },
+      "result": {
+        "contract": "model_lifecycle_evidence_v1",
+        "family": "patch_classification",
+        "human_truth_approved": false,
+        "model_quality_approved": false,
+        "parent_accepted": false,
+        "prerequisites": [
+          "human-reviewed representative patch_class_labels",
+          "independent model-quality decision",
+          "target-specific runtime qualification"
+        ],
+        "record_chain_verified": true,
+        "refusals": [],
+        "runtime_execution_reproduced": false,
+        "scope": "Declared durable record bytes and causal joins only; no runtime reproduction or human/quality/target approval; undeclared artifacts not checked",
+        "stages": {
+          "dataset": {
+            "scope": "record integrity/control only",
+            "state": "verified"
+          },
+          "eval": {
+            "scope": "record integrity/control only",
+            "state": "verified"
+          },
+          "export": {
+            "scope": "record integrity/control only",
+            "state": "verified"
+          },
+          "flow_or_adoption": {
+            "scope": "record integrity/control only",
+            "state": "verified"
+          },
+          "labels": {
+            "scope": "record integrity/control only",
+            "state": "verified"
+          },
+          "target": {
+            "scope": "record integrity/control only",
+            "state": "verified"
+          },
+          "train": {
+            "scope": "record integrity/control only",
+            "state": "verified"
+          }
+        },
+        "state": "verified",
+        "target_execution_approved": false,
+        "truth_kind": "synthetic_control"
+      }
+    }
+  ],
+  "recorded_source_sha": "a60e1341f051d90f26cd8e8b89461a1a28c72d43",
+  "schema": "modu-vision.original-flat-bounded-cpu-parity-and-records/v1",
+  "scope": "Original synthetic controls and original recorded source CPU comparisons only. Packages, original cohorts, weights and raw process records stay private. No GUI export, representative model quality, installed target, GPU or whole-parent acceptance is asserted.",
+  "source_CPU_parity": [
+    {
+      "comparison_fields_per_image": 9,
+      "controller": {
+        "sha256": "df30ca6b6209c35bc53c258f853ee42afbc4f0da23cd949e1fa6fde371159281",
+        "size": 82564
+      },
+      "coverage_limitation": "Original three-image classifier heldout cohort, tiny synthetic functional control; not quality acceptance",
+      "distinct_owned_package_children": 3,
+      "elapsed_seconds": 31.207671917043626,
+      "family": "classification",
+      "gate": "classification-original-flat-bounded-parity-96",
+      "image_count": 3,
+      "observed_numeric_CPU_threads": 1,
+      "original_after": {
+        "sha256": "b16c37ff6017ba007f0e730f25478d3ad848d6bc373311fe24fb9c362a720dba",
+        "size": 1501271
+      },
+      "original_before": {
+        "sha256": "b16c37ff6017ba007f0e730f25478d3ad848d6bc373311fe24fb9c362a720dba",
+        "size": 1501271
+      },
+      "original_run": {
+        "sha256": "ad0457fe0121b8277c0032862a2c52030fb89b3092c851756e2d9118ce80eae8",
+        "size": 231
+      },
+      "original_start": {
+        "sha256": "cd45816ff02bee048415c87dffc0931701dd849e3592b5d5d353bbb01c9e5fc6",
+        "size": 2657
+      },
+      "original_stderr": {
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size": 0
+      },
+      "original_stdout": {
+        "sha256": "7c9818b98b42c46c349464db7e33164fe29fd3b263defdaeb5e5ca2773ab18d8",
+        "size": 178
+      },
+      "parity_report": {
+        "sha256": "51d8798a7b625a24e0e438e73799de9f9eae6d9e2725cb0fe4e1a8a32ac810ff",
+        "size": 7359
+      },
+      "qualified_recorded_source_CPU_parity": true,
+      "reference_worker": {
+        "sha256": "e2afa8f4fff92ce683fae659b4379efcf91cdc34906fecd40ac85f57dd00d49d",
+        "size": 12383
+      },
+      "root_actual_readback": {
+        "sha256": "1531054d59cb378673774c1cbe7ea054a85e220f23bfbec2c462f6c7798a966f",
+        "size": 117538
+      },
+      "source_and_original_pins_unchanged": true,
+      "whole_seconds": 29.84429641708266
+    },
+    {
+      "comparison_fields_per_image": 9,
+      "controller": {
+        "sha256": "748f5eec3b6028b67ba6fa8037b0f729be7efc02f67735ee84aa4bd3e81b8b23",
+        "size": 75741
+      },
+      "coverage_limitation": "Original mixed SEG/Patch graph source2 covers four right-hand Patch boxes of eight F04 boxes; not all-eight ROI coverage",
+      "distinct_owned_package_children": 2,
+      "elapsed_seconds": 28.76705495803617,
+      "family": "patch_classification",
+      "gate": "patch-original-flat-bounded-parity-97",
+      "image_count": 2,
+      "observed_numeric_CPU_threads": 1,
+      "original_after": {
+        "sha256": "b16c37ff6017ba007f0e730f25478d3ad848d6bc373311fe24fb9c362a720dba",
+        "size": 1501271
+      },
+      "original_before": {
+        "sha256": "b16c37ff6017ba007f0e730f25478d3ad848d6bc373311fe24fb9c362a720dba",
+        "size": 1501271
+      },
+      "original_run": {
+        "sha256": "9dc82725cc6d3d9e771ec65e1fca003dc230cc9f3e9fc643be261b80ec9bee96",
+        "size": 230
+      },
+      "original_start": {
+        "sha256": "16993c5c76ab3c0da18df3b58d70ee4b08dbce0303307b3878ef65874068a68d",
+        "size": 2648
+      },
+      "original_stderr": {
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size": 0
+      },
+      "original_stdout": {
+        "sha256": "1279cf6f19c7225ebdbbacfc3b3b325a5f087d8e7392248ac7a5547d069224ee",
+        "size": 170
+      },
+      "parity_report": {
+        "sha256": "35a5e644a3639bad421867432470333d940bafde07bab99127ab6c34fb583e8d",
+        "size": 8963
+      },
+      "qualified_recorded_source_CPU_parity": true,
+      "reference_worker": {
+        "sha256": "bbceb3afec9c6e6c0b5b0591ec2a670e1f6d8432421ac8f98c9163a78f6f3087",
+        "size": 9448
+      },
+      "root_actual_readback": {
+        "sha256": "80f228054361d96f5178c08b1f9e1295f8d0f37d699ce604b7909611532ba446",
+        "size": 116424
+      },
+      "source_and_original_pins_unchanged": true,
+      "whole_seconds": 26.774736375082284
+    }
+  ],
+  "source_count": 2362
+}
