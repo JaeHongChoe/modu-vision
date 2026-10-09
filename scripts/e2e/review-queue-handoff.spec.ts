@@ -10,6 +10,27 @@ const harness=require('./fixtures/harness.cjs');
 type Api=(route:string,body?:unknown,method?:string)=>Promise<any>;
 const sha=(file:string)=>crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 
+// Read the actual base canvas at source-pixel centres. This is a decoded
+// synthetic image/coordinate readiness witness, not model or display-quality approval.
+async function canvasSourceCentres(page:Page){
+ return page.locator('[data-canvas-container]').evaluate(container=>{
+  const canvas=container.querySelector('canvas'),hud=document.querySelector('[data-testid="canvas-hud"]') as HTMLElement|null;
+  const rect=container.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
+  const scale=Number(hud?.innerText.match(/scale\s*([\d.]+)\s*%/)?.[1]||0)/100;
+  if(!canvas||!scale)return null;
+  const ctx=canvas.getContext('2d');if(!ctx)return null;
+  const x0=(rect.width-64*scale)/2,y0=(rect.height-64*scale)/2;
+  if(x0<0||y0<0)return null;
+  const pixels:number[]=[];
+  for(let y=0;y<64;y++)for(let x=0;x<64;x++){
+   const px=Math.floor((x0+(x+.5)*scale)*dpr),py=Math.floor((y0+(y+.5)*scale)*dpr);
+   if(px<0||py<0||px>=canvas.width||py>=canvas.height)return null;
+   pixels.push(...ctx.getImageData(px,py,1,1).data);
+  }
+  return {scale,dpr,css_width:rect.width,css_height:rect.height,pixels};
+ });
+}
+
 async function exercise(page:Page,w:Workspace,e:Evidence,api:Api,native:boolean,url?:string){
  const source=path.join(w.root,'queue-handoff-source');fs.mkdirSync(source);
  const inputs=['error','disagreement','threshold'].map((name,i)=>{const file=path.join(source,name+'.png');fs.writeFileSync(file,png(64,3,(x,y)=>[x,y,100+i]));return {file,sha256:sha(file)};});
@@ -36,12 +57,20 @@ async function exercise(page:Page,w:Workspace,e:Evidence,api:Api,native:boolean,
  await navigate();await expect(choice).toHaveValue(first.id);await panel.getByRole('button',{name:'현재 항목 열기',exact:true}).click();
  // Real unsaved canvas content must block advancing or leaving for training.
  await page.getByRole('button',{name:'집중 편집',exact:true}).click();
- // Exact pointer geometry requires the current image to finish its initial Fit.
- // The original whole-suite trace retained the100% click before raw decoding;
- // onload then completed Fit at250% before the drag. Keep the exact bbox check.
- await expect.poll(async()=>Number((await page.getByTestId('canvas-hud').innerText()).match(/scale\s*([\d.]+)\s*%/)?.[1]||0)).toBeGreaterThan(100);
- await page.getByTitle('100% Zoom (1:1)',{exact:true}).click();await expect(page.getByTestId('canvas-hud')).toContainText('100%');await page.getByTitle('바운딩 박스 (BBox - 2)',{exact:true}).click();
- const bounds=(await page.locator('[data-canvas-container]').boundingBox())!,pt=(v:number)=>({x:bounds.x+(bounds.width-64)/2+v,y:bounds.y+(bounds.height-64)/2+v});const a=pt(10),b=pt(30);
+ // A stale Fit percentage is not evidence that this image decoded. Keep the
+ // original configured twenty-second absolute scope for readiness and 1:1 mapping.
+ const canvasBegan=Date.now(),canvasDeadline=canvasBegan+20_000;
+ const remainingCanvas=()=>{const remaining=canvasDeadline-Date.now();expect(remaining).toBeGreaterThan(0);return remaining;};
+ await expect.poll(async()=>{const probe=await canvasSourceCentres(page);return probe?.pixels.every((value,index)=>index%4===2?value===100:index%4===3?value===255:true)||false;},{timeout:remainingCanvas()}).toBe(true);
+ await page.getByTitle('바운딩 박스 (BBox - 2)',{exact:true}).click();
+ await page.getByTitle('100% Zoom (1:1)',{exact:true}).click();await expect(page.getByTestId('canvas-hud')).toContainText('100%');
+ const expectedPixels=Array.from({length:64*64},(_,index)=>[index%64,Math.floor(index/64),100,255]).flat();
+ await expect.poll(async()=>{const probe=await canvasSourceCentres(page);return probe&&{scale:probe.scale,pixels:probe.pixels};},{timeout:remainingCanvas()}).toEqual({scale:1,pixels:expectedPixels});
+ const canvasMapping=await canvasSourceCentres(page),canvasFinished=Date.now();expect(canvasMapping).not.toBeNull();
+ expect(canvasMapping!.scale).toBe(1);expect(canvasMapping!.pixels).toEqual(expectedPixels);expect(Date.now()).toBeLessThanOrEqual(canvasDeadline);
+ const bounds=(await page.locator('[data-canvas-container]').boundingBox())!;
+ expect(bounds.width).toBe(canvasMapping!.css_width);expect(bounds.height).toBe(canvasMapping!.css_height);
+ const pt=(v:number)=>({x:bounds.x+(bounds.width-64)/2+v,y:bounds.y+(bounds.height-64)/2+v});const a=pt(10),b=pt(30);
  await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(b.x,b.y,{steps:6});await page.mouse.up();await expect(page.getByRole('button',{name:'Save Changes',exact:true})).toBeVisible();await page.getByRole('button',{name:'집중 편집',exact:true}).click();await page.locator('summary').filter({hasText:'저장 검토 큐 · 오류·불일치·임계값 우선'}).click();await expect(choice).toHaveValue(first.id);
  const review=panel.getByRole('button',{name:'검토 완료 · 다음',exact:true}),skip=panel.getByRole('button',{name:'보류 · 다음',exact:true}),prepare=panel.getByRole('button',{name:'수정·검수 데이터로 학습 준비',exact:true});
  await expect(review).toBeDisabled();await expect(skip).toBeDisabled();await expect(prepare).toBeDisabled();expect(await api('/api/data-workbench/review-queues/'+first.id)).toEqual(first);await e.screenshot(page,`${native?'native':'browser'}-queue-unsaved-guards`);
@@ -55,7 +84,7 @@ async function exercise(page:Page,w:Workspace,e:Evidence,api:Api,native:boolean,
  const permitted=await api('/api/team-data/readiness');expect(permitted.ready).toBe(true);expect(permitted.counts.approved).toBe(0);await prepare.click();await expect(page.getByRole('region',{name:'저장된 검토 큐'})).toHaveCount(0);
  expect((await api('/api/training/jobs')).jobs).toEqual([]);await stages.getByRole('button').nth(1).click();await page.locator('summary').filter({hasText:'저장 검토 큐 · 오류·불일치·임계값 우선'}).click();await expect(choice).toHaveValue(first.id);expect(await api('/api/data-workbench/review-queues/'+first.id)).toEqual(first);expect(await api('/api/data-workbench/review-queues/'+second.id)).toEqual(second);
  for(const input of inputs)expect(sha(input.file)).toBe(input.sha256);expect(sha(original.path)).toBe(original.sha256);expect(sha(alternate.path)).toBe(alternate.sha256);
- await e.screenshot(page,`${native?'native':'browser'}-queue-training-return`);e.note('saved_queue_handoff',{project_id:project.id,original,alternate,first,second,inputs,saved,blocked,permitted,invalid_margin_422:true,alternate_queue_and_reload:true,exact_original_evaluation_return:true,actual_unsaved_annotation_blocks_actions:true,actual_readiness_gate:true,no_training_submitted:true,controlled_reports_not_model_inference:true,human_annotation_or_quality_approval:false,native});
+ await e.screenshot(page,`${native?'native':'browser'}-queue-training-return`);e.note('saved_queue_handoff',{project_id:project.id,original,alternate,first,second,inputs,saved,blocked,permitted,canvas_mapping:{...canvasMapping,started:canvasBegan,deadline:canvasDeadline,finished:canvasFinished,source_centres_only:true},invalid_margin_422:true,alternate_queue_and_reload:true,exact_original_evaluation_return:true,actual_unsaved_annotation_blocks_actions:true,actual_readiness_gate:true,no_training_submitted:true,controlled_reports_not_model_inference:true,human_annotation_or_quality_approval:false,native});
 }
 test('saved queue returns to exact evaluation and gates training on saved data and policy',async({page,request,renderer,workspace,evidence})=>{await installDesktopHostShim(page,renderer.port);const api:Api=async(route,body,method)=>{const r=await request.fetch(renderer.origin+route,{method:method||(body===undefined?'GET':'POST'),...(body===undefined?{}:{data:body})});expect(r.ok(),await r.text()).toBe(true);return r.json();};await exercise(page,workspace,evidence,api,false,renderer.url);});
 test('native saved queue returns to exact evaluation and gates training on saved data and policy',{tag:'@electron'},async({electronSession,workspace,evidence})=>{const {window}=electronSession,status=await electronSession.waitForBackend();const api:Api=(route,body,method)=>window.evaluate(async({port,route,body,method})=>{const r=await fetch(`http://127.0.0.1:${port}${route}`,{method:method||(body===undefined?'GET':'POST'),...(body===undefined?{}:{headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})});if(!r.ok)throw Error(`Owned queue handoff API ${r.status}: ${await r.text()}`);return r.json();},{port:status.port,route,body,method});await exercise(window,workspace,evidence,api,true);});

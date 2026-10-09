@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import {execFileSync} from 'node:child_process';
-import type {Page, Route, Locator} from '@playwright/test';
+import type {Page, Route, Locator, Request, Response} from '@playwright/test';
 import {test, expect, type Workspace, type Evidence} from './fixtures/test';
 import {installDesktopHostShim} from './fixtures/desktop-host-shim';
 import {png} from './qa/appFlow';
@@ -12,7 +12,7 @@ test.use({actionTimeout: 10_000});
 type OwnedApi = (route: string, body?: unknown, method?: string) => Promise<any>;
 const sha = (bytes: Buffer) => crypto.createHash('sha256').update(bytes).digest('hex');
 
-async function exercise(page: Page, workspace: Workspace, evidence: Evidence, api: OwnedApi, native: boolean, url?: string) {
+async function exercise(page: Page, workspace: Workspace, evidence: Evidence, api: OwnedApi, native: boolean, apiOrigin: string, url?: string) {
   const source = path.join(workspace.root, 'saved-view-source');
   fs.mkdirSync(source);
   const original = path.join(source, 'part.png');
@@ -37,12 +37,37 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   const projectBytes = fs.readFileSync(path.join(project.project_dir, 'project.json'));
   const writes: string[] = [];
   const queries: Array<{task: string | null; labelset: string | null; source: string | null}> = [];
+  const historyStarts = new Map<Request, number>();
+  const ownedHistoryRequest = (request: Request) => {
+    const target = new URL(request.url());
+    return request.frame() === page.mainFrame() && request.method() === 'GET' && target.origin === apiOrigin && target.pathname === '/api/evaluation/history'
+      && target.searchParams.get('source_dataset_path') === source
+      && target.searchParams.get('task') === 'segmentation' && !target.searchParams.has('labelset_id')
+      && [...target.searchParams.keys()].sort().join(',') === 'source_dataset_path,task';
+  };
+  const ownedHistory = (response: Response, generation: ReadonlySet<Request>) => generation.has(response.request()) && ownedHistoryRequest(response.request());
+  const completeOwnedHistory = async (response: Response) => {
+    const started = historyStarts.get(response.request()); expect(started).toBeDefined();
+    const deadline = started! + 10_000, remaining = deadline - Date.now(); expect(remaining).toBeGreaterThan(0);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const body = await Promise.race([(async () => {expect(await response.finished()).toBeNull(); return response.json();})(),
+        new Promise<never>((_, reject) => {timer = setTimeout(() => reject(Error('Owned history body deadline expired')), remaining);})]);
+      const finished = Date.now(); expect(response.status()).toBe(200); expect(finished).toBeLessThanOrEqual(deadline);
+      const expected = fixture.items.map((item: any) => item.record).filter((record: any) => record.result.task === 'segmentation')
+        .sort((a: any, b: any) => b.created_at - a.created_at);
+      expect(body).toEqual({items: expected, total: expected.length});
+      return {method: response.request().method(), url: response.url(), status: response.status(), body, started, deadline, finished};
+    } finally {if (timer) clearTimeout(timer);}
+  };
   page.on('request', request => {
     const target = new URL(request.url());
     if (request.method() !== 'GET' && /\/(evaluation|train|jobs)(\/|$)/.test(target.pathname))
       writes.push(`${request.method()} ${target.pathname}`);
-    if (target.pathname === '/api/evaluation/history')
+    if (target.pathname === '/api/evaluation/history') {
+      historyStarts.set(request, Date.now());
       queries.push({task: target.searchParams.get('task'), labelset: target.searchParams.get('labelset_id'), source: target.searchParams.get('source_dataset_path')});
+    }
   });
   const summary = page.locator('summary').filter({hasText: '평가 이력 · 제품/Lot별 오류'});
   const history = summary.locator('..');
@@ -92,30 +117,40 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
     const before = await viewPreference();
     const injected = {...JSON.parse(before.raw), [field]: field === 'task' ? 'controlled-unknown-family' : 'controlled-unknown-group'};
     const queryStart = queries.length;
-    await page.evaluate(({key, value}) => localStorage.setItem(key, JSON.stringify(value)), {key: before.key, value: injected});
-    await navigate();
-    await expect(family).toHaveValue('segmentation');
-    await expect(labelset).toHaveValue('');
-    await expect(group).toHaveValue('product');
-    await assertRecord(segmentation);
-    expect(queries.slice(queryStart).length).toBeGreaterThan(0);
-    // Initial state hydration may fetch the known default OCR task/source.
-    // The injected unknown family never reaches a request, and the final
-    // owned-source query agrees with the hydrated segmentation view.
-    const requests = queries.slice(queryStart);
-    expect(requests.every(query => query.task !== 'controlled-unknown-family')).toBe(true);
-    expect(requests.filter(query => query.source === source).at(-1)?.task).toBe('segmentation');
-    expect(await family.locator('option').evaluateAll(rows => rows.map(row => (row as HTMLOptionElement).value))).not.toContain('controlled-unknown-family');
-    expect(await group.locator('option').evaluateAll(rows => rows.map(row => (row as HTMLOptionElement).value))).not.toContain('controlled-unknown-group');
-    dimensions[field === 'task' ? 'family_invalid' : 'group_invalid'] = {
-      controlled_optional_preference_fault: {key: before.key, original: JSON.parse(before.raw), injected},
-      actual_renderer_reload: true, fallback: {task: 'segmentation', labelset_id: '', group: 'product'},
-      requests, selected_evaluation_id: segmentation.record.evaluation_id,
-      evidence_sha256: segmentation.record.evidence_sha256,
-    };
-    await screenshot(`${field}-invalid-preference-fallback`);
-    await choose(segmentation);
-    await group.selectOption('lot');
+    // Arm a fresh Request-object generation before preference injection/reload.
+    // An already in-flight response cannot enter this set on late completion.
+    const generation = new Set<Request>();
+    const observeFreshHistory = (request: Request) => {if (ownedHistoryRequest(request)) generation.add(request);};
+    page.on('request', observeFreshHistory);
+    try {
+      await page.evaluate(({key, value}) => localStorage.setItem(key, JSON.stringify(value)), {key: before.key, value: injected});
+      const owningHistoryRead = page.waitForResponse(response => ownedHistory(response, generation), {timeout: 10_000}).then(completeOwnedHistory);
+      await navigate();
+      const owningHistory = await owningHistoryRead;
+      await expect(family).toHaveValue('segmentation');
+      await expect(labelset).toHaveValue('');
+      await expect(group).toHaveValue('product');
+      await assertRecord(segmentation);
+      expect(queries.slice(queryStart).length).toBeGreaterThan(0);
+      // The mounted SpecializedApprovalPanel also legitimately reads OCR for
+      // this source. Retain every query; verify the HistoryPanel's owning scope
+      // and complete records rather than the order of an independent producer.
+      const requests = queries.slice(queryStart);
+      expect(requests.every(query => query.task !== 'controlled-unknown-family')).toBe(true);
+      expect(requests.some(query => query.source === source && query.task === 'segmentation' && query.labelset === null)).toBe(true);
+      expect(owningHistory.body.items).toContainEqual(segmentation.record);
+      expect(await family.locator('option').evaluateAll(rows => rows.map(row => (row as HTMLOptionElement).value))).not.toContain('controlled-unknown-family');
+      expect(await group.locator('option').evaluateAll(rows => rows.map(row => (row as HTMLOptionElement).value))).not.toContain('controlled-unknown-group');
+      dimensions[field === 'task' ? 'family_invalid' : 'group_invalid'] = {
+        controlled_optional_preference_fault: {key: before.key, original: JSON.parse(before.raw), injected},
+        actual_renderer_reload: true, fallback: {task: 'segmentation', labelset_id: '', group: 'product'},
+        requests, owning_history_response: owningHistory, selected_evaluation_id: segmentation.record.evaluation_id,
+        evidence_sha256: segmentation.record.evidence_sha256,
+      };
+      await screenshot(`${field}-invalid-preference-fallback`);
+      await choose(segmentation);
+      await group.selectOption('lot');
+    } finally {page.off('request', observeFreshHistory);}
   }
 
   const pattern = /\/api\/evaluation\/history\?/;
@@ -236,7 +271,7 @@ test('saved evaluation view validates preferences, refuses selected family error
     expect(response.ok(), await response.text()).toBe(true);
     return response.json();
   };
-  await exercise(page, workspace, evidence, api, false, renderer.url);
+  await exercise(page, workspace, evidence, api, false, renderer.origin, renderer.url);
 });
 
 test('native saved evaluation view validates preferences, refuses selected family errors and preserves dismissed and handed off choices', {tag: '@electron'}, async ({electronSession, workspace, evidence}) => {
@@ -247,5 +282,5 @@ test('native saved evaluation view validates preferences, refuses selected famil
     if (!response.ok) throw Error(`Owned saved-view API: HTTP ${response.status}`);
     return response.json();
   }, {port: backend.port, route, body, method});
-  await exercise(window, workspace, evidence, api, true);
+  await exercise(window, workspace, evidence, api, true, `http://127.0.0.1:${backend.port}`);
 });

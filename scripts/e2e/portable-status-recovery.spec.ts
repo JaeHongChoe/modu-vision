@@ -134,7 +134,24 @@ test('portable inspect error requires explicit same-identity retry and utility h
     await page.goto(renderer.url); await settle();
     const created = await page.request.post(renderer.origin + '/api/project/create', {data: {name: 'Owned portable inspect lifecycle', task: 'classification'}, timeout: 10_000});
     expect(created.status()).toBe(200); const createdProject = await created.json(); await settle();
-    await page.reload();
+    // A fixture API creation does not accept a project into the mounted UI store.
+    // Use the original project-open control before checking the restored context.
+    await page.getByTitle('프로젝트 관리', {exact: true}).click();
+    const projects = page.getByRole('dialog', {name: '프로젝트 관리', exact: true});
+    await projects.getByRole('button', {name: '폴더에서 열기', exact: true}).click();
+    await projects.getByPlaceholder('/path/to/project', {exact: true}).fill(createdProject.project_dir);
+    const restoredReply = page.waitForResponse(response => response.request().method() === 'POST'
+      && new URL(response.url()).origin === renderer.origin && new URL(response.url()).pathname === '/api/project/open'
+      && new URL(response.url()).search === ''
+      && Object.keys(JSON.parse(response.request().postData() || 'null') || {}).sort().join(',') === 'project_dir'
+      && JSON.parse(response.request().postData() || 'null')?.project_dir === createdProject.project_dir, {timeout: 10_000});
+    await projects.getByRole('button', {name: '프로젝트 열기', exact: true}).click();
+    expect((await restoredReply).status()).toBe(200); await expect(projects).toHaveCount(0);
+    await expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(createdProject.name);
+    await settle(); await page.reload();
+    await expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(createdProject.name);
+    expect(await api('/api/project/current')).toMatchObject({id: createdProject.id,
+      project_dir: createdProject.project_dir, name: createdProject.name, task: 'classification', source_dataset_dir: null});
     const open = async () => {
       await page.getByRole('button', {name: '패키지·장치·진단', exact: true}).click();
       await page.getByRole('navigation', {name: '배포 운영 화면', exact: true}).getByRole('button', {name: '설치·진단', exact: true}).click();
