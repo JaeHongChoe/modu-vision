@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "7e6fa7e79d75227cee28dc623bdbfcadd7425ef3",
+  "source_dirty": false,
+  "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+  "test_source_sha256": "87579d5b61650e882ca2506889002e7d4e3360afdfac884a4154b94942ccad29",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "fd4c18c851880181be75d3676a00e723a94f4453312d736d1df0ebf0d368d290",
+  "harness_sha256": "d575003cb43a5c1cc66d3efde859845da5702b68d5dc747a897ef246fd223950",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "0c0c3424f0a7ec9af330dca592849c0cbda7dff2f303cbedd6ee53f6cdbb37cd"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "029cf1372549aa9b4452f82bc51f064125d7d7cabea058d7894e0302a9481431"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

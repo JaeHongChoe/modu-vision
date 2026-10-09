@@ -1,0 +1,90 @@
+{
+  "schema": "modu-vision.portable-source-canary-diagnostic-regression/v1",
+  "source_sha": "7e6fa7e79d75227cee28dc623bdbfcadd7425ef3",
+  "scope": "Original refused source-canary diagnostic and unchanged controlled browser primary regression only",
+  "changed_source_files": {
+    "backend/engine/staged_update_canary.py": "f401dc0b5200713d70fbc3765be0dedb34e934954436256251eab2aa8a7fa737",
+    "backend/tests/test_staged_update_canary.py": "d23dee8901a98ce05eae1ac2e0db257611c1b25eba25317df3e93e5c4e8a249b"
+  },
+  "diagnostic": {
+    "fixed_allowlisted_status_codes_flags_counts_only": true,
+    "max_serialized_ascii_characters": 642,
+    "limit_characters": 1024,
+    "raw_stdout_stderr_paths_PID_environment_values_excluded": true,
+    "not_process_exit_or_receipt_authority": true,
+    "original_failure_guard_proof_replay_ownership_deadline_unchanged": true
+  },
+  "causal_red": {
+    "source_sha": "867785afc593392de683d5920969e04528dc21a3",
+    "tests": 4,
+    "failures": 4,
+    "errors": 0,
+    "skips": 0,
+    "failure": "Original caller omitted diagnostic text after existing refusal, intent/no-proof assertions and blocked replay",
+    "real_model_or_CPU_worker_executed": false,
+    "junit_sha256": "191124d37d93bd5ab6adc361534394a7dfacf09cffef486bccc9e8aca0326510"
+  },
+  "full_module_regression": {
+    "test": "backend/tests/test_staged_update_canary.py",
+    "tests": 98,
+    "passed": 98,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0,
+    "junit_seconds": 88.571,
+    "outer_seconds": 89.94072575005703,
+    "junit_sha256": "2ba335106abcd6d93dd55397842d32f31c12ea7b5305f5ca1961187821c4fba6",
+    "original_source_CPU_cases_included": true,
+    "source_raw_custody_unchanged": true
+  },
+  "browser_primary": {
+    "canonical_receipt": "2026-10-09-portable-source-diagnostic-primary-7e6fa7e-browser.json",
+    "canonical_receipt_sha256": "4b491eb35589d648a4eb47191379eda41e0e510ea744574e03e1df6fd3d19752",
+    "test": "scripts/e2e/portable-update-review.spec.ts::portable review binds actual signed bytes and preserves new writes through app recovery",
+    "test_source_sha256": "87579d5b61650e882ca2506889002e7d4e3360afdfac884a4154b94942ccad29",
+    "mode": "browser",
+    "status": "passed",
+    "attempts": 1,
+    "outer_seconds": 108.84332013130188,
+    "screenshots": [
+      {
+        "id": "screenshot-0",
+        "sha256": "0c0c3424f0a7ec9af330dca592849c0cbda7dff2f303cbedd6ee53f6cdbb37cd"
+      },
+      {
+        "id": "screenshot-1",
+        "sha256": "029cf1372549aa9b4452f82bc51f064125d7d7cabea058d7894e0302a9481431"
+      }
+    ],
+    "scope": "Actual browser renderer and main manager with a disposable owned source-CPU fixture and disposable signing authority; no provisioned installed native or real publisher approval"
+  },
+  "runner_selection_negative_retained": {
+    "status": "no_tests_found",
+    "cause": "An anchored Root grep selected zero original cases; only the runner grep was corrected before the fresh passing original primary case",
+    "product_failure_claimed": false,
+    "log_sha256": "10430d4abdbd108757550247ef54aa526417db51010e4fcac2d0bf16fe54e830"
+  },
+  "original_bounds": {
+    "runner_timeout_ms": 120000,
+    "source_CPU_deadline_ms": 30000,
+    "workers": 1,
+    "retries": 0
+  },
+  "existing_ledger_refresh": {
+    "already_verified_refs": 14,
+    "fields": [
+      "source_sha",
+      "receipt",
+      "receipt_sha256",
+      "artifacts"
+    ],
+    "status_count_and_parent_changes": false
+  },
+  "runtime_namespace_optimization_integrated": false,
+  "runtime_strict_limit_accepted": false,
+  "quality_approved": false,
+  "provisioned_native_accepted": false,
+  "publisher_or_release_accepted": false,
+  "human_approved": false,
+  "parent_feature_accepted": false
+}
