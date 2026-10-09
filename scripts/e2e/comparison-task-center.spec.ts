@@ -10,6 +10,28 @@ const harness = require('./fixtures/harness.cjs');
 test.use({actionTimeout: 10_000});
 type OwnedApi = (route: string, body?: unknown) => Promise<any>;
 
+// Fresh reads of only this fixture's named originals and saved label/report files.
+// A full read has leaf FD/named and lexical ancestor guards; atime is excluded.
+function ownedBytes(file: string, scope: string) {
+  const root=path.resolve(scope),target=path.resolve(file),relative=path.relative(root,target);
+  expect(relative !== '' && relative !== '..' && !relative.startsWith('..'+path.sep) && !path.isAbsolute(relative)).toBe(true);
+  const identity=(s:fs.BigIntStats)=>[s.dev,s.ino,s.mode,s.nlink,s.size,s.mtimeNs,s.ctimeNs].map(String);
+  const ancestors: Array<[string,string[]]>=[];
+  for(let parent=path.dirname(target);;parent=path.dirname(parent)){
+    const value=fs.lstatSync(parent,{bigint:true});expect(value.isDirectory()&&!value.isSymbolicLink()).toBe(true);
+    ancestors.push([parent,identity(value)]);if(parent===root)break;
+    expect(path.dirname(parent)).not.toBe(parent);
+  }
+  const before=fs.lstatSync(target,{bigint:true});expect(before.isFile()&&!before.isSymbolicLink()).toBe(true);expect(before.nlink).toBe(1n);
+  const fd=fs.openSync(target,fs.constants.O_RDONLY|fs.constants.O_NOFOLLOW|fs.constants.O_NONBLOCK);
+  let raw:Buffer;
+  try{expect(identity(fs.fstatSync(fd,{bigint:true}))).toEqual(identity(before));raw=fs.readFileSync(fd);expect(BigInt(raw.length)).toBe(before.size);expect(identity(fs.fstatSync(fd,{bigint:true}))).toEqual(identity(before));}
+  finally{fs.closeSync(fd);}
+  expect(identity(fs.lstatSync(target,{bigint:true}))).toEqual(identity(before));
+  for(const [parent,pin] of ancestors)expect(identity(fs.lstatSync(parent,{bigint:true}))).toEqual(pin);
+  return {path:target,size:raw.length,sha256:crypto.createHash('sha256').update(raw).digest('hex'),identity:identity(before),raw};
+}
+
 async function exercise(page: Page, workspace: Workspace, evidence: Evidence, api: OwnedApi, native: boolean, startupUrl?: string) {
   const source = path.join(workspace.root, 'comparison-source');
   const originals: Record<string, string> = {};
@@ -165,7 +187,15 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   // Explicit current-label mode preserves the frozen report and its filters.
   await panel.getByLabel('모델 비교 제품 필터').selectOption('(미지정)');
   await panel.getByLabel('모델 비교 Lot 필터').selectOption('(미지정)');
-  const editRow=report.images[0];
+  const selectedReport=await api(`/api/evaluation/model-comparisons/${secondJob.report_id}${query}`);
+  expect(selectedReport.comparison_id).toBe(secondJob.report_id);expect(selectedReport.project_id).toBe(project.id);
+  expect(selectedReport.source_dataset_path).toBe(source);expect(selectedReport.task).toBe('classification');
+  expect(selectedReport.labelset_id).toBe(project.active_labelset_id||'default');
+  const editRow=selectedReport.images[0];
+  const initialMetadata=await api(`/api/dataset/metadata/image?image_path=${encodeURIComponent(editRow.file_path)}`);
+  expect(initialMetadata.image_uuid).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+  expect(initialMetadata.image_uuid).toBe(editRow.image_uuid);expect(initialMetadata.file_path).toBe(editRow.file_path);
+  expect(initialMetadata.content_hash).toBe(editRow.image_sha256);expect(initialMetadata.revision).toBe(editRow.revision);
   const beforeLabels=await api(`/api/annotations/${editRow.image_id}?file_path=${encodeURIComponent(editRow.file_path)}`);
   const beforeReportSha=crypto.createHash('sha256').update(JSON.stringify(await api(`/api/evaluation/model-comparisons/${secondJob.report_id}${query}`))).digest('hex');
   await panel.locator('[data-comparison-image]').filter({hasText:editRow.file_name}).getByRole('button',{name:'원판정 근거 보기',exact:true}).click();
@@ -183,17 +213,37 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   expect(afterLabels.metadata.revision).toBeGreaterThan(beforeLabels.metadata.revision);
   expect(afterLabels.annotations.some((row:any)=>row.is_normal)).toBe(true);
   expect(afterLabels.metadata.content_hash).toBe(editRow.image_sha256);
+  expect(beforeLabels.metadata.image_uuid).toBe(initialMetadata.image_uuid);
+  expect(beforeLabels.metadata.revision).toBe(initialMetadata.revision);
+  expect(afterLabels.metadata.image_uuid).toBe(initialMetadata.image_uuid);
+  const savedMetadata=await api(`/api/dataset/metadata/image?image_path=${encodeURIComponent(editRow.file_path)}`);
+  expect(savedMetadata).toEqual(afterLabels.metadata);
+  const datasetKey=(folder:string)=>crypto.createHash('sha256').update(fs.realpathSync(folder)).digest('hex').slice(0,16);
+  const annotationFile=path.join(project.annotations_dir,'by_dataset',datasetKey(path.dirname(editRow.file_path)),`${editRow.image_id}.json`);
+  const metadataFile=path.join(project.annotations_dir,'by_dataset',datasetKey(source),'metadata','workflow.json');
+  const reportFiles=[job.report_id,secondJob.report_id].map(id=>path.join(project.reports_dir,'model_comparisons',`${id}.json`));
+  const protectedFiles=[...Object.keys(originals),annotationFile,metadataFile,...reportFiles];
+  expect(protectedFiles).toHaveLength(10);expect(new Set(protectedFiles).size).toBe(10);
+  const custody=()=>protectedFiles.map(file=>{const {raw,...pin}=ownedBytes(file,workspace.root);return pin;});
+  const savedAnnotation=JSON.parse(ownedBytes(annotationFile,workspace.root).raw.toString('utf8'));
+  expect(savedAnnotation.image_id).toBe(editRow.image_id);expect(savedAnnotation.annotations).toEqual(afterLabels.annotations);
+  const savedLedger=JSON.parse(ownedBytes(metadataFile,workspace.root).raw.toString('utf8'));
+  expect(savedLedger.images[savedMetadata.relative_path]).toMatchObject({image_uuid:savedMetadata.image_uuid,file_path:editRow.file_path,content_hash:editRow.image_sha256,revision:savedMetadata.revision});
   await page.reload();
   await expect(editReturn).toContainText(editRow.image_id);
   const reopen=editReturn.getByRole('button',{name:'근거 이미지의 현재 라벨 다시 열기',exact:true});
   const originSnapshot=()=>page.evaluate(()=>JSON.stringify(Object.entries(localStorage).filter(([key])=>key.startsWith('modu-evidence-edit:')).sort()));
   const storedOrigin=await originSnapshot();
+  const originRecords=JSON.parse(storedOrigin);expect(originRecords).toHaveLength(1);
+  expect(JSON.parse(originRecords[0][1])).toMatchObject({comparison_id:secondJob.report_id,project_id:project.id,source,task:'classification',labelset_id:selectedReport.labelset_id,image_id:editRow.image_id,file_path:editRow.file_path,image_sha256:editRow.image_sha256,revision:beforeLabels.metadata.revision});
+  const errorCustodyBefore=custody();const boundaryPosts=posted;let errorMetadataReads=0;
   const metadataRoute='**/api/dataset/metadata/image?*';
   const exactMetadata=(url:string)=>new URL(url).searchParams.get('image_path')===editRow.file_path;
-  await page.route(metadataRoute,r=>exactMetadata(r.request().url())?r.fulfill({status:503,json:{detail:'Controlled current-label metadata unavailable'}}):r.continue());
+  await page.route(metadataRoute,r=>{if(!exactMetadata(r.request().url()))return r.continue();errorMetadataReads++;return r.fulfill({status:503,json:{detail:'Controlled current-label metadata unavailable'}});});
   await reopen.click();await expect(editReturn.getByRole('alert')).toContainText('Controlled current-label metadata unavailable');
-  await expect(reopen).toBeEnabled();expect(await originSnapshot()).toBe(storedOrigin);
+  await expect(reopen).toBeEnabled();const errorOriginAfter=await originSnapshot();expect(errorOriginAfter).toBe(storedOrigin);
   expect(await api(`/api/annotations/${editRow.image_id}?file_path=${encodeURIComponent(editRow.file_path)}`)).toEqual(afterLabels);
+  const errorCustodyAfter=custody();expect(errorCustodyAfter).toEqual(errorCustodyBefore);expect(errorMetadataReads).toBe(1);expect(posted).toBe(boundaryPosts);
   await evidence.screenshot(page,native?'native-evidence-label-reopen-error':'browser-evidence-label-reopen-error');
   await page.unroute(metadataRoute);await reopen.click();
   await expect(editReturn.getByRole('alert')).toHaveCount(0);
@@ -202,25 +252,43 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
 
   // Deliberately defer the first genuine metadata read. Leaving and returning
   // to the same editor cancels this request; no late label read or navigation.
-  const capturedMetadata=await api(`/api/dataset/metadata/image?image_path=${encodeURIComponent(editRow.file_path)}`);
+  let capturedMetadata:any=null;
   let release!:()=>void,metadataStarted=false,metadataReleased=false,metadataReads=0,annotationReads=0;
   const held=new Promise<void>(resolve=>{release=resolve;});
   const countAnnotation=(r:any)=>{if(r.method()==='GET'&&new URL(r.url()).pathname===`/api/annotations/${editRow.image_id}`)annotationReads++;};
   page.on('request',countAnnotation);
-  await page.route(metadataRoute,async r=>{if(!exactMetadata(r.request().url())){await r.continue();return;}metadataReads++;metadataStarted=true;await held;await r.fulfill({status:200,json:capturedMetadata});metadataReleased=true;});
+  await page.route(metadataRoute,async r=>{
+    if(!exactMetadata(r.request().url())){await r.continue();return;}
+    metadataReads++;const response=await r.fetch({maxRedirects:0,maxRetries:0,timeout:10_000});
+    expect(response.ok()).toBe(true);capturedMetadata=await response.json();expect(capturedMetadata).toEqual(savedMetadata);
+    metadataStarted=true;await held;await r.fulfill({response});metadataReleased=true;
+  });
+  const cancelCustodyBefore=custody();
   const beforeCancelledOrigin=await originSnapshot();await reopen.click();await expect.poll(()=>metadataStarted).toBe(true);await expect(reopen).toBeDisabled();
   await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(3).click();
   await expect(panel.getByLabel('저장된 모델 비교')).toHaveValue(secondJob.report_id);
   await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(1).click();
   await expect(editReturn).toContainText(editRow.image_id);await expect(reopen).toBeEnabled();const readsBeforeRelease=annotationReads;
-  release();await expect.poll(()=>metadataReleased).toBe(true);await page.waitForTimeout(300);
+  const cancelledResponse=page.waitForResponse(r=>exactMetadata(r.url())&&r.request().method()==='GET',{timeout:10_000});
+  release();await expect.poll(()=>metadataReleased).toBe(true);const delivered=await cancelledResponse;expect(delivered.ok()).toBe(true);await delivered.finished();await page.waitForTimeout(300);
   expect(metadataReads).toBe(1);expect(annotationReads).toBe(readsBeforeRelease);expect(await originSnapshot()).toBe(beforeCancelledOrigin);await expect(editReturn.getByRole('alert')).toHaveCount(0);
+  const cancelledLateAnnotationReads=annotationReads-readsBeforeRelease;expect(cancelledLateAnnotationReads).toBe(0);
+  expect(await api(`/api/annotations/${editRow.image_id}?file_path=${encodeURIComponent(editRow.file_path)}`)).toEqual(afterLabels);
+  const cancelCustodyAfter=custody();expect(cancelCustodyAfter).toEqual(cancelCustodyBefore);expect(posted).toBe(boundaryPosts);
   await evidence.screenshot(page,native?'native-evidence-label-cancelled-read':'browser-evidence-label-cancelled-read');
   await page.unroute(metadataRoute);page.off('request',countAnnotation);await reopen.click();await expect(page.getByRole('button',{name:'Normal (OK) Part',exact:true})).toBeVisible();await expect(reopen).toBeEnabled();
+  evidence.note('evidence_label_boundary_custody',{cells:['U030.evidence-current-label-return.error','U030.evidence-current-label-return.cancel'],
+    comparison_id:secondJob.report_id,project_id:project.id,source,task:'classification',labelset_id:selectedReport.labelset_id,
+    image_id:editRow.image_id,image_uuid:savedMetadata.image_uuid,image_path:editRow.file_path,image_sha256:editRow.image_sha256,
+    historical_revision:editRow.revision,current_revision:savedMetadata.revision,error_metadata_reads:errorMetadataReads,
+    error:{before:errorCustodyBefore,after:errorCustodyAfter,origin_before:storedOrigin,origin_after:errorOriginAfter},
+    cancel:{before:cancelCustodyBefore,after:cancelCustodyAfter,original_response_read_once:true,original_response_delivered:true,late_annotation_reads:cancelledLateAnnotationReads},
+    actual_gui:true,actual_owned_backend:true,actual_electron_main_preload:native,controlled_transport:true,
+    no_new_comparison:true,full_source_and_saved_label_report_bytes_unchanged:true,model_quality_acceptance:false,physical_target_acceptance:false,complete_feature_acceptance:false});
   evidence.note('evidence_label_reopen_boundaries',{image_id:editRow.image_id,current_revision:capturedMetadata.revision,
     controlled_metadata_failure:503,error_keeps_origin_and_annotations:true,deliberate_retry:true,
     leave_and_reenter_same_stage_cancels_old_request:true,cancelled_metadata_reads:metadataReads,
-    cancelled_late_annotation_reads:annotationReads-readsBeforeRelease,new_editor_not_busy:true,new_deliberate_request_succeeds:true});
+    cancelled_late_annotation_reads:cancelledLateAnnotationReads,new_editor_not_busy:true,new_deliberate_request_succeeds:true});
   await editReturn.getByRole('button',{name:'원래 판정 근거로 돌아가기',exact:true}).click();
   await expect(panel.getByLabel('저장된 모델 비교')).toHaveValue(secondJob.report_id);
   await expect(panel.getByLabel('모델 비교 제품 필터')).toHaveValue('(미지정)');
@@ -233,7 +301,7 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(3).click();
   await expect(panel.getByLabel('저장된 모델 비교')).toHaveValue(secondJob.report_id);
   evidence.note('evidence_labeling',{comparison_id:secondJob.report_id,image_id:editRow.image_id,image_path:editRow.file_path,
-    captured_hash:editRow.image_sha256,labelset_id:report.labelset_id,before_revision:beforeLabels.metadata.revision,after_revision:afterLabels.metadata.revision,
+    captured_hash:editRow.image_sha256,labelset_id:selectedReport.labelset_id,image_uuid:savedMetadata.image_uuid,before_revision:beforeLabels.metadata.revision,after_revision:afterLabels.metadata.revision,
     historical_report_sha256:beforeReportSha,normal_label_saved:true,dirty_return_refused:true,reopened_current_label:true,
     returned_exact_report_image_filters:true,no_new_comparison:true,actual_brush_eraser:false,team_lease_fixture:false});
 
