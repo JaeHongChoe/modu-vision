@@ -638,3 +638,120 @@ def test_portable_ordinary_name_support_keeps_unsafe_path_boundaries(name):
 def test_portable_name_length_limit_retains_exact_160_character_segment():
     from backend.engine import runtime_update as update
     assert update._safe_path('a/'+('x'*160))=='a/'+('x'*160)
+
+
+# Diagnostic-only external-interface seam: the original source caller runs its
+# original pre-proof refusal; no CPU worker, acceptance proof or runtime API runs.
+def _source_canary_outcome_failure(tmp_path,monkeypatch,outcome):
+    from types import SimpleNamespace
+    from backend.engine import staged_update_canary as canary,runtime_deadline as runtime
+    calls=[];attempt=tmp_path/'attempt';attempt.mkdir();project=tmp_path/'source-project';project.mkdir()
+    canonical=lambda value:json.dumps(value,sort_keys=True,separators=(',',':')).encode()
+    digest=lambda raw:hashlib.sha256(raw).hexdigest()
+    specification={'workspace_id':'1'*32,'project_id':'2'*32,'plan_sha256':'3'*64}
+    capability={'project_path':str(project),'plan':{'runtime_source_sha256':'4'*64,
+        'release_policy':None,'project_manifest_sha256':'5'*64,'deadline_ms':30000}}
+    def admitted(*args,**kwargs):
+        calls.append('admit');destination=kwargs.get('copy_to')
+        if destination:destination.mkdir(parents=True)
+        return capability
+    def write_raw(path,raw):
+        path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(raw)
+    def proof_read(*args):
+        calls.append('proof_read');raise AssertionError('Failed outcome must not read or seal acceptance proof')
+    updater=SimpleNamespace(_unlinked=lambda path:Path(path),_sha=digest,_canonical=canonical,
+        _hex=lambda value,length=64:isinstance(value,str) and len(value)==length and all(c in '0123456789abcdef' for c in value),
+        _write_raw=write_raw,GENERATIONS='generations',migration=SimpleNamespace(_sync_directories=lambda *args,**kwargs:None))
+    execution=SimpleNamespace(admit_plan=admitted,_read=lambda *args,**kwargs:b'controlled input',PLAN='plan.json',MAX_RESULT=1024,_json=proof_read)
+    monkeypatch.setattr(canary,'_require_exclusive',lambda root:calls.append('exclusive'))
+    monkeypatch.setattr(canary,'_update',lambda:updater);monkeypatch.setattr(canary,'_execution',lambda:execution)
+    monkeypatch.setattr(canary,'_directory',lambda *args:attempt)
+    monkeypatch.setattr(canary,'_candidate_rows',lambda manifest:([],capability['plan']['runtime_source_sha256']))
+    monkeypatch.setattr(canary,'_validate_private_inputs',lambda *args:calls.append('private_checked'))
+    monkeypatch.setattr(canary,'_source_and_target',lambda *args:calls.append('source_checked'))
+    monkeypatch.setattr(canary,'_checkpoint',lambda point:calls.append(point))
+    def observed(command,**kwargs):
+        calls.append(('execute',kwargs['deadline_ms']));return outcome
+    monkeypatch.setattr(runtime,'execute_owned_process',observed)
+    record={'canary':specification,'canary_capability_sha256':digest(canonical(capability)),'application_generation':'a'*32}
+    with pytest.raises(canary.CanaryError)as error:
+        canary.execute_source_candidate(tmp_path,record,{}, {}, '6'*64)
+    assert calls.count(('execute',30000))==1 and calls[0]=='exclusive'
+    assert 'before_canary_spawn'in calls and 'after_canary_math'not in calls and 'proof_read'not in calls
+    assert (attempt/canary.INTENT).is_file() and not(attempt/canary.RECEIPT).exists()
+    assert not(attempt/'canary-result.json').exists() and not(attempt/'private/worker-result.json').exists()
+    # The original recovery-intent guard must refuse a second attempt; it cannot
+    # use diagnostic text as a sealed receipt or new publication capability.
+    requirement={'schema_version':1};requirement_sha=canary._write_sealed(attempt/canary.REQUIREMENT,requirement)
+    monkeypatch.setattr(canary,'expected_requirement',lambda *args:requirement)
+    monkeypatch.setattr(canary,'_document',lambda *args:(requirement,requirement_sha))
+    monkeypatch.setattr(updater,'UPDATES','updates',raising=False)
+    monkeypatch.setattr(updater,'_write',lambda *args:None,raising=False)
+    record['update_id']='b'*32;record['canary_requirement_sha256']=requirement_sha
+    with pytest.raises(canary.CanaryError,match='already attempted without sealed proof'):
+        canary.ensure_verified(tmp_path,record,{}, {})
+    assert calls.count(('execute',30000))==1 and not(attempt/canary.RECEIPT).exists()
+    prefix='Canary CPU failed or timed out; retain recovery ownership, process-tree exit is unverified'
+    assert str(error.value).startswith(prefix)
+    return str(error.value)
+
+
+@pytest.mark.parametrize('outcome,expected_status,returncode_present,expected_code',[
+    ({'status':'completed','returncode':17,'stdout':'SECRET /private/canary','stderr':'SECRET credential'},'completed',True,17),
+    ({'status':'uncertain','returncode':1,'leader_returncode':0,'rejection_reason':'OWNED_PROCESS_GROUP_UNRECONCILED',
+        'ownership':{'scope':'observed_original_process_group','leader_exit_confirmed':True,'remaining_members':[123],
+            'unknown_members':[456],'observation_failed':True,'termination_attempted':False,'termination_failed':False},
+        'private_diagnostics':'/private/SECRET','stdout':'SECRET','stderr':'SECRET'},'uncertain',True,1),
+    ({'status':'timeout','rejection_reason':'INFERENCE_DEADLINE_EXCEEDED',
+        'deadline':{'terminated':True,'leader_exit_confirmed':True,'pid':123,'process_tree_exit_verified':False}},'timeout',False,None),
+    ({'status':'cancelled','rejection_reason':'CANCELLED',
+        'deadline':{'terminated':True,'leader_exit_confirmed':True,'pid':123}},'cancelled',False,None),
+])
+def test_source_canary_refusal_exposes_exact_bounded_outcome_without_reading_proof_or_retry(tmp_path,monkeypatch,outcome,expected_status,returncode_present,expected_code):
+    message=_source_canary_outcome_failure(tmp_path,monkeypatch,outcome)
+    assert '; diagnostic='in message,'Original source caller discarded the refused execution outcome'
+    encoded=message.split('; diagnostic=',1)[1];diagnostic=json.loads(encoded)
+    assert len(encoded)<=1024 and diagnostic['status']==expected_status
+    assert diagnostic['returncode_present']is returncode_present and diagnostic['returncode']==expected_code
+    assert diagnostic['diagnostic_only']is True and diagnostic['release_qualified']is False
+    assert diagnostic['process_tree_exit_verified']is False
+    assert not any(word in encoded for word in ('SECRET','/private','stdout','stderr','private_diagnostics','"pid"'))
+    if expected_status=='uncertain':
+        assert diagnostic['leader_returncode_present']is True and diagnostic['leader_returncode']==0
+        assert diagnostic['ownership']['remaining_member_count']==diagnostic['ownership']['unknown_member_count']==1
+        assert diagnostic['ownership']['observation_failed']is True
+    else:
+        assert diagnostic['ownership']['remaining_member_count']is None
+        assert diagnostic['ownership']['unknown_member_count']is None
+
+
+@pytest.mark.parametrize('invalid',[True,False,'1',1.0,2**100,-2**100,None])
+def test_source_canary_diagnostic_never_coerces_invalid_codes_or_flags(invalid):
+    from backend.engine import staged_update_canary as canary
+    encoded=canary._source_outcome_diagnostic({'status':'uncertain','returncode':invalid,'leader_returncode':invalid,
+        'ownership':{'leader_exit_confirmed':invalid,'observation_failed':invalid,'remaining_members':'SECRET'},
+        'deadline':{'terminated':invalid,'leader_exit_confirmed':invalid}})
+    diagnostic=json.loads(encoded);assert diagnostic['returncode_present']is True and diagnostic['returncode']is None
+    assert diagnostic['leader_returncode_present']is True and diagnostic['leader_returncode']is None
+    assert diagnostic['ownership']['remaining_member_count']is None and len(encoded)<=1024
+    if type(invalid)is not bool:
+        assert diagnostic['ownership']['leader_exit_confirmed']is None and diagnostic['deadline']['terminated']is None
+    assert diagnostic['process_tree_exit_verified']is False and diagnostic['release_qualified']is False
+
+
+def test_source_canary_diagnostic_ignores_hostile_nested_large_or_foreign_values():
+    from backend.engine import staged_update_canary as canary
+    class Hostile:
+        def __str__(self):raise AssertionError('Diagnostic must not stringify unknown values')
+        def __repr__(self):raise AssertionError('Diagnostic must not repr unknown values')
+    class ForeignDict(dict):
+        def get(self,*args):raise AssertionError('Diagnostic must not call foreign nested methods')
+    values=[{'status':Hostile(),'returncode':Hostile(),'ownership':ForeignDict(),'deadline':ForeignDict()},
+        {'status':'SECRET /private/path','rejection_reason':'SECRET','ownership':{'scope':'SECRET','unknown_members':[Hostile()]*65537}},
+        {'status':'uncertain','ownership':Hostile(),'deadline':Hostile(),'stdout':'SECRET'*100000,'stderr':Hostile()},Hostile()]
+    for value in values:
+        encoded=canary._source_outcome_diagnostic(value);assert len(encoded)<=1024
+        assert 'SECRET'not in encoded and '/private'not in encoded
+        diagnostic=json.loads(encoded);assert diagnostic['process_tree_exit_verified']is False
+        assert diagnostic['release_qualified']is False and diagnostic['diagnostic_only']is True
+    assert json.loads(canary._source_outcome_diagnostic({'status':'unexpected'}))['status']=='unrecognized'

@@ -254,6 +254,33 @@ def validate_receipt(root,record,database,manifest):
     return receipt
 
 
+def _source_outcome_diagnostic(outcome):
+    """Bounded observation only; never execution/exit/publication authority."""
+    import json
+    value=outcome if type(outcome) is dict else {}
+    ownership=value.get('ownership');ownership=ownership if type(ownership) is dict else {}
+    deadline=value.get('deadline');deadline=deadline if type(deadline) is dict else {}
+    def label(value,allowed):return value if type(value) is str and value in allowed else None
+    def integer(value):return value if type(value) is int and -(2**31)<=value<=2**32-1 else None
+    def flag(value):return value if type(value) is bool else None
+    def count(value):return len(value) if type(value) is list and len(value)<=65536 else None
+    diagnostic={'schema_version':1,'kind':'staged_source_runtime_outcome_diagnostic',
+        'status':label(value.get('status'),('completed','timeout','cancelled','uncertain')) or 'unrecognized',
+        'returncode_present':'returncode' in value,'returncode':integer(value.get('returncode')),
+        'leader_returncode_present':'leader_returncode' in value,'leader_returncode':integer(value.get('leader_returncode')),
+        'rejection_reason':label(value.get('rejection_reason'),('OWNED_PROCESS_GROUP_UNRECONCILED','INFERENCE_DEADLINE_EXCEEDED','CANCELLED')),
+        'ownership':{'scope':label(ownership.get('scope'),('observed_original_process_group','observed_descendants')),
+            'leader_exit_confirmed':flag(ownership.get('leader_exit_confirmed')),
+            'remaining_member_count':count(ownership.get('remaining_members')),
+            'unknown_member_count':count(ownership.get('unknown_members')),
+            'observation_failed':flag(ownership.get('observation_failed')),
+            'termination_attempted':flag(ownership.get('termination_attempted')),
+            'termination_failed':flag(ownership.get('termination_failed'))},
+        'deadline':{'terminated':flag(deadline.get('terminated')),'leader_exit_confirmed':flag(deadline.get('leader_exit_confirmed'))},
+        'process_tree_exit_verified':False,'diagnostic_only':True,'release_qualified':False}
+    return json.dumps(diagnostic,sort_keys=True,separators=(',',':'),ensure_ascii=True,allow_nan=False)
+
+
 def execute_source_candidate(root,record,database,manifest,requirement_sha256):
     """Fixed private source adapter; frozen/native candidates require target work."""
     _require_exclusive(root)
@@ -316,7 +343,7 @@ def execute_source_candidate(root,record,database,manifest,requirement_sha256):
     outcome=execute_owned_process([sys.executable,'-I','-B','-X','pycache_prefix='+str(private/'bytecode'),'-c',bootstrap,
         str(request_path),str(output),request_sha],deadline_ms=plan['deadline_ms'],env=_worker_environment(home,cache,scratch),cwd=private)
     if outcome['status']!='completed' or outcome['returncode']!=0:
-        raise CanaryError('Canary CPU failed or timed out; retain recovery ownership, process-tree exit is unverified')
+        raise CanaryError('Canary CPU failed or timed out; retain recovery ownership, process-tree exit is unverified; diagnostic='+_source_outcome_diagnostic(outcome))
     proof=e._json(e._read(output,e.MAX_RESULT))
     if (not isinstance(proof,dict) or set(proof)!={'request_sha256','nonce','epoch','requirement_sha256','runtime_helper_path','process','flow_result','environment'}
             or any(proof.get(name)!=request[name] for name in ('nonce','epoch','requirement_sha256'))
