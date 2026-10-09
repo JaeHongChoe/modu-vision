@@ -253,6 +253,8 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   await page.unroute(metadataRoute);await reopen.click();
   await expect(editReturn.getByRole('alert')).toHaveCount(0);
   await expect(page.getByRole('button',{name:'Normal (OK) Part',exact:true})).toBeVisible();
+  await expect(reopen).toBeEnabled();
+  await expect(editReturn).toContainText(`확인한 수정 버전 ${savedMetadata.revision}`);
   await evidence.screenshot(page,native?'native-evidence-label-reopened':'browser-evidence-label-reopened');
 
   // Deliberately defer the first genuine metadata read. Leaving and returning
