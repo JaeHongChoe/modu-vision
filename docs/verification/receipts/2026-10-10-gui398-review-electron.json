@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "fc3d284e579ac340bdf4b7d0a54e6cedf57d2c6b",
+  "source_dirty": false,
+  "test": "scripts/e2e/team-review-draft-lifecycle.spec.ts::native three review decisions preserve exact UUID revisions and original labels across project handoff",
+  "test_source_sha256": "21fa444e1fb00ae4506d5d86b57c3e584c521a49a6d7fe03184559602a1d65b3",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "54c717c507edf7ed5f81cb8d74b7fae271df80ce7bbbf60729a3825bc686c914",
+  "harness_sha256": "04792c465ad8b6680872946e523e570d7d8001af1a945459f152d109f0f24853",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "4cec7bbfcfc5066d38aacf53b2344356a9dfce2ba0d65ff49e3d7f973de7b553"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "8ad017669a5133c0d7974c360e5b796ef205750b71747c96ff7c1ef9a5d20af4"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "b46cfd675cd5832c2724ceb9044bed75fc383a1f0a4198c3710d4de1bebdc684"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

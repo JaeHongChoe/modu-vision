@@ -292,7 +292,22 @@ async function comparisonProjectHandoff(page:Page,w:Workspace,e:Evidence,api:Han
  const originals:Record<string,any>={};for(const scope of [A,B]){await api('/api/project/open',{project_dir:scope.project.project_dir});originals[scope.tag]=await api(scope.query);expect(originals[scope.tag].metadata.image_uuid).toBe(scope.uuid);}
  await api('/api/project/open',{project_dir:A.project.project_dir});if(url)await page.goto(url);else await page.reload();await handoffEnterLabels(page,A,false);
  const drafts=()=>page.evaluate(()=>Object.entries(localStorage).filter(([key])=>key.startsWith('modu-annotation-draft:v1:')));
+ // Wait for the original base raster before 1:1; image onload itself sets Fit.
+ // One original 10s frame contains image readiness, normal UI controls and zoom readback.
+ const canvasDeadline=performance.now()+10_000;
+ await handoffWithin((async()=>{
+  await page.waitForFunction(()=>{
+   const canvas=document.querySelector<HTMLCanvasElement>('[data-canvas-container] > canvas:first-of-type');
+   if(!canvas||canvas.width===0||canvas.height===0)return false;
+   const context=canvas.getContext('2d');if(!context)return false;
+   return context.getImageData(Math.floor(canvas.width/2),Math.floor(canvas.height/2),1,1).data[3]>0;
+  },undefined,{timeout:10_000});
  await page.getByTitle('100% Zoom (1:1)',{exact:true}).click();await page.getByRole('button',{name:/^Scratch(?: \d+)?$/}).click();await page.getByTitle('바운딩 박스 (BBox - 2)',{exact:true}).click();
+  const hud=page.getByTestId('canvas-hud');
+  await expect(hud).toContainText(/VIEW\s*scale\s*100\s*%/,{timeout:10_000});
+  await page.evaluate(()=>new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve()))));
+  await expect(hud).toContainText(/VIEW\s*scale\s*100\s*%/,{timeout:10_000});
+ })(),canvasDeadline,'original base image and stable 1:1 zoom');
  const box=(await page.locator('[data-canvas-container]').boundingBox())!;const at=(x:number,y:number)=>({x:box.x+(box.width-256)/2+x,y:box.y+(box.height-256)/2+y});const start=at(40,40),end=at(80,80);
  await page.mouse.move(start.x,start.y);await page.mouse.down();await page.mouse.move(end.x,end.y,{steps:6});await page.mouse.up();await expect(page.getByRole('region',{name:'라벨 연결 복구',exact:true})).toContainText('이 컴퓨터에 초안 보존됨');
  const entries=await drafts();expect(entries).toHaveLength(1);const [key,rawDraft]=entries[0],draft=JSON.parse(rawDraft);expect(draft.image_uuid).toBe(A.uuid);expect(draft.image_path).toBe(A.image);expect(draft.source_sha256).toBe(handoffHash(fs.readFileSync(A.image)));expect(draft.base_revision).toBe(originals.A.metadata.revision);expect(draft.annotations).toHaveLength(2);expect(draft.annotations[1].bbox).toEqual([40,40,80,80]);
@@ -329,4 +344,62 @@ test('native draft comparison project handoff retains original UUID raw draft an
  const page=electronSession.window,backend=await electronSession.waitForBackend(),origin=`http://127.0.0.1:${backend.port}`;
  const api:HandoffApi=(route,body,method)=>page.evaluate(async({origin,route,body,method})=>{const r=await fetch(origin+route,{method:method||(body===undefined?'GET':'POST'),headers:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});if(!r.ok)throw Error(`Owned handoff fixture HTTP ${r.status}`);return r.json();},{origin,route,body,method});
  await comparisonProjectHandoff(page,workspace,evidence,api,true,origin);
+});
+
+
+// Additional F024 handoff cells: genuine UI writes, synthetic control reviewers only.
+import {handoffApi as fiveApi,handoffRoots as fiveRoots,handoffAssertRoots as fiveAssertRoots,handoffSave as fiveSave,handoffPost as fivePost,handoffProject as fiveProject,handoffLateRead as fiveLateRead} from './fixtures/remaining-project-handoff';
+async function reviewVoteProjectHandoff(page:Page,w:Workspace,e:Evidence,native:boolean,origin:string,url?:string){
+ const api=fiveApi(page,origin,native);
+ const prepare=async(tag:'A'|'B')=>{
+  const scope=await handoffLabels(w,api,'review-votes',tag);
+  await api('/api/team-data/settings',{expected_revision:1,actor:'fixture-owner',changes:{review_enabled:true,required_reviews:2,prevent_self_review:true,approved_only_training:true}},'PUT');
+  await api('/api/project/preferences');await api(scope.query);await api(scope.imageRoute);await api('/api/team-data/readiness');await api('/api/team-data/queue?offset=0&limit=30');
+  return scope;
+ };
+ const A=await prepare('A'),B=await prepare('B');expect(A.project.id).not.toBe(B.project.id);expect(A.uuid).not.toBe(B.uuid);
+ if(url)await page.goto(url);else await page.reload();
+ await handoffEnterLabels(page,B,true);await fiveProject(page,A,origin);let dialog=(await handoffEnterLabels(page,A,true))!;
+ const read=async(scope:typeof A)=>({annotation:await api(scope.query),image:await api(scope.imageRoute),workspace:await api('/api/team-data'),queue:await api('/api/team-data/queue?offset=0&limit=30')});
+ const baselineA=await read(A),rootsA=fiveRoots(A);await fiveProject(page,B,origin);await handoffEnterLabels(page,B,true);const baselineB=await read(B),rootsB=fiveRoots(B);await fiveProject(page,A,origin);dialog=(await handoffEnterLabels(page,A,true))!;
+ expect(baselineA.image.image.team.reviews).toEqual([]);expect(baselineB.image.image.team.reviews).toEqual([]);
+ const workflow='by_dataset/'+handoffHash(Buffer.from(fs.realpathSync(A.source))).slice(0,16)+'/metadata/workflow.json';expect(rootsA.annotations.snapshot.files[workflow]).toBeTruthy();
+ const mutations:any[]=[],observe=(request:HandoffRequest)=>{const u=new URL(request.url());if(u.origin===origin&&!['GET','HEAD','OPTIONS'].includes(request.method())&&u.pathname.startsWith('/api/')&&u.pathname!=='/api/project/open')mutations.push({method:request.method(),path:u.pathname,body:request.postDataJSON()});};
+ const actions=[{id:'approve-vote',button:'승인 표 제출',actor:'fixture-handoff-reviewer-1',decision:'approve',endpoint:'/review'},
+  {id:'reject-vote',button:'반려 표 제출',actor:'fixture-handoff-reviewer-2',decision:'reject',endpoint:'/review'},
+  {id:'adjudicate',button:'최종 승인 조정',actor:'fixture-handoff-adjudicator',decision:'approve',endpoint:'/adjudicate'}] as const;
+ const proof:any[]=[];page.on('request',observe);let primary:unknown;
+ try{
+  for(const [index,action] of actions.entries()){
+   const work=dialog.getByRole('region',{name:'현재 이미지 팀 작업',exact:true}),current=await read(A),reason='Synthetic handoff '+action.id+'; no human or manufacturing approval';
+   await dialog.getByLabel('팀 작업자 이름',{exact:true}).fill(action.actor);await work.getByLabel('검수 이유',{exact:true}).fill(reason);
+   const body={expected_revision:current.annotation.metadata.revision,actor:action.actor,decision:action.decision,reason};const post=await fivePost(page,origin,work.getByRole('button',{name:action.button,exact:true}),A.imageRoute+action.endpoint,body,e,w,'review-handoff-'+index);
+   await expect(work).toContainText(action.actor);const refresh=dialog.getByRole('button',{name:'새로고침',exact:true});await expect(refresh).toBeEnabled();await expect(dialog.getByRole('status',{exact:false})).toHaveCount(0);
+   const saved=await read(A);expect(saved.image.image).toEqual(post.body.image);expect(saved.annotation.metadata.image_uuid).toBe(A.uuid);expect(saved.annotation.metadata.revision).toBe(post.body.image.revision);expect(saved.annotation.metadata.team).toEqual(post.body.image.team);
+   expect(saved.annotation.annotations).toEqual(baselineA.annotation.annotations);fiveAssertRoots(rootsA,fiveRoots(A),{annotations:[workflow]});expect(handoffHash(fs.readFileSync(A.image))).toBe(baselineA.annotation.metadata.content_hash);
+   const rawLedger=JSON.parse(fs.readFileSync(handoffPath.join(A.project.annotations_dir,workflow),'utf8'));const raw=Object.values(rawLedger.images).find((row:any)=>row.image_uuid===A.uuid) as any;expect(raw.team).toEqual(post.body.image.team);expect(raw.revision).toBe(post.body.image.revision);
+   if(action.id==='approve-vote'){expect(post.body.image.team.reviews.map((v:any)=>v.decision)).toEqual(['approve']);expect(post.body.image.team.review_status).toBe('pending');}
+   if(action.id==='reject-vote'){expect(post.body.image.team.reviews.map((v:any)=>v.decision)).toEqual(['approve','reject']);expect(post.body.image.team.review_status).toBe('disputed');}
+   if(action.id==='adjudicate'){expect(post.body.image.team.adjudication).toMatchObject({actor:action.actor,decision:'approve',reason});expect(post.body.image.team.review_status).toBe('approved');}
+   const expectedRoots=fiveRoots(A),late=await fiveLateRead(page,origin,native,u=>u.pathname===A.imageRoute);let latePrimary:unknown;
+   try{
+    await refresh.click();const captured=await late.ready();expect(captured.body).toEqual(saved.image);
+    const toB=await fiveProject(page,B,origin);const dialogB=(await handoffEnterLabels(page,B,true))!;await expect(dialogB.getByLabel('검수 이유',{exact:true})).toHaveValue('');expect(await read(B)).toEqual(baselineB);fiveAssertRoots(rootsB,fiveRoots(B));
+    expect((await api('/api/project/current')).id).toBe(B.project.id);await expect(dialogB.getByRole('region',{name:'현재 이미지 팀 작업',exact:true})).not.toContainText(action.actor);
+    const disposition=await late.finish();expect(await read(B)).toEqual(baselineB);fiveAssertRoots(rootsB,fiveRoots(B));
+    const toA=await fiveProject(page,A,origin);dialog=(await handoffEnterLabels(page,A,true))!;await expect(dialog.getByLabel('검수 이유',{exact:true})).toHaveValue('');await expect(dialog.getByRole('region',{name:'현재 이미지 팀 작업',exact:true})).toContainText(action.actor);
+    expect(await read(A)).toEqual(saved);fiveAssertRoots(expectedRoots,fiveRoots(A));expect(mutations).toHaveLength(index+1);expect(mutations[index]).toEqual({method:'POST',path:A.imageRoute+action.endpoint,body});
+    await e.screenshot(page,`${native?'native':'browser'}-${action.id}-exact-persisted-A-return-after-B`);
+    proof.push({action:action.id,dimension:'handoff',actual_post:post.proof,toB,toA,late_read:disposition,raw_response_sha256:captured.sha256,saved,roots:expectedRoots,synthetic_control_review_only:true});
+   }catch(error){latePrimary=error;throw error;}finally{try{await late.close();}catch(error){if(!latePrimary)throw error;e.note('review_handoff_secondary_route_cleanup',{type:error instanceof Error?error.name:'unknown'});}}
+  }
+  fiveSave(e,w,'review-vote-handoff-proof',{A,B,baselineA,baselineB,rootsA,rootsB,proof,mutations});
+  e.note('review_vote_project_handoff',{record_id:'F024',actions:['approve-vote','reject-vote','adjudicate'],dimension:'handoff',projects:[A.project.id,B.project.id,A.project.id],image_uuids:[A.uuid,B.uuid],actual_UI_business_posts:3,proof,mutations,no_label_pixel_writes:true,no_edit_lease_acquire_or_transfer:true,actual_model_inference:false,human_quality_installed_target_parent_approval:false,source_electron:native});
+ }catch(error){primary=error;throw error;}finally{page.off('request',observe);void primary;}
+}
+test('three persisted review decisions hand off A B A without transferring original votes or authority',async({page,renderer,workspace,evidence})=>{
+ await installDesktopHostShim(page,renderer.port);await reviewVoteProjectHandoff(page,workspace,evidence,false,renderer.origin,renderer.url);
+});
+test('native three review decisions preserve exact UUID revisions and original labels across project handoff',{tag:'@electron'},async({electronSession,workspace,evidence})=>{
+ const page=electronSession.window,backend=await electronSession.waitForBackend();await reviewVoteProjectHandoff(page,workspace,evidence,true,`http://127.0.0.1:${backend.port}`);
 });

@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "c8ce2df32906d36f34aad6f2396cfd24426b7365",
+  "source_dirty": false,
+  "test": "scripts/e2e/evaluation-filter-controls.spec.ts::ROC review thresholds change explicitly and reset across A B A while saved reports stay exact",
+  "test_source_sha256": "073a2ef84616a2ae8e3f5537098ff51850f28891e0c47eca6e91d592070b366d",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "5202f1e8458479d836e70eba8c4a123f223635877a83e6d8a59e3ac15ea55ca5",
+  "harness_sha256": "f144df9a527f8bf112abe4faf7a50ba636c86835aa3abccb91d5fe0e53d3a73f",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "ec61181adb17df70ad730e5c7ccba461ce4eaecbf9e1f31beb2898fa18a17852"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "2b8981685f3807a0efd4644a197c18c12d2700be0e2a999ab8eda83596288d9a"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "61c5be146152d48cbfe19301f2cbf36142af0025d17628ac73a98d5529ce9bcf"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

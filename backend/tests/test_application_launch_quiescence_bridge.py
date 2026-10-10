@@ -408,7 +408,7 @@ def managed_stack(tmp_path, monkeypatch, *, uncovered=False, damage=None):
     original_fixture = fixtures.fixture
     compiler = "const fs=require('fs'),ts=require('typescript');process.stdout.write(ts.transpileModule(fs.readFileSync(process.argv[1],'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText)"
     supervisor = subprocess.check_output(['node', '-e', compiler, str(repository/'src/main/supervisor.ts')])
-    backend = ('#!'+sys.executable+'\n'+f'''
+    backend = ('#!'+sys.executable+'\n'+fixtures._fixture_json_publisher_source()+f'''
 import sys,os,time,json,threading,signal,socket
 from pathlib import Path
 sys.path.insert(0,{str(repository)!r})
@@ -427,7 +427,7 @@ def stdin():
 threading.Thread(target=stdin,daemon=True).start()
 def stop_requested():
  requested.wait()
- (projects/'ordinary-stop-requested.json').write_text(json.dumps({{'pid':os.getpid(),'requested':True}}))
+ _atomic_fixture_json(projects/'ordinary-stop-requested.json',{{'pid':os.getpid(),'requested':True}})
 threading.Thread(target=stop_requested,daemon=True).start()
 def cooperative_exit():
  while not stop.is_set():
@@ -613,6 +613,61 @@ def finish_managed(child, root):
     pytest.fail('Original controller did not record its retained main Popen exit; retain this scope')
 
 
+def _managed_stop_diagnostic(projects, result):
+    """Failure-only, bounded controlled fixture facts; no authority or secrets."""
+    try:
+        import re
+        import stat
+        def safe_text(value, limit):
+            if value is None:
+                return None
+            if type(value) is not str:
+                return {'type': type(value).__name__[:80]}
+            # Synthetic fixture stderr still redacts paths and credential-shaped
+            # data. Never read token files or the process environment here.
+            text = value[-limit:]
+            text = re.sub(r'(?im)^.*\b(?:authorization|password|secret|token|nonce|cookie|api[_-]?key)\b\s*(?:=|:)[^\n]*$', '<redacted credential-shaped line>', text)
+            text = re.sub(r'(?i)\b(?:bearer|token|authorization|password|secret|nonce|cookie|api[_-]?key)\b\s*(?::|=)?\s*[^\s,;]+', '<redacted>', text)
+            text = re.sub(r'[A-Za-z]:[\\/][^\s:]+|(?:/[^\s/:]+)+', '<path>', text)
+            text = re.sub(r'\b[A-Za-z0-9_+=-]{32,}\b', '<opaque>', text)
+            return ''.join(c if c in '\n\t' or 32 <= ord(c) < 127 else '?' for c in text)
+        details = {'direct_exit': result.get('direct_exit'),
+                   'signal': safe_text(result.get('signal'), 128),
+                   'error': safe_text(result.get('error'), 4096)}
+        path = Path(projects) / 'execution-backend-error.txt'
+        descriptor = None
+        stderr_error = None
+        try:
+            named = path.lstat()
+            if not stat.S_ISREG(named.st_mode):
+                raise ValueError('Controlled backend stderr is not a regular file')
+            descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            opened = os.fstat(descriptor)
+            if (opened.st_dev, opened.st_ino) != (named.st_dev, named.st_ino):
+                raise ValueError('Controlled backend stderr identity changed')
+            raw = os.read(descriptor, 8193)
+            details['backend_stderr'] = {'observed_size': opened.st_size,
+                'read_size': len(raw), 'truncated': opened.st_size > len(raw) or len(raw) > 8192,
+                'read_sha256': hashlib.sha256(raw).hexdigest(),
+                'text_prefix': safe_text(raw[:8192].decode('utf-8', errors='replace'), 8192)}
+        except BaseException as error:
+            stderr_error = type(error).__name__[:80]
+        finally:
+            if descriptor is not None:
+                try:
+                    os.close(descriptor)
+                except BaseException as error:
+                    details['stderr_close_error_type'] = type(error).__name__[:80]
+        if stderr_error is not None:
+            details['stderr_read_error_type'] = stderr_error
+        message = json.dumps(details, ensure_ascii=True, sort_keys=True)
+        if len(message.encode('utf-8')) > 16384:
+            return 'Controlled stop diagnostic exceeded its byte bound'
+        return message
+    except BaseException as error:
+        return 'Controlled stop diagnostic unavailable: ' + type(error).__name__[:80]
+
+
 @pytest.mark.parametrize('uncovered',[False,True])
 def test_actual_source_cpu_then_managed_drain_and_original_node_exit_keeps_lease_blocked(tmp_path,monkeypatch,uncovered):
     import urllib.request,urllib.error
@@ -656,7 +711,7 @@ def test_actual_source_cpu_then_managed_drain_and_original_node_exit_keeps_lease
         assert ordinary=={'pid':server['pid'],'requested':True}
         (projects/'exit.trigger').touch()
         result=json.loads(wait_file(projects/'managed-stop-result.json',seconds=5))
-        assert result['direct_exit']==0 and result['signal'] is None
+        assert result['direct_exit']==0 and result['signal'] is None, _managed_stop_diagnostic(projects, result)
         assert (result['error'] is not None)==uncovered
         finish_managed(child,root)  # Original direct-main observation settles publication.
         snapshot=inspect_epoch(root,ack['nonce']);assert snapshot['registry']['state']=='closed'

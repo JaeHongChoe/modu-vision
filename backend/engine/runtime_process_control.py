@@ -84,9 +84,77 @@ def inspection_command(arguments,state):
         and arguments[arguments.index('--state-dir')+1]==str(Path(state)))
 
 
+def _runtime_spawn_diagnostic(process,owner,arguments,state):
+    """Bounded non-atomic observations; no raw argv values or authority grant."""
+    def command(value):
+        if type(value) not in (list,tuple) or any(type(item) is not str for item in value):
+            return {'unavailable':'command_shape'}
+        if len(value)>64 or any(len(item)>65536 for item in value):
+            return {'unavailable':'command_bounds','argc':len(value)}
+        vector=list(value)
+        entry=('module' if len(vector)>=3 and vector[1:3]==['-m','backend.engine.inspection_service']
+               else 'frozen' if len(vector)>=2 and vector[1]=='--inspection-service'
+               else 'empty' if not vector else 'other')
+        count=vector.count('--state-dir')
+        state_matches=(count==1 and vector.index('--state-dir')+1<len(vector)
+                       and vector[vector.index('--state-dir')+1]==str(Path(state)))
+        flags={'-m','--inspection-service','--state-dir','--package','--runtime-root',
+               '--release-policy','--require-approved-release','--device','--port',
+               '--input-root','--camera-source','--camera-fps','--camera-width','--camera-height'}
+        tokens=[]
+        for index,item in enumerate(vector[:8]):
+            if index and item in flags:
+                tokens.append({'index':index,'flag':item})
+            elif index==2 and entry=='module':
+                tokens.append({'index':index,'module':'backend.engine.inspection_service'})
+            else:
+                tokens.append({'index':index,'sha256':hashlib.sha256(item.encode()).hexdigest()})
+        return {'argc':len(vector),'sha256':command_sha256(vector),'entry':entry,
+                'state_flag_count':count,'state_matches':state_matches,'tokens':tokens}
+
+    def observe(read,kind):
+        try:
+            value=read()
+        except BaseException as exc:
+            unavailable=('ZombieProcess' if isinstance(exc,psutil.ZombieProcess)
+                         else 'NoSuchProcess' if isinstance(exc,psutil.NoSuchProcess)
+                         else 'AccessDenied' if isinstance(exc,psutil.AccessDenied)
+                         else 'TimeoutExpired' if isinstance(exc,psutil.TimeoutExpired)
+                         else 'observation_error')
+            return {'unavailable':unavailable}
+        if kind=='birth' and type(value) in (int,float) and 0<value<float('inf'):
+            return value
+        if kind=='status' and type(value) is str:
+            statuses={'running','sleeping','disk-sleep','stopped','tracing-stop','zombie','dead',
+                      'wake-kill','waking','parked','idle','locked','waiting','suspended'}
+            return value if value in statuses else 'other'
+        if kind=='poll' and (value is None or type(value) is int and -(1<<31)<=value<(1<<31)):
+            return value
+        return {'unavailable':'observation_shape'}
+
+    pid=process.pid
+    return {'schema':'modu-vision.runtime-spawn-observation/v1',
+            'non_atomic':True,'ownership_verified':False,
+            'expected':command(getattr(process,'args',None)),'observed':command(arguments),
+            'process':{'pid':pid if type(pid) is int and 0<pid<(1<<63) else {'unavailable':'observation_shape'},
+                       'birth':observe(lambda:owner.create_time(),'birth'),
+                       'status':observe(lambda:owner.status(),'status'),
+                       'poll_exit_code':observe(lambda:process.poll(),'poll')}}
+
+
 def process_identity(process,state):
     owner=psutil.Process(process.pid);arguments=owner.cmdline()
-    if not inspection_command(arguments,state):raise ValueError('Spawned runtime command differs from its owned state')
+    if not inspection_command(arguments,state):
+        error=ValueError('Spawned runtime command differs from its owned state')
+        try:
+            diagnostic=_runtime_spawn_diagnostic(process,owner,arguments,state)
+            note='Runtime spawn diagnostic: '+json.dumps(diagnostic,separators=(',',':'),allow_nan=False)
+            if len(note.encode('utf-8'))<=4096:
+                error.runtime_spawn_diagnostic=diagnostic
+                if hasattr(error,'add_note'):error.add_note(note)
+        except BaseException:
+            pass  # Observation failure must preserve the already selected refusal.
+        raise error
     return {'pid':process.pid,'process_created_at':owner.create_time(),'process_command_sha256':command_sha256(arguments)}
 
 

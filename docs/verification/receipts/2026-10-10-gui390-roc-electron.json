@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "c8ce2df32906d36f34aad6f2396cfd24426b7365",
+  "source_dirty": false,
+  "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native ROC review handoff resets transient thresholds and preserves exact saved record bindings",
+  "test_source_sha256": "073a2ef84616a2ae8e3f5537098ff51850f28891e0c47eca6e91d592070b366d",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "36928638112f34b0266eb30997eba333acd9f6f2eac9b065510e20357a44d431",
+  "harness_sha256": "e4614a140cad54fcdb14db0b57769fcb4f53dd1816265cec20e25c247ed74b32",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "248354ee42edf399947af032cc8cba216b6044e0286510e36aa844c373013537"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "7a9a5d8f87895174028be0b45eab18060a63753e540f2384963b5a65b6f7815b"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "8cbada10fab3b0eac3072d09b8cc1fb001558b2d9bbd748021eb0e77b45c6a96"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

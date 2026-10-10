@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "c8ce2df32906d36f34aad6f2396cfd24426b7365",
+  "source_dirty": false,
+  "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved evaluation filters preserve exact class errors, score and area bins and ROC arithmetic",
+  "test_source_sha256": "073a2ef84616a2ae8e3f5537098ff51850f28891e0c47eca6e91d592070b366d",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "90f4653777485bf86c1bc5faf56fd572190589c1f499408813b54ca6ccc31ec4",
+  "harness_sha256": "ba864818fd5f773c21327432bef2d38dce05c2a13424b4e0033e4339d2d08d71",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "efc1eaf5fdc4cd358d4ea90b58fed1436b267e20196122f9e85de8af5213096a"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "72610381366c6ac4bb28f18a294f9b6090a295cf0a8ae2facb30619f6cec50cc"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

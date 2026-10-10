@@ -256,15 +256,20 @@ def test_cpu_and_browser_ci_have_independent_original_bounds_and_complete_comman
         'backend/tests/test_rotated_detection_lifecycle_evidence.py',
         'backend/tests/test_enhancement_gan_lifecycle_evidence.py',
         'backend/tests/test_gan_generation_lifecycle_evidence.py',
+        'backend/tests/test_migration_writer_snapshot_order.py',
+        'backend/tests/test_native_compiler_optional_tool_exclusions.py',
+        'backend/tests/test_yolo_obb_cpu_device_contract.py',
+        'backend/tests/test_labelset_blank_name_boundary.py',
+        'backend/tests/test_runtime_spawn_diagnostic.py',
     )
     command = cpu_step['run']
     marker = 'backend/tests/test_service_s5_01.py '
     insertion = ' '.join(additional) + ' '
-    assert command.count(marker + insertion) == 1, 'Reviewed thirteen-module addition must remain at its original single insertion point'
+    assert command.count(marker + insertion) == 1, 'Reviewed eighteen-module addition must remain at its original single insertion point'
     assert all(command.split().count(reference) == 1 for reference in additional), 'Every added verified-control module must execute once'
     preserved = command.replace(marker + insertion, marker, 1)
     assert hashlib.sha256(preserved.encode()).hexdigest() == 'bcc48453cbc55193ffc09ddfab2675bc657897eb509143ebb2d52264b71742fe', 'Every original CPU selector, ordering and command bound must be preserved'
-    assert hashlib.sha256(command.encode()).hexdigest() == '79f5e7ed15715f1342f8524f49a8c50e9a7f2ae79ce304843c2cd39ec3109593', 'Complete original CPU command plus exactly thirteen published controls must remain unchanged'
+    assert hashlib.sha256(command.encode()).hexdigest() == '402fdf2a6f2a37e30ab2c7e52acf7236d083c819502a172e57e235558df5feee', 'Complete original CPU command plus exactly eighteen published controls must remain unchanged'
     assert cpu_step['env'] == {'MV_CI_RECORD_DIR': '${{ runner.temp }}/modu-ci-manifests'}
     assert step(cpu, 'Core defect baseline evidence')['run'] == 'python scripts/service_baseline_evidence.py --output "$MV_CI_RECORD_DIR/ci-baseline-evidence.json"'
     assert not any(value.get('name') in {'Install test browser', 'Browser transport and flow checks'} for value in cpu['steps'])

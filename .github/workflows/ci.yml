@@ -187,6 +187,11 @@ jobs:
           backend/tests/test_rotated_detection_lifecycle_evidence.py
           backend/tests/test_enhancement_gan_lifecycle_evidence.py
           backend/tests/test_gan_generation_lifecycle_evidence.py
+          backend/tests/test_migration_writer_snapshot_order.py
+          backend/tests/test_native_compiler_optional_tool_exclusions.py
+          backend/tests/test_yolo_obb_cpu_device_contract.py
+          backend/tests/test_labelset_blank_name_boundary.py
+          backend/tests/test_runtime_spawn_diagnostic.py
           backend/tests/test_service_s5_02.py
           backend/tests/test_service_s5_06.py
           backend/tests/test_service_s5_08_drift.py

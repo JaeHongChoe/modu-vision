@@ -223,3 +223,55 @@ test('source Electron readiness diagnosis and unsent grouped split lifecycle pre
   const api: Api = (route, body, method) => page.evaluate(async ({port, route, body, method}) => {const response = await fetch(`http://127.0.0.1:${port}${route}`, {method: method || (body === undefined ? 'GET' : 'POST'), ...(body === undefined ? {} : {headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)})}); if (!response.ok) throw Error(`Owned readiness fixture HTTP ${response.status}: ${await response.text()}`); return response.json();}, {port: backend.port, route, body, method});
   await exercise(page, workspace, evidence, api, true);
 });
+
+
+// Additional U013.group-split-preview.handoff, never split apply or cancel credit.
+import {handoffApi as splitHandoffApi,handoffProject as splitHandoffProject,handoffLateRead as splitLateRead,handoffRoots as splitRoots,handoffAssertRoots as splitAssertRoots,handoffPost as splitPost,handoffSave as splitSave} from './fixtures/remaining-project-handoff';
+async function groupedPreviewProjectHandoff(page:Page,w:Workspace,e:Evidence,native:boolean,origin:string,url?:string){
+ const api=splitHandoffApi(page,origin,native);
+ const prepare=async(tag:'A'|'B')=>{
+  const source=path.join(w.root,'grouped-preview-handoff-'+tag);fs.mkdirSync(source);expect(w.images).toHaveLength(2);
+  const images=w.images.map((input,index)=>{const dir=path.join(source,input.label);fs.mkdirSync(dir,{recursive:true});const file=path.join(dir,'part-'+index+'.png');fs.copyFileSync(input.path,file);expect(fileSha(file)).toBe(input.sha256);return {path:file,sha256:input.sha256};});
+  const project=await api('/api/project/create',{name:'Grouped preview handoff '+tag,task:'classification'});await api('/api/project/update',{source_dataset_dir:source},'PUT');await api('/api/dataset/import',{folder_path:source,task:'classification',validate_images:false});
+  const imported=(await api('/api/dataset/metadata?limit=10')).items;expect(imported).toHaveLength(2);
+  for(const [index,row] of imported.entries())await api('/api/dataset/metadata/'+row.image_uuid,{expected_revision:row.revision,actor:'handoff-split-setup',changes:{product:'product-'+tag,lot:'lot-'+tag+'-'+index,group:'declared-original-'+tag+'-'+index}},'PATCH');
+  // Match the original readiness fixture: genuine first-read team/annotation setup precedes saved split qualification.
+  await api('/api/team-data');await api('/api/team-data/readiness');await api('/api/team-data/queue?offset=0&limit=30');await api('/api/project/preferences');
+  for(const image of images)await api('/api/annotations/'+path.basename(image.path,'.png')+'?file_path='+encodeURIComponent(image.path));
+  const saved=await api(splitEndpoint,{group_by:[tag==='A'?'product':'lot'],train_ratio:tag==='A'?1:0,val_ratio:tag==='A'?0:1,test_ratio:0,apply:true,actor:'handoff-split-setup'});expect(saved.applied).toBe(true);expect(saved.group_count).toBe(tag==='A'?1:2);
+  const metadata=(await api('/api/dataset/metadata?limit=10')).items;for(const row of metadata){const input=images.find(x=>x.path===row.file_path)!;expect(input).toBeTruthy();expect(row.content_hash).toBe(input.sha256);expect(row.image_uuid).toBeTruthy();expect(row.lot.startsWith('lot-'+tag+'-')).toBe(true);}
+  await api('/api/dataset/versions');const annotations=await Promise.all(images.map(image=>api('/api/annotations/'+path.basename(image.path,'.png')+'?file_path='+encodeURIComponent(image.path))));
+  return {tag,source,project:await api('/api/project/current'),images,metadata,annotations,saved:await api(splitEndpoint)};
+ };
+ const A=await prepare('A'),B=await prepare('B');expect(A.project.id).not.toBe(B.project.id);expect(A.metadata.map((r:any)=>r.image_uuid).some((id:string)=>B.metadata.some((r:any)=>r.image_uuid===id))).toBe(false);expect(A.saved.qualification.sha256).not.toBe(B.saved.qualification.sha256);
+ const enter=async(scope:typeof A)=>{
+  await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(0).click();const toggle=page.getByRole('button',{name:'이미지 검토·그룹 분할·라벨 교환',exact:true});if(await toggle.getAttribute('aria-expanded')==='false')await toggle.click();
+  const panel=page.getByRole('region',{name:'데이터 검토와 라벨 교환',exact:true});await expect(panel).toContainText('검색 결과 2개');await expect(panel.getByRole('status').filter({hasText:'처리 중'})).toHaveCount(0);await expect(panel.getByLabel('저장된 분할 근거',{exact:true})).toContainText('저장 기준 '+(scope.tag==='A'?'product':'lot'));return panel;
+ };
+ if(url)await page.goto(url);else await page.reload();await enter(B);await splitHandoffProject(page,A,origin);let panel=await enter(A);const rootsA=splitRoots(A);await splitHandoffProject(page,B,origin);await enter(B);const rootsB=splitRoots(B);await splitHandoffProject(page,A,origin);panel=await enter(A);
+ const baselineA={metadata:(await api('/api/dataset/metadata?limit=10')).items,saved:await api(splitEndpoint),annotations:await Promise.all(A.images.map(image=>api('/api/annotations/'+path.basename(image.path,'.png')+'?file_path='+encodeURIComponent(image.path))))};
+ expect(baselineA.saved).toEqual(A.saved);expect(baselineA.metadata).toEqual(A.metadata);expect(baselineA.annotations).toEqual(A.annotations);
+ const writes:any[]=[],observe=(request:Request)=>{const u=new URL(request.url());if(u.origin===origin&&!['GET','HEAD','OPTIONS'].includes(request.method())&&u.pathname.startsWith('/api/')&&u.pathname!=='/api/project/open')writes.push({method:request.method(),path:u.pathname,body:request.postDataJSON()});};page.on('request',observe);let primary:unknown;
+ try{
+  await panel.getByLabel('분할 그룹 기준',{exact:true}).selectOption('lot');for(const [index,name] of ['학습','검증','시험'].entries())await panel.getByLabel(name+' 그룹 분할 비율',{exact:true}).fill(String([50,50,0][index]));
+  const expected={group_by:['lot'],train_ratio:.5,val_ratio:.5,test_ratio:0,apply:false,actor:'operator'};const posted=await splitPost(page,origin,panel.getByRole('button',{name:'분할 미리보기',exact:true}),splitEndpoint,expected,e,w,'grouped-preview-handoff');const preview=posted.body;
+  expect(preview).toMatchObject({applied:false,apply_supported:true,group_count:2,split:{train:1,val:1,test:0}});expect(preview.qualification.group_by).toEqual(['lot']);expect(preview.qualification.sha256).not.toBe(A.saved.qualification.sha256);await expect(panel).toContainText('독립 그룹 2개');await expect(panel.getByLabel('저장된 분할 근거',{exact:true})).toContainText('저장 기준 lot');await expect(panel.getByRole('button',{name:'분할 미리보기',exact:true})).toBeEnabled();
+  expect(await api(splitEndpoint)).toEqual(A.saved);splitAssertRoots(rootsA,splitRoots(A));
+  const late=await splitLateRead(page,origin,native,u=>u.pathname===splitEndpoint);let latePrimary:unknown;
+  try{
+   const toggle=page.getByRole('button',{name:'이미지 검토·그룹 분할·라벨 교환',exact:true});await toggle.click();await expect(toggle).toHaveAttribute('aria-expanded','false');await toggle.click();const captured=await late.ready();expect(captured.body).toEqual(A.saved);
+   const toB=await splitHandoffProject(page,B,origin);const panelB=await enter(B);await expect(panelB).toContainText('학습 0 / 검증 2 / 시험 0');expect(await api(splitEndpoint)).toEqual(B.saved);splitAssertRoots(rootsB,splitRoots(B));
+   const outcome=await late.finish();await expect(panelB.getByLabel('저장된 분할 근거',{exact:true})).toContainText('저장 기준 lot');await expect(panelB).toContainText('학습 0 / 검증 2 / 시험 0');expect((await api('/api/dataset/metadata?limit=10')).items).toEqual(B.metadata);splitAssertRoots(rootsB,splitRoots(B));
+   const toA=await splitHandoffProject(page,A,origin);panel=await enter(A);await expect(panel).toContainText('독립 그룹 1개');await expect(panel).toContainText('학습 2 / 검증 0 / 시험 0');await expect(panel.getByLabel('저장된 분할 근거',{exact:true})).toContainText('저장 기준 product');expect(await api(splitEndpoint)).toEqual(A.saved);expect((await api('/api/dataset/metadata?limit=10')).items).toEqual(baselineA.metadata);splitAssertRoots(rootsA,splitRoots(A));
+   expect(writes).toEqual([{method:'POST',path:splitEndpoint,body:expected}]);for(const scope of [A,B])for(const image of scope.images)expect(fileSha(image.path)).toBe(image.sha256);
+   await e.screenshot(page,`${native?'native':'browser'}-unsaved-lot-preview-return-A-original-product-split`);splitSave(e,w,'grouped-preview-handoff-proof',{A,B,rootsA,rootsB,baselineA,actual_preview:posted.proof,preview,captured_sha256:captured.sha256,toB,toA,outcome,writes});
+   e.note('grouped_preview_project_handoff',{record_id:'U013',action:'group-split-preview',dimension:'handoff',actual_UI_preview:posted.proof,projects:[A.project.id,B.project.id,A.project.id],original_UUIDs:{A:A.metadata.map((r:any)=>r.image_uuid),B:B.metadata.map((r:any)=>r.image_uuid)},original_saved_split_sha256:{A:A.saved.qualification.sha256,B:B.saved.qualification.sha256},preview_qualification_sha256:preview.qualification.sha256,toB,toA,late_read:outcome,only_preview_POST_after_setup:true,saved_split_and_original_namespaces_exact:true,apply_or_cancel_credit:false,actual_model_inference:false,human_quality_installed_target_parent_approval:false,source_electron:native});
+  }catch(error){latePrimary=error;throw error;}finally{try{await late.close();}catch(error){if(!latePrimary)throw error;e.note('split_handoff_secondary_route_cleanup',{type:error instanceof Error?error.name:'unknown'});}}
+ }catch(error){primary=error;throw error;}finally{page.off('request',observe);void primary;}
+}
+test('unsaved lot grouped preview hands off A B A while both original saved splits remain exact',async({page,renderer,workspace,evidence})=>{
+ await installDesktopHostShim(page,renderer.port);await groupedPreviewProjectHandoff(page,workspace,evidence,false,renderer.origin,renderer.url);
+});
+test('native lot grouped preview fences late A split read and restores exact saved split on return',{tag:'@electron'},async({electronSession,workspace,evidence})=>{
+ const page=electronSession.window,backend=await electronSession.waitForBackend();await groupedPreviewProjectHandoff(page,workspace,evidence,true,`http://127.0.0.1:${backend.port}`);
+});

@@ -49,3 +49,61 @@ test('saved review queue preserves priority cursor and reviewer without approvin
 test('native saved review queue preserves priority cursor and reviewer without approving labels',{tag:'@electron'},async({electronSession,workspace,evidence})=>{
  const {window}=electronSession,backend=await electronSession.waitForBackend();const api:Api=(route,body,method)=>window.evaluate(async({port,route,body,method})=>{const r=await fetch(`http://127.0.0.1:${port}${route}`,{method:method||(body===undefined?'GET':'POST'),...(body===undefined?{}:{headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})});if(!r.ok)throw Error(`Owned queue API ${r.status}: ${await r.text()}`);return r.json();},{port:backend.port,route,body,method});await exercise(window,workspace,evidence,api,true);
 });
+
+
+// Additional U015.saved-queue-create.handoff; reports remain controlled, not inference.
+import type {Request as QueueHandoffRequest} from '@playwright/test';
+import {handoffApi as queueHandoffApi,handoffProject as queueHandoffProject,handoffLateRead as queueLateRead,handoffRoots as queueRoots,handoffAssertRoots as queueAssertRoots,handoffPost as queuePost,handoffSave as queueSave} from './fixtures/remaining-project-handoff';
+async function queueCreateProjectHandoff(page:Page,w:Workspace,e:Evidence,native:boolean,origin:string,url?:string){
+ const api=queueHandoffApi(page,origin,native);
+ const prepare=async(tag:'A'|'B')=>{
+  const source=path.join(w.root,'queue-create-handoff-'+tag);fs.mkdirSync(source);
+  const inputs=['error','disagreement','threshold'].map((name,i)=>{const file=path.join(source,name+'.png');fs.writeFileSync(file,png(64,3,(x,y)=>[x,y,(tag==='A'?50:150)+i]));return {path:file,sha256:sha(file)};});
+  const project=await api('/api/project/create',{name:'Queue create handoff '+tag,task:'segmentation'});await api('/api/project/update',{source_dataset_dir:source},'PUT');await api('/api/dataset/import',{folder_path:source,task:'segmentation'});
+  const fixture=JSON.parse(execFileSync(harness.resolvePython(),[path.join(harness.REPO_ROOT,'scripts/e2e/fixtures/review_queue_reports.py'),w.root,project.project_dir,source],{cwd:harness.REPO_ROOT,encoding:'utf8',timeout:30_000}));expect(fixture.controlled_reports_not_model_inference).toBe(true);expect(sha(fixture.path)).toBe(fixture.sha256);
+  await api('/api/team-data');await api('/api/team-data/readiness');await api('/api/team-data/queue?offset=0&limit=30');await api('/api/project/preferences');
+  const metadata=[];for(const row of inputs){const image=await api('/api/dataset/metadata/image?image_path='+encodeURIComponent(row.path));expect(image.content_hash).toBe(row.sha256);expect(image.image_uuid).toBeTruthy();metadata.push(image);await api('/api/annotations/'+path.basename(row.path,'.png')+'?file_path='+encodeURIComponent(row.path));}
+  const queue=tag==='B'?await api('/api/data-workbench/review-queues',{evaluation_id:fixture.record.evaluation_id,threshold:.5,margin:.05}):null;
+  return {tag,source,project:await api('/api/project/current'),inputs,metadata,fixture,queue};
+ };
+ const A=await prepare('A'),B=await prepare('B');expect(A.project.id).not.toBe(B.project.id);expect(A.fixture.record.evaluation_id).not.toBe(B.fixture.record.evaluation_id);expect(A.metadata.some(row=>B.metadata.some(other=>row.image_uuid===other.image_uuid))).toBe(false);
+ expect(A.fixture.record.result.test_predictions.map((r:any)=>r.image_sha256)).toEqual(A.inputs.map(row=>row.sha256));
+ const enter=async(scope:typeof A)=>{
+  await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(1).click();const focus=page.getByRole('button',{name:'집중 편집',exact:true});if(await focus.getAttribute('aria-pressed')==='true')await focus.click();
+  const summary=page.getByText('저장 검토 큐 · 오류·불일치·임계값 우선',{exact:true});if(await summary.locator('..').getAttribute('open')===null)await summary.click();const panel=page.getByRole('region',{name:'저장된 검토 큐'});await expect(panel.getByRole('combobox',{name:'검토 큐 원본 평가',exact:true})).toHaveValue(scope.fixture.record.evaluation_id);return panel;
+ };
+ if(url)await page.goto(url);else await page.reload();await enter(B);await queueHandoffProject(page,A,origin);let panel=await enter(A);expect((await api('/api/data-workbench/review-queues')).queues).toEqual([]);
+ const rootsA=queueRoots(A);await queueHandoffProject(page,B,origin);await enter(B);const rootsB=queueRoots(B),savedB=await api('/api/data-workbench/review-queues/'+B.queue.id);await queueHandoffProject(page,A,origin);panel=await enter(A);
+ const writes:any[]=[],observe=(request:QueueHandoffRequest)=>{const u=new URL(request.url());if(u.origin===origin&&!['GET','HEAD','OPTIONS'].includes(request.method())&&u.pathname.startsWith('/api/')&&u.pathname!=='/api/project/open')writes.push({method:request.method(),path:u.pathname,body:request.postDataJSON()});};page.on('request',observe);
+ const expected={evaluation_id:A.fixture.record.evaluation_id,threshold:.5,margin:.05};let primary:unknown;
+ try{
+  const created=await queuePost(page,origin,panel.getByRole('button',{name:'우선순위 큐 저장',exact:true}),'/api/data-workbench/review-queues',expected,e,w,'queue-handoff');const queue=created.body;
+  await expect(panel.getByRole('combobox',{name:'저장 검토 큐 선택',exact:true})).toHaveValue(queue.id);await expect(panel).toContainText('검토 진행 0 / 3');await expect(panel.getByRole('button',{name:'우선순위 큐 저장',exact:true})).toBeEnabled();
+  expect(queue.scope.source).toBe(A.source);expect(queue.origin.evaluation_id).toBe(A.fixture.record.evaluation_id);expect(queue.cursor).toBe(0);expect(queue.history).toEqual([]);
+  expect(queue.items.map((r:any)=>[r.relative_path,r.reasons,r.priority])).toEqual([['error.png',['error','threshold'],400],['disagreement.png',['disagreement'],200],['threshold.png',['threshold'],100]]);
+  const catalogA=await api('/api/data-workbench/review-queues');expect(catalogA.queues).toHaveLength(1);expect(catalogA.queues[0].id).toBe(queue.id);const savedA=await api('/api/data-workbench/review-queues/'+queue.id),expectedRoots=queueRoots(A);
+  // Genuine queue creation is the only new A persisted file; its raw path/hash is pinned.
+  for(const kind of ['source','annotations','models','reports'])expect(expectedRoots[kind]).toEqual(rootsA[kind]);
+  const storage='data_workbench/'+crypto.createHash('sha256').update(fs.realpathSync(A.source)).digest('hex').slice(0,24),beforeFiles=rootsA.dataset.snapshot.files,afterFiles=expectedRoots.dataset.snapshot.files,newMembers=Object.keys(afterFiles).filter(x=>!(x in beforeFiles));expect(newMembers).toEqual([storage+'/review_queues/'+queue.id+'.json']);for(const member of Object.keys(beforeFiles))expect(afterFiles[member]).toEqual(beforeFiles[member]);
+  const addedDirectories=expectedRoots.dataset.snapshot.directories.filter(x=>!rootsA.dataset.snapshot.directories.includes(x));expect(addedDirectories).toEqual(['data_workbench',storage,storage+'/review_queues'].filter(x=>!rootsA.dataset.snapshot.directories.includes(x)));
+  expect(expectedRoots.dataset.snapshot.directories).toEqual([...rootsA.dataset.snapshot.directories,...addedDirectories].sort());
+  for(const row of queue.items){const image=A.metadata.find(item=>item.file_path===row.file_path)!;expect(image).toBeTruthy();expect(image.content_hash).toBe(row.source_sha256);}
+  const rawQueue=JSON.parse(fs.readFileSync(path.join(A.project.dataset_dir,newMembers[0]),'utf8'));expect(rawQueue).toEqual(savedA);
+  const late=await queueLateRead(page,origin,native,u=>u.pathname==='/api/data-workbench/review-queues');let latePrimary:unknown;
+  try{
+   await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(0).click();await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(1).click();const captured=await late.ready();expect(captured.body).toEqual(catalogA);
+   const toB=await queueHandoffProject(page,B,origin);const panelB=await enter(B);await expect(panelB.getByRole('combobox',{name:'저장 검토 큐 선택',exact:true})).toHaveValue(B.queue.id);expect(await api('/api/data-workbench/review-queues/'+B.queue.id)).toEqual(savedB);queueAssertRoots(rootsB,queueRoots(B));
+   const outcome=await late.finish();await expect(panelB.getByRole('combobox',{name:'저장 검토 큐 선택',exact:true})).toHaveValue(B.queue.id);expect((await api('/api/data-workbench/review-queues')).queues.map((r:any)=>r.id)).toEqual([B.queue.id]);queueAssertRoots(rootsB,queueRoots(B));
+   const toA=await queueHandoffProject(page,A,origin);panel=await enter(A);await expect(panel.getByRole('combobox',{name:'저장 검토 큐 선택',exact:true})).toHaveValue(queue.id);await expect(panel).toContainText('검토 진행 0 / 3');expect(await api('/api/data-workbench/review-queues/'+queue.id)).toEqual(savedA);queueAssertRoots(expectedRoots,queueRoots(A));
+   expect(writes).toEqual([{method:'POST',path:'/api/data-workbench/review-queues',body:expected}]);for(const scope of [A,B]){for(const input of scope.inputs)expect(sha(input.path)).toBe(input.sha256);expect(sha(scope.fixture.path)).toBe(scope.fixture.sha256);}
+   await e.screenshot(page,`${native?'native':'browser'}-created-queue-exact-A-return-after-old-A-catalog`);queueSave(e,w,'queue-create-handoff-proof',{A,B,rootsA,rootsB,expectedRoots,created:created.proof,savedA,savedB,newMembers,toB,toA,captured_sha256:captured.sha256,outcome,writes});
+   e.note('saved_queue_create_project_handoff',{record_id:'U015',action:'saved-queue-create',dimension:'handoff',actual_UI_create:created.proof,projects:[A.project.id,B.project.id,A.project.id],evaluation_ids:[A.fixture.record.evaluation_id,B.fixture.record.evaluation_id],queue_ids:[queue.id,B.queue.id,queue.id],toB,toA,late_read:outcome,original_inputs_reports_labels_exact:true,queue_cursor_and_history_exact:true,controlled_reports_not_model_inference:true,human_quality_installed_target_parent_approval:false,source_electron:native});
+  }catch(error){latePrimary=error;throw error;}finally{try{await late.close();}catch(error){if(!latePrimary)throw error;e.note('queue_handoff_secondary_route_cleanup',{type:error instanceof Error?error.name:'unknown'});}}
+ }catch(error){primary=error;throw error;}finally{page.off('request',observe);void primary;}
+}
+test('created saved queue hands off A B A with exact controlled report cursor and original inputs',async({page,renderer,workspace,evidence})=>{
+ await installDesktopHostShim(page,renderer.port);await queueCreateProjectHandoff(page,workspace,evidence,false,renderer.origin,renderer.url);
+});
+test('native created saved queue fences old A catalog and preserves exact reopened queue',{tag:'@electron'},async({electronSession,workspace,evidence})=>{
+ const page=electronSession.window,backend=await electronSession.waitForBackend();await queueCreateProjectHandoff(page,workspace,evidence,true,`http://127.0.0.1:${backend.port}`);
+});
