@@ -168,3 +168,176 @@ test('native independent direction rejects invalid values and persists an intent
    source_electron:true,actual_UI_input_and_save:true,invalid_rejected_in_renderer_without_write:true,invalid_backend_422_claimed:false,empty_is_absent_not_zero:true,all_complete_protected_trees_unfiltered:true,only_owned_label_and_workflow_changed:true,model_training_or_inference:false,human_annotation_quality_approval:false,parent_82_acceptance:false});
  }finally{io.finish();}
 });
+
+// SOURCE-only append: Root alone executes and qualifies this prospective cell.
+import {installDesktopHostShim as directionHandoffHost} from './fixtures/desktop-host-shim';
+import {handoffApi as directionHandoffApi, handoffProject as directionHandoffProject,
+ handoffLateRead as directionHandoffLateRead, handoffWithin as directionHandoffWithin,
+ handoffSave as directionHandoffSave, type HandoffApi as DirectionHandoffApi} from './fixtures/remaining-project-handoff';
+
+type DirectionHandoffScope={tag:'A'|'B';project:any;source:string;image:string;source_sha256:string;direction:number;angle:number;saved?:any};
+const directionHandoffIdentity=(s:fs.BigIntStats)=>[s.dev,s.ino,s.mode,s.nlink,s.size,s.mtimeNs,s.ctimeNs].map(String);
+function directionHandoffTree(root:string):Record<string,unknown>{
+ const rows:Record<string,unknown>={};
+ try{fs.lstatSync(root);}catch(error){if((error as NodeJS.ErrnoException).code==='ENOENT')return{'.':{kind:'absent'}};throw error;}
+ const visit=(file:string)=>{
+  const named=fs.lstatSync(file,{bigint:true}),member=path.relative(root,file).split(path.sep).join('/')||'.';
+  expect(named.isSymbolicLink()).toBe(false);expect(fs.realpathSync(file)).toBe(file);
+  if(named.isDirectory()){
+   rows[member]={kind:'directory',identity:directionHandoffIdentity(named)};
+   const names=fs.readdirSync(file).sort();for(const name of names)visit(path.join(file,name));
+   expect(fs.readdirSync(file).sort()).toEqual(names);expect(directionHandoffIdentity(fs.lstatSync(file,{bigint:true}))).toEqual(directionHandoffIdentity(named));return;
+  }
+  expect(named.isFile()).toBe(true);expect(named.nlink).toBe(1n);
+  const fd=fs.openSync(file,fs.constants.O_RDONLY|fs.constants.O_NOFOLLOW);let primary:unknown;
+  try{
+   expect(directionHandoffIdentity(fs.fstatSync(fd,{bigint:true}))).toEqual(directionHandoffIdentity(named));
+   const raw=fs.readFileSync(fd);expect(BigInt(raw.length)).toBe(named.size);
+   expect(directionHandoffIdentity(fs.fstatSync(fd,{bigint:true}))).toEqual(directionHandoffIdentity(named));
+   expect(directionHandoffIdentity(fs.lstatSync(file,{bigint:true}))).toEqual(directionHandoffIdentity(named));
+   rows[member]={kind:'file',identity:directionHandoffIdentity(named),sha256:sha(raw),size:raw.length};
+  }catch(error){primary=error;throw error;}finally{try{fs.closeSync(fd);}catch(error){if(primary===undefined)throw error;}}
+ };visit(root);return rows;
+}
+function directionHandoffOwnedBrowserProject(project:any,w:Workspace){expect(path.dirname(project.project_dir)).toBe(w.projects);expect(fs.realpathSync(project.project_dir)).toBe(project.project_dir);expect(fs.lstatSync(project.project_dir).isSymbolicLink()).toBe(false);}
+async function directionHandoffMake(api:DirectionHandoffApi,w:Workspace,tag:'A'|'B'):Promise<DirectionHandoffScope>{
+ const source=path.join(w.root,'direction-handoff-source-'+tag);fs.mkdirSync(source);
+ const image=path.join(source,'part.png'),blue=tag==='A'?100:101;
+ fs.writeFileSync(image,png(256,3,(x,y)=>[x,y,blue]),{flag:'wx'});const raw=fs.readFileSync(image);assertSourcePixels(raw,blue);
+ const made=await api('/api/project/create',{name:'Owned independent direction handoff '+tag,task:'segmentation'});directionHandoffOwnedBrowserProject(made,w);
+ await api('/api/project/update',{source_dataset_dir:source},'PUT');
+ await api('/api/dataset/import',{folder_path:source,task:'segmentation',validate_images:true});
+ const project=await api('/api/project/current');expect(project.id).toBe(made.id);expect(project.source_dataset_dir).toBe(source);expect(project.task).toBe('segmentation');
+ await api('/api/project/labelsets');await api('/api/team-data');await api('/api/team-data/readiness');
+ const metadata=(await api('/api/dataset/metadata?limit=100')).items;expect(metadata).toHaveLength(1);
+ await api('/api/team-data/images/'+metadata[0].image_uuid);await api('/api/annotations/part?file_path='+encodeURIComponent(image));
+ return{tag,project,source,image,source_sha256:sha(raw),direction:tag==='A'?315:45,angle:tag==='A'?30:60};
+}
+async function directionHandoffExercise(page:Page,w:Workspace,e:Evidence,origin:string,url:string){
+ const api=directionHandoffApi(page,origin,false),A=await directionHandoffMake(api,w,'A'),B=await directionHandoffMake(api,w,'B');
+ expect(A.project.id).not.toBe(B.project.id);expect(A.project.project_dir).not.toBe(B.project.project_dir);expect(A.source_sha256).not.toBe(B.source_sha256);
+ const query=(scope:DirectionHandoffScope)=>'/api/annotations/part?file_path='+encodeURIComponent(scope.image);
+ const direction=page.getByLabel('객체 독립 방향 라벨',{exact:true});
+ const angle=page.getByText('Angle (θ)',{exact:true}).locator('..').locator('..').getByRole('spinbutton');
+ const save=page.getByTestId('annotation-save-button'),proof:any[]=[];
+ const current=async(scope:DirectionHandoffScope)=>{
+  const value=await api('/api/project/current');expect([value.id,value.project_dir,value.source_dataset_dir,value.task,value.active_labelset_id])
+   .toEqual([scope.project.id,scope.project.project_dir,scope.source,scope.project.task,scope.project.active_labelset_id]);return value;
+ };
+ const enter=async(scope:DirectionHandoffScope)=>{
+  await current(scope);await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(1).click();
+  const focus=page.getByRole('button',{name:'집중 편집',exact:true});if(await focus.getAttribute('aria-pressed')!=='true')await focus.click();
+  await expect(page.locator('[data-canvas-container]')).toBeVisible();await expect(save).toBeEnabled();
+ };
+ const owningContext=async(request:Request,scope:DirectionHandoffScope,deadline:number)=>{
+  expect(request.frame()).toBe(page.mainFrame());expect(new URL(request.url()).origin).toBe(origin);
+  expect(await directionHandoffWithin(request.headerValue('x-vision-project'),deadline,'owning project header')).toBe(scope.project.id);
+  const raw=await directionHandoffWithin(request.headerValue('x-vision-context'),deadline,'owning request context');expect(raw).not.toBeNull();
+  const context=JSON.parse(raw!);expect(context.project_id).toBe(scope.project.id);expect(context.mode).toBe('local');
+  expect(context.workspace_id).toEqual(expect.any(String));expect(context.actor_id).toEqual(expect.any(String));return context;
+ };
+ const keepRaw=(label:string,raw:Buffer)=>{
+  const file=path.join(w.logs,'direction-'+label+'-original-response.json');fs.writeFileSync(file,raw,{flag:'wx'});e.addFile(file);return{path:file,size:raw.length,sha256:sha(raw)};
+ };
+ const readAnnotation=async(scope:DirectionHandoffScope)=>{
+  await current(scope);const deadline=performance.now()+10_000,route=query(scope);
+  const response=await directionHandoffWithin(page.request.get(origin+route,{timeout:Math.max(1,Math.floor(deadline-performance.now()))}),deadline,'owning fixture annotation GET');
+  expect(response.status()).toBe(200);expect(new URL(response.url()).pathname+new URL(response.url()).search).toBe(route);
+  const raw=await directionHandoffWithin(response.body(),deadline,'owning fixture annotation complete raw body');expect(raw.length).toBeLessThanOrEqual(1024*1024);
+  proof.push({project_id:scope.project.id,source:scope.source,image_path:scope.image,method:'GET',path:'/api/annotations/part',status:200,
+   transport:'owned fixture API read; not original renderer HTTP provenance',raw:keepRaw(scope.tag+'-annotation-observer-'+proof.length,raw)});
+  return JSON.parse(raw.toString('utf8'));
+ };
+ const responseBody=async(response:Response,scope:DirectionHandoffScope,deadline:number,label:string)=>{
+  expect(response.status()).toBe(200);const context=await owningContext(response.request(),scope,deadline);
+  const raw=await directionHandoffWithin(response.body(),deadline,'complete '+label+' body');expect(raw.length).toBeLessThanOrEqual(1024*1024);
+  expect(await directionHandoffWithin(response.finished(),deadline,label+' finished')).toBeNull();
+  const row={project_id:scope.project.id,context,method:response.request().method(),path:new URL(response.url()).pathname,request:response.request().postDataJSON(),status:200,raw:keepRaw(label,raw)};
+  proof.push(row);return{body:JSON.parse(raw.toString('utf8')),proof:row};
+ };
+ const checkSaved=(scope:DirectionHandoffScope,value:any)=>{
+  expect(value.image_id).toBe('part');expect([value.image_width,value.image_height]).toEqual([256,256]);expect(value.annotations).toHaveLength(1);
+  const obb=value.annotations[0];expect(obb.type).toBe('rotated_bbox');expect(obb.label).toBe('Crack');expect(obb.direction_deg).toBe(scope.direction);
+  expect(obb.rotated_bbox).toEqual([110,170,80,40,scope.angle]);expect(value.metadata.file_path).toBe(scope.image);expect(value.metadata.content_hash).toBe(scope.source_sha256);
+  expect(value.metadata.image_uuid).toEqual(expect.any(String));expect(value.metadata.image_uuid.length).toBeGreaterThan(0);
+  if(scope.saved)expect(value).toEqual(scope.saved);return value;
+ };
+ const prepare=async(scope:DirectionHandoffScope)=>{
+  const before=await readAnnotation(scope);expect(before.annotations).toEqual([]);const frame=performance.now()+10_000;
+  await directionHandoffWithin((async()=>{
+   // Source LabelingCanvas installs initial fit on actual image load. Wait for its pixels BEFORE ordinary 1:1.
+   await page.waitForFunction(()=>{const canvas=document.querySelector<HTMLCanvasElement>('[data-canvas-container] > canvas:first-of-type');
+    if(!canvas||canvas.width===0||canvas.height===0)return false;const context=canvas.getContext('2d');return Boolean(context&&context.getImageData(Math.floor(canvas.width/2),Math.floor(canvas.height/2),1,1).data[3]>0);
+   },undefined,{timeout:10_000});
+   await page.getByTitle('100% Zoom (1:1)',{exact:true}).click();await page.getByRole('button',{name:/^Crack(?: \d+)?$/}).click();
+   await page.getByTitle('회전 바운딩 박스 (Rotated BBox OBB - 3)',{exact:true}).click();
+   await expect(page.getByTestId('canvas-hud')).toContainText(/VIEW\s*scale\s*100\s*%/,{timeout:10_000});
+   await page.evaluate(()=>new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve()))));
+   await expect(page.getByTestId('canvas-hud')).toContainText(/VIEW\s*scale\s*100\s*%/,{timeout:10_000});
+  })(),frame,'loaded original pixels and stable 1:1');
+  const box=await page.locator('[data-canvas-container]').boundingBox();expect(box).not.toBeNull();
+  const point=(x:number,y:number)=>({x:box!.x+(box!.width-256)/2+x,y:box!.y+(box!.height-256)/2+y});const from=point(70,150),to=point(150,190);
+  await page.mouse.move(from.x,from.y);await page.mouse.down();await page.mouse.move(to.x,to.y,{steps:8});await page.mouse.up();
+  await expect(direction).toBeVisible();await direction.fill(String(scope.direction));await angle.fill(String(scope.angle));
+  await expect(direction).toHaveValue(String(scope.direction));await expect(angle).toHaveValue(String(scope.angle));
+  const deadline=performance.now()+10_000;
+  const pending=page.waitForResponse(r=>new URL(r.url()).origin===origin&&new URL(r.url()).pathname==='/api/annotations/save'&&r.request().method()==='POST'&&r.request().frame()===page.mainFrame(),{timeout:10_000});
+  const imported=page.waitForResponse(r=>new URL(r.url()).origin===origin&&new URL(r.url()).pathname==='/api/dataset/import'&&r.request().method()==='POST'&&r.request().frame()===page.mainFrame()&&r.request().postDataJSON()?.folder_path===scope.source&&r.request().postDataJSON()?.validate_images===false,{timeout:10_000});
+  const [saved,refresh]=await directionHandoffWithin(Promise.all([pending,imported,save.click()]),deadline,'actual save and original manifest refresh');
+  const savedRaw=await responseBody(saved,scope,deadline,scope.tag+'-saved'),request=saved.request().postDataJSON();
+  expect(savedRaw.body.status).toBe('saved');expect(request.image_id).toBe('part');expect(request.image_path).toBe(scope.image);expect(request.expected_revision).toBe(before.metadata.revision);
+  expect([request.image_width,request.image_height]).toEqual([256,256]);expect(request.annotations).toHaveLength(1);
+  expect(request.annotations[0].direction_deg).toBe(scope.direction);expect(request.annotations[0].rotated_bbox).toEqual([110,170,80,40,scope.angle]);
+  expect(refresh.request().postDataJSON()).toEqual({folder_path:scope.source,task:'segmentation',validate_images:false});await responseBody(refresh,scope,deadline,scope.tag+'-manifest-refreshed');
+  scope.saved=checkSaved(scope,await readAnnotation(scope));expect(scope.saved.metadata.revision).toBe(before.metadata.revision+1);expect(scope.saved.metadata.image_uuid).toBe(before.metadata.image_uuid);
+  expect(savedRaw.body.metadata).toEqual(scope.saved.metadata);await expect(save).toContainText('Saved');
+  await e.screenshot(page,'direction-'+scope.tag+'-distinct-direction-and-axis-saved');
+ };
+ const selectSaved=async(scope:DirectionHandoffScope)=>{
+  await current(scope);await expect(page.getByTitle('Delete annotation',{exact:true})).toHaveCount(1);
+  await page.getByTitle('Delete annotation',{exact:true}).locator('..').locator('..').click();
+  await expect(direction).toHaveValue(String(scope.direction));await expect(angle).toHaveValue(String(scope.angle));await expect(save).toContainText('Saved');
+  return checkSaved(scope,await readAnnotation(scope));
+ };
+ const state=async(scope:DirectionHandoffScope)=>{
+  await current(scope);const annotation=checkSaved(scope,await readAnnotation(scope)),metadata=(await api('/api/dataset/metadata?limit=100')).items;
+  expect(metadata).toHaveLength(1);expect(metadata[0].image_uuid).toBe(annotation.metadata.image_uuid);expect(metadata[0].content_hash).toBe(scope.source_sha256);
+  const labelsets=await api('/api/project/labelsets');const roots={source:scope.source,annotations:scope.project.annotations_dir,models:scope.project.models_dir,reports:scope.project.reports_dir,dataset:scope.project.dataset_dir,labelsets:path.join(scope.project.project_dir,'labelsets'),labelset_registry:path.join(scope.project.project_dir,'labelsets.json')};
+  return{annotation,metadata,labelsets,roots:Object.fromEntries(Object.entries(roots).map(([name,root])=>[name,{root,tree:directionHandoffTree(root)}]))};
+ };
+ const writes:Array<{method:string;path:string;body:unknown}>=[];
+ const observe=(request:Request)=>{const u=new URL(request.url());if(u.origin===origin&&u.pathname.startsWith('/api/')&&!['GET','HEAD','OPTIONS'].includes(request.method()))writes.push({method:request.method(),path:u.pathname,body:request.postDataJSON()});};
+ let late:Awaited<ReturnType<typeof directionHandoffLateRead>>|undefined,primary:unknown;
+ try{
+  await page.goto(url);await directionHandoffProject(page,A,origin);await enter(A);await prepare(A);const beforeA=await state(A);
+  await directionHandoffProject(page,B,origin);await enter(B);await prepare(B);const beforeB=await state(B);
+  expect(A.saved.metadata.image_uuid).not.toBe(B.saved.metadata.image_uuid);expect(A.saved.annotations[0].id).not.toBe(B.saved.annotations[0].id);
+  await directionHandoffProject(page,A,origin);await enter(A);await selectSaved(A);expect(await state(A)).toEqual(beforeA);
+  page.on('request',observe);
+  late=await directionHandoffLateRead(page,origin,false,u=>u.pathname==='/api/annotations/part'&&u.searchParams.get('file_path')===A.image);
+  const oldDeadline=performance.now()+10_000;
+  const oldRequest=page.waitForRequest(request=>{const u=new URL(request.url());return u.origin===origin&&u.pathname==='/api/annotations/part'&&u.searchParams.get('file_path')===A.image&&request.method()==='GET'&&request.frame()===page.mainFrame();},{timeout:10_000});
+  const [originalRequest]=await directionHandoffWithin(Promise.all([oldRequest,page.reload()]),oldDeadline,'real reopened A annotation request');
+  const oldContext=await owningContext(originalRequest,A,oldDeadline),captured=await directionHandoffWithin(late.ready(),oldDeadline,'original A complete saved label response');checkSaved(A,captured.body);
+  const heldRaw=keepRaw('A-held-owning-read',captured.bytes),toB=await directionHandoffProject(page,B,origin);await enter(B);await selectSaved(B);
+  const disposition=await late.finish();await expect(direction).toHaveValue(String(B.direction));await expect(angle).toHaveValue(String(B.angle));const afterB=await state(B);expect(afterB).toEqual(beforeB);
+  await e.screenshot(page,'direction-B-owning-values-after-old-A-response');
+  const toA=await directionHandoffProject(page,A,origin);await enter(A);await selectSaved(A);const afterA=await state(A);expect(afterA).toEqual(beforeA);
+  await e.screenshot(page,'direction-A-original315-axis30-restored-after-handoff');
+  expect(writes).toEqual([toB,toA].map(row=>({method:'POST',path:'/api/project/open',body:{project_dir:row.project_dir}})));
+  directionHandoffSave(e,w,'direction-input-handoff-custody',{beforeA,beforeB,afterA,afterB,owning_save_and_refresh_responses:proof,transitions:[toB,toA],held_original_A_read:{context:oldContext,raw_response:heldRaw,disposition},business_mutations_after_baseline:writes});
+  e.note('direction_input_project_handoff',{action:'U020.independent-direction-input',dimensions:['handoff'],actual_browser_UI:true,
+   two_owning_UI_annotation_saves:true,distinct_project_and_image_UUIDs:true,same_relative_filename_distinct_original_pixels:true,
+   independent_direction_and_axial_angle_exact:true,actual_A_B_A_project_open:[toB,toA],late_A_original_browser_response:disposition,
+   complete_source_annotation_model_report_dataset_labelset_trees_and_registry_unchanged:true,annotation_or_dataset_writes_after_baseline:0,
+   source_Electron:false,installed_native:false,model_training:false,model_inference:false,human_quality:false,parent_target_acceptance:false});
+ }catch(error){primary=error;throw error;}finally{
+  let cleanupError:unknown;
+  try{page.off('request',observe);}catch(error){cleanupError=error;}
+  if(late){try{await late.close();}catch(error){if(cleanupError===undefined)cleanupError=error;}}
+  if(primary===undefined&&cleanupError!==undefined)throw cleanupError;
+ }
+}
+test('independent direction and axial angle stay scoped through A B A project handoff and an old owning label read',async({page,renderer,workspace,evidence})=>{
+ await directionHandoffHost(page,renderer.port);await directionHandoffExercise(page,workspace,evidence,renderer.origin,renderer.url);
+});

@@ -5165,53 +5165,53 @@
         "evidence": [
           {
             "task": "S3-08",
-            "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
+            "source_sha": "b081a54a904224825b48a37bf427abad7144cf4d",
             "kind": "click",
             "action": "검수한 파생 버전을 데이터 원본으로 선택",
             "expected": "Use an explicit verified source and preserve original history.",
             "observed": "Actual native source selection reached separately included reviewed training data, authentic CPU warm-start and16 fixed heldout comparisons; training was submitted through API.",
             "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
             "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
-            "receipt": "2026-10-08-derived-workflow-734a766-electron.json",
-            "receipt_sha256": "82c66bd1895485b4e9f85e259a1786e52816c01a1263354667470fd4347f6158",
+            "receipt": "2026-10-10-root456-derived-old-electron.json",
+            "receipt_sha256": "d4571df06d9cf502daa7b99da2bfc44720e5736d0e3a5be8f0fb1aa28ca060ad",
             "artifacts": [
               {
                 "id": "screenshot-0",
-                "sha256": "751389c48b57e1e018bba1fb4a21fa3b303206014fd868673151b8bae11f8411"
+                "sha256": "106a189ba0cde9a7acd549d6eea1a7bf9b2d7329bd56fb3276b98ad9287df63a"
               },
               {
                 "id": "screenshot-1",
-                "sha256": "09b77984f5168715254511f4afe08a50128b72aabcce097564bb9c96c8d3a77d"
+                "sha256": "2a58e0de72276915720972376749c83be8cda67523762d87af5083e86468711c"
               },
               {
                 "id": "screenshot-2",
-                "sha256": "2ecd06145a509b241778dae30b154668b09219e6ff9be3d0c6155865c398d14f"
+                "sha256": "024be3b1fecdcad0529b753b1b983d6406728268bf883db17700aca797f59ae2"
               }
             ]
           },
           {
             "task": "S3-08",
-            "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
+            "source_sha": "b081a54a904224825b48a37bf427abad7144cf4d",
             "kind": "click",
             "action": "검증한 편집 전 원본으로 돌아가기",
             "expected": "Use an explicit verified source and preserve original history.",
             "observed": "Native return restored the original source selection and exact original image/annotation bytes without replacing the candidate dataset.",
             "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
             "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
-            "receipt": "2026-10-08-derived-workflow-734a766-electron.json",
-            "receipt_sha256": "82c66bd1895485b4e9f85e259a1786e52816c01a1263354667470fd4347f6158",
+            "receipt": "2026-10-10-root456-derived-old-electron.json",
+            "receipt_sha256": "d4571df06d9cf502daa7b99da2bfc44720e5736d0e3a5be8f0fb1aa28ca060ad",
             "artifacts": [
               {
                 "id": "screenshot-0",
-                "sha256": "751389c48b57e1e018bba1fb4a21fa3b303206014fd868673151b8bae11f8411"
+                "sha256": "106a189ba0cde9a7acd549d6eea1a7bf9b2d7329bd56fb3276b98ad9287df63a"
               },
               {
                 "id": "screenshot-1",
-                "sha256": "09b77984f5168715254511f4afe08a50128b72aabcce097564bb9c96c8d3a77d"
+                "sha256": "2a58e0de72276915720972376749c83be8cda67523762d87af5083e86468711c"
               },
               {
                 "id": "screenshot-2",
-                "sha256": "2ecd06145a509b241778dae30b154668b09219e6ff9be3d0c6155865c398d14f"
+                "sha256": "024be3b1fecdcad0529b753b1b983d6406728268bf883db17700aca797f59ae2"
               }
             ]
           }
@@ -5222,53 +5222,53 @@
         "evidence": [
           {
             "task": "S3-08",
-            "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
+            "source_sha": "b081a54a904224825b48a37bf427abad7144cf4d",
             "kind": "click",
             "action": "검수한 파생 버전을 데이터 원본으로 선택",
             "expected": "Use an explicit verified source and preserve original history.",
             "observed": "Actual native source selection reached separately included reviewed training data, authentic CPU warm-start and16 fixed heldout comparisons; training was submitted through API.",
             "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
             "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
-            "receipt": "2026-10-08-derived-workflow-734a766-electron.json",
-            "receipt_sha256": "82c66bd1895485b4e9f85e259a1786e52816c01a1263354667470fd4347f6158",
+            "receipt": "2026-10-10-root456-derived-old-electron.json",
+            "receipt_sha256": "d4571df06d9cf502daa7b99da2bfc44720e5736d0e3a5be8f0fb1aa28ca060ad",
             "artifacts": [
               {
                 "id": "screenshot-0",
-                "sha256": "751389c48b57e1e018bba1fb4a21fa3b303206014fd868673151b8bae11f8411"
+                "sha256": "106a189ba0cde9a7acd549d6eea1a7bf9b2d7329bd56fb3276b98ad9287df63a"
               },
               {
                 "id": "screenshot-1",
-                "sha256": "09b77984f5168715254511f4afe08a50128b72aabcce097564bb9c96c8d3a77d"
+                "sha256": "2a58e0de72276915720972376749c83be8cda67523762d87af5083e86468711c"
               },
               {
                 "id": "screenshot-2",
-                "sha256": "2ecd06145a509b241778dae30b154668b09219e6ff9be3d0c6155865c398d14f"
+                "sha256": "024be3b1fecdcad0529b753b1b983d6406728268bf883db17700aca797f59ae2"
               }
             ]
           },
           {
             "task": "S3-08",
-            "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
+            "source_sha": "b081a54a904224825b48a37bf427abad7144cf4d",
             "kind": "click",
             "action": "검증한 편집 전 원본으로 돌아가기",
             "expected": "Use an explicit verified source and preserve original history.",
             "observed": "Native return restored the original source selection and exact original image/annotation bytes without replacing the candidate dataset.",
             "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
             "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
-            "receipt": "2026-10-08-derived-workflow-734a766-electron.json",
-            "receipt_sha256": "82c66bd1895485b4e9f85e259a1786e52816c01a1263354667470fd4347f6158",
+            "receipt": "2026-10-10-root456-derived-old-electron.json",
+            "receipt_sha256": "d4571df06d9cf502daa7b99da2bfc44720e5736d0e3a5be8f0fb1aa28ca060ad",
             "artifacts": [
               {
                 "id": "screenshot-0",
-                "sha256": "751389c48b57e1e018bba1fb4a21fa3b303206014fd868673151b8bae11f8411"
+                "sha256": "106a189ba0cde9a7acd549d6eea1a7bf9b2d7329bd56fb3276b98ad9287df63a"
               },
               {
                 "id": "screenshot-1",
-                "sha256": "09b77984f5168715254511f4afe08a50128b72aabcce097564bb9c96c8d3a77d"
+                "sha256": "2a58e0de72276915720972376749c83be8cda67523762d87af5083e86468711c"
               },
               {
                 "id": "screenshot-2",
-                "sha256": "2ecd06145a509b241778dae30b154668b09219e6ff9be3d0c6155865c398d14f"
+                "sha256": "024be3b1fecdcad0529b753b1b983d6406728268bf883db17700aca797f59ae2"
               }
             ]
           }
@@ -5279,27 +5279,27 @@
         "evidence": [
           {
             "task": "S3-08",
-            "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
+            "source_sha": "b081a54a904224825b48a37bf427abad7144cf4d",
             "kind": "click",
             "action": "파생 학습 데이터 버전 재열기",
             "expected": "Reload retains saved source branches.",
             "observed": "Native reload reloaded the saved derived dataset before explicitly returning to original.",
             "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
             "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
-            "receipt": "2026-10-08-derived-workflow-734a766-electron.json",
-            "receipt_sha256": "82c66bd1895485b4e9f85e259a1786e52816c01a1263354667470fd4347f6158",
+            "receipt": "2026-10-10-root456-derived-old-electron.json",
+            "receipt_sha256": "d4571df06d9cf502daa7b99da2bfc44720e5736d0e3a5be8f0fb1aa28ca060ad",
             "artifacts": [
               {
                 "id": "screenshot-0",
-                "sha256": "751389c48b57e1e018bba1fb4a21fa3b303206014fd868673151b8bae11f8411"
+                "sha256": "106a189ba0cde9a7acd549d6eea1a7bf9b2d7329bd56fb3276b98ad9287df63a"
               },
               {
                 "id": "screenshot-1",
-                "sha256": "09b77984f5168715254511f4afe08a50128b72aabcce097564bb9c96c8d3a77d"
+                "sha256": "2a58e0de72276915720972376749c83be8cda67523762d87af5083e86468711c"
               },
               {
                 "id": "screenshot-2",
-                "sha256": "2ecd06145a509b241778dae30b154668b09219e6ff9be3d0c6155865c398d14f"
+                "sha256": "024be3b1fecdcad0529b753b1b983d6406728268bf883db17700aca797f59ae2"
               }
             ]
           }
@@ -5313,53 +5313,53 @@
         "evidence": [
           {
             "task": "S3-08",
-            "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
+            "source_sha": "b081a54a904224825b48a37bf427abad7144cf4d",
             "kind": "click",
             "action": "검수한 파생 버전을 데이터 원본으로 선택",
             "expected": "Use an explicit verified source and preserve original history.",
             "observed": "Actual native source selection reached separately included reviewed training data, authentic CPU warm-start and16 fixed heldout comparisons; training was submitted through API.",
             "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
             "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
-            "receipt": "2026-10-08-derived-workflow-734a766-electron.json",
-            "receipt_sha256": "82c66bd1895485b4e9f85e259a1786e52816c01a1263354667470fd4347f6158",
+            "receipt": "2026-10-10-root456-derived-old-electron.json",
+            "receipt_sha256": "d4571df06d9cf502daa7b99da2bfc44720e5736d0e3a5be8f0fb1aa28ca060ad",
             "artifacts": [
               {
                 "id": "screenshot-0",
-                "sha256": "751389c48b57e1e018bba1fb4a21fa3b303206014fd868673151b8bae11f8411"
+                "sha256": "106a189ba0cde9a7acd549d6eea1a7bf9b2d7329bd56fb3276b98ad9287df63a"
               },
               {
                 "id": "screenshot-1",
-                "sha256": "09b77984f5168715254511f4afe08a50128b72aabcce097564bb9c96c8d3a77d"
+                "sha256": "2a58e0de72276915720972376749c83be8cda67523762d87af5083e86468711c"
               },
               {
                 "id": "screenshot-2",
-                "sha256": "2ecd06145a509b241778dae30b154668b09219e6ff9be3d0c6155865c398d14f"
+                "sha256": "024be3b1fecdcad0529b753b1b983d6406728268bf883db17700aca797f59ae2"
               }
             ]
           },
           {
             "task": "S3-08",
-            "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
+            "source_sha": "b081a54a904224825b48a37bf427abad7144cf4d",
             "kind": "click",
             "action": "검증한 편집 전 원본으로 돌아가기",
             "expected": "Use an explicit verified source and preserve original history.",
             "observed": "Native return restored the original source selection and exact original image/annotation bytes without replacing the candidate dataset.",
             "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
             "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
-            "receipt": "2026-10-08-derived-workflow-734a766-electron.json",
-            "receipt_sha256": "82c66bd1895485b4e9f85e259a1786e52816c01a1263354667470fd4347f6158",
+            "receipt": "2026-10-10-root456-derived-old-electron.json",
+            "receipt_sha256": "d4571df06d9cf502daa7b99da2bfc44720e5736d0e3a5be8f0fb1aa28ca060ad",
             "artifacts": [
               {
                 "id": "screenshot-0",
-                "sha256": "751389c48b57e1e018bba1fb4a21fa3b303206014fd868673151b8bae11f8411"
+                "sha256": "106a189ba0cde9a7acd549d6eea1a7bf9b2d7329bd56fb3276b98ad9287df63a"
               },
               {
                 "id": "screenshot-1",
-                "sha256": "09b77984f5168715254511f4afe08a50128b72aabcce097564bb9c96c8d3a77d"
+                "sha256": "2a58e0de72276915720972376749c83be8cda67523762d87af5083e86468711c"
               },
               {
                 "id": "screenshot-2",
-                "sha256": "2ecd06145a509b241778dae30b154668b09219e6ff9be3d0c6155865c398d14f"
+                "sha256": "024be3b1fecdcad0529b753b1b983d6406728268bf883db17700aca797f59ae2"
               }
             ]
           }
@@ -7573,27 +7573,27 @@
         "evidence": [
           {
             "task": "S3-08",
-            "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
+            "source_sha": "b081a54a904224825b48a37bf427abad7144cf4d",
             "kind": "click",
             "action": "정렬 새 버전 저장",
             "expected": "Save30-degree alignment with transformed annotations and original identity.",
             "observed": "Native button produced a polygon from bbox, direction20 to50 and unchanged textA01; original images and labels retained.",
             "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
             "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
-            "receipt": "2026-10-08-derived-workflow-734a766-electron.json",
-            "receipt_sha256": "82c66bd1895485b4e9f85e259a1786e52816c01a1263354667470fd4347f6158",
+            "receipt": "2026-10-10-root456-derived-old-electron.json",
+            "receipt_sha256": "d4571df06d9cf502daa7b99da2bfc44720e5736d0e3a5be8f0fb1aa28ca060ad",
             "artifacts": [
               {
                 "id": "screenshot-0",
-                "sha256": "751389c48b57e1e018bba1fb4a21fa3b303206014fd868673151b8bae11f8411"
+                "sha256": "106a189ba0cde9a7acd549d6eea1a7bf9b2d7329bd56fb3276b98ad9287df63a"
               },
               {
                 "id": "screenshot-1",
-                "sha256": "09b77984f5168715254511f4afe08a50128b72aabcce097564bb9c96c8d3a77d"
+                "sha256": "2a58e0de72276915720972376749c83be8cda67523762d87af5083e86468711c"
               },
               {
                 "id": "screenshot-2",
-                "sha256": "2ecd06145a509b241778dae30b154668b09219e6ff9be3d0c6155865c398d14f"
+                "sha256": "024be3b1fecdcad0529b753b1b983d6406728268bf883db17700aca797f59ae2"
               }
             ]
           }
@@ -7604,27 +7604,27 @@
         "evidence": [
           {
             "task": "S3-08",
-            "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
+            "source_sha": "b081a54a904224825b48a37bf427abad7144cf4d",
             "kind": "click",
             "action": "정렬 새 버전 저장",
             "expected": "Save30-degree alignment with transformed annotations and original identity.",
             "observed": "Native button produced a polygon from bbox, direction20 to50 and unchanged textA01; original images and labels retained.",
             "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
             "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
-            "receipt": "2026-10-08-derived-workflow-734a766-electron.json",
-            "receipt_sha256": "82c66bd1895485b4e9f85e259a1786e52816c01a1263354667470fd4347f6158",
+            "receipt": "2026-10-10-root456-derived-old-electron.json",
+            "receipt_sha256": "d4571df06d9cf502daa7b99da2bfc44720e5736d0e3a5be8f0fb1aa28ca060ad",
             "artifacts": [
               {
                 "id": "screenshot-0",
-                "sha256": "751389c48b57e1e018bba1fb4a21fa3b303206014fd868673151b8bae11f8411"
+                "sha256": "106a189ba0cde9a7acd549d6eea1a7bf9b2d7329bd56fb3276b98ad9287df63a"
               },
               {
                 "id": "screenshot-1",
-                "sha256": "09b77984f5168715254511f4afe08a50128b72aabcce097564bb9c96c8d3a77d"
+                "sha256": "2a58e0de72276915720972376749c83be8cda67523762d87af5083e86468711c"
               },
               {
                 "id": "screenshot-2",
-                "sha256": "2ecd06145a509b241778dae30b154668b09219e6ff9be3d0c6155865c398d14f"
+                "sha256": "024be3b1fecdcad0529b753b1b983d6406728268bf883db17700aca797f59ae2"
               }
             ]
           }
@@ -7635,27 +7635,27 @@
         "evidence": [
           {
             "task": "S3-08",
-            "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
+            "source_sha": "b081a54a904224825b48a37bf427abad7144cf4d",
             "kind": "click",
             "action": "변환 이미지·라벨 검수 후 채택 후보",
             "expected": "Explicitly review converted labels before materializing a training source.",
             "observed": "Controlled synthetic review was saved and reopened; human manufacturing quality was not approved.",
             "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
             "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
-            "receipt": "2026-10-08-derived-workflow-734a766-electron.json",
-            "receipt_sha256": "82c66bd1895485b4e9f85e259a1786e52816c01a1263354667470fd4347f6158",
+            "receipt": "2026-10-10-root456-derived-old-electron.json",
+            "receipt_sha256": "d4571df06d9cf502daa7b99da2bfc44720e5736d0e3a5be8f0fb1aa28ca060ad",
             "artifacts": [
               {
                 "id": "screenshot-0",
-                "sha256": "751389c48b57e1e018bba1fb4a21fa3b303206014fd868673151b8bae11f8411"
+                "sha256": "106a189ba0cde9a7acd549d6eea1a7bf9b2d7329bd56fb3276b98ad9287df63a"
               },
               {
                 "id": "screenshot-1",
-                "sha256": "09b77984f5168715254511f4afe08a50128b72aabcce097564bb9c96c8d3a77d"
+                "sha256": "2a58e0de72276915720972376749c83be8cda67523762d87af5083e86468711c"
               },
               {
                 "id": "screenshot-2",
-                "sha256": "2ecd06145a509b241778dae30b154668b09219e6ff9be3d0c6155865c398d14f"
+                "sha256": "024be3b1fecdcad0529b753b1b983d6406728268bf883db17700aca797f59ae2"
               }
             ]
           }
@@ -7666,27 +7666,27 @@
         "evidence": [
           {
             "task": "S3-08",
-            "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
+            "source_sha": "b081a54a904224825b48a37bf427abad7144cf4d",
             "kind": "click",
             "action": "검수한 파생본으로 새 학습 데이터 저장",
             "expected": "Unreviewed adoption is disabled; a reviewed copy creates a separate dataset.",
             "observed": "Button disabled before fixture review; reviewed copy retained16 fixed test originals and label lineage for separate CPU candidate comparison.",
             "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
             "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
-            "receipt": "2026-10-08-derived-workflow-734a766-electron.json",
-            "receipt_sha256": "82c66bd1895485b4e9f85e259a1786e52816c01a1263354667470fd4347f6158",
+            "receipt": "2026-10-10-root456-derived-old-electron.json",
+            "receipt_sha256": "d4571df06d9cf502daa7b99da2bfc44720e5736d0e3a5be8f0fb1aa28ca060ad",
             "artifacts": [
               {
                 "id": "screenshot-0",
-                "sha256": "751389c48b57e1e018bba1fb4a21fa3b303206014fd868673151b8bae11f8411"
+                "sha256": "106a189ba0cde9a7acd549d6eea1a7bf9b2d7329bd56fb3276b98ad9287df63a"
               },
               {
                 "id": "screenshot-1",
-                "sha256": "09b77984f5168715254511f4afe08a50128b72aabcce097564bb9c96c8d3a77d"
+                "sha256": "2a58e0de72276915720972376749c83be8cda67523762d87af5083e86468711c"
               },
               {
                 "id": "screenshot-2",
-                "sha256": "2ecd06145a509b241778dae30b154668b09219e6ff9be3d0c6155865c398d14f"
+                "sha256": "024be3b1fecdcad0529b753b1b983d6406728268bf883db17700aca797f59ae2"
               }
             ]
           }
@@ -7697,27 +7697,27 @@
         "evidence": [
           {
             "task": "S3-08",
-            "source_sha": "734a76656b3e8409fc7c14f1c553b545da468a5f",
+            "source_sha": "b081a54a904224825b48a37bf427abad7144cf4d",
             "kind": "click",
             "action": "검수한 파생본으로 새 학습 데이터 저장",
             "expected": "Unreviewed adoption is disabled; a reviewed copy creates a separate dataset.",
             "observed": "Button disabled before fixture review; reviewed copy retained16 fixed test originals and label lineage for separate CPU candidate comparison.",
             "reviewer": "Root clean browser and source Electron execution with independently reviewed exact frozen source; human, installed target and whole feature acceptance pending",
             "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
-            "receipt": "2026-10-08-derived-workflow-734a766-electron.json",
-            "receipt_sha256": "82c66bd1895485b4e9f85e259a1786e52816c01a1263354667470fd4347f6158",
+            "receipt": "2026-10-10-root456-derived-old-electron.json",
+            "receipt_sha256": "d4571df06d9cf502daa7b99da2bfc44720e5736d0e3a5be8f0fb1aa28ca060ad",
             "artifacts": [
               {
                 "id": "screenshot-0",
-                "sha256": "751389c48b57e1e018bba1fb4a21fa3b303206014fd868673151b8bae11f8411"
+                "sha256": "106a189ba0cde9a7acd549d6eea1a7bf9b2d7329bd56fb3276b98ad9287df63a"
               },
               {
                 "id": "screenshot-1",
-                "sha256": "09b77984f5168715254511f4afe08a50128b72aabcce097564bb9c96c8d3a77d"
+                "sha256": "2a58e0de72276915720972376749c83be8cda67523762d87af5083e86468711c"
               },
               {
                 "id": "screenshot-2",
-                "sha256": "2ecd06145a509b241778dae30b154668b09219e6ff9be3d0c6155865c398d14f"
+                "sha256": "024be3b1fecdcad0529b753b1b983d6406728268bf883db17700aca797f59ae2"
               }
             ]
           }

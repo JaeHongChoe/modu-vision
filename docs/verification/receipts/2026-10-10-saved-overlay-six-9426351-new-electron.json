@@ -1,0 +1,72 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "942635186d006be083943c1ef3bbc850ddfbd880",
+  "source_dirty": false,
+  "test": "scripts/e2e/evaluation-source-overlay.spec.ts::source Electron saved truth prediction and error overlays hand off owning reports and reopen genuine provenance refusals through A B A",
+  "test_source_sha256": "8726082b1899aaa4e66db31f82e190c23b442162b8d4c66ad36d8d96e0c53e3d",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "3a66ba9dcf79f27396cbd1c43111ce043c837bdc9ddaf490eec1c16d26eab166",
+  "harness_sha256": "683ebe93fef2c65e895a5d0a8b863df2cbba364be01bb6c1115ecc0b2ccecb0e",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "6d56ac11ace32f7d238baa7c657d1b80636c8a8ff63cdfebbe15a0212d237f18"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "098e6409ec7aa7d90ab9be2a1ac406d15f1d64c9544fa722ed73b59e7b1b5ff2"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "73f3707316577a61a1a59997b0f2cf8fab571c2bfb4d9999015b6a79a214df89"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "910c05149bb2fd4d724579f3af3c0900bf911bf40d51091819935beb259fe523"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "196a14430494cd9d5496f8d16fc7c59b85b826b11d6cbf514e11bb63bbd5688e"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "f15cdc7c659d7c4ecbb3dcf53bb47876e1d4ea4c6b6e380f2ffe8a9e6b051344"
+    },
+    {
+      "id": "screenshot-6",
+      "sha256": "6f6e6c040a3be45ac8f9e0efefb895085620a4299c482ea39b1ef1194c526cdd"
+    },
+    {
+      "id": "screenshot-7",
+      "sha256": "6cb68e464bf92766c6bad613cc69fd292ebd76c29af921e5d0833015849f9178"
+    },
+    {
+      "id": "screenshot-8",
+      "sha256": "5a2ea0b533c99b3b27c67ede92f0f839eaef9dbce5cfb966f4e6bd3fab4e333a"
+    },
+    {
+      "id": "screenshot-9",
+      "sha256": "88e1665d47929835820c60bf918a3fd41b265d956c04e188a49bf54ea2d18dc4"
+    },
+    {
+      "id": "screenshot-10",
+      "sha256": "0aa68d3303d9df437bb81f7221079ba5ef03dc2fff0cd11513be8e5b4f1081ce"
+    },
+    {
+      "id": "screenshot-11",
+      "sha256": "8b4ebd9940428bc34a702c3f32495969233b657179e5e678f6426d93ef3c21c2"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

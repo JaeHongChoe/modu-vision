@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "c328c8ef7de91b923d3b52742adbac2bead975a2",
+  "source_dirty": false,
+  "test": "scripts/e2e/evaluation-viewer-reopen.spec.ts::saved overlay reopen resets opacity zoom pan and scoped class without modifying evidence",
+  "test_source_sha256": "7dc0a45c7af2241b8a4f577723a67fe63fd6aecb0804c91cd94053551b67752b",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "3abbb656b13b9a1a77233ebcb60bdf1cbfdd1e671cc0d8e6dc3374e7179248fa",
+  "harness_sha256": "6c4e855c0c972e1a6fa78951d7a0139d661e2ac1ccee762070c244c4e123fbdd",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "73e0f8b4e95e6b2860abda7652be4221ed315dcba5001cf3f511c4b1ac363f78"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "9dbe3e1fe306ef3ab53a83155f2a1118d1c6ea201980e12a83b76e30acb6ed44"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "2a434aa1fb01be4a384c31beca679cf2bb1a9e8d94af0b0b92bdf380a595df07"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

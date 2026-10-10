@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "fdc004bef91f51b8bcae01735b68be9a5277f727",
+  "source_dirty": false,
+  "test": "scripts/e2e/direction-field-input-boundaries.spec.ts::independent direction and axial angle stay scoped through A B A project handoff and an old owning label read",
+  "test_source_sha256": "859276df7e87a7247793a712f740e60deac40a4558350c1720fc0759e234f9fb",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "ba0629a946143f0d12ca5314b69e94e78f52a02048b5f929f4e02716dbdf1772",
+  "harness_sha256": "61f40814a2880bbd8569d84190f6cf69d27b0b5f227cdec23ce857c212db9750",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "0f5286b338d3c6943cc8ead5b63c68a94577d179279b496af1c55b6a7d0d9c24"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "290dc36064feebd5bfe3088c8e9eeefae960bb32c219e3cad9139ced317e0b0f"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "4a9928790b247ad77f5cb636a36652db2ea27021079020d79861acf6114da1f3"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "f0df7a23d1e306e73e34d170c203138834e67d369c418e91b191c310e420438b"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

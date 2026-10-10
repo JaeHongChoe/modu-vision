@@ -1,0 +1,84 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "270ff3072ce06401e12a6acf0d3719277642eb9b",
+  "source_dirty": false,
+  "test": "scripts/e2e/classification-summary.spec.ts::native classification import-label summary follows own saved projects A B A",
+  "test_source_sha256": "072e7c4d556c3c5416f5449e93cddf1511dcece15cfa332c8ce879ab9a9f0cc1",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "43f223e17a509f714810c3582e88e79d0027f32e134b21f0f4bbf18258a206d9",
+  "harness_sha256": "da262f01e072f400e9b8ae9b2e540a1cf9fbe82b1ca8667cc63ad60d378a007d",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "d7d386fd4f2677e049fbdc4279c0fbeed630a720dbe5eb21c1777d746120fb4e"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "26d8011554bd1e8c8def5379af7dea0262d4a86891676d92986cbd451fd533f1"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "0817e7a972d740f761de8724ca931f59e34032d79bab705fea46971baec6d540"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "9ac5b49cac77e67fb0ffbc5ba17590f657aaa16258938bfe50a8baaccfc71f3e"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "110adec1003106821ad5ccd82b178b524a369e78821415e8c5b3becbfbb56487"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "691349b9f3f6ea7ffb42719e440ed433a4d7e057e97c038e61908782d2399e4f"
+    },
+    {
+      "id": "screenshot-6",
+      "sha256": "388f8948f9e011162cc43d7049639648c4d42292fe09d01fe8d8a8730123f5fa"
+    },
+    {
+      "id": "screenshot-7",
+      "sha256": "0f82bee6353056583493cc67e1ead245054bac77626205f2bff69683c6ef90eb"
+    },
+    {
+      "id": "screenshot-8",
+      "sha256": "eb44428cccd1902a4a0998a15576c4c8ba5c0d92296b0a78aec5fcaaaa293b92"
+    },
+    {
+      "id": "screenshot-9",
+      "sha256": "ed9dcd1ee3138fa164d1ac2dc49eebae7e39afe389e4d41d582556593a54d69c"
+    },
+    {
+      "id": "screenshot-10",
+      "sha256": "7f6eb048635f7007b014fbe6acc546de21f8dc55c62d9abfd25f0388b7da2739"
+    },
+    {
+      "id": "screenshot-11",
+      "sha256": "3dd430f21a35caa33e192dab136a8aa9b704d61c56fb2ff759535790efef8db4"
+    },
+    {
+      "id": "screenshot-12",
+      "sha256": "dfe9503a428741301fe0d43bc7809c1984514099ba1fb51ef3edc34b5d35fbc4"
+    },
+    {
+      "id": "screenshot-13",
+      "sha256": "72e9d7d7ffa0150fd58eb92cda095a43a98f83040e6ee5d1a363b3f8b944f3c4"
+    },
+    {
+      "id": "screenshot-14",
+      "sha256": "3c1f8c00838e9ada38f9de4919ab573e7d65d8f93534554d8a1354a36267e9eb"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

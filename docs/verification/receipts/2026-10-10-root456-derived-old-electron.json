@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "b081a54a904224825b48a37bf427abad7144cf4d",
+  "source_dirty": false,
+  "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
+  "test_source_sha256": "d2e84362bf5049d31f5653ee1dbc2668288051684f086e1613469e49bc1d7e80",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "8085cb6244901162588c2d3db095f5cb4f89f69476703726ce0d85a44beb0351",
+  "harness_sha256": "75cfe587d008fa9346b6bd671f95397d5a6a2d1cd92700c47a799d9ff9be3a4e",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "106a189ba0cde9a7acd549d6eea1a7bf9b2d7329bd56fb3276b98ad9287df63a"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "2a58e0de72276915720972376749c83be8cda67523762d87af5083e86468711c"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "024be3b1fecdcad0529b753b1b983d6406728268bf883db17700aca797f59ae2"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

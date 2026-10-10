@@ -1,0 +1,44 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "13d7aeddc69242b81a1108e94ce9858a544e8a79",
+  "source_dirty": false,
+  "test": "scripts/e2e/review-queue-open-project-handoff.spec.ts::saved queue open and remembered nondefault selection stay scoped through A B A project handoff",
+  "test_source_sha256": "822041ef79ed68a01269c1022e1dbc8cacd5d7674c698487f8281a4db731d12c",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "5930fb8681cd36fa9f9a26b281396687125af08938f9dc4bcff54e44891f4142",
+  "harness_sha256": "8e8148fee4b88757398db72c763a3d991c389d6721fa61c45460b2f0ef256873",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "82d5f1604c8d8e1861c43a207f25ca7cc340c00f0e08177ccbf88b3dc9b78fd7"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "a7a0f9f5a9534064516a54ff774b1090b46171b7dbad83bfc79837d9e9f6bb06"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "8d6e0185009a23e5eba931d75ca284aa57ddae543fbd51bd1fbc2c6cb25fab43"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "e44279e155c64ae69fe229d29d1440ba8925fda8bb88ff1ac9a9f4bf41b41b4c"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "0a241bf1c9b1fc81b9b7ae73449610bbfdc9987b4e7f46d78b7165ff942f8a75"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

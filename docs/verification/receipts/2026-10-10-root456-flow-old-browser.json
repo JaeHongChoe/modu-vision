@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "54cda06a8162fc239752b1d6feb2752e93821d26",
+  "source_dirty": false,
+  "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::keyboard graph and original ROI survive window and display scale changes",
+  "test_source_sha256": "4d378467d88e280bb960e0a060276a5dc2a485b18fff01de11ec498bed0fd1bc",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "77f1ff3937ee794d75fc60de57eab7c0ffef0899f5f97c1d6f914de34678cf77",
+  "harness_sha256": "03fc3dc8a1655806ca842ffc4e7750d21b9afebf8fccb3d65c8b8f116dd284e5",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "3d6c3af1d4a5f85f6a45c8edae33a8d2be355477e5183e0057db3b4b80fe1b70"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

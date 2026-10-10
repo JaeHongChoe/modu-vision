@@ -1,0 +1,99 @@
+{
+  "schema": "modu-vision.current-source-saved-five-cpu-replay/v1",
+  "source_sha": "1d113691ad090045f9af22a1c0a9ebb57df99b0e",
+  "source_count": 2477,
+  "qualification": "Root actual closed0; current Source saved-checkpoint CPU reference and fresh package parity",
+  "new_training": false,
+  "model_family": "classification",
+  "checkpoint_count": 5,
+  "checkpoints": {
+    "job_1791276504_6b8ccc": "33ffb8fc11517d463683e95a6b524526379c042184d1f4549f6ece3dbc030ab4",
+    "job_1791276508_221694": "73ec4556e2cacd568443e87ae855e6ffa4367942a5cdfe22a29bf3fde5ec6d66",
+    "job_1791276512_b16371": "1f973bcfc0b26a955f746dc1da14ce543ca69eb5339a4d0aa3bcf04e8e23c3a5",
+    "job_1791276516_546ac8": "fa4b81b449610a4e475acbebcbb3d7ae8feab8eef1211d6dcf92e9c77c795c65",
+    "job_1791276520_f88def": "e38842ea1a592c065643455adb73a046ba0ae3cdced64bb7bb5d3f4e8f6e1f94"
+  },
+  "heldout_count": 3,
+  "heldout_images": [
+    {
+      "image_id": "12eae6ca-ff46-5172-8a6b-c09b4e0e7417",
+      "sha256": "f7b8c11c15bbb2d8e7b2279243884720f5d10fbb4260bc2631ed0f607ca9c790",
+      "index": 0,
+      "status": "passed",
+      "mismatched_fields": []
+    },
+    {
+      "image_id": "be3d44e7-7010-59ad-8b51-294d3eb26d26",
+      "sha256": "66575fb1a14c87bc47b62f2b9d06958c40d4d3be67a1a37832a1bd39dbfd1966",
+      "index": 1,
+      "status": "passed",
+      "mismatched_fields": []
+    },
+    {
+      "image_id": "a966f534-ba91-51ad-b5ed-6c1642a1788c",
+      "sha256": "c7bee471859dc2f69689a6cd3021b9a1edc1b9ca1e717834e11818f832d21601",
+      "index": 2,
+      "status": "passed",
+      "mismatched_fields": []
+    }
+  ],
+  "graph_sha256": "1b4ea0c385ea9e0903541bbbb5a64570ee5cbe84c3c8e2d68b13ebe1e0860b22",
+  "cohort_sha256": "2c8c03623fdb3e6aa3f41001882e83d7b368a61cd57dcbfbdd768d46cea8e3fe",
+  "manifest_sha256": "06f987de32fbf708b1c4fc3e78fd0a66953b58adbe3aa2be39afbce96f05daee",
+  "complete_result_comparison": {
+    "contract": "flow_parity_v1",
+    "compared_fields": [
+      "final_verdict",
+      "roi_count",
+      "defective_roi_count",
+      "routed_output_node_id",
+      "rejection_reason",
+      "inspected_image_size",
+      "execution_resources",
+      "execution_steps",
+      "crops"
+    ],
+    "image_count": 3,
+    "completed_count": 3,
+    "mismatched_fields": [],
+    "tolerance": {
+      "defect_score_abs": 0.0001,
+      "float_abs": 0.0001,
+      "raster_abs": 1e-06
+    }
+  },
+  "actual_process_counts": {
+    "reference": 1,
+    "package_run_flow": 3
+  },
+  "numeric_observation": {
+    "device": "cpu",
+    "cpu_threads": 1,
+    "all_observed_torch_interop_threads": 1,
+    "all_observed_opencv_threads": 1,
+    "setters_before_model_import_no_post_inference_reset": true
+  },
+  "original_caps": {
+    "absolute_seconds": 125,
+    "final_custody_reserve_seconds": 8,
+    "package_child_seconds": 25,
+    "existing_deadline_child_reserve_seconds": 10
+  },
+  "elapsed_seconds": {
+    "outer": 58.64778983290307,
+    "harness": 53.8531735840952
+  },
+  "raw_evidence_sha256": {
+    "closed_outer": "8ab235e380f5e1e5a9a418458eb86f80b6c0c706b860ab216fcb1faf495f69e9",
+    "qualification": "84bd577fb77f09c0088803bd5782cb867a15e8f0079b52ba1c49285c76f47867",
+    "harness": "c42d57d49570030807aa46b2197ebfe5dd54647cac0c960f3eaa8ab286cfcf5d",
+    "controller": "b1201e9675ab5ae18bee5a5c85cef1d8de59b92747be98d45cca432b792cbe9b",
+    "parity_report": "af450631dd23f7f0b96f25cd5a692726231fcad435b17b12d39507c4b3775fda"
+  },
+  "original_source_provider_fixed_custody_unchanged": true,
+  "historical_model_producer_dirty_and_synthetic_quality_limits_retained": true,
+  "legacy366_outer_negative_retained": true,
+  "bit_for_bit_reproducibility_measured": false,
+  "current_compiled_native_installed_target_GPU_human_quality_parent_signing_license_acceptance": false,
+  "scope": "Exact current1d113 source uses five already saved classification checkpoints and three original heldout images, builds one fresh owned package, runs one reference process and three genuine run_flow package children, and compares all nine complete result fields. No retraining or new model generation. Historical dirty/synthetic producer and all-NG functional parity remain quality limits; this software replay does not qualify compiled/native or installed targets, manufacturing quality, human review, GPU, signing, distribution or parent acceptance."
+}

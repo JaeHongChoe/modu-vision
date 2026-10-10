@@ -282,3 +282,123 @@ test('ROC review thresholds change explicitly and reset across A B A while saved
 test('native ROC review handoff resets transient thresholds and preserves exact saved record bindings',{tag:'@electron'},async({electronSession,workspace,evidence})=>{
  const page=electronSession.window,backend=await electronSession.waitForBackend(),origin=`http://127.0.0.1:${backend.port}`;const api:OwnedApi=(route,body,method)=>page.evaluate(async({origin,route,body,method})=>{const r=await fetch(origin+route,{method:method||(body===undefined?'GET':'POST'),headers:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});if(!r.ok)throw Error('Owned ROC fixture HTTP '+r.status);return r.json();},{origin,route,body,method});await rocThresholdProjectHandoff(page,workspace,evidence,api,true,origin);
 });
+
+// F055-only browser extension. Generated saved reports exercise display/state,
+// not detector inference, representative truth or manufacturing approval.
+async function savedAreaBinProjectHandoff(page:Page,w:Workspace,e:Evidence,origin:string,url:string){
+ const frame=async<T>(label:string,work:(deadline:number)=>Promise<T>):Promise<T>=>{const deadline=performance.now()+10_000;return rocHandoffWithin(work(deadline),deadline,label);};
+ const api:OwnedApi=(route,body,method)=>frame('owned area fixture API full body',async deadline=>{
+  const response=await page.request.fetch(origin+route,{method:method||(body===undefined?'GET':'POST'),timeout:rocHandoffRemaining(deadline),...(body===undefined?{}:{data:body})});
+  const raw=await response.body();expect(response.ok(),'Owned area fixture API HTTP '+response.status()).toBe(true);return JSON.parse(raw.toString('utf8'));
+ });
+ const make=async(tag:'A'|'B')=>{
+  const source=path.join(w.root,'area-bin-handoff-'+tag);fs.mkdirSync(source);
+  for(let i=0;i<6;i++)fs.writeFileSync(path.join(source,`case-${i}.png`),handoffPng(16,3,(x,y)=>[x,y,(tag==='A'?30:130)+i]),{flag:'wx'});
+  const created=await api('/api/project/create',{name:'Area bin handoff '+tag,task:'segmentation'});
+  await api('/api/project/update',{source_dataset_dir:source},'PUT');await api('/api/dataset/import',{folder_path:source,task:'segmentation'});
+  const project=await api('/api/project/current');expect(project.id).toBe(created.id);expect(project.source_dataset_dir).toBe(source);
+  const fixture=JSON.parse(execFileSync(harness.resolvePython(),[path.join(harness.REPO_ROOT,'scripts/e2e/fixtures/evaluation_filter_reports.py'),w.root,project.project_dir,source],{cwd:harness.REPO_ROOT,encoding:'utf8',timeout:30_000}));
+  expect(fixture.kind).toBe('controlled_saved_filter_reports_not_model_inference');expect(fixture.inputs).toHaveLength(6);expect(fixture.items).toHaveLength(3);
+  const full=fixture.items.find((item:any)=>item.variant==='full');expect(full).toBeTruthy();expect(full.record.binding.source_dataset_path).toBe(source);expect(full.record.binding.task).toBe('detection');expect(full.record.result.test_predictions).toHaveLength(6);
+  for(const row of full.record.result.test_predictions){expect(row.file_path).toBe(path.join(source,row.file_name));expect(row.object_evidence.coordinate_space).toBe('original_image_px');expect(row.object_evidence.source_size).toEqual([16,16]);}
+  await api('/api/team-data');await api('/api/team-data/readiness');await api('/api/team-data/queue?offset=0&limit=30');
+  return {tag,source,project,fixture,full};
+ };
+ const A=await make('A'),B=await make('B');expect(A.project.id).not.toBe(B.project.id);expect(A.full.record.evaluation_id).not.toBe(B.full.record.evaluation_id);
+ const rawTrees=(scope:typeof A)=>({source:rocHandoffTree(scope.source),reports:rocHandoffTree(path.join(scope.project.project_dir,'reports','evaluations')),annotations:rocHandoffTree(scope.project.annotations_dir)});
+ const before={A:rawTrees(A),B:rawTrees(B)};
+ await api('/api/project/open',{project_dir:A.project.project_dir});await frame('initial own renderer',deadline=>page.goto(url,{timeout:rocHandoffRemaining(deadline)}));
+ const summary=page.locator('summary').filter({hasText:/^평가 이력 · 제품\/Lot별 오류$/}),history=summary.locator('..');
+ const family=history.getByLabel('평가 이력 모델 종류',{exact:true}),selector=history.getByLabel(/^모델별 저장 평가/),group=history.getByLabel('평가 오류 집계 기준',{exact:true});
+ const fullNames=['case-0.png · FN 0 / FP 0','case-1.png · FN 1 / FP 0','case-2.png · FN 0 / FP 1','case-3.png · FN 0 / FP 0','case-4.png · FN 0 / FP 0','case-5.png · FN 0 / FP 1'];
+ const saved=async(scope:typeof A)=>frame('exact own saved result and binding',async deadline=>{
+  const result=history.locator('details').filter({has:page.locator('summary').filter({hasText:'저장된 평가 지표·이미지 결과'})}).first();
+  if(await result.getAttribute('open')===null)await result.locator('summary').first().click({timeout:rocHandoffRemaining(deadline)});
+  expect(JSON.parse(await result.locator('pre').innerText())).toEqual(scope.full.record.result);
+  const binding=history.locator('details').filter({has:page.locator('summary').filter({hasText:'평가 버전·데이터·모델 해시 확인'})}).first();
+  if(await binding.getAttribute('open')===null)await binding.locator('summary').first().click({timeout:rocHandoffRemaining(deadline)});
+  const value=JSON.parse(await binding.locator('pre').innerText());expect(value).toEqual({evaluation_id:scope.full.record.evaluation_id,evidence_sha256:scope.full.record.evidence_sha256,binding:scope.full.record.binding});return value;
+ });
+ const enter=async(scope:typeof A)=>{
+  const detail=await frame('own report and area reset before refresh',async deadline=>{
+   await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(scope.project.name,{timeout:rocHandoffRemaining(deadline)});
+   await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(3).click({timeout:rocHandoffRemaining(deadline)});
+   if(await history.getAttribute('open')===null)await summary.click({timeout:rocHandoffRemaining(deadline)});
+   await family.selectOption('detection',{timeout:rocHandoffRemaining(deadline)});
+   await expect(selector.locator('option[value="'+scope.full.record.evaluation_id+'"]')).toHaveCount(1,{timeout:rocHandoffRemaining(deadline)});
+   await selector.selectOption(scope.full.record.evaluation_id,{timeout:rocHandoffRemaining(deadline)});
+   const current=history.locator('details').filter({has:page.locator('summary').filter({hasText:'객체·픽셀·문자 오류와 분포 분석'})}).first();
+   if(await current.getAttribute('open')===null)await current.locator('summary').first().click({timeout:rocHandoffRemaining(deadline)});
+   await expect(current.getByLabel('평가 증거 클래스',{exact:true})).toHaveValue('all',{timeout:rocHandoffRemaining(deadline)});
+   await expect(current.getByLabel('평가 증거 오류',{exact:true})).toHaveValue('all',{timeout:rocHandoffRemaining(deadline)});
+   await expect(current.getByRole('button',{name:'면적 필터 해제',exact:true})).toHaveCount(0,{timeout:rocHandoffRemaining(deadline)});
+   await expect(current.getByRole('button',{name:/^case-\d\.png · FN/})).toHaveCount(6,{timeout:rocHandoffRemaining(deadline)});
+   expect(await current.getByRole('button',{name:/^case-\d\.png · FN/}).allTextContents()).toEqual(fullNames);return current;
+  });
+  const binding=await saved(scope);
+  // Refresh only after observing entry reset, and before selecting the area.
+  // No refresh, family toggle or clear action occurs while the area is active.
+  const readback=await frame('fresh owning history response before area selection',async deadline=>{
+   const generation=new Set<HandoffRequest>();const started=(request:HandoffRequest)=>{const u=new URL(request.url());if(request.frame()===page.mainFrame()&&request.method()==='GET'&&u.origin===origin&&u.pathname==='/api/evaluation/history'&&u.searchParams.get('source_dataset_path')===scope.source&&u.searchParams.get('task')==='detection'&&!u.searchParams.has('labelset_id'))generation.add(request);};page.on('request',started);
+   try{
+    const wire=page.waitForResponse(response=>generation.has(response.request()),{timeout:rocHandoffRemaining(deadline)});
+    await history.getByRole('button',{name:'평가 이력 새로고침',exact:true}).click({timeout:rocHandoffRemaining(deadline)});
+    const response=await wire;expect(response.status()).toBe(200);const raw=await response.body();expect(await response.finished()).toBeNull();const body=JSON.parse(raw.toString('utf8'));
+    expect(body.items).toHaveLength(3);expect(body.items.map((item:any)=>item.evaluation_id).sort()).toEqual(scope.fixture.items.map((item:any)=>item.record.evaluation_id).sort());
+    for(const item of scope.fixture.items)expect(body.items.find((row:any)=>row.evaluation_id===item.record.evaluation_id)).toEqual(item.record);
+    await expect(selector).toHaveValue(scope.full.record.evaluation_id,{timeout:rocHandoffRemaining(deadline)});
+    return {method:'GET',status:200,main_frame:true,source:scope.source,body,sha256:handoffHash(raw),full_HTTP_completion:true,no_interception_or_delegation:true};
+   }finally{page.off('request',started);}
+  });
+  await frame('unchanged unfiltered result after refresh',async deadline=>{
+   if(await detail.getAttribute('open')===null)await detail.locator('summary').first().click({timeout:rocHandoffRemaining(deadline)});
+   await expect(detail.getByRole('button',{name:'면적 필터 해제',exact:true})).toHaveCount(0,{timeout:rocHandoffRemaining(deadline)});
+   await expect(detail.getByRole('button',{name:/^case-\d\.png · FN/})).toHaveCount(6,{timeout:rocHandoffRemaining(deadline)});
+   expect(await detail.getByRole('button',{name:/^case-\d\.png · FN/}).allTextContents()).toEqual(fullNames);
+  });
+  return {detail,binding,readback,area_reset_before_refresh:true,unfiltered_names:fullNames};
+ };
+ const selectArea=async(detail:ReturnType<Page['locator']>,index:3|7,expected:string)=>frame('actual independent area bin selection',async deadline=>{
+  const areaSummary=detail.locator('summary').filter({hasText:'결함 크기 분포 · 구간을 눌러 이미지 확인'});
+  if(await areaSummary.locator('..').getAttribute('open')===null)await areaSummary.click({timeout:rocHandoffRemaining(deadline)});
+  const bins=detail.getByRole('button',{name:/^결함 면적 /}),counts=[1,0,0,1,0,0,0,1,0,1];await expect(bins).toHaveCount(10,{timeout:rocHandoffRemaining(deadline)});
+  for(let i=0;i<10;i++)await expect(bins.nth(i)).toHaveAttribute('aria-label',`결함 면적 ${(i*4.9).toFixed(1)}에서 ${((i+1)*4.9).toFixed(1)} ${counts[i]}개`,{timeout:rocHandoffRemaining(deadline)});
+  await bins.nth(index).click({timeout:rocHandoffRemaining(deadline)});
+  await expect(detail.getByLabel('평가 증거 클래스',{exact:true})).toHaveValue('all',{timeout:rocHandoffRemaining(deadline)});
+  await expect(detail.getByLabel('평가 증거 오류',{exact:true})).toHaveValue('all',{timeout:rocHandoffRemaining(deadline)});
+  await expect(detail.getByRole('button',{name:'면적 필터 해제',exact:true})).toHaveCount(1,{timeout:rocHandoffRemaining(deadline)});
+  await expect(detail.getByRole('button',{name:/^case-\d\.png · FN/})).toHaveCount(1,{timeout:rocHandoffRemaining(deadline)});
+  expect(await detail.getByRole('button',{name:/^case-\d\.png · FN/}).allTextContents()).toEqual([expected]);
+  return {bin_index:index,bin_counts:counts,selected_names:[expected],class_filter:'all',error_filter:'all',area_filter_active:true,clear_button_present:true};
+ });
+ const switchProject=async(scope:typeof A,detail:ReturnType<Page['locator']>,activeName:string)=>frame('actual recent project handoff with active area',async deadline=>{
+  await expect(detail.getByRole('button',{name:'면적 필터 해제',exact:true})).toHaveCount(1,{timeout:rocHandoffRemaining(deadline)});
+  expect(await detail.getByRole('button',{name:/^case-\d\.png · FN/}).allTextContents()).toEqual([activeName]);
+  await page.getByTitle('프로젝트 관리',{exact:true}).click({timeout:rocHandoffRemaining(deadline)});const manager=page.getByRole('dialog',{name:'프로젝트 관리',exact:true});
+  await manager.getByRole('button',{name:'최근 프로젝트',exact:true}).click({timeout:rocHandoffRemaining(deadline)});
+  const generation=new Set<HandoffRequest>(),started=(request:HandoffRequest)=>{if(request.frame()===page.mainFrame()&&request.method()==='POST'&&request.url()===origin+'/api/project/open')generation.add(request);};page.on('request',started);
+  try{
+   const wire=page.waitForResponse(response=>generation.has(response.request())&&response.request().postDataJSON()?.project_dir===scope.project.project_dir,{timeout:rocHandoffRemaining(deadline)});
+   const item=manager.getByRole('button').filter({has:page.locator('span[title]').filter({hasText:scope.project.project_dir})});await expect(item).toHaveCount(1,{timeout:rocHandoffRemaining(deadline)});await item.click({timeout:rocHandoffRemaining(deadline)});
+   const response=await wire;expect(response.status()).toBe(200);expect(response.request().postDataJSON()).toEqual({project_dir:scope.project.project_dir});const raw=await response.body();expect(await response.finished()).toBeNull();const body=JSON.parse(raw.toString('utf8'));
+   expect([body.id,body.project_dir,body.source_dataset_dir]).toEqual([scope.project.id,scope.project.project_dir,scope.source]);await expect(manager).toHaveCount(0,{timeout:rocHandoffRemaining(deadline)});
+   return {project_id:body.id,project_dir:body.project_dir,source:body.source_dataset_dir,status:200,request_body:response.request().postDataJSON(),response_sha256:handoffHash(raw),full_HTTP_completion:true,area_active_before_normal_project_open:true};
+  }finally{page.off('request',started);}
+ });
+ const writes:Array<{method:string;path:string;body:string|null}>=[];const observe=(request:HandoffRequest)=>{const u=new URL(request.url());if(u.origin===origin&&u.pathname.startsWith('/api/')&&!['GET','HEAD','OPTIONS'].includes(request.method()))writes.push({method:request.method(),path:u.pathname,body:request.postData()});};page.on('request',observe);
+ try{
+  const first=await enter(A);await frame('A group preference',deadline=>group.selectOption('lot',{timeout:rocHandoffRemaining(deadline)}));const A_area=await selectArea(first.detail,3,'case-2.png · FN 0 / FP 1');await e.screenshot(page,'browser-area-A-bin3-active');
+  const toB=await switchProject(B,first.detail,'case-2.png · FN 0 / FP 1'),second=await enter(B);await expect(selector.locator('option[value="'+A.full.record.evaluation_id+'"]')).toHaveCount(0,{timeout:10_000});
+  await frame('B group preference',deadline=>group.selectOption('product',{timeout:rocHandoffRemaining(deadline)}));await e.screenshot(page,'browser-area-B-reset-own-record');
+  const B_area=await selectArea(second.detail,7,'case-4.png · FN 0 / FP 0');await e.screenshot(page,'browser-area-B-bin7-active');
+  const toA=await switchProject(A,second.detail,'case-4.png · FN 0 / FP 0'),third=await enter(A);await expect(group).toHaveValue('lot',{timeout:10_000});await expect(selector.locator('option[value="'+B.full.record.evaluation_id+'"]')).toHaveCount(0,{timeout:10_000});expect(third.binding).toEqual(first.binding);await e.screenshot(page,'browser-area-return-A-reset-own-record');
+  expect(writes).toEqual([{method:'POST',path:'/api/project/open',body:JSON.stringify({project_dir:B.project.project_dir})},{method:'POST',path:'/api/project/open',body:JSON.stringify({project_dir:A.project.project_dir})}]);
+  const after={A:rawTrees(A),B:rawTrees(B)};expect(after).toEqual(before);
+  for(const scope of[A,B]){for(const item of scope.fixture.items){expect(handoffHash(fs.readFileSync(item.report_path))).toBe(item.report_sha256);e.addFile(item.report_path);}for(const input of scope.fixture.inputs){expect(handoffHash(fs.readFileSync(input.path))).toBe(input.sha256);e.addFile(input.path);}}
+  const proof={schema:'modu-vision.f055-area-project-handoff-proof/v1',key:'F055.area-bin-filter.handoff',mode:'browser',projects:[A.project.id,B.project.id,A.project.id],evaluation_ids:[A.full.record.evaluation_id,B.full.record.evaluation_id,A.full.record.evaluation_id],source_paths:[A.source,B.source,A.source],fixtures:{A,B},A_area,B_area,toB,toA,entry_area_reset_before_refresh:[first.area_reset_before_refresh,second.area_reset_before_refresh,third.area_reset_before_refresh],entry_unfiltered_names:[first.unfiltered_names,second.unfiltered_names,third.unfiltered_names],owning_history_reads:[first.readback,second.readback,third.readback],saved_bindings:[first.binding,second.binding,third.binding],raw_trees_before:before,raw_trees_after:after,business_writes:writes,guard_scope:'two source, two evaluation-report and two annotation trees; not entire project runtime stores',no_refresh_or_clear_while_area_active:true,no_request_interception_or_delegation:true,controlled_saved_reports_not_model_inference:true,actual_model_inference:false,source_electron:false,quality_human_installed_target_parent_approval:false};
+  const output=path.join(w.logs,'f055-area-handoff-proof.json');fs.writeFileSync(output,JSON.stringify(proof),{flag:'wx'});e.addFile(output);e.note('area_bin_project_handoff',proof);
+ }finally{page.off('request',observe);}
+}
+test('saved area bins remain active until real A B A project handoff and reset to exact owning reports',async({page,renderer,workspace,evidence})=>{
+ await installDesktopHostShim(page,renderer.port);await savedAreaBinProjectHandoff(page,workspace,evidence,renderer.origin,renderer.url);
+});

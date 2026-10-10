@@ -212,3 +212,201 @@ test('owning draft PUT503 preserves saved graph and explicitly recovers same dir
  const api:Api=async(route,body,method)=>{const reply=await request.fetch(renderer.origin+route,{method:method||(body===undefined?'GET':'POST'),...(body===undefined?{}:{data:body})});return{status:reply.status(),body:await reply.text(),url:reply.url()};};await exercise(page,workspace,evidence,api,false,renderer.url);});
 test('native owning draft PUT503 retains original source and explicit save200 readback', {tag:'@electron'},async({electronSession,workspace,evidence})=>{test.setTimeout(160_000);const backend=await electronSession.waitForBackend();
  const api:Api=(route,body,method)=>electronSession.window.evaluate(async({port,route,body,method})=>{const reply=await fetch(`http://127.0.0.1:${port}${route}`,{method:method||(body===undefined?'GET':'POST'),...(body===undefined?{}:{headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})});return{status:reply.status,body:await reply.text(),url:reply.url};},{port:backend.port,route,body,method});await exercise(electronSession.window,workspace,evidence,api,true);});
+
+// SOURCE-only append. Root alone executes and qualifies the owned fixture.
+import {handoffApi as draftHandoffApi, handoffProject as draftHandoffProject,
+  handoffWithin as draftHandoffWithin, handoffSave as draftHandoffSave,
+  type HandoffApi as DraftHandoffApi} from './fixtures/remaining-project-handoff';
+
+type DraftHandoffScope={tag:'A'|'B';project:any;source:string;context:any;seed:any;saved:any;
+  roiId:string;label:string;draftFile:string;images:Array<{path:string;size:number;sha256:string;blue:number}>;readback?:any};
+type DraftHandoffClock={request:Request;started:number;deadline:number;pending?:Promise<void>;failure?:unknown;
+  finished?:number;status?:number;raw?:Buffer;context?:any;project?:string};
+const draftHandoffRaw7=(s:fs.BigIntStats)=>[s.dev,s.ino,s.mode,s.nlink,s.size,s.mtimeNs,s.ctimeNs].map(String);
+
+// Complete declared trees, including their directories and absent roots. No
+// lifecycle SQLite stores outside these explicit roots are claimed here.
+function draftHandoffTree(root:string):Record<string,unknown>{
+ const result:Record<string,unknown>={};
+ try{fs.lstatSync(root,{bigint:true});}catch(error){if((error as NodeJS.ErrnoException).code==='ENOENT')return{'.':{kind:'absent'}};throw error;}
+ const visit=(file:string)=>{
+  const named=fs.lstatSync(file,{bigint:true}),identity=draftHandoffRaw7(named),member=path.relative(root,file).split(path.sep).join('/')||'.';
+  expect(named.isSymbolicLink()).toBe(false);expect(fs.realpathSync(file)).toBe(file);
+  if(named.isDirectory()){
+   const names=fs.readdirSync(file).sort();result[member]={kind:'directory',identity};
+   for(const name of names)visit(path.join(file,name));
+   expect(fs.readdirSync(file).sort()).toEqual(names);expect(draftHandoffRaw7(fs.lstatSync(file,{bigint:true}))).toEqual(identity);return;
+  }
+  expect(named.isFile()).toBe(true);expect(named.nlink).toBe(1n);
+  const fd=fs.openSync(file,fs.constants.O_RDONLY|fs.constants.O_NOFOLLOW);let primary:unknown;
+  try{
+   expect(draftHandoffRaw7(fs.fstatSync(fd,{bigint:true}))).toEqual(identity);const raw=fs.readFileSync(fd);
+   expect(BigInt(raw.length)).toBe(named.size);expect(draftHandoffRaw7(fs.fstatSync(fd,{bigint:true}))).toEqual(identity);
+   expect(draftHandoffRaw7(fs.lstatSync(file,{bigint:true}))).toEqual(identity);result[member]={kind:'file',identity,size:raw.length,sha256:sha(raw)};
+  }catch(error){primary=error;throw error;}finally{try{fs.closeSync(fd);}catch(error){if(primary===undefined)throw error;}}
+ };visit(root);return result;
+}
+
+function draftHandoffPixels(raw:Buffer,blue:number){
+ let cursor=8,header:Buffer|undefined;const chunks:Buffer[]=[];expect(raw.subarray(0,8)).toEqual(Buffer.from([137,80,78,71,13,10,26,10]));
+ while(cursor<raw.length){const count=raw.readUInt32BE(cursor),kind=raw.toString('ascii',cursor+4,cursor+8);expect(cursor+count+12).toBeLessThanOrEqual(raw.length);
+  if(kind==='IHDR'){expect(header).toBeUndefined();header=raw.subarray(cursor+8,cursor+8+count);}if(kind==='IDAT')chunks.push(raw.subarray(cursor+8,cursor+8+count));cursor+=count+12;}
+ expect(cursor).toBe(raw.length);expect(header).toBeDefined();expect([...header!]).toEqual([...Buffer.from([0,0,1,0,0,0,1,0,8,2,0,0,0])]);
+ const actual=inflateSync(Buffer.concat(chunks)),expected=Buffer.alloc(256*769);
+ for(let y=0;y<256;y++)for(let x=0;x<256;x++){const offset=y*769+1+x*3;expected[offset]=x;expected[offset+1]=y;expected[offset+2]=blue;}
+ expect(actual.equals(expected)).toBe(true);return{width:256,height:256,pixels:65536,channels:3,blue};
+}
+
+async function draftHandoffMake(api:DraftHandoffApi,w:Workspace,tag:'A'|'B'):Promise<DraftHandoffScope>{
+ const source=path.join(w.root,'saved-flow-draft-source-'+tag),normal=path.join(source,'train','good');fs.mkdirSync(normal,{recursive:true});
+ const images=[0,1].map(index=>{
+  const blue=(tag==='A'?100:120)+index,file=path.join(normal,index?'part-1.png':'part.png');fs.writeFileSync(file,png(256,3,(x,y)=>[x,y,blue]),{flag:'wx'});
+  const raw=fs.readFileSync(file);draftHandoffPixels(raw,blue);return{path:file,size:raw.length,sha256:sha(raw),blue};
+ });
+ const made=await api('/api/project/create',{name:'Owned saved flow draft handoff '+tag,task:'anomaly'});
+ await api('/api/project/update',{source_dataset_dir:source},'PUT');assertAnomalyImport(await api('/api/dataset/import',{folder_path:source,task:'anomaly',validate_images:true}));
+ const project=await api('/api/project/current');expect(project.id).toBe(made.id);expect(project.source_dataset_dir).toBe(source);expect(path.dirname(project.project_dir)).toBe(w.projects);
+ const context={project_id:project.id,source_dataset_path:source,labelset_id:project.active_labelset_id||'default'},suffix=tag.toLowerCase(),roiId='roi-'+suffix;
+ const pipeline={id:'owned-draft-handoff-'+suffix,name:'Owned editable no-model flow '+tag,nodes:[
+  {id:'input-'+suffix,position:{x:32,y:170},data:{label:'Input '+tag,node_type:'input'}},
+  {id:roiId,position:{x:332,y:170},data:{label:'ROI initial '+tag,node_type:'fixed_roi',params:{roi_bbox:tag==='A'?[2,3,20,21]:[12,13,40,41]}}},
+  {id:'decision-'+suffix,position:{x:632,y:170},data:{label:'Decision '+tag,node_type:'decision',rule:'any_defect_is_ng'}},
+  {id:'output-'+suffix,position:{x:932,y:170},data:{label:'Output '+tag,node_type:'output'}}],edges:[
+  {id:'input-roi-'+suffix,source:'input-'+suffix,target:roiId,payload_type:'image'},
+  {id:'roi-decision-'+suffix,source:roiId,target:'decision-'+suffix,payload_type:'roi'},
+  {id:'decision-output-'+suffix,source:'decision-'+suffix,target:'output-'+suffix,payload_type:'result'}]};
+ const seed=await api('/api/flowchart/draft',{pipeline,context,base_version_id:'none'},'PUT');assertDraftRecord(seed,seed.pipeline,context);
+ for(const node of seed.pipeline.nodes)expect(node.data.model_job_id).toBeNull();
+ await api('/api/project/labelsets');await api('/api/team-data');await api('/api/team-data/readiness');await api('/api/dataset/metadata?limit=100');
+ for(const image of images)await api('/api/annotations/part?file_path='+encodeURIComponent(image.path));
+ const draftFile=path.join(project.project_dir,'flowcharts','drafts',context.labelset_id,sha(source).slice(0,16),'draft.json');
+ expect(JSON.parse(fs.readFileSync(draftFile,'utf8'))).toEqual(Object.fromEntries(Object.entries(seed).filter(([key])=>key!=='active_version_id')));
+ return{tag,project,source,context,seed,saved:seed,roiId,label:'ROI persisted '+tag,draftFile,images};
+}
+
+async function draftHandoffExercise(page:Page,w:Workspace,e:Evidence,origin:string,url:string){
+ const api=draftHandoffApi(page,origin,false),A=await draftHandoffMake(api,w,'A'),B=await draftHandoffMake(api,w,'B');
+ expect(A.project.id).not.toBe(B.project.id);expect(A.project.project_dir).not.toBe(B.project.project_dir);expect(A.source).not.toBe(B.source);
+ expect(A.seed.draft_sha256).not.toBe(B.seed.draft_sha256);expect(new Set([...A.images,...B.images].map(row=>row.sha256)).size).toBe(4);
+ const writes:Array<{request:Request;method:string;path:string;body:any}>=[],clocks=new Map<Request,DraftHandoffClock>();let primary:unknown,baseline=false;
+ const observed=(request:Request)=>{
+  const u=new URL(request.url());if(u.origin!==origin||!u.pathname.startsWith('/api/')||request.method()==='OPTIONS')return;
+  if(!['GET','HEAD'].includes(request.method()))writes.push({request,method:request.method(),path:u.pathname,body:request.postDataJSON()});
+  if(u.pathname==='/api/flowchart/draft'){const started=performance.now();clocks.set(request,{request,started,deadline:started+10_000});}
+ };
+ const failed=(request:Request)=>{const row=clocks.get(request);if(row)row.failure=request.failure()?.errorText||'Original draft request failed';};
+ const replied=(response:Response)=>{
+  const row=clocks.get(response.request());if(!row)return;
+  row.pending=(async()=>{try{
+   const deadline=row.deadline;row.status=response.status();expect(row.status).toBe(200);expect(row.request.frame()).toBe(page.mainFrame());
+   row.project=(await draftHandoffWithin(row.request.headerValue('x-vision-project'),deadline,'original draft owner header'))!;
+   const context=await draftHandoffWithin(row.request.headerValue('x-vision-context'),deadline,'original draft context header');expect(context).not.toBeNull();row.context=JSON.parse(context!);
+   row.raw=await draftHandoffWithin(response.body(),deadline,'original complete draft response');expect(row.raw.length).toBeLessThanOrEqual(1024*1024);
+   expect(await draftHandoffWithin(response.finished(),deadline,'original draft response finished')).toBeNull();row.finished=performance.now();expect(row.finished).toBeLessThanOrEqual(deadline);
+  }catch(error){row.failure=error;}})();
+ };
+ const drain=async()=>{for(const row of clocks.values()){
+  if(!row.pending)await draftHandoffWithin(expect.poll(()=>Boolean(row.pending||row.failure),{timeout:Math.max(1,row.deadline-performance.now())}).toBe(true),row.deadline,'original draft response arrival');
+  expect(row.failure).toBeUndefined();await row.pending;expect(row.failure).toBeUndefined();expect(row.deadline).toBe(row.started+10_000);
+  expect(row.raw).toBeDefined();expect(row.finished!).toBeLessThanOrEqual(row.deadline);
+ }};
+ const rendered=()=>page.evaluate(()=>({nodes:[...document.querySelectorAll<HTMLElement>('[data-flow-node-id]')].map(row=>({id:row.dataset.flowNodeId,label:row.querySelector('h4')?.textContent,x:parseFloat(row.style.left),y:parseFloat(row.style.top)})),edges:[...document.querySelectorAll<SVGElement>('path[data-flow-edge]')].map(row=>({id:row.dataset.flowEdge,source:row.dataset.flowFrom?.split(':')[0],target:row.dataset.flowTo?.split(':')[0]}))}));
+ const view=(pipeline:any)=>({nodes:pipeline.nodes.map((row:any)=>({id:row.id,label:row.data.label,x:row.position.x,y:row.position.y})),edges:pipeline.edges.map((row:any)=>({id:row.id,source:row.source,target:row.target}))});
+ const savedStatus=page.getByRole('status').filter({hasText:/^초안 저장됨 · 실행본 활성화 전$/}),save=page.getByRole('button',{name:'초안 저장',exact:true});
+ const enter=async(scope:DraftHandoffScope,reopened:boolean)=>{
+  expect(await api('/api/project/current')).toEqual(scope.project);
+  await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(scope.project.name);
+  await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(4).click();await page.getByRole('tab',{name:'편집',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'검사 플로우 편집기',exact:true})).toBeVisible();await expect(page.locator('[data-flow-node-id]')).toHaveCount(4);
+  await expect.poll(rendered).toEqual(view(scope.saved.pipeline));await expect(savedStatus).toHaveCount(1);await expect(save).toBeEnabled();
+  if(reopened){await expect(page.getByRole('button',{name:'플로우 실행 취소',exact:true})).toBeDisabled();await expect(page.getByRole('button',{name:'플로우 다시 실행',exact:true})).toBeDisabled();}
+  await page.getByLabel('플로우 노드 검색',{exact:true}).fill(scope.roiId);await page.getByRole('list',{name:'노드 검색 결과'}).getByRole('button').click();
+  await expect(page.getByRole('textbox',{name:'노드 명칭',exact:true})).toHaveValue(scope.saved.pipeline.nodes.find((row:any)=>row.id===scope.roiId).data.label);await drain();
+ };
+ const responses:any[]=[],snapshots:any[]=[],transitions:any[]=[];
+ const rawResponse=(label:string,raw:Buffer)=>{const file=path.join(w.logs,label+'.json');fs.writeFileSync(file,raw,{flag:'wx'});e.addFile(file);return{path:file,size:raw.length,sha256:sha(raw)};};
+ const savePrepared=async(scope:DraftHandoffScope)=>{
+  const changed=clone(scope.seed.pipeline);changed.nodes.find((row:any)=>row.id===scope.roiId).data.label=scope.label;
+  const capture=async(response:Response,kind:'650ms-autosave'|'explicit-button')=>{
+   const row=clocks.get(response.request());expect(row).toBeDefined();await drain();expect(row!.failure).toBeUndefined();
+   expect(row!.project).toBe(scope.project.id);expect(row!.context.project_id).toBe(scope.project.id);expect(row!.context.mode).toBe('local');
+   expect(typeof row!.context.workspace_id).toBe('string');expect(typeof row!.context.actor_id).toBe('string');
+   assertDraftRequest({method:response.request().method(),url:response.url(),body:response.request().postData()},origin,changed,scope.context);
+   const record=JSON.parse(row!.raw!.toString('utf8'));assertDraftRecord(record,changed,scope.context);scope.saved=record;
+   await expect(savedStatus).toHaveCount(1);await expect(save).toBeEnabled();await expect.poll(rendered).toEqual(view(changed));await drain();
+   expect(await api('/api/flowchart/draft')).toEqual(record);
+   const disk=fs.readFileSync(scope.draftFile);expect(JSON.parse(disk.toString('utf8'))).toEqual(Object.fromEntries(Object.entries(record).filter(([key])=>key!=='active_version_id')));
+   responses.push({kind,project_id:scope.project.id,context:scope.context,actual_owner_context:row!.context,started:row!.started,deadline:row!.deadline,finished:row!.finished,
+    method:'PUT',path:'/api/flowchart/draft',status:200,request:response.request().postDataJSON(),response:record,raw_response:rawResponse('saved-flow-'+scope.tag+'-'+kind,row!.raw!),disk_sha256:sha(disk)});
+  };
+  const automaticDeadline=performance.now()+10_000;
+  const automatic=page.waitForResponse(r=>r.url()===origin+'/api/flowchart/draft'&&r.request().method()==='PUT'&&r.request().frame()===page.mainFrame(),{timeout:Math.max(1,automaticDeadline-performance.now())});
+  await draftHandoffWithin(page.getByRole('textbox',{name:'노드 명칭',exact:true}).fill(scope.label),automaticDeadline,'ordinary node edit');
+  await capture(await draftHandoffWithin(automatic,automaticDeadline,'genuine650ms autosave'),'650ms-autosave');
+  // The same already-clean graph is explicitly saved by its real owning
+  // button. Both responses are finished before any custody baseline.
+  const explicitDeadline=performance.now()+10_000;
+  const explicit=page.waitForResponse(r=>r.url()===origin+'/api/flowchart/draft'&&r.request().method()==='PUT'&&r.request().frame()===page.mainFrame(),{timeout:Math.max(1,explicitDeadline-performance.now())});
+  await draftHandoffWithin(save.click(),explicitDeadline,'ordinary explicit draft button');await capture(await draftHandoffWithin(explicit,explicitDeadline,'explicit draft save'),'explicit-button');
+  await page.evaluate(()=>new Promise<void>(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>r()))));await expect(savedStatus).toHaveCount(1);await expect(save).toBeEnabled();await drain();
+ };
+ const readback=async(scope:DraftHandoffScope)=>{
+  const value={project:await api('/api/project/current'),draft:await api('/api/flowchart/draft'),labelsets:await api('/api/project/labelsets'),
+   metadata:await api('/api/dataset/metadata?limit=100'),active:await api('/api/flowchart/pipeline/active-version'),pipelines:await api('/api/flowchart/pipelines?source_dataset_path='+encodeURIComponent(scope.source)),
+   annotations:await Promise.all(scope.images.map(image=>api('/api/annotations/part?file_path='+encodeURIComponent(image.path)))),revisions:await api('/api/dataset/revisions')};
+  expect(value.project).toEqual(scope.project);expect(value.draft).toEqual(scope.saved);assertDraftRecord(value.draft,scope.saved.pipeline,scope.context);
+  expect(value.metadata.items).toHaveLength(2);expect(new Set(value.metadata.items.map((row:any)=>row.image_uuid)).size).toBe(2);
+  expect(value.active).toEqual({version_id:null});expect(value.pipelines).toEqual({pipelines:[],total:0});
+  expect(JSON.parse(fs.readFileSync(scope.draftFile,'utf8'))).toEqual(Object.fromEntries(Object.entries(scope.saved).filter(([key])=>key!=='active_version_id')));
+  return value;
+ };
+ const custody=(scope:DraftHandoffScope)=>{
+  const roots={source:scope.source,annotations:scope.project.annotations_dir,models:scope.project.models_dir,reports:scope.project.reports_dir,dataset:scope.project.dataset_dir,
+   labelsets:path.join(scope.project.project_dir,'labelsets'),flowcharts:path.join(scope.project.project_dir,'flowcharts')};
+  const value={roots,trees:Object.fromEntries(Object.entries(roots).map(([key,root])=>[key,draftHandoffTree(root)])),
+   project_config:draftHandoffTree(path.join(scope.project.project_dir,'project.json')),labelset_registry:draftHandoffTree(path.join(scope.project.project_dir,'labelsets.json'))};
+  expect(fs.existsSync(path.join(scope.project.project_dir,'flowcharts','active.json'))).toBe(false);
+  for(const image of scope.images){const raw=fs.readFileSync(image.path);expect(raw.length).toBe(image.size);expect(sha(raw)).toBe(image.sha256);draftHandoffPixels(raw,image.blue);}return value;
+ };
+ const both=()=>({A:custody(A),B:custody(B),harness_dataset:draftHandoffTree(w.dataset)});
+ let baselineTrees:ReturnType<typeof both>|undefined;
+ page.on('request',observed);page.on('requestfailed',failed);page.on('response',replied);
+ try{
+  await page.goto(url);await enter(B,true);await savePrepared(B);B.readback=await readback(B);await e.screenshot(page,'saved-flow-B-actual-put200-before-handoff');
+  transitions.push(await draftHandoffProject(page,A,origin));await enter(A,true);await savePrepared(A);A.readback=await readback(A);await e.screenshot(page,'saved-flow-A-actual-put200-before-handoff');
+  await drain();baselineTrees=both();expect(writes.filter(row=>row.path==='/api/flowchart/draft')).toHaveLength(4);
+  for(const scope of[A,B])expect(writes.filter(row=>row.path==='/api/flowchart/draft'&&row.body.context.project_id===scope.project.id)).toHaveLength(2);
+  const setupWrites=writes.map(({request:_request,...row})=>row);writes.length=0;const clockStart=clocks.size;baseline=true;
+  snapshots.push({tag:'A-before',state:baselineTrees,readback:A.readback});
+  transitions.push(await draftHandoffProject(page,B,origin));await enter(B,true);expect(await readback(B)).toEqual(B.readback);await drain();expect(both()).toEqual(baselineTrees);
+  snapshots.push({tag:'B-after',state:both(),readback:B.readback});await e.screenshot(page,'saved-flow-B-own-graph-and-hash-after-A-to-B');
+  transitions.push(await draftHandoffProject(page,A,origin));await enter(A,true);expect(await readback(A)).toEqual(A.readback);await drain();expect(both()).toEqual(baselineTrees);
+  snapshots.push({tag:'A-return',state:both(),readback:A.readback});await e.screenshot(page,'saved-flow-A-return-own-graph-and-hash');
+  expect(writes.map(({request:_request,...row})=>row)).toEqual([{method:'POST',path:'/api/project/open',body:{project_dir:B.project.project_dir}},{method:'POST',path:'/api/project/open',body:{project_dir:A.project.project_dir}}]);
+  const owningReads=[...clocks.values()].slice(clockStart);expect(owningReads.length).toBeGreaterThanOrEqual(2);
+  for(const scope of[B,A])expect(owningReads.some(row=>row.request.method()==='GET'&&row.project===scope.project.id&&JSON.parse(row.raw!.toString('utf8')).draft_sha256===scope.saved.draft_sha256)).toBe(true);
+  const actualDraftReplies=[...clocks.values()].map((row,index)=>({method:row.request.method(),url:row.request.url(),request:row.request.postData(),project_id:row.project,owner_context:row.context,
+   started:row.started,deadline:row.deadline,finished:row.finished,status:row.status,raw_response:rawResponse('saved-flow-observed-reply-'+index,row.raw!)}));
+  draftHandoffSave(e,w,'flow-draft-project-handoff-proof',{schema:'modu-vision.flow-draft-project-handoff-proof/v1',cells:['U012.save-draft.handoff'],projects:[A.project,B.project],contexts:[A.context,B.context],
+   originals:[A.images,B.images],seeds:[A.seed,B.seed],saved_graphs:[A.saved,B.saved],actual_UI_puts:responses,actual_project_transitions:transitions,
+   setup_renderer_writes:setupWrites,post_baseline_renderer_writes:writes.map(({request:_request,...row})=>row),actual_original_draft_replies:actualDraftReplies,snapshots,
+   exact_topology_positions_ROI_labels_contexts_and_hashes:true,all_declared_seven_trees_per_project_plus_registries_and_harness_unchanged:true,
+   policy:{original_debounce_ms:650,baseline_after_auto_and_explicit_full_response_and_clean_status:true,dirty_unmount_persistence_not_disabled:true,no_dirty_project_switch:true,post_baseline_draft_writes:0},
+   scope:{browser:true,source_Electron:false,installed_native:false,training:false,model_or_GPU_execution:false,active_flow:false,quality_or_human_or_parent_target_acceptance:false,unrelated_project_lifecycle_SQLite_namespace:false}});
+ }catch(error){primary=error;throw error;}finally{
+  let cleanupError:unknown;const cleanupRows:Array<{role:string;unchanged:boolean;error_type?:string}>=[];
+  const attempt=async(role:string,work:()=>unknown|Promise<unknown>)=>{try{await work();cleanupRows.push({role,unchanged:true});}catch(error){
+   if(cleanupError===undefined)cleanupError=error;cleanupRows.push({role,unchanged:false,error_type:error instanceof Error?error.name:typeof error});}};
+  await attempt('original-draft-responses',drain);await attempt('request-observer-remove',()=>page.off('request',observed));
+  await attempt('failed-observer-remove',()=>page.off('requestfailed',failed));await attempt('response-observer-remove',()=>page.off('response',replied));
+  if(baseline){await attempt('A-full-declared-custody',()=>expect(custody(A)).toEqual(baselineTrees!.A));
+   await attempt('B-full-declared-custody',()=>expect(custody(B)).toEqual(baselineTrees!.B));
+   await attempt('original-harness-dataset',()=>expect(draftHandoffTree(w.dataset)).toEqual(baselineTrees!.harness_dataset));}
+  await attempt('durable-final-custody',()=>draftHandoffSave(e,w,'flow-draft-project-handoff-final-custody',{
+   baseline_reached:baseline,primary_present:primary!==undefined,roles:[...cleanupRows],original_error_preserved:true}));
+  if(primary===undefined&&cleanupError!==undefined)throw cleanupError;
+ }
+}
+test('saved editable flow graphs and hashes stay scoped through A B A project handoff after owning draft saves',async({page,renderer,workspace,evidence})=>{
+ test.setTimeout(240_000);await installDesktopHostShim(page,renderer.port);await draftHandoffExercise(page,workspace,evidence,renderer.origin,renderer.url);
+});

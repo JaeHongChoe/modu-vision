@@ -1,0 +1,52 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "b081a54a904224825b48a37bf427abad7144cf4d",
+  "source_dirty": false,
+  "test": "scripts/e2e/derived-workflow-closure.spec.ts::saved derived alignment brightness review and training-source reopen retain their owning projects",
+  "test_source_sha256": "d2e84362bf5049d31f5653ee1dbc2668288051684f086e1613469e49bc1d7e80",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "8b1c1174e261f88ff264618a3a79b9ba7d184298b596ed551d0242e64c8cc3b4",
+  "harness_sha256": "d03fbaf50cc014800bc3e4f6906288bb1a2c8f57713839ae2f1e4d6749547d35",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "e07705ea0ccb9c0b6fd31ad5c693aa1b86da189bebb64a4e3f0461bf5ebd4f24"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "8b266383a1557c8ad5360540f5818921320ca26f1d3b0a462b0a9846f99860d6"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "9ab5172e83c9e9067d9950cfd16ea063e21c03ba8d40c735d5a09bcc29335d27"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "1df402a941cce2dadc8e1869752cfc22cb597cbc0b6104724851b13430887b43"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "a6f07625e8f31aee4609dc3d6c12195a2fa22ea89890b1f9e7cf3f50eb43fc47"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "67fdf0a2bf8aa34920ac712d104584393580701c30ba47f5a2e45c2fc1f4e89c"
+    },
+    {
+      "id": "screenshot-6",
+      "sha256": "a6f07625e8f31aee4609dc3d6c12195a2fa22ea89890b1f9e7cf3f50eb43fc47"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

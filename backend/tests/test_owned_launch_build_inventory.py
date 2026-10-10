@@ -172,3 +172,76 @@ def test_cpu_protocol_is_distinct_and_cannot_probe_older_or_forged_inventory(tmp
         if change=='float':inventory[field]=1.0
         else:inventory['resources'].append(copy.deepcopy(next(row for row in inventory['resources'] if row['path']==build.OWNED_APPLICATION_CPU_RESOURCES[-1])))
         with pytest.raises(ValueError):build.validate_inventory(inventory)
+
+
+
+def test_compiler_child_disables_auto_install_without_mutating_parent_or_arguments(tmp_path, monkeypatch):
+    """Exercise the actual compiler subprocess and JSON argument transport."""
+    import os
+    import sys
+    import types
+
+    root = checkout(tmp_path, monkeypatch)
+    inventory = build.dependency_inventory(root)
+    monkeypatch.setattr(build, 'ROOT_DIR', root)
+    monkeypatch.setattr(build, 'ENTRY_POINT', root/'scripts/frozen_backend_entry.py')
+    monkeypatch.setattr(build, 'check_pyinstaller', lambda: True)
+    monkeypatch.setattr(build, 'dependency_inventory', lambda base, **kwargs: inventory)
+    # The compiler and license data are fixtures; subprocess.run, source
+    # snapshotting, command construction and argument transport remain real.
+    licenses = types.ModuleType('scripts.package_license_texts')
+    licenses.collect_frozen_licenses = lambda *args, **kwargs: {}
+    monkeypatch.setitem(sys.modules, 'scripts.package_license_texts', licenses)
+
+    expected = {
+        'YOLO_AUTOINSTALL': 'false',
+        'PIP_NO_INDEX': '1',
+        'PIP_DISABLE_PIP_VERSION_CHECK': '1',
+        'PYTHONDONTWRITEBYTECODE': '1',
+        'HF_HUB_OFFLINE': '1',
+        'HF_DATASETS_OFFLINE': '1',
+        'TRANSFORMERS_OFFLINE': '1',
+    }
+    for name in expected:
+        monkeypatch.setenv(name, 'true' if name == 'YOLO_AUTOINSTALL' else '0')
+    monkeypatch.setenv('OWNED_COMPILER_ENV_SENTINEL', 'parent-value-preserved')
+    proof_path = tmp_path/'compiler-child-proof.json'
+    monkeypatch.setenv('OWNED_COMPILER_ENV_PROOF', str(proof_path))
+    compiler_root = tmp_path/'compiler-fixture'
+    package = compiler_root/'PyInstaller'
+    package.mkdir(parents=True)
+    (package/'__init__.py').write_text('', encoding='utf-8')
+    (package/'__main__.py').write_text(
+        "import json, os\n"
+        "from pathlib import Path\n"
+        "def run(arguments):\n"
+        "    names = ('YOLO_AUTOINSTALL', 'PIP_NO_INDEX', 'PIP_DISABLE_PIP_VERSION_CHECK',\n"
+        "             'PYTHONDONTWRITEBYTECODE', 'HF_HUB_OFFLINE', 'HF_DATASETS_OFFLINE', 'TRANSFORMERS_OFFLINE')\n"
+        "    proof = {'arguments': arguments, 'environment': {name: os.environ.get(name) for name in names},\n"
+        "             'sentinel': os.environ.get('OWNED_COMPILER_ENV_SENTINEL')}\n"
+        "    Path(os.environ['OWNED_COMPILER_ENV_PROOF']).write_text(json.dumps(proof), encoding='utf-8')\n"
+        "    output = Path(next(arg.split('=', 1)[1] for arg in arguments if arg.startswith('--distpath=')))\n"
+        "    directory = output/'vision_ai_backend'\n"
+        "    directory.mkdir()\n"
+        "    executable = directory/('vision_ai_backend.exe' if os.name == 'nt' else 'vision_ai_backend')\n"
+        "    executable.write_bytes(b'Owned compiler fixture; never execute this file.\\n')\n",
+        encoding='utf-8')
+    monkeypatch.setenv('PYTHONPATH', str(compiler_root))
+    parent_environment = dict(os.environ)
+    output = tmp_path/'dist'
+
+    build.build_binary(output, accept=False)
+
+    proof = json.loads(proof_path.read_text(encoding='utf-8'))
+    assert proof['environment'] == expected
+    assert proof['sentinel'] == 'parent-value-preserved'
+    parent_unchanged = dict(os.environ) == parent_environment
+    assert parent_unchanged, 'Compiler build mutated its parent environment'
+    assert os.environ['YOLO_AUTOINSTALL'] == 'true'
+    snapshots = list((output/'.build').glob('source-*'))
+    assert len(snapshots) == 1
+    command = build.pyinstaller_command(snapshots[0], output, build.platform.system())
+    argument_files = list((output/'.build').glob('pyinstaller-arguments-*.json'))
+    assert len(argument_files) == 1
+    assert proof['arguments'] == json.loads(argument_files[0].read_text(encoding='utf-8')) == command[3:]
+    assert not (package/'__pycache__').exists()

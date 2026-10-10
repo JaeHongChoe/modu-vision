@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "227dff74c2a2046ef591131f30521768895f4284",
+  "source_dirty": false,
+  "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved area bins remain active until real A B A project handoff and reset to exact owning reports",
+  "test_source_sha256": "5e28e631e4e5cade887e1e9f963a905a42c6318a8fcd2edcd16aaad5f2170d29",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "470491d2f1ebbc1c7426981330a7a6f94f58e6bdd6c98aca8875e6a44b882229",
+  "harness_sha256": "aa5e649ff7bbcb3377fc367f01e3c1881c3dd913c1e5e5ae01cdd616d959031f",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "6f4b920c3f0b99a101d14fd5ed2ddf6e2804bacfb9faa9fe470ebfa91e31fd1c"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "3458396afb0093aff31e8e30b45f738e423f17daf48d708cd5ba0fea22f3334d"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "60b7f5c81686da31159290abc3fdfd1afde094ae00d291cdbf166211004099ce"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "77f2673ec158a7e4d0697b49c5efcf9cee564125aa82ca0c9ed260c767454d50"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

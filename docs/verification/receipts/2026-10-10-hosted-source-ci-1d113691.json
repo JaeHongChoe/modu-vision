@@ -1,0 +1,523 @@
+{
+  "CPU_artifact": {
+    "id": 11658226757,
+    "members": [
+      {
+        "name": "modu-ci-manifests/ci-baseline-evidence.json",
+        "sha256": "73049803c45a6f12bc644efe870fa6db7dd2658fbccc4d35474f9494362dbeab",
+        "size": 8309
+      },
+      {
+        "name": "modu-ci-manifests/ci-flow-outcome-diagnostic-pytest.xml",
+        "sha256": "5bfe227cb9f48342af578d1f69ecbb504e3b0843c130065714ac6b5bb978223a",
+        "size": 4105
+      },
+      {
+        "name": "modu-ci-manifests/ci-license-inventory.json",
+        "sha256": "1356560e7a9e7ea6033a0bd03aad2cd5471350a0693c88eb3c3bed1a0eb34e03",
+        "size": 228822
+      },
+      {
+        "name": "modu-ci-manifests/ci-pytest.xml",
+        "sha256": "612efa9972adda39f1ca860f256388ae9af1978b6906ef32e60d826df5dec6f0",
+        "size": 808042
+      },
+      {
+        "name": "modu-ci-manifests/ci-receipt.json",
+        "sha256": "7206fb777c58c1208b59c0656cab7b5123afdea6df242a7bf9275b63440475a8",
+        "size": 1495
+      }
+    ],
+    "name": "linux-cpu-1d113691ad090045f9af22a1c0a9ebb57df99b0e",
+    "sha256": "868b8cdd2fd282669db206fe806dee784bb82b33daeeee416a7a6bd0efdcc75d",
+    "size": 109773
+  },
+  "conclusion": "success",
+  "created_at": "2026-10-10T02:45:27Z",
+  "event": "push",
+  "jobs": [
+    {
+      "conclusion": "success",
+      "id": 114112882071,
+      "name": "browser",
+      "status": "completed",
+      "steps": [
+        {
+          "completed_at": "2026-10-10T02:45:31Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "started_at": "2026-10-10T02:45:30Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T02:45:34Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "number": 2,
+          "started_at": "2026-10-10T02:45:31Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T02:45:37Z",
+          "conclusion": "success",
+          "name": "Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "number": 3,
+          "started_at": "2026-10-10T02:45:34Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T02:45:37Z",
+          "conclusion": "success",
+          "name": "Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "number": 4,
+          "started_at": "2026-10-10T02:45:37Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T02:45:37Z",
+          "conclusion": "success",
+          "name": "Prepare isolated CI records",
+          "number": 5,
+          "started_at": "2026-10-10T02:45:37Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T02:46:27Z",
+          "conclusion": "success",
+          "name": "Install locked CPU environment",
+          "number": 6,
+          "started_at": "2026-10-10T02:45:37Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T02:46:35Z",
+          "conclusion": "success",
+          "name": "Run npm ci",
+          "number": 7,
+          "started_at": "2026-10-10T02:46:27Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T02:46:41Z",
+          "conclusion": "success",
+          "name": "Check preserved scope and acceptance states",
+          "number": 8,
+          "started_at": "2026-10-10T02:46:35Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T02:48:10Z",
+          "conclusion": "success",
+          "name": "Type checks, renderer regressions, and build",
+          "number": 9,
+          "started_at": "2026-10-10T02:46:41Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T02:48:30Z",
+          "conclusion": "success",
+          "name": "Install test browser",
+          "number": 10,
+          "started_at": "2026-10-10T02:48:10Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T03:26:40Z",
+          "conclusion": "success",
+          "name": "Browser transport and flow checks",
+          "number": 11,
+          "started_at": "2026-10-10T02:48:30Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T03:26:41Z",
+          "conclusion": "success",
+          "name": "Record source, toolchain, and license inventory",
+          "number": 12,
+          "started_at": "2026-10-10T03:26:40Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T03:26:57Z",
+          "conclusion": "success",
+          "name": "Preserve evidence",
+          "number": 13,
+          "started_at": "2026-10-10T03:26:41Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T03:26:57Z",
+          "conclusion": "success",
+          "name": "Post Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "number": 24,
+          "started_at": "2026-10-10T03:26:57Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T03:26:57Z",
+          "conclusion": "success",
+          "name": "Post Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "number": 25,
+          "started_at": "2026-10-10T03:26:57Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T03:26:57Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "number": 26,
+          "started_at": "2026-10-10T03:26:57Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T03:26:57Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 27,
+          "started_at": "2026-10-10T03:26:57Z",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "conclusion": "success",
+      "id": 114112882335,
+      "name": "source",
+      "status": "completed",
+      "steps": [
+        {
+          "completed_at": "2026-10-10T02:45:31Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "started_at": "2026-10-10T02:45:30Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T02:45:33Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "number": 2,
+          "started_at": "2026-10-10T02:45:31Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T02:45:35Z",
+          "conclusion": "success",
+          "name": "Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "number": 3,
+          "started_at": "2026-10-10T02:45:33Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T02:45:36Z",
+          "conclusion": "success",
+          "name": "Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "number": 4,
+          "started_at": "2026-10-10T02:45:35Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T02:45:36Z",
+          "conclusion": "success",
+          "name": "Prepare isolated CI records",
+          "number": 5,
+          "started_at": "2026-10-10T02:45:36Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T02:46:11Z",
+          "conclusion": "success",
+          "name": "Install locked CPU environment",
+          "number": 6,
+          "started_at": "2026-10-10T02:45:36Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T02:46:15Z",
+          "conclusion": "success",
+          "name": "Run npm ci",
+          "number": 7,
+          "started_at": "2026-10-10T02:46:11Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T02:46:18Z",
+          "conclusion": "success",
+          "name": "Check preserved scope and acceptance states",
+          "number": 8,
+          "started_at": "2026-10-10T02:46:15Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T02:47:16Z",
+          "conclusion": "success",
+          "name": "Type checks, renderer regressions, and build",
+          "number": 9,
+          "started_at": "2026-10-10T02:46:18Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T03:26:03Z",
+          "conclusion": "success",
+          "name": "CPU contract and recovery regressions",
+          "number": 10,
+          "started_at": "2026-10-10T02:47:16Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T03:26:06Z",
+          "conclusion": "success",
+          "name": "Isolated flow outcome diagnostic controls",
+          "number": 11,
+          "started_at": "2026-10-10T03:26:03Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T03:28:16Z",
+          "conclusion": "success",
+          "name": "Core defect baseline evidence",
+          "number": 12,
+          "started_at": "2026-10-10T03:26:06Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T03:28:16Z",
+          "conclusion": "success",
+          "name": "Record source, toolchain, and license inventory",
+          "number": 13,
+          "started_at": "2026-10-10T03:28:16Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T03:28:18Z",
+          "conclusion": "success",
+          "name": "Preserve evidence",
+          "number": 14,
+          "started_at": "2026-10-10T03:28:16Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T03:28:18Z",
+          "conclusion": "success",
+          "name": "Post Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "number": 26,
+          "started_at": "2026-10-10T03:28:18Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T03:28:18Z",
+          "conclusion": "success",
+          "name": "Post Run actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+          "number": 27,
+          "started_at": "2026-10-10T03:28:18Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T03:28:18Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "number": 28,
+          "started_at": "2026-10-10T03:28:18Z",
+          "status": "completed"
+        },
+        {
+          "completed_at": "2026-10-10T03:28:18Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 29,
+          "started_at": "2026-10-10T03:28:18Z",
+          "status": "completed"
+        }
+      ]
+    }
+  ],
+  "license_inventory": {
+    "components": 598,
+    "distribution_approved": false,
+    "frozen_backend_scanned": false,
+    "sha256": "1356560e7a9e7ea6033a0bd03aad2cd5471350a0693c88eb3c3bed1a0eb34e03",
+    "size": 228822,
+    "unresolved_items": 49
+  },
+  "observation_sha256": {
+    "artifacts": "c43071cb2a830c8c32357449aa1df8019d9792f0e8449fc854bbcb35a425283d",
+    "browser_log": "abea2330eca2e5fd3485b13c4d43bda5efbec2e00650bed14f85d48c224aa317",
+    "jobs": "859c72a90baa3d3f354aac1972030c0ab5e0b1634daa83052b9dbd52f52dfef7",
+    "run": "4489becf1b5f6dade88df9b7ccc7d9ed0c1dbe39561321d0b429cdf93ee6c960",
+    "source_log": "195440421e041f3defe115bf79acf35955150a3df6972ea44c5fb2b81d567d31"
+  },
+  "release_accepted": false,
+  "run_id": 38018125052,
+  "schema": "modu-vision.hosted-ci-observation/v1",
+  "scope": "Exact published1d113691 GitHub-hosted Linux source CI, only after genuine terminal run/job success and full bounded CPU artifact/log readback. Browser scope is saved job API/log only; browser artifact remains unread. This does not qualify compiled/native execution, GPU, hardware, signing, authentic-weight model quality, human review, binary/license distribution or parent acceptance. Previous6f499d5 receipts and all historical failures remain unchanged; skipped cases are disclosed, never counted as passes.",
+  "skip_reasons": [
+    {
+      "classname": "tests.test_service_s1_09",
+      "name": "test_windows_refuses_to_replace_a_file_a_reader_holds_and_the_retry_waits_it_out",
+      "reason": "Windows file sharing semantics",
+      "status": "skipped",
+      "time": "0.000",
+      "type": "pytest.skip"
+    },
+    {
+      "classname": "tests.test_service_s1_09",
+      "name": "test_a_status_file_read_while_it_is_replaced_never_fails_either_side_on_windows",
+      "reason": "Windows file sharing semantics",
+      "status": "skipped",
+      "time": "0.000",
+      "type": "pytest.skip"
+    },
+    {
+      "classname": "tests.test_service_s2_01",
+      "name": "test_an_example_folder_reached_under_another_letter_case_is_still_the_example",
+      "reason": "this file system tells letter cases apart: the other spelling is another folder",
+      "status": "skipped",
+      "time": "0.114",
+      "type": "pytest.skip"
+    },
+    {
+      "classname": "tests.test_whole_flow_runtime_review",
+      "name": "test_actual_openvino_full_flow_review_and_package_reopen",
+      "reason": "Explicit OpenVINO validation interpreter is required",
+      "status": "skipped",
+      "time": "0.002",
+      "type": "pytest.skip"
+    },
+    {
+      "classname": "tests.test_ssh_keychain_transport",
+      "name": "test_native_macos_openssh_effective_configuration_overrides_conflicting_user_defaults[ssh]",
+      "reason": "Apple OpenSSH Keychain config parser is macOS specific",
+      "status": "skipped",
+      "time": "0.000",
+      "type": "pytest.skip"
+    },
+    {
+      "classname": "tests.test_ssh_keychain_transport",
+      "name": "test_native_macos_openssh_effective_configuration_overrides_conflicting_user_defaults[scp]",
+      "reason": "Apple OpenSSH Keychain config parser is macOS specific",
+      "status": "skipped",
+      "time": "0.000",
+      "type": "pytest.skip"
+    },
+    {
+      "classname": "tests.test_ssh_keychain_transport",
+      "name": "test_native_macos_openssh_effective_configuration_overrides_conflicting_user_defaults[rsync]",
+      "reason": "Apple OpenSSH Keychain config parser is macOS specific",
+      "status": "skipped",
+      "time": "0.000",
+      "type": "pytest.skip"
+    },
+    {
+      "classname": "tests.test_native_update_layout",
+      "name": "test_signed_native_internal_framework_install_launch_and_forward_recovery",
+      "reason": "Actual macOS host required for the signed native cutover",
+      "status": "skipped",
+      "time": "0.000",
+      "type": "pytest.skip"
+    },
+    {
+      "classname": "tests.test_native_update_layout",
+      "name": "test_installed_native_tamper_refuses_launch_and_recovery[changed_target]",
+      "reason": "Actual macOS host required for installed native tamper checks",
+      "status": "skipped",
+      "time": "0.000",
+      "type": "pytest.skip"
+    },
+    {
+      "classname": "tests.test_native_update_layout",
+      "name": "test_installed_native_tamper_refuses_launch_and_recovery[absolute_target]",
+      "reason": "Actual macOS host required for installed native tamper checks",
+      "status": "skipped",
+      "time": "0.000",
+      "type": "pytest.skip"
+    },
+    {
+      "classname": "tests.test_native_update_layout",
+      "name": "test_installed_native_tamper_refuses_launch_and_recovery[missing_link]",
+      "reason": "Actual macOS host required for installed native tamper checks",
+      "status": "skipped",
+      "time": "0.000",
+      "type": "pytest.skip"
+    },
+    {
+      "classname": "tests.test_native_update_layout",
+      "name": "test_installed_native_tamper_refuses_launch_and_recovery[regular_replacement]",
+      "reason": "Actual macOS host required for installed native tamper checks",
+      "status": "skipped",
+      "time": "0.000",
+      "type": "pytest.skip"
+    },
+    {
+      "classname": "tests.test_native_update_layout",
+      "name": "test_installed_native_tamper_refuses_launch_and_recovery[extra_link]",
+      "reason": "Actual macOS host required for installed native tamper checks",
+      "status": "skipped",
+      "time": "0.000",
+      "type": "pytest.skip"
+    },
+    {
+      "classname": "tests.test_native_update_layout",
+      "name": "test_installed_native_tamper_refuses_launch_and_recovery[extra_directory]",
+      "reason": "Actual macOS host required for installed native tamper checks",
+      "status": "skipped",
+      "time": "0.000",
+      "type": "pytest.skip"
+    },
+    {
+      "classname": "tests.test_native_update_layout",
+      "name": "test_installed_native_tamper_refuses_launch_and_recovery[changed_regular]",
+      "reason": "Actual macOS host required for installed native tamper checks",
+      "status": "skipped",
+      "time": "0.000",
+      "type": "pytest.skip"
+    },
+    {
+      "classname": "tests.test_native_update_layout",
+      "name": "test_installed_native_tamper_refuses_launch_and_recovery[linked_parent]",
+      "reason": "Actual macOS host required for installed native tamper checks",
+      "status": "skipped",
+      "time": "0.000",
+      "type": "pytest.skip"
+    },
+    {
+      "classname": "tests.test_native_update_layout",
+      "name": "test_native_dotdot_is_resolved_after_the_real_alias_expansion",
+      "reason": "Actual macOS host required for installed alias resolution",
+      "status": "skipped",
+      "time": "0.000",
+      "type": "pytest.skip"
+    }
+  ],
+  "source_sha": "1d113691ad090045f9af22a1c0a9ebb57df99b0e",
+  "status": "completed",
+  "test_counts": {
+    "CPU": {
+      "errors": 0,
+      "failures": 0,
+      "passed": 4437,
+      "skipped": 17,
+      "total": 4454
+    },
+    "browser": {
+      "evidence": "saved job API and log; browser artifact not downloaded/read",
+      "passed": 242,
+      "skipped": 2
+    },
+    "flow_outcome_controls": {
+      "errors": 0,
+      "failures": 0,
+      "passed": 23,
+      "skipped": 0,
+      "total": 23
+    }
+  },
+  "toolchain": {
+    "electron": "44.5.1",
+    "node": "v24.21.0",
+    "python": "3.13.16"
+  },
+  "updated_at": "2026-10-10T03:28:22Z",
+  "url": "https://github.com/JaeHongChoe/modu-vision/actions/runs/38018125052"
+}

@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "6288eb8b0e9cd501e7a66e72a7e38468963658ac",
+  "source_dirty": false,
+  "test": "scripts/e2e/flow-draft-save-error.spec.ts::owning draft PUT503 preserves saved graph and explicitly recovers same dirty edit",
+  "test_source_sha256": "1991a427a21bec2cab6a7d9d9ed326cf2e64ccc9b67118317959741f0edd5a7a",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "9009af113e7bcb9d6bff8b28a195d7c84ad8e56035013f1c5a11664adfa467c4",
+  "harness_sha256": "436b0fe2632fcadb8309262a71efb26d36d790f1faae2052441efcba980c5f8e",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "9320b7f85d856360583d753c2056a86782fecff279920a69cc227c17aeebc2fc"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "db94405d2b6b4ce829e56262e376c78217eac3568b17d2a206e9179d94514094"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "6288eb8b0e9cd501e7a66e72a7e38468963658ac",
+  "source_dirty": false,
+  "test": "scripts/e2e/flow-draft-save-error.spec.ts::native owning draft PUT503 retains original source and explicit save200 readback",
+  "test_source_sha256": "1991a427a21bec2cab6a7d9d9ed326cf2e64ccc9b67118317959741f0edd5a7a",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "9fb678fb097588f8caf26337fc3610e51e6358a063c77b07c4c729e24f987a00",
+  "harness_sha256": "037267f4c8035ffd070a2cbd06c25dd13df9bf48b81dc8ee4631211970e15a5c",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "05b6f24d0c1e894cabe49dfc43bede472295db76ef151ad79245b7c8cce4b5c9"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "131777e892e90cca5c914840cc075b99b1c8a55555eaab56ae6beb898aacfcf2"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

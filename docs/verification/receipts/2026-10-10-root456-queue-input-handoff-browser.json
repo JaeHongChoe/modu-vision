@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "4fc488a44b007f23c013b34f0c52649b1877b620",
+  "source_dirty": false,
+  "test": "scripts/e2e/review-queue-lifecycle.spec.ts::saved queue threshold margin and selected origin stay bound through A B A project handoff",
+  "test_source_sha256": "c93b03f0f3dcd62a439e0322ccc001c9cbac2b28c0fba4261351a3e9f421a069",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "1e427336813bddf86eee2a851706c1f61a552321803d065799e5fb3e05228549",
+  "harness_sha256": "427facd4016d6fc4a980129581bdb954d32dc0bcb6762cc79be790a5dde239fc",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "1bb6ee011b9ca5ff2ec3fd2d2b832cc8bb57967e888e2813df49459d3a2809ea"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "e0ce66bcb438538cb11f3b57ef5b147c0d194f3cd6da3e200ccd9606cfe7cb46"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "735ffaa2918e247e5a6850d12b9ae51abbc7b7b1ee2b757e97e32238658e43d9"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "37f72e8c9e3bcb6f434c6303e6afdc2373a917f1a188cf6bc658dbaeb4cec0d1"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

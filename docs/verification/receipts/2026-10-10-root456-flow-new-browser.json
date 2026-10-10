@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "54cda06a8162fc239752b1d6feb2752e93821d26",
+  "source_dirty": false,
+  "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::keyboard edited graphs ROI and incomplete policies stay owned across A B A project handoff",
+  "test_source_sha256": "4d378467d88e280bb960e0a060276a5dc2a485b18fff01de11ec498bed0fd1bc",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "8051e87b978ef06d5b114c466f6a4cd29c7df431537efc3144d2a75f42458a4e",
+  "harness_sha256": "c12322fb75bad71f2f9c08b1acc0fc63810eb569d0b441724483863c907a9429",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "b15b4936867603eb5ac2ae7aaa8e5d683ae83ed6351a747c3b6c87f7a89c5eb3"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "9ba8475a3aff06dbab85a816d7df7c86c143fa39d567d8910b1dbd05a6b33a98"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "6ecc0557fa6d899640e13c4bf1920f07644255e015dedb3dcb3197b68bd1d550"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "e13b4e440cde4a983cb3ffa8925ff4294abbe5d436b41687f4431340e833072a"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

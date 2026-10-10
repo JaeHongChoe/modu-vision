@@ -406,7 +406,15 @@ def build_binary(output=OUTPUT_DIR, *, accept=True, supplier_manifest=None):
     print("\nCompiling... (this may take a few minutes for PyTorch symbols)\n")
 
     invocation = pyinstaller_invocation(cmd, output / '.build')
-    res = subprocess.run(invocation, cwd=str(ROOT_DIR))
+    # Compiler hooks may import Ultralytics. Keep its auto-install path and
+    # pip index access disabled in the child without changing the caller.
+    compiler_env = os.environ.copy()
+    compiler_env.update({
+        'YOLO_AUTOINSTALL': 'false', 'PIP_NO_INDEX': '1',
+        'PIP_DISABLE_PIP_VERSION_CHECK': '1', 'PYTHONDONTWRITEBYTECODE': '1',
+        'HF_HUB_OFFLINE': '1', 'HF_DATASETS_OFFLINE': '1', 'TRANSFORMERS_OFFLINE': '1',
+    })
+    res = subprocess.run(invocation, cwd=str(ROOT_DIR), env=compiler_env)
     if res.returncode != 0:
         print(f"\n[ERROR] PyInstaller compilation failed with exit code {res.returncode}")
         sys.exit(res.returncode)

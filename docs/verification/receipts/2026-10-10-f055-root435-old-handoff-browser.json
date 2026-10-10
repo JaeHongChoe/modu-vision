@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "ae1addd9279583ef5e4f2d606c8c69e541cc2846",
+  "source_dirty": false,
+  "test": "scripts/e2e/evaluation-filter-controls.spec.ts::saved filter project handoff A B A fences an old catalog and preserves exact report UUIDs",
+  "test_source_sha256": "5e28e631e4e5cade887e1e9f963a905a42c6318a8fcd2edcd16aaad5f2170d29",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "86ff006475444ea1fbb2c4e902725354ffb4695b1f0250129006259d0d77f0b9",
+  "harness_sha256": "4977105f4a995f6e627f5c0a889005f17682b60d885f29a599d285c37eb6790f",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "556e7b6a999a17a3091a1976fba88fe84116b6bcd8d56fbb972d0361f292de66"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "72b3f07d834c5f5e6720380cf1cdaf48fd4e5c51a26632b5564b24631ab4129f"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

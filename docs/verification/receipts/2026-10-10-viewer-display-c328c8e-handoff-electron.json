@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "c328c8ef7de91b923d3b52742adbac2bead975a2",
+  "source_dirty": false,
+  "test": "scripts/e2e/evaluation-viewer-reopen.spec.ts::source Electron saved overlay opacity zoom and mouse pan reset to the owning evidence through A B A project handoff",
+  "test_source_sha256": "7dc0a45c7af2241b8a4f577723a67fe63fd6aecb0804c91cd94053551b67752b",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "fc6ad8540e2e70265a444b41ee2e105d0a6ce7d6d78e12a3ca226cba2f876b68",
+  "harness_sha256": "47c2de4010ff0769962cee2cb9bbbb1ce27183036da703050b0307f172d8fb71",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "3f9d6ab1803ca1e3e18e7b6da5a5f3ec0ddf64f2cde28ba9c9bcce32210f7e27"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "a548ff8067c704f94c14725ebe549ae2ba57c8d688c196495949524fc53c7ed5"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "e9ef28b59cdfc2c47aac0d2c75abdfcc29ff4cddd4366708f2bb2236819f812d"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

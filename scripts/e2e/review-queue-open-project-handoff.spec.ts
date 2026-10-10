@@ -157,3 +157,127 @@ test('saved queue open and remembered nondefault selection stay scoped through A
 test('native saved queue open fences old replies and reopens only the owning remembered queue',{tag:'@electron'},async({electronSession,workspace,evidence})=>{
  const page=electronSession.window,backend=await electronSession.waitForBackend();await exercise(page,workspace,evidence,true,`http://127.0.0.1:${backend.port}`);
 });
+
+// One additive browser case. The complete original two-case prefix above is unchanged.
+async function exerciseQueueAdvanceHandoff(page:Page,w:Workspace,e:Evidence,origin:string,url:string){
+ const api=handoffApi(page,origin,false),A=await prepare(api,w,'A'),B=await prepare(api,w,'B');
+ expect(A.project.id).not.toBe(B.project.id);expect(A.metadata.some(a=>B.metadata.some(b=>a.image_uuid===b.image_uuid))).toBe(false);
+ const expected=new Map<Scope,any>([[A,structuredClone(A.chosen)],[B,structuredClone(B.chosen)]]);
+ const actor=(scope:Scope)=>'Owned queue advance handoff '+scope.tag;
+ const panel=()=>page.getByRole('region',{name:'저장된 검토 큐',exact:true});
+ const choice=()=>panel().getByLabel('저장 검토 큐 선택',{exact:true});
+ const rawPattern=origin+'/api/dataset/raw/**',fallback=(route:Route)=>route.fallback();
+ const timings=new Map<Request,{started:number;deadline:number}>(),pending=new Set<Promise<{ok:true;value:any}|{ok:false;error:unknown}>>();
+ const writes:Array<{method:string;path:string;body:unknown}>=[],allowedWrites:typeof writes=[];
+ const started=(request:Request)=>{const u=new URL(request.url());if(u.origin===origin&&request.frame()===page.mainFrame()){
+  const now=performance.now();timings.set(request,{started:now,deadline:now+10_000});}};
+ const observe=(request:Request)=>{const u=new URL(request.url());if(u.origin===origin&&u.pathname.startsWith('/api/')&&!['GET','HEAD','OPTIONS'].includes(request.method())){
+  expect(request.frame()).toBe(page.mainFrame());writes.push({method:request.method(),path:u.pathname,body:request.postDataJSON()});}};
+ const wire=(scope:Scope,method:'GET'|'POST',pathname:string,query:(u:URL)=>boolean,deadline:number,body?:unknown)=>{
+  const waiting=page.waitForRequest(request=>{const u=new URL(request.url());return request.frame()===page.mainFrame()&&request.method()===method&&u.origin===origin&&u.pathname===pathname&&query(u);},
+   {timeout:Math.max(1,Math.floor(deadline-performance.now()))});
+  const operation=(async()=>{const request=await handoffWithin(waiting,deadline,'owning queue request start'),timing=timings.get(request);expect(timing).toBeTruthy();
+   const bound=Math.min(deadline,timing!.deadline),projectHeader=await handoffWithin(request.headerValue('x-vision-project'),bound,'owning project header'),contextHeader=await handoffWithin(request.headerValue('x-vision-context'),bound,'owning context header');
+   if(!pathname.startsWith('/api/dataset/raw/')){expect(projectHeader).toBe(scope.project.id);expect(contextHeader).not.toBeNull();expect(JSON.parse(contextHeader!).project_id).toBe(scope.project.id);}
+   if(method==='POST')expect(request.postDataJSON()).toEqual(body);
+   const response=await handoffWithin(request.response(),bound,'owning queue response');expect(response).not.toBeNull();expect(response!.request()).toBe(request);expect(response!.status()).toBe(200);
+   const bytes=await handoffWithin(response!.body(),bound,'owning complete response bytes');expect(bytes.length).toBeLessThanOrEqual(1024*1024);
+   expect(await handoffWithin(response!.finished(),bound,'owning response complete')).toBeNull();
+   return {bytes,proof:{method,origin,path:pathname,body:body??null,owning_project_id:scope.project.id,owning_source:scope.source,
+    project_header:projectHeader,context_project_id:contextHeader===null?null:JSON.parse(contextHeader).project_id,query_sha256:handoffHash(new URL(request.url()).search),
+    main_frame:true,status:200,request_started_ms:timing!.started,absolute_deadline_ms:bound,finished_ms:performance.now(),sha256:handoffHash(bytes),size:bytes.length}};})();
+  const outcome=operation.then(value=>({ok:true as const,value}),error=>({ok:false as const,error}));pending.add(outcome);
+  return async()=>{const result=await outcome;pending.delete(outcome);if(!result.ok)throw result.error;return result.value;};
+ };
+ const enter=async(scope:Scope)=>{const deadline=performance.now()+10_000;
+  await handoffWithin(page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(1).click(),deadline,'labeling entry');
+  const focus=page.getByRole('button',{name:'집중 편집',exact:true});if(await handoffWithin(focus.getAttribute('aria-pressed'),deadline,'ordinary focus state')==='true')await handoffWithin(focus.click(),deadline,'ordinary focus exit');
+  const summary=page.getByText('저장 검토 큐 · 오류·불일치·임계값 우선',{exact:true});if(await handoffWithin(summary.locator('..').getAttribute('open'),deadline,'queue details state')===null)await handoffWithin(summary.click(),deadline,'queue details open');
+  await handoffWithin(expect(panel()).toBeVisible({timeout:Math.max(1,Math.floor(deadline-performance.now()))}),deadline,'owning queue panel');
+  await handoffWithin(expect(choice().locator('option[value="'+scope.chosen.id+'"]')).toHaveCount(1,{timeout:Math.max(1,Math.floor(deadline-performance.now()))}),deadline,'owning queue option');
+ };
+ const selected=async(scope:Scope)=>{const queue=expected.get(scope),foreign=scope===A?B:A;
+  await expect(choice()).toHaveValue(queue.id,{timeout:10_000});await expect(panel()).toContainText('검토 진행 '+queue.cursor+' / 3',{timeout:10_000});
+  for(const q of[foreign.chosen,foreign.other])await expect(choice().locator('option[value="'+q.id+'"]')).toHaveCount(0);
+  expect(await api('/api/project/current')).toEqual(scope.project);expect(await api('/api/data-workbench/review-queues')).toEqual({queues:[scope.other,queue]});
+  expect(await api('/api/data-workbench/review-queues/'+queue.id)).toEqual(queue);
+ };
+ const image=async(scope:Scope,target:any,raw:any,labels:any)=>{expect(raw.bytes).toEqual(originalFile(target.file_path).bytes);expect(handoffHash(raw.bytes)).toBe(target.source_sha256);
+  const annotation=JSON.parse(labels.bytes.toString('utf8'));expect(annotation).toEqual(scope.annotations[target.file_path]);const metadata=scope.metadata.find(row=>row.file_path===target.file_path);expect(metadata).toBeTruthy();
+  expect(annotation.metadata).toMatchObject({file_path:target.file_path,content_hash:target.source_sha256,image_uuid:metadata.image_uuid,revision:metadata.revision});
+  const thumb=page.locator('[data-labeling-filmstrip]').getByRole('img',{name:path.basename(target.file_path),exact:true});await expect(thumb.locator('..')).toHaveClass(/border-blue-500/,{timeout:10_000});
+  expect(new URL((await thumb.getAttribute('src'))!,page.url()).searchParams.get('file_path')).toBe(target.file_path);await expect(page.getByTestId('annotation-save-button')).toHaveText('Saved',{timeout:10_000});
+  return {raw:raw.proof,annotations:labels.proof,file_path:target.file_path,image_uuid:metadata.image_uuid,image_revision:metadata.revision,source_sha256:target.source_sha256};
+ };
+ const imageReads=(scope:Scope,target:any,deadline:number)=>({
+  raw:wire(scope,'GET','/api/dataset/raw/'+encodeURIComponent(path.basename(target.file_path)),u=>u.searchParams.get('file_path')===target.file_path,deadline),
+  annotations:wire(scope,'GET','/api/annotations/'+path.basename(target.file_path,'.png'),u=>u.searchParams.get('file_path')===target.file_path,deadline)});
+ const openCurrent=async(scope:Scope)=>{const queue=expected.get(scope);if(queue.cursor===queue.items.length){await expect(panel()).toContainText('큐의 모든 항목을 검토했습니다.');
+   for(const name of['현재 항목 열기','검토 완료 · 다음','보류 · 다음'])await expect(panel().getByRole('button',{name,exact:true})).toBeDisabled();return null;}
+  await page.locator('[data-labeling-filmstrip]').getByRole('img',{name:'error.png',exact:true}).click();
+  const target=queue.items[queue.cursor],deadline=performance.now()+10_000,q=wire(scope,'GET','/api/data-workbench/review-queues/'+queue.id,()=>true,deadline),reads=imageReads(scope,target,deadline);
+  await handoffWithin(panel().getByRole('button',{name:'현재 항목 열기',exact:true}).click(),deadline,'actual owning current-item open');
+  const [actual,raw,labels]=await Promise.all([q(),reads.raw(),reads.annotations()]);expect(JSON.parse(actual.bytes.toString('utf8'))).toEqual(queue);
+  return {queue:actual.proof,image:await image(scope,target,raw,labels)};
+ };
+ const setActor=async(scope:Scope)=>{const deadline=performance.now()+10_000,toggle=page.getByRole('button',{name:'이미지 정보·검토',exact:true});
+  await handoffWithin(toggle.click(),deadline,'reviewer information open');await handoffWithin(page.getByRole('textbox',{name:'작업자·검토자 이름',exact:true}).fill(actor(scope)),deadline,'owning synthetic reviewer');
+  await handoffWithin(toggle.click(),deadline,'reviewer information close');};
+ const readbacks=async(scope:Scope)=>{const values:Record<string,unknown>={};for(const endpoint of['/api/team-data','/api/team-data/readiness','/api/project/preferences','/api/project/labelsets','/api/dataset/versions','/api/dataset/metadata/split','/api/dataset/metadata?limit=100','/api/data-workbench/review-evaluations'])values[endpoint]=await api(endpoint);
+  for(const row of scope.inputs)values[annotationRoute(row.path)]=await api(annotationRoute(row.path));return values;};
+ const state=async(scope:Scope)=>{const values=await readbacks(scope),queues=await api('/api/data-workbench/review-queues'),chosen=await api('/api/data-workbench/review-queues/'+scope.chosen.id),other=await api('/api/data-workbench/review-queues/'+scope.other.id);
+  expect(queues).toEqual({queues:[scope.other,expected.get(scope)]});expect(chosen).toEqual(expected.get(scope));expect(other).toEqual(scope.other);
+  const remembered=await page.evaluate(()=>Object.entries(localStorage).filter(([key])=>key.startsWith('modu-review-queue:'))),own=remembered.filter(([key])=>{const saved=JSON.parse(key.slice('modu-review-queue:'.length));return saved[0]===scope.project.project_dir&&saved[1]===scope.project.id&&saved[2]===scope.project.task&&saved[3]===scope.source&&saved[4]==='default';});
+  expect(own).toHaveLength(1);expect(own[0][1]).toBe(scope.chosen.id);return {roots:handoffRoots(scope),readbacks:values,queues,chosen,other,remembered:own[0],
+   project_json:originalFile(path.join(scope.project.project_dir,'project.json')).sha256,labelsets_json:originalFile(path.join(scope.project.project_dir,'labelsets.json')).sha256};};
+ const before=new Map<Scope,Awaited<ReturnType<typeof state>>>(),queueMembers=new Map<Scope,string>();
+ const canonical=(value:any):any=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])):value;
+ const assertState=async(scope:Scope)=>{await selected(scope);const actual=await state(scope),baseline=before.get(scope)!,member=queueMembers.get(scope)!;
+  handoffAssertRoots(baseline.roots,actual.roots,{dataset:[member]});expect(actual.roots.dataset.snapshot.files[member]).toEqual({size:Buffer.byteLength(JSON.stringify(canonical(expected.get(scope)))),sha256:handoffHash(JSON.stringify(canonical(expected.get(scope))))});
+  expect(originalFile(path.join(scope.project.dataset_dir,member)).bytes).toEqual(Buffer.from(JSON.stringify(canonical(expected.get(scope)))));
+  expect({...actual,roots:baseline.roots,queues:baseline.queues,chosen:baseline.chosen}).toEqual(baseline);return actual;};
+ const advance=async(scope:Scope,status:'reviewed'|'skipped')=>{const prior=expected.get(scope),index=prior.cursor,target=prior.items[index],nextTarget=prior.items[index+1],endpoint='/api/data-workbench/review-queues/'+prior.id+'/advance';
+  expect(prior.scope).toEqual({source:scope.source,task:scope.project.task,labelset_id:'default'});expect(target.file_path.startsWith(scope.source+path.sep)).toBe(true);
+  const body={expected_revision:prior.revision,relative_path:target.relative_path,state:status,actor:actor(scope)},deadline=performance.now()+10_000,response=wire(scope,'POST',endpoint,()=>true,deadline,body),reads=nextTarget?imageReads(scope,nextTarget,deadline):null;
+  allowedWrites.push({method:'POST',path:endpoint,body});const button=panel().getByRole('button',{name:status==='reviewed'?'검토 완료 · 다음':'보류 · 다음',exact:true});
+  await handoffWithin(expect(button).toBeEnabled({timeout:Math.max(1,Math.floor(deadline-performance.now()))}),deadline,'owning advance enabled');await handoffWithin(button.click(),deadline,'actual owning advance button');
+  const received=await response(),saved=JSON.parse(received.bytes.toString('utf8')),next=structuredClone(prior);expect(saved.items[index].reviewed_at).toEqual(expect.any(Number));expect(Number.isFinite(saved.items[index].reviewed_at)).toBe(true);
+  expect(saved.history[index].at).toEqual(expect.any(Number));expect(Number.isFinite(saved.history[index].at)).toBe(true);
+  next.items[index]={...next.items[index],state:status,actor:actor(scope),reviewed_at:saved.items[index].reviewed_at};next.cursor++;next.revision++;next.history.push({relative_path:target.relative_path,state:status,actor:actor(scope),at:saved.history[index].at});
+  expect(saved).toEqual(next);expected.set(scope,next);const responseFile=path.join(w.logs,'queue-advance-'+scope.tag+'-'+status+'-actual-response.json');fs.writeFileSync(responseFile,received.bytes,{flag:'wx'});e.addFile(responseFile);
+  let nextImage:any=null;if(reads){const [raw,labels]=await Promise.all([reads.raw(),reads.annotations()]);nextImage=await image(scope,nextTarget,raw,labels);}
+  await selected(scope);if(!nextTarget)await openCurrent(scope);expect(writes).toEqual(allowedWrites);const after=await assertState(scope);
+  await e.screenshot(page,'browser-queue-advance-'+scope.tag+'-'+status+'-owning-state');return {project_id:scope.project.id,source:scope.source,queue_id:prior.id,old_cursor:prior.cursor,old_revision:prior.revision,state:status,
+   request:received.proof,response_file:responseFile,complete_saved_queue:saved,next_original_image:nextImage,after};};
+ const transition=async(scope:Scope)=>{allowedWrites.push({method:'POST',path:'/api/project/open',body:{project_dir:scope.project.project_dir}});const proof=await handoffProject(page,scope,origin);
+  await enter(scope);await selected(scope);await setActor(scope);const opened=await openCurrent(scope),retained=await assertState(scope);expect(writes).toEqual(allowedWrites);return {project_open:proof,opened,retained};};
+ let failed=false;
+ try{
+  page.on('request',started);await page.route(rawPattern,fallback);await page.goto(url);await enter(B);await choice().selectOption(B.chosen.id);await selected(B);await openCurrent(B);await setActor(B);before.set(B,await state(B));
+  await handoffProject(page,A,origin);await enter(A);await choice().selectOption(A.chosen.id);await selected(A);await openCurrent(A);await setActor(A);before.set(A,await state(A));
+  for(const scope of[A,B]){const baseline=before.get(scope)!,members=Object.keys(baseline.roots.dataset.snapshot.files).filter(name=>name.endsWith('/review_queues/'+scope.chosen.id+'.json'));expect(members).toHaveLength(1);queueMembers.set(scope,members[0]);
+   const lock=path.posix.join(path.posix.dirname(path.posix.dirname(members[0])),'review_queue.lock');expect(baseline.roots.dataset.snapshot.files[lock]).toEqual({size:0,sha256:handoffHash(Buffer.alloc(0))});
+   expect(baseline.roots.dataset.snapshot.files[members[0]]).toEqual({size:Buffer.byteLength(JSON.stringify(canonical(scope.chosen))),sha256:handoffHash(JSON.stringify(canonical(scope.chosen)))});}
+  expect(before.get(A)!.remembered[0]).not.toBe(before.get(B)!.remembered[0]);handoffSave(e,w,'saved-queue-advance-handoff-before',{A:before.get(A),B:before.get(B)});page.on('request',observe);
+  const A_review=await advance(A,'reviewed'),toB=await transition(B),B_skip=await advance(B,'skipped'),toA=await transition(A),A_skip=await advance(A,'skipped'),backB=await transition(B),B_review=await advance(B,'reviewed'),backA=await transition(A);
+  const afterA=await assertState(A);expect(afterA.chosen).toMatchObject({cursor:3,revision:4});expect(afterA.chosen.history.map((row:any)=>[row.state,row.actor])).toEqual([['skipped','owned-setup-A'],['reviewed',actor(A)],['skipped',actor(A)]]);
+  const finalB=await transition(B),afterB=await assertState(B);expect(afterB.chosen).toMatchObject({cursor:3,revision:4});expect(afterB.chosen.history.map((row:any)=>[row.state,row.actor])).toEqual([['skipped','owned-setup-B'],['skipped',actor(B)],['reviewed',actor(B)]]);
+  const finalA=await transition(A);expect(await assertState(A)).toEqual(afterA);expect(writes).toEqual(allowedWrites);expect(writes).toHaveLength(10);
+  for(const scope of[A,B]){for(const row of scope.inputs)expect(originalFile(row.path).sha256).toBe(row.sha256);for(const record of[scope.chosenOrigin,scope.otherOrigin])expect(originalFile(record.path).sha256).toBe(record.sha256);}
+  await e.screenshot(page,'browser-queue-advance-return-A-complete-own-history');const proof={cells:['U015.saved-queue-review-next.handoff','U015.saved-queue-skip-next.handoff'],
+   projects:[A.project.id,B.project.id,A.project.id],initial_setup_skip_not_UI_credit:true,controlled_reports_not_model_inference:true,queue_ids:{A:A.chosen.id,B:B.chosen.id,A_unmodified:A.other.id,B_unmodified:B.other.id},
+   A_review,toB,B_skip,toA,A_skip,backB,B_review,backA,finalB,finalA,afterA,afterB,all_real_UI_writes:writes,exact_allowed_writes:allowedWrites,
+   four_real_advance_POSTs_six_real_project_open_POSTs:true,complete_scope_source_origin_revision_cursor_item_history_actor_joins:true,
+   five_roots_per_project_all_members_guarded_only_exact_chosen_queue_bytes_changed:true,preexisting_empty_queue_locks_unchanged:true,
+   original_source_bytes_UUIDs_revisions_annotations_team_policy_reports_project_labelsets_other_queues_preserved:true,
+   source_browser_only:true,native_Electron_installed_or_windows_coverage:false,queue_review_not_human_label_or_quality_approval:true,
+   model_training_inference_GPU_parent_or_signed_acceptance:false};handoffSave(e,w,'saved-queue-advance-project-handoff-proof',proof);e.note('saved_queue_advance_project_handoff',proof);
+ }catch(error){failed=true;throw error;}finally{
+  let cleanup:unknown,cleanupFailed=false;for(const outcome of pending){const result=await outcome;pending.delete(outcome);if(!result.ok&&!cleanupFailed){cleanupFailed=true;cleanup=result.error;}}
+  try{if(!page.isClosed())await page.unroute(rawPattern,fallback);}catch(error){if(!cleanupFailed){cleanupFailed=true;cleanup=error;}}
+  page.off('request',observe);page.off('request',started);if(cleanupFailed){try{e.note('saved_queue_advance_secondary_cleanup',{type:cleanup instanceof Error?cleanup.name:typeof cleanup});}catch{}if(!failed)throw cleanup;}
+ }
+}
+test('real saved queue review and skip advances retain only the owning cursor and history through A B A project handoff',async({page,renderer,workspace,evidence})=>{
+ await installDesktopHostShim(page,renderer.port);await exerciseQueueAdvanceHandoff(page,workspace,evidence,renderer.origin,renderer.url);
+});

@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "3e5be751e917b2ca0efa8547f804ccac8efe1f8d",
+  "source_dirty": false,
+  "test": "scripts/e2e/comparison-manual-selection.spec.ts::manual comparison pair and explicit empty survive evaluation model changes",
+  "test_source_sha256": "559c82bc35c3ad49d06ad5221dff081f92bd3e90e1361bbb3fb5741d6dea3dab",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "60cd0bac337549c0cfe66927b381a5c4424d7989b93b92e313e9b08c2955ca2e",
+  "harness_sha256": "c7a277a0a506d1cdd27a8712be5b597275efbcbb000f834f98c5ff9c0e7d027e",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "d0c933119d408338718155a216d0abb0c9c5611dee58891797fe681a231aaa8d"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}
