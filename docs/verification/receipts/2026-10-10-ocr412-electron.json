@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "c710f7f4ffa0f8d233bfd441fe5ce9b2df086365",
+  "source_dirty": false,
+  "test": "scripts/e2e/ocr-truth-error-cancel-lifecycle.spec.ts::native OCR empty inputs real missing truth error and unsent table stage abandonment preserve original labels",
+  "test_source_sha256": "2f6b0122ddb6c7aa7818f95213b0930117b60cf28c5e1de9356f53b848eb27d8",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "6286307de4bd00262d2f5f6eaae17c438ba8ce711c3558764d07f3ca0b6594e3",
+  "harness_sha256": "0c25f492b87f40c8e6b57df51f042ee75c79ff37cf1ae87f1851070255a98ecb",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "6903e2824d91f4937aa14ea5a4df07c94000e9f933d16caebb5bf08653208aa5"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "22d3e58ee005dc2e170544f6928df211e481916820e5ea1250a853f5e3aa5c11"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "92e9f3ccc505acc1f77f44c4a2309b7e5bb64296483dc057b31149ca576d79e1"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "9dad89dff69fbe95a0eac037bc04ca632c514aa2be2dc4aad9aaffe15eb28d98"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

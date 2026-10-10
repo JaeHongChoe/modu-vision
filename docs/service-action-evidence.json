@@ -10388,16 +10388,202 @@
               ]
             },
             "empty": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S4-06",
+                  "source_sha": "c710f7f4ffa0f8d233bfd441fe5ce9b2df086365",
+                  "kind": "click",
+                  "action": "선택 이미지의 문자 정답 추가 · 정답과 이미지 해시 저장 · 저장된 정답 읽기",
+                  "expected": "Empty OCR image/text/table inputs must keep original truth and prevent saving.",
+                  "observed": "The actual browser controls disabled text addition and truth saving with empty inputs. Original image hashes, labels, metadata, team state and prepared OCR namespaces stayed exact.",
+                  "reviewer": "Codex Root verified the original browser case, request and byte readbacks; model quality and release acceptance remain pending.",
+                  "test": "scripts/e2e/ocr-truth-error-cancel-lifecycle.spec.ts::OCR empty inputs real missing truth error and unsent table stage abandonment preserve original labels",
+                  "receipt": "2026-10-10-ocr412-browser.json",
+                  "receipt_sha256": "324821f5f5d90eae901ff7d630efa79bc7aaa4afc9f12590b78d752da816d082",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "c404bc2625dcc16a5b5483a963c516616f7f28d7610a37864902aca0a6aa9725"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "df2d78957969a6a055b9cd81a869fa21c164bdf036cd1524c1f951e662c11e43"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "43d61aa3466b1e127ac3d7e6d86713d0211cdbee06f43b73a921442cd05b5f08"
+                    },
+                    {
+                      "id": "screenshot-3",
+                      "sha256": "ea2d5d50359f680782e40212999de67192d4891037e3a118b679c449acba6e82"
+                    }
+                  ]
+                },
+                {
+                  "task": "S4-06",
+                  "source_sha": "c710f7f4ffa0f8d233bfd441fe5ce9b2df086365",
+                  "kind": "click",
+                  "action": "선택 이미지의 문자 정답 추가 · 정답과 이미지 해시 저장 · 저장된 정답 읽기",
+                  "expected": "Empty OCR image/text/table inputs must keep original truth and prevent saving.",
+                  "observed": "The actual Source Electron controls disabled text addition and truth saving with empty inputs. Original image hashes, labels, metadata, team state and prepared OCR namespaces stayed exact.",
+                  "reviewer": "Codex Root verified the original Source Electron case, request and byte readbacks; compiled installer, model quality and release acceptance remain pending.",
+                  "test": "scripts/e2e/ocr-truth-error-cancel-lifecycle.spec.ts::native OCR empty inputs real missing truth error and unsent table stage abandonment preserve original labels",
+                  "receipt": "2026-10-10-ocr412-electron.json",
+                  "receipt_sha256": "fbc474d47227fae4fd9ccf3e1c5ea632ba6f52e5815a9d494d657df8717ff824",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "6903e2824d91f4937aa14ea5a4df07c94000e9f933d16caebb5bf08653208aa5"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "22d3e58ee005dc2e170544f6928df211e481916820e5ea1250a853f5e3aa5c11"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "92e9f3ccc505acc1f77f44c4a2309b7e5bb64296483dc057b31149ca576d79e1"
+                    },
+                    {
+                      "id": "screenshot-3",
+                      "sha256": "9dad89dff69fbe95a0eac037bc04ca632c514aa2be2dc4aad9aaffe15eb28d98"
+                    }
+                  ]
+                }
+              ]
             },
             "invalid": {
               "state": "pending"
             },
             "error": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S4-06",
+                  "source_sha": "c710f7f4ffa0f8d233bfd441fe5ce9b2df086365",
+                  "kind": "click",
+                  "action": "선택 이미지의 문자 정답 추가 · 정답과 이미지 해시 저장 · 저장된 정답 읽기",
+                  "expected": "Reading an absent regular OCR truth manifest must show the original owning error and leave source data unchanged.",
+                  "observed": "The browser sent its real owning GET to the OCR manifest endpoint, received the complete original HTTP422 missing-manifest body and displayed the owner error. No mocked success or prepared/training POST occurred; protected data stayed exact.",
+                  "reviewer": "Codex Root verified the actual response body, original context and visible error; no model inference or human truth acceptance is claimed.",
+                  "test": "scripts/e2e/ocr-truth-error-cancel-lifecycle.spec.ts::OCR empty inputs real missing truth error and unsent table stage abandonment preserve original labels",
+                  "receipt": "2026-10-10-ocr412-browser.json",
+                  "receipt_sha256": "324821f5f5d90eae901ff7d630efa79bc7aaa4afc9f12590b78d752da816d082",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "c404bc2625dcc16a5b5483a963c516616f7f28d7610a37864902aca0a6aa9725"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "df2d78957969a6a055b9cd81a869fa21c164bdf036cd1524c1f951e662c11e43"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "43d61aa3466b1e127ac3d7e6d86713d0211cdbee06f43b73a921442cd05b5f08"
+                    },
+                    {
+                      "id": "screenshot-3",
+                      "sha256": "ea2d5d50359f680782e40212999de67192d4891037e3a118b679c449acba6e82"
+                    }
+                  ]
+                },
+                {
+                  "task": "S4-06",
+                  "source_sha": "c710f7f4ffa0f8d233bfd441fe5ce9b2df086365",
+                  "kind": "click",
+                  "action": "선택 이미지의 문자 정답 추가 · 정답과 이미지 해시 저장 · 저장된 정답 읽기",
+                  "expected": "Reading an absent regular OCR truth manifest must show the original owning error and leave source data unchanged.",
+                  "observed": "Source Electron sent its real owning GET to the OCR manifest endpoint, received the complete original HTTP422 missing-manifest body and displayed the owner error. No mocked success or prepared/training POST occurred; protected data stayed exact.",
+                  "reviewer": "Codex Root verified the actual response body, original context and visible error; no model inference or human truth acceptance is claimed.",
+                  "test": "scripts/e2e/ocr-truth-error-cancel-lifecycle.spec.ts::native OCR empty inputs real missing truth error and unsent table stage abandonment preserve original labels",
+                  "receipt": "2026-10-10-ocr412-electron.json",
+                  "receipt_sha256": "fbc474d47227fae4fd9ccf3e1c5ea632ba6f52e5815a9d494d657df8717ff824",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "6903e2824d91f4937aa14ea5a4df07c94000e9f933d16caebb5bf08653208aa5"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "22d3e58ee005dc2e170544f6928df211e481916820e5ea1250a853f5e3aa5c11"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "92e9f3ccc505acc1f77f44c4a2309b7e5bb64296483dc057b31149ca576d79e1"
+                    },
+                    {
+                      "id": "screenshot-3",
+                      "sha256": "9dad89dff69fbe95a0eac037bc04ca632c514aa2be2dc4aad9aaffe15eb28d98"
+                    }
+                  ]
+                }
+              ]
             },
             "cancel": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S4-06",
+                  "source_sha": "c710f7f4ffa0f8d233bfd441fe5ce9b2df086365",
+                  "kind": "click",
+                  "action": "선택 이미지의 문자 정답 추가 · 정답과 이미지 해시 저장 · 저장된 정답 읽기",
+                  "expected": "Leaving a valid but unsent OCR truth table must not save it or mutate original data.",
+                  "observed": "The browser added exact Unicode and spaces to two train/validation rows, then used ordinary stage exit before sending. Re-entry reset the transient table and left original files, labels and prepared/model namespaces exact. This covers unsent stage abandonment; it does not cover an explicit cancel dialog, HTTP abort or job stop.",
+                  "reviewer": "Codex Root verified actual stage controls, screenshot and complete before/after readbacks; no training, representative truth or release approval is claimed.",
+                  "test": "scripts/e2e/ocr-truth-error-cancel-lifecycle.spec.ts::OCR empty inputs real missing truth error and unsent table stage abandonment preserve original labels",
+                  "receipt": "2026-10-10-ocr412-browser.json",
+                  "receipt_sha256": "324821f5f5d90eae901ff7d630efa79bc7aaa4afc9f12590b78d752da816d082",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "c404bc2625dcc16a5b5483a963c516616f7f28d7610a37864902aca0a6aa9725"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "df2d78957969a6a055b9cd81a869fa21c164bdf036cd1524c1f951e662c11e43"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "43d61aa3466b1e127ac3d7e6d86713d0211cdbee06f43b73a921442cd05b5f08"
+                    },
+                    {
+                      "id": "screenshot-3",
+                      "sha256": "ea2d5d50359f680782e40212999de67192d4891037e3a118b679c449acba6e82"
+                    }
+                  ]
+                },
+                {
+                  "task": "S4-06",
+                  "source_sha": "c710f7f4ffa0f8d233bfd441fe5ce9b2df086365",
+                  "kind": "click",
+                  "action": "선택 이미지의 문자 정답 추가 · 정답과 이미지 해시 저장 · 저장된 정답 읽기",
+                  "expected": "Leaving a valid but unsent OCR truth table must not save it or mutate original data.",
+                  "observed": "Source Electron added exact Unicode and spaces to two train/validation rows, then used ordinary stage exit before sending. Re-entry reset the transient table and left original files, labels and prepared/model namespaces exact. This covers unsent stage abandonment; it does not cover an explicit cancel dialog, HTTP abort or job stop.",
+                  "reviewer": "Codex Root verified actual stage controls, screenshot and complete before/after readbacks; no training, representative truth or release approval is claimed.",
+                  "test": "scripts/e2e/ocr-truth-error-cancel-lifecycle.spec.ts::native OCR empty inputs real missing truth error and unsent table stage abandonment preserve original labels",
+                  "receipt": "2026-10-10-ocr412-electron.json",
+                  "receipt_sha256": "fbc474d47227fae4fd9ccf3e1c5ea632ba6f52e5815a9d494d657df8717ff824",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "6903e2824d91f4937aa14ea5a4df07c94000e9f933d16caebb5bf08653208aa5"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "22d3e58ee005dc2e170544f6928df211e481916820e5ea1250a853f5e3aa5c11"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "92e9f3ccc505acc1f77f44c4a2309b7e5bb64296483dc057b31149ca576d79e1"
+                    },
+                    {
+                      "id": "screenshot-3",
+                      "sha256": "9dad89dff69fbe95a0eac037bc04ca632c514aa2be2dc4aad9aaffe15eb28d98"
+                    }
+                  ]
+                }
+              ]
             },
             "reopen": {
               "state": "verified",
@@ -29569,7 +29755,77 @@
               ]
             },
             "handoff": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S3-09",
+                  "source_sha": "d6f32b55476e9d155946d0b25c19803f32a235ae",
+                  "kind": "click",
+                  "action": "현재 항목 열기",
+                  "expected": "Project handoff and remembered queue reopening preserve the owning saved queue and original item state.",
+                  "observed": "A to B to A retained the owning nondefault saved queue, cursor 1, revision 2 and original skipped-item history. Late prior-project replies used original browser HTTP response and did not replace the active scope. Original queue/raw/annotation GETs completed within 10 seconds; source image hashes, UUIDs, annotations, reports and remembered project keys remained exact. Only six project-open POSTs followed setup; no model inference or label approval occurred.",
+                  "reviewer": "Root actual execution and artifact readback; synthetic saved reports only; no human quality or installed target acceptance.",
+                  "test": "scripts/e2e/review-queue-open-project-handoff.spec.ts::saved queue open and remembered nondefault selection stay scoped through A B A project handoff",
+                  "receipt": "2026-10-10-queue414-browser.json",
+                  "receipt_sha256": "2e6efed1ec47cf83804ad9a478e2c59a75a0b1567b68de680782c92f355bb606",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "615b77e8aa38d6cac8bb62dfcf9ebc8332b15ed61e99f70ca4243acf48a9dc89"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "4ebc65a1f0c783bfa7c756a8650c95a2bf15c316fb7feefac154e78db3985847"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "afbda1f8344b004fff5a263bc34079fbc5cc0d7a0a6f99f68d87e3dcded8c97b"
+                    },
+                    {
+                      "id": "screenshot-3",
+                      "sha256": "82cc7ef8059fec806a045afc0ad13cfc62cc370722c12ad204b48cfdbd29bfdc"
+                    },
+                    {
+                      "id": "screenshot-4",
+                      "sha256": "41d870bb570fc025f37466860723b58f8d9ec0ba1208b45f877144edadd3c433"
+                    }
+                  ]
+                },
+                {
+                  "task": "S3-09",
+                  "source_sha": "d6f32b55476e9d155946d0b25c19803f32a235ae",
+                  "kind": "click",
+                  "action": "현재 항목 열기",
+                  "expected": "Project handoff and remembered queue reopening preserve the owning saved queue and original item state.",
+                  "observed": "A to B to A retained the owning nondefault saved queue, cursor 1, revision 2 and original skipped-item history. Late prior-project replies used separate authenticated GET carrying the original UI reply snapshot and did not replace the active scope. Original queue/raw/annotation GETs completed within 10 seconds; source image hashes, UUIDs, annotations, reports and remembered project keys remained exact. Only six project-open POSTs followed setup; no model inference or label approval occurred.",
+                  "reviewer": "Root actual execution and artifact readback; synthetic saved reports only; no human quality or installed target acceptance.",
+                  "test": "scripts/e2e/review-queue-open-project-handoff.spec.ts::native saved queue open fences old replies and reopens only the owning remembered queue",
+                  "receipt": "2026-10-10-queue414-electron.json",
+                  "receipt_sha256": "41687575f9f0c83eca5754dacc0585f8e31b41dff2f5569f5e911a26a1246654",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "86f9db44d9d8deeb185631d6ac2b8eed368ebc1d95bdac1a5243e48b53b11c4e"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "095c311b501c5f47433716354050d32ebfccc90292f7510591edeb4cbb012f80"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "69e24f4ec4c31157f0770453d7123f171ae028e035d47dacedfefc15375e08db"
+                    },
+                    {
+                      "id": "screenshot-3",
+                      "sha256": "57390b0e1dcbdf07ed35bc366ec782fd1c3bb3ea32839acc0711749bcf999285"
+                    },
+                    {
+                      "id": "screenshot-4",
+                      "sha256": "56ab22e204758d1640ff3ca37dcfb080883332f12fe4ffc5d63af9a164279a6f"
+                    }
+                  ]
+                }
+              ]
             }
           }
         },
@@ -30577,7 +30833,77 @@
               ]
             },
             "handoff": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S3-09",
+                  "source_sha": "d6f32b55476e9d155946d0b25c19803f32a235ae",
+                  "kind": "click",
+                  "action": "저장 검토 큐 선택",
+                  "expected": "Project handoff and remembered queue reopening preserve the owning saved queue and original item state.",
+                  "observed": "A to B to A retained the owning nondefault saved queue, cursor 1, revision 2 and original skipped-item history. Late prior-project replies used original browser HTTP response and did not replace the active scope. Original queue/raw/annotation GETs completed within 10 seconds; source image hashes, UUIDs, annotations, reports and remembered project keys remained exact. Only six project-open POSTs followed setup; no model inference or label approval occurred.",
+                  "reviewer": "Root actual execution and artifact readback; synthetic saved reports only; no human quality or installed target acceptance.",
+                  "test": "scripts/e2e/review-queue-open-project-handoff.spec.ts::saved queue open and remembered nondefault selection stay scoped through A B A project handoff",
+                  "receipt": "2026-10-10-queue414-browser.json",
+                  "receipt_sha256": "2e6efed1ec47cf83804ad9a478e2c59a75a0b1567b68de680782c92f355bb606",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "615b77e8aa38d6cac8bb62dfcf9ebc8332b15ed61e99f70ca4243acf48a9dc89"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "4ebc65a1f0c783bfa7c756a8650c95a2bf15c316fb7feefac154e78db3985847"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "afbda1f8344b004fff5a263bc34079fbc5cc0d7a0a6f99f68d87e3dcded8c97b"
+                    },
+                    {
+                      "id": "screenshot-3",
+                      "sha256": "82cc7ef8059fec806a045afc0ad13cfc62cc370722c12ad204b48cfdbd29bfdc"
+                    },
+                    {
+                      "id": "screenshot-4",
+                      "sha256": "41d870bb570fc025f37466860723b58f8d9ec0ba1208b45f877144edadd3c433"
+                    }
+                  ]
+                },
+                {
+                  "task": "S3-09",
+                  "source_sha": "d6f32b55476e9d155946d0b25c19803f32a235ae",
+                  "kind": "click",
+                  "action": "저장 검토 큐 선택",
+                  "expected": "Project handoff and remembered queue reopening preserve the owning saved queue and original item state.",
+                  "observed": "A to B to A retained the owning nondefault saved queue, cursor 1, revision 2 and original skipped-item history. Late prior-project replies used separate authenticated GET carrying the original UI reply snapshot and did not replace the active scope. Original queue/raw/annotation GETs completed within 10 seconds; source image hashes, UUIDs, annotations, reports and remembered project keys remained exact. Only six project-open POSTs followed setup; no model inference or label approval occurred.",
+                  "reviewer": "Root actual execution and artifact readback; synthetic saved reports only; no human quality or installed target acceptance.",
+                  "test": "scripts/e2e/review-queue-open-project-handoff.spec.ts::native saved queue open fences old replies and reopens only the owning remembered queue",
+                  "receipt": "2026-10-10-queue414-electron.json",
+                  "receipt_sha256": "41687575f9f0c83eca5754dacc0585f8e31b41dff2f5569f5e911a26a1246654",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "86f9db44d9d8deeb185631d6ac2b8eed368ebc1d95bdac1a5243e48b53b11c4e"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "095c311b501c5f47433716354050d32ebfccc90292f7510591edeb4cbb012f80"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "69e24f4ec4c31157f0770453d7123f171ae028e035d47dacedfefc15375e08db"
+                    },
+                    {
+                      "id": "screenshot-3",
+                      "sha256": "57390b0e1dcbdf07ed35bc366ec782fd1c3bb3ea32839acc0711749bcf999285"
+                    },
+                    {
+                      "id": "screenshot-4",
+                      "sha256": "56ab22e204758d1640ff3ca37dcfb080883332f12fe4ffc5d63af9a164279a6f"
+                    }
+                  ]
+                }
+              ]
             }
           }
         },

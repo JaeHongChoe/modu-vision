@@ -131,7 +131,7 @@ def _check_file(path,row,*,copy_to=None):
         writer=open(copy_to,'xb') if copy_to is not None else None
         try:
             read_size=min(1024**2,before.st_size+1)
-            buffer=bytearray(read_size)if(type(reader)is io.BufferedReader and copy_to is None and before.st_size>=1024**2)else None
+            buffer=bytearray(read_size)if(type(reader)is io.BufferedReader and copy_to is None)else None
             view=memoryview(buffer)if buffer is not None else None
             while True:
                 chunk=view[:reader.readinto(buffer)]if buffer is not None else reader.read(read_size)

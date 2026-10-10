@@ -167,7 +167,12 @@ def test_small_native_file_keeps_reviewed_read_cap_path(size, tmp_path, monkeypa
     new = invoke(monkeypatch, update._check_file, path, row)
     assert old[0] is new[0] is None and joined(old) == joined(new) == payload
     assert old[1] == new[1] and old[3] == new[3] and new[1][-1][1] == 0
-    assert all(c['type'] is bytes and c['buffer'] is None for c in new[2])
+    if size:
+        buffer = new[2][0]['buffer']
+        assert type(buffer) is bytearray and len(buffer) == min(1024**2, size + 1)
+        assert all(c['type'] is memoryview and c['buffer'] is buffer for c in new[2])
+    else:
+        assert new[2] == []
 
 
 def test_large_copy_writer_keeps_original_read_bytes_and_output(tmp_path, monkeypatch):

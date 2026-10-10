@@ -1,0 +1,44 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "d6f32b55476e9d155946d0b25c19803f32a235ae",
+  "source_dirty": false,
+  "test": "scripts/e2e/review-queue-open-project-handoff.spec.ts::saved queue open and remembered nondefault selection stay scoped through A B A project handoff",
+  "test_source_sha256": "cc32a413e0c3684a4341e4462a3ca947615f938857fc818f9d27b7ee577696ec",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "f5d745b6f5e4e72246571e5a8a0ae1f32c69c088e4535c635e9b1be55e38fbb6",
+  "harness_sha256": "193f3b21f3986350e67875f87d35d6d7a9814a60dbfb925c75500b8a7f3e1593",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "615b77e8aa38d6cac8bb62dfcf9ebc8332b15ed61e99f70ca4243acf48a9dc89"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "4ebc65a1f0c783bfa7c756a8650c95a2bf15c316fb7feefac154e78db3985847"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "afbda1f8344b004fff5a263bc34079fbc5cc0d7a0a6f99f68d87e3dcded8c97b"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "82cc7ef8059fec806a045afc0ad13cfc62cc370722c12ad204b48cfdbd29bfdc"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "41d870bb570fc025f37466860723b58f8d9ec0ba1208b45f877144edadd3c433"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}
