@@ -28,7 +28,7 @@
     "src/renderer/components/labeling/SavedReviewQueuePanel.tsx": "2255668df8dbac83f05da5ede7d8b3a7647f8ddfe62e4addcc78090cec6f5588",
     "src/renderer/components/common/EvidenceImageViewer.tsx": "99a32cf293009b767ea5e98922a44498c4a008580ea033a97aa7b25c179c8892",
     "src/renderer/components/labeling/EvidenceEditReturn.tsx": "485980f5f259f304f3b836c64c83fc2ae14f3ccb20a9273354cc738b52048ac9",
-    "src/renderer/components/labeling/CandidateProviderControls.tsx": "1f2512051cbd189893f925821f86b300eda4ed25d0b4d7e68b8fab10e0daf2b0",
+    "src/renderer/components/labeling/CandidateProviderControls.tsx": "310023af1a687a72d0244240ebe6290f49e28b03bc838bf7808670186cabc8ef",
     "src/renderer/components/labeling/ModelAssistPanel.tsx": "27d386e4f53e09159bbbdc3713c80abbbd5fa6ae9dd9a80dd44c5581ed59febc",
     "src/renderer/components/inference/RuntimeOptimizationPanel.tsx": "89ebe9a26ee74a9699705cd6d533301ad579bbb01a5f5a40fb0b5417d2adcfff",
     "src/renderer/components/inference/PackageLibraryPanel.tsx": "e6eaa53f27415cd1be5e10e5b620565762bd43bdd4f3265d4ea33d5fc000b3b8",
@@ -21776,27 +21776,27 @@
                 },
                 {
                   "task": "S6-03",
-                  "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+                  "source_sha": "f5c325308fa1de2286fc1a67a2b95d4686fdc027",
                   "kind": "click",
                   "action": "Window 적용·정보 조회",
                   "expected": "Apply and reopen exact verified DICOM display.",
                   "observed": "Clean native display retained original/view hash through explicit window, zero-width field error, transport error and reload.",
                   "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
                   "test": "scripts/e2e/dicom-integrity-rle.spec.ts::native DICOM optional runtime preserves source through window errors and reopen",
-                  "receipt": "2026-10-07-app-dicom-integrity-window-electron.json",
-                  "receipt_sha256": "e06bf3bf632f10c4a64b2ad55fa46b0fdd88252ce7740e7e07026ce3280af322",
+                  "receipt": "2026-10-11-app-dicom-window-electron.json",
+                  "receipt_sha256": "df42a713019be4a86f2389daa94823fbcdfd9cd4a41c3b3dde54ba584dcde37c",
                   "artifacts": [
                     {
                       "id": "screenshot-0",
-                      "sha256": "9add725957546d51236309c94ae780253613be7bae7b194d9303f12c6c22e096"
+                      "sha256": "0bb68a27843fb616939b2a9b1961aa4c04b826cc20034f86f1fcdbeaf33a3c1d"
                     },
                     {
                       "id": "screenshot-1",
-                      "sha256": "f6ed076ea48527364bb5c09a22e1ff889e8f336e8cfdc84ee94c8e5409ed847b"
+                      "sha256": "6e1c9d5b59f60c6184e1841877029ea8eef9273520cd881db688950e4d903583"
                     },
                     {
                       "id": "screenshot-2",
-                      "sha256": "9add725957546d51236309c94ae780253613be7bae7b194d9303f12c6c22e096"
+                      "sha256": "0bb68a27843fb616939b2a9b1961aa4c04b826cc20034f86f1fcdbeaf33a3c1d"
                     }
                   ]
                 }
@@ -21836,27 +21836,27 @@
                 },
                 {
                   "task": "S6-03",
-                  "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+                  "source_sha": "f5c325308fa1de2286fc1a67a2b95d4686fdc027",
                   "kind": "click",
                   "action": "Window 적용·정보 조회",
                   "expected": "Apply and reopen exact verified DICOM display.",
                   "observed": "Clean native display retained original/view hash through explicit window, zero-width field error, transport error and reload.",
                   "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
                   "test": "scripts/e2e/dicom-integrity-rle.spec.ts::native DICOM optional runtime preserves source through window errors and reopen",
-                  "receipt": "2026-10-07-app-dicom-integrity-window-electron.json",
-                  "receipt_sha256": "e06bf3bf632f10c4a64b2ad55fa46b0fdd88252ce7740e7e07026ce3280af322",
+                  "receipt": "2026-10-11-app-dicom-window-electron.json",
+                  "receipt_sha256": "df42a713019be4a86f2389daa94823fbcdfd9cd4a41c3b3dde54ba584dcde37c",
                   "artifacts": [
                     {
                       "id": "screenshot-0",
-                      "sha256": "9add725957546d51236309c94ae780253613be7bae7b194d9303f12c6c22e096"
+                      "sha256": "0bb68a27843fb616939b2a9b1961aa4c04b826cc20034f86f1fcdbeaf33a3c1d"
                     },
                     {
                       "id": "screenshot-1",
-                      "sha256": "f6ed076ea48527364bb5c09a22e1ff889e8f336e8cfdc84ee94c8e5409ed847b"
+                      "sha256": "6e1c9d5b59f60c6184e1841877029ea8eef9273520cd881db688950e4d903583"
                     },
                     {
                       "id": "screenshot-2",
-                      "sha256": "9add725957546d51236309c94ae780253613be7bae7b194d9303f12c6c22e096"
+                      "sha256": "0bb68a27843fb616939b2a9b1961aa4c04b826cc20034f86f1fcdbeaf33a3c1d"
                     }
                   ]
                 }
@@ -21893,27 +21893,27 @@
                 },
                 {
                   "task": "S6-03",
-                  "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+                  "source_sha": "f5c325308fa1de2286fc1a67a2b95d4686fdc027",
                   "kind": "click",
                   "action": "Window 적용·정보 조회",
                   "expected": "Apply and reopen exact verified DICOM display.",
                   "observed": "Clean native display retained original/view hash through explicit window, zero-width field error, transport error and reload.",
                   "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
                   "test": "scripts/e2e/dicom-integrity-rle.spec.ts::native DICOM optional runtime preserves source through window errors and reopen",
-                  "receipt": "2026-10-07-app-dicom-integrity-window-electron.json",
-                  "receipt_sha256": "e06bf3bf632f10c4a64b2ad55fa46b0fdd88252ce7740e7e07026ce3280af322",
+                  "receipt": "2026-10-11-app-dicom-window-electron.json",
+                  "receipt_sha256": "df42a713019be4a86f2389daa94823fbcdfd9cd4a41c3b3dde54ba584dcde37c",
                   "artifacts": [
                     {
                       "id": "screenshot-0",
-                      "sha256": "9add725957546d51236309c94ae780253613be7bae7b194d9303f12c6c22e096"
+                      "sha256": "0bb68a27843fb616939b2a9b1961aa4c04b826cc20034f86f1fcdbeaf33a3c1d"
                     },
                     {
                       "id": "screenshot-1",
-                      "sha256": "f6ed076ea48527364bb5c09a22e1ff889e8f336e8cfdc84ee94c8e5409ed847b"
+                      "sha256": "6e1c9d5b59f60c6184e1841877029ea8eef9273520cd881db688950e4d903583"
                     },
                     {
                       "id": "screenshot-2",
-                      "sha256": "9add725957546d51236309c94ae780253613be7bae7b194d9303f12c6c22e096"
+                      "sha256": "0bb68a27843fb616939b2a9b1961aa4c04b826cc20034f86f1fcdbeaf33a3c1d"
                     }
                   ]
                 }
@@ -21953,27 +21953,27 @@
                 },
                 {
                   "task": "S6-03",
-                  "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+                  "source_sha": "f5c325308fa1de2286fc1a67a2b95d4686fdc027",
                   "kind": "click",
                   "action": "Window 적용·정보 조회",
                   "expected": "Apply and reopen exact verified DICOM display.",
                   "observed": "Clean native display retained original/view hash through explicit window, zero-width field error, transport error and reload.",
                   "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
                   "test": "scripts/e2e/dicom-integrity-rle.spec.ts::native DICOM optional runtime preserves source through window errors and reopen",
-                  "receipt": "2026-10-07-app-dicom-integrity-window-electron.json",
-                  "receipt_sha256": "e06bf3bf632f10c4a64b2ad55fa46b0fdd88252ce7740e7e07026ce3280af322",
+                  "receipt": "2026-10-11-app-dicom-window-electron.json",
+                  "receipt_sha256": "df42a713019be4a86f2389daa94823fbcdfd9cd4a41c3b3dde54ba584dcde37c",
                   "artifacts": [
                     {
                       "id": "screenshot-0",
-                      "sha256": "9add725957546d51236309c94ae780253613be7bae7b194d9303f12c6c22e096"
+                      "sha256": "0bb68a27843fb616939b2a9b1961aa4c04b826cc20034f86f1fcdbeaf33a3c1d"
                     },
                     {
                       "id": "screenshot-1",
-                      "sha256": "f6ed076ea48527364bb5c09a22e1ff889e8f336e8cfdc84ee94c8e5409ed847b"
+                      "sha256": "6e1c9d5b59f60c6184e1841877029ea8eef9273520cd881db688950e4d903583"
                     },
                     {
                       "id": "screenshot-2",
-                      "sha256": "9add725957546d51236309c94ae780253613be7bae7b194d9303f12c6c22e096"
+                      "sha256": "0bb68a27843fb616939b2a9b1961aa4c04b826cc20034f86f1fcdbeaf33a3c1d"
                     }
                   ]
                 }
@@ -21994,31 +21994,31 @@
               "evidence": [
                 {
                   "task": "S6-03",
-                  "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+                  "source_sha": "f5c325308fa1de2286fc1a67a2b95d4686fdc027",
                   "kind": "click",
                   "action": "DICOM frame index and Window 적용·정보 조회",
                   "expected": "Display only a selected supported RLE frame and preserve source identity.",
                   "observed": "Actual native frame0/frame1 produced distinct display hashes; unavailable frame2 and zero width refused without losing previous display; frame0 reopened identical with no annotation-save requests.",
                   "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
                   "test": "scripts/e2e/dicom-integrity-rle.spec.ts::native DICOM built-in RLE view selects distinct frames and refuses an unavailable frame",
-                  "receipt": "2026-10-07-app-dicom-rle-frames-electron.json",
-                  "receipt_sha256": "704d6a742ea7c0a3c86167a9ac922ff71a5635e3fd0410719568cb4ec341d5c1",
+                  "receipt": "2026-10-11-app-dicom-rle-electron.json",
+                  "receipt_sha256": "823d525547bc134f7b2c2b97d3fd85c4a4c62e804bb4a5960b2d19ebaea6f3fd",
                   "artifacts": [
                     {
                       "id": "screenshot-0",
-                      "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+                      "sha256": "b85bf53ad272940bc0eaae142227e4687da942bf6125b8b46d34c4ca3b896aa3"
                     },
                     {
                       "id": "screenshot-1",
-                      "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+                      "sha256": "b85bf53ad272940bc0eaae142227e4687da942bf6125b8b46d34c4ca3b896aa3"
                     },
                     {
                       "id": "screenshot-2",
-                      "sha256": "77bae1fa33955cd87695a15fa534e202fe7e032c61d45c1d6fb4a1091e2e6331"
+                      "sha256": "2c4ee0a3b090003a321d3bcd0c7b987a6efe89443f5add3cf1c5d231f2049e59"
                     },
                     {
                       "id": "screenshot-3",
-                      "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+                      "sha256": "b85bf53ad272940bc0eaae142227e4687da942bf6125b8b46d34c4ca3b896aa3"
                     }
                   ]
                 }
@@ -22032,31 +22032,31 @@
               "evidence": [
                 {
                   "task": "S6-03",
-                  "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+                  "source_sha": "f5c325308fa1de2286fc1a67a2b95d4686fdc027",
                   "kind": "click",
                   "action": "DICOM frame index and Window 적용·정보 조회",
                   "expected": "Display only a selected supported RLE frame and preserve source identity.",
                   "observed": "Actual native frame0/frame1 produced distinct display hashes; unavailable frame2 and zero width refused without losing previous display; frame0 reopened identical with no annotation-save requests.",
                   "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
                   "test": "scripts/e2e/dicom-integrity-rle.spec.ts::native DICOM built-in RLE view selects distinct frames and refuses an unavailable frame",
-                  "receipt": "2026-10-07-app-dicom-rle-frames-electron.json",
-                  "receipt_sha256": "704d6a742ea7c0a3c86167a9ac922ff71a5635e3fd0410719568cb4ec341d5c1",
+                  "receipt": "2026-10-11-app-dicom-rle-electron.json",
+                  "receipt_sha256": "823d525547bc134f7b2c2b97d3fd85c4a4c62e804bb4a5960b2d19ebaea6f3fd",
                   "artifacts": [
                     {
                       "id": "screenshot-0",
-                      "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+                      "sha256": "b85bf53ad272940bc0eaae142227e4687da942bf6125b8b46d34c4ca3b896aa3"
                     },
                     {
                       "id": "screenshot-1",
-                      "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+                      "sha256": "b85bf53ad272940bc0eaae142227e4687da942bf6125b8b46d34c4ca3b896aa3"
                     },
                     {
                       "id": "screenshot-2",
-                      "sha256": "77bae1fa33955cd87695a15fa534e202fe7e032c61d45c1d6fb4a1091e2e6331"
+                      "sha256": "2c4ee0a3b090003a321d3bcd0c7b987a6efe89443f5add3cf1c5d231f2049e59"
                     },
                     {
                       "id": "screenshot-3",
-                      "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+                      "sha256": "b85bf53ad272940bc0eaae142227e4687da942bf6125b8b46d34c4ca3b896aa3"
                     }
                   ]
                 }
@@ -22073,38 +22073,66 @@
               "evidence": [
                 {
                   "task": "S6-03",
-                  "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+                  "source_sha": "f5c325308fa1de2286fc1a67a2b95d4686fdc027",
                   "kind": "click",
                   "action": "DICOM frame index and Window 적용·정보 조회",
                   "expected": "Display only a selected supported RLE frame and preserve source identity.",
                   "observed": "Actual native frame0/frame1 produced distinct display hashes; unavailable frame2 and zero width refused without losing previous display; frame0 reopened identical with no annotation-save requests.",
                   "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
                   "test": "scripts/e2e/dicom-integrity-rle.spec.ts::native DICOM built-in RLE view selects distinct frames and refuses an unavailable frame",
-                  "receipt": "2026-10-07-app-dicom-rle-frames-electron.json",
-                  "receipt_sha256": "704d6a742ea7c0a3c86167a9ac922ff71a5635e3fd0410719568cb4ec341d5c1",
+                  "receipt": "2026-10-11-app-dicom-rle-electron.json",
+                  "receipt_sha256": "823d525547bc134f7b2c2b97d3fd85c4a4c62e804bb4a5960b2d19ebaea6f3fd",
                   "artifacts": [
                     {
                       "id": "screenshot-0",
-                      "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+                      "sha256": "b85bf53ad272940bc0eaae142227e4687da942bf6125b8b46d34c4ca3b896aa3"
                     },
                     {
                       "id": "screenshot-1",
-                      "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+                      "sha256": "b85bf53ad272940bc0eaae142227e4687da942bf6125b8b46d34c4ca3b896aa3"
                     },
                     {
                       "id": "screenshot-2",
-                      "sha256": "77bae1fa33955cd87695a15fa534e202fe7e032c61d45c1d6fb4a1091e2e6331"
+                      "sha256": "2c4ee0a3b090003a321d3bcd0c7b987a6efe89443f5add3cf1c5d231f2049e59"
                     },
                     {
                       "id": "screenshot-3",
-                      "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+                      "sha256": "b85bf53ad272940bc0eaae142227e4687da942bf6125b8b46d34c4ca3b896aa3"
                     }
                   ]
                 }
               ]
             },
             "handoff": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S6-03",
+                  "source_sha": "f5c325308fa1de2286fc1a67a2b95d4686fdc027",
+                  "kind": "click",
+                  "action": "DICOM built-in RLE frame window and canvas prompts through owning project A B A handoff",
+                  "expected": "Each owning project retains its exact source, selected frame, view cache and prompt state; changing project resets ephemeral prompts and returns to the original source without writes.",
+                  "observed": "Actual clean Source Electron case passed A/B/A with prompt counts A1/B2/A0 and six real100/100 frame0/frame1 view responses. Own source/header/context and PNG/cache hashes matched; frame0 center was black and frame1 white; original source, annotations, view caches and project manifests remained unchanged. No annotation-save, generation, training or deployment activation request was sent.",
+                  "reviewer": "Codex root actual clean Source Electron execution and original collector readback; independent human, device, installed-native, model-quality, release and full feature acceptance remain pending",
+                  "test": "scripts/e2e/dicom-integrity-rle.spec.ts::native built-in RLE frames and canvas prompts stay owned through A B A project handoff",
+                  "receipt": "2026-10-11-app-dicom-rle-project-handoff-electron.json",
+                  "receipt_sha256": "64d60d3458db96f85f71bb9bd8efeaef12b12596869e221a93bebb128edc9092",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "00185826012d88b433d8d8a1bb1c861aefc5a88855842e41d19be55b1471013f"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "b0e47b0d7ad6cebf895a1b39e507653d8393ab00fdd32d369b5a698e0efd709c"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "2da00ddc30dcf01fc18769470309fe89f89464cbb2058562df33648727c9bc2a"
+                    }
+                  ]
+                }
+              ]
             }
           }
         }

@@ -16,7 +16,7 @@ export const CandidateProviderControls:React.FC<Props>=({disabled,onCreated,onOp
   const {currentImage,annotations,selectedAnnotationId,setActiveTool,activeCategory,categories}=useAnnotationStore();
   const {images,folderPath}=useDatasetStore();const project=useProjectStore(s=>s.project);const projectDir=useProjectStore(s=>s.projectDir);
   const scope=labelingScope({projectDir,project});const [loadedScope,setLoadedScope]=useState(scope);const currentScope=loadedScope===scope;
-  const {points,boxes,pointLabel,setPointLabel,clear,bind}=useFoundationPromptStore();
+  const {points,boxes,pointLabel,setPointLabel,clear,bind,bindProject}=useFoundationPromptStore();
   const [setup,setSetup]=useState<FoundationSetup|null>(null);const [prompt,setPrompt]=useState('');const [label,setLabel]=useState('defect');
   const [positive,setPositive]=useState<RegionExample[]>([]);const [negative,setNegative]=useState<RegionExample[]>([]);
   const [examplePath,setExamplePath]=useState('');const [exampleRoi,setExampleRoi]=useState('');
@@ -38,12 +38,12 @@ export const CandidateProviderControls:React.FC<Props>=({disabled,onCreated,onOp
   useEffect(()=>{setExclusions({imagePath:'',regions:[]});setExcludeRoi('');},[scope]);
   useEffect(()=>{setLabel(activeCategory.name);},[activeCategory.name]);
   useEffect(()=>{
-    let active=true;setLoadedScope(scope);setBusy(false);setSetup(null);setBatches([]);setBatchId('');setFeatureJob(null);setFeatureModels([]);setPositive([]);setNegative([]);setModelId('');setBatchPaths(new Set());setExamplePath('');setExampleRoi('');setCheckpoint('');setCheckpointHash('');setError('');setNotice('');clear();
+    let active=true;setLoadedScope(scope);setBusy(false);setSetup(null);setBatches([]);setBatchId('');setFeatureJob(null);setFeatureModels([]);setPositive([]);setNegative([]);setModelId('');setBatchPaths(new Set());setExamplePath('');setExampleRoi('');setCheckpoint('');setCheckpointHash('');setError('');setNotice('');bindProject(scope);
     const remembered=localStorage.getItem(`foundation-feature-job:${scope}`);
     void Promise.all([provider.setup(),provider.featureModels(),provider.batches(),provider.featureJobs().then(result=>result.jobs.find(j=>j.id===remembered)||result.jobs[0]||null)])
       .then(([s,m,b,j])=>{if(active&&sameProject()){setSetup(s);setFeatureModels(m.models);setBatches(b.batches);setBatchId(b.batches[0]?.id||'');setFeatureJob(j);setCheckpoint(s.configuration.feature_checkpoint||'');setCheckpointHash(s.configuration.feature_sha256||'');}})
       .catch(e=>{if(active&&sameProject())setError(workflowError(e));});return()=>{active=false;};
-  },[scope,clear]);
+  },[scope,bindProject]);
   useEffect(()=>{
     if(!running)return;useModelAssistRunStore.getState().begin();let active=true;
     const poll=async()=>{try{

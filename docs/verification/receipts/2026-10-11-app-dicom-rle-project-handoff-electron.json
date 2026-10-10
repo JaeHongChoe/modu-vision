@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "f5c325308fa1de2286fc1a67a2b95d4686fdc027",
+  "source_dirty": false,
+  "test": "scripts/e2e/dicom-integrity-rle.spec.ts::native built-in RLE frames and canvas prompts stay owned through A B A project handoff",
+  "test_source_sha256": "9d760c88b67e7d74a64c3e018a606dc99d8f269e0567052965292b44e4144c8e",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "7ca89cfd7e0ffff3f7916b3c8f0d9a339fc2aff9882993ebdeae3436dbb3d5b0",
+  "harness_sha256": "564cbdb9397007b49c88f8ca0bd7c6820e6a08be19564ff0eace8c2be88f2403",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "00185826012d88b433d8d8a1bb1c861aefc5a88855842e41d19be55b1471013f"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "b0e47b0d7ad6cebf895a1b39e507653d8393ab00fdd32d369b5a698e0efd709c"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "2da00ddc30dcf01fc18769470309fe89f89464cbb2058562df33648727c9bc2a"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}
