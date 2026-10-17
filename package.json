@@ -20,7 +20,7 @@
     "test:m5": "node scripts/verify-m5.js",
     "test:training-cancel": "node scripts/verify-training-cancel.js",
     "test:packaging": "node scripts/verify-packaging.js",
-    "test:e2e:harness": "node --test scripts/tests/e2e-harness.test.cjs scripts/tests/e2e-current-capability-filesystem.test.cjs scripts/tests/partial-current-context-contract.test.cjs scripts/tests/e2e-flow-optional-model-discovery.test.cjs scripts/tests/dicom-owned-capture.test.cjs scripts/tests/fleet-cleanup.test.cjs",
+    "test:e2e:harness": "node --test scripts/tests/e2e-harness.test.cjs scripts/tests/e2e-current-capability-filesystem.test.cjs scripts/tests/partial-current-context-contract.test.cjs scripts/tests/e2e-flow-optional-model-discovery.test.cjs scripts/tests/dicom-owned-capture.test.cjs scripts/tests/fleet-cleanup.test.cjs scripts/tests/fleet-child-lifetime.test.cjs",
     "typecheck:e2e": "tsc -p scripts/e2e/fixtures/tsconfig.json",
     "pretest:e2e": "npm run test:e2e:harness",
     "test:e2e": "playwright test",
