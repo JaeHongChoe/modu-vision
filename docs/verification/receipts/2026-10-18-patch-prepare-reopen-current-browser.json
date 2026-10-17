@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "74fcce8bdc55c22036a8035a5641b7a5d81c2a3f",
+  "source_dirty": false,
+  "test": "scripts/e2e/patch-prepare-reopen-error-controls.spec.ts::patch preparation reopens its actual saved dataset manifest and original-coordinate preview without training",
+  "test_source_sha256": "f397d085539bc381133f62a00d5dddfc526d5ccfca8e1ef7380d2acf81a13fa7",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "0f242c925a8a89ace63a2a097ccfb06e22782e03afa9f79f635ca4ce573f16f8",
+  "harness_sha256": "490452fe9cbbb72d3009ff7c245ee441981c649865cf1104fd257a52f296d424",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "ebf61f3359aa0e1792c07e14e680be59cec0c24399b189a00c40ee27d09ddcae"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "e1c7843e9e9353b26e6fb60157b4fd80b8899be2d18889e992169ffdacb72075"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

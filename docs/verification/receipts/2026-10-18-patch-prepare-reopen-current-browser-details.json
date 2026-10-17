@@ -1,0 +1,450 @@
+{
+  "schema": "modu-vision.gui-action-details/v1",
+  "cell": "F026.dino-patch-native-prepare.reopen",
+  "scope": "One ordinary browser renderer/backend prepared-data reopen case; controlled desktop folder answer, no actual native picker.",
+  "path_redaction": {
+    "derivative": true,
+    "private_readback": {
+      "file": "passed-reopen-independent-readback.private.json",
+      "bytes": 27171,
+      "sha256": "f3d85599872512edb2b5db44eb9acbeb565404e8fe8aa9cc4f241d287b7ab408"
+    },
+    "rule": "No personal absolute paths or credentials copied; original private receipt remains unchanged and is identified by SHA256."
+  },
+  "execution": {
+    "source_sha": "74fcce8bdc55c22036a8035a5641b7a5d81c2a3f",
+    "source_dirty": false,
+    "test": "scripts/e2e/patch-prepare-reopen-error-controls.spec.ts::patch preparation reopens its actual saved dataset manifest and original-coordinate preview without training",
+    "test_source_sha256": "f397d085539bc381133f62a00d5dddfc526d5ccfca8e1ef7380d2acf81a13fa7",
+    "actual_original_Root_tool_start": {
+      "file": "original-tool-start.json",
+      "bytes": 131,
+      "sha256": "0d46a9ff3502227d5c2ad888b1d69f631e1d41b32c32ba54fd8be5b7db97a84e"
+    },
+    "actual_original_Root_tool_completion": {
+      "file": "original-tool-completion.json",
+      "bytes": 126,
+      "sha256": "5c246b86e47f545e649ef5fb56cf546b6d98bf63ced1319b35747f64258d5507"
+    },
+    "tool_files_copied_byte_exact_from_Root_handoff": true,
+    "original_case_ms": 7648,
+    "report": {
+      "duration": 16222.685,
+      "expected": 1,
+      "flaky": 0,
+      "skipped": 0,
+      "startTime": "2026-10-17T16:53:10.081Z",
+      "unexpected": 0
+    },
+    "original_wrapper_seconds": 16.667180207790807,
+    "attempts": 1,
+    "retries": 0,
+    "original_action_fullbody_ms": 10000,
+    "original_case_cap_ms": 240000,
+    "no_extra_browser_execution_by_collector": true
+  },
+  "source_provenance": {
+    "public_base": "fafa790b8c175dc1e6b4d72075d1293bace51dfe",
+    "private_test_checkpoint": "abf68757ea15784945f2dc8b60132569faaf21c5",
+    "frontend_fix_checkpoint": "cd73cd39a50a72c420a87e193b70620e92667edd",
+    "backend_fix_executed_checkpoint": "74fcce8bdc55c22036a8035a5641b7a5d81c2a3f",
+    "tracked_count": 2935,
+    "tracked_bytes": 35566703,
+    "tracked_raw9_SHA_and_index_modes_before_after_and_current_equal": true,
+    "script_unchanged_across_actual01_02_03": true,
+    "dependencies": {
+      "scripts/e2e/patch-prepare-reopen-error-controls.spec.ts": "f397d085539bc381133f62a00d5dddfc526d5ccfca8e1ef7380d2acf81a13fa7",
+      "scripts/e2e/fixtures/test.ts": "49171e2d0d4d7d9559416fdb43bc7dae9394129bbc237fe4f2a4cea0a7afa480",
+      "scripts/e2e/fixtures/harness.cjs": "171460c1cf1697b7a44b8f86a197d2b944928381f736f81af304412126464975",
+      "scripts/e2e/fixtures/desktop-host-shim.ts": "4f598862ec0e08189628c72bbb552f72bf8fd73f5a9a05b8da1d3ddf516dcfa6",
+      "scripts/e2e/fixtures/remaining-project-handoff.ts": "7a7c74a2f42a5d6ad991dadc97626c1f8330f962edaf73fd461d31f9c4764904",
+      "scripts/e2e/qa/appFlow.ts": "4eed3e5dad1d9d65a6b19fc9bb51a1f9b0e23911a39e7f255220bec0ce37fea2",
+      "playwright.config.ts": "91495f41ce2b89d5472fc5851c4fc9c5937684958ac453d0a6a759df2a10b936",
+      "src/renderer/components/training/PatchClassificationWorkbench.tsx": "1e1ffa525e9db32c058d89620a13cf219f9f5deed943466d8a20c71641aa4cc5",
+      "src/renderer/components/training/useProgramWorkbench.ts": "c41ce026bc338b2bc62c9c27af79f40cdd5aa4564307fcb6a03c210c269fbc8d",
+      "src/renderer/components/training/ProgramWorkbenchControls.tsx": "f982a95aefdd2b5360bedefbe4703e80bdd81d18e3a24e5cbcbc9297a2b95a51",
+      "src/renderer/services/modelTrainingProgram.ts": "cd8594aa2ec17fce979858e8276d46264fe53bc7edb65c429b06b2582763357c",
+      "src/renderer/services/datasetWorkflow.ts": "67a0b469b78b0d991921244d81d571c954e5c9bda5b767f1c3b0d55270f90bab",
+      "src/renderer/services/api.ts": "ba82fc801fb827ab16b453ee4722ede933a641177be9994f6666f82965bc472e",
+      "backend/api/routes_patch_classification.py": "65f6abeb38c77b2b86cfa0cfcd252b7723f291244b769fec082932c3605f456b",
+      "backend/engine/patch_preparation.py": "48e84c0afcb9fc8d05a1f29fc01054a3cc7b388be379824e715fb31aa62f7fc9",
+      "backend/engine/grouped_dataset_views.py": "ebe6722dd1e809bc150465e03f284d9ad84aa94c2c080844f574159e57f1e57f",
+      "backend/engine/patch_classification.py": "c90ce5ad03308034493f689cfa8bc84b036c75ee905c91106d833fdf0b7d52b8",
+      "src/renderer/components/training/PatchRecipePreview.tsx": "fb0b91b076e0512583cd955a9a2bc134275db03145961a488c89ce2e1c63f542"
+    },
+    "additional_backend_source": {
+      "backend/api/routes_training.py": "0e07be9f86487477ac725dc8f7d639116be6d69c15c750b1fca6a25ccc5e2e4a"
+    },
+    "private_input_count_raw9_SHA": 27,
+    "provider_links": {
+      "count": 321,
+      "container": "owned0700 thin directory",
+      "witness": "target,inode,mode,mtimeNs,ctimeNs; not raw9",
+      "all_declared_targets_and_resolved_paths_equal": true
+    },
+    "selected_provider_files_raw9_SHA": 10,
+    "resolved_runtime_files_raw9_SHA": 3
+  },
+  "actual_behavior": {
+    "setup": "Three synthetic32x32PNG with three adjacent rectangle-label JSON files; genuine product project/import/persist APIs before declared custody baseline.",
+    "valid_prepare_request": {
+      "method": "POST",
+      "path": "/api/patch-classification/prepare",
+      "body": {
+        "patch_size": 16,
+        "stride": 16,
+        "normal_class": "OK",
+        "minimum_overlap": 0.05
+      }
+    },
+    "prepare_status": 200,
+    "saved_manifest": {
+      "classes": [
+        "OK",
+        "chip"
+      ],
+      "normal_class": "OK",
+      "patch_size": 16,
+      "stride": 16,
+      "patch_count": 12,
+      "split_counts": {
+        "train": 4,
+        "val": 4,
+        "test": 4
+      },
+      "copied_originals": 3,
+      "all_copy_SHA_equal_source": true,
+      "manifest_sha256": "e3299f75ddf1324ccc6c86877838baeb57808cba0e417132fc2ae824b6aa301c",
+      "source_manifest": {
+        "file": "source_manifest.json",
+        "bytes": 1781,
+        "sha256": "65fef246682a06622bc2929ca97c62afdcdff52018078162b574a723e9760f73"
+      }
+    },
+    "reopen": "Real page.reload and original navigation; original same-Request datasets200 and sample200 bodies equal full baseline; separate genuine manifest GET equals full baseline.",
+    "restored_DOM": "Exact checked option 준비 1 · 패치 12개 · 16px / 간격 16px passed after reload under original10s; final no-alert assertion passed.",
+    "preview": {
+      "source_dimensions": [
+        32,
+        32
+      ],
+      "patch_dimensions": [
+        16,
+        16
+      ],
+      "box": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "source_relative_path": "part-0.png",
+      "split": "train",
+      "label": "chip",
+      "readiness_body_path_SHA_and_encoded_body_equality": true,
+      "independent_full_RGB_parity": false
+    },
+    "parents_response_fullbody_captured": false,
+    "no_parents_catalog_or_parent_quality_acceptance_claim": true
+  },
+  "full_UI_response_bodies": {
+    "count": 5,
+    "original_same_Request_main_frame_finished": true,
+    "all_complete_within_original_absolute_action_frames": true,
+    "full_request_context_header_equality": true,
+    "independent_server_accepted_context_receipt": false,
+    "rows": [
+      {
+        "label": "owning-source-import",
+        "method": "POST",
+        "path": "/api/dataset/import",
+        "status": 200,
+        "bytes": 346,
+        "sha256": "c5454eb0fcf388da965adf9433ecfc9b31a5907409addc443d413b1f5d48114d",
+        "same_Request": true,
+        "main_frame": true,
+        "finished": true,
+        "deadline": 18490.100959,
+        "completed": 8664.25475
+      },
+      {
+        "label": "owning-source-persist",
+        "method": "PUT",
+        "path": "/api/project/update",
+        "status": 200,
+        "bytes": 1535,
+        "sha256": "8ebfeb87d88514b34a3b9bcab317affd4760ab82fb902183acd09f9eb85251e6",
+        "same_Request": true,
+        "main_frame": true,
+        "finished": true,
+        "deadline": 18490.100959,
+        "completed": 8679.417209
+      },
+      {
+        "label": "actual-reopen-prepare",
+        "method": "POST",
+        "path": "/api/patch-classification/prepare",
+        "status": 200,
+        "bytes": 569,
+        "sha256": "fb805d6cc4f15ee6e5e7c7d45a641f39eda9a237e02e9e4175ec973a3b01b53a",
+        "same_Request": true,
+        "main_frame": true,
+        "finished": true,
+        "deadline": 19469.122667,
+        "completed": 9525.428042
+      },
+      {
+        "label": "ordinary-reload-datasets",
+        "method": "GET",
+        "path": "/api/patch-classification/datasets",
+        "status": 200,
+        "bytes": 1566,
+        "sha256": "df0d15a1272214ed2a80cc1f7fab2006af2eea32dc35f53a8eebb9f7c594ae20",
+        "same_Request": true,
+        "main_frame": true,
+        "finished": true,
+        "deadline": 19695.061292,
+        "completed": 10278.222084
+      },
+      {
+        "label": "ordinary-reload-sample",
+        "method": "GET",
+        "path": "/api/patch-classification/sample",
+        "status": 200,
+        "bytes": 617,
+        "sha256": "cfe59b1adec7e3d7fdf432bc1637e0478c1a88e9ebedfc64a6c3b7c3ad277964",
+        "same_Request": true,
+        "main_frame": true,
+        "finished": true,
+        "deadline": 19695.061292,
+        "completed": 10280.652792
+      }
+    ]
+  },
+  "custody": {
+    "witness": "Business source/project trees raw7(dev,ino,mode,nlink,size,mtimeNs,ctimeNs)+SHA; tracked source separately raw9 includesUID/GID.",
+    "source_file_count": 6,
+    "all_business_files_after_prepare_reload_and_postshutdown": 19,
+    "source_original_tree_unchanged": true,
+    "existing_project_nodes_unchanged_except_declared_dataset_directory_metadata": true,
+    "new_owned_prepared_subtree_nodes": 8,
+    "new_owned_regular_files": 5,
+    "after_prepare_equals_after_reload_equals_current_postshutdown": true,
+    "descriptor_opened": 64,
+    "descriptor_closed": 64,
+    "artifact_refs_reopened_count": 20,
+    "artifact_SHA_and_bytes_exact": true,
+    "no_before_UID_GID_claim_for_business_raw7": true
+  },
+  "screenshots": {
+    "independently_viewed_with_image_tool": true,
+    "rows": [
+      {
+        "id": "screenshot-0",
+        "sha256": "ebf61f3359aa0e1792c07e14e680be59cec0c24399b189a00c40ee27d09ddcae"
+      },
+      {
+        "id": "screenshot-1",
+        "sha256": "e1c7843e9e9353b26e6fb60157b4fd80b8899be2d18889e992169ffdacb72075"
+      }
+    ],
+    "actual_prepare_image": "Pre-reload prepared selector shows12patches/OK·chip but its numeric size/stride caption is blank. The input fields show16/16.",
+    "ordinary_reload_image": "Upper patch-classification setup with three originals; screenshot does not show lower prepared selector/preview. Reload numeric option and preview are established by original DOM/fullbody assertions, not this PNG.",
+    "known_unfixed_pre_reload_display_defect": true,
+    "does_not_invalidate_functional_reopen_pass": true
+  },
+  "closure": {
+    "original_Popen_natural_wait_returned": true,
+    "runner_returncode": 0,
+    "signals_sent_by_runner": false,
+    "backend_exitcode": 0,
+    "forced": false,
+    "group_alive": false,
+    "PID_alive": false,
+    "port_closed": true,
+    "escaped": [],
+    "unowned_references": [],
+    "scan_error": null,
+    "global_leftovers": [],
+    "global_unowned_references": [],
+    "global_scan_error": null,
+    "run_readback_errors": [],
+    "page_errors": [],
+    "console_errors_retained": [
+      "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)",
+      "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+    ],
+    "not_whole_UI_health_claim": true
+  },
+  "history": {
+    "actual01": "Original error PASS and reopen FAIL preserved on abf68757; no repin or rerun of error case. Root preliminary metadata-only precheck KeyError(files) disclosed in prior error details; original runner and later postreadback provide separate source evidence.",
+    "actual02": "Original reopen-only FAIL on cd73cd39 preserved: warm-start source must match current project dataset.",
+    "actual03": "One fresh execution on74fcce8b after frontend prepared-path binding and scoped backend prepared-ownership fix; same f397 spec and same original runner body.",
+    "old_failure_refs": [
+      {
+        "file": "2026-10-18-patch-prepare-reopen-second-negative.json",
+        "bytes": 5698,
+        "sha256": "695d076bf3ef92ed08baa906f7b927179f06e9997fc5f0594f3bbd5bc3d0bded"
+      }
+    ],
+    "original_error_generic": {
+      "file": "2026-10-18-patch-prepare-owned-filesystem-error-current-browser.json",
+      "bytes": 1224,
+      "sha256": "cc6bcf17f32486294a7dbdda8315889fd4c322760e18c47f23a63c69337891f5"
+    }
+  },
+  "claims": {
+    "only_proposed_cell": "F026.dino-patch-native-prepare.reopen",
+    "training": false,
+    "model_execution": false,
+    "GPU": false,
+    "native_picker_or_installed_app": false,
+    "model_quality_approved": false,
+    "parent_acceptance": false,
+    "whole_feature_acceptance": false,
+    "counter_or_registry_mutated": false
+  },
+  "generic_receipt": {
+    "file": "2026-10-18-patch-prepare-reopen-current-browser.json",
+    "bytes": 1226,
+    "sha256": "dd04cb6848d18d8343d608b066d093faf92e6e372fa16ac88ef7f44b00858c90"
+  },
+  "original_finite_refs": [
+    {
+      "bytes": 91134,
+      "sha256": "490452fe9cbbb72d3009ff7c245ee441981c649865cf1104fd257a52f296d424",
+      "file": "harness-manifest.json",
+      "custody": "private original; unchanged"
+    },
+    {
+      "bytes": 6636,
+      "sha256": "0f242c925a8a89ace63a2a097ccfb06e22782e03afa9f79f635ca4ce573f16f8",
+      "file": "report.json",
+      "custody": "private original; unchanged"
+    },
+    {
+      "bytes": 1622,
+      "sha256": "57fdce6e45e5827b8a84ebaa761669d2278d38338b612643607f0b128e81b6bc",
+      "file": "run-result.json",
+      "custody": "private original; unchanged"
+    },
+    {
+      "bytes": 420,
+      "sha256": "f026fc40f251f2878d7eac4a3f09bd75695715e2cedc07d7469af509baf4f599",
+      "file": "browser-01.log",
+      "custody": "private original; unchanged"
+    },
+    {
+      "bytes": 1043012,
+      "sha256": "97549b32113cd79a839a00b18204594576f5bcc4faba93922d9bcb1e8b36231c",
+      "file": "source-before.json",
+      "custody": "private original; unchanged"
+    },
+    {
+      "bytes": 1043012,
+      "sha256": "97549b32113cd79a839a00b18204594576f5bcc4faba93922d9bcb1e8b36231c",
+      "file": "source-after.json",
+      "custody": "private original; unchanged"
+    },
+    {
+      "bytes": 131,
+      "sha256": "0d46a9ff3502227d5c2ad888b1d69f631e1d41b32c32ba54fd8be5b7db97a84e",
+      "file": "original-tool-start.json",
+      "custody": "private original; unchanged"
+    },
+    {
+      "bytes": 126,
+      "sha256": "5c246b86e47f545e649ef5fb56cf546b6d98bf63ced1319b35747f64258d5507",
+      "file": "original-tool-completion.json",
+      "custody": "private original; unchanged"
+    },
+    {
+      "bytes": 214186,
+      "sha256": "cc3f8763d0ddf95fbce12195ce2a86217f7d533e929fdb3ade9afc807c478acb",
+      "file": "preparation.json",
+      "custody": "private original; unchanged"
+    },
+    {
+      "bytes": 4155,
+      "sha256": "33a105aff712913f244ec16585ea5503dec050f21658ecd089da07888843ff63",
+      "file": "ready-handoff.json",
+      "custody": "private original; unchanged"
+    },
+    {
+      "bytes": 1045963,
+      "sha256": "1b8811e9ea25b4a42936a5436948b20658d2a60637f79b2cdd4053e79e2937ac",
+      "file": "source-ready.json",
+      "custody": "private original; unchanged"
+    },
+    {
+      "bytes": 331172,
+      "sha256": "2705ade164b12e3ec500512913f4e9c2f5f5ca3ef0a290a00a99570438100953",
+      "file": "git-index-modes.json",
+      "custody": "private original; unchanged"
+    },
+    {
+      "bytes": 103257,
+      "sha256": "bb00c877a7537dd528a13bde71c4f485381bb1bd33bca23d0628dfd79f982689",
+      "file": "provider-mapping.json",
+      "custody": "private original; unchanged"
+    },
+    {
+      "bytes": 71727,
+      "sha256": "d6d63747f4ae30604f19bb0dee65e15367047cd70b4497ea72c11192c119d1b1",
+      "file": "provider-links-ready.json",
+      "custody": "private original; unchanged"
+    },
+    {
+      "bytes": 4094,
+      "sha256": "aa259f1b0e470c2f4294fec93ed678121dda99cef3a66124b328f8a45b8d202e",
+      "file": "selected-provider-files-ready.json",
+      "custody": "private original; unchanged"
+    },
+    {
+      "bytes": 1448,
+      "sha256": "ee755c471c4268bd785b2e994d85baacdc70e8f6c25efbbd67fbe270e0b44de3",
+      "file": "runtimes-definition.json",
+      "custody": "private original; unchanged"
+    },
+    {
+      "bytes": 277,
+      "sha256": "76b4a275841572949c61fd4266a139ae1bf8b7e0fbf6be2c05f27b2aa67888a2",
+      "file": "collector-result.json",
+      "custody": "private original; unchanged"
+    },
+    {
+      "bytes": 1256,
+      "sha256": "b4ffd6e8e27eb27149fc2f81e9bf0b8dd8d2071cd1f8e96c23535c6964e64169",
+      "file": "collector-original-popen.json",
+      "custody": "private original; unchanged"
+    },
+    {
+      "bytes": 294,
+      "sha256": "9c78c68ecf8744f3d65b993821a3d2786ca0b3c0d664b27694f4e0a5de045626",
+      "file": "collector.stdout.log",
+      "custody": "private original; unchanged"
+    },
+    {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "file": "collector.stderr.log",
+      "custody": "private original; unchanged"
+    },
+    {
+      "bytes": 1226,
+      "sha256": "dd04cb6848d18d8343d608b066d093faf92e6e372fa16ac88ef7f44b00858c90",
+      "file": "2026-10-18-patch-prepare-reopen-current-browser.json",
+      "custody": "private original; unchanged"
+    },
+    {
+      "file": "collector-original-tool-result.json",
+      "bytes": 407,
+      "sha256": "0d7209d26a94ed26f3755dbbcda3f50cef0a4d4e6dd1cd6cac05f5598e188ae3"
+    },
+    {
+      "file": "independent_postreadback.py",
+      "bytes": 10237,
+      "sha256": "1350762409f121b6201abf373a6c4b71b47955ae42030686701850a9c959af44"
+    }
+  ]
+}

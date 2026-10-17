@@ -1,0 +1,118 @@
+{
+  "causal_red": {
+    "body": {
+      "detail": "Warm-start source must match the current project's dataset"
+    },
+    "failed": 1,
+    "junit": {
+      "bytes": 1576,
+      "file": "junit.xml",
+      "sha256": "c29f2e47064a68b023ffa7aa0bcf1d5fe9d9a7c36baf72dcfc10748fa934e46b"
+    },
+    "log": {
+      "bytes": 1597,
+      "file": "pytest.log",
+      "sha256": "3072b20c9e98459b00bd8cef8ecf5b963e0fd4687e86eba7713f0deef2f87f70"
+    },
+    "natural_pytest_reaped": true,
+    "observed_HTTP_status": 409,
+    "result": {
+      "bytes": 23290,
+      "file": "result.json",
+      "sha256": "8e743fa4aa8403f713063fe065bfaa1ebff42ee316f3bf7202ca6aa0f2860cd7"
+    },
+    "selector": "backend/tests/test_patch_warm_start_scope.py::test_patch_parent_list_accepts_owned_prepared_classes_and_original_source_receipt",
+    "signals_sent": false
+  },
+  "fixture_limits": [
+    "Real original ASGI application+HTTP API handlers, without full application lifespan qualification.",
+    "Synthetic three32x32PNG/LabelMe source and genuine12patch preparation; checkpoint is a declared one-zero-tensor structural fixture, not authentic/trained DINO weights.",
+    "torch checkpoint serialization/deserialization occurred, no training, inference, GPU or worker execution.",
+    "Existing related classification API test captures the would-be training start; does not run a trainer.",
+    "Local capability/context scoping is exercised; no new shared-role/CSRF authority acceptance inferred."
+  ],
+  "green": {
+    "all_input_bytes_and_metadata_before_after_equal": true,
+    "checks": [
+      "actual12patch preparation classes + original-source-linked completed parent response/hash",
+      "foreign prepared root422",
+      "raw supplied symlink422",
+      "own prepared manifest with foreign originalsource422",
+      "classification preparedpath remains409",
+      "existing general classification current-source parent API remains valid"
+    ],
+    "existing_cases": 1,
+    "failed": 0,
+    "junit": {
+      "bytes": 1152,
+      "file": "junit.xml",
+      "sha256": "9b268cfde72059296ff891ddbf6f1880a7395b8ec8501241905bf2e92d7059d6"
+    },
+    "log": {
+      "bytes": 283,
+      "file": "pytest.log",
+      "sha256": "9f8258fc6e88f636e02e163a3106e484d2656e2d4056117def89e678c2a0c4b0"
+    },
+    "natural_pytest_reaped": true,
+    "new_cases": 5,
+    "passed": 6,
+    "result": {
+      "bytes": 75258,
+      "file": "result.json",
+      "sha256": "5141ecc4eddb51aea2fc04a46ec0bc27ec38c80c3a97d5e9e3d1f0d198ec6859"
+    },
+    "signals_sent": false
+  },
+  "isolation": {
+    "errors": [],
+    "fresh_six_store_environment": true,
+    "green_probe_rows": 15,
+    "original_backend_conftest_explicitly_preloaded_before_imports": true,
+    "original_probe_sha256": "5a23a61a2e53a318a9d38a8e89069c10e549cda19f34c45cfb1343ceb3acd101",
+    "red_probe_rows": 5
+  },
+  "no_credit": {
+    "Root09_native_exact_cause": true,
+    "actual_browser_successor": true,
+    "lease_release_or_parent_completion": true,
+    "native_installed_GPU_model_quality": true
+  },
+  "original_browser02_negative": {
+    "failed": 1,
+    "passed": 0,
+    "receipt": "2026-10-18-patch-prepare-reopen-second-negative.json",
+    "reopen_cell_pending": true,
+    "sha256": "695d076bf3ef92ed08baa906f7b927179f06e9997fc5f0594f3bbd5bc3d0bded"
+  },
+  "schema": "modu-vision.patch-prepared-parent-scope-source-red-green/v1",
+  "scope": "Patch-only parent catalog request accepts fully owned prepared truth and retains original source identity for the existing models-store/completed-receipt checks. No general guard relaxation.",
+  "source": {
+    "_warm_start_scope_body_byte_identical": true,
+    "actual_pytest_cohort": "Frozen cd73 overlay with changed backend route + explicit new test; later clean checkpoint is exact byte join.",
+    "base": "cd73cd39a50a72c420a87e193b70620e92667edd",
+    "changed_files": {
+      "backend/api/routes_training.py": "0e07be9f86487477ac725dc8f7d639116be6d69c15c750b1fca6a25ccc5e2e4a",
+      "backend/tests/test_patch_warm_start_scope.py": "121489c1bec5ce35943fa1c8aeda4fb1c016098a472fe9c30648fe749067610d"
+    },
+    "dependencies_sha256": {
+      "backend/api/routes_patch_classification.py": "65f6abeb38c77b2b86cfa0cfcd252b7723f291244b769fec082932c3605f456b",
+      "backend/api/routes_training.py": "0e07be9f86487477ac725dc8f7d639116be6d69c15c750b1fca6a25ccc5e2e4a",
+      "backend/conftest.py": "fefff0858284a1c809cf16e0f29ef176cb2d2a57b8fa1ff54f21c414176baa7d",
+      "backend/engine/checkpoint_paths.py": "726c9b25b33d1dacace225f03f4a06eff5ca91a64112cb372ed4b2d09ab50797",
+      "backend/engine/patch_classification.py": "c90ce5ad03308034493f689cfa8bc84b036c75ee905c91106d833fdf0b7d52b8",
+      "backend/engine/warm_start.py": "45d3b616a10b79d66344a1559862cb983b9b8ac62095d6889f41bc0af5084446",
+      "scripts/e2e/patch-prepare-reopen-error-controls.spec.ts": "f397d085539bc381133f62a00d5dddfc526d5ccfca8e1ef7380d2acf81a13fa7",
+      "src/renderer/components/training/PatchClassificationWorkbench.tsx": "1e1ffa525e9db32c058d89620a13cf219f9f5deed943466d8a20c71641aa4cc5",
+      "src/renderer/components/training/PatchPreparedParentBinding.test.cjs": "c915cf61480e8f661b6580b473abafb5a1ac31422710e42f762d4b466629ebbb",
+      "src/renderer/services/modelTrainingProgram.ts": "cd8594aa2ec17fce979858e8276d46264fe53bc7edb65c429b06b2582763357c"
+    },
+    "private_checkpoint": "74fcce8bdc55c22036a8035a5641b7a5d81c2a3f",
+    "tracked_count": 2935
+  },
+  "typecheck": {
+    "new_backend_only_source_typecheck_not_repeated": true,
+    "original_renderer_main_cd73_exit": 0,
+    "renderer_main_log_sha256": "3cea01ca6731d254d8cb8265f4fb29f0abcddf05eb43593ffedb269501b44fad",
+    "unchanged_browser_spec_f397_e2e_typecheck_from_abf_exit": 0
+  }
+}

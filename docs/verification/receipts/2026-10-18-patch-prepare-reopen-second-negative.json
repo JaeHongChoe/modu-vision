@@ -1,0 +1,161 @@
+{
+  "closure": {
+    "backend": {
+      "durationMs": 968,
+      "escaped": [],
+      "exitCode": 0,
+      "exited": true,
+      "exitedBeforeStop": false,
+      "forced": false,
+      "forcedReason": null,
+      "groupAlive": false,
+      "healthy_at_end": true,
+      "pid_alive": false,
+      "port_closed": true,
+      "scanError": null,
+      "signal": null,
+      "stoppedAt": "2026-10-17T16:41:03.109Z",
+      "unownedReferences": []
+    },
+    "global": {
+      "leftovers": [],
+      "scan_error": null,
+      "unowned_references": []
+    },
+    "readback_errors": [
+      "AssertionError: "
+    ],
+    "strict_original_runner_success": false
+  },
+  "execution": {
+    "automatic_retries": 0,
+    "case_attempts": 1,
+    "failed": 1,
+    "ordinary_Popen_wait_returned": true,
+    "original_Root_owned_tool": true,
+    "passed": 0,
+    "signals_sent": false,
+    "skipped": 0,
+    "source_before_after_equal": true,
+    "wrapper_seconds": 27.846365874866024
+  },
+  "history": {
+    "first_source_fix": "Unit final3functionalRED/1PASS\u21927PASS and clean candidate renderer/main0 do not establish browser success; actual02 remainsfailed.",
+    "no_assertion_or_deadline_weakened": true,
+    "original01": "One errorPASS plus one reopenFAIL retained at oldabf. Error evidence is never rerun or repinned.",
+    "original01_precheck": "Root metadata-only KeyError(files) before its full preexecution source iteration; subsequent complete source readbacks retained separately."
+  },
+  "no_credit": {
+    "native_installed_GPU_model_training_quality_or_parent": true,
+    "reopen_action": true,
+    "whole_F026": true
+  },
+  "observed": {
+    "actual_UI_alert_from_error_context": "Warm-start source must match the current project's dataset",
+    "already_completed_assertions": "Real successful12patch preparation, full manifest/copy/split/hash proof, originalUI reload dataset/sample full200bodies and decoded16px preview assertions reached before final no-alert failure.",
+    "captured_original_UI_replies": [
+      {
+        "finished": true,
+        "label": "owning-source-import",
+        "main_frame": true,
+        "same_Request": true,
+        "sha256": "c5454eb0fcf388da965adf9433ecfc9b31a5907409addc443d413b1f5d48114d",
+        "status": 200
+      },
+      {
+        "finished": true,
+        "label": "owning-source-persist",
+        "main_frame": true,
+        "same_Request": true,
+        "sha256": "aca8dd86fac74065e89df9e90ad061f2e0f63ef27a6f065f0655048ec0372c80",
+        "status": 200
+      },
+      {
+        "finished": true,
+        "label": "actual-reopen-prepare",
+        "main_frame": true,
+        "same_Request": true,
+        "sha256": "14592e5a64ab054b2d0cc381b7b5a4f4bf6d09964cb6a026d1da585819396080",
+        "status": 200
+      },
+      {
+        "finished": true,
+        "label": "ordinary-reload-datasets",
+        "main_frame": true,
+        "same_Request": true,
+        "sha256": "b9bd63a31c26d0ed17c6aae3b540e0b3c905f6c5bdd331a4610b68507e812d3b",
+        "status": 200
+      },
+      {
+        "finished": true,
+        "label": "ordinary-reload-sample",
+        "main_frame": true,
+        "same_Request": true,
+        "sha256": "cfe59b1adec7e3d7fdf432bc1637e0478c1a88e9ebedfc64a6c3b7c3ad277964",
+        "status": 200
+      }
+    ],
+    "failed_assertion": "Original10s no-stale-alert gate after real reload",
+    "healthy_source_unchanged_final_assertion": true,
+    "parent_409_fullbody_independently_wired": false,
+    "source_trace": "Existing warm-start source guard compares prepared dataset path against registered original source. This explains the observed alert by source contract; it is not a saved parent Request/response fullbody join."
+  },
+  "raw_refs": [
+    {
+      "bytes": 1648,
+      "label": "run-result.json",
+      "sha256": "59776a0d648ffb86452c1db2be60209a51f8d6e5a990118b5b3bc23a1f451a83"
+    },
+    {
+      "bytes": 10636,
+      "label": "report.json",
+      "sha256": "0d3819ce20c2f2086946101f0179b0b37f7ded05905fb5e37594bf34b570b5dd"
+    },
+    {
+      "bytes": 5482,
+      "label": "browser-01.log",
+      "sha256": "618eadfe8cc55a4295d83ff770464c5f618601d82bd65c9fa9e9b544dc3e7f07"
+    },
+    {
+      "bytes": 73766,
+      "label": "harness-manifest.json",
+      "sha256": "faf444f2e302a423efeaffcd85d20384146e6d26e742f32162a79c682dfd2e2c"
+    },
+    {
+      "bytes": 1042667,
+      "label": "source-before.json",
+      "sha256": "a77b7657b84f95360d48b896165ebe4b2c0ab67a327056e7be754802dc83f32e"
+    },
+    {
+      "bytes": 1042667,
+      "label": "source-after.json",
+      "sha256": "a77b7657b84f95360d48b896165ebe4b2c0ab67a327056e7be754802dc83f32e"
+    },
+    {
+      "bytes": 128,
+      "label": "actual-tool-start.json",
+      "sha256": "2844a7fde12b7a91bb5412c4e8a519412436a09428a4af27716b0a5825f88df7"
+    },
+    {
+      "bytes": 720,
+      "label": "actual-tool-completion.json",
+      "sha256": "d75972a64dc30cbf0d9b1349f5b7fe912004dee7585eb94e278fed056014dde4"
+    },
+    {
+      "bytes": 296,
+      "label": "root-preexecution-readback-01.json",
+      "sha256": "3aeaccd9c4e42f7efe341f8c9baa6a5f79fea8f29af9797ba5f758ac2a3fd3b6"
+    }
+  ],
+  "schema": "modu-vision.patch-reopen-second-negative/v1",
+  "source": {
+    "backend_routes_training_sha256": "c1129c8cb288cadb51a1e60e867bff6cacd08d6124f4cb47df65eea5bd253c33",
+    "component_sha256": "1e1ffa525e9db32c058d89620a13cf219f9f5deed943466d8a20c71641aa4cc5",
+    "dirty": false,
+    "executed_HEAD": "cd73cd39a50a72c420a87e193b70620e92667edd",
+    "first_argument_fix_browser_pass": false,
+    "spec_sha256": "f397d085539bc381133f62a00d5dddfc526d5ccfca8e1ef7380d2acf81a13fa7",
+    "tracked_count": 2934
+  },
+  "status": "preserved_failed_original_case"
+}

@@ -36,7 +36,7 @@
     "src/renderer/components/flowchart/FlowGraphNavigator.tsx": "656832c214f41742d5bc0f66c9f8983c5fb6892cfaf3b42b48ee353f282da20a",
     "src/renderer/components/training/TrainingController.tsx": "136007b7deacecc461f594b8f65b79b909dd210ae6c0a1d0d641172c9a0cd932",
     "src/renderer/components/wizard/WizardHeader.tsx": "1d62c46aa0ade805dc1390fb48ed194fb6192638abd5257fe7e5f93985f6cf86",
-    "src/renderer/components/training/PatchClassificationWorkbench.tsx": "cde9853f3daf15749f7e42f8dbcd9f41a2bdc58acd624ae64ba0e9c93eb98b4c",
+    "src/renderer/components/training/PatchClassificationWorkbench.tsx": "1e1ffa525e9db32c058d89620a13cf219f9f5deed943466d8a20c71641aa4cc5",
     "src/renderer/components/training/PatchRecipePreview.tsx": "fb0b91b076e0512583cd955a9a2bc134275db03145961a488c89ce2e1c63f542",
     "src/renderer/components/training/EnhancementWorkbench.tsx": "a352a4b0b7d9b01383a3505982430dd4e5dd0bc18bb5bf93ef14db523b4d48b6",
     "src/renderer/components/training/DefectGANWorkbench.tsx": "fb3ed02f8e651b16c912ab78d67262e40f42a44811796ebd1472d1b545466f40",
@@ -9855,7 +9855,31 @@
               "state": "pending"
             },
             "reopen": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S4-03",
+                  "source_sha": "74fcce8bdc55c22036a8035a5641b7a5d81c2a3f",
+                  "kind": "click",
+                  "action": "영역 라벨에서 패치 준비",
+                  "expected": "Reopen the actual saved prepared dataset with unchanged source/manifest/copy/split data and original-coordinate preview without training.",
+                  "observed": "One actual ordinary browser case passed: genuine16/16 prepare saved12patches/three copied originals; reload original UI datasets/sample fullbody matches baseline, saved manifest and19business files raw7+SHA remain exact, decoded32/16preview and exact16px/16px option restored, no stale alert. FD64/64; backend natural0/unforced/empty scanners. Pre-reload prepared-response size caption remains blank and two console422 records are retained; no wholeUI/native/model-quality/parent claim.",
+                  "reviewer": "Root reviewed exact source/runner and executed once; independent complete postshutdown source/provider/runtime/body/custody/closure check and two PNG views.",
+                  "test": "scripts/e2e/patch-prepare-reopen-error-controls.spec.ts::patch preparation reopens its actual saved dataset manifest and original-coordinate preview without training",
+                  "receipt": "2026-10-18-patch-prepare-reopen-current-browser.json",
+                  "receipt_sha256": "dd04cb6848d18d8343d608b066d093faf92e6e372fa16ac88ef7f44b00858c90",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "ebf61f3359aa0e1792c07e14e680be59cec0c24399b189a00c40ee27d09ddcae"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "e1c7843e9e9353b26e6fb60157b4fd80b8899be2d18889e992169ffdacb72075"
+                    }
+                  ]
+                }
+              ]
             },
             "handoff": {
               "state": "pending"

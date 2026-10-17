@@ -32,7 +32,7 @@ export function PatchClassificationWorkbench() {
   useEffect(() => {setParent(''); setParents([]); setEvaluation(null);}, [state.scope]);
   useEffect(() => {
     let active = true; setParent(''); setParents([]);
-    if (state.source && state.dataset) void modelTrainingProgram.patch.parents(state.source, backbone).then(result => {
+    if (state.source && state.dataset) void modelTrainingProgram.patch.parents(state.dataset.dataset_path, backbone).then(result => {
       if (active && state.isCurrent()) setParents(result.parents);
     }).catch(cause => {if (active && state.isCurrent()) state.setError(cause.message);});
     return () => {active = false;};
