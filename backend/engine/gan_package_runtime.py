@@ -14,7 +14,10 @@ def _sha(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 # The engine files a generation package carries; runtime_deadline (the owned generation run) needs process_isolation.
 GENERATOR_PACKAGE_ENGINE_FILES = ('defect_gan.py', 'gan_package_runtime.py', 'runtime_device.py', 'geometry_measurement.py',
-                                  'runtime_deadline.py', 'process_isolation.py', 'runtime_configuration.py', 'native_runtime_bridge.py')
+                                  'runtime_deadline.py', 'process_isolation.py', 'runtime_configuration.py', 'native_runtime_bridge.py',
+                                  'original_owned_UI_ancillary_request.py', 'original_request_activity.py',
+                                  'original_owned_account_request.py')
+GENERATOR_PACKAGE_REQUIREMENTS = 'numpy>=1.26\nPillow>=10.4\nopencv-python-headless>=4.10\ntorch>=2.4\nstarlette>=1.7.0\n'
 
 
 def build_generator_package(checkpoint: Path, output_dir: Path) -> Path:
@@ -46,7 +49,7 @@ with tempfile.TemporaryDirectory(prefix="modu-generator-bytecode-") as bytecode:
     from backend.engine.gan_package_runtime import main
     if __name__ == "__main__": raise SystemExit(main())
 ''',encoding='utf-8')
-        (staging/'requirements.txt').write_text('numpy>=1.26\nPillow>=10.4\nopencv-python-headless>=4.10\ntorch>=2.4\n',encoding='utf-8')
+        (staging/'requirements.txt').write_text(GENERATOR_PACKAGE_REQUIREMENTS,encoding='utf-8')
         (staging/'workflow.json').write_text(json.dumps({'task':'defect_gan','stages':['explicit_defect_crops','trained_generator','heldout_diagnostic','generate_unreviewed','human_review','adopt_train_only'],'output_state':'synthetic_unreviewed','quality_status':'unvalidated'}),encoding='utf-8')
         (staging/'README.md').write_text('# GAN generation workflow\nInstall requirements, then run `python generate.py --output /new/review/directory --count 8 --seed 0 --device cpu`. Add `--source-image /original/image.png --regions /regions.json` to compose into explicit original-coordinate regions. Each region declares `id`, `bbox` and optional `opacity`, `feather_px`, `mask_polygon`. The manifest verifies every package file before checkpoint loading. Generated candidates require review and an explicit defect label before adoption into training data. This workflow does not issue an inspection verdict.\n', encoding='utf-8')
         files=[{'path':p.relative_to(staging).as_posix(),'sha256':_sha(p)} for p in sorted(staging.rglob('*')) if p.is_file()]

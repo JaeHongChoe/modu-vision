@@ -458,7 +458,10 @@ const settle=()=>new Promise(resolve=>setImmediate(resolve));
  api.setProjectContext(context('pending-second'));assert.equal(ports.length,2);
  ports[0](8123);ports[1](8123);await pending;await settle();assert.equal(sockets.length,4);
  assert.equal(JSON.parse(new URL(sockets[3].url).searchParams.get('project_context')).project_id,'pending-second');
- telemetry.disconnect();api.setCachedPort(null);const cancelled=telemetry.connect();
+ telemetry.disconnect();api.setCachedPort(null);
+ assert.equal(api.getProjectContext(),null,'changing the local port retires its accepted authority');
+ api.setProjectContext(context('cancelled'));
+ const cancelled=telemetry.connect();assert.equal(ports.length,3,'the newly accepted context starts its own lookup');
  telemetry.disconnect();ports[2](8123);await cancelled;await settle();assert.equal(sockets.length,4);
 })().catch(error=>{console.error(error);telemetry.disconnect();process.exitCode=1;});
 '''
