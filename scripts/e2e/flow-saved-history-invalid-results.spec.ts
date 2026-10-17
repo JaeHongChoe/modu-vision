@@ -7,6 +7,19 @@ import {installDesktopHostShim} from './fixtures/desktop-host-shim';
 
 const historyRoute = '/api/flow-workspace/comparisons';
 const sha = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
+function annotationPayloads(root: string, metadataFile: string): Record<string, string> {
+  const files: Record<string, string> = {};
+  const visit = (directory: string) => {
+    for (const name of fs.readdirSync(directory).sort()) {
+      const file = path.join(directory, name), stat = fs.lstatSync(file);
+      expect(stat.isSymbolicLink()).toBe(false);
+      if (stat.isDirectory()) visit(file);
+      else if (file !== metadataFile) {expect(stat.isFile()).toBe(true); files[path.relative(root, file)] = sha(fs.readFileSync(file));}
+    }
+  };
+  if (fs.existsSync(root)) visit(root);
+  return files;
+}
 test.use({actionTimeout: 10_000});
 
 // Removing the saved-result refusal makes these original persisted rows crash
@@ -42,6 +55,21 @@ test('persisted legacy comparison results refuse invalid execution evidence and 
     revision_id: imported.result.revision.revision_id, expected_active: null,
   });
   expect(accepted).toEqual({active_revision: imported.result.revision.revision_id, job_id: admitted.job_id});
+  // Ordinary review reads register workflow defaults lazily. Hydrate that real
+  // ledger before the library baseline instead of accepting null/empty drift.
+  const metadataFile = path.join(project.annotations_dir, 'by_dataset',
+    sha(Buffer.from(project.source_dataset_dir)).slice(0, 16), 'metadata', 'workflow.json');
+  const annotationPayloadsBefore = annotationPayloads(project.annotations_dir, metadataFile);
+  for (const image of workspace.images) expect(sha(fs.readFileSync(image.path))).toBe(image.sha256);
+  const metadataRoute = '/api/dataset/metadata?' + new URLSearchParams({
+    folder_path: project.source_dataset_dir, offset: '0', limit: '50',
+  });
+  const metadata = await api(metadataRoute);
+  expect(metadata.total).toBe(2); expect(metadata.items).toHaveLength(2);
+  expect(metadata.items.map((row: any) => row.file_path).sort()).toEqual(workspace.images.map(image => image.path).sort());
+  for (const row of metadata.items) expect(row).toMatchObject({product: '', lot: ''});
+  expect(annotationPayloads(project.annotations_dir, metadataFile)).toEqual(annotationPayloadsBefore);
+  for (const image of workspace.images) expect(sha(fs.readFileSync(image.path))).toBe(image.sha256);
   const library = await api('/api/dataset/library/images?state=valid&limit=120');
   expect(library.items).toHaveLength(2);
 
@@ -119,7 +147,7 @@ test('persisted legacy comparison results refuse invalid execution evidence and 
   protectedFiles.set(path.join(project.project_dir, 'project.json'), fs.readFileSync(path.join(project.project_dir, 'project.json')));
   const draftFile = path.join(project.project_dir, 'flowcharts', 'drafts', draftContext.labelset_id,
     sha(Buffer.from(project.source_dataset_dir)).slice(0, 16), 'draft.json');
-  for (const file of [draftFile, path.join(project.project_dir, 'flowcharts', 'active.json'),
+  for (const file of [metadataFile, draftFile, path.join(project.project_dir, 'flowcharts', 'active.json'),
     path.join(project.project_dir, 'flowcharts', 'versions', savedFlow.version_id + '.json')]) {
     protectedFiles.set(file, fs.readFileSync(file)); evidence.addFile(file);
   }
@@ -132,6 +160,7 @@ test('persisted legacy comparison results refuse invalid execution evidence and 
   const unchanged = () => {
     expect(fs.readdirSync(directory).sort()).toEqual(records.map(item => path.basename(item.file)).sort());
     for (const [file, bytes] of protectedFiles) expect(fs.readFileSync(file).equals(bytes), file).toBe(true);
+    expect(annotationPayloads(project.annotations_dir, metadataFile)).toEqual(annotationPayloadsBefore);
   };
   const initialHistory = await api(historyRoute);
   expect(initialHistory.invalid).toEqual([]);
@@ -217,6 +246,7 @@ test('persisted legacy comparison results refuse invalid execution evidence and 
     await evidence.screenshot(page, 'legacy-normal-recovered-after-real-reload');
     expect(await api(historyRoute)).toEqual(initialHistory);
     expect(await api('/api/dataset/library/images?state=valid&limit=120')).toEqual(library);
+    expect(await api(metadataRoute)).toEqual(metadata);
     expect(await api('/api/flowchart/draft')).toEqual(savedDraft);
     expect(await api(activeFlowRoute)).toEqual(activeFlow);
     unchanged();
@@ -225,8 +255,9 @@ test('persisted legacy comparison results refuse invalid execution evidence and 
       invalid_controls: controls.map(control => ({id: control.id, side: control.side})),
       real_original_history_reads: reads,
       actual_API_created_baseline: {project_task: project.task, dataset_import: imported,
-        accepted_revision: accepted, library, saved_flow: savedFlow, saved_draft: savedDraft, active_flow: activeFlow,
+        accepted_revision: accepted, metadata, library, saved_flow: savedFlow, saved_draft: savedDraft, active_flow: activeFlow,
         completed_training_job_created: false, model_binding_created: false, evaluation_result_created: false},
+      metadata_hydration_image_and_annotation_payloads_unchanged: true,
       protected_files: [...protectedFiles].map(([file, bytes]) => ({file, bytes: bytes.length, sha256: sha(bytes)})),
       synthetic_legacy_fixtures: true, legacy_integrity: 'legacy_unverified', synthetic_saved_previews_decoded: true,
       normal_selection_recovered_after_each_refusal: true, actual_renderer_reload_recovered: true,
