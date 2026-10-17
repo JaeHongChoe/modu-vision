@@ -8,6 +8,7 @@ resource effects. The normal missing-draft 404 is a separate original branch.
 from contextlib import contextmanager, _GeneratorContextManager
 from contextvars import ContextVar
 from functools import wraps
+from _thread import LockType
 import builtins
 import inspect
 import hashlib
@@ -404,7 +405,7 @@ class OriginalOwnedUIAncillaryRequest:
             (Path,('open','read_text','read_bytes','glob')),(builtins,('open','map','iter','next','staticmethod')),(io,('open','text_encoding','TextIOWrapper','BufferedReader','BufferedRandom','FileIO')),
             (json,('load','loads','dump','dumps')),(os,('replace','fsync','getpid','open','fdopen','fstat','close')),
             (sys.modules[__name__],('_ACTIVE','_HANDLERS','_SPEC','_RESOURCES','_PROFILE_KIND','_context','_headers','_SelectedCurrentAuth',
-                'OriginalOwnedUIAncillaryRequest','_AncillaryAttempt','_AncillaryAuth','_AncillaryIncluded','GeneratorType','_DATASET_NAMES','_DATASET_METADATA_NAMES','_DATASET_OPERATION_ROUTES')),
+                'OriginalOwnedUIAncillaryRequest','_AncillaryAttempt','_AncillaryAuth','_AncillaryIncluded','GeneratorType','LockType','_DATASET_NAMES','_DATASET_METADATA_NAMES','_DATASET_OPERATION_ROUTES')),
         ) for name in names]
         if os.name!='nt':
             import fcntl
@@ -469,6 +470,7 @@ class OriginalOwnedUIAncillaryRequest:
         self.eligible=(set(self.handlers)==set(_SPEC) and self.profile_kind is profiles.ProfileStore
             and type(self.registry) is ContextRegistry and type(self.flow_lock) is type(threading.RLock())
             and type(self.profile_lock) is type(threading.RLock())
+            and type(routes_dataset._DIGEST_LOCK) is LockType
             and routes_flowchart.get_current_project is routes_flow_workspace.get_current_project is routes_product_delivery.get_current_project is routes_project.get_current_project is main.get_current_project
             and routes_project.get_current_project is original_current_project_request._DECORATED.get('resolution')
             and ContextRegistry._db is original_current_project_request._DECORATED.get('context_db'))
@@ -2262,7 +2264,11 @@ def observe_original_dataset_thumbnail_operation(kind):
             try:result=function(*args,**kwargs)
             except BaseException:attempt.fail('thumbnail_operation_failed');raise
             else:
-                if not valid or not attempt.resource_entry('thumbnail_operation_return') or kind=='memo_get' and routes_dataset._DIGEST_LOCK.locked():attempt.fail('thumbnail_operation_return')
+                # The pinned original memo body returns through its builtin
+                # lock context's exit. A different original worker may already
+                # hold that same lock, so its global locked() state cannot
+                # establish whether this operation released its own scope.
+                if not valid or not attempt.resource_entry('thumbnail_operation_return'):attempt.fail('thumbnail_operation_return')
                 else:attempt.thumbnail_operations.append((kind,result))
                 return result
             finally:
