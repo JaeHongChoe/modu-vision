@@ -74,7 +74,18 @@ class _FlatModel(nn.Module):
 def _hash_array(value):return hashlib.sha256(np.ascontiguousarray(value).tobytes()).hexdigest()
 
 
-def convert_model_artifact(model,example,output_dir,*,precision='fp32',calibration=(),validation=(),device='CPU',cpu_threads=1,dynamic_spatial=False):
+def _output_argmax_counts(reference, candidate, *, task=None):
+    """Count changed output locations using the task's saved tensor layout."""
+    axis = 1 if task == 'segmentation' else -1
+    if task == 'segmentation' and candidate.ndim != 4:
+        raise ValueError('Segmentation argmax evidence requires NCHW output')
+    if candidate.ndim >= 2 and candidate.shape[axis] > 1:
+        changed = int(np.count_nonzero(candidate.argmax(axis) != reference.argmax(axis)))
+        return axis, changed, int(candidate.size // candidate.shape[axis])
+    return axis, 0, 0
+
+
+def convert_model_artifact(model,example,output_dir,*,precision='fp32',calibration=(),validation=(),device='CPU',cpu_threads=1,dynamic_spatial=False,task=None):
     if precision not in ('fp32','fp16','int8'):raise ValueError('precision must be fp32, fp16 or int8')
     require_openvino_device(device)
     from backend.engine.runtime_configuration import runtime_options
@@ -108,7 +119,7 @@ def convert_model_artifact(model,example,output_dir,*,precision='fp32',calibrati
         ov.save_model(ir,str(output/'model.xml'),compress_to_fp16=precision=='fp16')
         core=ov.Core();properties=_compile_properties(core,device,cpu_threads)
         compiled=core.compile_model(str(output/'model.xml'),device,properties)
-        gaps=[];relative=[];disagreements=0;compared=0;latencies=[];reference_latencies=[]
+        gaps=[];relative=[];disagreements=0;compared=0;latencies=[];reference_latencies=[];argmax_axis=-1
         for tensor in validation:
             reference_started=time.perf_counter()
             with torch.inference_mode():reference=[item.detach().cpu().numpy() for item in _flatten(model(torch.from_numpy(tensor)))]
@@ -120,10 +131,10 @@ def convert_model_artifact(model,example,output_dir,*,precision='fp32',calibrati
                 difference=np.abs(actual.astype(np.float64)-expected.astype(np.float64))
                 if not np.isfinite(difference).all():raise ValueError('Converted model produced nonfinite validation evidence')
                 gaps.append(float(difference.max(initial=0)));relative.append(float(difference.mean()))
-                if actual.ndim>=2 and actual.shape[-1]>1:
-                    disagreements+=int(np.count_nonzero(actual.argmax(-1)!=expected.argmax(-1)));compared+=int(np.prod(actual.shape[:-1]))
+                argmax_axis, changed, locations = _output_argmax_counts(expected, actual, task=task)
+                disagreements += changed; compared += locations
         metrics={'calibration_count':len(calibration),'validation_count':len(validation),'max_absolute_error':max(gaps),
-            'mean_absolute_error':float(np.mean(relative)),'output_argmax_disagreement_fraction':disagreements/compared if compared else None,'output_argmax_axis':-1,
+            'mean_absolute_error':float(np.mean(relative)),'output_argmax_disagreement_fraction':disagreements/compared if compared else None,'output_argmax_axis':argmax_axis,
             'latency_mean_ms':float(np.mean(latencies)),'latency_p95_ms':float(np.percentile(latencies,95)),
             'reference_latency_mean_ms':float(np.mean(reference_latencies)),
             'measured_speedup':float(np.mean(reference_latencies))/float(np.mean(latencies)),
@@ -315,7 +326,7 @@ def _optimize_flow_package(package_dir,*,output_dir,precision='fp32',calibration
             validation=[_image_tensor(p,size,channels,row['task']) for p in validation_images]
             directory=checkpoint.parent/'openvino'
             result=convert_model_artifact(model,validation[0],directory,precision=precision,calibration=calibration,validation=validation,
-                device=device,cpu_threads=cpu_threads,dynamic_spatial=row['task']=='enhancement')
+                device=device,cpu_threads=cpu_threads,dynamic_spatial=row['task']=='enhancement',task=row['task'])
             result['metrics']['validation_image_count']=len(validation_images)
             (directory/'conversion.json').write_text(json.dumps(result,indent=2)+'\n',encoding='utf-8')
             record={'job_id':row['job_id'],'task':row['task'],'checkpoint':row['checkpoint'],'checkpoint_sha256':_sha256(checkpoint),
