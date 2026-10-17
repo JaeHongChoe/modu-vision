@@ -16,15 +16,55 @@ test('persisted legacy comparison results refuse invalid execution evidence and 
   const api = async (route: string, body?: unknown, method?: string) => {
     const response = await page.request.fetch(renderer.origin + route, {
       method: method || (body === undefined ? 'GET' : 'POST'),
+      timeout: 10_000,
       ...(body === undefined ? {} : {data: body}),
     });
     expect(response.ok(), await response.text()).toBe(true);
     return response.json();
   };
   await installDesktopHostShim(page, renderer.port);
-  await api('/api/project/create', {name: 'Synthetic saved comparison refusal', task: 'classification'});
+  await api('/api/project/create', {name: 'Synthetic saved comparison refusal', task: 'segmentation'});
   const project = await api('/api/project/update', {source_dataset_dir: workspace.dataset}, 'PUT');
-  await api('/api/dataset/import', {folder_path: project.source_dataset_dir, task: 'classification'});
+  await api('/api/dataset/import', {folder_path: project.source_dataset_dir, task: 'segmentation', validate_images: true});
+
+  // Make ordinary project reads valid through their real APIs. Import completion
+  // below verifies only the two synthetic images; it is not a training job.
+  expect((await api('/api/dataset/revisions')).active_revision).toBeNull();
+  const admitted = await api('/api/dataset/imports', {task: 'segmentation', verify: true, invalid_policy: 'reject', follow_links: false});
+  let imported: any;
+  await expect.poll(async () => {
+    imported = await api('/api/dataset/imports/' + admitted.job_id);
+    return imported.state;
+  }, {timeout: 10_000}).toBe('completed');
+  expect(imported.result.revision).toMatchObject({state: 'prepared', image_count: 2, valid_count: 2,
+    error_count: 0, verified_all: true});
+  const accepted = await api('/api/dataset/imports/' + admitted.job_id + '/accept', {
+    revision_id: imported.result.revision.revision_id, expected_active: null,
+  });
+  expect(accepted).toEqual({active_revision: imported.result.revision.revision_id, job_id: admitted.job_id});
+  const library = await api('/api/dataset/library/images?state=valid&limit=120');
+  expect(library.items).toHaveLength(2);
+
+  // An editable inspection template may have an unbound inspection node. Save
+  // and activate it without creating any model binding, checkpoint or result.
+  const graph = await api('/api/flowchart/templates/single-segmentation');
+  graph.name = 'Unbound synthetic history display baseline';
+  expect(graph.nodes.every((node: any) => !node.data.model_job_id)).toBe(true);
+  const savedFlow = await api('/api/flowchart/pipeline?' + new URLSearchParams({
+    recipe_task: 'segmentation', source_dataset_path: project.source_dataset_dir,
+    change_reason: 'Synthetic saved history display baseline; no model or execution', expected_version_id: 'none',
+  }), graph);
+  expect(savedFlow.status).toBe('saved');
+  expect(savedFlow.version_id).toMatch(/^[a-f0-9]{32}$/);
+  const draftContext = {project_id: project.id, source_dataset_path: project.source_dataset_dir,
+    labelset_id: project.active_labelset_id || 'default'};
+  const savedDraft = await api('/api/flowchart/draft', {pipeline: graph, context: draftContext,
+    base_version_id: savedFlow.version_id}, 'PUT');
+  expect(savedDraft.active_version_id).toBe(savedFlow.version_id);
+  const activeFlowRoute = '/api/flowchart/pipeline/active/record?source_dataset_path=' + encodeURIComponent(project.source_dataset_dir);
+  const activeFlow = await api(activeFlowRoute);
+  expect(activeFlow.version_id).toBe(savedFlow.version_id);
+  expect(activeFlow.pipeline).toEqual(savedDraft.pipeline);
 
   const image = workspace.images[0];
   const preview = 'data:image/png;base64,' + fs.readFileSync(image.path).toString('base64');
@@ -77,6 +117,12 @@ test('persisted legacy comparison results refuse invalid execution evidence and 
   });
   const protectedFiles = new Map<string, Buffer>(originals);
   protectedFiles.set(path.join(project.project_dir, 'project.json'), fs.readFileSync(path.join(project.project_dir, 'project.json')));
+  const draftFile = path.join(project.project_dir, 'flowcharts', 'drafts', draftContext.labelset_id,
+    sha(Buffer.from(project.source_dataset_dir)).slice(0, 16), 'draft.json');
+  for (const file of [draftFile, path.join(project.project_dir, 'flowcharts', 'active.json'),
+    path.join(project.project_dir, 'flowcharts', 'versions', savedFlow.version_id + '.json')]) {
+    protectedFiles.set(file, fs.readFileSync(file)); evidence.addFile(file);
+  }
   for (const source of workspace.images) {
     const bytes = fs.readFileSync(source.path);
     expect(sha(bytes)).toBe(source.sha256);
@@ -170,11 +216,17 @@ test('persisted legacy comparison results refuse invalid execution evidence and 
     await panel.getByText('Synthetic saved source step: REVIEW (1 → 1)', {exact: true}).scrollIntoViewIfNeeded();
     await evidence.screenshot(page, 'legacy-normal-recovered-after-real-reload');
     expect(await api(historyRoute)).toEqual(initialHistory);
+    expect(await api('/api/dataset/library/images?state=valid&limit=120')).toEqual(library);
+    expect(await api('/api/flowchart/draft')).toEqual(savedDraft);
+    expect(await api(activeFlowRoute)).toEqual(activeFlow);
     unchanged();
     expect(pageErrors).toEqual([]); expect(consoleErrors).toEqual([]); expect(mutations).toEqual([]);
     const proof = {cell: 'F064.saved-comparison.invalid-results', project_id: project.id,
       invalid_controls: controls.map(control => ({id: control.id, side: control.side})),
       real_original_history_reads: reads,
+      actual_API_created_baseline: {project_task: project.task, dataset_import: imported,
+        accepted_revision: accepted, library, saved_flow: savedFlow, saved_draft: savedDraft, active_flow: activeFlow,
+        completed_training_job_created: false, model_binding_created: false, evaluation_result_created: false},
       protected_files: [...protectedFiles].map(([file, bytes]) => ({file, bytes: bytes.length, sha256: sha(bytes)})),
       synthetic_legacy_fixtures: true, legacy_integrity: 'legacy_unverified', synthetic_saved_previews_decoded: true,
       normal_selection_recovered_after_each_refusal: true, actual_renderer_reload_recovered: true,

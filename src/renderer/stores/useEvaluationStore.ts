@@ -311,6 +311,8 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   loadEvaluation: async (jobId, source) => {
     calibrationSource = null;
     const selectedSource = source ? {...source} : undefined;
+    // Keep selectors fixed while optional completed-model discovery is pending.
+    source = selectedSource;
     const sourceCurrent = selectedSource?.folderPath ? captureCalibrationSource(selectedSource) : null;
     if (selectedSource?.folderPath && !sourceCurrent) return;
     const training = useTrainingStore.getState();
@@ -339,6 +341,22 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
       const native=Boolean(source?.executionTarget && source.evaluationDatasetVersionId);
       if(native && (!requestedJob || !source?.folderPath || !source.device
         || (source.executionTarget==='selected_compute')!==Boolean(source.computeProfileId)))throw new Error('평가 모델과 실행 위치를 명시적으로 선택하세요.');
+      if (!requestedJob && source?.folderPath) {
+        // The catalog is an optional discovery read: no completed matching
+        // checkpoint is a 200 empty list, not a missing selected-job error.
+        // Keep selected/current/stored job reads on the authoritative evaluator.
+        const catalog = await api.flowchart.modelCatalog(source.folderPath);
+        if (generation !== evaluationGeneration || source.isCurrent?.() === false || (sourceCurrent && !sourceCurrent())) return;
+        if (!catalog.models.some(model => model.task === source!.task)) {
+          currentHeatmapRequestId += 1;
+          set({executionEvidence:null, remoteRequest:null, remoteOperation:null, remoteOperationError:null,
+            isLoading:false, jobId:null, metrics:{}, classSemantics:null, confusionMatrix:null,
+            testPredictions:[], filteredPredictions:[], selectedPrediction:null, selectedCell:null,
+            overkillAnalysis:null, heatmapOverlayBase64:null, heatmapLoading:false,
+            errorMessage:'현재 데이터로 학습한 모델이 없습니다. 3단계에서 학습을 완료하세요.'});
+          return;
+        }
+      }
       const res = native ? await api.evaluation.runCoreCohort({task:source!.task,stage:'evaluate',execution_target:source!.executionTarget!,
         device:source!.device!,...(source!.computeProfileId?{compute_profile_id:source!.computeProfileId}:{}),
         params:{job_id:requestedJob!,dataset_path:source!.folderPath,evaluation_dataset_version_id:source!.evaluationDatasetVersionId!}})
