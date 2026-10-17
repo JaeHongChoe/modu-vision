@@ -1,0 +1,297 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "49b597a08dc64bf7a39cee30e767e4c563175f2e",
+  "source_dirty": false,
+  "test": "scripts/e2e/roi-keyboard-small-image.spec.ts::U007 trusted ROI keys after a real 8x8 input unmount preserve the saved original-coordinate draft",
+  "test_source_sha256": "43726428400f7324146311e8539746b3e0fa34c7202973ab0a0137fc9034c1a6",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "workers": 1,
+  "retries": 0,
+  "report_sha256": "0113335c26683c1e065315d98ef6b4141df757941fc25adeee6e94b2fa297f84",
+  "harness_sha256": "17701da0778ab76fdbcf49771e057bd64eca617aee94778f2f00a22e2bdd0d04",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "cc85b90bf2f6b1ec06036298b4f4b8886075c0ceba47fcaf66c3ad9f3167265c"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "6dce3bd8c184e35008c29fbef5941f71026d74b4d52a954b3a05ad8c7a4ead7a"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "5d1fa7121222d3f4c5e38d4e6cf0d9f1c70e6c3eebbbd3b07e9b35ba1a04fe81"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Only U007.native-original-roi-keyboard-resize.invalid on this browser source: trusted ordinary ROI keys after real invalid-size image selection unmounts the prior editor. Positive original-image keys and normal reopen are controls; no other scenario, native lifetime, model quality or parent acceptance.",
+  "execution": {
+    "browser_channel": "chrome",
+    "browser_version": "155.0.8059.80",
+    "test_cases": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "command_exit_code": 0,
+    "command_elapsed_seconds": 17.56744520785287,
+    "original_action_and_response_body_budget_ms": 10000
+  },
+  "positive_control": {
+    "original_dimensions": [
+      512,
+      256
+    ],
+    "real_UI_local_file_confirmation": true,
+    "real_pointer_initial_ROI": [
+      64,
+      32,
+      257,
+      161
+    ],
+    "trusted_original_SVG_ArrowRight": {
+      "x_before": 64,
+      "x_after": 65
+    },
+    "trusted_original_SVG_ShiftArrowDown": {
+      "height_before": 129,
+      "height_after": 130
+    },
+    "defaultPrevented_after_original_dispatch": true,
+    "saved_ROI": [
+      65,
+      32,
+      258,
+      162
+    ],
+    "one_original_UI_draft_PUT": true,
+    "normal_source_reopened_with_exact_saved_ROI": true
+  },
+  "invalid_control": {
+    "actual_owned_image_dimensions": [
+      8,
+      8
+    ],
+    "outside_business_source_in_owned_project_dataset": true,
+    "extra_import_for_tiny_image": false,
+    "original_image_info_status": 200,
+    "original_image_info_body_sha256": "c0450072f564d1615da6b64e3d9e1c98fb62f74e44d780125e30d63ba1552df0",
+    "source_sha256": "4a893f10cbbd08aa49134043204231efa7bedb9cca5419b98168f2924272961d",
+    "exact_minimum16notice_in_original_DOM": true,
+    "editable_ROI_SVG_absent": true,
+    "original_editor_reference_disconnected": true,
+    "natural_modal_focus_restore": "live image-change opener button",
+    "trusted_ordinary_keys": [
+      "ArrowRight",
+      "Shift+ArrowDown"
+    ],
+    "actual_key_target": "connected focused BUTTON / 이미지 변경...",
+    "defaultPrevented_after_original_dispatch": false,
+    "dispatch_and_two_animation_frames_complete_each": true,
+    "postbaseline_business_mutations": 0,
+    "exact_original_ROI_draft_source_and_protected_roots_unchanged": true,
+    "screenshot_limit": "Minimum-size notice is partly clipped at the sidebar top; the original DOM assertion retains exact full text. Reopen shows exact node coordinates; editor is below screenshot viewport, with exact DOM rectangle assertions."
+  },
+  "observed_original_key_events": [
+    {
+      "phase": "positive_original_ArrowRight",
+      "trusted": true,
+      "key": "ArrowRight",
+      "code": "ArrowRight",
+      "shift": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "repeat": false,
+      "target_tag": "SVG",
+      "target_role": "application",
+      "target_aria_label": "원본 이미지 ROI 편집",
+      "target_text": "",
+      "target_connected": true,
+      "target_is_original_editor": true,
+      "original_editor_connected": true,
+      "active_element_matches_target": true,
+      "editable_or_dialog": false,
+      "modal": false,
+      "focused_document": true,
+      "default_prevented_after_dispatch": true,
+      "dispatch_completed": true,
+      "two_animation_frames": true
+    },
+    {
+      "phase": "positive_original_ShiftArrowDown",
+      "trusted": true,
+      "key": "ArrowDown",
+      "code": "ArrowDown",
+      "shift": true,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "repeat": false,
+      "target_tag": "SVG",
+      "target_role": "application",
+      "target_aria_label": "원본 이미지 ROI 편집",
+      "target_text": "",
+      "target_connected": true,
+      "target_is_original_editor": true,
+      "original_editor_connected": true,
+      "active_element_matches_target": true,
+      "editable_or_dialog": false,
+      "modal": false,
+      "focused_document": true,
+      "default_prevented_after_dispatch": true,
+      "dispatch_completed": true,
+      "two_animation_frames": true
+    },
+    {
+      "phase": "invalid_unmounted_ArrowRight",
+      "trusted": true,
+      "key": "ArrowRight",
+      "code": "ArrowRight",
+      "shift": false,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "repeat": false,
+      "target_tag": "BUTTON",
+      "target_role": null,
+      "target_aria_label": null,
+      "target_text": "이미지 변경...",
+      "target_connected": true,
+      "target_is_original_editor": false,
+      "original_editor_connected": false,
+      "active_element_matches_target": true,
+      "editable_or_dialog": false,
+      "modal": false,
+      "focused_document": true,
+      "default_prevented_after_dispatch": false,
+      "dispatch_completed": true,
+      "two_animation_frames": true
+    },
+    {
+      "phase": "invalid_unmounted_ShiftArrowDown",
+      "trusted": true,
+      "key": "ArrowDown",
+      "code": "ArrowDown",
+      "shift": true,
+      "ctrl": false,
+      "alt": false,
+      "meta": false,
+      "repeat": false,
+      "target_tag": "BUTTON",
+      "target_role": null,
+      "target_aria_label": null,
+      "target_text": "이미지 변경...",
+      "target_connected": true,
+      "target_is_original_editor": false,
+      "original_editor_connected": false,
+      "active_element_matches_target": true,
+      "editable_or_dialog": false,
+      "modal": false,
+      "focused_document": true,
+      "default_prevented_after_dispatch": false,
+      "dispatch_completed": true,
+      "two_animation_frames": true
+    }
+  ],
+  "custody": {
+    "source_tracked_files": 2865,
+    "source_raw9_and_body_pins_equal": true,
+    "source_before_inventory_sha256": "9136f3477c18cc58ef5db680b7307da68cfe84cd80fb18089213bbf8b6dbf967",
+    "source_after_inventory_sha256": "9136f3477c18cc58ef5db680b7307da68cfe84cd80fb18089213bbf8b6dbf967",
+    "published_drag_spec_sha256_unchanged": "cc459838aef446b814482935397d9eb3c2655c96fa9bcb4240e92076100e41f8",
+    "original_browser_complete_responses": 91,
+    "fixture_complete_API_responses": 18,
+    "verified_harness_artifacts": 117,
+    "protected_tree_regular_files": {
+      "source": 1,
+      "annotations": 1,
+      "models": 0,
+      "reports": 0,
+      "flowcharts": 1
+    },
+    "protected_raw9_and_bytes_exact_before_after_invalid_after_reopen_and_poststop": true,
+    "poststop_readback_sha256": "36b549ccbbaf4b7a583413f5e23c2b96ab89df8637ab69150be0a1252211a746",
+    "Root_independent_rehash": {
+      "references": 234,
+      "unique_paths": 125,
+      "size": 39043,
+      "sha256": "e7e9d7bfaa461eca48c538630e6342369b9724d769fc10071ccee56f49a91285"
+    }
+  },
+  "guards": {
+    "page_errors": 0,
+    "console_errors": 0,
+    "request_failures": 0,
+    "foreign_requests": 0,
+    "postbaseline_mutations": 0,
+    "controlled_network_responses": false,
+    "product_or_guard_changes_during_execution": false,
+    "synthetic_key_dispatch": false,
+    "product_handler_replacement": false
+  },
+  "owned_natural_closure": {
+    "backend_exit_code": 0,
+    "signal": null,
+    "forced": false,
+    "early_exit": false,
+    "port_closed": true,
+    "pid_alive": false,
+    "group_alive": false,
+    "escaped_processes": 0,
+    "leftovers": 0,
+    "unowned_references": 0,
+    "scan_error": null
+  },
+  "raw_evidence_pins": {
+    "log": {
+      "size": 399,
+      "sha256": "94f88227388369a4fc040d9605d836aee528a61e0d77daac52d4bc9fc6bda80a"
+    },
+    "readback": {
+      "size": 76781,
+      "sha256": "36b549ccbbaf4b7a583413f5e23c2b96ab89df8637ab69150be0a1252211a746"
+    },
+    "report": {
+      "size": 7245,
+      "sha256": "0113335c26683c1e065315d98ef6b4141df757941fc25adeee6e94b2fa297f84"
+    },
+    "harness": {
+      "size": 186099,
+      "sha256": "17701da0778ab76fdbcf49771e057bd64eca617aee94778f2f00a22e2bdd0d04"
+    },
+    "teardown": {
+      "size": 362,
+      "sha256": "d81d4168e38bb8cf649c709a1f2678c3979e13b9208b3d5e6e67f5ca003918da"
+    },
+    "private_completion": {
+      "size": 6205,
+      "sha256": "84d704b1daaf1f0ac4e7423aeef861c968fb78e5143e6d7628a777b5fc8bde14"
+    },
+    "root_independent_rehash": {
+      "size": 39043,
+      "sha256": "e7e9d7bfaa461eca48c538630e6342369b9724d769fc10071ccee56f49a91285"
+    }
+  },
+  "limits": {
+    "no_claim_key_delivered_to_detached_SVG": true,
+    "invalid_geometry_handler_execution_in_absent_editor_claimed": false,
+    "model_training_or_inference_invoked": false,
+    "backend_health_device_detection": "mps; availability discovery is not model execution",
+    "installed_native_lifetime_qualified": false,
+    "drag_invalid_autocredit": false,
+    "cache_branch_coverage": false,
+    "parent_acceptance": false,
+    "other_scenario_promotion": false
+  }
+}
