@@ -32080,7 +32080,35 @@
               "state": "pending"
             },
             "invalid": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S2-05",
+                  "source_sha": "49b597a08dc64bf7a39cee30e767e4c563175f2e",
+                  "kind": "click",
+                  "action": "ArrowRight · Shift+ArrowDown",
+                  "expected": "After a real invalid-size selected image unmounts the ROI SVG, trusted ordinary ROI keys must not invoke stale ROI changes or business writes; saved original ROI, draft and source remain exact.",
+                  "observed": "browser: Real512x256 input accepted trusted ArrowRight and Shift+ArrowDown on the connected original SVG, preventing defaults and saving exactROI[65,32,258,162]. Ordinary local-file modal confirmation selected a real8x8 input, rendered the exact minimum16notice and removed that editor. Natural modal focus restored to the live image-change button; both trusted keys targeted that connected focused button with defaultPreventedfalse and completed dispatch plus2animationframes. Neither key changed ROI/source/rawdraft/protected roots or issued a business write. Normal source reopen and ordinary backend stop retained exact saved bytes;91 original UI and18 fixture full bodies completed inside original10s deadlines with zero page/console/request/foreign errors.",
+                  "reviewer": "Codex root finalized exact one-cell source/action/response/custody review, independently viewed3 original screenshots and rehashed234 references/125 unique files; source author separately rehashed117 harness artifacts and protected poststop pins. Human quality, native lifetime and parent acceptance remain pending.",
+                  "test": "scripts/e2e/roi-keyboard-small-image.spec.ts::U007 trusted ROI keys after a real 8x8 input unmount preserve the saved original-coordinate draft",
+                  "receipt": "2026-10-17-u007-keyboard-small-image-browser.json",
+                  "receipt_sha256": "813b1edb0c377f50f5a6c1d624d21518ccde45bb757a2ef4453ddc07560a7357",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "cc85b90bf2f6b1ec06036298b4f4b8886075c0ceba47fcaf66c3ad9f3167265c"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "6dce3bd8c184e35008c29fbef5941f71026d74b4d52a954b3a05ad8c7a4ead7a"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "5d1fa7121222d3f4c5e38d4e6cf0d9f1c70e6c3eebbbd3b07e9b35ba1a04fe81"
+                    }
+                  ]
+                }
+              ]
             },
             "error": {
               "state": "pending"
