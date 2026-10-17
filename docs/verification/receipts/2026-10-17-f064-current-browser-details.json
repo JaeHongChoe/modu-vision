@@ -1,0 +1,265 @@
+{
+  "schema": "modu-vision.f064-current-browser-details/v1",
+  "source_sha": "5f43c863f46606782c260270365e61e7c1b52aab",
+  "source_dirty": false,
+  "test_source_sha256": "3f2dd42813d1615f6c17a0121388662d8505158d6b350aa8f211a138f2235b65",
+  "production_source_equivalent_to": "2bf54a90cbde0ec9ecef0f777699a33a9669e75e",
+  "mode": "browser",
+  "browser_channel": "chrome",
+  "browser_version": "155.0.8059.80",
+  "playwright_version": "1.63.0",
+  "status": "passed",
+  "attempts": 1,
+  "retries": 0,
+  "workers": 1,
+  "synthetic_fixture_images": 2,
+  "persisted_legacy_controls": [
+    {
+      "id": "legacy-missing-steps-a",
+      "side": "A"
+    },
+    {
+      "id": "legacy-null-steps-b",
+      "side": "B"
+    },
+    {
+      "id": "legacy-object-steps-a",
+      "side": "A"
+    },
+    {
+      "id": "legacy-null-step-a",
+      "side": "A"
+    },
+    {
+      "id": "legacy-object-step-name-b",
+      "side": "B"
+    },
+    {
+      "id": "legacy-invalid-total-latency-a",
+      "side": "A"
+    },
+    {
+      "id": "legacy-invalid-cache-latency-b",
+      "side": "B"
+    }
+  ],
+  "owning_refusals_and_original_JSON_readbacks": 7,
+  "normal_recovery_after_each_refusal": true,
+  "actual_renderer_reload_recovery": true,
+  "protected_file_count": 15,
+  "protected_files": [
+    {
+      "id": "projects/synthetic_saved_comparison_refusal/flowcharts/comparisons/legacy-missing-steps-a.json",
+      "bytes": 1933,
+      "sha256": "1ac485acde43528e8e74581d708a2926cb59665090a888c6343c83632216b111"
+    },
+    {
+      "id": "projects/synthetic_saved_comparison_refusal/flowcharts/comparisons/legacy-null-steps-b.json",
+      "bytes": 2360,
+      "sha256": "37eb8a9d374ee02373891443df3886996530b0970230ee5b3564030c8a21a41d"
+    },
+    {
+      "id": "projects/synthetic_saved_comparison_refusal/flowcharts/comparisons/legacy-object-steps-a.json",
+      "bytes": 2412,
+      "sha256": "54f5fadc11e1ea0fc979287ce605b988f2be5f4cf187f44165128c435b92f1cc"
+    },
+    {
+      "id": "projects/synthetic_saved_comparison_refusal/flowcharts/comparisons/legacy-null-step-a.json",
+      "bytes": 2382,
+      "sha256": "de2334d8f2fd7aec326d74439f9bb14577c34eb5157c64996b443c8a21618d7f"
+    },
+    {
+      "id": "projects/synthetic_saved_comparison_refusal/flowcharts/comparisons/legacy-object-step-name-b.json",
+      "bytes": 2559,
+      "sha256": "49c87d9d003d9b4ded1a754db1fbee0c6a1f7afad3e4ba71125255605ce9e5d9"
+    },
+    {
+      "id": "projects/synthetic_saved_comparison_refusal/flowcharts/comparisons/legacy-invalid-total-latency-a.json",
+      "bytes": 2668,
+      "sha256": "7c85746405d92d6cf4d2b098063239d5df6b5bd2d0495ef2acdb4711a36e1258"
+    },
+    {
+      "id": "projects/synthetic_saved_comparison_refusal/flowcharts/comparisons/legacy-invalid-cache-latency-b.json",
+      "bytes": 2668,
+      "sha256": "5cf2e3adeca81ca1dd2fd6fdd4d084acb11bfb7938d398780781f52dd0f5143c"
+    },
+    {
+      "id": "projects/synthetic_saved_comparison_refusal/flowcharts/comparisons/legacy-normal-control.json",
+      "bytes": 2633,
+      "sha256": "d787f9dec61da63d96fa032d993e1899bee141c408fd1c66c9ea454a8a8f9924"
+    },
+    {
+      "id": "projects/synthetic_saved_comparison_refusal/project.json",
+      "bytes": 1491,
+      "sha256": "4bf8c991bf49577c077d5a2d71527c46c056884490e63f6eb3fe7080e06d80d0"
+    },
+    {
+      "id": "projects/synthetic_saved_comparison_refusal/annotations/by_dataset/a506cbfc8a97da4b/metadata/workflow.json",
+      "bytes": 2977,
+      "sha256": "0c9d2341fd4e912bf090f319a477e9652be018126367eb0138d48f9ec5e50a16"
+    },
+    {
+      "id": "projects/synthetic_saved_comparison_refusal/flowcharts/drafts/default/a506cbfc8a97da4b/draft.json",
+      "bytes": 3388,
+      "sha256": "5c8468204ed2c4331050f20c7d03576dd0e63970cfc196fd342cfbeb3b0e9cfc"
+    },
+    {
+      "id": "projects/synthetic_saved_comparison_refusal/flowcharts/active.json",
+      "bytes": 357,
+      "sha256": "d3c5d9b28679e5152502307fe8e89d223d9213323f27bb98db7ed10b3c98e467"
+    },
+    {
+      "id": "projects/synthetic_saved_comparison_refusal/flowcharts/versions/9b524211b42e47b89ec41ecde1a8a203.json",
+      "bytes": 3271,
+      "sha256": "8295fc3a72c262451b6cfa20dc5d6eff600371dc289c5212ea15955fb5e793fe"
+    },
+    {
+      "id": "dataset/ok/sample-ok.png",
+      "bytes": 96,
+      "sha256": "81572d1b78633b407ffe90590ac0a8cb2aa250999896e5d5ef314e1f8214010e"
+    },
+    {
+      "id": "dataset/ng/sample-ng.png",
+      "bytes": 103,
+      "sha256": "919582da17df342cd3f3b4d9ac5537051914da91f141ad126fbfcf61d39191da"
+    }
+  ],
+  "annotation_payload_tree_unchanged": true,
+  "original_history_GET_bodies": [
+    {
+      "bytes": 15315,
+      "sha256": "b3765cbed96d71d7a4fc3f609300411dbfafb7098f6c67787711486d03a123f3",
+      "status": 200,
+      "finished": true
+    },
+    {
+      "bytes": 15315,
+      "sha256": "b3765cbed96d71d7a4fc3f609300411dbfafb7098f6c67787711486d03a123f3",
+      "status": 200,
+      "finished": true
+    }
+  ],
+  "metadata_and_readiness_baseline": {
+    "readiness_precedes_metadata": true,
+    "default_team_policy_initialized": true,
+    "repeated_readiness_original_body_and_ledger_bytes_exact": true,
+    "subsequent_metadata_preserves_ledger_bytes": true,
+    "readiness_body_sha256": "764c555385ef1517fa092b00e92912e1c9f2f1a22f20dc97ebee8344ff575062"
+  },
+  "strict_guards": {
+    "page_errors": 0,
+    "console_errors": 0,
+    "UI_API_mutation_requests": 0,
+    "blocked_loopback_requests": 0,
+    "guards_or_deadlines_changed": false
+  },
+  "natural_owned_closure": {
+    "backend_exit_code": 0,
+    "forced": false,
+    "group_alive": false,
+    "escaped": 0,
+    "unowned_references": 0,
+    "scan_error": null,
+    "healthy_at_end": true,
+    "port_closed": true,
+    "pid_alive": false,
+    "global_teardown_leftovers": 0
+  },
+  "artifacts": [
+    {
+      "id": "browser-01-gui-execution.json",
+      "bytes": 1964,
+      "sha256": "1bd0e8d7cc66bcd5717b8abd4cf66f23df913e6ea371956a22e516dff40fd94d"
+    },
+    {
+      "id": "report.json",
+      "bytes": 9291,
+      "sha256": "dc0342677346d128290cecbe9220868b45694a526c14563f1b2ca81090333398"
+    },
+    {
+      "id": "harness-manifest.json",
+      "bytes": 81804,
+      "sha256": "24766c626e04d2159f80012776b7a7d83ea528dbe9161cd42ad8afb3bf848d24"
+    },
+    {
+      "id": "browser-01-command.log",
+      "bytes": 2375,
+      "sha256": "1500f1b68a643418ee5df16b7898424c65cf60c76173e8aaac0e1e5268294d33"
+    },
+    {
+      "id": "teardown.json",
+      "bytes": 341,
+      "sha256": "a4226294758828f94ac1f3b12264b3f70f5bb9654452e4cf3d4614d846029b27"
+    },
+    {
+      "id": "browser-01-integrity-readback.json",
+      "bytes": 23564,
+      "sha256": "ad9cc5e9b8a2af991bef91b7663e066a7099d28f91e32769ef3217f79578948e"
+    }
+  ],
+  "screenshots": [
+    {
+      "id": "legacy-missing-steps-a-refused-original-json.png",
+      "bytes": 167890,
+      "sha256": "1340ef93e6b5fe585b46fef7fb76d288e0f456cec11cde044ea5814824d4dbc5"
+    },
+    {
+      "id": "legacy-null-steps-b-refused-original-json.png",
+      "bytes": 167881,
+      "sha256": "3bb027eea36676e0cd31c463db7e66f058925dca28e6d2914316f4c25bb4f711"
+    },
+    {
+      "id": "legacy-object-steps-a-refused-original-json.png",
+      "bytes": 168029,
+      "sha256": "fdc2c9098327f20cc6205533592805affdea18cbf511a24cdcafc1b075d44ad1"
+    },
+    {
+      "id": "legacy-null-step-a-refused-original-json.png",
+      "bytes": 168676,
+      "sha256": "1ea1dcdeee8f07d55070f9d964a2c7f1797539fdf7f7a91cad3acd46bc566aa0"
+    },
+    {
+      "id": "legacy-object-step-name-b-refused-original-json.png",
+      "bytes": 168786,
+      "sha256": "498e217c3e90f9a2d4a33f1566cec1dd508f278e4a7959708e6ec937fad231a6"
+    },
+    {
+      "id": "legacy-invalid-total-latency-a-refused-original-json.png",
+      "bytes": 168146,
+      "sha256": "66715a1b9a188adfbe56edd3d356ff74e085517474d10cffe56f6a8f747f0383"
+    },
+    {
+      "id": "legacy-invalid-cache-latency-b-refused-original-json.png",
+      "bytes": 166685,
+      "sha256": "447fba129b8b4a0f38e01924c95a3063fdb5c45d4ba7422efa068a99b8d500da"
+    },
+    {
+      "id": "legacy-normal-recovered-after-real-reload.png",
+      "bytes": 117938,
+      "sha256": "99cd913958a60de86722b92cd69aa3bdbdb4e8ced9a65d1d91b4ec1cae1d2b20"
+    }
+  ],
+  "visual_review": [
+    {
+      "name": "legacy-invalid-cache-latency-b-refused-original-json.png",
+      "observation": "B-side cache latency refusal and expanded original JSON heading visible; verdict/preview absent."
+    },
+    {
+      "name": "legacy-normal-recovered-after-real-reload.png",
+      "observation": "Both saved synthetic preview images and both REVIEW step names visible after actual reload."
+    }
+  ],
+  "scope_limits": [
+    "Synthetic legacy display fixtures remain legacy_unverified; no executed model result or model quality approval inferred.",
+    "Browser Chrome only; no Electron, installed-native, training or GPU execution credit.",
+    "Passing trace is removed by unchanged retain-on-failure configuration. Original full history bodies and finished reads are retained; no independent all-request transport closure observer claimed."
+  ],
+  "prior_four_failed_runs_preserved": true,
+  "model_training": false,
+  "model_execution": false,
+  "GPU_compute": false,
+  "installed_native": false,
+  "source_Electron": false,
+  "quality_approved": false,
+  "independent_review_accepted": false
+}

@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "2bf54a90cbde0ec9ecef0f777699a33a9669e75e",
+  "source_dirty": false,
+  "test": "scripts/e2e/dataset-picker-ownership.spec.ts::delayed dataset picker keeps project and backend ownership and a fresh choice succeeds",
+  "test_source_sha256": "ecb44d117b2e3194a92db66085e959aebd232fc12f9610dac4406267d30c38d8",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "61e49722f8337f12a38e271c9f4dcd82d121ec7be2081775d810a52382cce943",
+  "harness_sha256": "94fc7c9f50e297094c11fae6ff9900bb2a6a56d793d9b7b00d8e1d47e1ef6988",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "405cb7b6d48fb3cdc7084c8e897b00bde49e523ac708f8c0685702da51372364"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "264aad9129a9d606fa90d3b82ad2cd4bf4ca1b3c20639f9866accc9aa7496460"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Actual Chrome renderer and two isolated real authenticated backends. Project and backend handoff, delayed host folder answer refusal, fresh imports/source saves and original image hashes. Host dialog answers controlled; no native OS picker, installed app, model quality, deployment or whole-feature acceptance."
+}

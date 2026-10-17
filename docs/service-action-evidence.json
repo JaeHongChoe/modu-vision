@@ -2486,6 +2486,28 @@
                       "sha256": "9c00aa205138260ef09066fa7299d754d5e78cd21dac7bed3fd31d1a71b73350"
                     }
                   ]
+                },
+                {
+                  "task": "S2-07",
+                  "source_sha": "2bf54a90cbde0ec9ecef0f777699a33a9669e75e",
+                  "kind": "click",
+                  "action": "데이터셋 폴더 선택·프로젝트/서버 전환",
+                  "expected": "Reject delayed answers after project/backend handoff and accept only fresh owning dataset choices.",
+                  "observed": "Actual Chrome UI kept A-to-B and local-B-to-shared-C authority, rejected both stale folder answers, imported/saved fresh B6/C8, decoded current gallery pixels, preserved 35 original hashes and closed both owned backends normally. Native OS folder chooser is not qualified.",
+                  "reviewer": "Codex Root source/API review, actual response/artifact hashes, screenshot and normal closure readback; no human quality or whole feature approval.",
+                  "test": "scripts/e2e/dataset-picker-ownership.spec.ts::delayed dataset picker keeps project and backend ownership and a fresh choice succeeds",
+                  "receipt": "2026-10-17-dataset-picker-current-browser.json",
+                  "receipt_sha256": "17bf0e65dc5a8deddcf16295664b355a9fa4a99bca12f328d108bf8b7d54dfd8",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "405cb7b6d48fb3cdc7084c8e897b00bde49e523ac708f8c0685702da51372364"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "264aad9129a9d606fa90d3b82ad2cd4bf4ca1b3c20639f9866accc9aa7496460"
+                    }
+                  ]
                 }
               ]
             },
@@ -2610,6 +2632,28 @@
                     {
                       "id": "screenshot-14",
                       "sha256": "3c1f8c00838e9ada38f9de4919ab573e7d65d8f93534554d8a1354a36267e9eb"
+                    }
+                  ]
+                },
+                {
+                  "task": "S2-07",
+                  "source_sha": "2bf54a90cbde0ec9ecef0f777699a33a9669e75e",
+                  "kind": "click",
+                  "action": "데이터셋 폴더 선택·프로젝트/서버 전환",
+                  "expected": "Reject delayed answers after project/backend handoff and accept only fresh owning dataset choices.",
+                  "observed": "Actual Chrome UI kept A-to-B and local-B-to-shared-C authority, rejected both stale folder answers, imported/saved fresh B6/C8, decoded current gallery pixels, preserved 35 original hashes and closed both owned backends normally. Native OS folder chooser is not qualified.",
+                  "reviewer": "Codex Root source/API review, actual response/artifact hashes, screenshot and normal closure readback; no human quality or whole feature approval.",
+                  "test": "scripts/e2e/dataset-picker-ownership.spec.ts::delayed dataset picker keeps project and backend ownership and a fresh choice succeeds",
+                  "receipt": "2026-10-17-dataset-picker-current-browser.json",
+                  "receipt_sha256": "17bf0e65dc5a8deddcf16295664b355a9fa4a99bca12f328d108bf8b7d54dfd8",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "405cb7b6d48fb3cdc7084c8e897b00bde49e523ac708f8c0685702da51372364"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "264aad9129a9d606fa90d3b82ad2cd4bf4ca1b3c20639f9866accc9aa7496460"
                     }
                   ]
                 }
@@ -22153,6 +22197,52 @@
                       "sha256": "ad225bebde3d07a5532fa8b3d9671ce3b181e9d2af9ddefdeef002dfe97eefd5"
                     }
                   ]
+                },
+                {
+                  "task": "S2-05",
+                  "source_sha": "5f43c863f46606782c260270365e61e7c1b52aab",
+                  "kind": "click",
+                  "action": "저장 비교 결과 · 고정 모델·입력 근거",
+                  "reviewer": "Codex assigned F064 executor checked original HTTP bodies, protected-byte hashes, two representative screenshots and natural owned closure. No human quality, independent, Electron, installed-native or whole-feature acceptance inferred.",
+                  "test": "scripts/e2e/flow-saved-history-invalid-results.spec.ts::persisted legacy comparison results refuse invalid execution evidence and recover on a normal saved row",
+                  "receipt": "2026-10-17-f064-current-browser.json",
+                  "receipt_sha256": "1bd0e8d7cc66bcd5717b8abd4cf66f23df913e6ea371956a22e516dff40fd94d",
+                  "expected": "Refuse persisted legacy A/B rows with missing, null or malformed execution steps and invalid saved latency; show the owning refusal and unchanged original JSON, then recover on a normal saved row.",
+                  "observed": "Actual isolated Chrome UI refused all seven synthetic legacy_unverified controls, parsed each visible original JSON exactly and recovered on the normal record after each refusal. No crash, console error or UI API mutation; all 15 protected original files and annotation payload tree remained exact. No model result was executed or quality-approved.",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "1340ef93e6b5fe585b46fef7fb76d288e0f456cec11cde044ea5814824d4dbc5"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "3bb027eea36676e0cd31c463db7e66f058925dca28e6d2914316f4c25bb4f711"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "fdc2c9098327f20cc6205533592805affdea18cbf511a24cdcafc1b075d44ad1"
+                    },
+                    {
+                      "id": "screenshot-3",
+                      "sha256": "1ea1dcdeee8f07d55070f9d964a2c7f1797539fdf7f7a91cad3acd46bc566aa0"
+                    },
+                    {
+                      "id": "screenshot-4",
+                      "sha256": "498e217c3e90f9a2d4a33f1566cec1dd508f278e4a7959708e6ec937fad231a6"
+                    },
+                    {
+                      "id": "screenshot-5",
+                      "sha256": "66715a1b9a188adfbe56edd3d356ff74e085517474d10cffe56f6a8f747f0383"
+                    },
+                    {
+                      "id": "screenshot-6",
+                      "sha256": "447fba129b8b4a0f38e01924c95a3063fdb5c45d4ba7422efa068a99b8d500da"
+                    },
+                    {
+                      "id": "2026-10-17-f064-current-browser-details.json",
+                      "sha256": "ab3c8edb94f3b0fead4343ef89c2c3b04d3464a18c1a5a5d15cefb6f31ac09ff"
+                    }
+                  ]
                 }
               ]
             },
@@ -22244,6 +22334,28 @@
                     {
                       "id": "screenshot-3",
                       "sha256": "ad225bebde3d07a5532fa8b3d9671ce3b181e9d2af9ddefdeef002dfe97eefd5"
+                    }
+                  ]
+                },
+                {
+                  "task": "S2-05",
+                  "source_sha": "5f43c863f46606782c260270365e61e7c1b52aab",
+                  "kind": "click",
+                  "action": "저장 비교 결과 · 고정 모델·입력 근거",
+                  "reviewer": "Codex assigned F064 executor checked original HTTP bodies, protected-byte hashes, two representative screenshots and natural owned closure. No human quality, independent, Electron, installed-native or whole-feature acceptance inferred.",
+                  "test": "scripts/e2e/flow-saved-history-invalid-results.spec.ts::persisted legacy comparison results refuse invalid execution evidence and recover on a normal saved row",
+                  "receipt": "2026-10-17-f064-current-browser.json",
+                  "receipt_sha256": "1bd0e8d7cc66bcd5717b8abd4cf66f23df913e6ea371956a22e516dff40fd94d",
+                  "expected": "After invalid saved-history selections, reopen the original list through a real renderer reload and recover the normal saved comparison with original images, metadata, graph and history unchanged.",
+                  "observed": "Actual Chrome reload completed a second original history GET full body identical to the first; the normal saved row recovered both decoded 32x32 synthetic previews and named REVIEW steps. Exact metadata/library/draft/active-flow readbacks and all 15 protected bytes passed. Readiness-first baseline hydration was idempotent; owned backend exited normally. No training, GPU, model-quality or installed-app credit.",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-7",
+                      "sha256": "99cd913958a60de86722b92cd69aa3bdbdb4e8ced9a65d1d91b4ec1cae1d2b20"
+                    },
+                    {
+                      "id": "2026-10-17-f064-current-browser-details.json",
+                      "sha256": "ab3c8edb94f3b0fead4343ef89c2c3b04d3464a18c1a5a5d15cefb6f31ac09ff"
                     }
                   ]
                 }
