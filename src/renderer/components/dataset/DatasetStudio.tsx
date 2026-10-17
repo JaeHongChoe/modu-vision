@@ -18,7 +18,7 @@ import {
 import { useProjectStore } from '../../stores/useProjectStore';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
-import { api, resolveApiUrl, type DatasetRevisionRow, type DatasetSourceStatus } from '../../services/api';
+import { api, getApiPersistenceIdentity, getProjectContextGeneration, resolveApiUrl, type DatasetRevisionRow, type DatasetSourceStatus } from '../../services/api';
 import { host, hostErrorMessage } from '../../services/hostAdapter';
 import { ProceduralGeneratorModal } from './ProceduralGeneratorModal';
 import { DatasetVersionPanel } from './DatasetVersionPanel';
@@ -114,6 +114,8 @@ export const DatasetStudio: React.FC = () => {
   }, [activeRevisionId, isLoading, hasSelectedFolder, quickValidation]);
   const validation = validationStatus(quickValidation, activeRevision, project?.source_dataset_dir, task, sourceStatus);
   const [imageOpenError, setImageOpenError] = useState<string | null>(null);
+  const folderSelection = useRef(0);
+  useEffect(() => () => { folderSelection.current += 1; }, []);
   const splitUnavailableForTask = isSplitUnavailable(task, splitSupported);
   const splitUnavailableHint = splitUnavailableReason || (language === 'ko'
     ? '이 작업 유형은 화면 재분할을 지원하지 않습니다. 원본 train/val/test 폴더 구성을 사용하세요.'
@@ -155,17 +157,30 @@ export const DatasetStudio: React.FC = () => {
   }, [folderPath, datasetKey, task, ensureImported]);
 
   const handleSelectFolder = async () => {
+    const selection = ++folderSelection.current;
+    const started = useProjectStore.getState();
+    const projectId = started.project?.id;
+    const startedDir = started.projectDir;
+    const backendPort = started.backendPort;
+    const generation = getProjectContextGeneration();
+    const backend = getApiPersistenceIdentity();
+    const isCurrent = () => selection === folderSelection.current
+      && generation === getProjectContextGeneration() && backend === getApiPersistenceIdentity()
+      && useProjectStore.getState().project?.id === projectId
+      && useProjectStore.getState().backendPort === backendPort
+      && useProjectStore.getState().projectDir === startedDir && useProjectStore.getState().task === task;
+    if (!isCurrent()) return;
     setImageOpenError(null);
     let folder: string | null;
     try {
       folder = await host.selectFolder({ title: 'Select Industrial Dataset' });
     } catch (error) {
       // A browser has no folder dialog: say so instead of doing nothing.
-      setImageOpenError(hostErrorMessage(error, '폴더 선택 창을 열 수 없습니다.'));
+      if (isCurrent()) setImageOpenError(hostErrorMessage(error, '폴더 선택 창을 열 수 없습니다.'));
       return;
     }
-    if (folder) {
-      await importFolder(folder, task).catch(() => {});
+    if (folder && isCurrent()) {
+      await importFolder(folder, task, undefined, false, isCurrent).catch(() => {});
     }
   };
 

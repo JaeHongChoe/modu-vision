@@ -5,7 +5,7 @@
 
 import { create } from 'zustand';
 import type { ClassSplitCounts, ImageMeta, VisionTask } from '../types';
-import { api, type DatasetQuickValidation } from '../services/api';
+import { api, getApiPersistenceIdentity, getProjectContextGeneration, resolveApiUrl, type DatasetQuickValidation } from '../services/api';
 import type {DatasetPartition} from '../services/projectPreferences';
 import { useTrainingStore } from './useTrainingStore';
 import { useEvaluationStore } from './useEvaluationStore';
@@ -51,7 +51,7 @@ interface DatasetState {
   setClassFilter: (className: string | null) => void;
   setLabelFilter: (status: 'all' | 'labeled' | 'unlabeled') => void;
   setTrainRatio: (ratio: number) => void;
-  importFolder: (folder: string, task: VisionTask, allowRecoveryOverride?: boolean, restoreSaved?: boolean) => Promise<void>;
+  importFolder: (folder: string, task: VisionTask, allowRecoveryOverride?: boolean, restoreSaved?: boolean, isCurrent?: () => boolean) => Promise<void>;
   ensureImported: (task: VisionTask) => Promise<void>;
   generateSynthetic: (params: {
     task: VisionTask;
@@ -154,7 +154,13 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
   },
   setTrainRatio: (trainRatio) => set({ trainRatio }),
 
-  importFolder: async (folder, task, allowRecoveryOverride, restoreSaved = false) => {
+  importFolder: async (folder, task, allowRecoveryOverride, restoreSaved = false, isCurrent) => {
+    const generation = getProjectContextGeneration();
+    const backend = getApiPersistenceIdentity();
+    const transport = resolveApiUrl('/');
+    const sameAuthority = () => generation === getProjectContextGeneration() && backend === getApiPersistenceIdentity()
+      && (!transport || transport === resolveApiUrl('/'));
+    if (isCurrent && !isCurrent()) return;
     const pickedFolder = folder;
     let key = importKey(folder, task);
     const previous = get().lastImportedKey;
@@ -170,6 +176,8 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
     );
     invalidateDownstream(allowSourceRecovery);
     const requestId = ++latestImportRequest;
+    const ownsRequest = () => requestId === latestImportRequest && get().datasetKey === key && sameAuthority();
+    const current = () => ownsRequest() && (!isCurrent || isCurrent());
     latestImageRequest += 1;
     latestSplitRequest += 1;
     set({
@@ -183,11 +191,11 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
     try {
       if (!restoreSaved) try {
         const project = await api.project.update({ source_dataset_dir: folder });
-        if (requestId !== latestImportRequest || get().datasetKey !== key) return;
+        if (!current()) return;
         // The project API is the authority for the canonical source path. Keep
         // the renderer's project state aligned before allowing a switch.
         const { useProjectStore } = await import('./useProjectStore');
-        if (requestId !== latestImportRequest || get().datasetKey !== key) return;
+        if (!current()) return;
         useProjectStore.setState((state) => state.project?.id === project.id
           ? { project, projectName: project.name, projectDir: project.project_dir }
           : {});
@@ -215,14 +223,15 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
         }
       } catch (error) {
         // The in-memory dataset remains usable, but a restart cannot restore its source.
-        if (requestId === latestImportRequest && get().datasetKey === key) {
+        if (current()) {
           set({ sourceSaveError: `데이터는 불러왔지만 프로젝트에 경로를 저장하지 못했습니다: ${importErrorMessage(error)}` });
         }
       }
+      if (!current()) return;
       const res = restoreSaved
         ? await api.dataset.currentSummary({ folder_path: folder, task })
         : await api.dataset.import({ folder_path: folder, task, validate_images: true });
-      if (requestId !== latestImportRequest || get().datasetKey !== key) return;
+      if (!current()) return;
       set({
         totalImages: res.total_images,
         sourceImages: res.source_images ?? res.total_images,
@@ -241,14 +250,15 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
         lastImportedKey: key,
         page: 1,
       });
-      if (requestId !== latestImportRequest || get().datasetKey !== key) return;
+      if (!current()) return;
       set({ isLoading: false });
       await get().loadImages(1);
     } catch (err) {
-      if (requestId === latestImportRequest && get().datasetKey === key) {
-        set({ isLoading: false, importError: importErrorMessage(err) });
-      }
+      if (!current()) return;
+      set({ isLoading: false, importError: importErrorMessage(err) });
       throw err;
+    } finally {
+      if (ownsRequest() && get().isLoading) set({ isLoading: false });
     }
   },
 

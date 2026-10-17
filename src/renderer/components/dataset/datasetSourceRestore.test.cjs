@@ -10,7 +10,7 @@ function harness(){
  const noWrite=async data=>{writes.push(data);throw Error('Read-only source restoration cannot write');};
  const api={project:{update:noWrite},dataset:{import:noWrite,currentSummary:request=>{reads.push({project_id:project.project.id,...request});const value=deferred();pending.push(value);return value.promise;},getImages:async()=>({images:[],total:0})},datasetImports:{revisions:async()=>({revisions:[],active_revision:null})}};
  const inert={getState:()=>({invalidateForDataChange(){}}),setState(){}};
- const store=load(path.resolve(__dirname,'../../stores/useDatasetStore.ts'),{'../services/api':{api},'./useTrainingStore':{useTrainingStore:inert},'./useEvaluationStore':{useEvaluationStore:inert},'./useFlowchartStore':{useFlowchartStore:inert},'./useProjectStore':{useProjectStore:{setState(){throw Error('Restore must not update the project');}}}}).useDatasetStore;
+ const store=load(path.resolve(__dirname,'../../stores/useDatasetStore.ts'),{'../services/api':{api,getProjectContextGeneration:()=>0,getApiPersistenceIdentity:()=> 'local',resolveApiUrl:x=>x},'./useTrainingStore':{useTrainingStore:inert},'./useEvaluationStore':{useEvaluationStore:inert},'./useFlowchartStore':{useFlowchartStore:inert},'./useProjectStore':{useProjectStore:{setState(){throw Error('Restore must not update the project');}}}}).useDatasetStore;
  store.setState({folderPath:'/source',hasSelectedFolder:true,datasetKey:'/source\0anomaly',lastImportedKey:'/source\0anomaly',totalImages:2});
  const hook=object=>Object.assign(selector=>selector?selector(object):object,{getState:()=>object});
  const file=path.join(__dirname,'DatasetStudio.tsx'),m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(__dirname);const original=m.require.bind(m);
