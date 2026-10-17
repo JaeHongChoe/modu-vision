@@ -4,6 +4,8 @@ import type {FlowEvaluationCohort,FlowEvaluationHistory,SavedEvaluationFlow,Trut
 import {datasetWorkflow,type ImageReviewMetadata,workflowError} from '../../services/datasetWorkflow';
 import {flowSkipReasonText} from './flowWorkspace';
 import {WholeFlowApprovalPanel} from './WholeFlowApprovalPanel';
+import {api} from '../../services/api';
+import {getFlowchartModelTask} from './flowchartStartup';
 
 export interface FlowEvaluationPanelProps {
   sourceDatasetPath?:string;
@@ -37,6 +39,7 @@ export function FlowEvaluationPanel({sourceDatasetPath='',savedVersionId,context
   const [open,setOpen]=useState(embedded&&visible), [busy,setBusy]=useState(false), [error,setError]=useState(''), [notice,setNotice]=useState('');
   const [versions,setVersions]=useState<SavedEvaluationFlow[]>([]), [version,setVersion]=useState('');
   const [scope,setScope]=useState<TruthScope|null>(null), [cohorts,setCohorts]=useState<FlowEvaluationCohort[]>([]), [cohort,setCohort]=useState('');
+  const [scopePrerequisite,setScopePrerequisite]=useState('');
   const [cohortName,setCohortName]=useState('시험 분할 전체'), [history,setHistory]=useState<FlowEvaluationHistory[]>([]);
   const [result,setResult]=useState<FlowEvaluation|null>(null), [evidence,setEvidence]=useState<FlowImageEvidence|null>(null);
   const [images,setImages]=useState<ImageReviewMetadata[]>([]), [imageTotal,setImageTotal]=useState(0), [imageOffset,setImageOffset]=useState(0), [image,setImage]=useState('');
@@ -64,8 +67,19 @@ export function FlowEvaluationPanel({sourceDatasetPath='',savedVersionId,context
   },[open,sourceDatasetPath,contextKey,savedVersionId]);
 
   useEffect(()=>{
-    setScope(null);setTruth(null);if(!open||!version)return;let active=true;
-    flowEvaluation.scope(version).then(value=>{if(active)setScope(value);}).catch(e=>{if(active)setError(workflowError(e));});
+    setScope(null);setTruth(null);setScopePrerequisite('');setError('');if(!open||!version)return;let active=true;
+    const loadScope=async()=>{
+      const pipeline=await api.flowchart.getPipelineVersion(version);
+      if(!active)return;
+      const missing=pipeline.nodes.filter(node=>getFlowchartModelTask(node)&&!node.data.model_job_id);
+      if(missing.length){
+        setScopePrerequisite(`${missing.map(node=>node.data.label).join(', ')}: 완료 모델을 연결한 뒤 전체 흐름 평가를 준비하세요. 저장된 비교 이력은 계속 열 수 있습니다.`);
+        return;
+      }
+      const value=await flowEvaluation.scope(version);
+      if(active)setScope(value);
+    };
+    loadScope().catch(e=>{if(active)setError(workflowError(e));});
     return()=>{active=false;};
   },[open,version,sourceDatasetPath,contextKey,savedVersionId]);
 
@@ -109,9 +123,10 @@ export function FlowEvaluationPanel({sourceDatasetPath='',savedVersionId,context
       <p className="text-slate-400">실제 ROI·분기·Blob·최종 규칙을 CPU에서 실행합니다. 미확인 정답은 성능 집계에서 제외되며, 원본이나 라벨이 바뀌면 이전 근거의 유효성이 해제됩니다.</p>
       <div className="flex flex-wrap items-end gap-2"><label>저장된 흐름 버전<select aria-label="전체 흐름 평가 버전" value={version} disabled={busy} onChange={e=>{setVersion(e.target.value);setCohort('');}} className={`${field} ml-2 max-w-80`}><option value="">저장된 버전 선택</option>{versions.map(row=><option key={row.version_id} value={row.version_id}>{row.name} · {row.saved_at} · {row.version_id.slice(0,8)}</option>)}</select></label>
         <label>고정 시험 코호트<select aria-label="전체 흐름 시험 코호트" value={cohort} disabled={busy||!scope} onChange={e=>setCohort(e.target.value)} className={`${field} ml-2 max-w-80`}><option value="">코호트 선택</option>{compatible.map(row=><option key={row.cohort_id} value={row.cohort_id}>{row.name} · {row.count}개 · {row.created_at}</option>)}</select></label>
-        <button disabled={busy||!version||!cohort} className={`${button} ${embedded?"bg-cyan-800 text-white":""}`} data-primary-action={embedded||undefined} onClick={()=>void run(async current=>{const requested=version;const value=await flowEvaluation.run(requested,cohort);const rows=await refreshHistory();if(!current())return;setHistory(rows);if(selectedVersion.current===requested){setResult(value);setEvidence(null);}else setNotice(`버전 ${requested}의 평가가 끝났습니다. 평가 이력에서 열 수 있습니다.`);})}>{embedded?'선택 코호트 평가':'전체 흐름 평가 실행'}</button>
+        <button disabled={busy||!version||!cohort||!scope} className={`${button} ${embedded?"bg-cyan-800 text-white":""}`} data-primary-action={embedded||undefined} onClick={()=>void run(async current=>{const requested=version;const value=await flowEvaluation.run(requested,cohort);const rows=await refreshHistory();if(!current())return;setHistory(rows);if(selectedVersion.current===requested){setResult(value);setEvidence(null);}else setNotice(`버전 ${requested}의 평가가 끝났습니다. 평가 이력에서 열 수 있습니다.`);})}>{embedded?'선택 코호트 평가':'전체 흐름 평가 실행'}</button>
       </div>
       {!versions.length&&!busy&&<p className="text-amber-200">실행 가능한 흐름을 먼저 저장하세요.</p>}
+      {scopePrerequisite&&<p role="status" className="text-amber-200">{scopePrerequisite}</p>}
       {scope&&<p className="text-slate-400">정답 범위: {scope.task} · {scope.classes.join(', ')} · 라벨 세트 {scope.labelset_id}</p>}
       {scope&&<div className="flex flex-wrap gap-2" aria-label="정답 범위 클래스 역할">{scope.classes.map(name=><span key={name} className="rounded border border-slate-700 px-2 py-1">{name} · {{normal:'정상',defect:'결함',unknown:'역할 미확인'}[scope.class_semantics.roles[name]]||'역할 미확인'}</span>)}{scope.participating_tasks&&<span className="self-center text-slate-400">참여 모델: {scope.participating_tasks.join(' + ')}</span>}</div>}
       <details><summary className="cursor-pointer font-semibold text-cyan-200">이미지별 명시적 정답 검토</summary>
