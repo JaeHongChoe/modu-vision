@@ -1,0 +1,53 @@
+{
+  "after": {
+    "failed": 0,
+    "passed": 36,
+    "scope": "Same29 consumer cases plus7 formatter/API rejection controls",
+    "skipped": 0
+  },
+  "before": {
+    "failed": 4,
+    "passed": 25,
+    "reason": "datasetWorkflow module not found; no four functional cases reached"
+  },
+  "cause": "Existing handwritten TypeScript loaders resolved nested relative imports from the test directory or without TypeScript transpilation; the new real formatter import exposed four load failures.",
+  "files": {
+    "src/renderer/components/training/familyJobWatch.test.cjs": {
+      "bytes": 10259,
+      "sha256": "62c97787c7db624bceff8cd851c319d709499833ddbed86255ac1d39dfda8a16"
+    },
+    "src/renderer/components/training/jobProgress.test.cjs": {
+      "bytes": 14725,
+      "sha256": "5b8ae67c6ed2e037afc7e58cfd56b6d3272ba18d04b52db83d67305eeab2d6dd"
+    },
+    "src/renderer/components/training/modelExecution.test.cjs": {
+      "bytes": 12322,
+      "sha256": "7cf51bdb122ac5b0de34a9f089650995993d46614050b35f271435c6bf4b638a"
+    }
+  },
+  "limits": {
+    "browser_or_native_executed": false,
+    "controlled_component_tests_only": true,
+    "scenario_or_parent_promotion": false,
+    "training_jobs_executed": false,
+    "whole_CI_pass": false
+  },
+  "original_tool_pins": {
+    "program-validation-error-consumers-actual-tool-start.json": {
+      "bytes": 10124,
+      "sha256": "8233f3ee989f1632011e74197ac6ce3b31001387ede251b90dc24f1e2b17b602"
+    },
+    "program-validation-error-consumers-green-actual-tool-completion.json": {
+      "bytes": 4155,
+      "sha256": "c132cddd8ed1ae825029fe33a39c5b1828f619be9b022bf4041290a3788f2f56"
+    },
+    "program-validation-error-consumers-green-actual-tool-start.json": {
+      "bytes": 130,
+      "sha256": "75be1219cb39ddb5262cdf36f4e77dd086a0b65ec606695fc3b7ffae0790be91"
+    }
+  },
+  "product_source_changed": false,
+  "repair": "Resolve relative TypeScript dependencies from each loaded file and preserve existing mocks; assertion bodies and test timer setup unchanged.",
+  "schema": "modu-vision.training-test-module-loader-regression/v1",
+  "source": "154cd7c35b947c8369165e065cdaeb0492c04e2b"
+}

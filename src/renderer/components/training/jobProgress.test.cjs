@@ -1,7 +1,7 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),Module=require('node:module'),ts=require('typescript');
 // S2-09: every model family's job is read the same way: label, progress, location, uncertainty, failure and next action.
-function load(file,mocks={}){const name=path.join(__dirname,file),m=new Module(name,module);m.filename=name;m.paths=Module._nodeModulePaths(__dirname);
-  m.require=ref=>ref in mocks?mocks[ref]:ref.startsWith('.')?load(ref+'.ts'):require(ref);
+function load(file,mocks={}){const name=path.resolve(__dirname,file),m=new Module(name,module);m.filename=name;m.paths=Module._nodeModulePaths(path.dirname(name));const original=m.require.bind(m);
+  m.require=ref=>{if(ref in mocks)return mocks[ref];const target=ref.startsWith('.')?path.resolve(path.dirname(name),ref+'.ts'):null;return target&&fs.existsSync(target)?load(target,mocks):original(ref);};
   m._compile(ts.transpileModule(fs.readFileSync(name,'utf8'),{fileName:name,compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,name);return m.exports;}
 const model=()=>load('jobProgress.ts');
 test('S2-09: recorded pending cancel suppresses another cancel and permits observation',()=>{
