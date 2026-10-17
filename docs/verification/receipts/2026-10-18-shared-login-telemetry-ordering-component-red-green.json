@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "scope": "controlled_component_shared_login_telemetry_ordering_regression",
+  "source": {
+    "base_sha": "8d98e212894dc575d1073f77448c5eddb013f74b",
+    "red_sha": "8d7005411da230e8f3da1f90d6e5c9b5cdcf1a55",
+    "green_sha": "beeed172e81f81fdd50d9b4417f31fa9634b3abc",
+    "files": {
+      "src/renderer/components/compute/SharedProjectPanel.test.cjs": {
+        "bytes": 12127,
+        "sha256": "77c1d10824c9270caa4049298b554e3c5a7e27d5918199ce94d087d98e5f69a0",
+        "git_blob": "339d0b1561a924034c471a5f0e84d6fecc17e362"
+      },
+      "src/renderer/components/compute/SharedProjectPanel.tsx": {
+        "bytes": 12866,
+        "sha256": "b16eeb14b0b52ae675f11f2d327a143821ba6048e72f57b2461df847002e0f7e",
+        "git_blob": "1c94f99ff3405b0251aef09b5020b590256e0811"
+      }
+    }
+  },
+  "change": "Disconnect the prior telemetry stream after successful host authentication and before renderer authority mutations; connect once after project synchronization.",
+  "execution": {
+    "causal_red": {
+      "tests": 10,
+      "pass": 8,
+      "fail": 2,
+      "exit_code": 1,
+      "intended_failures_only": [
+        "success fresh sockets2 versus1",
+        "sync_failure sockets2 versus1"
+      ],
+      "node_duration_ms": 566.604709
+    },
+    "same_body_green": {
+      "tests": 10,
+      "pass": 10,
+      "fail": 0,
+      "exit_code": 0,
+      "same_test_body_as_red": true,
+      "node_duration_ms": 559.853875
+    },
+    "related_controls": {
+      "tests": 20,
+      "pass": 20,
+      "fail": 0,
+      "exit_code": 0,
+      "node_duration_ms": 745.871375,
+      "commands": [
+        "node --test src/renderer/services/jobEventFeed.test.cjs src/renderer/components/compute/sharedSourceScope.test.cjs"
+      ]
+    },
+    "renderer_main_typecheck": {
+      "exit_code": 0,
+      "command": "npm run typecheck",
+      "renderer_and_main_no_emit": true
+    }
+  },
+  "preservation": {
+    "tracked_source_raw9_sha_before_after_exact": true,
+    "tracked_files": 2912,
+    "provider_pins": 12,
+    "providers_unchanged": true
+  },
+  "claim_limits": {
+    "controlled_component_only": true,
+    "external_socket_is_fake": true,
+    "real_network_or_browser_acceptance": false,
+    "compiled_or_native_acceptance": false,
+    "historical_socket_context_equivalence_proven": false,
+    "strict_drain_or_native_cause_proven": false,
+    "parent_or_model_quality_acceptance": false,
+    "action_count_change": 0
+  },
+  "readback": {
+    "path": "readback.json",
+    "bytes": 6904,
+    "sha256": "f56a4b77607b0a611206b93a6840dd4300b975b7a27aa923fc10153112dc7bc2"
+  },
+  "raw_evidence": [
+    {
+      "path": "actual-original-tool-results.json",
+      "bytes": 783,
+      "sha256": "88d97e8541d0519d55699c61aba350310fb3e7a2fcac7f07a84bc14476e17280"
+    },
+    {
+      "path": "final-two-file.diff",
+      "bytes": 10812,
+      "sha256": "acb658ae57de39edb5beb0552e0cc0750dd619ed8111c20c3953f5780325372f"
+    },
+    {
+      "path": "green-component.log",
+      "bytes": 1101,
+      "sha256": "ad19bbeca1c6dfd472f034540dbf3711d5ba232cb11d2c026a544ff70a49095f"
+    },
+    {
+      "path": "red-component.log",
+      "bytes": 2688,
+      "sha256": "dc42c5b93f56428a919f727661fd80e851123987075187fdd3b90e6705aa4710"
+    },
+    {
+      "path": "related-components.log",
+      "bytes": 2293,
+      "sha256": "68187cb04d95d9af978ea5bb92699c2c1b56eaa8adde0a3cf2ff4e33a851e17a"
+    },
+    {
+      "path": "typecheck.log",
+      "bytes": 108,
+      "sha256": "3cea01ca6731d254d8cb8265f4fb29f0abcddf05eb43593ffedb269501b44fad"
+    }
+  ]
+}

@@ -45,3 +45,88 @@ for(const operation of ['activate','login','disconnect','login_inventory_failure
   if(operation==='login_inventory_failure')assert.match(values[14],/inventory is unavailable/);
   unsubscribe();delete global.window;
 });
+
+// Exercise the real context subscription and telemetry client through the real
+// login handler. Only the external socket and server-discovery boundaries are
+// controlled; no socket lifecycle method or context notification is replaced.
+for(const outcome of ['success','auth_failure','inventory_failure','select_failure','sync_failure','no_project'])test(`shared login ${outcome} keeps telemetry owned by the completed login`,async()=>{
+  const apiModule=load(path.resolve(__dirname,'../../services/api.ts'),{});
+  const previousSocket=global.WebSocket;const sockets=[];
+  class FakeSocket{
+    static OPEN=1;static CONNECTING=0;
+    constructor(url){this.url=url;this.readyState=FakeSocket.CONNECTING;this.closeCount=0;sockets.push(this);}
+    send(){}
+    close(){this.closeCount+=1;this.readyState=3;this.onclose?.();}
+    open(){this.readyState=FakeSocket.OPEN;this.onopen();}
+  }
+  global.WebSocket=FakeSocket;
+  const {telemetryService}=load(path.resolve(__dirname,'../../services/websocket.ts'),{'./api':apiModule});
+  const oldContext={workspace_id:'old-workspace',project_id:'old-project',actor_id:'old-user',mode:'local'};
+  const newContext={workspace_id:'new-workspace',project_id:'new-project',actor_id:'new-user',mode:'team'};
+  const connection={server_url:'https://new.example',user:{id:'new-user',username:'tester',administrator:false},expires_at:2000000000};
+  let resolveLogin,rejectLogin;
+  const loginResult=new Promise((resolve,reject)=>{resolveLogin=resolve;rejectLogin=reject;});
+  let complete;
+  const completed=new Promise(resolve=>{complete=resolve;});
+  const values=[null,connection.server_url,'tester','private-test-password',[],'',[],'','','','viewer','',{value:'',scope:null},false,''];let cursor=0;
+  const react={createElement:(type,props,...children)=>({type,props:{...props,children}}),useEffect:()=>{},useState:initial=>{
+    const index=cursor++;if(values[index]===undefined)values[index]=initial;
+    return [values[index],value=>{values[index]=typeof value==='function'?value(values[index]):value;if(index===13&&values[index]===false)complete();}];
+  }};
+  const projectState={project:{id:newContext.project_id,project_dir:'/owned/new-project'},isProjectBusy:false,syncCurrentProject:async()=>{
+    apiModule.setProjectContext(newContext);
+    if(outcome==='sync_failure')throw new Error('Project synchronization refused after context discovery');
+  }};
+  const projectStore=Object.assign(selector=>selector(projectState),{getState:()=>projectState,setState:value=>Object.assign(projectState,value)});
+  const request=async endpoint=>{
+    if(endpoint==='/api/accounts/me'){
+      if(outcome==='inventory_failure')throw new Error('Account inventory refused');
+      return {projects:outcome==='no_project'?[]:[{id:newContext.project_id,path:'/owned/new-project',role:'trainer'}],selected_project_id:outcome==='no_project'?null:newContext.project_id};
+    }
+    if(endpoint==='/api/accounts/select-project'&&outcome==='select_failure')throw new Error('Project selection refused');
+    return {};
+  };
+  const heard=[];
+  const unsubscribe=telemetryService.subscribe((event,data)=>heard.push({event,data}));
+  try{
+    apiModule.setCachedPort(56001);apiModule.setProjectContext(oldContext);
+    await telemetryService.connect();sockets[0].open();
+    const oldSocket=sockets[0];
+    const panel=load(path.resolve(__dirname,'SharedProjectPanel.tsx'),{
+      react:{__esModule:true,default:react,...react},'lucide-react':{Users:'icon',LogIn:'icon',LogOut:'icon'},
+      '../../services/api':{...apiModule,request},
+      '../../stores/useProjectStore':{useProjectStore:projectStore,saveOpenEdits:async()=>{}},
+      '../../stores/useComputeStore':{resetComputeTransportCache:()=>{}},
+      '../../stores/useDatasetStore':{useDatasetStore:{getState:()=>({setFolderPath:()=>{}})}},
+      '../../stores/useAnnotationStore':{useAnnotationStore:{getState:()=>({setReviewerName:()=>{},setImages:async()=>{}})}},
+      '../../services/websocket':{telemetryService},
+      '../../services/hostAdapter':{host:{kind:()=>'desktop',shared:{login:()=>loginResult,select:async()=>({...connection,project_id:newContext.project_id})}}},
+    }).SharedProjectPanel;
+    nodes(panel()).find(n=>n.type==='button'&&n.props.children.includes('연결·로그인')).props.onClick();
+    await tick();
+    assert.equal(oldSocket.readyState,FakeSocket.OPEN,'authentication has not succeeded: the prior stream remains available');
+    assert.equal(oldSocket.closeCount,0);
+    if(outcome==='auth_failure')rejectLogin(new Error('Authentication refused'));
+    else resolveLogin(connection);
+    await completed;
+    if(outcome==='auth_failure'){
+      assert.equal(sockets.length,1);assert.equal(oldSocket.closeCount,0);assert.equal(telemetryService.getStatus(),true);
+      assert.deepEqual(apiModule.getProjectContext(),oldContext);assert.match(values[14],/Authentication refused/);
+    }else if(outcome==='success'){
+      const current=sockets.filter(socket=>new URL(socket.url).searchParams.get('project_context')===JSON.stringify(newContext));
+      assert.equal(current.length,1,'one fresh accepted-context stream is opened, without closing and reopening it');
+      assert.equal(oldSocket.closeCount,1);assert.equal(current[0].closeCount,0);
+      current[0].open();
+      assert.equal(telemetryService.getStatus(),true);
+      current[0].onmessage({data:JSON.stringify({event:'current-project-event',project_context:newContext,data:{sequence:1}})});
+      oldSocket.onmessage({data:JSON.stringify({event:'stale-project-event',project_context:oldContext,data:{sequence:2}})});
+      assert.deepEqual(heard.filter(row=>row.event.endsWith('project-event')),[{event:'current-project-event',data:{sequence:1}}]);
+      assert.equal(values[14],'');
+    }else{
+      assert.equal(oldSocket.closeCount,1);assert.equal(sockets.length,1,'incomplete selection never enables a newly discovered project stream');
+      assert.equal(telemetryService.getStatus(),false);
+      if(outcome==='no_project')assert.equal(values[14],'');
+      else assert.match(values[14],/refused/);
+    }
+  }finally{unsubscribe();telemetryService.disconnect();global.WebSocket=previousSocket;}
+});
