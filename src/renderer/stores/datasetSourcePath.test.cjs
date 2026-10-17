@@ -1,5 +1,5 @@
-// A dataset picked under one spelling is imported under the path the project API saved (the backend resolves symlinks,
-// and on Windows a mapped network drive to its UNC path), so training's "current source" check is met.
+// Validate a picked source before saving it, then adopt the canonical spelling returned by the project API
+// (resolved symlinks, or a mapped Windows drive's UNC path), so training's "current source" check is met.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -46,14 +46,14 @@ function harness(saved, hold) {
   return { store: load(api, project, evaluation), imports, project, evaluation };
 }
 
-test('an import follows the source path the project API saved', async () => {
+test('a validated picked source adopts the canonical path the project API saved', async () => {
   const { store, imports, project } = harness('/private/var/qa/data');
   await store.getState().importFolder('/var/qa/data', 'segmentation');
   const state = store.getState();
   assert.equal(state.folderPath, '/private/var/qa/data');
   assert.equal(state.datasetKey, '/private/var/qa/data\0segmentation');
   assert.equal(state.lastImportedKey, '/private/var/qa/data\0segmentation');
-  assert.deepEqual(imports, ['/private/var/qa/data'], 'the import reads the saved spelling');
+  assert.deepEqual(imports, ['/var/qa/data'], 'the picked alias is validated before the canonical source is saved');
   assert.equal(project.project.source_dataset_dir, state.folderPath, 'training sees the project source and the dataset as the same');
   assert.equal(state.isLoading, false);
 });
@@ -97,7 +97,7 @@ test('an empty saved path is not adopted, and a newer pick made while the path i
   releaseFirst();
   await firstImport;
   assert.equal(held.store.getState().folderPath, '/private/var/qa/second', 'the older answer never replaces the newer pick');
-  assert.deepEqual(held.imports, ['/private/var/qa/second']);
+  assert.deepEqual(held.imports, ['/var/qa/first', '/var/qa/second']);
 });
 
 function loadProjectStore(dataset, update, getCurrent) {
@@ -177,7 +177,7 @@ test('a newer pick made while the project store module loads keeps the newer fol
   await store.getState().importFolder('/var/qa/older', 'segmentation');
   await newer;
   assert.equal(store.getState().folderPath, '/private/var/qa/newer');
-  assert.deepEqual(imports, ['/private/var/qa/newer'], 'the older pick never imports over the newer one');
+  assert.deepEqual(imports, ['/var/qa/older', '/var/qa/newer'], 'both picks validate, but the older result never replaces the newer one');
 });
 
 test('the saved spelling still respects stale marks, an explicit choice and a save that failed before', async () => {

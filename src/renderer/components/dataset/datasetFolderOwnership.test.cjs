@@ -24,7 +24,7 @@ function load(filename, mocks) {
   return m.exports;
 }
 
-function harness({ holdSave = false } = {}) {
+function harness({ holdSave = false, holdImport = false, importFailure, saveFailure } = {}) {
   let generation = 0, backend = 'A', port = 8001, cursor = 0;
   const project = { task: 'classification', language: 'en', projectDir: '/projects/A', backendPort: port,
     project: { id: 'A', name: 'A', project_dir: '/projects/A', source_dataset_dir: '/source/A' } };
@@ -32,11 +32,12 @@ function harness({ holdSave = false } = {}) {
     getState: () => state,
     setState: change => Object.assign(state, typeof change === 'function' ? change(state) : change),
   });
-  const projectStore = hook(project), calls = [], pickers = [], saves = [], slots = [], effects = [];
+  const projectStore = hook(project), calls = [], pickers = [], saves = [], imports = [], slots = [], effects = [];
   const summary = { total_images: 3, source_images: 3, classes: { OK: 3 }, split: { train: 2, val: 1, test: 0 } };
   const api = {
     project: { update: async data => {
       calls.push({ kind: 'save', backend, project: project.project.id, folder: data.source_dataset_dir });
+      if (saveFailure) throw saveFailure;
       const saved = { ...project.project, source_dataset_dir: data.source_dataset_dir };
       if (holdSave) { const pending = deferred(); saves.push(pending); await pending.promise; }
       return saved;
@@ -44,6 +45,8 @@ function harness({ holdSave = false } = {}) {
     dataset: {
       import: async data => {
         calls.push({ kind: 'import', backend, project: project.project.id, folder: data.folder_path });
+        if (importFailure) throw importFailure;
+        if (holdImport) { const pending = deferred(); imports.push(pending); return pending.promise; }
         return summary;
       },
       getImages: async () => ({ items: [], total: 3 }),
@@ -105,7 +108,7 @@ function harness({ holdSave = false } = {}) {
     } });
     store.setState({ folderPath: `/source/${id}`, datasetKey: `/source/${id}\0classification`, totalImages: 17, isLoading: false });
   };
-  return { store, project, render, select, pickers, saves, calls, move,
+  return { store, project, render, select, pickers, saves, imports, summary, calls, move,
     unmount: () => slots.forEach(slot => slot?.cleanup?.()) };
 }
 
@@ -146,3 +149,34 @@ test(`a source-save response from the old ${change.transport ? 'shared' : 'local
   assert.equal(h.calls.some(call => call.backend === 'B'), false);
 });
 }
+
+test('a rejected import leaves the previous persisted project source untouched', async () => {
+  const h = harness({ importFailure: Error('Unsupported dataset folder') });
+  await assert.rejects(h.store.getState().importFolder('/rejected', 'classification'), /Unsupported/);
+  assert.equal(h.project.project.source_dataset_dir, '/source/A');
+  assert.deepEqual(h.calls.map(call => call.kind), ['import']);
+  assert.match(h.store.getState().importError, /Unsupported/);
+  assert.equal(h.store.getState().isLoading, false);
+});
+
+test('pending validation cannot publish the chosen source before it succeeds', async () => {
+  const h = harness({ holdImport: true });
+  const pending = h.store.getState().importFolder('/pending', 'classification');
+  await tick();
+  const sourceBeforeValidation = h.project.project.source_dataset_dir;
+  const callsBeforeValidation = h.calls.map(call => call.kind);
+  h.imports[0].resolve(h.summary); await pending;
+  assert.equal(sourceBeforeValidation, '/source/A');
+  assert.deepEqual(callsBeforeValidation, ['import']);
+  assert.deepEqual(h.calls.map(call => call.kind), ['import', 'save']);
+  assert.equal(h.project.project.source_dataset_dir, '/pending');
+  assert.equal(h.store.getState().totalImages, 3);
+});
+
+test('failed validation never announces that unimported data merely failed to save', async () => {
+  const h = harness({ importFailure: Error('Unsupported dataset folder'), saveFailure: Error('Project is locked') });
+  await assert.rejects(h.store.getState().importFolder('/rejected', 'classification'), /Unsupported/);
+  assert.equal(h.store.getState().sourceSaveError, null);
+  assert.deepEqual(h.calls.map(call => call.kind), ['import']);
+  assert.equal(h.project.project.source_dataset_dir, '/source/A');
+});

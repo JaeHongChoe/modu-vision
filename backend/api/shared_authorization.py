@@ -154,9 +154,10 @@ class SharedAuthorizationMiddleware:
         # File selectors must stay inside this project's storage or registered source.
         roots=[Path(project['project_dir']).resolve()]
         if project.get('source_dataset_dir'):roots.append(Path(project['source_dataset_dir']).resolve())
-        def check_paths(value,key=''):
+        def check_paths(value,key='',*,prospective_source=False):
             if isinstance(value,dict):
-                for child,data in value.items():check_paths(data,child)
+                for child,data in value.items():
+                    check_paths(data,child,prospective_source=prospective_source and not key and child=='folder_path')
             elif isinstance(value,list):
                 for data in value:check_paths(data,key.removesuffix('s'))
             elif isinstance(value,str) and (key.endswith(('_path','_dir')) or key=='pretrained_checkpoint') and value:
@@ -164,6 +165,14 @@ class SharedAuthorizationMiddleware:
                 # registered kind root, including symlinks, before creating a ref.
                 if path=='/api/context/artifacts' and key=='relative_path':return
                 if account['administrator'] and path in {'/api/project/update','/api/label-candidates/setup'}:return
+                if prospective_source:
+                    # Match project.update's source registration boundary, but
+                    # inspect only this top-level candidate without adopting it.
+                    candidate=Path(value).expanduser().resolve()
+                    workspace=Path(project['project_dir']).resolve()
+                    if workspace==candidate or workspace.is_relative_to(candidate):
+                        raise ValueError('Project workspace cannot be inside its dataset source')
+                    return
                 if path=='/api/team-data/books' and key=='relative_path':
                     relative=Path(value)
                     if relative.is_absolute() or '..' in relative.parts or not project.get('source_dataset_dir'):raise ValueError('Example path is outside the project source')
@@ -188,7 +197,9 @@ class SharedAuthorizationMiddleware:
                     if not message.get('more_body'):break
                 body=b''.join(chunks)
                 if body:
-                    value=json.loads(body);check_paths(value)
+                    value=json.loads(body)
+                    check_paths(value,prospective_source=(method=='POST' and path=='/api/dataset/import'
+                        and bool(account['administrator']) and role=='owner'))
                     changes=value.get('changes',{}) if isinstance(value,dict) else {}
                     if role not in {'owner','reviewer'} and isinstance(changes,dict) and changes.get('workflow_state')=='approved':
                         return await reject(403,'Reviewer permission required for label approval')
