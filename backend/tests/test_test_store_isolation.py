@@ -9,8 +9,11 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import uuid
 from pathlib import Path
+
+import pytest
 
 from backend.api import routes_dataset
 from backend.engine import dataset_loaders
@@ -70,6 +73,72 @@ def test_importing_the_shared_conftest_alone_isolates_every_store(tmp_path):
     for name, value in shown.items():
         assert _inside(value, session), (name, value)
         assert not any(_inside(value, home) for home in HOME_STORES), (name, value)
+
+
+def _subprocess_owned_store(env):
+    code = '''
+import importlib, json, os, tempfile
+from pathlib import Path
+temp_root = tempfile.gettempdir()
+import backend.conftest
+session = os.environ['MODU_TEST_DATA_DIR']
+importlib.reload(backend.conftest)
+assert os.environ['MODU_TEST_DATA_DIR'] == session
+from backend.engine.fleet_secret_store import ServerSecretStore
+result = {'temp_root': temp_root, 'session': session, 'stores': {
+    name: os.environ[name] for name in ('VISION_AI_STUDIO_USER_DATA_DIR',
+    'MODU_FLOW_TEMPLATE_DIR', 'MODU_SPLIT_MANIFEST_DIR', 'MODU_THUMBNAIL_CACHE_DIR')}}
+try:
+    store = ServerSecretStore(Path(session) / 'project')
+    reference = store.save('test-target', 'test-token')
+    result['store_root'] = str(store.root)
+    result['readback'] = store.read('test-target', reference) == 'test-token'
+except ValueError as exc:
+    result['store_error'] = str(exc)
+print(json.dumps(result))
+'''
+    return json.loads(subprocess.run([sys.executable, '-c', code], cwd=ROOT, env=env,
+                                    capture_output=True, text=True, check=True, timeout=120).stdout)
+
+
+@pytest.mark.parametrize('temp_location', ['native', 'linked'])
+def test_new_session_temp_is_canonical_before_owned_store_creation(tmp_path, temp_location):
+    env = {key: value for key, value in os.environ.items() if key != 'MODU_TEST_DATA_DIR'}
+    if temp_location == 'linked':
+        target = tmp_path.resolve() / 'temp-target'
+        target.mkdir()
+        alias = tmp_path.resolve() / 'temp-alias'
+        alias.symlink_to(target, target_is_directory=True)
+        env['TMPDIR'] = str(alias)
+    shown = _subprocess_owned_store(env)
+    # The native case retains the actual OS TMPDIR, including macOS's /var alias.
+    if temp_location == 'native':
+        assert shown['temp_root'] == tempfile.gettempdir()
+    else:
+        assert shown['temp_root'] == str(alias)
+    session = Path(shown['session'])
+    assert session == session.resolve()
+    assert session.parent == Path(shown['temp_root']).resolve()
+    for value in shown['stores'].values():
+        assert Path(value) == Path(value).resolve()
+        assert _inside(value, session)
+    assert 'store_error' not in shown, shown
+    assert shown['readback'] is True
+    assert _inside(shown['store_root'], session)
+
+
+def test_explicit_session_alias_is_unchanged_and_owned_store_guard_still_rejects_it(tmp_path):
+    target = tmp_path.resolve() / 'caller-target'
+    target.mkdir()
+    caller_path = tmp_path.resolve() / 'caller-alias'
+    caller_path.symlink_to(target, target_is_directory=True)
+    env = dict(os.environ, MODU_TEST_DATA_DIR=str(caller_path))
+    shown = _subprocess_owned_store(env)
+    assert shown['session'] == str(caller_path)
+    assert shown['stores']['VISION_AI_STUDIO_USER_DATA_DIR'] == str(caller_path / 'user_data')
+    assert shown['store_error'] == 'Server secret storage is linked'
+    assert 'readback' not in shown
+    assert not (target / 'user_data').exists()
 
 
 def test_a_real_split_save_and_thumbnail_land_in_the_session_folder(tmp_path):

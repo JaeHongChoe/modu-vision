@@ -21,7 +21,11 @@ import pytest
 
 # MODU_TEST_DATA_DIR names an explicit folder for this session (a reviewer's or CI run); it is used, never removed.
 # Exporting it makes any second run of this block in the same process reuse the folder.
-_SESSION_DATA = os.environ.get('MODU_TEST_DATA_DIR') or tempfile.mkdtemp(prefix='modu-vision-tests-')
+_SESSION_DATA = os.environ.get('MODU_TEST_DATA_DIR')
+if not _SESSION_DATA:
+    # Only our newly created private temp folder may resolve OS aliases such as macOS /var.
+    # An explicit caller path keeps its original spelling and the product's linked-path guards.
+    _SESSION_DATA = str(Path(tempfile.mkdtemp(prefix='modu-vision-tests-')).resolve(strict=True))
 os.environ['MODU_TEST_DATA_DIR'] = _SESSION_DATA
 os.environ['VISION_AI_STUDIO_USER_DATA_DIR'] = os.path.join(_SESSION_DATA, 'user_data')
 os.environ['MODU_FLOW_TEMPLATE_DIR'] = os.path.join(_SESSION_DATA, 'flow_templates')
