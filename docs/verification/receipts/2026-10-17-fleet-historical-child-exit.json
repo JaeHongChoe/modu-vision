@@ -1,0 +1,261 @@
+{
+  "claim": "Fixture-only missed historical exit callback repair and bounded regression gates",
+  "custody": {
+    "all_four_integrated_source_inventories_sha256": "15ceb70d93012a7f9119845e77f652e4d2713f4bcf4318a8e5491e22e20e31e2",
+    "dependency_install_or_update_performed": false,
+    "harness_existing_synthetic_cleanup_signals_were_authorized": true,
+    "source_and_existing_dependency_provider_identity_unchanged": true,
+    "wrapper_sent_signals": false
+  },
+  "evidence": [
+    {
+      "bytes": 1731,
+      "logical_evidence_name": "original-red/actual-red-01/node.log",
+      "public_copy_of_raw_body_included": false,
+      "raw_original_preserved": true,
+      "sha256": "68a2ecece6995ed90c62d30976d21454f669f66822ca909b0eaaec2096b72d94"
+    },
+    {
+      "bytes": 349,
+      "logical_evidence_name": "original-red/actual-red-01/result.json",
+      "public_copy_of_raw_body_included": false,
+      "raw_original_preserved": true,
+      "sha256": "01d7db41d6dd0fb32fe83e529e1c81df6e1ad749c555cb759e053712941de2cf"
+    },
+    {
+      "bytes": 1413,
+      "logical_evidence_name": "original-red/actual-red-01/inputs-before.json",
+      "public_copy_of_raw_body_included": false,
+      "raw_original_preserved": true,
+      "sha256": "286279b945846d6d00f92c863c99f9bee0221ec9391b5d4063f1b3ac44e826e3"
+    },
+    {
+      "bytes": 1413,
+      "logical_evidence_name": "original-red/actual-red-01/inputs-after.json",
+      "public_copy_of_raw_body_included": false,
+      "raw_original_preserved": true,
+      "sha256": "286279b945846d6d00f92c863c99f9bee0221ec9391b5d4063f1b3ac44e826e3"
+    },
+    {
+      "bytes": 1189,
+      "logical_evidence_name": "candidate/actual-green-01/node.log",
+      "public_copy_of_raw_body_included": false,
+      "raw_original_preserved": true,
+      "sha256": "a40624ebe4d561b2983718da34d7385d3ac8af881398c28b842f4e45f230cb67"
+    },
+    {
+      "bytes": 372,
+      "logical_evidence_name": "candidate/actual-green-01/result.json",
+      "public_copy_of_raw_body_included": false,
+      "raw_original_preserved": true,
+      "sha256": "16750e4ca02f62552dcf634498f8d66ffd13ffcc2e36ad606cbd6aaed9a5c7cc"
+    },
+    {
+      "bytes": 972852,
+      "logical_evidence_name": "candidate/actual-green-01/inputs-before.json",
+      "public_copy_of_raw_body_included": false,
+      "raw_original_preserved": true,
+      "sha256": "49bedb38b2373350b5767f14b7aa609466d73a19f4665ce0c79c956991bd3c82"
+    },
+    {
+      "bytes": 972852,
+      "logical_evidence_name": "candidate/actual-green-01/inputs-after.json",
+      "public_copy_of_raw_body_included": false,
+      "raw_original_preserved": true,
+      "sha256": "49bedb38b2373350b5767f14b7aa609466d73a19f4665ce0c79c956991bd3c82"
+    },
+    {
+      "bytes": 6163,
+      "logical_evidence_name": "candidate/integrated-gates-01/harness/npm.log",
+      "public_copy_of_raw_body_included": false,
+      "raw_original_preserved": true,
+      "sha256": "5eaf0d847def32115284b08c91408328313c20223d50f960712bfe99bf0d6038"
+    },
+    {
+      "bytes": 367,
+      "logical_evidence_name": "candidate/integrated-gates-01/harness/result.json",
+      "public_copy_of_raw_body_included": false,
+      "raw_original_preserved": true,
+      "sha256": "d6efa8201dd3302ba49b45ccad240b05df3abc0eec54d604a8f4fb8488d54286"
+    },
+    {
+      "bytes": 972547,
+      "logical_evidence_name": "candidate/integrated-gates-01/harness/source-before.json",
+      "public_copy_of_raw_body_included": false,
+      "raw_original_preserved": true,
+      "sha256": "15ceb70d93012a7f9119845e77f652e4d2713f4bcf4318a8e5491e22e20e31e2"
+    },
+    {
+      "bytes": 972547,
+      "logical_evidence_name": "candidate/integrated-gates-01/harness/source-after.json",
+      "public_copy_of_raw_body_included": false,
+      "raw_original_preserved": true,
+      "sha256": "15ceb70d93012a7f9119845e77f652e4d2713f4bcf4318a8e5491e22e20e31e2"
+    },
+    {
+      "bytes": 80,
+      "logical_evidence_name": "candidate/integrated-gates-01/typecheck/npm.log",
+      "public_copy_of_raw_body_included": false,
+      "raw_original_preserved": true,
+      "sha256": "0919024eaa08b11e2a01bdac079bf8c8debb38d3c424bdc824ed6c296484d515"
+    },
+    {
+      "bytes": 361,
+      "logical_evidence_name": "candidate/integrated-gates-01/typecheck/result.json",
+      "public_copy_of_raw_body_included": false,
+      "raw_original_preserved": true,
+      "sha256": "bf31a7afe9be04067fc757048c8e1185cd88c013cacc4d19c01d182e663dd53f"
+    },
+    {
+      "bytes": 972547,
+      "logical_evidence_name": "candidate/integrated-gates-01/typecheck/source-before.json",
+      "public_copy_of_raw_body_included": false,
+      "raw_original_preserved": true,
+      "sha256": "15ceb70d93012a7f9119845e77f652e4d2713f4bcf4318a8e5491e22e20e31e2"
+    },
+    {
+      "bytes": 972547,
+      "logical_evidence_name": "candidate/integrated-gates-01/typecheck/source-after.json",
+      "public_copy_of_raw_body_included": false,
+      "raw_original_preserved": true,
+      "sha256": "15ceb70d93012a7f9119845e77f652e4d2713f4bcf4318a8e5491e22e20e31e2"
+    },
+    {
+      "bytes": 13940,
+      "logical_evidence_name": "candidate/final-candidate.diff",
+      "public_copy_of_raw_body_included": false,
+      "raw_original_preserved": true,
+      "sha256": "dec5432dedcdd65788362021b0a2962beb179b415b12317326a052981dfe172e"
+    },
+    {
+      "bytes": 1503,
+      "logical_evidence_name": "candidate/portability.json",
+      "public_copy_of_raw_body_included": false,
+      "raw_original_preserved": true,
+      "sha256": "463a4a4081a51a7a0560ebcb8a0383536b7735ef4f971761f7ba906ec673568d"
+    }
+  ],
+  "integrated_gates": [
+    {
+      "actual_fleet_native_model_external_service_execution": false,
+      "attempts": 1,
+      "cancelled": 0,
+      "command": "npm run test:e2e:harness",
+      "exit_code": 0,
+      "failed": 0,
+      "original_npm_process_natural_exit_and_reaped": true,
+      "passed": 60,
+      "retained_wrapper_elapsed_seconds": 8.847037249943241,
+      "scope": "unchanged original harness synthetic owned Node children, loopback HTTP/TCP and existing cleanup signals, plus five new EventEmitter controls",
+      "skipped": 0,
+      "source_files_before_after_equal": 2876,
+      "tap_duration_ms": 8357.98275,
+      "tests": 60
+    },
+    {
+      "attempts": 1,
+      "command": "npm run typecheck:e2e",
+      "exit_code": 0,
+      "original_npm_process_natural_exit_and_reaped": true,
+      "retained_wrapper_elapsed_seconds": 4.66663329093717,
+      "scope": "original noEmit E2E TypeScript configuration",
+      "source_files_before_after_equal": 2876
+    }
+  ],
+  "limits": [
+    "EventEmitter controls establish callback/handle identity semantics only; they do not prove actual ChildProcess ownership or whole-fleet cleanup.",
+    "An active original child that never emits exit remains unbounded; no new timeout, retry or fresh 240-second budget is introduced.",
+    "No attribution of the historical 079 ECONNREFUSED or aggregate escaped-worker report is established.",
+    "Existing scanner, group and escaped-worker refusal guards remain unchanged.",
+    "No actual fleet, native app, model inference, GPU, build, external-service execution or parent-job completion credit.",
+    "This review draft does not change registry/action state or claim a clean committed candidate execution."
+  ],
+  "original_causal_RED": {
+    "attempts": 1,
+    "cancelled": 0,
+    "event_model": "EventEmitter only; historical exit before disconnect; in-memory noOsModelKillCallback",
+    "exact_disconnect_fragment_sha256": "b7608c7d91919374c5f34a13523d740561d1c0e7ada7b757ee0cb1e4972a45ce",
+    "extraction": "exact original fragment; only index:number and Promise<void> TypeScript erasures",
+    "failed": 1,
+    "failure": "sole desired completion assertion: expected fulfilled, actual pending after four Promise microtasks",
+    "inputs_before_after_equal": true,
+    "original_Node_runner_natural_exit_and_reaped": true,
+    "original_source_sha256": "b9289eed3378122a5eb4c3b983891a731e81bd5509133f5c00812e5010b2d30d",
+    "passed": 1,
+    "setup_and_provenance_guards_passed": true,
+    "skipped": 0,
+    "source_commit": "3a582ef3f41969d7d8272dbd926ea06c034b1413",
+    "test_exit_code": 1,
+    "tests": 2
+  },
+  "portable_controls": {
+    "behavior_body_sha256": "2665148629820851601a6e47e2e39e12df72fa2b500ba30493ff3dd1a0fbeed5",
+    "harness_script_change": "append only scripts/tests/fleet-child-lifetime.test.cjs",
+    "private_behavior_bodies_exact_after_removing_provenance_calls": true,
+    "tests": 5
+  },
+  "private_GREEN": {
+    "actual_fleet_or_application_child_or_OS_signal": false,
+    "attempts": 1,
+    "behaviors": [
+      "ordinary post-registration original exit",
+      "historical exit without second signal",
+      "mismatched and later-replaced child refused without replacement signal or clearing",
+      "kill false without retained exit event remains pending",
+      "exitCode populated without retained exit event remains pending and uncleared"
+    ],
+    "cancelled": 0,
+    "event_model_only": true,
+    "failed": 0,
+    "original_Node_runner_natural_exit_and_reaped": true,
+    "original_four_control_bytes_preserved_sha256": "86df85fd0183ead468f149034e9086dc1e121190524deed98fedc9499f50f2ed",
+    "passed": 5,
+    "private_and_original_RED_inputs_unchanged": true,
+    "retained_wrapper_elapsed_seconds": 0.3084343750961125,
+    "skipped": 0,
+    "source_files_unchanged": 2875,
+    "tap_duration_ms": 16.730167,
+    "test_exit_code": 0,
+    "tests": 5
+  },
+  "private_review_draft_sha256": "f1b30aca69f06a68d7932e514679ef22eabddcb6c56399fb8f651bf26b604f2a",
+  "public_redaction": {
+    "kind": "path-redacted structured derivative; original evidence untouched",
+    "no_private_tokens_or_authority_frames_included": true,
+    "omitted": [
+      "personal absolute paths",
+      "runtime PID values",
+      "dependency provider absolute paths",
+      "raw failure stack containing private paths"
+    ],
+    "raw_originals_identified_by_sha256": true
+  },
+  "recorded_at_utc": "2026-10-17T11:44:15.889687+00:00",
+  "schema": "modu-vision.public-style.fleet-original-child-exit-fixture-review/v1",
+  "source": {
+    "base_commit": "dcb45ec717a9c36a351d8b303fd6fe29d4a975e6",
+    "clean_commit_execution_claim": false,
+    "execution_source": "reviewed private candidate based on the exact base commit; four declared file changes",
+    "files": [
+      {
+        "path": "scripts/e2e/fleet-actual-rollout.spec.ts",
+        "sha256": "21a8724a10ecb15703b3d2787b77c56deda7464d90ac74e0ca12bcb9d9ad8cd9"
+      },
+      {
+        "path": "scripts/e2e/fixtures/fleet-child-lifetime.cjs",
+        "sha256": "3950ec032edef22b329dc21cfac02d4ea01e919d86357fd4f7a9f9fcedfb70b6"
+      },
+      {
+        "path": "scripts/tests/fleet-child-lifetime.test.cjs",
+        "sha256": "2a31bd5017f792d490a586ac750b3dfa21780ed1f6113410ce40dcc9cb24a8fb"
+      },
+      {
+        "path": "package.json",
+        "sha256": "8658d7cce5ace735ed24412e3f19e1f14d1ac3ea721827c64801791903971d3c"
+      }
+    ],
+    "final_candidate_diff_sha256": "dec5432dedcdd65788362021b0a2962beb179b415b12317326a052981dfe172e",
+    "public_worktree_mutated_during_candidate_execution": false
+  },
+  "status": "Root reviewed source checkpoint; no registry action-state update"
+}
