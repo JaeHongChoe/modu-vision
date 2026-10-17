@@ -1,0 +1,377 @@
+{
+  "GUI_actions_verified": false,
+  "PUB_mutated": false,
+  "Provider18_manual8_accepted": false,
+  "can_release_launch_lease": false,
+  "final_failed_lease": {
+    "active_scopes": 0,
+    "backend_exit_receipt_present": false,
+    "can_release_launch_lease": false,
+    "claimed": true,
+    "cpu_execution_present": false,
+    "drain_status": "refused",
+    "known_image_receipt_present": false,
+    "original_main_exit_returncode": 0,
+    "process_tree_exit_verified": false,
+    "protocol_version": 4,
+    "reason": "Process-tree exit is unverified",
+    "revision": 9,
+    "state": "recovery_required",
+    "unsupported": [
+      "uncovered_request_protocol"
+    ],
+    "whole_writer_coverage": false,
+    "writer_drain_phase": "refused"
+  },
+  "first_failure_cause_identified": false,
+  "health_observations": [
+    {
+      "HTTP_status": 200,
+      "all_released_records_normal_complete": true,
+      "first_poisoned_observation_interval": false,
+      "observation_ordinal": 1,
+      "own_health_request_is_still_in_flight": true,
+      "pending": [
+        {
+          "entered_sequence": 85,
+          "identity": 15,
+          "protocol": "HTTP",
+          "route": "HEALTH"
+        }
+      ],
+      "pending_records": 1,
+      "released_records": 14,
+      "request_count": 15,
+      "sampled_active_scopes": 2,
+      "sequence": 85,
+      "settled_records": 14,
+      "stage": "baseline",
+      "stop_further_UI": false,
+      "truncated": false,
+      "uncertain": false,
+      "wrapper_exit_code": 0
+    },
+    {
+      "HTTP_status": 200,
+      "all_released_records_normal_complete": true,
+      "first_poisoned_observation_interval": true,
+      "observation_ordinal": 2,
+      "own_health_request_is_still_in_flight": true,
+      "pending": [
+        {
+          "entered_sequence": 309,
+          "identity": 53,
+          "protocol": "WEBSOCKET",
+          "route": "TELEMETRY"
+        },
+        {
+          "entered_sequence": 527,
+          "identity": 66,
+          "protocol": "HTTP",
+          "route": "HEALTH"
+        }
+      ],
+      "pending_records": 2,
+      "released_records": 64,
+      "request_count": 66,
+      "sampled_active_scopes": 4,
+      "sequence": 527,
+      "settled_records": 64,
+      "stage": "login",
+      "stop_further_UI": true,
+      "truncated": false,
+      "uncertain": true,
+      "wrapper_exit_code": 2
+    }
+  ],
+  "ledger_promoted": false,
+  "native_observation": {
+    "CUA_stage_scope": "Fixture account login and automatic restoration of the owned existing segmentation/patch-control project; UI stopped at the first poisoned health interval.",
+    "GUI_actions_independently_verified": false,
+    "Root_attested_actual_CUA_AX_login_and_auto_project_hydration": true,
+    "actual_CUA_executor": "Root only",
+    "initial_controller_ack_is_starting_unverified": true,
+    "original_holder_READY_reached": true,
+    "retained_READY_journal": {
+      "claimed": true,
+      "protocol_version": 4,
+      "revision": 6,
+      "state": "ready"
+    },
+    "screenshot_file_evidence_claimed": false,
+    "subsequent_workflow_UI_stages_executed": false
+  },
+  "native_workflow_accepted": false,
+  "ordinary_shutdown": {
+    "complete_Electron_helper_tree_closed": false,
+    "holder_errors": [
+      {
+        "exception_class": "ValueError",
+        "phase": "normal-closure"
+      }
+    ],
+    "holder_returncode": 1,
+    "nonce_bound_ready_SHA_quit_request": true,
+    "normal_quit_requested": true,
+    "original_backend_exited": true,
+    "original_controller_reaped": true,
+    "original_controller_still_live": false,
+    "original_main_exited": true,
+    "signals_or_forced_termination_used": false,
+    "strict_lifetime_and_scoped_closure_verified": false,
+    "whole_process_tree_exit_verified": false
+  },
+  "parent_acceptance": false,
+  "private_pinlist": {
+    "bytes": 24768,
+    "sha256": "3e21da191d2c06b9d9a8f86941864abfd5f6925e75c0d52aef4f1826ed6d67a6"
+  },
+  "protected_originals": {
+    "active_pointer_changed_by_UI": false,
+    "body_count": 68,
+    "installed_profile_unchanged": true,
+    "original_after_UI_control_exit_code": 0,
+    "original_bodies_reopened_by_receipt_preparation": false,
+    "original_model_source_profile_pins_unchanged": true,
+    "protected_after_setup_and_after_UI_rows_equal": true
+  },
+  "publisher_or_OS_signature_approved": false,
+  "quality_approved": false,
+  "raw_evidence": {
+    "active_before_UI": {
+      "bytes": 410,
+      "sha256": "8af1eb6fe7da83610dbc04350e60081f1f484542ec11c666aa82b0e23eff29cc"
+    },
+    "actual_input_verification": {
+      "bytes": 3601,
+      "sha256": "a032381caf38c787cdd6fcf3acd17058836f9e3afe5ec6420b0c0a0c0ce6662e"
+    },
+    "adapter_source": {
+      "bytes": 14605,
+      "sha256": "3b6558f6844ddd3352132d4b42f649d051b516ef79efadf33ab4c6b605013f84"
+    },
+    "artifact_pins": {
+      "bytes": 58964,
+      "sha256": "20641dc7985dc7596f44ad3efedfb35a1ee8730538e79c9eb786554503ed53c8"
+    },
+    "assembly_child_stdout": {
+      "bytes": 291,
+      "sha256": "98a02a14e6b27056f5f52bddadf3f30b2483c6040c53bf0208a14cf3bff1514b"
+    },
+    "assembly_original_tool_result": {
+      "bytes": 459,
+      "sha256": "037f86ecde289bef6e923963ed294997fcc2c9360689c187b000f79a0e586440"
+    },
+    "assembly_provenance": {
+      "bytes": 2164989,
+      "sha256": "5fbd4aec447353925f92a32e7eb02980962aa89bc07520fe8a495ac7fb3aff5a"
+    },
+    "assembly_wrapper_result": {
+      "bytes": 167,
+      "sha256": "b7421219d63dc0735c83746da3cc8b3673e5064279d894c2bce1b8e1681886d5"
+    },
+    "backend_build_result": {
+      "bytes": 650,
+      "sha256": "4413d4f9eb5f9ac0e3cfe0862c61c52c98bd6e6ce87d5b8093a0199d0b159be2"
+    },
+    "backend_build_start": {
+      "bytes": 4960,
+      "sha256": "bf5b662c94ca5aef065dea2242efee8ce1d6a7e46b67109b040b233b0b3fdfab"
+    },
+    "backend_build_tool": {
+      "bytes": 953,
+      "sha256": "e1a0b329f3da9b63be8daf6c3b7be790cc2cc06105e017e5496144e76e8a3a76"
+    },
+    "backend_release": {
+      "bytes": 957541,
+      "sha256": "d03a64a7b10798dcc5a0fcd199c4fc5e57962af13c0a0d209b6e42092c16076c"
+    },
+    "backend_source_after": {
+      "bytes": 530059,
+      "sha256": "5453f416815fac6299431d3839d63fe92c59a0e654ada1bdf22bb79f261b5ca5"
+    },
+    "backend_source_before": {
+      "bytes": 530059,
+      "sha256": "5453f416815fac6299431d3839d63fe92c59a0e654ada1bdf22bb79f261b5ca5"
+    },
+    "baseline_health": {
+      "bytes": 7840,
+      "sha256": "bab92e84fda045d36adffa64fd18df86fddaa7ce277a874aef3a293a76ead93c"
+    },
+    "canary_pins": {
+      "bytes": 194,
+      "sha256": "8c4d541c80ee515631c3a6f37344127395fba34c55c44090f50a3c16a4bdc3c1"
+    },
+    "coherent_declaration": {
+      "bytes": 5984,
+      "sha256": "977fdb4f26afdecf3d1d9123d99dca5de8cd73caafca98c99f334d2190fe51ff"
+    },
+    "controller_argv": {
+      "bytes": 927,
+      "sha256": "b51cd1974593ca2a6480cf986592f06fdac35581b28e8a7f955a952845f4f871"
+    },
+    "controller_inputs": {
+      "bytes": 548,
+      "sha256": "12aabdfccdf6957a35bc6ef031156206e84d8c7d5f30dd823e1ac495a193f417"
+    },
+    "controller_start": {
+      "bytes": 3547,
+      "sha256": "e1bf4a8cef74ab0eaab5f61183f4cde61af4d3cc79415aaaf4201aec5cd82bd6"
+    },
+    "controller_stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "current_inputs": {
+      "bytes": 7042,
+      "sha256": "63a2fd5a0563ec9df3c746afef914e57ec3a2d1019aa0ec90902c37142c6f637"
+    },
+    "final_failed_journal": {
+      "bytes": 5373,
+      "sha256": "bbacc48b362973adc7a0c2d696fc1454ef953c9e93856ffc6f43cf7f52757a80"
+    },
+    "frontend_source_snapshot": {
+      "bytes": 1033410,
+      "sha256": "c78389c08b3609c58f207dc655145ee2a35508c8a770d0c4b4a49b5eab2bbafb"
+    },
+    "holder_readiness_proof": {
+      "bytes": 19878,
+      "sha256": "7071518601fdfd6871909cdf65340ec6a4802a843f7aac7aca0c859c5e2395fb"
+    },
+    "holder_ready": {
+      "bytes": 1732,
+      "sha256": "1fa28793a79016aad6ac079eff50587e6c2727ccb742ac86619e631036c3760b"
+    },
+    "holder_result": {
+      "bytes": 4674,
+      "sha256": "aec49f8786eba88c3500e617694c84e65e68135b36d0ebb7ee3f234a25852f22"
+    },
+    "initial_controller_ack": {
+      "bytes": 404,
+      "sha256": "00a57cd4f9709cd7ae0631670758b761fb9ae3e60512a76f0570df0b1f42cef0"
+    },
+    "install": {
+      "bytes": 545,
+      "sha256": "074b5ac8e6d3e0a8935541542256976208b68624314dfb5345fbcf7568fae6b6"
+    },
+    "install_child": {
+      "bytes": 3039,
+      "sha256": "f9a924ce672837c0bd4815668a715d8bac03b71ae841ac5bdb6f313bc64a7637"
+    },
+    "install_start": {
+      "bytes": 2095,
+      "sha256": "fa21a7b985238fceb051e8a2838bbe9b5154755cbc756357605487165a10468d"
+    },
+    "install_stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "install_stdout": {
+      "bytes": 503,
+      "sha256": "65faed60cd8aad24bc0cb872cf5c7a49b5e67269b946d3dfb35de83a7fe5e6d5"
+    },
+    "installed_original_tool_results": {
+      "bytes": 5988,
+      "sha256": "a33696e72f26ace16f36d188aa22055b07660b9afb930f823ac1526a9b37a33f"
+    },
+    "lifetime_inputs": {
+      "bytes": 1705,
+      "sha256": "a99e482537c203adb41a004c9195e471e6e2ba557194ac732da478857ec397f7"
+    },
+    "login_health": {
+      "bytes": 25991,
+      "sha256": "7db24e44fcec89feb979c1fbd025c6511a5770e01a719420808bbdbcdd48935c"
+    },
+    "nonce_bound_quit": {
+      "bytes": 222,
+      "sha256": "98cf322b0b6717e388b623072a8e4f0f6b9a8eee857e287b49abbf8c27f596c0"
+    },
+    "original_argv_binding": {
+      "bytes": 7896,
+      "sha256": "73f4783240c806d04b68f43aa684e13cc85206b523c4728f91e6acf2658ca29f"
+    },
+    "populated_setup": {
+      "bytes": 21984,
+      "sha256": "9c9841809ffee09336d1308ad282fb11e432a7f11bc6c267f01ea76d3c4ab778"
+    },
+    "preview": {
+      "bytes": 2571,
+      "sha256": "771da3d0427f657d374e05b693ffa8466e3fb22ad72549b73c1435a254c78386"
+    },
+    "preview_child": {
+      "bytes": 2938,
+      "sha256": "7a12314e633e3e65ba6d2a54e136d2ab6e22101c5b7f70efbf22fed363088ab5"
+    },
+    "preview_start": {
+      "bytes": 1993,
+      "sha256": "159b465f96981ad49e659ea07157e762802b7f74d2214f475fad8c5c8c0882b0"
+    },
+    "preview_stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "preview_stdout": {
+      "bytes": 2373,
+      "sha256": "4fab3281d74fb789c7488a675212b9923e027ebd21bd8484eb7d73531b3e6bbe"
+    },
+    "protected_after_UI": {
+      "bytes": 59899,
+      "sha256": "93b974b657850d2bf182d1bb8b1db37ed27a6f424650c57f34d1497eb6257dc4"
+    },
+    "protected_after_setup": {
+      "bytes": 60281,
+      "sha256": "e99cc4ccae69a670c7dfa99c97da70f56f6eae2cda8852de84384f6c3d3d05ac"
+    },
+    "protected_before_setup": {
+      "bytes": 58318,
+      "sha256": "d5fdd0186edca69863dc35d3216e62eed0c985f8f62a60de47ef7027c3be7f09"
+    },
+    "ready_handoff": {
+      "bytes": 3573,
+      "sha256": "ffce51ec5945ed1561b8f850f402c439215636959503c077396efed1a1baa371"
+    },
+    "setup_result": {
+      "bytes": 15311,
+      "sha256": "e3a7c726969be1f8353c994d3986391a571670097d6aeac3d9c4938799dd6be5"
+    }
+  },
+  "retained_build_and_artifact_verification": {
+    "actual_build_tool_and_assembly_triple_retained": true,
+    "backend_build_exit_code": 0,
+    "backend_build_seconds": 127.35813183384016,
+    "portable_files_verified_by_original_verifier": 5387,
+    "portable_links_verified_by_original_verifier": 14,
+    "receipt_preparation_did_not_rehash_payloads": true,
+    "release_members_verified_by_original_verifier": 5104,
+    "source_resource_joins_reported": 372,
+    "source_unchanged": true
+  },
+  "schema": "modu-vision.current-installed-native-login-negative/v1",
+  "scope_limits": [
+    "Actual startup READY and Root-observed login/hydration are recorded; this is a preserved failed native run, not later workflow or model execution credit.",
+    "Health records retain the false-to-true uncertainty interval but omit first observer failure codes. Pending telemetry/health rows do not establish the cause.",
+    "All original direct processes exited according to the original holder, while strict scoped closure remained refused. Direct process exit is not complete helper-tree or lease-release proof.",
+    "The failed journal and all stores remain untouched; no reopen, recovery, repair, retry, API call or new execution occurred during receipt preparation.",
+    "Root-attested CUA/AX observation is not presented as a saved screenshot artifact.",
+    "Backend/frontend sources differ from later publication HEADs. No source-fix claim establishes this native failure cause."
+  ],
+  "setup": {
+    "GUI_or_parent_accepted": false,
+    "complete": true,
+    "original_compiled_CLI_install": true,
+    "setup_tool_exit_code": 0
+  },
+  "source_cohort": {
+    "archive_bytes": 487611136,
+    "archive_sha256": "520b7dc8f25d24ca525f1dac78e2f4139dca3c068f32ffe2c2b5760f25a8b701",
+    "backend_build_identity_sha256": "158958da9944e0280a40af9d9913ea19a224641545c95d32886269cd2e2cd1a9",
+    "backend_executable_sha256": "67ec3d842c08702a762d25cb858ed58943ae38749bf7146dda0bbd683990fb96",
+    "backend_head": "8f6f1b5f649311e74fd7a43b378b3069ab32b0a1",
+    "backend_release_sha256": "d03a64a7b10798dcc5a0fcd199c4fc5e57962af13c0a0d209b6e42092c16076c",
+    "frontend_diagnostic_head": "32752ea542343d770eb3874524be56cae44682cc",
+    "frontend_tracked_files": 2886,
+    "portable_manifest_sha256": "a999635fb443e80104633bfd9e57ef06130807593fa2c4a2849a64cb3a08f805"
+  },
+  "status": "failed_after_login_hydration_and_strict_closure_refused",
+  "whole_process_tree_exit_verified": false
+}
