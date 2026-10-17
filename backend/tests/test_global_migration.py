@@ -23,6 +23,33 @@ def owned(tmp_path):
     (root/'projects/labels.json').write_bytes(b'{"label":"original"}')
     return root,scopes,ledger,registry,account,actor
 
+def test_internal_schema_probe_accepts_an_aliased_os_temporary_directory(tmp_path,monkeypatch):
+    from backend.engine import global_migration
+    from backend.engine.global_store_paths import SUPPORTED_SCOPES
+    canonical=tmp_path.resolve()/'canonical-temp';canonical.mkdir()
+    alias=tmp_path/'os-temp-alias';alias.symlink_to(canonical,target_is_directory=True)
+    monkeypatch.setattr(global_migration.tempfile,'tempdir',str(canonical))
+    expected=global_migration._known_schemas(SUPPORTED_SCOPES)
+    monkeypatch.setattr(global_migration.tempfile,'tempdir',str(alias))
+    actual=global_migration._known_schemas(SUPPORTED_SCOPES)
+    assert actual==expected and set(actual)=={'ledger','leases','accounts','context'}
+    assert all(actual.values())
+    assert list(canonical.iterdir())==[]
+
+@pytest.mark.parametrize('linked_part',['root','parent'])
+def test_external_owned_initialization_still_rejects_linked_paths(tmp_path,linked_part):
+    from backend.engine.global_migration import initialize_owned,GlobalMigrationError
+    from backend.engine.global_store_paths import SUPPORTED_SCOPES
+    canonical=tmp_path.resolve()/'external';canonical.mkdir()
+    alias=tmp_path/'external-alias';alias.symlink_to(canonical,target_is_directory=True)
+    root=alias
+    if linked_part=='parent':
+        (canonical/'fresh').mkdir()
+        root=alias/'fresh'
+    with pytest.raises(GlobalMigrationError,match='new empty owned installation'):
+        initialize_owned(root,scopes=SUPPORTED_SCOPES)
+    assert list((canonical/'fresh' if linked_part=='parent' else canonical).iterdir())==[]
+
 def test_owned_preview_and_activation_preserve_identity_and_revoke_copied_sessions(tmp_path):
     from backend.engine.global_migration import preview,apply
     from backend.engine.global_store_paths import resolve_store_path

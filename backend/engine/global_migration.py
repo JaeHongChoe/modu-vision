@@ -63,7 +63,9 @@ def _construct(root,scopes):
 
 def _known_schemas(scopes):
     with tempfile.TemporaryDirectory(prefix='modu-global-schema-') as temp:
-        root=Path(temp)
+        # OS temp parents may be aliases (macOS /var). Canonicalize only this
+        # freshly created internal scratch; external owned roots still reject links.
+        root=Path(temp).resolve(strict=True)
         # A confined worker TMPDIR may be inside another owned installation.
         # Scratch constructors must acquire their own admission, never its lock.
         initialize_owned(root,scopes=scopes)
