@@ -1,0 +1,229 @@
+{
+  "schema": "modu-vision.current-compiled-continuation/v1",
+  "created_at": "2026-10-17T05:24:53.601333+00:00",
+  "public_derivative": true,
+  "derivation": "Bounded summary of retained original private execution receipts and actual CUA observations; this is not an original transport response or a replacement for failed receipts.",
+  "frontend_source_commit": "2bf54a90cbde0ec9ecef0f777699a33a9669e75e",
+  "backend_source_commit": "35ac911a83dd105a794f83e0a65e108d29461054",
+  "backend_executable_sha256": "11aecb7dc6398db41d02f9bc117f5c5262526fb25d11e568f9f829fb9a44fc58",
+  "backend_release_sha256": "3dcd3d7c07971982e83e3869cbf215a60e8877ade0269344682530386fa86b73",
+  "source_regressions": {
+    "renderer_passed": 1299,
+    "renderer_failed": 0,
+    "typecheck_exit_code": 0,
+    "e2e_typecheck_exit_code": 0,
+    "renderer_log_sha256": "70e4898f3fff88350cbdeab10da895a0cb946c9306c74aa2e60e3d7fb3e765b3",
+    "source_body_gate_receipt": {
+      "bytes": 2838,
+      "sha256": "4ef7e90df5df72fa7dca98a2dca9d51783e66afa7a0d35341d3222d39fa8ea99"
+    },
+    "recorded_HEAD_at_test": "e5516efc87bd2e2e142cb0352ac3a2d22339ca14",
+    "tested_working_body_pins_became_commit": "2bf54a90cbde0ec9ecef0f777699a33a9669e75e",
+    "working_body_source_pins": [
+      {
+        "path": "src/renderer/components/dataset/DatasetStudio.tsx",
+        "bytes": 52774,
+        "sha256": "05001ce30dd9b6c8490735f1c2ce23140f9bc4651fd4ed95bb9b6fc528ceca3b"
+      },
+      {
+        "path": "src/renderer/components/dataset/datasetFolderOwnership.test.cjs",
+        "bytes": 16406,
+        "sha256": "b3dcef459599d55bde6049c2e6e2f2c9e86844a338438f08ebfca31d4b3e2aed"
+      },
+      {
+        "path": "src/renderer/components/dataset/datasetSourceRestore.test.cjs",
+        "bytes": 6932,
+        "sha256": "9a4cf4fb1d7f4f16bc4bef01754e305d2c32c84e1910b3dc6ee4c72ca076a7b5"
+      },
+      {
+        "path": "src/renderer/services/api.ts",
+        "bytes": 76767,
+        "sha256": "ba82fc801fb827ab16b453ee4722ede933a641177be9994f6666f82965bc472e"
+      },
+      {
+        "path": "src/renderer/services/apiImageOrigin.test.cjs",
+        "bytes": 6434,
+        "sha256": "be2df1517a99de819f6402611bb26a724d404d0e50b6ed181283a83cc6f8cfa8"
+      },
+      {
+        "path": "src/renderer/stores/datasetSourcePath.test.cjs",
+        "bytes": 17749,
+        "sha256": "c752b04f48582dbd7faca1220214b427d512405598b726ef07751ae5c8a7087b"
+      },
+      {
+        "path": "src/renderer/stores/useDatasetStore.ts",
+        "bytes": 19128,
+        "sha256": "2be93b612936ab7fc9f515382c205737e7a22237fc7efe5dfa58434efd004cb3"
+      }
+    ]
+  },
+  "actual_current_frozen_backend": {
+    "passed": 4,
+    "failed": 0,
+    "scope": "Three original-epoch dispatch refusals and one actual original-epoch CPU OCR case; unchanged selected test controls.",
+    "result": {
+      "bytes": 83,
+      "sha256": "fbcee6e514069663c67e87eb6e7b24b4eb8df4fb9a7359279b4df31ba137dcdd"
+    },
+    "junit": {
+      "bytes": 899,
+      "sha256": "3aceb0c5a31d83502661f17a08af20e8128e46fc1d69cf5dd0ac96d57be904f2"
+    }
+  },
+  "actual_current_controlled_native_registration": {
+    "passed": 1,
+    "failed": 0,
+    "scope": "Controlled native registration/health/inspect/drain/normal quit/scoped writer closure; separate from the later populated GUI lifetime.",
+    "result": {
+      "bytes": 83,
+      "sha256": "2c0a6d2ac208c1c9842229b5919fbd08f941d0bf62ac016bcaff52b7fcab4979"
+    },
+    "junit": {
+      "bytes": 447,
+      "sha256": "96353656a38fb4c993f8846d4eec791b93b02e5436df76a699b2f242503c1a0e"
+    }
+  },
+  "actual_compiled_CLI_install": {
+    "preview_returncode": 0,
+    "install_returncode": 0,
+    "natural_join": true,
+    "original_children_reaped": true,
+    "signals_sent": false,
+    "canary_monkeypatch": false,
+    "publisher_signer_used": false,
+    "original_result": {
+      "bytes": 15149,
+      "sha256": "61f0e6f217fa08ec6af87f7d900cf63d87c56e00936bee3e5ff6f5e6c3a57032"
+    }
+  },
+  "actual_installed_GUI": {
+    "observed_save_version": "74517a5edb6a4aa19367464f8ad83581",
+    "durable_run_id": "caeb8c95-016a-4881-b397-a919ece27747",
+    "saved_graph_sha256": "e7ac8eb988adf9cdfc20bd17b850802dcc02d157e726655edd787c6bad3ce5dc",
+    "selected_compute_profile_sha256": "6f36f621864d3c6b327295f684118434c6c1d18ddee8b21f30071527b0e7ea49",
+    "target": "Selected existing remote CUDA GPU2, NVIDIA L40S",
+    "run_completed": true,
+    "images": 2,
+    "model_verdicts": {
+      "NG": 2
+    },
+    "row_failures": 0,
+    "downloaded_worker_operations": [
+      {
+        "id": "op_15d1c33e2e8540e7ae78368984c71b2a",
+        "image_sha256": "a45bfb45ccf7ef16fa9af98c9c0729f2707f4e4d4adc54a82e2add6627dd6212",
+        "worker_exit_confirmed": true,
+        "outputs": [
+          {
+            "bytes": 102904,
+            "sha256": "6fd2704437b75a7ab38e89e0ca0f40b27c68a0270e461c1cb52d7909f793ccd5"
+          },
+          {
+            "bytes": 3527,
+            "sha256": "3612d61dff186ad53d03aa7f0480902dcfaa21cad96f53703174c4a2098572f3"
+          },
+          {
+            "bytes": 6060,
+            "sha256": "c3b200314e6d31d323c60863f97504832388c0540e76b2b1abcff44b637915a1"
+          }
+        ],
+        "source_archive_sha256": "94a7600a77d10a60ba5bba36e26d792f2227879f7671f27cf408f02465adfcd5"
+      },
+      {
+        "id": "op_879842d252ef43efa353c8898440c680",
+        "image_sha256": "681e62695a13994ace258982d34bc3aff5e12990aa225d4a0e68b6b7938467a3",
+        "worker_exit_confirmed": true,
+        "outputs": [
+          {
+            "bytes": 103350,
+            "sha256": "12913a55e34bfc99fb1001d65dbd9e77abc7ccb701be3f17b0ab358fd0e7648b"
+          },
+          {
+            "bytes": 3539,
+            "sha256": "95a5ae744e0c05bd923b4d8bd96548986737d98c1d48da188dd865e130f415ae"
+          },
+          {
+            "bytes": 6227,
+            "sha256": "d12bf9edf7a44896054853b807bd7964d79a9dac33b5017cd740bc2d857e8de7"
+          }
+        ],
+        "source_archive_sha256": "3c5b9488ee94d3c67bc32a97182a26511888326d6ecfd173871d8f16bea953af"
+      }
+    ],
+    "model_sha256": {
+      "1c95798117d2439998ff696638561e75": "4c3c5c99adca1396d79d7217dc33138193cdd8132519e19f8b4cc8d738aabf97",
+      "job_1791504538_ea1648": "6843b566058af262ead960cf871a0581dc346a49562c2cb90ad13116500a0b3b"
+    },
+    "package_manifest_sha256": "fb60ef0d504b03356fb12118e75913afb7e0a18dd11eafb396af66b0faf654fe",
+    "package_manifest_member_files_verified": 295,
+    "total_package_files_with_manifest": 296,
+    "package_model_bodies_match": true,
+    "package_parity_run": false,
+    "package_includes_field_approval": false,
+    "saved_version_reopen": "Observed through actual native CUA return to Stage5 plus explicit saved-version load; r8/same74517 version/two model connections.",
+    "CUA_selected_observations": {
+      "bytes": 3370,
+      "sha256": "fc28fd1f62eb30e194fcad4cc35caca649e839bdb4f50ab95e7815289b5e6667"
+    },
+    "strict_local_readback": {
+      "bytes": 396526,
+      "sha256": "8208a2b90580caa18a07271d518148a882718f1e791b4dc681124bfcc75a28b7"
+    },
+    "original_fixed_HTTP_terminal_or_exchange_captures_present": false,
+    "strict_retained_single_input_run": false
+  },
+  "actual_populated_GUI_shutdown": {
+    "status": "failed",
+    "original_main_exited": true,
+    "original_backend_exited": true,
+    "original_controller_reaped": true,
+    "original_controller_still_live": false,
+    "signals_sent": false,
+    "managed_writer_closure_verified": false,
+    "final_protocol": 4,
+    "final_state": "recovery_required",
+    "writer_drain": "refused",
+    "active_scopes": 6,
+    "unsupported": [
+      "uncovered_request_protocol"
+    ],
+    "original_result": {
+      "bytes": 4618,
+      "sha256": "11abb4e4f68ca6f99b0619cb43754fc68328697a45e2c7aa18f7c0a5683484d3"
+    },
+    "failed_original_lease": {
+      "bytes": 5349,
+      "sha256": "c4d2da9bfcedc188c6064e4560493b27c2d1aede897d3ed11a85de7bcb39c395"
+    },
+    "failed_state_repaired_or_released": false
+  },
+  "GitHub_CI_prior_published_commit": {
+    "head": "42ad635e74013a7ba0a410845b7faafe8830430a",
+    "run_id": 39002134777,
+    "browser_job_status": "failed",
+    "browser_failed": 24,
+    "browser_passed": 272,
+    "browser_skipped": 2,
+    "source_job": "not yet confirmed complete",
+    "latest_local_fixes_do_not_inherit_CI_success": true
+  },
+  "Provider18_manual8_accepted": false,
+  "model_quality_approved": false,
+  "human_or_publisher_approval": false,
+  "release_or_deployment_approved": false,
+  "whole_process_tree_closed": false,
+  "all_work_complete": false,
+  "remaining_requirements": [
+    "S5-01",
+    "S6-03",
+    "S6-04",
+    "S6-06",
+    "S7-01",
+    "S7-02",
+    "S7-05",
+    "S7-06",
+    "S7-07",
+    "S7-08"
+  ],
+  "rollback": "Use individual normal revert commits; preserve published main ancestry."
+}
