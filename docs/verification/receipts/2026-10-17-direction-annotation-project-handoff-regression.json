@@ -1,0 +1,315 @@
+{
+  "PUB_or_registry_mutated": false,
+  "RED": {
+    "A_and_B_source_annotation_model_report_dataset_labelset_custody_before_after_equal": true,
+    "case_ms": 10091,
+    "case_status": "failed",
+    "console_error_count": 3,
+    "errors_allowlisted_or_accepted": false,
+    "failure": "Successful original business path followed by final zero-refusal gate: expected0 received3. Preserved as failed execution.",
+    "global_teardown_clean": true,
+    "normal_backend_closure": {
+      "escaped": [],
+      "exitCode": 0,
+      "exited": true,
+      "exitedBeforeStop": false,
+      "forced": false,
+      "groupAlive": false,
+      "pid_alive": false,
+      "port_closed": true,
+      "scanError": null,
+      "unownedReferences": []
+    },
+    "observed_annotation_GET_non2xx": 3,
+    "observer_receipt": {
+      "sha256": "c239c6af48d8038aceafce477dff54cae84113cfc67abfbbf770f7c85f846231",
+      "size": 6398
+    },
+    "original_Popen_natural_wait_returned": true,
+    "original_case_count": 1,
+    "page_error_count": 0,
+    "raw_evidence_pins": {
+      "browser-01.log": {
+        "sha256": "b2908f8fad21245c0bab3b0282051692b6e1b5b9c0ec58d0bf904ac3a2af295b",
+        "size": 7081
+      },
+      "business_custody": {
+        "sha256": "d964c6f2a3cd0f11829877ac36598a41607e1de6a9b507f05d811c60c79545b0",
+        "size": 72929
+      },
+      "invocation.json": {
+        "sha256": "49c147b13f474627945fe7f8b42d8016756d8f7e44a4964a1ed2af72b0728b77",
+        "size": 1176
+      },
+      "manifest": {
+        "sha256": "b45719d8a649bbdacae71b96523092485d87500276cc73db7eed92e8e7da8266",
+        "size": 18672
+      },
+      "run-result.json": {
+        "sha256": "7a7d2b2af08b419686597e00af1de96d374f994d2645fa002cba4065547ca6be",
+        "size": 1635
+      },
+      "source-after.json": {
+        "sha256": "642af5b45f43d1f3fa59b77c0518ec5d2b2fe636a0ed7bfbe36a81d9d6e24192",
+        "size": 1027006
+      },
+      "source-before.json": {
+        "sha256": "642af5b45f43d1f3fa59b77c0518ec5d2b2fe636a0ed7bfbe36a81d9d6e24192",
+        "size": 1027006
+      }
+    },
+    "runner_returncode": 1,
+    "runner_seconds": 20.472838749876246,
+    "source": "85ff40009b2eb7d20106d95e982ff4f5be2e529b",
+    "source_raw9_and_bytes_before_after_exact": true,
+    "source_tracked_files": 2869,
+    "test_sha256": "8a8adebfc5d9c7816776cec9d129efefd1f3f14b353d6c33fbaccb9cd8dd392b",
+    "trace": {
+      "sha256": "c708f242662c706652a0accf4c9963a5cf4cd84d2e7a6fde0604516766403376",
+      "size": 10150195
+    }
+  },
+  "historical079_cause_identified": false,
+  "ledger_credit": false,
+  "limits": [
+    "The captured project HEADER equality does not establish the full accepted request context.",
+    "The historical079 preparation timeout was not reproduced or explained by these runs.",
+    "The private diagnostic spec and minimized permanent spec are separately source-bound executions. The1306renderer results belong to privateGREEN389892.",
+    "Zero non2xx in the permanent case covers its observed original annotationGET window; this is one browser scenario.",
+    "No source Electron, installed native, GPU/model quality, whole UI, parent target acceptance or ledger promotion."
+  ],
+  "minimal_permanent_regression": {
+    "A_and_B_source_annotation_model_report_dataset_labelset_custody_before_after_equal": true,
+    "case_ms": 9416,
+    "case_status": "passed",
+    "console_error_count": 0,
+    "e2e_typecheck": {
+      "log": {
+        "sha256": "0919024eaa08b11e2a01bdac079bf8c8debb38d3c424bdc824ed6c296484d515",
+        "size": 80
+      },
+      "original_command": "npm run typecheck:e2e",
+      "returncode": 0,
+      "same_source_before_after_exact": true
+    },
+    "global_teardown_clean": true,
+    "minimal_test_delta": "Passive original exact-origin/mainframe annotationGET non2xx status collector. Empty assertion after existing final business-write assertion and before custody publication. Listener detached in existing finally.",
+    "normal_backend_closure": {
+      "escaped": [],
+      "exitCode": 0,
+      "exited": true,
+      "exitedBeforeStop": false,
+      "forced": false,
+      "groupAlive": false,
+      "pid_alive": false,
+      "port_closed": true,
+      "scanError": null,
+      "unownedReferences": []
+    },
+    "observed_annotation_GET_non2xx": 0,
+    "original_Popen_natural_wait_returned": true,
+    "original_case_count": 1,
+    "page_error_count": 0,
+    "private_body_header_timing_observer_in_this_spec": false,
+    "public_base_source": "dcb45ec717a9c36a351d8b303fd6fe29d4a975e6",
+    "raw_evidence_pins": {
+      "browser-01.log": {
+        "sha256": "d87134e99621959c2a6ec36bc2040149ec70afe33bd9c156fca300cdc9524fd8",
+        "size": 418
+      },
+      "business_custody": {
+        "sha256": "dc30506505ce0ad7ce72983e520f8754350e9e3f9655b366f62ff4e24127b107",
+        "size": 72840
+      },
+      "invocation.json": {
+        "sha256": "ea4219087f571ab2ec10ad32f966c4ff118c22ae1ec1c5ae423071153284272a",
+        "size": 1174
+      },
+      "manifest": {
+        "sha256": "ed2211c53d84e5670bcbfda8b6b020178e4ac61db18c449d29d5fa44de9c9bd3",
+        "size": 16603
+      },
+      "run-result.json": {
+        "sha256": "284e25c627a76afb640c970a12a44fdbced5494dbaa365a1ebdfd7f00230c4e0",
+        "size": 1598
+      },
+      "source-after.json": {
+        "sha256": "ff4d3486277bdd04d3df365d2de08f3e0985310f78923eb071eaa90f31fd71d8",
+        "size": 1028831
+      },
+      "source-before.json": {
+        "sha256": "ff4d3486277bdd04d3df365d2de08f3e0985310f78923eb071eaa90f31fd71d8",
+        "size": 1028831
+      }
+    },
+    "renderer_suite_repeated_for_this_head": false,
+    "runner_returncode": 0,
+    "runner_seconds": 18.874922540970147,
+    "source": "6a20cc394cc5160517c98d5b8a8e2df573ffce43",
+    "source_raw9_and_bytes_before_after_exact": true,
+    "source_tracked_files": 2874,
+    "test_sha256": "5d865b7eeb5ef966a908732a283056dc071799e0379d0e2943083e29554b6e11",
+    "zero_refusal_assertion_passed": true
+  },
+  "observed_issue": {
+    "body_detail": "Image must be a file inside the selected dataset",
+    "body_sha256": "7220de497d57d4b5ae31dc1861eac0559cade3359aafbe80c41c056d2be9e70b",
+    "body_size": 61,
+    "endpoint": "GET /api/annotations/part",
+    "full_accepted_context_captured": false,
+    "redacted_original_request_observations": [
+      {
+        "body_and_finished_observed_within_original_request_deadline": true,
+        "file_path_equality_scope": "B",
+        "full_original_response_body_complete": true,
+        "header_read_observed": true,
+        "response_finished_null": true,
+        "x_vision_project_HEADER_equality_scope": "A"
+      },
+      {
+        "body_and_finished_observed_within_original_request_deadline": true,
+        "file_path_equality_scope": "A",
+        "full_original_response_body_complete": true,
+        "header_read_observed": true,
+        "response_finished_null": true,
+        "x_vision_project_HEADER_equality_scope": "B"
+      },
+      {
+        "body_and_finished_observed_within_original_request_deadline": true,
+        "file_path_equality_scope": "B",
+        "full_original_response_body_complete": true,
+        "header_read_observed": true,
+        "response_finished_null": true,
+        "x_vision_project_HEADER_equality_scope": "A"
+      }
+    ],
+    "status": 422
+  },
+  "owned_synthetic_inputs": true,
+  "parent_acceptance": false,
+  "private_GREEN": {
+    "A_and_B_source_annotation_model_report_dataset_labelset_custody_before_after_equal": true,
+    "case_ms": 11552,
+    "case_status": "passed",
+    "console_error_count": 0,
+    "global_teardown_clean": true,
+    "normal_backend_closure": {
+      "escaped": [],
+      "exitCode": 0,
+      "exited": true,
+      "exitedBeforeStop": false,
+      "forced": false,
+      "groupAlive": false,
+      "pid_alive": false,
+      "port_closed": true,
+      "scanError": null,
+      "unownedReferences": []
+    },
+    "observed_annotation_GET_non2xx": 0,
+    "observed_non2xx_responses": 0,
+    "observer_receipt": {
+      "sha256": "69904924bd47e87ad75f7e8b20d56bb045cf75ded03036c0a07ff6fc6a6b6945",
+      "size": 1004
+    },
+    "original_Popen_natural_wait_returned": true,
+    "original_case_count": 1,
+    "page_error_count": 0,
+    "raw_evidence_pins": {
+      "browser-01.log": {
+        "sha256": "0f0b338cfff2c4f38b6a7af61b3ef87f9652ec7c6788028c8f0c8d233d67fa07",
+        "size": 419
+      },
+      "business_custody": {
+        "sha256": "7b0c929c9a29aa1d4b595c0464c864d7f747dc072f790da816915fdbddae5251",
+        "size": 73463
+      },
+      "invocation.json": {
+        "sha256": "e876f936e3c22e6706f1793b7cfa896ca404d9320942fee0961dcf0ebb380404",
+        "size": 1181
+      },
+      "manifest": {
+        "sha256": "658852a9d87dbf671f2000ecaf0367c534dd196e092203e0ed8eb32b4c80893a",
+        "size": 17572
+      },
+      "run-result.json": {
+        "sha256": "4c716266031967429ac48ed31e521c7a9ccb598919fda4434aa5cd833d261b3d",
+        "size": 1611
+      },
+      "source-after.json": {
+        "sha256": "ed5ee106daed296a9380554e11f8177221617358115aec34070db202277faccd",
+        "size": 1028831
+      },
+      "source-before.json": {
+        "sha256": "ed5ee106daed296a9380554e11f8177221617358115aec34070db202277faccd",
+        "size": 1028831
+      }
+    },
+    "runner_returncode": 0,
+    "runner_seconds": 22.50880604190752,
+    "same_exact_RED_diagnostic_spec": true,
+    "source": "389892dd68b314c013ac256b9c3b3fca529ccf8f",
+    "source_gates": {
+      "full_source_raw9_and_bytes_unchanged_after_each_gate": true,
+      "renderer": {
+        "failed": 0,
+        "log": {
+          "sha256": "bc6e807e012cd63a2d79bc494ddf14882631fb7901b1157425d7c49063469886",
+          "size": 157637
+        },
+        "original_command": "npm run test:renderer",
+        "passed": 1306,
+        "returncode": 0,
+        "tests": 1306
+      },
+      "same_head": "389892dd68b314c013ac256b9c3b3fca529ccf8f",
+      "typecheck": {
+        "log": {
+          "sha256": "3cea01ca6731d254d8cb8265f4fb29f0abcddf05eb43593ffedb269501b44fad",
+          "size": 108
+        },
+        "original_command": "npm run typecheck",
+        "returncode": 0
+      }
+    },
+    "source_raw9_and_bytes_before_after_exact": true,
+    "source_tracked_files": 2874,
+    "test_sha256": "8a8adebfc5d9c7816776cec9d129efefd1f3f14b353d6c33fbaccb9cd8dd392b"
+  },
+  "product_delta": {
+    "backend_selected_source_guard_changed": false,
+    "change": "Pause the existing automatic gallery synchronization effect while project selection is busy; include busy state in dependencies so synchronization resumes after selection.",
+    "path": "src/renderer/components/labeling/LabelingStudio.tsx",
+    "project_acceptance_refusal_and_clear_order_changed": false,
+    "same_product_bytes_in_both_GREEN_executions": true,
+    "sha256": "0b371e1eb6035a1fd6182112d606dccfce1d39cf5a1a6c4fa9a03199d9500688"
+  },
+  "raw_evidence_rehash": {
+    "manifest_refs": {
+      "permanent": 24,
+      "private_green": 26,
+      "red": 29
+    },
+    "private_pinlist": {
+      "sha256": "b32fe667f37e30b36cfb750cadfd772d4a9740acf303675b9886f0d6970f0776",
+      "size": 70215
+    },
+    "unique_raw_refs": 133
+  },
+  "redaction": {
+    "credentials_tokens_or_authority_published": false,
+    "raw_private_paths_published": false,
+    "raw_query_values_or_request_headers_published": false
+  },
+  "runtime": {
+    "backend": "qualified M523",
+    "browser": "Chrome",
+    "isolated_home": true,
+    "original_harness_action_test_and_ordinary_cleanup_bounds_unchanged": true,
+    "original_request_and_preparation_frame_ms": 10000,
+    "retries": 0,
+    "workers": 1
+  },
+  "schema": "modu-vision.direction-annotation-project-handoff-regression/v1",
+  "status": "bounded_browser_RED_GREEN_and_minimal_permanent_regression_passed",
+  "test_title": "independent direction and axial angle stay scoped through A B A project handoff and an old owning label read"
+}
