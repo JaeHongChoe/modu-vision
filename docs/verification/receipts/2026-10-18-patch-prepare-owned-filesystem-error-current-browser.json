@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "abf68757ea15784945f2dc8b60132569faaf21c5",
+  "source_dirty": false,
+  "test": "scripts/e2e/patch-prepare-reopen-error-controls.spec.ts::patch preparation reports a real owned filesystem obstruction and reloads without fabricated prepared data",
+  "test_source_sha256": "f397d085539bc381133f62a00d5dddfc526d5ccfca8e1ef7380d2acf81a13fa7",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "5757aa8a6ba1144b5dbd618329203d72d1be8fc9227f287f10b007c7d649ea85",
+  "harness_sha256": "9066e284f5cf4c5282fec0437ce8c01d99d488265772428c7353edc039167238",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "aeeb70b2cb5125d4c21ed4b20f7efd73da564f039101b8387bd2fb596efe047f"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "033c09bf2386d453eb0b78a12fefee85b308e539ad2406f769d393ef8eda7e11"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

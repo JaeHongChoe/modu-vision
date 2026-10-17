@@ -1,0 +1,294 @@
+{
+  "bounds": {
+    "deadline_reset_or_extension": false,
+    "deliberate_crash_reap_seconds": "min(original10, remaining original360)",
+    "forced_failure_cleanup": false,
+    "install_recover_seconds": 360,
+    "poll_seconds": 0.1,
+    "preview_seconds": 180
+  },
+  "controlled_release_pair": {
+    "new_archive_sha256": "0fc53a0ffccc699a171eb3ed7694e2a08a7cdb26dc92711ce4e3bc3cc4f16044",
+    "new_version": "1.2.0",
+    "old_archive_sha256": "ed7f48a5e5524c9af06c1f9284a8f00f4b50aac5036b27639e98f2e230f5cde6",
+    "old_version": "1.1.0",
+    "portable_manifest_change": "version only via original candidate_bundle recipe",
+    "publisher_or_OS_signature_accepted": false,
+    "same_immutable_A9_payload_and_links": true,
+    "source_upgrade_proven": false
+  },
+  "custody": {
+    "B6_failed_attempt_preserved_exact": true,
+    "B6_separate_passed_postconditions_preserved_exact": true,
+    "failed_native_store_or_lease_reused": false,
+    "full_archive_body_rehash_repeated_by_reader": false,
+    "independent_current_source_raw9_matches_recent_full_body_readback": true,
+    "original_full_source_and_artifact_checks_passed_before_after": true,
+    "protected68_before_after_and_independent_current_exact": true
+  },
+  "fresh_attempt": {
+    "active_pointer_forward_held_intent_identity_join_passed": true,
+    "all12_direct_original_children_reaped": true,
+    "automatic_retry": false,
+    "children": [
+      {
+        "elapsed_seconds": 12.831379750045016,
+        "label": "base-preview",
+        "original_child_reaped": true,
+        "returncode": 0,
+        "signals": [],
+        "unresolved_original_child": false
+      },
+      {
+        "elapsed_seconds": 69.76411579200067,
+        "label": "base-install",
+        "original_child_reaped": true,
+        "returncode": 0,
+        "signals": [],
+        "unresolved_original_child": false
+      },
+      {
+        "elapsed_seconds": 12.729459665948525,
+        "label": "next-preview-before-writer",
+        "original_child_reaped": true,
+        "returncode": 0,
+        "signals": [],
+        "unresolved_original_child": false
+      },
+      {
+        "elapsed_seconds": 12.486856459174305,
+        "label": "stale-plan-refusal",
+        "original_child_reaped": true,
+        "returncode": 2,
+        "signals": [],
+        "unresolved_original_child": false
+      },
+      {
+        "elapsed_seconds": 12.506794875022024,
+        "label": "next-preview-after-writer",
+        "original_child_reaped": true,
+        "returncode": 0,
+        "signals": [],
+        "unresolved_original_child": false
+      },
+      {
+        "elapsed_seconds": 58.541048000101,
+        "label": "interrupted-install",
+        "original_child_reaped": true,
+        "returncode": -9,
+        "signals": [
+          "SIGSTOP",
+          "SIGKILL"
+        ],
+        "unresolved_original_child": false
+      },
+      {
+        "elapsed_seconds": 3.8735552500002086,
+        "label": "interrupted-inspect",
+        "original_child_reaped": true,
+        "returncode": 0,
+        "signals": [],
+        "unresolved_original_child": false
+      },
+      {
+        "elapsed_seconds": 0.26377216703258455,
+        "label": "pending-launch-refusal",
+        "original_child_reaped": true,
+        "returncode": 2,
+        "signals": [],
+        "unresolved_original_child": false
+      },
+      {
+        "elapsed_seconds": 32.11253537493758,
+        "label": "finish",
+        "original_child_reaped": true,
+        "returncode": 0,
+        "signals": [],
+        "unresolved_original_child": false
+      },
+      {
+        "elapsed_seconds": 3.8515753329265863,
+        "label": "finished-launch-plan",
+        "original_child_reaped": true,
+        "returncode": 0,
+        "signals": [],
+        "unresolved_original_child": false
+      },
+      {
+        "elapsed_seconds": 43.47729020798579,
+        "label": "forward",
+        "original_child_reaped": true,
+        "returncode": 0,
+        "signals": [],
+        "unresolved_original_child": false
+      },
+      {
+        "elapsed_seconds": 3.9740330839995295,
+        "label": "final-launch-plan",
+        "original_child_reaped": true,
+        "returncode": 0,
+        "signals": [],
+        "unresolved_original_child": false
+      }
+    ],
+    "complete": true,
+    "current_pointer_pair_executable_environment_version_exact": true,
+    "final_database_fence": 3,
+    "final_seven_key_launch_plan_has_no_update_id": true,
+    "finish_preserved_same_sealed_capsule_without_replay": true,
+    "independent_readonly_current_database_ID_check": true,
+    "launch_lease_absent": true,
+    "original_full_seal_and_own_quiescence_checks_passed": true,
+    "pending_update_absent": true,
+    "post_write_forward_version": "1.2.0",
+    "sealed_interruption": "Only exact original installer Popen received SIGSTOP then SIGKILL after eligible live/stopped pins matched; original sealed worker already absent.",
+    "stale_expected_plan_refused_before_staging": true,
+    "tool_exit_code": 0,
+    "two_legitimate_owned_writes_preserved": true,
+    "unresolved_direct_children": []
+  },
+  "limits": [
+    "Fresh B9 complete is a separate cohort; original B6 KeyError failure remains failed and its later postcondition pass remains separate.",
+    "Controlled1.1.0 and1.2.0 carry the same A9 payload; no source-upgrade or publisher/OS-signing validation.",
+    "Only direct original Popen owners are reaped; no whole descendant/process-tree closure, native GUI, general lease-release authority or parent acceptance.",
+    "No model-quality, production/GPU/Windows, ledger cell or scenario-count credit.",
+    "The independent reader inspected durable records and one mode=ro/query_only database, without rerunning CLI, canary, validators or quiescence API."
+  ],
+  "private_readback": {
+    "bytes": 49681,
+    "sha256": "b683b2e1716c61165f5ce8e9376cefcc2f892c2f03aa4dd65448fe579ab73c3b"
+  },
+  "raw_evidence": [
+    {
+      "bytes": 836,
+      "label": "final-launch-plan",
+      "sha256": "ef3f918b5c1e45f2b80861a7555235e0cbf559efc689eda841f9f5594f892ff4"
+    },
+    {
+      "bytes": 0,
+      "label": "final-launch-plan",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 780,
+      "label": "final-launch-plan",
+      "sha256": "0fbc9cac3f607209c29ae2bdd58ef35e6aca09523e35dd420486e7b555b168b9"
+    },
+    {
+      "bytes": 1374,
+      "label": "final-pair-readback",
+      "sha256": "7751ccab2e541c9c90b50d84d24caae60ead046bfebe4b36f6708ed94984c9d3"
+    },
+    {
+      "bytes": 545,
+      "label": "forward",
+      "sha256": "8037db544dbc077475f25e667c9c7aace3e3a8052961c2f8a98bafb408d702f0"
+    },
+    {
+      "bytes": 0,
+      "label": "forward",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 503,
+      "label": "forward",
+      "sha256": "149bb2a9592e6560ea567073f9fb9d44fc16971030c3955596affe4d6ac4320b"
+    },
+    {
+      "bytes": 8255,
+      "label": "interruption-events",
+      "sha256": "b27a2bfe0e00fe8c83ad78b5152cd7ece34e382835fc8b088c296d2af8eb35c6"
+    },
+    {
+      "bytes": 3803,
+      "label": "interruption-readback",
+      "sha256": "b99a3b7159617a93d610f26bc08791bb1b774370f1a2e47541ee6d2a28df00fb"
+    },
+    {
+      "bytes": 54950,
+      "label": "protected-after",
+      "sha256": "4260c8103dbdbc124df177d24769464aba24c907ff5a8c2354fe3391c0487f88"
+    },
+    {
+      "bytes": 54950,
+      "label": "protected-before",
+      "sha256": "4260c8103dbdbc124df177d24769464aba24c907ff5a8c2354fe3391c0487f88"
+    },
+    {
+      "bytes": 21242,
+      "label": "result",
+      "sha256": "8628eccafbd80d37d5b38b29508a2b56de17eab80f6890b7decf7c17b0f7b4a9"
+    },
+    {
+      "bytes": 39200,
+      "label": "runner_run_fresh_compiled_recovery",
+      "sha256": "126866cb8c8577490f586cb24d96446173334dc950f9f400ae07743d5e07d0a7"
+    },
+    {
+      "bytes": 130,
+      "label": "runner_root-actual-tool-start",
+      "sha256": "fcd5066b9a23521e50b3b64778ddd127c5f7f1b26bbd509c20ac9e69286b0d79"
+    },
+    {
+      "bytes": 277,
+      "label": "runner_root-actual-tool-completion",
+      "sha256": "dda2498e064dc6c7575ca26689d7712ece52c1ef388b28cf2061147e9cee479d"
+    },
+    {
+      "bytes": 1077,
+      "label": "old_sealed_receipt",
+      "sha256": "85ef0409efea8f811cd749f0b3a9afdd1570d98fdf8b7bfd8f86576a1a3608b0"
+    },
+    {
+      "bytes": 1077,
+      "label": "current_canary_receipt",
+      "sha256": "dbbf4ac20892a61df7b616d5eac94b07a8b54c54c00046b7a58b0734a10d4ccb"
+    },
+    {
+      "bytes": 16942,
+      "label": "current_canary_result",
+      "sha256": "7272c2af363c9414efee1715a0465fe8c46fbb12c098bec769d3ac009c7a150d"
+    },
+    {
+      "bytes": 809,
+      "label": "writer_readonly_witness",
+      "sha256": "5d6359c0298d9ec1a79cb9b98a6b02b00bb5bfe8784f9c2842477634b214581c"
+    },
+    {
+      "bytes": 20655,
+      "label": "B6_failed_result",
+      "sha256": "c00c1bc7992273284bad5ec89def7764112533c33a44ae9902d87ab2f05a762d"
+    },
+    {
+      "bytes": 948,
+      "label": "B6_separate_postconditions",
+      "sha256": "44b53ca70cea3a4836cfc750a47bd9d55cf4fc135454c23b0dfd34ac8f2d9cb9"
+    }
+  ],
+  "real_canary_scope": {
+    "execution_scope": "staged_frozen_runtime_worker",
+    "original_models_training_or_GPU_used": false,
+    "protocol": 2,
+    "qualification_flags": {
+      "candidate_main_launch_verified": false,
+      "frozen_backend_verified": false,
+      "model_quality_verified": false,
+      "native_application_verified": false,
+      "owned_backend_execution_origin_verified": false,
+      "release_ready": false,
+      "worker_process_tree_exit_verified": false
+    },
+    "status": "verified",
+    "synthetic_input": "32x64 CPU OCR canary"
+  },
+  "schema": "modu-vision.b9-compiled-cli-interruption-forward-scoped-receipt/v1",
+  "source_cohort": {
+    "backend_executable_sha256": "bafd1f7ddd3edde3bcf4638a693781e1a7e7b8f166b22b22f3b61b0f48194232",
+    "backend_head": "ad8fbee8684fc243704d46f639314d62656a95b1",
+    "backend_tracked_count": 2927,
+    "frontend_head": "3c1e7bcfa02230b1909147503dfd5dbad285c041",
+    "frontend_tracked_count": 2928,
+    "runtime_source_sha256": "957b60b40b9413f51e0ee3772ca319087d097a572f3802091fc20061e34b0043"
+  },
+  "status": "fresh_B9_complete_separate_from_preserved_B6_failure"
+}
