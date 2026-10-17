@@ -2,8 +2,8 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 // S2-09: the family workbench hooks reopen a job whose state may still change before an older finished one, keep reading
 // it while its connection is down, and reconnect a server job through the server job API.
 // prelude: source placed before the module's own, used to give only the module under test recording timers
-function load(file,mocks={},prelude=''){const name=path.join(__dirname,file),m=new Module(name,module);m.filename=name;m.paths=Module._nodeModulePaths(__dirname);
-  m.require=ref=>ref in mocks?mocks[ref]:ref==='./jobProgress'||ref==='./scopedTrainingJob'||ref==='./taskHandoff'?load(ref+'.ts'):require(ref);
+function load(file,mocks={},prelude=''){const name=path.resolve(__dirname,file),m=new Module(name,module);m.filename=name;m.paths=Module._nodeModulePaths(path.dirname(name));const original=m.require.bind(m);
+  m.require=ref=>{if(ref in mocks)return mocks[ref];const target=ref.startsWith('.')?path.resolve(path.dirname(name),ref+'.ts'):null;return target&&fs.existsSync(target)?load(target,mocks):original(ref);};
   m._compile(prelude+ts.transpileModule(fs.readFileSync(name,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,name);return m.exports;}
 function hookHarness(){let cursor=0;const slots=[],effects=[];
   const react={useState:initial=>{const i=cursor++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return[slots[i],v=>slots[i]=typeof v==='function'?v(slots[i]):v];},
