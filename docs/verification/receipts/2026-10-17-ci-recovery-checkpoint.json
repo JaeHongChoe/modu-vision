@@ -1,0 +1,288 @@
+{
+  "schema": "modu-vision.ci-recovery-checkpoint/v1",
+  "source_checkpoint": "990898f87881592b58e54b687f74e8b288b835b0",
+  "scope": "Focused source regressions, current browser fixture bodies and exact historical declarations; no parent acceptance",
+  "prior_full_CI": {
+    "commit": "f6cc043b0a30e1384c245c0abf314aed8a3a2eb7",
+    "run_id": 39006413737,
+    "status": "failed",
+    "source_failed": 82,
+    "source_passed": 4469,
+    "source_skipped": 17,
+    "browser_failed": 30,
+    "browser_passed": 268,
+    "browser_skipped": 2,
+    "old_failures_preserved": true
+  },
+  "source_regressions": [
+    {
+      "id": "cpu_relay65",
+      "passed": 65,
+      "returncode": 0,
+      "log_sha256": "103d6521d063de8470128fd35b8ad74670e36f2d663877baa05925c61e35e18c",
+      "scope": "Controlled original protocol/source fixtures; no native release or whole-process approval"
+    },
+    {
+      "id": "cpu_child84",
+      "passed": 84,
+      "returncode": 0,
+      "log_sha256": "7dc49ed7605abf6b758d3c96f705b4a38a05c553f424edbf836059e6febdd456",
+      "scope": "Controlled original protocol/source fixtures; no native release or whole-process approval"
+    },
+    {
+      "id": "source_cpu91",
+      "passed": 91,
+      "returncode": 0,
+      "log_sha256": "3d73a329a40c32c45b301b53e33a168d45f9960570f5977b05f4f37587db94b8",
+      "scope": "Controlled original protocol/source fixtures; no native release or whole-process approval"
+    }
+  ],
+  "source_harness": {
+    "passed": 44,
+    "returncode": 0,
+    "log_sha256": "35d54df6c635ed3b50dfbf0284c689845a99d2ba7362ff1287f4eabad5300415",
+    "guards_added_to_existing_command": true
+  },
+  "coherent_source_gates": [
+    {
+      "label": "service",
+      "argv": [
+        "python3",
+        "-B",
+        "scripts/check_service_plan.py"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.9368699591141194,
+      "log_sha256": "fb87fcf4fb0e1340acaef34c006d03d6fbbcb0b539cd423db686fcbe1efe4939"
+    },
+    {
+      "label": "actions",
+      "argv": [
+        "python3",
+        "-B",
+        "scripts/check_action_evidence.py"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 21.215434833895415,
+      "log_sha256": "cabffb321951b3236f60fe4dec26508e3a6a77664f4e479b0ff1c0f6bcb16ee1"
+    },
+    {
+      "label": "renderer_types",
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 8.482231708010659,
+      "log_sha256": "3cea01ca6731d254d8cb8265f4fb29f0abcddf05eb43593ffedb269501b44fad"
+    },
+    {
+      "label": "e2e_types",
+      "argv": [
+        "npm",
+        "run",
+        "typecheck:e2e"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 5.0995809158775955,
+      "log_sha256": "0919024eaa08b11e2a01bdac079bf8c8debb38d3c424bdc824ed6c296484d515"
+    }
+  ],
+  "browser_runs": [
+    {
+      "id": "eval4",
+      "passed": 4,
+      "report_sha256": "c703e2b1fc9bc00d525a304c95d7295c474bfd0c59a9a47919a5c7eec276f7d1",
+      "teardown_sha256": "e3202b6de2248f0024d8a1736959fa38816045066a40c2401d6bba60b8079b2a",
+      "skipped": 0,
+      "failed": 0,
+      "flaky": 0,
+      "leftovers": [],
+      "unowned_references": []
+    },
+    {
+      "id": "service6",
+      "passed": 6,
+      "report_sha256": "85ac73effbd2c894d77c4fff61a8f6e08597b88fb6af5239f26ea982078059a5",
+      "teardown_sha256": "d79110f714c22c2142c4db64505c54e40329dcfbfd3393a7cc6493c2e457e898",
+      "skipped": 0,
+      "failed": 0,
+      "flaky": 0,
+      "leftovers": [],
+      "unowned_references": []
+    },
+    {
+      "id": "derived1",
+      "passed": 1,
+      "report_sha256": "6912364a16a2f3e769cff29e28560eec39b0c05c3f0714d29cbc92957fef63ef",
+      "teardown_sha256": "0698a433c2f4314c1f30f4b4673044725cfe1c7fb7b9eba0e4204c354b3d74a6",
+      "skipped": 0,
+      "failed": 0,
+      "flaky": 0,
+      "leftovers": [],
+      "unowned_references": []
+    },
+    {
+      "id": "templates2",
+      "passed": 2,
+      "report_sha256": "de9aa436e6dbc02cbb43c8e666fe01082d6f5bac3a0f3624d2cb96afebcb2e2c",
+      "teardown_sha256": "5b8a93d9be5e23878d1b3027565e31b9f1a4fb6d291d8ea61c70285d727b8238",
+      "skipped": 0,
+      "failed": 0,
+      "flaky": 0,
+      "leftovers": [],
+      "unowned_references": []
+    },
+    {
+      "id": "partial4",
+      "passed": 4,
+      "report_sha256": "d5014b18fcd44ff23955500ec1c14ec6e9ac2ab7737daa0d2efbe91c589bcd1e",
+      "teardown_sha256": "05364ca76b2e64e63e23a5b33aebe4737548aba6f613efe69d7423bde080a8ed",
+      "F064_proof_sha256": "55cb3a6dbd9287ab164bc2c5ed9e34777d82a83143e62dd8a8698eb61d875f6a",
+      "skipped": 0,
+      "failed": 0,
+      "flaky": 0,
+      "leftovers": [],
+      "unowned_references": []
+    }
+  ],
+  "browser_total_passed": 17,
+  "browser_execution_provenance": {
+    "clean_full_990898f_execution": false,
+    "source_working_body_evidence_retained": true,
+    "eighteen_fixture_and_config_bodies_match_checkpoint": [
+      {
+        "relative": "playwright.config.ts",
+        "sha256": "91495f41ce2b89d5472fc5851c4fc9c5937684958ac453d0a6a759df2a10b936",
+        "matches_ready_manifest": true,
+        "matches_current_commit": true
+      },
+      {
+        "relative": "scripts/e2e/derived-adoption-import-four-controls.spec.ts",
+        "sha256": "6830327e87099c8b9c576abd33009acbc12074ea5012a76a98af097bead75f55",
+        "matches_ready_manifest": true,
+        "matches_current_commit": true
+      },
+      {
+        "relative": "scripts/e2e/evaluation-late-labelset-lifecycle.spec.ts",
+        "sha256": "808104f67f070740d0ddf8c22d74607a4b8c20fd9f4215872e10a0f5a9dba0db",
+        "matches_ready_manifest": true,
+        "matches_current_commit": true
+      },
+      {
+        "relative": "scripts/e2e/review-queue-progress-lifecycle.spec.ts",
+        "sha256": "08a99853a658805dc65b7f2eb8537a4f758dc7ad06efd943090f79190acd0d83",
+        "matches_ready_manifest": true,
+        "matches_current_commit": true
+      },
+      {
+        "relative": "scripts/e2e/saved-evaluation-record-error.spec.ts",
+        "sha256": "3a1661dbcb72347110e0da7f32a80e476a4b3d8bff1f2996a01a2f3df9776b69",
+        "matches_ready_manifest": true,
+        "matches_current_commit": true
+      },
+      {
+        "relative": "scripts/e2e/saved-evaluation-selection-lifecycle.spec.ts",
+        "sha256": "e7a0fff477f858f3931bc7c9e9748de9d1a3cfc07d301958882a44e91ffc32aa",
+        "matches_ready_manifest": true,
+        "matches_current_commit": true
+      },
+      {
+        "relative": "scripts/e2e/flow-debug-model-freeze.spec.ts",
+        "sha256": "8f6bd5a326ee206a2bfb57d242c998354ffcf6482e82ea23f54b54f2e373ea9a",
+        "matches_ready_manifest": true,
+        "matches_current_commit": true
+      },
+      {
+        "relative": "scripts/e2e/flow-debug-model-freeze-f064-controls.spec.ts",
+        "sha256": "debbfb4153d4a5a26d8029a00d61fedaa313fd7eec469b39917272e35c4df3df",
+        "matches_ready_manifest": true,
+        "matches_current_commit": true
+      },
+      {
+        "relative": "scripts/e2e/flow-debugger-artifact-controls.spec.ts",
+        "sha256": "8d3493ffcf68f3440c8961a4c9cf9b9d323a5e6f6c271f9d915c963f02fdee0e",
+        "matches_ready_manifest": true,
+        "matches_current_commit": true
+      },
+      {
+        "relative": "scripts/e2e/fixtures/authenticatedFlowBrowser.ts",
+        "sha256": "2065fc7b4f882942f7479df0118d9cfa3e916beaa70c916faf1bf79fe77a75fc",
+        "matches_ready_manifest": true,
+        "matches_current_commit": true
+      },
+      {
+        "relative": "scripts/e2e/fixtures/partialNodeCacheControls.ts",
+        "sha256": "1d82c85cbafda49fd213072352dbbbd164041264b39ab2ca88afb419ab5077cd",
+        "matches_ready_manifest": true,
+        "matches_current_commit": true
+      },
+      {
+        "relative": "scripts/e2e/fixtures/partialNodeCacheContract.cjs",
+        "sha256": "00f397aa2e1434820590c35fa3d0dcd8c9dfe7b25827d895010890bccd117094",
+        "matches_ready_manifest": true,
+        "matches_current_commit": true
+      },
+      {
+        "relative": "scripts/e2e/fixtures/owned-startup-evaluation.cjs",
+        "sha256": "6a1ea544996102659d32334aaec3dc05112df5e44e10df13be611dbd6c266bf7",
+        "matches_ready_manifest": true,
+        "matches_current_commit": true
+      },
+      {
+        "relative": "scripts/e2e/flow-template-draft-history.spec.ts",
+        "sha256": "7aacf560bf67b2a42024cea59ca3a26dc9421cd9c7f4e1c610d6d9d4b07efa11",
+        "matches_ready_manifest": true,
+        "matches_current_commit": true
+      },
+      {
+        "relative": "scripts/e2e/flow-template-safety.spec.ts",
+        "sha256": "c1db5ad8408622d7a83d7bbfd28c14ee3b3ef996782adfbf4e33991d9ae0b8ad",
+        "matches_ready_manifest": true,
+        "matches_current_commit": true
+      },
+      {
+        "relative": "scripts/e2e/service-s0-05.spec.ts",
+        "sha256": "74a5ae4d60f62cea5a1930c7deef9386941b9053564f9e22a1feb440232a0242",
+        "matches_ready_manifest": true,
+        "matches_current_commit": true
+      },
+      {
+        "relative": "scripts/tests/e2e-current-capability-filesystem.test.cjs",
+        "sha256": "1a6de7606af6892246d67e6923117f58dde3cba1f9e58672c15180b0d6a28d06",
+        "matches_ready_manifest": true,
+        "matches_current_commit": true
+      },
+      {
+        "relative": "scripts/tests/partial-current-context-contract.test.cjs",
+        "sha256": "bc4cde8d26346e6cd3e1c1e13b4dc549f2c18707ab7f768dfe2b27b580578769",
+        "matches_ready_manifest": true,
+        "matches_current_commit": true
+      }
+    ],
+    "source_manifest_sha256": "a49ba49b409ac5a95ecc94b18ccb89862ca509457ae48335ce96e30a0f83bb2e",
+    "completion_receipt_sha256": "b13fee6067b09dad5ab33812d5d3c86cc169e09c038f2973c752db07eddb968e",
+    "native_variants_executed": false,
+    "F057_manual_OS_without_grant": "unselected capability; not passed"
+  },
+  "historical_evidence": {
+    "declarations": 42,
+    "registry_sha256": "47751f1a198d706d9134c64fb256200e4164c6440161f99446737e8a17ad9193",
+    "original_receipt_bytes_modified": false,
+    "execution_source_rebound_to_current": false,
+    "action_states_changed": false
+  },
+  "remaining": {
+    "whole_remote_CI_after_fixes": "not yet observed",
+    "comparison_submit_original_10s_response": "failed in preserved af50 source plus explicit test-body overlay run; investigation continues",
+    "DICOM_owned_open_body": "failed on overlapping automatic default-project request; investigation continues",
+    "CI_artifact_drift_callback_case": "original remote failure not reproduced in focused local execution; no causal fix claimed",
+    "installed_GUI_managed_scope_closure": "original compiled installed GUI remains refused with six active scopes and uncovered_request_protocol",
+    "new_compiled_diagnostic": "first attempt failed before HTTP due unavailable parent AppKit prerequisite; no product finding or pass credit",
+    "Windows_QA": "excluded by user",
+    "model_quality_publisher_and_operational_approval": "not granted"
+  },
+  "parent_completion_credit": false,
+  "accepted_work_packages": 0
+}
