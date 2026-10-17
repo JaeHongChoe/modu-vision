@@ -1,0 +1,71 @@
+{
+  "schema": "modu-vision.development-continuation-checkpoint/v1",
+  "created_at": "2026-10-17T04:19:03.983542+00:00",
+  "repository": "JaeHongChoe/modu-vision",
+  "existing_public_main": "0c3a28f0de9c55340921f01c4ea04a612c09bfb2",
+  "tested_source_commit": "d00f07f3d7c940317848762abdf6743831dfe63d",
+  "history_rewritten": false,
+  "source_changes": [
+    "Refuse incomplete saved A/B comparison rendering while retaining raw JSON.",
+    "Fence delayed folder selections and imports to the original project and backend.",
+    "Validate candidate datasets before saving their source; preserve owner/admin confinement.",
+    "Canonicalize internally created migration scratch paths without relaxing external symlink rejection."
+  ],
+  "verification": {
+    "renderer": {
+      "passed": 1257,
+      "failed": 0,
+      "skipped": 0,
+      "log_sha256": "9936d5f1139d0fd7a28027d809b31f5dffa2a5e0946f8aca05913d1227bd3b03"
+    },
+    "typecheck": "passed",
+    "renderer_and_main_build": "passed",
+    "e2e_typecheck_and_harness": "passed at preceding source checkpoint; no E2E test implementation changed by subsequent import ordering fix",
+    "migration_related_tests": {
+      "passed": 70
+    },
+    "new_shared_import_ASGI_security_tests": {
+      "passed": 19
+    },
+    "related_authorization_and_import_tests": {
+      "passed": 76,
+      "test_environment": "Canonical OS temporary parent; preceding alias-path fixture failure retained."
+    },
+    "independent_source_review": "No blocking finding in the four fixes and source-import authorization change.",
+    "publication_static_audit": {
+      "status": "passed",
+      "unexamined": 0,
+      "exact_reviewed_synthetic_and_existing_logo_allowances": true
+    }
+  },
+  "separate_retained_native_cohort": {
+    "source_commit": "a860ca4d155af7e677d47ab045f073b48d549b39",
+    "actual_compiled_registration_health_normal_quit_store_closure": {
+      "passed": 1,
+      "seconds": 313.18,
+      "inspect_drain_proof_sha256": "39cf7951613e867977bb3cdffcef33278a4ea71ab722e25eed19dcb3ebc51814",
+      "cleanup_sha256": "3be964199dc0bba7e20377759636ff74c1e07807e906cda40cbc457749985456"
+    },
+    "credit_for_newer_source_or_model_quality": false
+  },
+  "remaining_requirements": [
+    "S5-01",
+    "S6-03",
+    "S6-04",
+    "S6-06",
+    "S7-01",
+    "S7-02",
+    "S7-05",
+    "S7-06",
+    "S7-07",
+    "S7-08"
+  ],
+  "implementation_verified": 70,
+  "windows_requirements_excluded_by_owner": [
+    "S6-02",
+    "S7-03"
+  ],
+  "all_work_complete": false,
+  "GitHub_CI": "Pending execution/readback after publication.",
+  "rollback": "Use normal revert commits for individual published fixes. Preserve shared main history."
+}
