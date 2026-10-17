@@ -52,7 +52,7 @@
     "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx": "9ab0454b4433afdd10fc9c6cbcc12e0ac4c71e3f43e0ed0aa829cd687d38672e",
     "src/renderer/components/runtime/FleetPanel.tsx": "572144e60bbe38efc208ca2d2d19e87de58793da783269e5498970c1d97243ab",
     "src/renderer/components/runtime/PortableUpdatePanel.tsx": "4f747509c427ab35d41745d3da7f26e50a3c3f3a93acdca35beb5fee9145796b",
-    "src/renderer/components/evaluation/ModelComparisonPanel.tsx": "3a9b93dd4be7f67d007556234607942cfc0c55ee295d147c237702e605e3c31e",
+    "src/renderer/components/evaluation/ModelComparisonPanel.tsx": "c5cc84f3e0ce315316b8a17b68b4e7a63ed841a60db7b7b95b15cd8a6d4f2631",
     "src/renderer/components/dataset/CaptureIntakePanel.tsx": "7021606464274e98970014a0a18bc8b273a22db2e7f2436f6ad163eef4770b36",
     "src/renderer/components/inference/BatchInspectionPanel.tsx": "768d503c3ddad0cdec15ae4f09ca4596ac29d8f39ec018b4d6960e66ba33c632",
     "src/renderer/components/flowchart/IntermediateCropDrawer.tsx": "b8d4e37fde319fc00f93c6f51ffc2730599fdbc6b5c9a330c6e9f26b2871c8d3",
@@ -10579,7 +10579,31 @@
               ]
             },
             "invalid": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S4-07",
+                  "source_sha": "c474cb00c073d51a526140b897e289f91949c872",
+                  "kind": "click",
+                  "action": "중심 기준 · 회전 박스 맞추기 · 정답 표에 추가",
+                  "expected": "Real duplicate first and second source pointer points must be refused by the original geometric fitter without appending, saving or changing the existing truth.",
+                  "observed": "Three trusted original SVG clicks delivered two identical points and a distinct third. The owning fit-box POST returned exact full 422 detail Fitting edge must have positive length within the original10s frame, and the owning alert displayed it. Append stayed disabled with no polygon. Exactly one geometric POST and zero persistent mutations occurred; original full manifestGET200/reload and all source/project/prepared raw9 and bodies remained exact through natural backend shutdown. One exact owning Chrome422 diagnostic was expected; unexpected errors0.",
+                  "reviewer": "Codex exact source/contract, actual browser report, full response and custody readback, and saved PNG review; independent acceptance and parent/human quality remain pending.",
+                  "test": "scripts/e2e/obb-center-fit-invalid.spec.ts::center fitting refuses actual duplicate edge points without changing saved truth and reopens exact baseline",
+                  "receipt": "2026-10-17-f029-center-fit-invalid-browser.json",
+                  "receipt_sha256": "28a9db88cfcd6f12097dea531826afaa5d90b6df7a3a6a7f1089c8fcfb212601",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "9aed9bae927930eb221e3ccd2df4c9a7443e3058aaa37ea7193d68cb92d02ba2"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "665b37f31e1e7bba75fbe5c9244886e4170dfa452681d2e1b326070a97a81b1d"
+                    }
+                  ]
+                }
+              ]
             },
             "error": {
               "state": "pending"
@@ -10708,7 +10732,39 @@
               ]
             },
             "empty": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S4-07",
+                  "source_sha": "f2a60df5144a8f8b1df6760d984f54910ebbac0f",
+                  "kind": "click",
+                  "action": "한 면 기준 · 회전 박스 맞추기 · 정답 표에 추가",
+                  "expected": "Loaded original source with no fitting points disables fitting and append while preserving saved truth.",
+                  "observed": "face mode was selected through its ordinary button with real sourceGET200/sourceSHA. With0points, original fit and append were disabled and no geometricPOST occurred. The same owning source then produced a real positive fit control from trusted pointer clicks. Independent geometry matched original fitPOST200 within10s. Exactly one geometricPOST and no persistent mutation occurred. The saved3-row train1/val1/test1 table, full owning manifestGET200/reload and all source/project/prepared raw9 and bodies stayed exact through natural backend shutdown; console/page/non2xx/callback errors0.",
+                  "reviewer": "Codex Root reviewed exact source/guards before the authorized clean headless run; report, full responses, source/provider/protected custody, all8 saved PNG and natural closure read back. Independent acceptance and parent/human quality remain pending.",
+                  "test": "scripts/e2e/obb-face-irregular-empty-reset.spec.ts::face fitting empty and redraw discard only the unsent proposal and reopen exact saved truth",
+                  "receipt": "2026-10-17-f029-face-fit-empty-reset-browser.json",
+                  "receipt_sha256": "69823ac942d5a9f84db7135a7901fea07a9a4acba1bf6d94fdfc89438cb6b756",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "48b029acb956c1e1dea5754b521bf8f99805fd1c57240d860576f685faca1cdc"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "eaa7a9689409564ba1a740fab8a42a8dc66e638bd6692dac11e6ab801f116fbf"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "3282af3cf4929648bf3c757e757fbc809ecfff03c14066f40b79a8bf4ded72b6"
+                    },
+                    {
+                      "id": "screenshot-3",
+                      "sha256": "ea535abe9c0dabc7793198787ea3c2c8f30ddc38b479fad96ed814931abe9dc5"
+                    }
+                  ]
+                }
+              ]
             },
             "invalid": {
               "state": "pending"
@@ -10717,7 +10773,39 @@
               "state": "pending"
             },
             "cancel": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S4-07",
+                  "source_sha": "f2a60df5144a8f8b1df6760d984f54910ebbac0f",
+                  "kind": "click",
+                  "action": "한 면 기준 · 회전 박스 맞추기 · 정답 표에 추가",
+                  "expected": "The original redraw button discards only the unappended and unsaved returned proposal while preserving saved truth.",
+                  "observed": "Trusted original redraw removed actual face points/path, returned polygon and box summary; fit and append became disabled. The proposal had not been appended or saved. Independent geometry matched original fitPOST200 within10s. Exactly one geometricPOST and no persistent mutation occurred. The saved3-row train1/val1/test1 table, full owning manifestGET200/reload and all source/project/prepared raw9 and bodies stayed exact through natural backend shutdown; console/page/non2xx/callback errors0.",
+                  "reviewer": "Codex Root reviewed exact source/guards before the authorized clean headless run; report, full responses, source/provider/protected custody, all8 saved PNG and natural closure read back. Independent acceptance and parent/human quality remain pending.",
+                  "test": "scripts/e2e/obb-face-irregular-empty-reset.spec.ts::face fitting empty and redraw discard only the unsent proposal and reopen exact saved truth",
+                  "receipt": "2026-10-17-f029-face-fit-empty-reset-browser.json",
+                  "receipt_sha256": "69823ac942d5a9f84db7135a7901fea07a9a4acba1bf6d94fdfc89438cb6b756",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "48b029acb956c1e1dea5754b521bf8f99805fd1c57240d860576f685faca1cdc"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "eaa7a9689409564ba1a740fab8a42a8dc66e638bd6692dac11e6ab801f116fbf"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "3282af3cf4929648bf3c757e757fbc809ecfff03c14066f40b79a8bf4ded72b6"
+                    },
+                    {
+                      "id": "screenshot-3",
+                      "sha256": "ea535abe9c0dabc7793198787ea3c2c8f30ddc38b479fad96ed814931abe9dc5"
+                    }
+                  ]
+                }
+              ]
             },
             "reopen": {
               "state": "verified",
@@ -10808,7 +10896,39 @@
               ]
             },
             "empty": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S4-07",
+                  "source_sha": "f2a60df5144a8f8b1df6760d984f54910ebbac0f",
+                  "kind": "click",
+                  "action": "불규칙 외곽 · 회전 박스 맞추기 · 정답 표에 추가",
+                  "expected": "Loaded original source with no fitting points disables fitting and append while preserving saved truth.",
+                  "observed": "irregular mode was selected through its ordinary button with real sourceGET200/sourceSHA. With0points, original fit and append were disabled and no geometricPOST occurred. The same owning source then produced a real positive fit control from trusted pointer clicks. Independent geometry matched original fitPOST200 within10s. Exactly one geometricPOST and no persistent mutation occurred. The saved3-row train1/val1/test1 table, full owning manifestGET200/reload and all source/project/prepared raw9 and bodies stayed exact through natural backend shutdown; console/page/non2xx/callback errors0.",
+                  "reviewer": "Codex Root reviewed exact source/guards before the authorized clean headless run; report, full responses, source/provider/protected custody, all8 saved PNG and natural closure read back. Independent acceptance and parent/human quality remain pending.",
+                  "test": "scripts/e2e/obb-face-irregular-empty-reset.spec.ts::irregular fitting empty and redraw discard only the unsent proposal and reopen exact saved truth",
+                  "receipt": "2026-10-17-f029-irregular-fit-empty-reset-browser.json",
+                  "receipt_sha256": "9c2ae256c64e74ea1a4ed60877c580bb5b3084e89832289ad84f355b6e1dde9c",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "a83e25d6414a4bdf15a5e8a978785ee604bc9f1432b592a3d22cbc43eb80f4a6"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "ef59d6296216c7191e1d5c924705a5ac0de1e5ab420269f795a08c8950231051"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "0315dce3ca423c0390d9e93d5346615757d5d80f59e97f4204d676d3667f5edc"
+                    },
+                    {
+                      "id": "screenshot-3",
+                      "sha256": "31c80d6ba7f4a5cd8e103eb0486226cd95d0c2f330d82f0451debb86b3e58c06"
+                    }
+                  ]
+                }
+              ]
             },
             "invalid": {
               "state": "pending"
@@ -10817,7 +10937,39 @@
               "state": "pending"
             },
             "cancel": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S4-07",
+                  "source_sha": "f2a60df5144a8f8b1df6760d984f54910ebbac0f",
+                  "kind": "click",
+                  "action": "불규칙 외곽 · 회전 박스 맞추기 · 정답 표에 추가",
+                  "expected": "The original redraw button discards only the unappended and unsaved returned proposal while preserving saved truth.",
+                  "observed": "Trusted original redraw removed actual irregular points/path, returned polygon and box summary; fit and append became disabled. The proposal had not been appended or saved. Independent geometry matched original fitPOST200 within10s. Exactly one geometricPOST and no persistent mutation occurred. The saved3-row train1/val1/test1 table, full owning manifestGET200/reload and all source/project/prepared raw9 and bodies stayed exact through natural backend shutdown; console/page/non2xx/callback errors0.",
+                  "reviewer": "Codex Root reviewed exact source/guards before the authorized clean headless run; report, full responses, source/provider/protected custody, all8 saved PNG and natural closure read back. Independent acceptance and parent/human quality remain pending.",
+                  "test": "scripts/e2e/obb-face-irregular-empty-reset.spec.ts::irregular fitting empty and redraw discard only the unsent proposal and reopen exact saved truth",
+                  "receipt": "2026-10-17-f029-irregular-fit-empty-reset-browser.json",
+                  "receipt_sha256": "9c2ae256c64e74ea1a4ed60877c580bb5b3084e89832289ad84f355b6e1dde9c",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "a83e25d6414a4bdf15a5e8a978785ee604bc9f1432b592a3d22cbc43eb80f4a6"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "ef59d6296216c7191e1d5c924705a5ac0de1e5ab420269f795a08c8950231051"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "0315dce3ca423c0390d9e93d5346615757d5d80f59e97f4204d676d3667f5edc"
+                    },
+                    {
+                      "id": "screenshot-3",
+                      "sha256": "31c80d6ba7f4a5cd8e103eb0486226cd95d0c2f330d82f0451debb86b3e58c06"
+                    }
+                  ]
+                }
+              ]
             },
             "reopen": {
               "state": "verified",

@@ -441,6 +441,36 @@
       "recorded_test_source_sha256": "859276df7e87a7247793a712f740e60deac40a4558350c1720fc0759e234f9fb",
       "retained_spec_commit": "f4e1cde796e0684e0b2f4f8c55a27520c7beb888",
       "test": "scripts/e2e/direction-field-input-boundaries.spec.ts::independent direction and axial angle stay scoped through A B A project handoff and an old owning label read"
+    },
+    {
+      "receipt": "2026-10-10-root456-manual-old-browser.json",
+      "receipt_sha256": "81aafca22f00ca39c6d0b57fdc80f038d10d6a936dffef5d34893c5567349b40",
+      "execution_source_sha": "3e5be751e917b2ca0efa8547f804ccac8efe1f8d",
+      "test": "scripts/e2e/comparison-manual-selection.spec.ts::manual comparison pair and explicit empty survive evaluation model changes",
+      "recorded_test_source_sha256": "559c82bc35c3ad49d06ad5221dff081f92bd3e90e1361bbb3fb5741d6dea3dab",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "52cc4b8f2edb4cd8b97526527890cd31b2bedb36f5202c42b2588b8926ef9a7f",
+      "reason": "Retained public ancestor preserves exact historical executed test bytes. The reviewed current fixture joins already-issued stage-entry evaluation responses before immutable custody, retaining original request-start10s, full-body and source/context guards. This declaration preserves the old execution source and supplies no new GUI execution or current acceptance."
+    },
+    {
+      "receipt": "2026-10-10-root456-manual-old-electron.json",
+      "receipt_sha256": "79938666312811bf6eca75a740509465d0ed67940bc215abd0fdc80e34d64f00",
+      "execution_source_sha": "3e5be751e917b2ca0efa8547f804ccac8efe1f8d",
+      "test": "scripts/e2e/comparison-manual-selection.spec.ts::native manual comparison pair and explicit empty survive evaluation model changes",
+      "recorded_test_source_sha256": "559c82bc35c3ad49d06ad5221dff081f92bd3e90e1361bbb3fb5741d6dea3dab",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "52cc4b8f2edb4cd8b97526527890cd31b2bedb36f5202c42b2588b8926ef9a7f",
+      "reason": "Retained public ancestor preserves exact historical executed test bytes. The reviewed current fixture joins already-issued stage-entry evaluation responses before immutable custody, retaining original request-start10s, full-body and source/context guards. This declaration preserves the old execution source and supplies no new GUI execution or current acceptance."
+    },
+    {
+      "receipt": "2026-10-10-root456-manual-handoff-browser.json",
+      "receipt_sha256": "d26740b77c4099694a5378b698f2a77386825b1ea33a7058035bce6d6b87277e",
+      "execution_source_sha": "3e5be751e917b2ca0efa8547f804ccac8efe1f8d",
+      "test": "scripts/e2e/comparison-manual-selection.spec.ts::manual baseline empty and exact saved comparison pair reopen through owning A B A project handoff",
+      "recorded_test_source_sha256": "559c82bc35c3ad49d06ad5221dff081f92bd3e90e1361bbb3fb5741d6dea3dab",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "52cc4b8f2edb4cd8b97526527890cd31b2bedb36f5202c42b2588b8926ef9a7f",
+      "reason": "Retained public ancestor preserves exact historical executed test bytes. The reviewed current fixture joins already-issued stage-entry evaluation responses before immutable custody, retaining original request-start10s, full-body and source/context guards. This declaration preserves the old execution source and supplies no new GUI execution or current acceptance."
     }
   ]
 }

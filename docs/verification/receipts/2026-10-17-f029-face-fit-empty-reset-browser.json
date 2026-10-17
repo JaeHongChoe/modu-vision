@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "f2a60df5144a8f8b1df6760d984f54910ebbac0f",
+  "source_dirty": false,
+  "test": "scripts/e2e/obb-face-irregular-empty-reset.spec.ts::face fitting empty and redraw discard only the unsent proposal and reopen exact saved truth",
+  "test_source_sha256": "db0683b85bf62dd70bda6ca6dd396916380b77877af451cf13df846c0feb1084",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "1c6c7ac370a37cb07e34349d26647ebc8c4c1e6c5dd171af31bbfa423363ebb9",
+  "harness_sha256": "abfdc41434bfbbae80725f9f323464d6d80e7fd07b6fcc2bd33502dcda8de4f6",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "48b029acb956c1e1dea5754b521bf8f99805fd1c57240d860576f685faca1cdc"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "eaa7a9689409564ba1a740fab8a42a8dc66e638bd6692dac11e6ab801f116fbf"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "3282af3cf4929648bf3c757e757fbc809ecfff03c14066f40b79a8bf4ded72b6"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "ea535abe9c0dabc7793198787ea3c2c8f30ddc38b479fad96ed814931abe9dc5"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Only face empty-points and redraw-discard of an unappended/unsaved geometric proposal, with exact saved-truth reload. No HTTP/job cancellation, native, quality, whole-CI, release or parent acceptance inferred."
+}
