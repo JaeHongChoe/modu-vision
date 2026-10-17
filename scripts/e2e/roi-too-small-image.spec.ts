@@ -7,6 +7,7 @@ import {test, expect} from './fixtures/test';
 import {installDesktopHostShim} from './fixtures/desktop-host-shim';
 
 const harness = require('./fixtures/harness.cjs');
+const {joinOriginalResponse} = require('./fixtures/u007-response-join.cjs');
 test.use({actionTimeout: 10_000});
 const sha = (raw: Buffer | string) => crypto.createHash('sha256').update(raw).digest('hex');
 const raw9 = (s: fs.BigIntStats) => [s.dev, s.ino, s.mode, s.nlink, s.uid, s.gid, s.size, s.mtimeNs, s.ctimeNs].map(String);
@@ -55,6 +56,7 @@ test('U007 refuses an actual 8x8 ROI editor input while preserving the saved ori
     'src/renderer/stores/useDatasetStore.ts', 'src/renderer/services/api.ts', 'src/renderer/services/flowDraft.ts',
     'backend/api/routes_flow_workspace.py', 'backend/api/routes_flowchart.py', 'backend/api/routes_dataset.py',
     'scripts/e2e/fixtures/test.ts', 'scripts/e2e/fixtures/harness.cjs', 'scripts/e2e/fixtures/desktop-host-shim.ts',
+    'scripts/e2e/fixtures/u007-response-join.cjs', 'scripts/tests/u007-response-join.test.cjs',
     'scripts/e2e/roi-too-small-image.spec.ts', 'playwright.config.ts'];
   const sourcePins = () => Object.fromEntries(dependencies.map(file => [file, filePin(path.join(harness.REPO_ROOT, file))]));
   const pinsBefore = sourcePins(), wires: Wire[] = [], byRequest = new Map<Request, Wire>(), apiCalls: unknown[] = [];
@@ -88,8 +90,8 @@ test('U007 refuses an actual 8x8 ROI editor input while preserving the saved ori
       try {
         const [body, terminal] = await within(Promise.all([response.body(), response.finished()]), row.deadline, 'original browser response');
         expect(terminal).toBeNull(); expect(body.length).toBeLessThanOrEqual(2 * 1024 * 1024);
-        expect(row.status).toBeGreaterThanOrEqual(200); expect(row.status).toBeLessThan(300);
         Object.assign(row, retain('browser-response', body), {finished: performance.now()}); expect(row.finished!).toBeLessThanOrEqual(row.deadline);
+        expect(row.status).toBeGreaterThanOrEqual(200); expect(row.status).toBeLessThan(300);
       } catch (error) {row.failure = String(error);} finally {row.resolve();}
     })();
   };
@@ -103,8 +105,9 @@ test('U007 refuses an actual 8x8 ROI editor input while preserving the saved ori
   page.on('pageerror', onPageError); page.on('console', onConsole);
   const settle = async () => {
     for (let index = 0; index < wires.length; index++) {
-      const row = wires[index]; await within(row.done, row.deadline, 'full original response join');
-      expect(row.failure).toBeUndefined(); expect(row.finished).toBeDefined();
+      // An already joined receipt retains its original finish/deadline. A
+      // later inspection must not re-wait it against an elapsed wall clock.
+      await joinOriginalResponse(wires[index], within);
     }
   };
   const api = async (route: string, body?: unknown, method?: string) => {
@@ -162,6 +165,31 @@ test('U007 refuses an actual 8x8 ROI editor input while preserving the saved ori
     const imported = await api('/api/dataset/import', {folder_path: source, task: 'anomaly', validate_images: true});
     expect(imported.validation).toMatchObject({checked_images: 1, complete: true}); expect(imported.corrupted_images).toEqual([]);
     project = await api('/api/project/current'); expect(project.source_dataset_dir).toBe(source);
+    // The legacy import above decodes the renderer source; it does not create
+    // the immutable accepted revision required by the actual image library.
+    // Use the same real verify -> terminal -> CAS accept workflow as the
+    // original image-library E2E fixture, before opening the renderer.
+    const validationDeadline = performance.now() + 10_000;
+    const initialRevisions = await within(api('/api/dataset/revisions'), validationDeadline, 'fresh revision state');
+    expect(initialRevisions.active_revision).toBeNull(); expect(initialRevisions.revisions).toEqual([]);
+    const validation = await within(api('/api/dataset/imports', {task: 'anomaly', verify: true, invalid_policy: 'reject'}), validationDeadline, 'submit actual source validation');
+    let validated = validation;
+    while (!['completed', 'failed', 'aborted', 'interrupted'].includes(validated.state)) {
+      await within(new Promise<void>(resolve => setTimeout(resolve, 20)), validationDeadline, 'original validation progress cadence');
+      validated = await within(api('/api/dataset/imports/' + validation.job_id), validationDeadline, 'same original validation job');
+    }
+    expect(validated.state).toBe('completed');
+    const revision = validated.result.revision.revision_id; expect(revision).toMatch(/^[0-9a-f]{32}$/);
+    const accepted = await within(api('/api/dataset/imports/' + validation.job_id + '/accept', {revision_id: revision, expected_active: null}), validationDeadline, 'explicit CAS revision acceptance');
+    expect(accepted).toEqual({active_revision: revision, job_id: validation.job_id});
+    const activeRevisions = await within(api('/api/dataset/revisions'), validationDeadline, 'accepted revision readback');
+    expect(activeRevisions.active_revision).toBe(revision);
+    const library = await within(api('/api/dataset/library/images?state=valid&limit=120'), validationDeadline, 'real library prerequisite readback');
+    expect(library.active).toBe(true); expect(library.source_root).toBe(source); expect(library.items).toHaveLength(1);
+    expect(library.items[0]).toMatchObject({file_path: normal, relative_path: 'train/good/coordinate-512x256.png', valid: true, sha256: filePin(normal).sha256});
+    proof.actual_library_prerequisite = {initial: initialRevisions, submitted: validation, terminal: validated, accepted,
+      readback: activeRevisions, original_library: library, deadline: validationDeadline, finished: performance.now(),
+      no_route_fake_or_409_exception: true, no_additional_legacy_import: true};
     const tinyRoot = path.join(project.dataset_dir, 'u007-owned-boundary-input'); fs.mkdirSync(tinyRoot);
     tiny = path.join(tinyRoot, 'too-small-8x8.png'); make(tiny, 8, 8);
     originalInputs = {normal: filePin(normal), tiny: filePin(tiny)};
