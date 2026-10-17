@@ -1,0 +1,102 @@
+{
+  "schema": "modu-vision.openvino-nchw-output-axis-source-regression/v1",
+  "status": "passed",
+  "scope": "four fixed-array source tests only",
+  "source": {
+    "head": "2c83c2ac6aa2caa52b7d2340ab6cf73ca04aba2e",
+    "parent": "8119f03b5e0f15823198bc479e15a03cdc774da0",
+    "tracked_file_count": 2884,
+    "changed_files": [
+      {
+        "path": "backend/engine/openvino_runtime.py",
+        "size": 26283,
+        "sha256": "8b7ab19f30f1dbbcd5e0a0c67d4a8803eb4ff4cc1ef3192602b1a5a8177c535a"
+      },
+      {
+        "path": "backend/tests/test_openvino_output_axis.py",
+        "size": 1567,
+        "sha256": "9ddee892f73a75618289be6cf2dfd51f2c845a5ce7e1ec61cf99720799a1ff53"
+      }
+    ],
+    "clean_after_checkpoint": true,
+    "all_other_tracked_bodies_unchanged": true
+  },
+  "defect_and_correction": {
+    "old_metric": "For NCHW segmentation, output_argmax_axis=-1 truthfully measures width-position argmax agreement; it does not measure per-pixel class agreement. The historical zero is not reinterpreted.",
+    "new_segmentation_axis": 1,
+    "new_denominator": "N * H * W",
+    "other_and_unspecified_task_axis_preserved": -1,
+    "non_nchw_segmentation_output": "refused",
+    "scalar_or_raster_comparison_tolerances_changed": false,
+    "approval_or_quality_guards_changed": false
+  },
+  "red": {
+    "returncode": 1,
+    "failed": 3,
+    "passed": 1,
+    "pytest_seconds": 1.36,
+    "natural_popen_wait_seconds": 2.086733083007857,
+    "log_size": 2325,
+    "log_sha256": "efef5a3e96e8852ec92f1a0c9502ada9c7daaf170bdf25868b35a059be6c8a4c",
+    "old_axis_behavior_extracted_unchanged": true
+  },
+  "green": {
+    "returncode": 0,
+    "passed": 4,
+    "failed": 0,
+    "pytest_seconds": 0.92,
+    "natural_popen_wait_seconds": 1.556563707999885,
+    "log_size": 98,
+    "log_sha256": "9ec3f8871416f43c00a62e0a3a3ac1f5787063a1e36708faf3817e8e47bc38f4"
+  },
+  "verification": {
+    "original_backend_conftest": true,
+    "fresh_owned_test_stores_per_run": true,
+    "full_source_test_file_count": 2884,
+    "full_raw9_and_sha_before_after_equal_each_run": true,
+    "both_original_test_children_reaped_naturally_and_absent": true,
+    "additional_gates_run": false,
+    "models_created_loaded_or_called": false,
+    "openvino_import_or_conversion_called": false,
+    "gpu_or_native_app_run": false
+  },
+  "retained_inference_facts_unchanged": {
+    "conversion_source_head": "7668f776075c0e00309eb291dea2f9e97d0d2435",
+    "source_package_manifest_sha256": "9c1c6664b691e8fb827dd495d8cbcd5e539e3d75a081ebde3d67612aee408e00",
+    "candidate_manifest_sha256": "df9ac470825cebabc92aa490c2056bf4fe6b3c576de50dcc47553f1d8e56bb79",
+    "original_full_flow_holdout_passed": 0,
+    "original_full_flow_holdout_total": 2,
+    "cpu_reference_and_openvino_candidate_areas": {
+      "sample-4": [
+        3000,
+        3000
+      ],
+      "sample-5": [
+        3010,
+        3010
+      ]
+    },
+    "separate_later_a860_cuda_areas": {
+      "sample-4": 3000,
+      "sample-5": 3011
+    },
+    "categorical_masks_area_and_bbox_equal_in_each_retained_cpu_reference_candidate_pair": true,
+    "mismatch_fields": [
+      "execution_steps[1].artifacts",
+      "execution_steps[2].artifacts",
+      "crops[0].segmentation_classes"
+    ],
+    "no_new_model_runtime_quality_or_precision_approval": true
+  },
+  "limitations": [
+    "No model, conversion, inference, actual OpenVINO, GPU or native execution was performed for this source regression.",
+    "The four fixed-array tests establish diagnostic axis/count correctness only.",
+    "The retained strict holdout remains 0/2; the old receipts and cross-device 3010/3011 difference remain unchanged.",
+    "No preprocessing, threshold or tiling runtime defect causing that retained holdout has been established.",
+    "No native, model-quality, whole-flow, parent-scenario or acceptance-count credit."
+  ],
+  "private_evidence_manifest": {
+    "size": 22529,
+    "sha256": "d51801709788e42a65b6bb2b5a912e3f952ef80b39be21265660b90dcbb14233"
+  }
+}
