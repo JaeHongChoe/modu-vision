@@ -1688,6 +1688,7 @@ def observe_original_UI_global_project_role(function):
         else:attempt.global_role_results.append((project_id,result))
         return result
     _RESOURCES['global_project_role']=observed
+    _RESOURCES['global_project_role_origin']=(function,function.__code__)
     return observed
 
 

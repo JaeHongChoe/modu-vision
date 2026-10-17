@@ -1,0 +1,339 @@
+{
+  "GREEN_assertions": {
+    "can_release_launch_lease": false,
+    "four_distinct_complete_normal_released_original_envelopes": true,
+    "observer_all_settled": true,
+    "observer_uncertain": false,
+    "original_login_me_users_selection_responses_and_SQLite_selection_verified": true,
+    "original_point_zero_three_second_drain_exact": {
+      "active_scopes": 0,
+      "status": "managed_scopes_drained",
+      "unsupported": []
+    },
+    "process_tree_exit_verified": false,
+    "real_original_account_ASGI_routes": true,
+    "whole_writer_coverage": false
+  },
+  "PUB_mutated": false,
+  "Root05_exact_native_cause_proved": false,
+  "baseline_account_ancillary_test_and_conftest_equal_fix_parent": {
+    "backend/conftest.py": "fefff0858284a1c809cf16e0f29ef176cb2d2a57b8fa1ff54f21c414176baa7d",
+    "backend/engine/original_owned_UI_ancillary_request.py": "e6c2c9dd497110ee5fb91c13c7dcfeaed7d3effbf8180580c21acde92ab48f1e",
+    "backend/engine/original_owned_account_request.py": "a83c6e8fd9b416be90193ea0dc02a8c56de9d1632721897a5bd5493688e3180c",
+    "backend/tests/test_original_owned_account_request_lifetime.py": "8077b98d38b842fe95a13dcc3220f4f044d8da585775b4118446dbae75d2932a"
+  },
+  "causal_observation": {
+    "baseline_and_candidate_failure_snapshot_bytes_equal": true,
+    "earlier_four_database_entries_valid": true,
+    "first_failure": "owned_account_database_entry",
+    "first_invalid_handler": "me",
+    "first_invalid_method": "project_role",
+    "first_invalid_original_database_return_ordinal": 5,
+    "functions_or_returns_replaced": false,
+    "grandparent_exact_original_project_for": true,
+    "immediate_parent_exact_registered_pass_through_wrapper": true,
+    "original_begin_return_valid": false,
+    "original_preconditions_valid": true,
+    "scheduling_barriers_added": false,
+    "trace_errors": [],
+    "trace_restored": true,
+    "wrapper_body_factory_code_closure_arguments_valid": true
+  },
+  "isolation": {
+    "HOME_changed": false,
+    "actual_training_leases_job_ledger_split_thumbnail_profile_paths_under_private_output": true,
+    "isolation_probe_sha256": "5a23a61a2e53a318a9d38a8e89069c10e549cda19f34c45cfb1343ceb3acd101",
+    "original_backend_conftest_preloaded": true,
+    "original_conftest_sha256": "fefff0858284a1c809cf16e0f29ef176cb2d2a57b8fa1ff54f21c414176baa7d",
+    "passive_failure_probe_sha256": "0df5db17827d41c1a2f21fcd19348771cc59ef6dc0cd86809919a6bdde4592ae",
+    "private_MODU_TEST_DATA_DIR_before_product_import": true
+  },
+  "ledger_promotion": false,
+  "limits": [
+    "These are original ASGI source fixtures with disclosed synthetic setup and explicitly mutated negative inputs; no installed app, native controller, real transport bootstrap or native lease acceptance was executed.",
+    "Root05 installed login uncertainty first cause remains unidentified; this source regression does not establish that native incident cause.",
+    "Python3.13 executed current inline-comprehension paths; the unchanged older-Python comprehension branch has no new old-Python execution credit.",
+    "Only the reviewed original selector and one44-case related slice were executed; no whole-backend or whole-app claim.",
+    "No product/UI/Git publication or action ledger state was changed in the publication worktree by this verification."
+  ],
+  "model_or_GPU_execution": false,
+  "native_acceptance": false,
+  "negative_controls": {
+    "all_passed": true,
+    "cases": 8,
+    "inputs": [
+      "foreign role wrapper before bind",
+      "foreign role wrapper after bind",
+      "role body code changed before bind",
+      "same-code body copy substituted in wrapped reference and closure before bind",
+      "role body code changed after bind",
+      "wrapped body reference changed after bind",
+      "closure body changed after bind",
+      "foreign project_for intermediate before bind"
+    ],
+    "no_settled_me_owner_credit": true,
+    "original_normal_envelopes_and_false_authority_flags_asserted": true,
+    "qualification_refused_and_sticky_unsupported": true,
+    "real_original_HTTP_business_responses_remain_200_and_complete": true
+  },
+  "original_selector": "backend/tests/test_original_owned_account_request_lifetime.py::test_original_login_me_users_select_commits_and_drains",
+  "original_selector_file_sha256": "8077b98d38b842fe95a13dcc3220f4f044d8da585775b4118446dbae75d2932a",
+  "parent_acceptance": false,
+  "private_fix_source_tracked_files": 2883,
+  "private_verified_fix_HEAD": "a2f2d1893a6f0966edac1aba7b912d97946beeb1",
+  "product_base_HEAD": "f4e1cde796e0684e0b2f4f8c55a27520c7beb888",
+  "product_change": [
+    "Retain decorator-time immutable tuple of exact original role body function and code beside the existing canonical wrapper registration.",
+    "Require retained registration tuple identity, exact current body/code, canonical wrapper/factory/globals/closure and original provider references.",
+    "For account/me project_role only, accept exactly that one immediate pass-through frame with exact store/user/project/function and absent ancillary attempt, then keep original project_for/projects_for/older-comprehension parent checks."
+  ],
+  "related_slice": {
+    "failed": 0,
+    "files": [
+      "backend/tests/test_original_account_role_parent_binding.py",
+      "backend/tests/test_original_job_list_lock_binding.py",
+      "backend/tests/test_original_owned_UI_ancillary_reads_lifetime.py",
+      "backend/tests/test_original_owned_account_request_lifetime.py"
+    ],
+    "original_36_case_slice_plus_8_new": true,
+    "passed": 44,
+    "retried": 0,
+    "skipped": 0,
+    "total": 44
+  },
+  "runs": {
+    "baseline_single_RED": {
+      "full_tracked_raw9_and_bytes_equal": true,
+      "pytest_summary": "1 failed in 1.20s",
+      "raw_pins": {
+        "failure-observer.json": {
+          "bytes": 4922,
+          "sha256": "b5354119453c49ac25bd96f1428376e574a3652324f8f636435832e76b7ca516"
+        },
+        "invocation.json": {
+          "bytes": 1228,
+          "sha256": "18648282021fe15bbfb8a0fd04f66c4a55f446b72fe5c62a4ea99853a8556d91"
+        },
+        "isolation-final.json": {
+          "bytes": 21730,
+          "sha256": "5dd4ca8f23bcbe8b83670946a69726118cde0c146de58f9fa351b789f0723108"
+        },
+        "pytest.log": {
+          "bytes": 3699,
+          "sha256": "021233d13fb147abee65ca4c604930bb3c9ccd921e367eeef8b17604c87121a7"
+        },
+        "result.json": {
+          "bytes": 354,
+          "sha256": "b7eafc386e9876653a0b252566e1d162a27865a8ce7b4ec94fb0eda5f955637e"
+        },
+        "source-after.json": {
+          "bytes": 1030020,
+          "sha256": "a914e97a009c480f9e0c1cd2549a245d2b8b321e09056fedbc94702e6d99b918"
+        },
+        "source-before.json": {
+          "bytes": 1030020,
+          "sha256": "a914e97a009c480f9e0c1cd2549a245d2b8b321e09056fedbc94702e6d99b918"
+        }
+      },
+      "returncode": 1,
+      "runner_seconds": 5.971339415991679,
+      "signals_or_forced_termination_used": false,
+      "source_HEAD": "3a582ef3f41969d7d8272dbd926ea06c034b1413",
+      "source_clean_at_both_snapshots": true,
+      "store_isolation_all_checks_passed": true,
+      "store_isolation_errors": [],
+      "store_isolation_rows": 5,
+      "test_child_natural_exit": true,
+      "tracked_source_files": 2869
+    },
+    "job_fix_single_RED": {
+      "full_tracked_raw9_and_bytes_equal": true,
+      "pytest_summary": "1 failed in 1.20s",
+      "raw_pins": {
+        "failure-observer.json": {
+          "bytes": 4922,
+          "sha256": "b5354119453c49ac25bd96f1428376e574a3652324f8f636435832e76b7ca516"
+        },
+        "invocation.json": {
+          "bytes": 1234,
+          "sha256": "7763a534132503193feb482d4509a14727a23ccb722d58130cc7f1f826b3eab3"
+        },
+        "isolation-final.json": {
+          "bytes": 21782,
+          "sha256": "4326e95a0302b85771ad5f19eef95458d8ba16d426f46dab175a05cea355eaa8"
+        },
+        "pytest.log": {
+          "bytes": 3700,
+          "sha256": "2670b45a68c2220eb81ece4e535f46a87daeaa9a2bb0886673adfdba60b49f81"
+        },
+        "result.json": {
+          "bytes": 354,
+          "sha256": "136c57be3231e06e99ee46a165c299eacee277497c909caee7184fc9d8f3664c"
+        },
+        "source-after.json": {
+          "bytes": 1032212,
+          "sha256": "ba1175cdf3cb49f5147b034c0fad551de495ce1738ebdbd544c5a6075db79c23"
+        },
+        "source-before.json": {
+          "bytes": 1032212,
+          "sha256": "ba1175cdf3cb49f5147b034c0fad551de495ce1738ebdbd544c5a6075db79c23"
+        }
+      },
+      "returncode": 1,
+      "runner_seconds": 5.803170665865764,
+      "signals_or_forced_termination_used": false,
+      "source_HEAD": "088327f9c8064cdbdf42b9442e4bc16a82671a47",
+      "source_clean_at_both_snapshots": true,
+      "store_isolation_all_checks_passed": true,
+      "store_isolation_errors": [],
+      "store_isolation_rows": 5,
+      "test_child_natural_exit": true,
+      "tracked_source_files": 2875
+    },
+    "original_selector_GREEN": {
+      "full_tracked_raw9_and_bytes_equal": true,
+      "pytest_summary": "1 passed in 1.20s",
+      "raw_pins": {
+        "invocation.json": {
+          "bytes": 1241,
+          "sha256": "4228f6ffe5760be303d6e4743e7c19d0f367282910160944c41344d3e0d265b1"
+        },
+        "isolation-final.json": {
+          "bytes": 21886,
+          "sha256": "acf5bdaf41cc32a13a69258616ea21e7d6dcb68658830d5ddb1e2ce28cfbe20c"
+        },
+        "pytest.log": {
+          "bytes": 98,
+          "sha256": "6adb81285ad83cda4860e53fd7a29d459160a711fe0e4b04323f735de187fab8"
+        },
+        "result.json": {
+          "bytes": 355,
+          "sha256": "5de660cc9d6d6e960669f2f6c2245b761c63212f8a9114b6a6b26d4ac150dd44"
+        },
+        "source-after.json": {
+          "bytes": 1035155,
+          "sha256": "3a5c468228a3485c7ca5aec003db05f359eabac7ba284892666ca3a360c8a846"
+        },
+        "source-before.json": {
+          "bytes": 1035155,
+          "sha256": "3a5c468228a3485c7ca5aec003db05f359eabac7ba284892666ca3a360c8a846"
+        }
+      },
+      "returncode": 0,
+      "runner_seconds": 6.291777291102335,
+      "signals_or_forced_termination_used": false,
+      "source_HEAD": "a2f2d1893a6f0966edac1aba7b912d97946beeb1",
+      "source_clean_at_both_snapshots": true,
+      "store_isolation_all_checks_passed": true,
+      "store_isolation_errors": [],
+      "store_isolation_rows": 5,
+      "test_child_natural_exit": true,
+      "tracked_source_files": 2883
+    },
+    "passive_parent_trace_RED": {
+      "full_tracked_raw9_and_bytes_equal": true,
+      "pytest_summary": "1 failed in 1.61s",
+      "raw_pins": {
+        "failure-observer.json": {
+          "bytes": 4922,
+          "sha256": "b5354119453c49ac25bd96f1428376e574a3652324f8f636435832e76b7ca516"
+        },
+        "invocation.json": {
+          "bytes": 1373,
+          "sha256": "683046673a0fd9248b437ffc0d6e595a9ab07c64a36ccc74c5fc4f42a63c1e2b"
+        },
+        "isolation-final.json": {
+          "bytes": 21990,
+          "sha256": "5d221a0d3e294063ea2f42418ed7f321e17e7713ecb2dcf1ee30274d51eea498"
+        },
+        "pytest.log": {
+          "bytes": 3704,
+          "sha256": "71b2dff78e74bade65e46f05601e97920b6756c1306b4005e4538890817123e9"
+        },
+        "result.json": {
+          "bytes": 397,
+          "sha256": "f5f21179f04b00120ee7b492d53c6b6aecdb12f9ad96d9ab157a8f33f12d29a1"
+        },
+        "role-parent-trace.json": {
+          "bytes": 3791,
+          "sha256": "455115ce54d6289810109800a4c6751f0efb7725cc035a7a3947273e2af7f4ee"
+        },
+        "source-after.json": {
+          "bytes": 1032212,
+          "sha256": "ba1175cdf3cb49f5147b034c0fad551de495ce1738ebdbd544c5a6075db79c23"
+        },
+        "source-before.json": {
+          "bytes": 1032212,
+          "sha256": "ba1175cdf3cb49f5147b034c0fad551de495ce1738ebdbd544c5a6075db79c23"
+        }
+      },
+      "returncode": 1,
+      "runner_seconds": 6.655216499930248,
+      "signals_or_forced_termination_used": false,
+      "source_HEAD": "088327f9c8064cdbdf42b9442e4bc16a82671a47",
+      "source_clean_at_both_snapshots": true,
+      "store_isolation_all_checks_passed": true,
+      "store_isolation_errors": [],
+      "store_isolation_rows": 5,
+      "test_child_natural_exit": true,
+      "tracked_source_files": 2875
+    },
+    "related_slice_GREEN": {
+      "full_tracked_raw9_and_bytes_equal": true,
+      "pytest_summary": "44 passed in 29.93s",
+      "raw_pins": {
+        "invocation.json": {
+          "bytes": 2138,
+          "sha256": "f055e09ee33195a3eb84b6631b4ba2e3c70150e3824f13d23392e9743f57582a"
+        },
+        "isolation-final.json": {
+          "bytes": 454777,
+          "sha256": "eb31fcc892f3db32188fbcd986da562e2b622690cc5f664622bacbda3d84857d"
+        },
+        "pytest.log": {
+          "bytes": 100,
+          "sha256": "c9dcc90377891ede3a489037935e983d79e8892c78712fc2d8cad09fa86701a8"
+        },
+        "result.json": {
+          "bytes": 334,
+          "sha256": "beaf5402e368e183ead94c6725a04969170a5e08e78021085ed1ce733043c76c"
+        },
+        "source-after.json": {
+          "bytes": 1035155,
+          "sha256": "3a5c468228a3485c7ca5aec003db05f359eabac7ba284892666ca3a360c8a846"
+        },
+        "source-before.json": {
+          "bytes": 1035155,
+          "sha256": "3a5c468228a3485c7ca5aec003db05f359eabac7ba284892666ca3a360c8a846"
+        }
+      },
+      "returncode": 0,
+      "runner_seconds": 36.93488100008108,
+      "signals_or_forced_termination_used": false,
+      "source_HEAD": "a2f2d1893a6f0966edac1aba7b912d97946beeb1",
+      "source_clean_at_both_snapshots": true,
+      "store_isolation_all_checks_passed": true,
+      "store_isolation_errors": [],
+      "store_isolation_rows": 91,
+      "test_child_natural_exit": true,
+      "tracked_source_files": 2883
+    }
+  },
+  "schema": "modu-vision.account-canonical-role-parent-source-red-green/v1",
+  "source_files": {
+    "backend/engine/original_owned_UI_ancillary_request.py": {
+      "bytes": 169980,
+      "sha256": "7426ab8f61ebe4b9e09bbbe307397700195254dbc518c571287d1b1c8435f672"
+    },
+    "backend/engine/original_owned_account_request.py": {
+      "bytes": 52998,
+      "sha256": "f780250306ec53ab622be545757acaaa9d08ae2bec8c80f639a8008496617756"
+    },
+    "backend/tests/test_original_account_role_parent_binding.py": {
+      "bytes": 5723,
+      "sha256": "e48987182615e5a0fbd75b91fcadbf0305fa97c37c13964fbb40880e3d509f03"
+    }
+  },
+  "status": "bounded_source_regression_passed",
+  "unchanged_original_test_body": true
+}
