@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "c474cb00c073d51a526140b897e289f91949c872",
+  "source_dirty": false,
+  "test": "scripts/e2e/obb-center-fit-invalid.spec.ts::center fitting refuses actual duplicate edge points without changing saved truth and reopens exact baseline",
+  "test_source_sha256": "e0e876968a1cf574c7ec9e32df374da40198af5e8b5d9f9c7381636bbb9b559e",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "bc7885717f2c45df5d92b919d148a326ace47db150c4d21622f27cd68428e61e",
+  "harness_sha256": "d57a0021161943e40882cc23716b511c414409c16c138037369ed07e81072648",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "9aed9bae927930eb221e3ccd2df4c9a7443e3058aaa37ea7193d68cb92d02ba2"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "665b37f31e1e7bba75fbe5c9244886e4170dfa452681d2e1b326070a97a81b1d"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Only actual duplicate center-edge input refusal, no append or persistent mutation, and exact saved-truth reload in a headless browser. No native, model quality, release, whole-CI or parent acceptance inferred."
+}

@@ -1,0 +1,217 @@
+{
+  "schema": "modu-vision.F029-center-fit-invalid-browser-details/v1",
+  "generic_receipt_sha256": "28a9db88cfcd6f12097dea531826afaa5d90b6df7a3a6a7f1089c8fcfb212601",
+  "source_sha": "c474cb00c073d51a526140b897e289f91949c872",
+  "source_base_sha": "b7b2c27c78194de6714d717180147d2dee2cad92",
+  "source_dirty": false,
+  "test_source_sha256": "e0e876968a1cf574c7ec9e32df374da40198af5e8b5d9f9c7381636bbb9b559e",
+  "raw_readback_sha256": "8792c80a67fec75c87354c44faf68ed1379936a902f05edd3c737a6814aeac4c",
+  "raw_report_sha256": "bc7885717f2c45df5d92b919d148a326ace47db150c4d21622f27cd68428e61e",
+  "raw_harness_sha256": "d57a0021161943e40882cc23716b511c414409c16c138037369ed07e81072648",
+  "raw_log_sha256": "b3b82f1f4a536f8a521805721a6c9eaa7734bbf1a5cb39dd47150fef3f5c8ecc",
+  "raw_original_tool_observations_sha256": "495680548dd4812c84bf4180b577bcc50173f0e55530cfa77f584705041c8ec0",
+  "raw_teardown_sha256": "9cd133aa8224a8d7911355cb2349445d3efdf3eaa8027b20b1f633dcc0fa67ad",
+  "source_snapshot_before_after_sha256": "c7b5974287c2a46205010a0a8628c7e64bcfb01f346343654395907b72007eca",
+  "provider_snapshot_before_after_sha256": "f9db7fa03c8877a6db8caf4635f80857e98793772fb0049dfaf5c87ea1633e90",
+  "source_tracked_files": 2906,
+  "source_and_locked_provider_before_after_equal": true,
+  "source_diff": "Only this new browser spec added to the exact public base. Product and original harness bytes equal the base.",
+  "execution": {
+    "selected": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "retries": 0,
+    "flaky": 0,
+    "report_seconds": 16.996268,
+    "wrapper_seconds": 17.454367416910827,
+    "channel": "chrome",
+    "version": "155.0.8059.80",
+    "workers": 1,
+    "headless": true
+  },
+  "typecheck": {
+    "argv": [
+      "/opt/homebrew/bin/node",
+      "node_modules/typescript/bin/tsc",
+      "-p",
+      "scripts/e2e/fixtures/tsconfig.json"
+    ],
+    "exit_code": 0,
+    "seconds": 4.41494920803234,
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "invalid": {
+    "actual_client_points": [
+      [
+        641,
+        525
+      ],
+      [
+        641,
+        525
+      ],
+      [
+        674,
+        541
+      ]
+    ],
+    "actual_source_points": [
+      [
+        79.84761904761905,
+        59.733333333333334
+      ],
+      [
+        79.84761904761905,
+        59.733333333333334
+      ],
+      [
+        99.96190476190476,
+        69.48571428571428
+      ]
+    ],
+    "first_two_exactly_equal": true,
+    "third_distinct": true,
+    "trusted_pointer_and_button_events": true,
+    "source_size": [
+      256,
+      256
+    ],
+    "source_sha256": "a637bc630cbf369e26ea1d1525263cf1f26ff90cc29d66ae8a70478d37628f73",
+    "original_fit_POST_status": 422,
+    "original_full_body": {
+      "detail": "Fitting edge must have positive length"
+    },
+    "original_full_body_sha256": "a669bda34b02a51c0e8cc67d11c15d1139104097b6f2b10e5c50104b5120890a",
+    "original_full_body_bytes": 51,
+    "owning_alert_exact_and_visible": true,
+    "append_disabled": true,
+    "returned_polygon_count": 0,
+    "fit_action_enabled_after_refusal": true,
+    "original_request_body_not_fabricated": true
+  },
+  "readback": {
+    "responses": [
+      {
+        "label": "initial-own-saved-manifest",
+        "method": "GET",
+        "route": "rotated-detection/manifest",
+        "status": 200,
+        "sha256": "50e61d6dc9e5ba2b5a1d9496f556c0aeec1d5e476825d9ca4ee36757e657cea7",
+        "bytes": 2372,
+        "same_Request": true,
+        "main_frame": true,
+        "full_body_and_finished": true,
+        "within_original_10s": true
+      },
+      {
+        "label": "own-fitting-source",
+        "method": "GET",
+        "route": "rotated-detection/fit-source",
+        "status": 200,
+        "sha256": "3bfdf72304c07340fce6f384f4458164ca489c4d43467550b15c8ee316afffa1",
+        "bytes": 1172,
+        "same_Request": true,
+        "main_frame": true,
+        "full_body_and_finished": true,
+        "within_original_10s": true
+      },
+      {
+        "label": "actual-duplicate-edge-refusal",
+        "method": "POST",
+        "route": "rotated-detection/fit-box",
+        "status": 422,
+        "sha256": "a669bda34b02a51c0e8cc67d11c15d1139104097b6f2b10e5c50104b5120890a",
+        "bytes": 51,
+        "same_Request": true,
+        "main_frame": true,
+        "full_body_and_finished": true,
+        "within_original_10s": true
+      },
+      {
+        "label": "real-reload-own-saved-manifest",
+        "method": "GET",
+        "route": "rotated-detection/manifest",
+        "status": 200,
+        "sha256": "50e61d6dc9e5ba2b5a1d9496f556c0aeec1d5e476825d9ca4ee36757e657cea7",
+        "bytes": 2372,
+        "same_Request": true,
+        "main_frame": true,
+        "full_body_and_finished": true,
+        "within_original_10s": true
+      }
+    ],
+    "full_request_context_header_equality": true,
+    "distinct_server_accepted_context_receipt_claim": false,
+    "saved_samples": 3,
+    "saved_splits": {
+      "train": 1,
+      "val": 1,
+      "test": 1
+    },
+    "initial_and_reloaded_manifest_bodies_equal": true,
+    "saved_table_exact_after_invalid_and_reload": true,
+    "protected_tree_counts": {
+      "source": 4,
+      "project": 23,
+      "prepared": 5
+    },
+    "source_project_prepared_raw9_and_bodies_equal_through_natural_shutdown": true,
+    "after_baseline_nonGET_requests": [
+      {
+        "method": "POST",
+        "route": "/api/rotated-detection/fit-box"
+      }
+    ],
+    "persistent_API_mutations_after_baseline": 0
+  },
+  "errors": {
+    "page": 0,
+    "callback": 0,
+    "expected_original_HTTP_422": 1,
+    "expected_original_owning_Chrome_422_network_console_diagnostic": 1,
+    "unexpected": 0,
+    "blanket_console_exemption": false
+  },
+  "natural_backend_closure": {
+    "exit_code": 0,
+    "forced": false,
+    "port_closed": true,
+    "pid_alive": false,
+    "group_alive": false,
+    "escaped": [],
+    "scan_error": null,
+    "teardown_leftovers": [],
+    "teardown_unowned_references": [],
+    "FD_custody": {
+      "opened": 96,
+      "closed": 96,
+      "uncertain": []
+    }
+  },
+  "visual_review": {
+    "refusal_PNG": "Exact owning refusal, fit button enabled, append disabled and saved three-row table visible. Source point area partly above viewport; pointer geometry is established by original DOM/request evidence.",
+    "reload_PNG": "Owning project and selected rotated workbench visible; table below viewport, so exact reopened table is established by original GET plus DOM equality, not this PNG alone."
+  },
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "9aed9bae927930eb221e3ccd2df4c9a7443e3058aaa37ea7193d68cb92d02ba2"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "665b37f31e1e7bba75fbe5c9244886e4170dfa452681d2e1b326070a97a81b1d"
+    }
+  ],
+  "limits": {
+    "native_installed_GUI": false,
+    "model_quality": false,
+    "parent_acceptance": false,
+    "Root05_Root06_cause": false,
+    "whole_CI": false,
+    "GPU_unavailable_claim": false,
+    "model_inference_requested": false,
+    "training_requested": false,
+    "backend_health_device_is_capability": "mps; no model selected or forward action requested in this geometric case"
+  }
+}
