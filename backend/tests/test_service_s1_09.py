@@ -679,16 +679,33 @@ def test_the_isolation_helper_imports_nothing_from_the_app():
     assert runtime_process_control.session_isolation is process_isolation.session_isolation
 
 
-def test_a_generation_package_carries_what_its_owned_run_imports():
+def test_a_generation_package_carries_what_its_owned_run_imports(tmp_path):
     """A GAN generation package copies a fixed list of engine files; its deadline run imports process_isolation."""
     import ast
-    from backend.engine.gan_package_runtime import GENERATOR_PACKAGE_ENGINE_FILES
+    import shutil
+    from backend.engine.gan_package_runtime import GENERATOR_PACKAGE_ENGINE_FILES, GENERATOR_PACKAGE_REQUIREMENTS
     engine = Path(__file__).resolve().parents[2] / 'backend' / 'engine'
     for name in ('runtime_deadline.py', 'process_isolation.py'):
         tree = ast.parse((engine / name).read_text(encoding='utf-8'))
         needed = {node.module.rsplit('.', 1)[1] + '.py' for node in ast.walk(tree)
                   if isinstance(node, ast.ImportFrom) and node.module and node.module.startswith('backend.engine.')}
         assert needed <= set(GENERATOR_PACKAGE_ENGINE_FILES), (name, needed - set(GENERATOR_PACKAGE_ENGINE_FILES))
+    # Import the actual copied runtime with no source checkout on sys.path.
+    # This also checks the observer's eager dependency closure; it is not optional
+    # and its observation guards must not be replaced with no-op fallbacks.
+    for name in GENERATOR_PACKAGE_ENGINE_FILES:
+        target = tmp_path / 'backend/engine' / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(engine / name, target)
+    for name in ('backend/__init__.py', 'backend/engine/__init__.py'):
+        (tmp_path / name).write_text('')
+    script = ('import sys; sys.dont_write_bytecode=True; sys.path.insert(0,sys.argv[1]); '
+              'from backend.engine import runtime_deadline; '
+              'assert callable(runtime_deadline.execute_owned_process)')
+    done = subprocess.run([sys.executable, '-I', '-c', script, str(tmp_path)], cwd=tmp_path,
+                          capture_output=True, text=True, timeout=20)
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert 'starlette>=1.7.0' in GENERATOR_PACKAGE_REQUIREMENTS.splitlines()
 
 
 def test_session_store_setup_retires_a_removed_case_ledger_before_fixture_overrides(tmp_path, monkeypatch, request):

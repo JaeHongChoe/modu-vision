@@ -666,6 +666,7 @@ export type FlowchartRunRequest = {
   compute_profile_id?: string | null;
   project_id?: string | null;
   stop_node_id?: string | null;
+  partial_run_id?: string | null;
 };
 
 export type GANCompositionRegion = {
@@ -1305,6 +1306,14 @@ export type RestoreRequest = {
   expected_archive_sha256: string;
 };
 
+export type RetainedPreprocessorBindingRequest = {
+  source_project_id: string;
+  job_id: string;
+  source_project_manifest_sha256: string;
+  checkpoint_sha256: string;
+  version_manifest_sha256: string;
+};
+
 export type RetentionPinRequest = {
   owner: string;
   paths: Array<string>;
@@ -1618,6 +1627,8 @@ export type ZeroEscapeCalibrateRequest = {
   cost_scrap?: number | null;
   current_threshold?: number | null;
   apply_to_eval_results?: boolean | null;
+  source_dataset_path?: string | null;
+  source_task?: string | null;
 };
 
 export type backend__api__routes_capture_intake__AdoptRequest = {
@@ -1927,7 +1938,9 @@ export interface ApiRequestBody {
   "POST /api/flow-workspace/templates/{template_id}/map": TemplateMap;
   "PUT /api/flowchart/draft": FlowDraftSaveRequest;
   "PUT /api/flowchart/execution-resources": FlowExecutionResourcesRequest;
+  "POST /api/flowchart/models/retained-preprocessors": RetainedPreprocessorBindingRequest;
   "POST /api/flowchart/models/verify": FlowchartModelVerificationRequest;
+  "POST /api/flowchart/partial-runs/prepare": FlowchartRunRequest;
   "POST /api/flowchart/pipeline": FlowchartPipeline_Input;
   "POST /api/flowchart/pipeline/diff": FlowchartPipeline_Input;
   "POST /api/flowchart/run": FlowchartRunRequest;
