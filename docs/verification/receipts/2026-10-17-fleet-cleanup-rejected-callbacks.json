@@ -1,0 +1,120 @@
+{
+  "schema": "modu-vision.fleet-fixture-cleanup-callback-correction/v1",
+  "scope": "Fixture cleanup after rejected callbacks only; no actual fleet deployment/model/native execution in these controls",
+  "original_source": "3a582ef3f41969d7d8272dbd926ea06c034b1413",
+  "original_inline_fragment": {
+    "size": 288,
+    "sha256": "dff6cefa0ac0a8ff693f77b69c39a2ccefc2767a148b522c3b1d85f325055f38"
+  },
+  "original_extraction": {
+    "size": 963,
+    "sha256": "b9ecdb7ad597a7aacc322f6e2e0b192e3c37f0d58638f47b508c2a1de6f8c230"
+  },
+  "RED": {
+    "passed": 1,
+    "failed": 2,
+    "skipped": 0,
+    "intended_failures": [
+      "first stop rejection skips disconnect/log/remaining owners",
+      "cleanup rejection replaces the original body Error"
+    ],
+    "causal_preconditions_checked": true,
+    "result": {
+      "size": 296,
+      "sha256": "8ebf314bd78300e57e04a6ce55294e59f98073a13b6112f03c1394cfe38d8f12"
+    },
+    "log": {
+      "size": 4426,
+      "sha256": "7ca3d55d6748bf822c0f72ded3536d56c2fc8200b46adb7f36ab1c3ee93c913f"
+    }
+  },
+  "GREEN": {
+    "passed": 6,
+    "failed": 0,
+    "skipped": 0,
+    "result": {
+      "size": 343,
+      "sha256": "8f1c0e68f361c1daf8769badf9361368e7548a028fdd72eebd5604e9fa177b6d"
+    },
+    "log": {
+      "size": 1462,
+      "sha256": "cf7446c730faf81e8a71ae5f098f3fa7d6dbc7aaf3f7d57910497e1fc154b57a"
+    },
+    "same_original_three_behavior_assertions_retained": true,
+    "additional_cases": [
+      "log and evidence-note rejection order",
+      "original restart rejection",
+      "frozen primary limited error attachment"
+    ],
+    "no_actual_fleet_or_model_processes": true
+  },
+  "change": {
+    "all_original_owner_callbacks_attempted_after_rejected_callbacks": true,
+    "same_original_primary_Error_retained": true,
+    "ordinary_primary_secondary_errors_non_enumerable": true,
+    "no_primary_cleanup_errors_throw_AggregateError": true,
+    "frozen_or_incompatible_primary_attachment_limited_and_reported": true,
+    "product_runtime_or_process_scanner_changed": false,
+    "existing_stop_disconnect_and_deadlines_changed": false
+  },
+  "integrated_gate": {
+    "harness_passed": 55,
+    "harness_failed": 0,
+    "harness_skipped": 0,
+    "typecheck_e2e_exit_code": 0,
+    "results": [
+      {
+        "exit_code": 0,
+        "log_sha256": "74f994115df297c1117640300a54d70a97b3f3840f341fd0184955f4f84c6d73",
+        "seconds": 8.662142083980143,
+        "step": "harness"
+      },
+      {
+        "exit_code": 0,
+        "log_sha256": "0919024eaa08b11e2a01bdac079bf8c8debb38d3c424bdc824ed6c296484d515",
+        "seconds": 4.3525191671215,
+        "step": "typecheck-e2e"
+      }
+    ],
+    "source_before_after_exact": true,
+    "source_before": {
+      "size": 1028614,
+      "sha256": "0df7bf6b9882133590ab1afeb5cffc4a0ef6984e0f39c086c833535d748bc8db"
+    },
+    "source_after": {
+      "size": 1028614,
+      "sha256": "0df7bf6b9882133590ab1afeb5cffc4a0ef6984e0f39c086c833535d748bc8db"
+    },
+    "gate_result": {
+      "size": 427,
+      "sha256": "451705c109ea9f199fb215edda7d0fef7f20eea2cd8cb6ae0766094be9df5769"
+    }
+  },
+  "source_body_pins": {
+    "package.json": {
+      "size": 2712,
+      "sha256": "808c2bb9a981108b720faef29cdbf41108c6b4ce38f6841a53f3afce888e3d55"
+    },
+    "scripts/e2e/fleet-actual-rollout.spec.ts": {
+      "size": 11592,
+      "sha256": "468a4079c8fd3e77dbfa0b9ab68a9d4de5a960de393ad4077ff4ecabcf8e144c"
+    },
+    "scripts/e2e/fixtures/fleet-cleanup.cjs": {
+      "size": 2560,
+      "sha256": "486b38a839b751a8b9aab3e4e7223a68833a39dd2c7d4b347b1c7d9a36f2cf5f"
+    },
+    "scripts/tests/fleet-cleanup.test.cjs": {
+      "size": 7118,
+      "sha256": "c19de546c772a8d170622221cf848383db357ca3e866ced9da84609a880a153b"
+    }
+  },
+  "limits": [
+    "This fixes only settled rejection propagation; a callback that never settles can still block later cleanup.",
+    "The existing disconnect missed or already-emitted child exit-event hang is a separate unresolved path.",
+    "Original240s fleet test ceiling, child ownership, stop/disconnect semantics and escaped/scanner guards remain unchanged.",
+    "Historical079 fleet failure, actual fleet teardown, whole CI, native closure, model quality and parent acceptance are not declared fixed or complete.",
+    "No action or parent ledger cell changes."
+  ],
+  "parent_acceptance": false,
+  "ledger_credit": false
+}

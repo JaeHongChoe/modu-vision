@@ -7,6 +7,7 @@ import type {Page} from '@playwright/test';
 import {test,expect,type Workspace,type Evidence} from './fixtures/test';
 import {installDesktopHostShim} from './fixtures/desktop-host-shim';
 const harness=require('./fixtures/harness.cjs');
+const cleanupOwnedFleet=require('./fixtures/fleet-cleanup.cjs');
 type Api=(route:string,body?:unknown,method?:'PUT')=>Promise<any>;
 async function port(){const s=createServer();await new Promise<void>(r=>s.listen(0,'127.0.0.1',r));const p=(s.address() as {port:number}).port;await new Promise<void>(r=>s.close(()=>r()));return p;}
 async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,native:boolean,url?:string){
@@ -20,7 +21,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   const submitted=await fetch(origin+(viaAgent?'/agent/v1/jobs/upload':'/v1/jobs/upload'),{method:'POST',headers,body:fs.readFileSync(Object.keys(fixture.images)[0])});expect(submitted.status).toBe(viaAgent?200:202);const id=(await submitted.json() as any).job_id;
   let result:any;await expect.poll(async()=>{const r=await fetch(origin+(viaAgent?'/agent/v1/jobs/':'/v1/jobs/')+id,{headers});result=await r.json();return result.state;},{timeout:40_000}).toBe('completed');expect(result.model_verdict).toBe('OK');return result;
  };
- const jobs:any[]=[];const plans:any[]=[];
+ const jobs:any[]=[];const plans:any[]=[];let primaryError:unknown;let bodyFailed=false;
  try{
   for(let i=0;i<2;i++){const root=path.join(workspace.root,'owned-field-'+i);fs.mkdirSync(root);const token=randomBytes(24).toString('hex');evidence.redact(token);const log=fs.createWriteStream(path.join(root,'agent.log'));agents.push({root,port:await port(),token,child:null,pids:[],log});await start(i);}
   await api('/api/project/open',{project_dir:fixture.project.project_dir});if(url)await page.goto(url);else await page.reload();await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();await page.getByText('중앙 · 현장 장비 모델 관리',{exact:true}).click();await page.getByText('현장 장비 추가',{exact:true}).click();
@@ -39,8 +40,8 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   await page.reload();await page.getByRole('button',{name:'패키지·장치·진단',exact:true}).click();await page.getByText('중앙 · 현장 장비 모델 관리',{exact:true}).click();const reopened=page.getByRole('region',{name:'단계적 현장 배포'});await reopened.getByLabel('순차 배포 계획',{exact:true}).selectOption(plan.plan_id);await expect(reopened.getByRole('status')).toContainText('completed');await page.getByLabel('현장 배포 검토자',{exact:true}).fill('synthetic-contract-reviewer');
   await reopened.getByRole('button',{name:'적용 장비의 이전 이력으로 롤백',exact:true}).click();await expect(reopened.getByRole('status')).toContainText('rolling_back',{timeout:60_000});await reopened.getByRole('button',{name:'다음 롤백 배치·응답 확인',exact:true}).click();await expect(reopened.getByRole('status')).toContainText('rolled_back',{timeout:60_000});plan=await api('/api/fleet/rollouts/'+plan.plan_id);expect(plan.targets.every((t:any)=>t.status==='rolled_back'&&t.readback.runtime.manifest_sha256===fixture.first_release.manifest_sha256)).toBe(true);plans.push(plan);jobs.push(await inspect(0,true));
   await reopened.scrollIntoViewIfNeeded();await evidence.screenshot(page,`${native?'native':'browser'}-actual-fleet-rollback`);evidence.note('actual_fleet',{fixture,targets,plans,jobs,agents:agents.map(({root,port,pids})=>({root,port,pids})),actual_os_agents:true,actual_cpu_inference:true,physical_field_devices:false,synthetic_approval_not_quality_acceptance:true,windows_excluded:true});
- }finally{
-  const clean=[];for(let i=0;i<agents.length;i++){if(!agents[i].child)await start(i);clean.push({root:agents[i].root,port:agents[i].port,pids:agents[i].pids,result:await remote(i,'/agent/v1/stop',{})});await disconnect(i);agents[i].log.end();}evidence.note('owned_agents_cleanup',clean);
+ }catch(error){primaryError=error;bodyFailed=true;throw error;}finally{
+  await cleanupOwnedFleet({agents,start,remote,disconnect,evidence,...(bodyFailed?{primaryError}:{})});
  }
 }
 test('actual authenticated CPU fleet canary, disconnect continuity and rollback',async({page,renderer,workspace,evidence})=>{const api:Api=async(route,body,method)=>{const r=await page.request.fetch(renderer.origin+route,{method:method||(body?'POST':'GET'),data:body});expect(r.ok(),await r.text()).toBe(true);return r.json();};await installDesktopHostShim(page,renderer.port);await exercise(page,workspace,evidence,api,false,renderer.url);});
