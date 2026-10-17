@@ -3,6 +3,7 @@ import {ComputeJobsPanel} from './ComputeJobsPanel';
 import {SharedProjectPanel} from './SharedProjectPanel';
 import {ServerConnectionWizard} from './ServerConnectionWizard';
 import React, { useState,useEffect } from 'react';
+import {createPortal} from 'react-dom';
 import { CheckCircle2, Pencil, Plus, RefreshCw, Server, Trash2, X } from 'lucide-react';
 import { useComputeStore } from '../../stores/useComputeStore';
 import type { ComputeProfile, ComputeProfileInput, ComputeProbeResult } from '../../services/api';
@@ -83,8 +84,10 @@ export const ComputeServerPanel: React.FC<Props> = ({ onClose }) => {
     try { await deleteProfile(profile.id); } catch { /* Store error is shown below. */ }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-end bg-black/60 p-4" role="presentation" onClick={onClose}>
+  // Match project management's dialog layer above workspace toolbars (z-75).
+  // Portalling also keeps the header's stacking context out of modal input.
+  return createPortal(
+    <div className="fixed inset-0 z-[90] flex items-start justify-end bg-black/60 p-4" role="presentation" onClick={onClose}>
       <section
         role="dialog"
         aria-modal="true"
@@ -193,6 +196,6 @@ export const ComputeServerPanel: React.FC<Props> = ({ onClose }) => {
         )}
         <ComputeJobsPanel onOpenReview={onClose}/>
       </section>
-    </div>
+    </div>, document.body
   );
 };
