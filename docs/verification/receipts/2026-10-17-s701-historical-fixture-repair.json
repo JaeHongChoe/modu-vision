@@ -1,0 +1,102 @@
+{
+  "schema": "modu-vision.historical-fixture-portability-repair/v1",
+  "scope": "S7-01 temporary positive evidence fixtures and ASCII console smoke only",
+  "fix_commit": "cb436d5e0630b44288846728f1d2bfdf7b2f5fb7",
+  "original_CI": {
+    "run_id": 39017667639,
+    "head": "e5d870502ba856b2ea2ff461a5d744912b9b5873",
+    "status": "completed",
+    "conclusion": "failure",
+    "url": "https://github.com/JaeHongChoe/modu-vision/actions/runs/39017667639",
+    "source_job_id": 117352995533,
+    "source_summary": {
+      "failed": 3,
+      "passed": 4559,
+      "skipped": 17,
+      "seconds": 3388.97
+    },
+    "source_raw_job_log_sha256": "269f8845fee9ff67a3b26e910c043e2db1bd30cdf9816d979f7cf07057a9ae78",
+    "source_raw_job_log_bytes": 463929,
+    "browser_job_id": 117352995669,
+    "browser_summary": {
+      "failed": 9,
+      "passed": 288,
+      "skipped": 2
+    },
+    "browser_raw_job_log_sha256": "fabb4628571c77306a435cf4ce576242008b5c45bb0d39f45d1ac085ec3ca410",
+    "browser_raw_job_log_bytes": 592444
+  },
+  "exact_selectors": [
+    "backend/tests/test_service_s7_01.py::test_well_formed_evidence_of_an_owner_task_is_accepted_for_its_dimension",
+    "backend/tests/test_service_s7_01.py::test_a_claimed_acceptance_without_evidence_fails_and_full_evidence_derives_it",
+    "backend/tests/test_service_s7_01.py::test_the_gate_prints_only_ascii_so_a_windows_console_cannot_fail_it"
+  ],
+  "failure_cause": {
+    "two_temporary_positive_evidence_fixtures": "Current specs and original receipts were copied without the historical declaration registry and real ancestor Git objects required by the unchanged checker; twelve inherited bindings correctly refused.",
+    "ASCII_smoke": "An empty PATH hid Git from the newly required historical source proof. The process exited1 for unavailable provenance validation; no character-encoding traceback was reported."
+  },
+  "change": {
+    "only_path": "backend/tests/test_service_s7_01.py",
+    "added_lines": 18,
+    "removed_lines": 1,
+    "registry": "Copy exact gui-test-source-history.json from the source checkout.",
+    "ancestry": "Create a real local shared bare clone inside the owned temporary fixture; require its exact HEAD to equal the source checkout. The original checker continues checking exact commit ancestry, original spec blob, regular mode, size and SHA.",
+    "ASCII_smoke": "Retain PYTHONIOENCODING=cp1252 and stdout.isascii(); PATH contains only the resolved real Git directory.",
+    "checker_changed": false,
+    "acceptance_policy_relaxed": false,
+    "historical_receipts_rewritten": false
+  },
+  "private_base_red_green": {
+    "base_HEAD": "bc3fbd503a5e752048aa1179da0d95130e4500c5",
+    "red_source": "Unmodified exact base checkout",
+    "green_source": "Same base plus the single proposed test-file overlay",
+    "green_source_dirty": true,
+    "base_test_file_sha256": "c645a5011d68af2784c58041f99bc590000b155be9e1db989bb06ba1f9c3d463",
+    "proposed_test_file_sha256": "243ef5c4c50e058c08c825eae9de8fd81944ccd5ee3a048bbc567cbfe1a9608b",
+    "checker_sha256": "55dcdbdcef682f8285d6288abc3fa42a09a936a7d4a952970fb797438930d865",
+    "proposed_patch_sha256": "ef6d241290f3eee2e53a5e5dbe60dcf7ee9efb5d7df273e54a3797651a40448c",
+    "proposed_patch_bytes": 2249,
+    "causal_RED": {
+      "failed": 3,
+      "seconds": 4.46,
+      "exit_code": 1,
+      "log_sha256": "08d40f3aa3e67e653f3fce1f12667d0b1b7a0aa2a2186cb4c10c9d36982e568a",
+      "junit_sha256": "02a06f2258097feeb306e329e72e6b2be2fa4ccf34a63fe0daa0fe9937812bd6"
+    },
+    "focused_GREEN": {
+      "passed": 3,
+      "seconds": 7.71,
+      "exit_code": 0,
+      "log_sha256": "3d94463a88eae9a9ac943a3f831d52787089d63d8655bb747848bc73b683a19b",
+      "junit_sha256": "252a65cce0688a3c6e709d2bf524c8fd27da1404122d70fb7d608bb2e3446e55"
+    },
+    "diff_check_exit_code": 0,
+    "full_suite_rerun": false
+  },
+  "root_integrated_validation": {
+    "source_head": "2c132d0d6b43200baf39248d21abee08113d4968",
+    "passed": 3,
+    "pytest_seconds": 7.31,
+    "command_seconds": 7.73425954207778,
+    "exit_code": 0,
+    "log_sha256": "e46c24aab614a2ce90420f99578ae1bc42e07d1749d1e7d8fe0823bae911eb75",
+    "test_file_sha256": "243ef5c4c50e058c08c825eae9de8fd81944ccd5ee3a048bbc567cbfe1a9608b"
+  },
+  "remaining_browser_risks": {
+    "DICOM": "Successor3b37784 changes capture to exact original owning request; current CI pass not established by this receipt.",
+    "comparison": "07978db changes comparison/deployment bind_truth transaction reuse, but does not directly change the failing independent /api/evaluation/results preparation. That stage retains its original60000ms budget; generic helper error text says10s. This e5 pre-evaluation timeout remains unresolved here.",
+    "unchanged_seven_selectors": [
+      "scripts/e2e/evaluation-error-class-selector-transitions.spec.ts:710",
+      "scripts/e2e/evaluation-mask-truth-prediction-transitions.spec.ts:633",
+      "scripts/e2e/fleet-actual-rollout.spec.ts:46",
+      "scripts/e2e/flow-debug-model-freeze-f064-controls.spec.ts:44",
+      "scripts/e2e/flow-debug-model-freeze-f064-controls.spec.ts:49",
+      "scripts/e2e/flow-debug-model-freeze.spec.ts:44",
+      "scripts/e2e/ocr-saved-truth-project-handoff.spec.ts:224"
+    ],
+    "current_remote_result": "079 run in_progress;8fb andbc3 pending at retained readback; no current pass inferred"
+  },
+  "current_full_CI_passed": false,
+  "parent_acceptance_promoted": false,
+  "private_paths_or_credentials_included": false
+}

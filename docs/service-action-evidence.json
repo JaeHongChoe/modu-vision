@@ -31984,7 +31984,35 @@
               "state": "pending"
             },
             "invalid": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S2-05",
+                  "source_sha": "27eb9e0fb8c46a2fcd6325efc7c1f29bd7d02343",
+                  "kind": "click",
+                  "action": "원본 이미지 ROI 편집 · 원본 좌표 끌기",
+                  "expected": "Refuse SVG ROI editing for a real decoded image below16pixels in either dimension while preserving the previously saved original-coordinate ROI, draft and source bytes.",
+                  "observed": "browser: A real512x256 original first accepted a pointer drag and saved exactROI[64,32,257,161]. Ordinary local-file modal confirmation selected a real owned8x8 PNG; both original image-info responses returned200 with exact dimensions/sourceSHA, minimum16notice rendered and editable SVG was absent. Invalid phase issued no business write. Exact protected source/draft/ROI bytes and rawstat pins survived invalid selection, normal source reload/reopen and normal backend stop;85 complete original UI responses and15 fixture API bodies were verified with zero page/console/request/foreign errors.",
+                  "reviewer": "Codex root independently rehashed113 original body/artifact references, read source/result/protected-root custody and original8x8 screenshot;85 UI+15 fixture bodies completed inside original deadlines. Independent human quality, device and parent acceptance remain pending.",
+                  "test": "scripts/e2e/roi-too-small-image.spec.ts::U007 refuses an actual 8x8 ROI editor input while preserving the saved original-coordinate draft",
+                  "receipt": "2026-10-17-u007-small-image-refusal-browser.json",
+                  "receipt_sha256": "061601f0563a1be872e3b8eef9cf66a22529a4c87954ff80369bc4f214b2264e",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "81dc6378ab65b6b3eca39f8d18561261f85b4e545b45ef5826fba22e5f582179"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "f197e68170fbee8ff0c33050af8c9247e3ba157d6643418fe86e8dddf4133d5c"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "83d4bba8f0511e4d5177fd94f7d232367d978fa6db67c0fa387723e42d383eb5"
+                    }
+                  ]
+                }
+              ]
             },
             "error": {
               "state": "pending"

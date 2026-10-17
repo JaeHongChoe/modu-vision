@@ -1,0 +1,324 @@
+{
+  "case_resources": {
+    "actual_model_inference": false,
+    "blocked_loopback_requests": [],
+    "business_writes": 4,
+    "cleanup_failures": [],
+    "console_HTTP_error_messages": {
+      "controlled_503": 2,
+      "saved_source_provenance_409": 21
+    },
+    "controlled_saved_reports_not_model_inference": true,
+    "observations": 2,
+    "page_errors": [],
+    "resource_closure": {
+      "owned_routes_joined_and_removed": true,
+      "readonly_sqlite_closed": true,
+      "request_observer_removed": true,
+      "retained_raw_FDs_closed": true
+    },
+    "transitions": 4
+  },
+  "claims": {
+    "F047_or_F051_registry_credit": false,
+    "GPU_execution_or_model_quality": false,
+    "GUI_cell_credit": false,
+    "PUB_changed": false,
+    "current_full_CI_passed": false,
+    "native_installed_acceptance": false,
+    "old_e5_failure_erased": false,
+    "parent_acceptance": false,
+    "product_fix_claim": false
+  },
+  "closure": {
+    "escaped": [],
+    "exitCode": 0,
+    "exited": true,
+    "exitedBeforeStop": false,
+    "forced": false,
+    "groupAlive": false,
+    "pid_alive": false,
+    "port_closed": true,
+    "scanError": null,
+    "signal": null,
+    "unownedReferences": []
+  },
+  "evidence": {
+    "original_private_artifact_pins": [
+      {
+        "artifact": "original_log",
+        "bytes": 417,
+        "raw_private_body_published": false,
+        "sha256": "f45914ea172b48c8f55c04c10cf337471a4086a677a1c676fe35e42ec71c9971"
+      },
+      {
+        "artifact": "original_report",
+        "bytes": 8953,
+        "raw_private_body_published": false,
+        "sha256": "4342c109dfa54d632b27e3113f4c101a147d87aa74b27215144347f868b13eb8"
+      },
+      {
+        "artifact": "original_harness_manifest",
+        "bytes": 202819,
+        "raw_private_body_published": false,
+        "sha256": "1ba188d3fa6fff85ae86c8b83046700315988c81949f22dad1d8967e1c9730a2"
+      },
+      {
+        "artifact": "original_teardown",
+        "bytes": 354,
+        "raw_private_body_published": false,
+        "sha256": "e8c84425c35d55f25ac703a8a0e0df24de9a73dcd9c570f2240363b90801574f"
+      },
+      {
+        "artifact": "original_Popen_record",
+        "bytes": 483,
+        "raw_private_body_published": false,
+        "sha256": "7ad22eff7130586ca2627d898fe0d3b697b788a87d5275d21a46e71f65c42b2a"
+      },
+      {
+        "artifact": "original_invocation",
+        "bytes": 1279,
+        "raw_private_body_published": false,
+        "sha256": "3a9d809af247f565bb6f27f43035978fe475aecd9739ba5f838006c3d9bec82d"
+      },
+      {
+        "artifact": "run_result",
+        "bytes": 1709,
+        "raw_private_body_published": false,
+        "sha256": "7f84c7d189b80d3ce362d8459988788224983a3db48e7339cc9b80de2dc90995"
+      },
+      {
+        "artifact": "full_source_before",
+        "bytes": 1022615,
+        "raw_private_body_published": false,
+        "sha256": "88fa96cf1ae2baac45f4342735381bdba382b0cf369b6ca114f956ee46bb5292"
+      },
+      {
+        "artifact": "full_source_after",
+        "bytes": 1022615,
+        "raw_private_body_published": false,
+        "sha256": "88fa96cf1ae2baac45f4342735381bdba382b0cf369b6ca114f956ee46bb5292"
+      }
+    ],
+    "timing_note_readback": {
+      "bytes": 14073,
+      "name": "timing-note-readback.json",
+      "sha256": "4cc6b644f37050d57af0e657ecd6856f450f7aed4a329a175e625f3425daf452"
+    }
+  },
+  "execution": {
+    "all_original_full_RGBA_context_body_assertions_preserved": true,
+    "browser_channel": "chrome",
+    "expected": 1,
+    "flaky": 0,
+    "mode": "browser",
+    "original_Popen_natural_wait_returned": true,
+    "original_absolute_deadline_ms": 10000,
+    "report_duration_ms": 30825.799,
+    "retries": 0,
+    "runtime": "M523",
+    "screenshot_modalclose_order_preserved": true,
+    "selector": "saved truth and prediction overlays recover after source outage and fence old A replies from B",
+    "skipped": 0,
+    "test_duration_ms": 20144,
+    "unexpected": 0,
+    "workers": 1,
+    "wrapper_elapsed_seconds": 31.257305416977033,
+    "wrapper_signals_sent": false
+  },
+  "global_teardown": {
+    "leftovers": [],
+    "scan_error": null,
+    "unowned_references": []
+  },
+  "publication": {
+    "original_raw_artifacts_preserved": true,
+    "path_redacted_derivative": true,
+    "personal_paths_tokens_headers_raw_HTTP_bodies_authority_frames_included": false
+  },
+  "schema": "modu-vision.public-browser-timing-diagnostic/v1",
+  "source": {
+    "HEAD": "1fddb595b2bcf4209144b6cbb0d01ae39fcc3639",
+    "base_HEAD": "2c132d0d6b43200baf39248d21abee08113d4968",
+    "declared_difference": "One committed timestamp-only spec overlay; no product behavior change",
+    "dirty": false,
+    "spec": "scripts/e2e/evaluation-mask-truth-prediction-transitions.spec.ts",
+    "spec_sha256": "2373a5c09222f0d8a6abd719d7a5c1244f575480bbedcef2f93dc5800ec57fec",
+    "tracked_before_after_exact": true,
+    "tracked_bytes": 34746586,
+    "tracked_files": 2857
+  },
+  "status": "passed_diagnostic_only",
+  "timing_observation": {
+    "event_count": 56,
+    "fix_or_deadline_increase_justified_by_this_run": false,
+    "inference": "Cumulative remote timing remains a possibility; this successful local run cannot identify or fix the remote limiting stage.",
+    "layers": [
+      {
+        "elapsed_from_original_absolute_deadline_start_ms": 2520.627667,
+        "final_remaining_ms": 7479.372333,
+        "layer": "truth",
+        "longest_measured_stage": {
+          "milliseconds": 568.518792,
+          "remaining_after_ms": 8956.356958,
+          "stage": "choose-B"
+        },
+        "original_deadline_budget_ms": 10000,
+        "stages": [
+          {
+            "milliseconds": 11.704166,
+            "remaining_after_ms": 9985.480292,
+            "stage": "late-ready"
+          },
+          {
+            "milliseconds": 323.609875,
+            "remaining_after_ms": 9524.884417,
+            "stage": "project-B"
+          },
+          {
+            "milliseconds": 568.518792,
+            "remaining_after_ms": 8956.356958,
+            "stage": "choose-B"
+          },
+          {
+            "milliseconds": 138.335667,
+            "remaining_after_ms": 8818.015875,
+            "stage": "select-full-B-mask"
+          },
+          {
+            "milliseconds": 67.976,
+            "remaining_after_ms": 8750.027667,
+            "stage": "original-B-source"
+          },
+          {
+            "milliseconds": 440.165042,
+            "remaining_after_ms": 8309.857333,
+            "stage": "original-B-overlay"
+          },
+          {
+            "milliseconds": 40.729916,
+            "remaining_after_ms": 8268.290417,
+            "stage": "late-finish-and-original-route-close"
+          },
+          {
+            "milliseconds": 390.932625,
+            "remaining_after_ms": 7857.104625,
+            "stage": "B-overlay-after-old-A"
+          },
+          {
+            "milliseconds": 134.782791,
+            "remaining_after_ms": 7722.320167,
+            "stage": "B-mask-after-old-A"
+          },
+          {
+            "milliseconds": 71.30575,
+            "remaining_after_ms": 7631.921042,
+            "stage": "old-A-B-viewer-screenshot"
+          },
+          {
+            "milliseconds": 38.362584,
+            "remaining_after_ms": 7593.556833,
+            "stage": "ordinary-B-viewer-close"
+          },
+          {
+            "milliseconds": 14.655541,
+            "remaining_after_ms": 7578.897292,
+            "stage": "B-dialog-closed-and-focus"
+          },
+          {
+            "milliseconds": 99.52275,
+            "remaining_after_ms": 7479.372333,
+            "stage": "final-full-B-mask"
+          }
+        ]
+      },
+      {
+        "elapsed_from_original_absolute_deadline_start_ms": 2467.329708,
+        "final_remaining_ms": 7532.670292,
+        "layer": "prediction",
+        "longest_measured_stage": {
+          "milliseconds": 494.2795,
+          "remaining_after_ms": 9350.914792,
+          "stage": "project-B"
+        },
+        "original_deadline_budget_ms": 10000,
+        "stages": [
+          {
+            "milliseconds": 8.624416,
+            "remaining_after_ms": 9986.833084,
+            "stage": "late-ready"
+          },
+          {
+            "milliseconds": 494.2795,
+            "remaining_after_ms": 9350.914792,
+            "stage": "project-B"
+          },
+          {
+            "milliseconds": 322.45675,
+            "remaining_after_ms": 9028.456375,
+            "stage": "choose-B"
+          },
+          {
+            "milliseconds": 136.855208,
+            "remaining_after_ms": 8891.600084,
+            "stage": "select-full-B-mask"
+          },
+          {
+            "milliseconds": 70.9195,
+            "remaining_after_ms": 8820.678959,
+            "stage": "original-B-source"
+          },
+          {
+            "milliseconds": 439.962459,
+            "remaining_after_ms": 8380.715125,
+            "stage": "original-B-overlay"
+          },
+          {
+            "milliseconds": 41.571083,
+            "remaining_after_ms": 8337.945209,
+            "stage": "late-finish-and-original-route-close"
+          },
+          {
+            "milliseconds": 408.663292,
+            "remaining_after_ms": 7904.854375,
+            "stage": "B-overlay-after-old-A"
+          },
+          {
+            "milliseconds": 129.535875,
+            "remaining_after_ms": 7775.316792,
+            "stage": "B-mask-after-old-A"
+          },
+          {
+            "milliseconds": 64.519042,
+            "remaining_after_ms": 7692.883625,
+            "stage": "old-A-B-viewer-screenshot"
+          },
+          {
+            "milliseconds": 46.264208,
+            "remaining_after_ms": 7646.617042,
+            "stage": "ordinary-B-viewer-close"
+          },
+          {
+            "milliseconds": 15.499083,
+            "remaining_after_ms": 7631.116167,
+            "stage": "B-dialog-closed-and-focus"
+          },
+          {
+            "milliseconds": 98.442542,
+            "remaining_after_ms": 7532.670292,
+            "stage": "final-full-B-mask"
+          }
+        ]
+      }
+    ],
+    "limiting_stage_in_this_run": "No measured stage approaches the absolute budget. Longest measured stage is truth choose-B568.519ms; final mask98\u2013100ms; screenshot65\u201372ms.",
+    "original_e5_failure_preserved": {
+      "browser_raw_job_log_sha256": "fabb4628571c77306a435cf4ce576242008b5c45bb0d39f45d1ac085ec3ca410",
+      "failure": "Final full B mask at original spec582 received78ms remaining; remote limiting stage not retained in old log",
+      "head": "e5d870502ba856b2ea2ff461a5d744912b9b5873",
+      "run_id": 39017667639
+    },
+    "original_e5_failure_reproduced": false,
+    "remote_root_cause_identified": false
+  }
+}
