@@ -1,0 +1,83 @@
+{
+  "schema": "modu-vision.thumbnail-memo-own-release/v1",
+  "base_head": "bc3fbd503a5e752048aa1179da0d95130e4500c5",
+  "fix_commit": "2dcb749",
+  "observation": "Two real original HTTP/AnyIO thumbnail workers, exact builtin Lock/function/code identities and complete normal JPEG bodies. After A returned through its original with-lock exit, B acquired that same lock; A original resource_entry returned true, then the old global locked() postcondition caused its first failure.",
+  "change": "Require canonical builtin LockType before owner binding; retain global lock, original wrapper/body/code, exact worker and pre/post resource checks. Remove the unrelated global locked() sample after normal original memo return.",
+  "instrumentation": "Python tracing only schedules existing original frames; no replacement of product functions, lock, handler, observer, return value or authority. Tracing is armed after complete original setup and restored for every exit.",
+  "original_bounds": {
+    "common_thumbnail_seconds": 30,
+    "drain_seconds": 3.903,
+    "automatic_retries": 0
+  },
+  "causal_runs": {
+    "red": {
+      "evidence_sha256": "0a0503c0770f55900f7b90fcba6558104bf82b46b4775197f6d1484ec0f2c6ec",
+      "result_sha256": "544f08e438eb31d4e2e56887a7eefb30870fcb025fcfb6f3e892927c7dff329a",
+      "log_sha256": "983fb245f47727e543c78996e422bf05dc9491f2cc45352fd22f8963026d5aa3",
+      "exit_code": 1,
+      "command_seconds": 8.3122076659929,
+      "original_complete_JPEGs": [
+        {
+          "bytes": 885,
+          "sha256": "d9f0359eb51050da6feab7cc1d29a574496c63319570eaa113bb1f9f3a025dbb"
+        },
+        {
+          "bytes": 885,
+          "sha256": "19384442a9c0c59744b3d03d3c60098d1d1c85ddbd04cb9f78d36dc487363d3e"
+        }
+      ],
+      "original_drain": {
+        "active_scopes": 3,
+        "status": "refused",
+        "unsupported": [
+          "uncovered_request_protocol"
+        ]
+      }
+    },
+    "green": {
+      "evidence_sha256": "0a6e1a818381ea270c3f54e0b23f7b668dc42b3bdb028e013571c75560a177c9",
+      "result_sha256": "e908c5af7a46d3779e87c195d7c99bfb636338e9fbe9f6a022265752e0c49e45",
+      "log_sha256": "6e150dcc9d5a218107cef8c65b19296b8ec1edd1ebd7dd810f183faeec233adc",
+      "exit_code": 0,
+      "command_seconds": 8.961614749860018,
+      "original_complete_JPEGs": [
+        {
+          "bytes": 885,
+          "sha256": "d9f0359eb51050da6feab7cc1d29a574496c63319570eaa113bb1f9f3a025dbb"
+        },
+        {
+          "bytes": 885,
+          "sha256": "19384442a9c0c59744b3d03d3c60098d1d1c85ddbd04cb9f78d36dc487363d3e"
+        }
+      ],
+      "original_drain": {
+        "active_scopes": 0,
+        "status": "managed_scopes_drained",
+        "unsupported": []
+      }
+    }
+  },
+  "adjacent_and_provider_controls": {
+    "passed": 44,
+    "pytest_seconds": 50.1,
+    "command_seconds": 53.89528320799582,
+    "log_sha256": "6fad1147f7c25acb17ede3cc21b502a12564405956dfcab601e46b45588f374c",
+    "before_bind_unknown_provider_baseline": "1 failed because managed_scopes_drained was incorrectly accepted; after-bind replacement already refused",
+    "baseline_log_sha256": "eb837b87b4eb93ae419404a88f06171190813ad3053aea273d2f7bc12ceefcd5",
+    "coverage": "Original mounted reads, cold/warm thumbnail body/cache, ancillary resources, before-bind unknown lock and after-bind replacement."
+  },
+  "preserved_setup_failure": {
+    "attempt": "01",
+    "outcome": "Original setup current-summary ReadTimeout before either thumbnail request or trace schedule; no causal credit. Original observer settled without uncertainty and original server closed.",
+    "evidence_sha256": "2f6e957ec130fa416f4084cb0fc410923cc22972acea9a56fd5bf2b4751d5768"
+  },
+  "limitations": {
+    "Root03_first_failure_identified": false,
+    "compiled_or_installed_fix_validated": false,
+    "whole_process_or_writer_authority": false,
+    "parent_acceptance_promoted": false,
+    "whole_CI_passed": false
+  },
+  "private_paths_or_credentials_included": false
+}
