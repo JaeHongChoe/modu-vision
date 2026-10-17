@@ -151,7 +151,7 @@ test('U020 empty selection ignores a delivered coarse nudge after an owning OBB 
     const image = path.join(source, 'part.png'), originalImage = png(256, 3, (x, y) => [x, y, 100]);
     fs.writeFileSync(image, originalImage, {flag: 'wx'});
     const project = (await read('/api/project/create', {name: 'Owned empty selection nudge', task: 'segmentation'})).body;
-    expect(path.dirname(project.project_dir)).toBe(path.join(w.userData, 'projects'));
+    expect(path.dirname(project.project_dir)).toBe(w.projects);
     await read('/api/project/update', {source_dataset_dir: source}, 'PUT');
     await read('/api/dataset/import', {folder_path: source, task: 'segmentation', validate_images: true});
     await installDesktopHostShim(page, renderer.port); await page.goto(renderer.url);
