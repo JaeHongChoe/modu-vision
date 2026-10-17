@@ -49,7 +49,12 @@ def original_cpu(epoch,tmp_path,monkeypatch):
         'writer_id':registration.writer_id,'registration_sha256':registration.registration_sha256,
         'main':SimpleNamespace(pid=os.getppid())}
     node._AUTHORITIES[authority]=state
-    monkeypatch.setattr(node,'_fresh',lambda cap:(node._state(cap),owner._owned()))
+    def fresh(cap, *, shutdown=None):
+        # These no-child controls model the pre-shutdown CPU epoch only.
+        # Preserve the current keyword contract without admitting a shutdown capability.
+        assert shutdown is None
+        return node._state(cap), owner._owned()
+    monkeypatch.setattr(node,'_fresh',fresh)
     monkeypatch.setattr(node,'_parent_pid',lambda pid:os.getppid())
     core.bind_authenticated_node_backend(registration.writer_id,authority,expected_registry_sha256=digest(core))
     state['phase']='bound'
@@ -145,8 +150,9 @@ def test_original_cpu_deadline_never_publishes_late_cas_ack(original_cpu,monkeyp
     journal=(directory/'registry.json').read_bytes();pointer=(directory/'publication.json').read_bytes()
     if boundary=='node_final':
         fresh=c.node._fresh
-        def cross(cap):
-            result=fresh(cap)
+        def cross(cap, *, shutdown=None):
+            assert shutdown is None
+            result=fresh(cap, shutdown=shutdown)
             relay=getattr(c.owner,'_cpu_relays',{}).get(c.request['request_id'])
             if relay is not None and cpu._CONTROLLERS[relay]['phase']=='reserved':c.clock[0]=104.0
             return result
@@ -247,7 +253,10 @@ def test_original_controller_sole_reader_dispatches_cpu_before_expected_proof(or
     expected={'kind':'cpu_execution_proof','original':'opaque data'}
     c.node._EVENTS[last]={'authority':c.owner._node_backend_authority,'frame':expected,'used':False}
     events=iter([first,last]);sent=[]
-    monkeypatch.setattr(c.node,'receive_frame',lambda authority,remaining:next(events))
+    def receive(authority, remaining, *, shutdown=None):
+        assert authority is c.owner._node_backend_authority and shutdown is None
+        return next(events)
+    monkeypatch.setattr(c.node,'receive_frame',receive)
     def send(actual,answer,*,absolute_deadline):
         assert actual is channel and absolute_deadline==104.0
         assert answer['kind']=='controller_cpu_child_reply' and answer['action']=='reserve'
@@ -364,8 +373,8 @@ def test_original_sole_controller_reader_consumes_settlement_before_managed_drai
         c.node._EVENTS[event]={'authority':c.owner._node_backend_authority,'frame':value,'used':False}
         events.append(event)
     reads=[]
-    def read(cap,remaining):
-        assert cap is c.owner._node_backend_authority and remaining==4.0
+    def read(cap,remaining, *, shutdown=None):
+        assert cap is c.owner._node_backend_authority and remaining==4.0 and shutdown is None
         reads.append(remaining);return events.pop(0)
     monkeypatch.setattr(c.node,'receive_frame',read)
     answer=controller._controller_reply(c.owner,104.0,'managed_drain_proof')

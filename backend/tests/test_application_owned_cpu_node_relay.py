@@ -27,14 +27,32 @@ class Channel extends EventEmitter{
 const ticks=async()=>{for(let i=0;i<100;i++)await Promise.resolve();};
 async function main(){const controller=new Channel(),backend=new Channel(),proc=new EventEmitter();
  Object.assign(proc,{pid:31,exitCode:null,signalCode:null,stdio:[null,null,null,backend]});
- const nonce='1'.repeat(32),binding={application_generation:'2'.repeat(32)},writer={writer_id:'3'.repeat(32),registration_sha256:'4'.repeat(64)};
- const launch=new OwnedApplicationLaunch('/modeled',nonce,binding,{pid:21},'5'.repeat(64),new Frames(controller),writer);
+ const nonce='1'.repeat(32),binding={installation_id:'a'.repeat(32),update_id:'b'.repeat(32),application_generation:'2'.repeat(32),database_pointer:{generation_id:'c'.repeat(32),fence:1}},writer={writer_id:'3'.repeat(32),registration_sha256:'4'.repeat(64)};
+ const path=require('node:path'),root=process.argv[3],mainProcess={pid:21,created_at:1.0,command_sha256:'d'.repeat(64)},controllerProcess={pid:11,created_at:.5,command_sha256:'e'.repeat(64)};
+ // Keep registeredBackend untouched: the modeled controller publishes finite
+ // real registry files and the original registration ACK before CPU traffic.
+ const directory=path.join(root,'.application-writer-epochs',nonce),journalDirectory=path.join(root,'.application-launches',nonce);
+ fs.mkdirSync(directory,{recursive:true});fs.mkdirSync(journalDirectory,{recursive:true});
+ fs.writeFileSync(path.join(journalDirectory,'journal.json'),canonical({supervisor:controllerProcess}),{flag:'wx',mode:0o600});
+ const launch=new OwnedApplicationLaunch(root,nonce,binding,mainProcess,'5'.repeat(64),new Frames(controller),writer);
  launch.bindingCurrent=()=>{};launch.current=()=>{};launch.executable=()=>({sha256:'6'.repeat(64),build:null});
- let epoch,claim,cpuRequest,header,plan,completion,pubAck,drainRequest;let proofs=0,settlements=0,exits=0,concurrentDrain=null,heldDrain=null;
+ let epoch,claim,cpuRequest,header,plan,completion,pubAck,drainRequest,originalRegistration;let proofs=0,settlements=0,exits=0,registrationEchoes=0,concurrentDrain=null,heldDrain=null;
  const child={pid:41,created_at:1.25,command_sha256:'a'.repeat(64)},registration={writer_id:'b'.repeat(32),registration_sha256:'c'.repeat(64)};
  const emitAction=(action,payload)=>backend.receive({...header,action,payload});
  controller.onWrite=(value,raw)=>{
-  if(value.kind==='main_cpu_child_request'){
+  if(value.kind==='backend_proof'){
+   assert.equal(value.nonce,nonce);assert.equal(value.challenge,'5'.repeat(64));
+   assert.equal(Buffer.from(value.claim_b64,'base64').toString(),canonical(claim));
+   assert.equal(Buffer.from(value.ready_b64,'base64').toString(),canonical({...claim,kind:'backend_ready'}));
+   const lock=path.join(directory,'authority.lock');fs.writeFileSync(lock,'',{flag:'wx',mode:0o600});const info=fs.statSync(lock);
+   const registry={schema_version:1,binding:{installation_id:binding.installation_id,nonce,update_id:binding.update_id,application_generation:binding.application_generation,database_generation_id:binding.database_pointer.generation_id,database_fence:binding.database_pointer.fence,launch_binding_sha256:hash(canonical(binding)),controller:controllerProcess},revision:1,state:'open',authority_lock_identity:{device:info.dev,inode:info.ino},writers:[{...writer,role:'backend',status:'active',lock_identity:{device:info.dev,inode:info.ino},process:claim.process,exit_code:null,reason_code:null}]};
+   const rawRegistry=Buffer.from(canonical(registry));fs.writeFileSync(path.join(directory,'registry.json'),rawRegistry,{flag:'wx',mode:0o600});
+   fs.writeFileSync(path.join(directory,'publication.json'),canonical({schema_version:1,nonce,revision:1,registry_sha256:hash(rawRegistry)}),{flag:'wx',mode:0o600});
+   originalRegistration={schema_version:1,kind:'backend_registered',nonce,epoch,binding_sha256:hash(canonical(binding)),backend_claim_sha256:hash(canonical(claim)),main_process:mainProcess,backend_process:claim.process,...writer,active_registry_sha256:hash(rawRegistry)};
+   queueMicrotask(()=>controller.receive(originalRegistration));
+  }else if(value.kind==='backend_registration_admitted'){
+   assert.equal(++registrationEchoes,1);assert.equal(canonical(value),canonical({...originalRegistration,kind:'backend_registration_admitted'}));
+  }else if(value.kind==='main_cpu_child_request'){
    const req=value.request,answer={schema_version:1,kind:'controller_cpu_child_reply',nonce,epoch,request_id:req.request_id,
     action:req.action,request_sha256:hash(canonical(req)),payload:req.action==='reserve'?registration:{status:req.action==='bind'?'bound':'direct_exited'}};
    if(scenario==='late-child-ack')now=5000;
@@ -98,7 +116,7 @@ async function main(){const controller=new Channel(),backend=new Channel(),proc=
     active_scopes:0,unsupported:[],scope:'reviewed_foreground_scopes_only',whole_writer_coverage:false,process_tree_exit_verified:false,can_release_launch_lease:false}));
   }
  };
- await launch.bindBackend(proc,'/modeled-backend',null);await ticks();
+ await launch.bindBackend(proc,'/modeled-backend',null);await ticks();assert.equal(registrationEchoes,1);
  controller.receive({schema_version:1,kind:'cpu_execution_request',challenge:'d'.repeat(64),request_id:'d'.repeat(32),nonce,epoch,
   binding_sha256:hash(canonical(binding)),backend_claim_sha256:hash(canonical(claim)),workspace_id:'e'.repeat(32),project_id:'f'.repeat(32),plan_sha256:'0'.repeat(64)});
  await ticks();
@@ -130,7 +148,7 @@ main().catch(error=>{for(const timer of timers)clearTimeout(timer);console.error
     'drain-before-finish','replay-cpu-request'])
 def test_original_source_cpu_node_transport(scenario,tmp_path):
     root=Path(__file__).resolve().parents[2]
-    result=subprocess.run(['node','-e',CONTROL,str(root/'src/main/applicationLaunch.ts'),scenario],
+    result=subprocess.run(['node','-e',CONTROL,str(root/'src/main/applicationLaunch.ts'),scenario,str(tmp_path/'modeled-owned')],
         cwd=root,capture_output=True,text=True,env=os.environ,timeout=15)
     (tmp_path/'node-model.stdout').write_text(result.stdout);(tmp_path/'node-model.stderr').write_text(result.stderr)
     assert result.returncode==0,result.stderr

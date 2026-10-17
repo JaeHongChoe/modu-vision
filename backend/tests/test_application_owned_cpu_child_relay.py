@@ -657,6 +657,12 @@ def test_original_backend_sole_service_forwards_proof_before_worker_done_and_ret
     def read(channel,seconds):
         assert channel is o['left'] and pending_frames and 0<seconds<=10
         value=pending_frames.pop(0);reads.append(value['kind']);return value
+    def peek(channel,deadline,current):
+        # The peer/read above models frames rather than writing socket bytes.
+        # Classify that same next frame; do not peek an empty modeled peer.
+        assert channel is o['left'] and o['clock'][0]<deadline and pending_frames
+        current()
+        return pending_frames[0].get('kind')=='backend_shutdown_prepare'
     def selected(r,w,x,wait):
         assert r==[o['left']] and not w and not x and wait in (.02,.2)
         token=facts.get('preflight_token')
@@ -676,6 +682,7 @@ def test_original_backend_sole_service_forwards_proof_before_worker_done_and_ret
             stop.set()
         return (r if pending_frames else [],[],[])
     monkeypatch.setattr(h,'send_frame',send);monkeypatch.setattr(h,'read_frame',read)
+    monkeypatch.setattr(h,'_peek_backend_shutdown_prepare',peek)
     monkeypatch.setattr(h.select,'select',selected)
     if damage in ('none','preflight_interleave'):
         h.backend_execution_service(stop)
@@ -792,6 +799,10 @@ def test_original_sole_service_waits_for_callback_and_settlement_after_count_rea
     def read(channel,seconds):
         assert channel is o['left'] and frames and 0<seconds<=10
         return frames.pop(0)
+    def peek(channel,deadline,current):
+        assert channel is o['left'] and o['clock'][0]<deadline and frames
+        current()
+        return frames[0].get('kind')=='backend_shutdown_prepare'
     def send(channel,value,*,absolute_deadline):
         assert channel is o['left'] and absolute_deadline==104.0
         writes.append(copy.deepcopy(value));events.append(value['kind'])
@@ -799,6 +810,7 @@ def test_original_sole_service_waits_for_callback_and_settlement_after_count_rea
         if value['kind']=='backend_managed_drain':stop.set()
     monkeypatch.setattr(h.select,'select',selected);monkeypatch.setattr(h,'_validate_service_action',validated)
     monkeypatch.setattr(h,'read_frame',read);monkeypatch.setattr(h,'send_frame',send)
+    monkeypatch.setattr(h,'_peek_backend_shutdown_prepare',peek)
     if damage=='none':
         h.backend_execution_service(stop)
         assert events==['count_zero_done_false','original_done','backend_source_cpu_settled','backend_managed_drain']
