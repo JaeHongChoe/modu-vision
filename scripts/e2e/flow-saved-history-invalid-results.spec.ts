@@ -55,12 +55,28 @@ test('persisted legacy comparison results refuse invalid execution evidence and 
     revision_id: imported.result.revision.revision_id, expected_active: null,
   });
   expect(accepted).toEqual({active_revision: imported.result.revision.revision_id, job_id: admitted.job_id});
-  // Ordinary review reads register workflow defaults lazily. Hydrate that real
-  // ledger before the library baseline instead of accepting null/empty drift.
+  // Ordinary review and readiness reads register workflow defaults lazily.
+  // Hydrate their real ledger before the protected baseline; repeated reads
+  // must preserve the exact response and bytes, without normalizing either.
   const metadataFile = path.join(project.annotations_dir, 'by_dataset',
     sha(Buffer.from(project.source_dataset_dir)).slice(0, 16), 'metadata', 'workflow.json');
   const annotationPayloadsBefore = annotationPayloads(project.annotations_dir, metadataFile);
   for (const image of workspace.images) expect(sha(fs.readFileSync(image.path))).toBe(image.sha256);
+  const readinessRoute = '/api/team-data/readiness';
+  const readinessResponse = await page.request.get(renderer.origin + readinessRoute, {timeout: 10_000});
+  expect(readinessResponse.ok(), await readinessResponse.text()).toBe(true);
+  const readinessBytes = await readinessResponse.body();
+  const readiness = JSON.parse(readinessBytes.toString('utf8'));
+  expect(readiness).toMatchObject({book_version: 0, book_sha256: null, counts: {total: 2}});
+  const readinessLedger = fs.readFileSync(metadataFile);
+  expect(JSON.parse(readinessLedger.toString('utf8')).team_data).toEqual({
+    schema_version: 1, settings: {revision: 1, editing_enabled: false, review_enabled: false,
+      required_reviews: 1, prevent_self_review: true, approved_only_training: false}, books: [],
+  });
+  const readinessAgain = await page.request.get(renderer.origin + readinessRoute, {timeout: 10_000});
+  expect(readinessAgain.ok(), await readinessAgain.text()).toBe(true);
+  expect((await readinessAgain.body()).equals(readinessBytes)).toBe(true);
+  expect(fs.readFileSync(metadataFile).equals(readinessLedger)).toBe(true);
   const metadataRoute = '/api/dataset/metadata?' + new URLSearchParams({
     folder_path: project.source_dataset_dir, offset: '0', limit: '50',
   });
@@ -68,6 +84,7 @@ test('persisted legacy comparison results refuse invalid execution evidence and 
   expect(metadata.total).toBe(2); expect(metadata.items).toHaveLength(2);
   expect(metadata.items.map((row: any) => row.file_path).sort()).toEqual(workspace.images.map(image => image.path).sort());
   for (const row of metadata.items) expect(row).toMatchObject({product: '', lot: ''});
+  expect(fs.readFileSync(metadataFile).equals(readinessLedger)).toBe(true);
   expect(annotationPayloads(project.annotations_dir, metadataFile)).toEqual(annotationPayloadsBefore);
   for (const image of workspace.images) expect(sha(fs.readFileSync(image.path))).toBe(image.sha256);
   const library = await api('/api/dataset/library/images?state=valid&limit=120');
@@ -255,8 +272,11 @@ test('persisted legacy comparison results refuse invalid execution evidence and 
       invalid_controls: controls.map(control => ({id: control.id, side: control.side})),
       real_original_history_reads: reads,
       actual_API_created_baseline: {project_task: project.task, dataset_import: imported,
-        accepted_revision: accepted, metadata, library, saved_flow: savedFlow, saved_draft: savedDraft, active_flow: activeFlow,
+        accepted_revision: accepted, metadata, library, readiness, saved_flow: savedFlow, saved_draft: savedDraft, active_flow: activeFlow,
         completed_training_job_created: false, model_binding_created: false, evaluation_result_created: false},
+      readiness_hydration: {route: readinessRoute, body_base64: readinessBytes.toString('base64'),
+        bytes: readinessBytes.length, sha256: sha(readinessBytes), default_team_policy_initialized: true,
+        repeated_original_response_and_ledger_bytes_unchanged: true},
       metadata_hydration_image_and_annotation_payloads_unchanged: true,
       protected_files: [...protectedFiles].map(([file, bytes]) => ({file, bytes: bytes.length, sha256: sha(bytes)})),
       synthetic_legacy_fixtures: true, legacy_integrity: 'legacy_unverified', synthetic_saved_previews_decoded: true,
