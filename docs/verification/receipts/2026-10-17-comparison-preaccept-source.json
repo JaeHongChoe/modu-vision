@@ -1,0 +1,76 @@
+{
+  "schema": "modu-vision.comparison-preaccept-source-regression/v1",
+  "scope": "One coherent metadata ledger transaction during comparison preparation; actual GUI replay remains pending",
+  "prior_profile": {
+    "source_commit": "990898f87881592b58e54b687f74e8b288b835b0",
+    "actual_HTTP_202_milliseconds": 10309.992332999998,
+    "original_GUI_guard_milliseconds": 10000,
+    "prior_GUI_failure_preserved": true,
+    "source_functions_replaced": false,
+    "no_backend_crash_observed": true,
+    "read_truth_calls": 512,
+    "read_truth_inclusive_seconds": 5.745520333293825,
+    "bind_truth_inclusive_seconds": 5.914832332869992,
+    "queue_comparison_inclusive_seconds": 10.041914958041161,
+    "profile_receipt_sha256": "67bdba1274a6bae728a51aadabb12a44441e067c344f234008ab3eaa1e482714",
+    "private_completion_sha256": "ecdaf205550da846dde0e7509f325796ac04a1ab577c08ffec565bd297330318"
+  },
+  "change": "Wrap the existing per-image truth reader in one existing reentrant metadata transaction for the nonempty input cohort.",
+  "original_checks_retained": [
+    "all 512 original truth readers",
+    "source and label checksums",
+    "reviewed UNKNOWN precedence",
+    "changed original source refusal",
+    "model metadata and class-role checks",
+    "comparison binding and full cohort fences"
+  ],
+  "source_files": {
+    "backend/engine/comparison_truth.py": {
+      "bytes": 11836,
+      "sha256": "dda268d393692174e6c511dda768fd7c53b675cf59e2ce21b1820c15b7008bd0"
+    },
+    "backend/tests/test_model_comparisons.py": {
+      "bytes": 28796,
+      "sha256": "f1ae28373f69d6e352c93ac05119ad3663cce1e32414e932bc1ff69d18f910e3"
+    }
+  },
+  "causal_RED": {
+    "failed": 1,
+    "passed": 1,
+    "whole_metadata_and512_original_truth_checks_unchanged": true,
+    "ledger_reads_actual": 512,
+    "required_reads": 1,
+    "log_sha256": "8e62e7067be07ad149bf548d1db33830cb0f931231b751c327d920dea489a7fa"
+  },
+  "focused_GREEN": {
+    "passed": 65,
+    "failed": 0,
+    "log_sha256": "27feb0e681968999c14bd6b5107850daf664b17a04355689dfe9a3db80bebc94"
+  },
+  "independent_root_source_replay": {
+    "passed": 2,
+    "deselected": 14,
+    "returncode": 0,
+    "duration_seconds": 4.14,
+    "command": "python -B -m pytest -q -p no:cacheprovider backend/tests/test_model_comparisons.py -k \"truth_reads_one or snapshot_keeps\""
+  },
+  "actual_GUI_of_fix_passed": false,
+  "original_10_second_guard_changed": false,
+  "new_API_cache_or_approval": false,
+  "historical_receipts_changed": false,
+  "parent_acceptance": false,
+  "model_quality_approved": false,
+  "release_ready": false,
+  "independent_peer_review": {
+    "blocking_findings": 0,
+    "selected_semantic_tests_passed": 6,
+    "elapsed_seconds": 4.77,
+    "log_sha256": "bc4ff4fa93cc542c4f3702c47cd6fd662679ec786f9341df1c82bafc8d82d57a",
+    "real_OS_lock_concurrency_probe_passed": true,
+    "empty_image_behavior_retained": true,
+    "late_foreign_image_refused": true,
+    "late_row_failure_rolls_back_whole_managed_ledger": true,
+    "source_and_model_bytes_unchanged": true,
+    "post_execution_truth_revalidation_retained": true
+  }
+}
