@@ -1,0 +1,128 @@
+{
+  "actual_tool_envelope_pins": {
+    "program-validation-error-green-actual-tool-start.json": {
+      "bytes": 880,
+      "sha256": "5f032f63137a1496ab7f50d10294b06dc9f9b11a84e58f7a52c0373a9d68f55e"
+    },
+    "program-validation-error-red-actual-tool.json": {
+      "bytes": 2603,
+      "sha256": "1431c98723da12753b3a7e2853eb547f098abbbaebd73763a11a2b94cdeb797a"
+    },
+    "program-validation-error-typecheck-actual-tool-completion.json": {
+      "bytes": 126,
+      "sha256": "029e5209f6bcfa1c1e738c1e6ba6e5d104e92771453471641349089c12fe7a7b"
+    },
+    "program-validation-error-typecheck-actual-tool-start.json": {
+      "bytes": 243,
+      "sha256": "727081c35cdc579df2118a0467673213e10049b2404682c802086957424253b2"
+    }
+  },
+  "date": "2026-10-18",
+  "limits": {
+    "HTTP_response_mocked": true,
+    "action_scenario_credit": false,
+    "actual_browser_executed": false,
+    "full_dependency_custody_claim": false,
+    "full_source_raw9_before_after_claim": false,
+    "native_acceptance": false,
+    "parent_acceptance": false,
+    "training_or_GPU_executed": false,
+    "unrelated_training_dispatch_module_controlled": true
+  },
+  "private_source": {
+    "GREEN": "053cea645461c1060294f7554bf3a2988607c7e4",
+    "RED": "9a111026104b01b77bf91207d48d53cd23ff1c2f",
+    "baseline": "c522a50311226924659ba0ffddb49ebde79ec5e2",
+    "current_clean": true
+  },
+  "product_change": "Reuse the existing bounded field/message formatter for structured model-workbench errors; ordinary Error and string messages preserved",
+  "schema": "modu-vision.model-workbench-validation-error-source-red-green/v1",
+  "scope": "Actual REST-client rejection to model-workbench formatter; controlled HTTP boundary only",
+  "source_pins": {
+    "src/renderer/services/api.ts": {
+      "current_working_file": {
+        "bytes": 76767,
+        "sha256": "ba82fc801fb827ab16b453ee4722ede933a641177be9994f6666f82965bc472e"
+      },
+      "executed_GREEN_commit_blob": {
+        "bytes": 76767,
+        "sha256": "ba82fc801fb827ab16b453ee4722ede933a641177be9994f6666f82965bc472e"
+      },
+      "executed_RED_commit_blob": {
+        "bytes": 76767,
+        "sha256": "ba82fc801fb827ab16b453ee4722ede933a641177be9994f6666f82965bc472e"
+      }
+    },
+    "src/renderer/services/datasetWorkflow.test.cjs": {
+      "current_working_file": {
+        "bytes": 2237,
+        "sha256": "68165d462933a00ce7fdc6f476396e7fb1891d43677f235b45eafed7622df34d"
+      },
+      "executed_GREEN_commit_blob": {
+        "bytes": 2237,
+        "sha256": "68165d462933a00ce7fdc6f476396e7fb1891d43677f235b45eafed7622df34d"
+      },
+      "executed_RED_commit_blob": {
+        "bytes": 2237,
+        "sha256": "68165d462933a00ce7fdc6f476396e7fb1891d43677f235b45eafed7622df34d"
+      }
+    },
+    "src/renderer/services/datasetWorkflow.ts": {
+      "current_working_file": {
+        "bytes": 7959,
+        "sha256": "67a0b469b78b0d991921244d81d571c954e5c9bda5b767f1c3b0d55270f90bab"
+      },
+      "executed_GREEN_commit_blob": {
+        "bytes": 7959,
+        "sha256": "67a0b469b78b0d991921244d81d571c954e5c9bda5b767f1c3b0d55270f90bab"
+      },
+      "executed_RED_commit_blob": {
+        "bytes": 7959,
+        "sha256": "67a0b469b78b0d991921244d81d571c954e5c9bda5b767f1c3b0d55270f90bab"
+      }
+    },
+    "src/renderer/services/modelTrainingProgram.test.cjs": {
+      "current_working_file": {
+        "bytes": 3628,
+        "sha256": "66a7778e4d48799c110301cac72e07292b436f37bff4eac6a4768ef65503b269"
+      },
+      "executed_GREEN_commit_blob": {
+        "bytes": 3628,
+        "sha256": "66a7778e4d48799c110301cac72e07292b436f37bff4eac6a4768ef65503b269"
+      },
+      "executed_RED_commit_blob": {
+        "bytes": 3628,
+        "sha256": "66a7778e4d48799c110301cac72e07292b436f37bff4eac6a4768ef65503b269"
+      }
+    },
+    "src/renderer/services/modelTrainingProgram.ts": {
+      "current_working_file": {
+        "bytes": 10445,
+        "sha256": "cd8594aa2ec17fce979858e8276d46264fe53bc7edb65c429b06b2582763357c"
+      },
+      "executed_GREEN_commit_blob": {
+        "bytes": 10445,
+        "sha256": "cd8594aa2ec17fce979858e8276d46264fe53bc7edb65c429b06b2582763357c"
+      },
+      "executed_RED_commit_blob": {
+        "bytes": 10351,
+        "sha256": "7afc412648ec1f523c839b2ebb8ad48f99e2e2ef4b6fda659657c9033d71284b"
+      }
+    }
+  },
+  "verification": {
+    "formatter_leaves_original_rejection_and_status_intact": true,
+    "input_ctx_url_values_not_displayed": true,
+    "ordinary_rejection_unchanged": true,
+    "renderer_and_main_typecheck_exit": 0,
+    "same_three_plus_existing_four_formatter_tests_GREEN": {
+      "failed": 0,
+      "passed": 7
+    },
+    "same_three_tests_RED": {
+      "failed": 2,
+      "passed": 1,
+      "reason": "actual [object Object] instead of patch_size/stride validation detail"
+    }
+  }
+}
