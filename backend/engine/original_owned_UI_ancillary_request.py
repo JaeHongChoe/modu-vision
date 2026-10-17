@@ -513,7 +513,7 @@ class OriginalOwnedUIAncillaryRequest:
             and self.execution.common is self.flow and self.execution.export_included is self.shared_export
             and _methods_original(self.execution,original_owned_flow_execution_request.OriginalOwnedFlowExecutionRequest,self.calls)
             and self.execution.original()
-            and type(self.job_manager) is self.job_kind and type(self.job_lock) is type(threading.Lock())
+            and type(self.job_manager) is self.job_kind and type(self.job_lock) is LockType
             and self.job_manager._lock is self.job_lock and self.job_manager._jobs is self.job_records
             and _methods_original(self.job_manager,self.job_kind,self.calls)
             and type(self.job_lease) is self.lease_kind and self.job_manager._leases is self.job_lease
@@ -1534,9 +1534,10 @@ def observe_original_UI_ancillary_job_list(function):
         try:result=function(manager)
         except BaseException:attempt.fail('job_list_failed');raise
         else:
+            # Normal return from the pinned original builtin-lock with block
+            # proves this call released its lock; another worker may now hold it.
             if (not valid or not attempt.worker_original() or attempt.job_live!=(manager,function)
-                    or len(attempt.job_snapshots)!=before+1 or attempt.job_snapshots[-1] is not result
-                    or manager._lock.locked()):attempt.fail('job_list_return')
+                    or len(attempt.job_snapshots)!=before+1 or attempt.job_snapshots[-1] is not result):attempt.fail('job_list_return')
             else:attempt.job_lists.append(result)
             return result
         finally:attempt.job_live=None
