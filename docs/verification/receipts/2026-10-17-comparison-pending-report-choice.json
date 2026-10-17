@@ -1,0 +1,119 @@
+{
+  "schema": "modu-vision.comparison-pending-choice-fix/v1",
+  "scope": "Retain an explicit pending saved comparison report through a same-scope model-recommendation catalog restart.",
+  "source": {
+    "base_commit": "a448950deeea1664c07aabe2d19a1c6aea9fa838",
+    "fixed_commit": "58fd9ae7652c81f2165ec69a49aac1a3bfbaf587",
+    "tracked_files": 2897,
+    "changed_files": [
+      "src/renderer/components/evaluation/ModelComparisonPanel.tsx",
+      "src/renderer/components/evaluation/ModelComparisonPanel.test.cjs"
+    ],
+    "product_sha256": "c5cc84f3e0ce315316b8a17b68b4e7a63ed841a60db7b7b95b15cd8a6d4f2631",
+    "component_test_sha256": "67a87abb896309b28e5a79958d618e44846d64edd29b4a1e77effec55c8c61a7",
+    "existing_browser_test_sha256": "1a9a9e1f72fe9a78bca5683b025884f9b5651f341b4f1b5c1cb3b561aeb26f26",
+    "other_tracked_git_bodies_unchanged": true
+  },
+  "causal_component_regression": {
+    "red": {
+      "pass": 0,
+      "fail": 1,
+      "observed": "The late recommendation restored the old handed report while the later explicit report read was pending.",
+      "evidence_limit": "Original failing tool output remains in the session conversation, chunk 3172e7. Its raw log/tool-result file was not saved; the retained red-observation JSON is derivative only."
+    },
+    "green": {
+      "focused_pass": 41,
+      "focused_fail": 0,
+      "related_component_pass": 18,
+      "related_component_fail": 0,
+      "renderer_and_main_typecheck_exit": 0,
+      "e2e_typecheck_exit": 0
+    },
+    "controls": [
+      "Project, source, transport and fresh external handoff supersede an abandoned pending report.",
+      "A new review-queue return supersedes pending manual selection.",
+      "Rejected reads or mismatched response identity cannot persist or revive an invalid report.",
+      "A valid manual report persists only after the selected response identity is accepted."
+    ]
+  },
+  "actual_browser": {
+    "title": "CPU comparison reopens the exact completed job from Task Center and after refresh",
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "retry": 0,
+    "duration_ms": 27057,
+    "runner_elapsed_seconds": 35.62921016593464,
+    "workers": 1,
+    "unchanged_existing_test": true,
+    "manual_report_reopen": {
+      "same_persistent_handoff_superseded": true,
+      "no_new_submission_on_refresh": true,
+      "fresh_handoff_restores_original_job": true,
+      "actual_cpu_comparisons": 2
+    },
+    "controlled_fixture": "Two untrained deterministic models and six synthetic classification source images; two test images per comparison. The existing case also exercises a controlled CPU inspection and evidence/label-return boundaries.",
+    "source_before_after_exact_files": 2897,
+    "provider_link_and_four_packages_before_after_exact": true,
+    "post_shutdown_ten_file_hash_size_identity_equal": true,
+    "page_errors": 0,
+    "blocked_loopback_requests": 0,
+    "console_messages": {
+      "recorded_count": 2,
+      "recorded_statuses": [
+        409,
+        503
+      ],
+      "global_zero_error_gate": false,
+      "endpoint_body_join_independently_established": false,
+      "all_messages_expected_claim": false
+    },
+    "owned_backend": {
+      "exit_code": 0,
+      "forced": false,
+      "pid_alive": false,
+      "port_closed": true,
+      "group_alive": false,
+      "escaped": [],
+      "unowned_references": [],
+      "scan_error": null
+    },
+    "global_teardown": {
+      "leftovers": [],
+      "unowned_references": [],
+      "scan_error": null
+    }
+  },
+  "raw_evidence": {
+    "readback": {
+      "size": 37379,
+      "sha256": "c0c7f9c16c3bcec6d53b405d33f70293596c5a86509f947ad25a90bfa9c5d58c"
+    },
+    "run_result": {
+      "size": 1593,
+      "sha256": "0ca8552f4b021f8a12d5e1a6327fd76024c539e4a177ceadf669691b3106b3e6"
+    },
+    "harness_manifest": {
+      "size": 65839,
+      "sha256": "428d7cde8ac1309a07fd8e21d6aeae9b4ebf571ff347142b59ac90fe5be6a4ca"
+    },
+    "report": {
+      "size": 9643,
+      "sha256": "a867cc296b087e6f281fee8f83afee5d04a22fa8942cc7b67de2b5ca018fc09e"
+    },
+    "finite_rehashed_original_references": 67
+  },
+  "limits": {
+    "older_cb436_ci_timing_cause_established": false,
+    "full_http_request_response_archive": false,
+    "distinct_server_accepted_context_receipt": false,
+    "native_acceptance": false,
+    "model_quality_acceptance": false,
+    "training": false,
+    "gpu": false,
+    "whole_parent_acceptance": false,
+    "ledger_or_count_promotion": false,
+    "publication": false
+  }
+}

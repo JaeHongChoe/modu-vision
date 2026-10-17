@@ -1,0 +1,124 @@
+{
+  "schema": "modu-vision.scoped-source-fixture-repair/v1",
+  "result": "passed_scoped_fixture_requalification",
+  "source": {
+    "base_commit": "a448950deeea1664c07aabe2d19a1c6aea9fa838",
+    "executed_test_path": "backend/tests/test_application_launch_quiescence_bridge.py",
+    "executed_test_sha256": "8e692cf95b0a1084a1230715b53f57a58e86d7cea11b203183a25b22cf39c20b",
+    "execution_was_base_plus_exact_test_overlay": true,
+    "private_clean_checkpoint_created_after_execution": "ee7ec6ddcde27e930c70e83d6ca3c36acac1bceb",
+    "checkpoint_test_bytes_equal_execution": true,
+    "product_files_changed": false
+  },
+  "deterministic_regression": {
+    "selectors": [
+      "backend/tests/test_application_launch_quiescence_bridge.py::test_managed_idle_callback_never_exposes_a_partial_final_json_name",
+      "backend/tests/test_application_launch_quiescence_bridge.py::test_managed_cleanup_retains_primary_and_reports_secondary",
+      "backend/tests/test_application_launch_quiescence_bridge.py::test_managed_cleanup_without_primary_propagates_exact_cleanup_error",
+      "backend/tests/test_application_launch_quiescence_bridge.py::test_managed_cleanup_success_retains_original_body_error_or_result"
+    ],
+    "red": {
+      "failed": 4,
+      "passed": 2,
+      "seconds": 0.64,
+      "actual_failures": [
+        "final marker exposed empty bytes before write",
+        "cleanup replaced original RuntimeError",
+        "cleanup replaced original KeyboardInterrupt",
+        "cleanup replaced original SystemExit"
+      ],
+      "stdout": {
+        "bytes": 4206,
+        "sha256": "746d9ce8860ac7075b377d08f5f644587d7adb84d20cb2dca6d17cd720af129a"
+      }
+    },
+    "green": {
+      "passed": 6,
+      "failed": 0,
+      "seconds": 0.47,
+      "stdout": {
+        "bytes": 98,
+        "sha256": "2fbebde3ff012e439c92df39ae6a15dfd79aa6e934c94deeaafeb22da015bf43"
+      }
+    },
+    "modeled_cleanup_and_generated_callback_only": true
+  },
+  "original_selector": {
+    "selector": "backend/tests/test_application_launch_quiescence_bridge.py::test_actual_source_cpu_then_managed_drain_and_original_node_exit_keeps_lease_blocked[False]",
+    "passed": 1,
+    "failed": 0,
+    "pytest_seconds": 28.03,
+    "wrapper_seconds": 28.880477417027578,
+    "stdout": {
+      "bytes": 99,
+      "sha256": "a1c714d5deacca714dcea6bca9bd2ab222fc121ff3646ee7f1ac942ced07a0f8"
+    },
+    "stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "actual_tool_completion": {
+      "bytes": 1875,
+      "sha256": "d67e11046b93f8a2338d3e9f0583c3d23e39e8f4b944b1b769217ed439178996"
+    },
+    "result": {
+      "bytes": 1772,
+      "sha256": "57e0efddccd5d45097b721fa1ab2321d46eacfbb4439dfa58a7f4e5a21a46a86"
+    }
+  },
+  "observed": {
+    "idle_marker_complete_JSON": true,
+    "active_scopes": 0,
+    "unsupported": [],
+    "controlled_CPU_semantic_verdict": "OK",
+    "managed_drain_phase": "backend_exited",
+    "writer_registry_state": "closed",
+    "backend_direct_exit_code": 0,
+    "backend_exit_signal": null,
+    "original_stop_error": null,
+    "managed_proof": {
+      "bytes": 9344,
+      "sha256": "c035b6a56902eb7850baf5d70a8758d7ded48badbcb171edde468f720b1d7c2d"
+    }
+  },
+  "custody": {
+    "tracked_files": 2897,
+    "full_raw9_and_SHA_before_after_equal": true,
+    "finite_existing_python_node_typescript_provider_pins_equal": true,
+    "source_before": {
+      "bytes": 978823,
+      "sha256": "83a14ebede9a8f2f5797eacf3d30b71c18169e6c29e1df2850bb4f420f24e5dc"
+    },
+    "source_after": {
+      "bytes": 978823,
+      "sha256": "83a14ebede9a8f2f5797eacf3d30b71c18169e6c29e1df2850bb4f420f24e5dc"
+    },
+    "providers_before": {
+      "bytes": 1471,
+      "sha256": "d6ad7605d5dc5b1110fd3c079eee274320d428d5f95619945f7ee36ca0230576"
+    },
+    "providers_after": {
+      "bytes": 1471,
+      "sha256": "d6ad7605d5dc5b1110fd3c079eee274320d428d5f95619945f7ee36ca0230576"
+    }
+  },
+  "guard_preservation": {
+    "existing_atomic_helper_reused": true,
+    "JSON_reader_and_no_retry_behavior_unchanged": true,
+    "all_original_timeouts_unchanged": true,
+    "finish_managed_body_and_retained_Popen_authority_unchanged": true,
+    "original_readonly_lease_inspection_and_lock_guards_unchanged": true,
+    "primary_BaseException_preserved_secondary_cleanup_noted": true,
+    "cleanup_only_error_still_propagates": true
+  },
+  "limits": {
+    "original_CI_failure_preserved": true,
+    "full_CI_requalification": false,
+    "Linux_CI_reexecution": false,
+    "native_GUI_or_installed_application_acceptance": false,
+    "parent_action_or_scenario_promotion": false,
+    "model_quality_or_operational_approval": false,
+    "whole_process_tree_or_unconditional_lease_release_claim": false,
+    "PUB_mutated_by_this_fixture_work": false
+  }
+}
