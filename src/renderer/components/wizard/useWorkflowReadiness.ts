@@ -31,6 +31,14 @@ export function useWorkflowReadiness() {
     const current=()=>live.current===key&&sequence.current===generation&&apiScope===JSON.stringify([getProjectContext(),getApiPersistenceIdentity()]);
     if(stage===1 || !projectDir || !project || !sourceReady || !context || context.project_id!==project.id){setReceipt(null);return;}
     setReceipt({key,evidence:{status:'checking'}});
+    if(stage===2){
+      request<NonNullable<WorkflowEvidence['review']>>('/api/team-data/readiness').then(review=>{
+        if(!current())return;
+        if(typeof review.ready!=='boolean'||!Number.isFinite(review.counts?.eligible))throw new Error('준비도 근거 형식을 확인할 수 없습니다.');
+        setReceipt({key,evidence:{status:'ready',review}});
+      }).catch(cause=>{if(current())setReceipt({key,evidence:{status:'error',error:String(cause.message||cause)}});});
+      return()=>{sequence.current++;};
+    }
     Promise.all([
       request<NonNullable<WorkflowEvidence['review']>>('/api/team-data/readiness'),
       request<WorkflowImpact>('/api/provenance/impact'),

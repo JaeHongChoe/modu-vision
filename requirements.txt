@@ -12,6 +12,8 @@ cryptography>=44.0.1
 # Computer Vision & Numerical Processing
 numpy>=1.26.0
 Pillow>=10.4.0
+# Ultralytics lazily imports this decoder after a Pillow open failure.
+pi-heif==1.4.0
 opencv-python-headless>=4.10.0.84
 scikit-learn>=1.5.0
 

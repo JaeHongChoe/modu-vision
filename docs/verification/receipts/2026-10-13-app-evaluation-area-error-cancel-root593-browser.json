@@ -1,0 +1,44 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "331276d1ee6f02c03fd72d15e4ed2be3254e46fa",
+  "source_dirty": false,
+  "test": "scripts/e2e/evaluation-area-transition-controls.spec.ts::saved area bins disappear on failed history and survive canceled A read in B",
+  "test_source_sha256": "63dc9a958dad4d6b0e8498902fc3dbd37787a643956adcf264704117aff5ab81",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "abfb0936dd81a5a3af6cb5c542dfd8dad9f62841b823c58861ec5d89c1b18e1d",
+  "harness_sha256": "7c3153fb9679a3bd5e640bf4275620a820accb37d1601d201b72bd250e90fe9f",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "b73578c487e46b2a1d0153e364ecfe249350a8b1ede81076571a41422fa84802"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "765950c21a077409fe01643acfbf976683b58e34bc0ebcd6fae458577cc9a60f"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "7eda664029bf68877a4f2126cc148cf23d558f4de3f9c92aadcbd979a1ae9322"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "2e634c697988a788b340b31a72a9d08876e2454deddf529532118e66faf12d43"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "c67ebe3699b1ac8784cd312c734b6398c4fd48932792665471739df582e83d7e"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

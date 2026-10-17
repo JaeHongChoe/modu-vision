@@ -1,0 +1,103 @@
+{
+  "schema": "modu-vision.action-source-portability-provenance-delta/v1",
+  "scope": "Current source declarations and one pending current GUI dimension; historical executions remain historical",
+  "source_declaration_only": true,
+  "historical_acceptance_rebound": false,
+  "historical_receipts_modified": false,
+  "new_GUI_executions": [],
+  "newly_verified_scenarios": [],
+  "parent_completion_credit": false,
+  "whole_current_GUI_suite_pending": true,
+  "original_checker_report": {
+    "schema_version": 1,
+    "scope": "curated_action_evidence_not_complete_feature_acceptance",
+    "accepted_features": 0,
+    "ok": false,
+    "errors": [
+      "Action source bytes changed: src/renderer/components/flowchart/FlowchartStudio.tsx",
+      "Action source bytes changed: src/renderer/components/inference/RuntimeOptimizationPanel.tsx",
+      "F117.action.cancel evidence 1: GUI executed test bytes changed since receipt"
+    ],
+    "actions": 207,
+    "verified_scenarios": 971,
+    "pending_scenarios": 477,
+    "not_required_scenarios": 0
+  },
+  "current_source_table_changes": [
+    {
+      "relative": "src/renderer/components/flowchart/FlowchartStudio.tsx",
+      "historical_declaration_sha256": "8765e25b10c3d42bd9701a22d0fd5d7fe2357ba8714efb2a0a3c3ebd050346f9",
+      "current_declaration_sha256": "445b156c5129e6522c8a4d17b84f71acbffab6732aae125fecff4967ef38e26d"
+    },
+    {
+      "relative": "src/renderer/components/inference/RuntimeOptimizationPanel.tsx",
+      "historical_declaration_sha256": "89ebe9a26ee74a9699705cd6d533301ad579bbb01a5f5a40fb0b5417d2adcfff",
+      "current_declaration_sha256": "d8713031d956f86361455fe2aff1e5442a7d93e3ca585acd7317126ede63d076"
+    }
+  ],
+  "affected_source_action_accounting": [
+    {
+      "relative": "src/renderer/components/flowchart/FlowchartStudio.tsx",
+      "actions": 13,
+      "retained_historical_verified_dimensions": 48,
+      "state_changes": 0,
+      "current_GUI_execution_requalified": false
+    },
+    {
+      "relative": "src/renderer/components/inference/RuntimeOptimizationPanel.tsx",
+      "actions": 3,
+      "retained_historical_verified_dimensions": 21,
+      "state_changes": 0,
+      "current_GUI_execution_requalified": false
+    }
+  ],
+  "historical_GUI_dimension": {
+    "feature": "F117",
+    "action": "format-export-bundle",
+    "dimension": "cancel",
+    "historical_state": "verified",
+    "historical_dimension": {
+      "state": "verified",
+      "evidence": [
+        {
+          "task": "S3-05",
+          "source_sha": "114d908cf73ef9bef25f62af2b968436895522c0",
+          "kind": "click",
+          "action": "라벨 내보내기 요청 취소",
+          "expected": "Abort only the currently owned export request; prevent download adoption and allow explicit fresh retry without claiming backend bundle rollback or worker interruption.",
+          "observed": "Clean browser actual Root04 used the owning AbortSignal after the original backend completed200. Original client socket closed with0bytes and no Response/download adoption; original server ZIP remained. A separate real project-context switch also rejected adoption; two ordinary fresh ZIP downloads recovered exact source and label member hashes. No panel-dismissal, worker-stop, installed-native, model quality or whole-parent credit.",
+          "reviewer": "Root actual proof review plus immutable source/HTTP/ZIP/screenshot receipts; canonical click reference only, no whole feature acceptance",
+          "test": "scripts/e2e/label-export-own-request-cancel.spec.ts::real owning export Abort cancels download adoption then recovers without deleting completed server bundles",
+          "receipt": "2026-10-15-f117-own-export-cancel-root04-browser.json",
+          "receipt_sha256": "b1442969771692791f891ef464598a6a8fef3af52234a022379439a5273698e5",
+          "artifacts": [
+            {
+              "id": "screenshot-0",
+              "sha256": "fff1cc7752e2d207e0faa819c85320bb855acf83103fc146c27c94612b279a2f"
+            },
+            {
+              "id": "screenshot-1",
+              "sha256": "7832d2bf4c3c3b46d1e6a1335003767d064d4713bf79e93012979a4e7e63b911"
+            },
+            {
+              "id": "screenshot-2",
+              "sha256": "5abc5ba1ef5c01e908dce5265e5f021107347544da10cba82e33186e2334d5d8"
+            },
+            {
+              "id": "screenshot-3",
+              "sha256": "697b0e58a1881e906933dce77874605aa4b6139b0b8454bacad561f8b30562f6"
+            }
+          ]
+        }
+      ]
+    },
+    "canonical_receipt_sha256": "b1442969771692791f891ef464598a6a8fef3af52234a022379439a5273698e5",
+    "historical_executed_test_sha256": "67dab82a9eedd11551843b629b5eb44fd05d9e52c8ef7d58b921fc0f992ae68e",
+    "current_test_sha256": "4e92d42217d9cd0ae3c115ff0174c5edb7e919cfdad72ad604c61631e513b48e",
+    "current_state": "pending",
+    "change": "The exact previously reviewed passive HTTP observer is now repository-local with unchanged helper SHA-256; source path portability only, no new GUI acceptance",
+    "helper": "scripts/e2e/fixtures/owned-failed-http-observer.cjs",
+    "helper_sha256": "08f1555a2e6a1d70784f77025969281082c4b7d4586e8083c53e061bde6ff4e0"
+  },
+  "count_interpretation": "The original failing checker counted 971 valid historical verified dimensions and 477 pending dimensions; one additional raw verified claim was invalid due to changed executed test bytes. That single current claim becomes pending. No new pass is created."
+}

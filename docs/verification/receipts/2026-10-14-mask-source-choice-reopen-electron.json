@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "9f5826b79d447d0849b5dd650e77157d827693bb",
+  "source_dirty": false,
+  "test": "scripts/e2e/mask-source-choice-reopen.spec.ts::native mask source choice stays local through details collapse and resets default on original panel remount",
+  "test_source_sha256": "109b91ac628c82de151c5a7de39bdf4e89ccdc753f0d0099d2c7611c05d635e9",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "81d70bab7a2c72e149bcd870b367236f550da8c6f0f20ef46154e5e39d279270",
+  "harness_sha256": "ddf86437c601c934a3f80901dfce5d781a29dfac3253e3957843a8f5d4d73523",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "e3604be98aba61ec24d4276d2ab654dc0825a21767872303cc98868da5d711f7"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "e3604be98aba61ec24d4276d2ab654dc0825a21767872303cc98868da5d711f7"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "e8b4dc0250575a7c9ad93ba6898fc1398da15214e39da8171f1a7eab4142ce71"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

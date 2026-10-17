@@ -6,6 +6,7 @@ controller remains responsible for durable launch ownership and recovery.
 """
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import math
@@ -34,26 +35,198 @@ _PREFLIGHT_UNRESOLVED = set()
 
 class BackendWorkAdmission:
     """Only the reviewed foreground scopes; no background/tree exit authority."""
-    def __init__(self):
+    def __init__(self, *, activity_observer=None):
         self._condition = threading.Condition()
         self._closed = False
         self._active = 0
         self._unsupported = set()
+        self._startup_joins = {}
+        self._startup_join_preparing = False
+        self._startup_pending = {}
+        self._activity_observer = activity_observer
+        self._activity_sequence = 0
+        self._current_project_requests = None
+        self._desktop_denials = None
+        self._shared_denials = None
+        self._account_requests = None
+        self._flow_requests = None
+        self._flow_execution_requests = None
+        self._UI_ancillary_requests = None
+        self._telemetry_socket_requests = None
+        if activity_observer is not None:
+            from backend.engine.original_request_activity import OriginalRequestActivityObserver, ActivityObservationError
+            if type(activity_observer) is not OriginalRequestActivityObserver:
+                raise ActivityObservationError('An original typed activity observer is required')
+            activity_observer.bind(self)
 
-    def enter(self, scope):
+    def _activity_transition(self, action, *args):
+        self._activity_sequence += 1
+        observer = self._activity_observer
+        if observer is not None:
+            try: observer.event(self, self._activity_sequence, action, *args)
+            except BaseException:
+                try: observer.poison('observer_recording_failure')
+                except BaseException: pass
+
+    def bind_activity_middleware(self, middleware, downstream):
         with self._condition:
-            if self._closed: return False
+            if self._activity_observer is not None:
+                try: self._activity_observer.bind_middleware(self, middleware, downstream)
+                except BaseException: self._activity_observer.poison('middleware_binding_failure')
+
+    def request_activity(self, middleware, downstream, scope):
+        with self._condition:
+            if self._activity_observer is None: return None
+            try: return self._activity_observer.capture(self, middleware, downstream, scope)
+            except BaseException:
+                self._activity_observer.poison('request_capture_failure'); return None
+
+    def observe_activity(self, action, activity, *args):
+        with self._condition: self._activity_transition(action, activity, *args)
+
+    def finish_rejected_activity(self, activity, *, normal_return):
+        with self._condition: self._activity_transition('rejected_leave', activity, normal_return)
+
+    def register_startup_join(self, role, callback):
+        if role not in {'job_ledger_maintenance', 'preflight_run_sweep', 'telemetry_broadcaster'} or not callable(callback):
+            raise HandshakeError('Unknown original startup thread join adapter')
+        with self._condition:
+            if self._closed or self._startup_join_preparing or role in self._startup_joins:
+                raise HandshakeError('Original startup join registration is closed or repeated')
+            self._startup_joins[role] = callback
+
+    @contextmanager
+    def _startup_condition(self, absolute_deadline, original_condition):
+        if self._condition is not original_condition:
+            raise HandshakeError('Original startup condition changed')
+        remaining = absolute_deadline - time.monotonic()
+        if remaining <= 0 or not original_condition.acquire(timeout=remaining):
+            raise HandshakeError('Original startup condition deadline expired')
+        try:
+            if self._condition is not original_condition:
+                raise HandshakeError('Original startup condition changed')
+            if time.monotonic() >= absolute_deadline:
+                raise HandshakeError('Original startup condition deadline expired')
+            yield
+        finally:
+            original_condition.release()
+
+    def prepare_startup_threads(self, absolute_deadline):
+        if (type(absolute_deadline) not in (int, float) or not math.isfinite(absolute_deadline)
+                or time.monotonic() >= absolute_deadline):
+            raise HandshakeError('Original startup preparation deadline expired')
+        original_condition = self._condition
+        with self._startup_condition(absolute_deadline, original_condition):
+            if self._startup_join_preparing:
+                raise HandshakeError('Original startup preparation cannot replay')
+            self._startup_join_preparing = True
+            callbacks = tuple(self._startup_joins.items())
+        receipts = []
+        for role, callback in callbacks:
+            if time.monotonic() >= absolute_deadline:
+                raise HandshakeError('Original startup preparation deadline expired')
+            receipts.append(callback(absolute_deadline))
+            with self._startup_condition(absolute_deadline, original_condition):
+                if self._startup_joins.get(role) is not callback:
+                    raise HandshakeError('Original startup join adapter changed')
+        if time.monotonic() >= absolute_deadline:
+            raise HandshakeError('Original startup preparation completed late')
+        # These original local joins do not cover recovery, detached training,
+        # a whole writer tree or lease release. Unsupported status stays sticky.
+        return receipts
+
+    def begin_original_startup(self, observed):
+        from backend.engine.original_fresh_startup import _claim_pending
+        with self._condition:
+            if (self._closed or self._active or self._unsupported or self._activity_sequence
+                    or self._startup_join_preparing or self._startup_pending):
+                raise HandshakeError('Original startup lifetime must precede other admitted activity')
+            token = _claim_pending(observed, self)
+            self._startup_pending[token] = observed
+            # Typed startup bookkeeping is distinct from anonymous producers.
             self._active += 1
+
+    def finish_original_startup(self, observed, absolute_deadline, reader, receipts):
+        from backend.engine.original_fresh_startup import _pending_token, _mark_settled, _settle_original
+        condition = self._condition
+        with self._startup_condition(absolute_deadline, condition):
+            token = _pending_token(observed, self)
+            if token is None or self._startup_pending.get(token) is not observed:
+                raise HandshakeError('Original pending startup lifetime is missing or replayed')
+        receipt = _settle_original(observed, absolute_deadline, reader, receipts)
+        with self._startup_condition(absolute_deadline, condition):
+            if self._startup_pending.get(token) is not observed or self._active < 1 or self._closed:
+                raise HandshakeError('Original startup lifetime changed before settlement')
+            if receipt['supported'] is not True: self._unsupported.add('startup_background_protocols')
+            del self._startup_pending[token]
+            self._active -= 1
+            _mark_settled(observed)
+            self._condition.notify_all()
+        return receipt
+
+    def enter(self, scope, *, activity=None):
+        with self._condition:
+            if self._closed:
+                self._activity_transition('enter', scope, activity, False)
+                return False
+            self._active += 1
+            self._activity_transition('enter', scope, activity, True)
+            named = self._current_project_requests
+            denials = self._desktop_denials
+            covered = denials is not None and denials.begin(activity)
+            shared = self._shared_denials
+            if not covered: covered = shared is not None and shared.begin(activity)
+            accounts = self._account_requests
+            if not covered: covered = accounts is not None and accounts.begin(activity)
+            flows = self._flow_requests
+            if not covered: covered = flows is not None and flows.begin(activity)
+            executions = self._flow_execution_requests
+            if not covered: covered = executions is not None and executions.begin(activity)
+            ancillary = self._UI_ancillary_requests
+            if not covered: covered = ancillary is not None and ancillary.begin(activity)
+            sockets = self._telemetry_socket_requests
+            if not covered: covered = sockets is not None and sockets.begin(activity)
+            if not covered: covered = named is not None and named.begin(activity)
             # Even GET can create projects or recover jobs. Uncovered requests
             # still work normally, but cannot qualify a clean managed drain.
-            if not (scope.get('type') == 'http' and scope.get('path') in {'/health', '/api/errors'}):
+            if not covered and not (scope.get('type') == 'http' and scope.get('path') == '/health'):
                 self._unsupported.add('uncovered_request_protocol')
             return True
 
-    def leave(self):
+    def leave(self, *, activity=None, normal_return=False):
         with self._condition:
-            if self._active < 1: raise HandshakeError('Accepted scope lifetime is unbalanced')
+            named = self._current_project_requests
+            denials = self._desktop_denials
+            shared = self._shared_denials
+            accounts = self._account_requests
+            flows = self._flow_requests
+            executions = self._flow_execution_requests
+            ancillary = self._UI_ancillary_requests
+            sockets = self._telemetry_socket_requests
+            if self._active <= (len(self._startup_pending) + (len(named.pending) if named is not None else 0)
+                    + (len(denials.pending) if denials is not None else 0)
+                    + (len(shared.pending) if shared is not None else 0)
+                    + (len(accounts.pending) if accounts is not None else 0)
+                    + (len(flows.pending) if flows is not None else 0)
+                    + (len(executions.pending) if executions is not None else 0)
+                    + (len(ancillary.pending) if ancillary is not None else 0)
+                    + (len(sockets.pending) if sockets is not None else 0)):
+                self._activity_transition('unmatched_leave')
+                raise HandshakeError('Accepted scope lifetime is unbalanced')
+            self._activity_transition('leave', activity, normal_return)
             self._active -= 1
+            if named is not None: named.finish(activity)
+            if denials is not None: denials.finish(activity)
+            if shared is not None: shared.finish(activity)
+            if accounts is not None: accounts.finish(activity)
+            if flows is not None: flows.finish(activity)
+            if executions is not None: executions.finish(activity)
+            if ancillary is not None: ancillary.finish(activity)
+            if sockets is not None: sockets.finish(activity)
+            observer=self._activity_observer
+            if observer is not None:
+                try:observer.original_request_settled(self,activity)
+                except BaseException:observer.poison('settled_history_recording_failure')
             self._condition.notify_all()
 
     def response(self, status):
@@ -77,9 +250,13 @@ class BackendWorkAdmission:
         with self._condition:
             if self._closed: raise HandshakeError('Original backend producer admission is closed')
             self._active += 1
+            self._activity_transition('producer')
 
     def close(self):
-        with self._condition: self._closed = True
+        with self._condition:
+            was_closed = self._closed
+            self._closed = True
+            self._activity_transition('close', was_closed)
 
     def snapshot(self):
         with self._condition:
@@ -91,6 +268,30 @@ class BackendWorkAdmission:
         deadline = time.monotonic() + seconds
         with self._condition:
             if not self._closed: raise HandshakeError('Managed admission must close before draining')
+            if self._current_project_requests is not None:
+                named = self._current_project_requests
+                named.deadline = deadline if named.deadline is None else min(named.deadline, deadline)
+            if self._desktop_denials is not None:
+                denials = self._desktop_denials
+                denials.deadline = deadline if denials.deadline is None else min(denials.deadline, deadline)
+            if self._shared_denials is not None:
+                shared = self._shared_denials
+                shared.deadline = deadline if shared.deadline is None else min(shared.deadline, deadline)
+            if self._account_requests is not None:
+                accounts = self._account_requests
+                accounts.deadline = deadline if accounts.deadline is None else min(accounts.deadline, deadline)
+            if self._flow_requests is not None:
+                flows = self._flow_requests
+                flows.deadline = deadline if flows.deadline is None else min(flows.deadline, deadline)
+            if self._flow_execution_requests is not None:
+                executions = self._flow_execution_requests
+                executions.deadline = deadline if executions.deadline is None else min(executions.deadline, deadline)
+            if self._UI_ancillary_requests is not None:
+                ancillary = self._UI_ancillary_requests
+                ancillary.deadline = deadline if ancillary.deadline is None else min(ancillary.deadline, deadline)
+            if self._telemetry_socket_requests is not None:
+                sockets = self._telemetry_socket_requests
+                sockets.deadline = deadline if sockets.deadline is None else min(sockets.deadline, deadline)
             while self._active and not self._unsupported:
                 remaining = deadline - time.monotonic()
                 if remaining <= 0: break
@@ -340,6 +541,28 @@ def _owned_cpu_producer_scope(*, flow_device=_FIXED_CPU_PRODUCER):
     original_challenge = _canonical(original_cache['challenge'])
     original_proof = _canonical(original_cache['proof'])
     original_admission = original_cache['admission']
+    # Only this original frozen controller CPU callback can separate its
+    # fixed mutex-entry budget from its already captured full action budget.
+    # HTTP/source/flow callers do not receive a deadline or marker argument.
+    authentication_deadline = entry_deadline
+    original_execution = original_cache.get('original_cpu_execution')
+    execution_fields = None
+    if (flow_device is _FIXED_CPU_PRODUCER and getattr(sys, 'frozen', False) is True
+            and original_cache['proof'].get('frozen') is True
+            and type(original_execution) is dict
+            and original_execution.get('thread') is threading.current_thread()):
+        if (set(original_execution) != {'done', 'result', 'error', 'deadline', 'thread'}
+                or type(original_execution['done']) is not threading.Event
+                or original_execution['done'].is_set()
+                or original_execution['result'] is not None or original_execution['error'] is not None
+                or type(original_execution['deadline']) not in (int, float)
+                or not math.isfinite(original_execution['deadline'])):
+            raise HandshakeError('Original frozen CPU callback is incomplete or settled')
+        execution_fields = (original_execution['thread'], original_execution['done'],
+                            original_execution['deadline'], type(original_execution['deadline']))
+        authentication_deadline = execution_fields[2]
+        if not 0 < authentication_deadline - time.monotonic() <= 210:
+            raise HandshakeError('Original frozen CPU action deadline expired or differs')
     original_writer = tuple(original_cache.get(key) for key in
                             ('writer_guard', 'writer_handle', 'writer_private_fd', 'writer_fd_identity'))
     endpoint = None
@@ -347,6 +570,8 @@ def _owned_cpu_producer_scope(*, flow_device=_FIXED_CPU_PRODUCER):
         from backend.engine.application_preflight_child_relay import _endpoint
         endpoint = _endpoint(original_socket)
     def entry_current():
+        if time.monotonic() >= authentication_deadline:
+            raise HandshakeError('Original CPU producer action deadline expired')
         current = _root_context()
         if (_CACHE is not original_cache or current is None or current[0] != root
                 or current[1] != values or _context() != original_context
@@ -363,8 +588,29 @@ def _owned_cpu_producer_scope(*, flow_device=_FIXED_CPU_PRODUCER):
             raise HandshakeError('Original CPU producer admission writer changed')
         if original_socket is not None and _endpoint(original_socket) != endpoint:
             raise HandshakeError('Original CPU producer admission endpoint changed')
+        if execution_fields is not None:
+            if (original_cache.get('original_cpu_execution') is not original_execution
+                    or set(original_execution) != {'done', 'result', 'error', 'deadline', 'thread'}
+                    or original_execution['thread'] is not execution_fields[0]
+                    or threading.current_thread() is not execution_fields[0]
+                    or original_execution['done'] is not execution_fields[1]
+                    or original_execution['done'].is_set()
+                    or original_execution['result'] is not None or original_execution['error'] is not None
+                    or type(original_execution['deadline']) is not execution_fields[3]
+                    or original_execution['deadline'] != execution_fields[2]):
+                raise HandshakeError('Original frozen CPU callback custody changed')
+        if time.monotonic() >= authentication_deadline:
+            raise HandshakeError('Original CPU producer action deadline expired')
+    def entry_acquire():
+        # Context/endpoint checks consume the same once-captured entry budget.
+        # Slow successful __enter__ is checked before any original owner hash.
+        if time.monotonic() >= entry_deadline:
+            raise HandshakeError('Original transition entry deadline expired')
+        entry_current()
+        if time.monotonic() >= entry_deadline:
+            raise HandshakeError('Original transition entry deadline expired')
     if _validate(root, values, _CACHE['challenge'], validated=validated,
-                 absolute_deadline=entry_deadline, before_acquire=entry_current) != _CACHE['proof']:
+                 absolute_deadline=authentication_deadline, before_acquire=entry_acquire) != _CACHE['proof']:
         raise HandshakeError('Original owned CPU producer process binding changed')
     entry_current()
     if 'writer' not in _CACHE['challenge']:
@@ -686,6 +932,9 @@ def _validated_backend_admission(root, values, frame, *, validated=None,
         if before_acquire is not None: before_acquire()
     with _transition_admission_before_deadline(root, frame['nonce'], absolute_deadline,
                                               before_attempt=before_attempt):
+        # Outside the enter-retry loop: callback/body/exit failures propagate
+        # once, and slow successful entry cannot spend a larger auth budget.
+        before_attempt()
         protocol = [None]
         def original_owner():
             original_challenge()
@@ -747,6 +996,32 @@ def _no_replay(sock, *, ready=False):
         if not ready: raise HandshakeError('Backend private descriptor closed before readiness')
 
 
+def _new_original_work_admission():
+    from backend.engine.original_request_activity import OriginalRequestActivityObserver
+    return BackendWorkAdmission(activity_observer=OriginalRequestActivityObserver())
+
+
+def begin_fresh_startup_observation(app, manager, telemetry):
+    """Optional shadow startup facts; ineligible owned startup remains sticky."""
+    admission = getattr(app.state, 'owned_work_admission', None)
+    if admission is None: return None
+    from backend.engine.original_fresh_startup import _begin_from_original_cache
+    try: return _begin_from_original_cache(_CACHE, app, manager, telemetry)
+    except Exception:
+        admission.uncovered('startup_background_protocols')
+        return None
+
+
+def _finish_fresh_startup_observation(original_cache, deadline, receipts):
+    observed = original_cache.get('fresh_startup_observation')
+    if observed is None: return None
+    if _CACHE is not original_cache:
+        raise HandshakeError('Original startup cache changed during preparation')
+    from backend.engine.migration_guard import _admission_capability
+    reader = _admission_capability(original_cache['root'], exclusive=False)
+    return original_cache['admission'].finish_original_startup(observed, deadline, reader, receipts)
+
+
 def early_backend_bootstrap():
     """Authenticate once before application imports; recheck every local reuse."""
     global _CACHE
@@ -776,7 +1051,7 @@ def early_backend_bootstrap():
         _no_replay(sock); send_frame(sock, proof)
         _CACHE = {'context': _context(), 'root': root, 'socket': sock, 'challenge': frame, 'proof': proof,
             'ready': False, 'writer_guard': guard, 'writer_handle': handle, 'writer_private_fd': private_fd, 'writer_fd_identity': fd_identity,
-            'admission': BackendWorkAdmission()}
+            'admission': _new_original_work_admission()}
         from backend.engine.application_preflight_child_relay import BackendRelayQueue
         _CACHE['preflight_queue'] = BackendRelayQueue(sock)
         if proof['frozen'] is False and 'writer' in frame:
@@ -847,6 +1122,345 @@ def _validate_service_action(original_cache, deadline):
         return proof
 
 
+
+_BACKEND_SHUTDOWN_MINTS = set()
+_BACKEND_SHUTDOWNS = weakref.WeakKeyDictionary()
+
+
+def _backend_shutdown_endpoint(original_cache):
+    """Fresh private endpoint checks; untrusted peeks confer no authority."""
+    from backend.engine.application_preflight_child_relay import BackendRelayQueue
+    context = _root_context()
+    queue = original_cache.get('preflight_queue')
+    if (_CACHE is not original_cache or context is None or context[0] != original_cache['root']
+            or _context() != original_cache['context'] or not original_cache['ready']
+            or type(queue) is not BackendRelayQueue):
+        raise HandshakeError('Original shutdown endpoint/context differs')
+    queue._fresh(original_cache['socket'], reader=True)
+    return context
+
+
+def _peek_backend_shutdown_prepare(sock, deadline, current):
+    """Classify only a complete canonical preparation without consuming it.
+
+    Other or malformed frames retain their original full validator/read path.
+    The sole original reader owns this bounded peek; no socket reader is added.
+    """
+    while time.monotonic() < deadline:
+        current()
+        if not select.select([sock], [], [], max(0, deadline-time.monotonic()))[0]:
+            return False
+        raw = sock.recv(MAX_FRAME+1, socket.MSG_PEEK | getattr(socket, 'MSG_DONTWAIT', 0))
+        if not raw or len(raw) > MAX_FRAME: return False
+        end = raw.find(b'\n')
+        if end >= 0:
+            raw = raw[:end+1]
+            try:
+                def pairs(items):
+                    value = {}
+                    for key, item in items:
+                        if key in value: raise ValueError('duplicate')
+                        value[key] = item
+                    return value
+                frame = json.loads(raw[:-1].decode('utf-8', 'strict'), object_pairs_hook=pairs,
+                    parse_constant=lambda _: (_ for _ in ()).throw(ValueError('nonfinite')))
+                return (type(frame) is dict and _canonical(frame)+b'\n' == raw
+                        and frame.get('kind') == 'backend_shutdown_prepare')
+            except (ValueError, UnicodeError, RecursionError):
+                return False
+        # A partial readable stream must not become an unbounded busy loop.
+        time.sleep(min(.001, max(0, deadline-time.monotonic())))
+    return False
+
+
+def _backend_shutdown_controls(original_cache):
+    """Read original control publications/fences, without whole asset hashing."""
+    from backend.engine import application_launch_lease as lease, runtime_update as update
+    from backend.engine.global_store_paths import active_generation
+    from backend.engine.application_launch_quiescence import inspect_epoch
+    context = _backend_shutdown_endpoint(original_cache)
+    root, owner = update._root(original_cache['root'])
+    update.validate_attachment(root)
+    pointer = update._pointer(root); current = active_generation(root)
+    challenge = original_cache['challenge']; binding = challenge['binding']
+    if (root != context[0] or pointer is None or current is None
+            or owner['installation_id'] != binding['installation_id']
+            or pointer['installation_id'] != binding['installation_id']
+            or pointer['update_id'] != binding['update_id']
+            or pointer['application_generation'] != binding['application_generation']
+            or _canonical(pointer['database_pointer']) != _canonical(binding['database_pointer'])
+            or _canonical(current[1]) != _canonical(binding['database_pointer'])
+            or str(current[0]) != binding['database_generation_path']):
+        raise HandshakeError('Original shutdown application/database fence changed')
+    row = lease._load(root)
+    writer = challenge.get('writer'); drain = row.get('writer_drain') if row is not None else None
+    if (row is None or row['nonce'] != challenge['nonce'] or row['protocol_version'] != 4
+            or row['state'] not in {'starting', 'ready'} or not row['spawn_attempted']
+            or not _same_process(row['process'], challenge['main_process'])
+            or _canonical(row['binding']) != _canonical(binding) or writer is None or drain is None
+            or any(drain[k] != writer[k] for k in ('writer_id','registration_sha256','registration_registry_sha256'))):
+        raise HandshakeError('Original shutdown launch/writer controls changed')
+    return {'row': row, 'epoch': inspect_epoch(root, challenge['nonce'])}
+
+
+def _shutdown_fd(fd):
+    import stat
+    if type(fd) is not int: raise HandshakeError('Original shutdown writer descriptor differs')
+    info = os.fstat(fd)
+    if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.geteuid() or info.st_nlink != 1
+            or info.st_size != 0 or stat.S_IMODE(info.st_mode) != 0o600):
+        raise HandshakeError('Original shutdown writer descriptor is not its private lifetime lock')
+    return (fd, info.st_dev, info.st_ino, stat.S_IFMT(info.st_mode), info.st_uid,
+            info.st_nlink, info.st_size, info.st_mode, info.st_mtime_ns, info.st_ctime_ns)
+
+
+class _BackendShutdown:
+    """One private original preparation; intermediate guards grant no release."""
+    __slots__ = ('__weakref__',)
+
+    def __init__(self, *, _mint=None):
+        if _mint not in _BACKEND_SHUTDOWN_MINTS:
+            raise HandshakeError('Original backend shutdown must be freshly prepared')
+
+    def __copy__(self): raise HandshakeError('Original backend shutdown cannot be copied')
+    def __deepcopy__(self, memo): raise HandshakeError('Original backend shutdown cannot be copied')
+    def __reduce_ex__(self, protocol): raise HandshakeError('Original backend shutdown cannot be serialized')
+
+    def _state(self):
+        state = _BACKEND_SHUTDOWNS.get(self)
+        if (state is None or state['failed'] or state['pid'] != os.getpid()
+                or state['thread'] is not threading.current_thread()
+                or state['parent_pid'] != os.getppid() or state['session'] != os.getsid(0)
+                or state['process_group'] != os.getpgrp()):
+            raise HandshakeError('Original backend shutdown process/thread differs')
+        return state
+
+    @property
+    def deadline(self): return self._state()['deadline']
+
+    def _current(self, deadline, *, gate=None):
+        state = self._state(); cache = state['cache']
+        if (type(deadline) not in (int, float) or not math.isfinite(deadline)
+                or deadline > state['deadline'] or time.monotonic() >= deadline):
+            raise HandshakeError('Original backend shutdown deadline expired or renewed')
+        from backend.engine import application_launch_lease as lease
+        from backend.engine.migration_guard import _admission_capability
+        context = _backend_shutdown_endpoint(cache)
+        if (cache['root'] is not state['root'] or cache['context'] is not state['context']
+                or _context() != state['context'] or context[0] != state['root']
+                or cache['socket'] is not state['socket'] or cache['preflight_queue'] is not state['queue']
+                or cache['admission'] is not state['admission'] or cache['proof'] is not state['proof_record']
+                or cache['challenge'] is not state['challenge_record']
+                or _canonical(cache['proof']) != state['proof'] or _canonical(cache['challenge']) != state['challenge']
+                or cache.get('shutdown_prepare_attempt') is not state['attempt']
+                or _admission_capability(state['root'], exclusive=False) is not state['lifespan']
+                or cache['writer_guard'] is not state['writer_guard'] or cache['writer_handle'] is not state['writer_handle']
+                or cache['writer_handle'].pass_fds != state['pass_fds']
+                or cache['writer_private_fd'] != state['private_fd']
+                or cache['writer_fd_identity'] != state['writer_fd_identity']
+                or tuple(_shutdown_fd(fd) for fd in state['pass_fds']) != state['writer_fds']
+                or _shutdown_fd(state['private_fd']) != state['private_identity']
+                or cache.get('source_cpu_queue') is not state['source_queue']
+                or not _same_process(lease._identity(os.getpid()), state['proof_record']['process'])
+                or not _same_process(lease._identity(os.getppid()), state['challenge_record']['main_process'])):
+            raise HandshakeError('Original backend shutdown retained custody changed')
+        state['queue']._fresh(state['socket'], reader=True)
+        if state['source_queue'] is not None: state['source_queue']._fresh(state['socket'], reader=True)
+        if state['queue']._active is not None or state['source_queue'] is not None and state['source_queue']._active is not None:
+            raise HandshakeError('Original backend shutdown has an unresolved accepted exchange')
+        # Preparation metadata is provisional custody only. After the exact
+        # preparation response, physical drain actions use small fresh controls;
+        # complete bytes/namespaces must pass controller postvalidation while
+        # the original main/channel remain alive before any final publication.
+        if state['phase'] == 'prepared' and not state['sent'] and gate is None:
+            from backend.engine.application_shutdown_transaction import asset_custody
+            asset_error = None
+            try: assets = asset_custody(state['root'], state['challenge_record']['binding'])
+            except BaseException as exc: asset_error = exc; assets = None
+            if asset_error is not None or assets != state['assets']:
+                # Preserve the genuine validator's original error priority. Even a
+                # successful full recheck cannot accept changed/restored custody.
+                _validate(state['root'], context[1], state['challenge_record'], absolute_deadline=deadline)
+                raise HandshakeError('Original backend shutdown asset custody changed') from asset_error
+        controls = _backend_shutdown_controls(cache)
+        from backend.engine.runtime_process_control import private_json_bytes
+        original_row = state['controls']['row']; original_epoch = state['controls']['epoch']
+        closed_registry = {**original_epoch['registry'], 'state': 'closed',
+                           'revision': original_epoch['registry']['revision']+1}
+        closed_epoch = {'registry': closed_registry,
+                        'registry_sha256': hashlib.sha256(private_json_bytes(closed_registry)).hexdigest()}
+        def closing_row(request):
+            return {**original_row, 'revision': original_row['revision']+1,
+                    'writer_drain': {**original_row['writer_drain'], 'phase': 'closing', 'request': request}}
+        if state['phase'] == 'prepared':
+            if _canonical(controls['epoch']) not in (_canonical(original_epoch), _canonical(closed_epoch)):
+                raise HandshakeError('Original backend shutdown registry has an unplanned transition')
+            row = controls['row']; request = row.get('writer_drain', {}).get('request')
+            if _canonical(row) != _canonical(original_row):
+                self._request(state, request)
+                if (_canonical(row) != _canonical(closing_row(request))
+                        or _canonical(controls['epoch']) != _canonical(closed_epoch)
+                        or request['closed_registry_sha256'] != closed_epoch['registry_sha256']):
+                    raise HandshakeError('Original backend shutdown lease closing differs')
+            if gate is not None:
+                self._request(state, gate)
+                if (_canonical(row) != _canonical(closing_row(gate))
+                        or _canonical(controls['epoch']) != _canonical(closed_epoch)
+                        or gate['closed_registry_sha256'] != closed_epoch['registry_sha256']):
+                    raise HandshakeError('Original backend shutdown gate differs from exact closing publication')
+            if cache['admission']._closed or state['queue']._closed_deadline is not None:
+                raise HandshakeError('Original backend preparation closed admission early')
+        else:
+            if (_canonical(controls['row']) != _canonical(closing_row(state['request']))
+                    or _canonical(controls['epoch']) != _canonical(closed_epoch)
+                    or not state['admission']._closed or state['queue']._closed_deadline != state['deadline']
+                    or cache.get('preflight_drain_deadline') != state['deadline']
+                    or state['source_queue'] is not None and state['source_queue']._closed_deadline != state['deadline']):
+                raise HandshakeError('Original backend shutdown closing controls changed')
+        if time.monotonic() >= deadline:
+            raise HandshakeError('Original backend shutdown controls completed late')
+        return json.loads(state['proof'])
+
+    @staticmethod
+    def _request(state, frame):
+        writer = state['challenge_record']['writer']; proof = state['proof_record']
+        validate_drain_request(frame, nonce=proof['nonce'], epoch=proof['epoch'],
+            binding=state['challenge_record']['binding'], writer_id=writer['writer_id'],
+            registration_sha256=writer['registration_sha256'])
+        if (frame['request_id'] != state['prepare']['request_id']
+                or frame['backend_claim_sha256'] != state['prepare']['backend_claim_sha256']):
+            raise HandshakeError('Original backend shutdown preparation/request differs')
+
+    def fresh(self, deadline):
+        try: return self._current(deadline)
+        except BaseException:
+            state = _BACKEND_SHUTDOWNS.get(self)
+            if state is not None: state['failed'] = True
+            raise
+
+    def prepared_frame(self):
+        state = self._state()
+        if state['phase'] != 'prepared' or state['sent']:
+            raise HandshakeError('Original backend shutdown preparation is replayed')
+        self.fresh(state['deadline']); state['sent'] = True
+        return {'schema_version': 1, 'kind': 'backend_shutdown_prepared',
+                'nonce': state['prepare']['nonce'], 'request_id': state['prepare']['request_id'],
+                'backend_claim_sha256': state['prepare']['backend_claim_sha256']}
+
+    def begin_drain(self, frame, *, started):
+        state = self._state()
+        try:
+            if (state['phase'] != 'prepared' or type(started) not in (int, float)
+                    or not math.isfinite(started) or started > time.monotonic()):
+                raise HandshakeError('Original backend shutdown gate is replayed or clock differs')
+            self._request(state, frame)
+            self._current(min(state['deadline'], started+frame['budget_ms']/1000), gate=frame)
+            state.update(phase='draining', request=json.loads(_canonical(frame)),
+                         deadline=started+frame['budget_ms']/1000)
+        except BaseException:
+            state['failed'] = True
+            raise
+
+
+def _prepare_backend_shutdown(original_cache, frame, *, started):
+    """One complete original full-byte admission before physical drainage."""
+    names = {'schema_version','kind','nonce','epoch','binding_sha256','backend_claim_sha256','request_id','budget_ms'}
+    proof = original_cache['proof']
+    if (type(frame) is not dict or set(frame) != names or type(frame['schema_version']) is not int
+            or frame['schema_version'] != 1 or frame['kind'] != 'backend_shutdown_prepare'
+            or frame['nonce'] != proof['nonce'] or frame['epoch'] != proof['epoch']
+            or frame['binding_sha256'] != proof['binding_sha256']
+            or frame['backend_claim_sha256'] != hashlib.sha256(_canonical(proof)).hexdigest()
+            or not _hex(frame['request_id'], 32) or type(frame['budget_ms']) is not int
+            or not 0 < frame['budget_ms'] <= 30000 or type(started) not in (int,float)
+            or not math.isfinite(started) or started > time.monotonic()
+            or original_cache.get('shutdown_prepare_attempt') is not None):
+        raise HandshakeError('Original backend shutdown preparation differs or is replayed')
+    deadline = started+frame['budget_ms']/1000
+    context = _backend_shutdown_endpoint(original_cache)
+    queue = original_cache['preflight_queue']; source_queue = original_cache.get('source_cpu_queue')
+    if (queue._active is not None or source_queue is not None and source_queue._active is not None
+            or original_cache['admission']._closed or queue._closed_deadline is not None
+            or original_cache.get('preflight_drain_deadline') is not None
+            or original_cache['writer_guard'] is None or original_cache['writer_handle'] is None
+            or original_cache['writer_private_fd'] is None):
+        raise HandshakeError('Original backend shutdown preparation has unresolved/closed work')
+    from backend.engine.migration_guard import _admission_capability
+    root = original_cache['root']; context_record = original_cache['context']
+    sock = original_cache['socket']; challenge = original_cache['challenge']
+    admission = original_cache['admission']; writer_guard = original_cache['writer_guard']
+    handle = original_cache['writer_handle']; pass_fds = handle.pass_fds
+    private_fd = original_cache['writer_private_fd']; fd_identity = original_cache['writer_fd_identity']
+    if type(pass_fds) is not tuple or len(pass_fds) != 1:
+        raise HandshakeError('Original backend writer lifetime descriptor set differs')
+    writer_fds = tuple(_shutdown_fd(fd) for fd in pass_fds); private_identity = _shutdown_fd(private_fd)
+    if writer_fds[0][1:3] != fd_identity or private_identity[1:3] != fd_identity:
+        raise HandshakeError('Original backend writer descriptor differs from admitted identity')
+    original_proof = _canonical(proof); original_challenge = _canonical(challenge)
+    lifespan = _admission_capability(root, exclusive=False)
+    if lifespan is None: raise HandshakeError('Original backend shared lifespan is unavailable')
+    pid = os.getpid(); thread = threading.current_thread(); parent = os.getppid()
+    session = os.getsid(0); process_group = os.getpgrp()
+    attempt = object(); original_cache['shutdown_prepare_attempt'] = attempt
+    def original():
+        current = _backend_shutdown_endpoint(original_cache)
+        if (os.getpid() != pid or threading.current_thread() is not thread or os.getppid() != parent
+                or os.getsid(0) != session or os.getpgrp() != process_group
+                or original_cache['root'] is not root or original_cache['context'] is not context_record
+                or original_cache['socket'] is not sock or original_cache['preflight_queue'] is not queue
+                or original_cache['admission'] is not admission or original_cache['proof'] is not proof
+                or original_cache['challenge'] is not challenge or original_cache['writer_guard'] is not writer_guard
+                or original_cache['writer_handle'] is not handle or handle.pass_fds != pass_fds
+                or original_cache['writer_private_fd'] != private_fd or original_cache['writer_fd_identity'] != fd_identity
+                or original_cache.get('source_cpu_queue') is not source_queue
+                or original_cache.get('shutdown_prepare_attempt') is not attempt
+                or _canonical(proof) != original_proof or _canonical(challenge) != original_challenge
+                or _admission_capability(root, exclusive=False) is not lifespan
+                or tuple(_shutdown_fd(fd) for fd in pass_fds) != writer_fds
+                or _shutdown_fd(private_fd) != private_identity or time.monotonic() >= deadline):
+            raise HandshakeError('Original backend preparation custody changed or completed late')
+        return current
+    original()
+    from backend.engine.application_shutdown_transaction import asset_custody
+    asset_error = None
+    try: assets_before = asset_custody(root, challenge['binding'])
+    except BaseException as exc: asset_error = exc; assets_before = None
+    fresh = _validate(root, context[1], challenge, absolute_deadline=deadline, before_acquire=original)
+    original()
+    if fresh != proof:
+        raise HandshakeError('Original backend shutdown full admission changed')
+    assets = asset_custody(root, challenge['binding'])
+    if asset_error is not None or assets != assets_before:
+        raise HandshakeError('Original backend preparation asset custody changed') from asset_error
+    startup_receipts = admission.prepare_startup_threads(deadline)
+    original()
+    _finish_fresh_startup_observation(original_cache, deadline, startup_receipts)
+    original()
+    controls = _backend_shutdown_controls(original_cache)
+    original()
+    if (controls['row']['writer_drain']['phase'] != 'enrolled'
+            or controls['epoch']['registry']['state'] != 'open'):
+        raise HandshakeError('Original backend preparation requires the open enrolled writer epoch')
+    mint = object(); _BACKEND_SHUTDOWN_MINTS.add(mint)
+    try: capability = _BackendShutdown(_mint=mint)
+    finally: _BACKEND_SHUTDOWN_MINTS.discard(mint)
+    _BACKEND_SHUTDOWNS[capability] = {'pid': pid, 'thread': thread, 'parent_pid': parent,
+        'session': session, 'process_group': process_group,
+        'cache': original_cache, 'root': original_cache['root'], 'context': original_cache['context'],
+        'socket': original_cache['socket'], 'queue': queue, 'source_queue': source_queue,
+        'admission': original_cache['admission'], 'lifespan': lifespan,
+        'proof_record': proof, 'challenge_record': original_cache['challenge'],
+        'proof': original_proof, 'challenge': original_challenge,
+        'writer_guard': original_cache['writer_guard'], 'writer_handle': handle, 'pass_fds': handle.pass_fds,
+        'writer_fds': writer_fds,
+        'private_fd': private_fd, 'private_identity': private_identity,
+        'writer_fd_identity': original_cache['writer_fd_identity'], 'assets': assets,
+        'controls': copy.deepcopy(controls), 'prepare': json.loads(_canonical(frame)),
+        'deadline': deadline, 'phase': 'prepared', 'failed': False, 'sent': False, 'attempt': attempt}
+    capability.fresh(deadline)
+    return capability
+
+
 def backend_execution_service(stop_event=None):
     """Consume at most one controller-origin CPU request after admitted ready.
 
@@ -863,6 +1477,7 @@ def backend_execution_service(stop_event=None):
     queue = _CACHE['preflight_queue']
     if type(queue) is not BackendRelayQueue: raise HandshakeError('Original backend sole reader queue differs')
     queue.claim_reader(); pending = None; cpu = None; drain = None; closing_deadline = None; closing_unsupported = None
+    shutdown = None; closing_status = None
     from backend.engine.application_owned_cpu_child_relay import CpuRelayQueue
     source_queue=original_cache.get('source_cpu_queue'); source_pending=None
     if source_queue is not None:
@@ -871,6 +1486,7 @@ def backend_execution_service(stop_event=None):
     original_admission = original_cache['admission']
     original_context = original_cache['context']
     original_proof = _canonical(proof); original_challenge = _canonical(original_cache['challenge'])
+    original_proof_record = proof; original_challenge_record = original_cache['challenge']
 
     def closing_current():
         # The post-send terminal receipt permits only bounded local stopping.
@@ -889,12 +1505,14 @@ def backend_execution_service(stop_event=None):
                 or queue._closed_deadline != closing_deadline):
             raise HandshakeError('Original terminal service closing context changed')
         queue._fresh(sock, reader=True)
+        if shutdown is not None: shutdown.fresh(closing_deadline)
         if time.monotonic() >= closing_deadline:
             raise HandshakeError('Original terminal service closing deadline expired')
         snapshot = original_admission.snapshot()
         if (not original_admission._closed or not set(closing_unsupported).issubset(snapshot['unsupported'])
                 or pending is not None or cpu is not None or drain is not None
-                or queue._active is not None or snapshot['active_scopes'] != 0):
+                or queue._active is not None
+                or snapshot['active_scopes'] != 0 and (shutdown is None or closing_status != 'refused')):
             raise HandshakeError('Original terminal service closing still has accepted work')
         if source_queue is not None:
             source_queue._fresh(sock,reader=True)
@@ -914,6 +1532,9 @@ def backend_execution_service(stop_event=None):
                     closing_current()
                     continue
                 if stop_event is not None and stop_event.is_set(): return
+                if shutdown is not None and (pending is not None or source_pending is not None or cpu is not None
+                        or queue._active is not None or source_queue is not None and source_queue._active is not None):
+                    raise HandshakeError('Prepared shutdown refuses unresolved accepted exchanges without clearing them')
                 context=_root_context()
                 if _CACHE is not original_cache or context is None or _context()!=original_cache['context']:raise HandshakeError('CPU backend process context changed')
                 # Idle polling holds no publication mutex. Exact endpoint and
@@ -968,10 +1589,13 @@ def backend_execution_service(stop_event=None):
                             'backend_proof': proof, 'status': 'refused' if snapshot['active_scopes'] or snapshot['unsupported'] else 'managed_scopes_drained',
                             **snapshot, 'scope': 'reviewed_foreground_scopes_only', 'whole_writer_coverage': False,
                             'process_tree_exit_verified': False, 'can_release_launch_lease': False}
-                        proof = _validate_service_action(original_cache, drain['deadline'])
+                        proof = (shutdown.fresh(drain['deadline']) if shutdown is not None
+                                 else _validate_service_action(original_cache, drain['deadline']))
                         validate_drain_receipt(completed, drain['frame'], backend_process=proof['process'])
                         send_frame(sock, completed, absolute_deadline=drain['deadline'])
-                        _validate_service_action(original_cache, drain['deadline'])
+                        (shutdown.fresh(drain['deadline']) if shutdown is not None
+                         else _validate_service_action(original_cache, drain['deadline']))
+                        closing_status = completed['status']
                         closing_deadline = drain['deadline']; closing_unsupported = tuple(completed['unsupported']); drain = None
                         closing_current()
                         continue
@@ -990,11 +1614,84 @@ def backend_execution_service(stop_event=None):
                 if drain is not None: budget = min(budget, drain['deadline']-time.monotonic())
                 if budget <= 0: raise HandshakeError('Original private service request deadline expired')
                 deadline = time.monotonic()+budget
-                proof = _validate_service_action(original_cache, deadline)
-                if source_queue is not None:source_queue._fresh(sock,reader=True)
-                frame=read_frame(sock,deadline-time.monotonic())
-                proof = _validate_service_action(original_cache, deadline)
-                if source_queue is not None:source_queue._fresh(sock,reader=True)
+                original_frame_deadline = deadline
+                incoming_started = time.monotonic()
+                if (shutdown is None and not drained
+                        and _peek_backend_shutdown_prepare(sock, original_frame_deadline,
+                            lambda: _backend_shutdown_endpoint(original_cache))):
+                    _backend_shutdown_endpoint(original_cache)
+                    frame = read_frame(sock, original_frame_deadline-time.monotonic())
+                    _backend_shutdown_endpoint(original_cache)
+                    if pending is not None or source_pending is not None or cpu is not None:
+                        raise HandshakeError('Original preparation refuses pending work without clearing it')
+                    shutdown = _prepare_backend_shutdown(original_cache, frame, started=incoming_started)
+                    send_frame(sock, shutdown.prepared_frame(), absolute_deadline=shutdown.deadline)
+                    shutdown.fresh(shutdown.deadline)
+                    continue
+                initial_cpu_deadline = None; frozen_initial_cpu = False
+                if shutdown is not None:
+                    deadline = min(deadline, shutdown.deadline)
+                    proof = shutdown.fresh(deadline)
+                    frame = read_frame(sock, deadline-time.monotonic())
+                    proof = shutdown.fresh(deadline)
+                    if frame.get('kind') != 'backend_drain_request':
+                        raise HandshakeError('Prepared shutdown accepts only its original drain gate')
+                else:
+                    initial_cpu_deadline = None
+                    frozen_initial_cpu = (getattr(sys, 'frozen', False) is True
+                        and original_cache['proof'].get('frozen') is True
+                        and source_queue is None and original_cache.get('source_cpu_queue') is None
+                        and pending is None and source_pending is None and cpu is None and drain is None
+                        and not executed and not drained
+                        and original_cache.get('original_cpu_execution') is None
+                        and original_cache.get('preflight_drain_deadline') is None)
+                    if frozen_initial_cpu:
+                        # One original CPU action fence includes both full fresh
+                        # binding reads. Transport alone retains its separate 10s
+                        # bound; no proof or deadline is adopted from a frame.
+                        initial_cpu_deadline = time.monotonic()+210
+                        def initial_cpu_current():
+                            current = _root_context()
+                            if (_CACHE is not original_cache or current is None or current[0] != root
+                                    or original_cache['root'] is not root or _context() != original_context
+                                    or original_cache['context'] is not original_context
+                                    or not original_cache['ready'] or original_cache['socket'] is not sock
+                                    or original_cache['preflight_queue'] is not queue
+                                    or original_cache['admission'] is not original_admission
+                                    or original_cache['proof'] is not original_proof_record
+                                    or original_cache['challenge'] is not original_challenge_record
+                                    or _canonical(original_cache['proof']) != original_proof
+                                    or _canonical(original_cache['challenge']) != original_challenge
+                                    or getattr(sys, 'frozen', False) is not True
+                                    or original_cache['proof'].get('frozen') is not True
+                                    or original_cache.get('source_cpu_queue') is not None
+                                    or source_queue is not None or pending is not None or source_pending is not None
+                                    or cpu is not None or drain is not None or executed or drained
+                                    or original_cache.get('original_cpu_execution') is not None
+                                    or original_cache.get('preflight_drain_deadline') is not None):
+                                raise HandshakeError('Original initial frozen CPU service context changed')
+                            queue._fresh(sock, reader=True)
+                            if time.monotonic() >= initial_cpu_deadline:
+                                raise HandshakeError('Original initial frozen CPU action deadline expired')
+                        initial_cpu_current()
+                        deadline = initial_cpu_deadline
+                    proof = _validate_service_action(original_cache, deadline)
+                    if source_queue is not None:source_queue._fresh(sock,reader=True)
+                    read_deadline = deadline
+                    if frozen_initial_cpu:
+                        initial_cpu_current()
+                        read_deadline = min(time.monotonic()+10, initial_cpu_deadline)
+                    frame=read_frame(sock,read_deadline-time.monotonic())
+                    if frozen_initial_cpu:
+                        if time.monotonic() >= read_deadline:
+                            raise HandshakeError('Original initial frozen CPU frame completed late')
+                        initial_cpu_current()
+                    proof = _validate_service_action(original_cache, deadline)
+                    if source_queue is not None:source_queue._fresh(sock,reader=True)
+                    if frozen_initial_cpu:
+                        initial_cpu_current()
+                        if frame.get('kind') != 'cpu_execution_request' and time.monotonic() >= original_frame_deadline:
+                            raise HandshakeError('Original non-CPU private service request completed late')
                 if frame.get('kind') == 'controller_preflight_reply':
                     if pending is None: raise HandshakeError('Original preflight reply is unsolicited or replayed')
                     queue.complete(pending, frame); pending = None
@@ -1009,7 +1706,8 @@ def backend_execution_service(stop_event=None):
                     continue
                 if frame.get('kind') == 'backend_drain_request':
                     if drained:raise HandshakeError('Managed drain request replay requires recovery')
-                    started = time.monotonic()
+                    started = incoming_started if shutdown is not None else time.monotonic()
+                    if shutdown is not None: shutdown.begin_drain(frame, started=started)
                     writer = _CACHE['challenge'].get('writer')
                     if writer is None or _CACHE['writer_guard'] is None:
                         raise HandshakeError('Managed drain requires original retained writer admission')
@@ -1024,12 +1722,17 @@ def backend_execution_service(stop_event=None):
                     state = _CACHE['admission']; state.close(); drained = True
                     drain = {'frame': frame, 'deadline': started+frame['budget_ms']/1000}
                     _CACHE['preflight_drain_deadline'] = drain['deadline']
+                    with state._condition:
+                        named = state._current_project_requests
+                        if named is not None:
+                            named.deadline = drain['deadline'] if named.deadline is None else min(named.deadline, drain['deadline'])
                     queue.close_admission(drain['deadline'])
                     if source_queue is not None:source_queue.close_admission(drain['deadline'])
                 else:
                     if executed or drained:raise HandshakeError('CPU private request replay or closed admission requires recovery')
                     executed=True
-                    cpu = {'done': threading.Event(), 'result': None, 'error': None, 'deadline': time.monotonic()+210}
+                    cpu = {'done': threading.Event(), 'result': None, 'error': None, 'deadline':
+                        initial_cpu_deadline if frozen_initial_cpu and frame.get('kind') == 'cpu_execution_request' else time.monotonic()+210}
                     execution = cpu
                     def work(request=frame, authenticated=proof, state=execution):
                         try: state['result'] = execute_backend(request,authenticated,root)

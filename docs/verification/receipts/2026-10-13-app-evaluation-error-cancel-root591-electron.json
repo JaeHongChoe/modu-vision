@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "095eead84fa44225c4cf6fd8d93346ff0e92b864",
+  "source_dirty": false,
+  "test": "scripts/e2e/evaluation-evidence-transition-controls.spec.ts::native three saved evaluation families retain B class filters and score bins after canceled A history",
+  "test_source_sha256": "78a256fb77c8086dc0ceb0ca8ad6433193a440d778301d791c74421109684fd4",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "2c625ac0ea03cedb10cc29f969a52918c833bdd510c130146b36cf406392bd06",
+  "harness_sha256": "0fbb9c9007f48e46c1cbd06fa53391b58e37244df1e3808b06c4d0bb14b44a82",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "ab4605e17c7b0c8d8cb67378b8ad06bd35dad5344414d840ab9a9ca212ea490a"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "094913af0c1c90f68e42984ffd313b1305921ee98a0f722fa837a58c4ef281a6"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "236ad9c9df489e35b04ce66a57241d4aa3ae79ecc5b60fedadd7d8ce43cb5969"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "1f631a6b6bfa8884ea30d6feecb0275c949c189150e3a0058d01b104c32d7b2f"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

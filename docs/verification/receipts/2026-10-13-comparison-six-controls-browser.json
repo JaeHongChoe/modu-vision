@@ -1,0 +1,56 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "734e681373f9e7ea48a52fd0beebb4c877b30401",
+  "source_dirty": false,
+  "test": "scripts/e2e/comparison-manual-nine-controls.spec.ts::manual comparison same-job guards and controlled errors preserve pair before abandoned A submit in B",
+  "test_source_sha256": "726eaa3d1292eec51854073327d5312b0c461135358e2ee801e61c4301e1d74f",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "488a6bf39fe77413c96a5d592be2fec9224736df63f0ee5d8decc1dc8c4c9ccd",
+  "harness_sha256": "d80bec9d5185f446a2ff3b97b27a1a41955cff79537232b5128a5b2a2db603fc",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "73539fea1ffe60060dfd302742c5badfede19eb3cfa5254e9140e248106086ac"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "4601ec5721588222ba218460758b1364d74cf3a04aa48cfddd772c49e038c162"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "3f98bf78735018d9873de7629e77eb00285a0a5b91ab4a779b6ab9df242c3457"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "6aeafb08d6ac4e74e85a2d3258a450c5a8dfe756222487148607c72731687a18"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "ba64278a41db9718837589f4fd5c0f5e35f13c3f44e5bc5f0bf21b1f121f7cad"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "c0fcee5d9af2d0e4d407ccb824ffe9c2c757334688f3ff5f0a924efcdcf2dc0f"
+    },
+    {
+      "id": "screenshot-6",
+      "sha256": "3655f6652a1c1ae172be303317767c838bdf087ceeef320267d6c55d0edb6ea5"
+    },
+    {
+      "id": "screenshot-7",
+      "sha256": "3bb466c002b6adbd2584de307299fa958c5c31e9fdbea558ea8d746ecd26d8cf"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

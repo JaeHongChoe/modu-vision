@@ -9,8 +9,10 @@ recorded before a worker is launched and carry a fencing token, so an earlier
 owner can never report over a later one.
 """
 from __future__ import annotations
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_handler, observe_original_dataset_UI_operation, observe_original_dataset_UI_connection, original_dataset_UI_read_text, original_dataset_UI_read_bytes, original_dataset_UI_image_open, original_dataset_UI_file, original_dataset_UI_diagnostics_missing
 
 from backend.engine.global_store_paths import resolve_store_path, store_admission
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_global_ledger, observe_original_UI_global_job_store
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -123,6 +125,7 @@ _shared_lock = threading.Lock()
 _shared: Optional['JobStore'] = None
 
 
+@observe_original_UI_global_ledger
 def ledger() -> 'JobStore':
     """The ledger in the configured application data folder, resolved again when that folder changes."""
     global _shared
@@ -138,6 +141,7 @@ def _context_fields(context: Any) -> tuple[str, str, str, str]:
     return value['workspace_id'], value['project_id'], value['actor_id'], value['mode']
 
 
+@observe_original_UI_global_job_store
 class JobStore:
     def __init__(self, path: Path | str | None = None):
         self.path = resolve_store_path(Path(path) if path is not None else default_ledger_path())
@@ -154,6 +158,7 @@ class JobStore:
                         if 'duplicate column' not in str(exc):  # another process added it first
                             raise
 
+    @observe_original_dataset_UI_connection('ledger')
     @contextmanager
     def _connect(self):
         with store_admission(self.path):

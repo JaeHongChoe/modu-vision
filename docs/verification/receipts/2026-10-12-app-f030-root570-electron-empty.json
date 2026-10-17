@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "d88843ef220daaad0fa03feb57702190fe3db6c8",
+  "source_dirty": false,
+  "test": "scripts/e2e/ocr-empty-workbench-controls.spec.ts::native OCR empty truth prepared input completed job and model selection preserve originals through reopen",
+  "test_source_sha256": "238bb9d59cc8cb998f222e4ec38a9aeb87d0b86f35eb3e44c7d7a01f54757b62",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "05b3e92f69556d8fc6a5367f95470698e1956fb74f8ed41af1690f4b6c4b4082",
+  "harness_sha256": "b9d7a4257725363b50471e5f7d6864066646a5af8c273aed1faac197d3d65992",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "06fa07122042cb2ac477e46c50a0199fd3c947c15563a9a7f2e4e578c536a56c"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "91f85fdc7cf8d2796b4f3ee57bddd62abbddd394b9204924039a7754374e1dff"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

@@ -87,7 +87,7 @@ function fixture() {
     setImageDimensions: value => dimensions.push({...value}),
     setViewTransform: value => { annotation.viewTransform = typeof value === 'function' ? value(annotation.viewTransform) : value; transforms.push({...annotation.viewTransform}); dirty = true; },
   };
-  const project = {backendPort: 8000};
+  const project = {backendPort: 8000,project:{source_dataset_dir:'/controlled'}};
   const foundation = {displaySource: null, displaySourcePath: null, points: [], boxes: [], bind() {}};
   const hook = state => Object.assign(() => state, {getState: () => state});
   const math = load(path.resolve(__dirname, '../../utils/coordinateMath.ts'));
@@ -227,4 +227,45 @@ test('current raw failure still falls back to the current thumbnail and commits 
 test('the existing zero-natural-dimension fallback remains 512 for the current image', () => {
   const f = fixture(); try { f.complete(f.images[0], 0, 0); assert.deepEqual(f.dimensions.at(-1), {width: 512, height: 512}); }
   finally { f.close(); }
+});
+
+
+test('project selection suppresses old raw reload when display source is cleared', () => {
+  const f=fixture();try{
+    const count=f.sourceAssignments.length;
+    f.project.isProjectBusy=true;f.project.projectDir='/owned/next';
+    f.foundation.displaySourcePath=f.annotation.currentImage.file_path;f.foundation.displaySource='/owned/old-display.png';
+    f.render();assert.equal(f.sourceAssignments.length,count,'No image read while project selection owns the transition');
+    f.annotation.currentImage={image_id:'b',file_path:'/controlled/b.png',file_name:'b.png'};
+    f.project.isProjectBusy=false;f.render();
+    assert.equal(f.sourceAssignments.length,count+1);assert.match(f.images.at(-1).src,/raw\/b\.png/);
+  }finally{f.close();}
+});
+
+test('project change fences retained raw callbacks before React cleanup runs', () => {
+  const f=fixture();try{
+    const old=f.images[0],load=old.onload,error=old.onerror,before=f.observation();
+    f.project.projectDir='/owned/other';f.project.isProjectBusy=true;
+    load();error(new Error('Old project callback before effect cleanup'));
+    assert.deepEqual(f.observation(),before);
+  }finally{f.close();}
+});
+
+
+test('old gallery selection cannot load in another project after busy settles', () => {
+  const f=fixture();try{
+    const before=f.sourceAssignments.length;
+    f.project.project={source_dataset_dir:'/different-source'};f.project.projectDir='/owned/other';
+    f.foundation.displaySource='/old.png';f.foundation.displaySourcePath=f.annotation.currentImage.file_path;
+    f.project.isProjectBusy=false;f.render();
+    assert.equal(f.sourceAssignments.length,before,'A carried old gallery row cannot read under the new project');
+  }finally{f.close();}
+});
+
+test('an explicitly selected evidence image outside the current gallery still loads', () => {
+  const f=fixture();try{
+    f.project.project={source_dataset_dir:'/different-source'};f.project.projectDir='/owned/other';
+    f.annotation.externalSelectionPath=f.annotation.currentImage.file_path;f.render();
+    assert.match(f.images.at(-1).src,/raw\/a\.png/);assert.equal(f.sourceAssignments.length,2);
+  }finally{f.close();}
 });

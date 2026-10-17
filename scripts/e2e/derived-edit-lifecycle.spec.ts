@@ -265,3 +265,249 @@ test('native derived align and brightness lifecycle binds exact saved pixels lab
     if (!response.ok) throw Error(`Owned derived lifecycle API ${response.status}: ${await response.text()}`); return response.json();
   }, {port: backend.port, route, body, method}); await exercise(page, workspace, evidence, api, true);
 });
+
+
+// U014 empty actions: an empty owning project exposes no image-edit controls.
+// The populated A saves below are support controls; only the two empty cells
+// are proposed. Ordinary project selection returns to the exact saved A rows.
+function u014EmptyRawTree(root: string): any {
+  if (!fs.existsSync(root)) return {exists: false, rows: {}};
+  const rows: Record<string, unknown> = {};
+  const identity = (s: fs.BigIntStats) => [s.dev, s.ino, s.mode, s.nlink, s.size, s.mtimeNs, s.ctimeNs].map(String);
+  const visit = (file: string) => {
+    const before = fs.lstatSync(file, {bigint: true}); expect(before.isSymbolicLink()).toBe(false);
+    const relative = path.relative(root, file).split(path.sep).join('/') || '.';
+    if (before.isDirectory()) {
+      const children = fs.readdirSync(file).sort(); rows[relative] = {kind: 'directory', identity: identity(before), children};
+      for (const child of children) visit(path.join(file, child));
+    } else {
+      expect(before.isFile()).toBe(true); const bytes = fs.readFileSync(file);
+      expect(identity(fs.lstatSync(file, {bigint: true}))).toEqual(identity(before));
+      rows[relative] = {kind: 'file', identity: identity(before), sha256: sha(bytes)};
+    }
+  };
+  visit(root); return {exists: true, rows};
+}
+
+test('native empty align and brightness actions preserve owning A versions through empty B and exact reopen', {tag: '@electron'}, async ({electronSession, workspace: w, evidence: e}) => {
+  const page = electronSession.window, backend = await electronSession.waitForBackend();
+  const api: Api = (route, body, method) => page.evaluate(async ({port, route, body, method}) => {
+    const response = await fetch(`http://127.0.0.1:${port}${route}`, {method: method || (body === undefined ? 'GET' : 'POST'),
+      ...(body === undefined ? {} : {headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)})});
+    if (!response.ok) throw Error(`Owned empty derived API ${response.status}: ${await response.text()}`);
+    return response.json();
+  }, {port: backend.port, route, body, method});
+  const source = path.join(w.root, 'u014-empty-originals'); fs.mkdirSync(source);
+  const original = path.join(source, 'part.png'); fs.writeFileSync(original, png(64, 3, (x, y) => [x * 3, y * 3, (x + y) % 200]));
+  const sourceSha = fileSha(original), actor = 'u014-empty-owned-fixture';
+  const pixels = JSON.parse(execFileSync(harness.resolvePython(), ['-c', pixelControl, original, path.join(w.logs, 'u014-empty-independent-pixels')],
+    {cwd: harness.REPO_ROOT, encoding: 'utf8', timeout: 15_000}));
+  expect(pixels.original_sha256).toBe(sourceSha); for (const row of Object.values(pixels.expected) as any[]) e.addFile(row.path);
+  const A = await api('/api/project/create', {name: 'U014 populated owner A', task: 'segmentation'});
+  const activeA = await api('/api/project/update', {source_dataset_dir: source}, 'PUT');
+  await api('/api/dataset/import', {folder_path: source, task: 'segmentation', validate_images: false});
+  const saved = await api('/api/annotations/save', {image_id: 'part', image_path: original, image_width: 64, image_height: 64,
+    actor, annotations: [{id: 'u014-original-box', type: 'bbox', label: 'Defect', category_id: 1,
+      bbox: [8, 10, 40, 44], direction_deg: 20, text: 'A01'}]});
+  const payload = {image_path: original, expected_revision: saved.metadata.revision, expected_sha256: sourceSha, actor};
+  // A genuine pre-baseline seed initializes the original derive storage/locks.
+  const seed = await api(endpoint, {...payload, operation: {kind: 'brightness', factor: 1.1}});
+  const B = await api('/api/project/create', {name: 'U014 empty owner B', task: 'segmentation'});
+  expect(B.id).not.toBe(A.id); expect(B.project_dir).not.toBe(A.project_dir); expect(B.source_dataset_dir).toBeNull();
+  for (const owner of [A, B]) {
+    const relative = path.relative(w.root, owner.project_dir); expect(relative).not.toBe('');
+    expect(path.isAbsolute(relative) || relative.split(path.sep).includes('..')).toBe(false);
+  }
+  const panel = page.getByRole('region', {name: '파생 이미지 편집', exact: true});
+  const choice = panel.getByLabel('파생 편집 기준 버전', {exact: true});
+  const stages = page.getByRole('navigation', {name: 'Workflow Stages'});
+  const writes: any[] = [], ownerSelections: any[] = [], outputs: any[] = [], emptyObservations: any[] = [], pageErrors: string[] = [];
+  const reviewAdoptionEmptyObservations: any[] = [];
+  let phase = 'setup', primary: unknown = null; const secondary: any[] = [];
+  const routes: Array<{pattern: string; handler: (route: Route) => Promise<void>}> = [];
+  const observe = (request: Request) => {
+    const address = new URL(request.url()); if (!address.pathname.startsWith('/api/') || ['GET', 'HEAD', 'OPTIONS'].includes(request.method())) return;
+    let body: any; try {body = request.postDataJSON();} catch {body = request.postData();}
+    writes.push({phase, method: request.method(), endpoint: address.pathname, body, headers: request.headers()});
+  };
+  const onError = (error: Error) => pageErrors.push(error.message);
+  page.on('request', observe); page.on('pageerror', onError);
+  const focusOff = async () => {
+    const focus = page.getByRole('button', {name: '집중 편집', exact: true});
+    if (await focus.getAttribute('aria-pressed') === 'true') await focus.click();
+    await expect(focus).toHaveAttribute('aria-pressed', 'false');
+  };
+  const openOwner = async (owner: any) => {
+    await page.getByTitle('프로젝트 관리', {exact: true}).click(); const dialog = page.getByRole('dialog', {name: '프로젝트 관리', exact: true});
+    await dialog.getByRole('button', {name: '폴더에서 열기', exact: true}).click();
+    await dialog.getByPlaceholder('/path/to/project', {exact: true}).fill(owner.project_dir);
+    const wait = page.waitForResponse(response => response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/project/open');
+    await dialog.getByRole('button', {name: '프로젝트 열기', exact: true}).click(); const response = await wait;
+    expect(response.status()).toBe(200); expect(response.request().postDataJSON()).toEqual({project_dir: owner.project_dir});
+    const selected = await response.json(); expect(selected).toMatchObject({id: owner.id, name: owner.name, project_dir: owner.project_dir,
+      task: 'segmentation', source_dataset_dir: owner.id === A.id ? source : null});
+    const context = JSON.parse(response.headers()['x-vision-context']); expect(context.project_id).toBe(owner.id);
+    await expect(dialog).toHaveCount(0); await expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(owner.name);
+    expect(await api('/api/project/current')).toMatchObject({id: owner.id, project_dir: owner.project_dir, source_dataset_dir: selected.source_dataset_dir});
+    expect((await api('/api/context')).project_context).toEqual(context);
+    ownerSelections.push({owner: owner.id, selected, response_context: context}); return context;
+  };
+  const mountA = async (historyCount: number) => {
+    await stages.getByRole('button').nth(1).click(); await expect(page.getByTestId('annotation-save-button')).toHaveText('Saved'); await focusOff();
+    const summary = page.locator('summary').filter({hasText: '원본 보존 이미지 편집 · 파생 버전'});
+    if (await summary.locator('..').getAttribute('open') === null) await summary.click();
+    await expect(panel).toBeVisible(); await expect(choice.locator('option')).toHaveCount(historyCount + 1);
+    await expect(panel.getByRole('alert')).toHaveCount(0);
+  };
+  const historyEndpoint = endpoint + '?image_path=' + encodeURIComponent(original);
+  const annotationEndpoint = '/api/annotations/part?file_path=' + encodeURIComponent(original);
+  const workbench = path.join(A.dataset_dir, 'data_workbench'), BWorkbench = path.join(B.dataset_dir, 'data_workbench');
+  let contextA: any, metadataBefore: any, annotationBefore: any, protectedBefore: any, workbenchBefore: Record<string, string> = {};
+  let expectedWorkbench: Record<string, string> = {}, expectedHistory: any[] = [], BBefore: any;
+  const protectedRoots = {source, annotations: activeA.annotations_dir || A.annotations_dir, reports: A.reports_dir || path.join(A.project_dir, 'reports'),
+    splits: path.join(A.dataset_dir, 'splits')};
+  const immutable = () => {for (const [name, root] of Object.entries(protectedRoots)) expect(u014EmptyRawTree(root)).toEqual(protectedBefore[name]);};
+  const unchangedA = async () => {
+    immutable(); expect(tree(workbench)).toEqual(expectedWorkbench);
+    expect((await api('/api/dataset/metadata?limit=100')).items).toEqual(metadataBefore); expect(await api(annotationEndpoint)).toEqual(annotationBefore);
+    expect((await api(historyEndpoint)).versions).toEqual(expectedHistory);
+    expect(await api('/api/project/current')).toMatchObject({id: A.id, project_dir: A.project_dir, source_dataset_dir: source});
+    expect((await api('/api/context')).project_context).toEqual(contextA);
+  };
+  try {
+    await page.reload(); await expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(B.name);
+    contextA = await openOwner(A); await mountA(1);
+    await page.getByRole('button', {name: '이미지 정보·검토', exact: true}).click();
+    await page.getByRole('region', {name: '이미지 정보와 검토 기록'}).getByLabel('작업자·검토자 이름', {exact: true}).fill(actor);
+    await page.getByRole('button', {name: '이미지 정보·검토', exact: true}).click();
+    // Warm genuine read-side report/metadata namespaces before immutable capture.
+    await api('/api/team-data'); await api('/api/team-data/readiness'); await api('/api/project/preferences');
+    await api('/api/data-workbench/review-evaluations'); await api('/api/dataset/metadata/split');
+    metadataBefore = (await api('/api/dataset/metadata?limit=100')).items; expect(metadataBefore).toHaveLength(1);
+    expect(metadataBefore[0]).toMatchObject({image_uuid: saved.metadata.image_uuid, file_path: original, content_hash: sourceSha, revision: saved.metadata.revision});
+    annotationBefore = await api(annotationEndpoint); expect(annotationBefore.annotations).toHaveLength(1); expect(annotationBefore.metadata.workflow_state).not.toBe('approved');
+    expectedHistory = (await api(historyEndpoint)).versions; expect(expectedHistory).toHaveLength(1); expect(expectedHistory[0].id).toBe(seed.id);
+    protectedBefore = Object.fromEntries(Object.entries(protectedRoots).map(([name, root]) => [name, u014EmptyRawTree(root)]));
+    workbenchBefore = tree(workbench); expectedWorkbench = {...workbenchBefore}; phase = 'populated-A';
+    for (const kind of ['align', 'brightness'] as const) {
+      const operation = kind === 'align' ? {kind, degrees: 30} : {kind, factor: .7};
+      await choice.selectOption(''); await panel.getByLabel(kind === 'align' ? '파생 이미지 정렬 각도' : '파생 이미지 밝기 배율', {exact: true}).fill(kind === 'align' ? '30' : '0.7');
+      const button = panel.getByRole('button', {name: kind === 'align' ? '정렬 새 버전 저장' : '밝기 새 버전 저장', exact: true}); await expect(button).toBeEnabled();
+      const wait = page.waitForResponse(response => response.request().method() === 'POST' && new URL(response.url()).pathname === endpoint);
+      await button.click(); const response = await wait; expect(response.status()).toBe(200); expect(response.request().postDataJSON()).toEqual({...payload, operation});
+      const headers = await response.request().allHeaders(); expect(headers['x-vision-project']).toBe(A.id); expect(JSON.parse(headers['x-vision-context'])).toEqual(contextA);
+      expect(JSON.parse(response.headers()['x-vision-context'])).toEqual(contextA);
+      const made = await response.json(); expect(made).toMatchObject({scope: {task: 'segmentation', labelset_id: A.active_labelset_id || 'default'}, parent_id: null,
+        source_path: original, source_relative_path: 'part.png', source_sha256: sourceSha, actor, operation,
+        derived_sha256: pixels.expected[kind].sha256, size: pixels.expected[kind].size, omitted_annotation_ids: []});
+      expect(path.relative(workbench, made.dataset_path).split(path.sep).includes('..') || path.isAbsolute(path.relative(workbench, made.dataset_path))).toBe(false);
+      expect(fs.readFileSync(made.file_path)).toEqual(fs.readFileSync(pixels.expected[kind].path)); expect(made.annotations).toHaveLength(1);
+      if (kind === 'brightness') expect(made.annotations).toEqual(annotationBefore.annotations);
+      else {
+        const radians = Math.PI / 6, co = Math.cos(radians), si = Math.sin(radians), [width, height] = made.size;
+        const points = [[8, 10], [40, 10], [40, 44], [8, 44]].map(([x, y]) => [co * (x - 32) - si * (y - 32) + width / 2, si * (x - 32) + co * (y - 32) + height / 2]);
+        expect(made.annotations[0]).toMatchObject({id: annotationBefore.annotations[0].id, type: 'polygon', label: 'Defect', category_id: 1, direction_deg: 50, text: 'A01'});
+        for (const [i, point] of points.entries()) for (const [axis, value] of point.entries()) expect(made.annotations[0].polygon[i][axis]).toBeCloseTo(value, 12);
+        expect(made.annotations[0].points).toEqual(made.annotations[0].polygon);
+      }
+      const outputTree = tree(made.dataset_path); expect(Object.keys(outputTree).sort()).toEqual(['annotations.json', 'images/derived.json', 'images/derived.png', 'masks/derived.png', 'version.json']);
+      for (const [name, digest] of Object.entries(made.annotation_files_sha256)) expect(outputTree[name]).toBe(digest);
+      const relative = path.relative(workbench, made.dataset_path).split(path.sep).join('/');
+      expectedWorkbench = {...expectedWorkbench, ...Object.fromEntries(Object.entries(outputTree).map(([name, digest]) => [relative + '/' + name, digest]))};
+      const reopened = await api(endpoint + '/' + made.id); expect(reopened).toEqual({...made, review_revision: 0, review: null});
+      expectedHistory = [...expectedHistory, reopened]; await expect(choice).toHaveValue(made.id); await unchangedA();
+      const raw = u014EmptyRawTree(made.dataset_path); outputs.push({kind, row: reopened, raw_tree: raw, outputTree});
+      for (const file of Object.keys(outputTree)) e.addFile(path.join(made.dataset_path, file));
+    }
+    expect(new Set(outputs.map(output => output.row.id)).size).toBe(2); await e.screenshot(page, 'u014-empty-populated-A-two-real-saved-versions');
+    // Exact populated-A controls anchor the two supplemental empty-B absence checks.
+    await expect(panel.getByRole('button', {name: '변환 이미지·라벨 검수 후 채택 후보', exact: true})).toHaveCount(1);
+    await expect(panel.getByRole('button', {name: '검수한 파생본으로 새 학습 데이터 저장', exact: true})).toHaveCount(1);
+    phase = 'empty-B'; const contextB = await openOwner(B); expect(contextB.project_id).not.toBe(contextA.project_id);
+    await stages.getByRole('button').nth(1).click(); await focusOff();
+    await expect(page.locator('[data-labeling-work-area]')).toBeVisible(); await expect(panel).toHaveCount(0);
+    for (const name of ['정렬 새 버전 저장', '밝기 새 버전 저장']) await expect(page.getByRole('button', {name, exact: true})).toHaveCount(0);
+    await expect(page.getByRole('button', {name: '변환 이미지·라벨 검수 후 채택 후보', exact: true})).toHaveCount(0);
+    await expect(page.getByRole('button', {name: '검수한 파생본으로 새 학습 데이터 저장', exact: true})).toHaveCount(0);
+    for (const name of ['파생 이미지 정렬 각도', '파생 이미지 밝기 배율', '파생 편집 기준 버전']) await expect(page.getByLabel(name, {exact: true})).toHaveCount(0);
+    BBefore = u014EmptyRawTree(BWorkbench); expect(BBefore.exists).toBe(false); immutable(); expect(tree(workbench)).toEqual(expectedWorkbench);
+    const emptyCurrent = await api('/api/project/current'); expect(emptyCurrent).toMatchObject({id: B.id, project_dir: B.project_dir, source_dataset_dir: null});
+    expect((await api('/api/context')).project_context).toEqual(contextB);
+    expect(writes.filter(row => row.phase === 'empty-B' && row.endpoint === endpoint)).toEqual([]);
+    const emptyReviewPOSTs = writes.filter(row => row.phase === 'empty-B' && row.method === 'POST' && /^\/api\/data-workbench\/derived\/[^/]+\/review$/.test(row.endpoint));
+    const emptyAdoptionPOSTs = writes.filter(row => row.phase === 'empty-B' && row.method === 'POST' && row.endpoint === '/api/data-workbench/derived-adoptions');
+    const emptyTrainingPOSTs = writes.filter(row => row.phase === 'empty-B' && row.method === 'POST' && row.endpoint === '/api/training/start');
+    expect(emptyReviewPOSTs).toEqual([]); expect(emptyAdoptionPOSTs).toEqual([]); expect(emptyTrainingPOSTs).toEqual([]);
+    for (const [action, label] of [['derived-reviewed-adoption', '변환 이미지·라벨 검수 후 채택 후보'], ['derived-new-training-source', '검수한 파생본으로 새 학습 데이터 저장']]) {
+      const controlCount = await page.getByRole('button', {name: label, exact: true}).count(); expect(controlCount).toBe(0);
+      reviewAdoptionEmptyObservations.push({scenario_id: 'U014.' + action + '.empty', owner: B.id, context: contextB,
+        source_dataset_dir: null, current_image_absent_panel_branch: true, exact_control_label: label, actual_control_count: controlCount,
+        actual_review_POSTs: emptyReviewPOSTs, actual_adoption_POSTs: emptyAdoptionPOSTs, actual_training_start_POSTs: emptyTrainingPOSTs,
+        original_A_image_uuid: saved.metadata.image_uuid, original_A_revision: saved.metadata.revision});
+    }
+    await e.screenshot(page, 'u014-empty-owning-B-no-derived-image-or-save-controls');
+    expect(u014EmptyRawTree(BWorkbench)).toEqual(BBefore);
+    emptyObservations.push(...['align-version-save', 'brightness-version-save'].map(action => ({scenario_id: 'U014.' + action + '.empty', owner: B.id,
+      context: contextB, source_dataset_dir: null, current_image_absent_panel_branch: true, actual_save_control_count: 0, actual_derived_POST_count: 0,
+      original_A_image_uuid: saved.metadata.image_uuid, original_A_revision: saved.metadata.revision})));
+    phase = 'return-A'; const returnedContext = await openOwner(A); expect(returnedContext).toEqual(contextA); await mountA(3); await expect(choice).toHaveValue('');
+    for (const output of outputs) {
+      const imageEndpoint = endpoint + '/' + output.row.id + '/image';
+      const handler = async (route: Route) => {expect(route.request().method()).toBe('GET'); await route.fallback();};
+      const pattern = '**' + imageEndpoint; await page.route(pattern, handler); routes.push({pattern, handler});
+      const wait = page.waitForResponse(response => response.request().method() === 'GET' && new URL(response.url()).pathname === imageEndpoint);
+      await choice.selectOption(output.row.id); const response = await wait; expect(response.status()).toBe(200);
+      // The SVG uses resolveApiUrl, not request(): prove its real owning backend URL and bytes.
+      const imageAddress = new URL(response.url()); expect(imageAddress.origin).toBe(`http://127.0.0.1:${backend.port}`);
+      expect(imageAddress.pathname).toBe(imageEndpoint); expect(imageAddress.search).toBe('');
+      expect((await api('/api/context')).project_context).toEqual(contextA);
+      const body = await response.body(); expect(body).toEqual(fs.readFileSync(output.row.file_path)); expect(sha(body)).toBe(output.row.derived_sha256);
+      output.reopened_image = {url: response.url(), sha256: sha(body), request_headers: await response.request().allHeaders(), selected_owner_context: contextA};
+      const preview = panel.getByRole('img', {name: '편집 원본과 변환 라벨 미리보기', exact: true}); await expect(preview).toHaveAttribute('viewBox', '0 0 ' + output.row.size.join(' '));
+      expect(new URL((await preview.locator('image').first().getAttribute('href'))!, page.url()).pathname).toBe(imageEndpoint);
+      const points = output.kind === 'align' ? output.row.annotations[0].polygon : [[8, 10], [40, 10], [40, 44], [8, 44]];
+      await expect(preview.locator('polygon').first()).toHaveAttribute('points', points.map((point: number[]) => point.join(',')).join(' '));
+      const detail = panel.locator('details').filter({hasText: '버전 출처와 보존 해시'}); if (await detail.getAttribute('open') === null) await detail.locator('summary').click();
+      expect(JSON.parse(await detail.locator('pre').innerText())).toMatchObject({version: output.row.id, parent: null, actor, operation: output.row.operation,
+        original_sha256: sourceSha, derived_sha256: output.row.derived_sha256, dataset_path: output.row.dataset_path});
+      expect(await api(endpoint + '/' + output.row.id)).toEqual(output.row); expect(u014EmptyRawTree(output.row.dataset_path)).toEqual(output.raw_tree);
+      await e.screenshot(page, 'u014-empty-return-A-exact-' + output.kind + '-version'); await unchangedA();
+    }
+    expect(writes.filter(row => row.endpoint === endpoint)).toHaveLength(2); expect(writes.filter(row => row.endpoint === endpoint).every(row => row.phase === 'populated-A')).toBe(true);
+    expect(writes.filter(row => ![endpoint, '/api/project/open', '/api/dataset/import'].includes(row.endpoint))).toEqual([]);
+    // Recheck the complete observed A/B/A interval, including delayed dispatch after return to A.
+    expect(writes.filter(row => row.method === 'POST' && /^\/api\/data-workbench\/derived\/[^/]+\/review$/.test(row.endpoint))).toEqual([]);
+    expect(writes.filter(row => row.method === 'POST' && row.endpoint === '/api/data-workbench/derived-adoptions')).toEqual([]);
+    expect(writes.filter(row => row.method === 'POST' && row.endpoint === '/api/training/start')).toEqual([]);
+    expect(reviewAdoptionEmptyObservations).toHaveLength(2);
+    expect(emptyObservations).toHaveLength(2); expect(ownerSelections.map(row => row.owner)).toEqual([A.id, B.id, A.id]); expect(pageErrors).toEqual([]);
+    expect(u014EmptyRawTree(BWorkbench)).toEqual(BBefore); await unchangedA();
+  } catch (error) {primary = error;}
+  finally {
+    page.off('request', observe); page.off('pageerror', onError);
+    const post = async (stage: string, read: () => unknown | Promise<unknown>) => {
+      try {await read();} catch (error) {if (primary === null) primary = error; else secondary.push({stage, error: String(error)});}
+    };
+    for (const row of routes) await post('restore-image-cache-route', () => page.unroute(row.pattern, row.handler));
+    if (protectedBefore) for (const [name, root] of Object.entries(protectedRoots)) await post('immutable-' + name, () => expect(u014EmptyRawTree(root)).toEqual(protectedBefore[name]));
+    if (BBefore) await post('empty-B-workbench', () => expect(u014EmptyRawTree(BWorkbench)).toEqual(BBefore));
+    await post('retained-proof', () => {
+      const proof = {cells: emptyObservations, owners: ownerSelections, source_sha256: sourceSha, original_image_uuid: saved.metadata.image_uuid,
+        proposed_new_empty_cells: reviewAdoptionEmptyObservations,
+        original_revision: saved.metadata.revision, original_annotation: annotationBefore, protected_before: protectedBefore,
+        protected_after: Object.fromEntries(Object.entries(protectedRoots).map(([name, root]) => [name, u014EmptyRawTree(root)])),
+        seed_prebaseline_version: seed, original_workbench_before: workbenchBefore, workbench_after: tree(workbench), outputs, writes, page_errors: pageErrors,
+        first_exception: primary === null ? null : String(primary), secondary, actual_source_Electron: true,
+        control_unavailable_because_project_has_no_current_image: true, derived_response_supplied_by_test: false,
+        original_two_cases_unchanged: true, only_empty_cells_proposed: true, model_training_inference_GPU: false,
+        installed_native_device_human_quality_parent_license_acceptance: false};
+      const file = path.join(w.logs, 'u014-empty-owner-proof.json'); fs.writeFileSync(file, JSON.stringify(proof, null, 2)); e.addFile(file); e.note('u014_empty_owned_projects', proof);
+    });
+  }
+  if (primary !== null) {
+    if (secondary.length && primary && (typeof primary === 'object' || typeof primary === 'function')) {
+      try {Object.defineProperty(primary, 'u014SecondaryFailures', {value: secondary});} catch {}
+    }
+    throw primary;
+  }
+});

@@ -1063,9 +1063,17 @@ def run_flowchart(spec_path: Path, engine_factory: Callable[[dict[str, dict[str,
             actual_device=get_device(spec.get('device'))
         status.update(status="running")
         engine = (engine_factory or _flowchart_engine)(checkpoints, str(actual_device))
-        result = engine.execute(pipeline=pipeline, image_path=str(image),
-                                image_id=spec.get("image_id") or image.stem,
-                                **({"stop_node_id":spec["stop_node_id"]} if spec.get("stop_node_id") else {}))
+        required_capture_observation = None
+        if spec.get('required_passive_capture') is None:
+            result = engine.execute(pipeline=pipeline, image_path=str(image),
+                                    image_id=spec.get("image_id") or image.stem,
+                                    **({"stop_node_id":spec["stop_node_id"]} if spec.get("stop_node_id") else {}))
+        else:
+            from backend.engine.required_flow_passive_capture import prepare_worker_observation, observe_required_engine_call, worker_capture_record
+            original_execute_kwargs = {'pipeline':pipeline,'image_path':str(image),'image_id':spec.get("image_id") or image.stem,
+                                       **({"stop_node_id":spec["stop_node_id"]} if spec.get("stop_node_id") else {})}
+            required_capture_observation = prepare_worker_observation(engine,original_execute_kwargs,spec['required_passive_capture'],spec,run_dir,actual_device)
+            result = observe_required_engine_call(engine,original_execute_kwargs,required_capture_observation)
         if (run_dir / "cancel").exists():
             return status.update(status="aborted")
         if not isinstance(result, dict):
@@ -1095,6 +1103,10 @@ def run_flowchart(spec_path: Path, engine_factory: Callable[[dict[str, dict[str,
             _atomic_bytes(run_dir / path, _png_data_url_bytes(crop.get("crop_thumbnail"), "crop thumbnail"))
             crop["crop_thumbnail"] = path
             files.append(path)
+        if required_capture_observation is not None:
+            required_capture_data = worker_capture_record(required_capture_observation,run_dir)
+            files.extend(required_capture_data['files'])
+            payload['required_passive_capture'] = required_capture_data['metadata']
         _atomic_json(run_dir / "outputs" / "flowchart_result.json", payload)
         manifest = _operation_artifact_manifest(run_dir, spec, "flowchart_run", tuple(files))
         manifest["model_refs"] = sorted(spec['models'],key=lambda row:row['job_id'])

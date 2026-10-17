@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "9d09adda461674783f9026e58930f59c6ea4be07",
+  "source_dirty": false,
+  "test": "scripts/e2e/saved-queue-remaining-controls.spec.ts::saved queue owning evaluation error recovery and real preparation document reopen preserve exact saved controls",
+  "test_source_sha256": "6bfd0b7d19d2a1338c76fd785ad52fd17efb8c5fdc1251aa5d4576d55e1c728b",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "6e990a0b5269b820d8f11430d14c5c816ea759a0c51670c584a4d766d964956e",
+  "harness_sha256": "4a4b266ee3c800e9ad887ea9e74c46fc57a7d7153ad1fa0eb77e8e4002e62793",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "feb9c2eb9c2276d4368d3747b7521d556817364d05bc0735cd141c40d2327e21"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "695ad27b86531b52d9021c2b54e60fb643391a88cbaee66b15ae9b9ae0480b35"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "2bfd2170047b8f40da8848c9466e2609ed55de1273bab9243c6bc4c321b37476"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

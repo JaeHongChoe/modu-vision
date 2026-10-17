@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "e4a15ea7deba4a9662d03b2b0f71405cb9a4fabe",
+  "source_dirty": false,
+  "test": "scripts/e2e/ocr-fitting-content.spec.ts::OCR hash-bound split empty invalid and unsent abandonment preserve saved 8 2 2 through reopen",
+  "test_source_sha256": "e6351e953a85f6d1440bff5689e00de91c53be6cf8f273e00b3e4349ce2749db",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "c96c4ab3afcc8c9444ccdb872083b87446e7fa7f719077d0c35564ddf65494a7",
+  "harness_sha256": "baf21a1475f661e553f891ce2244905c4cb5d37be08d88a1444a907e2b4ce316",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "e5aaab63e6279c7460cb3cf65e773979c8c4a2a026fea3c48bbf0be744a48de8"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "84df5c57d6bed205659e440b86d3009da2af96a76c6693d35e21d72fde25f386"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "dd18dd5944ef791e15ee8b16d038cbd0a1e7d56c15eef7fbc2266887c83bccfa"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "dd18dd5944ef791e15ee8b16d038cbd0a1e7d56c15eef7fbc2266887c83bccfa"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

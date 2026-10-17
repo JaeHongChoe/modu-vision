@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "44c923d9e91cfec197f0c7045fe7d7678ab8c138",
+  "source_dirty": false,
+  "test": "scripts/e2e/flow-readonly-control-preflights.spec.ts::native F064 empty inspector search partial-run input and unsent typed connection cancellation preserve saved originals",
+  "test_source_sha256": "ac2e7d606ea8f74110ee82831972c866381c54a02a9172c203b41ade1897fed6",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "c131503fe30a632b7776f8f3ea23bff16013779324deee30e3505fc5bfe273a7",
+  "harness_sha256": "b43726e5c4e6a8ac4b4c1776cca58c45b33a8edf742ef847343b1dcc272c7b11",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "5e7d1654c91e20a70fd65f7701091ddee35874d66112337e0dca950290e4be3f"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

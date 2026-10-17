@@ -89,6 +89,15 @@ def original_terminal(monkeypatch, tmp_path):
         return event.is_set()
 
     monkeypatch.setattr(handshake, '_validate_service_action', validated)
+    # read_frame below models the original transport frame. Classification
+    # must inspect that same next frame, rather than peek an empty socket.
+    def peek(channel, deadline, current):
+        assert channel is left
+        current()
+        return (len(state.reads) < len(state.frames)
+                and state.frames[len(state.reads)].get('kind') == 'backend_shutdown_prepare')
+
+    monkeypatch.setattr(handshake, '_peek_backend_shutdown_prepare', peek)
     monkeypatch.setattr(handshake, 'read_frame', read)
     monkeypatch.setattr(handshake, 'send_frame', send)
     monkeypatch.setattr(handshake.select, 'select', lambda r, w, x, seconds: (r, [], []))

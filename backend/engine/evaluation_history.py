@@ -1,5 +1,6 @@
 """Immutable evaluation evidence and durable comparison execution state."""
 from __future__ import annotations
+from backend.engine.original_owned_UI_ancillary_request import observe_original_dataset_provenance_operation, original_dataset_provenance_file, original_dataset_provenance_database, original_dataset_provenance_journal_read, original_dataset_UI_read_text, original_dataset_UI_read_bytes
 import hashlib
 import json
 import os
@@ -94,13 +95,14 @@ class EvaluationHistory:
             writer.write(canonical(record)); writer.flush(); os.fsync(writer.fileno())
         return record
 
+    @observe_original_dataset_provenance_operation('evaluation_get')
     def get(self, evaluation_id):
         if not isinstance(evaluation_id, str) or len(evaluation_id) != 43 or not evaluation_id.startswith('evaluation_') or any(c not in '0123456789abcdef' for c in evaluation_id[11:]):
             raise ValueError('Invalid evaluation ID')
         path = self.directory / (evaluation_id + '.json')
         if path.is_symlink():
             raise ValueError('Evaluation integrity failure')
-        record = json.loads(path.read_text(encoding='utf-8'))
+        record = json.loads(original_dataset_UI_read_text(path,encoding='utf-8'))
         evidence = {k: v for k, v in record.items() if k != 'evidence_sha256'}
         if record.get('evaluation_id') != evaluation_id or hashlib.sha256(canonical(evidence)).hexdigest() != record.get('evidence_sha256'):
             raise ValueError('Evaluation integrity failure')
@@ -141,7 +143,7 @@ def _evaluation_training_provenance(project_root, metadata):
         def read_receipt(path):
             if path.is_symlink() or not path.is_file():
                 raise ValueError('Evaluation lineage receipt is unavailable or linked')
-            return json.loads(path.read_text(encoding='utf-8'))
+            return json.loads(original_dataset_UI_read_text(path,encoding='utf-8'))
 
         project = read_receipt(root / 'project.json')
         manifest = read_receipt(version / 'manifest.json')
@@ -341,7 +343,7 @@ def archive_specialized_evaluation(project, checkpoint, source, result, *, task=
     from backend.engine.evaluation_evidence import evaluation_analysis
     payload['analysis']=evaluation_analysis(predictions,task)
     metadata_path=checkpoint.parent/'model_meta.json'
-    metadata=json.loads(metadata_path.read_text(encoding='utf-8')) if metadata_path.is_file() else {}
+    metadata=json.loads(original_dataset_UI_read_text(metadata_path,encoding='utf-8')) if metadata_path.is_file() else {}
     binding={'source_dataset_path':str(source),'evaluation_dataset_path':str(dataset),
              'dataset_fingerprint':_fingerprint(source),'checkpoint_sha256':_sha256(checkpoint),
              'family_dataset_sha256':payload.get('dataset_sha256',payload.get('manifest_sha256')),

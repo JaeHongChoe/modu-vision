@@ -2,7 +2,8 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const nodes=t=>Array.isArray(t)?t.flatMap(nodes):t&&typeof t==='object'?[t,...nodes(t.props?.children)]:[];
 const record=(id,job='candidate',extra={})=>({evaluation_id:id,created_at:1791150000,result:{job_id:job,task:'ocr',split:'test',sample_count:8,exact_match_accuracy:1},binding:{checkpoint_sha256:job==='incumbent'?'a'.repeat(64):'b'.repeat(64),dataset_fingerprint:'frozen-source',family_dataset_sha256:'heldout1',source_dataset_path:'/source'},...extra});
 function fixture(config={}){
- let index=0,tree,dirty=true,generation=1,listener,resolveHistory,resolveApproval;
+ let index=0,tree,dirty=true,generation=1,listener,resolveHistory,resolveApproval,autoOpened=false;
+ const historyResolvers=[];
  const slots=[],effects=[],calls=[],reads=[];const project=config.project||{projectDir:'/project',project:{id:'owned',project_dir:'/project',source_dataset_dir:'/source',task:'segmentation'},task:'segmentation',isProjectBusy:false},dataset=config.dataset||{folderPath:'/source',datasetKey:'/source\0segmentation',isLoading:false,importError:null};
  const hook=object=>{const get=typeof object==='function'?object:()=>object;return Object.assign(selector=>selector(get()),{getState:get});};
  const react={useState(value){const i=index++;if(!(i in slots))slots[i]=typeof value==='function'?value():value;return[slots[i],v=>{slots[i]=typeof v==='function'?v(slots[i]):v;dirty=true;}];},useRef(value){const i=index++;return slots[i]??(slots[i]={current:value});},useEffect(fn,deps){const i=index++;if(JSON.stringify(slots[i]?.deps)!==JSON.stringify(deps)){const previous=slots[i];slots[i]={deps};effects.push(()=>{previous?.cleanup?.();slots[i].cleanup=fn();});}}};
@@ -11,17 +12,19 @@ function fixture(config={}){
  const api={getApiPersistenceIdentity:()=> 'local:actor-'+generation,getProjectContextGeneration:()=>generation,subscribeProjectContext(fn){listener=fn;return()=>{};},request:async(url,options)=>{
   if(options){calls.push(JSON.parse(options.body));if(config.deferApproval)return new Promise(r=>{resolveApproval=r;});return {revision:{revision_id:'controlled'}};}
   reads.push(url);if(url.includes('model-deployments/active')){if(config.failActive)throw Error('Controlled active-state outage');return{active};}
-  if(config.deferHistory)return new Promise(r=>{resolveHistory=r;});return{items:rows};
+  if(config.deferHistory)return new Promise(r=>{resolveHistory=r;historyResolvers.push(r);});return{items:config.records||rows};
  }};
  const file=path.join(__dirname,'SpecializedApprovalPanel.tsx'),m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(__dirname);const req=m.require.bind(m);
  m.require=n=>n==='react'?react:n.includes('useProjectStore')?{useProjectStore:hook(project)}:n.includes('useDatasetStore')?{useDatasetStore:hook(dataset)}:n.endsWith('/services/api')?api:req(n);
  m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{fileName:file,compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,file);
  function render(){index=0;dirty=false;tree=m.exports.SpecializedApprovalPanel();effects.splice(0).forEach(f=>f());}
- async function settle(){for(let i=0;i<10;i++){if(dirty)render();await new Promise(setImmediate);if(!dirty)return;}}
+  const details=()=>nodes(tree).find(n=>n.type==='details');
+  const toggle=open=>{const disclosure=details();assert(disclosure,'native details owner is present');disclosure.props.onToggle?.({currentTarget:{open}});};
+  async function settle(){for(let i=0;i<10;i++){if(dirty)render();if(config.autoOpen!==false&&!autoOpened&&details()){autoOpened=true;toggle(true);}await new Promise(setImmediate);if(!dirty)return;}}
  const all=()=>nodes(tree),field=label=>all().find(n=>n.props?.['aria-label']===label),change=async(label,value)=>{field(label).props.onChange({target:{value}});await settle();};
  const review=async()=>{all().find(n=>n.type==='input'&&n.props.type==='checkbox').props.onChange({target:{checked:true}});await change('특수 모델 검토자','fixture reviewer');await change('특수 모델 승인 근거','Synthetic handler test only');};
  const button=()=>all().find(n=>n.type==='button'&&n.props.children==='품질 기준 검증 후 승인');
- return{calls,reads,project,dataset,all,field,change,review,button,settle,render,switchActor(){generation++;listener?.();},resolveHistory(){resolveHistory({items:rows});},resolveApproval(){resolveApproval({revision:{revision_id:'stale-actor'}});}};
+ return{calls,reads,project,dataset,all,field,change,review,button,settle,render,details,toggle,async open(){toggle(true);await settle();},async close(){toggle(false);await settle();},resolveHistoryAt(i,items=rows){assert(historyResolvers[i]);historyResolvers[i]({items});},switchActor(){generation++;listener?.();},resolveHistory(){resolveHistory({items:rows});},resolveApproval(){resolveApproval({revision:{revision_id:'stale-actor'}});}};
 }
 test('incumbent is selected from matching actual saved test records, never entered as text',async()=>{
  const f=fixture();await f.settle();await f.change('특수 모델 평가 승인','candidate-eval');const select=f.field('특수 모델 기준 평가');assert.equal(select.type,'select');assert.deepEqual(nodes(select).filter(n=>n.type==='option'&&n.props.value).map(n=>n.props.value),['incumbent-eval']);await f.change('특수 모델 기준 평가','incumbent-eval');await f.review();assert.equal(f.button().props.disabled,false);await f.button().props.onClick();await f.settle();assert.equal(f.calls[0].evaluation_id,'candidate-eval');assert.equal(f.calls[0].incumbent_evaluation_id,'incumbent-eval');
@@ -108,4 +111,47 @@ test('late approval result cannot show a revision while the source is synchroniz
  const f=fixture({deferApproval:true});await f.settle();await f.change('특수 모델 평가 승인','candidate-eval');await f.change('특수 모델 기준 평가','incumbent-eval');await f.review();
  const pending=f.button().props.onClick();await f.settle();f.project.isProjectBusy=true;f.resolveApproval();await pending;await f.settle();
  assert(!f.all().some(n=>n.props?.role==='status'&&String(n.props.children).includes('stale-actor')));assert.equal(f.button().props.disabled,true);
+});
+
+test('initially closed native disclosure issues no history or deployment reads',async()=>{
+ const f=fixture({autoOpen:false,active:null});await f.settle();
+ assert.equal(f.details().props.open,undefined,'details keeps its native uncontrolled default closed state');
+ assert.deepEqual(f.reads,[]);assert.deepEqual(f.calls,[]);assert.equal(f.button().props.disabled,true);
+ await f.button().props.onClick();await f.settle();assert.deepEqual(f.calls,[]);
+});
+test('opening reopening and explicit refresh each fetch fresh approval and history',async()=>{
+ const config={autoOpen:false,active:null};const f=fixture(config);await f.settle();assert.deepEqual(f.reads,[]);
+ const expected=['/api/evaluation/history?source_dataset_path=%2Fsource&task=ocr','/api/model-deployments/active?source_dataset_path=%2Fsource&task=ocr'];
+ await f.open();assert.deepEqual(f.reads,expected);await f.change('특수 모델 평가 승인','candidate-eval');await f.review();assert.equal(f.button().props.disabled,false);
+ await f.close();assert.deepEqual(f.reads,expected);assert.equal(f.field('특수 모델 평가 승인').props.value,'');assert.equal(f.button().props.disabled,true);
+ config.records=[record('reopened-fresh')];await f.open();assert.deepEqual(f.reads,[...expected,...expected]);
+ assert.deepEqual(nodes(f.field('특수 모델 평가 승인')).filter(n=>n.type==='option'&&n.props.value).map(n=>n.props.value),['reopened-fresh']);
+ await f.change('특수 모델 평가 승인','reopened-fresh');await f.review();assert.equal(f.button().props.disabled,false);
+ config.records=[record('refreshed-fresh')];f.field('특수 모델 평가 기록 새로 고침').props.onClick();await f.settle();assert.deepEqual(f.reads,[...expected,...expected,...expected]);
+ assert.deepEqual(nodes(f.field('특수 모델 평가 승인')).filter(n=>n.type==='option'&&n.props.value).map(n=>n.props.value),['refreshed-fresh']);
+ assert.equal(f.field('특수 모델 평가 승인').props.value,'');assert.equal(f.all().find(n=>n.type==='input'&&n.props.type==='checkbox').props.checked,false);assert.equal(f.button().props.disabled,true);assert.deepEqual(f.calls,[]);
+});
+test('close invalidates a late history read before a render and reopening needs its own fresh result',async()=>{
+ const f=fixture({autoOpen:false,deferHistory:true,active:null});await f.settle();await f.open();assert.equal(f.reads.length,2);
+ f.toggle(false);f.toggle(true);f.resolveHistoryAt(0,[record('closed-scope-stale')]);await f.settle();
+ assert.equal(f.reads.length,4);assert.deepEqual(nodes(f.field('특수 모델 평가 승인')).filter(n=>n.type==='option'&&n.props.value),[]);assert.equal(f.button().props.disabled,true);
+ f.resolveHistoryAt(1,[record('new-open-scope')]);await f.settle();
+ assert.deepEqual(nodes(f.field('특수 모델 평가 승인')).filter(n=>n.type==='option'&&n.props.value).map(n=>n.props.value),['new-open-scope']);assert.deepEqual(f.calls,[]);
+});
+test('a captured approval handler cannot submit after closing before a render',async()=>{
+ const f=fixture({active:null});await f.settle();await f.change('특수 모델 평가 승인','candidate-eval');await f.review();assert.equal(f.button().props.disabled,false);
+ const submitted=f.button().props.onClick;f.toggle(false);await submitted();assert.deepEqual(f.calls,[]);await f.settle();assert.equal(f.button().props.disabled,true);
+});
+test('closing and immediately reopening cannot revive a captured approval handler',async()=>{
+ const f=fixture({active:null});await f.settle();await f.change('특수 모델 평가 승인','candidate-eval');await f.review();const submitted=f.button().props.onClick;
+ f.toggle(false);f.toggle(true);await submitted();assert.deepEqual(f.calls,[]);await f.settle();assert.equal(f.field('특수 모델 평가 승인').props.value,'');assert.equal(f.button().props.disabled,true);assert.equal(f.reads.length,4);
+});
+test('a late approval response after close cannot publish success before a render',async()=>{
+ const f=fixture({deferApproval:true});await f.settle();await f.change('특수 모델 평가 승인','candidate-eval');await f.change('특수 모델 기준 평가','incumbent-eval');await f.review();
+ const pending=f.button().props.onClick();await f.settle();assert.equal(f.calls.length,1);f.toggle(false);f.resolveApproval();await pending;await f.settle();
+ assert(!f.all().some(n=>n.props?.role==='status'&&String(n.props.children).includes('stale-actor')));assert.equal(f.button().props.disabled,true);
+});
+test('a previously rendered refresh cannot read while the native disclosure is closed',async()=>{
+ const f=fixture({active:null});await f.settle();const refresh=f.field('특수 모델 평가 기록 새로 고침').props.onClick;
+ await f.close();const before=[...f.reads];refresh();await f.settle();assert.deepEqual(f.reads,before);assert.deepEqual(f.calls,[]);
 });

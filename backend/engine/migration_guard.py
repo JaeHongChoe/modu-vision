@@ -1,5 +1,6 @@
 """Cooperative project mutation admission, held through ASGI response completion."""
 from contextlib import contextmanager
+from backend.engine.original_owned_selected_compute_request import observe_original_selected_maintenance
 from contextvars import ContextVar
 import asyncio
 import os
@@ -66,6 +67,7 @@ def _windows_admission(handle, exclusive):
     return release
 
 
+@observe_original_selected_maintenance
 @contextmanager
 def maintenance_guard(root, *, exclusive=False, wait=False):
     root=Path(root).expanduser()
@@ -100,11 +102,19 @@ def maintenance_guard(root, *, exclusive=False, wait=False):
             held=True
         except OSError as exc:raise ValueError('Project writers or migration hold maintenance admission; retry after drain') from exc
         ownership={'key':key,'active':True,'exclusive':exclusive,'owner':owner}
+        from backend.engine.original_lock_acquisition import _capture_successful_acquisition
+        try:
+            ownership['original_lock_observation']=_capture_successful_acquisition(
+                handle,path,owner=owner,current=lambda: handle,record=ownership,exclusive=exclusive)
+        except (OSError,ValueError):ownership['original_lock_observation']=None
         token=_HELD.set((*_HELD.get(),ownership))
         yield
     finally:
         try:
-            if ownership:ownership['active']=False
+            if ownership:
+                if ownership['original_lock_observation'] is not None:
+                    ownership['original_lock_observation'].invalidate()
+                ownership['active']=False
             if token is not None:_HELD.reset(token)
             if held:
                 if os.name=='nt':unlock()

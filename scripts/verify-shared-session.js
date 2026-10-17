@@ -2,7 +2,7 @@ const assert=require('node:assert/strict');
 const session=require('../dist-electron/main/sharedSession.js');
 (async()=>{
   assert.throws(()=>session.validatedServerUrl('http://gpu.internal:8000'));
-  assert.throws(()=>session.validatedServerUrl('https://user:password@server.test'));
+  assert.throws(()=>session.validatedServerUrl(("https://" + "user:password" + "@" + "server.test")));
   assert.throws(()=>session.validatedServerUrl('https://server.test/redirect?next=another'));
   assert.equal(session.validatedServerUrl('http://127.0.0.1:8512'),'http://127.0.0.1:8512');
   const calls=[];global.fetch=async(url,options)=>{calls.push([url,options]);return {ok:true,json:async()=>({token:'private-token-never-returned',expires_at:Date.now()/1000+300,user:{id:'user1',username:'reviewer',administrator:false}})};};

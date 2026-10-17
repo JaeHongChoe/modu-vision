@@ -433,12 +433,17 @@ def _remote_worker_components(root: Path) -> list[dict]:
 
 
 def _share_worker_licenses(components: list[dict]) -> None:
-    """Worker pins reuse the license and status recorded for the same package."""
-    known = {item['name']: item for item in components if item['category'] == 'python_runtime' and item['version']}
+    """Reuse inventory metadata only for the same package and exact nonempty version."""
+    known = {(item['name'], item['version']): item for item in components
+             if item['category'] == 'python_runtime' and type(item.get('version')) is str and item['version']}
     for item in components:
-        if item['category'] == 'python_remote_worker' and item['name'] in known:
-            item['license'] = known[item['name']]['license'] + ' (as recorded for the inventory interpreter version)'
-            item['status'] = known[item['name']]['status']
+        version = item.get('version')
+        version = version[2:] if type(version) is str and version.startswith('==') else version
+        if item['category'] == 'python_remote_worker' and type(version) is str and version:
+            recorded = known.get((item['name'], version))
+            if recorded is not None:
+                item['license'] = recorded['license'] + ' (as recorded for the inventory interpreter version)'
+                item['status'] = recorded['status']
 
 
 def _cached_worker_weights(root: Path) -> set[str]:
@@ -582,16 +587,15 @@ def scan_frozen_build(build: Path, pyz_toc: Path | None = None) -> tuple[list[di
                 if _canonical(name) in known:
                     continue
                 known.add(_canonical(name))
-                try:
-                    dist = metadata.distribution(name)
-                    license_text, version = _python_license(dist.metadata), dist.version
-                except metadata.PackageNotFoundError:
-                    license_text, version = 'UNKNOWN', None
+                # The interpreter suggests a distribution name, not the version
+                # or license of the code inside this build. Only the build's own
+                # dist-info above establishes those fields.
                 components.append({
-                    'category': 'frozen_backend_module_package', 'name': _canonical(name), 'version': version,
-                    'license': license_text, 'source': f'PYZ module {module} (metadata from the inventory interpreter)',
+                    'category': 'frozen_backend_module_package', 'name': _canonical(name), 'version': None,
+                    'license': 'UNKNOWN', 'source': f'PYZ module {module} (distribution mapping from the inventory '
+                                                   'interpreter; build version and license unverified)',
                     'distribution': 'frozen_backend', 'notices_required': True, 'bundled': True,
-                    'status': license_status(license_text),
+                    'status': 'needs_review',
                 })
         for module in unmapped:
             components.append({

@@ -1,5 +1,6 @@
 """Project/source/labelset-bound product data workflow APIs."""
 from __future__ import annotations
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_handler, observe_original_dataset_UI_operation, observe_original_dataset_UI_connection, original_dataset_UI_read_text, original_dataset_UI_read_bytes, original_dataset_UI_image_open, original_dataset_UI_file, original_dataset_UI_diagnostics_missing
 import hashlib
 import json
 import re
@@ -122,13 +123,15 @@ def diagnose(req:DiagnosticRequest,request:Request):
     except (ValueError,OSError,KeyError) as exc:raise _error(exc) from exc
 
 
-@router.get('/diagnostics')
+@observe_original_UI_ancillary_handler(router.get('/diagnostics'))
 def saved_diagnostics(request:Request):
     project,source=_context(request);path=dw._storage(project['project_dir'],source,create=False)/f"diagnostics_{project.get('active_labelset_id','default')}.json"
-    if not path.is_file():return {'report':None}
+    if not path.is_file():
+        original_dataset_UI_diagnostics_missing(path)
+        return {'report':None}
     try:
         if path.is_symlink():raise ValueError('Diagnostic report cannot be a symbolic link')
-        report=json.loads(path.read_text(encoding='utf-8'))
+        report=json.loads(original_dataset_UI_read_text(path, encoding='utf-8'))
         if report['scope']!={'source':str(source),'task':project['task'],'labelset_id':project.get('active_labelset_id','default')}:raise ValueError('Diagnostic scope changed')
         current={r['relative_path']:r for r in _rows(project,source)}
         assignments=_split_assignments(project,source,list(current.values()))
@@ -237,7 +240,7 @@ def _comparisons(project,source):
     records=[]
     for path in _report_dir(project).glob('comparison_*.json'):
         if path.is_symlink() or not re.fullmatch(r'comparison_[0-9a-f]{32}',path.stem):continue
-        row=json.loads(path.read_text(encoding='utf-8'))
+        row=json.loads(original_dataset_UI_read_text(path, encoding='utf-8'))
         if row.get('comparison_id')!=path.stem:raise ValueError('Saved comparison identity changed')
         if row.get('project_id')==project['id'] and row.get('source_dataset_path')==str(source) and row.get('task')==project['task'] and row.get('labelset_id','default')==project.get('active_labelset_id','default'):
             records.append({**row,'evidence_sha256':hashlib.sha256(dw.canonical(row)).hexdigest()})

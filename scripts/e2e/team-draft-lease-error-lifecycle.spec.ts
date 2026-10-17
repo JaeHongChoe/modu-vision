@@ -400,3 +400,105 @@ test('empty draft recovery and reopened explicit apply preserve original labels 
 test('native empty recovery reopened draft and explicit apply remain scoped through project handoff',{tag:'@electron'},async({electronSession,workspace,evidence})=>{
  const page=electronSession.window,backend=await electronSession.waitForBackend(),origin=`http://127.0.0.1:${backend.port}`;const api:Api=(route,body,method)=>page.evaluate(async({origin,route,body,method})=>{const r=await fetch(origin+route,{method:method||(body===undefined?'GET':'POST'),headers:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});return{status:r.status,body:await r.text(),url:r.url};},{origin,route,body,method});await explicitDraftLifecycle(page,workspace,evidence,api,true,origin);
 });
+
+
+// F024-only empty-image controls. These cases do not qualify queue filtering,
+// cancellation, lease acquisition, server save, training, or human review.
+async function emptyEditSaveLifecycle(page:Page,w:Workspace,e:Evidence,api:Api,native:boolean,origin:string,url?:string){
+ const prefix=native?'source-electron':'browser',actor='fixture-empty-operator';
+ const read=async(route:string,body?:unknown,method?:string)=>{
+  const deadline=performance.now()+10_000,reply=await draftApplyWithin(api(route,body,method),deadline,'empty control owning API full body');
+  expect(reply.status,route).toBe(200);expect(reply.url).toBe(origin+route);return JSON.parse(reply.body);
+ };
+ const make=async(tag:'A'|'B')=>{
+  const source=path.join(w.root,'f024-empty-'+tag);fs.mkdirSync(source);
+  const image=tag==='A'?path.join(source,'part.png'):null;
+  if(image)fs.writeFileSync(image,png(256,3,(x,y)=>[x,y,113]),{flag:'wx'});
+  const project=await read('/api/project/create',{name:'Owned empty edit save '+tag,task:'segmentation'});
+  await read('/api/project/update',{source_dataset_dir:source},'PUT');
+  const imported=await read('/api/dataset/import',{folder_path:source,task:'segmentation',validate_images:false});
+  expect(imported.total_images).toBe(tag==='A'?1:0);
+  await read('/api/team-data/books',{expected_version:0,actor:'fixture-owner',title:'Empty control '+tag,categories:[{id:0,name:'OK',color:'#10b981'},{id:2,name:'Scratch',color:'#f59e0b'}]});
+  const team=await read('/api/team-data');expect(team.settings.editing_enabled).toBe(false);
+  const written=image?await read('/api/annotations/save',{image_id:'part',image_path:image,image_width:256,image_height:256,actor:'fixture-original-labeler',annotations:[{id:'f024-original-A',type:'bbox',label:'Scratch',category_id:2,color:'#f59e0b',bbox:[2,3,20,21]}]}):null;
+  await read('/api/team-data/settings',{expected_revision:team.settings.revision,actor:'fixture-owner',changes:{editing_enabled:true}},'PUT');
+  const current=await read('/api/project/current');expect(current.id).toBe(project.id);expect(current.source_dataset_dir).toBe(source);
+  const images=await read('/api/dataset/images?folder_path='+encodeURIComponent(source)+'&task=segmentation&offset=0&limit=120');
+  expect(images.total).toBe(tag==='A'?1:0);expect(images.items).toHaveLength(tag==='A'?1:0);
+  const query=image?'/api/annotations/part?file_path='+encodeURIComponent(image):null;
+  const saved=query?await read(query):null;
+  if(saved){expect(saved.annotations).toHaveLength(1);expect(saved.annotations[0].id).toBe('f024-original-A');expect(saved.metadata).toEqual(written.metadata);expect(saved.metadata.team.edit_lease).toBeNull();expect(saved.metadata.image_uuid).toEqual(expect.any(String));}
+  await read('/api/team-data/readiness');await read('/api/team-data/queue?offset=0&limit=30');
+  return{tag,source,image,project:current,query,saved,image_sha256:image?sha(fs.readFileSync(image)):null};
+ };
+ const A=await make('A'),B=await make('B');expect(A.project.id).not.toBe(B.project.id);expect(B.image).toBeNull();expect(B.saved).toBeNull();expect(fs.readdirSync(B.source)).toEqual([]);
+ const ownerRoot=native?path.join(w.userData,'projects'):w.projects;
+ for(const scope of[A,B]){expect(path.dirname(scope.project.project_dir)).toBe(ownerRoot);expect(fs.realpathSync(scope.source)).toBe(scope.source);expect(fs.realpathSync(scope.project.project_dir)).toBe(scope.project.project_dir);}
+ await read('/api/project/open',{project_dir:A.project.project_dir});if(url)await page.goto(url);else await page.reload();
+ const rows=()=>page.getByTitle('Delete annotation',{exact:true}),save=()=>page.getByTestId('annotation-save-button');
+ const team=()=>page.getByRole('dialog',{name:'팀 데이터 작업',exact:true});
+ const drafts=()=>page.evaluate(()=>Object.entries(localStorage).filter(([key])=>key.startsWith('modu-annotation-draft:v1:')).sort(([a],[b])=>a.localeCompare(b))) as Promise<DraftEntry[]>;
+ const roots=(scope:typeof A)=>({source:protectedTree(scope.source),project:protectedTree(scope.project.project_dir)});
+ const enter=async(scope:typeof A)=>{
+  const deadline=performance.now()+10_000;
+  await draftApplyWithin(expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(scope.project.name,{timeout:draftApplyRemaining(deadline)}),deadline,'own empty control project');
+  await draftApplyWithin(page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(1).click({timeout:draftApplyRemaining(deadline)}),deadline,'original labeling stage');
+  const focus=page.getByRole('button',{name:'집중 편집',exact:true});if(await draftApplyWithin(focus.getAttribute('aria-pressed'),deadline,'focus state')!=='true')await draftApplyWithin(focus.click({timeout:draftApplyRemaining(deadline)}),deadline,'normal focus');
+  await draftApplyWithin(expect(save()).toHaveCount(1,{timeout:draftApplyRemaining(deadline)}),deadline,'real original save control');
+  await draftApplyWithin(expect(save()).toBeEnabled({timeout:draftApplyRemaining(deadline)}),deadline,'original ready empty save is clickable');
+  await draftApplyWithin(expect(rows()).toHaveCount(scope.tag==='A'?1:0,{timeout:draftApplyRemaining(deadline)}),deadline,'own selected annotation count');
+  await draftApplyWithin(page.getByRole('button',{name:'팀 작업 · 라벨 기준·검수',exact:true}).click({timeout:draftApplyRemaining(deadline)}),deadline,'original team dialog');
+  await draftApplyWithin(team().getByLabel('팀 작업자 이름',{exact:true}).fill(actor,{timeout:draftApplyRemaining(deadline)}),deadline,'nonempty owning actor');
+  if(scope.tag==='B')await draftApplyWithin(expect(team().getByText('이미지를 선택하세요.',{exact:true})).toBeVisible({timeout:draftApplyRemaining(deadline)}),deadline,'no selected image, not an empty annotation list on an image');
+  await draftApplyWithin(team().getByRole('button',{name:'팀 데이터 작업 닫기',exact:true}).click({timeout:draftApplyRemaining(deadline)}),deadline,'close original team dialog');
+  await draftApplyWithin(expect(team()).toHaveCount(0,{timeout:draftApplyRemaining(deadline)}),deadline,'team dialog closed');
+  const workspace=await read('/api/team-data');expect(workspace.scope.project_id).toBe(scope.project.id);expect(workspace.settings.editing_enabled).toBe(true);
+  return workspace;
+ };
+ const switchProject=async(scope:typeof A)=>{
+  const deadline=performance.now()+10_000;
+  await draftApplyWithin(page.getByTitle('프로젝트 관리',{exact:true}).click({timeout:draftApplyRemaining(deadline)}),deadline,'normal project manager');
+  const manager=page.getByRole('dialog',{name:'프로젝트 관리',exact:true});await draftApplyWithin(manager.getByRole('button',{name:'최근 프로젝트',exact:true}).click({timeout:draftApplyRemaining(deadline)}),deadline,'original recent projects');
+  const generation=new Set<Request>();const started=(r:Request)=>{if(r.frame()===page.mainFrame()&&r.method()==='POST'&&r.url()===origin+'/api/project/open')generation.add(r);};page.on('request',started);
+  try{
+   const response=page.waitForResponse(r=>generation.has(r.request())&&r.request().postDataJSON()?.project_dir===scope.project.project_dir,{timeout:draftApplyRemaining(deadline)});
+   const item=manager.getByRole('button').filter({has:page.locator('span[title]').filter({hasText:scope.project.project_dir})});await draftApplyWithin(expect(item).toHaveCount(1,{timeout:draftApplyRemaining(deadline)}),deadline,'exact owned recent project');
+   await draftApplyWithin(item.click({timeout:draftApplyRemaining(deadline)}),deadline,'actual project reopen');const wire=await draftApplyWithin(response,deadline,'own full project response');expect(wire.status()).toBe(200);expect(wire.request().postDataJSON()).toEqual({project_dir:scope.project.project_dir});
+   const raw=await draftApplyWithin(wire.body(),deadline,'complete project response body');expect(await draftApplyWithin(wire.finished(),deadline,'project response completion')).toBeNull();const body=JSON.parse(raw.toString('utf8'));expect([body.id,body.project_dir,body.source_dataset_dir]).toEqual([scope.project.id,scope.project.project_dir,scope.source]);expect(generation.size).toBe(1);
+   await draftApplyWithin(expect(manager).toHaveCount(0,{timeout:draftApplyRemaining(deadline)}),deadline,'own project manager closes');return{project_id:body.id,source:body.source_dataset_dir,status:200,response_sha256:sha(raw)};
+  }finally{page.off('request',started);}
+ };
+ await enter(A);await expect(page.getByRole('button',{name:'편집 시작',exact:true})).toHaveCount(1);await expect(page.getByRole('button',{name:'편집 시작',exact:true})).toBeEnabled();expect(await drafts()).toEqual([]);expect(await read(A.query!)).toEqual(A.saved);
+ const A_before=roots(A);await e.screenshot(page,prefix+'-f024-A-selected-own-original-label');
+ const owningPosts:Array<{path:string;body:string|null}>=[],businessWrites:Array<{method:string;path:string;body:string|null}>=[];
+ const observe=(r:Request)=>{const u=new URL(r.url());if(u.origin!==origin)return;if(u.pathname.startsWith('/api/')&&!['GET','HEAD','OPTIONS'].includes(r.method()))businessWrites.push({method:r.method(),path:u.pathname,body:r.postData()});if(r.method()==='POST'&&(u.pathname==='/api/annotations/save'||/^\/api\/team-data\/images\/[^/]+\/lease\/(acquire|renew|release)$/.test(u.pathname)))owningPosts.push({path:u.pathname,body:r.postData()});};page.on('request',observe);
+ try{
+  const toB=await switchProject(B),B_workspace=await enter(B);
+  await expect(page.getByRole('button',{name:'편집 시작',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'편집 종료',exact:true})).toHaveCount(0);expect(await drafts()).toEqual([]);
+  const B_snapshot=async()=>{
+   const project=await read('/api/project/current');expect(project.id).toBe(B.project.id);expect(project.source_dataset_dir).toBe(B.source);
+   const workspace=await read('/api/team-data'),ready=await read('/api/team-data/readiness'),queue=await read('/api/team-data/queue?offset=0&limit=30'),images=await read('/api/dataset/images?folder_path='+encodeURIComponent(B.source)+'&task=segmentation&offset=0&limit=120');
+   expect(workspace.scope.project_id).toBe(B.project.id);expect(workspace.settings.editing_enabled).toBe(true);expect(ready.counts.total).toBe(0);expect(queue.total).toBe(0);expect(queue.items).toEqual([]);expect(images.total).toBe(0);expect(images.items).toEqual([]);expect(fs.readdirSync(B.source)).toEqual([]);
+   return{project,workspace,ready,queue,images,drafts:await drafts(),trees:roots(B)};
+  };
+  const B_before=await B_snapshot();expect(roots(A)).toEqual(A_before);expect(owningPosts).toEqual([]);
+  const clickEmptySave=async(label:string)=>{
+   const deadline=performance.now()+10_000,priorText=await draftApplyWithin(save().innerText(),deadline,'original empty save text');
+   await draftApplyWithin(expect(save()).toBeEnabled({timeout:draftApplyRemaining(deadline)}),deadline,'real empty save available');await draftApplyWithin(save().click({timeout:draftApplyRemaining(deadline)}),deadline,'actual original empty Save click');
+   await draftApplyWithin(page.evaluate(()=>new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve())))),deadline,'original handler and two frames complete');
+   await draftApplyWithin(expect(save()).toHaveText(priorText,{timeout:draftApplyRemaining(deadline)}),deadline,'no synthetic Saved or Saving result');await draftApplyWithin(expect(save()).toBeEnabled({timeout:draftApplyRemaining(deadline)}),deadline,'not left saving');await draftApplyWithin(expect(rows()).toHaveCount(0,{timeout:draftApplyRemaining(deadline)}),deadline,'still no selected labels');
+   await draftApplyWithin(expect(page.getByRole('button',{name:'편집 시작',exact:true})).toHaveCount(0,{timeout:draftApplyRemaining(deadline)}),deadline,'no empty-image lease control');expect(owningPosts).toEqual([]);expect(await B_snapshot()).toEqual(B_before);expect(roots(A)).toEqual(A_before);await e.screenshot(page,prefix+'-f024-'+label);return{actual_original_button_click:true,save_text_before:priorText,save_text_after:await save().innerText(),owning_POSTs:owningPosts.slice(),empty_owner_state_exact:true};
+  };
+  const first=await clickEmptySave('B-empty-save-no-POST');
+  await page.reload();await enter(B);expect(await B_snapshot()).toEqual(B_before);const reopened=await clickEmptySave('B-reopen-empty-save-no-POST');
+  const toA=await switchProject(A);await enter(A);expect(await read(A.query!)).toEqual(A.saved);expect(await read('/api/dataset/metadata/image?image_path='+encodeURIComponent(A.image!))).toEqual(A.saved.metadata);expect(sha(fs.readFileSync(A.image!))).toBe(A.image_sha256);expect(roots(A)).toEqual(A_before);expect(roots(B)).toEqual(B_before.trees);expect(await drafts()).toEqual([]);await expect(page.getByRole('button',{name:'편집 시작',exact:true})).toHaveCount(1);expect(owningPosts).toEqual([]);await e.screenshot(page,prefix+'-f024-A-return-exact-label-metadata');
+  const proof={schema:'modu-vision.F024-empty-edit-save/v1',cells:[{key:'F024.edit-start.empty',pointer:'/records/23/actions/1/scenarios/empty',empty_project_id:B.project.id,source_dataset_dir:B.source,nonempty_actor:actor,editing_enabled:B_workspace.settings.editing_enabled,no_selected_image:true,actual_edit_start_control_count:0,lease_acquire_renew_release_POSTs:[],server_and_client_lease_not_created:true},{key:'F024.save-annotation.empty',pointer:'/records/23/actions/2/scenarios/empty',empty_project_id:B.project.id,source_dataset_dir:B.source,no_selected_image:true,actual_original_save_clicks:[first,reopened],annotations_save_POSTs:[],empty_owner_state_and_reopen_exact:true}],source_electron:native,projects:[A.project.id,B.project.id,A.project.id],toB,toA,original_A:{image_path:A.image,image_sha256:A.image_sha256,image_uuid:A.saved.metadata.image_uuid,revision:A.saved.metadata.revision,annotation_body:A.saved,trees:A_before},original_empty_B:B_before,owning_POSTs:owningPosts,business_writes:businessWrites,original_source_labels_and_drafts_exact:true,actual_server_save:false,lease_acquired_or_transferred:false,training_started:false,actual_model_inference:false,accepted_quality:false,human_review:false,Native_accepted:false,parent_completion_credit:false,registry_credit:false};
+  const output=path.join(w.logs,'f024-empty-edit-save-proof.json');fs.writeFileSync(output,JSON.stringify(proof),{flag:'wx'});e.addFile(output);e.addFile(A.image!);for(const scope of[A,B])for(const[relative,row]of Object.entries(scope.tag==='A'?A_before.project:B_before.trees.project))if(row.kind==='file')e.addFile(path.join(scope.project.project_dir,relative));e.note('f024_empty_edit_save',proof);
+ }finally{page.off('request',observe);}
+}
+test('empty image owner omits edit start and real Save clicks preserve both projects through exact reopen',async({page,renderer,workspace,evidence})=>{
+ await installDesktopHostShim(page,renderer.port);const api:Api=async(route,body,method)=>{const r=await page.request.fetch(renderer.origin+route,{method:method||(body===undefined?'GET':'POST'),...(body===undefined?{}:{data:body})});return{status:r.status(),body:await r.text(),url:r.url()};};await emptyEditSaveLifecycle(page,workspace,evidence,api,false,renderer.origin,renderer.url);
+});
+test('native empty image owner omits edit start and actual Save clicks preserve exact original labels and reopen',{tag:'@electron'},async({electronSession,workspace,evidence})=>{
+ const page=electronSession.window,backend=await electronSession.waitForBackend(),origin=`http://127.0.0.1:${backend.port}`;const api:Api=(route,body,method)=>page.evaluate(async({origin,route,body,method})=>{const r=await fetch(origin+route,{method:method||(body===undefined?'GET':'POST'),headers:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});return{status:r.status,body:await r.text(),url:r.url};},{origin,route,body,method});await emptyEditSaveLifecycle(page,workspace,evidence,api,true,origin);
+});

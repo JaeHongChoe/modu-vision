@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "2520ec27b18a95910eb0e194e72198155aabb352",
+  "source_dirty": false,
+  "test": "scripts/e2e/flow-debug-model-freeze-f064-controls.spec.ts::F064 owning selected-node503 retries genuine CPU partial and cache identity survives reopen and A B A",
+  "test_source_sha256": "6b4aa3c55d78d1870114a4cf57106feb7820f2a51e4ad49d11a832223e21dd65",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "205fb1a79aa521532ac0c5cd748063456c7d237ecac173da1edb6cf7d9df2198",
+  "harness_sha256": "831b4f88629cabbb71de5f5dcaee6f1c8705fd93647d91e57164bddd0cc84514",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "a71b37ee4dc8cb814f05ea3038c8dbac47fd414c322658ce0ed075a981b635cd"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "8149859e53a9401d6ba9997053321341dd8230ab46823b90ecbe5a16426abb71"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "f42c399d34275b750f2e9944344ff25a3214535d",
+  "source_dirty": false,
+  "test": "scripts/e2e/keyboard-modal-isolation.spec.ts::modal keyboard isolation and saved labels remain owning through A B A project handoff",
+  "test_source_sha256": "a241762cd168c12f846e942f501e394fe6fc2ace6b952d7f35c84292f529e9c7",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "69d2fc0203a8b9a164fbe9266022c5f58bc8a0cce489f0234ba534a9de5df494",
+  "harness_sha256": "2ca9bbcf774f4e502a79b915390244dd15ce0723d9357b4055e95bd0b2adadf0",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "d6381bd07ab0fc623217f0c87a3b57435765452c60a1b918d6cd787f27bbd6bc"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "521cd2400fe91126561b3583c60c6335649425bccc14c61f5b42344c77cc18bf"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "5805e1a4d73cc724ddfab9a6b9d5f98e22220c3fde4285231e7e10640a58de57"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "55b17a4f8b5513dd7346fd3d09589a665ed9b7341fac51c6c0de2aa014c23cac"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

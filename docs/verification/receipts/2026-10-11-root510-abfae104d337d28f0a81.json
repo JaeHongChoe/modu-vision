@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "f42c399d34275b750f2e9944344ff25a3214535d",
+  "source_dirty": false,
+  "test": "scripts/e2e/service-s2-05.spec.ts::the decision states how an image that met no condition is judged, and the choice stays with the flow",
+  "test_source_sha256": "9da105295a43f11f19ce315d0ed3106528503c8280c7913cf90898dcccbd7cf2",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "69d2fc0203a8b9a164fbe9266022c5f58bc8a0cce489f0234ba534a9de5df494",
+  "harness_sha256": "05e43d05b3c0fde7f13a1c90085a8ef31bd8a6d3fda0e52214812b2ec98e1c40",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "3575390dd6004fc0ca8ee0adcee56eaa230c843f10b7c6edec916bb28e0680d7"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

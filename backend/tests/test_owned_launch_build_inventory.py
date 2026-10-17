@@ -181,6 +181,9 @@ def test_compiler_child_disables_auto_install_without_mutating_parent_or_argumen
     import sys
     import types
 
+    # The builder inserts its fixture ROOT_DIR for the deferred license import.
+    # Own that path mutation so teardown cannot expose the empty fixture module.
+    monkeypatch.setattr(sys, 'path', list(sys.path))
     root = checkout(tmp_path, monkeypatch)
     inventory = build.dependency_inventory(root)
     monkeypatch.setattr(build, 'ROOT_DIR', root)
@@ -245,3 +248,34 @@ def test_compiler_child_disables_auto_install_without_mutating_parent_or_argumen
     assert len(argument_files) == 1
     assert proof['arguments'] == json.loads(argument_files[0].read_text(encoding='utf-8')) == command[3:]
     assert not (package/'__pycache__').exists()
+
+
+def test_required_heif_decoder_is_version_bound_and_collected(tmp_path, monkeypatch):
+    """The lazy codec is required inventory, and its native package survives freezing."""
+    dependency = next(row for row in build.DEPENDENCIES if row[0] == 'pi-heif')
+    assert dependency == ('pi-heif', 'pi_heif', True)
+    root = checkout(tmp_path, monkeypatch)
+    (root/'requirements.txt').write_text('pi-heif==1.4.0\n')
+    monkeypatch.setattr(build, 'DEPENDENCIES', (dependency,))
+    monkeypatch.setattr(build.importlib.util, 'find_spec', lambda module: object())
+    monkeypatch.setattr(build.importlib.metadata, 'version', lambda distribution: '1.4.0')
+    inventory = build.dependency_inventory(root)
+    assert inventory['dependencies'] == [{
+        'distribution': 'pi-heif', 'module': 'pi_heif', 'version': '1.4.0',
+        'available': True, 'required': True, 'requirement': 'pi-heif==1.4.0',
+        'satisfies_requirement': True,
+    }]
+    build.validate_inventory(inventory)
+    for platform in ('Darwin', 'Linux', 'Windows'):
+        command = build.pyinstaller_command(root, tmp_path/'dist', platform)
+        assert command.count('--collect-all=pi_heif') == 1
+    for change, message in [('missing', 'lacks required dependencies'),
+                            ('outdated', 'does not satisfy declared requirements')]:
+        refused = copy.deepcopy(inventory)
+        row = refused['dependencies'][0]
+        if change == 'missing':
+            row.update(available=False, version=None, satisfies_requirement=False)
+        else:
+            row.update(version='1.3.0', satisfies_requirement=False)
+        with pytest.raises(RuntimeError, match=message):
+            build.validate_inventory(refused)

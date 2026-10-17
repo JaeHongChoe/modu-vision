@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "2489104fa58a9330cbf8d66daf323024d7ed0720",
+  "source_dirty": false,
+  "test": "scripts/e2e/ocr-prepared-unsent-handoff.spec.ts::native OCR unsent alphabet draft and saved alphabet split handoff preserve whole originals",
+  "test_source_sha256": "47d0083f0980707408476282bd8f72bea3b472b3138b2c39560180f4fdc99368",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "20cd093475b1530e62f8a5f6eb2a6935a65dd0a0bdbd3055677b0942c206ff51",
+  "harness_sha256": "36fde530073fb4315c7627b6d2bc214bc4b6d7f7608c03b7d91f6ff948983426",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "1956cd5bd582b7e89e95fd2b28ed3ae0c519da0ac4a2ef75b126b2a414573e07"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "bfc5107383b613de4ebec952d82704e41ce1af1beb489a2e78535a71df975d4b"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

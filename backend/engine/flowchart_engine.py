@@ -59,6 +59,7 @@ from backend.engine.segmentation_evidence import class_evidence, remap_class_evi
 from backend.engine.rule_evaluation import validate_blob_rules, measure_blob_rules, validate_ocr_rules, evaluate_ocr_rules
 from backend.engine.geometry_measurement import measure_geometry, validate_measurement_params
 from backend.engine.flow_executor import execute_layers
+from backend.engine.original_owned_flow_execution_request import observe_original_execution_effect
 
 logger = logging.getLogger("vision_ai_studio.flowchart_engine")
 MAX_SEGMENTATION_TILES = 1024
@@ -66,6 +67,33 @@ SEGMENTATION_TILE_BATCH_SIZE = 4
 _VERIFIED_CHECKPOINTS: ContextVar[Optional[Dict[Tuple[str, str], Path]]] = ContextVar(
     "flowchart_verified_checkpoints", default=None,
 )
+_PARTIAL_RUN: ContextVar[Any] = ContextVar('flowchart_local_CPU_partial_run', default=None)
+
+
+class FlowchartPartialCancelled(Exception):
+    """Only the admitted partial control's cooperative cancellation, not a fault."""
+    def __init__(self, control):
+        super().__init__('Original local CPU partial run was cancelled')
+        self.control = control
+
+
+def current_partial_run():
+    return _PARTIAL_RUN.get()
+
+
+@contextmanager
+def partial_run_scope(control):
+    token = _PARTIAL_RUN.set(control)
+    try:
+        yield
+    finally:
+        _PARTIAL_RUN.reset(token)
+
+
+def _check_partial_cancel():
+    control = _PARTIAL_RUN.get()
+    if control is not None:
+        control.check()
 
 
 @contextmanager
@@ -254,6 +282,7 @@ class FlowchartRunRequest(BaseModel):
     compute_profile_id: Optional[str] = None
     project_id: Optional[str] = None
     stop_node_id: Optional[str] = None
+    partial_run_id: Optional[str] = None
 
 
 # ============================================================================
@@ -1991,6 +2020,7 @@ class FlowchartEngine:
                 })
         return detected, latency_ms, status
 
+    @observe_original_execution_effect('engine')
     @_tracked_execution
     def execute(
         self,
@@ -2008,6 +2038,7 @@ class FlowchartEngine:
         pipe = pipeline or get_default_flowchart()
         ordered_nodes = ordered_linear_nodes(pipe)
         debug_scope = debug_ancestor_ids(pipe, stop_node_id)
+        _check_partial_cancel()
         nodes = {node.id: node for node in ordered_nodes}
         incoming = {node.id: [] for node in ordered_nodes}
         outgoing = {node.id: [] for node in ordered_nodes}
@@ -2481,12 +2512,18 @@ class FlowchartEngine:
         shared_active_edges = active_edges
 
         def bounded_node(node):
+            _check_partial_cancel()
             needs_device = node.data.node_type in ("inspection", "detection_crop") or (
                 node.data.node_type == "preprocess" and node.data.params.get("operation") in ("learned_rotation", "enhancement"))
             if needs_device:
                 with run_gate, self._device_gate:
-                    return process_node(node)
-            return process_node(node)
+                    _check_partial_cancel()
+                    result = process_node(node)
+                    _check_partial_cancel()
+                    return result
+            result = process_node(node)
+            _check_partial_cancel()
+            return result
 
         for layer in execute_layers([node for node in processing_nodes if node.id in debug_scope], incoming, bounded_node, pipe.execution_config.max_workers):
             for node, (regions, evidence, branch, steps, selected_edges, reasons, skipped) in layer:
@@ -2498,6 +2535,10 @@ class FlowchartEngine:
                 active_edges.update(selected_edges)
                 execution_steps.extend(steps)
                 incomplete_reasons.extend(reasons)
+        # execute_layers has exhausted its real executor context here. A
+        # callback cancellation also unwinds that context, joining submitted
+        # futures before it can leave this original engine call.
+        _check_partial_cancel()
         # A layer can contain nodes separated in the serialized graph. Restore
         # the validated graph order for repeatable history and package parity.
         order_index = {node.id: index for index, node in enumerate(ordered_nodes)}

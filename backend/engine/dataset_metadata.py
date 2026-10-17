@@ -6,6 +6,8 @@ review decisions. Stable UUIDs identify paths, while content versions identify
 changed bytes. Reading also detects edits made by legacy annotation clients.
 """
 from __future__ import annotations
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_handler, observe_original_dataset_UI_operation, observe_original_dataset_UI_connection, original_dataset_UI_read_text, original_dataset_UI_read_bytes, original_dataset_UI_image_open, original_dataset_UI_file, original_dataset_UI_diagnostics_missing
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_context,observe_original_UI_ancillary_file,observe_original_UI_ancillary_image,original_UI_ancillary_read_text
 import copy
 try:
     import fcntl
@@ -27,6 +29,7 @@ from pathlib import Path
 from typing import Any, Callable
 from PIL import Image
 from backend.engine.dicom_input import IMAGE_OPEN_ERRORS, open_source_image
+open_source_image=observe_original_UI_ancillary_image(open_source_image)
 from backend.engine.annotation_storage import dataset_annotation_dir, scoped_annotation_root
 from backend.engine.annotation_transactions import AnnotationFileTransaction
 from backend.engine.dataset_loaders import SUPPORTED_IMAGE_EXTENSIONS
@@ -67,6 +70,7 @@ def annotation_file_transaction(ledger):
         register_transaction_callbacks(ledger, state.annotation_files.rollback, state.annotation_files.cleanup)
     return state.annotation_files
 
+@observe_original_UI_ancillary_context("metadata_lock")
 @contextmanager
 def _file_lock(path):
     with path.open("a+b") as handle:
@@ -96,6 +100,7 @@ def _hash(path):
     if not path.is_file(): return None
     digest = hashlib.sha256()
     with path.open('rb') as handle:
+        observe_original_UI_ancillary_file(handle,path,'dataset')
         for block in iter(lambda: handle.read(1024*1024), b''): digest.update(block)
     return digest.hexdigest()
 
@@ -107,6 +112,7 @@ def _root(project_root, annotation_root=None):
 def ledger_path(project_root, dataset_root, annotation_root=None):
     return dataset_annotation_dir(Path(dataset_root), _root(project_root, annotation_root), use_scope=False)/'metadata'/'workflow.json'
 
+@observe_original_UI_ancillary_context("metadata_transaction")
 @contextmanager
 def metadata_transaction(project_root, dataset_root, annotation_root=None):
     path = ledger_path(project_root, dataset_root, annotation_root)
@@ -128,7 +134,7 @@ def metadata_transaction(project_root, dataset_root, annotation_root=None):
     lock_name = hashlib.sha256(key.encode()).hexdigest()
     with _file_lock(locks/f'{lock_name}.lock'):
         if path.is_symlink(): raise ValueError('Metadata ledger cannot be a symbolic link')
-        ledger = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {'schema_version':1, 'images':{}}
+        ledger = json.loads(original_UI_ancillary_read_text(path,encoding='utf-8',role='dataset')) if path.exists() else {'schema_version':1, 'images':{}}
         if not isinstance(ledger.get('images'),dict): raise ValueError('Invalid metadata ledger')
         before = json.dumps(ledger, sort_keys=True)
         state = _MetadataTransactionState(ledger)
@@ -142,6 +148,7 @@ def metadata_transaction(project_root, dataset_root, annotation_root=None):
                 path.parent.mkdir(parents=True, exist_ok=True)
                 with tempfile.NamedTemporaryFile('w',encoding='utf-8',dir=path.parent,delete=False) as handle:
                     temporary = Path(handle.name)
+                    observe_original_UI_ancillary_file(handle,temporary,"dataset_publish")
                     json.dump(ledger,handle,ensure_ascii=False,indent=2); handle.flush(); os.fsync(handle.fileno())
                 os.replace(temporary,path)
         except BaseException as exc:

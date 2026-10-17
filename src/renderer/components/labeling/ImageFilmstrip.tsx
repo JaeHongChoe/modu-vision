@@ -7,11 +7,14 @@ import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { useDatasetStore } from '../../stores/useDatasetStore';
+import { useProjectStore } from '../../stores/useProjectStore';
 import { resolveApiUrl } from '../../services/api';
+import { imageReadAllowed } from './imageReadCustody';
 
 /** ``compact`` (focus editing): one slim row with the position and the arrows, no thumbnails. */
 export const ImageFilmstrip: React.FC<{ compact?: boolean }> = ({ compact = false }) => {
-  const { images, currentImageIndex, selectImageByIndex, nextImage, prevImage } = useAnnotationStore();
+  const { images, currentImageIndex, externalSelectionPath, selectImageByIndex, nextImage, prevImage } = useAnnotationStore();
+  const { project, isProjectBusy } = useProjectStore();
   const { page, pageSize, totalImagesCount, loadImages } = useDatasetStore();
   const pageCount = Math.max(1, Math.ceil(totalImagesCount / pageSize));
   const canGoBack = currentImageIndex > 0 || page > 1;
@@ -56,12 +59,12 @@ export const ImageFilmstrip: React.FC<{ compact?: boolean }> = ({ compact = fals
         {compact && images[currentImageIndex] && <span className="truncate text-xs font-mono text-slate-300">{images[currentImageIndex].file_name}</span>}
         {!compact && images.map((img, idx) => {
           const isSelected = idx === currentImageIndex;
-          const thumbSrc = resolveApiUrl(
+          const thumbSrc = imageReadAllowed(img.file_path, project?.source_dataset_dir, externalSelectionPath, isProjectBusy) ? resolveApiUrl(
             img.thumbnail_url ||
               `/api/dataset/thumbnail/${encodeURIComponent(img.file_name)}?file_path=${encodeURIComponent(
                 img.file_path
               )}&size=128`
-          );
+          ) : undefined;
 
           return (
             <div

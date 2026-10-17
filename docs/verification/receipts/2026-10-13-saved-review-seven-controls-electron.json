@@ -1,0 +1,44 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "975e89701e35c5639abb6bc7c93b75b6e85209af",
+  "source_dirty": false,
+  "test": "scripts/e2e/saved-review-seven-controls.spec.ts::native saved review seven current and origin controls preserve owned originals through empty stale-origin error and reopen",
+  "test_source_sha256": "42915c362d69342364f7b0e6c30dc81c300fd3925dca4f7bb9f896fa3473834c",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "537e2109ec16bdb99e7104bd81a193988d9277e4c9042894ceb8555207ad4765",
+  "harness_sha256": "53049249ca15ad0372d1173de9f26f9b0730a735c59bdfda323427b245d11788",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "4526eaebcc9f4ab4afb2561854b0e686a4d16aa99bedd180ea41554a4201e51b"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "c77d2e312d7d033bee24a0dde22c3d8ab13bfb21ebb04d33a4fe0724a67c457a"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "8e8cc86dbdebafa53257a6dac31179be74a807e31c1533de57734113c8906cf4"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "f0b934733815db7aac6eab8445559fcb3a4e117ea4ae5b1a597c41bdcd4d46be"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "085a55652aa596569b92c547b37f5fe12e7e5118a05664503d97fe01399a9a15"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

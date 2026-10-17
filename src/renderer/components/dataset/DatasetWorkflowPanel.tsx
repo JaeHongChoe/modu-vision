@@ -1,4 +1,4 @@
-import React,{useEffect,useState} from 'react';
+import React,{useEffect,useRef,useState} from 'react';
 import {datasetWorkflow,workflowError,type ImageReviewMetadata,type GroupSplit,type ImportPreview,type DuplicateGroup} from '../../services/datasetWorkflow';
 import {resolveApiUrl,getProjectContextGeneration,getApiPersistenceIdentity,subscribeProjectContext} from '../../services/api';
 import {host} from '../../services/hostAdapter';
@@ -8,9 +8,18 @@ import {useAnnotationStore} from '../../stores/useAnnotationStore';
 import {ProjectPreferencePanel} from './ProjectPreferencePanel';
 import {ExternalMaskExchangePanel} from './ExternalMaskExchangePanel';
 import {projectPreferences} from '../../services/projectPreferences';
+// Project acceptance precedes dataset adoption during a workspace switch.
+// Read only while both stores describe the same saved source and task.
+function metadataReadScope(projectState:ReturnType<typeof useProjectStore.getState>,dataset:ReturnType<typeof useDatasetStore.getState>):string{
+  const project=projectState.project,source=dataset.folderPath;
+  if(!project?.id||projectState.isProjectBusy||dataset.isLoading||!dataset.hasSelectedFolder||!source
+    ||projectState.projectDir!==project.project_dir||projectState.task!==project.task||source!==project.source_dataset_dir)return '';
+  return JSON.stringify([project.id,project.project_dir,project.task,project.active_labelset_id||'default',source]);
+}
 export const DatasetWorkflowPanel:React.FC=()=>{
-  const {folderPath,hasSelectedFolder,annotationsChanged,loadImages}=useDatasetStore();const {projectDir,openImageForLabeling}=useProjectStore();
+  const dataset=useDatasetStore(),projectState=useProjectStore();const {folderPath,hasSelectedFolder,annotationsChanged,loadImages}=dataset;const {projectDir,openImageForLabeling}=projectState;
   const [epoch,setEpoch]=useState(getProjectContextGeneration);const generation=getProjectContextGeneration(),identity=getApiPersistenceIdentity();const same=()=>getProjectContextGeneration()===generation&&getApiPersistenceIdentity()===identity&&useDatasetStore.getState().folderPath===folderPath&&useProjectStore.getState().projectDir===projectDir;
+  const readScope=metadataReadScope(projectState,dataset);const sameRead=()=>Boolean(readScope)&&same()&&metadataReadScope(useProjectStore.getState(),useDatasetStore.getState())===readScope;
   useEffect(()=>subscribeProjectContext(()=>setEpoch(getProjectContextGeneration())),[]);
   const {reviewerName,setReviewerName}=useAnnotationStore();
   const [open,setOpen]=useState(false);const [rows,setRows]=useState<ImageReviewMetadata[]>([]);const [total,setTotal]=useState(0);const [state,setState]=useState('');const [product,setProduct]=useState('');const [lot,setLot]=useState('');const [group,setGroup]=useState('');const [tag,setTag]=useState('');
@@ -20,9 +29,24 @@ export const DatasetWorkflowPanel:React.FC=()=>{
   const [bulkUsage,setBulkUsage]=useState('');const [palette,setPalette]=useState<Record<string,string>>({});
   useEffect(()=>{let active=true;const load=()=>projectPreferences.read().then(p=>{if(active)setPalette(p.tag_colors);}).catch(()=>undefined);if(projectDir)void load();window.addEventListener('project-preferences-changed',load);return()=>{active=false;window.removeEventListener('project-preferences-changed',load);};},[projectDir]);
   const [format,setFormat]=useState('labelme');const [importDir,setImportDir]=useState('');const [policy,setPolicy]=useState('reject');const [preview,setPreview]=useState<ImportPreview[]>([]);const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [notice,setNotice]=useState('');
-  const refresh=async()=>{if(!same())return;const result=await datasetWorkflow.list({folder_path:folderPath,state,product,lot,group,tag,limit:5000});if(same()){setRows(result.items);setTotal(result.total);}};
-  useEffect(()=>{setRows([]);setPage(1);setSelected(new Set());setSplit(null);setPreview([]);setImportDir('');setError('');setNotice('');},[projectDir,folderPath,epoch,identity]);
-  useEffect(()=>{if(!open||!hasSelectedFolder||!projectDir)return;let current=true;setBusy(true);Promise.all([datasetWorkflow.list({folder_path:folderPath,state,product,lot,group,tag,limit:5000}),datasetWorkflow.duplicates(),datasetWorkflow.savedSplit()]).then(([r,d,s])=>{if(current&&same()){setRows(r.items);setPage(1);setSelected(new Set());setTotal(r.total);setDuplicates(d.duplicates);if(s.availability==='available')setSplit(s);}}).catch(e=>{if(current&&same())setError(workflowError(e));}).finally(()=>{if(current&&same())setBusy(false);});return()=>{current=false;};},[open,projectDir,folderPath,state,product,lot,group,tag,hasSelectedFolder,generation]);
+  const activeExport=useRef<AbortController|null>(null);const [exporting,setExporting]=useState<AbortController|null>(null);
+  useEffect(()=>()=>{const controller=activeExport.current;activeExport.current=null;controller?.abort();},[]);
+  useEffect(()=>{const controller=activeExport.current;if(controller){activeExport.current=null;controller.abort();setExporting(null);setBusy(false);}},[projectDir,folderPath,epoch,identity]);
+  const cancelExport=(controller:AbortController|null)=>{
+    if(!controller||activeExport.current!==controller||!same())return;
+    activeExport.current=null;controller.abort();setExporting(null);setBusy(false);setError('');setNotice('내보내기 요청을 취소했습니다. 다운로드를 시작하지 않았습니다. 이미 생성된 파일은 유지됩니다.');
+  };
+  const exportLabels=async()=>{
+    if(busy||activeExport.current||!same())return;
+    const controller=new AbortController();activeExport.current=controller;setExporting(controller);setBusy(true);setError('');setNotice('');
+    const current=()=>activeExport.current===controller&&!controller.signal.aborted&&same();
+    try{const result=await datasetWorkflow.export(format,controller.signal);if(!current())return;const a=document.createElement('a');a.href=resolveApiUrl(result.download_url);a.download=`${format}_annotations.zip`;a.click();setNotice(`${result.image_count}개 이미지 · ${result.annotation_count}개 라벨 내보내기 완료`);}
+    catch(cause){if(current())setError(workflowError(cause));}
+    finally{if(current()){activeExport.current=null;setExporting(null);setBusy(false);}}
+  };
+  const refresh=async()=>{if(!sameRead())return;const result=await datasetWorkflow.list({folder_path:folderPath,state,product,lot,group,tag,limit:5000});if(sameRead()){setRows(result.items);setTotal(result.total);}};
+  useEffect(()=>{setRows([]);setPage(1);setSelected(new Set());setSplit(null);setPreview([]);setImportDir('');setError('');setNotice('');},[projectDir,folderPath,epoch,identity,readScope]);
+  useEffect(()=>{if(!open||!readScope){if(!activeExport.current)setBusy(false);return;}let current=true;setBusy(true);Promise.all([datasetWorkflow.list({folder_path:folderPath,state,product,lot,group,tag,limit:5000}),datasetWorkflow.duplicates(),datasetWorkflow.savedSplit()]).then(([r,d,s])=>{if(current&&sameRead()){setRows(r.items);setPage(1);setSelected(new Set());setTotal(r.total);setDuplicates(d.duplicates);if(s.availability==='available')setSplit(s);}}).catch(e=>{if(current&&sameRead())setError(workflowError(e));}).finally(()=>{if(current&&sameRead())setBusy(false);});return()=>{current=false;};},[open,projectDir,folderPath,state,product,lot,group,tag,hasSelectedFolder,generation,readScope]);
   const run=async(action:()=>Promise<void>)=>{if(!same())return;setBusy(true);setError('');setNotice('');try{await action();}catch(e){if(same())setError(workflowError(e));}finally{if(same())setBusy(false);}};
   const importLabels=async(apply:boolean)=>{
     if(apply&&!reviewerName.trim())throw new Error('작업자 이름을 입력하세요.');
@@ -46,7 +70,7 @@ export const DatasetWorkflowPanel:React.FC=()=>{
     if(result.applied){setNotice(`그룹 분할 적용 · 이전 버전 ${result.backup_version_id}`);await annotationsChanged();if(same())await loadImages(1);}
   };
   return <div className="relative z-[75] shrink-0 border-b border-slate-700 bg-[#101722] px-4 py-2 text-xs">
-    <div className="flex items-center justify-between gap-2"><button type="button" onClick={()=>setOpen(!open)} disabled={!hasSelectedFolder||!projectDir} aria-expanded={open} className="rounded border border-cyan-800 px-3 py-1.5 font-semibold text-cyan-200 disabled:opacity-40">이미지 검토·그룹 분할·라벨 교환</button><ProjectPreferencePanel/></div>
+    <div className="flex items-center justify-between gap-2"><button type="button" onClick={()=>{if(open)cancelExport(activeExport.current);setOpen(!open);}} disabled={!hasSelectedFolder||!projectDir} aria-expanded={open} className="rounded border border-cyan-800 px-3 py-1.5 font-semibold text-cyan-200 disabled:opacity-40">이미지 검토·그룹 분할·라벨 교환</button><ProjectPreferencePanel/></div>
     {open&&<section aria-label="데이터 검토와 라벨 교환" className="absolute inset-x-3 top-full mt-1 max-h-[75vh] space-y-4 overflow-y-auto rounded border border-slate-600 bg-[#151D2A] p-4 shadow-2xl">
       <div className="flex flex-wrap items-end gap-2"><label>작업자·검토자<input aria-label="데이터 작업자 이름" value={reviewerName} onChange={e=>setReviewerName(e.target.value)} className="ml-2 rounded border border-slate-600 bg-slate-900 p-1.5"/></label>
         <select aria-label="검토 상태 필터" value={state} onChange={e=>setState(e.target.value)} className="rounded border border-slate-600 bg-slate-900 p-1.5"><option value="">전체 상태</option><option value="unworked">미작업</option><option value="needs_review">검토 필요</option><option value="approved">승인됨</option></select>
@@ -70,7 +94,7 @@ export const DatasetWorkflowPanel:React.FC=()=>{
         <button disabled={busy} onClick={()=>void run(async()=>{const dir=await host.selectFolder({title:'가져올 라벨 폴더 선택'});if(dir&&same()){setImportDir(dir);setPreview([]);}})} className="rounded border border-slate-600 px-3 py-2">라벨 폴더 선택</button><span className="max-w-72 truncate text-slate-400" title={importDir}>{importDir||'폴더를 선택하세요'}</span>
         <select aria-label="기존 라벨 충돌 처리" value={policy} onChange={e=>setPolicy(e.target.value)} className="rounded border border-slate-600 bg-slate-900 p-2"><option value="reject">기존 라벨 충돌 시 중지</option><option value="merge">기존 라벨에 추가</option><option value="replace">기존 라벨 교체</option></select>
         <button disabled={busy||!importDir} onClick={()=>void run(()=>importLabels(false))} className="rounded border border-cyan-700 px-3 py-2 disabled:opacity-40">가져오기 미리보기</button><button disabled={busy||!preview.length} onClick={()=>void run(()=>importLabels(true))} className="rounded bg-emerald-700 px-3 py-2 disabled:opacity-40">검토한 라벨 적용</button>
-        <button disabled={busy} onClick={()=>void run(async()=>{const result=await datasetWorkflow.export(format);if(!same())return;const a=document.createElement('a');a.href=resolveApiUrl(result.download_url);a.download=`${format}_annotations.zip`;a.click();setNotice(`${result.image_count}개 이미지 · ${result.annotation_count}개 라벨 내보내기 완료`);})} className="rounded border border-cyan-700 px-3 py-2">라벨 내보내기</button></div>
+        <button type="button" disabled={busy} aria-busy={Boolean(exporting)} onClick={()=>void exportLabels()} className="rounded border border-cyan-700 px-3 py-2">라벨 내보내기</button><button type="button" disabled={!exporting} onClick={()=>cancelExport(exporting)} title={exporting?'현재 라벨 내보내기 요청 취소':'진행 중인 라벨 내보내기 요청이 없습니다.'} className="cursor-pointer rounded border border-slate-600 px-3 py-2 hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400 disabled:cursor-default disabled:opacity-40">내보내기 요청 취소</button></div>
         {preview.length>0&&<ul className="mt-2 max-h-32 overflow-auto">{preview.map(r=><li key={r.image_uuid} className={r.conflict?'text-amber-300':'text-slate-300'}>{r.file_name} · 기존 {r.existing_count} / 가져올 {r.incoming_count}{r.conflict?' · 충돌 있음':''}</li>)}</ul>}
         <p className="mt-2 text-slate-400">원본 좌표를 유지하며 이미지 파일은 복사하지 않습니다. COCO·YOLO는 박스/다각형만 지원합니다. 브러시 마스크·COCO RLE는 명시적으로 중지합니다. YOLO는 classes.txt와 이미지 크기 정보가 필요합니다.</p>
       </details>

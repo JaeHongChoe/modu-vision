@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "58eaccddb104da9e41269824625f033d28333fc4",
+  "source_dirty": false,
+  "test": "scripts/e2e/flow-node-limit-preflights.spec.ts::F064 ninth fixed ROI and inspection node keyboard additions fail before graph or saved draft writes",
+  "test_source_sha256": "6236bb318378715ae00131829ee56497e1eeb75c7f7a2bb3a9664c8fa386dfa8",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "cd2e8c9075f3cce574a0cc7e6fd11ed7ce95479762c67212f42448b6898ed863",
+  "harness_sha256": "25a14afaa857d2af8813fedb712d34f1f3acafbd9b71993c6957622f00290bf3",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "8c98b9d536bbb7f1a4caff2e746a0bdc1cc5da8db5be5126daf86127702da14f"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "b764f49a8cc286576bc10aaeda17146a8347a54a",
+  "source_dirty": false,
+  "test": "scripts/e2e/dicom-empty-owned-abort.spec.ts::native DICOM empty optional windows use original defaults and exact RLE request abort preserves display before original retry",
+  "test_source_sha256": "9334241345d6b26a49da137ac64c116e4f68f125d2895affe34b22937cba15de",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "2e8325a4adb05d339b393f20fd99df65c05bbaccc7ae0def93a7154f316b41bc",
+  "harness_sha256": "48beec1d191a54b2ef7d7fcd0d2b3c8eb1d1d206c79ae67a86be178d73440bd0",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "24b81e011524eda89a70652900fd1043eda02298393ce79d3e64a3add5b65a81"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "10ad914a923e33126c5416813ac5b8141f6ffbb12b22b0fe3418d9c17ed0edae"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "1787eed06dcdaf1130922156b5dd0f51e3bbd2529fa723aaa996997581104e38"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "a6380350c1da8d03fad3987353f749c229abaacc9334eb86e764614f91b524a1"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

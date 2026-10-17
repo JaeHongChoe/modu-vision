@@ -1048,8 +1048,9 @@ def test_atomic_observation_cleanup_only_failure_remains_visible_after_complete_
     def unlink(path):
         real_unlink(path)
         raise error
-    monkeypatch.setattr(os,'unlink',unlink)
-    with pytest.raises(OSError) as caught:_atomic_fixture_json(target,{'fact':True},exclusive=True)
+    with monkeypatch.context() as scoped:
+        scoped.setattr(os,'unlink',unlink)
+        with pytest.raises(OSError) as caught:_atomic_fixture_json(target,{'fact':True},exclusive=True)
     assert caught.value is error
     assert json.loads(target.read_bytes())=={'fact':True}
     assert sorted(p.name for p in tmp_path.iterdir())==['first.json']

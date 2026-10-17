@@ -33,8 +33,12 @@ def test_optional_tool_exclusions_preserve_the_whole_backend_command(
     # Old compiler fails here before the unchanged full-command comparison.
     assert command.count('--exclude-module=panel') == 1
     assert command.count('--exclude-module=sphinx') == 1
+    # Collect the required codec once at its exact builder-command position.
+    assert command.count('--collect-all=pi_heif') == 1
+    assert command.index('--collect-all=pi_heif') == command.index('--collect-all=huggingface_hub') + 1
     remaining = [arg for arg in command if arg not in (
-        '--exclude-module=panel', '--exclude-module=sphinx')]
+        '--exclude-module=panel', '--exclude-module=sphinx',
+        '--collect-all=pi_heif')]
     original = [
         sys.executable, '-m', 'PyInstaller', '--name', 'vision_ai_backend',
         '--onedir', '--clean', '--noconfirm', f'--distpath={output}',

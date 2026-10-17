@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "0f96d1dcf1dbd953d1b48fd0d19e483b586f73be",
+  "source_dirty": false,
+  "test": "scripts/e2e/derived-edit-lifecycle.spec.ts::native empty align and brightness actions preserve owning A versions through empty B and exact reopen",
+  "test_source_sha256": "e995e241d04b0f2602ad4f103ff146138930a889c447a2c842ae04fec9ef0f57",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "b8eff66db377e7a37ac4c4aedaea5326607ed4bec743eea90602f7dbc8658cd2",
+  "harness_sha256": "24330513b5b6f8cff792a5dc9fb0156e94ed777dc00dbf9a70a39c9ccfcc49a2",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "9cdbf3c0c15196d3abccf28c29fee91b8ed820b8ae416b9e95d1eee8fe261ed7"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "62954fd0f637e3ac20defe973b220c5f5120abdd180a84209dc9865dd1e8a4db"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "d0eb9960f951fdad9c96cf5fb332c969c466440b7fbc36c4881c708fa4bf2238"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "c018c016f9a744c0d6f49e3149341eebf83b3ae04a605ea8e9f1a75912bf6e70"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

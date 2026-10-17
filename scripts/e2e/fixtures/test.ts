@@ -8,6 +8,8 @@ import { _electron as electron, expect, test as base, type ElectronApplication, 
 // The CommonJS core is shared with the Node bootstrap checks.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const harness = require('./harness.cjs');
+const nativeFullBodyFenceMode = process.env.MV_E2E_NATIVE_FULL_BODY_READS;
+const nativeFullBodyFence = nativeFullBodyFenceMode === '1' ? require('./native-full-body-fence.cjs') : null;
 
 export type Workspace = {
   root: string; userData: string; projects: string; home: string; dataset: string; logs: string;
@@ -261,6 +263,10 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       }
     };
     let appWindow: Page | null = null;
+    const fullBodyFenceEnabled = nativeFullBodyFenceMode === '1';
+    const fullBodyFence = nativeFullBodyFence;
+    const fullBodyFailure = fullBodyFenceEnabled
+      ? fullBodyFence.createFixtureFailure((record: unknown) => evidence.note('native_full_body_fixture_closure', record)) : null;
     try {
       appWindow = await app.firstWindow({ timeout: 60_000 });
       // In an unpackaged run the main process first tries the dev server URL and
@@ -289,8 +295,18 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
           return { port: status.port, pid: status.pid ?? null, state: 'HEALTHY', health };
         },
       };
-      await use(session);
+      if (fullBodyFenceEnabled) {
+        await fullBodyFence.withNativeFullBodyReads(window, () => use(session),
+          (record: unknown) => evidence.note('native_full_body_cache_fence', record),
+          nativeFullBodyFenceMode);
+      } else {
+        await use(session);
+      }
+    } catch (cause) {
+      if (!fullBodyFailure) throw cause;
+      fullBodyFailure.capture(cause);
     } finally {
+      try {
       // Re-read the backend identity just before closing to catch supervisor restarts.
       const finalStatus = appWindow ? await readStatus(appWindow).catch(() => null) : null;
       if (finalStatus?.port) seenBackends.set(finalStatus.port, { port: finalStatus.port, pid: finalStatus.pid ?? null });
@@ -337,6 +353,12 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
         closeTimedOut && 'Electron did not close within 30 s',
       ].filter(Boolean);
       if (problems.length) throw new Error(`Electron session did not stop cleanly: ${problems.join('; ')}`);
+      } catch (cause) {
+        if (!fullBodyFailure) throw cause;
+        fullBodyFailure.capture(cause);
+      } finally {
+        if (fullBodyFailure) fullBodyFailure.finish({original_app_teardown_attempted: true});
+      }
     }
   },
 });

@@ -2,17 +2,17 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const nodes=t=>Array.isArray(t)?t.flatMap(nodes):t&&typeof t==='object'?[t,...nodes(t.props?.children)]:[];
 global.localStorage={getItem:()=>null,setItem(){},removeItem(){}};
 function fixture(config={}){
- let index=0,tree,dirty=true;const slots=[],effects=[],calls=[],urls=[];let pending=null,resolveCreate;
+ let index=0,tree,dirty=true;const slots=[],effects=[],calls=[],urls=[],catalogReads=[];let pending=null,resolveCreate;
  const compute={selectedProfileId:'server',transportRevision:1,profiles:[{id:'server',name:'GPU2',gpu_selector:'2'}]};
  const hook=object=>Object.assign(selector=>selector?selector(object):object,{getState:()=>object});
  const react={useState(value){const i=index++;if(!(i in slots))slots[i]=value;return[slots[i],v=>{slots[i]=typeof v==='function'?v(slots[i]):v;dirty=true;}];},useRef(value){const i=index++;return slots[i]??(slots[i]={current:value});},useEffect(fn,deps){const i=index++;if(JSON.stringify(slots[i]?.deps)!==JSON.stringify(deps)){const previous=slots[i];slots[i]={deps};effects.push(()=>{previous?.cleanup?.();slots[i].cleanup=fn();});}}};
  const file=path.join(__dirname,'ModelComparisonPanel.tsx'),m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(__dirname);const req=m.require.bind(m);
  const models=[{job_id:'incumbent',task:'classification'},{job_id:'candidate',task:'classification'}];
- m.require=n=>n==='react'?react:n.endsWith('/services/datasetWorkflow')?{datasetWorkflow:{}}:n.endsWith('/services/teamDataApi')?{teamDataApi:{}}:n.endsWith('/useAnnotationStore')?{useAnnotationStore:hook({reviewerName:'kai'})}:n.endsWith('/evidenceLabeling')?{openEvidenceLabeling:async()=>{throw new Error('Unexpected edit action');},rememberEvidenceEdit(){}}:n.endsWith('/EvidenceImageViewer')?{EvidenceImageViewer:()=>null}:n.includes('useComputeStore')?{useComputeStore:hook(compute)}:n.includes('useProjectStore')?{useProjectStore:hook({projectDir:'/project',project:{id:'p',source_dataset_dir:'/source',active_labelset_id:'default'}})}:n.endsWith('/useTaskHandoff')?{useTaskHandoff:()=>config.handoff||null}:n.includes('productDataWorkflow')?{consumeReviewContext:(_storage,_scope,ids)=>{const value=config.origin;config.origin=null;return value&&ids.includes(value.comparison_id)?value:null;},evaluationOriginScope:()=>null}:n.endsWith('/services/api')?{getApiPersistenceIdentity:()=> 'local',api:{evaluation:{comparisonModels:async()=>({models:config.models||models}),listComparisons:async()=>({comparisons:config.report?[config.report]:[]}),getComparison:async id=>config.getReport?config.getReport(id):config.report}},request:async(url,options)=>{urls.push(url);if(options){calls.push(JSON.parse(options.body));if(pending)return new Promise(resolve=>{resolveCreate=resolve;});return config.created||{job_id:'controlled',status:'completed'};}if(url.includes('/export?'))return config.export?config.export():{report:config.report,saved_report_sha256:'a'.repeat(64)};if(url.includes('/jobs/'))return config.polled||config.created||{job_id:'controlled',status:'completed',completed_images:0,total_images:0,report_id:null,error:null};return{jobs:config.jobs||[]};}}:req(n);
+ m.require=n=>n==='react'?react:n.endsWith('/services/datasetWorkflow')?{datasetWorkflow:{}}:n.endsWith('/services/teamDataApi')?{teamDataApi:{}}:n.endsWith('/useAnnotationStore')?{useAnnotationStore:hook({reviewerName:'kai'})}:n.endsWith('/evidenceLabeling')?{openEvidenceLabeling:async()=>{throw new Error('Unexpected edit action');},rememberEvidenceEdit(){}}:n.endsWith('/EvidenceImageViewer')?{EvidenceImageViewer:()=>null}:n.includes('useComputeStore')?{useComputeStore:hook(compute)}:n.includes('useProjectStore')?{useProjectStore:hook({projectDir:'/project',project:{id:'p',source_dataset_dir:'/source',active_labelset_id:'default'}})}:n.endsWith('/useTaskHandoff')?{useTaskHandoff:()=>config.handoff||null}:n.includes('productDataWorkflow')?{consumeReviewContext:(_storage,_scope,ids)=>{const value=config.origin;config.origin=null;return value&&ids.includes(value.comparison_id)?value:null;},evaluationOriginScope:()=>null}:n.endsWith('/services/api')?{getApiPersistenceIdentity:()=> 'local',api:{evaluation:{comparisonModels:async(source,task)=>{catalogReads.push({source,task});if(config.catalogError)throw config.catalogError;return{models:config.models||models};},listComparisons:async()=>({comparisons:config.report?[config.report]:[]}),getComparison:async id=>config.getReport?config.getReport(id):config.report}},request:async(url,options)=>{urls.push(url);if(options){calls.push(JSON.parse(options.body));if(config.createError)throw config.createError;if(pending)return new Promise(resolve=>{resolveCreate=resolve;});return config.created||{job_id:'controlled',status:'completed'};}if(url.includes('/export?'))return config.export?config.export():{report:config.report,saved_report_sha256:'a'.repeat(64)};if(url.includes('/jobs/'))return config.polled||config.created||{job_id:'controlled',status:'completed',completed_images:0,total_images:0,report_id:null,error:null};return{jobs:config.jobs||[]};}}:req(n);
  m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,file);
  function render(){index=0;dirty=false;tree=m.exports.ModelComparisonPanel({projectDir:'/project',sourceFolder:'/source',task:'classification',preferredJobId:'candidate',preferredParentJobId:'incumbent',language:'ko',...config.props});effects.splice(0).forEach(f=>f());}
  async function settle(){for(let i=0;i<8;i++){if(dirty)render();await new Promise(setImmediate);if(!dirty)return;}}
- return{compute,calls,urls,settle,render,defer(){pending=true;},resolve(){resolveCreate({job_id:'stale-request',status:'completed'});},all:()=>nodes(tree),change:async(label,value)=>{const n=nodes(tree).find(n=>n.props?.['aria-label']===label);assert(n,label);n.props.onChange({target:{value}});await settle();},run:async()=>{const n=nodes(tree).find(n=>n.type==='button'&&nodes(n).some(child=>[child.props?.children].flat().includes('동일 test 이미지로 비교')));assert(n);await n.props.onClick();await settle();}};
+ return{compute,calls,urls,catalogReads,settle,render,defer(){pending=true;},resolve(){resolveCreate({job_id:'stale-request',status:'completed'});},all:()=>nodes(tree),change:async(label,value)=>{const n=nodes(tree).find(n=>n.props?.['aria-label']===label);assert(n,label);n.props.onChange({target:{value}});await settle();},run:async()=>{const n=nodes(tree).find(n=>n.type==='button'&&nodes(n).some(child=>[child.props?.children].flat().includes('동일 test 이미지로 비교')));assert(n);await n.props.onClick();await settle();}};
 }
 test('production comparison submits explicitly selected server/device',async()=>{const f=fixture();await f.settle();await f.change('비교 실행 장치','cpu');await f.run();assert.equal(f.calls[0].execution_target,'selected_compute');assert.equal(f.calls[0].compute_profile_id,'server');assert.equal(f.calls[0].device,'cpu');});
 test('production comparison with local selection labels and submits host CPU',async()=>{const f=fixture();f.compute.selectedProfileId=null;await f.settle();await f.run();assert.equal(f.calls[0].execution_target,'local_cpu');assert.equal(f.calls[0].device,'cpu');assert.equal(f.calls[0].compute_profile_id,null);assert(f.all().some(n=>String(n.props?.children).includes('로컬 CPU')));});
@@ -170,4 +170,95 @@ test('a disappeared manual model refuses rather than substituting a recommendati
 test('late recommendation reload preserves the manually selected pair threshold',async()=>{
  const config={props:{preferredJobId:'candidate'}};const f=fixture(config);await f.settle();await f.change('비교 기준 모델','incumbent');await f.change('후보 모델','candidate');await f.change('비교 후보 임계값',.37);
  config.props.preferredJobId='incumbent';f.render();await f.settle();assert.equal(f.all().find(n=>n.props?.['aria-label']==='비교 후보 임계값').props.value,.37);
+});
+
+// Focused source-component controls; these do not claim a browser or backend pass.
+test('manual duplicate pair refuses submission and explicit valid pair restores it',async()=>{
+ const f=fixture();await f.settle();await f.change('후보 모델','incumbent');const submit=f.all().find(n=>n.type==='button'&&textOf(n)==='동일 test 이미지로 비교');assert(submit&&submit.props.disabled);await f.run();assert.equal(f.calls.length,0);await f.change('후보 모델','candidate');await f.run();assert.equal(f.calls.length,1);assert.equal(f.calls[0].incumbent_job_id,'incumbent');assert.equal(f.calls[0].candidate_job_id,'candidate');
+});
+test('manual pair survives submit rejection and explicit retry retains exact payload',async()=>{
+ const config={createError:new Error('controlled503 comparison unavailable')},f=fixture(config);await f.settle();await f.change('비교 기준 모델','candidate');await f.change('후보 모델','incumbent');await f.run();assert(f.all().some(n=>n.props?.role==='alert'&&textOf(n).includes('controlled503')));assert.equal(f.all().find(n=>n.props?.['aria-label']==='비교 기준 모델').props.value,'candidate');assert.equal(f.all().find(n=>n.props?.['aria-label']==='후보 모델').props.value,'incumbent');const first=structuredClone(f.calls[0]);config.createError=null;await f.run();assert.deepEqual(f.calls[1],first);assert(!f.all().some(n=>n.props?.role==='alert'));
+});
+test('owning source switch abandons an in-flight pair without publishing its late job',async()=>{
+ const config={props:{sourceFolder:'/source'}},f=fixture(config);await f.settle();f.defer();const pending=f.run();await new Promise(setImmediate);assert.equal(f.calls.length,1);assert.equal(f.calls[0].source_dataset_path,'/source');config.props.sourceFolder='/other-source';f.render();await f.settle();f.resolve();await pending;await f.settle();assert(!f.all().some(n=>n.type==='option'&&n.props?.value==='stale-request'));assert(!f.urls.some(u=>u.includes('/jobs/stale-request?')));assert.equal(f.calls.length,1);assert.equal(f.all().find(n=>n.props?.['aria-label']==='비교 기준 모델').props.value,'incumbent');assert.equal(f.all().find(n=>n.props?.['aria-label']==='후보 모델').props.value,'candidate');assert.equal(f.all().find(n=>n.type==='button'&&textOf(n)==='동일 test 이미지로 비교').props.disabled,false);assert(!f.all().some(n=>n.props?.role==='alert'));
+});
+
+// These source-component controls exercise catalog reload; actual header clicks
+// and raw HTTP ownership remain the separate browser/Electron spec's evidence.
+test('explicit comparison refresh re-reads catalog without replacing the manual pair',async()=>{
+ const config={props:{refreshRevision:0}},f=fixture(config);await f.settle();
+ await f.change('비교 기준 모델','candidate');await f.change('후보 모델','incumbent');
+ await f.change('비교 후보 임계값',.37);
+ config.models=[{job_id:'incumbent',task:'classification'},{job_id:'candidate',task:'classification'},{job_id:'new-catalog-model',task:'classification'}];
+ config.props.refreshRevision=1;f.render();await f.settle();
+ assert.deepEqual(f.catalogReads,[{source:'/source',task:'classification'},{source:'/source',task:'classification'}]);
+ assert(f.all().some(n=>n.type==='option'&&n.props.value==='new-catalog-model'));
+ assert.equal(f.all().find(n=>n.props?.['aria-label']==='비교 기준 모델').props.value,'candidate');
+ assert.equal(f.all().find(n=>n.props?.['aria-label']==='후보 모델').props.value,'incumbent');
+ assert.equal(f.all().find(n=>n.props?.['aria-label']==='비교 후보 임계값').props.value,.37);
+ assert.equal(f.calls.length,0);assert(!f.all().some(n=>n.props?.role==='alert'));
+});
+test('catalog refresh error retains exact manual values and exposes the refusal',async()=>{
+ const config={props:{refreshRevision:0}},f=fixture(config);await f.settle();
+ await f.change('비교 기준 모델','candidate');await f.change('후보 모델','incumbent');
+ config.catalogError=new Error('controlled model catalog unavailable');config.props.refreshRevision=1;
+ f.render();await f.settle();assert.equal(f.catalogReads.length,2);
+ assert(f.all().some(n=>n.props?.role==='alert'&&textOf(n)==='controlled model catalog unavailable'));
+ assert.equal(f.all().find(n=>n.props?.['aria-label']==='비교 기준 모델').props.value,'candidate');
+ assert.equal(f.all().find(n=>n.props?.['aria-label']==='후보 모델').props.value,'incumbent');
+ assert.equal(f.all().find(n=>n.type==='button'&&textOf(n)==='동일 test 이미지로 비교').props.disabled,false);
+ assert.equal(f.calls.length,0);
+});
+test('catalog refresh retry restores the new catalog and clears error for the same manual pair',async()=>{
+ const config={props:{refreshRevision:0}},f=fixture(config);await f.settle();
+ await f.change('비교 기준 모델','candidate');await f.change('후보 모델','incumbent');
+ config.catalogError=new Error('controlled model catalog unavailable');config.props.refreshRevision=1;
+ f.render();await f.settle();assert(f.all().some(n=>n.props?.role==='alert'));
+ config.catalogError=null;config.models=[{job_id:'incumbent',task:'classification'},{job_id:'candidate',task:'classification'},{job_id:'retried-model',task:'classification'}];
+ config.props.refreshRevision=2;f.render();await f.settle();
+ assert.deepEqual(f.catalogReads,[{source:'/source',task:'classification'},{source:'/source',task:'classification'},{source:'/source',task:'classification'}]);
+ assert(f.all().some(n=>n.type==='option'&&n.props.value==='retried-model'));
+ assert.equal(f.all().find(n=>n.props?.['aria-label']==='비교 기준 모델').props.value,'candidate');
+ assert.equal(f.all().find(n=>n.props?.['aria-label']==='후보 모델').props.value,'incumbent');
+ assert(!f.all().some(n=>n.props?.role==='alert'));assert.equal(f.calls.length,0);
+});
+test('same-scope refresh preserves a pending comparison and its running result until terminal completion',async()=>{
+ const storage=persistentSelection(),priorWindow=global.window,timers=new Map();let nextTimer=0;
+ global.window={setTimeout:fn=>{const id=++nextTimer;timers.set(id,fn);return id;},clearTimeout:id=>timers.delete(id)};
+ const config={props:{refreshRevision:0},polled:compareJob('stale-request','running')},f=fixture(config);
+ const submit=()=>f.all().find(n=>n.type==='button'&&['동일 test 이미지로 비교','비교 실행 중…'].includes(textOf(n)));
+ const section=()=>f.all().find(n=>n.props?.['aria-label']==='현행과 후보 모델 비교');
+ let pendingStarted=false,resolved=false;
+ try{
+  await f.settle();await f.change('비교 기준 모델','candidate');await f.change('후보 모델','incumbent');
+  f.defer();pendingStarted=true;const pending=f.run();await new Promise(setImmediate);await f.settle();
+  assert.equal(f.calls.length,1);const submitted=structuredClone(f.calls[0]);
+  assert.equal(section().props['aria-busy'],true);assert.equal(submit().props.disabled,true);
+  config.props.refreshRevision=1;f.render();await f.settle();
+  assert.equal(section().props['aria-busy'],true);assert.equal(submit().props.disabled,true);
+  assert.equal(f.all().find(n=>n.props?.['aria-label']==='후보 모델').props.disabled,true);
+  assert.equal(f.calls.length,1);assert.equal(f.catalogReads.length,1);
+  f.resolve();resolved=true;await pending;await f.settle();
+  assert(f.urls.some(url=>url.includes('/jobs/stale-request?')));
+  assert.equal(f.all().find(n=>n.props?.['aria-label']==='비교 작업 다시 열기').props.value,'stale-request');
+  assert.equal(section().props['aria-busy'],true);assert.equal(submit().props.disabled,true);
+  assert.equal(timers.size,1);const [timer,poll]=timers.entries().next().value;
+  config.props.refreshRevision=2;f.render();await f.settle();
+  assert.equal(section().props['aria-busy'],true);assert.equal(submit().props.disabled,true);
+  assert.equal(f.all().find(n=>n.props?.['aria-label']==='비교 작업 다시 열기').props.value,'stale-request');
+  assert(timers.has(timer));assert.equal(f.calls.length,1);assert.equal(f.catalogReads.length,1);
+  timers.delete(timer);const terminal=compareJob('stale-request','completed');config.polled=terminal;
+  await poll();await f.settle();assert.equal(section().props['aria-busy'],false);assert.equal(submit().props.disabled,false);
+  assert(f.all().some(n=>n.type==='option'&&n.props.value==='stale-request'&&n.props.children.includes('completed')));
+  config.jobs=[terminal];config.models=[{job_id:'incumbent',task:'classification'},{job_id:'candidate',task:'classification'},{job_id:'idle-refreshed-model',task:'classification'}];
+  config.props.refreshRevision=3;f.render();await f.settle();
+  assert.equal(f.catalogReads.length,2);assert(f.all().some(n=>n.type==='option'&&n.props.value==='idle-refreshed-model'));
+  assert.equal(f.all().find(n=>n.props?.['aria-label']==='비교 기준 모델').props.value,'candidate');
+  assert.equal(f.all().find(n=>n.props?.['aria-label']==='후보 모델').props.value,'incumbent');
+  assert.equal(submit().props.disabled,false);assert.equal(f.calls.length,1);assert.deepEqual(f.calls[0],submitted);
+  assert(!f.all().some(n=>n.props?.role==='alert'));
+ }finally{
+  if(pendingStarted&&!resolved){f.resolve();await f.settle();}
+  global.window=priorWindow;storage.restore();
+ }
 });

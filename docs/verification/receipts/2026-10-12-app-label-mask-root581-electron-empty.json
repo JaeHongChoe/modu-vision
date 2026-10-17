@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "e53171e93b3527ca22ebc9b436f4e52555fa398d",
+  "source_dirty": false,
+  "test": "scripts/e2e/label-mask-empty-preflights.spec.ts::native label and mask empty chooser preview and apply preflights preserve originals",
+  "test_source_sha256": "b3c7c07af92471aefb2b236e9552987bea28e1a089d8c7415be007dcaf08ebbd",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "d4868a100a3ed67b5173045e12c5df6c2a1b2f0a36f081a16e4d0325d0d3eb10",
+  "harness_sha256": "d8d27388d0b16aeefff85ea3d0cb06947cc11c71b6116aedfe02ab51965c07aa",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "7b58efbb37acc5730dc1fd46abe5f009689a01a837abf7ef584179c5245a3af8"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

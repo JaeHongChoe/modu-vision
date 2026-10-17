@@ -17,12 +17,13 @@ export function getNextAction(input: ReadinessContext): ReadinessAction {
   completedInputs.push(`현재 원본 이미지 ${input.totalImages}장`);
   if(stage===1)return result('ready',[],'라벨·검수 확인',2);
   if(evidence.status!=='ready')return result(evidence.status==='checking'?'checking':'unknown',[evidence.error || '현재 입력 근거 확인 중'],'준비도 다시 확인',stage,undefined,'refresh');
-  if(!evidence.review || !evidence.impact)return result('unknown',['현재 입력의 검수·이력 근거 확인 필요'],'준비도 다시 확인',stage,undefined,'refresh');
+  if(!evidence.review)return result('unknown',['현재 입력의 검수·이력 근거 확인 필요'],'준비도 다시 확인',stage,undefined,'refresh');
   if(stage===2){
     if(!evidence.review.ready)return result('blocked',evidence.review.blockers?.length?evidence.review.blockers:['학습에 사용할 승인 이미지가 부족합니다.'],'라벨·검수 작업 열기',2,'workflow-label-review');
     completedInputs.push(`검수 기준을 통과한 이미지 ${evidence.review.counts.eligible}장`);
     return result('ready',[],'학습 입력 확인',3,'workflow-training');
   }
+  if(!evidence.impact)return result('unknown',['현재 입력의 검수·이력 근거 확인 필요'],'준비도 다시 확인',stage,undefined,'refresh');
   if(stage===3){
     if(!evidence.review.ready)return result('blocked',evidence.review.blockers?.length?evidence.review.blockers:['검수 기준을 통과한 학습 입력 필요'],'라벨·검수 확인',2);
     completedInputs.push(`검수 기준 통과 ${evidence.review.counts.eligible}장`);

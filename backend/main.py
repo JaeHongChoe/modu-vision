@@ -212,10 +212,30 @@ class OwnedWorkAdmissionMiddleware:
     """Close HTTP/WS entries before project resolution can perform writes."""
     def __init__(self, app, admission):
         self.app, self.admission = app, admission
+        if admission is not None: admission.bind_activity_middleware(self, app)
+        if admission is not None and admission._current_project_requests is not None:
+            admission._current_project_requests.bind_chain(self, app)
+        if admission is not None and admission._desktop_denials is not None:
+            admission._desktop_denials.bind_chain(self, app)
+        if admission is not None and admission._shared_denials is not None:
+            admission._shared_denials.bind_chain(self, app)
+        if admission is not None and admission._account_requests is not None:
+            admission._account_requests.bind_chain(self, app)
+        if admission is not None and admission._flow_requests is not None:
+            admission._flow_requests.bind_chain(self, app)
+        if admission is not None and admission._flow_execution_requests is not None:
+            admission._flow_execution_requests.bind_chain(self, app)
+        if admission is not None and admission._UI_ancillary_requests is not None:
+            admission._UI_ancillary_requests.bind_chain(self, app)
+        if admission is not None and admission._telemetry_socket_requests is not None:
+            admission._telemetry_socket_requests.bind_chain(self, app)
 
     async def __call__(self, scope, receive, send):
         if scope['type'] not in {'http', 'websocket'} or self.admission is None:
             return await self.app(scope, receive, send)
+        activity = self.admission.request_activity(self, self.app, scope)
+        if activity is not None:
+            return await self._observed_call(scope, receive, send, activity)
         if not self.admission.enter(scope):
             if scope['type'] == 'websocket':
                 return await send({'type': 'websocket.close', 'code': 1013})
@@ -225,6 +245,59 @@ class OwnedWorkAdmissionMiddleware:
             await send(message)
         try: await self.app(scope, receive, tracked_send)
         finally: self.admission.leave()
+
+
+    async def _observed_call(self, scope, receive, send, activity):
+        admitted = self.admission.enter(scope, activity=activity)
+        normal = False
+        http_capture = None
+        if admitted and scope.get('type') == 'http' and scope.get('method') in {'POST', 'GET'}:
+            from backend.engine.required_flow_http_capture import begin_original_flow_http_capture
+            http_capture = begin_original_flow_http_capture(self.admission, activity)
+        async def tracked_send(message):
+            if message['type'] == 'http.response.start': self.admission.response(message['status'])
+            self.admission.observe_activity('send_attempt', activity, message)
+            original_http_frame = http_capture.send_attempt(message) if http_capture is not None else None
+            try: await send(message)
+            except BaseException as error:
+                self.admission.observe_activity('send_error', activity, error)
+                raise
+            self.admission.observe_activity('send_success', activity, message)
+            if http_capture is not None: http_capture.sent(message, original_http_frame)
+        async def tracked_receive():
+            try: message = await receive()
+            except BaseException as error:
+                self.admission.observe_activity('receive_error', activity, error)
+                raise
+            self.admission.observe_activity('receive', activity, message)
+            if http_capture is not None: http_capture.received(message)
+            return message
+        try:
+            if admitted:
+                from backend.engine.original_current_project_request import current_project_request_scope
+                from backend.engine.original_desktop_auth_denial import desktop_denial_scope
+                from backend.engine.original_shared_auth_denial import shared_denial_scope
+                from backend.engine.original_owned_account_request import original_owned_account_request_scope
+                from backend.engine.original_owned_flow_request import original_owned_flow_request_scope
+                from backend.engine.original_owned_flow_execution_request import original_owned_flow_execution_request_scope
+                from backend.engine.original_owned_UI_ancillary_request import original_owned_UI_ancillary_request_scope
+                from backend.engine.original_owned_telemetry_socket_request import original_owned_telemetry_socket_scope
+                with current_project_request_scope(self.admission, activity), desktop_denial_scope(self.admission, activity), shared_denial_scope(self.admission, activity), original_owned_account_request_scope(self.admission, activity), original_owned_flow_request_scope(self.admission, activity), original_owned_flow_execution_request_scope(self.admission, activity), original_owned_UI_ancillary_request_scope(self.admission, activity), original_owned_telemetry_socket_scope(self.admission, activity):
+                    await self.app(scope, tracked_receive, tracked_send)
+            elif scope['type'] == 'websocket':
+                await tracked_send({'type': 'websocket.close', 'code': 1013})
+            else:
+                await JSONResponse({'detail': 'Owned backend admission is closed for drain'}, status_code=409)(scope, tracked_receive, tracked_send)
+            normal = True
+        except BaseException as error:
+            self.admission.observe_activity('downstream_error', activity, error)
+            raise
+        finally:
+            try:
+                if admitted: self.admission.leave(activity=activity, normal_return=normal)
+                else: self.admission.finish_rejected_activity(activity, normal_return=normal)
+            finally:
+                if http_capture is not None: http_capture.finish(normal)
 
 
 class DesktopApiAuthMiddleware:
@@ -247,11 +320,16 @@ class DesktopApiAuthMiddleware:
             if scope_type == "websocket":
                 await send({"type": "websocket.close", "code": 1008})
             else:
-                await JSONResponse({"detail": "Desktop session authorization required"}, status_code=401)(
-                    scope, receive, send,
-                )
+                from backend.engine.original_desktop_auth_denial import original_desktop_denial_response
+                with original_desktop_denial_response(self, scope, receive, send):
+                    await JSONResponse({"detail": "Desktop session authorization required"}, status_code=401)(
+                        scope, receive, send,
+                    )
             return
         await self.app(scope, receive, send)
+
+
+from backend.engine.original_current_project_request import observe_storage_scope
 
 
 class ProjectStorageScopeMiddleware:
@@ -261,6 +339,7 @@ class ProjectStorageScopeMiddleware:
         self.app = app
         self.project_app = project_app
 
+    @observe_storage_scope
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http" or scope.get('path','').startswith('/api/accounts/') or scope.get("path") in {
             "/health", "/api/project/create", "/api/project/open",
@@ -292,30 +371,83 @@ async def lifespan(app: FastAPI):
         async with _admitted_lifespan(app):yield
 
 
+def _capture_telemetry_startup_join(owner):
+    """Bind the original broadcaster and method before its tasks are started."""
+    from types import MethodType
+    from backend.engine.application_launch_handshake import HandshakeError
+    prepare = owner.prepare_shutdown
+    if type(prepare) is not MethodType or prepare.__self__ is not owner:
+        raise HandshakeError('Original telemetry broadcaster callback binding is unavailable')
+    function = prepare.__func__
+    def original():
+        current = owner.prepare_shutdown
+        if (broadcaster is not owner or type(current) is not MethodType
+                or current.__self__ is not owner or current.__func__ is not function):
+            raise HandshakeError('Original telemetry broadcaster or callback changed')
+    def join(absolute_deadline):
+        original()
+        receipt = prepare(absolute_deadline)
+        original()
+        if (not isinstance(receipt, dict) or receipt.get('idle') is not True
+                or receipt.get('supported') is not True or type(receipt.get('task_count')) is not int
+                or receipt['task_count'] < 2 or receipt.get('joined_tasks') != receipt['task_count']
+                or type(receipt.get('pending_tasks')) is not int or receipt['pending_tasks'] != 0
+                or any(receipt.get(flag) is not False for flag in
+                    ('whole_writer_coverage', 'process_tree_exit_verified', 'can_release_launch_lease'))):
+            raise HandshakeError('Original telemetry broadcaster local closure receipt differs')
+        return receipt
+    return join
+
+
 @asynccontextmanager
 async def _admitted_lifespan(app: FastAPI):
     """Lifespan context manager orchestrating clean startup and shutdown sequences."""
     from backend.api.routes_workers import stop_for_shutdown as stop_worker_preflight
-    execution_stop=None;execution_thread=None
+    execution_stop=None;execution_thread=None;sweep_owner=None;startup_observation=None
+    telemetry_owner = broadcaster
+    telemetry_shutdown = telemetry_owner.shutdown
     try:
         admission = getattr(app.state, 'owned_work_admission', None)
         if admission is not None:
-            # Recovery, sweep and detached training need their own adapters.
-            admission.uncovered('startup_background_protocols')
+            from backend.engine.application_launch_handshake import begin_fresh_startup_observation
+            startup_observation = begin_fresh_startup_observation(app, training_job_manager, telemetry_owner)
         # Startup may partially recover workers before a failure or supervisor
         # EOF. Cleanup must also run when the suspended lifespan is finalized
         # without Uvicorn's normal shutdown notification.
         loop = asyncio.get_running_loop()
-        broadcaster.start(loop)
+        if admission is not None:
+            admission.register_startup_join('telemetry_broadcaster',
+                _capture_telemetry_startup_join(telemetry_owner))
+        telemetry_owner.start(loop)
         from backend.remote.coordinator import recover_remote_jobs
-        recover_remote_jobs(training_job_manager)
+        if startup_observation is None: recover_remote_jobs(training_job_manager)
+        else: recover_remote_jobs(training_job_manager, outcome_observer=startup_observation.recovery)
         from backend.engine.local_training_worker import recover_local_jobs
-        recover_local_jobs(training_job_manager)
+        if startup_observation is None: recover_local_jobs(training_job_manager)
+        else: recover_local_jobs(training_job_manager, outcome_observer=startup_observation.recovery)
         from backend.api.routes_dataset_imports import recover_imports_at_startup
-        recover_imports_at_startup(app)
+        if startup_observation is None: recover_imports_at_startup(app)
+        else: recover_imports_at_startup(app, outcome_observer=startup_observation.recovery)
         from backend.engine.worker_preflight import sweep_stale_runs
         # Only stale preflight folders of this installation are swept.
-        threading.Thread(target=sweep_stale_runs, name="PreflightRunSweep", daemon=True).start()
+        if admission is None:
+            threading.Thread(target=sweep_stale_runs, name="PreflightRunSweep", daemon=True).start()
+        else:
+            from backend.engine.startup_thread_lifetime import OriginalStartupThread
+            if startup_observation is None:
+                sweep_owner = OriginalStartupThread('preflight_run_sweep',
+                    lambda stop: sweep_stale_runs(stop_event=stop), name='PreflightRunSweep')
+            else:
+                sweep_owner = OriginalStartupThread('preflight_run_sweep',
+                    lambda stop: sweep_stale_runs(startup_observation.sweep.root, stop_event=stop,
+                        outcome_observer=startup_observation.sweep), name='PreflightRunSweep')
+                startup_observation.bind_sweep(sweep_owner)
+            admission.register_startup_join('job_ledger_maintenance',
+                training_job_manager.capture_startup_maintenance_join())
+            admission.register_startup_join('preflight_run_sweep',
+                lambda deadline: sweep_owner.stop_and_join(deadline, expected_thread=sweep_owner.thread))
+            sweep_owner.start()
+            if startup_observation is not None: startup_observation.recovery_ready()
         logger.info("Vision AI Studio backend daemon initialized (v%s).", VERSION)
         if backend_bootstrap_ready() is not None:
             from backend.engine.application_launch_handshake import backend_execution_service
@@ -325,6 +457,10 @@ async def _admitted_lifespan(app: FastAPI):
             execution_thread.start()
         yield
     finally:
+        if startup_observation is not None:
+            # Normal lifespan exit alone cannot settle the retained startup token.
+            startup_observation.lifespan_ended()
+        if sweep_owner is not None:sweep_owner.stop_event.set()
         if execution_stop is not None:execution_stop.set()
         if execution_thread is not None:execution_thread.join(timeout=1)
         logger.info("Initiating Vision AI Studio backend shutdown...")
@@ -337,7 +473,7 @@ async def _admitted_lifespan(app: FastAPI):
                 stop_worker_preflight()
             finally:
                 try:
-                    await broadcaster.shutdown()
+                    await telemetry_shutdown()
                 finally:
                     clear_device_cache()
         logger.info("Shutdown cleanup complete.")
@@ -413,12 +549,16 @@ def _admitted_create_app(project_dir: Optional[str] = None, shared_auth_dir: Opt
             raise ValueError("MODU_BROWSER_ORIGINS must be a JSON array of exact HTTPS origins") from exc
     app.add_middleware(CORSMiddleware, **cors_options)
 
+    # A health readback is data only and uses the existing process capability.
+    health_admission = app.state.owned_work_admission
+    health_observer = health_admission._activity_observer if health_admission is not None else None
+    health_token = app.state.api_token
     # Health check endpoint strictly conforming to PROJECT.md line 144
     @app.get("/health")
-    def health_check():
+    def health_check(request: Request):
         dev = get_device()
         info = get_device_info(dev)
-        return {
+        result = {
             "status": "ok",
             "version": VERSION,
             "device": info.device_type,  # "mps" | "cuda" | "cpu"
@@ -426,6 +566,16 @@ def _admitted_create_app(project_dir: Optional[str] = None, shared_auth_dir: Opt
             "is_accelerated": info.is_accelerated,
             "torch_version": info.torch_version,
         }
+        from backend.engine.original_request_activity import OriginalRequestActivityObserver
+        if (type(health_token) is str and health_token
+                and app.state.api_token is health_token
+                and app.state.owned_work_admission is health_admission
+                and health_admission is not None and health_admission._activity_observer is health_observer
+                and type(health_observer) is OriginalRequestActivityObserver
+                and secrets.compare_digest(request.headers.get('x-vision-token', '').encode('utf-8'), health_token.encode('utf-8'))):
+            diagnostic = health_observer.health_diagnostic(request.scope)
+            if diagnostic is not None: result['owned_request_diagnostic'] = diagnostic
+        return result
 
     # Error catalog endpoints
     @app.get('/api/context')
@@ -526,6 +676,27 @@ def _admitted_create_app(project_dir: Optional[str] = None, shared_auth_dir: Opt
     app.include_router(telemetry_router)
 
     app.add_middleware(OwnedWorkAdmissionMiddleware, admission=app.state.owned_work_admission)
+    from backend.engine.original_current_project_request import bind_current_project_request
+    bind_current_project_request(app, app.state.owned_work_admission)
+    from backend.engine.original_desktop_auth_denial import bind_original_desktop_denial
+    bind_original_desktop_denial(app, app.state.owned_work_admission)
+    from backend.engine.original_shared_auth_denial import bind_original_shared_denial
+    bind_original_shared_denial(app, app.state.owned_work_admission)
+    from backend.engine.original_owned_account_request import bind_original_owned_account_request
+    bind_original_owned_account_request(app, app.state.owned_work_admission)
+    from backend.engine.original_owned_flow_request import bind_original_owned_flow_request
+    bind_original_owned_flow_request(app, app.state.owned_work_admission)
+    from backend.engine.original_owned_flow_execution_request import bind_original_owned_flow_execution_request
+    bind_original_owned_flow_execution_request(app, app.state.owned_work_admission)
+    from backend.engine.original_owned_UI_ancillary_request import bind_original_owned_UI_ancillary_request
+    bind_original_owned_UI_ancillary_request(app, app.state.owned_work_admission)
+    from backend.engine.original_owned_telemetry_socket_request import bind_original_owned_telemetry_socket_request
+    bind_original_owned_telemetry_socket_request(app, app.state.owned_work_admission)
+    if app.state.owned_work_admission is not None:
+        from backend.engine.required_flow_passive_capture import bind_original_required_flow_selector
+        selector = bind_original_required_flow_selector(app,backend_work_admission,SharedAuthorizationMiddleware if app.state.accounts is not None else DesktopApiAuthMiddleware,ROOT_DIR)
+        from backend.engine.required_flow_http_capture import bind_original_flow_http_capture
+        bind_original_flow_http_capture(selector)
     return app
 
 
@@ -587,7 +758,14 @@ def run_server():
             pass
 
     if os.environ.get(STOP_ON_STDIN_EOF) == "1":
-        threading.Thread(target=_stop_when_stdin_closes, args=(server,), name="StopOnStdinEOF", daemon=True).start()
+        if app.state.owned_work_admission is None:
+            threading.Thread(target=_stop_when_stdin_closes, args=(server,), name="StopOnStdinEOF", daemon=True).start()
+        else:
+            from backend.engine.owned_stdin_lifetime import OwnedStdinLifetime
+            stdin_owner = OwnedStdinLifetime(0, lambda fd, observed:
+                _stop_when_stdin_closes(server, stdin_fd=fd, on_natural_eof=observed))
+            app.state.owned_stdin_lifetime = stdin_owner  # captured before its original Thread starts
+            stdin_owner.start()
 
     try:
         server.run(sockets=[sock])
@@ -602,22 +780,33 @@ def run_server():
 STOP_ON_STDIN_EOF = "VISION_AI_STUDIO_STOP_ON_STDIN_EOF"
 
 
-def _stop_when_stdin_closes(server) -> None:
+def _stop_when_stdin_closes(server, *, stdin_fd=0, on_natural_eof=None):
+    read_error = None; eof_error = None
     try:
         # The raw descriptor, not sys.stdin: a daemon thread blocked in a buffered read holds a lock that interpreter
         # shutdown would then wait for.
-        while os.read(0, 65536):
+        while os.read(stdin_fd, 65536):
             pass
-    except OSError:
-        pass  # a broken pipe also means the supervisor is gone
+        if on_natural_eof is not None:
+            try:on_natural_eof()
+            except BaseException as error:eof_error = error
+    except OSError as error:
+        read_error = error  # a broken pipe requests stop but is not genuine EOF evidence
     logger.info("The supervisor closed stdin; detaching owned training and triggering exit...")
     try:
         training_job_manager.detach_all_for_shutdown()
     finally:  # a failed detach (a locked database) never loses the stop request
         server.should_exit = True
+    if on_natural_eof is not None:
+        if read_error is not None:
+            from backend.engine.owned_stdin_lifetime import OriginalStdinError
+            raise OriginalStdinError('Original stdin reader failed before genuine EOF') from read_error
+        if eof_error is not None:raise eof_error
+        return {'natural_stdin_eof': True, 'detach_completed': True}
 
 
-if __name__ == "__main__":
+def main():
+    """Run the original CLI dispatch through the canonical module instance."""
     if len(sys.argv)>1 and sys.argv[1]=='--managed-service-project':
         if len(sys.argv)!=3:raise SystemExit('--managed-service-project requires exactly one project directory')
         from backend.engine.service_bootstrap import main as service_bootstrap_main
@@ -627,3 +816,7 @@ if __name__ == "__main__":
         from backend.engine.inspection_service import main as inspection_service_main
         raise SystemExit(inspection_service_main())
     else:run_server()
+
+
+if __name__ == "__main__":
+    main()

@@ -5441,31 +5441,31 @@
           },
           {
             "task": "S6-03",
-            "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+            "source_sha": "f5c325308fa1de2286fc1a67a2b95d4686fdc027",
             "kind": "click",
             "action": "DICOM frame index and Window 적용·정보 조회",
             "expected": "Display only a selected supported RLE frame and preserve source identity.",
             "observed": "Actual native frame0/frame1 produced distinct display hashes; unavailable frame2 and zero width refused without losing previous display; frame0 reopened identical with no annotation-save requests.",
             "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
             "test": "scripts/e2e/dicom-integrity-rle.spec.ts::native DICOM built-in RLE view selects distinct frames and refuses an unavailable frame",
-            "receipt": "2026-10-07-app-dicom-rle-frames-electron.json",
-            "receipt_sha256": "704d6a742ea7c0a3c86167a9ac922ff71a5635e3fd0410719568cb4ec341d5c1",
+            "receipt": "2026-10-11-app-dicom-rle-electron.json",
+            "receipt_sha256": "823d525547bc134f7b2c2b97d3fd85c4a4c62e804bb4a5960b2d19ebaea6f3fd",
             "artifacts": [
               {
                 "id": "screenshot-0",
-                "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+                "sha256": "b85bf53ad272940bc0eaae142227e4687da942bf6125b8b46d34c4ca3b896aa3"
               },
               {
                 "id": "screenshot-1",
-                "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+                "sha256": "b85bf53ad272940bc0eaae142227e4687da942bf6125b8b46d34c4ca3b896aa3"
               },
               {
                 "id": "screenshot-2",
-                "sha256": "77bae1fa33955cd87695a15fa534e202fe7e032c61d45c1d6fb4a1091e2e6331"
+                "sha256": "2c4ee0a3b090003a321d3bcd0c7b987a6efe89443f5add3cf1c5d231f2049e59"
               },
               {
                 "id": "screenshot-3",
-                "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+                "sha256": "b85bf53ad272940bc0eaae142227e4687da942bf6125b8b46d34c4ca3b896aa3"
               }
             ]
           }
@@ -5502,31 +5502,31 @@
           },
           {
             "task": "S6-03",
-            "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+            "source_sha": "f5c325308fa1de2286fc1a67a2b95d4686fdc027",
             "kind": "click",
             "action": "DICOM frame index and Window 적용·정보 조회",
             "expected": "Display only a selected supported RLE frame and preserve source identity.",
             "observed": "Actual native frame0/frame1 produced distinct display hashes; unavailable frame2 and zero width refused without losing previous display; frame0 reopened identical with no annotation-save requests.",
             "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
             "test": "scripts/e2e/dicom-integrity-rle.spec.ts::native DICOM built-in RLE view selects distinct frames and refuses an unavailable frame",
-            "receipt": "2026-10-07-app-dicom-rle-frames-electron.json",
-            "receipt_sha256": "704d6a742ea7c0a3c86167a9ac922ff71a5635e3fd0410719568cb4ec341d5c1",
+            "receipt": "2026-10-11-app-dicom-rle-electron.json",
+            "receipt_sha256": "823d525547bc134f7b2c2b97d3fd85c4a4c62e804bb4a5960b2d19ebaea6f3fd",
             "artifacts": [
               {
                 "id": "screenshot-0",
-                "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+                "sha256": "b85bf53ad272940bc0eaae142227e4687da942bf6125b8b46d34c4ca3b896aa3"
               },
               {
                 "id": "screenshot-1",
-                "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+                "sha256": "b85bf53ad272940bc0eaae142227e4687da942bf6125b8b46d34c4ca3b896aa3"
               },
               {
                 "id": "screenshot-2",
-                "sha256": "77bae1fa33955cd87695a15fa534e202fe7e032c61d45c1d6fb4a1091e2e6331"
+                "sha256": "2c4ee0a3b090003a321d3bcd0c7b987a6efe89443f5add3cf1c5d231f2049e59"
               },
               {
                 "id": "screenshot-3",
-                "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+                "sha256": "b85bf53ad272940bc0eaae142227e4687da942bf6125b8b46d34c4ca3b896aa3"
               }
             ]
           }
@@ -5563,31 +5563,31 @@
           },
           {
             "task": "S6-03",
-            "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+            "source_sha": "f5c325308fa1de2286fc1a67a2b95d4686fdc027",
             "kind": "click",
             "action": "DICOM frame index and Window 적용·정보 조회",
             "expected": "Display only a selected supported RLE frame and preserve source identity.",
             "observed": "Actual native frame0/frame1 produced distinct display hashes; unavailable frame2 and zero width refused without losing previous display; frame0 reopened identical with no annotation-save requests.",
             "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
             "test": "scripts/e2e/dicom-integrity-rle.spec.ts::native DICOM built-in RLE view selects distinct frames and refuses an unavailable frame",
-            "receipt": "2026-10-07-app-dicom-rle-frames-electron.json",
-            "receipt_sha256": "704d6a742ea7c0a3c86167a9ac922ff71a5635e3fd0410719568cb4ec341d5c1",
+            "receipt": "2026-10-11-app-dicom-rle-electron.json",
+            "receipt_sha256": "823d525547bc134f7b2c2b97d3fd85c4a4c62e804bb4a5960b2d19ebaea6f3fd",
             "artifacts": [
               {
                 "id": "screenshot-0",
-                "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+                "sha256": "b85bf53ad272940bc0eaae142227e4687da942bf6125b8b46d34c4ca3b896aa3"
               },
               {
                 "id": "screenshot-1",
-                "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+                "sha256": "b85bf53ad272940bc0eaae142227e4687da942bf6125b8b46d34c4ca3b896aa3"
               },
               {
                 "id": "screenshot-2",
-                "sha256": "77bae1fa33955cd87695a15fa534e202fe7e032c61d45c1d6fb4a1091e2e6331"
+                "sha256": "2c4ee0a3b090003a321d3bcd0c7b987a6efe89443f5add3cf1c5d231f2049e59"
               },
               {
                 "id": "screenshot-3",
-                "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+                "sha256": "b85bf53ad272940bc0eaae142227e4687da942bf6125b8b46d34c4ca3b896aa3"
               }
             ]
           }
@@ -5624,31 +5624,31 @@
           },
           {
             "task": "S6-03",
-            "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+            "source_sha": "f5c325308fa1de2286fc1a67a2b95d4686fdc027",
             "kind": "click",
             "action": "DICOM frame index and Window 적용·정보 조회",
             "expected": "Display only a selected supported RLE frame and preserve source identity.",
             "observed": "Actual native frame0/frame1 produced distinct display hashes; unavailable frame2 and zero width refused without losing previous display; frame0 reopened identical with no annotation-save requests.",
             "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
             "test": "scripts/e2e/dicom-integrity-rle.spec.ts::native DICOM built-in RLE view selects distinct frames and refuses an unavailable frame",
-            "receipt": "2026-10-07-app-dicom-rle-frames-electron.json",
-            "receipt_sha256": "704d6a742ea7c0a3c86167a9ac922ff71a5635e3fd0410719568cb4ec341d5c1",
+            "receipt": "2026-10-11-app-dicom-rle-electron.json",
+            "receipt_sha256": "823d525547bc134f7b2c2b97d3fd85c4a4c62e804bb4a5960b2d19ebaea6f3fd",
             "artifacts": [
               {
                 "id": "screenshot-0",
-                "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+                "sha256": "b85bf53ad272940bc0eaae142227e4687da942bf6125b8b46d34c4ca3b896aa3"
               },
               {
                 "id": "screenshot-1",
-                "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+                "sha256": "b85bf53ad272940bc0eaae142227e4687da942bf6125b8b46d34c4ca3b896aa3"
               },
               {
                 "id": "screenshot-2",
-                "sha256": "77bae1fa33955cd87695a15fa534e202fe7e032c61d45c1d6fb4a1091e2e6331"
+                "sha256": "2c4ee0a3b090003a321d3bcd0c7b987a6efe89443f5add3cf1c5d231f2049e59"
               },
               {
                 "id": "screenshot-3",
-                "sha256": "f76453dc913c308cb533ee8a2cdcde28ba4a78e2853d7185b195daaf6551945c"
+                "sha256": "b85bf53ad272940bc0eaae142227e4687da942bf6125b8b46d34c4ca3b896aa3"
               }
             ]
           }
@@ -8269,55 +8269,55 @@
         "evidence": [
           {
             "task": "S3-05",
-            "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+            "source_sha": "f42c399d34275b750f2e9944344ff25a3214535d",
             "kind": "click",
             "action": "객체 독립 방향 라벨",
             "expected": "Preserve independent direction and OBB axis angle through save and reopen.",
             "observed": "Actual native315-degree direction remained distinct from30-degree box angle through save, keyboard nudge and reload.",
             "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
             "test": "scripts/e2e/labeling-vector-content.spec.ts::native bbox polygon OBB and independent direction retain exact saved geometry",
-            "receipt": "2026-10-07-app-labeling-vector-content-electron.json",
-            "receipt_sha256": "c2eba2f012e57b872d50e45d2d6aee5df0f4a844326aa6d5ae905059758bb26d",
+            "receipt": "2026-10-11-root510-6345e81af8981e0cc0bb.json",
+            "receipt_sha256": "e988b79267dbb67606d82e165eaa06d08a02addba57789f5d17f7ea13f2ed9a6",
             "artifacts": [
               {
                 "id": "screenshot-0",
-                "sha256": "dbf00a94af9fe0916b5e92ba3220ab2aefa10e3b626af0143f9e0007450215bc"
+                "sha256": "9fb5d9cfb15f0b16adebd151e6e534004b087591803b7ed35b3d911e857a8a50"
               }
             ]
           },
           {
             "task": "S3-05",
-            "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+            "source_sha": "f42c399d34275b750f2e9944344ff25a3214535d",
             "kind": "click",
             "action": "Angle (θ)",
             "expected": "Preserve independent direction and OBB axis angle through save and reopen.",
             "observed": "Actual native box angle30 and direction315 reopened as separate inspector values after coordinates changed.",
             "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
             "test": "scripts/e2e/labeling-vector-content.spec.ts::native bbox polygon OBB and independent direction retain exact saved geometry",
-            "receipt": "2026-10-07-app-labeling-vector-content-electron.json",
-            "receipt_sha256": "c2eba2f012e57b872d50e45d2d6aee5df0f4a844326aa6d5ae905059758bb26d",
+            "receipt": "2026-10-11-root510-6345e81af8981e0cc0bb.json",
+            "receipt_sha256": "e988b79267dbb67606d82e165eaa06d08a02addba57789f5d17f7ea13f2ed9a6",
             "artifacts": [
               {
                 "id": "screenshot-0",
-                "sha256": "dbf00a94af9fe0916b5e92ba3220ab2aefa10e3b626af0143f9e0007450215bc"
+                "sha256": "9fb5d9cfb15f0b16adebd151e6e534004b087591803b7ed35b3d911e857a8a50"
               }
             ]
           },
           {
             "task": "S3-05",
-            "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+            "source_sha": "f42c399d34275b750f2e9944344ff25a3214535d",
             "kind": "click",
             "action": "Shift+ArrowRight",
             "expected": "Preserve independent direction and OBB axis angle through save and reopen.",
             "observed": "Actual keyboard nudge moved OBB center110 to120; width80 height40 angle30 direction315 and other shapes were preserved.",
             "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
             "test": "scripts/e2e/labeling-vector-content.spec.ts::native bbox polygon OBB and independent direction retain exact saved geometry",
-            "receipt": "2026-10-07-app-labeling-vector-content-electron.json",
-            "receipt_sha256": "c2eba2f012e57b872d50e45d2d6aee5df0f4a844326aa6d5ae905059758bb26d",
+            "receipt": "2026-10-11-root510-6345e81af8981e0cc0bb.json",
+            "receipt_sha256": "e988b79267dbb67606d82e165eaa06d08a02addba57789f5d17f7ea13f2ed9a6",
             "artifacts": [
               {
                 "id": "screenshot-0",
-                "sha256": "dbf00a94af9fe0916b5e92ba3220ab2aefa10e3b626af0143f9e0007450215bc"
+                "sha256": "9fb5d9cfb15f0b16adebd151e6e534004b087591803b7ed35b3d911e857a8a50"
               }
             ]
           }
@@ -8328,55 +8328,55 @@
         "evidence": [
           {
             "task": "S3-05",
-            "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+            "source_sha": "f42c399d34275b750f2e9944344ff25a3214535d",
             "kind": "click",
             "action": "객체 독립 방향 라벨",
             "expected": "Preserve independent direction and OBB axis angle through save and reopen.",
             "observed": "Actual native315-degree direction remained distinct from30-degree box angle through save, keyboard nudge and reload.",
             "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
             "test": "scripts/e2e/labeling-vector-content.spec.ts::native bbox polygon OBB and independent direction retain exact saved geometry",
-            "receipt": "2026-10-07-app-labeling-vector-content-electron.json",
-            "receipt_sha256": "c2eba2f012e57b872d50e45d2d6aee5df0f4a844326aa6d5ae905059758bb26d",
+            "receipt": "2026-10-11-root510-6345e81af8981e0cc0bb.json",
+            "receipt_sha256": "e988b79267dbb67606d82e165eaa06d08a02addba57789f5d17f7ea13f2ed9a6",
             "artifacts": [
               {
                 "id": "screenshot-0",
-                "sha256": "dbf00a94af9fe0916b5e92ba3220ab2aefa10e3b626af0143f9e0007450215bc"
+                "sha256": "9fb5d9cfb15f0b16adebd151e6e534004b087591803b7ed35b3d911e857a8a50"
               }
             ]
           },
           {
             "task": "S3-05",
-            "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+            "source_sha": "f42c399d34275b750f2e9944344ff25a3214535d",
             "kind": "click",
             "action": "Angle (θ)",
             "expected": "Preserve independent direction and OBB axis angle through save and reopen.",
             "observed": "Actual native box angle30 and direction315 reopened as separate inspector values after coordinates changed.",
             "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
             "test": "scripts/e2e/labeling-vector-content.spec.ts::native bbox polygon OBB and independent direction retain exact saved geometry",
-            "receipt": "2026-10-07-app-labeling-vector-content-electron.json",
-            "receipt_sha256": "c2eba2f012e57b872d50e45d2d6aee5df0f4a844326aa6d5ae905059758bb26d",
+            "receipt": "2026-10-11-root510-6345e81af8981e0cc0bb.json",
+            "receipt_sha256": "e988b79267dbb67606d82e165eaa06d08a02addba57789f5d17f7ea13f2ed9a6",
             "artifacts": [
               {
                 "id": "screenshot-0",
-                "sha256": "dbf00a94af9fe0916b5e92ba3220ab2aefa10e3b626af0143f9e0007450215bc"
+                "sha256": "9fb5d9cfb15f0b16adebd151e6e534004b087591803b7ed35b3d911e857a8a50"
               }
             ]
           },
           {
             "task": "S3-05",
-            "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+            "source_sha": "f42c399d34275b750f2e9944344ff25a3214535d",
             "kind": "click",
             "action": "Shift+ArrowRight",
             "expected": "Preserve independent direction and OBB axis angle through save and reopen.",
             "observed": "Actual keyboard nudge moved OBB center110 to120; width80 height40 angle30 direction315 and other shapes were preserved.",
             "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
             "test": "scripts/e2e/labeling-vector-content.spec.ts::native bbox polygon OBB and independent direction retain exact saved geometry",
-            "receipt": "2026-10-07-app-labeling-vector-content-electron.json",
-            "receipt_sha256": "c2eba2f012e57b872d50e45d2d6aee5df0f4a844326aa6d5ae905059758bb26d",
+            "receipt": "2026-10-11-root510-6345e81af8981e0cc0bb.json",
+            "receipt_sha256": "e988b79267dbb67606d82e165eaa06d08a02addba57789f5d17f7ea13f2ed9a6",
             "artifacts": [
               {
                 "id": "screenshot-0",
-                "sha256": "dbf00a94af9fe0916b5e92ba3220ab2aefa10e3b626af0143f9e0007450215bc"
+                "sha256": "9fb5d9cfb15f0b16adebd151e6e534004b087591803b7ed35b3d911e857a8a50"
               }
             ]
           }
@@ -8387,55 +8387,55 @@
         "evidence": [
           {
             "task": "S3-05",
-            "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+            "source_sha": "f42c399d34275b750f2e9944344ff25a3214535d",
             "kind": "click",
             "action": "객체 독립 방향 라벨",
             "expected": "Preserve independent direction and OBB axis angle through save and reopen.",
             "observed": "Actual native315-degree direction remained distinct from30-degree box angle through save, keyboard nudge and reload.",
             "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
             "test": "scripts/e2e/labeling-vector-content.spec.ts::native bbox polygon OBB and independent direction retain exact saved geometry",
-            "receipt": "2026-10-07-app-labeling-vector-content-electron.json",
-            "receipt_sha256": "c2eba2f012e57b872d50e45d2d6aee5df0f4a844326aa6d5ae905059758bb26d",
+            "receipt": "2026-10-11-root510-6345e81af8981e0cc0bb.json",
+            "receipt_sha256": "e988b79267dbb67606d82e165eaa06d08a02addba57789f5d17f7ea13f2ed9a6",
             "artifacts": [
               {
                 "id": "screenshot-0",
-                "sha256": "dbf00a94af9fe0916b5e92ba3220ab2aefa10e3b626af0143f9e0007450215bc"
+                "sha256": "9fb5d9cfb15f0b16adebd151e6e534004b087591803b7ed35b3d911e857a8a50"
               }
             ]
           },
           {
             "task": "S3-05",
-            "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+            "source_sha": "f42c399d34275b750f2e9944344ff25a3214535d",
             "kind": "click",
             "action": "Angle (θ)",
             "expected": "Preserve independent direction and OBB axis angle through save and reopen.",
             "observed": "Actual native box angle30 and direction315 reopened as separate inspector values after coordinates changed.",
             "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
             "test": "scripts/e2e/labeling-vector-content.spec.ts::native bbox polygon OBB and independent direction retain exact saved geometry",
-            "receipt": "2026-10-07-app-labeling-vector-content-electron.json",
-            "receipt_sha256": "c2eba2f012e57b872d50e45d2d6aee5df0f4a844326aa6d5ae905059758bb26d",
+            "receipt": "2026-10-11-root510-6345e81af8981e0cc0bb.json",
+            "receipt_sha256": "e988b79267dbb67606d82e165eaa06d08a02addba57789f5d17f7ea13f2ed9a6",
             "artifacts": [
               {
                 "id": "screenshot-0",
-                "sha256": "dbf00a94af9fe0916b5e92ba3220ab2aefa10e3b626af0143f9e0007450215bc"
+                "sha256": "9fb5d9cfb15f0b16adebd151e6e534004b087591803b7ed35b3d911e857a8a50"
               }
             ]
           },
           {
             "task": "S3-05",
-            "source_sha": "5cfe9bc5524ae57ed3d7c83b9334896086381d2b",
+            "source_sha": "f42c399d34275b750f2e9944344ff25a3214535d",
             "kind": "click",
             "action": "Shift+ArrowRight",
             "expected": "Preserve independent direction and OBB axis angle through save and reopen.",
             "observed": "Actual keyboard nudge moved OBB center110 to120; width80 height40 angle30 direction315 and other shapes were preserved.",
             "reviewer": "Codex root source and retained clean execution review; independent, human, device and release acceptance pending",
             "test": "scripts/e2e/labeling-vector-content.spec.ts::native bbox polygon OBB and independent direction retain exact saved geometry",
-            "receipt": "2026-10-07-app-labeling-vector-content-electron.json",
-            "receipt_sha256": "c2eba2f012e57b872d50e45d2d6aee5df0f4a844326aa6d5ae905059758bb26d",
+            "receipt": "2026-10-11-root510-6345e81af8981e0cc0bb.json",
+            "receipt_sha256": "e988b79267dbb67606d82e165eaa06d08a02addba57789f5d17f7ea13f2ed9a6",
             "artifacts": [
               {
                 "id": "screenshot-0",
-                "sha256": "dbf00a94af9fe0916b5e92ba3220ab2aefa10e3b626af0143f9e0007450215bc"
+                "sha256": "9fb5d9cfb15f0b16adebd151e6e534004b087591803b7ed35b3d911e857a8a50"
               }
             ]
           }

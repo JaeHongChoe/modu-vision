@@ -5,6 +5,10 @@ Dataset Management, Synthetic Generation, Inspection, Pagination & Thumbnail Ser
 """
 
 from __future__ import annotations
+from backend.engine.original_owned_UI_ancillary_request import original_dataset_thumbnail_response, observe_original_dataset_thumbnail_operation, original_dataset_thumbnail_spool, original_dataset_thumbnail_image_open, original_dataset_thumbnail_file, original_dataset_thumbnail_write, original_dataset_thumbnail_publish
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_handler, observe_original_dataset_UI_operation, observe_original_dataset_UI_connection, original_dataset_UI_read_text, original_dataset_UI_read_bytes, original_dataset_UI_image_open, original_dataset_UI_file, original_dataset_UI_diagnostics_missing
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_image,original_UI_ancillary_read_text
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_handler
 
 import csv
 import hashlib
@@ -26,6 +30,7 @@ from fastapi import APIRouter, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse
 from PIL import Image
 from backend.engine.dicom_input import IMAGE_OPEN_ERRORS, open_source_image
+open_source_image=observe_original_UI_ancillary_image(open_source_image)
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend.engine.dataset_loaders import (
@@ -133,7 +138,7 @@ def migrate_legacy_split_manifest(project: Dict[str, Any]) -> Optional[Path]:
     copied = False
     if not target.exists() and legacy.is_file() and not legacy.is_symlink():
         try:
-            payload = json.loads(legacy.read_text(encoding="utf-8"))
+            payload = json.loads(original_dataset_UI_read_text(legacy, encoding="utf-8"))
         except (OSError, ValueError):
             payload = None
         if isinstance(payload, dict) and payload.get("folder_path") == str(source_path):
@@ -167,7 +172,7 @@ def _read_split_manifest(folder: Path) -> Dict[str, str]:
     if not path.is_file():
         return {}
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(original_dataset_UI_read_text(path, encoding="utf-8"))
         if data.get("folder_path") != str(folder.resolve()):
             return {}
         return {str(folder / relative): partition for relative, partition in data["assignments"].items()}
@@ -210,7 +215,7 @@ def _paired_labelme_images(folder: Path) -> set[Path]:
         if not studio_json.is_file():
             continue
         try:
-            saved = json.loads(studio_json.read_text(encoding="utf-8"))
+            saved = json.loads(original_dataset_UI_read_text(studio_json, encoding="utf-8"))
             annotations = saved["annotations"]
             if not isinstance(annotations, list):
                 raise ValueError("annotations must be a list")
@@ -255,7 +260,7 @@ def _flat_labelme_class_counts(folder: Path, paired_images: set[Path], *, count_
         annotation = studio_json if studio_json.is_file() else source_annotations.get(image)
         if annotation is None:
             continue
-        text = annotation.read_text(encoding="utf-8") if annotation == studio_json else read_source_text(annotation)
+        text = original_dataset_UI_read_text(annotation, encoding="utf-8") if annotation == studio_json else read_source_text(annotation)
         data = json.loads(text)
         shapes = data.get("annotations", []) if annotation == studio_json else data.get("shapes", [])
         found = False
@@ -526,7 +531,7 @@ def _validate_folder_images(folder: Path):
     return corrupted, checked, False, gaps
 
 
-@router.get("/current-summary")
+@observe_original_UI_ancillary_handler(router.get("/current-summary"))
 def current_dataset_summary(request: Request, folder_path: str, task: str):
     """Read the selected project's saved source without changing its path or revision.
 
@@ -541,6 +546,7 @@ def current_dataset_summary(request: Request, folder_path: str, task: str):
     return import_dataset(DatasetImportRequest(folder_path=source, task=project["task"], validate_images=True))
 
 
+@observe_original_dataset_UI_operation('import_dataset')
 @router.post("/import")
 def import_dataset(req: DatasetImportRequest):
     """Scans dataset directory and returns total_images, classes, and split."""
@@ -826,7 +832,7 @@ def _class_split_counts(images: List[ImageMeta]) -> dict[str, dict[str, int]]:
     return counts
 
 
-@router.get("/images")
+@observe_original_UI_ancillary_handler(router.get("/images"))
 def list_dataset_images(
     folder_path: Optional[str] = Query(None, description="Dataset folder path"),
     task: Optional[Literal["classification", "detection", "segmentation", "anomaly"]] = Query(None, description="Dataset task"),
@@ -851,7 +857,7 @@ def list_dataset_images(
     from backend.engine.annotation_storage import request_project_root,scoped_annotation_root
     selected_project=request_project_root()
     if selected_project and (selected_project/'project.json').is_file():
-        project=json.loads((selected_project/'project.json').read_text(encoding='utf-8'))
+        project=json.loads(original_UI_ancillary_read_text(selected_project/'project.json',encoding='utf-8',role='dataset'))
         if project.get('source_dataset_dir') and Path(project['source_dataset_dir']).resolve()==target_dir and requested_task:
             from backend.engine.dataset_summary import dataset_summary
             from backend.engine.dataset_metadata import list_metadata
@@ -1006,7 +1012,7 @@ def list_dataset_images(
                 json_candidate = studio_json if studio_json.is_file() else f.with_suffix(".json")
                 if json_candidate.exists():
                     try:
-                        text = json_candidate.read_text(encoding="utf-8") if json_candidate == studio_json else read_source_text(json_candidate)
+                        text = original_dataset_UI_read_text(json_candidate, encoding="utf-8") if json_candidate == studio_json else read_source_text(json_candidate)
                         jd = json.loads(text)
                         img_w = jd.get("image_width", jd.get("imageWidth"))
                         img_h = jd.get("image_height", jd.get("imageHeight"))
@@ -1154,6 +1160,7 @@ def _memo_key(path: Path, stat: os.stat_result) -> tuple:
     return (str(path), stat.st_dev, stat.st_ino, stat.st_ctime_ns, stat.st_mtime_ns, stat.st_size)
 
 
+@observe_original_dataset_thumbnail_operation('memo_get')
 def _memo_get(path: Path, stat: os.stat_result) -> Optional[str]:
     key, now = _memo_key(path, stat), time.monotonic()
     with _DIGEST_LOCK:
@@ -1239,11 +1246,13 @@ def _changed_while_read(path: Path) -> HTTPException:
     return HTTPException(status_code=409, detail=f"{path} changed while its thumbnail was drawn; request it again")
 
 
+@observe_original_dataset_thumbnail_operation('hash_source')
 def _hash_source(path: Path, copy=None) -> str:
     """sha256 of the source read in chunks; with ``copy``, the same chunks are kept there for decoding."""
     digest = hashlib.sha256()
     try:
         with path.open("rb") as handle:
+            original_dataset_thumbnail_file(handle,path)
             while chunk := handle.read(_CHUNK):
                 digest.update(chunk)
                 if copy is None:
@@ -1261,11 +1270,12 @@ def _hash_source(path: Path, copy=None) -> str:
     return digest.hexdigest()
 
 
+@observe_original_dataset_thumbnail_operation('probe_header')
 def _probe_header(path: Path) -> None:
     """Pillow reads only the header: a file it cannot identify, or a decompression bomb, is refused before any read.
     A failure to read the file at all (an I/O error, a sharing violation) is a read failure, not a broken image."""
     try:
-        with Image.open(path) as probe:
+        with original_dataset_thumbnail_image_open(Image.open,path) as probe:
             probe.size
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Image file not found") from None
@@ -1292,6 +1302,7 @@ def _is_webp(path: Path) -> bool:
     return header[:4] == b"RIFF" and header[8:12] == b"WEBP"
 
 
+@observe_original_dataset_thumbnail_operation('render_jpeg')
 def _render_jpeg(image: Image.Image, size: int) -> bytes:
     with image:
         image.draft("RGB", (size, size))  # JPEG sources decode at a reduced scale that still covers the size
@@ -1302,7 +1313,7 @@ def _render_jpeg(image: Image.Image, size: int) -> bytes:
         return buffer.getvalue()
 
 
-@router.get("/thumbnail/{image_path:path}")
+@observe_original_UI_ancillary_handler(router.get("/thumbnail/{image_path:path}"))
 def get_thumbnail(
     image_path: str,
     request: Request,
@@ -1342,12 +1353,12 @@ def get_thumbnail(
         cached = THUMBNAIL_CACHE_DIR / f"{key}.jpg"
         headers = {"Cache-Control": "private, no-cache", "ETag": f'"{key}"'}
         if _etag_matches(request.headers.get("if-none-match"), headers["ETag"]) and (rendered is not None or cached.exists()):
-            return Response(status_code=304, headers=headers)
+            return original_dataset_thumbnail_response(Response,status_code=304, headers=headers)
         if rendered is not None:
             return Response(content=rendered, media_type="image/jpeg", headers=headers)
         if not cached.exists():
             return None
-        return FileResponse(cached, media_type="image/jpeg", headers=headers)
+        return original_dataset_thumbnail_response(FileResponse,cached, media_type="image/jpeg", headers=headers)
 
     from backend.engine.dicom_input import is_dicom, read_dicom
     dicom = is_dicom(candidate_path)
@@ -1369,6 +1380,7 @@ def get_thumbnail(
         raise
 
 
+@observe_original_dataset_thumbnail_operation('render_thumbnail')
 def _render_thumbnail(candidate_path: Path, stat: os.stat_result, size: int, dicom: bool, decoder: str, read_dicom,
                       respond):
     if stat.st_size > _WEBP_LIMIT and _is_webp(candidate_path):
@@ -1386,20 +1398,23 @@ def _render_thumbnail(candidate_path: Path, stat: os.stat_result, size: int, dic
     # A render decides the key and the pixels from one read, so a rewrite in between cannot attach new pixels to an old key.
     try:
         if dicom:
-            image, metadata = read_dicom(candidate_path)
+            # A dataset thumbnail represents the first source frame. The full
+            # DICOM viewer still requires its own explicit frame selection.
+            image, metadata = read_dicom(candidate_path, frame_index=0)
             digest = metadata["source_sha256"]
             rendered = _render_jpeg(image, size)
         elif stat.st_size > _COPY_LIMIT:
             # Too large to copy: decode from the file, then confirm the bytes did not change while it was read.
             before = digest
-            rendered = _render_jpeg(Image.open(candidate_path), size)
+            rendered = _render_jpeg(original_dataset_thumbnail_image_open(Image.open,candidate_path), size)
             if _hash_source(candidate_path) != before:
                 raise _changed_while_read(candidate_path)
         else:
             with tempfile.SpooledTemporaryFile(max_size=_SPOOL_IN_MEMORY) as copy:
+                original_dataset_thumbnail_spool(copy)
                 digest = _hash_source(candidate_path, copy)
                 copy.seek(0)
-                rendered = _render_jpeg(Image.open(copy), size)
+                rendered = _render_jpeg(original_dataset_thumbnail_image_open(Image.open,copy), size)
     except HTTPException:
         raise
     except FileNotFoundError:
@@ -1416,9 +1431,9 @@ def _render_thumbnail(candidate_path: Path, stat: os.stat_result, size: int, dic
     if not cached.exists():
         staging = THUMBNAIL_CACHE_DIR / f".{key}.{uuid.uuid4().hex}.jpg"
         try:
-            staging.write_bytes(rendered)
+            original_dataset_thumbnail_write(staging,rendered)
             try:
-                os.replace(staging, cached)  # a reader never sees a half-written thumbnail
+                original_dataset_thumbnail_publish(staging,cached)  # a reader never sees a half-written thumbnail
             except OSError:
                 if not cached.exists():  # Windows refuses to replace a file being served; the same bytes are there
                     raise

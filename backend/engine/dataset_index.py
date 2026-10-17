@@ -35,6 +35,7 @@ Schema 3 adds the annotation and duplicate tables; a schema-2 index is upgraded 
 older revisions report ``annotations_scanned = false``. An older app then refuses the upgraded index explicitly.
 """
 from __future__ import annotations
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_handler, observe_original_dataset_UI_operation, observe_original_dataset_UI_connection, original_dataset_UI_read_text, original_dataset_UI_read_bytes, original_dataset_UI_image_open, original_dataset_UI_file, original_dataset_UI_diagnostics_missing
 
 import base64
 from contextlib import contextmanager
@@ -382,6 +383,7 @@ class DatasetIndex:
                 raise
             db.execute('COMMIT')
 
+    @observe_original_dataset_UI_connection('index')
     @contextmanager
     def _connect(self):
         db = sqlite3.connect(self.path, timeout=30, isolation_level=None)
@@ -605,6 +607,7 @@ class DatasetIndex:
             **{name: (None if row[name] is None else bool(row[name]) if name == 'annotations_bind' else row[name])
                for name in _DETAILS})
 
+    @observe_original_dataset_UI_operation('index_revisions')
     def revisions(self, project_key: str) -> list[dict]:
         """Revisions newest first; ``annotations_scanned`` is false for revisions sealed before schema 3."""
         with self._connect() as db:
@@ -613,6 +616,7 @@ class DatasetIndex:
                      'active': bool(active and active[0] == row['revision_id'])} for row in db.execute(
                 f'{_REVISION_ROWS} WHERE r.project_key=? ORDER BY r.created_ns DESC', (project_key,))]
 
+    @observe_original_dataset_UI_operation('index_active')
     def active(self, project_key: str) -> Optional[str]:
         with self._connect() as db:
             row = db.execute('SELECT revision_id FROM dataset_active WHERE project_key=?', (project_key,)).fetchone()
@@ -640,6 +644,7 @@ class DatasetIndex:
             db.execute('INSERT OR REPLACE INTO dataset_active VALUES(?, ?)', (project_key, revision_id))
             return revision_id
 
+    @observe_original_dataset_UI_operation('index_source_status')
     def source_status(self, project_key: str, revision_id: str) -> dict:
         """Whether a revision still matches its source, by this index's own inventory definition (the one a build
         reads), without decoding or hashing anything: images added or removed since, images whose current file the stat
@@ -679,6 +684,7 @@ class DatasetIndex:
                     stat = path.stat()
                     if stat.st_size:  # a now-empty file would be ZERO_BYTE on a new validation
                         with path.open('rb') as handle:
+                            original_dataset_UI_file(handle,path)
                             handle.read(1)
                 except FileNotFoundError:
                     pass  # disappearance after the listing cannot confirm the old exclusion

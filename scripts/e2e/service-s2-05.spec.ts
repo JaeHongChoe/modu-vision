@@ -47,6 +47,9 @@ test('an added model shows its own problem, the wrong output port is refused and
  await expect(node.getByRole('button',{name:/IMAGE\/ROI IN$/})).toBeVisible();
  await evidence.screenshot(page,'s205-added-node-marked');
 
+ // Adding the node schedules an owning draft PUT/readback; wait before testing either port.
+ // This status is published only after the same-context draft hash has been read back.
+ await expect(page.getByRole('status').filter({hasText:/^초안 저장됨 · 실행본 활성화 전$/})).toBeVisible();
  await existing.getByRole('button',{name:/^Start connection from .* RESULT OUT$/}).click();
  await node.getByRole('button',{name:/^Connect to .* IMAGE\/ROI IN$/}).click();
  await expect(page.getByText(/결과 출력은 .*에 연결할 수 없습니다\. 이 입력은 이미지·ROI만 받습니다\./)).toBeVisible();

@@ -1,0 +1,48 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "ef0bb33b4cc4fac877746209820c14b96fa8dff3",
+  "source_dirty": false,
+  "test": "scripts/e2e/dicom-empty-owned-abort.spec.ts::DICOM empty optional windows use original defaults and exact RLE request abort preserves display before original retry",
+  "test_source_sha256": "a967981dd98161879d1203aa55449679bd3a653f44d75e4241109f73ce687018",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "c0b3c3a82ffc9170d06d7df6e7994ebda10840c2cd6b066164e2611f0b389a7b",
+  "harness_sha256": "baf437285528a3e991d27cfc4db3d1fe431e5fe169234f16fca87e8a43743479",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "a5b8a8ef59f9685c41a53b016f7049c63ade52aef823c66c9dfabb17e94c47a8"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "04fdbc01cab5020ce1946317a230fc5ab8c2d6a0e9f0a4dff3e4e1492f99bd66"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "e9696a40daf7f0c54397a685c45d34c9d96173df969a07070041cecfa30ebcb9"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "c39647dcf87864c2c83b55f2c6e5735718e4becb04f11664c225c556f9e58f04"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "0533646d484cce8d58ffc7f22cefdde20ea75025e097aaa730ab427ccc5ab08a"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "7a54618e435fab71f0a80746fb8db49515620f9107bd0f733e813abce210a3e3"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

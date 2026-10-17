@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "b20b9a8bd0f337174f7a1ef46880515bf6d10c19",
+  "source_dirty": false,
+  "test": "scripts/e2e/saved-queue-empty-controls.spec.ts::native saved queue empty threshold margin origin and eligible training preserve exact originals",
+  "test_source_sha256": "aa5ab27e0a937729c61c8e1d821786f3e36f9583a8b7af3e925fe62b2f0d7db3",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "536f8b6b72f4be2ae532ffa74a051fa1e237591a35ccf213618d673ea35283da",
+  "harness_sha256": "99774cd31e4e88c5e08fffeb59d1a8e7df01fe0494730d84ec247cf8ba3420b0",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "be54064693e68c7b45632b51b4eca8d69438ac4f13329f9219d68cd8582f0793"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "d1d1041f33c79617311a323f9400bab8c1d356d1f5468aa56160b863bef59b1d"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "81939e5fb61a14364423e6dea3153ddfe97bf2397ba2583ca59cb6076ae7a76f"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "f511953eb4f8b10f7353e601beb3557748d1902acaa3234cb11012d042456af9"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

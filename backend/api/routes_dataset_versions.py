@@ -6,6 +6,7 @@ requires the source to match the snapshot and never writes source LabelMe files.
 """
 
 from __future__ import annotations
+from backend.engine.original_owned_UI_ancillary_request import observe_original_dataset_provenance_operation, original_dataset_provenance_file, original_dataset_provenance_database, original_dataset_provenance_journal_read, original_dataset_UI_read_text, original_dataset_UI_read_bytes
 
 import hashlib
 import json
@@ -218,7 +219,7 @@ def _snapshot(project: Dict[str, Any], source: Path, name: str, note: str, kind:
 def _read_manifest(project: Dict[str, Any], version_id: str) -> tuple[Path, Dict[str, Any]]:
     path = _version_path(project, version_id)
     try:
-        manifest = json.loads((path / "manifest.json").read_text(encoding="utf-8"))
+        manifest = json.loads(original_dataset_UI_read_text(path / "manifest.json",encoding="utf-8"))
         if not isinstance(manifest, dict) or manifest.get("id") != version_id:
             raise ValueError("mismatched version ID")
         if manifest.get("project_id") != project["id"]:
@@ -242,6 +243,7 @@ def _file_hash(path: Path, *, allow_symlink: bool = False) -> Optional[str]:
         return None
     digest = hashlib.sha256()
     with path.open("rb") as source:
+        original_dataset_provenance_file(source,path)
         for block in iter(lambda: source.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
@@ -267,6 +269,7 @@ def _relative_path(row: Dict[str, Any]) -> Path:
     return relative
 
 
+@observe_original_dataset_provenance_operation('version_verify')
 def _verify(project: Dict[str, Any], version_dir: Path, manifest: Dict[str, Any]) -> Dict[str, Any]:
     source = _source_path(project)
     if str(source) != manifest["source_dataset_dir"]:
@@ -366,8 +369,8 @@ def _restore_labels(project: Dict[str, Any], version_dir: Path, manifest: Dict[s
         previous_ledger_path = studio / metadata_relative
         restored_ledger_path = stage_studio / metadata_relative
         if previous_ledger_path.is_file():
-            previous_ledger = json.loads(previous_ledger_path.read_text(encoding="utf-8"))
-            restored_ledger = json.loads(restored_ledger_path.read_text(encoding="utf-8")) if restored_ledger_path.is_file() else {"schema_version":1,"images":{}}
+            previous_ledger = json.loads(original_dataset_UI_read_text(previous_ledger_path,encoding="utf-8"))
+            restored_ledger = json.loads(original_dataset_UI_read_text(restored_ledger_path,encoding="utf-8")) if restored_ledger_path.is_file() else {"schema_version":1,"images":{}}
             # Guidance versions and current team policies are immutable project
             # decisions, not labels to rewind. Keep their complete history.
             if previous_ledger.get('team_data'):
@@ -521,7 +524,7 @@ def restore_version(version_id: str, request: Request):
         _restore_labels(project, path, manifest)
         restored_path = metadata_engine.ledger_path(Path(project["project_dir"]), source)
         if restored_path.is_file():
-            restored_ledger = json.loads(restored_path.read_text(encoding="utf-8"))
+            restored_ledger = json.loads(original_dataset_UI_read_text(restored_path,encoding="utf-8"))
             ledger.clear(); ledger.update(restored_ledger)
         return {
             "restored_version_id": version_id, "backup_version_id": backup["id"],

@@ -31,7 +31,9 @@ class DebugRunCache:
         return hashlib.sha256(json.dumps(identity(),sort_keys=True,separators=(',',':'),
             ensure_ascii=False,allow_nan=False).encode()).hexdigest()
 
-    def execute(self, identity, run):
+    def execute(self, identity, run, *, partial=None):
+        if partial is not None:
+            partial.check()
         started=time.perf_counter();key=self._key(identity)
         with self._lock:
             row=self._rows.get(key)
@@ -56,12 +58,26 @@ class DebugRunCache:
                 size+=len(part.encode())
                 if size>self.max_bytes:eligible=False;break
         if eligible and self.max_entries>0:
-            with self._lock:
-                old=self._rows.pop(key,None)
-                if old:self._size-=old[1]
-                self._rows[key]=(deepcopy(result),size);self._size+=size
-                while self._size>self.max_bytes or len(self._rows)>self.max_entries:
-                    _,(_,removed)=self._rows.popitem(last=False);self._size-=removed
+            if partial is None:
+                with self._lock:
+                    old=self._rows.pop(key,None)
+                    if old:self._size-=old[1]
+                    self._rows[key]=(deepcopy(result),size);self._size+=size
+                    while self._size>self.max_bytes or len(self._rows)>self.max_entries:
+                        _,(_,removed)=self._rows.popitem(last=False);self._size-=removed
+            else:
+                # Copy before the final cancellation lock. Publication is only
+                # staged here, and cannot occur until the original Run has left
+                # every engine/executor/device/compute-lease finally scope.
+                value=deepcopy(result)
+                def publish():
+                    with self._lock:
+                        old=self._rows.pop(key,None)
+                        if old:self._size-=old[1]
+                        self._rows[key]=(value,size);self._size+=size
+                        while self._size>self.max_bytes or len(self._rows)>self.max_entries:
+                            _,(_,removed)=self._rows.popitem(last=False);self._size-=removed
+                partial.stage_cache(publish,lambda:self._key(identity)==key)
         result['debug_cache']={'status':'miss' if eligible else 'bypassed','identity_sha256':key}
         return result
 
@@ -83,7 +99,7 @@ def check_checkpoint_files(files):
 
 
 def local_debug_run(cache, engine, pipeline, image_path, image_id, stop_node_id, project, checkpoints):
-    from backend.engine.flowchart_engine import debug_ancestor_ids
+    from backend.engine.flowchart_engine import debug_ancestor_ids, current_partial_run
     from backend.engine.model_runtime import active_model_runtime
     run=lambda:engine.execute(pipeline=pipeline,image_path=image_path,image_id=image_id,stop_node_id=stop_node_id)
     if not project or not stop_node_id or engine.device.type!='cpu' or active_model_runtime.get() is not None:
@@ -105,4 +121,4 @@ def local_debug_run(cache, engine, pipeline, image_path, image_id, stop_node_id,
             'context':{key:project.get(key) for key in ('id','project_dir','models_dir','source_dataset_dir','active_labelset_id','task')},
             'models':[(job,task,str(path),files[Path(path)]) for (job,task),path in sorted(checkpoints.items())],
             'model_files':{str(file):sha for file,sha in files.items()}}
-    return cache.execute(identity,run)
+    return cache.execute(identity,run,partial=current_partial_run())

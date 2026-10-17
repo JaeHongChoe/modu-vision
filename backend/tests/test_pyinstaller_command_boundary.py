@@ -95,8 +95,10 @@ def test_full_build_child_public_api_receives_exact_utf8_arguments(tmp_path, mon
                 json.dumps({'status': 'passed', 'frozen': True}), encoding='utf-8')
             return subprocess.CompletedProcess(command, 0)
         assert kwargs.get('shell', False) is False
-        return real_run(command, **kwargs, env={**os.environ, 'PYTHONPATH': str(shim),
-                                               'FIXTURE_ARGUMENTS': str(captured), 'PYTHONDONTWRITEBYTECODE': '1'})
+        child_environment = dict(kwargs.pop('env', os.environ))
+        child_environment.update({'PYTHONPATH': str(shim), 'FIXTURE_ARGUMENTS': str(captured),
+                                  'PYTHONDONTWRITEBYTECODE': '1'})
+        return real_run(command, env=child_environment, **kwargs)
     monkeypatch.setattr(build.subprocess, 'run', execute)
     build.build_binary(output, accept=True)
     snapshot = next((output / '.build').glob('source-*'))
@@ -134,7 +136,9 @@ def test_child_compiler_failure_keeps_exit_code_and_never_runs_acceptance(tmp_pa
     real_run = subprocess.run
     def execute(command, **kwargs):
         calls.append(command)
-        return real_run(command, **kwargs, env={**os.environ, 'PYTHONPATH': str(shim), 'PYTHONDONTWRITEBYTECODE': '1'})
+        child_environment = dict(kwargs.pop('env', os.environ))
+        child_environment.update({'PYTHONPATH': str(shim), 'PYTHONDONTWRITEBYTECODE': '1'})
+        return real_run(command, env=child_environment, **kwargs)
     monkeypatch.setattr(build.subprocess, 'run', execute)
     with pytest.raises(SystemExit) as raised:
         build.build_binary(tmp_path / 'output', accept=True)

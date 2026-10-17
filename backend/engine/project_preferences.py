@@ -1,5 +1,6 @@
 """Revision-checked project tag palettes and user-defined model/labelset flags."""
 from __future__ import annotations
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_handler, observe_original_dataset_UI_operation, observe_original_dataset_UI_connection, original_dataset_UI_read_text, original_dataset_UI_read_bytes, original_dataset_UI_image_open, original_dataset_UI_file, original_dataset_UI_diagnostics_missing
 
 import copy
 import json
@@ -14,13 +15,14 @@ class PreferenceConflict(ValueError):
     pass
 
 
+@observe_original_dataset_UI_operation('read_preferences')
 def read_preferences(project:Path)->dict:
     path=Path(project)/'preferences.json'
     if path.is_symlink():
         raise ValueError('Project preferences must not be a symbolic link')
     if not path.exists():
         return {'schema_version':1,'revision':0,'tag_colors':{},'model_flags':{},'labelset_flags':{},'audit':[]}
-    data=json.loads(path.read_text(encoding='utf-8'))
+    data=json.loads(original_dataset_UI_read_text(path, encoding='utf-8'))
     if data.get('schema_version')!=1 or type(data.get('revision')) is not int:
         raise ValueError('Invalid preference registry')
     return data

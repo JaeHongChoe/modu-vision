@@ -10,8 +10,11 @@ and client connection management.
 from __future__ import annotations
 
 import asyncio
+from contextlib import contextmanager
 import json
 import logging
+import math
+import threading
 import sqlite3
 import time
 from pathlib import Path
@@ -25,6 +28,11 @@ from backend.utils.error_catalog import classify_exception
 from backend.contracts.context import current_project_context, originating_context
 from backend.engine.job_store import ledger as observation_ledger
 from backend.engine.product_delivery import redact_diagnostics
+from backend.engine.original_owned_telemetry_socket_request import (
+    observe_original_telemetry_handler, observe_original_telemetry_register,
+    observe_original_telemetry_unregister,
+    observe_original_telemetry_task_creation, observe_original_telemetry_drain_creation,
+)
 
 logger = logging.getLogger("vision_ai_studio.telemetry")
 
@@ -75,6 +83,14 @@ class TelemetryBroadcaster:
         self._hw_task: Optional[asyncio.Task] = None
         self._running: bool = False
         self._device = None
+        self._task_lifetimes: List[Dict[str, Any]] = []
+        self._task_heads: Dict[str, Dict[str, Any]] = {}
+        self._lifetime_lock = threading.RLock()
+        self._shutdown_started = False
+        self._prepared_shutdown = False
+        self._shutdown_failure: Optional[str] = None
+        self._shutdown_failures: Dict[str, str] = {}
+        self._shutdown_observers: List[Dict[str, Any]] = []
 
     @property
     def active_connections(self) -> Set[WebSocket]:
@@ -84,58 +100,313 @@ class TelemetryBroadcaster:
         """Sets the running asyncio event loop and initializes queues if needed."""
         self.start(loop)
 
-    def start(self, loop: asyncio.AbstractEventLoop) -> None:
-        """Initializes queues and background dispatch loops within the running event loop."""
-        if self._running and self._loop == loop:
-            return
-        self._loop = loop
-        self._queue = asyncio.Queue()
-        self._running = True
+    def _retain_shutdown_failure(self, message: str) -> str:
+        # One built-in dictionary insertion retains the first failure without
+        # waiting for the lifetime lock that may itself have timed out.
+        first = self._shutdown_failures.setdefault('first', message)
+        self._shutdown_failure = first
+        return first
+
+    def _refuse_shutdown(self, message: str) -> None:
+        self._retain_shutdown_failure(message)
+        raise RuntimeError(message)
+
+    @contextmanager
+    def _lifetime_access(self, deadline: Optional[float] = None):
+        acquired = (self._lifetime_lock.acquire() if deadline is None else
+                    self._lifetime_lock.acquire(timeout=self._remaining(deadline)))
+        if not acquired:
+            self._refuse_shutdown("Original telemetry lifetime lock unresolved at deadline")
         try:
-            self._device = get_device()
+            if deadline is not None:
+                self._remaining(deadline)
+            yield
+        finally:
+            self._lifetime_lock.release()
+
+    def _remaining(self, deadline: float) -> float:
+        observed = time.monotonic()
+        if (type(deadline) not in (int, float) or not math.isfinite(deadline)
+                or deadline <= observed):
+            self._refuse_shutdown("Original telemetry shutdown deadline expired or invalid")
+        return deadline - observed
+
+    def _validate_original_tasks(self, deadline: Optional[float] = None) -> None:
+        with self._lifetime_access(deadline):
+            for role, attribute in (("dispatch", "_dispatch_task"), ("hardware", "_hw_task")):
+                head = self._task_heads.get(role)
+                current = getattr(self, attribute)
+                if head is None:
+                    if current is not None:
+                        self._refuse_shutdown("Original telemetry task ownership is unknown")
+                elif current is not head['task'] and not (head['joined'] and current is None):
+                    self._refuse_shutdown("Original telemetry task ownership was substituted")
+            for record in self._task_lifetimes:
+                if (not isinstance(record['task'], asyncio.Task)
+                        or record['task'].get_loop() is not record['loop']):
+                    self._refuse_shutdown("Original telemetry task loop ownership differs")
+            latest = self._task_heads.get('hardware')
+            if latest is not None and self._loop is not latest['loop']:
+                self._refuse_shutdown("Original telemetry loop ownership was substituted")
+
+    @observe_original_telemetry_task_creation
+    def _record_task(self, loop: asyncio.AbstractEventLoop, role: str, coroutine,
+                     deadline: Optional[float] = None) -> Dict[str, Any]:
+        try:
+            with self._lifetime_access(deadline):
+                task = loop.create_task(coroutine)
+                record = {'task': task, 'loop': loop, 'role': role, 'joined': False}
+                self._task_lifetimes.append(record)
+                return record
+        except BaseException:
+            coroutine.close()
+            self._refuse_shutdown("Original telemetry task creation was incomplete")
+
+    def start(self, loop: asyncio.AbstractEventLoop) -> None:
+        """Retain the actual created tasks, including superseded generations."""
+        self._validate_original_tasks()
+        with self._lifetime_lock:
+            if self._shutdown_failure is not None:
+                raise RuntimeError(self._shutdown_failure)
+            if self._shutdown_started and any(not r['joined'] for r in self._task_lifetimes):
+                self._refuse_shutdown("Original telemetry shutdown tasks remain unresolved")
+        try:
+            current = asyncio.get_running_loop()
+        except RuntimeError:
+            current = None
+        if current is not loop or loop.is_closed() or not loop.is_running():
+            self._refuse_shutdown("Original telemetry start requires its running event loop")
+        if self._running and self._loop is loop:
+            return
+        try:
+            device = get_device()
         except Exception:
-            self._device = None
-
-        # Cancel existing tasks if restarting
-        if self._dispatch_task and not self._dispatch_task.done():
-            self._dispatch_task.cancel()
-        if self._hw_task and not self._hw_task.done():
-            self._hw_task.cancel()
-
-        self._dispatch_task = self._loop.create_task(self._event_dispatch_loop())
-        self._hw_task = self._loop.create_task(self._hardware_telemetry_loop())
+            device = None
+        # Admission and exact pair publication are atomic with the preparation
+        # snapshot; device probing happens outside this small critical section.
+        with self._lifetime_lock:
+            self._validate_original_tasks()
+            if self._shutdown_failure is not None:
+                raise RuntimeError(self._shutdown_failure)
+            if self._prepared_shutdown:
+                self._refuse_shutdown("Original telemetry startup admission is closed")
+            if self._shutdown_started and any(not r['joined'] for r in self._task_lifetimes):
+                self._refuse_shutdown("Original telemetry shutdown tasks remain unresolved")
+            if self._active_connections and self._loop is not loop:
+                self._refuse_shutdown("Original telemetry connection loop ownership differs")
+            for record in tuple(self._task_lifetimes):
+                if not record['joined'] and not record['task'].done():
+                    owner = record['loop']
+                    if owner.is_closed() or not owner.is_running():
+                        self._refuse_shutdown("Original telemetry loop is stopped")
+                    owner.call_soon_threadsafe(record['task'].cancel)
+            self._loop = loop
+            self._queue = asyncio.Queue()
+            self._device = device
+            self._running = True
+            self._shutdown_started = False
+            dispatch = self._record_task(loop, 'dispatch', self._event_dispatch_loop())
+            self._task_heads['dispatch'] = dispatch
+            self._dispatch_task = dispatch['task']
+            hardware = self._record_task(loop, 'hardware', self._hardware_telemetry_loop())
+            self._task_heads['hardware'] = hardware
+            self._hw_task = hardware['task']
         logger.info("TelemetryBroadcaster started.")
 
-    async def shutdown(self) -> None:
-        """Gracefully shuts down all active WebSocket connections and background tasks."""
-        self._running = False
-        if self._hw_task:
-            self._hw_task.cancel()
-            try:
-                await self._hw_task
-            except (asyncio.CancelledError, Exception):
-                pass
-            self._hw_task = None
+    async def _join_records(self, records: List[Dict[str, Any]], deadline: float) -> None:
+        tasks = {record['task'] for record in records}
+        if tasks:
+            _, pending = await asyncio.wait(tasks, timeout=self._remaining(deadline))
+            if pending:
+                self._refuse_shutdown("Original telemetry tasks unresolved at shutdown deadline")
+            self._remaining(deadline)
+        with self._lifetime_access(deadline):
+            failure = None
+            for record in records:
+                task = record['task']
+                try:
+                    error = task.exception()
+                except asyncio.CancelledError:
+                    error = None
+                record['joined'] = True
+                if error is not None:
+                    failure = "Original telemetry original task failed: " + type(error).__name__
+                if record['role'] == 'connection_close':
+                    if error is None and not task.cancelled() and task.result() is True:
+                        self._active_connections.discard(record['connection'])
+                    else:
+                        failure = "Original telemetry connection close was not confirmed"
+            if failure is not None:
+                self._refuse_shutdown(failure)
 
-        if self._dispatch_task:
-            self._dispatch_task.cancel()
-            try:
-                await self._dispatch_task
-            except (asyncio.CancelledError, Exception):
-                pass
-            self._dispatch_task = None
+    @observe_original_telemetry_drain_creation
+    async def _drain_original_loop(self, loop: asyncio.AbstractEventLoop,
+                                   records: List[Dict[str, Any]], deadline: float,
+                                   observer: Dict[str, Any]) -> None:
+        if asyncio.get_running_loop() is not loop:
+            self._refuse_shutdown("Original telemetry observer loop ownership differs")
+        original_task = asyncio.current_task()
+        with self._lifetime_access(deadline):
+            if observer['task'] is not None and observer['task'] is not original_task:
+                self._refuse_shutdown('Original telemetry observer task ownership differs')
+            observer['task'] = original_task
+            observer['original_task'] = original_task
+        self._remaining(deadline)
+        for record in records:
+            if record['task'].get_loop() is not loop:
+                self._refuse_shutdown("Original telemetry task loop ownership differs")
+            if not record['task'].done():
+                record['task'].cancel()
+        await self._join_records(records, deadline)
+        if loop is self._loop:
+            closes = []
+            for ws in tuple(self._active_connections):
+                record = self._record_task(loop, 'connection_close', self._safe_close(ws), deadline)
+                record['connection'] = ws
+                closes.append(record)
+            await self._join_records(closes, deadline)
 
-        # Close all active websockets with code 1001 (Going Away)
-        for ws in list(self._active_connections):
-            await self._safe_close(ws)
-        self._active_connections.clear()
+    def _begin_shutdown(self, deadline: float, *, cleanup: bool = False) -> Dict[Any, Any]:
+        self._remaining(deadline)
+        self._validate_original_tasks(deadline)
+        with self._lifetime_access(deadline):
+            if self._shutdown_failure is not None and not cleanup:
+                raise RuntimeError(self._shutdown_failure)
+            groups: Dict[Any, Any] = {}
+            for record in self._task_lifetimes:
+                if not record['joined']:
+                    groups.setdefault(record['loop'], []).append(record)
+            if self._active_connections and self._loop is not None:
+                groups.setdefault(self._loop, [])
+            for loop in groups:
+                if loop.is_closed() or not loop.is_running():
+                    self._refuse_shutdown("Original telemetry loop is stopped")
+            self._running = False
+            self._shutdown_started = True
+            if not cleanup:
+                self._prepared_shutdown = True
+            return groups
+
+    def _closure_receipt(self, deadline: float) -> Dict[str, Any]:
+        self._validate_original_tasks(deadline)
+        with self._lifetime_access(deadline):
+            if any(not r['joined'] for r in self._task_lifetimes) or self._active_connections:
+                self._refuse_shutdown("Original telemetry tasks or connections remain unresolved")
+            if self._shutdown_failure is not None:
+                raise RuntimeError(self._shutdown_failure)
+            for observer in self._shutdown_observers:
+                task, future = observer.get('task'), observer.get('future')
+                if (not isinstance(task, asyncio.Task) or task is not observer.get('original_task')
+                        or task.get_loop() is not observer['loop'] or not task.done()
+                        or future is None or not future.done()):
+                    self._refuse_shutdown('Original telemetry observer ownership or exit remains unresolved')
+                try:
+                    error = future.exception()
+                except BaseException:
+                    self._refuse_shutdown('Original telemetry observer completion was interrupted')
+                if error is not None:
+                    self._refuse_shutdown('Original telemetry observer completion failed')
+            self._remaining(deadline)
+            for role, attribute in (("dispatch", "_dispatch_task"), ("hardware", "_hw_task")):
+                if self._task_heads.get(role, {}).get('joined'):
+                    setattr(self, attribute, None)
+            return {'idle': True, 'supported': True, 'task_count': len(self._task_lifetimes),
+                    'joined_tasks': len(self._task_lifetimes), 'pending_tasks': 0,
+                    'whole_writer_coverage': False, 'process_tree_exit_verified': False,
+                    'can_release_launch_lease': False}
+
+    def _observe_shutdown(self, observer: Dict[str, Any], future) -> None:
+        """Retain terminal observer failure even after a bounded caller returns."""
+        try:
+            error = future.exception()
+        except BaseException as error:
+            observer['exception_type'] = type(error).__name__
+            if self._shutdown_failure is None:
+                self._retain_shutdown_failure("Original telemetry observer was interrupted")
+        else:
+            observer['exception_type'] = type(error).__name__ if error is not None else None
+            if error is not None and self._shutdown_failure is None:
+                self._retain_shutdown_failure("Original telemetry observer failed: " + type(error).__name__)
+        observer['terminal_observed'] = True
+
+    def prepare_shutdown(self, deadline: float) -> Dict[str, Any]:
+        """Bounded original-loop observation from the owned preparation thread."""
+        try:
+            current = asyncio.get_running_loop()
+        except RuntimeError:
+            current = None
+        if current is not None:
+            self._refuse_shutdown("Telemetry sync preparation cannot block the same event loop")
+        groups = self._begin_shutdown(deadline)
+        observers = []
+        for loop, records in groups.items():
+            observer = {'loop': loop, 'task': None, 'future': None}
+            coroutine = self._drain_original_loop(loop, records, deadline, observer)
+            try:
+                future = asyncio.run_coroutine_threadsafe(coroutine, loop)
+            except BaseException:
+                coroutine.close()
+                self._refuse_shutdown("Original telemetry observer scheduling failed")
+            observer['future'] = future
+            self._shutdown_observers.append(observer)
+            future.add_done_callback(lambda done, original=observer: self._observe_shutdown(original, done))
+            observers.append(future)
+        for future in observers:
+            try:
+                future.result(timeout=self._remaining(deadline))
+            except TimeoutError:
+                # Retain the observer and originals; late completion cannot
+                # clear this admission failure or qualify release afterward.
+                self._refuse_shutdown("Original telemetry shutdown deadline expired")
+            except BaseException as error:
+                if self._shutdown_failure is None:
+                    self._refuse_shutdown("Original telemetry observer failed: " + type(error).__name__)
+                raise RuntimeError(self._shutdown_failure) from error
+        self._remaining(deadline)
+        return self._closure_receipt(deadline)
+
+    async def shutdown(self, deadline: Optional[float] = None) -> None:
+        """Compatible async interface, bounded on the caller's single deadline."""
+        deadline = time.monotonic() + 4.0 if deadline is None else deadline
+        groups = self._begin_shutdown(deadline, cleanup=True)
+        current = asyncio.get_running_loop()
+        observers = []
+        for loop, records in groups.items():
+            observer = {'loop': loop, 'task': None, 'future': None}
+            coroutine = self._drain_original_loop(loop, records, deadline, observer)
+            if loop is current:
+                future = loop.create_task(coroutine)
+            else:
+                try:
+                    future = asyncio.run_coroutine_threadsafe(coroutine, loop)
+                except BaseException:
+                    coroutine.close()
+                    self._refuse_shutdown("Original telemetry observer scheduling failed")
+            observer['future'] = future
+            self._shutdown_observers.append(observer)
+            future.add_done_callback(lambda done, original=observer: self._observe_shutdown(original, done))
+            observers.append(future if isinstance(future, asyncio.Future) else asyncio.wrap_future(future))
+        try:
+            if observers:
+                done, pending = await asyncio.wait(observers, timeout=self._remaining(deadline))
+                if pending:
+                    self._refuse_shutdown("Original telemetry shutdown tasks unresolved at deadline")
+                for future in done:
+                    future.result()
+        except asyncio.CancelledError:
+            if self._shutdown_failure is None:
+                self._retain_shutdown_failure("Original telemetry shutdown observer was interrupted")
+            raise
+        self._remaining(deadline)
+        self._closure_receipt(deadline)
         logger.info("TelemetryBroadcaster shut down cleanly.")
 
-    async def _safe_close(self, ws: WebSocket) -> None:
+    async def _safe_close(self, ws: WebSocket) -> bool:
         try:
             await ws.close(code=1001, reason="Server shutting down")
+            return True
         except Exception:
-            pass
+            return False
 
     async def connect(self, websocket: WebSocket) -> None:
         """Alias for register to support different naming conventions."""
@@ -145,9 +416,15 @@ class TelemetryBroadcaster:
         """Alias for unregister."""
         self.unregister(websocket)
 
+    @observe_original_telemetry_register
     async def register(self, websocket: WebSocket) -> None:
         """Accepts and registers a new WebSocket client, sending initial state snapshot."""
+        if self._shutdown_started:
+            raise RuntimeError("Telemetry shutdown no longer admits new connections")
         await websocket.accept()
+        if self._shutdown_started:
+            await websocket.close(code=1001, reason="Server shutting down")
+            return
         self._active_connections.add(websocket)
         logger.info(
             "WebSocket client connected. Active connections: %d",
@@ -178,6 +455,7 @@ class TelemetryBroadcaster:
         except Exception as e:
             logger.debug("Failed to send initial hardware snapshot: %s", e)
 
+    @observe_original_telemetry_unregister
     def unregister(self, websocket: WebSocket) -> None:
         """Removes disconnected WebSocket client."""
         self._active_connections.discard(websocket)
@@ -458,7 +736,7 @@ async def _handle_websocket_connection(websocket: WebSocket) -> None:
         broadcaster.unregister(websocket)
 
 
-@router.websocket("/ws/telemetry")
+@observe_original_telemetry_handler(router.websocket("/ws/telemetry"))
 async def websocket_telemetry_endpoint(websocket: WebSocket):
     """Primary telemetry WebSocket endpoint specified in user request."""
     await _handle_websocket_connection(websocket)

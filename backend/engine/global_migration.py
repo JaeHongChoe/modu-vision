@@ -12,7 +12,8 @@ _SCOPES={'ledger','leases','profiles','accounts','context','local_journals','rem
 _EXCLUDED={OWNER_FILE,POINTER_FILE,'.global-generations','.global-migrations','.global-generation.json','migration_admission.lock', '.installed-home-adoption'}
 _APPLICATION_CONTROL={'application-active.json','application-update-pending.json','.application-updates','.application-generations',
                       'application-launch-lease.json','.application-launches','application-database-ownership.lock',
-                      '.application-writer-epochs', '.application-runtime-homes'}
+                      '.application-writer-epochs', '.application-runtime-homes',
+                      '.application-writer-archives', '.application-writer-closures'}
 
 def digest(value):return hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 
@@ -62,7 +63,11 @@ def _construct(root,scopes):
 
 def _known_schemas(scopes):
     with tempfile.TemporaryDirectory(prefix='modu-global-schema-') as temp:
-        root=Path(temp);p=root/scopes['profiles'];p.parent.mkdir(parents=True,exist_ok=True);p.write_text('{"profiles":[],"selected":null}',encoding='utf-8')
+        root=Path(temp)
+        # A confined worker TMPDIR may be inside another owned installation.
+        # Scratch constructors must acquire their own admission, never its lock.
+        initialize_owned(root,scopes=scopes)
+        p=root/scopes['profiles'];p.parent.mkdir(parents=True,exist_ok=True);p.write_text('{"profiles":[],"selected":null}',encoding='utf-8')
         _construct(root,scopes)
         return {name:_schema(root/scopes[name]) for name in ('ledger','leases','accounts','context')}
 
@@ -370,12 +375,15 @@ def recover(root,identifier,*,action):
             from backend.engine.live_control_migration import recover_live
             return recover_live(root,identifier,action=action)
         if action not in {'finish','restore'}:raise GlobalMigrationError('Select finish or restore')
+        if record.get('kind')=='paired_restore':
+            from backend.engine.approved_paired_restore import validate_database
+            validate_database(root,record)
         if record.get('application_update_id') is not None or (root/'application-update-pending.json').exists():
             from backend.engine.staged_update_canary import require_publication
             require_publication(root,record)
             if action!='finish':raise GlobalMigrationError('Application-bound restore requires the reviewed update recovery policy')
         def source_view():
-            if record.get('kind')!='forward':return preview(root)
+            if record.get('kind') not in {'forward','paired_restore'}:return preview(root)
             previous=record.get('previous_pointer') or {};prior=previous.get('generation_id')
             if (not isinstance(prior,str) or len(prior)!=32 or any(c not in '0123456789abcdef' for c in prior)
                     or previous.get('installation_id')!=owner['installation_id'] or type(previous.get('fence')) is not int
@@ -385,7 +393,7 @@ def recover(root,identifier,*,action):
         if record.get('status') in {'restoring','restored'}:
             if action!='restore':raise GlobalMigrationError('Selected migration is restoring or restored; select restore')
             return _resume_restore(root,owner,identifier,path,record,source_view())
-        if (record.get('kind')=='forward' and action=='finish' and record.get('status')=='prepared'
+        if (record.get('kind') in {'forward','paired_restore'} and action=='finish' and record.get('status')=='prepared'
                 and current and current[1]==record.get('previous_pointer')):
             source=source_view()
             if source['source_sha256']!=record['source_sha256'] or not source['can_apply']:

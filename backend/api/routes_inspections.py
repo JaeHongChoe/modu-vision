@@ -104,7 +104,27 @@ def _owned_checkpoint(project: Dict[str, Any], job_id: str, checkpoint: Path) ->
     }
 
 
-def _verified_run_provenance(payload: "CreateRun", project: Dict[str, Any]) -> tuple[Optional[str], Dict[str, str], Dict[str, str]]:
+def _retained_inspection_checkpoint(project, job_id, task, source, pipeline, request):
+    """Use only the original explicit retained-rotation verifier, never a foreign-path fallback."""
+    if task != "rotation":
+        return None
+    from backend.engine.retained_preprocessors import retained_rotation_jobs
+    if job_id not in retained_rotation_jobs(project):
+        return None
+    from backend.api.routes_flowchart import _resolve_project_specialist
+    checkpoint = None
+    for node in pipeline.nodes:
+        if node.data.model_job_id == job_id and flow_model_task(node) == task:
+            resolved, _ = _resolve_project_specialist(project, job_id, task, source, request, node=node)
+            if checkpoint is not None and resolved != checkpoint:
+                raise ValueError("Retained inspection checkpoint changed during validation.")
+            checkpoint = resolved
+    if checkpoint is None:
+        raise ValueError("Retained inspection checkpoint has no matching preprocessing node.")
+    return checkpoint
+
+
+def _verified_run_provenance(payload: "CreateRun", project: Dict[str, Any], request: Request = None) -> tuple[Optional[str], Dict[str, str], Dict[str, str]]:
     """Bind a configured project run to its active saved graph, source images, and checkpoints."""
     configured = project.get("source_dataset_dir")
     if not configured:
@@ -163,14 +183,17 @@ def _verified_run_provenance(payload: "CreateRun", project: Dict[str, Any]) -> t
     model_paths: Dict[str, str] = {}
     for job_id, task in _model_references(pipeline).items():
         try:
-            if task in SPECIALIZED_TASKS:
+            retained = _retained_inspection_checkpoint(project, job_id, task, str(source), pipeline, request)
+            if retained is not None:
+                checkpoint = retained
+            elif task in SPECIALIZED_TASKS:
                 checkpoint,_ = resolve_specialized_checkpoint(project["models_dir"],job_id,task,str(source))
             else:
                 _, checkpoint, _, _, _, _ = _resolve_job_artifacts(
                 job_id, source_dataset_path=str(source), source_task=task,
             )
             local_job = Path(project["models_dir"]).resolve() / job_id
-            if not _owned_checkpoint(project, job_id, checkpoint) or (
+            if (retained is None and not _owned_checkpoint(project, job_id, checkpoint)) or (
                 local_job.is_dir() and checkpoint.parent.resolve() != local_job
             ):
                 raise ValueError("Another project's checkpoint was selected for this job ID.")
@@ -490,7 +513,7 @@ def _read_run(conn: sqlite3.Connection, run_id: str) -> Dict[str, Any]:
     return output
 
 
-def _verified_execution_context(run: sqlite3.Row, project: Dict[str, Any]) -> tuple[FlowchartPipeline, Dict[tuple[str, str], Path]]:
+def _verified_execution_context(run: sqlite3.Row, project: Dict[str, Any], request: Request = None) -> tuple[FlowchartPipeline, Dict[tuple[str, str], Path]]:
     """Reopen this run's immutable graph and exact checkpoint files, independent of the current active flow."""
     source = Path(run["source_folder"]).expanduser().resolve()
     if (project.get("source_dataset_dir") != str(source) or project.get("task") != run["task"]
@@ -522,10 +545,12 @@ def _verified_execution_context(run: sqlite3.Row, project: Dict[str, Any]) -> tu
             if not isinstance(recorded, str) or not isinstance(model_hashes[job_id], str):
                 raise ValueError("Stored checkpoint identity is invalid.")
             checkpoint = Path(recorded)
+            retained = _retained_inspection_checkpoint(project, job_id, task, str(source), pipeline, request)
             local_job = Path(project["models_dir"]).resolve() / job_id
             if (checkpoint.name != "best_model.pt" or checkpoint.is_symlink() or not checkpoint.is_file()
                     or str(checkpoint.resolve()) != recorded
-                    or not _owned_checkpoint(project, job_id, checkpoint)
+                    or (retained is None and not _owned_checkpoint(project, job_id, checkpoint))
+                    or (retained is not None and checkpoint != retained)
                     or (local_job.is_dir() and checkpoint.parent.resolve() != local_job)
                     or _sha256(checkpoint) != model_hashes[job_id]):
                 raise ValueError(f"Checkpoint {job_id} differs from the recorded inspection model.")
@@ -561,7 +586,7 @@ def create_run(payload: CreateRun, request: Request):
         pipeline_json = canonical_pipeline_json(payload.pipeline)
     except (ValueError, TypeError) as exc:
         raise HTTPException(status_code=422, detail=f"Inspection graph is invalid: {exc}") from exc
-    saved_version_id, model_sha256, model_paths = _verified_run_provenance(payload, project)
+    saved_version_id, model_sha256, model_paths = _verified_run_provenance(payload, project, request)
     run_id, stamp = str(uuid.uuid4()), _now()
     with _run_index(request) as index:
         index.execute("INSERT INTO run_projects VALUES (?, ?, ?)",
@@ -724,7 +749,7 @@ def execute_row(run_id: str, payload: ExecuteRow, request: Request):
         image = json.loads(row["image_json"])
         run_record = dict(run)
 
-    pipeline, checkpoints = _verified_execution_context(run_record, project)
+    pipeline, checkpoints = _verified_execution_context(run_record, project, request)
     execution_config, frozen_profile = _verified_execution_choice(run_record, project)
     image_path = Path(payload.image_path).expanduser().resolve()
     source_path = Path(run_record["source_folder"]).expanduser().resolve()

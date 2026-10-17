@@ -25,21 +25,31 @@ export const SpecializedApprovalPanel: React.FC = () => {
   const [active, setActive] = useState<ActiveApproval | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [readRevision, setReadRevision] = useState(0);
+  const [isOpen, setIsOpen] = useState(false);
+  const openRef = useRef(false);
+  const disclosureRevision = useRef(0);
+  const toggleOpen = (event: React.SyntheticEvent<HTMLDetailsElement>) => {
+    const next = event.currentTarget.open;
+    if (openRef.current === next) return;
+    openRef.current = next;
+    disclosureRevision.current++;
+    setIsOpen(next);
+  };
   const captureScope = () => {
     const current = useProjectStore.getState();
     return JSON.stringify([current.project?.id, current.projectDir, current.task, readySource(current, useDatasetStore.getState()),
-      family, getProjectContextGeneration(), getApiPersistenceIdentity(), readRevision]);
+      family, getProjectContextGeneration(), getApiPersistenceIdentity(), readRevision, disclosureRevision.current]);
   };
   const scope = captureScope();
   const scopeRef = useRef(scope); scopeRef.current = scope;
   useEffect(() => {
     let valid = true;
     const requestScope = scope;
-    const current = () => valid && scopeRef.current === requestScope && captureScope() === requestScope;
+    const current = () => valid && openRef.current && scopeRef.current === requestScope && captureScope() === requestScope;
     setSelected(''); setRecords([]); setReviewed(false); setMessage(''); setBusy(false); setIncumbent('');
     setActive(null); setLoaded(false); setReviewer(''); setReason(''); setMinimumCount(8);
     setBounds(JSON.stringify(defaults[family], null, 2));
-    if (projectDir && source) Promise.all([
+    if (isOpen && openRef.current && projectDir && source) Promise.all([
       request<{items: Evidence[]}>(`/api/evaluation/history?source_dataset_path=${encodeURIComponent(source)}&task=${family}`),
       request<{active: ActiveApproval | null}>(`/api/model-deployments/active?source_dataset_path=${encodeURIComponent(source)}&task=${family}`),
     ]).then(([history, approval]) => {
@@ -48,7 +58,7 @@ export const SpecializedApprovalPanel: React.FC = () => {
       setActive(approval.active); setLoaded(true);
     }).catch(cause => { if (current()) setMessage(cause instanceof Error ? cause.message : String(cause)); });
     return () => { valid = false; };
-  }, [scope]);
+  }, [scope, isOpen]);
   const evidence = records.find(row => row.evaluation_id === selected);
   const replacing = !!active && !!evidence && active.job_id !== evidence.result.job_id;
   const compatible = evidence && replacing ? records.filter(row => row.evaluation_id !== evidence.evaluation_id
@@ -58,21 +68,21 @@ export const SpecializedApprovalPanel: React.FC = () => {
     && row.binding.source_dataset_path === evidence.binding.source_dataset_path
     && row.binding.dataset_fingerprint === evidence.binding.dataset_fingerprint
     && row.result.sample_count === evidence.result.sample_count) : [];
-  const canApprove = loaded && (!active || active.valid === true) && !busy && !!evidence && reviewed
+  const canApprove = isOpen && openRef.current && captureScope() === scope && loaded && (!active || active.valid === true) && !busy && !!evidence && reviewed
     && !!reviewer.trim() && reason.trim().length >= 8 && (!replacing || compatible.some(row => row.evaluation_id === incumbent));
   const approve = async () => {
     const requestScope = scope;
-    if (!canApprove || captureScope() !== requestScope) return;
+    if (!canApprove || !openRef.current || captureScope() !== requestScope) return;
     setBusy(true); setMessage('');
     try {
       const criteria = JSON.parse(bounds);
       const response = await request<{ revision: { revision_id: string } }>('/api/model-deployments/specialized-approve', { method: 'POST', body: JSON.stringify({ source_dataset_path: source, task: family, evaluation_id: selected, incumbent_evaluation_id: replacing ? incumbent : null, reviewer, reason, holdout_reviewed: reviewed, minimum_sample_count: minimumCount, minimum_metrics: criteria.minimum || {}, maximum_metrics: criteria.maximum || {} }) });
-      if (scopeRef.current === requestScope && captureScope() === requestScope) setMessage(`승인 revision: ${response.revision.revision_id}. 이 revision을 포함한 flow 패키지로 서비스를 명시적으로 적용하세요.`);
-    } catch (cause) { if (scopeRef.current === requestScope && captureScope() === requestScope) setMessage(cause instanceof Error ? cause.message : String(cause)); }
-    finally { if (scopeRef.current === requestScope && captureScope() === requestScope) setBusy(false); }
+      if (openRef.current && scopeRef.current === requestScope && captureScope() === requestScope) setMessage(`승인 revision: ${response.revision.revision_id}. 이 revision을 포함한 flow 패키지로 서비스를 명시적으로 적용하세요.`);
+    } catch (cause) { if (openRef.current && scopeRef.current === requestScope && captureScope() === requestScope) setMessage(cause instanceof Error ? cause.message : String(cause)); }
+    finally { if (openRef.current && scopeRef.current === requestScope && captureScope() === requestScope) setBusy(false); }
   };
   if (!projectDir || !source) return null;
-  return <details className="mt-3 rounded border border-slate-700 p-3 text-xs"><summary className="cursor-pointer font-semibold">OCR · 회전 검출 · 이미지 개선 승인</summary>
+  return <details onToggle={toggleOpen} className="mt-3 rounded border border-slate-700 p-3 text-xs"><summary className="cursor-pointer font-semibold">OCR · 회전 검출 · 이미지 개선 승인</summary>
     <label className="mt-2 block">모델 유형<select aria-label="특수 모델 승인 유형" className="ml-2 rounded bg-slate-800 p-1" value={family} onChange={event => setFamily(event.target.value as Family)}><option value="ocr">OCR</option><option value="rotated_detection">회전 검출</option><option value="enhancement">이미지 개선</option><option value="rotation">회전·정렬</option></select></label>
     <button type="button" aria-label="특수 모델 평가 기록 새로 고침" disabled={busy} onClick={() => setReadRevision(value => value + 1)} className="mt-2 rounded border border-slate-600 px-2 py-1 disabled:opacity-40">평가 기록 새로 고침</button>
     <label className="mt-2 block">변경 불가 test 평가<select aria-label="특수 모델 평가 승인" disabled={!loaded || busy} className="mt-1 w-full rounded bg-slate-800 p-2 disabled:opacity-40" value={selected} onChange={event => { setSelected(event.target.value); setIncumbent(''); setReviewed(false); }}><option value="">평가 기록 선택</option>{records.map(row => <option key={row.evaluation_id} value={row.evaluation_id}>{row.result.job_id} · {row.result.split} · {row.result.sample_count ?? 0}장 · {new Date(row.created_at * 1000).toLocaleString()}</option>)}</select></label>

@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "8182f569c730db75e3dc73c1c3830b46b5527c17",
+  "source_dirty": false,
+  "test": "scripts/e2e/mask-reviewed-apply-error.spec.ts::reviewed mask apply exact POST error preserves owned preview and annotations before original preview recovery",
+  "test_source_sha256": "32d6c58fb083486ffc32d3aa0c7de7373763fb28f66533570b376b3ca9c9f370",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "38379894c53554185133aca4c6b23492ef05fec1010e3015eff84f912459074e",
+  "harness_sha256": "ac3c59f5a6937952ea37302c473e7d65627faf6a6b816d6277320ee6fa0a7097",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "0bca109b29c35b712dd4df35f3cbf89167c89360904849e9d0a529665a35abfd"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "e32110ff91c9ad0cf9c6272d544ed38d15779551ef7564de3fce5f200f33e2c5"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "8211eefedf389c471e112078b0663dbae37fe34fbbd2f2a25ea5443bd20f64f7"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

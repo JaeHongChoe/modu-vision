@@ -6,6 +6,7 @@ local training receipt is allowed to say ``completed``.
 """
 
 from __future__ import annotations
+from backend.engine.original_owned_selected_compute_request import observe_original_selected_compute, selected_file
 
 import hashlib
 import errno
@@ -53,6 +54,7 @@ class RemoteWorkerExited(RuntimeError):
     """The remote process ended before it published a status receipt."""
 
 
+@observe_original_selected_compute("confirm")
 def _confirm_owned_exit(transport, profile, run_id, handle):
     """Terminal publication precedes teardown; only owned exit frees compute."""
     started = time.monotonic()
@@ -208,6 +210,7 @@ def _bundle_backend(destination: Path) -> Path:
 def _sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
+        selected_file(handle,path,"checksum")
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
@@ -882,87 +885,94 @@ def _terminal_receipt_matches_record(saved: Any, record: Any) -> bool:
     return not binding or saved.get('training_provenance') == binding
 
 
-def recover_remote_jobs(manager: Any) -> None:
+def recover_remote_jobs(manager: Any, *, outcome_observer=None) -> None:
     """Reattach launched runs first, then reclaim queued launch intents."""
-    index = _journal_index()
-    if not index.is_dir():
-        return
-    paths = sorted(index.glob("job_*.json"))
-    journals = []
-    for path in paths:
-        try:
-            journal = json.loads(path.read_text(encoding="utf-8"))
-            if not isinstance(journal, dict):
-                raise ValueError('Remote training journal must be a JSON object')
-            if journal.get("operation") in {'train','label'}:
-                journals.append((path, journal))
-        except (OSError, ValueError):
-            logger.exception("Could not read remote training journal %s", path)
-    def recovery_order(item):
-        enqueued_at = item[1].get("enqueued_at")
-        if not isinstance(enqueued_at, (int, float)):
-            enqueued_at = 0
-        launch = item[1].get('launch_spec')
-        priority = launch.get('priority', 0) if isinstance(launch, dict) else 0
-        if type(priority) is not int or not -10 <= priority <= 10:priority=0
-        return (item[1].get("state") == "queued", -priority, enqueued_at, str(item[0]))
+    from backend.engine.startup_recovery_outcomes import recovery_stage
+    with recovery_stage(outcome_observer, 'remote_recovery', manager) as observed:
+        observed.manager(manager)
+        index = _journal_index()
+        observed.inventory(index)
+        if not index.is_dir():
+            return
+        paths = sorted(index.glob("job_*.json"))
+        observed.records(paths, "journal_paths")
+        journals = []
+        for path in paths:
+            try:
+                journal = json.loads(path.read_text(encoding="utf-8"))
+                if not isinstance(journal, dict):
+                    raise ValueError('Remote training journal must be a JSON object')
+                if journal.get("operation") in {'train','label'}:
+                    journals.append((path, journal))
+            except (OSError, ValueError) as error:
+                observed.error(error, "journal_read_error")
+                logger.exception("Could not read remote training journal %s", path)
+        def recovery_order(item):
+            enqueued_at = item[1].get("enqueued_at")
+            if not isinstance(enqueued_at, (int, float)):
+                enqueued_at = 0
+            launch = item[1].get('launch_spec')
+            priority = launch.get('priority', 0) if isinstance(launch, dict) else 0
+            if type(priority) is not int or not -10 <= priority <= 10:priority=0
+            return (item[1].get("state") == "queued", -priority, enqueued_at, str(item[0]))
 
-    journals.sort(key=recovery_order)
-    for path, journal in journals:
-        try:
-            if journal.get("state") in ("preparing", "prepared") or (journal.get('state') == 'transferring' and not journal.get('transfers')):
-                # No launch was attempted. Reusing a half-prepared snapshot is
-                # unsafe; make the interruption explicit and release its slot.
-                journal["state"] = "failed"
-                journal["error"] = "The desktop app closed before the remote worker was launched"
-                _save_journal(journal)
-            output = Path(journal["output_dir"])
-            if manager.get_job(journal["job_id"]):
-                continue
-            profile = ComputeProfile.model_validate(journal["profile"])
-            if journal.get("state") == "queued" and not isinstance(journal.get("launch_spec"), dict):
-                journal["state"] = "failed"
-                journal["error"] = "Queued run is missing its launch specification"
-                _save_journal(journal)
-            receipt_exists = (output / "job_receipt.json").is_file()
-            if journal.get("state") in ("aborted", "failed") or (journal.get("state") == "completed" and receipt_exists):
-                from backend.api.routes_training import JobRecord, _write_job_receipt
+        journals.sort(key=recovery_order)
+        for path, journal in journals:
+            try:
+                if journal.get("state") in ("preparing", "prepared") or (journal.get('state') == 'transferring' and not journal.get('transfers')):
+                    # No launch was attempted. Reusing a half-prepared snapshot is
+                    # unsafe; make the interruption explicit and release its slot.
+                    journal["state"] = "failed"
+                    journal["error"] = "The desktop app closed before the remote worker was launched"
+                    _save_journal(journal)
+                output = Path(journal["output_dir"])
+                if manager.get_job(journal["job_id"]):
+                    continue
+                profile = ComputeProfile.model_validate(journal["profile"])
+                if journal.get("state") == "queued" and not isinstance(journal.get("launch_spec"), dict):
+                    journal["state"] = "failed"
+                    journal["error"] = "Queued run is missing its launch specification"
+                    _save_journal(journal)
+                receipt_exists = (output / "job_receipt.json").is_file()
+                if journal.get("state") in ("aborted", "failed") or (journal.get("state") == "completed" and receipt_exists):
+                    from backend.api.routes_training import JobRecord, _write_job_receipt
 
-                record = JobRecord(
-                    job_id=journal["job_id"], task=journal["task"], preset=journal["preset"],
+                    record = JobRecord(
+                        job_id=journal["job_id"], task=journal["task"], preset=journal["preset"],
+                        dataset_path=journal["dataset_path"], output_dir=str(output),
+                        status=journal["state"], phase=journal["state"], remote_profile_id=profile.id,
+                        remote_profile=profile,
+                        launch_spec=journal.get('launch_spec'),
+                        source_dataset_path=journal.get("source_dataset_path"),
+                        dataset_fingerprint=journal.get("dataset_fingerprint"),
+                        error={"message": str(journal["error"])} if journal.get("error") else None,
+                    )
+                    if receipt_exists:
+                        saved = json.loads((output / "job_receipt.json").read_text(encoding='utf-8'))
+                        if _terminal_receipt_matches_record(saved, record):
+                            for key in ("current_epoch", "total_epochs", "current_step", "total_steps", "best_metric", "metrics", "loss_history", "error"):
+                                if key in saved: setattr(record, key, saved[key])
+                            record.train_loss = saved.get("current_train_loss")
+                            record.val_loss = saved.get("current_val_loss")
+                            record.phase = record.status
+                    if not receipt_exists:
+                        _write_job_receipt(record)
+                    manager.restore_terminal_job(record)
+                    continue
+                if receipt_exists:
+                    continue
+                manager.start_remote_job(
+                    job_id=journal["job_id"], task=journal["task"],
                     dataset_path=journal["dataset_path"], output_dir=str(output),
-                    status=journal["state"], phase=journal["state"], remote_profile_id=profile.id,
-                    remote_profile=profile,
-                    launch_spec=journal.get('launch_spec'),
+                    preset=journal["preset"], remote_profile_id=profile.id,
                     source_dataset_path=journal.get("source_dataset_path"),
                     dataset_fingerprint=journal.get("dataset_fingerprint"),
-                    error={"message": str(journal["error"])} if journal.get("error") else None,
+                    remote_runner=make_remote_runner(profile, journal.get("launch_spec")),
+                    profile=profile, launch_spec=journal.get("launch_spec"),
+                    split_manifest_root=journal.get("split_manifest_root"),
+                    recovery_state=journal["state"],
+                    dataset_binding=(journal.get("launch_spec") or {}).get("dataset_binding"),
                 )
-                if receipt_exists:
-                    saved = json.loads((output / "job_receipt.json").read_text(encoding='utf-8'))
-                    if _terminal_receipt_matches_record(saved, record):
-                        for key in ("current_epoch", "total_epochs", "current_step", "total_steps", "best_metric", "metrics", "loss_history", "error"):
-                            if key in saved: setattr(record, key, saved[key])
-                        record.train_loss = saved.get("current_train_loss")
-                        record.val_loss = saved.get("current_val_loss")
-                        record.phase = record.status
-                if not receipt_exists:
-                    _write_job_receipt(record)
-                manager.restore_terminal_job(record)
-                continue
-            if receipt_exists:
-                continue
-            manager.start_remote_job(
-                job_id=journal["job_id"], task=journal["task"],
-                dataset_path=journal["dataset_path"], output_dir=str(output),
-                preset=journal["preset"], remote_profile_id=profile.id,
-                source_dataset_path=journal.get("source_dataset_path"),
-                dataset_fingerprint=journal.get("dataset_fingerprint"),
-                remote_runner=make_remote_runner(profile, journal.get("launch_spec")),
-                profile=profile, launch_spec=journal.get("launch_spec"),
-                split_manifest_root=journal.get("split_manifest_root"),
-                recovery_state=journal["state"],
-                dataset_binding=(journal.get("launch_spec") or {}).get("dataset_binding"),
-            )
-        except Exception:
-            logger.exception("Could not reconnect remote training journal %s", path)
+            except Exception as error:
+                observed.error(error, "journal_recovery_error")
+                logger.exception("Could not reconnect remote training journal %s", path)

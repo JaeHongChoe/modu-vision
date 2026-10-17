@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel,Field,ConfigDict
 from typing import Literal
 from backend.contracts.authentication import browser_origin_allowed, VerifiedIdentity
+from backend.engine.original_owned_account_request import observe_original_owned_login, observe_original_owned_account
 
 router=APIRouter(prefix='/api/accounts',tags=['shared-accounts'])
 COOKIE='vision_session'
@@ -86,6 +87,7 @@ def bootstrap(body:Credentials,request:Request):
     except ValueError as exc:raise HTTPException(409,str(exc)) from exc
 
 @router.post('/login')
+@observe_original_owned_login
 def login(body:Login,request:Request):
     if body.transport=='cookie':browser_origin(request)
     try:
@@ -101,6 +103,7 @@ def logout(request:Request):
     return response
 
 @router.get('/me')
+@observe_original_owned_account
 def me(request:Request):
     accounts=store(request)
     try:selected=accounts.project_for(user(request)['id'])
@@ -111,6 +114,7 @@ def me(request:Request):
             'workspace_id':metadata['workspace_id'],'organization_id':metadata['organization_id']}
 
 @router.get('/users')
+@observe_original_owned_account
 def users(request:Request):admin(request);return {'users':store(request).users()}
 
 @router.post('/users')
@@ -160,6 +164,7 @@ def project_members(project_id:str,request:Request):
     except ValueError as exc:raise HTTPException(403,str(exc)) from exc
 
 @router.post('/select-project')
+@observe_original_owned_account
 def select_project(body:ProjectSelection,request:Request):
     try:store(request).select_project(user(request)['id'],body.project_id)
     except ValueError as exc:raise HTTPException(403,str(exc)) from exc

@@ -144,18 +144,24 @@ class DataBackupJobs:
         thread.start()
         return thread
 
-    def recover_orphans(self):
-        interrupted, completed = [], []
-        for row in self.store.active(KIND):
-            try:
-                operation = self.store.checkpoint_value(row['id'])
-                result = operation.get('result_ref')
-                if result and Path(result['path']).is_file() and _digest_file(Path(result['path'])) == result['sha256'] and not self.store.cancel_intent(row['id']):
-                    self.store.transition(row['id'], row['revision'], 'complete', {'operation': operation, 'recovered': True})
-                    completed.append(row['id'])
-                    continue
-                self.store.transition(row['id'], row['revision'], 'interrupt', {'reason': 'Backend restarted; explicit resume required'})
-                interrupted.append(row['id'])
-            except StaleRevision:
-                pass
-        return {'interrupted': interrupted, 'completed': completed}
+    def recover_orphans(self, *, outcome_observer=None):
+        from backend.engine.startup_recovery_outcomes import recovery_stage
+        with recovery_stage(outcome_observer, 'backup_orphans', self) as observed:
+            observed.store(self.store)
+            interrupted, completed = [], []
+            rows = self.store.active(KIND)
+            observed.records(rows, 'active_rows')
+            for row in rows:
+                try:
+                    operation = self.store.checkpoint_value(row['id'])
+                    result = operation.get('result_ref')
+                    if result and Path(result['path']).is_file() and _digest_file(Path(result['path'])) == result['sha256'] and not self.store.cancel_intent(row['id']):
+                        self.store.transition(row['id'], row['revision'], 'complete', {'operation': operation, 'recovered': True})
+                        completed.append(row['id'])
+                        continue
+                    self.store.transition(row['id'], row['revision'], 'interrupt', {'reason': 'Backend restarted; explicit resume required'})
+                    interrupted.append(row['id'])
+                except StaleRevision as error:
+                    observed.error(error, 'orphan_recovery_error')
+                    pass
+            return {'interrupted': interrupted, 'completed': completed}

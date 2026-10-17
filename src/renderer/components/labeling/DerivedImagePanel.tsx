@@ -7,6 +7,7 @@ import {useComputeStore} from '../../stores/useComputeStore';
 import {useProjectStore} from '../../stores/useProjectStore';
 import {useAnnotationStore} from '../../stores/useAnnotationStore';
 import {cropPoint,cropRectangle} from './productDataWorkflow';
+import {imageReadAllowed} from './imageReadCustody';
 import type {AnnotationItem} from '../../types';
 const button='rounded border border-slate-600 px-3 py-2 disabled:opacity-40';
 function outline(a:AnnotationItem):string|undefined{
@@ -15,7 +16,7 @@ function outline(a:AnnotationItem):string|undefined{
  if(a.bbox){const [x1,y1,x2,y2]=a.bbox;return `${x1},${y1} ${x2},${y1} ${x2},${y2} ${x1},${y2}`;}return undefined;
 }
 export const DerivedImagePanel:React.FC=()=>{
- const project=useProjectStore();const compute=useComputeStore();const {currentImage,metadata,isDirty,isSaving,annotationLoadStatus,annotations,reviewerName}=useAnnotationStore();
+ const project=useProjectStore();const compute=useComputeStore();const {currentImage,externalSelectionPath,metadata,isDirty,isSaving,annotationLoadStatus,annotations,reviewerName}=useAnnotationStore();
  const scope=`${dataWorkbenchScope({...project,...compute,apiTransportIdentity:getApiPersistenceIdentity()})}\n${currentImage?.file_path||''}`;const current=useRef(scope);current.current=scope;
  const [loaded,setLoaded]=useState<{scope:string;versions:DerivedVersion[]}|null>(null);const [selected,setSelected]=useState('');
  const [crop,setCrop]=useState<[number,number,number,number]|null>(null);const [anchor,setAnchor]=useState<[number,number]|null>(null);const [cropMode,setCropMode]=useState(false);
@@ -24,10 +25,11 @@ export const DerivedImagePanel:React.FC=()=>{
  const [busy,setBusy]=useState(false);const [error,setError]=useState('');const [notice,setNotice]=useState('');
  const versions=loaded?.scope===scope?loaded.versions:[];const version=versions.find(row=>row.id===selected);
  const size:readonly[number,number]=version?.size||[metadata?.width||1,metadata?.height||1];const rows=version?.annotations||annotations;
- const same=()=>`${dataWorkbenchScope({...useProjectStore.getState(),...useComputeStore.getState(),apiTransportIdentity:getApiPersistenceIdentity()})}\n${useAnnotationStore.getState().currentImage?.file_path||''}`===scope;
+ const ownsImage=()=>{const p=useProjectStore.getState(),a=useAnnotationStore.getState();return a.currentImage===currentImage&&imageReadAllowed(currentImage?.file_path,p.project?.source_dataset_dir,a.externalSelectionPath,p.isProjectBusy);};
+ const same=()=>ownsImage()&&`${dataWorkbenchScope({...useProjectStore.getState(),...useComputeStore.getState(),apiTransportIdentity:getApiPersistenceIdentity()})}\n${useAnnotationStore.getState().currentImage?.file_path||''}`===scope;
  useEffect(()=>{let active=true;setLoaded(null);setSelected('');setCrop(null);setCropMode(false);setBusy(false);setError('');setNotice('');
-  if(currentImage)void dataWorkbench.derivedHistory(currentImage.file_path).then(result=>{if(active&&same())setLoaded({scope,versions:result.versions});}).catch(cause=>{if(active&&same())setError(workflowError(cause));});return()=>{active=false;};
- },[scope]);
+  if(currentImage&&ownsImage())void dataWorkbench.derivedHistory(currentImage.file_path).then(result=>{if(active&&same())setLoaded({scope,versions:result.versions});}).catch(cause=>{if(active&&same())setError(workflowError(cause));});return()=>{active=false;};
+ },[scope,currentImage,project.isProjectBusy,externalSelectionPath]);
  const edit=async(operation:Record<string,unknown>)=>{
   if(!currentImage||!metadata||!same()||isDirty||isSaving)return;
   if(!reviewerName.trim()){setError('이미지 정보·검토에서 작업자 이름을 입력하세요.');return;}
@@ -41,7 +43,7 @@ export const DerivedImagePanel:React.FC=()=>{
   try{const row=await dataWorkbench.reviewDerived(version,reviewerName,decision,reviewNote);if(same()){setLoaded({scope,versions:versions.map(old=>old.id===row.id?row:old)});setNotice(decision==='approve'?'파생 이미지와 변환 라벨의 검수 기록을 저장했습니다.':'파생본 제외 검수를 저장했습니다.');}}
   catch(cause){if(same())setError(workflowError(cause));}finally{if(same())setBusy(false);}
  };
- if(!currentImage)return null;
+ if(!currentImage||!ownsImage())return null;
  const disabled=busy||isDirty||isSaving||annotationLoadStatus!=='ready';
  const imageUrl=version?resolveApiUrl(version.image_url):resolveApiUrl(`/api/dataset/raw/${encodeURIComponent(currentImage.file_name)}?file_path=${encodeURIComponent(currentImage.file_path)}`);
  return <details className="shrink-0 border-b border-slate-700 bg-[#111D2B] text-xs"><summary className="cursor-pointer px-4 py-2 font-semibold text-cyan-100">원본 보존 이미지 편집 · 파생 버전 {versions.length}개</summary><section aria-label="파생 이미지 편집" className="max-h-[65vh] space-y-3 overflow-auto px-4 pb-4">

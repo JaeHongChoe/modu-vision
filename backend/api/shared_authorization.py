@@ -10,6 +10,8 @@ from urllib.parse import parse_qs,unquote
 from starlette.datastructures import Headers
 from starlette.responses import JSONResponse
 from fastapi import HTTPException
+from backend.engine.original_shared_current_project import observe_shared_authorization
+from backend.engine.original_shared_auth_denial import original_shared_denial_authentication
 
 
 def request_actor(request, declared):
@@ -21,6 +23,7 @@ def request_actor(request, declared):
 class SharedAuthorizationMiddleware:
     def __init__(self,app,project_app):self.app=app;self.project_app=project_app
 
+    @observe_shared_authorization
     async def __call__(self,scope,receive,send):
         if scope['type'] not in {'http','websocket'}:return await self.app(scope,receive,send)
         path=scope.get('path','');method=scope.get('method','GET');headers=Headers(scope=scope)
@@ -35,29 +38,30 @@ class SharedAuthorizationMiddleware:
         if scope['type']=='websocket' and not token:
             token=next((p.removeprefix('vision.') for p in scope.get('subprotocols',[]) if p.startswith('vision.')),'')
         store=self.project_app.state.accounts
-        try:
-            store.bind_workspace(self.project_app.state.context_registry.workspace_id)
-            browser=False
-            if not token:
-                cookies=SimpleCookie()
-                try:cookies.load(headers.get('cookie',''))
-                except Exception:return await reject(401,'Browser session unavailable')
-                token=cookies['vision_session'].value if 'vision_session' in cookies else ''
-                browser=bool(token)
-            account=store.cookie_session(token) if browser else store.authenticate(token)
-            if browser:
-                # A cookie handshake also needs a trusted Origin; a CSRF token
-                # is required for unsafe HTTP mutations, never a URL token.
-                origin=headers.get('origin','')
-                if scope.get('scheme','') not in {'https','wss'}:
-                    return await reject(403,'Browser cookies require HTTPS')
-                if origin or scope['type']=='websocket' or method not in {'GET','HEAD','OPTIONS'}:
-                    if not browser_origin_allowed(self.project_app,origin,scope.get('scheme','')):
-                        return await reject(403,'Browser origin is not authorized')
-                if scope['type']=='http' and method not in {'GET','HEAD','OPTIONS'}:
-                    try:store.cookie_session(token,headers.get('x-vision-csrf',''))
-                    except ValueError:return await reject(403,'Browser CSRF verification required')
-        except ValueError:return await reject(401,'Account session expired or unavailable')
+        with original_shared_denial_authentication(self,scope,receive,send,store,headers):
+            try:
+                store.bind_workspace(self.project_app.state.context_registry.workspace_id)
+                browser=False
+                if not token:
+                    cookies=SimpleCookie()
+                    try:cookies.load(headers.get('cookie',''))
+                    except Exception:return await reject(401,'Browser session unavailable')
+                    token=cookies['vision_session'].value if 'vision_session' in cookies else ''
+                    browser=bool(token)
+                account=store.cookie_session(token) if browser else store.authenticate(token)
+                if browser:
+                    # A cookie handshake also needs a trusted Origin; a CSRF token
+                    # is required for unsafe HTTP mutations, never a URL token.
+                    origin=headers.get('origin','')
+                    if scope.get('scheme','') not in {'https','wss'}:
+                        return await reject(403,'Browser cookies require HTTPS')
+                    if origin or scope['type']=='websocket' or method not in {'GET','HEAD','OPTIONS'}:
+                        if not browser_origin_allowed(self.project_app,origin,scope.get('scheme','')):
+                            return await reject(403,'Browser origin is not authorized')
+                    if scope['type']=='http' and method not in {'GET','HEAD','OPTIONS'}:
+                        try:store.cookie_session(token,headers.get('x-vision-csrf',''))
+                        except ValueError:return await reject(403,'Browser CSRF verification required')
+            except ValueError:return await reject(401,'Account session expired or unavailable')
         state=scope.setdefault('state',{});state['account_user']=account
         state['account_session_token']=token
         if path.startswith('/api/accounts/'):
@@ -204,4 +208,7 @@ class SharedAuthorizationMiddleware:
                     return await original_receive()
                 receive=replay
         except (ValueError,TypeError,UnicodeError):return await reject(403,'Request data is outside this project or invalid')
-        return await self.app(scope,receive,send)
+        # Passive data witness only after every original auth/path/CSRF check.
+        from backend.engine.original_shared_required_flow import original_shared_flow_continuation
+        with original_shared_flow_continuation(self,scope):
+            return await self.app(scope,receive,send)

@@ -29,6 +29,13 @@ from backend.engine.global_store_paths import active_generation, owned_root, sto
 from backend.engine.runtime_process_control import atomic_private_json
 from backend.engine.application_launch_lease import assert_quiescent
 
+# Optional local POSIX acceleration; the original Python probes remain the
+# fallback on source-only/Windows builds and changed/custom callable inputs.
+try:
+    from backend.engine import _runtime_path_guard as _native_path_guard
+except ImportError:
+    _native_path_guard=None
+
 ACTIVE='application-active.json'
 PENDING='application-update-pending.json'
 UPDATES='.application-updates'
@@ -83,6 +90,20 @@ def _unlinked(path):
     native_parent=(native_parent and type(path)is PosixPath and type(current)is str
         and current.startswith('/')and not current.startswith('///')
         and '//'not in current[2:]and(current in('/','//')or not current.endswith('/')))
+    guard=globals().get('_native_path_guard')
+    if native_parent and guard is not None:
+        def native_error(error):
+            # This classifies the very same failed native probe; it never
+            # retries a path or replaces its original exception object.
+            try:raise error
+            except OSError as error:
+                if not (getattr(error,'errno',None)in(errno.ENOENT,errno.ENOTDIR,errno.EBADF,errno.ELOOP)
+                        or getattr(error,'winerror',None)in(21,123,1921)):raise
+            except ValueError:pass
+        def native_reject():raise UpdateError('Update storage cannot follow links')
+        remaining=guard.check_unlinked(current,os,stat,native_error.__globals__,native_reject,native_error)
+        if remaining is None:return path
+        current=remaining
     while True:
         try:linked=stat.S_ISLNK(os.stat(current,follow_symlinks=False).st_mode)
         except OSError as error:
@@ -801,7 +822,7 @@ def _installed_intent_row(application,row):
 
 def _intent_domain_ranges(rows,floor):
     """Two contiguous ranges; their original row identity/order is unchanged."""
-    if type(floor)is not int or floor not in (64*1024,1024**2):raise UpdateError('Invalid fixed intent range floor')
+    if type(floor)is not int or floor not in (1,64*1024,1024**2):raise UpdateError('Invalid fixed intent range floor')
     groups=[];offset=0;remaining=sum(max(row['size'],floor)for row in rows)
     count=min(2,len(rows))
     for ordinal in range(count):
@@ -843,7 +864,10 @@ def _intent_zip_metadata(bundle,release):
     if not native and any(stat.S_IFMT(member.external_attr>>16)not in (0,stat.S_IFREG)for member in members):
         raise UpdateError('Portable schema1 archive cannot contain links')
     if set(names)!=set(expected)|set(links)|{'portable-application.json'}:raise UpdateError('Portable application membership differs')
-    _application_namespaces([*expected,*links,'portable-application.json'])
+    # Schema2's unchanged _native_layout already checks this exact complete
+    # file/link/manifest name set from the same fresh JSON in this call.
+    # Schema1 still needs its original standalone namespace check here.
+    if not native:_application_namespaces([*expected,*links,'portable-application.json'])
     _safe_path(manifest['entrypoint'])
     if manifest['entrypoint'] not in expected or not expected[manifest['entrypoint']]['executable']:
         raise UpdateError('Portable application entrypoint is not an executable inventory member')
@@ -865,7 +889,7 @@ def _intent_zip_range(archive,release,ordinal):
     try:
         with _file(archive,1024**3)as(reader,_),zipfile.ZipFile(reader)as bundle:
             manifest,manifest_sha,expected=_intent_zip_metadata(bundle,release)
-            groups=_intent_domain_ranges(manifest['files'],64*1024)
+            groups=_intent_domain_ranges(manifest['files'],1)
             selected=groups[ordinal]if ordinal<len(groups)else[]
             indices={id(row):index for index,row in enumerate(manifest['files'])}
             for row in selected:
@@ -974,6 +998,11 @@ def _validated_intent(root,identifier):
                         or database.get('source_sha256')!=record['source_sha256']
                         or database.get('previous_pointer')!=record['previous_database']):
                     raise UpdateError('Application update database intent binding changed')
+                if database.get('kind')=='paired_restore' and record.get('kind')!='approved_paired_restore':
+                    raise UpdateError('Paired restore requires its separately approved application intent')
+            if record.get('kind')=='approved_paired_restore':
+                from backend.engine.approved_paired_restore import validate_intent
+                validate_intent(root,record)
             result=record,directory,manifest
     except BaseException as error:
         first=error
@@ -1018,7 +1047,10 @@ def _finish(root,identifier):
                 record.update(status='database_prepared',migration_id=journal['migration_id'])
                 _write(directory/'journal.json',record);_checkpoint('database_prepared')
                 ensure_verified(root,record,journal,manifest);_checkpoint('canary_verified')
-            migrate=migration.advance if current else migration.apply
+            if record.get('kind')=='approved_paired_restore':
+                from backend.engine.approved_paired_restore import advance
+                migrate=advance
+            else:migrate=migration.advance if current else migration.apply
             migrate(root,expected_source_sha256=record['source_sha256'],on_prepared=prepared,application_update_id=identifier)
         else:
             _,database=migration._journal(root,record['migration_id'])
@@ -1102,6 +1134,8 @@ def recover_update(root,intent,*,action='finish'):
             (root/PENDING).unlink();migration._sync_directories(root,recursive=False)
             return {'status':'aborted','update_id':intent,'staged_artifacts':'retained'}
         if action=='forward':
+            if record.get('kind')=='approved_paired_restore':
+                raise UpdateError('Approved inverse forward recovery requires a newly reviewed signed successor')
             from backend.engine.staged_update_canary import validate_spec
             if record['schema_version']!=2:raise UpdateError('Legacy application forward recovery requires a newly reviewed preactivation canary')
             validate_spec(record.get('canary'))

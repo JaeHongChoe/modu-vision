@@ -3,6 +3,7 @@
 Observed group reconciliation is not complete or escaped process-tree proof.
 """
 from __future__ import annotations
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_process,observe_original_UI_ancillary_spawn
 
 import os
 import signal
@@ -356,6 +357,7 @@ def _writer_transport(pass_fds):
         os.close(private)  # Never LOCK_UN an inherited open-file description.
 
 
+@observe_original_UI_ancillary_process
 def execute_owned_process(command, *, deadline_ms, env=None, cwd=None,cancel_event=None,pass_fds=()) -> dict[str, Any]:
     """Budget initialization and refuse success for observed surviving work."""
     validate_deadline(deadline_ms)
@@ -369,6 +371,7 @@ def execute_owned_process(command, *, deadline_ms, env=None, cwd=None,cancel_eve
         # Own session on POSIX; own process group and no console window on Windows.
         transport = {'close_fds': True, 'pass_fds': inherited} if inherited else {}
         process=subprocess.Popen(command,stdout=stdout,stderr=stderr,env=env,cwd=cwd,**transport,**session_isolation())
+        observe_original_UI_ancillary_spawn(process,stdout,stderr,command,deadline_ms)
         ownership = _OwnedGroup(process,module)
         cancelled=False
         timed_out=False

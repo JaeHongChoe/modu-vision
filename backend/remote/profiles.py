@@ -1,6 +1,9 @@
 """Validated, credential-free SSH profiles stored in app user data."""
 
 from __future__ import annotations
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_profile_store,observe_original_UI_ancillary_context,observe_original_UI_ancillary_file
+
+from backend.engine.original_owned_selected_compute_request import observe_original_selected_compute, selected_file
 
 import json
 import os
@@ -9,6 +12,7 @@ import tempfile
 import threading
 from pathlib import Path, PurePosixPath
 from backend.engine.global_store_paths import resolve_store_path, store_admission
+store_admission=observe_original_UI_ancillary_context("profile_admission")(store_admission)
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator,model_validator
@@ -105,6 +109,7 @@ def default_profile_path() -> Path:
     return Path.home() / ".modu_vision" / "compute_profiles.json"
 
 
+@observe_original_UI_ancillary_profile_store
 class ProfileStore:
     def __init__(self, path: Path | str | None = None):
         self.path = resolve_store_path(Path(path) if path is not None else default_profile_path())
@@ -113,6 +118,8 @@ class ProfileStore:
         if not self.path.exists():
             return {"profiles": [], "selected": None}
         with self.path.open("r", encoding="utf-8") as handle:
+            observe_original_UI_ancillary_file(handle,self.path,"profile")
+            selected_file(handle,self.path,"profile")
             raw = json.load(handle)
         if not isinstance(raw, dict) or not isinstance(raw.get("profiles"), list):
             raise ValueError("compute profile store is invalid")
@@ -150,6 +157,7 @@ class ProfileStore:
         with store_admission(self.path), _STORE_LOCK:
             return list(self._read()["profiles"])
 
+    @observe_original_selected_compute("profile")
     def get(self, profile_id: str) -> ComputeProfile | None:
         with store_admission(self.path), _STORE_LOCK:
             return next((profile for profile in self._read()["profiles"] if profile.id == profile_id), None)

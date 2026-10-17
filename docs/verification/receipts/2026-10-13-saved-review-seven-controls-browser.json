@@ -1,0 +1,44 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "975e89701e35c5639abb6bc7c93b75b6e85209af",
+  "source_dirty": false,
+  "test": "scripts/e2e/saved-review-seven-controls.spec.ts::saved review seven current and origin controls preserve owned queue through empty stale-origin error and reopen",
+  "test_source_sha256": "42915c362d69342364f7b0e6c30dc81c300fd3925dca4f7bb9f896fa3473834c",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "4bec5ad566b8ecb62c053501a093206dcbd34ac47925928b5de5d2ab94c8b8a9",
+  "harness_sha256": "82d1eb037531d224117d7babe7b616aa836f8e5a8d02b7579841143404642d19",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "5eca7365ef9907339590b410eedef90ea868e5c7aa54c934329853e63200d26d"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "a2ffa82b9392b5327f1e2e0469d13d1865840428509b88ed4a9db343cedc03f1"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "5d7ada777b336d52049ae95169a0fceeefc5243b7df17fff2cc370d72f7048c0"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "86a118b3c814b7c273d8dffc77e93493a932c3944f1b8bef8a35f62625a385d3"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "5314ecc482f6c45501d73a1cad018c4fd13ecd853b1b607772aae83ac8af8763"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

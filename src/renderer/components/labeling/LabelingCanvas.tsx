@@ -50,6 +50,7 @@ export const LabelingCanvas: React.FC = () => {
 
   const {
     currentImage,
+    externalSelectionPath,
     annotations,
     selectedAnnotationId,
     activeTool,
@@ -72,7 +73,7 @@ export const LabelingCanvas: React.FC = () => {
     setActiveTool,
     triggerAutoSelect,
   } = useAnnotationStore();
-  const { backendPort } = useProjectStore();
+  const { backendPort, projectDir, project, isProjectBusy } = useProjectStore();
   useEffect(()=>{useFoundationPromptStore.getState().bind(currentImage?.file_path||'');},[currentImage?.file_path]);
 
   // Interaction State
@@ -502,9 +503,20 @@ export const LabelingCanvas: React.FC = () => {
   // Load Base Inspection Image
   // -------------------------------------------------------------
   useEffect(() => {
-    if (!currentImage) return;
+    const ownsSource = () => {
+      const selected = useAnnotationStore.getState();
+      const source = useProjectStore.getState().project?.source_dataset_dir;
+      if (selected.externalSelectionPath === currentImage?.file_path) return true;
+      if (!source || !currentImage?.file_path) return false;
+      const spelling = (value: string) => value.replace(/\\/g, '/').replace(/\/+$/, '');
+      return spelling(currentImage.file_path).startsWith(spelling(source) + '/');
+    };
+    if (!currentImage || isProjectBusy || !ownsSource()) return;
 
     let active = true;
+    const ownsSelection = () => active && !useProjectStore.getState().isProjectBusy
+      && useProjectStore.getState().projectDir === projectDir
+      && useAnnotationStore.getState().currentImage === currentImage && ownsSource();
     const img = new Image();
     const encodedPath = encodeURIComponent(currentImage.file_path || '');
     const encodedName = encodeURIComponent(currentImage.file_name || 'image.png');
@@ -515,7 +527,7 @@ export const LabelingCanvas: React.FC = () => {
     img.crossOrigin = 'anonymous';
 
     img.onload = () => {
-      if (!active) return;
+      if (!ownsSelection()) return;
       baseImageRef.current = img;
       const w = img.naturalWidth || 512;
       const h = img.naturalHeight || 512;
@@ -539,7 +551,7 @@ export const LabelingCanvas: React.FC = () => {
     };
 
     img.onerror = (err) => {
-      if (!active) return;
+      if (!ownsSelection()) return;
       console.warn(`[LabelingCanvas] Failed to load raw image from ${rawUrl}, trying thumbnail:`, err);
       if (img.src !== thumbUrl) {
         img.src = thumbUrl;
@@ -553,7 +565,7 @@ export const LabelingCanvas: React.FC = () => {
       img.onerror = null;
     };
   // Redraw callbacks change on every pan/zoom; reloading here would reset the view to Fit.
-  }, [currentImage, backendPort, setViewTransform, foundationPrompt.displaySource, foundationPrompt.displaySourcePath]);
+  }, [currentImage, externalSelectionPath, backendPort, projectDir, project?.source_dataset_dir, isProjectBusy, setViewTransform, foundationPrompt.displaySource, foundationPrompt.displaySourcePath]);
 
   // -------------------------------------------------------------
   // Load Mask / Heatmap Image

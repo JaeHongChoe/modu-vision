@@ -4,6 +4,44 @@ export interface ObjectEvidence {predicted:EvidenceBox[];truth:EvidenceBox[];per
 export interface PixelEvidence {per_class?:Record<string,ErrorCounts>;coordinate_space?:string;shape?:number[];prediction_mask?:string;truth_mask?:string;mapping?:{kind:string;source_size:number[]}}
 export interface CharacterEvidence {per_character:Record<string,ErrorCounts>;edit_distance:number;alignment:{operation:string;reference:string|null;predicted:string|null;reference_index:number|null;prediction_index:number|null}[]}
 export interface EvidenceSample {file_path?:string;file_name?:string;image?:string;image_sha256?:string;ground_truth?:string;predicted_class?:string;confidence?:number;defect_score?:number;class_scores?:Record<string,number>;object_evidence?:ObjectEvidence;pixel_evidence?:PixelEvidence;character_evidence?:CharacterEvidence;is_correct?:boolean;oriented_iou?:number;angle_error_deg?:number}
+/** A saved display may refuse derived controls while retaining its original JSON. */
+export function savedEvidenceIssue(rows:unknown):string|null{
+  const countsIssue='저장된 클래스별 TP·FN·FP 지표가 유효하지 않아 클래스 지표와 필터를 표시할 수 없습니다.';
+  const scoreIssue='저장된 평가 점수가 유효하지 않아 클래스 지표와 필터를 표시할 수 없습니다.';
+  const areaIssue='저장된 객체 좌표나 결함 면적이 유효하지 않아 분포와 필터를 표시할 수 없습니다.';
+  const object=(value:unknown):value is Record<string,unknown>=>!!value&&typeof value==='object'&&!Array.isArray(value);
+  const score=(value:unknown)=>value===null||value===undefined||(typeof value==='number'&&Number.isFinite(value));
+  const finite=(value:unknown):value is number=>typeof value==='number'&&Number.isFinite(value);
+  if(!Array.isArray(rows))return '저장된 이미지별 평가 증거가 유효하지 않아 클래스 지표와 필터를 표시할 수 없습니다.';
+  for(const row of rows){
+    if(!object(row))return '저장된 이미지별 평가 증거가 유효하지 않아 클래스 지표와 필터를 표시할 수 없습니다.';
+    for(const [family,key] of [['object_evidence','per_class'],['pixel_evidence','per_class'],['character_evidence','per_character']]){
+      const evidence=row[family];if(evidence===null||evidence===undefined)continue;if(!object(evidence))return countsIssue;
+      const table=evidence[key];if(table===null||table===undefined)continue;if(!object(table))return countsIssue;
+      for(const value of Object.values(table))if(!object(value)||['tp','fn','fp'].some(key=>value[key]!==null&&value[key]!==undefined&&(typeof value[key]!=='number'||!Number.isSafeInteger(value[key])||(value[key] as number)<0)))return countsIssue;
+    }
+    if(!score(row.defect_score)||!score(row.confidence))return scoreIssue;
+    if(row.class_scores!==null&&row.class_scores!==undefined&&(!object(row.class_scores)||Object.values(row.class_scores).some(value=>!score(value))))return scoreIssue;
+    const predicted=object(row.object_evidence)?row.object_evidence.predicted:undefined;
+    if(predicted!==null&&predicted!==undefined){
+      if(!Array.isArray(predicted))return areaIssue;
+      for(const item of predicted){
+        if(!object(item))return areaIssue;
+        const box=item.box;
+        if(Array.isArray(box)){
+          if(box.length!==4||!box.every(finite)||box[2]<box[0]||box[3]<box[1]||!Number.isFinite((box[2]-box[0])*(box[3]-box[1])))return areaIssue;
+        }else if(!object(box)||!['cx','cy','width','height','angle_deg'].every(key=>finite(box[key]))||(box.width as number)<0||(box.height as number)<0||!Number.isFinite((box.width as number)*(box.height as number)))return areaIssue;
+      }
+    }
+    const pixels=object(row.pixel_evidence)&&object(row.pixel_evidence.per_class)?row.pixel_evidence.per_class:undefined;
+    if(pixels)for(const value of Object.values(pixels)){
+      if(!object(value))return areaIssue;
+      const area=value.predicted_area_px;
+      if(area!==null&&area!==undefined&&(!finite(area)||area<0))return areaIssue;
+    }
+  }
+  return null;
+}
 export function evidenceClasses(rows:EvidenceSample[]):string[]{return [...new Set(rows.flatMap(r=>Object.keys(r.object_evidence?.per_class||{}).concat(Object.keys(r.pixel_evidence?.per_class||{}),Object.keys(r.character_evidence?.per_character||{}),Object.keys(r.class_scores||{}))))].sort();}
 export function sampleCounts(row:EvidenceSample,name:string):ErrorCounts{
   const values=[row.object_evidence?.per_class,row.pixel_evidence?.per_class,row.character_evidence?.per_character];

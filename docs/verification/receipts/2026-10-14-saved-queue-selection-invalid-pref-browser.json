@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "c286c45dc0407641388404c9ca0c28ab2a41eaa9",
+  "source_dirty": false,
+  "test": "scripts/e2e/saved-queue-selection-invalid-pref.spec.ts::saved queue selection rejects a missing remembered id and restores deliberate owning choice after real reload",
+  "test_source_sha256": "5a147f8435d1b5dcb7fd02359e0f141bf311ae78af3079275bca2a8e2cd45a07",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "98264b0772bb071eb866f828a2f2ff7a9a738d6024e7aea68706d4178d00ce8a",
+  "harness_sha256": "39be44fb2efe965bd0282d43071c5d9f06dfcf9d4d53d21234ecb2c55feefdc6",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "d4f260035dc534fe83ffcbcf86c4651eefb5286a719764e2161d8deb50515095"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "d4f260035dc534fe83ffcbcf86c4651eefb5286a719764e2161d8deb50515095"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "d4f260035dc534fe83ffcbcf86c4651eefb5286a719764e2161d8deb50515095"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

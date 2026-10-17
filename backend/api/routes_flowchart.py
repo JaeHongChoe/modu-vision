@@ -7,6 +7,8 @@ Enables visual assembly of multi-stage vision AI inspection:
 """
 
 from __future__ import annotations
+from backend.engine.original_owned_UI_ancillary_request import original_UI_ancillary_read_text
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_handler
 
 import json
 import hashlib
@@ -41,6 +43,8 @@ from backend.engine.flowchart_engine import (
     FlowchartExecutionStep,
     FlowchartPipeline,
     FlowchartRunRequest,
+    FlowchartPartialCancelled,
+    partial_run_scope,
     get_conditional_inspection_flowchart,
     get_default_flowchart,
     get_five_model_chain_flowchart,
@@ -58,6 +62,14 @@ from backend.engine.flow_provenance import pipeline_sha256
 from backend.engine.specialized_models import SPECIALIZED_TASKS, flow_model_task, valid_flow_job, resolve_specialized_checkpoint
 from backend.engine.flow_workspace import catalog_class_vocabulary
 from backend.engine.flow_class_validation import validate_recorded_flow_classes
+from backend.engine.original_owned_flow_execution_request import observe_original_flow_execution_handler
+from backend.engine.original_owned_flow_request import (
+    observe_original_flow_handler, observe_original_flow_locked, observe_original_flow_publication,
+    observe_original_flow_model_resolution,
+    observe_original_flow_specialist_resolution, observe_original_flow_retained_source,
+)
+
+_resolve_job_artifacts = observe_original_flow_model_resolution(_resolve_job_artifacts)
 
 logger = logging.getLogger("vision_ai_studio.routes_flowchart")
 
@@ -120,6 +132,7 @@ def _recipe_file(
     return base.with_name(f"pipeline_{task}_{source_key}.json")
 
 
+@observe_original_flow_locked
 def _project_dir(request: Optional[Request]) -> Optional[Path]:
     if request is None:
         return None
@@ -148,6 +161,7 @@ def _legacy_owner(project_dir: Path) -> bool:
         return False
 
 
+@observe_original_flow_publication
 def _write_json(path: Path, value: Dict[str, Any]) -> None:
     temporary_path: Optional[Path] = None
     try:
@@ -235,13 +249,13 @@ def _draft_active_version(project: dict, context: dict, checksum: str) -> Option
     if not pointer.is_file():
         return None
     try:
-        active = json.loads(pointer.read_text(encoding='utf-8'))
+        active = json.loads(original_UI_ancillary_read_text(pointer,encoding='utf-8',role='flow'))
         version_file = _version_dir(Path(project["project_dir"])) / f"{active['version_id']}.json"
         if (active.get("project_id") != context["project_id"]
                 or active.get("source_dataset_path") != context["source_dataset_path"]
                 or active.get("labelset_id", "default") != context["labelset_id"]):
             return None
-        version = json.loads(version_file.read_text(encoding='utf-8'))
+        version = json.loads(original_UI_ancillary_read_text(version_file,encoding='utf-8',role='flow'))
         pipeline = FlowchartPipeline.model_validate(version["pipeline"])
         return active["version_id"] if pipeline_sha256(pipeline) == checksum else None
     except (OSError, ValueError, KeyError, TypeError):
@@ -270,7 +284,7 @@ def save_flow_draft(req: FlowDraftSaveRequest, request: Request) -> dict:
         return {**record, "active_version_id": _draft_active_version(project, context, checksum)}
 
 
-@router.get("/draft")
+@observe_original_UI_ancillary_handler(router.get("/draft"))
 def get_flow_draft(request: Request) -> dict:
     with _FLOW_SAVE_LOCK:
         project = get_current_project(request)
@@ -279,7 +293,7 @@ def get_flow_draft(request: Request) -> dict:
         if not file.is_file():
             raise HTTPException(status_code=404, detail="No draft for this project, source and labelset")
         try:
-            record = json.loads(file.read_text(encoding='utf-8'))
+            record = json.loads(original_UI_ancillary_read_text(file,encoding='utf-8',role='flow'))
             pipeline = FlowchartPipeline.model_validate(record["pipeline"])
             checksum = pipeline_sha256(pipeline)
             if record.get("context") != context or record.get("draft_sha256") != checksum:
@@ -287,7 +301,7 @@ def get_flow_draft(request: Request) -> dict:
             active_file = _active_flow_file(Path(project["project_dir"]))
             # A later explicit save/activation supersedes an earlier draft.
             if active_file.is_file():
-                active = json.loads(active_file.read_text(encoding='utf-8'))
+                active = json.loads(original_UI_ancillary_read_text(active_file,encoding='utf-8',role='flow'))
                 if (active.get("activated_at_ns", 0) > record.get("saved_at_ns", 0)
                         and active.get("source_dataset_path") == context["source_dataset_path"]
                         and active.get("labelset_id", "default") == context["labelset_id"]
@@ -435,6 +449,7 @@ def get_active_pipeline(source_dataset_path: Optional[str] = None, request: Requ
         return _get_active_pipeline_unlocked(source_dataset_path, request)
 
 
+@observe_original_flow_locked
 def _get_active_pipeline_unlocked(
     source_dataset_path: Optional[str], request: Request,
 ) -> FlowchartPipeline:
@@ -524,7 +539,86 @@ class FlowchartModelVerificationRequest(BaseModel):
     models: List[FlowchartModelReference] = Field(min_length=1, max_length=24)
 
 
-@router.post("/models/verify")
+class RetainedPreprocessorBindingRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    source_project_id: str = Field(min_length=1, max_length=128)
+    job_id: str = Field(pattern=r"^(?:[0-9a-f]{32}|job_[A-Za-z0-9][A-Za-z0-9_-]{0,119})$")
+    source_project_manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    checkpoint_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    version_manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+@observe_original_flow_retained_source
+def _registered_retained_source(request, source_project_id, *, binding_target=None):
+    """Resolve an original registry entry, never a caller-supplied path."""
+    from backend.engine.retained_preprocessors import read_registered_project
+    if request is None:
+        raise ValueError("An original authorized request is required for retained model data")
+    accounts = getattr(request.app.state, 'accounts', None)
+    account = getattr(request.state, 'account_user', None)
+    if accounts is not None:
+        if account is None:
+            raise HTTPException(403, 'Original shared source permission is required')
+        if binding_target is not None and accounts.project_role(account['id'], binding_target['id']) != 'owner':
+            raise HTTPException(403, 'Only the target project owner may bind retained model data')
+        session = getattr(request.state, 'account_session_token', None)
+        if not session:
+            raise HTTPException(403, 'Original source session is required')
+        decision = accounts.authorize(account['id'], 'flow.execute', source_project_id, session_token=session)
+        if not decision.allowed:
+            raise HTTPException(403, 'Original source project execution permission is required')
+        if binding_target is not None and accounts.project_role(account['id'], source_project_id) != 'owner':
+            raise HTTPException(403, 'Only the original source owner may publish its retained reference')
+        row = accounts.project_for(account['id'], source_project_id)
+        if row is None:
+            raise HTTPException(403, 'Registered retained source project is unavailable')
+        directory = row['path']
+    else:
+        from backend.api.routes_project import _load_history
+        rows = [row for row in _load_history(request) if row.get('id') == source_project_id]
+        if len(rows) != 1:
+            raise ValueError('Select an existing registered retained source project first')
+        directory = rows[0]['project_dir']
+    return read_registered_project(Path(directory), source_project_id)
+
+
+@observe_original_flow_specialist_resolution
+def _resolve_project_specialist(project, job_id, task, source_dataset_path, request=None, *, node=None):
+    """Keep the old resolver unless explicit rotation preprocessing is bound."""
+    if task == 'rotation':
+        from backend.engine.retained_preprocessors import retained_rotation_jobs, resolve_retained_rotation
+        if job_id in retained_rotation_jobs(project):
+            if node is not None and (node.data.node_type != 'preprocess'
+                    or node.data.params.get('operation') != 'learned_rotation'):
+                raise ValueError('Retained rotation is bound only to learned_rotation preprocessing')
+            bound = resolve_retained_rotation(project, job_id, source_dataset_path,
+                lambda identifier: _registered_retained_source(request, identifier))
+            if bound is not None:
+                return bound
+    return resolve_specialized_checkpoint(project['models_dir'], job_id, task, source_dataset_path)
+
+
+def _retained_request_options(project, request):
+    # Unbound old helper calls keep their original arguments and defaults.
+    from backend.engine.retained_preprocessors import retained_rotation_jobs
+    return {'request': request} if retained_rotation_jobs(project) else {}
+
+
+@router.post('/models/retained-preprocessors')
+def bind_retained_preprocessor(req: RetainedPreprocessorBindingRequest, request: Request):
+    from backend.api.routes_project import _project_context_mutation
+    from backend.engine.retained_preprocessors import bind_retained_rotation
+    try:
+        with _project_context_mutation(get_current_project(request)) as project:
+            source_project = _registered_retained_source(request, req.source_project_id, binding_target=project)
+            return bind_retained_rotation(project, source_project, job_id=req.job_id,
+                source_project_manifest_sha256=req.source_project_manifest_sha256,
+                checkpoint_sha256=req.checkpoint_sha256, version_manifest_sha256=req.version_manifest_sha256)
+    except (ValueError, OSError, KeyError) as exc:
+        raise HTTPException(409, 'Retained rotation binding refused: original model/source/ownership must remain valid') from exc
+
+
+@observe_original_flow_handler(router.post("/models/verify"))
 def verify_flowchart_models(request: FlowchartModelVerificationRequest, http_request: Request = None):
     """Verify every saved model against the selected source and its node task."""
     verified: List[str] = []
@@ -534,7 +628,7 @@ def verify_flowchart_models(request: FlowchartModelVerificationRequest, http_req
         try:
             if model.task in SPECIALIZED_TASKS:
                 project=get_current_project(http_request)
-                resolve_specialized_checkpoint(project['models_dir'],model.job_id,model.task,request.source_dataset_path)
+                _resolve_project_specialist(project, model.job_id, model.task, request.source_dataset_path, http_request)
                 verified.append(model.job_id)
                 continue
             _resolve_job_artifacts(
@@ -577,7 +671,7 @@ def _catalog_model_settings(meta, checkpoint=None):
         'parent_job_id': meta.get('parent_job_id') or parent.get('parent_job_id')}
 
 
-@router.get("/models/catalog")
+@observe_original_flow_handler(router.get("/models/catalog"))
 def catalog_flowchart_models(source_dataset_path: str, request: Request = None):
     """List completed checkpoints whose dataset fingerprint still matches."""
     source = Path(source_dataset_path).expanduser().resolve()
@@ -633,9 +727,22 @@ def catalog_flowchart_models(source_dataset_path: str, request: Request = None):
             if not root.is_dir() or root.is_symlink(): continue
             for directory in root.iterdir():
                 try:
-                    checkpoint,meta=resolve_specialized_checkpoint(project['models_dir'],directory.name,specialized_task,str(source))
+                    checkpoint,meta=_resolve_project_specialist(project, directory.name, specialized_task, str(source), request)
                 except (ValueError,OSError,KeyError,RuntimeError): continue
                 models.append({'job_id':directory.name,'task':specialized_task,'label':f"{specialized_task} · {directory.name}",'created_at':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime(checkpoint.stat().st_mtime)),'source_dataset_path':str(source),'best_metric':None,'preset':None, **_catalog_model_settings(meta)})
+    if project:
+        from backend.engine.retained_preprocessors import retained_rotation_jobs
+        for job_id in retained_rotation_jobs(project):
+            if any(row['job_id'] == job_id for row in models):
+                continue
+            try:
+                checkpoint, meta = _resolve_project_specialist(project, job_id, 'rotation', str(source), request)
+                settings = _catalog_model_settings(meta, checkpoint)
+            except (HTTPException, ValueError, OSError, KeyError, RuntimeError):
+                continue
+            models.append({'job_id': job_id, 'task': 'rotation', 'label': f"rotation · {job_id}",
+                'created_at': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(checkpoint.stat().st_mtime)),
+                'source_dataset_path': str(source), 'best_metric': None, 'preset': None, **settings})
     for model in models:
         model['capabilities'] = ({'role': 'preprocess', 'operation': 'learned_rotation', 'native_source_coordinates': True}
             if model['task'] == 'rotation' else {'role': 'preprocess', 'operation': 'enhancement'}
@@ -644,7 +751,7 @@ def catalog_flowchart_models(source_dataset_path: str, request: Request = None):
     return {"models": models, "total": len(models)}
 
 
-def _save_class_model_metadata(node, project, source_dataset_path):
+def _save_class_model_metadata(node, project, source_dataset_path, request=None):
     """Resolve only model references used by class rules, without loading inference models."""
     job_id = node.data.model_job_id
     task = flow_model_task(node)
@@ -654,7 +761,7 @@ def _save_class_model_metadata(node, project, source_dataset_path):
         if task in SPECIALIZED_TASKS:
             if project is None:
                 raise ValueError("Specialized class rules require an active project")
-            _, metadata = resolve_specialized_checkpoint(project["models_dir"], job_id, task, source_dataset_path)
+            _, metadata = _resolve_project_specialist(project, job_id, task, source_dataset_path, request, node=node)
         else:
             checkpoint = trusted_checkpoint(job_id)
             if checkpoint is None:
@@ -699,14 +806,14 @@ def _active_version(project_dir: Optional[Path]) -> tuple[Optional[str], Optiona
     if project_dir is None:
         return None, None
     try:
-        active = json.loads(_active_flow_file(project_dir).read_text(encoding="utf-8"))
-        record = json.loads((_version_dir(project_dir) / f"{active['version_id']}.json").read_text(encoding="utf-8"))
+        active = json.loads(original_UI_ancillary_read_text(_active_flow_file(project_dir),encoding="utf-8",role="flow"))
+        record = json.loads(original_UI_ancillary_read_text(_version_dir(project_dir) / f"{active['version_id']}.json",encoding="utf-8",role="flow"))
         return active["version_id"], FlowchartPipeline.model_validate(record["pipeline"])
     except (OSError, ValueError, KeyError, TypeError):
         return None, None
 
 
-@router.post("/pipeline")
+@observe_original_flow_handler(router.post("/pipeline"))
 def save_pipeline(
     pipeline: FlowchartPipeline, recipe_task: Optional[PipelineTask] = None,
     source_dataset_path: Optional[str] = None,
@@ -737,7 +844,7 @@ def save_pipeline(
     effective_source = source_dataset_path or project_source
     try:
         validate_recorded_flow_classes(
-            pipeline, lambda node: _save_class_model_metadata(node, project, effective_source),
+            pipeline, lambda node: _save_class_model_metadata(node, project, effective_source, request),
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -828,13 +935,14 @@ def save_pipeline(
             ) from e
 
 
-@router.get("/pipelines")
+@observe_original_flow_handler(router.get("/pipelines"))
 def list_saved_pipelines(source_dataset_path: Optional[str] = None, request: Request = None):
     """List immutable saved flow revisions from the active project."""
     with _FLOW_SAVE_LOCK:
         return _list_saved_pipelines_unlocked(source_dataset_path, request)
 
 
+@observe_original_flow_locked
 def _list_saved_pipelines_unlocked(source_dataset_path: Optional[str], request: Request):
     if source_dataset_path:
         source = Path(source_dataset_path).expanduser().resolve()
@@ -965,7 +1073,7 @@ def list_configuration_changes(request: Request, limit: int = Query(100, ge=1, l
             "runtime": runtime_release_status(project_dir)}
 
 
-@router.get("/pipeline/active-version")
+@observe_original_UI_ancillary_handler(router.get("/pipeline/active-version"))
 def get_active_version_id(request: Request) -> dict:
     """The project's active flow version (None when there is none): the base an editor's save is checked against."""
     with _FLOW_SAVE_LOCK:
@@ -973,7 +1081,7 @@ def get_active_version_id(request: Request) -> dict:
     return {"version_id": version_id}
 
 
-@router.get("/pipeline/active/record")
+@observe_original_flow_handler(router.get("/pipeline/active/record"))
 def get_active_pipeline_record(request: Request, source_dataset_path: Optional[str] = None) -> dict:
     """The active graph with its version id, read together (an editor's save base must be the version it shows)."""
     with _FLOW_SAVE_LOCK:
@@ -982,7 +1090,7 @@ def get_active_pipeline_record(request: Request, source_dataset_path: Optional[s
     return {"version_id": version_id, "pipeline": pipeline}
 
 
-@router.post("/pipeline/diff")
+@observe_original_UI_ancillary_handler(router.post("/pipeline/diff"))
 def preview_pipeline_change(pipeline: FlowchartPipeline, request: Request, expected_version_id: Optional[str] = None) -> dict:
     """The inspection-rule difference a save of ``pipeline`` would record (from the active version), shown before the
     reason is asked; ``stale`` when the active flow is no longer ``expected_version_id``."""
@@ -996,7 +1104,7 @@ def preview_pipeline_change(pipeline: FlowchartPipeline, request: Request, expec
             "semantic_delta": delta, "layout_only": bool(delta.get("layout_only"))}
 
 
-@router.get("/pipelines/{version_id}", response_model=FlowchartPipeline)
+@observe_original_flow_handler(router.get("/pipelines/{version_id}", response_model=FlowchartPipeline))
 def get_saved_pipeline_version(version_id: str, request: Request = None) -> FlowchartPipeline:
     """Open one saved revision without changing the current recipe."""
     if not re.fullmatch(r"[0-9a-f]{32}", version_id):
@@ -1080,13 +1188,105 @@ def _project_calibrations(project):
     return stack
 
 
-@router.post("/run")
+def _partial_owner(request, project):
+    account = getattr(request.state, 'account_user', None)
+    context = getattr(request.state, 'project_context', None)
+    registry = getattr(request.app.state, 'context_registry', None)
+    if (not isinstance(account, dict) or not isinstance(account.get('id'), str)
+            or context is None or registry is None
+            or context.actor_id != account['id'] or context.project_id != project['id']
+            or context.workspace_id != registry.workspace_id):
+        raise HTTPException(401, 'An original authenticated project context is required')
+    return (registry.workspace_id, account['id'], project['id'],
+            str(Path(project['project_dir']).resolve()))
+
+
+def _partial_binding(req, project):
+    if (req.pipeline is None or req.execution_target != 'local' or req.device != 'cpu'
+            or req.compute_profile_id is not None or not req.stop_node_id):
+        raise HTTPException(422, 'Prepare an explicit local CPU partial inspection')
+    if req.project_id != project['id']:
+        raise HTTPException(409, 'Partial inspection belongs to another project')
+    try:
+        ordered_linear_nodes(req.pipeline)
+        debug_ancestor_ids(req.pipeline, req.stop_node_id)
+        selected = Path(req.image_path).expanduser().resolve(strict=True)
+        roots = [Path(project[key]).expanduser().resolve()
+                 for key in ('project_dir','dataset_dir','source_dataset_dir') if project.get(key)]
+        if not any(selected.is_relative_to(root) for root in roots):
+            raise ValueError('Partial inspection image is outside the original project')
+        from backend.engine.flow_partial_runs import image_identity
+        image, digest = image_identity(selected)
+        if Path(image) != selected:
+            raise ValueError('Partial inspection image path changed before hashing')
+        from backend.engine.flow_provenance import semantic_sha256
+        return {'semantic_sha256':semantic_sha256(req.pipeline),
+                'image_path':image, 'image_sha256':digest, 'image_id':req.image_id,
+                'stop_node_id':req.stop_node_id, 'execution_target':'local', 'device':'cpu',
+                'project_source':{key:project.get(key) for key in (
+                    'id','project_dir','models_dir','source_dataset_dir','active_labelset_id','task')}}
+    except (OSError, TypeError, ValueError) as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@router.post('/partial-runs/prepare')
+def prepare_partial_run(req: FlowchartRunRequest, request: Request):
+    from backend.engine.flow_partial_runs import registry_for
+    if req.partial_run_id is not None:
+        raise HTTPException(422, 'Partial capabilities are issued by this server')
+    project = get_current_project(request)
+    return registry_for(request.app).prepare(_partial_owner(request, project), _partial_binding(req, project))
+
+
+@router.get('/partial-runs/{run_id}')
+def partial_run_terminal(run_id: str, request: Request):
+    from backend.engine.flow_partial_runs import registry_for
+    project = get_current_project(request)
+    return registry_for(request.app).owned(run_id, _partial_owner(request, project)).snapshot()
+
+
+@router.post('/partial-runs/{run_id}/cancel')
+def cancel_partial_run(run_id: str, request: Request):
+    from backend.engine.flow_partial_runs import registry_for
+    project = get_current_project(request)
+    return registry_for(request.app).owned(run_id, _partial_owner(request, project)).cancel()
+
+
+def _run_prepared_partial(req, request):
+    from backend.engine.flow_partial_runs import registry_for
+    if request is None:
+        raise HTTPException(401, 'An original authenticated partial request is required')
+    project = get_current_project(request)
+    row = registry_for(request.app).owned(req.partial_run_id, _partial_owner(request, project))
+    row.consume(_partial_binding(req, project))
+    try:
+        cancellation = None
+        with partial_run_scope(row):
+            try:
+                # Re-enter the unchanged original business path with no second
+                # capability consumption. This returns only after all original
+                # executor/engine/device/compute-lease finally paths unwind.
+                result = run_flowchart(req.model_copy(update={'partial_run_id':None}), request)
+            except FlowchartPartialCancelled as exc:
+                cancellation = exc
+        if cancellation is not None:
+            return row.cancelled_after_unwind(cancellation)
+        return row.finish(result, _partial_binding(req, get_current_project(request)))
+    except BaseException as exc:
+        # A real fault, including one concurrent with cancel, stays failed.
+        row.failed_after_unwind(exc)
+        raise
+
+
+@observe_original_flow_execution_handler(router.post("/run"))
 def run_flowchart(req: FlowchartRunRequest, request: Request = None):
     """
     Runs either original-resolution tiled segmentation or detector ROI inspection.
     A local result image is returned as a bounded preview; excessive tile counts
     yield REVIEW without pretending that the source image was inspected.
     """
+    if req.partial_run_id is not None:
+        return _run_prepared_partial(req, request)
     try:
         project = get_current_project(request) if request is not None else None
         if req.project_id is not None and (not project or req.project_id != project["id"]):
@@ -1144,7 +1344,7 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
             expected_task = flow_model_task(node)
             if expected_task in SPECIALIZED_TASKS:
                 if project is None: raise HTTPException(status_code=409,detail="Specialized models require an active project.")
-                try: checkpoint,_=resolve_specialized_checkpoint(project['models_dir'],job_id,expected_task,project.get('source_dataset_dir'))
+                try: checkpoint,_=_resolve_project_specialist(project, job_id, expected_task, project.get('source_dataset_dir'), request, node=node)
                 except (ValueError,OSError) as exc: raise HTTPException(status_code=409,detail=str(exc)) from exc
                 verified_checkpoints[(job_id,expected_task)]=checkpoint.resolve()
                 local_model_jobs.add(job_id)
@@ -1215,8 +1415,20 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
                     raise HTTPException(status_code=409, detail="Execution compute profile changed after this inspection run was created.")
                 profile = frozen_profile
             try:
-                return run_verified_flowchart_on_compute(profile, project, pipeline.model_dump(), verified_checkpoints,
-                                                         Path(req.image_path), req.image_id, device=req.device, **({"stop_node_id":req.stop_node_id} if req.stop_node_id else {}))
+                required_capture_grant = getattr(getattr(getattr(request, 'app', None), 'state', None), 'required_retained_flow_capture', None)
+                if required_capture_grant is not None:
+                    from backend.engine.required_flow_passive_capture import offer_original_required_flow_capture
+                    required_capture_grant = offer_original_required_flow_capture(required_capture_grant,request,profile,
+                        pipeline=pipeline.model_dump(),image_path=Path(req.image_path),device=req.device,stop_node_id=req.stop_node_id)
+                from contextlib import nullcontext
+                from backend.engine.retained_preprocessors import retained_rotation_jobs, retained_rotation_transport
+                bound_rotation = set(retained_rotation_jobs(project))
+                retained_scope = (retained_rotation_transport(project, lambda identifier: _registered_retained_source(request, identifier))
+                    if any(task == 'rotation' and job in bound_rotation for job, task in verified_checkpoints) else nullcontext())
+                with retained_scope:
+                    return run_verified_flowchart_on_compute(profile, project, pipeline.model_dump(), verified_checkpoints,
+                                                             Path(req.image_path), req.image_id, device=req.device, **({"stop_node_id":req.stop_node_id} if req.stop_node_id else {}),
+                                                             **({'required_passive_capture_grant': required_capture_grant} if required_capture_grant is not None else {}))
             except RemoteComputeBusy as exc:
                 raise HTTPException(status_code=409, detail=str(exc)) from exc
             except RemoteDisconnected as exc:
@@ -1248,6 +1460,8 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
             )
         return {**result, "execution_target": "model_compute", "execution_device": str(_ENGINE.device),
                 "compute_profile_id": None}
+    except FlowchartPartialCancelled:
+        raise
     except HTTPException:
         raise
     except Exception as e:

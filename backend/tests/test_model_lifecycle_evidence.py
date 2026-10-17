@@ -7,6 +7,7 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -62,7 +63,10 @@ def family_record_model(family,labels,*,prepared=True):
 
 class LifecycleEvidenceTests(unittest.TestCase):
     def setUp(self):
-        self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
+        data_root=os.environ.get('MODU_TEST_DATA_DIR')
+        temp_parent=Path(data_root)/'lifecycle-controls' if data_root else None
+        if temp_parent is not None:temp_parent.mkdir(parents=True,exist_ok=True)
+        self.temp=tempfile.TemporaryDirectory(dir=temp_parent);self.addCleanup(self.temp.cleanup)
         self.root=Path(self.temp.name).resolve();self.files={};self.receipt=self.fixture()
         if verifier is not None:self.assertTrue(verifier.verify_lifecycle(self.receipt,self.root)['record_chain_verified'],'synthetic base chain must verify before any corruption control')
     def put(self,path,value):

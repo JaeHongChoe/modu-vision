@@ -6,6 +6,7 @@ source, an output folder or an actor. A team server never follows links out of i
 may (a source that links a NAS folder). A finished import activates nothing: accept is explicit and compare-and-swap.
 """
 from __future__ import annotations
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_handler, observe_original_dataset_UI_operation, observe_original_dataset_UI_connection, original_dataset_UI_read_text, original_dataset_UI_read_bytes, original_dataset_UI_image_open, original_dataset_UI_file, original_dataset_UI_diagnostics_missing
 
 import json
 import re
@@ -212,7 +213,7 @@ def accept_import(job_id: str, payload: AcceptRequest, request: Request):
     return {"active_revision": active, "job_id": job_id}
 
 
-@router.get("/revisions")
+@observe_original_UI_ancillary_handler(router.get("/revisions"))
 def list_revisions(request: Request):
     context, project_key, _project = _scope(request)
     jobs = _jobs(request)
@@ -252,7 +253,7 @@ def revision_duplicates(revision_id: str, request: Request, cursor: Optional[str
         raise HTTPException(422, str(exc)) from exc
 
 
-@router.get("/revisions/{revision_id}/source-status")
+@observe_original_UI_ancillary_handler(router.get("/revisions/{revision_id}/source-status"))
 def revision_source_status(revision_id: str, request: Request):
     """Whether the revision still matches its source by the index's inventory definition (images added, removed or not
     confirmed unchanged, unreadable folders that differ); nothing is decoded or hashed."""
@@ -273,24 +274,36 @@ def revision_gaps(revision_id: str, request: Request):
         raise HTTPException(404, "Revision not found in this project") from None
 
 
-def recover_imports_at_startup(app) -> dict:
+def recover_imports_at_startup(app, *, outcome_observer=None) -> dict:
     """No import thread survives a restart: the backend that owns the data folder completes imports whose revision
     was sealed and marks the others interrupted. Another live backend's imports are left alone."""
-    import logging
-    from backend.api.routes_training import _own_data_folder
-    store = ledger()
-    if not _own_data_folder(store.path.parent):
-        return {"completed": [], "interrupted": [], "skipped": "another backend owns the data folder"}
-    try:
-        jobs = DatasetImportJobs(store, DatasetIndex(index_path(app.state.context_registry.root)))
-        app.state.dataset_imports = jobs
-        result = jobs.recover_orphans()
-        result['backups'] = _backup_jobs().recover_orphans()
-        result['restores'] = _restore_jobs().recover_orphans()
-        return result
-    except Exception:  # a recovery problem never blocks the backend from starting
-        logging.getLogger(__name__).exception("Dataset import recovery failed at startup")
-        return {"completed": [], "interrupted": [], "error": True}
+    from backend.engine.startup_recovery_outcomes import recovery_stage
+    with recovery_stage(outcome_observer, 'import_recovery', app) as observed:
+        import logging
+        from backend.api.routes_training import _own_data_folder, _FOLDER_LOCKS
+        store = ledger()
+        observed.store(store)
+        if not _own_data_folder(store.path.parent):
+            observed.skipped("another_folder_owner")
+            return {"completed": [], "interrupted": [], "skipped": "another backend owns the data folder"}
+        if outcome_observer is not None:
+            observed.folder_owner(_FOLDER_LOCKS.get(str(Path(store.path.parent).resolve())))
+        try:
+            jobs = DatasetImportJobs(store, DatasetIndex(index_path(app.state.context_registry.root)))
+            app.state.dataset_imports = jobs
+            if outcome_observer is None:
+                result = jobs.recover_orphans()
+                result['backups'] = _backup_jobs().recover_orphans()
+                result['restores'] = _restore_jobs().recover_orphans()
+            else:
+                result = jobs.recover_orphans(outcome_observer=outcome_observer)
+                result['backups'] = _backup_jobs().recover_orphans(outcome_observer=outcome_observer)
+                result['restores'] = _restore_jobs().recover_orphans(outcome_observer=outcome_observer)
+            return result
+        except Exception as error:  # a recovery problem never blocks the backend from starting
+            observed.error(error, "startup_recovery_error")
+            logging.getLogger(__name__).exception("Dataset import recovery failed at startup")
+            return {"completed": [], "interrupted": [], "error": True}
 
 
 def _backup_jobs():

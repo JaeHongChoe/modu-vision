@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "9713fbfa227314290f19d39fb057f18cf417fd8d",
+  "source_dirty": false,
+  "test": "scripts/e2e/remaining-mask-handoff-invalid.spec.ts::native mask source choice stays local across real project handoff and original backend refuses invalid folder and class export",
+  "test_source_sha256": "87eae86b10f364078d71414e4a64cc3107e48b567ea63a56496102a6e89845dc",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "796ad1b97548b85f00e6937f67397bde974f6e7fe8f720eb9a7f56124878c5d3",
+  "harness_sha256": "65300deaee914d1d3c84e8bfd9fc11393f9b8b2f434ea425054e791040d3e765",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "1d7d5f56d84befc5de620414d685d62882f7e24d4378d92a1dd645c10c3be067"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "ba7a459d43a82179828f5bf20e30e5738e5721c4e9f55044f18ae37a9097f9a2"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "b265d5594f87d7e7c910a9541608d8c5a66d10ff12f26514333279c7806a30e1"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "80bcb2eb8c5ca1e77678f25787a37534b2c3806b3b8b7382ab31440ea8168e85"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

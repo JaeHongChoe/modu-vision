@@ -1,5 +1,6 @@
 """Immutable user templates and fixed-input flow result comparisons."""
 from copy import deepcopy
+from backend.engine.original_owned_UI_ancillary_request import original_UI_ancillary_read_text, original_UI_ancillary_workspace_glob
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -94,9 +95,9 @@ def save_template(root, pipeline, *, name, project_id, node_ids=None):
 
 def load_templates(root):
     result=[]
-    for p in Path(root).glob('*.json'):
+    for p in original_UI_ancillary_workspace_glob(Path(root),'*.json',role='workspace_template'):
         try:
-            record=json.loads(p.read_text(encoding='utf-8'))
+            record=json.loads(original_UI_ancillary_read_text(p,encoding='utf-8',role='workspace_template'))
             digest=record.pop('sha256')
             if _digest(record)!=digest or record.get('schema_version')!=1: continue
             record['sha256']=digest

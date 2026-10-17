@@ -180,16 +180,19 @@ app.on('window-all-closed', () => {
 });
 
 let isQuitting = false;
+let quitDecisionSettled = false;
 app.on('before-quit', async (event) => {
+  if (quitDecisionSettled) return;
+  event.preventDefault();
   if (!isQuitting) {
     isQuitting = true;
-    event.preventDefault();
     console.log('[Main] Application quit initiated. Stopping backend daemon...');
     try {
       await supervisor?.stopBackend();
     } catch (err) {
       console.error('[Main] Error during supervisor shutdown:', err);
     } finally {
+      quitDecisionSettled = true;
       app.quit();
     }
   }

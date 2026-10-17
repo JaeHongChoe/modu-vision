@@ -1,4 +1,5 @@
 """Team guidance, scoped work queues, edit ownership and review endpoints."""
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_handler, observe_original_dataset_UI_operation, observe_original_dataset_UI_connection, original_dataset_UI_read_text, original_dataset_UI_read_bytes, original_dataset_UI_image_open, original_dataset_UI_file, original_dataset_UI_diagnostics_missing
 from typing import Any, Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -111,7 +112,7 @@ def queue(request: Request, assignee: Optional[str] = None, state: Optional[str]
     return _run(lambda: td.work_queue(project, source, assignee, state, offset, limit))
 
 
-@router.get('/readiness')
+@observe_original_UI_ancillary_handler(router.get('/readiness'))
 def readiness(request: Request):
     project, source = _context(request)
     return _run(lambda: td.training_readiness(project, source))

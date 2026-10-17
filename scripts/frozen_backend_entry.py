@@ -86,6 +86,18 @@ def diagnostics():
     return 0 if required_ready else 1
 
 
+def openvino_device_discovery():
+    """Run the fixed isolated probe without entering application ownership."""
+    sys.modules['pyarrow'] = None
+    import openvino as ov
+    core = ov.Core()
+    print(json.dumps({'backend': 'openvino', 'version': ov.__version__,
+        'devices': core.available_devices,
+        'names': {device: str(core.get_property(device, 'FULL_DEVICE_NAME'))
+                  for device in core.available_devices}}), flush=True)
+    return 0
+
+
 if __name__ == '__main__':
     multiprocessing.freeze_support()
     if len(sys.argv)>1 and sys.argv[1]=='--owned-application-launch-controller':
@@ -97,6 +109,11 @@ if __name__ == '__main__':
     if len(sys.argv)>1 and sys.argv[1]=='--owned-staged-canary-cpu-worker':
         from backend.engine.staged_canary_frozen_execution import frozen_worker_main
         raise SystemExit(frozen_worker_main(sys.argv[2:]))
+    if len(sys.argv)>1 and sys.argv[1]=='--openvino-device-discovery':
+        if sys.argv[1:] != ['--openvino-device-discovery']:
+            print('OpenVINO device discovery accepts no arguments', file=sys.stderr)
+            raise SystemExit(2)
+        raise SystemExit(openvino_device_discovery())
     if sys.argv[1:] == ['--backend-diagnostics']:
         raise SystemExit(diagnostics())
     if len(sys.argv)>1 and sys.argv[1] in ('--flow-package-runner','--flow-package-worker'):
@@ -111,6 +128,14 @@ if __name__ == '__main__':
     if len(sys.argv)>1 and sys.argv[1]=='--offline-application-update':
         from backend.engine.runtime_update import main
         raise SystemExit(main(sys.argv[2:]))
+    if len(sys.argv)>1 and sys.argv[1]=='--inspection-service':
+        del sys.argv[1]
+        from backend.engine.inspection_service import main as inspection_service_main
+        raise SystemExit(inspection_service_main())
     from backend.engine.application_launch_handshake import early_backend_bootstrap
     early_backend_bootstrap()
-    runpy.run_module('backend.main', run_name='__main__')
+    if len(sys.argv)>1 and sys.argv[1]=='--windows-inspection-service':
+        from backend.engine.windows_inspection_service import main as windows_service_main
+        raise SystemExit(windows_service_main(sys.argv[2:]))
+    from backend.main import main as backend_main
+    backend_main()

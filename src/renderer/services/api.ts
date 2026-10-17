@@ -11,6 +11,7 @@ import type {
   ErrorCatalogItem,
   EvaluationResults,
   FlowchartExecutionResult,
+  FlowchartPartialRunSnapshot,
   FlowchartPipeline,
   FlowModelTask,
   ImageMeta,
@@ -1320,6 +1321,8 @@ export const api = {
 
     getOverkillUnderkill: (params: {
       job_id?: string;
+      source_dataset_path?: string;
+      source_task?: VisionTask;
       target_max_underkill?: number;
       cost_escape?: number;
       cost_scrap?: number;
@@ -1327,12 +1330,21 @@ export const api = {
     }) => {
       const q = new URLSearchParams();
       if (params.job_id) q.set('job_id', params.job_id);
+      if (params.source_dataset_path) q.set('source_dataset_path', params.source_dataset_path);
+      if (params.source_task) q.set('source_task', params.source_task);
       if (params.target_max_underkill !== undefined) q.set('target_max_underkill', String(params.target_max_underkill));
       if (params.cost_escape !== undefined) q.set('cost_escape', String(params.cost_escape));
       if (params.cost_scrap !== undefined) q.set('cost_scrap', String(params.cost_scrap));
       if (params.current_threshold !== undefined) q.set('current_threshold', String(params.current_threshold));
       return request<any>(`/api/evaluation/overkill-underkill?${q.toString()}`);
     },
+
+    calibrateZeroEscape: (data: {job_id?: string; source_dataset_path?: string; source_task?: VisionTask;
+      target_max_underkill?: number; cost_escape?: number; cost_scrap?: number;
+      current_threshold?: number; apply_to_eval_results?: boolean}) =>
+      request<import('../types').OverkillUnderkillAnalysis>('/api/evaluation/zero-escape-calibrate', {
+        method: 'POST', body: JSON.stringify(data),
+      }),
 
     runBenchmark: (data: { job_id?: string; iterations?: number; resolution?: number }) =>
       request<any>('/api/evaluation/benchmark', {
@@ -1422,11 +1434,24 @@ export const api = {
         body: JSON.stringify(data),
       });
     },
-    run: (data: { image_path?: string; image_id?: string; pipeline?: any;
-      execution_target?: 'local' | 'selected_compute' | 'model_compute'; device?: 'cpu' | 'mps' | 'cuda'; compute_profile_id?: string; project_id?: string; stop_node_id?: string }) =>
+    preparePartialRun: (data: { image_path: string; image_id: string | null; pipeline: FlowchartPipeline;
+      project_id: string; stop_node_id: string; execution_target: 'local'; device: 'cpu' }, context?: ProjectContext | null) =>
+      request<FlowchartPartialRunSnapshot>('/api/flowchart/partial-runs/prepare', {
+        method: 'POST', body: JSON.stringify(data), ...(context === undefined ? {} : { projectContext: context }),
+      }),
+    getPartialRun: (runId: string, context?: ProjectContext | null) =>
+      request<FlowchartPartialRunSnapshot>(`/api/flowchart/partial-runs/${encodeURIComponent(runId)}`,
+        context === undefined ? {} : { projectContext: context }),
+    cancelPartialRun: (runId: string, context?: ProjectContext | null) =>
+      request<FlowchartPartialRunSnapshot>(`/api/flowchart/partial-runs/${encodeURIComponent(runId)}/cancel`, {
+        method: 'POST', ...(context === undefined ? {} : { projectContext: context }),
+      }),
+    run: (data: { image_path?: string; image_id?: string | null; pipeline?: any;
+      execution_target?: 'local' | 'selected_compute' | 'model_compute'; device?: 'cpu' | 'mps' | 'cuda'; compute_profile_id?: string; project_id?: string; stop_node_id?: string; partial_run_id?: string }, context?: ProjectContext | null) =>
       request<any>('/api/flowchart/run', {
         method: 'POST',
         body: JSON.stringify(data),
+        ...(context === undefined ? {} : { projectContext: context }),
       }),
   },
 

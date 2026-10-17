@@ -327,7 +327,7 @@ class SSHTransport:
     @staticmethod
     def _ssh_base(profile: ComputeProfile) -> list[str]:
         return [
-            "ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
+            "ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes", "-o", "ForwardAgent=no",
             "-p", str(profile.ssh_port),
             "-o", "ConnectTimeout=10", "-o", "ConnectionAttempts=1",
             "-o", "ServerAliveInterval=5", "-o", "ServerAliveCountMax=2",
@@ -339,7 +339,7 @@ class SSHTransport:
     @staticmethod
     def _scp_base(profile: ComputeProfile) -> list[str]:
         return [
-            "scp", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
+            "scp", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes", "-o", "ForwardAgent=no",
             "-P", str(profile.ssh_port),
             "-o", "ConnectTimeout=10", "-o", "ConnectionAttempts=1",
             "-o", "ServerAliveInterval=5", "-o", "ServerAliveCountMax=2",

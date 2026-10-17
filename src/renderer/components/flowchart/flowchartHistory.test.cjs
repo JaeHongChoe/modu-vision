@@ -28,10 +28,15 @@ const api = { flowchart: {
   activeVersionId: async () => ({ version_id: null }),
   savePipeline: async () => ({}),
 } };
+let currentProject = null;
 loaded.require = (name) => {
-  if (name === '../services/api') return { api };
+  if (name === '../services/api') return { api,
+    getProjectContext: () => null,
+    getProjectContextGeneration: () => 0,
+    getApiPersistenceIdentity: () => 'controlled-history-api',
+  };
   if (name === '../services/flowDraft') return { flowDraft: {} };
-  if (name === './useProjectStore') return { useProjectStore: { getState: () => ({ project: null }) } };
+  if (name === './useProjectStore') return { useProjectStore: { getState: () => ({ project: currentProject }) } };
   if (name === '../components/flowchart/flowchartStartup') return { getFlowchartModelTask: node => node.data.task || null };
   return originalRequire(name);
 };
@@ -47,6 +52,7 @@ graphModule._compile(ts.transpileModule(fs.readFileSync(graphFilename, 'utf8'), 
 }).outputText, graphFilename);
 
 test.beforeEach(async () => {
+  currentProject = null;
   store.getState().invalidateForDataChange();
   await store.getState().loadPipeline(true);
 });
@@ -213,13 +219,27 @@ test('flow layout is one undoable edit and preserves the original connected grap
   assert.equal(store.getState().pipeline, arranged);
 });
 
-test('debug run validates models only up to the selected node and sends stop identity',async()=>{
+test('debug run validates models only up to the selected node and sends stop identity',async t=>{
   const pipeline={...store.getState().pipeline,nodes:[{id:'input',data:{node_type:'input'},position:{x:0,y:0}},{id:'roi',data:{node_type:'fixed_roi',params:{roi_bbox:[0,0,32,32]}},position:{x:100,y:0}},{id:'later',data:{node_type:'inspection',task:'segmentation',model_job_id:null},position:{x:200,y:0}}],edges:[{id:'a',source:'input',target:'roi'},{id:'b',source:'roi',target:'later'}]};
   store.getState().replacePipeline(pipeline);store.getState().setSelectedImage({source:'dataset',imagePath:'/fixture/a.png',fileName:'a.png'});
-  let request;
-  api.flowchart.run=async data=>{request=data;return {status:'partial',final_verdict:'REVIEW',stop_node_id:'roi',execution_target:'local',execution_device:'cpu',execution_steps:[]};};
+  currentProject = { id: 'history-project', project_dir: '/fixture/project', active_labelset_id: 'default' };
+  const runId = '746f4866bfa342c2a1e4c4e1efb704c0';
+  const snapshot = (state, execution_finished) => ({ run_id: runId, project_id: currentProject.id,
+    stop_node_id: 'roi', execution_target: 'local', device: 'cpu', state, execution_finished, error_type: null });
+  const previous = { run: api.flowchart.run, prepare: api.flowchart.preparePartialRun, status: api.flowchart.getPartialRun };
+  t.after(() => {
+    api.flowchart.run = previous.run;
+    api.flowchart.preparePartialRun = previous.prepare;
+    api.flowchart.getPartialRun = previous.status;
+    currentProject = null;
+  });
+  let request, prepared;
+  api.flowchart.preparePartialRun = async data => { prepared = data; return snapshot('prepared', false); };
+  api.flowchart.getPartialRun = async id => { assert.equal(id, runId); return snapshot('completed', true); };
+  api.flowchart.run=async data=>{request=data;return {status:'partial',partial_run_id:runId,is_ok:false,final_verdict:'REVIEW',stop_node_id:'roi',execution_target:'local',execution_device:'cpu',compute_profile_id:null,execution_steps:[]};};
   const ok=await store.getState().runPipeline(undefined,undefined,{savedVersionId:null,executionTarget:'local',device:'cpu',stopNodeId:'roi'});
   assert.equal(ok,true);assert.equal(request.stop_node_id,'roi');assert.equal(store.getState().executionResult.status,'partial');
+  assert.deepEqual(request, { ...prepared, partial_run_id: runId }, 'The same prepared graph and server-issued ID reach Run');
   assert.equal(isExecutionResultCurrent(store.getState()),true);
   store.getState().updateNodeData('roi',{params:{roi_bbox:[1,1,33,33]}});
   assert.equal(store.getState().executionResult.status,'partial','S0-05: the earlier run stays visible');

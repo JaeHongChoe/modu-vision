@@ -24,10 +24,12 @@ export default async function globalSetup(config: FullConfig) {
   // full Chromium path, so a file check alone cannot prove the project can run.
   let browserLaunch: Record<string, unknown> = { checked: false };
   if (wants('browser')) {
-    const channel = process.env.MV_E2E_BROWSER_CHANNEL || undefined;
+    const configured = config.projects.find(project => project.name === 'browser')?.use;
+    const launchOptions = configured?.launchOptions ?? {};
+    const channel = configured?.channel ?? (process.env.MV_E2E_BROWSER_CHANNEL || undefined);
     try {
-      const browser = await chromium.launch({ channel, timeout: 60_000 });
-      browserLaunch = { checked: true, ok: true, channel: channel ?? 'bundled', version: browser.version() };
+      const browser = await chromium.launch({ ...launchOptions, channel, timeout: 60_000 });
+      browserLaunch = { checked: true, ok: true, channel: channel ?? 'bundled', executable_path: launchOptions.executablePath ?? null, version: browser.version() };
       await browser.close();
       problems.splice(0, problems.length, ...problems.filter(item => !item.startsWith('No browser for the browser project')));
     } catch (error) {

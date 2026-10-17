@@ -1,4 +1,6 @@
 """Saved user flow modules and reproducible A/B inspection experiments."""
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_image,original_UI_ancillary_read_bytes,original_UI_ancillary_read_text
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_handler, original_UI_ancillary_workspace_glob
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -16,6 +18,7 @@ from backend.engine.flowchart_engine import FlowchartPipeline, FlowchartRunReque
 from backend.engine.flow_provenance import pipeline_sha256
 from backend.engine.flow_workspace import save_template, load_templates, map_template, compare_results, atomic_json
 from backend.engine.dicom_input import open_source_image
+open_source_image=observe_original_UI_ancillary_image(open_source_image)
 from backend.engine.flow_debug_cache import checkpoint_files, check_checkpoint_files, file_sha256
 from backend.engine.flow_class_validation import _recorded_vocabulary, validate_recorded_flow_classes
 from backend.engine.specialized_models import flow_model_task, SPECIALIZED_TASKS, resolve_specialized_checkpoint
@@ -87,7 +90,7 @@ def _mapped_model_classes(node,project):
     return record
 
 
-@router.get('/templates')
+@observe_original_UI_ancillary_handler(router.get('/templates'))
 def templates(request:Request): return {'templates':load_templates(_library(request))}
 
 
@@ -112,12 +115,12 @@ def import_template(template_id:str,req:TemplateMap,request:Request):
         raise HTTPException(422,str(exc)) from exc
 
 
-@router.get('/image-info')
+@observe_original_UI_ancillary_handler(router.get('/image-info'))
 def image_info(image_path:str,request:Request):
     project=get_current_project(request)
     path=_image(project,image_path)
     try:
-        with open_source_image(path) as im: return {'width':im.width,'height':im.height,'sha256':hashlib.sha256(path.read_bytes()).hexdigest()}
+        with open_source_image(path) as im: return {'width':im.width,'height':im.height,'sha256':hashlib.sha256(original_UI_ancillary_read_bytes(path,role='image')).hexdigest()}
     except (OSError,ValueError) as exc: raise HTTPException(422,'Image cannot be decoded') from exc
 
 
@@ -206,15 +209,15 @@ def _frozen_input_bytes(path, expected):
     return contents
 
 
-@router.get('/comparisons')
+@observe_original_UI_ancillary_handler(router.get('/comparisons'))
 def comparisons(request:Request):
     project=get_current_project(request)
     rows=[];invalid=[]
-    for file in _comparisons(project).glob('*.json'):
+    for file in original_UI_ancillary_workspace_glob(_comparisons(project),'*.json',role='workspace_comparison'):
         try:
             if file.is_symlink() or file.stat().st_size>MAX_COMPARISON_RECORD_BYTES:
                 raise ValueError('linked_or_oversize_record')
-            record=json.loads(file.read_text(encoding='utf-8'),object_pairs_hook=_unique_record_fields)
+            record=json.loads(original_UI_ancillary_read_text(file,encoding='utf-8',role='workspace_comparison'),object_pairs_hook=_unique_record_fields)
             if record['project_id']==project['id'] and record.get('source_dataset_path')==project.get('source_dataset_dir') and record.get('labelset_id','default')==project.get('active_labelset_id','default'):
                 if record.get('comparison_id')!=file.stem or not isinstance(record.get('rows'),list) or not isinstance(record.get('created_at'),str):
                     raise ValueError('invalid_record_identity')

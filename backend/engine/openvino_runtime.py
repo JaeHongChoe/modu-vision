@@ -27,7 +27,10 @@ def available_openvino_devices():
         from backend.engine.runtime_deadline import execute_owned_process
         python=os.environ.get('VISION_OPENVINO_PYTHON',sys.executable)
         code="import json,sys;sys.modules['pyarrow']=None;import openvino as ov;c=ov.Core();print(json.dumps({'backend':'openvino','version':ov.__version__,'devices':c.available_devices,'names':{d:str(c.get_property(d,'FULL_DEVICE_NAME')) for d in c.available_devices}}))"
-        result=execute_owned_process([python,'-c',code],deadline_ms=15000)
+        command=([python,'--openvino-device-discovery']
+                 if getattr(sys,'frozen',False) and not os.environ.get('VISION_OPENVINO_PYTHON')
+                 else [python,'-c',code])
+        result=execute_owned_process(command,deadline_ms=15000)
         if result['status']=='timeout' or result.get('returncode')!=0:
             raise ValueError('OpenVINO device discovery failed; install a compatible openvino runtime in VISION_OPENVINO_PYTHON: '+result.get('stderr','timeout'))
         return json.loads(result['stdout'])

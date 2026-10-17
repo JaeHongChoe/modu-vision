@@ -77,6 +77,8 @@ export class OwnedApplicationLaunch {
  private pendingDrain:{id:string;deadline:number;resolve:(receipt:any)=>void;reject:(error:Error)=>void;timer:NodeJS.Timeout}|null=null;
  private drainRequest:any=null;private drainReceipt:any=null;private backendExitFrame:any=null;
  private drainDeadline:number|null=null;
+ private backendChannel:Duplex|null=null;
+ private shutdownPreparation:{id:string;proc:ChildProcess;channel:Duplex;controller:Frames;deadline:number;phase:'preparing'|'backend_preparing'|'backend_prepared'|'prepared'|'draining'|'post'|'final';postDeadline:number|null;receiptRawHash:string|null;resolve:()=>void;reject:(error:Error)=>void;timer:NodeJS.Timeout|null}|null=null;
  private exitAcknowledged=false;
  private exitResolve:(()=>void)|null=null;private exitReject:((error:Error)=>void)|null=null;private exitConfirmation:Promise<void>|null=null;
  constructor(readonly root:string,readonly nonce:string,readonly binding:any,readonly mainProcess:any,private challenge:string,private frames:Frames,private writer?:any){this.projects=path.join(root,'projects');this.auth=path.join(root,'auth');}
@@ -90,16 +92,50 @@ export class OwnedApplicationLaunch {
  if(receiptRows.length!==1)return {sha256:rows[0].sha256,build:null};stable(receiptPath,8*1024**2,receiptRows[0]);const receipt=parsePrivateDocument(stable(receiptPath,8*1024**2) as Buffer,8*1024**2).value;
  if(receipt.schema_version!==1||receipt.executable!==path.basename(file)||receipt.executable_sha256!==rows[0].sha256||!HEX64.test(receipt.inventory?.build_identity_sha256))throw new Error('Committed backend receipt differs');return {sha256:rows[0].sha256,build:receipt.inventory.build_identity_sha256};}
  backendEnvironment(env:NodeJS.ProcessEnv):NodeJS.ProcessEnv {const result={...env};for(const key of CONTEXT)delete result[key];return {...result,VISION_AI_STUDIO_USER_DATA_DIR:this.root,VISION_APPLICATION_LAUNCH_NONCE:this.nonce,VISION_APPLICATION_GENERATION:this.binding.application_generation,VISION_APPLICATION_DATABASE_GENERATION:this.binding.database_generation_path,VISION_APPLICATION_BACKEND_FD:'3'};}
+ private registeredBackend(claim:any,receipt:any):void {
+  fields(receipt,['schema_version','kind','nonce','epoch','binding_sha256','backend_claim_sha256','main_process','backend_process','writer_id','registration_sha256','active_registry_sha256']);
+  identity(receipt.main_process);identity(receipt.backend_process);
+  if(!this.writer||receipt.schema_version!==1||receipt.kind!=='backend_registered'||receipt.nonce!==this.nonce||receipt.epoch!==claim.epoch||receipt.binding_sha256!==hash(canonical(this.binding))||receipt.backend_claim_sha256!==this.backendClaimHash||canonical(receipt.main_process)!==canonical(this.mainProcess)||canonical(receipt.backend_process)!==canonical(claim.process)||receipt.writer_id!==this.writer.writer_id||receipt.registration_sha256!==this.writer.registration_sha256||!HEX64.test(receipt.active_registry_sha256))throw new Error('Original backend registration acknowledgement differs');
+  const directory=path.join(this.root,'.application-writer-epochs',this.nonce),publicationPath=path.join(directory,'publication.json');
+  const before=stable(publicationPath) as Buffer,registryRaw=stable(path.join(directory,'registry.json')) as Buffer,after=stable(publicationPath) as Buffer;
+  const publication=parsePrivateDocument(before).value,registry=parsePrivateDocument(registryRaw).value;
+  fields(publication,['schema_version','nonce','revision','registry_sha256']);fields(registry,['schema_version','binding','revision','state','authority_lock_identity','writers']);
+  if(!before.equals(after)||publication.schema_version!==1||publication.nonce!==this.nonce||!Number.isSafeInteger(publication.revision)||publication.revision<1||registry.schema_version!==1||registry.revision!==publication.revision||registry.state!=='open'||publication.registry_sha256!==receipt.active_registry_sha256||hash(registryRaw)!==receipt.active_registry_sha256||!Array.isArray(registry.writers))throw new Error('Original durable backend registration publication differs');
+  const journal=document(path.join(this.root,'.application-launches',this.nonce,'journal.json')).value;
+  const binding=registry.binding;fields(binding,['installation_id','nonce','update_id','application_generation','database_generation_id','database_fence','launch_binding_sha256','controller']);identity(binding.controller);
+  const expected={installation_id:this.binding.installation_id,nonce:this.nonce,update_id:this.binding.update_id,application_generation:this.binding.application_generation,database_generation_id:this.binding.database_pointer.generation_id,database_fence:this.binding.database_pointer.fence,launch_binding_sha256:hash(canonical(this.binding)),controller:journal.supervisor};
+  if(canonical(binding)!==canonical(expected))throw new Error('Original backend registration epoch binding differs');
+  const rows=registry.writers.filter((row:any)=>row.writer_id===this.writer.writer_id);if(rows.length!==1)throw new Error('Original backend registration row is unavailable');
+  const row=rows[0];fields(row,['writer_id','role','status','lock_identity','registration_sha256','process','exit_code','reason_code']);identity(row.process);
+  if(row.role!=='backend'||row.status!=='active'||row.registration_sha256!==this.writer.registration_sha256||canonical(row.process)!==canonical(claim.process)||row.exit_code!==null||row.reason_code!==null)throw new Error('Original backend writer is not durably active');
+  this.bindingCurrent();
+ }
  async bindBackend(proc:ChildProcess,executable:string,build:string|null):Promise<void>{if(this.usedBackend)throw new Error('Owned backend restart requires a new reconciled controller epoch');this.usedBackend=true;this.current();const artifact=this.executable(executable);if(artifact.build!==build||!Number.isSafeInteger(proc.pid)||!proc.stdio[3])throw new Error('Owned backend executable or private descriptor differs');
  const channel=proc.stdio[3] as Duplex,frames=new Frames(channel),challenge=randomBytes(32).toString('hex'),epoch=randomBytes(16).toString('hex');
  await frames.send({schema_version:1,kind:'backend_challenge',challenge,epoch,nonce:this.nonce,binding:this.binding,main_process:this.mainProcess,backend_pid:proc.pid,backend_executable:executable,backend_build_identity_sha256:build,...(this.writer?{writer:this.writer}:{})});
  const claimRaw=await frames.read(),readyRaw=await frames.read(),claim=parsePrivateDocument(claimRaw).value,ready=parsePrivateDocument(readyRaw).value;
  const names=['schema_version','kind','challenge','epoch','nonce','binding_sha256','process','executable','executable_sha256','build_identity_sha256','frozen'];fields(claim,names);fields(ready,names);identity(claim.process);identity(ready.process);
  if(claim.schema_version!==1||ready.schema_version!==1||claim.kind!=='backend_claim'||ready.kind!=='backend_ready'||canonical({...claim,kind:'backend_ready'})!==canonical(ready)||ready.challenge!==challenge||ready.epoch!==epoch||ready.nonce!==this.nonce||ready.binding_sha256!==hash(canonical(this.binding))||ready.process.pid!==proc.pid||ready.executable!==executable||ready.executable_sha256!==artifact.sha256||ready.build_identity_sha256!==build||typeof ready.frozen!=='boolean'||ready.frozen!==(build!==null))throw new Error('Backend private readiness binding differs');
- this.current();frames.assertEmpty();await this.frames.send({schema_version:1,kind:'backend_proof',challenge:this.challenge,nonce:this.nonce,claim_b64:claimRaw.toString('base64'),ready_b64:readyRaw.toString('base64')});
+ this.current();frames.assertEmpty();
+ // Proof, durable registration ACK and its consumption confirmation share one
+ // original 210s proof phase. Claim/ready allowances above are unchanged.
+ const proofDeadline=performance.now()+210000;
+ this.backendClaimHash=hash(parsePrivateDocument(claimRaw).canonical);
+ await this.frames.send({schema_version:1,kind:'backend_proof',challenge:this.challenge,nonce:this.nonce,claim_b64:claimRaw.toString('base64'),ready_b64:readyRaw.toString('base64')},proofDeadline);
+ if(this.writer){
+  const remaining=proofDeadline-performance.now();if(remaining<=0)throw new Error('Original backend registration deadline expired');
+  const parsedRegistration=parsePrivateDocument(await this.frames.read(remaining)),registered=parsedRegistration.value;this.registeredBackend(claim,registered);
+  if(proc.stdio[3]!==channel||proc.pid!==claim.process.pid||proc.exitCode!==null||proc.signalCode!==null)throw new Error('Original registered backend handle differs');
+  if(performance.now()>=proofDeadline)throw new Error('Original backend registration deadline expired');
+  await this.frames.sendCanonical(parsedRegistration.canonical.replace('"kind":"backend_registered"','"kind":"backend_registration_admitted"'),proofDeadline);
+  if(performance.now()>=proofDeadline)throw new Error('Original backend registration confirmation completed late');
+  // A legitimate controller CPU frame may already be queued after the echo.
+  // The existing sole controller reader below consumes it; no empty assertion.
+ }
+
  // One closed controller-origin execution request may follow readiness. Idle
  // waiting has no timeout; unsolicited backend data still invalidates ownership.
- this.backend=proc;this.backendProof=claim;this.backendEpoch=epoch;this.backendClaimHash=hash(parsePrivateDocument(claimRaw).canonical);
+ this.backend=proc;this.backendChannel=channel;this.backendProof=claim;this.backendEpoch=epoch;this.backendClaimHash=hash(parsePrivateDocument(claimRaw).canonical);
  let failed=false,cpuExecuted=false,cleanExitObserved=false;const relayRows=new Map<string,{phase:string;plan:string;registration:any;child:any;deadline:number}>();
  let admittedDrain:{receipt:any;request:any;receiptHash:string;requestHash:string;deadline:number;outerDeadline:number}|null=null,exitTimer:NodeJS.Timeout|null=null;
  type RelayPending={request:any;requestHash:string;row:{phase:string;plan:string;registration:any;child:any;deadline:number};deadline:number;timer:NodeJS.Timeout};
@@ -114,6 +150,7 @@ export class OwnedApplicationLaunch {
  // are visible to strict TypeScript control flow without type assertions.
  const pendingState:{relayPending:RelayPending|null;backendPending:BackendPending|null;drainAdmitted:DrainAdmitted|null;cpuPending:CpuPending|null;cpuFlow:CpuFlow|null}={relayPending:null,backendPending:null,drainAdmitted:null,cpuPending:null,cpuFlow:null};
  const invalidate=()=>{if(failed)return;failed=true;const error=new Error('Original owned backend channel/ownership ended');
+  const preparation=this.shutdownPreparation;if(preparation?.timer!==null&&preparation?.timer!==undefined){clearTimeout(preparation.timer);preparation.timer=null;}preparation?.reject(error);
   this.pendingDrain?.reject(error);this.exitReject?.(error);pendingState.backendPending?.reject(error);pendingState.drainAdmitted?.reject(error);
   if(pendingState.relayPending)clearTimeout(pendingState.relayPending.timer);if(pendingState.backendPending)clearTimeout(pendingState.backendPending.timer);if(pendingState.drainAdmitted)clearTimeout(pendingState.drainAdmitted.timer);
   if(pendingState.cpuPending)clearTimeout(pendingState.cpuPending.timer);if(pendingState.cpuFlow)clearTimeout(pendingState.cpuFlow.timer);
@@ -127,23 +164,26 @@ export class OwnedApplicationLaunch {
  // admitted the original drain. It grants no exit, ACK, writer or lease release.
  // Keep the other reader for the exact retained ChildProcess exit and its ACK.
  const cleanDrainCurrent=()=>{
-  const admitted=admittedDrain;
+  const admitted=admittedDrain,preparation=this.shutdownPreparation;
+  const effectiveDeadline=preparation?.phase==='post'||preparation?.phase==='final'?preparation.postDeadline:admitted?.deadline;
   const exact=()=>!failed&&this.backend===proc&&proc.stdio[3]===channel&&proc.pid===claim.process.pid&&
    (proc.exitCode===null&&proc.signalCode===null||cleanExitObserved&&proc.exitCode===0&&proc.signalCode===null)&&
    admitted!==null&&this.drainReceipt===admitted.receipt&&this.drainRequest===admitted.request&&
-   this.drainDeadline===admitted.outerDeadline&&performance.now()<admitted.deadline&&
+   this.drainDeadline===admitted.outerDeadline&&effectiveDeadline!==null&&effectiveDeadline!==undefined&&performance.now()<effectiveDeadline&&
+   (!preparation||preparation.proc===proc&&preparation.channel===channel&&preparation.controller===this.frames&&preparation.id===admitted.request.request_id)&&
    hash(canonical(admitted.receipt))===admitted.receiptHash&&hash(canonical(admitted.request))===admitted.requestHash&&
    this.pendingDrain===null&&pendingState.relayPending===null&&pendingState.backendPending===null&&pendingState.drainAdmitted===null&&
    [...relayRows.values()].every(row=>row.phase==='finished')&&pendingState.cpuPending===null&&
    [...cpuRows.values()].every(row=>row.phase==='finished')&&(!pendingState.cpuFlow||pendingState.cpuFlow.phase==='finished');
   if(!exact())throw new Error('Original backend end retains pending, changed or late ownership');
   this.bindingCurrent();if(!exact())throw new Error('Original backend end ownership changed during validation');
-  return admitted!.deadline;
+  return effectiveDeadline!;
  };
  const backendReply=(kind:string,deadline:number):Promise<Buffer>=>{freshBackend();if(pendingState.backendPending||deadline<=performance.now())throw new Error('Original backend response is concurrent or late');return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{reject(new Error('Original backend response deadline expired'));invalidate();},deadline-performance.now());pendingState.backendPending={kind,deadline,resolve,reject,timer};});};
  proc.once('exit',(code,signal)=>{
   if(!admittedDrain||code!==0||signal!==null||proc.exitCode!==code||proc.signalCode!==signal){invalidate();return;}
   cleanExitObserved=true;let deadline:number;try{deadline=cleanDrainCurrent();}catch{invalidate();return;}
+  const preparation=this.shutdownPreparation;if(preparation){if(preparation.phase!=='draining'){invalidate();return;}preparation.phase='post';preparation.postDeadline=performance.now()+30000;deadline=preparation.postDeadline;if(exitTimer!==null)clearTimeout(exitTimer);exitTimer=setTimeout(invalidate,30000);}
   this.backendExitFrame={schema_version:1,kind:'main_backend_exit',nonce:this.nonce,epoch,request_id:this.drainRequest.request_id,challenge:this.drainRequest.challenge,backend_process:claim.process,returncode:code,signal};
   void this.frames.send(this.backendExitFrame,deadline).then(()=>{cleanDrainCurrent();}).catch(invalidate);
  });
@@ -155,6 +195,7 @@ export class OwnedApplicationLaunch {
   // A fast original backend may answer in the same write callback. Keep the
   // original ACK/post-send validation serialized within its existing timer;
   // buffered data cannot renew the deadline or precede that confirmation.
+  if(this.shutdownPreparation&&!['backend_shutdown_prepared','backend_managed_drain'].includes(request.kind))throw new Error('Original prepared shutdown refuses new backend work');
   if(pendingState.cpuPending?.delivery)await pendingState.cpuPending.delivery;
   if(pendingState.cpuFlow?.delivery)await pendingState.cpuFlow.delivery;
   freshBackend();
@@ -221,6 +262,7 @@ export class OwnedApplicationLaunch {
  // Exactly one reader for the controller channel, including while CPU/drain
  // work waits for a backend response. No nested Frames.read or renewed budget.
  void (async()=>{while(true){const request=parsePrivateDocument(await this.frames.read(null)).value;
+ if(this.shutdownPreparation&&!['backend_shutdown_prepare','shutdown_prepared','backend_drain_request','managed_drain_admitted','shutdown_validation_final'].includes(request.kind))throw new Error('Original prepared shutdown refuses new controller work');
  if(request.kind==='controller_cpu_child_reply'){
   freshBackend();fields(request,['schema_version','kind','nonce','epoch','request_id','action','request_sha256','payload']);const pending=pendingState.cpuPending;
   if(!pending||request.schema_version!==1||request.nonce!==this.nonce||request.epoch!==epoch||request.request_id!==pending.request.request_id||request.action!==pending.request.action||request.request_sha256!==pending.requestHash)throw new Error('Original SOURCE CPU child ACK differs or replayed');
@@ -248,11 +290,29 @@ export class OwnedApplicationLaunch {
   else{fields(request.payload,['status']);if(request.payload.status!==(request.action==='bind'?'bound':'direct_exited'))throw new Error('Original child status acknowledgement differs');pending.row.phase=request.action==='bind'?'bound':'finished';}
   await frames.send(request,replyDeadline);freshBackend();if(performance.now()>=Math.min(replyDeadline,this.drainDeadline??Infinity))throw new Error('Original preflight acknowledgement send completed late');clearTimeout(pending.timer);pendingState.relayPending=null;continue;
  }
+ if(request.kind==='backend_shutdown_prepare'){
+  freshBackend();fields(request,['schema_version','kind','nonce','epoch','binding_sha256','backend_claim_sha256','request_id','budget_ms']);const preparation=this.shutdownPreparation;
+  if(!preparation||preparation.phase!=='preparing'||preparation.proc!==proc||preparation.channel!==channel||preparation.controller!==this.frames||request.schema_version!==1||request.nonce!==this.nonce||request.epoch!==epoch||request.binding_sha256!==hash(canonical(this.binding))||request.backend_claim_sha256!==this.backendClaimHash||request.request_id!==preparation.id||!Number.isSafeInteger(request.budget_ms)||request.budget_ms<1||request.budget_ms>30000||performance.now()>=preparation.deadline||this.drainRequest||pendingState.relayPending||pendingState.backendPending||pendingState.drainAdmitted||pendingState.cpuPending||[...relayRows.values()].some(row=>row.phase!=='finished')||[...cpuRows.values()].some(row=>row.phase!=='finished')||pendingState.cpuFlow&&pendingState.cpuFlow.phase!=='finished')throw new Error('Original shutdown preparation differs, is active or replayed');
+  preparation.phase='backend_preparing';const deadline=Math.min(preparation.deadline,performance.now()+request.budget_ms),response=backendReply('backend_shutdown_prepared',deadline);await frames.send(request,deadline);
+  void(async()=>{const prepared=parsePrivateDocument(await response).value;fields(prepared,['schema_version','kind','nonce','request_id','backend_claim_sha256']);freshBackend();if(preparation!==this.shutdownPreparation||preparation.phase!=='backend_preparing'||prepared.schema_version!==1||prepared.kind!=='backend_shutdown_prepared'||prepared.nonce!==this.nonce||prepared.request_id!==preparation.id||prepared.backend_claim_sha256!==this.backendClaimHash||performance.now()>=deadline)throw new Error('Original backend shutdown preparation differs or expired');preparation.phase='backend_prepared';await this.frames.send({...prepared,kind:'main_shutdown_prepared'},deadline);freshBackend();if(performance.now()>=deadline)throw new Error('Original shutdown preparation relay completed late');})().catch(invalidate);continue;
+ }
+ if(request.kind==='shutdown_prepared'){
+  freshBackend();fields(request,['schema_version','kind','nonce','request_id','post_budget_ms']);const preparation=this.shutdownPreparation;
+  if(!preparation||preparation.phase!=='backend_prepared'||preparation.proc!==proc||preparation.channel!==channel||preparation.controller!==this.frames||request.schema_version!==1||request.nonce!==this.nonce||request.request_id!==preparation.id||request.post_budget_ms!==30000||performance.now()>=preparation.deadline)throw new Error('Original shutdown preparation acknowledgement differs or expired');
+  preparation.phase='prepared';if(preparation.timer!==null){clearTimeout(preparation.timer);preparation.timer=null;}preparation.resolve();continue;
+ }
+ if(request.kind==='shutdown_validation_final'){
+  cleanDrainCurrent();const preparation=this.shutdownPreparation;
+  fields(request,['schema_version','kind','nonce','request_id','receipt_sha256','exit_sha256','status','whole_writer_coverage','process_tree_exit_verified','can_release_launch_lease']);
+  if(!preparation||preparation.phase!=='post'||!cleanExitObserved||this.exitAcknowledged||!this.exitResolve||!this.exitReject||!this.exitConfirmation||request.schema_version!==1||request.nonce!==this.nonce||request.request_id!==preparation.id||request.receipt_sha256!==preparation.receiptRawHash||request.exit_sha256!==hash(canonical(this.backendExitFrame))||request.status!==this.drainReceipt?.status||!['managed_scopes_drained','refused'].includes(request.status)||request.whole_writer_coverage!==false||request.process_tree_exit_verified!==false||request.can_release_launch_lease!==false)throw new Error('Original final shutdown validation differs, escalates coverage or replayed');
+  cleanDrainCurrent();preparation.phase='final';this.exitAcknowledged=true;if(exitTimer!==null){clearTimeout(exitTimer);exitTimer=null;}const resolve=this.exitResolve,reject=this.exitReject;this.exitResolve=null;this.exitReject=null;request.status==='refused'?reject(new Error('Backend retains uncovered or active writers')):resolve();continue;
+ }
  if(request.kind==='managed_drain_admitted'){
   const pending=pendingState.drainAdmitted;if(!pending||!this.pendingDrain||performance.now()>=this.pendingDrain.deadline||canonical(request)!==canonical(pending.expected))throw new Error('Original controller drain acknowledgement differs, expired or replayed');
   clearTimeout(pending.timer);pendingState.drainAdmitted=null;pending.resolve();continue;
  }
  if(request.kind==='backend_exit_observed'){
+  if(this.shutdownPreparation)throw new Error('Two-phase shutdown requires its original final validation');
   cleanDrainCurrent();if(!cleanExitObserved)throw new Error('Original backend exit has not occurred');
   fields(request,['schema_version','kind','nonce','request_id','exit_sha256']);
   if(this.exitAcknowledged||!this.exitResolve||!this.exitConfirmation||request.schema_version!==1||request.nonce!==this.nonce||!this.backendExitFrame||request.request_id!==this.backendExitFrame.request_id||request.exit_sha256!==hash(canonical(this.backendExitFrame)))throw new Error('Original Node exit acknowledgement differs or replayed');
@@ -271,7 +331,8 @@ export class OwnedApplicationLaunch {
    await this.frames.send({schema_version:1,kind:'managed_drain_proof',nonce:this.nonce,proof_b64:raw.toString('base64')},deadline);await admission;
    if(performance.now()>=deadline)throw new Error('Original drain admission completed late');
    const pending=this.pendingDrain;if(!pending)throw new Error('Original shutdown budget already expired');clearTimeout(pending.timer);this.pendingDrain=null;
-   if(receipt.status!=='managed_scopes_drained'){pending.reject(new Error('Backend retains uncovered or active writers'));return;}
+   if(receipt.status!=='managed_scopes_drained'&&!this.shutdownPreparation){pending.reject(new Error('Backend retains uncovered or active writers'));return;}
+   if(this.shutdownPreparation){if(this.shutdownPreparation.phase!=='draining'||this.shutdownPreparation.id!==request.request_id)throw new Error('Original preparation does not own this drain');this.shutdownPreparation.receiptRawHash=hash(raw);}
    this.drainReceipt=receipt;admittedDrain={receipt,request,receiptHash:hash(canonical(receipt)),requestHash:hash(canonical(request)),deadline,outerDeadline:this.drainDeadline!};this.exitConfirmation=new Promise<void>((resolve,reject)=>{this.exitResolve=resolve;this.exitReject=reject;});void this.exitConfirmation.catch(()=>{});
    // Admission does not renew the shutdown window. Even silent EOF/exit/ACK
    // must refuse at the same original effective drain bound.
@@ -297,11 +358,20 @@ export class OwnedApplicationLaunch {
  })().catch(invalidate);
  }})().catch(invalidate);
  }
+ async prepareBackendShutdown(proc:ChildProcess):Promise<void>{
+  const deadline=performance.now()+30000;
+  if(!this.writer||proc!==this.backend||!this.backendProof||!this.backendChannel||proc.stdio[3]!==this.backendChannel||proc.pid!==this.backendProof.process.pid||proc.exitCode!==null||proc.signalCode!==null||this.shutdownPreparation||this.pendingDrain||this.drainRequest||this.drainDeadline!==null)throw new Error('Original enrolled shutdown preparation capability is unavailable');
+  this.bindingCurrent();const id=randomBytes(16).toString('hex');
+  const result=new Promise<void>((resolve,reject)=>{const preparation={id,proc,channel:this.backendChannel!,controller:this.frames,deadline,phase:'preparing' as const,postDeadline:null,receiptRawHash:null,resolve,reject,timer:null as NodeJS.Timeout|null};this.shutdownPreparation=preparation;preparation.timer=setTimeout(()=>{reject(new Error('Original shutdown preparation deadline expired'));this.refuse();},Math.max(0,deadline-performance.now()));});
+  void this.frames.send({schema_version:1,kind:'main_shutdown_prepare',nonce:this.nonce,epoch:this.backendEpoch,binding_sha256:hash(canonical(this.binding)),backend_claim_sha256:this.backendClaimHash,request_id:id,budget_ms:Math.max(1,Math.floor(deadline-performance.now()))},deadline).catch(error=>this.shutdownPreparation?.reject(error));
+  return result;
+ }
  async prepareBackendDrain(proc:ChildProcess,budgetMs:number):Promise<any>{
   const deadline=performance.now()+budgetMs;
   if(!this.writer||proc!==this.backend||!this.backendProof||this.pendingDrain||this.drainRequest||this.drainDeadline!==null||!Number.isSafeInteger(budgetMs)||budgetMs<1||budgetMs>4000)throw new Error('Original enrolled backend drain capability is unavailable');
+  const preparation=this.shutdownPreparation;if(preparation&&(preparation.phase!=='prepared'||preparation.proc!==proc||preparation.channel!==this.backendChannel||preparation.controller!==this.frames||performance.now()>=preparation.deadline||this.frames.channel.destroyed))throw new Error('Original shutdown preparation is unadmitted, expired or replayed');
   this.drainDeadline=deadline;
-  validateBinding(this.root,this.nonce,this.binding,this.mainProcess);const id=randomBytes(16).toString('hex');
+  this.bindingCurrent();const id=preparation?.id??randomBytes(16).toString('hex');if(preparation)preparation.phase='draining';
   const result=new Promise<any>((resolve,reject)=>{const remaining=deadline-performance.now();if(remaining<=0){reject(new Error('Original managed shutdown budget expired'));return;}const timer=setTimeout(()=>{if(this.pendingDrain?.id===id)this.pendingDrain=null;reject(new Error('Original managed shutdown budget expired'));},remaining);this.pendingDrain={id,deadline,resolve,reject,timer};});
   void this.frames.send({schema_version:1,kind:'main_drain_request',nonce:this.nonce,epoch:this.backendEpoch,binding_sha256:hash(canonical(this.binding)),backend_claim_sha256:this.backendClaimHash,request_id:id,budget_ms:Math.max(1,Math.floor(deadline-performance.now()))},deadline).catch(error=>this.pendingDrain?.reject(error));
   return result;

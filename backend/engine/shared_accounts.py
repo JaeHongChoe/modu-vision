@@ -13,6 +13,8 @@ import time
 import uuid
 
 from backend.contracts.authentication import PermissionDecision
+from backend.engine.original_shared_current_project import observe_account_db, observe_account_method
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_global_projects_for, observe_original_UI_global_project_role
 
 ROLES={'viewer','labeler','trainer','reviewer','owner'}
 ACTIONS={
@@ -45,6 +47,7 @@ class AccountStore:
         self._migrate()
         os.chmod(self.path,0o600)
 
+    @observe_account_db
     @contextmanager
     def _db(self):
         with store_admission(self.path):
@@ -104,6 +107,7 @@ class AccountStore:
             db.execute('DELETE FROM failures WHERE username=?',(username,))
             return self._session(db,row,ttl_seconds,transport)
 
+    @observe_account_method('authenticate')
     def authenticate(self,token):
         if not isinstance(token,str) or len(token)>256:raise ValueError('Session unavailable')
         with self._db() as db:
@@ -133,6 +137,7 @@ class AccountStore:
         row=db.execute('SELECT role FROM members JOIN projects ON projects.id=members.project_id WHERE user_id=? AND project_id=?',(user_id,project_id)).fetchone()
         return row['role'] if row else None
 
+    @observe_original_UI_global_project_role
     def project_role(self,user_id,project_id):
         with self._db() as db:return self._role(db,user_id,project_id)
 
@@ -164,6 +169,7 @@ class AccountStore:
         if self.project_role(user_id,project_id) is None:raise ValueError('Project permission required')
         with self._db() as db:return dict(db.execute('SELECT * FROM projects WHERE id=?',(project_id,)).fetchone())
 
+    @observe_original_UI_global_projects_for
     def projects_for(self,user_id):
         with self._db() as db:rows=[dict(r) for r in db.execute('SELECT * FROM projects ORDER BY id')]
         return [{**r,'role':self.project_role(user_id,r['id'])} for r in rows if self.project_role(user_id,r['id'])]
@@ -209,6 +215,7 @@ class AccountStore:
                 db.execute("INSERT INTO account_meta VALUES('schema_version','2')")
             db.execute('INSERT OR IGNORE INTO member_revisions SELECT project_id,user_id,1 FROM members')
 
+    @observe_account_method('bind_workspace')
     def bind_workspace(self,workspace_id):
         """Bind account metadata to the server's persistent context registry."""
         with self._db() as db:

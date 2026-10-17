@@ -4,6 +4,7 @@ The app executes real CPU inference on these weights. These receipts describe a
 controlled fixture, and are never evidence of model training or quality.
 """
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -13,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from backend.api import routes_dataset
 from backend.engine.classification.model import create_classification_model
 from backend.engine.dataset_fingerprint import fingerprint_dataset
+from backend.engine.dataset_loaders import SUPPORTED_IMAGE_EXTENSIONS
 
 
 def main():
@@ -24,7 +26,17 @@ def main():
     torch.set_num_threads(1)
     for name, preferred in (("job_fixture_incumbent", 0), ("job_fixture_candidate", 1)):
         job = models / name
-        (job / "dataset").mkdir(parents=True, exist_ok=False)
+        job.mkdir(parents=True, exist_ok=True)
+        # STEP4's original latest-model evaluation reads this frozen snapshot,
+        # while model comparison reads the source. Keep the declared split
+        # layout and pixels unchanged; do not synthesize a held-out partition.
+        snapshot = job / "dataset"
+        shutil.copytree(source, snapshot)
+        (snapshot / "source_manifest.json").write_text(json.dumps([
+            {"image": str(image), "source_image": str(source / image.relative_to(snapshot))}
+            for image in sorted(snapshot.rglob("*"))
+            if image.is_file() and image.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
+        ]), encoding="utf-8")
         model = create_classification_model("resnet18", 2, pretrained=False)
         with torch.no_grad():
             for parameter in model.parameters():

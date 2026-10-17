@@ -13,8 +13,10 @@ import type {
   TestPredictionItem,
   VisionTask,
 } from '../types';
-import { api, getApiBaseUrl, type RemoteEvaluationOperation, type RemoteEvaluationResult } from '../services/api';
+import { api, getApiPersistenceIdentity, getProjectContext, getProjectContextGeneration, type RemoteEvaluationOperation, type RemoteEvaluationResult } from '../services/api';
 import { useTrainingStore } from './useTrainingStore';
+import { useProjectStore } from './useProjectStore';
+import { useDatasetStore } from './useDatasetStore';
 import { classRole, isDefectClass, type ClassRoles } from '../utils/classSemantics';
 
 export type SampleVerdict = 'ESCAPE' | 'OVERKILL' | 'CORRECT_NG' | 'CORRECT_OK' | 'REVIEW';
@@ -102,6 +104,33 @@ export interface EvaluationSource {
   evaluationDatasetVersionId?: string; computeProfileId?: string; device?: string;
   executionTarget?: 'local'|'selected_compute';
   isCurrent?: () => boolean;
+}
+// Keep follow-up analysis on the exact cohort accepted by the evaluation read.
+// The authority epoch also fences leaving and returning to the same project.
+interface CalibrationSource {
+  source: EvaluationSource; jobId: string; generation: number; isCurrent: () => boolean;
+}
+let calibrationSource: CalibrationSource | null = null;
+let analysisRequest = 0;
+let calibrationRequest = 0;
+function captureCalibrationSource(source: EvaluationSource): (() => boolean) | null {
+  const selected = {...source};
+  const scope = () => {
+    const state = useProjectStore.getState(), project = state.project, dataset = useDatasetStore.getState();
+    const authority = getProjectContext();
+    if (!project?.id || (authority && authority.project_id !== project.id) || !state.projectDir || state.isProjectBusy || dataset.isLoading || dataset.importError
+      || !dataset.hasSelectedFolder || dataset.folderPath !== selected.folderPath
+      || dataset.datasetKey !== `${selected.folderPath}\0${selected.task}`
+      || state.projectDir !== project.project_dir || state.task !== selected.task || project.task !== selected.task
+      || project.source_dataset_dir !== selected.folderPath
+      || (selected.labelsetId && selected.labelsetId !== (project.active_labelset_id || 'default'))) return null;
+    return JSON.stringify([project.id, project.project_dir, project.task, project.active_labelset_id || 'default', selected.folderPath]);
+  };
+  const expected = scope(), epoch = getProjectContextGeneration(), transport = getApiPersistenceIdentity();
+  const context = JSON.stringify(getProjectContext());
+  if (!expected || selected.isCurrent?.() === false) return null;
+  return () => scope() === expected && getProjectContextGeneration() === epoch && getApiPersistenceIdentity() === transport
+    && JSON.stringify(getProjectContext()) === context && selected.isCurrent?.() !== false;
 }
 interface EvaluationState {
   executionEvidence: RemoteEvaluationResult | null;
@@ -280,6 +309,10 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
     set({remoteOperation: response});
   },
   loadEvaluation: async (jobId, source) => {
+    calibrationSource = null;
+    const selectedSource = source ? {...source} : undefined;
+    const sourceCurrent = selectedSource?.folderPath ? captureCalibrationSource(selectedSource) : null;
+    if (selectedSource?.folderPath && !sourceCurrent) return;
     const training = useTrainingStore.getState();
     const completedCurrentJob = training.isCurrentData && training.status === 'completed' ? training.jobId : null;
     const requestedJob = jobId || completedCurrentJob || get().jobId;
@@ -314,7 +347,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
         sourceTask: source.task,
         evaluationDatasetVersionId: source.evaluationDatasetVersionId, computeProfileId: source.computeProfileId, device: source.device,
       } : undefined);
-      if (generation !== evaluationGeneration || source?.isCurrent?.() === false) return;
+      if (generation !== evaluationGeneration || source?.isCurrent?.() === false || (sourceCurrent && !sourceCurrent())) return;
       if (source?.evaluationDatasetVersionId && (res.common_cohort?.dataset_version_id !== source.evaluationDatasetVersionId || (res.compute_profile_id||null) !== (source.computeProfileId||null) || res.device !== source.device)) throw new Error("반환된 코호트 버전/실행 대상이 요청과 다릅니다.");
       if(native && (res.execution_target!==source!.executionTarget || res.execution?.execution_target!==source!.executionTarget
         || (res.execution?.compute_profile_id||null)!==(source!.computeProfileId||null) || res.execution?.device!==source!.device
@@ -334,6 +367,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
         isLoading: false,
         errorMessage: null,
       });
+      calibrationSource = selectedSource && sourceCurrent ? {source:selectedSource, jobId:res.job_id, generation, isCurrent:sourceCurrent} : null;
       get().computeFilteredList();
 
       // Also proactively load overkill/underkill analysis
@@ -343,7 +377,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
         get().updateHeatmap();
       }
     } catch (e) {
-      if (generation !== evaluationGeneration || source?.isCurrent?.() === false) return;
+      if (generation !== evaluationGeneration || source?.isCurrent?.() === false || (sourceCurrent && !sourceCurrent())) return;
       set({ executionEvidence:null, remoteRequest:null, remoteOperation:null, isLoading: false, jobId: null, metrics: {}, classSemantics: null, confusionMatrix: null, testPredictions: [],
         filteredPredictions: [], selectedPrediction: null, selectedCell: null, overkillAnalysis: null,
         errorMessage: e instanceof Error ? e.message : '평가 결과를 불러올 수 없습니다.' });
@@ -352,6 +386,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   },
 
   invalidateForDataChange: (allowSourceRecovery = false) => {
+    calibrationSource = null;
     set({executionEvidence:null, remoteRequest:null, remoteOperation:null, remoteOperationError:null});
     evaluationGeneration += 1;
     currentHeatmapRequestId += 1;
@@ -441,7 +476,12 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
 
   loadOverkillUnderkill: async (targetUnderkill, escapeCost, scrapCost) => {
     if (get().executionEvidence?.common_cohort) { set({errorMessage:'선택 코호트의 추가 분석/보정/속도 측정은 아직 지원되지 않습니다. 반환된 고정 평가 결과를 확인하세요.'}); return; }
-    const generation = evaluationGeneration;
+    const binding = calibrationSource;
+    const valid = () => binding !== null && binding === calibrationSource && binding.generation === evaluationGeneration
+      && binding.jobId === get().jobId && binding.isCurrent();
+    if (get().isLoading || !valid()) return;
+    const requestId = ++analysisRequest;
+    const current = () => requestId === analysisRequest && valid();
     const { jobId, confidenceThreshold } = get();
     if (!jobId || get().metrics.score_spec?.domain === 'distance') {
       set({ overkillAnalysis: null, isAnalyzingTradeoff: false });
@@ -455,16 +495,18 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
     try {
       const res = await api.evaluation.getOverkillUnderkill({
         job_id: jobId || undefined,
+        source_dataset_path: binding!.source.folderPath,
+        source_task: binding!.source.task,
         target_max_underkill: tu,
         cost_escape: ce,
         cost_scrap: cs,
         current_threshold: confidenceThreshold,
       });
-      if (generation !== evaluationGeneration) return;
+      if (!current()) return;
       set({ overkillAnalysis: res, isAnalyzingTradeoff: false });
       get().computeFilteredList();
     } catch (e) {
-      if (generation !== evaluationGeneration) return;
+      if (!current()) return;
       console.error('Failed to load overkill/underkill analysis:', e);
       set({ isAnalyzingTradeoff: false, overkillAnalysis: null });
     }
@@ -483,7 +525,12 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
   calibrateZeroEscape: async (jobIdOverride) => {
     if (get().isLoading) return;
     if (get().executionEvidence?.common_cohort) { set({errorMessage:'선택 코호트의 추가 분석/보정/속도 측정은 아직 지원되지 않습니다. 반환된 고정 평가 결과를 확인하세요.'}); return; }
-    const generation = evaluationGeneration;
+    const binding = calibrationSource;
+    const valid = () => binding !== null && binding === calibrationSource && binding.generation === evaluationGeneration
+      && binding.jobId === get().jobId && binding.isCurrent();
+    if (!valid() || (jobIdOverride && jobIdOverride !== binding!.jobId)) return;
+    const requestId = ++calibrationRequest;
+    const current = () => requestId === calibrationRequest && valid();
     const { jobId, costEscape, costScrap, confidenceThreshold, testPredictions, classSemantics } = get();
     const activeJob = jobIdOverride || jobId;
     if(get().metrics.anomaly_mode && get().metrics.evaluated_split==='test'){
@@ -499,26 +546,17 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
     }
     set({ isCalibrating: true, calibrationMessage: null, calibrationSuccess: false });
     try {
-      const base = await getApiBaseUrl();
-      const res = await fetch(`${base}/api/evaluation/zero-escape-calibrate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          job_id: activeJob || undefined,
-          target_max_underkill: 0,
-          cost_escape: costEscape,
-          cost_scrap: costScrap,
-          current_threshold: confidenceThreshold,
-          apply_to_eval_results: true,
-        }),
+      const data: OverkillUnderkillAnalysis = await api.evaluation.calibrateZeroEscape({
+        job_id: activeJob || undefined,
+        source_dataset_path: binding!.source.folderPath,
+        source_task: binding!.source.task,
+        target_max_underkill: 0,
+        cost_escape: costEscape,
+        cost_scrap: costScrap,
+        current_threshold: confidenceThreshold,
+        apply_to_eval_results: true,
       });
-
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
-      }
-
-      const data: OverkillUnderkillAnalysis = await res.json();
-      if (generation !== evaluationGeneration) return;
+      if (!current()) return;
       const optimalTh = data.optimal_threshold ?? 0.50;
 
       set({
@@ -532,7 +570,7 @@ export const useEvaluationStore = create<EvaluationState>((set, get) => ({
       get().computeFilteredList();
       await get().updateHeatmap();
     } catch (err: any) {
-      if (generation !== evaluationGeneration) return;
+      if (!current()) return;
       console.error('Zero-escape calibration API failed, falling back:', err);
       set({ isCalibrating: false, calibrationSuccess: false,
         calibrationMessage: err?.message || '미검 제로화 요청 실패' });

@@ -1,0 +1,60 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "b04a2b02489e554a6a4784c83b222753cbdda1f3",
+  "source_dirty": false,
+  "test": "scripts/e2e/derived-edit-lifecycle.spec.ts::align and brightness derived versions preserve originals through invalid abandon retry and exact reopen",
+  "test_source_sha256": "f3b025ecb0d839367dc27f500044d5ea4ab8c9cbbaa0d65ac236e55e739c6f07",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "505a555357dbc4dcd7ebb85d214eb032f2fd0e0231b2b5c176dc982126cb7d78",
+  "harness_sha256": "fcbfd6641db7fb4320eb8fac5f840ca4b2914b79b9512bed6d02aaf2b6423a99",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "81d2f02c99e15efa7f70df4d41c084a8680281f6c74a402689aed9f295967bc5"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "7cbb3c8533cf4cc662753538cea9acaa4b232c7b12c3e979e4e5c1aaa0255459"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "06a41fd6ed11e0b09b1d2a96ff12cf5b99985c95baec3f8f5ed9a3c2b8857101"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "ee8b443a06df0da164e11410d0ffae6554ad8d7dbbc10dd50e2d5e51f259dbe0"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "0e09be75a7d61744d26a9c1f6efb27afb0a87ea41d150018faf9c84ab3f3964d"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "ddfba340e7326cb3e793e0f2c466e71bce57e36ce999b1f173070d2f52d982bb"
+    },
+    {
+      "id": "screenshot-6",
+      "sha256": "8c5c90a7443ccd89a759b9e5b46f4d17b186da90b92da9c470a8315ab033a9c5"
+    },
+    {
+      "id": "screenshot-7",
+      "sha256": "70fbd73367a567f5812b88a02909741d9f22e3da680ee872a38eefde958e0008"
+    },
+    {
+      "id": "screenshot-8",
+      "sha256": "d248fbf55e64b22b7ea8161fecaa78c382845e9eb8f56e2dae2b6bb8544ba5b1"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

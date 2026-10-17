@@ -1,0 +1,44 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "875c0ce6e670d404b5fda9589204b4d34c30458e",
+  "source_dirty": false,
+  "test": "scripts/e2e/annotation-unsent-cancel.spec.ts::unsent geometry Escape preserves saved bbox and client scope through exact A B A reopen",
+  "test_source_sha256": "4c710d5779eff3a18b8e5bf178030324dec51aa94e3bbeeb53c5b2ecbf796d01",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "48d79743f2992ac0abde0ab374e71782e651dc2de9c98c8f00dd69cb8d13ccaf",
+  "harness_sha256": "31cafb53912b1f7b4487271ccf127407c70f2dbd73950571982fe67b0edced3f",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "a3d351019297751bf890ec6fb00a3717724d544cae987ce0fb2512755d2f32cf"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "57b3e49087cd573c7fef6a705d91f39366ac37a9d884839893949ad25ffd8f95"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "c1be1b91f2117cc7d8e0b73b7e0010463c0192df01b0267e517c2ac1a12fab60"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "878e45c7d0d2e84c6f13d68a30bc5d9dd734c9ff47f43a77f9ca73b6abdc6c75"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "dbc88773ef2af7ed4c13e018f7bd899d50fc6e8edd60582db0973d946d6c1aa2"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

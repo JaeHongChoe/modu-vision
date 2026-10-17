@@ -13,6 +13,8 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict
 
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_handler, observe_original_UI_global_team
+
 router = APIRouter(prefix='/api/onboarding', tags=['onboarding'])
 
 
@@ -26,6 +28,7 @@ def _store():
     return OnboardingStore()
 
 
+@observe_original_UI_global_team
 def _team_request(request: Request) -> bool:
     """A request made with a team account (shared server): the guide's record and the example belong to one person's
     own computer, never to the shared server."""
@@ -56,7 +59,7 @@ def _example_projects(request: Request) -> list[dict]:
     return found
 
 
-@router.get('')
+@observe_original_UI_ancillary_handler(router.get(''))
 def onboarding_state(request: Request):
     from backend.engine.demo_dataset import DEMO_CLASSES, DEMO_ID, DEMO_SPLITS, DEMO_TASK, DEMO_VERSION
     example = {'id': DEMO_ID, 'version': DEMO_VERSION, 'task': DEMO_TASK, 'classes': list(DEMO_CLASSES),

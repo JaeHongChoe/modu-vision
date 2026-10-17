@@ -1,0 +1,1309 @@
+{
+  "schema": "modu-vision.dicom-current-source-provenance-delta/v2",
+  "source_declaration_only": true,
+  "historical_verified_cells": 956,
+  "historical_acceptance_rebound": false,
+  "historical_receipts_modified": false,
+  "current_source_table_changes": [
+    {
+      "relative": "src/renderer/components/labeling/DerivedImagePanel.tsx",
+      "original_sha256": "f8a8053a1a2920471d9cee999957a3b417b97fabd0b274ee378d3fd6efee25b4",
+      "current_sha256": "18b54f80e288a2a3d304947141858fcc4bb2c091297a434528b723ce4367ac94"
+    },
+    {
+      "relative": "src/renderer/components/labeling/LabelingCanvas.tsx",
+      "original_sha256": "1a0a8976f97d7a6861126ee3d193715df7ef25bd91b41b92458a50366204ff85",
+      "current_sha256": "859e05d072113a6eecef970d480031b60d46e8cc30a6947e71eaeb497f55e2aa"
+    }
+  ],
+  "whole_current_GUI_suite_pending": true,
+  "whole_current_install_full_suite_pending": true,
+  "current_compatibility_claimed_from_hash_update": false,
+  "new_DICOM_cells_credited_by_this_document": [],
+  "parent_completion_credit": false,
+  "canonical_R658": {
+    "repository": "<private-qa-root>/Native-remaining-mask-handoff-invalid-registry-current-root658-01",
+    "head": "5112854ab533913d17d7eb3df00a8808aa57d643",
+    "source_count": 2674
+  },
+  "tested_R673": {
+    "repository": "<private-qa-root>/Native-dicom-empty-owned-abort-controls-current-root673-01",
+    "head": "b764f49a8cc286576bc10aaeda17146a8347a54a",
+    "source_count": 2678
+  },
+  "full_tracked_source_hash_changes": [
+    {
+      "relative": "backend/engine/application_launch_controller.py",
+      "original_sha256": "76cd07a30b098346b8a4a858ad7ab6fcd7663b4c9560f8437958228cc4c18dac",
+      "current_sha256": "a0cb9b3e9d818ed626db74f6bd9bf1485d2631e827e7b25c52b3fe4983057c28",
+      "original_mode": 33188,
+      "current_mode": 33188,
+      "change": "changed"
+    },
+    {
+      "relative": "backend/engine/application_launch_handshake.py",
+      "original_sha256": "0b6dd4a5fb84b9f768b436a2f8d38563a0eab1a1a7ab964b5e439be32cf7ee9a",
+      "current_sha256": "0dd66f23baf6489d6952e98a8d025c990adb485b175dcd53ab6979b8a281767b",
+      "original_mode": 33188,
+      "current_mode": 33188,
+      "change": "changed"
+    },
+    {
+      "relative": "backend/engine/application_launch_lease.py",
+      "original_sha256": "0070ebdc52af72d95521ec826c91eb42ac2aac24b28f96e5da8b149b2a43e4d0",
+      "current_sha256": "83c1aba04bd316f44159e0fa4f6666b2ce9988191939a1a03ae68fe791191d07",
+      "original_mode": 33188,
+      "current_mode": 33188,
+      "change": "changed"
+    },
+    {
+      "relative": "backend/engine/application_node_writer_authority.py",
+      "original_sha256": "ac9b63aef6b2254af64dc0508888aba7c91a45bc74055ac1a132602c92bd87ae",
+      "current_sha256": "4028bdb4e936b8270447a7f6ddff5e0ef269eb9dbecf6760d53856286df426f9",
+      "original_mode": 33188,
+      "current_mode": 33188,
+      "change": "changed"
+    },
+    {
+      "relative": "src/main/applicationLaunch.ts",
+      "original_sha256": "c4d5841ef712494c586fb9badea7966c679240e39e5c532fe69280cc6087cc3c",
+      "current_sha256": "55179535f8b28594fbf4cb0d5f52714738b4046f1fa9ca7790d81408515685d2",
+      "original_mode": 33188,
+      "current_mode": 33188,
+      "change": "changed"
+    },
+    {
+      "relative": "src/main/index.ts",
+      "original_sha256": "bfcffa28d2ccfb0f8fd4f249921f1afcc2d105e49361a3fcb2df7ac4cfaf39d6",
+      "current_sha256": "49117501d080c52dfab5db0ef721798cdfb81e938d0f4cac137aee3f03e9000f",
+      "original_mode": 33188,
+      "current_mode": 33188,
+      "change": "changed"
+    },
+    {
+      "relative": "src/main/supervisor.ts",
+      "original_sha256": "f3097f08ff02f06db39c27ba299d4ec57a9f6d1151f656971491c12d6553e656",
+      "current_sha256": "bbed095c3ac65741edf86dece1c697ea165ffc7944fc510db57696d12ba0945a",
+      "original_mode": 33188,
+      "current_mode": 33188,
+      "change": "changed"
+    },
+    {
+      "relative": "src/renderer/components/labeling/DerivedImagePanel.tsx",
+      "original_sha256": "f8a8053a1a2920471d9cee999957a3b417b97fabd0b274ee378d3fd6efee25b4",
+      "current_sha256": "18b54f80e288a2a3d304947141858fcc4bb2c091297a434528b723ce4367ac94",
+      "original_mode": 33188,
+      "current_mode": 33188,
+      "change": "changed"
+    },
+    {
+      "relative": "src/renderer/components/labeling/ImageFilmstrip.tsx",
+      "original_sha256": "3bf89ef8f1cf63479cb72440e64bcad0c3cb3a6d07ea24bcc32bed8f7f9cbc0c",
+      "current_sha256": "efe596f28f51934a4ac8db3645bd196481732f1f7c34a069522fc5dffeb47016",
+      "original_mode": 33188,
+      "current_mode": 33188,
+      "change": "changed"
+    },
+    {
+      "relative": "src/renderer/components/labeling/LabelingCanvas.tsx",
+      "original_sha256": "1a0a8976f97d7a6861126ee3d193715df7ef25bd91b41b92458a50366204ff85",
+      "current_sha256": "859e05d072113a6eecef970d480031b60d46e8cc30a6947e71eaeb497f55e2aa",
+      "original_mode": 33188,
+      "current_mode": 33188,
+      "change": "changed"
+    },
+    {
+      "relative": "src/renderer/components/labeling/LabelingCanvasImageLoad.test.cjs",
+      "original_sha256": "c0ae1e8942ff18d6938c75b4bb4384924dd1d65ac85d64ec5165ce39a1a2ed43",
+      "current_sha256": "360b371975d50d44026a8038c941e0ebddef47aba0555e977bc4b9e2638dd1be",
+      "original_mode": 33188,
+      "current_mode": 33188,
+      "change": "changed"
+    },
+    {
+      "relative": "backend/engine/application_shutdown_transaction.py",
+      "original_sha256": null,
+      "current_sha256": "c2ff34b26c0b6a5662a273a7f24b98b66d1da7bcdef318e8c41762d8689bdec3",
+      "original_mode": null,
+      "current_mode": 33188,
+      "change": "added"
+    },
+    {
+      "relative": "scripts/e2e/dicom-empty-owned-abort.spec.ts",
+      "original_sha256": null,
+      "current_sha256": "9334241345d6b26a49da137ac64c116e4f68f125d2895affe34b22937cba15de",
+      "original_mode": null,
+      "current_mode": 33188,
+      "change": "added"
+    },
+    {
+      "relative": "src/renderer/components/labeling/PreviewImageCustody.test.cjs",
+      "original_sha256": null,
+      "current_sha256": "b6066ebc10e18d352c50e4c8f613a0e4425874c7718612c8674e4b3fda35da2a",
+      "original_mode": null,
+      "current_mode": 33188,
+      "change": "added"
+    },
+    {
+      "relative": "src/renderer/components/labeling/imageReadCustody.ts",
+      "original_sha256": null,
+      "current_sha256": "78622fe2c75a551e36a5d73c337dc552e097334ff6b0600ed3a3fcf63f8913e7",
+      "original_mode": null,
+      "current_mode": 33188,
+      "change": "added"
+    }
+  ],
+  "evidence_pins": [
+    {
+      "path": "<private-qa-root>/DICOM-empty-owned-abort-ledger-Source02/join_exact_three.py",
+      "sha256": "8738a0477e28f94d1f6a2548807db1c3c35cd6a0777da5693fd2dfc12e881ec4",
+      "size": 36168,
+      "identity": [
+        16777231,
+        170745594,
+        33188,
+        1,
+        36168,
+        1791945380566360073,
+        1791945380566360073
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-empty-owned-abort-ledger-Source02/test_join_exact_three.py",
+      "sha256": "1571b4ed2e704dd6f574dfd66540007c4a7b9908310f630a81d741569af9a277",
+      "size": 5858,
+      "identity": [
+        16777231,
+        170745595,
+        33188,
+        1,
+        5858,
+        1791945380566719619,
+        1791945380566719619
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Native-remaining-mask-handoff-invalid-registry-current-root658-01/docs/service-action-evidence.json",
+      "sha256": "f8fd04f03e054854421d92858cc6926f8c875c2ccf089db493161c423797303f",
+      "size": 3471805,
+      "identity": [
+        16777231,
+        170456099,
+        33188,
+        1,
+        3471805,
+        1791940375015339517,
+        1791940375015339517
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Native-remaining-mask-handoff-invalid-registry-current-root658-01/docs/service-upgrade-program.json",
+      "sha256": "9fee82032e34b99a97397cbc14979292a02aef300ebaf95c53b9675c5431c274",
+      "size": 746957,
+      "identity": [
+        16777231,
+        170456102,
+        33188,
+        1,
+        746957,
+        1791940374632147943,
+        1791940374632147943
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-project-selection-image-custody-Source01/plan.json",
+      "sha256": "2f0021e3aab8bda35e34c634117e7e3982817b165d878f7a05b0130bc37d1450",
+      "size": 3323,
+      "identity": [
+        16777231,
+        170508381,
+        33188,
+        1,
+        3323,
+        1791942953364228822,
+        1791942953364228822
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Native-dicom-empty-owned-abort-source-current-root659-01/src/renderer/components/labeling/LabelingCanvas.tsx",
+      "sha256": "1a0a8976f97d7a6861126ee3d193715df7ef25bd91b41b92458a50366204ff85",
+      "size": 54864,
+      "identity": [
+        16777231,
+        170493481,
+        33188,
+        1,
+        54864,
+        1791942182544996735,
+        1791942182544996735
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-project-selection-image-custody-Source01/candidate/src/renderer/components/labeling/LabelingCanvas.tsx",
+      "sha256": "17efed10c5485c4f745a7de0f40bdc0186a42e6370f46c44fee2da16f9694642",
+      "size": 55169,
+      "identity": [
+        16777231,
+        170508175,
+        33188,
+        1,
+        55169,
+        1791942904602865161,
+        1791942904602865161
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Native-dicom-empty-owned-abort-source-current-root659-01/src/renderer/components/labeling/LabelingCanvasImageLoad.test.cjs",
+      "sha256": "c0ae1e8942ff18d6938c75b4bb4384924dd1d65ac85d64ec5165ce39a1a2ed43",
+      "size": 12887,
+      "identity": [
+        16777231,
+        170493482,
+        33188,
+        1,
+        12887,
+        1791942182545368573,
+        1791942182545368573
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-project-selection-image-custody-Source01/candidate/src/renderer/components/labeling/LabelingCanvasImageLoad.test.cjs",
+      "sha256": "e1149e36b7dbb0a739c7947882fb5540f91db5ebc3f9a2f8b6e7269ba05aa5e7",
+      "size": 14049,
+      "identity": [
+        16777231,
+        170508176,
+        33188,
+        1,
+        14049,
+        1791942889795590916,
+        1791942889795590916
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-project-selection-image-custody-Source02/plan.json",
+      "sha256": "8617c67a57ae8cf270af845db0900ba92fd47c600f3c66a996be70d1a7ffef1d",
+      "size": 3773,
+      "identity": [
+        16777231,
+        170695522,
+        33188,
+        1,
+        3773,
+        1791944094978780937,
+        1791944094978780937
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Native-dicom-empty-owned-abort-source-current-root661-01/src/renderer/components/labeling/LabelingCanvas.tsx",
+      "sha256": "17efed10c5485c4f745a7de0f40bdc0186a42e6370f46c44fee2da16f9694642",
+      "size": 55169,
+      "identity": [
+        16777231,
+        170534362,
+        33188,
+        1,
+        55169,
+        1791943058218846637,
+        1791943058218846637
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-project-selection-image-custody-Source02/candidate/src/renderer/components/labeling/LabelingCanvas.tsx",
+      "sha256": "859e05d072113a6eecef970d480031b60d46e8cc30a6947e71eaeb497f55e2aa",
+      "size": 55774,
+      "identity": [
+        16777231,
+        170662008,
+        33188,
+        1,
+        55774,
+        1791943982857011098,
+        1791943982857011098
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Native-dicom-empty-owned-abort-source-current-root661-01/src/renderer/components/labeling/LabelingCanvasImageLoad.test.cjs",
+      "sha256": "e1149e36b7dbb0a739c7947882fb5540f91db5ebc3f9a2f8b6e7269ba05aa5e7",
+      "size": 14049,
+      "identity": [
+        16777231,
+        170534364,
+        33188,
+        1,
+        14049,
+        1791943058218990597,
+        1791943058218990597
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-project-selection-image-custody-Source02/candidate/src/renderer/components/labeling/LabelingCanvasImageLoad.test.cjs",
+      "sha256": "360b371975d50d44026a8038c941e0ebddef47aba0555e977bc4b9e2638dd1be",
+      "size": 15080,
+      "identity": [
+        16777231,
+        170662006,
+        33188,
+        1,
+        15080,
+        1791943944821188225,
+        1791943944821188225
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Native-remaining-mask-handoff-invalid-registry-current-root658-01/src/renderer/components/labeling/LabelingCanvas.tsx",
+      "sha256": "1a0a8976f97d7a6861126ee3d193715df7ef25bd91b41b92458a50366204ff85",
+      "size": 54864,
+      "identity": [
+        16777231,
+        170457553,
+        33188,
+        1,
+        54864,
+        1791940374790036053,
+        1791940374790036053
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Native-dicom-empty-owned-abort-source-current-root663-01/src/renderer/components/labeling/LabelingCanvas.tsx",
+      "sha256": "859e05d072113a6eecef970d480031b60d46e8cc30a6947e71eaeb497f55e2aa",
+      "size": 55774,
+      "identity": [
+        16777231,
+        170698080,
+        33188,
+        1,
+        55774,
+        1791944096814151186,
+        1791944096814151186
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Native-dicom-empty-owned-abort-source-current-root663-01/src/renderer/components/labeling/LabelingCanvasImageLoad.test.cjs",
+      "sha256": "360b371975d50d44026a8038c941e0ebddef47aba0555e977bc4b9e2638dd1be",
+      "size": 15080,
+      "identity": [
+        16777231,
+        170698081,
+        33188,
+        1,
+        15080,
+        1791944096814316771,
+        1791944096814316771
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-empty-owned-abort-IndependentSourceReview03/review.json",
+      "sha256": "aa7ef3da94471af4ab7355982529c05b72679411e37f1cb437253a6c368f483f",
+      "size": 4398,
+      "identity": [
+        16777231,
+        170734328,
+        33188,
+        1,
+        4398,
+        1791944379386536493,
+        1791944379386536493
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-image-custody-source-binding-Root01/typecheck02-receipt.json",
+      "sha256": "552d72bd0fd40d51c2e9d6a120b75297b020c0c956cbcaf68620692cff279207",
+      "size": 1427,
+      "identity": [
+        16777231,
+        170588179,
+        33188,
+        1,
+        1427,
+        1791943300086595240,
+        1791943300086595240
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-image-custody-source-binding-Root01/renderer-typecheck02.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0,
+      "identity": [
+        16777231,
+        170588126,
+        33188,
+        1,
+        0,
+        1791943293524843815,
+        1791943293524862148
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-image-custody-source-binding-Root01/renderer-readonly-tsconfig02.json",
+      "sha256": "45ad2db87f59a495f80b41aacfc3111b83ccf532301924f510991fe54281896a",
+      "size": 2179,
+      "identity": [
+        16777231,
+        170588125,
+        33188,
+        1,
+        2179,
+        1791943293524784605,
+        1791943293524784605
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-image-custody-source-binding-Root01/node-typecheck02.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0,
+      "identity": [
+        16777231,
+        170588174,
+        33188,
+        1,
+        0,
+        1791943299304395205,
+        1791943299304413039
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-image-custody-source-binding-Root01/node-readonly-tsconfig02.json",
+      "sha256": "07ba29383f7662bc6519583d9716db26613bdaca4f4be9d9e1e8dedf190201e4",
+      "size": 2186,
+      "identity": [
+        16777231,
+        170588173,
+        33188,
+        1,
+        2186,
+        1791943299304317454,
+        1791943299304317454
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-image-custody-source-binding-Root01/source-binding.json",
+      "sha256": "4bb5e7cc0d171317c2581f4a7cc4f3408c5d8573d8ef8cb4e25851dc247474bc",
+      "size": 598,
+      "identity": [
+        16777231,
+        170534745,
+        33188,
+        1,
+        598,
+        1791943058686027243,
+        1791943058686027243
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-image-custody-source-binding-Root01/source-map.json",
+      "sha256": "611780675adce5e1fb2bebb4993987c67e5498cd5f2c9ce5c6da46a3dda3e299",
+      "size": 339842,
+      "identity": [
+        16777231,
+        170534743,
+        33188,
+        1,
+        339842,
+        1791943058669678838,
+        1791943058669678838
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-image-custody-source-binding-Root01/genuine-tool-exit-66883.json",
+      "sha256": "25188db06cccebd3f20b28e64810719bcfb8291377276531117d7d4c158f4803",
+      "size": 560,
+      "identity": [
+        16777231,
+        170558383,
+        33188,
+        1,
+        560,
+        1791943103277595662,
+        1791943103277595662
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-image-custody-source-binding-Root02/typecheck01-receipt.json",
+      "sha256": "850f08d3b4a1a5fc3af13d0adf364ff8ab20d47cf4d9975d6f38d45030ba73b2",
+      "size": 1426,
+      "identity": [
+        16777231,
+        170732700,
+        33188,
+        1,
+        1426,
+        1791944172227270961,
+        1791944172227270961
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-image-custody-source-binding-Root02/renderer-typecheck01.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0,
+      "identity": [
+        16777231,
+        170732684,
+        33188,
+        1,
+        0,
+        1791944165732102631,
+        1791944165732124339
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-image-custody-source-binding-Root02/renderer-readonly-tsconfig01.json",
+      "sha256": "c28873c8de38984f5be3625beb5f9416220a045e73489b636853ac37e318bf94",
+      "size": 2179,
+      "identity": [
+        16777231,
+        170732683,
+        33188,
+        1,
+        2179,
+        1791944165732039755,
+        1791944165732039755
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-image-custody-source-binding-Root02/node-typecheck01.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0,
+      "identity": [
+        16777231,
+        170732698,
+        33188,
+        1,
+        0,
+        1791944171440165777,
+        1791944171440185194
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-image-custody-source-binding-Root02/node-readonly-tsconfig01.json",
+      "sha256": "d402e79ac9345a304a9280b65046247292f9f00623a5c911e10b34931491459b",
+      "size": 2186,
+      "identity": [
+        16777231,
+        170732697,
+        33188,
+        1,
+        2186,
+        1791944171440082443,
+        1791944171440082443
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-image-custody-source-binding-Root02/source-binding.json",
+      "sha256": "71b407f3aacbf410abf9aab047f22803740c226cc97b71ddf722b6a497c099d7",
+      "size": 598,
+      "identity": [
+        16777231,
+        170698404,
+        33188,
+        1,
+        598,
+        1791944097478446651,
+        1791944097478446651
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-image-custody-source-binding-Root02/source-map.json",
+      "sha256": "5215d7c1a78f6fe91842b84aa078714079a2e35e470eb2efee53e7c8d01b6c12",
+      "size": 339842,
+      "identity": [
+        16777231,
+        170698402,
+        33188,
+        1,
+        339842,
+        1791944097464445312,
+        1791944097464445312
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-image-custody-source-binding-Root02/genuine-tool-exit-77448.json",
+      "sha256": "aecfc17b1813853e612365e8786333b88aa847212ef2e6c0d15c933172a3dc42",
+      "size": 560,
+      "identity": [
+        16777231,
+        170732682,
+        33188,
+        1,
+        560,
+        1791944165731627166,
+        1791944165731627166
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-empty-owned-abort-ActualReview02/review.json",
+      "sha256": "0200e2088a3d26871e725d0ac8c33163cffcda29a930d257027edad7105fe64e",
+      "size": 25412,
+      "identity": [
+        16777231,
+        170917829,
+        33188,
+        1,
+        25412,
+        1791955574553088953,
+        1791955574553088953
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-empty-owned-abort-Source08/source-chain-pins.json",
+      "sha256": "a881ad1d79cbe54b8e9a39eaf3fea3e9087633e1d780a9ab39c54d19abecb1ce",
+      "size": 19935,
+      "identity": [
+        16777231,
+        170862433,
+        33152,
+        1,
+        19935,
+        1791952600826885958,
+        1791952600826942209
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-readiness-source-binding-Root01/source-map.json",
+      "sha256": "789fa7965d65152d1b903320214d998a90243fb05e5c5c0c3075bd401d2efe59",
+      "size": 339842,
+      "identity": [
+        16777231,
+        170744388,
+        33188,
+        1,
+        339842,
+        1791944968384343672,
+        1791944968384343672
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-readiness-source-binding-Root01/source-before.json",
+      "sha256": "b294df7eebc780fcbe3c54ae7824965c8375e2833aed65414bcc4dab71da5969",
+      "size": 900506,
+      "identity": [
+        16777231,
+        170744389,
+        33188,
+        1,
+        900506,
+        1791944968397468584,
+        1791944968397468584
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-readiness-source-binding-Root01/source-binding.json",
+      "sha256": "8e6161286c9d5e5e5a8c361f87d202c43978635ed5ed7583c01a2cb8cdf5c723",
+      "size": 594,
+      "identity": [
+        16777231,
+        170744390,
+        33188,
+        1,
+        594,
+        1791944968398026424,
+        1791944968398026424
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-readiness-source-binding-Root01/genuine-tool-exit-26895.json",
+      "sha256": "9be337fca7d816f879a9a6792dfc5d52210b048f17ef9d4b5d667d70f133789b",
+      "size": 687,
+      "identity": [
+        16777231,
+        170744618,
+        33188,
+        1,
+        687,
+        1791945152280541607,
+        1791945152280541607
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-empty-owned-abort-IndependentSourceReview04/review.json",
+      "sha256": "0fc97d164abfa4768a195df6cd710b8655f910e638d25f9569f5a2609a29e836",
+      "size": 6283,
+      "identity": [
+        16777231,
+        170745667,
+        33188,
+        1,
+        6283,
+        1791945405842763066,
+        1791945405842763066
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-empty-owned-abort-Source04/run_dicom_empty_owned_abort.py",
+      "sha256": "2e21b243208838163566698f28b9ff93f160eb6512efa77b7718ea7572192196",
+      "size": 34067,
+      "identity": [
+        16777231,
+        170741399,
+        33188,
+        1,
+        34067,
+        1791944908395683924,
+        1791944908395683924
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-empty-owned-abort-Source04/plan.json",
+      "sha256": "73d9835d3f5831632ab0d8e6420fdc46cddf7ba7fe490acd4662730d8dbe57ea",
+      "size": 2412,
+      "identity": [
+        16777231,
+        170741397,
+        33188,
+        1,
+        2412,
+        1791944965906302517,
+        1791944965906302517
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Installed-two-phase-shutdown-integration-Root-review01/source-map.json",
+      "sha256": "a73d239146dbe07ff09bb598fc83eb81f8b7b1a050751cadc9a909ddbf87a964",
+      "size": 339966,
+      "identity": [
+        16777231,
+        170756073,
+        33188,
+        1,
+        339966,
+        1791946653855109472,
+        1791946653855109472
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Installed-two-phase-shutdown-integration-Author01/source-after.json",
+      "sha256": "99ec00f1506be90b7d6113d8107dc9a582e317e4f7a0b8c43f94f50a104a8cae",
+      "size": 900829,
+      "identity": [
+        16777231,
+        170755721,
+        33188,
+        1,
+        900829,
+        1791946499379600394,
+        1791946499379600394
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Installed-two-phase-shutdown-integration-Author01/receipt.json",
+      "sha256": "0dd26dae738dc003b855472ddd56233258029424c0d962622091483128259cdb",
+      "size": 10263,
+      "identity": [
+        16777231,
+        170755726,
+        33188,
+        1,
+        10263,
+        1791946499468772158,
+        1791946499468772158
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Installed-two-phase-shutdown-integration-Author01/genuine-tool-exit-1562.json",
+      "sha256": "bb285d1e35f2927a614ba23ff5416ebb02241318a02aa70e294b0e89b1362ce2",
+      "size": 456,
+      "identity": [
+        16777231,
+        170756405,
+        33188,
+        1,
+        456,
+        1791946655170884369,
+        1791946655170884369
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Installed-two-phase-shutdown-Source01-independent-review-capacity-01/review.json",
+      "sha256": "1289a2bedf9f2186b44db4db343dc9b10725654f1478a421ecc63137202e7be9",
+      "size": 6989,
+      "identity": [
+        16777231,
+        170740522,
+        33188,
+        1,
+        6989,
+        1791944605299965978,
+        1791944605299965978
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Installed-two-phase-shutdown-integration-Root-review01/review.json",
+      "sha256": "e86feccc78d85b39b42331fc7056f48e90da74b47e56084d1418c256b7709bc7",
+      "size": 777,
+      "identity": [
+        16777231,
+        170756399,
+        33188,
+        1,
+        777,
+        1791946653899832355,
+        1791946653899832355
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Installed-two-phase-shutdown-Source01/source-pins.json",
+      "sha256": "7d0907c271e104a2aa2b16c7c2a4bcc4697f2f81093b42fbbc774ef43f5720b9",
+      "size": 10206,
+      "identity": [
+        16777231,
+        170732763,
+        33188,
+        1,
+        10206,
+        1791944214224887646,
+        1791944214224887646
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-preview-custody-integration-Author01/source-before.json",
+      "sha256": "76f41624fa476ecb60177ee846cdb70e2d4d5749031fdba8e2ce67cf649a0c4d",
+      "size": 901516,
+      "identity": [
+        16777231,
+        170792671,
+        33188,
+        1,
+        901516,
+        1791948614136430528,
+        1791948614136430528
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-preview-custody-integration-Author01/receipt.json",
+      "sha256": "36061b7dd6689341af2dc978e4339ea5e2174e8af0c47de500ebcb8c542d51cf",
+      "size": 15529,
+      "identity": [
+        16777231,
+        170792675,
+        33188,
+        1,
+        15529,
+        1791948614143774488,
+        1791948614143774488
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-preview-image-custody-independent-review-Audit01/review.json",
+      "sha256": "e370a36c09a0affe6d22c5c7f4e5e43fb809622834526b3f1f770fbffe04c9b8",
+      "size": 39694,
+      "identity": [
+        16777231,
+        170789140,
+        33188,
+        1,
+        39694,
+        1791948272309518899,
+        1791948272309518899
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-preview-image-custody-Source01/source-pins.json",
+      "sha256": "cf42789ca44ddca1b900c658218fbaf10edaed2b43efaa0d681baad218b9e897",
+      "size": 7083,
+      "identity": [
+        16777231,
+        170781699,
+        33188,
+        1,
+        7083,
+        1791947666296034607,
+        1791947666296034607
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Installed-two-phase-shutdown-Source01/candidate/backend/engine/application_launch_controller.py",
+      "sha256": "a0cb9b3e9d818ed626db74f6bd9bf1485d2631e827e7b25c52b3fe4983057c28",
+      "size": 48389,
+      "identity": [
+        16777231,
+        170494152,
+        33188,
+        1,
+        48389,
+        1791943521731751681,
+        1791943521731751681
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Installed-two-phase-shutdown-Source01/candidate/backend/engine/application_launch_handshake.py",
+      "sha256": "0dd66f23baf6489d6952e98a8d025c990adb485b175dcd53ab6979b8a281767b",
+      "size": 93980,
+      "identity": [
+        16777231,
+        170508061,
+        33188,
+        1,
+        93980,
+        1791943604975894912,
+        1791943604975894912
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Installed-two-phase-shutdown-Source01/candidate/backend/engine/application_launch_lease.py",
+      "sha256": "83c1aba04bd316f44159e0fa4f6666b2ce9988191939a1a03ae68fe791191d07",
+      "size": 54569,
+      "identity": [
+        16777231,
+        170494154,
+        33188,
+        1,
+        54569,
+        1791942899391270806,
+        1791942899391270806
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Installed-two-phase-shutdown-Source01/candidate/backend/engine/application_node_writer_authority.py",
+      "sha256": "4028bdb4e936b8270447a7f6ddff5e0ef269eb9dbecf6760d53856286df426f9",
+      "size": 25509,
+      "identity": [
+        16777231,
+        170494153,
+        33188,
+        1,
+        25509,
+        1791944108027889115,
+        1791944108027889115
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Installed-two-phase-shutdown-Source01/candidate/backend/engine/application_shutdown_transaction.py",
+      "sha256": "d82c3f72784441362a9b52bdc549790570bb4914271e45d01a58718fee3cd3b4",
+      "size": 17691,
+      "identity": [
+        16777231,
+        170507477,
+        33188,
+        1,
+        17691,
+        1791943870536318963,
+        1791943870536318963
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Installed-two-phase-shutdown-Source01/candidate/src/main/applicationLaunch.ts",
+      "sha256": "55179535f8b28594fbf4cb0d5f52714738b4046f1fa9ca7790d81408515685d2",
+      "size": 64717,
+      "identity": [
+        16777231,
+        170495032,
+        33188,
+        1,
+        64717,
+        1791942921014897231,
+        1791942921014897231
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Installed-two-phase-shutdown-Source01/candidate/src/main/index.ts",
+      "sha256": "49117501d080c52dfab5db0ef721798cdfb81e938d0f4cac137aee3f03e9000f",
+      "size": 6909,
+      "identity": [
+        16777231,
+        170495034,
+        33188,
+        1,
+        6909,
+        1791942638742801622,
+        1791942638742801622
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Installed-two-phase-shutdown-Source01/candidate/src/main/supervisor.ts",
+      "sha256": "bbed095c3ac65741edf86dece1c697ea165ffc7944fc510db57696d12ba0945a",
+      "size": 34313,
+      "identity": [
+        16777231,
+        170495033,
+        33188,
+        1,
+        34313,
+        1791943067836793143,
+        1791943067836793143
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-preview-image-custody-Source01/candidate/src/renderer/components/labeling/DerivedImagePanel.tsx",
+      "sha256": "18b54f80e288a2a3d304947141858fcc4bb2c091297a434528b723ce4367ac94",
+      "size": 14112,
+      "identity": [
+        16777231,
+        170756476,
+        33188,
+        1,
+        14112,
+        1791947138547450730,
+        1791947138547450730
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-preview-image-custody-Source01/candidate/src/renderer/components/labeling/ImageFilmstrip.tsx",
+      "sha256": "efe596f28f51934a4ac8db3645bd196481732f1f7c34a069522fc5dffeb47016",
+      "size": 4789,
+      "identity": [
+        16777231,
+        170756477,
+        33188,
+        1,
+        4789,
+        1791946957392011780,
+        1791946957392011780
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-preview-image-custody-Source01/candidate/src/renderer/components/labeling/PreviewImageCustody.test.cjs",
+      "sha256": "b6066ebc10e18d352c50e4c8f613a0e4425874c7718612c8674e4b3fda35da2a",
+      "size": 9738,
+      "identity": [
+        16777231,
+        170757195,
+        33188,
+        1,
+        9738,
+        1791947464567249122,
+        1791947464567249122
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-preview-image-custody-Source01/candidate/src/renderer/components/labeling/imageReadCustody.ts",
+      "sha256": "78622fe2c75a551e36a5d73c337dc552e097334ff6b0600ed3a3fcf63f8913e7",
+      "size": 606,
+      "identity": [
+        16777231,
+        170769091,
+        33188,
+        1,
+        606,
+        1791946957391203187,
+        1791946957391203187
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Installed-signed-leaf-custody-integration-Author01/source-map.json",
+      "sha256": "b94bb2a3b6ba48eacb34471d92bd4534759e36a6d20283d6b99e88c00afbcd2f",
+      "size": 340227,
+      "identity": [
+        16777231,
+        170842026,
+        33152,
+        1,
+        340227,
+        1791951720903081965,
+        1791951720903081965
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Installed-signed-leaf-custody-integration-Author01/source-raw-after.json",
+      "sha256": "603da4422a141af10e26342388be76a24d9b5e5dba30d778aa248df7c45f3336",
+      "size": 877173,
+      "identity": [
+        16777231,
+        170842025,
+        33152,
+        1,
+        877173,
+        1791951720901182814,
+        1791951720901182814
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Installed-signed-leaf-custody-integration-Author01/source-binding.json",
+      "sha256": "ad6eddc8a157df9d0249a63d9b2d6d2ad5c8bed0ceef5d852d6bdaf601603a28",
+      "size": 802,
+      "identity": [
+        16777231,
+        170842027,
+        33152,
+        1,
+        802,
+        1791951720904099103,
+        1791951720904099103
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Installed-signed-leaf-custody-integration-Author01/receipt.json",
+      "sha256": "9f7b57824babc59103e0f1a2f8b238c4211faab700c22c4af43cb947ea670e0f",
+      "size": 3618,
+      "identity": [
+        16777231,
+        170842029,
+        33152,
+        1,
+        3618,
+        1791951761569070724,
+        1791951761569070724
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Installed-signed-leaf-custody-integration-Author01/genuine-tool-exit-22953.json",
+      "sha256": "e43a77489cc55e96cbfe5af2166f02221f999a0574454f6b2b735a0fa7281bce",
+      "size": 353,
+      "identity": [
+        16777231,
+        170842331,
+        33188,
+        1,
+        353,
+        1791951761568627593,
+        1791951761568627593
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Installed-two-phase-shutdown-Source02-independent-review-InstalledShutdown01/review.json",
+      "sha256": "7159083749e16f6e6342b2ff8bb8b537501abaf98e377f88e932de58ea4f373d",
+      "size": 6709,
+      "identity": [
+        16777231,
+        170838351,
+        33188,
+        1,
+        6709,
+        1791951496491308464,
+        1791951496491308464
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Installed-signed-leaf-custody-integration-Root-review01/review.json",
+      "sha256": "c77a838245d7ac36b0046e6446489a64b14c90b2c255a437c6fbb80cee228c82",
+      "size": 596,
+      "identity": [
+        16777231,
+        170842602,
+        33188,
+        1,
+        596,
+        1791951815036637645,
+        1791951815036637645
+      ]
+    },
+    {
+      "path": "<private-qa-root>/Installed-two-phase-shutdown-Source02/freeze.json",
+      "sha256": "767305c167552e43ba1d610a7bdd46467226e0a926933a995fa5a13bf54e68c2",
+      "size": 21760,
+      "identity": [
+        16777231,
+        170831831,
+        33188,
+        1,
+        21760,
+        1791951335265446025,
+        1791951335265446025
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-owned-startup-source-binding-Author01/source-before.json",
+      "sha256": "f5bb04baf8e8ee3d9d3e58251fff45e081edff9968a5f4363e2c72a4ee4ca4e8",
+      "size": 901514,
+      "identity": [
+        16777231,
+        170848236,
+        33188,
+        1,
+        901514,
+        1791952326657449591,
+        1791952326657449591
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-owned-startup-source-binding-Author01/receipt.json",
+      "sha256": "b371d898acaf2d35343c6e3d93399f60d174621f7e7157ed772b1fbfe1689ca9",
+      "size": 9236,
+      "identity": [
+        16777231,
+        170848239,
+        33188,
+        1,
+        9236,
+        1791952326662733454,
+        1791952326662733454
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-owned-startup-integration-Root-review01/review.json",
+      "sha256": "f8e720b49915c6662bf82e74a6bfe323de879ad0347f6a3ba00aff9b0b17d1ea",
+      "size": 784,
+      "identity": [
+        16777231,
+        170849546,
+        33188,
+        1,
+        784,
+        1791952441711127045,
+        1791952441711127045
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-empty-owned-abort-Source07/run_dicom_empty_owned_abort.py",
+      "sha256": "2026a99fd01a41c804365c19af04419d27433533b6aaacc75ea2fc49f5bdcf6b",
+      "size": 47225,
+      "identity": [
+        16777231,
+        170831099,
+        33188,
+        1,
+        47225,
+        1791951270183081530,
+        1791951270183081530
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-empty-owned-abort-Source08/source-validation.json",
+      "sha256": "bfbbb0e88f02dc26026c6e528cd3f4bcfb731cd0ded2d6e7971a56760bdac3f2",
+      "size": 4077,
+      "identity": [
+        16777231,
+        170849533,
+        33188,
+        1,
+        4077,
+        1791952437721561470,
+        1791952437721561470
+      ]
+    },
+    {
+      "path": "<private-qa-root>/DICOM-empty-owned-abort-Source08/startup-ordering-control.cjs",
+      "sha256": "2902e64930a4c4979f8262bcc4c48ef5b8c2dabcfcf9bf90aa8f656358f39f89",
+      "size": 4669,
+      "identity": [
+        16777231,
+        170843750,
+        33152,
+        1,
+        4669,
+        1791952093833180265,
+        1791952093833242516
+      ]
+    }
+  ],
+  "whole_source_chain": [
+    "R658",
+    "R665",
+    "R667",
+    "R668",
+    "R670",
+    "R672",
+    "R673"
+  ],
+  "old_canvas_provenance_original": {
+    "path": "<private-qa-root>/DICOM-empty-owned-abort-ledger-Source02/2026-10-14-dicom-canvas-source-provenance-delta.json",
+    "sha256": "0705744e30c3b623fd6154ef68b9b41da399507319caae6af6cc676b3f4f289c",
+    "size": 29317,
+    "identity": [
+      16777231,
+      170745599,
+      33188,
+      1,
+      29317,
+      1791945380693408970,
+      1791945380693408970
+    ]
+  },
+  "preview_product_integration_scope": "R668 exact reviewed DerivedImagePanel/ImageFilmstrip/imageReadCustody/PreviewImageCustody.test.cjs; R670 exact reviewed signed leaf collector; R672 test startup ordering only. These deltas do not extend the 956 historical original acceptance scope.",
+  "publication_redaction": {
+    "schema": "modu-vision.public-provenance-redaction/v1",
+    "original_private_sha256": "16c82c2c9d4cf94b34c79814cf2eba394203692ef2a294dcf9b787220825219f",
+    "redacted_string_values": 83,
+    "replacements": "Private absolute path prefixes replaced by stable descriptive placeholders. Original bytes retained privately; this public derivative has a different file hash. File content hashes and recorded qualification results are unchanged.",
+    "acceptance_extended": false
+  }
+}

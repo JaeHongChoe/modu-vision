@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "d88843ef220daaad0fa03feb57702190fe3db6c8",
+  "source_dirty": false,
+  "test": "scripts/e2e/ocr-empty-workbench-controls.spec.ts::OCR empty truth prepared input completed job and model selection preserve originals through reopen",
+  "test_source_sha256": "238bb9d59cc8cb998f222e4ec38a9aeb87d0b86f35eb3e44c7d7a01f54757b62",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "2571387c34814eb223614a1b3d81be111637cfe71ede9ee6f26e086446e97f69",
+  "harness_sha256": "c39deabcac92fc23b990495bfb91ffc4efb3a1554b4916c18988385350f3c080",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "c5e0da0ba61e4103b3166106481406a60be536f075548283e929c8f202c05d18"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "b5796ce803a11d7438394fe7f236b1f8976dc8f267079d74d5146350a152b337"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}
