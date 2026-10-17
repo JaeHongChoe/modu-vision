@@ -228,7 +228,7 @@ test('U007 refuses an actual 8x8 ROI editor input while preserving the saved ori
     await expect.poll(async () => (await api('/api/flowchart/draft')).pipeline.nodes.find((node: any) => node.id === roiId)?.data.params.roi_bbox,
       {timeout: 10_000}).toEqual(wanted);
     await expect(page.getByRole('button', {name: '초안 저장', exact: true})).toBeEnabled();
-    await expect(page.getByRole('status').filter({hasText: /^초안 저장됨 · 실행본 활성화 전/})).toHaveCount(1);
+    await expect(page.getByRole('status').filter({hasText: /^초안 저장됨 · 실행본 활성화 전$/})).toHaveCount(1);
     await settle();
     const saved = await api('/api/flowchart/draft'); expect(saved.pipeline.nodes.find((node: any) => node.id === roiId).data.params.roi_bbox).toEqual(wanted);
     e.addFile(normal); e.addFile(tiny); e.addFile(draftFile);
