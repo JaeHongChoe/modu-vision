@@ -39,8 +39,10 @@ async function view(page: Page, project: any, data: Cohort) {
   const images = page.locator('button[aria-label$=" 라벨링에서 열기"] img');
   await expect(images).toHaveCount(data.count);
   await expect.poll(() => images.evaluateAll(nodes => nodes.every(node => node instanceof HTMLImageElement && node.complete && node.naturalWidth > 0))).toBe(true);
-  expect(await images.evaluateAll(nodes => nodes.map(node => new URL((node as HTMLImageElement).src).searchParams.get('file_path')).sort()))
-    .toEqual(data.originals.map(row => row.path).sort());
+  const paths = await images.evaluateAll(nodes => nodes.map(node => new URL((node as HTMLImageElement).src).searchParams.get('file_path')).sort());
+  expect(paths).toEqual(data.originals.map(row => row.path).sort());
+  return {project_id: project.id, source: data.source, count: data.count, original_paths: paths,
+    original_sha256: data.originals, all_gallery_pixels_loaded: true};
 }
 
 async function holdPicker(page: Page) {
@@ -77,8 +79,9 @@ async function receipt(page: Page, response: Response, project: any, evidence: E
   const context = JSON.parse(response.request().headers()['x-vision-context']); expect(context.project_id).toBe(project.id);
   const raw = await response.body(); expect(raw.length).toBeLessThan(1024 * 1024); expect(await response.finished()).toBeNull();
   const body = JSON.parse(raw.toString('utf8'));
+  const file = test.info().outputPath(label + '-actual-response.json'); fs.writeFileSync(file, raw, {flag: 'wx'}); evidence.addFile(file);
   evidence.note(label, {url: response.url(), method: response.request().method(), request_body: response.request().postDataJSON(),
-    project_id: project.id, context, response_status: response.status(), response_body: body, response_sha256: sha(raw), actual_main_frame: true, finished: true});
+    project_id: project.id, context, response_status: response.status(), response_body: body, response_sha256: sha(raw), response_file: file, actual_main_frame: true, finished: true});
   return body;
 }
 
@@ -91,7 +94,7 @@ async function freshPick(page: Page, origin: string, prefix: string, project: an
   expect(summary.total_images).toBe(data.count);
   const updated = await receipt(page, await saved, project, evidence, prefix ? 'shared_fresh_source' : 'local_fresh_source');
   expect(updated.id).toBe(project.id); expect(updated.source_dataset_dir).toBe(data.source);
-  await view(page, updated, data); return updated;
+  evidence.note(prefix ? 'shared_fresh_gallery' : 'local_fresh_gallery', await view(page, updated, data)); return updated;
 }
 
 test('delayed dataset picker keeps project and backend ownership and a fresh choice succeeds', async ({page, rendererBuild, workspace, evidence, loopbackGuard}) => {
@@ -110,6 +113,7 @@ test('delayed dataset picker keeps project and backend ownership and a fresh cho
   };
   page.on('request', observe); page.on('console', message => {if (message.type() === 'error') consoleErrors.push(message.text());});
   page.on('pageerror', error => pageErrors.push(error.message));
+  let primary: unknown;
   try {
     const A = cohort(workspace.root, 'picker-source-a', 2), B = cohort(workspace.root, 'picker-source-b', 4);
     const C = cohort(workspace.root, 'picker-source-c', 3), staleA = cohort(workspace.root, 'picker-stale-a', 5);
@@ -138,6 +142,7 @@ test('delayed dataset picker keeps project and backend ownership and a fresh cho
     await page.getByLabel('공유 계정 이름', {exact: true}).fill('pickeradmin');
     await page.getByLabel('공유 계정 비밀번호', {exact: true}).fill(host.password);
     const sharedCurrent = page.waitForResponse(response => new URL(response.url()).pathname === '/picker-shared/api/project/current' && response.request().method() === 'GET');
+    void sharedCurrent.catch(() => undefined);
     await page.getByRole('button', {name: '연결·로그인', exact: true}).click();
     expect((await sharedCurrent).status()).toBe(200);
     await expect(page.getByLabel('공동 작업 프로젝트', {exact: true})).toHaveValue(projectC.id);
@@ -163,5 +168,18 @@ test('delayed dataset picker keeps project and backend ownership and a fresh cho
       stale_answer_mutations: [], mutations, projects: [projectA, projectB, projectC], originals,
       browser_errors: {page: pageErrors, console: consoleErrors}, prohibited_writes: prohibited,
       native_OS_picker: false, installed_native_app: false, training_or_model_quality_assessed: false});
-  } finally {page.off('request', observe); await page.close(); await host.close();}
+  } catch (error) {primary = error;}
+  finally {
+    page.off('request', observe);
+    const failures: unknown[] = [];
+    try {await page.close();} catch (error) {failures.push(error);}
+    try {await host.close();} catch (error) {failures.push(error);}
+    evidence.note('dataset_picker_completion', {primary_failure: primary === undefined ? null : String(primary),
+      cleanup_failures: failures.map(String), unknown_closure_is_not_a_pass: true});
+    if (primary === undefined && failures.length) primary = failures.shift();
+    if (primary instanceof Error && failures.length) try {
+      Object.defineProperty(primary, 'dataset_picker_cleanup_failures', {value: failures.map(String), configurable: true});
+    } catch {/* Keep the original failure; evidence above retains cleanup failures. */}
+  }
+  if (primary !== undefined) throw primary;
 });

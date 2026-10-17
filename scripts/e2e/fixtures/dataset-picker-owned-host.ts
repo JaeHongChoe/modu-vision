@@ -15,7 +15,16 @@ export async function datasetPickerOwnedHost(workspace: Workspace, rendererDir: 
   const staticRoot = fs.realpathSync(rendererDir);
   const localWorkspace = harness.createWorkspace(path.join(workspace.root, 'picker-local')) as Workspace;
   const sharedWorkspace = harness.createWorkspace(path.join(workspace.root, 'picker-shared')) as Workspace;
+  const owned: Array<{name: string; pid: number; port: number; started_at: string; logs: unknown; closure: unknown}> = [];
+  const publishOwned = () => evidence.note('dataset_picker_owned_backends', owned.map(row => ({...row})));
+  const recordStart = (name: string, backend: any) => {
+    evidence.redact(backend.token);
+    owned.push({name, pid: backend.pid, port: backend.port, started_at: backend.startedAt, logs: backend.logs,
+      closure: {status: 'unknown', reason: 'normal owned close has not completed'}});
+    publishOwned();
+  };
   const local = await harness.startOwnedBackend(harness.backendCommand({workspace: localWorkspace}));
+  recordStart('local', local);
   let shared: any;
   const sockets = new Set<net.Socket>();
   let origin = '', session: {token: string; connection: SharedConnection} | null = null;
@@ -82,18 +91,28 @@ export async function datasetPickerOwnedHost(workspace: Workspace, rendererDir: 
     if (!response.ok) throw Error(`Owned picker API ${method} ${route}: ${response.status} ${await response.text()}`);
     return response.json();
   };
+  const stops: unknown[] = [];
   const stop = async (backend: any) => {
-    const result = await backend.stop(), portClosed = await harness.waitForPortClosed(backend.port, 10_000);
+    const owner = owned.find(row => row.pid === backend.pid)!;
     evidence.addFile(backend.logs.stdout); evidence.addFile(backend.logs.stderr);
+    let result: any;
+    try {result = await backend.stop();}
+    catch (error) {owner.closure = {status: 'unknown', reason: 'owned stop threw before returning', error: String(error)}; publishOwned(); throw error;}
+    owner.closure = {status: 'partial', stop: result, port_closed: null, pid_alive: null}; publishOwned();
+    const portClosed = await harness.waitForPortClosed(backend.port, 10_000), pidAlive = harness.processAlive(backend.pid);
+    const row = {pid: backend.pid, port: backend.port, port_closed: portClosed, pid_alive: pidAlive, ...result};
+    stops.push(row); owner.closure = {status: 'observed', ...row};
+    publishOwned(); evidence.note('dataset_picker_backend_stop', stops.slice());
+    // Persist observations before enforcing the normal, unforced close gate.
     expect(result.exited).toBe(true); expect(result.groupAlive).toBe(false); expect(result.escaped).toEqual([]);
     expect(result.forced).toBe(false); expect(result.unownedReferences).toEqual([]);
-    expect(result.scanError).toBeFalsy(); expect(portClosed).toBe(true); expect(harness.processAlive(backend.pid)).toBe(false);
-    return {pid: backend.pid, port: backend.port, port_closed: portClosed, ...result};
+    expect(result.scanError).toBeFalsy(); expect(portClosed).toBe(true); expect(pidAlive).toBe(false);
+    return row;
   };
   try {
     const command = harness.backendCommand({workspace: sharedWorkspace});
     shared = await harness.startOwnedBackend({...command, args: [...command.args, '--shared-auth-dir', path.join(sharedWorkspace.userData, 'accounts')]});
-    evidence.redact(local.token); evidence.redact(shared.token);
+    recordStart('shared', shared);
     await new Promise<void>((resolve, reject) => {server.once('error', reject); server.listen(0, '127.0.0.1', resolve);});
     const port = (server.address() as net.AddressInfo).port; origin = `http://127.0.0.1:${port}`;
     const password = 'dataset-picker-owned-password-123'; evidence.redact(password);
@@ -130,14 +149,20 @@ export async function datasetPickerOwnedHost(workspace: Workspace, rendererDir: 
       close: async () => {
         for (const socket of sockets) socket.destroy();
         await new Promise<void>(resolve => server.close(() => resolve()));
-        const failures: unknown[] = [], results: unknown[] = [];
-        for (const backend of [shared, local]) try {results.push(await stop(backend));} catch (error) {failures.push(error);}
-        evidence.note('dataset_picker_backend_stop', results);
-        if (failures.length) throw failures[0];
+        const failures: unknown[] = [];
+        for (const backend of [shared, local]) try {await stop(backend);} catch (error) {failures.push(error);}
+        evidence.note('dataset_picker_cleanup_errors', failures.map(String));
+        if (failures.length) throw new AggregateError(failures, 'Owned picker backend close failed');
       },
     };
   } catch (error) {
     for (const socket of sockets) socket.destroy(); server.close();
-    if (shared) await stop(shared); await stop(local); throw error;
+    const failures: unknown[] = [];
+    for (const backend of [shared, local].filter(Boolean)) try {await stop(backend);} catch (failure) {failures.push(failure);}
+    evidence.note('dataset_picker_setup_cleanup_errors', failures.map(String));
+    if (error instanceof Error && failures.length) try {
+      Object.defineProperty(error, 'dataset_picker_cleanup_failures', {value: failures.map(String), configurable: true});
+    } catch {/* Keep the original setup failure. */}
+    throw error;
   }
 }
