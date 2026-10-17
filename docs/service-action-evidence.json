@@ -43360,7 +43360,31 @@
               ]
             },
             "empty": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S3-05",
+                  "source_sha": "b916cf17d47a23cb960d71a85c2f05682f859ec6",
+                  "kind": "click",
+                  "action": "Shift+ArrowRight",
+                  "expected": "With a real saved OBB present but no selected annotation, an original delivered coarse-nudge key leaves saved geometry, revision and all protected source/project bytes unchanged and dispatches no business mutation.",
+                  "observed": "browser: A real selected-OBB control first saved center110→120 while axis30/direction315 stayed distinct. A real blank-canvas click removed the selected inspector; an isTrusted Shift+ArrowRight reached focused BODY outside editable/dialog controls and completed native dispatch. One saved OBB, exact repeated complete API bodies/revision and12 protected regular-file/raw9 pins survived unchanged through natural backend stop; postbaseline mutations0 and page/console/request/foreign errors0.",
+                  "reviewer": "Codex root reviewed actual original positive/empty readbacks and empty screenshot; source author independently joined all67 harness artifacts,62 complete response bodies,2853 source pins,12 post-stop files and both screenshots. Human annotation quality and whole-feature acceptance remain pending.",
+                  "test": "scripts/e2e/labeling-empty-selection-nudge.spec.ts::U020 empty selection ignores a delivered coarse nudge after an owning OBB control",
+                  "receipt": "2026-10-17-u020-empty-selection-nudge-browser.json",
+                  "receipt_sha256": "4d5b2a3d46bf14642854f05a632647ed66a8315a09fc3767a0d23443a7584c6e",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "2972e3454763f2a645cfa396650321d56095c431fc8e158c7fc1f6fff7b3ef09"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "0a34554c6b4091a280040e65cb346c1e18940091e241df0c51d1b6259e5f1099"
+                    }
+                  ]
+                }
+              ]
             },
             "invalid": {
               "state": "pending"

@@ -5132,6 +5132,14 @@
           "receipt_sha256": "baf72bd57b8a3fa251ed9ac6dfc54b0ff91700fee8cc94535ddb94e306d5c889",
           "result": "Fresh current binary/build with339 resources/335 raw exports and456 frontend pins; original unmodified native case passed489.168s with2183 unchanged clean inputs. Original epoch CPU A/OK/1ROI/0defect, two same receipt readbacks and ordinary original-process cleanup verified.",
           "scope": "Private clean-source compiled pair only; original lease stays recovery_required/whole-treefalse. No old execution transferred, OS installer/managed writer drain/device configuration/publisher/model quality/installed-release or whole parent acceptance."
+        },
+        {
+          "kind": "actual-installed-login-hydration-negative-diagnostic",
+          "source_sha": "f36447cad8dabf7e8e57d1a83234be9ad6760de3",
+          "receipt": "docs/verification/receipts/2026-10-17-Root03-native-login-hydration-negative.json",
+          "receipt_sha256": "6a61d4913b1275c4be1431dfea755c55f9664facdefde5856c4ed574ca465cd9",
+          "result": "Fresh private frontend with retained compiled35ac B3 passed actual preview/install and reached READY. Baseline health was certain; after actual local fixture login/automatic hydration it became uncertain. Root immediately requested ordinary nonce-bound quit; the original main/backend/controller exited naturally, but protocol4 scoped closure refused one active scope/uncovered_request_protocol.68 original input/model/profile bodies and active pointer remain exact.",
+          "scope": "Bounded negative diagnosis of the login interval only; first poisoning request/cause is unidentified. Earlier EOF is not reproduced or fixed. No manual project/gallery/flow/model/GPU run, archive, whole-tree, publisher/operator/quality, manual8 or parent acceptance."
         }
       ],
       "file_actions": {
@@ -6270,7 +6278,7 @@
       },
       "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts",
       "remaining": [
-        "As of the 2026-10-17 clean-source browser receipts at d294856 and74fd6e3,207 curated actions have978 verified and471 pending scenarios. Exactly six previously pending classification import invalid/empty/chooser-cancel cells were verified; current comparison cancellation adds refreshed evidence to an already verified cell. This count comes from docs/service-action-evidence.json. Historical806/643 and earlier evidence snapshots are retained. S7-01 implementation and complete feature/target acceptance remain pending; the original installed GUI six-scope refusal and separate pre-ready EOF remain unresolved. Native OS picker, actual running partial-worker cancellation, publisher/operator/model-quality approvals and other unexecuted dimensions are not promoted. Windows-only S6-02/S7-03 remain excluded by the owner, without claiming Windows execution."
+        "As of the 2026-10-17 clean-source browser receipts at d294856,74fd6e3 andb916cf1,207 curated actions have979 verified and470 pending scenarios. Exactly six previously pending classification import invalid/empty/chooser-cancel cells and one empty-selection keyboard nudge cell were verified; current comparison cancellation adds refreshed evidence to an already verified cell. This count comes from docs/service-action-evidence.json. Historical806/643 and earlier evidence snapshots are retained. S7-01 implementation and complete feature/target acceptance remain pending; the original installed GUI six-scope refusal and separate pre-ready EOF remain unresolved; the fresh Root03 installed run reached READY but reproduced request uncertainty during login automatic hydration and refused scoped closure with one active scope. Native OS picker, actual running partial-worker cancellation, publisher/operator/model-quality approvals and other unexecuted dimensions are not promoted. Windows-only S6-02/S7-03 remain excluded by the owner, without claiming Windows execution."
       ]
     },
     {
