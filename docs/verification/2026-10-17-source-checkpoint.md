@@ -17,3 +17,9 @@ Use normal revert commits for a published checkpoint or fix. Keep the existing p
 ## Checks for this publication
 
 Validation results and final published commit identities are recorded in the following continuation receipt after execution. This checkpoint alone is not a claim that all pending work is complete.
+
+## Executed continuation
+
+The continuation receipt records 1,257 passing renderer regressions, passing type/build checks, 70 migration regressions, 19 new shared-import security cases, and 76 related authorization/import cases. Fixes are separate commits. The original native registration/normal-quit/store-closure case also passed on the retained a860 compiled cohort; that scope is distinct from the newer source. GitHub CI is recorded separately after publication.
+
+Remaining requirements: S5-01, S6-03, S6-04, S6-06, S7-01, S7-02, S7-05, S7-06, S7-07, S7-08. Windows S6-02 and S7-03 are excluded by the owner. No parent requirement or human/publisher approval is closed by this source checkpoint.
