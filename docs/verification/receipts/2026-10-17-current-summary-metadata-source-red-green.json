@@ -1,0 +1,332 @@
+{
+  "date": "2026-10-17",
+  "final_asserted_facts": {
+    "HTTP200_and_full_summary_body": true,
+    "actual_dataset_and_lock_handles_closed": true,
+    "drain": {
+      "active_scopes": 0,
+      "status": "managed_scopes_drained",
+      "unsupported": []
+    },
+    "false_authority_flags_asserted": true,
+    "foreign_selector": "Original shared authorization403 exact JSON; handler no file/resource operation; protected ledger unchanged; strict original drain refusal retained.",
+    "metadata_setup": "Original list_metadata and team_data.image_state initialize saved namespace before immutable focused baseline; exact normalization defaults asserted.",
+    "ordered_failures": [],
+    "original_metadata_contexts": 2,
+    "protected_bytes_and_raw9_exact": true,
+    "protected_files": 17,
+    "synthetic_input": "six32x32 images with original polygon JSON; no trained model; count0 summary/6validation is disclosed fixture shape"
+  },
+  "limits": {
+    "GPU_or_physical_device": false,
+    "GUI_registry_credit": false,
+    "Root06_native_cause_proven": false,
+    "cold_renderer_graph": "Separate cold renderer/login execution completed with a failure in WebSocket envelope/lifetime tracking after login. No owned_ancillary failure remained. That separate graph is not a pass, and its cause is still unproven.",
+    "model_execution_or_quality": false,
+    "native_executed": false,
+    "parent_job_completed": false,
+    "previous_four_diagnostic_attempts_unchanged": true,
+    "process_tree_release_authority": false,
+    "source_ASGI_pytest_processes_executed": true,
+    "whole_writer_coverage": false
+  },
+  "original_failure": {
+    "actual_handle": "open original _io.TextIOWrapper",
+    "first_reason": "owned_ancillary_file_binding",
+    "ingress": "GET /api/dataset/current-summary",
+    "private_first_call_proof": {
+      "bytes": 122423,
+      "engine_sha256": "7426ab8f61ebe4b9e09bbbe307397700195254dbc518c571287d1b1c8435f672",
+      "exact_engine_bytes_match_focused_baseline": true,
+      "execution_source": "4c2c9e847d8d784c6baeb4083d5428c9884d3b84",
+      "label": "actual-four-01/source-readback.private.json",
+      "sha256": "34cdf544980297f5442a1c8cded5e62f34f9d48cf5fc478d90c866a3b8538597"
+    },
+    "resource": "own project annotations/by_dataset/<source-key>/metadata/workflow.json",
+    "role": "dataset",
+    "source_passive_readback_separate_from_native": true
+  },
+  "preparation_and_results": {
+    "actual-green-01": "One actual positive PASS; one negative fixture FAIL expected409 but original earlier middleware correctly returned403. Not called an all-green run.",
+    "actual-permanent-integration-01": "Both permanent selectors PASS exactly once, including precise original403 denial; product unchanged from positive GREEN.",
+    "actual-red-01": "Fixture precondition failure: legitimate first team defaults publication changed the not-yet-normalized saved ledger; not counted as causal RED.",
+    "actual-red-02": "VALID causal RED: original200/full body,17protected files exact,read handle closed; then original drain refused active1/uncovered and first file_binding.",
+    "wrong_expected_test_SHA_preflight": {
+      "rejected_before_output_or_product_import": true,
+      "tool_result_sha256": "79a2da63bb6b5ed36c4f90624cb89a4dfe8d694853d9d3c3915203f9964a2570"
+    }
+  },
+  "root_review": {
+    "finite_evidence_readback_sha256": "54308cd4a149ba74d2000b8b945fb8073c97be75d9a14b872d97c4ce6e2a5be6",
+    "original_focused_draft_sha256": "d8a474e337154820aa39852ae1f57300fca12a10be56c6366fe38bd4bca65c42",
+    "scope": "Two-line participant repair and permanent positive/foreign-project denial regression; no count promotion."
+  },
+  "runs": {
+    "actual-green-01": {
+      "errors": 0,
+      "exit_code": 1,
+      "failures": 1,
+      "full_tracked_source_before_after_exact": true,
+      "natural_pytest_Popen_reaped": true,
+      "original120s_not_expired": true,
+      "original_conftest_and_store_isolation": true,
+      "private_inputs_before_after_exact": true,
+      "raw": {
+        "isolation-final.json": {
+          "bytes": 32027,
+          "sha256": "63a6e49e349e1c9a72875d48d0677008594b969591471d596bca64cb141743c1"
+        },
+        "junit.xml": {
+          "bytes": 3480,
+          "sha256": "5b996078fd2ab09902ca727b99edf89b82926f43a54f57a6abf13c40d11b7261"
+        },
+        "launch.json": {
+          "bytes": 1129,
+          "sha256": "3737c8f6ce5f5aa3d281fe343cd26b9dc1ad135aceeaa6126b25e1583595b777"
+        },
+        "original-popen.json": {
+          "bytes": 55,
+          "sha256": "dbff45f431df9e5a2ed105b746a4d0c45972137026fab47f22f3861f778701fc"
+        },
+        "original-tool-completion.json": {
+          "bytes": 611,
+          "sha256": "e6162baca80936b47350cd665d9cbb2cb56e2d2d56ccf0eed8dcb753c3be6a8c"
+        },
+        "private-inputs-after.json": {
+          "bytes": 1734,
+          "sha256": "ced710df43935f626d1fea5d36afb3b7b457a32ad2e2a1cbc1a78cd8c385f612"
+        },
+        "private-inputs-before.json": {
+          "bytes": 1734,
+          "sha256": "ced710df43935f626d1fea5d36afb3b7b457a32ad2e2a1cbc1a78cd8c385f612"
+        },
+        "pytest.log": {
+          "bytes": 3405,
+          "sha256": "7eee63ebf3b01a8aa52b0f82fa6faa014020a9cfbfb665113a28f74a1533f5d1"
+        },
+        "result.json": {
+          "bytes": 490,
+          "sha256": "f97ad59f778750358d58d35c3970da4570c7159996a782d7d5c7bd223f34fb2b"
+        },
+        "source-after.json": {
+          "bytes": 1041192,
+          "sha256": "f9f0e20b9da2ad757686fbe0d0d5ea7d8a4b0b28db4abe7d4856de56cdf50294"
+        },
+        "source-before.json": {
+          "bytes": 1041192,
+          "sha256": "f9f0e20b9da2ad757686fbe0d0d5ea7d8a4b0b28db4abe7d4856de56cdf50294"
+        }
+      },
+      "signals_sent": false,
+      "test_seconds": 2.907,
+      "tests": 2,
+      "wrapper_seconds": 8.025758415926248
+    },
+    "actual-permanent-integration-01": {
+      "errors": 0,
+      "exit_code": 0,
+      "failures": 0,
+      "full_tracked_source_before_after_exact": true,
+      "natural_pytest_Popen_reaped": true,
+      "original120s_not_expired": true,
+      "original_conftest_and_store_isolation": true,
+      "private_inputs_before_after_exact": true,
+      "raw": {
+        "isolation-final.json": {
+          "bytes": 33243,
+          "sha256": "632e629d376a4296e39c5c4a9563a75e67a34f17db38e7866c94a90105c638d6"
+        },
+        "junit.xml": {
+          "bytes": 572,
+          "sha256": "37b113bec2faba2a781c7f93a0facb687a9ec921f7f7fbb215df9bac5bad9754"
+        },
+        "launch.json": {
+          "bytes": 1254,
+          "sha256": "48178785ebc0e5be1c98ad5b215606b7ec8144061cca0016c884de04ec70528e"
+        },
+        "original-popen.json": {
+          "bytes": 54,
+          "sha256": "be345fa57b44a1b114f3cc8216258a01f14ecd4bc54812a8e0982c93af9c3f17"
+        },
+        "original-tool-completion.json": {
+          "bytes": 610,
+          "sha256": "552e3397d37bddd03c274dcf443fa15d3edb8ca6aba072785d0272a09b362695"
+        },
+        "private-inputs-after.json": {
+          "bytes": 1734,
+          "sha256": "f26fb462694b97e53906321a1bd3739ded0c6b7dddc5cb4bc36e1071c3d3d330"
+        },
+        "private-inputs-before.json": {
+          "bytes": 1734,
+          "sha256": "f26fb462694b97e53906321a1bd3739ded0c6b7dddc5cb4bc36e1071c3d3d330"
+        },
+        "pytest.log": {
+          "bytes": 297,
+          "sha256": "c8cebcab309ddb8e420166a83ef2cba926ac4c757aea02659b97794558384f24"
+        },
+        "result.json": {
+          "bytes": 489,
+          "sha256": "e676871b2327f8745afda1a9a7e36c4eec6c0328ea20eac2a35e3a56fa0ed5bd"
+        },
+        "source-after.json": {
+          "bytes": 1041500,
+          "sha256": "75dd1f3d5bb41ee1d7ce027f5bc8b7bad2f5a9630b1cbf1389984103c1710c4a"
+        },
+        "source-before.json": {
+          "bytes": 1041500,
+          "sha256": "75dd1f3d5bb41ee1d7ce027f5bc8b7bad2f5a9630b1cbf1389984103c1710c4a"
+        }
+      },
+      "signals_sent": false,
+      "test_seconds": 2.189,
+      "tests": 2,
+      "wrapper_seconds": 7.178975124843419
+    },
+    "actual-red-01": {
+      "errors": 0,
+      "exit_code": 1,
+      "failures": 1,
+      "full_tracked_source_before_after_exact": true,
+      "natural_pytest_Popen_reaped": true,
+      "original120s_not_expired": true,
+      "original_conftest_and_store_isolation": true,
+      "private_inputs_before_after_exact": true,
+      "raw": {
+        "isolation-final.json": {
+          "bytes": 21938,
+          "sha256": "52910ec5a118d06b431039fd6dcfa6a32ec41c62d761f69cf375c839ea6f92a3"
+        },
+        "junit.xml": {
+          "bytes": 4045,
+          "sha256": "bd12f937a0ad365b7e33f97c6d616d8101eb26331dd768dfc0b36969705fe5be"
+        },
+        "launch.json": {
+          "bytes": 1193,
+          "sha256": "30592a52019a12aeea0fa036e49478ffe8b6227ef2bb6a6566180de3c3d1ddb9"
+        },
+        "original-popen.json": {
+          "bytes": 55,
+          "sha256": "6b7bf5fc1426507ff409e1b9fa223ba301a4f614dd850986b220daba9aebf361"
+        },
+        "original-tool-completion.json": {
+          "bytes": 611,
+          "sha256": "2cb92fceda014dc097d75026d18201352618716e4d40fbca8547d80e80cb6b41"
+        },
+        "private-inputs-after.json": {
+          "bytes": 1734,
+          "sha256": "0b40159f63d35a35f933e17d8f1901267bfdb795e7ac475a1838d2275e6ebae2"
+        },
+        "private-inputs-before.json": {
+          "bytes": 1734,
+          "sha256": "0b40159f63d35a35f933e17d8f1901267bfdb795e7ac475a1838d2275e6ebae2"
+        },
+        "pytest.log": {
+          "bytes": 3564,
+          "sha256": "ca676e13767aa5c4136cde9d45d3f30cf20b923979e5e2ff7f5c1cddb78a4b8f"
+        },
+        "result.json": {
+          "bytes": 490,
+          "sha256": "2fee449ca284408027977c84b7893963317bb90c0888da10e3fc1fdfd5672c09"
+        },
+        "source-after.json": {
+          "bytes": 1041134,
+          "sha256": "de2e9a515f37914d333378d4e9bc7f2cb75a8aa8fab856e4abc2d25e37ec55d0"
+        },
+        "source-before.json": {
+          "bytes": 1041134,
+          "sha256": "de2e9a515f37914d333378d4e9bc7f2cb75a8aa8fab856e4abc2d25e37ec55d0"
+        }
+      },
+      "signals_sent": false,
+      "test_seconds": 1.742,
+      "tests": 1,
+      "wrapper_seconds": 6.626363958930597
+    },
+    "actual-red-02": {
+      "errors": 0,
+      "exit_code": 1,
+      "failures": 1,
+      "full_tracked_source_before_after_exact": true,
+      "natural_pytest_Popen_reaped": true,
+      "original120s_not_expired": true,
+      "original_conftest_and_store_isolation": true,
+      "private_inputs_before_after_exact": true,
+      "raw": {
+        "isolation-final.json": {
+          "bytes": 21938,
+          "sha256": "a5d426c88a827374e6a766c09d316aad662cea7be1b49bb0cbb34ac08ef32595"
+        },
+        "junit.xml": {
+          "bytes": 4615,
+          "sha256": "751a131c79c284a1235dbd41224daaf92fa42a2e3266e18704d5f600eb0759e3"
+        },
+        "launch.json": {
+          "bytes": 1193,
+          "sha256": "8a8747d07ddb3bb4ff9d7c549c042f5123f3a82b0430266435e4dad096a63778"
+        },
+        "original-popen.json": {
+          "bytes": 55,
+          "sha256": "fe434902fc8ab99815279ee4f51e1fd42d913e37b38600da4c31ee7c694cf949"
+        },
+        "original-tool-completion.json": {
+          "bytes": 611,
+          "sha256": "f2ae31625b561580b923968e69dddd627f1debba10f35df9a538cf58f1621da2"
+        },
+        "private-inputs-after.json": {
+          "bytes": 1734,
+          "sha256": "ced710df43935f626d1fea5d36afb3b7b457a32ad2e2a1cbc1a78cd8c385f612"
+        },
+        "private-inputs-before.json": {
+          "bytes": 1734,
+          "sha256": "ced710df43935f626d1fea5d36afb3b7b457a32ad2e2a1cbc1a78cd8c385f612"
+        },
+        "pytest.log": {
+          "bytes": 4480,
+          "sha256": "8f6fa3b3fb767d233abdfc3557637d1abeda0839b87c8d4bac1c8311fc41e613"
+        },
+        "result.json": {
+          "bytes": 490,
+          "sha256": "be71536e682ba51b566f0c778b2faa9b6eadc5c8902b854472c6dbcc92b51bc8"
+        },
+        "source-after.json": {
+          "bytes": 1041134,
+          "sha256": "de2e9a515f37914d333378d4e9bc7f2cb75a8aa8fab856e4abc2d25e37ec55d0"
+        },
+        "source-before.json": {
+          "bytes": 1041134,
+          "sha256": "de2e9a515f37914d333378d4e9bc7f2cb75a8aa8fab856e4abc2d25e37ec55d0"
+        }
+      },
+      "signals_sent": false,
+      "test_seconds": 1.718,
+      "tests": 1,
+      "wrapper_seconds": 6.514150667004287
+    }
+  },
+  "schema": "modu-vision.current-summary-owned-metadata-source-red-green/v1",
+  "scope": "Actual original ASGI current-summary request with genuinely saved, normalized metadata; two-line finite resource participation repair. No native or whole-renderer acceptance.",
+  "separate_cold_graph_observation": {
+    "log_sha256": "dc4d9c004d57abf44691ab1987a51a46311eb4be09d57e7a395de942b9aad68e",
+    "native_cause_claim": false,
+    "original_tool_source_receipt_unmodified": true,
+    "pytest_exit": 1,
+    "source": "25adcd5317b0029427c132a176d93bd921db4d34",
+    "test_seconds": 24.08
+  },
+  "source": {
+    "base_public_commit": "20e68d22c57ddc8e35b504d41218b64d5352a58f",
+    "engine": {
+      "path": "backend/engine/original_owned_UI_ancillary_request.py",
+      "sha256": "71d46223cc6c5a278736f876b3873ad3bdd01fd40fbbc352781dcc131f1bfe7d"
+    },
+    "final_private_clean_checkpoint": "25adcd5317b0029427c132a176d93bd921db4d34",
+    "final_tracked_files": 2900,
+    "permanent_test": {
+      "path": "backend/tests/test_original_current_summary_saved_metadata.py",
+      "sha256": "2229f57bf0da546dc3bc1b68748ddbfba18c0dc96785be116eee70d4cccbcd06"
+    },
+    "product_change": "Only current_dataset_summary added to existing dataset/dataset_lock/dataset_publish and original metadata_transaction/metadata_lock participant sets. No image-role addition.",
+    "product_diff_sha256": "9f30d301d23a40040f7e3cbab92137ace88ddba49b32819144587092969b1f6c"
+  },
+  "status": "focused_source_regression_verified"
+}

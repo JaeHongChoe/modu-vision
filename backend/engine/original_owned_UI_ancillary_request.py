@@ -866,7 +866,7 @@ class _AncillaryAttempt:
                     and any(original_path is member for member in row['members'])
                     and _workspace_iterator_original(row) and (row['live'] or row['complete'])
                     for row in self.workspace_listings))
-        elif role in {'dataset','dataset_lock','dataset_publish'}:valid=valid and self.name in {'list_dataset_images',*_DATASET_METADATA_NAMES} and (path.is_relative_to(root) or path.is_relative_to(source))
+        elif role in {'dataset','dataset_lock','dataset_publish'}:valid=valid and self.name in {'list_dataset_images','current_dataset_summary',*_DATASET_METADATA_NAMES} and (path.is_relative_to(root) or path.is_relative_to(source))
         elif role=='package':valid=valid and self.name=='packages' and path==root/'delivery'/'library.json'
         elif role=='global_project':valid=valid and self.name=='list_projects' and self.global_project_live is not None and path.is_relative_to(self.global_project_live['path'])
         else:valid=False
@@ -1326,7 +1326,7 @@ def observe_original_UI_ancillary_context(kind):
             attempt=_ACTIVE.get()
             used=(type(attempt) is _AncillaryAttempt and
                 (kind=='profile_admission' and attempt.profile_live is not None or
-                 kind in {'metadata_transaction','metadata_lock'} and attempt.name in {'list_dataset_images',*_DATASET_METADATA_NAMES} or
+                 kind in {'metadata_transaction','metadata_lock'} and attempt.name in {'list_dataset_images','current_dataset_summary',*_DATASET_METADATA_NAMES} or
                  kind=='compute_lease_connection' and attempt.name in {'reservations','jobs'}))
             if not used:return original
             if kind=='compute_lease_connection':

@@ -24,6 +24,8 @@ def main():
         split_manifest=routes_dataset._split_manifest_file(source),
     )
     torch.set_num_threads(1)
+    contract = {"task": "classification", "backbone": "resnet18",
+                "classes": ["OK", "NG"], "image_size": [64, 64]}
     for name, preferred in (("job_fixture_incumbent", 0), ("job_fixture_candidate", 1)):
         job = models / name
         job.mkdir(parents=True, exist_ok=True)
@@ -42,10 +44,8 @@ def main():
             for parameter in model.parameters():
                 parameter.zero_()
             model.fc.bias[preferred] = 10
-        torch.save({"task": "classification", "backbone": "resnet18",
-                    "classes": ["OK", "NG"], "image_size": [64, 64],
-                    "model_state_dict": model.state_dict()}, job / "best_model.pt")
-        (job / "model_meta.json").write_text(json.dumps({"task": "classification"}), encoding="utf-8")
+        torch.save({**contract, "model_state_dict": model.state_dict()}, job / "best_model.pt")
+        (job / "model_meta.json").write_text(json.dumps(contract), encoding="utf-8")
         (job / "job_receipt.json").write_text(json.dumps({
             "status": "completed", "task": "classification",
             "source_dataset_path": str(source), "dataset_fingerprint": fingerprint,
