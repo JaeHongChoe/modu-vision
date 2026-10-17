@@ -16,6 +16,79 @@ from backend.engine.dataset_fingerprint import fingerprint_dataset
 from backend.main import create_app
 
 
+def _truth_snapshot_fixture(tmp_path, count):
+    from backend.engine import dataset_metadata as dm, image_truth
+    source = tmp_path / 'source'
+    source.mkdir()
+    annotations = tmp_path / 'annotations'
+    annotations.mkdir()
+    project = {'id': 'truth-snapshot', 'project_dir': str(tmp_path),
+               'source_dataset_dir': str(source), 'annotations_dir': str(annotations),
+               'active_labelset_id': 'default'}
+    rows = []
+    for index in range(count):
+        file = source / f'part-{index:04}.png'
+        Image.new('RGB', (8, 8), (index % 255, index // 255, 33)).save(file)
+        rows.append({'file_path': str(file), 'ground_truth_label': 'OK' if index % 2 == 0 else 'NG'})
+    # Legitimately hydrate the baseline with the existing reentrant transaction.
+    # The comparison below must retain the same original per-image checks.
+    with dm.metadata_transaction(project['project_dir'], str(source), str(annotations)):
+        expected = [image_truth.read_truth(project, row['file_path'], task='classification', classes=['OK', 'NG'])
+                    for row in rows]
+    model = tmp_path / 'model'
+    model.mkdir()
+    torch.save({'task': 'classification', 'classes': ['OK', 'NG']}, model / 'best_model.pt')
+    (model / 'model_meta.json').write_text(json.dumps({'task': 'classification', 'classes': ['OK', 'NG']}))
+    models = [{'task': 'classification', 'checkpoint_path': str(model / 'best_model.pt')}]
+    return project, source, rows, models, expected, dm.ledger_path(tmp_path, source, annotations)
+
+
+def test_comparison_truth_reads_one_coherent_ledger_for_all512_original_images(tmp_path, monkeypatch):
+    from backend.engine import dataset_metadata as dm, image_truth
+    from backend.engine.comparison_truth import bind_truth
+    project, source, rows, models, expected, ledger = _truth_snapshot_fixture(tmp_path, 512)
+    before = ledger.read_bytes()
+    original_read, original_truth = dm.original_UI_ancillary_read_text, image_truth.read_truth
+    ledger_reads, checked = [], []
+
+    def read(path, *args, **kwargs):
+        if Path(path) == ledger:
+            ledger_reads.append(path)
+        return original_read(path, *args, **kwargs)
+
+    def truth(selected, path, **kwargs):
+        checked.append(path)
+        return original_truth(selected, path, **kwargs)
+
+    monkeypatch.setattr(dm, 'original_UI_ancillary_read_text', read)
+    monkeypatch.setattr(image_truth, 'read_truth', truth)
+    binding = bind_truth(project, source, 'classification', models, rows)
+    assert checked == [row['file_path'] for row in rows], 'Every original image still passes the real truth reader'
+    assert binding['images'] == [{'file_path': row['file_path'], 'truth_sha256': value['truth_sha256']}
+                                 for row, value in zip(rows, expected)]
+    assert ledger.read_bytes() == before, 'Stable comparison preparation cannot rewrite the metadata baseline'
+    assert len(ledger_reads) == 1, 'One coherent ledger read must replace512 full-ledger scans, not image validation'
+
+
+def test_comparison_truth_snapshot_keeps_reviewed_unknown_and_refuses_changed_original(tmp_path):
+    from backend.engine import image_truth
+    from backend.engine.comparison_truth import bind_truth, verify_truth
+    project, source, rows, models, _, ledger = _truth_snapshot_fixture(tmp_path, 3)
+    current = image_truth.read_truth(project, rows[0]['file_path'], task='classification', classes=['OK', 'NG'])
+    image_truth.declare_truth(project, rows[0]['file_path'], task='classification', classes=['OK', 'NG'],
+        verdict='UNKNOWN', reviewer='Controlled fixture', expected_revision=current['truth_revision'],
+        expected_image_revision=current['image_revision'])
+    before = ledger.read_bytes()
+    binding = bind_truth(project, source, 'classification', models, rows)
+    assert rows[0]['ground_truth_verdict'] is None
+    assert rows[0]['truth_basis'] == 'reviewed_declaration'
+    assert ledger.read_bytes() == before
+    verify_truth(project, source, binding)
+    Image.new('RGB', (8, 8), 'black').save(rows[1]['file_path'])
+    with pytest.raises(ValueError, match='truth changed'):
+        verify_truth(project, source, binding)
+
+
 def test_comparison_accepts_segmentation_class_names_metadata(tmp_path):
     from backend.engine.comparison_truth import bind_truth
     from backend.engine.class_semantics import class_semantics_record

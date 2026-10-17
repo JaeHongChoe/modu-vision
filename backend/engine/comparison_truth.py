@@ -49,17 +49,22 @@ def bind_truth(project, source, task, models, images):
     scope_roles=roles if explicit or mixed else None
     scope=image_truth.truth_scope(truth_project,scope_task,classes,scope_roles)
     bindings=[]
-    for row in images:
-        current=image_truth.read_truth(truth_project,row['file_path'],task=scope_task,classes=classes,
-                                      class_roles=scope_roles,participating_tasks=tasks if mixed else None)
-        # An intentional UNKNOWN declaration or invalidated declaration takes
-        # precedence over any descriptive folder/annotation label.
-        reviewed=current['declaration'] is not None or current.get('has_prior_scoped_declarations',False)
-        row['ground_truth_verdict']=(None if current['verdict']=='UNKNOWN' else current['verdict']) if reviewed else binary_verdict(row.get('ground_truth_label'),roles)
-        row['truth_sha256']=current['truth_sha256']
-        row['truth_scope']=scope
-        row['truth_basis']='reviewed_declaration' if reviewed else 'class_label'
-        bindings.append({'file_path':row['file_path'],'truth_sha256':current['truth_sha256']})
+    if images:
+        # Reuse the original reentrant reader under one coherent ledger lock.
+        # Each image still receives its source/label/truth validation, without
+        # parsing and serializing the whole ledger once per image.
+        with dm.metadata_transaction(truth_project['project_dir'],str(source),truth_project['annotations_dir']):
+            for row in images:
+                current=image_truth.read_truth(truth_project,row['file_path'],task=scope_task,classes=classes,
+                                              class_roles=scope_roles,participating_tasks=tasks if mixed else None)
+                # An intentional UNKNOWN declaration or invalidated declaration takes
+                # precedence over any descriptive folder/annotation label.
+                reviewed=current['declaration'] is not None or current.get('has_prior_scoped_declarations',False)
+                row['ground_truth_verdict']=(None if current['verdict']=='UNKNOWN' else current['verdict']) if reviewed else binary_verdict(row.get('ground_truth_label'),roles)
+                row['truth_sha256']=current['truth_sha256']
+                row['truth_scope']=scope
+                row['truth_basis']='reviewed_declaration' if reviewed else 'class_label'
+                bindings.append({'file_path':row['file_path'],'truth_sha256':current['truth_sha256']})
     binding={'scope':scope,'images':bindings,'metadata_sha256':metadata_hashes}
     if mixed:binding['participating_tasks']=tasks
     return binding
