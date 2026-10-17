@@ -143,8 +143,8 @@ test('U007 refuses an actual 8x8 ROI editor input while preserving the saved ori
       expect(row.request.frame()).toBe(page.mainFrame());
     }
     const preview = page.locator(`img[src*="/api/dataset/thumbnail/"]`).filter({visible: true});
-    await within(expect.poll(() => preview.evaluateAll(nodes => nodes.some(node => node instanceof HTMLImageElement
-      && new URL(node.src).searchParams.get('file_path') === file && node.complete && node.naturalWidth > 0)), {timeout: 10_000}).toBe(true), deadline, 'actual selected preview decoded');
+    await within(expect.poll(() => preview.evaluateAll((nodes, expectedFile) => nodes.some(node => node instanceof HTMLImageElement
+      && new URL(node.src).searchParams.get('file_path') === expectedFile && node.complete && node.naturalWidth > 0), file)), {timeout: 10_000}).toBe(true), deadline, 'actual selected preview decoded');
     proof[phase + '_selection'] = {file, dimensions, info_original_request_count: information.length,
       original_info_bodies: information.map(row => ({body: row.body, sha256: row.sha256, status: row.status})), local_path_mode: true};
   };
