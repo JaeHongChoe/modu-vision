@@ -196,6 +196,22 @@ export const FlowchartStudio: React.FC = () => {
     cancelled: 'Partial run stopped.', completed: 'Partial run completed.',
     failed: 'Partial run failed.', unknown: 'Completion is unknown. Check stop status.',
   })[partialRun.phase] : '';
+  const partialStopEpoch = getProjectContextGeneration();
+  const partialStopTransport = getApiPersistenceIdentity();
+  const ownedUnknownPartial = Boolean(isRunning && partialRun?.phase === 'unknown'
+    && partialRun.runId && /^[0-9a-f]{32}$/.test(partialRun.runId)
+    && partialRun.projectId === useProjectStore.getState().project?.id);
+  const handleUnknownPartialStop = () => {
+    if (!ownedUnknownPartial || !partialRun || partialRun.checking || partialRun.cancelRequested) return;
+    const current = useFlowchartStore.getState();
+    // A rendered recovery control must never stop an owner created after it.
+    if (!current.isRunning || current.partialRun !== partialRun
+      || current.partialRun.runId !== partialRun.runId
+      || useProjectStore.getState().project?.id !== partialRun.projectId
+      || getProjectContextGeneration() !== partialStopEpoch
+      || getApiPersistenceIdentity() !== partialStopTransport) return;
+    void cancelPartialRun();
+  };
   const sourceKey=`${getProjectContextGeneration()}/${folderPath}/${selectedImage?.imagePath||''}`;
   const [sourceInfo,setSourceInfo]=useState<{key:string;size?:number[];error?:string}|null>(null);
   useEffect(()=>{
@@ -1797,17 +1813,27 @@ export const FlowchartStudio: React.FC = () => {
           </label>
           <button ref={partialRunButton} type="button" onClick={handleRunToNode} disabled={!pipeline||!selectedNodeId||!selectedImage||isRunning||isLoading||!!graphError}
             className="rounded border border-sky-700 px-3 py-1.5 text-sky-200 disabled:opacity-50" title="선택한 실행 위치에서 이 노드와 그 상류만 실행합니다. 모델 학습 서버 자동 선택 방식에서는 이 컴퓨터 CPU로 디버그합니다.">선택 노드까지 실행</button>
-          <span className="inline-flex w-40 shrink-0">
+          <span className="inline-flex shrink-0 gap-2">
             {isRunning && partialRun && <button type="button"
               aria-describedby="flow-partial-run-status"
               disabled={partialRun.checking || (partialRun.phase !== 'unknown' && partialRun.cancelRequested)}
               onFocus={() => { partialStopHadFocus.current = true; }}
               onBlur={event => { if (event.relatedTarget) partialStopHadFocus.current = false; }}
               onClick={() => { void (partialRun.phase === 'unknown' ? refreshPartialRun() : cancelPartialRun()); }}
-              className="min-h-8 w-full cursor-pointer rounded border border-amber-600 px-3 py-1.5 text-sm text-amber-200 hover:bg-amber-950/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--workspace-focus)] disabled:cursor-not-allowed disabled:opacity-40">
+              className="min-h-8 w-40 cursor-pointer rounded border border-amber-600 px-3 py-1.5 text-sm text-amber-200 hover:bg-amber-950/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--workspace-focus)] disabled:cursor-not-allowed disabled:opacity-40">
               {language === 'ko'
                 ? (partialRun.checking ? '중단 상태 확인 중…' : partialRun.phase === 'unknown' ? '중단 상태 확인' : partialRun.cancelRequested ? '중단 요청됨' : '부분 실행 중단')
                 : (partialRun.checking ? 'Checking stop status…' : partialRun.phase === 'unknown' ? 'Check stop status' : partialRun.cancelRequested ? 'Stop requested' : 'Stop partial run')}
+            </button>}
+            {ownedUnknownPartial && partialRun && <button type="button"
+              aria-describedby="flow-partial-run-status"
+              disabled={partialRun.checking || partialRun.cancelRequested}
+              onFocus={() => { partialStopHadFocus.current = true; }}
+              onBlur={event => { if (event.relatedTarget) partialStopHadFocus.current = false; }}
+              onClick={handleUnknownPartialStop}
+              className="min-h-8 w-40 cursor-pointer rounded border border-amber-600 px-3 py-1.5 text-sm text-amber-200 hover:bg-amber-950/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--workspace-focus)] disabled:cursor-not-allowed disabled:opacity-40">
+              {language === 'ko' ? (partialRun.cancelRequested ? '중단 요청됨' : '부분 실행 중단')
+                : (partialRun.cancelRequested ? 'Stop requested' : 'Stop partial run')}
             </button>}
           </span>
           <button
