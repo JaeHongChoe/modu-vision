@@ -28371,41 +28371,40 @@
               ]
             },
             "cancel": {
-              "state": "pending",
+              "state": "verified",
+              "reason": "Current browser evidence replaces the current pointer after actual execution. The preceding historical receipt and complete old dimension remain unchanged in the 2026-10-17 source-portability provenance delta and Git history. No current Electron or parent acceptance.",
               "evidence": [
                 {
                   "task": "S3-05",
-                  "source_sha": "114d908cf73ef9bef25f62af2b968436895522c0",
+                  "source_sha": "d00f07f3d7c940317848762abdf6743831dfe63d",
                   "kind": "click",
                   "action": "라벨 내보내기 요청 취소",
-                  "expected": "Abort only the currently owned export request; prevent download adoption and allow explicit fresh retry without claiming backend bundle rollback or worker interruption.",
-                  "observed": "Clean browser actual Root04 used the owning AbortSignal after the original backend completed200. Original client socket closed with0bytes and no Response/download adoption; original server ZIP remained. A separate real project-context switch also rejected adoption; two ordinary fresh ZIP downloads recovered exact source and label member hashes. No panel-dismissal, worker-stop, installed-native, model quality or whole-parent credit.",
-                  "reviewer": "Root actual proof review plus immutable source/HTTP/ZIP/screenshot receipts; canonical click reference only, no whole feature acceptance",
+                  "expected": "Cancel only the currently owned export request; reject stale project responses and recover fresh downloads while preserving completed server bundles.",
+                  "observed": "One clean-source Chrome browser case passed without retries. Real explicit cancel and A-to-B project handoff rejected original completed 200 responses before download adoption; fresh downloads after cancellation and project return matched original ZIP image/label hashes. Four screenshots and 13 retained artifact bodies were checked. Backend exited normally with closed PID/port/group and no teardown leftovers.",
+                  "reviewer": "Root read back full real HTTP/ZIP/screenshot and closure evidence; two endpoint screenshots independently inspected. Browser-only scope, not Electron, native installation, model quality, whole feature or parent acceptance. The passive observer did not directly witness browser-context close; ordinary runner teardown is recorded separately.",
                   "test": "scripts/e2e/label-export-own-request-cancel.spec.ts::real owning export Abort cancels download adoption then recovers without deleting completed server bundles",
-                  "receipt": "2026-10-15-f117-own-export-cancel-root04-browser.json",
-                  "receipt_sha256": "b1442969771692791f891ef464598a6a8fef3af52234a022379439a5273698e5",
+                  "receipt": "2026-10-17-f117-owned-export-cancel-current-browser.json",
+                  "receipt_sha256": "ff308a663356eebe2c09a6c73497897d1f78ea9abd5440c6ac716b1f41c5b658",
                   "artifacts": [
                     {
                       "id": "screenshot-0",
-                      "sha256": "fff1cc7752e2d207e0faa819c85320bb855acf83103fc146c27c94612b279a2f"
+                      "sha256": "f42de30879d196afcc3b1afc3991a598ab77ae0add33e3b110694a0936925839"
                     },
                     {
                       "id": "screenshot-1",
-                      "sha256": "7832d2bf4c3c3b46d1e6a1335003767d064d4713bf79e93012979a4e7e63b911"
+                      "sha256": "a3cdc886da3289a429325f057eaf295ea7e3d3106353116bc3a6e0b065621a50"
                     },
                     {
                       "id": "screenshot-2",
-                      "sha256": "5abc5ba1ef5c01e908dce5265e5f021107347544da10cba82e33186e2334d5d8"
+                      "sha256": "4bcd55e061a08bc633f2e02914fe54831c9b0573dd51f9b448e5e37c1baf8151"
                     },
                     {
                       "id": "screenshot-3",
-                      "sha256": "697b0e58a1881e906933dce77874605aa4b6139b0b8454bacad561f8b30562f6"
+                      "sha256": "4bf9c8616c305e41d7111e668ffd68299a82d1656deedbcb0feda118730f5556"
                     }
                   ]
                 }
-              ],
-              "reason": "Historical Root04 browser cancellation passed at its retained source and test bytes. The test now loads the exact unchanged passive observer from a repository fixture after a source-only path portability change; no current GUI rerun was performed. The original evidence and receipt remain historical. See 2026-10-17-action-source-portability-provenance-delta.json.",
-              "reviewer": "Root source-only publication provenance reconciliation; current GUI execution remains pending"
+              ]
             },
             "reopen": {
               "state": "verified",
