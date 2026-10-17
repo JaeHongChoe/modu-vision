@@ -1,0 +1,26 @@
+{
+  "schema": "modu-vision.action-fix-source-declarations/v1",
+  "scope": "Current source declarations for fixed comparison rendering and dataset picker ownership only",
+  "source_declaration_only": true,
+  "historical_acceptance_rebound": false,
+  "historical_receipts_modified": false,
+  "new_GUI_executions": [],
+  "newly_verified_scenarios": [],
+  "parent_completion_credit": false,
+  "current_source_table_changes": [
+    {
+      "source": "src/renderer/components/flowchart/FlowWorkspacePanel.tsx",
+      "previous_declaration_sha256": "0467c9126211c365e25581db03cd1528d4ac803579b4a8fecb3fae785304ca45",
+      "current_declaration_sha256": "6e7c74ae465e6a426601de756a91a9966615195f52c1e6aa9e4691b187baa8bf"
+    },
+    {
+      "source": "src/renderer/components/dataset/DatasetStudio.tsx",
+      "previous_declaration_sha256": "40def65268609d4cc4ad1152564904a8deaf56219d6fc16e5549e56041614208",
+      "current_declaration_sha256": "b5a01e5de2236780e035206511e19ede82ca0bb9b3b9af849f68a6cf1e8c382d"
+    }
+  ],
+  "original_registry_sha256": "b0b8fc62a0d9fc977131b4b07f3d961b5975903cd13b4a15997dc52867c4fab8",
+  "updated_registry_sha256": "907b739bb114a34e1a7cb5ea33453dc70a6b7362f6e1ba80917482af2791ec05",
+  "all_historical_action_records_unchanged": true,
+  "remaining_current_GUI_verification": "Focused source regression tests are not a current whole GUI or installed native qualification."
+}

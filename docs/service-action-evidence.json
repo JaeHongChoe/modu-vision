@@ -2,7 +2,7 @@
   "schema_version": 1,
   "kind": "curated_action_evidence_not_complete_feature_acceptance",
   "sources": {
-    "src/renderer/components/flowchart/FlowWorkspacePanel.tsx": "0467c9126211c365e25581db03cd1528d4ac803579b4a8fecb3fae785304ca45",
+    "src/renderer/components/flowchart/FlowWorkspacePanel.tsx": "6e7c74ae465e6a426601de756a91a9966615195f52c1e6aa9e4691b187baa8bf",
     "src/renderer/components/flowchart/FlowchartStudio.tsx": "445b156c5129e6522c8a4d17b84f71acbffab6732aae125fecff4967ef38e26d",
     "src/renderer/components/flowchart/FlowDraftControls.tsx": "3bd10fc68ea4ae2dc600dfad2b6c51b56d74d213f7483923107295aac303f5a8",
     "src/renderer/components/labeling/TeamDataPanel.tsx": "c3e0aa4756127e8b3ae8db14d06ed25261b2948856ebb9d26c7c3fc797979397",
@@ -47,7 +47,7 @@
     "src/renderer/components/training/RotatedBoxFitting.tsx": "5b27de4bda68f1629261bc4dab546cc1f3c254af4f516c87fdbef1fbc69d9b50",
     "src/renderer/components/flowchart/CustomNode.tsx": "c0219bf9a011c5a86c7122bd100f5e88259b425164cee6d6a3e93548482e7fad",
     "src/renderer/components/flowchart/ImageRoiEditor.tsx": "498b466db43f32795b63f7f5cabb5bed5549c67d7be5d3d1e611b037dbe0016c",
-    "src/renderer/components/dataset/DatasetStudio.tsx": "40def65268609d4cc4ad1152564904a8deaf56219d6fc16e5549e56041614208",
+    "src/renderer/components/dataset/DatasetStudio.tsx": "b5a01e5de2236780e035206511e19ede82ca0bb9b3b9af849f68a6cf1e8c382d",
     "src/renderer/components/evaluation/EvaluationHistoryPanel.tsx": "ce9cfa541e63988176973a0966d031c5b8722b356feb1472671da73299d6e2fe",
     "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx": "9ab0454b4433afdd10fc9c6cbcc12e0ac4c71e3f43e0ed0aa829cd687d38672e",
     "src/renderer/components/runtime/FleetPanel.tsx": "572144e60bbe38efc208ca2d2d19e87de58793da783269e5498970c1d97243ab",
