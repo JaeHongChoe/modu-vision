@@ -13,6 +13,26 @@ import {applyResolution,legacyStorageKey,offeredLegacyPaths,parseSavedTestSet,pi
 interface Template {template_id:string;name:string;kind:'flow'|'subgraph';pipeline:FlowchartPipeline;models:Array<{node_id:string;name:string;task:string}>;classes:{names:string[];ids:number[]};classes_by_node?:Record<string,{names:string[];ids:number[]}>;ports:{inputs:Array<{node_id:string;payload_type:string}>;outputs:Array<{node_id:string;payload_type:string}>}}
 interface Comparison {comparison_id:string;name:string;created_at:string;status:string;schema_version?:number;integrity?:string;record_sha256?:string;quality_approved?:boolean;comparison_scope?:'whole_flow'|'debug_partial';stop_node_id?:string|null;cohort_sha256?:string;model_bindings?:{a:Array<{node_id:string;job_id:string;task:string;checkpoint_sha256:string}>;b:Array<{node_id:string;job_id:string;task:string;checkpoint_sha256:string}>};rows:Array<{image_path:string;file_name:string;image_sha256:string;error?:string;result_a?:FlowchartExecutionResult;result_b?:FlowchartExecutionResult;difference?:{verdict_changed:boolean;roi_changed:boolean;changed_nodes:string[];verdict_a:string;verdict_b:string;reason_a:string;reason_b:string}}>}
 function verifiedComparison(record:Comparison){return record.schema_version===2&&record.integrity==='verified'&&/^[a-f0-9]{64}$/.test(record.record_sha256||'');}
+// A saved envelope hash does not establish that an older result has displayable
+// execution evidence. Refuse its dependent view without repairing stored data.
+function savedComparisonRowIssue(row:Comparison['rows'][number]):string|null {
+  if(row.error)return null;
+  for(const [side,result] of [['A',row.result_a],['B',row.result_b]] as const){
+    let reason='';
+    if(!result||typeof result!=='object'||Array.isArray(result)||!Array.isArray(result.execution_steps))
+      reason='실행 단계 목록을 확인할 수 없습니다.';
+    else if(result.execution_steps.some(step=>!step||typeof step!=='object'||Array.isArray(step)
+      ||typeof step.node_id!=='string'||typeof step.name!=='string'||typeof step.status!=='string'
+      ||(step.branch_verdict!=null&&typeof step.branch_verdict!=='string')
+      ||[step.input_count,step.output_count].some(count=>count!=null&&(typeof count!=='number'||!Number.isFinite(count)))))
+      reason='실행 단계의 이름·상태·입출력 수가 유효하지 않습니다.';
+    else if(result.debug_cache?.status==='hit'&&(!Number.isFinite(result.total_latency_ms)
+      ||(result.debug_cache.original_latency_ms!=null&&!Number.isFinite(result.debug_cache.original_latency_ms))))
+      reason='저장된 캐시 실행 시간을 확인할 수 없습니다.';
+    if(reason)return `저장된 버전 ${side} 실행 결과가 불완전해 비교 판정과 미리보기를 표시할 수 없습니다. ${reason} 원본 기록은 변경하지 않았습니다.`;
+  }
+  return null;
+}
 export function FlowWorkspacePanel({versions,models,onOpenImage,area}:{area?:'edit'|'test'|'evaluate'|'release';versions:SavedFlowVersion[];models:FlowModelCatalogItem[];onOpenImage:()=>void}) {
   const project=useProjectStore(s=>s.project);const folder=useDatasetStore(s=>s.folderPath);const task=useProjectStore(s=>s.task);const labelset=project?.active_labelset_id;const transport=useComputeStore(s=>s.transportRevision);const profile=useComputeStore(s=>s.selectedProfileId);const backendIdentity=getApiPersistenceIdentity();
   const {pipeline,replacePipeline,setSelectedImage,selectNode,isRunning}=useFlowchartStore();
@@ -119,7 +139,14 @@ export function FlowWorkspacePanel({versions,models,onOpenImage,area}:{area?:'ed
         {comparison&&<p role="status" className="break-all text-slate-300">{verifiedComparison(comparison)?`저장 근거 무결성 확인 · ${comparison.record_sha256}`:'이전 비교 기록 · 해시 미기록 · 무결성 재검증 필요'} · 모델 품질 승인과 배포 적격성은 별도 확인하세요.</p>}
         {comparison&&<details><summary>고정 모델·입력 근거</summary><p className="break-all">입력 목록 해시: {comparison.cohort_sha256||'이전 기록: 미기록'}</p>{comparison.model_bindings?(['a','b'] as const).map(side=><div key={side}><h4>버전 {side.toUpperCase()} · 실행 범위 모델 {comparison.model_bindings![side].length}개</h4>{comparison.model_bindings![side].map(model=><p className="break-all" key={model.node_id}>{model.node_id} · {model.job_id} · {model.task} · {model.checkpoint_sha256}</p>)}</div>):<p>이전 기록: 모델 해시 미기록</p>}</details>}
         {comparison?.comparison_scope==='debug_partial'&&<p className="text-amber-200">부분 실행 · {comparison.stop_node_id}까지 · 최종 OK 판정이 아님 · 전체 플로우 평가가 별도로 필요합니다.</p>}
-        {comparison?.rows.map(row=><div key={row.image_path} className="rounded border border-slate-700 p-2"><button className="text-sky-200 underline" onClick={()=>{setSelectedImage({source:'dataset',imagePath:row.image_path,fileName:row.file_name,thumbnailUrl:`/api/dataset/thumbnail/preview?file_path=${encodeURIComponent(row.image_path)}`});if(row.difference?.changed_nodes[0])selectNode(row.difference.changed_nodes[0]);onOpenImage();}}>{row.file_name}</button>{row.error?<p role="alert" className="text-amber-300">{row.error}</p>:<><p>{row.difference?.verdict_a} → {row.difference?.verdict_b} · {row.difference?.roi_changed?'ROI/영역 판정 변경':'ROI 동일'}</p><p className="text-slate-400">A: {row.difference?.reason_a}<br/>B: {row.difference?.reason_b}</p><p>변경 노드: {row.difference?.changed_nodes.join(', ')||'없음'}</p><details><summary>중간 이미지와 원본 해시</summary><p className="break-all">{row.image_sha256}</p><div className="grid grid-cols-2 gap-2">{[row.result_a,row.result_b].map((r,i)=>{const image=inspectionPreview(r?.annotated_image,undefined);return <div key={i}>{r?.debug_cache&&<p>{debugRunCacheText(r)}</p>}{r?.annotated_image&&(image?<img alt={`버전 ${i?'B':'A'} 검사 결과`} src={image} className="w-full object-contain"/>:<p className="text-slate-400">결과 이미지를 읽을 수 없습니다.</p>)}{r?.execution_steps.map(s=><p key={s.node_id}>{s.name}: {s.branch_verdict||s.status} ({s.input_count??0} → {s.output_count??0})</p>)}</div>;})}</div></details></>}</div>)}
+        {comparison?.rows.map(row=>{const issue=savedComparisonRowIssue(row);return issue
+          ? <div key={row.image_path} className="rounded border border-amber-800 p-2">
+            <p role="alert" className="text-amber-300">{issue}</p>
+            <details><summary className="cursor-pointer text-sky-200">저장된 원본 비교 결과 JSON</summary>
+              <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap break-all">{JSON.stringify(row,null,2)}</pre>
+            </details>
+          </div>
+          : <div key={row.image_path} className="rounded border border-slate-700 p-2"><button className="text-sky-200 underline" onClick={()=>{setSelectedImage({source:'dataset',imagePath:row.image_path,fileName:row.file_name,thumbnailUrl:`/api/dataset/thumbnail/preview?file_path=${encodeURIComponent(row.image_path)}`});if(row.difference?.changed_nodes[0])selectNode(row.difference.changed_nodes[0]);onOpenImage();}}>{row.file_name}</button>{row.error?<p role="alert" className="text-amber-300">{row.error}</p>:<><p>{row.difference?.verdict_a} → {row.difference?.verdict_b} · {row.difference?.roi_changed?'ROI/영역 판정 변경':'ROI 동일'}</p><p className="text-slate-400">A: {row.difference?.reason_a}<br/>B: {row.difference?.reason_b}</p><p>변경 노드: {row.difference?.changed_nodes.join(', ')||'없음'}</p><details><summary>중간 이미지와 원본 해시</summary><p className="break-all">{row.image_sha256}</p><div className="grid grid-cols-2 gap-2">{[row.result_a,row.result_b].map((r,i)=>{const image=inspectionPreview(r?.annotated_image,undefined);return <div key={i}>{r?.debug_cache&&<p>{debugRunCacheText(r)}</p>}{r?.annotated_image&&(image?<img alt={`버전 ${i?'B':'A'} 검사 결과`} src={image} className="w-full object-contain"/>:<p className="text-slate-400">결과 이미지를 읽을 수 없습니다.</p>)}{r?.execution_steps.map(s=><p key={s.node_id}>{s.name}: {s.branch_verdict||s.status} ({s.input_count??0} → {s.output_count??0})</p>)}</div>;})}</div></details></>}</div>;})}
       </section>
     </div>{error&&<p role="alert" className="px-4 pb-3 text-amber-300">{error}</p>}{notice&&<p role="status" className="px-4 pb-3 text-sky-200">{notice}</p>}
   </details>;

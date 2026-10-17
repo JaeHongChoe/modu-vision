@@ -93,3 +93,35 @@ test('stored A/B previews admit inline raster bytes without fetching persisted e
  const images=nodes(panel.render()).filter(n=>n.type==='img');assert.deepEqual(images.map(n=>n.props.src),[inline]);
  assert.match(textOf(panel.render()),/결과 이미지를 읽을 수 없/);
 });
+
+const savedResult=()=>({execution_steps:[{node_id:'inspect',name:'Saved inspection',status:'review_required',branch_verdict:'REVIEW',input_count:1,output_count:1}]});
+const savedRow=()=>({image_path:'/fixture/one.png',file_name:'one.png',image_sha256:'a'.repeat(64),result_a:savedResult(),result_b:savedResult(),difference:{verdict_a:'REVIEW',verdict_b:'REVIEW',roi_changed:false,changed_nodes:[],reason_a:'Unapproved fixture',reason_b:'Unapproved fixture'}});
+const invalidSavedResults=[
+ ['missing execution steps',{}],
+ ['null execution steps',{execution_steps:null}],
+ ['non-array execution steps',{execution_steps:{node_id:'inspect'}}],
+ ['null execution step',{execution_steps:[null]}],
+ ['non-text execution step name',{execution_steps:[{node_id:'inspect',name:{untrusted:'name'},status:'passed'}]}],
+ ['invalid cached timing',{execution_steps:[],debug_cache:{status:'hit',original_latency_ms:'unknown'},total_latency_ms:1}],
+];
+for(const [name,result]of invalidSavedResults)test(`saved legacy A/B history refuses ${name} without repairing or rewriting its original`,async()=>{
+ const root=fs.mkdtempSync(path.join(require('node:os').tmpdir(),'modu-saved-comparison-'));
+ try{
+  const bad={comparison_id:'legacy-bad',created_at:'2026-10-01T00:00:00Z',status:'completed',rows:[{...savedRow(),result_a:result}]};
+  const good={comparison_id:'legacy-good',created_at:'2026-10-01T00:00:01Z',status:'completed',rows:[savedRow()]};
+  const filename=path.join(root,'legacy-bad.json'),original=Buffer.from(JSON.stringify(bad,null,2)+'\n');fs.writeFileSync(filename,original);
+  const supplied=JSON.parse(fs.readFileSync(filename,'utf8')),before=JSON.stringify(supplied),panel=renderPanel({history:[supplied,good]});
+  await panel.load();
+  const choose=id=>nodes(panel.render()).find(n=>n.props?.['aria-label']==='저장 비교 결과').props.onChange({target:{value:id}});
+  choose('legacy-bad');let tree;assert.doesNotThrow(()=>{tree=panel.render();require('react-dom/server').renderToStaticMarkup(tree);},'an incomplete saved result must not crash the actual panel render');
+  assert.match(textOf(tree),/저장된.*A.*실행 결과.*(없|유효하지|불완전)/,'the owning result must explain why its display is unavailable');
+  assert.ok(nodes(tree).some(n=>n.type==='pre'&&n.props.children===JSON.stringify(supplied.rows[0],null,2)),'unmodified saved row must remain inspectable');
+  assert.equal(nodes(tree).filter(n=>n.type==='img').length,0,'an invalid row must not present a result preview');
+  assert.equal(JSON.stringify(supplied),before,'display validation must not fabricate or mutate saved results');
+  assert.deepEqual(fs.readFileSync(filename),original,'the original saved JSON bytes must be preserved');
+  assert.equal(panel.sent(),undefined,'reading invalid history must not submit a comparison or other mutation');
+  choose('');assert.ok(!nodes(panel.render()).some(n=>n.props?.role==='alert'),'explicit dismissal clears only the selected unavailable view');
+  choose('legacy-good');tree=panel.render();assert.ok(!nodes(tree).some(n=>n.props?.role==='alert'),'a valid saved record remains readable after the refusal');
+  assert.match(textOf(tree),/Saved inspection/);assert.deepEqual(fs.readFileSync(filename),original);
+ }finally{fs.rmSync(root,{recursive:true,force:true});}
+});
