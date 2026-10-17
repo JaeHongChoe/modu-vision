@@ -155,8 +155,18 @@ async function exercise(mode: 'reopen' | 'error', {page, request, renderer, work
         await handoffWithin(page.getByRole('alert').scrollIntoViewIfNeeded(), deadline, 'original filesystem error visible for screenshot');
       } else {
         prepared = body; expect(path.dirname(prepared.dataset_path)).toBe(patchRoot); expect(path.basename(prepared.dataset_path)).toMatch(/^[0-9a-f]{32}$/);
-        expect(prepared).toEqual({dataset_path: prepared.dataset_path, classes: ['OK', 'chip'], patch_count: 12, split_counts: {train: 4, val: 4, test: 4}, warnings: [], source_dataset_path: source});
+        const manifestRaw = fs.readFileSync(path.join(prepared.dataset_path, 'patches.json'));
+        const sourceHashes = Object.fromEntries([0, 1, 2].map(i => [`images/part-${i}.png`, originalSource[`part-${i}.png`].sha256!]));
+        const sourceMap = Object.fromEntries(Object.entries(sourceHashes).map(([image, source_sha256]) => [image, {source_relative_path: path.basename(image), source_sha256}]));
+        const digest = createHash('sha256').update('patch-classification-dataset-v1\0').update(sha(manifestRaw));
+        for (const [image, hash] of Object.entries(sourceHashes).sort(([a], [b]) => a.localeCompare(b))) digest.update('\0').update(image).update('\0').update(hash);
+        const provenance = {dataset_sha256: 'sha256:' + digest.digest('hex'), manifest_sha256: sha(manifestRaw), source_sha256: sourceHashes,
+          split_counts: {train: 4, val: 4, test: 4}, source_image_count: 3, patch_count: 12, source_dataset_path: source, source_map: sourceMap};
+        expect(prepared).toEqual({dataset_path: prepared.dataset_path, classes: ['OK', 'chip'], patch_count: 12,
+          normal_class: 'OK', patch_size: 16, stride: 16, provenance, split_counts: {train: 4, val: 4, test: 4}, warnings: [], source_dataset_path: source});
         await handoffWithin(expect(datasetSelector()).toHaveValue(prepared.dataset_path, {timeout: remaining(deadline)}), deadline, 'original success selects prepared dataset');
+        await handoffWithin(expect(datasetSelector().locator('option:checked')).toHaveText('준비 1 · 패치 12개 · 16px / 간격 16px', {timeout: remaining(deadline)}), deadline, 'original prepare parameters visible before reload');
+        await handoffWithin(expect(page.getByText('클래스 OK · chip · 원본 크기 16px · train/val/test 이미지 단위 분할', {exact: true})).toBeVisible({timeout: remaining(deadline)}), deadline, 'original prepare size caption visible before reload');
         await handoffWithin(expect(page.getByRole('status').filter({hasText: '정답 패치 12개를 프로젝트에 준비했습니다.'})).toBeVisible({timeout: remaining(deadline)}), deadline, 'actual prepare success status');
       }
       await handoffWithin(expect(prepare).toBeEnabled({timeout: remaining(deadline)}), deadline, 'prepare action completed');

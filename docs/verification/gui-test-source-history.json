@@ -471,6 +471,26 @@
       "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
       "current_test_source_sha256": "52cc4b8f2edb4cd8b97526527890cd31b2bedb36f5202c42b2588b8926ef9a7f",
       "reason": "Retained public ancestor preserves exact historical executed test bytes. The reviewed current fixture joins already-issued stage-entry evaluation responses before immutable custody, retaining original request-start10s, full-body and source/context guards. This declaration preserves the old execution source and supplies no new GUI execution or current acceptance."
+    },
+    {
+      "receipt": "2026-10-18-patch-prepare-owned-filesystem-error-current-browser.json",
+      "receipt_sha256": "cc6bcf17f32486294a7dbdda8315889fd4c322760e18c47f23a63c69337891f5",
+      "execution_source_sha": "abf68757ea15784945f2dc8b60132569faaf21c5",
+      "test": "scripts/e2e/patch-prepare-reopen-error-controls.spec.ts::patch preparation reports a real owned filesystem obstruction and reloads without fabricated prepared data",
+      "recorded_test_source_sha256": "f397d085539bc381133f62a00d5dddfc526d5ccfca8e1ef7380d2acf81a13fa7",
+      "retained_spec_commit": "3c7a62bcea0c19e20ca8aa77c5a71b1a41a71e8a",
+      "current_test_source_sha256": "5e03e8604b1cd97c67c6af0b2092d68ca7d77485085dbed7ebd1932e0c11e661",
+      "reason": "Retained public ancestor preserves the exact historical executed spec and original receipt. Current test adds exact assertions for four intentionally added preparation metadata fields, independently derived provenance, and pre-reload numeric captions within the same original deadline. Existing error and reopen operations, custody and full-response guards remain unchanged. This declaration supplies no new execution or acceptance and does not rewrite either historical result."
+    },
+    {
+      "receipt": "2026-10-18-patch-prepare-reopen-current-browser.json",
+      "receipt_sha256": "dd04cb6848d18d8343d608b066d093faf92e6e372fa16ac88ef7f44b00858c90",
+      "execution_source_sha": "74fcce8bdc55c22036a8035a5641b7a5d81c2a3f",
+      "test": "scripts/e2e/patch-prepare-reopen-error-controls.spec.ts::patch preparation reopens its actual saved dataset manifest and original-coordinate preview without training",
+      "recorded_test_source_sha256": "f397d085539bc381133f62a00d5dddfc526d5ccfca8e1ef7380d2acf81a13fa7",
+      "retained_spec_commit": "3c7a62bcea0c19e20ca8aa77c5a71b1a41a71e8a",
+      "current_test_source_sha256": "5e03e8604b1cd97c67c6af0b2092d68ca7d77485085dbed7ebd1932e0c11e661",
+      "reason": "Retained public ancestor preserves the exact historical executed spec and original receipt. Current test adds exact assertions for four intentionally added preparation metadata fields, independently derived provenance, and pre-reload numeric captions within the same original deadline. Existing error and reopen operations, custody and full-response guards remain unchanged. This declaration supplies no new execution or acceptance and does not rewrite either historical result."
     }
   ]
 }
