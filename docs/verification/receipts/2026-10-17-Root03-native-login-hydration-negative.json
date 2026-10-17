@@ -1,0 +1,386 @@
+{
+  "claims": {
+    "GPU_execution_qualified": false,
+    "Provider18_manual8_accepted": false,
+    "actual_installed_startup_READY": true,
+    "flow_execution_qualified": false,
+    "historical_receipts_repinned": false,
+    "login_automatic_hydration_uncertainty_observed": true,
+    "model_execution_qualified": false,
+    "model_quality_approved": false,
+    "native_six_pending_requests_closed": false,
+    "parent_acceptance": false,
+    "release_signer_or_operator_approval": false,
+    "scoped_closure_pass": false
+  },
+  "cohort": "Root03-f364-frontend-B3-35ac-native-login-auto-hydration",
+  "evidence": {
+    "original_private_bodies": [
+      {
+        "bytes": 7839,
+        "name": "01-baseline.raw.json",
+        "public_body_included": false,
+        "sha256": "3b892e1e90c01ab9a5dab52b3937847c76a12e26460cb48ecfcf860cc76b596d"
+      },
+      {
+        "bytes": 26342,
+        "name": "02-login.raw.json",
+        "public_body_included": false,
+        "sha256": "c581b9c80e71ee3d6d88887be497fb8a65d422ca9c78a090b5ef6fc8638ab380"
+      },
+      {
+        "bytes": 410,
+        "name": "active-before-UI.raw.json",
+        "public_body_included": false,
+        "sha256": "8af1eb6fe7da83610dbc04350e60081f1f484542ec11c666aa82b0e23eff29cc"
+      },
+      {
+        "bytes": 2595,
+        "name": "bootstrap-receipt.raw.json",
+        "public_body_included": false,
+        "sha256": "799b00d8c976c637d258d3b8c41e83916f1d9c385553bb9d7c989992bdad6919"
+      },
+      {
+        "bytes": 404,
+        "name": "controller-ack.raw.json",
+        "public_body_included": false,
+        "sha256": "46bf435e46bf7ad21c6583d358384567efaf4559109eb301f9714ee78e773c93"
+      },
+      {
+        "bytes": 3554,
+        "name": "controller-start.raw.json",
+        "public_body_included": false,
+        "sha256": "ce6a8867c6e692d2411a878fdb676094b4cfe32ad8df8b487fc1a74b0c0c24c1"
+      },
+      {
+        "bytes": 15327,
+        "name": "fixture-result.raw.json",
+        "public_body_included": false,
+        "sha256": "c94724385f4e57a109ab183e4caecdf13739478a0fdd4d0331c253f5eca798d7"
+      },
+      {
+        "bytes": 235,
+        "name": "hold-tool-wrapper-result.raw.json",
+        "public_body_included": false,
+        "sha256": "376236043b4d7fa3e517b6365d0dcb6bd99f06ae3999a203a5df1081f74ce526"
+      },
+      {
+        "bytes": 3038,
+        "name": "install-child.raw.json",
+        "public_body_included": false,
+        "sha256": "16b943a8d85af3bf6598fba5d723435638be5268e0a218cf13a7dc7a7a6b0f04"
+      },
+      {
+        "bytes": 5372,
+        "name": "journal.raw.json",
+        "public_body_included": false,
+        "sha256": "100f0e0f3b3467c99fd6f1caacd81be785eb313a958c1461fa40db2184984e2b"
+      },
+      {
+        "bytes": 2938,
+        "name": "preview-child.raw.json",
+        "public_body_included": false,
+        "sha256": "93da0dd7d236a393f6a2c7f337a46deb8bc075a0464c2682dc9eb6e9df393ac9"
+      },
+      {
+        "bytes": 59899,
+        "name": "protected-after-UI.raw.json",
+        "public_body_included": false,
+        "sha256": "5d42648d2764d37804586ec9f04330ec010d9b10e68e25b741e224c69eba1741"
+      },
+      {
+        "bytes": 222,
+        "name": "quit.raw.json",
+        "public_body_included": false,
+        "sha256": "e4d71220b89a37b46e67b8af0344e62a228967014962b00a3f1560df16bda7f3"
+      },
+      {
+        "bytes": 19875,
+        "name": "readiness-proof.raw.json",
+        "public_body_included": false,
+        "sha256": "c61d6c2b394018faebcdad44e2b5ebb7b0fe16675be2c938d22b8dcd353cbed2"
+      },
+      {
+        "bytes": 1731,
+        "name": "ready.raw.json",
+        "public_body_included": false,
+        "sha256": "6af124d32ff443fb62944dbb40d63f3527dcf46db342f7e60306631b57dcc90b"
+      },
+      {
+        "bytes": 4681,
+        "name": "result.raw.json",
+        "public_body_included": false,
+        "sha256": "2f94a575c0823030e23c6caf0ecef9e98408af55053cd3ab9f914eb201c74c98"
+      },
+      {
+        "bytes": 4119,
+        "name": "setup-run-result.raw.json",
+        "public_body_included": false,
+        "sha256": "f996f5ecc8a2dda9013b1a89d408f977fadce5d7dcac4e21a95baad81e88bdcb"
+      },
+      {
+        "bytes": 6649,
+        "name": "startup-diagnostic.raw.jsonl",
+        "public_body_included": false,
+        "sha256": "94a27c649d60c6d5afa0fa4404119f4108b50498a3d9008abd477f304d63b406"
+      },
+      {
+        "bytes": 1111,
+        "name": "writer-registry.raw.json",
+        "public_body_included": false,
+        "sha256": "cd1596186fa3ea209ccd5eae65025f83d6c2cb61cbefffa22239fcd656dcb6fd"
+      }
+    ],
+    "private_raw_index_sha256": "ec8f0772dba15e21785b6b3abc510e485e0c6fb9e6a5107165776af24df01076",
+    "private_setup_supplement_index_sha256": "17e4f032fe0bff0f8c9e8ba8f0bdc2ada927c32c4dc00bf251110e8f9ede21c6",
+    "public_includes_original_raw_bodies": false
+  },
+  "identity_custody": {
+    "backend": {
+      "command_sha256": "3fbc085c67c2a1e4691d56a8d7f2bc73a23d99e98c49acfd325c2ba2d488a6c3",
+      "created_at": 1792229183.43438,
+      "pid": 33156
+    },
+    "controller": {
+      "command_sha256": "dce409b5b81a13a988d90bc1ff6630379186901704bee1d2b5cd565499a626d1",
+      "created_at": 1792229112.636453,
+      "pid": 32967
+    },
+    "derived_only_from": "actual Root03 original ACK, start record, READY, bootstrap and journal; no PID lookup or adoption",
+    "main": {
+      "command_sha256": "70771ccd56f9d81eab6a5cfcfad163a95f01af34e562153fde1edce46a4ef75c",
+      "created_at": 1792229130.164127,
+      "pid": 33020
+    },
+    "original_Popen_retained_by_owner": true,
+    "recovery_or_relaunch": false,
+    "signals_sent": false
+  },
+  "login_interval": {
+    "UI_observation_source": "Root original owner CUA stage report; reviewer did not operate UI",
+    "after_login": {
+      "diagnostic_request_identity": 67,
+      "diagnostic_request_in_flight": true,
+      "pending_records": 2,
+      "released_records": 65,
+      "request_count": 67,
+      "sampled_active_scopes": 5,
+      "sequence": 505,
+      "settled_records": 65,
+      "truncated": false,
+      "uncertain": true
+    },
+    "all_65_released_records_completed_normally": true,
+    "baseline": {
+      "diagnostic_request_identity": 15,
+      "diagnostic_request_in_flight": true,
+      "pending_records": 1,
+      "released_records": 14,
+      "request_count": 15,
+      "sampled_active_scopes": 2,
+      "sequence": 85,
+      "settled_records": 14,
+      "truncated": false,
+      "uncertain": false
+    },
+    "baseline_and_login_health_HTTP_status": [
+      200,
+      200
+    ],
+    "causal_limit": "The retained minimal health records bound the uncertainty transition to this login/automatic hydration interval. They do not contain the first poison reason/event; sanitized UNKNOWN route labels and pending telemetry are not individually established causes.",
+    "diagnostic_health_snapshot_itself_in_flight": true,
+    "exact_first_poisoning_request_or_exception_identified": false,
+    "first_poisoned_observed_interval": true,
+    "owner_UI_scope": "Project error viewed and closed; server panel and local shared login expanded; actual fixture login delivered; automatic project/gallery hydration began. No manual project, gallery, flow, edit or GPU action.",
+    "pending_sanitized_records": [
+      {
+        "accepted": true,
+        "completed": false,
+        "identity": 54,
+        "method": "NONE",
+        "normal_return": false,
+        "protocol": "WEBSOCKET",
+        "released": false,
+        "route": "TELEMETRY"
+      },
+      {
+        "accepted": true,
+        "completed": false,
+        "identity": 67,
+        "method": "GET",
+        "normal_return": false,
+        "protocol": "HTTP",
+        "released": false,
+        "route": "HEALTH"
+      }
+    ],
+    "request_count_delta": 52,
+    "sampled_active_delta": 3,
+    "stop_further_UI_immediately_applied_by_original_owner": true
+  },
+  "normal_quit_and_strict_closure": {
+    "active_scopes": 1,
+    "actual_backend_exit_and_close_code": 0,
+    "actual_direct_main_returncode": 0,
+    "archive_fact_source": "Original owner final outcome report; no archive action was performed by reviewer",
+    "archive_performed": false,
+    "backend_exit_receipt": null,
+    "can_release_launch_lease": false,
+    "errors": [
+      {
+        "exception_class": "ValueError",
+        "phase": "normal-closure"
+      }
+    ],
+    "hold_wrapper_elapsed_seconds": 296.71983218193054,
+    "hold_wrapper_exit_code": 1,
+    "journal_reason": "Process-tree exit is unverified",
+    "journal_state": "recovery_required",
+    "lifetime_and_scoped_closure_verified": false,
+    "natural_three_identity_exit_is_scoped_closure": false,
+    "normal_quit_requested": true,
+    "ordinary_nonce_bound_quit_requested_by_original_owner": true,
+    "original_backend_exited": true,
+    "original_controller_reaped": true,
+    "original_controller_still_live": false,
+    "original_main_exited": true,
+    "process_tree_exit_verified": false,
+    "protocol_version": 4,
+    "scope": "reviewed_foreground_scopes_only",
+    "unresolved_custody_preserved": true,
+    "unsupported": [
+      "uncovered_request_protocol"
+    ],
+    "whole_writer_coverage": false,
+    "writer_drain_phase": "refused",
+    "writer_drain_status": "refused"
+  },
+  "pins": {
+    "application_basename": "Owned Native.app",
+    "backend_build_identity_sha256": "9a19dd43a5fafd2dc0e079d8a419ed0e6008bae03c1dd30d13682aecb2cfc160",
+    "backend_executable_sha256": "11aecb7dc6398db41d02f9bc117f5c5262526fb25d11e568f9f829fb9a44fc58",
+    "backend_frozen": true,
+    "backend_source_HEAD": "35ac911a83dd105a794f83e0a65e108d29461054",
+    "bundle_identifier": "com.modu.private.native.f18cb65c66e240bd90b2b4233a18f5a3",
+    "frontend_source_HEAD": "f36447cad8dabf7e8e57d1a83234be9ad6760de3",
+    "original_nonce_sha256": "78ffccd8fec754700c2dbf5f7b38c658bf37eed5cfa72949b5e87686f3ffc74e"
+  },
+  "protected_inputs": {
+    "active_pointer_bytes": 410,
+    "active_pointer_changed_by_UI": false,
+    "active_pointer_sha256": "8af1eb6fe7da83610dbc04350e60081f1f484542ec11c666aa82b0e23eff29cc",
+    "evidence_scope": "Original owner before/after protected-body readback; reviewer retained its unchanged raw result, not a new model execution",
+    "installed_profile_bytes": 451,
+    "installed_profile_sha256": "87644365d6064acb7d7d3590367113d2576daea5a6495af5900dafa166f65887",
+    "installed_profile_unchanged": true,
+    "original_model_source_profile_pins_unchanged": true,
+    "protected_body_count": 68
+  },
+  "publication": {
+    "copy_only": true,
+    "original_private_artifacts_unchanged": true,
+    "path_redacted_derivative": true,
+    "personal_paths_tokens_headers_raw_HTTP_bodies_authority_frames_included": false,
+    "product_registry_git_changed_by_reviewer": false
+  },
+  "receipt_scope": "Original-owner installed native startup and login automatic hydration; bounded negative observation only",
+  "reviewer_actions": {
+    "additional_watch_loop": false,
+    "exclusive_bounded_raw_capture_only": true,
+    "health_or_business_API_called": false,
+    "old_failed_root_read": false,
+    "process_control_or_PID_query": false,
+    "runtime_mutated": false
+  },
+  "schema": "modu-vision.public-bounded-negative-diagnostic/v1",
+  "setup": {
+    "actual_compiled_CLI_install": true,
+    "fixture_setup_elapsed_seconds": 101.50089597702026,
+    "fixture_setup_returncode": 0,
+    "install_elapsed_seconds": 64.78046954097226,
+    "install_original_child_reaped": true,
+    "install_returncode": 0,
+    "preview_elapsed_seconds": 12.29017295804806,
+    "preview_original_child_reaped": true,
+    "preview_returncode": 0,
+    "publisher_signer_approval_claim": false,
+    "setup_all_four_steps_returncode_zero": true,
+    "setup_complete": true
+  },
+  "startup": {
+    "READY_observed": true,
+    "Root02_early_EOF_reproduced": false,
+    "Root02_exception_fixed_claim": false,
+    "complete_newline": true,
+    "diagnostic_only": true,
+    "events": [
+      {
+        "at": "2026-10-17T09:26:23.283Z",
+        "event": "diagnostic_started",
+        "sequence": 1
+      },
+      {
+        "at": "2026-10-17T09:26:23.435Z",
+        "event": "backend_spawned",
+        "sequence": 2
+      },
+      {
+        "at": "2026-10-17T09:26:23.435Z",
+        "event": "backend_attached",
+        "sequence": 3
+      },
+      {
+        "at": "2026-10-17T09:26:23.530Z",
+        "event": "port_discovery_started",
+        "sequence": 4
+      },
+      {
+        "at": "2026-10-17T09:26:44.108Z",
+        "event": "port_received",
+        "sequence": 5
+      },
+      {
+        "at": "2026-10-17T09:27:38.674Z",
+        "event": "backend_bootstrap_complete",
+        "sequence": 6
+      },
+      {
+        "at": "2026-10-17T09:27:38.823Z",
+        "event": "backend_healthy",
+        "sequence": 7
+      },
+      {
+        "at": "2026-10-17T09:29:51.647Z",
+        "event": "backend_exit",
+        "exit_code": 0,
+        "sequence": 8,
+        "signal": null
+      },
+      {
+        "at": "2026-10-17T09:29:51.665Z",
+        "event": "backend_close",
+        "exit_code": 0,
+        "sequence": 9,
+        "signal": null
+      }
+    ],
+    "lease_authority": false,
+    "raw_bytes": 6649,
+    "raw_cap_bytes": 131072,
+    "raw_sha256": "94a27c649d60c6d5afa0fa4404119f4108b50498a3d9008abd477f304d63b406",
+    "sequences_contiguous": true,
+    "startup_error_or_backend_error_event": false,
+    "truncation_event": false
+  },
+  "status": "blocked_scoped_closure_refused",
+  "unchanged_original_budgets_seconds": {
+    "backend_exit_seconds": 15,
+    "controller_exit_seconds": 10,
+    "main_exit_seconds": 30,
+    "manual_seconds": 600,
+    "original_export_seconds": 115,
+    "original_run_seconds": 60,
+    "readiness_seconds": 360,
+    "startup_seconds": 210
+  }
+}

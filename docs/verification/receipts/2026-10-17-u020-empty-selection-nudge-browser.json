@@ -1,0 +1,168 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "b916cf17d47a23cb960d71a85c2f05682f859ec6",
+  "source_dirty": false,
+  "test": "scripts/e2e/labeling-empty-selection-nudge.spec.ts::U020 empty selection ignores a delivered coarse nudge after an owning OBB control",
+  "test_source_sha256": "1fd0aec5059a85672ff1bc038c2b06d0b8a1ccaa143c3deaa12b59e128f75d98",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "workers": 1,
+  "retries": 0,
+  "report_sha256": "4e642c5ef82ac99a5aabea5e01905b7f38a879ebe6a10612ca653440c5bbbb5d",
+  "harness_sha256": "b9450bc55c0ea449700e1b904ac249b5925d751b78ac9077be9fc88f1fd1b3f7",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "2972e3454763f2a645cfa396650321d56095c431fc8e158c7fc1f6fff7b3ef09"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "0a34554c6b4091a280040e65cb346c1e18940091e241df0c51d1b6259e5f1099"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Only U020.independent-direction-nudge.empty on this current browser source. Positive selected-node nudge is a causal setup control. No parent, new success/reopen/handoff, installed-native, model quality, human, signing or release acceptance.",
+  "execution": {
+    "browser_channel": "chrome",
+    "browser_version": "155.0.8059.80",
+    "test_cases": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "command_exit_code": 0,
+    "command_elapsed_seconds": 18.919193249894306,
+    "original_action_and_response_body_budget_ms": 10000
+  },
+  "causal_control": {
+    "real_UI_draw_and_save": true,
+    "original_rotated_bbox": [
+      110,
+      170,
+      80,
+      40,
+      30
+    ],
+    "saved_after_shift_arrowright": [
+      120,
+      170,
+      80,
+      40,
+      30
+    ],
+    "direction_deg": 315,
+    "original_revision": 2,
+    "saved_revision": 3,
+    "real_owning_save_and_import_refresh": true,
+    "trusted_key": true,
+    "keyboard_target": "BODY",
+    "editable_or_dialog": false,
+    "default_prevented_after_native_dispatch": true
+  },
+  "empty_control": {
+    "real_blank_canvas_click": true,
+    "selected_inspectors_absent": true,
+    "one_annotation_retained": true,
+    "save_state": "Saved",
+    "trusted_key": true,
+    "keyboard_target": "BODY",
+    "document_focused": true,
+    "editable_or_dialog": false,
+    "default_prevented_after_native_dispatch": false,
+    "dispatch_and_two_animation_frames_confirmed": true,
+    "business_mutations": 0,
+    "protected_full_API_bodies_equal": true,
+    "protected_annotation_body_sha256": "bef601ce7427acef1456411ef330c3363abba8cff5ad59276b5407f57b6f8da0",
+    "observation_boundary": "Original trusted key dispatch and two animation frames, complete owning API read bodies, exact protected files and post-natural-stop readback; no arbitrary sleep."
+  },
+  "custody": {
+    "source_tracked_files": 2853,
+    "source_raw9_and_body_pins_equal": true,
+    "source_before_inventory_sha256": "b3f0600bd3596815f79c40668e417bd8ef291177e373c333fcedd2bb17a051df",
+    "source_after_inventory_sha256": "b3f0600bd3596815f79c40668e417bd8ef291177e373c333fcedd2bb17a051df",
+    "protected_regular_files": {
+      "project": 9,
+      "source": 1,
+      "harness_dataset": 2
+    },
+    "protected_raw9_and_bytes_exact_before_repeated_after_and_poststop": true,
+    "poststop_readback_sha256": "afc9a770f459e29d69aafca935dd632f0eac9558d3b632ec8038b9881d60f49f",
+    "original_browser_complete_responses": 37,
+    "fixture_complete_API_responses": 25,
+    "verified_harness_artifacts": 67
+  },
+  "guards": {
+    "page_errors": 0,
+    "console_errors": 0,
+    "request_failures": 0,
+    "foreign_requests": 0,
+    "unexpected_mutations": 0,
+    "postbaseline_mutations": 0,
+    "controlled_network_responses": false,
+    "product_or_guard_changes_during_execution": false
+  },
+  "owned_natural_closure": {
+    "backend_exit_code": 0,
+    "signal": null,
+    "forced": false,
+    "early_exit": false,
+    "port_closed": true,
+    "pid_alive": false,
+    "group_alive": false,
+    "escaped_processes": 0,
+    "leftovers": 0,
+    "unowned_references": 0,
+    "scan_error": null
+  },
+  "raw_evidence_pins": {
+    "log": {
+      "size": 388,
+      "sha256": "65afe6233fa9f205b4fdc1a938e95e05b763aac3bc9546f926164ffd1466fb34"
+    },
+    "readback": {
+      "size": 215431,
+      "sha256": "d9253f486e0914c25e4f16d16304bf4871eb82423878f97664f91ee57cda467d"
+    },
+    "report": {
+      "size": 6546,
+      "sha256": "4e642c5ef82ac99a5aabea5e01905b7f38a879ebe6a10612ca653440c5bbbb5d"
+    },
+    "harness": {
+      "size": 208833,
+      "sha256": "b9450bc55c0ea449700e1b904ac249b5925d751b78ac9077be9fc88f1fd1b3f7"
+    },
+    "teardown": {
+      "size": 363,
+      "sha256": "bae642283f9d5949d40ad4ea3c22d2a252826fdedcd74c055ce5d3b4da5e0a48"
+    },
+    "private_completion": {
+      "size": 34524,
+      "sha256": "8ccb69b80ba8066fa419bb406e29ba7d767d639b399384cf05a608c728cdca0a"
+    }
+  },
+  "limits": {
+    "model_training_or_inference_invoked": false,
+    "backend_health_device_detection": "mps; availability discovery is not reference inference or model execution",
+    "worker_process_exit_claim": false,
+    "annotation_quality_approval": false,
+    "parent_acceptance": false
+  },
+  "prior_failed_attempt_retained": {
+    "source_sha": "c2cab4eb80971b8e5b1da8df2db11315564fa194",
+    "test_source_sha256": "37b0b8208ebe4ad1509c165a3b294c6de636928ca34efff3074ad2e7df10ecd5",
+    "result": "failed",
+    "scope": "Fixture project-root assertion before page navigation or either U020 control; not retroactively passed.",
+    "correction": "Separate normal commit changes only browser project-root expected value to original harness workspace.projects.",
+    "log_sha256": "30db614a15db949320a2adda0897613a95a4ca8acbab46e681f02a7798995c48",
+    "completion_sha256": "425981a3d83699695b9478918c6091206a7b168af0635b8a9e8c2a549f4c7c62"
+  }
+}
