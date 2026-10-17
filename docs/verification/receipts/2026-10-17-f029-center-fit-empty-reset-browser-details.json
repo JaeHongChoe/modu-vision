@@ -1,0 +1,213 @@
+{
+  "schema": "modu-vision.F029-center-fit-empty-reset-browser-details/v1",
+  "generic_receipt_sha256": "2c7b59a27e3d805589301cad50417793d4d98b3f0943cb97bb266186ba55e67e",
+  "source_sha": "c849ad4a6a6a48b4bf5b870c6a18c23e780947c1",
+  "source_base_sha": "76503620c250d91ba16575b2ac08c004e708dc27",
+  "source_dirty": false,
+  "test_source_sha256": "e17af821f161ee8e6d0eaf9e2bbac8118bca1bed019785be4b7eec98c90f2135",
+  "raw_readback_sha256": "14c45d4f85d93b7f39851d00d8897b216ebbb2469a99a7233c472eeb3666df08",
+  "raw_report_sha256": "0fbb89b08067bf30ead74853db3040907528b4287749cd0f0448e87c3250022c",
+  "raw_harness_sha256": "507ac8ee8be264cd5f4c8057435f55e757332c37f71d64ddac95b93f506a7e70",
+  "raw_log_sha256": "cde061e57400325bde79280e4d0e85896ec6faad625b9f77a50889a9cac12a1c",
+  "raw_tool_observations_sha256": "280e49f1aad24471bfdbdf7e4371875ed52356ad15e4605ab0b8d14eeb3eea9f",
+  "raw_teardown_sha256": "908e7ad2f8ee6d059b2c0869c1195fac4da037bb8f7a25b455f06dad7fc8cefb",
+  "source_snapshot_before_after_sha256": "67670af936e0a6678936b442da5305bb5dc1fcddc8edd5035e842aa73f10ea58",
+  "source_tracked_files": 2892,
+  "source_and_locked_provider_before_after_equal": true,
+  "source_only_diff_from_prior_failed_case": "Exactly two image selectors changed from exact-label lookup to exact combobox role/name. All original counts, bodies/context/source/geometry and10s guards unchanged.",
+  "execution": {
+    "selected": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "retries": 0,
+    "flaky": 0,
+    "seconds": 18.692935000173748,
+    "channel": "chrome",
+    "version": "155.0.8059.80",
+    "workers": 1
+  },
+  "empty": {
+    "actual_loaded_original_size": [
+      256,
+      256
+    ],
+    "point_count": 0,
+    "fit_and_append_disabled": true,
+    "no_fit_POST_before_positive_control": true,
+    "existing_saved_rows": 3,
+    "baseline_splits": {
+      "train": 1,
+      "val": 1,
+      "test": 1
+    },
+    "source_sha256": "a637bc630cbf369e26ea1d1525263cf1f26ff90cc29d66ae8a70478d37628f73"
+  },
+  "positive_fit": {
+    "actual_trusted_button": true,
+    "actual_click_source_points": [
+      [
+        79.84761904761905,
+        59.733333333333334
+      ],
+      [
+        99.96190476190476,
+        59.733333333333334
+      ],
+      [
+        79.84761904761905,
+        69.48571428571428
+      ]
+    ],
+    "independently_calculated_box": {
+      "cx": 79.84761904761905,
+      "cy": 59.733333333333334,
+      "width": 40.22857142857143,
+      "height": 19.504761904761892,
+      "angle_deg": 0.0
+    },
+    "full_original_POST200_body_verified": true,
+    "truth_table_unchanged_before_append": true,
+    "polygon_element_count_in_DOM": 1,
+    "box_summary_visible_in_saved_PNG": true,
+    "append_enabled_in_DOM_and_saved_PNG": true,
+    "polygon_visibility_assertion_or_full_screenshot_claim": false
+  },
+  "cancel": {
+    "actual_trusted_redraw_button": true,
+    "points_and_polygon_removed": true,
+    "fit_summary_removed": true,
+    "fit_and_append_disabled": true,
+    "truth_table_exact": true,
+    "unsent_unappended_proposal_only": true,
+    "HTTP_abort_or_job_cancel_claim": false,
+    "saved_manifest_cancel_claim": false
+  },
+  "readback": {
+    "original_same_Request_full_body_responses": [
+      {
+        "label": "initial-own-saved-manifest",
+        "method": "GET",
+        "route": "rotated-detection/manifest",
+        "status": 200,
+        "sha256": "36e990ac253d285d056de6bd088fc6b196e00c42e513ae4a417acf33ded995f6",
+        "bytes": 2406
+      },
+      {
+        "label": "own-fitting-source",
+        "method": "GET",
+        "route": "rotated-detection/fit-source",
+        "status": 200,
+        "sha256": "3bfdf72304c07340fce6f384f4458164ca489c4d43467550b15c8ee316afffa1",
+        "bytes": 1172
+      },
+      {
+        "label": "actual-center-fit",
+        "method": "POST",
+        "route": "rotated-detection/fit-box",
+        "status": 200,
+        "sha256": "4a2b0fc83074967b60668ab1045d3a77301228da93c62c7b0255942317ddda27",
+        "bytes": 412
+      },
+      {
+        "label": "real-reload-own-saved-manifest",
+        "method": "GET",
+        "route": "rotated-detection/manifest",
+        "status": 200,
+        "sha256": "36e990ac253d285d056de6bd088fc6b196e00c42e513ae4a417acf33ded995f6",
+        "bytes": 2406
+      }
+    ],
+    "same_full_request_context_header_sha256": "e903126093dd244253f79218604874bfb1504beca751c7d91a2c4bd83e87d5fb",
+    "full_request_context_header_equality": true,
+    "saved_manifest_raw_body_sha256": "36e990ac253d285d056de6bd088fc6b196e00c42e513ae4a417acf33ded995f6",
+    "real_reload_exact_original_manifest_and_table": true,
+    "source_rows": 4,
+    "project_rows": 23,
+    "prepared_rows": 5,
+    "prepared_nested_under_project": true,
+    "whole_raw9_and_body_before_after_test_and_after_shutdown_equal": true,
+    "test_FDs": {
+      "opened": 132,
+      "closed": 132,
+      "uncertain": []
+    },
+    "readback_FDs": {
+      "opened": 18,
+      "closed": 18
+    },
+    "after_baseline_math_POSTs": 1,
+    "after_baseline_persistent_API_mutations": 0
+  },
+  "guards": {
+    "original_action_and_response_deadlines_seconds": 10,
+    "page_errors": 0,
+    "console_errors": 0,
+    "non2xx": 0,
+    "callback_errors": 0,
+    "blocked_loopback_requests": 0
+  },
+  "natural_owned_closure": {
+    "backend_exit_code": 0,
+    "forced": false,
+    "signals_claimed": false,
+    "port_closed": true,
+    "PID_alive": false,
+    "group_alive": false,
+    "escaped": [],
+    "global_teardown_leftovers": [],
+    "unowned_references": [],
+    "scan_error": null
+  },
+  "screenshots": [
+    {
+      "id": "screenshot-0",
+      "sha256": "66132ae922b3e53cd995980cfa32d3c23978e1c4a457436feb503af7ab6b6eec"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "20c5feef76cb3d9fa248be69ec109887352371b4f7aad3e54e8b797ef3eb3e55"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "8daa5ef168d8cf2058200c3ae6d8cb4c31c1755423ffe8ee4d18ba67671a0dd0"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "7c28e94bcc1ce8585a7f4beba3de6602162e1f2732313d7f5c344923f1464349"
+    }
+  ],
+  "visual_review": {
+    "all_four_saved_PNGs_opened": true,
+    "empty": "Selected synthetic gradient and center mode visible; zero points and disabled fit/append established by actual DOM assertions. Fit controls are below captured viewport.",
+    "fit": "Visible numeric fitted-box summary, enabled append and unchanged three-row truth table. Polygon itself lies above the captured viewport; polygon element count and complete returned geometry verified by original DOM/API assertions, without a polygon-visibility claim.",
+    "reset": "Numerical fit summary absent, fit and append visibly disabled, original three-row truth table remains.",
+    "reload": "Own project and upper rotated workbench reopened in saved PNG. Exact reopened table and selection are established by DOM and same original manifest200 full-body response, not visibly by this final PNG."
+  },
+  "retained_failed_first_source": {
+    "source_sha": "e81f0dab032de7bbbd99ed8c198671377db67e4c",
+    "spec_sha256": "4898c2fa14a29eebca8ae5cda5cd84cd556397c174d13b4d3d8656e73c649a4d",
+    "status": "failed",
+    "reason": "Exact-label fixture selector returned zero despite four actual image options; failed before target controls.",
+    "completion_sha256": "f00aa42b0842f8aa9bd44da3f3f088817fe4791e2db580c983f7945838d67e0c",
+    "no_target_control_credit": true
+  },
+  "prior_typecheck": {
+    "source_sha": "e81f0dab032de7bbbd99ed8c198671377db67e4c",
+    "exit_code": 0,
+    "log_sha256": "0919024eaa08b11e2a01bdac079bf8c8debb38d3c424bdc824ed6c296484d515",
+    "not_rerun_after_only_two_selector_change": true
+  },
+  "limits": [
+    "Empty=no fitting points with real loaded source, not empty dataset.",
+    "Cancel=original redraw discards unappended unsaved proposal, not HTTP/job/persisted-manifest cancellation.",
+    "Actual browser renderer only; no installed/native/picker/quality/parent acceptance.",
+    "Backend health reported MPS availability; no model forward or training was requested; no whole-process no-GPU inference is made.",
+    "No product/PUB/ledger/publication mutation during fixture execution."
+  ],
+  "independent_review_accepted": false,
+  "Native_accepted": false,
+  "quality_approved": false,
+  "parent_completion_credit": false,
+  "registry_credit_applied": false
+}

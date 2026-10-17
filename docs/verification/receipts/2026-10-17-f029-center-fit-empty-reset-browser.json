@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "c849ad4a6a6a48b4bf5b870c6a18c23e780947c1",
+  "source_dirty": false,
+  "test": "scripts/e2e/obb-center-fit-empty-reset.spec.ts::center fitting empty and redraw discard only the unsent proposal and reopen exact saved truth",
+  "test_source_sha256": "e17af821f161ee8e6d0eaf9e2bbac8118bca1bed019785be4b7eec98c90f2135",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "0fbb89b08067bf30ead74853db3040907528b4287749cd0f0448e87c3250022c",
+  "harness_sha256": "507ac8ee8be264cd5f4c8057435f55e757332c37f71d64ddac95b93f506a7e70",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "66132ae922b3e53cd995980cfa32d3c23978e1c4a457436feb503af7ab6b6eec"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "20c5feef76cb3d9fa248be69ec109887352371b4f7aad3e54e8b797ef3eb3e55"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "8daa5ef168d8cf2058200c3ae6d8cb4c31c1755423ffe8ee4d18ba67671a0dd0"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "7c28e94bcc1ce8585a7f4beba3de6602162e1f2732313d7f5c344923f1464349"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed empty-points and redraw-discard UI scopes only; no HTTP/job/saved-manifest cancellation, model quality, installed native, release or parent acceptance inferred"
+}
