@@ -12,7 +12,10 @@ test('explicit roles override aliases and unknown names never become normal',()=
  assert.equal(m.classRole('scratch'),'defect');assert.equal(m.CLASS_SEMANTICS_VERSION,1);
 });
 test('evaluation colours use the shared resolver for Korean normal classes and recorded roles',()=>{
- const mocks={'zustand':{create:()=>()=>({})},'../services/api':{api:{},getApiBaseUrl:()=>''},'./useTrainingStore':{useTrainingStore:{getState:()=>({})}}};
+ const mocks={'zustand':{create:()=>()=>({})},'../services/api':{api:{},getApiBaseUrl:()=>''},
+  './useTrainingStore':{useTrainingStore:{getState:()=>({})}},
+  './useProjectStore':{useProjectStore:{getState:()=>({project:null})}},
+  './useDatasetStore':{useDatasetStore:{getState:()=>({hasSelectedFolder:false})}}};
  const store=load('../stores/useEvaluationStore.ts',mocks);
  for(const name of ['정상','양품','합격','no_defect','non-defect'])assert.equal(store.isDefectLabel(name),false,name);
  for(const name of ['불량','불합격','scratch','ok_ng'])assert.equal(store.isDefectLabel(name),true,name);
