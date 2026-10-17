@@ -1,0 +1,675 @@
+{
+  "baseline": {
+    "commit": "25adcd5317b0029427c132a176d93bd921db4d34",
+    "same_telemetry_bytes_as_public_b7": true,
+    "telemetry_body_SHA256": "d3ff659d1028686c7017ef375ad274a5f7b170999ed66f3a516f81632db4776b",
+    "tracked_count": 2900
+  },
+  "candidate": {
+    "base_public_commit": "b7b2c27c78194de6714d717180147d2dee2cad92",
+    "clean_after_every_run": true,
+    "files": {
+      "backend/api/websocket_telemetry.py": {
+        "bytes": 36206,
+        "sha256": "7907be9c9fcac402e128b309898b425975f48a557f9eb3a1666b027f0848530d"
+      },
+      "backend/tests/test_original_telemetry_connection_send_join.py": {
+        "bytes": 15256,
+        "sha256": "28cee509c7646cde7af0b7b04183423bf0e51f9e54b347ed31ad8e3eaa3358cb"
+      }
+    },
+    "private_commit": "47ff9c6b73da39d625711d03fee189aa2b18ba03",
+    "private_commit_not_pushed": true,
+    "tracked_count": 2906
+  },
+  "causal_result": {
+    "GREEN": "same test body retains handler/socket until original successful send returns; second socket initial snapshot and pong independent; strictdrain0",
+    "RED": "exact original held send/carrier/task/message valid, real disconnect received, original handler already released/unregistered: intended one assertion failed",
+    "midaccept": "genuine shutdown after forwarded accept retains neverregistered path and original register-return refusal; no new KeyError/TypeError",
+    "new_controls": "4 distinct cases PASS, each selected once in a separate original pytest process; not one combined pytest-module run",
+    "shutdown_close": "genuine original prepare_shutdown connection_close task held across actual disconnect then completed/joined, strictdrain0",
+    "true_OSError": "actual forwarded original send throws transport OSError; transport_failed and strictactive1 refusal remain"
+  },
+  "disclosures": {
+    "actual_TestClient_disconnect": true,
+    "all_prior_graphs_and_invalid_debug_attempts_preserved": true,
+    "fixture_only_already_forwarded_send_return_barrier": true,
+    "fresh_MODU_TEST_DATA_DIR_each_process": true,
+    "no_GitHub_or_PUB_mutation": true,
+    "original_conftest_explicit_before_product_imports": true,
+    "original_real_ASGI_TestClient_and_periodic_tasks": true,
+    "real_original_pytest_children_executed": true,
+    "shield_disclosed_to_preserve_natural_disconnect_instead_of_TestClient_postdisconnect_cancel": true,
+    "six_store_environment_isolation": true,
+    "test_preparation_docstring_preserved_as_historical_label": true
+  },
+  "limits": {
+    "GUI_action_credit": false,
+    "Root06_native_cause_proven": false,
+    "browser": false,
+    "can_release_launch_lease": false,
+    "full_module_or_whole_CI_pass": false,
+    "model_quality": false,
+    "native": false,
+    "original_network_negative_required_to_pass": false,
+    "parent_complete": false,
+    "process_tree_authority": false,
+    "whole_writer_coverage": false
+  },
+  "product_contract": {
+    "active_missing_lock_refused": true,
+    "closing_marker_for_exact_socket": true,
+    "direct_broadcast_strict_and_unmodified": true,
+    "hardware_uses_original_dispatch": true,
+    "initial_snapshot_and_ping_pong_overlap_not_newly_qualified": true,
+    "never_registered_path_uses_original_unregister": true,
+    "new_send_after_closing_refused": true,
+    "no_ASGI_send_moved_to_helper_or_new_task": true,
+    "no_global_producer_cancel_or_join_added": true,
+    "no_pending_ignore_or_failure_reset": true,
+    "original_deadlines_unchanged": true,
+    "original_ownership_and_observer_functions_unchanged": true,
+    "per_connection_lock": true
+  },
+  "proposal_and_runner_pins": {
+    "candidate-source-checkpoint.json": {
+      "bytes": 622,
+      "sha256": "75de0519246847291d8233242874a097705c1724e9411d3ff783c2cf4535aaa3"
+    },
+    "controls-preparation.json": {
+      "bytes": 7849,
+      "sha256": "f1cd89cdffc5f2b9105bc0fc63abead2847205ad1d5ec033be648982181dd09e"
+    },
+    "current-public-telemetry-body-equality.json": {
+      "bytes": 328,
+      "sha256": "6c1f4e2ba4e23f16c02b56e8cf67b06999ecd55c160f9ff39a52f9e16dbb530e"
+    },
+    "green-preparation.json": {
+      "bytes": 6816,
+      "sha256": "340dd78c0b24a1b4e019716ea748c8082093102c7c67866f5a561dcd1232185a"
+    },
+    "minimal-product.diff": {
+      "bytes": 3391,
+      "sha256": "58b50a7bfa36abbfae014ac414f5e14244e8a356c23f3360a351f08811b9872b"
+    },
+    "preparation.json": {
+      "bytes": 5415,
+      "sha256": "dd7d2b30ba9c6c34fd313aad58af22a0c1a2f74c0ed15aedc4e1a94a4038a6fb"
+    },
+    "run_one_control.py": {
+      "bytes": 5255,
+      "sha256": "417bced014422661ce78d268aa88e2192af8075f1a3d283de0d5ab2c70b9efaa"
+    },
+    "run_one_green.py": {
+      "bytes": 4712,
+      "sha256": "2783c9d6397e8f25d0bd188e5f74889b94ba56007b702c30a69509ba04346611"
+    },
+    "run_one_red.py": {
+      "bytes": 4556,
+      "sha256": "ff61b1ac3893413ef84e53bf65db8ca72a76544b793abe8ca76abc5d3aa9179f"
+    },
+    "test_original_telemetry_connection_send_join.py": {
+      "bytes": 15256,
+      "sha256": "28cee509c7646cde7af0b7b04183423bf0e51f9e54b347ed31ad8e3eaa3358cb"
+    }
+  },
+  "run_details": {
+    "actual-green-01": {
+      "original_ASGI_readback": {
+        "bytes": 10586,
+        "sha256": "e55397262ff7d740f9e9821b226262e06c756d7d15cbd187d9e3135c269954a6"
+      },
+      "original_failures": [],
+      "pins": {
+        "finite-original-artifacts.json": {
+          "bytes": 2079,
+          "sha256": "cade322c4e0813903d82cf076f4c1832325eaa4a01204deb129cc58052e9f4d3"
+        },
+        "isolation-final.json": {
+          "bytes": 22146,
+          "sha256": "8084e4972859cf0d66bd1ff102e105abc707c7f2763755262bec0bf5da14d60a"
+        },
+        "junit.xml": {
+          "bytes": 424,
+          "sha256": "f1e592067a0960bf9f2232c9046742dc135d0eb82e5372bc98559bece9297762"
+        },
+        "original-tool-completion.json": {
+          "bytes": 611,
+          "sha256": "4abeead8ba7d9c0bf709fc29aa9447af88ebd2e01a6b425ed77b5c1f57576515"
+        },
+        "original-tool-start.json": {
+          "bytes": 130,
+          "sha256": "8f1841775fb32b5425187918d2f67df955aa39f41d0b2002573d843b71ba7049"
+        },
+        "private-inputs-after.json": {
+          "bytes": 5204,
+          "sha256": "899fd96b4e2e1105c46fdf6325eb644e0d4b5c0e1316217f658e7f544db3481d"
+        },
+        "private-inputs-before.json": {
+          "bytes": 5204,
+          "sha256": "899fd96b4e2e1105c46fdf6325eb644e0d4b5c0e1316217f658e7f544db3481d"
+        },
+        "pytest.log": {
+          "bytes": 205,
+          "sha256": "c92db68c0101a00f33bc04c4c6eaa29b4e5146edbc9e0eebccc3adcc60be9ca0"
+        },
+        "result.json": {
+          "bytes": 490,
+          "sha256": "e811256346e6c498cf43efe634f62286a46896c6f555ffcaead65352313555ad"
+        },
+        "source-after.json": {
+          "bytes": 1043764,
+          "sha256": "e5f5f4add0c80e5f9eb89364f9f6aa712cbeae0f7c82d01497c21c01e7db196a"
+        },
+        "source-before.json": {
+          "bytes": 1043764,
+          "sha256": "e5f5f4add0c80e5f9eb89364f9f6aa712cbeae0f7c82d01497c21c01e7db196a"
+        }
+      },
+      "result": {
+        "Root06_cause_proven": false,
+        "deadline_expired": false,
+        "exit_code": 0,
+        "full_source_before_after_exact": true,
+        "log_sha256": "c92db68c0101a00f33bc04c4c6eaa29b4e5146edbc9e0eebccc3adcc60be9ca0",
+        "native": false,
+        "original_store_isolation_all_checks_passed": true,
+        "private_inputs_before_after_exact": true,
+        "reaped": true,
+        "seconds": 7.109216124983504,
+        "signals_sent": false
+      },
+      "retained_original_ASGI_facts": {
+        "active_connections": 0,
+        "before_release": {
+          "closing": true,
+          "exact_carrier": true,
+          "exact_original_message": true,
+          "exact_original_source": true,
+          "exact_pending_task": true,
+          "handler_done": false,
+          "identity": 3,
+          "released": false,
+          "send_pending": true,
+          "socket_still_registered": true,
+          "unregistered": 0,
+          "ws_disconnect": true
+        },
+        "closure": {
+          "can_release_launch_lease": false,
+          "idle": true,
+          "joined_tasks": 2,
+          "pending_tasks": 0,
+          "process_tree_exit_verified": false,
+          "supported": true,
+          "task_count": 2,
+          "whole_writer_coverage": false
+        },
+        "drain": {
+          "active_scopes": 0,
+          "status": "managed_scopes_drained",
+          "unsupported": []
+        },
+        "errors": [],
+        "original_socket_calls_returned": 2,
+        "original_tasks_done": true,
+        "raw_ws": [
+          {
+            "completed": true,
+            "error_type": null,
+            "identity": 3,
+            "normal_return": true,
+            "released": true,
+            "send_attempt": false,
+            "transport_failed": false,
+            "ws_disconnect": true
+          },
+          {
+            "completed": true,
+            "error_type": null,
+            "identity": 4,
+            "normal_return": true,
+            "released": true,
+            "send_attempt": false,
+            "transport_failed": false,
+            "ws_disconnect": true
+          }
+        ],
+        "second_connection": true
+      }
+    },
+    "actual-green-error-01": {
+      "original_ASGI_readback": {
+        "bytes": 8706,
+        "sha256": "5d3b29905eb6d16ea016de51fb37985d8a2183590aaf05a76f352fe9bb659642"
+      },
+      "original_failures": [
+        "owned_socket_producer_send_failed",
+        "send_error",
+        "owned_socket_unregister_entry",
+        "owned_socket_unregister_return",
+        "owned_socket_handler_return",
+        "incomplete_original_envelope",
+        "owned_socket_unconfirmed_lifetime"
+      ],
+      "pins": {
+        "finite-original-artifacts.json": {
+          "bytes": 2078,
+          "sha256": "865a596174dd003c66e572385689b7afe2ff5fe81128f01391a4fcdbac60ef02"
+        },
+        "isolation-final.json": {
+          "bytes": 22458,
+          "sha256": "609f5a5ef1b261e10abad5ef75cc4e28b4ae0abb21ffe18a9d124f7f6c121bd5"
+        },
+        "junit.xml": {
+          "bytes": 416,
+          "sha256": "767d4e1d3eeb8bbf997018bdafbcf9b087768cfa5ed1b335ee8896d1fae87f21"
+        },
+        "original-tool-completion.json": {
+          "bytes": 611,
+          "sha256": "6a7a1ef5ff6884a715035a7777045e1c08054a8fb8a8eb3ef9da27622337ef62"
+        },
+        "original-tool-start.json": {
+          "bytes": 131,
+          "sha256": "b91efaf62153594d1f709ed53b3aca278ddfd17695de504b9322c56264c27af8"
+        },
+        "private-inputs-after.json": {
+          "bytes": 6079,
+          "sha256": "e4c2ab424b90bf151589a6f648b6b784adcb199e3fdea9a5062ca12f532f36b2"
+        },
+        "private-inputs-before.json": {
+          "bytes": 6079,
+          "sha256": "e4c2ab424b90bf151589a6f648b6b784adcb199e3fdea9a5062ca12f532f36b2"
+        },
+        "pytest.log": {
+          "bytes": 211,
+          "sha256": "12d2ea88239de7dd7afbd76a57bacdbead74868c5f6b76b498acbc52a8dada7d"
+        },
+        "result.json": {
+          "bytes": 490,
+          "sha256": "833c0efb1943cd9b2b63b5c569d08ebe340a010cf1f3edc34746852f52f1a9c2"
+        },
+        "source-after.json": {
+          "bytes": 1043764,
+          "sha256": "e5f5f4add0c80e5f9eb89364f9f6aa712cbeae0f7c82d01497c21c01e7db196a"
+        },
+        "source-before.json": {
+          "bytes": 1043764,
+          "sha256": "e5f5f4add0c80e5f9eb89364f9f6aa712cbeae0f7c82d01497c21c01e7db196a"
+        }
+      },
+      "result": {
+        "Root06_cause_proven": false,
+        "deadline_expired": false,
+        "exit_code": 0,
+        "full_source_before_after_exact": true,
+        "log_sha256": "12d2ea88239de7dd7afbd76a57bacdbead74868c5f6b76b498acbc52a8dada7d",
+        "native": false,
+        "original_store_isolation_all_checks_passed": true,
+        "private_inputs_before_after_exact": true,
+        "reaped": true,
+        "seconds": 6.8099403330124915,
+        "signals_sent": false
+      },
+      "retained_original_ASGI_facts": {
+        "active_connections": 0,
+        "before_release": {
+          "closing": true,
+          "exact_carrier": true,
+          "exact_original_message": true,
+          "exact_original_source": true,
+          "exact_pending_task": true,
+          "handler_done": false,
+          "identity": 3,
+          "released": false,
+          "send_pending": true,
+          "socket_still_registered": true,
+          "unregistered": 0,
+          "ws_disconnect": true
+        },
+        "closure": {
+          "can_release_launch_lease": false,
+          "idle": true,
+          "joined_tasks": 2,
+          "pending_tasks": 0,
+          "process_tree_exit_verified": false,
+          "supported": true,
+          "task_count": 2,
+          "whole_writer_coverage": false
+        },
+        "drain": {
+          "active_scopes": 1,
+          "status": "refused",
+          "unsupported": [
+            "uncovered_request_protocol"
+          ]
+        },
+        "errors": [],
+        "original_socket_calls_returned": 1,
+        "original_tasks_done": true,
+        "raw_ws": [
+          {
+            "completed": false,
+            "error_type": "OSError",
+            "identity": 3,
+            "normal_return": true,
+            "released": true,
+            "send_attempt": true,
+            "transport_failed": true,
+            "ws_disconnect": true
+          }
+        ],
+        "second_connection": false
+      }
+    },
+    "actual-green-mid-accept-01": {
+      "ASGI_assertions": "midaccept control assertions executed in pinned test source and PASS; no separate serialized ASGI readback for this case",
+      "pins": {
+        "finite-original-artifacts.json": {
+          "bytes": 1930,
+          "sha256": "d9df783e0b7da80c6c174de71234741db354aacc089908033b38f190a0ba8d9a"
+        },
+        "isolation-final.json": {
+          "bytes": 22718,
+          "sha256": "355ba730706389c160b0bb5c0e3ac00063b983f6e87b2c26adb1c32aa5b7ff27"
+        },
+        "junit.xml": {
+          "bytes": 398,
+          "sha256": "430cf028c75377a89282bd94b83dc0c3455eb99f2a2c30a5ef778c89c24a98e3"
+        },
+        "original-tool-completion.json": {
+          "bytes": 610,
+          "sha256": "f07cd9ca1894002df53ab496505892597c1913b793ad53695946f9fc829cf720"
+        },
+        "original-tool-start.json": {
+          "bytes": 131,
+          "sha256": "08931c25995b35b5bb1177ed40f1fbb6a06274181a17c30215c5865dc6af4b8b"
+        },
+        "private-inputs-after.json": {
+          "bytes": 6079,
+          "sha256": "e4c2ab424b90bf151589a6f648b6b784adcb199e3fdea9a5062ca12f532f36b2"
+        },
+        "private-inputs-before.json": {
+          "bytes": 6079,
+          "sha256": "e4c2ab424b90bf151589a6f648b6b784adcb199e3fdea9a5062ca12f532f36b2"
+        },
+        "pytest.log": {
+          "bytes": 216,
+          "sha256": "9d7971a4b472fb808dcbfb0b64d11108312dd980540e55465ad5722a09316f58"
+        },
+        "result.json": {
+          "bytes": 489,
+          "sha256": "e8356caa9d4cdd3fd4281944011133791a39ec986dd06a36ecb1463cf80b8b31"
+        },
+        "source-after.json": {
+          "bytes": 1043764,
+          "sha256": "e5f5f4add0c80e5f9eb89364f9f6aa712cbeae0f7c82d01497c21c01e7db196a"
+        },
+        "source-before.json": {
+          "bytes": 1043764,
+          "sha256": "e5f5f4add0c80e5f9eb89364f9f6aa712cbeae0f7c82d01497c21c01e7db196a"
+        }
+      },
+      "result": {
+        "Root06_cause_proven": false,
+        "deadline_expired": false,
+        "exit_code": 0,
+        "full_source_before_after_exact": true,
+        "log_sha256": "9d7971a4b472fb808dcbfb0b64d11108312dd980540e55465ad5722a09316f58",
+        "native": false,
+        "original_store_isolation_all_checks_passed": true,
+        "private_inputs_before_after_exact": true,
+        "reaped": true,
+        "seconds": 6.089966792147607,
+        "signals_sent": false
+      }
+    },
+    "actual-green-shutdown-close-01": {
+      "original_ASGI_readback": {
+        "bytes": 8852,
+        "sha256": "b6ca1c3323fbefc45eb825b66f55561b238fa09e6ab1ce61a2706666e7a77b42"
+      },
+      "original_failures": [],
+      "pins": {
+        "finite-original-artifacts.json": {
+          "bytes": 2078,
+          "sha256": "5a3f23d2a7f503911286596a9b4bcf45309c3b6b0c031f76fe60143275ebfa2f"
+        },
+        "isolation-final.json": {
+          "bytes": 22926,
+          "sha256": "0fa81bafb200228b6209ab4ec6c49c61867a8e3b00ee7a00850be35e780b8522"
+        },
+        "junit.xml": {
+          "bytes": 421,
+          "sha256": "525b81bf14624e6f7b2d2ecaf7ad285419b21534bfb25d3d710ed890be95a6da"
+        },
+        "original-tool-completion.json": {
+          "bytes": 611,
+          "sha256": "c84558da570c9395577b4b4de7d715d12810b2ffa0d804fff20f97a2dcb64c07"
+        },
+        "original-tool-start.json": {
+          "bytes": 131,
+          "sha256": "1dd93fb4a3cfd670f5235a7954979745bedfddfc3e6b9a888f5d1987e0359a8f"
+        },
+        "private-inputs-after.json": {
+          "bytes": 6079,
+          "sha256": "e4c2ab424b90bf151589a6f648b6b784adcb199e3fdea9a5062ca12f532f36b2"
+        },
+        "private-inputs-before.json": {
+          "bytes": 6079,
+          "sha256": "e4c2ab424b90bf151589a6f648b6b784adcb199e3fdea9a5062ca12f532f36b2"
+        },
+        "pytest.log": {
+          "bytes": 220,
+          "sha256": "025bf9afb228f398e561d8f1df301c826f0283eeb3abb91d0027bb4563484e68"
+        },
+        "result.json": {
+          "bytes": 490,
+          "sha256": "9b8259dbb81cfca01d434b8240083fa28e58dff647010cfaa63ceb2f530c6007"
+        },
+        "source-after.json": {
+          "bytes": 1043764,
+          "sha256": "e5f5f4add0c80e5f9eb89364f9f6aa712cbeae0f7c82d01497c21c01e7db196a"
+        },
+        "source-before.json": {
+          "bytes": 1043764,
+          "sha256": "e5f5f4add0c80e5f9eb89364f9f6aa712cbeae0f7c82d01497c21c01e7db196a"
+        }
+      },
+      "result": {
+        "Root06_cause_proven": false,
+        "deadline_expired": false,
+        "exit_code": 0,
+        "full_source_before_after_exact": true,
+        "log_sha256": "025bf9afb228f398e561d8f1df301c826f0283eeb3abb91d0027bb4563484e68",
+        "native": false,
+        "original_store_isolation_all_checks_passed": true,
+        "private_inputs_before_after_exact": true,
+        "reaped": true,
+        "seconds": 6.107708874857053,
+        "signals_sent": false
+      },
+      "retained_original_ASGI_facts": {
+        "active_connections": 0,
+        "before_release": {
+          "closing": true,
+          "exact_carrier": true,
+          "exact_original_message": true,
+          "exact_original_source": true,
+          "exact_pending_task": true,
+          "handler_done": false,
+          "identity": 3,
+          "released": false,
+          "send_pending": true,
+          "socket_still_registered": true,
+          "unregistered": 0,
+          "ws_disconnect": true
+        },
+        "closure": {
+          "can_release_launch_lease": false,
+          "idle": true,
+          "joined_tasks": 3,
+          "pending_tasks": 0,
+          "process_tree_exit_verified": false,
+          "supported": true,
+          "task_count": 3,
+          "whole_writer_coverage": false
+        },
+        "drain": {
+          "active_scopes": 0,
+          "status": "managed_scopes_drained",
+          "unsupported": []
+        },
+        "errors": [],
+        "original_socket_calls_returned": 1,
+        "original_tasks_done": true,
+        "raw_ws": [
+          {
+            "completed": true,
+            "error_type": null,
+            "identity": 3,
+            "normal_return": true,
+            "released": true,
+            "send_attempt": false,
+            "transport_failed": false,
+            "ws_disconnect": true
+          }
+        ],
+        "second_connection": false
+      }
+    },
+    "actual-red-01": {
+      "original_ASGI_readback": {
+        "bytes": 11156,
+        "sha256": "0fa07c21a027553f817c8f775db78e432df01c768a008a0d04a6440a8cda76bd"
+      },
+      "original_failures": [
+        "incomplete_original_envelope",
+        "owned_socket_unconfirmed_lifetime",
+        "original_request_owner_changed",
+        "unmatched_original_token"
+      ],
+      "pins": {
+        "finite-original-artifacts.json": {
+          "bytes": 2081,
+          "sha256": "ae3f6a43f15d11c4644ee2f5c75c1cbdb3cbbd60a3ffb2b54ecff02bea66ac33"
+        },
+        "isolation-final.json": {
+          "bytes": 22042,
+          "sha256": "cd6bcfbe745a0ea332090b2128c24935e0a391a58e2177f50af4d5fdfea07123"
+        },
+        "junit.xml": {
+          "bytes": 2002,
+          "sha256": "11403c25891d1e6279c7e7af6560f160664a1651c7b503899397cca8e1d926f1"
+        },
+        "original-tool-completion.json": {
+          "bytes": 609,
+          "sha256": "4d7c42a2432145a2aee60b58e0db35a27d934aa457f1b394647f74203baa6a28"
+        },
+        "original-tool-start.json": {
+          "bytes": 130,
+          "sha256": "f34ffacfdc1689b312d6881c3f3ddbf3a4b911a8d11867b3248e6a7cdcfdb789"
+        },
+        "private-inputs-after.json": {
+          "bytes": 3897,
+          "sha256": "a191acbdd5b88bb2ad03f7b726bb1299ac3c66b78d81ed36ca1e021b3c4dd39d"
+        },
+        "private-inputs-before.json": {
+          "bytes": 3897,
+          "sha256": "a191acbdd5b88bb2ad03f7b726bb1299ac3c66b78d81ed36ca1e021b3c4dd39d"
+        },
+        "pytest.log": {
+          "bytes": 2837,
+          "sha256": "fc2c7aa8d2aa1bda6b4b17aa047d0e380ee70b3b65a7ed1c05a72b9b83ca6e0a"
+        },
+        "result.json": {
+          "bytes": 488,
+          "sha256": "09e12555e85646ab529838070dc2524dade5149ee3f5eb620baa18dda00cf8a3"
+        },
+        "source-after.json": {
+          "bytes": 1041500,
+          "sha256": "75dd1f3d5bb41ee1d7ce027f5bc8b7bad2f5a9630b1cbf1389984103c1710c4a"
+        },
+        "source-before.json": {
+          "bytes": 1041500,
+          "sha256": "75dd1f3d5bb41ee1d7ce027f5bc8b7bad2f5a9630b1cbf1389984103c1710c4a"
+        }
+      },
+      "result": {
+        "Root06_cause_proven": false,
+        "deadline_expired": false,
+        "exit_code": 1,
+        "full_source_before_after_exact": true,
+        "log_sha256": "fc2c7aa8d2aa1bda6b4b17aa047d0e380ee70b3b65a7ed1c05a72b9b83ca6e0a",
+        "native": false,
+        "original_store_isolation_all_checks_passed": true,
+        "private_inputs_before_after_exact": true,
+        "reaped": true,
+        "seconds": 7.231779749970883,
+        "signals_sent": false
+      },
+      "retained_original_ASGI_facts": {
+        "active_connections": 0,
+        "before_release": {
+          "closing": false,
+          "exact_carrier": true,
+          "exact_original_message": true,
+          "exact_original_source": true,
+          "exact_pending_task": true,
+          "handler_done": true,
+          "identity": 3,
+          "released": true,
+          "send_pending": true,
+          "socket_still_registered": false,
+          "unregistered": 1,
+          "ws_disconnect": true
+        },
+        "closure": {
+          "can_release_launch_lease": false,
+          "idle": true,
+          "joined_tasks": 2,
+          "pending_tasks": 0,
+          "process_tree_exit_verified": false,
+          "supported": true,
+          "task_count": 2,
+          "whole_writer_coverage": false
+        },
+        "drain": {
+          "active_scopes": 1,
+          "status": "refused",
+          "unsupported": [
+            "uncovered_request_protocol"
+          ]
+        },
+        "errors": [],
+        "original_socket_calls_returned": 2,
+        "original_tasks_done": true,
+        "raw_ws": [
+          {
+            "completed": false,
+            "error_type": null,
+            "identity": 3,
+            "normal_return": true,
+            "released": true,
+            "send_attempt": true,
+            "transport_failed": false,
+            "ws_disconnect": true
+          },
+          {
+            "completed": true,
+            "error_type": null,
+            "identity": 4,
+            "normal_return": true,
+            "released": true,
+            "send_attempt": false,
+            "transport_failed": false,
+            "ws_disconnect": true
+          }
+        ],
+        "second_connection": true
+      }
+    }
+  },
+  "schema": "modu-vision.current-original-telemetry-send-join-source-red-green/v1",
+  "scope": "Per-connection teardown joins original qualified dispatch/shutdown-close send; no terminal/stream/authority relaxation"
+}
