@@ -29,6 +29,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # Resolve exact inherited GUI spec blobs without rebinding their receipts.
+          fetch-depth: 0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'
@@ -115,6 +117,7 @@ jobs:
           backend/tests/test_service_s1_02.py
           backend/tests/test_service_s7_01.py
           backend/tests/test_gui_execution_evidence.py
+          backend/tests/test_gui_execution_historical_source.py
           backend/tests/test_gui_execution_receipt_collector.py
           backend/tests/test_action_evidence.py
           backend/tests/test_model_lifecycle_evidence.py
@@ -371,6 +374,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # Resolve exact inherited GUI spec blobs without rebinding their receipts.
+          fetch-depth: 0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '24'

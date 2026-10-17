@@ -1,0 +1,26 @@
+{
+  "schema": "modu-vision.action-current-source-declaration/v1",
+  "scope": "Current source table for reviewed unknown-partial cancellation and comparison review-return race fixes only",
+  "source_declaration_only": true,
+  "historical_acceptance_rebound": false,
+  "historical_receipts_modified": false,
+  "new_GUI_executions": [],
+  "newly_verified_scenarios": [],
+  "parent_completion_credit": false,
+  "current_source_table_changes": [
+    {
+      "source": "src/renderer/components/flowchart/FlowchartStudio.tsx",
+      "previous_declaration_sha256": "445b156c5129e6522c8a4d17b84f71acbffab6732aae125fecff4967ef38e26d",
+      "current_declaration_sha256": "b046065d152575c1bd4d9a5e95eef60c15f8c56dec7c9f758173c8566b31c0e6"
+    },
+    {
+      "source": "src/renderer/components/evaluation/ModelComparisonPanel.tsx",
+      "previous_declaration_sha256": "c99e1673c11260594cc8228acfc6ad28e12a0dbbe5f71661a644c2b406be0941",
+      "current_declaration_sha256": "3a9b93dd4be7f67d007556234607942cfc0c55ee295d147c237702e605e3c31e"
+    }
+  ],
+  "original_registry_sha256": "7929823e9e8cb953825c30a009177f9f3371e545cf44a2a6824f2b0d3f65e97b",
+  "updated_registry_sha256": "9e0c38b6fc55843624e1fe840e71bcc98dfb4ace73c28a26018e61e2d52b7572",
+  "all_historical_action_records_unchanged": true,
+  "remaining_current_GUI_verification": "Source regressions do not replace current full GUI or installed application qualification."
+}

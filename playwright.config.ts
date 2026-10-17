@@ -18,6 +18,16 @@ if (process.env.MV_E2E_RUN_DIR_CLAIMED !== runDir && !process.argv.includes('--l
   process.env.MV_E2E_RUN_DIR_CLAIMED = runDir;
 }
 process.env.MV_E2E_RUN_DIR = runDir;
+// This one manual OS fixture needs the existing Root CUA grant and pristine
+// macOS browser bundle. Absence is an unselected capability, never a pass.
+const f057GrantProvided = Boolean(process.env.MV_E2E_F057_BROWSER_GRANT);
+if (f057GrantProvided && process.platform !== 'darwin')
+  throw new Error('F057 browser OS grant requires macOS; an explicit unsupported grant cannot be ignored');
+const f057BrowserOS = {
+  selected: process.platform === 'darwin' && f057GrantProvided,
+  reason: f057GrantProvided ? 'provided_requires_original_fixture_validation'
+    : process.platform === 'darwin' ? 'grant_not_provided' : 'unsupported_platform',
+};
 
 export default defineConfig({
   testDir: './scripts/e2e',
@@ -48,6 +58,8 @@ export default defineConfig({
       // same-origin proxy that holds the process token.
       name: 'browser',
       grepInvert: /@electron/,
+      testIgnore: f057BrowserOS.selected ? undefined : '**/manual-model-selector-browser-os-escape.spec.ts',
+      metadata: { F057_browser_OS: f057BrowserOS },
       use: {
         browserName: 'chromium',
         channel: process.env.MV_E2E_BROWSER_CHANNEL || undefined,

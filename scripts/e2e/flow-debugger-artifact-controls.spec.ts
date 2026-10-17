@@ -3,10 +3,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type {Page} from '@playwright/test';
 import {test,expect,type Workspace,type Evidence} from './fixtures/test';
-import {installDesktopHostShim} from './fixtures/desktop-host-shim';
 import {png} from './qa/appFlow';
+import {authenticatedFlowBrowser,activateFlowDataset,chooseFlowImage,type FlowNavigation} from './fixtures/authenticatedFlowBrowser';
 
-test.use({actionTimeout:10_000});
+test.use({actionTimeout:10_000,ignoreHTTPSErrors:true});
 type Api=(route:string,body?:unknown,method?:string)=>Promise<any>;
 const sha=(bytes:Buffer)=>crypto.createHash('sha256').update(bytes).digest('hex');
 function tree(root:string):Record<string,string>{
@@ -21,11 +21,12 @@ function tree(root:string):Record<string,string>{
 // last page, leaking inactive/skipped ROI paths, and viewer return losing focus.
 // Only the execution response is controlled: graph/project/source and controls
 // remain actual. These artifacts are display fixtures, not model inference.
-async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,native:boolean,url?:string){
+async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,native:boolean,url?:string,navigate?:FlowNavigation){
  const prefix=native?'native':'browser',name='Debugger artifact controls';
  const project=await api('/api/project/create',{name,task:'segmentation'});
  await api('/api/project/update',{source_dataset_dir:workspace.dataset},'PUT');
  await api('/api/dataset/import',{folder_path:workspace.dataset,task:'segmentation'});
+ await activateFlowDataset(api,'segmentation',evidence);
  const graph=await api('/api/flowchart/templates/fixed-roi?inspection_task=segmentation');
  graph.name='Controlled debugger evidence';graph.nodes.find((n:any)=>n.id==='node_fixed_roi').data.params.roi_bbox=[0,0,32,32];
  const source=workspace.images[0];
@@ -47,21 +48,26 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  const result={status:'partial',stop_node_id:'node_fixed_roi',final_verdict:'REVIEW',is_ok:false,
   rejection_reason:'Controlled display fixture; no model execution',roi_count:30,defective_roi_count:0,crops:[],execution_steps:steps,total_latency_ms:0,
   inspected_image_size:[32,32],image_path:source.path,image_id:path.basename(source.path,'.png'),graph_sha256:'c'.repeat(64),execution_target:'local',execution_device:'cpu'};
- let fixtureRequests=0;const writes:string[]=[];
- page.on('request',r=>{if(['POST','PUT','PATCH','DELETE'].includes(r.method()))writes.push(r.method()+' '+new URL(r.url()).pathname);});
+ let fixtureRequests=0,observing=!navigate;const writes:string[]=[],actualPartialSetup:any[]=[];
+ page.on('request',r=>{if(observing&&['POST','PUT','PATCH','DELETE'].includes(r.method()))writes.push(r.method()+' '+new URL(r.url()).pathname);});
  const controlled=async(route:any)=>{expect(route.request().method()).toBe('POST');const body=route.request().postDataJSON();
   expect(body).toMatchObject({project_id:project.id,image_path:source.path,stop_node_id:'node_fixed_roi',execution_target:'local',device:'cpu'});
   expect(body.pipeline.nodes.find((n:any)=>n.id==='node_fixed_roi').data.params.roi_bbox).toEqual([0,0,32,32]);
-  fixtureRequests++;return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(result)});
+  expect(body.partial_run_id).toMatch(/^[a-f0-9]{32}$/);
+  // Complete this real authenticated fixed-ROI-only CPU capability first.
+  // Only display artifacts are controlled; no terminal receipt is fabricated.
+  const original=await route.fetch();expect(original.status()).toBe(200);const actual=await original.json();
+  expect(actual).toMatchObject({status:'partial',partial_run_id:body.partial_run_id,stop_node_id:'node_fixed_roi',final_verdict:'REVIEW',is_ok:false,execution_target:'local',execution_device:'cpu'});
+  actualPartialSetup.push(actual);await original.dispose();
+  fixtureRequests++;return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({...result,partial_run_id:body.partial_run_id})});
  };
  await page.route('**/api/flowchart/run',controlled);
  try{
-  if(url)await page.goto(url);else await page.reload();
+  if(navigate)await navigate(project);else if(url)await page.goto(url);else await page.reload();
   await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(name);
+  observing=true;
   await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(4).click();
-  await page.getByRole('button',{name:'이미지 변경...',exact:true}).click();
-  await page.getByRole('button',{name:path.basename(source.path)+' 검사 이미지 선택',exact:true}).click();
-  await page.getByRole('button',{name:'선택 확정',exact:true}).click();
+  await chooseFlowImage(page,workspace.dataset,source.path);
   await page.getByRole('tab',{name:'편집',exact:true}).click();await page.locator('[data-flow-node-id="node_fixed_roi"]').click();
   await page.getByRole('tab',{name:'테스트',exact:true}).click();await page.getByLabel('플로우 실행 위치',{exact:true}).selectOption('local_cpu');
   await page.getByRole('button',{name:'선택 노드까지 실행',exact:true}).click();
@@ -99,10 +105,10 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   await output.getByLabel('출력 ROI 검색',{exact:true}).fill('');await expect(output.locator('figure')).toHaveCount(12);await expect(output).toContainText('1 / 3');
   await input.getByLabel('입력 ROI 검색',{exact:true}).fill('region:29');expect(await ids(input)).toEqual(['region:29']);await expect(output.locator('figure')).toHaveCount(12);
   await evidence.screenshot(page,prefix+'-search-empty-reset-and-independent-input');
-  const afterControls=writes.slice();expect(fixtureRequests).toBe(1);expect(afterControls.filter(x=>x!=='POST /api/flowchart/run')).toEqual([]);
+  const afterControls=writes.slice();expect(fixtureRequests).toBe(1);expect(afterControls).toEqual(['POST /api/flowchart/partial-runs/prepare','POST /api/flowchart/run']);
   expect(tree(path.join(project.project_dir,'flowcharts'))).toEqual(graphBefore);
   for(const image of workspace.images)expect(sha(fs.readFileSync(image.path))).toBe(image.sha256);
-  await page.reload();await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(name);
+  observing=false;if(navigate)await navigate(project);else await page.reload();observing=true;await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(name);
   await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(4).click();
   await page.getByRole('tab',{name:'편집',exact:true}).click();await page.locator('[data-flow-node-id="node_fixed_roi"]').click();
   await expect(page.getByRole('region',{name:'선택 노드 실행 근거',exact:true})).toHaveCount(0);
@@ -110,7 +116,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   expect(fixtureRequests).toBe(1);expect(writes).toEqual(afterControls);expect(tree(path.join(project.project_dir,'flowcharts'))).toEqual(graphBefore);
   const reread=await api('/api/flowchart/pipeline?inspection_task=segmentation&source_dataset_path='+encodeURIComponent(workspace.dataset));expect(reread.nodes).toEqual(graph.nodes);expect(reread.edges).toEqual(graph.edges);
   evidence.note('debugger_artifact_controls',{record_id:'U006',supplemental_action_ids:['debugger-artifact-search','debugger-artifact-page','debugger-artifact-details','debugger-roi-path','debugger-viewer-return'],
-   actual_ui:true,source_electron:native,controlled_execution_response:true,actual_backend_execution:false,fixture_result_sha256:sha(Buffer.from(JSON.stringify(result))),fixture_requests:fixtureRequests,
+   actual_ui:true,source_electron:native,controlled_execution_response:true,actual_backend_execution:false,genuine_fixed_ROI_CPU_capability_setup:actualPartialSetup,controlled_display_only:true,fixture_result_sha256:sha(Buffer.from(JSON.stringify(result))),fixture_requests:fixtureRequests,
    graph_before:graphBefore,graph_after:tree(path.join(project.project_dir,'flowcharts')),project_id:project.id,source_images:workspace.images,writes,
    pages:[12,12,6],independent_input_output_paging:true,uppercase_search_resets_last_page:true,empty_search_message:true,reset_first_page:true,
    exact_measurements:measurements,skipped_node_excluded_from_path:true,selected_edge_path_only:true,enter_space_controls:true,escape_and_explicit_return_focus:true,
@@ -118,9 +124,8 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  }finally{await page.unroute('**/api/flowchart/run',controlled);}
 }
 
-test('flow debugger pages searches and returns exact controlled artifacts without writes',async({page,request,renderer,workspace,evidence})=>{
- await installDesktopHostShim(page,renderer.port);const api:Api=async(route,body,method)=>{const reply=await request.fetch(renderer.origin+route,{method:method||(body===undefined?'GET':'POST'),...(body===undefined?{}:{data:body})});expect(reply.ok(),await reply.text()).toBe(true);return reply.json();};
- await exercise(page,workspace,evidence,api,false,renderer.url);
+test('flow debugger pages searches and returns exact controlled artifacts without writes',async({page,rendererBuild,workspace,evidence,loopbackGuard})=>{
+ await authenticatedFlowBrowser({page,rendererBuild,workspace,evidence,loopbackGuard},async({api,origin,navigate})=>exercise(page,workspace,evidence,api,false,origin,navigate));
 });
 test('native flow debugger keyboard controls keep exact controlled artifact and return focus',{tag:'@electron'},async({electronSession,workspace,evidence})=>{
  const page=electronSession.window,backend=await electronSession.waitForBackend();const api:Api=(route,body,method)=>page.evaluate(async({port,route,body,method})=>{const reply=await fetch(`http://127.0.0.1:${port}${route}`,{method:method||(body===undefined?'GET':'POST'),...(body===undefined?{}:{headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})});if(!reply.ok)throw Error(`Owned debugger HTTP ${reply.status}: ${await reply.text()}`);return reply.json();},{port:backend.port,route,body,method});

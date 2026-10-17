@@ -4,11 +4,13 @@ import ast
 import hashlib
 import json
 import re
+import subprocess
 from collections import Counter
 from pathlib import Path
 
 EVIDENCE_FILE = "docs/service-upgrade-evidence.json"
 COVERAGE_FILE = "docs/service-upgrade-coverage.md"
+GUI_TEST_HISTORY_FILE = "docs/verification/gui-test-source-history.json"
 COVERAGE_TABLE = "## 모든 기존 항목"
 DIMENSIONS = ("implementation", "gui", "persist", "reopen", "failure", "handoff", "target")
 FUNCTIONAL = ("implementation", "gui", "persist", "reopen", "failure", "handoff")
@@ -117,6 +119,79 @@ def _receipt_errors(label, entry, root, *, retained=None):
     return []
 
 
+def _historical_gui_test_errors(label, entry, record, root, current_sha):
+    """Keep an old executed test bound to its exact retained public Git blob.
+
+    The inherited spec anchor is distinct from the receipt's execution source.
+    This declares historical bytes only; it supplies no current GUI execution.
+    """
+    refusal = f'{label}: GUI executed test bytes changed since receipt; exact historical declaration required'
+    path = Path(root) / GUI_TEST_HISTORY_FILE
+    keys = {'receipt', 'receipt_sha256', 'execution_source_sha', 'test',
+            'recorded_test_source_sha256', 'retained_spec_commit',
+            'current_test_source_sha256', 'reason'}
+    try:
+        if any(p.is_symlink() for p in (path, *path.parents)):
+            raise ValueError('Linked historical declaration')
+        with path.open('rb') as stream:
+            raw = stream.read(1024 * 1024 + 1)
+        if len(raw) > 1024 * 1024:
+            raise ValueError('Historical declaration exceeds bound')
+        value = json.loads(raw, object_pairs_hook=_unique_json_object)
+        if (not isinstance(value, dict) or set(value) != {'schema', 'scope', 'declarations'}
+                or value['schema'] != 'modu-vision.gui-test-source-history/v1'
+                or value['scope'] != 'historical_test_declarations_only_no_new_execution'
+                or not isinstance(value['declarations'], list) or not 1 <= len(value['declarations']) <= 256):
+            raise ValueError('Invalid historical declaration schema')
+        seen = set()
+        for row in value['declarations']:
+            if (not isinstance(row, dict) or set(row) != keys
+                    or not _RECEIPT_NAME.fullmatch(_text(row.get('receipt')))
+                    or not _SHA40.fullmatch(_text(row.get('execution_source_sha')))
+                    or not _SHA40.fullmatch(_text(row.get('retained_spec_commit')))
+                    or any(not _SHA256.fullmatch(_text(row.get(k))) for k in
+                           ('receipt_sha256', 'recorded_test_source_sha256', 'current_test_source_sha256'))
+                    or not _text(row.get('test')).startswith('scripts/e2e/')
+                    or len(_text(row.get('reason'))) < MIN_REASON):
+                raise ValueError('Invalid historical declaration fields')
+            identity = (row['receipt'], row['execution_source_sha'], row['test'])
+            if identity in seen:
+                raise ValueError('Duplicate historical declaration')
+            seen.add(identity)
+        matches = [row for row in value['declarations'] if
+                   row['receipt'] == entry.get('receipt')
+                   and row['receipt_sha256'] == entry.get('receipt_sha256')
+                   and row['execution_source_sha'] == entry.get('source_sha') == record.get('source_sha')
+                   and row['test'] == entry.get('test') == record.get('test')
+                   and row['recorded_test_source_sha256'] == record.get('test_source_sha256')
+                   and row['current_test_source_sha256'] == current_sha]
+        if len(matches) != 1:
+            raise ValueError('No exact historical declaration')
+        row = matches[0]
+        def git(*args):
+            return subprocess.check_output(['git', '--no-replace-objects', *args], cwd=root,
+                                           stderr=subprocess.DEVNULL, timeout=10)
+        anchor = row['retained_spec_commit']
+        if git('rev-parse', '--verify', '--end-of-options', anchor + '^{commit}').decode().strip() != anchor:
+            raise ValueError('Historical spec anchor is not an exact commit')
+        git('merge-base', '--is-ancestor', anchor, 'HEAD')
+        relative = row['test'].split('::')[0]
+        tree = git('ls-tree', '-z', anchor, '--', relative).split(b'\0')
+        if len(tree) != 2 or tree[1] != b'':
+            raise ValueError('Historical spec blob absent')
+        metadata, name = tree[0].split(b'\t', 1)
+        mode, kind, oid = metadata.decode().split()
+        if mode not in {'100644', '100755'} or kind != 'blob' or name.decode() != relative:
+            raise ValueError('Historical spec must be a regular Git blob')
+        if not 0 < int(git('cat-file', '-s', oid)) <= 1024 * 1024:
+            raise ValueError('Historical spec exceeds bound')
+        if hashlib.sha256(git('cat-file', 'blob', oid)).hexdigest() != row['recorded_test_source_sha256']:
+            raise ValueError('Historical spec body differs from original receipt')
+    except (OSError, ValueError, TypeError, KeyError, UnicodeError, subprocess.SubprocessError):
+        return [refusal]
+    return []
+
+
 def _click_receipt_errors(label,entry,record,root):
     """Bind the exact executed GUI case; this is reference integrity, not reviewer authority."""
     test=entry.get('test');errors=[]
@@ -135,8 +210,9 @@ def _click_receipt_errors(label,entry,record,root):
     if any(not _SHA256.fullmatch(_text(record.get(k))) for k in ['test_source_sha256','report_sha256','harness_sha256']):
         errors.append(f'{label}: GUI execution receipt needs exact source/report/harness hashes')
     elif isinstance(test,str) and not _test_file_errors(label,test,root):
-        if hashlib.sha256((Path(root)/test.split('::')[0]).read_bytes()).hexdigest()!=record['test_source_sha256']:
-            errors.append(f'{label}: GUI executed test bytes changed since receipt')
+        current_sha = hashlib.sha256((Path(root)/test.split('::')[0]).read_bytes()).hexdigest()
+        if current_sha != record['test_source_sha256']:
+            errors += _historical_gui_test_errors(label, entry, record, root, current_sha)
     artifacts=record.get('artifacts')
     if (not isinstance(artifacts,list) or not artifacts or any(not isinstance(row,dict)
             or not _text(row.get('id')) or not _SHA256.fullmatch(_text(row.get('sha256'))) for row in artifacts)):

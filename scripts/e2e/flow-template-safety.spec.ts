@@ -1,5 +1,5 @@
 import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';import {execFileSync} from 'node:child_process';
-import type {Page} from '@playwright/test';import {test,expect,type Workspace,type Evidence} from './fixtures/test';
+import type {Dialog,Page} from '@playwright/test';import {test,expect,type Workspace,type Evidence} from './fixtures/test';
 import {installDesktopHostShim} from './fixtures/desktop-host-shim';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const harness=require('./fixtures/harness.cjs');
@@ -18,11 +18,39 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   const graph=python('flow_template_control.py',[JSON.stringify(project)]);
   const checkpoint=path.join(project.models_dir,graph.job_id,'best_model.pt'),checkpointSha=sha(fs.readFileSync(checkpoint));
   const versionFile=path.join(project.project_dir,'flowcharts/versions',graph.version+'.json'),versionSha=sha(fs.readFileSync(versionFile));
+  const versionReads:any[]=[];
   const open=async()=>{
     if(url)await page.goto(url);else await page.reload();
     await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);
     await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(4).click();await page.getByRole('tab',{name:'편집',exact:true}).click();
-    await page.getByLabel('저장 버전',{exact:true}).selectOption(graph.version);
+    const selector=page.getByLabel('저장 버전',{exact:true}),endpoint='/api/flowchart/pipelines/'+encodeURIComponent(graph.version);
+    const started=performance.now(),deadline=started+15_000;
+    const remaining=()=>{const value=deadline-performance.now();if(value<=0)throw Error('Selected saved version exceeded its original15s readiness deadline');return value;};
+    const waiting=page.waitForResponse(r=>r.request().method()==='GET'&&new URL(r.url()).pathname===endpoint,{timeout:remaining()});
+    const confirmations:any[]=[],dialogTasks:Promise<void>[]=[];let dialogCount=0,dialogFailure:unknown;
+    const ownDiscard=(dialog:Dialog)=>{
+      const record={type:dialog.type(),message:dialog.message(),page_matches_owner:dialog.page()===page,count:++dialogCount};
+      const pending=(async()=>{try{
+        expect(record).toEqual({type:'confirm',message:'저장하지 않은 플로우 변경 사항을 버리고 선택한 버전을 열까요?',page_matches_owner:true,count:1});
+        await dialog.accept();remaining();confirmations.push({...record,accepted:true});
+      }catch(error){dialogFailure=error;await dialog.dismiss().catch(()=>{});throw error;}})();
+      dialogTasks.push(pending);void pending.catch(error=>{dialogFailure=error;});
+    };
+    page.on('dialog',ownDiscard);
+    const ready=(async()=>{
+      const [reply]=await Promise.all([waiting,selector.selectOption(graph.version,{timeout:remaining()})]);
+      await Promise.all(dialogTasks);if(dialogFailure)throw dialogFailure;
+      expect(reply.status()).toBe(200);expect(await reply.finished()).toBeNull();expect(await reply.json()).toEqual(graph.pipeline);
+      await expect(selector).toHaveValue(graph.version,{timeout:remaining()});await expect(selector).toBeEnabled({timeout:remaining()});
+      await expect(page.getByTitle(graph.pipeline.name,{exact:true})).toBeVisible({timeout:remaining()});
+      const roi=graph.pipeline.nodes.find((node:any)=>node.data.node_type==='fixed_roi');expect(roi).toBeTruthy();
+      await expect(page.getByRole('group',{name:roi.data.label+' 노드 · 선택 안됨',exact:true})).toBeVisible({timeout:remaining()});
+      remaining();versionReads.push({version_id:graph.version,endpoint,status:reply.status(),response_body_complete:true,exact_pipeline:true,discard_confirmations:confirmations,
+        rendered_pipeline_name:graph.pipeline.name,rendered_roi_node:roi.id,elapsed_ms:performance.now()-started,deadline_ms:15_000});
+    })();
+    let timer:ReturnType<typeof setTimeout>|undefined;
+    try{await Promise.race([ready,new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('Selected saved version exceeded its original15s readiness deadline')),remaining());})]);}
+    finally{if(timer!==undefined)clearTimeout(timer);page.off('dialog',ownDiscard);}
     const details=page.locator('details').filter({has:page.getByText('내 템플릿 · 모델·클래스 매핑',{exact:true})}).first();
     if(await details.getAttribute('open')===null)await details.locator('summary').first().click();
   };
@@ -89,7 +117,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   for(const record of templateHashes){expect(sha(fs.readFileSync(record.path))).toBe(record.sha256);evidence.addFile(record.path);}
   for(const row of fixture.files){expect(sha(fs.readFileSync(row.path))).toBe(row.sha256);evidence.addFile(row.path);}evidence.addFile(checkpoint);evidence.addFile(versionFile);
   await evidence.screenshot(page,`${prefix}-mapped-draft-reopened-and-saved-source-version-preserved`);page.off('request',listener);
-  evidence.note('template_safety',{project,graph,template,module,savedLibrary,beforeDraft,finalDraft,mappedRequest,mappedBody,owned_template_root:ownedLibrary,owned_template_files:templateHashes,owned_template_store_verified:true,checkpoint_sha256:checkpointSha,source_version_sha256:versionSha,
+  evidence.note('template_safety',{project,graph,template,module,savedLibrary,beforeDraft,finalDraft,mappedRequest,mappedBody,selected_version_reads:versionReads,owned_template_root:ownedLibrary,owned_template_files:templateHashes,owned_template_store_verified:true,checkpoint_sha256:checkpointSha,source_version_sha256:versionSha,
     actual_ui_and_backend:true,empty_and_oversize_name_422:true,subset_empty_name_422:true,subset_oversize_name_422:true,controlled_save_subset_map_503:true,corrected_whole_and_subset_saved:true,abandoned_unsubmitted_save_preserved:true,abandoned_whole_save_preserved:true,populated_class_mapping_cancelled:true,
     template_library_reopened_exact:true,replacement_cancelled_without_map_request:true,empty_model_and_class_422:true,unknown_class_422:true,failed_mapping_preserved_draft:true,explicit_mapping_round_trip:true,
     mapped_draft_reopened_exact:true,reopened_graph_selected_in_actual_ui:true,source_images_and_checkpoint_preserved:true,saved_source_version_preserved:true,no_active_version:true,no_training:true,quality_approved:false,independent_acceptance:false});

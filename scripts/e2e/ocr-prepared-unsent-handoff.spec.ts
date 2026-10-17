@@ -42,7 +42,7 @@ const harness=require('./fixtures/harness.cjs');
 const UI_SOURCE={
  "src/renderer/components/training/OCRWorkbench.tsx": "769a2316ba1770bccd1c6c78987d99ee779ddf64d82f4c080ad5280924e51125",
  "backend/api/routes_ocr.py": "f3a3c76fdf6789e13239c4f980fdd677aaa811e94e55c4151165b2e7f99fcc29",
- "src/renderer/services/api.ts": "17761bbbc40a2775aee6d1b02a3e419355c5ff526d45d95d610baf1d546203be",
+ "src/renderer/services/api.ts": "ba82fc801fb827ab16b453ee4722ede933a641177be9994f6666f82965bc472e",
  "backend/engine/prepared_family_datasets.py": "656b31e84535da564ea3325b5d88f95414951ec7bf30c58970c72c9645b0f53d",
  "src/renderer/components/training/ProjectImagePicker.tsx": "96d972f0a2afc0791b0c7b68365c36ce65c4c6527e29af509a12cd88e73b9522",
  "src/renderer/components/training/TrainingPreparationPanel.tsx": "a277c3211e69335627a40c99a8f1761d7bd71c470ec101cdcb64e53705c16c91",
@@ -52,7 +52,7 @@ const UI_SOURCE={
  "src/renderer/components/training/TeamTrainingReadiness.tsx": "09d60b30478f906a1c92a514fb71d5727146e3ff1fdc90e04cb9861f12444b92",
  "src/renderer/components/training/WarmStartSelector.tsx": "e5817228ee17f5b4e2e07f9f8fb43293f636a2cb51a51dbfc15720c16665007f",
  "backend/engine/ocr.py": "1e42167362e251c567f0e5c66a7a678f1907f98df46302fcfa0a638c8a803fd1",
- "backend/api/routes_dataset.py": "bd26bf2006d64a03b0589f420d99e82c5648c7704b422bfd7c557ec1241aad5f",
+ "backend/api/routes_dataset.py": "7a4bcea5d2aed6cee0f61d6a0d5c8a09e048dcc38e644d83c1c301ac59c7e801",
  "src/renderer/components/training/modelAdapterRecipes.ts": "b5423202cb00e407e477053c7f081ea072754e27e028f97e029fb8fb04dd298b",
  "src/renderer/components/training/ProgramWorkbenchControls.tsx": "f982a95aefdd2b5360bedefbe4703e80bdd81d18e3a24e5cbcbc9297a2b95a51"
 } as const;

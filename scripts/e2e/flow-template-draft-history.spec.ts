@@ -1,14 +1,46 @@
 import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';import {execFileSync} from 'node:child_process';
-import type {Page} from '@playwright/test';import {test,expect,type Workspace,type Evidence} from './fixtures/test';
+import type {Dialog,Page} from '@playwright/test';import {test,expect,type Workspace,type Evidence} from './fixtures/test';
 const harness=require('./fixtures/harness.cjs');type Api=(route:string,body?:any)=>Promise<any>;
 test.use({actionTimeout:15_000});
 async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,url?:string){
  const python=(file:string,args:string[])=>JSON.parse(execFileSync(harness.resolvePython(),[path.join(harness.REPO_ROOT,'scripts/e2e/fixtures',file),...args],{encoding:'utf8',timeout:30_000}));
  const fixture=python('flow_comparison_control.py',[workspace.root]);
  const prepare=async(name:string,target=false)=>{await api('/api/project/create',{name,task:'classification'});await api('/api/project/update',{source_dataset_dir:fixture.source});await api('/api/dataset/import',{folder_path:fixture.source,task:'classification'});const project=await api('/api/project/current');python('comparison_models.py',[fixture.source,project.models_dir]);const graph=python('flow_template_control.py',[JSON.stringify(project),...(target?['target']:[])]);return {project,graph};};
- const open=async(project:any,version:string)=>{if(url)await page.goto(url);else await page.reload();await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(4).click();await page.getByRole('tab',{name:'편집',exact:true}).click();await page.getByLabel('저장 버전',{exact:true}).selectOption(version);};
+ const versionReads:any[]=[];
+ const open=async(project:any,graph:any)=>{
+  if(url)await page.goto(url);else await page.reload();await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);
+  await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(4).click();await page.getByRole('tab',{name:'편집',exact:true}).click();
+  const selector=page.getByLabel('저장 버전',{exact:true}),endpoint='/api/flowchart/pipelines/'+encodeURIComponent(graph.version);
+  const started=performance.now(),deadline=started+15_000;
+  const remaining=()=>{const value=deadline-performance.now();if(value<=0)throw Error('Selected saved version exceeded its original15s readiness deadline');return value;};
+  const waiting=page.waitForResponse(r=>r.request().method()==='GET'&&new URL(r.url()).pathname===endpoint,{timeout:remaining()});
+  const confirmations:any[]=[],dialogTasks:Promise<void>[]=[];let dialogCount=0,dialogFailure:unknown;
+  const ownDiscard=(dialog:Dialog)=>{
+   const record={type:dialog.type(),message:dialog.message(),page_matches_owner:dialog.page()===page,count:++dialogCount};
+   const pending=(async()=>{try{
+    expect(record).toEqual({type:'confirm',message:'저장하지 않은 플로우 변경 사항을 버리고 선택한 버전을 열까요?',page_matches_owner:true,count:1});
+    await dialog.accept();remaining();confirmations.push({...record,accepted:true});
+   }catch(error){dialogFailure=error;await dialog.dismiss().catch(()=>{});throw error;}})();
+   dialogTasks.push(pending);void pending.catch(error=>{dialogFailure=error;});
+  };
+  page.on('dialog',ownDiscard);
+  const ready=(async()=>{
+   const [reply]=await Promise.all([waiting,selector.selectOption(graph.version,{timeout:remaining()})]);
+   await Promise.all(dialogTasks);if(dialogFailure)throw dialogFailure;
+   expect(reply.status()).toBe(200);expect(await reply.finished()).toBeNull();expect(await reply.json()).toEqual(graph.pipeline);
+   await expect(selector).toHaveValue(graph.version,{timeout:remaining()});await expect(selector).toBeEnabled({timeout:remaining()});
+   await expect(page.getByTitle(graph.pipeline.name,{exact:true})).toBeVisible({timeout:remaining()});
+   const roi=graph.pipeline.nodes.find((node:any)=>node.data.node_type==='fixed_roi');expect(roi).toBeTruthy();
+   await expect(page.getByRole('group',{name:roi.data.label+' 노드 · 선택 안됨',exact:true})).toBeVisible({timeout:remaining()});
+   remaining();versionReads.push({version_id:graph.version,endpoint,status:reply.status(),response_body_complete:true,exact_pipeline:true,discard_confirmations:confirmations,
+    rendered_pipeline_name:graph.pipeline.name,rendered_roi_node:roi.id,elapsed_ms:performance.now()-started,deadline_ms:15_000});
+  })();
+  let timer:ReturnType<typeof setTimeout>|undefined;
+  try{await Promise.race([ready,new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('Selected saved version exceeded its original15s readiness deadline')),remaining());})]);}
+  finally{if(timer!==undefined)clearTimeout(timer);page.off('dialog',ownDiscard);}
+ };
  const details=()=>page.locator('details').filter({has:page.getByText('내 템플릿 · 모델·클래스 매핑',{exact:true})}).first();
- const source=await prepare('Cross-project template source');await open(source.project,source.graph.version);
+ const source=await prepare('Cross-project template source');await open(source.project,source.graph);
  if(await details().getAttribute('open')===null)await details().locator('summary').first().click();
  await page.getByLabel('템플릿 이름',{exact:true}).fill('Reviewed source class NG');
  const saved=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/flow-workspace/templates'&&r.request().method()==='POST');
@@ -25,7 +57,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  expect(partialTemplate.ports.inputs).toHaveLength(1);expect(partialTemplate.ports.outputs).toHaveLength(1);
  for(const node of selectedNodes)await subset.getByRole('checkbox',{name:node.data.label,exact:true}).uncheck();
  const sourceCheckpoint=path.join(source.project.models_dir,source.graph.job_id,'best_model.pt'),sourceHash=crypto.createHash('sha256').update(fs.readFileSync(sourceCheckpoint)).digest('hex');
- const target=await prepare('Cross-project target scratch',true);await open(target.project,target.graph.version);
+ const target=await prepare('Cross-project target scratch',true);await open(target.project,target.graph);
  if(await details().getAttribute('open')===null)await details().locator('summary').first().click();
  await page.getByLabel('내 템플릿 선택',{exact:true}).selectOption(partialTemplate.template_id);
  await page.getByLabel('ROI 결함 검사 템플릿 모델 매핑',{exact:true}).selectOption(target.graph.job_id);
@@ -84,7 +116,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  await search.fill(decision);await page.getByRole('list',{name:'노드 검색 결과'}).getByRole('button').click();await expect(incomplete).toHaveValue('ng');
  await incomplete.selectOption('review');await page.getByRole('button',{name:'초안 저장',exact:true}).click();
  await evidence.screenshot(page,'actual-incomplete-result-policy-persistence');
- await evidence.screenshot(page,'actual-cross-project-draft-recovery-reopen');evidence.note('template_draft',{source,target,template,partialTemplate,draft,selected_subgraph_reused:true,actual_gui_buttons:true,source_images_unchanged:true,source_checkpoint_unchanged:true,active_version_unchanged:true,trained:false,quality_approved:false});
+ await evidence.screenshot(page,'actual-cross-project-draft-recovery-reopen');evidence.note('template_draft',{source,target,template,partialTemplate,draft,selected_version_reads:versionReads,selected_subgraph_reused:true,actual_gui_buttons:true,source_images_unchanged:true,source_checkpoint_unchanged:true,active_version_unchanged:true,trained:false,quality_approved:false});
 }
 test('cross-project model class mapping preserves source and recovers draft',async({page,request,renderer,workspace,evidence})=>{const api:Api=async(route,body)=>{const r=body===undefined?await request.get(renderer.origin+route):route.endsWith('/update')?await request.put(renderer.origin+route,{data:body}):await request.post(renderer.origin+route,{data:body});expect(r.ok(),await r.text()).toBe(true);return r.json();};await exercise(page,workspace,evidence,api,renderer.url);});
 test('native cross-project mapping undo redo and persistent draft recovery',{tag:'@electron'},async({electronSession,workspace,evidence})=>{const {window}=electronSession;const backend=await electronSession.waitForBackend();const api:Api=(route,body)=>window.evaluate(async({port,route,body})=>{const r=await fetch(`http://127.0.0.1:${port}${route}`,{...(body===undefined?{}:{method:route.endsWith('/update')?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})});if(!r.ok)throw Error(`Owned API ${r.status}: ${await r.text()}`);return r.json();},{port:backend.port,route,body});await exercise(window,workspace,evidence,api);});

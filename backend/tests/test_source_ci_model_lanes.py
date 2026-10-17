@@ -222,7 +222,7 @@ def test_cpu_and_browser_ci_have_independent_original_bounds_and_complete_comman
         assert job['env'] == {'OMP_NUM_THREADS': '2', 'MKL_NUM_THREADS': '2'}
         checkout = job['steps'][0]
         assert checkout == {'uses': 'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1',
-            'with': {'persist-credentials': False}}
+            'with': {'persist-credentials': False, 'fetch-depth': 0}}
         assert job['steps'][1] == {'uses': 'actions/setup-node@820762786026740c76f36085b0efc47a31fe5020',
             'with': {'node-version': '24', 'cache': 'npm'}}
         assert job['steps'][2] == {'uses': 'actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97',
@@ -263,13 +263,32 @@ def test_cpu_and_browser_ci_have_independent_original_bounds_and_complete_comman
         'backend/tests/test_runtime_spawn_diagnostic.py',
     )
     command = cpu_step['run']
+    # These four source controls were published after the original lane. Remove
+    # only their exact, contiguous insertion before checking the original bytes.
+    source_controls = (
+        'backend/tests/test_dataset_import_source_authority.py',
+        'backend/tests/test_private_qa_fixtures.py',
+        'backend/tests/test_test_store_isolation.py',
+        'backend/tests/test_required_flow_current_source_cohort.py',
+    )
+    source_marker = 'backend/tests/test_dataset_import_contract.py '
+    source_insertion = ' '.join(source_controls) + ' '
+    assert command.count(source_marker + source_insertion) == 1
+    assert all(command.split().count(reference) == 1 for reference in source_controls)
+    original_command = command.replace(source_marker + source_insertion, source_marker, 1)
+    history_marker = 'backend/tests/test_gui_execution_evidence.py '
+    history_control = 'backend/tests/test_gui_execution_historical_source.py '
+    assert original_command.count(history_marker + history_control) == 1
+    assert command.split().count(history_control.strip()) == 1
+    original_command = original_command.replace(history_marker + history_control, history_marker, 1)
     marker = 'backend/tests/test_service_s5_01.py '
     insertion = ' '.join(additional) + ' '
     assert command.count(marker + insertion) == 1, 'Reviewed eighteen-module addition must remain at its original single insertion point'
     assert all(command.split().count(reference) == 1 for reference in additional), 'Every added verified-control module must execute once'
-    preserved = command.replace(marker + insertion, marker, 1)
+    preserved = original_command.replace(marker + insertion, marker, 1)
     assert hashlib.sha256(preserved.encode()).hexdigest() == 'bcc48453cbc55193ffc09ddfab2675bc657897eb509143ebb2d52264b71742fe', 'Every original CPU selector, ordering and command bound must be preserved'
-    assert hashlib.sha256(command.encode()).hexdigest() == '402fdf2a6f2a37e30ab2c7e52acf7236d083c819502a172e57e235558df5feee', 'Complete original CPU command plus exactly eighteen published controls must remain unchanged'
+    assert hashlib.sha256(original_command.encode()).hexdigest() == '402fdf2a6f2a37e30ab2c7e52acf7236d083c819502a172e57e235558df5feee', 'Complete original CPU command plus exactly eighteen published controls must remain unchanged'
+    assert hashlib.sha256(command.encode()).hexdigest() == '60bf9ff96d8625bc896f2ce4f272545c32751ebdb0aa5f58bcbd2973c12f678b', 'All original selectors and the five reviewed source controls retain exact ordering and command bytes'
     assert cpu_step['env'] == {'MV_CI_RECORD_DIR': '${{ runner.temp }}/modu-ci-manifests'}
     assert step(cpu, 'Core defect baseline evidence')['run'] == 'python scripts/service_baseline_evidence.py --output "$MV_CI_RECORD_DIR/ci-baseline-evidence.json"'
     assert not any(value.get('name') in {'Install test browser', 'Browser transport and flow checks'} for value in cpu['steps'])

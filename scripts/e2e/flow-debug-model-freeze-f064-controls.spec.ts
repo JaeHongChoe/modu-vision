@@ -1,11 +1,13 @@
 import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';import {execFileSync} from 'node:child_process';
 import type {Page} from '@playwright/test';import {test,expect,type Workspace,type Evidence} from './fixtures/test';
+import {authenticatedFlowBrowser,activateFlowDataset,chooseFlowImage,selectFlowVersion,type FlowNavigation} from './fixtures/authenticatedFlowBrowser';
 const harness=require('./fixtures/harness.cjs');type Api=(route:string,body?:any)=>Promise<any>;
-test.use({actionTimeout:15_000});
-async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,url?:string){
+test.use({actionTimeout:15_000,ignoreHTTPSErrors:true});
+async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,url?:string,navigate?:FlowNavigation){
  const fixtureScript=path.join(harness.REPO_ROOT,'scripts/e2e/fixtures/flow_comparison_control.py');
  const fixture=JSON.parse(execFileSync(harness.resolvePython(),[fixtureScript,workspace.root],{encoding:'utf8',timeout:15_000}));
  await api('/api/project/create',{name:'CPU flow identity controls',task:'classification'});await api('/api/project/update',{source_dataset_dir:fixture.source});await api('/api/dataset/import',{folder_path:fixture.source,task:'classification'});const project=await api('/api/project/current');
+ await activateFlowDataset(api,'classification',evidence);
  const weights=JSON.parse(execFileSync(harness.resolvePython(),[path.join(harness.REPO_ROOT,'scripts/e2e/fixtures/comparison_models.py'),fixture.source,project.models_dir],{encoding:'utf8',timeout:30_000}));
  const versions=JSON.parse(execFileSync(harness.resolvePython(),[path.join(harness.REPO_ROOT,'scripts/e2e/fixtures/flow_debug_model_control.py'),JSON.stringify(project)],{encoding:'utf8',timeout:15_000}));
  const input=fixture.files.find((row:any)=>row.split==='test').path;
@@ -16,11 +18,22 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  const record=await api('/api/flow-workspace/comparisons',{project_id:project.id,version_a:versions.version_a,version_b:versions.version_b,image_paths:[input],execution_target:'local',device:'cpu'});
  expect(record).toMatchObject({status:'completed',comparison_scope:'whole_flow',quality_approved:false,integrity:'verified'});expect(record.rows[0].difference).toMatchObject({verdict_changed:true,verdict_a:'OK',verdict_b:'NG'});expect(record.cohort_sha256).toMatch(/^[a-f0-9]{64}$/);
  for(const side of ['a','b']){const binding=record.model_bindings[side][0];expect(binding.checkpoint_sha256).toBe(versions.models[binding.job_id]);}
- if(url)await page.goto(url);else await page.reload();await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(4).click();await page.getByRole('tab',{name:'일괄 평가',exact:true}).click();const details=page.locator('details').filter({has:page.getByText('고정 테스트 세트 · 플로우 버전 A/B 비교',{exact:true})}).first();if(await details.getAttribute('open')===null)await details.locator('summary').first().click();await page.getByLabel('저장 비교 결과',{exact:true}).selectOption(record.comparison_id);await page.getByText('고정 모델·입력 근거',{exact:true}).click();await expect(page.getByText('입력 목록 해시:',{exact:false})).toContainText(record.cohort_sha256);await expect(page.getByText(versions.models.job_fixture_incumbent,{exact:false})).toBeVisible();await expect(page.getByText(versions.models.job_fixture_candidate,{exact:false})).toBeVisible();await evidence.screenshot(page,'actual-cpu-model-ab-identity-reopen');
- await page.getByRole('tab',{name:'편집',exact:true}).click();await page.getByLabel('저장 버전',{exact:true}).selectOption(versions.version_a);
- await page.getByRole('button',{name:/이미지 변경/}).click();await page.getByRole('button',{name:path.basename(input)+' 검사 이미지 선택',exact:true}).click();await page.getByRole('button',{name:'선택 확정',exact:true}).click();
+ if(navigate)await navigate(project);else if(url)await page.goto(url);else await page.reload();await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(4).click();await page.getByRole('tab',{name:'일괄 평가',exact:true}).click();const details=page.locator('details').filter({has:page.getByText('고정 테스트 세트 · 플로우 버전 A/B 비교',{exact:true})}).first();if(await details.getAttribute('open')===null)await details.locator('summary').first().click();await page.getByLabel('저장 비교 결과',{exact:true}).selectOption(record.comparison_id);await page.getByText('고정 모델·입력 근거',{exact:true}).click();await expect(page.getByText('입력 목록 해시:',{exact:false})).toContainText(record.cohort_sha256);await expect(page.getByText(versions.models.job_fixture_incumbent,{exact:false})).toBeVisible();await expect(page.getByText(versions.models.job_fixture_candidate,{exact:false})).toBeVisible();await evidence.screenshot(page,'actual-cpu-model-ab-identity-reopen');
+ await page.getByRole('tab',{name:'편집',exact:true}).click();await selectFlowVersion(page,versions.version_a,versions.pipeline);
+ await chooseFlowImage(page,fixture.source,input);
  await page.getByLabel('플로우 노드 검색',{exact:true}).fill(versions.stop_node_id);await page.getByRole('list',{name:'노드 검색 결과'}).getByRole('button').first().click();
- const guiRuns=[];for(let i=0;i<2;i++){await page.getByRole('tab',{name:'테스트',exact:true}).click();if(i===0)await page.getByLabel('플로우 실행 위치',{exact:true}).selectOption('local_cpu');const response=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/flowchart/run'&&r.request().method()==='POST');await page.getByRole('button',{name:'선택 노드까지 실행',exact:true}).click();const wire=await response;expect(wire.ok(),await wire.text()).toBe(true);guiRuns.push(await wire.json());}
+ const guiRuns=[],preparations=[];for(let i=0;i<2;i++){
+  await page.getByRole('tab',{name:'테스트',exact:true}).click();if(i===0)await page.getByLabel('플로우 실행 위치',{exact:true}).selectOption('local_cpu');
+  const prepared=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/flowchart/partial-runs/prepare'&&r.request().method()==='POST');
+  const response=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/flowchart/run'&&r.request().method()==='POST');
+  await page.getByRole('button',{name:'선택 노드까지 실행',exact:true}).click();
+  const preparation=await prepared;expect(preparation.status()).toBe(200);const capability=await preparation.json();expect(await preparation.finished()).toBeNull();
+  expect(capability).toMatchObject({project_id:project.id,stop_node_id:versions.stop_node_id,state:'prepared',execution_finished:false,execution_target:'local',device:'cpu'});expect(capability.run_id).toMatch(/^[a-f0-9]{32}$/);
+  const wire=await response;expect(wire.ok(),await wire.text()).toBe(true);expect(wire.request().postDataJSON().partial_run_id).toBe(capability.run_id);
+  expect(JSON.parse(wire.request().headers()['x-vision-context'])).toEqual(JSON.parse(preparation.request().headers()['x-vision-context']));
+  const result=await wire.json();expect(result.partial_run_id).toBe(capability.run_id);guiRuns.push(result);preparations.push(capability);
+ }
+ evidence.note('actual_partial_prepare_run_bindings',preparations);
  expect(guiRuns[0].debug_cache.status).toBe('miss');expect(guiRuns[1].debug_cache.status).toBe('hit');await expect(page.getByRole('status').filter({hasText:'동일한 부분 실행 근거 재사용'})).toBeVisible();await evidence.screenshot(page,'actual-gui-debug-cache-hit');
  evidence.note('gui_debug_runs',{runs:guiRuns,actual_buttons:true,partial_never_final_ok:guiRuns.every(r=>r.status==='partial'&&r.final_verdict==='REVIEW'&&r.is_ok===false)});
  expect((await api('/api/flow-workspace/comparisons')).comparisons[0]).toEqual(record);
@@ -28,10 +41,10 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  expect(fs.existsSync(path.join(project.project_dir,'flowcharts/active.json'))).toBe(false);
  evidence.note('flow_debug_model_freeze',{project,fixture,weights,versions,first,repeat,changedResult,record,actual_cpu_inference:true,trained:false,quality_approved:false,source_unchanged:true,active_flow_unchanged:true});
 }
-test('actual CPU debug cache and frozen model A B survive history reopen',async({page,request,renderer,workspace,evidence})=>{test.setTimeout(180_000);const api:Api=async(route,body)=>{const r=body===undefined?await request.get(renderer.origin+route):route.endsWith('/update')?await request.put(renderer.origin+route,{data:body}):await request.post(renderer.origin+route,{data:body});expect(r.ok(),await r.text()).toBe(true);return r.json();};await exercise(page,workspace,evidence,api,renderer.url);});
+test('actual CPU debug cache and frozen model A B survive history reopen',async({page,rendererBuild,workspace,evidence,loopbackGuard})=>{test.setTimeout(180_000);await authenticatedFlowBrowser({page,rendererBuild,workspace,evidence,loopbackGuard},async({api,origin,navigate})=>exercise(page,workspace,evidence,api,origin,navigate));});
 test('native CPU debug cache and model hash history reopen',{tag:'@electron'},async({electronSession,workspace,evidence})=>{test.setTimeout(180_000);const {window}=electronSession;const backend=await electronSession.waitForBackend();const api:Api=(route,body)=>window.evaluate(async({port,route,body})=>{const r=await fetch(`http://127.0.0.1:${port}${route}`,{...(body===undefined?{}:{method:route.endsWith('/update')?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})});if(!r.ok)throw Error(`Owned API ${r.status}: ${await r.text()}`);return r.json();},{port:backend.port,route,body});await exercise(window,workspace,evidence,api);});
 
 // Three new child-cell controls. Original success/reopen body above is byte exact.
 import {exercisePartialCache} from './fixtures/partialNodeCacheControls';
-test('F064 owning selected-node503 retries genuine CPU partial and cache identity survives reopen and A B A',async({page,renderer,workspace,evidence})=>{test.setTimeout(180_000);await exercisePartialCache(page,workspace,evidence,renderer.origin,false,renderer.url);});
+test('F064 owning selected-node503 retries genuine CPU partial and cache identity survives reopen and A B A',async({page,rendererBuild,workspace,evidence,loopbackGuard})=>{test.setTimeout(180_000);await authenticatedFlowBrowser({page,rendererBuild,workspace,evidence,loopbackGuard},async({api,origin,navigate})=>exercisePartialCache(page,workspace,evidence,origin,false,origin,{api,navigate}));});
 test('native F064 owning selected-node503 retries genuine CPU partial and cache identity survives reopen and A B A',{tag:'@electron'},async({electronSession,workspace,evidence})=>{test.setTimeout(180_000);const backend=await electronSession.waitForBackend();await exercisePartialCache(electronSession.window,workspace,evidence,`http://127.0.0.1:${backend.port}`,true);});

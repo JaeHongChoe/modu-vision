@@ -164,7 +164,12 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
     await settleStoreReads();
   };
   const open = async () => {if (await history.getAttribute('open') === null) await summary.click();};
-  const mountEvaluation = async () => {const waiting = defaultReads(); await stages.nth(3).click(); await finishDefaults(waiting); await open();};
+  const openOcrApproval = async () => {
+    const approval = page.locator('summary').filter({hasText: /^OCR · 회전 검출 · 이미지 개선 승인$/});
+    // The original OCR store reads start only when this actual disclosure opens.
+    if (await approval.locator('..').getAttribute('open') === null) await approval.click();
+  };
+  const mountEvaluation = async () => {const waiting = defaultReads(); await stages.nth(3).click(); await openOcrApproval(); await finishDefaults(waiting); await open();};
   const navigate = async () => {
     if (url) await page.goto(url); else await page.reload();
     await expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name);
