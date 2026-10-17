@@ -2515,7 +2515,31 @@
               "state": "pending"
             },
             "invalid": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S3-03",
+                  "source_sha": "d29485680c75f00baed9085cd17c871e647128a3",
+                  "kind": "click",
+                  "action": "데이터셋 폴더 열기 · 라벨 완료·미완료 집계",
+                  "expected": "Reject a no-longer-existing selected classification source without persisting it; retain the prior owning source and labels/partitions and restore them through ordinary reload.",
+                  "observed": "Actual Chrome ordinary dataset-folder button received only a controlled desktop-shim missing-folder answer, emitted a genuine owning classification import POST, and read its real404 ERR_NO_DATA full body with exact original Request/context under unchanged10s guards. Saved project source never changed; protected source and whole project namespace stayed byte/raw7 exact. Failure showed no stale gallery or accepted statistics. Ordinary reload restored6 eligible/6 labeled/0 unlabeled and Train3/Val2/Test1 plus gallery readiness/dimensions/paths; FD42/42 and natural backend exit0. The real404 console entry is retained. Native OS picker, installed app, full RGB canvas parity, model inference/training and parent acceptance are not qualified.",
+                  "reviewer": "Codex Root reviewed source before clean execution; independent source peer review and original collector/body/hash/custody readback support only this bounded current browser invalid-input scenario. No human quality or whole-feature acceptance.",
+                  "test": "scripts/e2e/classification-import-invalid-controls.spec.ts::classification folder import rejects a missing source and restores owning label and partition counts on reload",
+                  "receipt": "2026-10-17-classification-import-invalid-current-browser.json",
+                  "receipt_sha256": "7ae278472d3549fece0f9847d372a14e724ef8f6f3b500ce223ec5053565bf6a",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "13953f26cac05691db70cdb1602a52aef5cd7e0e338fc0edf5aefc4e5b229861"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "f5687011c00db06965eb2b18efd4279d85fe5c85e5d522f6a572411f5ddababc"
+                    }
+                  ]
+                }
+              ]
             },
             "error": {
               "state": "pending"
@@ -3094,7 +3118,31 @@
               "state": "pending"
             },
             "invalid": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S3-07",
+                  "source_sha": "d29485680c75f00baed9085cd17c871e647128a3",
+                  "kind": "click",
+                  "action": "데이터셋 폴더 열기 · Train·Val·Test 표시",
+                  "expected": "Reject a no-longer-existing selected classification source without persisting it; retain the prior owning source and labels/partitions and restore them through ordinary reload.",
+                  "observed": "Actual Chrome ordinary dataset-folder button received only a controlled desktop-shim missing-folder answer, emitted a genuine owning classification import POST, and read its real404 ERR_NO_DATA full body with exact original Request/context under unchanged10s guards. Saved project source never changed; protected source and whole project namespace stayed byte/raw7 exact. Failure showed no stale gallery or accepted statistics. Ordinary reload restored6 eligible/6 labeled/0 unlabeled and Train3/Val2/Test1 plus gallery readiness/dimensions/paths; FD42/42 and natural backend exit0. The real404 console entry is retained. Native OS picker, installed app, full RGB canvas parity, model inference/training and parent acceptance are not qualified.",
+                  "reviewer": "Codex Root reviewed source before clean execution; independent source peer review and original collector/body/hash/custody readback support only this bounded current browser invalid-input scenario. No human quality or whole-feature acceptance.",
+                  "test": "scripts/e2e/classification-import-invalid-controls.spec.ts::classification folder import rejects a missing source and restores owning label and partition counts on reload",
+                  "receipt": "2026-10-17-classification-import-invalid-current-browser.json",
+                  "receipt_sha256": "7ae278472d3549fece0f9847d372a14e724ef8f6f3b500ce223ec5053565bf6a",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "13953f26cac05691db70cdb1602a52aef5cd7e0e338fc0edf5aefc4e5b229861"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "f5687011c00db06965eb2b18efd4279d85fe5c85e5d522f6a572411f5ddababc"
+                    }
+                  ]
+                }
+              ]
             },
             "error": {
               "state": "pending"
@@ -20128,6 +20176,32 @@
                     {
                       "id": "screenshot-2",
                       "sha256": "c10a8512ca6db86d2f55e7abf9d8ecc641e173fcf841addc2c9ed88f85191b9c"
+                    }
+                  ]
+                },
+                {
+                  "task": "S4-13",
+                  "source_sha": "07978db97775f46fa40738c99ace2ec8c94f95d4",
+                  "kind": "click",
+                  "action": "동일 test 이미지로 비교",
+                  "expected": "Submit the exact full 512-image comparison through the owning UI, cancel its running attempt and preserve the prior saved comparison and all protected originals.",
+                  "observed": "Current clean-source Chrome execution passed the unchanged original 10-second submit and cancel guards. Original202 submission, running200 cancel and cancelled/aborted200 terminal match the same payload, 512 image/truth binding and durable attempt. Source/models/annotations/dataset/reports retained all protected original bytes and identities, prior report reopened, FD3132/3132 and natural backend exit0. Preparation reference inference used automatic MPS; comparison dispatch was explicit CPU. Exact request milliseconds were not retained. No independent worker-process exit, native app, model quality or parent completion is inferred.",
+                  "reviewer": "Root exact committed spec,12 index pins,12 raw manifest files,3 PNG hashes and terminal screenshot readback; independent original body/SQLite/closure review found no blocker. Historical browser/Electron records preserved.",
+                  "test": "scripts/e2e/comparison-submit-real-cancel.spec.ts::original manual comparison submit cancels its accepted owned CPU job and preserves earlier records",
+                  "receipt": "2026-10-17-comparison-submit-current-browser.json",
+                  "receipt_sha256": "a1f117afda22587e65bbf7f2630fcb55f0c6a60edad8f2d6f1d89dd5646f23b7",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "a9f7f77ddb26074bb43fda4aa9c325feaca24f024c2daba7a6dd4f46bbdb3d48"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "1b0b7780cfeb2c7b639b6aabc25b06215acb29163ec49ceefdb5b4bc5990c09c"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "715ab9ba0ecc9205a327967596ec367b1c6dc5cae47c4a23c959dd3974bd2811"
                     }
                   ]
                 }

@@ -1,0 +1,363 @@
+{
+  "schema": "modu-vision.comparison-submit-current-browser-details/v1",
+  "source_sha": "07978db97775f46fa40738c99ace2ec8c94f95d4",
+  "source_dirty": false,
+  "test": "scripts/e2e/comparison-submit-real-cancel.spec.ts::original manual comparison submit cancels its accepted owned CPU job and preserves earlier records",
+  "test_source_sha256": "5a8d1d5b0692f8b52665b6287b57cc1bb5c18826bf66e87d8577622a90c717a5",
+  "status": "passed",
+  "attempts": 1,
+  "retry": 0,
+  "workers": 1,
+  "generic_receipt_sha256": "a1f117afda22587e65bbf7f2630fcb55f0c6a60edad8f2d6f1d89dd5646f23b7",
+  "report_sha256": "55d2d38feb9fc278c0663cc233f3d4d721e43f7ccc66c050dc8d3923da3c2ddb",
+  "harness_sha256": "6ae7b50c9897739984b15d1b82c596996b9cbf3fe99ae5f37ebeee845e9078d7",
+  "raw_proof_sha256": "e03c2700f20f6d8f99a106028dd9256b8446b150fed674a1c1168d810e627912",
+  "raw_command_log_sha256": "bbc0a657ee0a0357c637f1d35599f231bb82b4add8f8782d1021c7bab9eb9c38",
+  "teardown_sha256": "24ebc4d352cfcfdee4e7e84a8519372fddefd7ff64baf7046d08243f2c413929",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "browser": {
+    "channel": "chrome",
+    "version": "155.0.8059.80",
+    "playwright": "1.63.0"
+  },
+  "source_inventory": {
+    "tracked_files": 2842,
+    "before_sha256": "8cc406ca6caa9de41e1c2db7cd3b702f306d916d26980a7796c2cd6ed7e1841c",
+    "after_sha256": "8cc406ca6caa9de41e1c2db7cd3b702f306d916d26980a7796c2cd6ed7e1841c",
+    "equal": true,
+    "git_clean_before_after": true
+  },
+  "fixture_harness_pins": [
+    {
+      "path": "package-lock.json",
+      "bytes": 230126,
+      "sha256": "1d9d7375b85724ee4b99d1c77d9963737f9e6e802df9c3ba53a16efdcf2efd7e"
+    },
+    {
+      "path": "package.json",
+      "bytes": 2675,
+      "sha256": "44c48b45349f16508fc508e67d155b14f1258dbba45176a1575ae3eb8f59db24"
+    },
+    {
+      "path": "playwright.config.ts",
+      "bytes": 3287,
+      "sha256": "91495f41ce2b89d5472fc5851c4fc9c5937684958ac453d0a6a759df2a10b936"
+    },
+    {
+      "path": "scripts/e2e/fixtures/comparison_models.py",
+      "bytes": 2754,
+      "sha256": "29e75ccd461c96b9e4308ffbdcd565acc6b87a376c0c0e4ea281946b0e93d424"
+    },
+    {
+      "path": "scripts/e2e/fixtures/desktop-host-shim.ts",
+      "bytes": 1810,
+      "sha256": "4f598862ec0e08189628c72bbb552f72bf8fd73f5a9a05b8da1d3ddf516dcfa6"
+    },
+    {
+      "path": "scripts/e2e/fixtures/global-setup.ts",
+      "bytes": 2757,
+      "sha256": "3a1ec05a6eab0e44fe05905f6be6dc3a6401e12f0c6e44bc5eec5d4b4cab3104"
+    },
+    {
+      "path": "scripts/e2e/fixtures/global-teardown.ts",
+      "bytes": 943,
+      "sha256": "8e032055d9b2b8ebb9887432f632b54e59c1797ffe49d48de86bfd97cbfc9937"
+    },
+    {
+      "path": "scripts/e2e/fixtures/harness.cjs",
+      "bytes": 37802,
+      "sha256": "171460c1cf1697b7a44b8f86a197d2b944928381f736f81af304412126464975"
+    },
+    {
+      "path": "scripts/e2e/fixtures/remaining-project-handoff.ts",
+      "bytes": 12931,
+      "sha256": "7a7c74a2f42a5d6ad991dadc97626c1f8330f962edaf73fd461d31f9c4764904"
+    },
+    {
+      "path": "scripts/e2e/fixtures/test.ts",
+      "bytes": 18260,
+      "sha256": "49171e2d0d4d7d9559416fdb43bc7dae9394129bbc237fe4f2a4cea0a7afa480"
+    }
+  ],
+  "preparation": {
+    "scope": "Independent ordinary latest evaluation readiness before protected snapshot; not comparison submit or cancellation concurrency",
+    "original_HTTP_status": 200,
+    "original_body_sha256": "26d856c8c881bd0ab87d9812d5c029358f6afe281d0a5244654aefff3f3bc2c1",
+    "original_body_bytes": 901267,
+    "body_complete": true,
+    "test_predictions": 512,
+    "cache_semantically_exact": true,
+    "cache_file_sha256": "537e81eb1b45f0e4edd857b654d8d878e1cd5c5de4a5af573f23a82b76c90501",
+    "phase_budget_ms": 60000,
+    "phase_elapsed_ms": 25594.734458000003,
+    "hardware_policy": "automatic reference inference device selection",
+    "backend_health_device": "mps",
+    "backend_health_is_accelerated": true,
+    "GPU_used_false_for_whole_run": false,
+    "new_model_training": false,
+    "concurrent_evaluation_and_cancel_covered": false
+  },
+  "comparison_dispatch": {
+    "execution_target": "local_cpu",
+    "device": "cpu",
+    "compute_profile_id": null,
+    "GPU_used": false,
+    "GPU_used_scope": "Explicit comparison dispatch payload and bound execution only; ordinary readiness reference inference used automatic MPS selection",
+    "full_test": true,
+    "bound_images": 512,
+    "bound_truth_images": 512,
+    "completed_images_before_cancellation": 0,
+    "untrained_deterministic_models": true,
+    "new_training": false
+  },
+  "actual_request": {
+    "POST_accepted_status": 202,
+    "POST_accepted_state": "queued/accepted",
+    "cancel_POST_status": 200,
+    "cancel_reply_state": "running",
+    "cancel_requested": 1,
+    "cancel_disposition": "requested",
+    "terminal_GET_status": 200,
+    "terminal_state": "cancelled/aborted",
+    "report_id": null,
+    "result_available": false,
+    "original_10s_submit_guard_unchanged_and_passed": true,
+    "original_10s_cancel_guard_unchanged_and_passed": true,
+    "POST_response_elapsed_ms": null,
+    "POST_response_elapsed_limit_ms": 10000,
+    "cancel_response_elapsed_ms": null,
+    "timing_limit_reason": "Unchanged passing spec retained strict original 10-second waits but did not persist per-request timestamps; retain-on-failure removed the successful trace. Durable job times do not measure pre-accept HTTP latency.",
+    "original_bodies": [
+      {
+        "label": "seed-original-open",
+        "method": "GET",
+        "status": 200,
+        "bytes": 6478,
+        "sha256": "96a515db5d727f0e1436e91b403a7edee0530eb7531a14cdf97f77200a4a1f62",
+        "original_HTTP": true,
+        "full_body_finished": true
+      },
+      {
+        "label": "actual-created-job",
+        "method": "POST",
+        "status": 202,
+        "bytes": 653894,
+        "sha256": "cb3541caa393a73db549ad73717a2bff07d1375453f8aca66a45a15d02a75e2c",
+        "original_HTTP": true,
+        "full_body_finished": true
+      },
+      {
+        "label": "actual-cancel-request",
+        "method": "POST",
+        "status": 200,
+        "bytes": 654175,
+        "sha256": "32a92f740427ddd7fd8d0368ac89984dc316a55a785135d31a8762174d7fd38b",
+        "original_HTTP": true,
+        "full_body_finished": true
+      },
+      {
+        "label": "actual-original-terminal-poll",
+        "method": "GET",
+        "status": 200,
+        "bytes": 654221,
+        "sha256": "c605d0b50f2ba7e8fe739741f8dc0509daedbe1dea2e3638c7698580e19cd533",
+        "original_HTTP": true,
+        "full_body_finished": true
+      },
+      {
+        "label": "original-history-reopen",
+        "method": "GET",
+        "status": 200,
+        "bytes": 6478,
+        "sha256": "96a515db5d727f0e1436e91b403a7edee0530eb7531a14cdf97f77200a4a1f62",
+        "original_HTTP": true,
+        "full_body_finished": true
+      }
+    ]
+  },
+  "durable_attempt": {
+    "number": 1,
+    "executor": "local_comparison",
+    "owner_same_backend": true,
+    "started_ns": 1792226818471498000,
+    "ended_ns": 1792226823551731000,
+    "worker_id": null,
+    "started_before_cancel": true,
+    "attempt_started_before_cancel_ms": 407.881,
+    "attempt_duration_ms": 5080.233,
+    "events": [
+      {
+        "seq": 1,
+        "revision": 1,
+        "event": "submit",
+        "from_state": null,
+        "to_state": "accepted",
+        "at_ns": 1792226818432689000
+      },
+      {
+        "seq": 2,
+        "revision": 2,
+        "event": "start",
+        "from_state": "accepted",
+        "to_state": "running",
+        "at_ns": 1792226818454997000
+      },
+      {
+        "seq": 3,
+        "revision": 3,
+        "event": "attempt",
+        "from_state": "running",
+        "to_state": "running",
+        "at_ns": 1792226818471498000
+      },
+      {
+        "seq": 4,
+        "revision": 4,
+        "event": "cancel_requested",
+        "from_state": "running",
+        "to_state": "running",
+        "at_ns": 1792226818879379000
+      },
+      {
+        "seq": 5,
+        "revision": 5,
+        "event": "abort",
+        "from_state": "running",
+        "to_state": "aborted",
+        "at_ns": 1792226823551731000
+      }
+    ],
+    "read_only_ledger_sha256": "da07c92b5629b1b5519be65bcb2fb303c9d502e664f4809aeeb7f60b5eb4a281",
+    "readback_sha256": "32328d2e065ca391ba4e47a09a63c86406dbce5bbf533e58580a7dac4302dd44",
+    "worker_process_exit_claim": false
+  },
+  "protection": {
+    "generated_test_images": 512,
+    "roots": {
+      "source": {
+        "entries": 526,
+        "files": 516,
+        "directories": 10,
+        "file_bytes": 4415313,
+        "snapshot_sha256": "0361336fcb80cbf36b840fa0a0746148c02f2a549f6486b6c9be535d25bdf360",
+        "before_after_exact": true,
+        "post_backend_stop_exact": true
+      },
+      "models": {
+        "entries": 1064,
+        "files": 1041,
+        "directories": 23,
+        "file_bytes": 99931602,
+        "snapshot_sha256": "79de2c291c815d428f9fd6e6da4240a6285b108804135a3da9a481a0d789ac1e",
+        "before_after_exact": true,
+        "post_backend_stop_exact": true
+      },
+      "annotations": {
+        "entries": 5,
+        "files": 1,
+        "directories": 4,
+        "file_bytes": 704141,
+        "snapshot_sha256": "24a48036f02d3335487bb78bd8a5120ef0d6ef05a385bb7fc5e93e0dcd30d7be",
+        "before_after_exact": true,
+        "post_backend_stop_exact": true
+      },
+      "dataset": {
+        "entries": 3,
+        "files": 1,
+        "directories": 2,
+        "file_bytes": 214,
+        "snapshot_sha256": "7e230605cdaed6d31345232eaa3e644d9f9b5064114d0bc8cc14368cef81cb9e",
+        "before_after_exact": true,
+        "post_backend_stop_exact": true
+      },
+      "reports": {
+        "entries": 2,
+        "files": 1,
+        "directories": 1,
+        "file_bytes": 8564,
+        "snapshot_sha256": "05eaad88140f9396ed0d1fd3d622fd2b05e8c45d5c4f06dbb7b7566a73e25444",
+        "before_after_exact": true,
+        "post_backend_stop_exact": true
+      }
+    },
+    "all_before_after_exact": true,
+    "all_post_backend_stop_exact": true,
+    "prior_job_unchanged": true,
+    "prior_report_original_open_reopen_equal": true,
+    "history_unchanged": true,
+    "deployment_unchanged": true,
+    "selected_pair_at_acceptance_terminal_equal": true,
+    "UI_mutations": 2,
+    "UI_mutations_scope": "Exactly original comparison POST plus owning cancel POST; no other observed mutation requests",
+    "response_fabricated": false,
+    "custom_routes": 0,
+    "page_errors": 0,
+    "console_errors": 0,
+    "blocked_requests": 0
+  },
+  "closure": {
+    "original_custody_opened": 3132,
+    "original_custody_closed": 3132,
+    "uncertain": [],
+    "post_run_verification_opened": 1560,
+    "post_run_verification_closed": 1560,
+    "backend_exited": true,
+    "exit_code": 0,
+    "forced": false,
+    "signal": null,
+    "group_alive": false,
+    "pid_alive": false,
+    "port_closed": true,
+    "healthy_at_end": true,
+    "backend_stop_duration_ms": 1592,
+    "teardown_leftovers": [],
+    "unowned_references": [],
+    "worker_process_exit_claim": false
+  },
+  "screenshots": [
+    {
+      "id": "screenshot-0",
+      "bytes": 234824,
+      "sha256": "a9f7f77ddb26074bb43fda4aa9c325feaca24f024c2daba7a6dd4f46bbdb3d48",
+      "visually_reviewed": true,
+      "observation": "Ready comparison retains incumbent/candidate and existing saved report, full-test selection shown"
+    },
+    {
+      "id": "screenshot-1",
+      "bytes": 234517,
+      "sha256": "1b0b7780cfeb2c7b639b6aabc25b06215acb29163ec49ceefdb5b4bc5990c09c",
+      "visually_reviewed": true,
+      "observation": "UI shows cancelled 0/512, same model pair and re-enabled original submit"
+    },
+    {
+      "id": "screenshot-2",
+      "bytes": 234728,
+      "sha256": "715ab9ba0ecc9205a327967596ec367b1c6dc5cae47c4a23c959dd3974bd2811",
+      "visually_reviewed": true,
+      "observation": "Original saved report selected again; model pair and evaluation panel remain usable"
+    }
+  ],
+  "action_fit": {
+    "action": "F057.comparison-manual-submit.cancel",
+    "task_owner": "S4-13",
+    "existing_state": "verified",
+    "recommendation": "Append bounded current-browser evidence to existing verified cancel action. No new scenario count or parent/feature state promotion.",
+    "historical_browser_electron_evidence_preserved": true,
+    "other_four_cancel_cells_pending": true
+  },
+  "limits": {
+    "source_Electron_executed": false,
+    "installed_native_accepted": false,
+    "worker_process_exit_proven": false,
+    "whole_parent_accepted": false,
+    "human_accepted": false,
+    "model_quality_approved": false,
+    "model_deployed": false,
+    "new_model_training": false,
+    "concurrent_readiness_cancel_covered": false
+  }
+}

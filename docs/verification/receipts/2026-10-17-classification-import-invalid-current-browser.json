@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "d29485680c75f00baed9085cd17c871e647128a3",
+  "source_dirty": false,
+  "test": "scripts/e2e/classification-import-invalid-controls.spec.ts::classification folder import rejects a missing source and restores owning label and partition counts on reload",
+  "test_source_sha256": "714c90a6e30b246b19e5e745afcc13e2f2978033954f0445e9d0c7e819221f45",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "8d07145f9b17ea3ed267d42b58cf281a468936f95660253ec98dccf04151a6f8",
+  "harness_sha256": "d10fba0d3f997374f70a1841dae582e418dd8032444d43f0c4b4cef454d2fd85",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "13953f26cac05691db70cdb1602a52aef5cd7e0e338fc0edf5aefc4e5b229861"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "f5687011c00db06965eb2b18efd4279d85fe5c85e5d522f6a572411f5ddababc"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}
