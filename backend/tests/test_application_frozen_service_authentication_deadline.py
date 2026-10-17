@@ -7,6 +7,7 @@ Root alone runs this file against the untouched baseline before the overlay.
 import copy
 from contextlib import nullcontext
 from pathlib import Path
+import socket
 import sys
 import threading
 from types import SimpleNamespace
@@ -32,13 +33,24 @@ class Clock:
 def service(monkeypatch):
     clock = Clock()
     stop = threading.Event()
-    observations = {'auth': [], 'read': [], 'execute': [], 'abandon': [], 'thread': []}
+    observations = {'auth': [], 'read': [], 'peek': [], 'consumed': [],
+                    'execute': [], 'abandon': [], 'thread': []}
     root = Path('/modeled-original-install')
     context = ('original-process', 'original-context')
     original_proof = {'frozen': True, 'nonce': 'n', 'epoch': 'e',
                       'binding_sha256': 'b' * 64}
     challenge = {'kind': 'backend_challenge', 'binding': {'generation': 'g'}}
     class Socket:
+        def recv(self, size, flags=0):
+            assert self is sock and size == h.MAX_FRAME + 1
+            assert flags == socket.MSG_PEEK | getattr(socket, 'MSG_DONTWAIT', 0)
+            assert not state.frame_consumed
+            # The original classifier peeks the SAME next frame as read_frame
+            # below. Peek neither consumes that frame nor advances its IO clock.
+            raw = h._canonical(state.frame) + b'\n'
+            observations['peek'].append({'at': clock.now, 'raw': raw,
+                                         'reads_before': len(observations['read'])})
+            return raw[:size]
         def shutdown(self, how):
             observations['shutdown'] = how
         def close(self):
@@ -66,7 +78,7 @@ def service(monkeypatch):
                             root=root, context=context, proof=original_proof,
                             challenge=challenge, queue=queue, admission=admission,
                             socket=sock, cache=cache, pre_seconds=12.0,
-                            post_seconds=12.0, io_seconds=0.0, mutate=None,
+                            post_seconds=12.0, io_seconds=0.0, mutate=None, frame_consumed=False,
                             frame={'schema_version': 1, 'kind': 'cpu_execution_request',
                                    'request_id': 'r' * 32})
     def validate(current_root, values, frame):
@@ -86,6 +98,12 @@ def service(monkeypatch):
         return result
     def read(endpoint, timeout):
         assert endpoint is sock and 0 < timeout <= 10.0
+        assert not state.frame_consumed and observations['peek']
+        raw = h._canonical(state.frame) + b'\n'
+        assert observations['peek'][-1]['raw'] == raw
+        assert observations['peek'][-1]['reads_before'] == len(observations['read'])
+        state.frame_consumed = True
+        observations['consumed'].append(raw)
         observations['read'].append({'at': clock.now, 'timeout': timeout})
         clock.now += state.io_seconds
         return copy.deepcopy(state.frame)
@@ -133,6 +151,9 @@ def test_frozen_initial_cpu_keeps_both_full_authentications_and_one_action_deadl
     assert observations['execute'][0]['at'] == 124.0
     assert observations['execute'][0]['record'] is service.cache['original_cpu_execution']
     assert observations['abandon'] == []
+    raw = h._canonical(service.frame) + b'\n'
+    assert observations['peek'] == [{'at': 100.0, 'raw': raw, 'reads_before': 0}]
+    assert observations['consumed'] == [raw] and service.frame_consumed is True
 
 
 def test_original_io_deadline_is_ten_seconds_after_fresh_preauth(service):
