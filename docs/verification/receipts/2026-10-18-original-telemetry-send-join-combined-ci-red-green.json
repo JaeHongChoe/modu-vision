@@ -1,0 +1,344 @@
+{
+  "causal_RED": {
+    "before_release": {
+      "closing": false,
+      "exact_carrier": true,
+      "exact_original_message": true,
+      "exact_original_source": true,
+      "exact_pending_task": true,
+      "handler_done": true,
+      "identity": 3,
+      "released": true,
+      "send_pending": true,
+      "socket_still_registered": false,
+      "unregistered": 1,
+      "ws_disconnect": true
+    },
+    "errors": [],
+    "original_periodic_closure": {
+      "can_release_launch_lease": false,
+      "idle": true,
+      "joined_tasks": 2,
+      "pending_tasks": 0,
+      "process_tree_exit_verified": false,
+      "supported": true,
+      "task_count": 2,
+      "whole_writer_coverage": false
+    },
+    "second_actual_connection_initial_and_pong_passed": true,
+    "strict_drain": {
+      "active_scopes": 1,
+      "status": "refused",
+      "unsupported": [
+        "uncovered_request_protocol"
+      ]
+    }
+  },
+  "combined_behavior_assertions": {
+    "actual_OSError_remains_transport_failed_and_refused": true,
+    "actual_original_shutdown_close_task_join_and_strict_success": true,
+    "actual_postaccept_shutdown_no_registration_keeps_original_refusal_without_new_KeyError": true,
+    "old_original_restoration_and_quiescence_checks_passed_for_all4_cases": true,
+    "second_connection_initial_snapshot_and_pong_not_blocked": true,
+    "successful_original_held_dispatch_joins_before_unregister": true
+  },
+  "fixture_contract": {
+    "actual_app_admission_owner_same_instance_asserted": true,
+    "both_aliases_restored_even_on_case_failure": true,
+    "both_telemetry_and_main_broadcaster_aliases_bound": true,
+    "new_instance_original_tasks_and_connections_closed_by_case_not_fixture": true,
+    "no_fixture_cleanup_loop_signal_or_deadline_added": true,
+    "no_original_flags_fields_methods_or_refusals_reset": true,
+    "old_original_identity_scalar_record_and_done_projection_unchanged": true,
+    "old_original_must_be_quiescent_before_binding": true,
+    "original_canonical_class_constructed_before_app_binding": true
+  },
+  "limits": {
+    "GUI_action_credit": false,
+    "Root06_cause_proven": false,
+    "actual_GitHub_CI_run": false,
+    "actual_browser": false,
+    "can_release_launch_lease": false,
+    "model_quality": false,
+    "native": false,
+    "parent_complete": false,
+    "process_tree_authority": false,
+    "whole_CI_pass": false,
+    "whole_writer_coverage": false
+  },
+  "pins": {
+    "candidate02-source-checkpoint.json": {
+      "bytes": 628,
+      "sha256": "11338f129ee8b3677ff4f84b1c0d9f4a7a72e678eb8c523150797379d2abbdfc"
+    },
+    "green-preparation.json": {
+      "bytes": 5033,
+      "sha256": "3de5bf37fc77105a34cb4bc98f682ad5c227eef22573177725f9f80a7b3cc1af"
+    },
+    "preparation.json": {
+      "bytes": 5052,
+      "sha256": "c779b7f9b0e561188e9c636c1f70f4180e5879d7f61aa40e8de40028b551d335"
+    },
+    "ready-handoff.json": {
+      "bytes": 1139,
+      "sha256": "fd5fa49b59b5cc26203f61837f2670285c2a1529c654f8de00dc25057dcd241f"
+    },
+    "run_combined_green.py": {
+      "bytes": 4608,
+      "sha256": "b1bf2a3bb8ed3713f74423fdc7f8bce7282dfebd928f311abde5fdd5c0526144"
+    },
+    "run_one_red.py": {
+      "bytes": 4548,
+      "sha256": "65310a4ca75a03178b359d4885e6a9c961c9c21cac20041e30a409d405e79e8a"
+    },
+    "runner-data-only.diff": {
+      "bytes": 3252,
+      "sha256": "6848d302b8328be69598f33beb4d184223c751876ec70f9c9379b5d966841ca3"
+    },
+    "test-only-fresh-original-fixture.diff": {
+      "bytes": 6136,
+      "sha256": "b6e81ed57c34a4ab4a82effff419afb67e7d26c16d6a880efafd30aa7bf390e9"
+    },
+    "test_original_telemetry_connection_send_join.py": {
+      "bytes": 19206,
+      "sha256": "b8fdf599d2e03517c3bba35b8c6e0d9250f31bbfddf0845245487469f4a190cf"
+    }
+  },
+  "prior_receipts_preserved": {
+    "all_invalid_and_failed_prior_graphs_unchanged": true,
+    "cold_graph08_still_negative_ClientDisconnected": true,
+    "individual_freshprocess_4PASS_receipt_SHA256": "313982524811f49961c691d508ef94509c7ce3e21e38dc079f7a7c919986ccb0"
+  },
+  "raw_readback_limit": {
+    "all4_behaviors_and_fixtures_proved_by_exact_test_assertions_and_individual_JUnit_PASS_rows": true,
+    "combined_JSON_contains_last_exercise_shutdown_close_case_only": true,
+    "combined_diagnostic_path_reused_by_case_helper": true,
+    "last_retained_ASGI_before_release": {
+      "closing": true,
+      "exact_carrier": true,
+      "exact_original_message": true,
+      "exact_original_source": true,
+      "exact_pending_task": true,
+      "handler_done": false,
+      "identity": 3,
+      "released": false,
+      "send_pending": true,
+      "socket_still_registered": true,
+      "unregistered": 0,
+      "ws_disconnect": true
+    },
+    "last_retained_ASGI_closure": {
+      "can_release_launch_lease": false,
+      "idle": true,
+      "joined_tasks": 3,
+      "pending_tasks": 0,
+      "process_tree_exit_verified": false,
+      "supported": true,
+      "task_count": 3,
+      "whole_writer_coverage": false
+    },
+    "last_retained_ASGI_drain": {
+      "active_scopes": 0,
+      "status": "managed_scopes_drained",
+      "unsupported": []
+    },
+    "no_claim_of4_independently_serialized_raw_ASGI_readbacks": true
+  },
+  "results": {
+    "GREEN": "ONE combined module4PASS in4.22s;0failures/0errors including all fixture teardowns",
+    "RED": "1 intended assertion failure in1.72s; fixture teardown/preconditions did not error",
+    "no_retries": true,
+    "same_final_test_body_for_both_runs": true
+  },
+  "runs": {
+    "actual-combined-green-01": {
+      "cases": [
+        {
+          "error_count": 0,
+          "failure_count": 0,
+          "name": "test_original_connection_send_finishes_before_teardown[dispatch_success_second_connection]",
+          "seconds": "1.696"
+        },
+        {
+          "error_count": 0,
+          "failure_count": 0,
+          "name": "test_original_connection_send_finishes_before_teardown[dispatch_actual_send_error]",
+          "seconds": "0.874"
+        },
+        {
+          "error_count": 0,
+          "failure_count": 0,
+          "name": "test_original_connection_send_finishes_before_teardown[original_shutdown_close_success]",
+          "seconds": "0.729"
+        },
+        {
+          "error_count": 0,
+          "failure_count": 0,
+          "name": "test_original_shutdown_during_accept_keeps_never_registered_path",
+          "seconds": "0.845"
+        }
+      ],
+      "pins": {
+        "finite-original-artifacts.json": {
+          "bytes": 2031,
+          "sha256": "1b08952b06176627b2ad98005d2f66b6ad3ba296aafbc44fe9d633edfff8a4f7"
+        },
+        "isolation-final.json": {
+          "bytes": 52369,
+          "sha256": "b80d35c5d817d2475f0761440098aa258547838e416504dd6c281cfe534af3ff"
+        },
+        "junit.xml": {
+          "bytes": 945,
+          "sha256": "51b92cd31f8002a44f8f2cc3817d56fdd2dcfec597b9faaabbeea06777341aab"
+        },
+        "original-ASGI-readback.json": {
+          "bytes": 8852,
+          "sha256": "3dea0b53029fa43a8ec2b18766b20cd0b2465a2079b694f2cd232a3f3826c35e"
+        },
+        "original-tool-completion.json": {
+          "bytes": 611,
+          "sha256": "4c65ed0628283a5e52c91c4b50c5c9b817e2edb94a44932ed0ed582ba4876d5c"
+        },
+        "original-tool-start.json": {
+          "bytes": 131,
+          "sha256": "347279cf6442d47a279e82a5844f38b24a9afcc0113c37b2201edcabdceebe70"
+        },
+        "private-inputs-after.json": {
+          "bytes": 3913,
+          "sha256": "22258ff18dfbe9dd12dc6b8de4fa0c35cf0f97cd4bf047a76c91f754c9cd6a54"
+        },
+        "private-inputs-before.json": {
+          "bytes": 3913,
+          "sha256": "22258ff18dfbe9dd12dc6b8de4fa0c35cf0f97cd4bf047a76c91f754c9cd6a54"
+        },
+        "pytest.log": {
+          "bytes": 209,
+          "sha256": "4660e72a61f6518e3828a947ed69e1fffa0bcc57c6502cbb08ae241d335244fd"
+        },
+        "result.json": {
+          "bytes": 490,
+          "sha256": "671c5d602df7f7c983f4129f41426bfab46b1da848a4acb36d61a7a2de6ef8e5"
+        },
+        "source-after.json": {
+          "bytes": 1043764,
+          "sha256": "de59d2f273af1b508d0333cf6a2c8b8a8eb32f737b456164b96c119b37187ea6"
+        },
+        "source-before.json": {
+          "bytes": 1043764,
+          "sha256": "de59d2f273af1b508d0333cf6a2c8b8a8eb32f737b456164b96c119b37187ea6"
+        }
+      },
+      "result": {
+        "Root06_cause_proven": false,
+        "deadline_expired": false,
+        "exit_code": 0,
+        "full_source_before_after_exact": true,
+        "log_sha256": "4660e72a61f6518e3828a947ed69e1fffa0bcc57c6502cbb08ae241d335244fd",
+        "native": false,
+        "original_store_isolation_all_checks_passed": true,
+        "private_inputs_before_after_exact": true,
+        "reaped": true,
+        "seconds": 9.337003874825314,
+        "signals_sent": false
+      },
+      "source": {
+        "clean": true,
+        "commit": "49baa87b79153e477298aeb215022516998f3a66",
+        "tracked_bytes": 35223714,
+        "tracked_count": 2906
+      }
+    },
+    "actual-red-01": {
+      "cases": [
+        {
+          "error_count": 0,
+          "failure_count": 1,
+          "name": "test_original_connection_send_finishes_before_teardown[dispatch_success_second_connection]",
+          "seconds": "1.641"
+        }
+      ],
+      "pins": {
+        "finite-original-artifacts.json": {
+          "bytes": 2034,
+          "sha256": "218658038a3e0beabbba2a9ca2210e3a195a3460daf092b2a26123700791c84a"
+        },
+        "isolation-final.json": {
+          "bytes": 21626,
+          "sha256": "da1e1aa5cd62ecbb641645ec6c0494546601eea8883de985626c6b43b4708f14"
+        },
+        "junit.xml": {
+          "bytes": 1994,
+          "sha256": "4f2af492c79dd8844abc1d5660d5274ce3828481474d4b1e220a8254ad580122"
+        },
+        "original-ASGI-readback.json": {
+          "bytes": 11157,
+          "sha256": "d3bc52ca5e12ee51eac8539007c5cabfbab13a3e3b3a7836fb9ed85f7d69b415"
+        },
+        "original-tool-completion.json": {
+          "bytes": 612,
+          "sha256": "76f10eeed19b52beea0227cb53b045ec5c945b89d84288c77d015c15154ab152"
+        },
+        "original-tool-start.json": {
+          "bytes": 131,
+          "sha256": "52857bd9e058fb558a321b4fe9587b3d7253bffcc482f2d4b47b8c208a8cd376"
+        },
+        "private-inputs-after.json": {
+          "bytes": 3913,
+          "sha256": "22258ff18dfbe9dd12dc6b8de4fa0c35cf0f97cd4bf047a76c91f754c9cd6a54"
+        },
+        "private-inputs-before.json": {
+          "bytes": 3913,
+          "sha256": "22258ff18dfbe9dd12dc6b8de4fa0c35cf0f97cd4bf047a76c91f754c9cd6a54"
+        },
+        "pytest.log": {
+          "bytes": 2821,
+          "sha256": "21d5cbf583120b400dc3e993ca447f2e93c0af9f05e7d4b620046c8600ee55d6"
+        },
+        "result.json": {
+          "bytes": 491,
+          "sha256": "d9e449e823783ff552354bbecf982a7344e459d599cbc9391adbdbc513a150b7"
+        },
+        "source-after.json": {
+          "bytes": 1041500,
+          "sha256": "75dd1f3d5bb41ee1d7ce027f5bc8b7bad2f5a9630b1cbf1389984103c1710c4a"
+        },
+        "source-before.json": {
+          "bytes": 1041500,
+          "sha256": "75dd1f3d5bb41ee1d7ce027f5bc8b7bad2f5a9630b1cbf1389984103c1710c4a"
+        }
+      },
+      "result": {
+        "Root06_cause_proven": false,
+        "deadline_expired": false,
+        "exit_code": 1,
+        "full_source_before_after_exact": true,
+        "log_sha256": "21d5cbf583120b400dc3e993ca447f2e93c0af9f05e7d4b620046c8600ee55d6",
+        "native": false,
+        "original_store_isolation_all_checks_passed": true,
+        "private_inputs_before_after_exact": true,
+        "reaped": true,
+        "seconds": 6.5850726251956075,
+        "signals_sent": false
+      },
+      "source": {
+        "clean": true,
+        "commit": "25adcd5317b0029427c132a176d93bd921db4d34",
+        "tracked_bytes": 35168467,
+        "tracked_count": 2900
+      }
+    }
+  },
+  "schema": "modu-vision.original-telemetry-connection-send-join-combined-ci-red-green/v1",
+  "scope": "Actual same-body causal regression and combined4-case CI portability verification; source only",
+  "source": {
+    "baseline_commit": "25adcd5317b0029427c132a176d93bd921db4d34",
+    "candidate_base": "b7b2c27c78194de6714d717180147d2dee2cad92",
+    "final_private_commit": "49baa87b79153e477298aeb215022516998f3a66",
+    "private_commit_not_pushed": true,
+    "product_SHA256": "7907be9c9fcac402e128b309898b425975f48a557f9eb3a1666b027f0848530d",
+    "product_fix_private_commit": "47ff9c6b73da39d625711d03fee189aa2b18ba03",
+    "product_unchanged_from_individual_case_proof": true,
+    "test_SHA256": "b8fdf599d2e03517c3bba35b8c6e0d9250f31bbfddf0845245487469f4a190cf",
+    "tracked_count": 2906
+  }
+}

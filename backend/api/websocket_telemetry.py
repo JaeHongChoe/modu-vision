@@ -76,6 +76,8 @@ class TelemetryBroadcaster:
 
     def __init__(self):
         self._active_connections: Set[WebSocket] = set()
+        self._connection_sends: Dict[WebSocket, asyncio.Lock] = {}
+        self._closing_connections: Set[WebSocket] = set()
         self._lock = asyncio.Lock()
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._queue: Optional[asyncio.Queue] = None
@@ -403,8 +405,14 @@ class TelemetryBroadcaster:
 
     async def _safe_close(self, ws: WebSocket) -> bool:
         try:
-            await ws.close(code=1001, reason="Server shutting down")
-            return True
+            lock = self._connection_sends.get(ws)
+            if lock is None:
+                return False
+            async with lock:
+                if ws not in self._active_connections or ws in self._closing_connections:
+                    return False
+                await ws.close(code=1001, reason="Server shutting down")
+                return True
         except Exception:
             return False
 
@@ -425,6 +433,7 @@ class TelemetryBroadcaster:
         if self._shutdown_started:
             await websocket.close(code=1001, reason="Server shutting down")
             return
+        self._connection_sends[websocket] = asyncio.Lock()
         self._active_connections.add(websocket)
         logger.info(
             "WebSocket client connected. Active connections: %d",
@@ -550,11 +559,17 @@ class TelemetryBroadcaster:
                 text = json.dumps(msg)
                 stale = []
                 for ws in list(self._active_connections):
-                    if not self._can_receive(ws,msg):continue
-                    try:
-                        await ws.send_text(text)
-                    except Exception:
-                        stale.append(ws)
+                    lock = self._connection_sends.get(ws)
+                    if lock is None:
+                        continue
+                    async with lock:
+                        if ws not in self._active_connections or ws in self._closing_connections:
+                            continue
+                        if not self._can_receive(ws,msg):continue
+                        try:
+                            await ws.send_text(text)
+                        except Exception:
+                            stale.append(ws)
 
                 for ws in stale:
                     self.unregister(ws)
@@ -733,7 +748,19 @@ async def _handle_websocket_connection(websocket: WebSocket) -> None:
     except Exception as e:
         logger.debug("WebSocket connection terminated: %s", e)
     finally:
-        broadcaster.unregister(websocket)
+        # Keep this original socket registered until its existing background
+        # send has returned. Only this connection stops admitting new sends.
+        lock = broadcaster._connection_sends.get(websocket)
+        if lock is None:
+            if websocket in broadcaster.active_connections:
+                raise RuntimeError("Registered telemetry connection send lock is missing")
+            broadcaster.unregister(websocket)
+        else:
+            broadcaster._closing_connections.add(websocket)
+            async with lock:
+                broadcaster.unregister(websocket)
+            del broadcaster._connection_sends[websocket]
+            broadcaster._closing_connections.discard(websocket)
 
 
 @observe_original_telemetry_handler(router.websocket("/ws/telemetry"))
