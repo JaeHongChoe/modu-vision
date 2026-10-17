@@ -262,3 +262,21 @@ test('same-scope refresh preserves a pending comparison and its running result u
   global.window=priorWindow;storage.restore();
  }
 });
+
+test('a late preferred-model refresh retains a consumed review-return image until its exact report applies',async()=>{
+ const storage=persistentSelection();try{
+  const report={...savedReport(),images:[{file_path:'/source/review.png',file_name:'review.png',image_sha256:'e'.repeat(64),ground_truth_verdict:'OK',incumbent:{verdict:'OK'},candidate:{verdict:'OK'}}]};
+  const seed=fixture({report});await seed.settle();await seed.change('저장된 모델 비교',report.comparison_id);
+  let resolveOld,reads=0;
+  const config={report,origin:{comparison_id:report.comparison_id,file_path:'/source/review.png',image_id:'review'},props:{preferredJobId:null,preferredParentJobId:null},
+   getReport:()=>++reads===1?new Promise(resolve=>{resolveOld=resolve;}):Promise.resolve(report)};
+  const f=fixture(config);await f.settle();assert.equal(reads,1);assert.equal(config.origin,null);
+  config.props.preferredJobId='candidate';config.props.preferredParentJobId='incumbent';f.render();await f.settle();
+  resolveOld(report);await f.settle();
+  const focused=f.all().filter(node=>node.props?.['data-comparison-image']&&node.props.className?.includes('ring-cyan-400'));
+  assert.equal(focused.length,1,'the exact queue-return image survives the discarded earlier effect');
+  assert.equal(focused[0].props['data-comparison-image'],'/source/review.png');assert.equal(f.calls.length,0);
+  f.compute.profiles[0].gpu_selector='3';f.render();await f.settle();
+  assert.equal(f.all().filter(node=>node.props?.['data-comparison-image']&&node.props.className?.includes('ring-cyan-400')).length,0,'a changed execution scope cannot inherit the old highlight');
+ }finally{storage.restore();}
+});

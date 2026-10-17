@@ -95,6 +95,10 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
   const currentScope = useRef(scopeKey);
   currentScope.current = scopeKey;
   const reportChoice = useRef(0);
+  // Queue return is a user choice. Keep it through an interrupted catalog
+  // effect until the same scoped report can apply; later recommendations may
+  // restart that effect after the storage entry has already been consumed.
+  const reviewReturnChoice = useRef<{scope:string;origin:NonNullable<ReturnType<typeof consumeReviewContext>>}|null>(null);
   // Recommendations may arrive after an operator has chosen the model pair.
   // Preserve each explicit choice (including an empty choice) only in this
   // source/target/handoff scope; a late recommendation must not reverse it.
@@ -135,6 +139,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
 
   useEffect(() => {
     let active = true;
+    if(reviewReturnChoice.current?.scope!==scopeKey)reviewReturnChoice.current=null;
     const sameScopeRefresh=catalogRequest.current.scope===modelSelectionScope
       && catalogRequest.current.refreshRevision!==refreshRevision;
     catalogRequest.current={scope:modelSelectionScope,refreshRevision};
@@ -166,7 +171,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
       api.evaluation.listComparisons(sourceFolder, task),
       request<{ jobs: ComparisonJob[] }>(`/api/evaluation/model-comparisons/jobs?source_dataset_path=${encodeURIComponent(sourceFolder)}&task=${task}`),
     ]).then(([catalog, history, jobHistory]) => {
-      if (!active || currentScope.current !== scopeKey) return;
+      if (!active || currentScope.current !== scopeKey || reportChoice.current !== choice) return;
       setModels(catalog.models);
       setRecords(history.comparisons);
       const remembered=handedSelection?(()=>{try{return readComparisonSelection(selectionChoiceKey);}catch{return null;}})():readComparisonSelection(selectionChoiceKey);
@@ -174,7 +179,10 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
       // A queue return is an explicit later choice. Consume it even when a
       // fresh task-center handoff wins, so an older return cannot fire later.
       const reviewReturn=consumeReviewContext(localStorage,evaluationOriginScope(project?.id,sourceFolder,task,project?.active_labelset_id||'default',compute),history.comparisons.map(row=>row.comparison_id),'comparison');
-      const origin=freshHandoff?null:reviewReturn;
+      if(freshHandoff||reviewReturnChoice.current?.scope!==scopeKey)reviewReturnChoice.current=null;
+      if(!freshHandoff&&reviewReturn)reviewReturnChoice.current={scope:scopeKey,origin:reviewReturn};
+      const retainedOrigin=reviewReturnChoice.current?.origin;
+      const origin=freshHandoff?null:retainedOrigin&&history.comparisons.some(row=>row.comparison_id===retainedOrigin.comparison_id)?retainedOrigin:null;
       const requested=freshHandoff?{kind:'job' as const,id:handedId!}:origin?.comparison_id?{kind:'report' as const,id:origin.comparison_id}
         :remembered||((handedId||localStorage.getItem(selectionKey))?{kind:'job' as const,id:handedId||localStorage.getItem(selectionKey)!}:null);
       const requestedId=requested?.kind==='job'?requested.id:null;
@@ -252,6 +260,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
 
   const openReport = async (comparisonId: string) => {
     if (!comparisonId || !sourceFolder) return;
+    reviewReturnChoice.current=null;setOriginPath('');
     const requestedScope = scopeKey;
     const choice = ++reportChoice.current;
     setComparisonJob(null);
@@ -277,6 +286,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
 
   const runComparison = async () => {
     if (!sourceFolder || !incumbentId || !candidateId || incumbentId === candidateId || missingProfile) return;
+    reviewReturnChoice.current=null;setOriginPath('');
     const requestedScope = scopeKey;
     const choice=++reportChoice.current;
     setComparisonJob(null);setReport(null);setReportScope('');
@@ -463,6 +473,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
           {comparisonJob && <p role="status" className="mt-2 text-slate-200">비교 {comparisonJob.completed_images}/{comparisonJob.total_images || '?'}장 · {comparisonJob.cancel_requested && comparisonJob.status === 'running' ? '현재 이미지 완료 후 중단' : comparisonJob.status}</p>}
           {jobs.length > 0 && <label className="mt-2 block text-slate-300">비교 작업 다시 열기<select aria-label="비교 작업 다시 열기" value={comparisonJob?.job_id || ''} onChange={(e) => {
             const job = jobs.find((j) => j.job_id === e.target.value); if (!job) return;
+            reviewReturnChoice.current=null;setOriginPath('');
             reportChoice.current++;setReport(null);setReportScope('');setError(null);setComparisonJob(job); setIsRunning(['queued', 'running'].includes(job.status));rememberSelection('job',job.job_id);
           }} className="mt-1 block w-full rounded border border-[#3D5266] bg-[#0F1B27] px-2 py-1.5"><option value="">작업 선택</option>{jobs.map((j) => <option value={j.job_id} key={j.job_id}>{j.job_id.slice(-12)} · {j.status} · {j.completed_images}/{j.total_images}</option>)}</select></label>}
           <p className="mt-2 text-[10px] leading-relaxed text-slate-400">
