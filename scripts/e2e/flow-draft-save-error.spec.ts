@@ -63,11 +63,16 @@ export function assertObservedDraftReplies(rows:any[],origin:string,source:strin
  for(const node of pipeline.nodes)expect(node.data.model_job_id).toBeNull();
  const libraryURL=origin+'/api/dataset/library/images?state=valid&limit=120';
  const evaluationURL=origin+'/api/evaluation/results?'+new URLSearchParams({source_dataset_path:source,source_task:'anomaly'});
- const counts={draft_failure:0,missing_revision:0,missing_model:0};
+ const counts={draft_failure:0,missing_revision:0,empty_model_catalog:0};
  for(const row of rows){
   for(const value of [row.started,row.deadline,row.finished])expect(Number.isFinite(value)).toBe(true);
   expect(row.deadline).toBe(row.started+10_000);expect(row.finished).toBeGreaterThanOrEqual(row.started);expect(row.finished).toBeLessThanOrEqual(row.deadline);
   expect(typeof row.raw).toBe('string');expect(row.raw_sha256).toBe(sha(row.raw));expect(row.raw_size).toBe(Buffer.byteLength(row.raw));
+  expect(row.url).not.toBe(evaluationURL);
+  if(row.url===origin+'/api/flowchart/models/catalog?source_dataset_path='+encodeURIComponent(source)){
+   expect(row.method).toBe('GET');expect(row.request_body).toBeNull();expect(row.status).toBe(200);
+   expect(JSON.parse(row.raw)).toEqual({models:[],total:0});counts.empty_model_catalog++;continue;
+  }
   if(row.status===200)continue;
   if(row.url===origin+'/api/flowchart/draft'&&row.method==='PUT'){
    assertDraftFailure({status:row.status,body:row.raw});counts.draft_failure++;
@@ -75,11 +80,10 @@ export function assertObservedDraftReplies(rows:any[],origin:string,source:strin
    expect(row.method).toBe('GET');expect(row.request_body).toBeNull();expect(row.status).toBe(409);
    expect(JSON.parse(row.raw)).toEqual({detail:'No validated dataset revision is active; validate the source and accept a revision first'});counts.missing_revision++;
   }else{
-   expect(row.url).toBe(evaluationURL);expect(row.method).toBe('GET');expect(row.request_body).toBeNull();expect(row.status).toBe(404);
-   expect(JSON.parse(row.raw)).toEqual({detail:'No completed training job has been selected'});counts.missing_model++;
+   throw Error('Unexpected original HTTP error: '+row.method+' '+row.url+' '+row.status+' '+row.raw);
   }
  }
- expect(counts).toEqual({draft_failure:1,missing_revision:1,missing_model:1});
+ expect(counts.draft_failure).toBe(1);expect(counts.missing_revision).toBe(1);expect(counts.empty_model_catalog).toBeGreaterThan(0);
 }
 
 function protectedTree(root:string):Tree{

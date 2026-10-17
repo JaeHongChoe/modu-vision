@@ -58,7 +58,21 @@ async function exercise(page:Page,w:Workspace,e:Evidence,native:boolean,origin:s
  const snapshot=()=>page.evaluate(()=>Object.fromEntries(Object.entries(localStorage).filter(([key])=>key.startsWith('vision-comparison-job:'))));
  let beforeSelection:any,acceptedSelection:any,terminalSelection:any;
  try{
+  // This actual latest evaluation is independent preparation, not the cancel
+  // operation. Finish its original response before freezing the model tree:
+  // the evaluator legitimately creates its first cached result on this read.
+  const preparationStarted=performance.now(),preparationDeadline=preparationStarted+60_000;
+  const evaluationWire=page.waitForResponse(response=>{const request=response.request(),u=new URL(request.url());return request.frame()===page.mainFrame()&&request.method()==='GET'&&u.origin===origin&&u.pathname==='/api/evaluation/results'&&u.searchParams.get('source_dataset_path')===source&&u.searchParams.get('source_task')==='classification'&&!u.searchParams.has('job_id');},{timeout:60_000});
+  void evaluationWire.catch(()=>{});
+  const originalModelFiles=Object.fromEntries([baseline,candidate].flatMap(id=>['best_model.pt','model_meta.json','job_receipt.json'].map(name=>{const file=path.join(project.models_dir,id,name);return [file,ownedFile(file,c)];})));
   if(url)await page.goto(url);else await page.reload();await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(3).click();await expect(a).toBeEnabled();await a.selectOption(baseline);await b.selectOption(candidate);await expect(submit).toBeEnabled();
+  const evaluationResponse=await handoffWithin(evaluationWire,preparationDeadline,'independent latest evaluation readiness');owner(evaluationResponse.request());expect(evaluationResponse.status()).toBe(200);
+  const evaluationBytes=await handoffWithin(evaluationResponse.body(),preparationDeadline,'independent evaluation whole original body');expect(evaluationBytes.length).toBeLessThanOrEqual(2*1024*1024);expect(await handoffWithin(evaluationResponse.finished(),preparationDeadline,'independent evaluation original completion')).toBeNull();
+  const evaluated=JSON.parse(evaluationBytes.toString('utf8'));expect(evaluated.job_id).toBe(candidate);expect(evaluated.task).toBe('classification');expect(evaluated.binding.source_dataset_path).toBe(source);expect(evaluated.test_predictions).toHaveLength(512);
+  const evaluationCache=path.join(project.models_dir,candidate,'eval_results.json');expect(JSON.parse(fs.readFileSync(evaluationCache,'utf8'))).toEqual(evaluated);
+  for(const [file,pin] of Object.entries(originalModelFiles))expect(ownedFile(file,c)).toEqual(pin);
+  const evaluationFile=path.join(w.logs,'f057-independent-preparation-original-evaluation.json');fs.writeFileSync(evaluationFile,evaluationBytes,{flag:'wx'});e.addFile(evaluationFile);
+  e.note('comparison_cancel_independent_evaluation_preparation',{started:preparationStarted,deadline:preparationDeadline,finished:performance.now(),budget_ms:60_000,original_HTTP:true,status:200,finished_null:true,request_url:evaluationResponse.url(),response_file:evaluationFile,response_sha256:hash(evaluationBytes),response_size:evaluationBytes.length,cache_file:evaluationCache,cache_sha256:hash(fs.readFileSync(evaluationCache)),source_images:512,untrained_deterministic_models:true,model_original_files_unchanged:true,submit_cancel_original_10s_deadlines_unchanged:true,concurrent_evaluation_and_cancel_covered:false,model_quality_approval:false});
   const select=panel.getByLabel('저장된 모델 비교',{exact:true});await expect(select.locator('option[value="'+seedReport.comparison_id+'"]')).toHaveCount(1);
   const reportWire=page.waitForResponse(r=>matches(r.request(),'GET',HISTORY+'/'+seedReport.comparison_id),{timeout:10_000});void reportWire.catch(()=>{});await select.selectOption(seedReport.comparison_id);expect(await original(await reportWire,'seed-original-open',200)).toEqual(seedReport);
   before=retained();expect(Object.keys(before.source).filter(name=>name.startsWith('test/')&&name.endsWith('.png'))).toHaveLength(512);beforeSelection=await snapshot();await e.screenshot(page,'f057-real-cancel-owned-original-ready');

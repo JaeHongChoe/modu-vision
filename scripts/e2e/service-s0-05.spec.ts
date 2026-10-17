@@ -265,6 +265,22 @@ async function openEvaluation({ page, renderer, workspace, evidence }: { page: P
     created_at: `2026-10-02T0${index}:00:00Z`, saved_at: `2026-10-02T0${index}:00:00Z`, is_active: index === 0,
   }));
   const [versionA, versionB] = versions.map(row => row.version_id);
+  // These six lifecycle cases declare model/evaluation responses. Their saved
+  // graphs must declare the same synthetic model before current preflight may
+  // request authoritative scope; no checkpoint or model decision is claimed.
+  const templateResponse = await page.request.get(renderer.origin + '/api/flowchart/templates/fixed-roi?inspection_task=classification');
+  expect(templateResponse.status()).toBe(200);
+  const evaluationGraph = await templateResponse.json() as Json;
+  const inspection = evaluationGraph.nodes.filter((node: Json) => node.data.node_type === 'inspection');
+  expect(inspection).toHaveLength(1); inspection[0].data.model_job_id = MODEL;
+  const savedGraphs = new Map(versions.map(version => [version.version_id,
+    {...structuredClone(evaluationGraph), name: version.name}]));
+  await page.route(url => [...savedGraphs.keys()].some(version => url.pathname === '/api/flowchart/pipelines/' + version), route => {
+    const version = new URL(route.request().url()).pathname.split('/').pop()!;
+    expect(route.request().method()).toBe('GET');
+    log.record(route.request(), 'declared synthetic saved bound graph for evaluation preflight: ' + version);
+    return json(route, savedGraphs.get(version));
+  });
   const cohort = { cohort_id: 'cohort-s005', name: '시험 분할 전체', created_at: '2026-10-02T00:00:00Z', scope, count: 2, split: 'test',
     record_sha256: 'a'.repeat(64), input_sha256: 'b'.repeat(64), truth_sha256: 'c'.repeat(64), split_sha256: 'd'.repeat(64) };
   const errorRecord = {
@@ -345,6 +361,17 @@ async function openEvaluation({ page, renderer, workspace, evidence }: { page: P
   const panel = page.locator('section[aria-label="전체 흐름 평가"]');
   const versionSelect = panel.getByLabel('전체 흐름 평가 버전');
   await expect(versionSelect).toHaveValue(versionA);
+  // Current evaluation first reads the exact saved graph. Prove this declared
+  // fixture is displayable and bound before asking for its executable scope.
+  for (const version of [versionA, versionB]) {
+    const graph = await page.evaluate(async version => {
+      const response = await fetch('/api/flowchart/pipelines/' + encodeURIComponent(version));
+      return {status: response.status, body: await response.json()};
+    }, version);
+    expect(graph.status).toBe(200);
+    expect(graph.body.nodes.filter((node: Json) => node.data.node_type === 'inspection')).toHaveLength(1);
+    expect(graph.body.nodes.find((node: Json) => node.data.node_type === 'inspection').data.model_job_id).toBe(MODEL);
+  }
   const chooseCohort = () => panel.getByLabel('전체 흐름 시험 코호트').selectOption(cohort.cohort_id);
   await chooseCohort();
   return {

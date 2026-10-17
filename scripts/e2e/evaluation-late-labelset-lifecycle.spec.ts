@@ -200,7 +200,12 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
     await settleStoreReads();
   };
   const open = async () => {if (await history.getAttribute('open') === null) await summary.click();};
-  const mountEvaluation = async () => {const waiting = defaultReads(); await stages.nth(3).click(); await finishDefaults(waiting); await open();};
+  const openOcrApproval = async () => {
+    const approval = page.locator('summary').filter({hasText: /^OCR · 회전 검출 · 이미지 개선 승인$/});
+    // The original OCR store reads start only when this actual disclosure opens.
+    if (await approval.locator('..').getAttribute('open') === null) await approval.click();
+  };
+  const mountEvaluation = async () => {const waiting = defaultReads(); await stages.nth(3).click(); await openOcrApproval(); await finishDefaults(waiting); await open();};
   const navigate = async () => {
     if (url) await page.goto(url); else await page.reload();
     await expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name);
@@ -469,7 +474,7 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
     const reopenPreferences = await preferences(), reopenLate = await reopenHeld.finish(); await assertRecord(alternate); expect(await preferences()).toEqual(reopenPreferences);
     const reloadReads = defaultReads(), reloadHistory = historyResponse('segmentation', 'default'); await page.reload();
     await expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name); await expect(summary).toHaveCount(1);
-    await finishDefaults(reloadReads); const actualReload = await readHistory(reloadHistory); await expect(history).toHaveAttribute('open', '');
+    await openOcrApproval(); await finishDefaults(reloadReads); const actualReload = await readHistory(reloadHistory); await expect(history).toHaveAttribute('open', '');
     await expect(family).toHaveValue('segmentation'); await expect(labelset).toHaveValue('default'); await expect(group).toHaveValue('lot');
     await assertRecord(alternate); expect(await preferences()).toEqual(reopenPreferences); await capture('actual-reload-keeps-newer-exact-record-after-late-200', identity); await unchanged();
     controls.push({action: 'native-evaluation-late-labelset-selection', dimension: 'reopen', older: reopenLate, actual_renderer_reload: true,

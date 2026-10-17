@@ -12,7 +12,8 @@ function ownedRequest(request,page,origin,scopes){
  const entries=[...url.searchParams];assert.ok(entries.length>=2&&entries.length<=3);assert.equal(new Set(entries.map(([key])=>key)).size,entries.length);
  assert.ok(entries.every(([key])=>['source_dataset_path','source_task','job_id'].includes(key)));
  const scope=scopes.find(s=>s.source===url.searchParams.get('source_dataset_path'));assert.ok(scope,'Foreign startup evaluation source');assert.equal(url.searchParams.get('source_task'),'classification');
- const headers=request.headers(),context=JSON.parse(headers['x-vision-context']);assert.equal(headers['x-vision-project'],scope.project.id);assert.equal(context.project_id,scope.project.id);assert.equal(context.mode,'local');
+ const headers=request.headers(),context=JSON.parse(headers['x-vision-context']);assert.equal(headers['x-vision-project'],scope.project.id);assert.equal(context.project_id,scope.project.id);
+ if(scope.context)assert.deepEqual(context,scope.context);else assert.equal(context.mode,'local');
  for(const key of ['workspace_id','actor_id'])assert.match(context[key],/^[A-Za-z0-9_.:-]{1,128}$/);
  const job=url.searchParams.get('job_id');if(job!==null)assert.ok(Object.hasOwn(scope.modelHashes,job));
  return {scope,identity:{method:'GET',origin,path:url.pathname,query:entries,project_id:context.project_id,workspace_id:context.workspace_id,actor_id:context.actor_id,mode:context.mode,main_frame:true,requested_job:job}};

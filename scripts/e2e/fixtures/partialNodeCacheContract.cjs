@@ -6,14 +6,21 @@ const SHA=/^[a-f0-9]{64}$/;
 function request(row,scope){
  assert.equal(row.method,'POST');assert.equal(row.origin,scope.origin);assert.equal(row.path,'/api/flowchart/run');assert.equal(row.search,'');assert.equal(row.main_frame,true);
  assert.equal(row.project_header,scope.project.id);assert.equal(row.context.project_id,scope.project.id);
- assert.equal(row.context.mode,'local');for(const key of ['workspace_id','actor_id'])assert.match(row.context[key],/^[A-Za-z0-9_.:-]{1,128}$/);
- assert.deepEqual(row.body,{project_id:scope.project.id,pipeline:scope.pipeline,image_path:scope.image.path,image_id:scope.image.image_id,execution_target:'local',device:'cpu',stop_node_id:scope.stop_node_id});
+ if(scope.context)assert.deepEqual(row.context,scope.context);else assert.equal(row.context.mode,'local');
+ for(const key of ['workspace_id','actor_id'])assert.match(row.context[key],/^[A-Za-z0-9_.:-]{1,128}$/);
+ const expected={project_id:scope.project.id,pipeline:scope.pipeline,image_path:scope.image.path,image_id:scope.image.image_id,execution_target:'local',device:'cpu',stop_node_id:scope.stop_node_id};
+ const prepared=row.preparation;assert.ok(prepared);assert.equal(prepared.status,200);
+ assert.deepEqual(prepared.request,{method:'POST',origin:scope.origin,path:'/api/flowchart/partial-runs/prepare',search:'',main_frame:true,project_header:scope.project.id,context:row.context,body:expected});
+ assert.match(prepared.body.run_id,/^[a-f0-9]{32}$/);
+ for(const [key,value] of Object.entries({project_id:scope.project.id,stop_node_id:scope.stop_node_id,execution_target:'local',device:'cpu',state:'prepared',execution_finished:false}))assert.equal(prepared.body[key],value);
+ assert.deepEqual(row.body,{...expected,partial_run_id:prepared.body.run_id});
  assert.equal(scope.pipeline.nodes.find(n=>n.id===scope.stop_node_id).data.model_job_id,'job_fixture_incumbent');
 }
 function failure(row){assert.equal(row.status,503);assert.deepEqual(row.body,{detail:DETAIL});assert.equal(row.controlled_response,true);assert.equal(row.original_backend_execution,false);}
 function partial(row,scope,cache){
  assert.equal(row.status,200);assert.equal(row.controlled_response,false);assert.equal(row.original_backend_execution,true);
  const v=row.body;assert.equal(v.status,'partial');assert.equal(v.final_verdict,'REVIEW');assert.equal(v.is_ok,false);assert.equal(v.stop_node_id,scope.stop_node_id);
+ assert.equal(v.partial_run_id,row.request.preparation.body.run_id);
  assert.equal(v.execution_target,'local');assert.equal(v.execution_device,'cpu');assert.equal(v.compute_profile_id,null);
  assert.equal(v.debug_cache.status,cache);assert.match(v.debug_cache.identity_sha256,SHA);
  assert.ok(Array.isArray(v.execution_steps)&&v.execution_steps.length>0);assert.ok(Array.isArray(v.crops)&&v.crops.length>0);

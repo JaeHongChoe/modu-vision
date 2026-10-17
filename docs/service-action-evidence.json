@@ -3,7 +3,7 @@
   "kind": "curated_action_evidence_not_complete_feature_acceptance",
   "sources": {
     "src/renderer/components/flowchart/FlowWorkspacePanel.tsx": "6e7c74ae465e6a426601de756a91a9966615195f52c1e6aa9e4691b187baa8bf",
-    "src/renderer/components/flowchart/FlowchartStudio.tsx": "445b156c5129e6522c8a4d17b84f71acbffab6732aae125fecff4967ef38e26d",
+    "src/renderer/components/flowchart/FlowchartStudio.tsx": "b046065d152575c1bd4d9a5e95eef60c15f8c56dec7c9f758173c8566b31c0e6",
     "src/renderer/components/flowchart/FlowDraftControls.tsx": "3bd10fc68ea4ae2dc600dfad2b6c51b56d74d213f7483923107295aac303f5a8",
     "src/renderer/components/labeling/TeamDataPanel.tsx": "c3e0aa4756127e8b3ae8db14d06ed25261b2948856ebb9d26c7c3fc797979397",
     "src/renderer/components/labeling/LabelingToolbar.tsx": "50eadcc577203c09631c0b23358ef509c4c894bb720b43e74666cf91881d538e",
@@ -52,7 +52,7 @@
     "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx": "9ab0454b4433afdd10fc9c6cbcc12e0ac4c71e3f43e0ed0aa829cd687d38672e",
     "src/renderer/components/runtime/FleetPanel.tsx": "572144e60bbe38efc208ca2d2d19e87de58793da783269e5498970c1d97243ab",
     "src/renderer/components/runtime/PortableUpdatePanel.tsx": "4f747509c427ab35d41745d3da7f26e50a3c3f3a93acdca35beb5fee9145796b",
-    "src/renderer/components/evaluation/ModelComparisonPanel.tsx": "c99e1673c11260594cc8228acfc6ad28e12a0dbbe5f71661a644c2b406be0941",
+    "src/renderer/components/evaluation/ModelComparisonPanel.tsx": "3a9b93dd4be7f67d007556234607942cfc0c55ee295d147c237702e605e3c31e",
     "src/renderer/components/dataset/CaptureIntakePanel.tsx": "7021606464274e98970014a0a18bc8b273a22db2e7f2436f6ad163eef4770b36",
     "src/renderer/components/inference/BatchInspectionPanel.tsx": "768d503c3ddad0cdec15ae4f09ca4596ac29d8f39ec018b4d6960e66ba33c632",
     "src/renderer/components/flowchart/IntermediateCropDrawer.tsx": "b8d4e37fde319fc00f93c6f51ffc2730599fdbc6b5c9a330c6e9f26b2871c8d3",

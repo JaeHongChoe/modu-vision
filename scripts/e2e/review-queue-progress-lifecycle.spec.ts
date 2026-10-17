@@ -202,8 +202,13 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
     await settleStoreReads();
     return observed;
   };
+  const openOcrApproval = async () => {
+    const approval = page.locator('summary').filter({hasText: /^OCR · 회전 검출 · 이미지 개선 승인$/});
+    // The original OCR store read starts only when this actual disclosure opens.
+    if (await approval.locator('..').getAttribute('open') === null) await approval.click();
+  };
   const warmEvaluationReads = evaluationDefaultReads();
-  await stages.getByRole('button').nth(3).click();
+  await stages.getByRole('button').nth(3).click(); await openOcrApproval();
   const initialEvaluationReads = await completeEvaluationDefaults(warmEvaluationReads);
   const warmHistorySummary = page.locator('summary').filter({hasText: /^평가 이력 · 제품\/Lot별 오류$/});
   if (await warmHistorySummary.locator('..').getAttribute('open') === null) await warmHistorySummary.click();
@@ -417,7 +422,7 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
         && (address.searchParams.get('labelset_id') || 'default') === origin.record.binding.labelset_id;
     });
     const finalEvaluationReads = evaluationDefaultReads();
-    await returnOrigin.click(); const confirmed = await realOrigin; expect(confirmed.status()).toBe(200); expect(await confirmed.json()).toEqual(expectedQueue);
+    await returnOrigin.click(); await openOcrApproval(); const confirmed = await realOrigin; expect(confirmed.status()).toBe(200); expect(await confirmed.json()).toEqual(expectedQueue);
     const historyResponse = await realHistory; expect(historyResponse.status()).toBe(200);
     const savedHistory = await historyResponse.json(); expect(savedHistory.items.find((row: any) => row.evaluation_id === origin.record.evaluation_id)).toEqual(origin.record);
     await expect(page.getByRole('combobox', {name: '모델별 저장 평가', exact: true})).toHaveValue(origin.record.evaluation_id);

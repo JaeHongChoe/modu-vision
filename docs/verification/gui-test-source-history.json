@@ -1,0 +1,426 @@
+{
+  "schema": "modu-vision.gui-test-source-history/v1",
+  "scope": "historical_test_declarations_only_no_new_execution",
+  "declarations": [
+    {
+      "receipt": "2026-10-12-app-f030-root570-browser-empty.json",
+      "receipt_sha256": "8418b2022181f1214284803ae688c6211dc5059046eca98a2ae4e502a68af7c3",
+      "execution_source_sha": "d88843ef220daaad0fa03feb57702190fe3db6c8",
+      "test": "scripts/e2e/ocr-empty-workbench-controls.spec.ts::OCR empty truth prepared input completed job and model selection preserve originals through reopen",
+      "recorded_test_source_sha256": "238bb9d59cc8cb998f222e4ec38a9aeb87d0b86f35eb3e44c7d7a01f54757b62",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "8c869e9c7fa829d2e22ad97ee3e3d97dae16aa82b507c75e55b7ee2060f5aa74",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
+    },
+    {
+      "receipt": "2026-10-12-app-f030-root570-browser-invalid.json",
+      "receipt_sha256": "2b1bc203185b0982883a84114af75902843f21dfb235eebe459b8a050565dae1",
+      "execution_source_sha": "d88843ef220daaad0fa03feb57702190fe3db6c8",
+      "test": "scripts/e2e/ocr-empty-workbench-controls.spec.ts::OCR invalid numeric training preflight with valid saved truth preserves whole originals through reopen",
+      "recorded_test_source_sha256": "238bb9d59cc8cb998f222e4ec38a9aeb87d0b86f35eb3e44c7d7a01f54757b62",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "8c869e9c7fa829d2e22ad97ee3e3d97dae16aa82b507c75e55b7ee2060f5aa74",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
+    },
+    {
+      "receipt": "2026-10-12-app-f030-root570-electron-empty.json",
+      "receipt_sha256": "9ae6219c22d9edf0e18adc2865920278e2cb61e20f5120d1ab3d2d7c50352e07",
+      "execution_source_sha": "d88843ef220daaad0fa03feb57702190fe3db6c8",
+      "test": "scripts/e2e/ocr-empty-workbench-controls.spec.ts::native OCR empty truth prepared input completed job and model selection preserve originals through reopen",
+      "recorded_test_source_sha256": "238bb9d59cc8cb998f222e4ec38a9aeb87d0b86f35eb3e44c7d7a01f54757b62",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "8c869e9c7fa829d2e22ad97ee3e3d97dae16aa82b507c75e55b7ee2060f5aa74",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
+    },
+    {
+      "receipt": "2026-10-12-app-f030-root570-electron-invalid.json",
+      "receipt_sha256": "194c4dfe9a213c4783201d226d619955af8f9b8f5a7c8e83eea47a3f1211b036",
+      "execution_source_sha": "d88843ef220daaad0fa03feb57702190fe3db6c8",
+      "test": "scripts/e2e/ocr-empty-workbench-controls.spec.ts::native OCR invalid numeric training preflight with valid saved truth preserves whole originals through reopen",
+      "recorded_test_source_sha256": "238bb9d59cc8cb998f222e4ec38a9aeb87d0b86f35eb3e44c7d7a01f54757b62",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "8c869e9c7fa829d2e22ad97ee3e3d97dae16aa82b507c75e55b7ee2060f5aa74",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
+    },
+    {
+      "receipt": "2026-10-12-app-f030-root572-browser-handoff.json",
+      "receipt_sha256": "e32b4206216db45dcad197b538235746ee5b8edba75cc9e75008b41964853623",
+      "execution_source_sha": "2489104fa58a9330cbf8d66daf323024d7ed0720",
+      "test": "scripts/e2e/ocr-prepared-unsent-handoff.spec.ts::OCR unsent alphabet draft and saved alphabet split handoff preserve whole originals",
+      "recorded_test_source_sha256": "47d0083f0980707408476282bd8f72bea3b472b3138b2c39560180f4fdc99368",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "19f4afb43c1a6ed14f1c7a0856dfb1590d2a4d944edfea1beb7b108381b56100",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
+    },
+    {
+      "receipt": "2026-10-12-app-f030-root572-electron-handoff.json",
+      "receipt_sha256": "8301eba4baa12a556f50143452462aa8f2d88c6193652f635277b4c1ff39e545",
+      "execution_source_sha": "2489104fa58a9330cbf8d66daf323024d7ed0720",
+      "test": "scripts/e2e/ocr-prepared-unsent-handoff.spec.ts::native OCR unsent alphabet draft and saved alphabet split handoff preserve whole originals",
+      "recorded_test_source_sha256": "47d0083f0980707408476282bd8f72bea3b472b3138b2c39560180f4fdc99368",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "19f4afb43c1a6ed14f1c7a0856dfb1590d2a4d944edfea1beb7b108381b56100",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
+    },
+    {
+      "receipt": "2026-10-12-app-f064-root575-browser-controls.json",
+      "receipt_sha256": "d9bd1f5ef5091d32b09b7142bbff843e88748351db6ace5f2f2b6980a3a4ae71",
+      "execution_source_sha": "44c923d9e91cfec197f0c7045fe7d7678ab8c138",
+      "test": "scripts/e2e/flow-readonly-control-preflights.spec.ts::F064 empty inspector search partial-run input and unsent typed connection cancellation preserve saved originals",
+      "recorded_test_source_sha256": "ac2e7d606ea8f74110ee82831972c866381c54a02a9172c203b41ade1897fed6",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "dbebd879dbe8b28bacfac1a97b5c90ee928e8e1d8e5144df5cc877c543e8bc5c",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
+    },
+    {
+      "receipt": "2026-10-12-app-f064-root575-electron-controls.json",
+      "receipt_sha256": "c4cbc69e2a58cfaabe97db2d17b5f795ac4a64589cb691d0c53dec6a8b5576f3",
+      "execution_source_sha": "44c923d9e91cfec197f0c7045fe7d7678ab8c138",
+      "test": "scripts/e2e/flow-readonly-control-preflights.spec.ts::native F064 empty inspector search partial-run input and unsent typed connection cancellation preserve saved originals",
+      "recorded_test_source_sha256": "ac2e7d606ea8f74110ee82831972c866381c54a02a9172c203b41ade1897fed6",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "dbebd879dbe8b28bacfac1a97b5c90ee928e8e1d8e5144df5cc877c543e8bc5c",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
+    },
+    {
+      "receipt": "2026-10-12-app-f064-root576-browser-limits.json",
+      "receipt_sha256": "5aa698c9313f06d59181d7bbc42da91126d90b86adbddbfa7adf954989647156",
+      "execution_source_sha": "58eaccddb104da9e41269824625f033d28333fc4",
+      "test": "scripts/e2e/flow-node-limit-preflights.spec.ts::F064 ninth fixed ROI and inspection node keyboard additions fail before graph or saved draft writes",
+      "recorded_test_source_sha256": "6236bb318378715ae00131829ee56497e1eeb75c7f7a2bb3a9664c8fa386dfa8",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "2d78fdeb79fa480168c42f89a7bd3260242626404c31e3b01bd1b1cc960c966e",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
+    },
+    {
+      "receipt": "2026-10-12-app-f064-root576-electron-limits.json",
+      "receipt_sha256": "6a0bf6d0ac44b8ec369c22716a4acfbbad95a3930328a021ad92308baf70a152",
+      "execution_source_sha": "58eaccddb104da9e41269824625f033d28333fc4",
+      "test": "scripts/e2e/flow-node-limit-preflights.spec.ts::native F064 ninth fixed ROI and inspection node keyboard additions fail before graph or saved draft writes",
+      "recorded_test_source_sha256": "6236bb318378715ae00131829ee56497e1eeb75c7f7a2bb3a9664c8fa386dfa8",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "2d78fdeb79fa480168c42f89a7bd3260242626404c31e3b01bd1b1cc960c966e",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
+    },
+    {
+      "receipt": "2026-10-12-app-f064-root578-browser-refusals.json",
+      "receipt_sha256": "23f447b572411b964359d2cb82a9530cd395f21fc5934bbafb12d1935da2da3c",
+      "execution_source_sha": "2a7edd3df0b339ab83a175ab7446ed2cec8aacbe",
+      "test": "scripts/e2e/flow-existing-refusal-controls.spec.ts::F064 empty model history mapping and keyboard layout connection deletion refusals preserve saved originals",
+      "recorded_test_source_sha256": "90d100eab9cccde0a6992e91da468aed4ece7eaaa44ffbad2d9cbd924a9ca244",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "58e24569d8e20b3886adc9a45554dad832e939a74112170da6c315588e35137d",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
+    },
+    {
+      "receipt": "2026-10-12-app-f064-root578-electron-refusals.json",
+      "receipt_sha256": "b993fdfa3d3ed6bd5f120dbc977af7d6eda181b76e81bea7d3ed40a19fe4095c",
+      "execution_source_sha": "2a7edd3df0b339ab83a175ab7446ed2cec8aacbe",
+      "test": "scripts/e2e/flow-existing-refusal-controls.spec.ts::native F064 empty model history mapping and keyboard layout connection deletion refusals preserve saved originals",
+      "recorded_test_source_sha256": "90d100eab9cccde0a6992e91da468aed4ece7eaaa44ffbad2d9cbd924a9ca244",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "58e24569d8e20b3886adc9a45554dad832e939a74112170da6c315588e35137d",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
+    },
+    {
+      "receipt": "2026-10-12-app-f064-root580-browser-reopen.json",
+      "receipt_sha256": "45006cd397393912270875015a24318374d27447779a74ecbfd2b0a3df075dba",
+      "execution_source_sha": "bbc531dd32b4304be74ce1ebdfa1773d88848762",
+      "test": "scripts/e2e/flow-model-less-reopen-controls.spec.ts::F064 model-less inspection ROI and typed connection drafts reopen with exact saved graphs",
+      "recorded_test_source_sha256": "2055dacdc591178b81ebef1dc85598d2b0cc322ddc49c509e5635a724cefe3b0",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "2eb85950f2bc9877787ea7d122b00b1a951a918357111f0392a3f98ec01ea9dc",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
+    },
+    {
+      "receipt": "2026-10-12-app-f064-root580-electron-reopen.json",
+      "receipt_sha256": "96aa0d12dcacce34ef5c4a838d88cf51a486a91f3884340bd239884222e8b50f",
+      "execution_source_sha": "bbc531dd32b4304be74ce1ebdfa1773d88848762",
+      "test": "scripts/e2e/flow-model-less-reopen-controls.spec.ts::native F064 model-less inspection ROI and typed connection drafts reopen with exact saved graphs",
+      "recorded_test_source_sha256": "2055dacdc591178b81ebef1dc85598d2b0cc322ddc49c509e5635a724cefe3b0",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "2eb85950f2bc9877787ea7d122b00b1a951a918357111f0392a3f98ec01ea9dc",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
+    },
+    {
+      "receipt": "2026-10-12-app-label-mask-root581-browser-empty.json",
+      "receipt_sha256": "bbec44cb68841cfa419892b08f2a3c782634b084767a9e3a85f4f77c2930fd7c",
+      "execution_source_sha": "e53171e93b3527ca22ebc9b436f4e52555fa398d",
+      "test": "scripts/e2e/label-mask-empty-preflights.spec.ts::label and mask empty chooser preview and apply preflights preserve originals",
+      "recorded_test_source_sha256": "b3c7c07af92471aefb2b236e9552987bea28e1a089d8c7415be007dcaf08ebbd",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "cfe95c29cae62d3ac1e2c3beaa495ac12481c7b3e092456df75c4256ce9d8c0b",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
+    },
+    {
+      "receipt": "2026-10-12-app-label-mask-root581-electron-empty.json",
+      "receipt_sha256": "d0ad44877a4b91565f6280ba2f4025f423a33f94f3fafa254bdf9597c2698248",
+      "execution_source_sha": "e53171e93b3527ca22ebc9b436f4e52555fa398d",
+      "test": "scripts/e2e/label-mask-empty-preflights.spec.ts::native label and mask empty chooser preview and apply preflights preserve originals",
+      "recorded_test_source_sha256": "b3c7c07af92471aefb2b236e9552987bea28e1a089d8c7415be007dcaf08ebbd",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "cfe95c29cae62d3ac1e2c3beaa495ac12481c7b3e092456df75c4256ce9d8c0b",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
+    },
+    {
+      "receipt": "2026-10-08-late-original-response-lifecycle-f7175f5-browser.json",
+      "receipt_sha256": "cb845732b60de2ab37ea62a5eaa1db0bd0f64e33526585fb879897f76e6e575b",
+      "execution_source_sha": "f7175f5b8bf0be6ee2a0bdc33dc5160506888923",
+      "test": "scripts/e2e/evaluation-late-labelset-lifecycle.spec.ts::late saved labelset responses preserve current empty, refused and failed scopes through actual stage abandonment, reload and remount",
+      "recorded_test_source_sha256": "e6c663a3765ed64552470e0d3acd00174fdb16f11cc609be8a0253e394db62ad",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "808104f67f070740d0ddf8c22d74607a4b8c20fd9f4215872e10a0f5a9dba0db",
+      "reason": "Inherited public spec anchor retains exact historical test bytes. Current fixture opens the real OCR disclosure before its existing original-response wait; original deadlines, schemas and protection guards remain; no new current GUI execution."
+    },
+    {
+      "receipt": "2026-10-08-late-original-response-lifecycle-f7175f5-electron.json",
+      "receipt_sha256": "d3e06a06fa9d030636eb7dff8c26349431c18e2ddb71563d1cde77b4887e1080",
+      "execution_source_sha": "f7175f5b8bf0be6ee2a0bdc33dc5160506888923",
+      "test": "scripts/e2e/evaluation-late-labelset-lifecycle.spec.ts::native late saved labelset responses preserve current empty, refused and failed scopes through actual stage abandonment, reload and remount",
+      "recorded_test_source_sha256": "e6c663a3765ed64552470e0d3acd00174fdb16f11cc609be8a0253e394db62ad",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "808104f67f070740d0ddf8c22d74607a4b8c20fd9f4215872e10a0f5a9dba0db",
+      "reason": "Inherited public spec anchor retains exact historical test bytes. Current fixture opens the real OCR disclosure before its existing original-response wait; original deadlines, schemas and protection guards remain; no new current GUI execution."
+    },
+    {
+      "receipt": "2026-10-08-queue-progress-2b28835-browser.json",
+      "receipt_sha256": "20f101ccb49bbb64154f007396c2a406aeeee89d1a0808376e3154e3fe4ad357",
+      "execution_source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+      "test": "scripts/e2e/review-queue-progress-lifecycle.spec.ts::saved queue progress retries preserve labels and empty selection and origin failures retain exact saved records",
+      "recorded_test_source_sha256": "d2c7b39a7f578866deb7b302618f03d63e005398cbee023600805ae793e9df7e",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "08a99853a658805dc65b7f2eb8537a4f758dc7ad06efd943090f79190acd0d83",
+      "reason": "Inherited public spec anchor retains exact historical test bytes. Current fixture opens the real OCR disclosure before its existing original-response wait; original deadlines, schemas and protection guards remain; no new current GUI execution."
+    },
+    {
+      "receipt": "2026-10-08-queue-progress-2b28835-electron.json",
+      "receipt_sha256": "04877e60a4bf47cec1679e9e8ee8f82980b3d55043874b2b92d81240bb7c498d",
+      "execution_source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
+      "test": "scripts/e2e/review-queue-progress-lifecycle.spec.ts::native saved queue progress retries and real empty states preserve complete originals labels and older origin",
+      "recorded_test_source_sha256": "d2c7b39a7f578866deb7b302618f03d63e005398cbee023600805ae793e9df7e",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "08a99853a658805dc65b7f2eb8537a4f758dc7ad06efd943090f79190acd0d83",
+      "reason": "Inherited public spec anchor retains exact historical test bytes. Current fixture opens the real OCR disclosure before its existing original-response wait; original deadlines, schemas and protection guards remain; no new current GUI execution."
+    },
+    {
+      "receipt": "2026-10-08-saved-record-error-31a3d1f-browser.json",
+      "receipt_sha256": "3c7f8dee45a2a685e4c8d107f975da154fbab1f59b5fd62ebe2de8b3ad0cd603",
+      "execution_source_sha": "31a3d1f9d4c58a5c9c26aa3e5717707e3fc7504c",
+      "test": "scripts/e2e/saved-evaluation-record-error.spec.ts::saved evaluation history failure clears stale record and explicit refresh recovers exact original identity result and preference",
+      "recorded_test_source_sha256": "5e6a5dbc88a0963f564dfb43786f3d955967c3e2f16a7da81ff9d1e36e8614e0",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "3a1661dbcb72347110e0da7f32a80e476a4b3d8bff1f2996a01a2f3df9776b69",
+      "reason": "Inherited public spec anchor retains exact historical test bytes. Current fixture opens the real OCR disclosure before its existing original-response wait; original deadlines, schemas and protection guards remain; no new current GUI execution."
+    },
+    {
+      "receipt": "2026-10-08-saved-record-error-31a3d1f-electron.json",
+      "receipt_sha256": "9bc76ce98306555f36b15c4b55f3e2675e07d1c73dddce281341d828ee4c3967",
+      "execution_source_sha": "31a3d1f9d4c58a5c9c26aa3e5717707e3fc7504c",
+      "test": "scripts/e2e/saved-evaluation-record-error.spec.ts::native saved evaluation history failure clears stale record and explicit refresh recovers exact original identity result and preference",
+      "recorded_test_source_sha256": "5e6a5dbc88a0963f564dfb43786f3d955967c3e2f16a7da81ff9d1e36e8614e0",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "3a1661dbcb72347110e0da7f32a80e476a4b3d8bff1f2996a01a2f3df9776b69",
+      "reason": "Inherited public spec anchor retains exact historical test bytes. Current fixture opens the real OCR disclosure before its existing original-response wait; original deadlines, schemas and protection guards remain; no new current GUI execution."
+    },
+    {
+      "receipt": "2026-10-08-saved-selection-lifecycle-4ce9550-browser.json",
+      "receipt_sha256": "67f17fee2f466fba3448dd3bff86e7f8f0b3ba94630ebeaa8478f725cc66eb79",
+      "execution_source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+      "test": "scripts/e2e/saved-evaluation-selection-lifecycle.spec.ts::saved evaluation choices refuse missing preferences, empty scopes and catalog errors while actual picker dismissal and stage return preserve exact records",
+      "recorded_test_source_sha256": "b070c56d87865609e908151e45837c94d63a47c61a7d9102bdb4320876d25f3a",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "e7a0fff477f858f3931bc7c9e9748de9d1a3cfc07d301958882a44e91ffc32aa",
+      "reason": "Inherited public spec anchor retains exact historical test bytes. Current fixture opens the real OCR disclosure before its existing original-response wait; original deadlines, schemas and protection guards remain; no new current GUI execution."
+    },
+    {
+      "receipt": "2026-10-08-saved-selection-lifecycle-4ce9550-electron.json",
+      "receipt_sha256": "7e65d958a4b6b1a95f1255b70db3a5c5bde1879fa5a9cd5b0f139e4847c9d379",
+      "execution_source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+      "test": "scripts/e2e/saved-evaluation-selection-lifecycle.spec.ts::native saved evaluation choices refuse missing preferences, empty scopes and catalog errors while actual picker dismissal and stage return preserve exact records",
+      "recorded_test_source_sha256": "b070c56d87865609e908151e45837c94d63a47c61a7d9102bdb4320876d25f3a",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "e7a0fff477f858f3931bc7c9e9748de9d1a3cfc07d301958882a44e91ffc32aa",
+      "reason": "Inherited public spec anchor retains exact historical test bytes. Current fixture opens the real OCR disclosure before its existing original-response wait; original deadlines, schemas and protection guards remain; no new current GUI execution."
+    },
+    {
+      "receipt": "2026-10-14-derived-adoption-import-four-controls-browser.json",
+      "receipt_sha256": "55c8bafa34dde62fa327038962979574387c4754de9c197390bf0bc7938908b6",
+      "execution_source_sha": "03d65b02519ff10ecfed6d62244a161b19d8a7cb",
+      "test": "scripts/e2e/derived-adoption-import-four-controls.spec.ts::derived review real revision conflict and owned abort retries plus original non LabelMe folder refusal preserve original data",
+      "recorded_test_source_sha256": "9eb213a22f9f4868af39277eb96a6a841e49272039bf82fb5a314ed4ac7d6a2d",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "6830327e87099c8b9c576abd33009acbc12074ea5012a76a98af097bead75f55",
+      "reason": "Inherited public spec anchor retains exact historical test bytes. Current directory-link checks support verified Linux and APFS semantics with all regular-file and ownership guards retained; no new current GUI execution."
+    },
+    {
+      "receipt": "2026-10-14-derived-adoption-import-four-controls-electron.json",
+      "receipt_sha256": "df4760f6390ac6a0e0740f86b1ffc4a799c88fd790aa0636d6fef9de548989cb",
+      "execution_source_sha": "03d65b02519ff10ecfed6d62244a161b19d8a7cb",
+      "test": "scripts/e2e/derived-adoption-import-four-controls.spec.ts::native derived review real revision conflict and owned abort retries plus original non LabelMe folder refusal preserve original data",
+      "recorded_test_source_sha256": "9eb213a22f9f4868af39277eb96a6a841e49272039bf82fb5a314ed4ac7d6a2d",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "6830327e87099c8b9c576abd33009acbc12074ea5012a76a98af097bead75f55",
+      "reason": "Inherited public spec anchor retains exact historical test bytes. Current directory-link checks support verified Linux and APFS semantics with all regular-file and ownership guards retained; no new current GUI execution."
+    },
+    {
+      "receipt": "2026-10-09-flow-input-history-d2d7f3e-electron.json",
+      "receipt_sha256": "df9a3a53308e99a2796031df2961bf3ac819a82ed38a668f7daece46d73dd3d5",
+      "execution_source_sha": "d2d7f3ecda68977a9a7a027ef0a53d5bfaa7ae97",
+      "test": "scripts/e2e/flow-history-input-boundaries.spec.ts::native input-focused history shortcuts preserve graph and durable draft boundary",
+      "recorded_test_source_sha256": "400df9d3d2f258d587d815351fe2404005bbf7482ad8f828a568b039f8e3791a",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "bb465f90abf35e1f4842c2fa5475d3402dc7bae650004c496c2bd607f86d2a05",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current no-job startup now verifies the original200 empty model catalog and refuses an obsolete evaluator404; no new GUI execution or current acceptance is supplied."
+    },
+    {
+      "receipt": "2026-10-09-flow-input-history-d2d7f3e-browser.json",
+      "receipt_sha256": "5bbacead3ab28a8bfdad0184578003a68f715631968a0323a6c808cec8b2f444",
+      "execution_source_sha": "d2d7f3ecda68977a9a7a027ef0a53d5bfaa7ae97",
+      "test": "scripts/e2e/flow-history-input-boundaries.spec.ts::input-focused history shortcuts preserve available undo and redo plus saved source",
+      "recorded_test_source_sha256": "400df9d3d2f258d587d815351fe2404005bbf7482ad8f828a568b039f8e3791a",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "bb465f90abf35e1f4842c2fa5475d3402dc7bae650004c496c2bd607f86d2a05",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current no-job startup now verifies the original200 empty model catalog and refuses an obsolete evaluator404; no new GUI execution or current acceptance is supplied."
+    },
+    {
+      "receipt": "2026-10-10-root442-flow-old-electron.json",
+      "receipt_sha256": "5cb23ce490ad86d5ede52aa6e804b508d385ccf8ca57e84a4cdc6480ee0eb4db",
+      "execution_source_sha": "6288eb8b0e9cd501e7a66e72a7e38468963658ac",
+      "test": "scripts/e2e/flow-draft-save-error.spec.ts::native owning draft PUT503 retains original source and explicit save200 readback",
+      "recorded_test_source_sha256": "1991a427a21bec2cab6a7d9d9ed326cf2e64ccc9b67118317959741f0edd5a7a",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "331992a0c2b7a1af5e6531d5afadbed22af546deacd2123025cbf8b8ad8cc219",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current no-job startup now verifies the original200 empty model catalog and refuses an obsolete evaluator404; no new GUI execution or current acceptance is supplied."
+    },
+    {
+      "receipt": "2026-10-10-root442-flow-old-browser.json",
+      "receipt_sha256": "9abcb4b14654db2a3f6c4064c8629704a336b9b29ea43d307447d78b77fbe727",
+      "execution_source_sha": "6288eb8b0e9cd501e7a66e72a7e38468963658ac",
+      "test": "scripts/e2e/flow-draft-save-error.spec.ts::owning draft PUT503 preserves saved graph and explicitly recovers same dirty edit",
+      "recorded_test_source_sha256": "1991a427a21bec2cab6a7d9d9ed326cf2e64ccc9b67118317959741f0edd5a7a",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "331992a0c2b7a1af5e6531d5afadbed22af546deacd2123025cbf8b8ad8cc219",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current no-job startup now verifies the original200 empty model catalog and refuses an obsolete evaluator404; no new GUI execution or current acceptance is supplied."
+    },
+    {
+      "receipt": "2026-10-10-root442-flow-handoff-browser.json",
+      "receipt_sha256": "760b7600c1ce151324301d98db07f264a2137ac494770c6c108e54f1dd27ad3c",
+      "execution_source_sha": "6288eb8b0e9cd501e7a66e72a7e38468963658ac",
+      "test": "scripts/e2e/flow-draft-save-error.spec.ts::saved editable flow graphs and hashes stay scoped through A B A project handoff after owning draft saves",
+      "recorded_test_source_sha256": "1991a427a21bec2cab6a7d9d9ed326cf2e64ccc9b67118317959741f0edd5a7a",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "331992a0c2b7a1af5e6531d5afadbed22af546deacd2123025cbf8b8ad8cc219",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current no-job startup now verifies the original200 empty model catalog and refuses an obsolete evaluator404; no new GUI execution or current acceptance is supplied."
+    },
+    {
+      "receipt": "2026-10-14-comparison-submit-real-cancel-browser.json",
+      "receipt_sha256": "4fe132b56de7f051b1d598f4613d035119d769d4623fb082046535c3b64fb728",
+      "execution_source_sha": "5c1760d1cb3a98e177ec684caa6a4279fcf5463a",
+      "test": "scripts/e2e/comparison-submit-real-cancel.spec.ts::original manual comparison submit cancels its accepted owned CPU job and preserves earlier records",
+      "recorded_test_source_sha256": "08bd4634ca28f94fbb60696901abe44f2ddb2e6f18852d9faba58529dd22cd62",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "5a8d1d5b0692f8b52665b6287b57cc1bb5c18826bf66e87d8577622a90c717a5",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Reviewed current fixture changes establish legitimate API readiness or platform prerequisites with original interaction guards retained; no new GUI execution or current acceptance is supplied."
+    },
+    {
+      "receipt": "2026-10-14-comparison-submit-real-cancel-electron.json",
+      "receipt_sha256": "e2d1239d1180362ef38c1f3934791a69cbb05819ed7e862eca6eff36dd9784d6",
+      "execution_source_sha": "5c1760d1cb3a98e177ec684caa6a4279fcf5463a",
+      "test": "scripts/e2e/comparison-submit-real-cancel.spec.ts::native original manual comparison submit cancels its accepted owned CPU job and preserves earlier records",
+      "recorded_test_source_sha256": "08bd4634ca28f94fbb60696901abe44f2ddb2e6f18852d9faba58529dd22cd62",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "5a8d1d5b0692f8b52665b6287b57cc1bb5c18826bf66e87d8577622a90c717a5",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Reviewed current fixture changes establish legitimate API readiness or platform prerequisites with original interaction guards retained; no new GUI execution or current acceptance is supplied."
+    },
+    {
+      "receipt": "2026-10-07-app-execution-32ce71c24472565c8fbb.json",
+      "receipt_sha256": "42c4c95ab945e6c26518e25aff977c51bb5f81d0c7b41323f38f1ce520ccf2b3",
+      "execution_source_sha": "3ab27ae5353dc6d3c25a3061b705be05270c9e89",
+      "test": "scripts/e2e/flow-debug-model-freeze.spec.ts::native CPU debug cache and model hash history reopen",
+      "recorded_test_source_sha256": "155708aac056bf6a57269a44be553d3eb068d37bf705cd40f73f32deccaced8c",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "8f6bd5a326ee206a2bfb57d242c998354ffcf6482e82ea23f54b54f2e373ea9a",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Reviewed current fixture changes establish legitimate API readiness or platform prerequisites with original interaction guards retained; no new GUI execution or current acceptance is supplied."
+    },
+    {
+      "receipt": "2026-10-07-clean-template-draft-electron.json",
+      "receipt_sha256": "12c90360ffb92cb1b860d06eb529def048493d5ecf1670ecda563e838ed2eecd",
+      "execution_source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
+      "test": "scripts/e2e/flow-template-draft-history.spec.ts::native cross-project mapping undo redo and persistent draft recovery",
+      "recorded_test_source_sha256": "a9a1e640a5d660773a4aedf8a9923ab06573ec2cd395a07ce569be5be6e358ba",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "7aacf560bf67b2a42024cea59ca3a26dc9421cd9c7f4e1c610d6d9d4b07efa11",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Reviewed current fixture changes establish legitimate API readiness or platform prerequisites with original interaction guards retained; no new GUI execution or current acceptance is supplied."
+    },
+    {
+      "receipt": "2026-10-07-flow-template-safety-42edae7-browser.json",
+      "receipt_sha256": "bf43198e825f3616fe58f80648af0f62fc0e49ee5ad7ebf35ff6afbdddda51d8",
+      "execution_source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+      "test": "scripts/e2e/flow-template-safety.spec.ts::template save and explicit mapping preserve originals across errors cancellation and reopen",
+      "recorded_test_source_sha256": "1774c498e87dc0248b2592ee3bdcfa8ccc39ada24a47350353f8a630cff80f74",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "c1db5ad8408622d7a83d7bbfd28c14ee3b3ef996782adfbf4e33991d9ae0b8ad",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Reviewed current fixture changes establish legitimate API readiness or platform prerequisites with original interaction guards retained; no new GUI execution or current acceptance is supplied."
+    },
+    {
+      "receipt": "2026-10-07-flow-template-safety-42edae7-electron.json",
+      "receipt_sha256": "0310f984333fd6dda1a4a9de644818a094a4221fc0b8849fdb11d6eb52c66c53",
+      "execution_source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
+      "test": "scripts/e2e/flow-template-safety.spec.ts::native template safety preserves saved versions and reopens explicitly mapped draft",
+      "recorded_test_source_sha256": "1774c498e87dc0248b2592ee3bdcfa8ccc39ada24a47350353f8a630cff80f74",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "c1db5ad8408622d7a83d7bbfd28c14ee3b3ef996782adfbf4e33991d9ae0b8ad",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Reviewed current fixture changes establish legitimate API readiness or platform prerequisites with original interaction guards retained; no new GUI execution or current acceptance is supplied."
+    },
+    {
+      "receipt": "2026-10-07-flow-template-draft-history-0544e0e-browser.json",
+      "receipt_sha256": "a0af134aa13a691a23bcb073b5b602fe1f7da22aa59591199f3aab5c17a19078",
+      "execution_source_sha": "0544e0ee84611e39cf67cf3ca76dc1010e15ccd4",
+      "test": "scripts/e2e/flow-template-draft-history.spec.ts::cross-project model class mapping preserves source and recovers draft",
+      "recorded_test_source_sha256": "a9a1e640a5d660773a4aedf8a9923ab06573ec2cd395a07ce569be5be6e358ba",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "7aacf560bf67b2a42024cea59ca3a26dc9421cd9c7f4e1c610d6d9d4b07efa11",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Reviewed current fixture changes establish legitimate API readiness or platform prerequisites with original interaction guards retained; no new GUI execution or current acceptance is supplied."
+    },
+    {
+      "receipt": "2026-10-07-flow-template-draft-history-0544e0e-electron.json",
+      "receipt_sha256": "16de6d4aee774158ba84b8111c97f279507721a37fd742e77c5fac15409b8564",
+      "execution_source_sha": "0544e0ee84611e39cf67cf3ca76dc1010e15ccd4",
+      "test": "scripts/e2e/flow-template-draft-history.spec.ts::native cross-project mapping undo redo and persistent draft recovery",
+      "recorded_test_source_sha256": "a9a1e640a5d660773a4aedf8a9923ab06573ec2cd395a07ce569be5be6e358ba",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "7aacf560bf67b2a42024cea59ca3a26dc9421cd9c7f4e1c610d6d9d4b07efa11",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Reviewed current fixture changes establish legitimate API readiness or platform prerequisites with original interaction guards retained; no new GUI execution or current acceptance is supplied."
+    },
+    {
+      "receipt": "2026-10-08-flow-debugger-e28d1d9-browser.json",
+      "receipt_sha256": "91ea077a0091afad45bded505228ea3f0e53be14e1a42eed7dff6e3f53e3087e",
+      "execution_source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+      "test": "scripts/e2e/flow-debugger-artifact-controls.spec.ts::flow debugger pages searches and returns exact controlled artifacts without writes",
+      "recorded_test_source_sha256": "31075ec4b4386d146c08b80091a5bbcb5cc30c41411aa7ef8e502705c71ec937",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "8d3493ffcf68f3440c8961a4c9cf9b9d323a5e6f6c271f9d915c963f02fdee0e",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Reviewed current fixture changes establish legitimate API readiness or platform prerequisites with original interaction guards retained; no new GUI execution or current acceptance is supplied."
+    },
+    {
+      "receipt": "2026-10-08-flow-debugger-e28d1d9-electron.json",
+      "receipt_sha256": "9b2a6f7aeafd07a0e934afcad770789f26bd655e906c370aaf645d4bf3e2adaf",
+      "execution_source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
+      "test": "scripts/e2e/flow-debugger-artifact-controls.spec.ts::native flow debugger keyboard controls keep exact controlled artifact and return focus",
+      "recorded_test_source_sha256": "31075ec4b4386d146c08b80091a5bbcb5cc30c41411aa7ef8e502705c71ec937",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "8d3493ffcf68f3440c8961a4c9cf9b9d323a5e6f6c271f9d915c963f02fdee0e",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Reviewed current fixture changes establish legitimate API readiness or platform prerequisites with original interaction guards retained; no new GUI execution or current acceptance is supplied."
+    },
+    {
+      "receipt": "2026-10-15-app-f064-root06-browser-partial-controls.json",
+      "receipt_sha256": "db09b1c8178f3f0efeab484de19460201105e90edf30b9b7690b15281a8f35b2",
+      "execution_source_sha": "2520ec27b18a95910eb0e194e72198155aabb352",
+      "test": "scripts/e2e/flow-debug-model-freeze-f064-controls.spec.ts::F064 owning selected-node503 retries genuine CPU partial and cache identity survives reopen and A B A",
+      "recorded_test_source_sha256": "6b4aa3c55d78d1870114a4cf57106feb7820f2a51e4ad49d11a832223e21dd65",
+      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "current_test_source_sha256": "debbfb4153d4a5a26d8029a00d61fedaa313fd7eec469b39917272e35c4df3df",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Reviewed current fixture uses real authenticated project/provider and validated library image identity under original10s execution/recovery guards; no new GUI execution or current acceptance is supplied."
+    }
+  ]
+}
