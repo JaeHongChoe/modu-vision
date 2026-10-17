@@ -1,6 +1,7 @@
 {
   "acceptance_promoted": false,
   "adjacent_gate": {
+    "actual_store_path_rows_verified": 75,
     "all_store_isolation_checks_passed": true,
     "failed": 1,
     "failed_selector": "backend/tests/test_original_owned_account_request_lifetime.py::test_original_login_me_users_select_commits_and_drains",
@@ -65,8 +66,8 @@
   },
   "isolation": {
     "HOME_changed": false,
-    "actual_store_path_rows_verified_per_run": 5,
     "all_checks_passed": true,
+    "causal_store_path_rows_verified_per_run": 5,
     "fresh_private_session_root_before_application_import": true,
     "original_RED01_import_time_store_custody_not_proven": true,
     "original_RED01_preserved_with_limitation": true,

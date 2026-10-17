@@ -1,0 +1,379 @@
+{
+  "Root_protected_input_rehash_count": 19,
+  "Root_readback_sha256": "47fb24afbfe6893d0fea6f246ba33739f4b97a1399eb4fd0f586986e649c2f4f",
+  "actual_results": {
+    "batch_size": 1,
+    "central_final_plan_and_20_audit_events_equal_raw_HTTP_body": true,
+    "disconnect_continuity": "second CPU job completed through direct service while its original agent was disconnected",
+    "four_jobs_completed_CPU_four_passed_steps_each": true,
+    "job_manifest_sequence": [
+      "first",
+      "first",
+      "candidate",
+      "first"
+    ],
+    "jobs": [
+      {
+        "CPU": true,
+        "four_steps_passed": true,
+        "full_body_canonical_sha256": "7ed77bf0866725b95989349730dff272e8ff2a8bc2dc7d6105fbad9806d92f51",
+        "index": 0,
+        "job_id": "1715f6ee166f4656ba5b247e6db4447c",
+        "manifest_sha256": "f678711eafc8a79c29d111c44059ff7c6140ffa430eb47b2b59743c361b18a73",
+        "state": "completed"
+      },
+      {
+        "CPU": true,
+        "four_steps_passed": true,
+        "full_body_canonical_sha256": "e503f632629cc1947e19bacac710bf626f215d6b98fe2df3b8f02e313010c230",
+        "index": 1,
+        "job_id": "58780c34dbfa44fcb43f5d1fa580a8a9",
+        "manifest_sha256": "f678711eafc8a79c29d111c44059ff7c6140ffa430eb47b2b59743c361b18a73",
+        "state": "completed"
+      },
+      {
+        "CPU": true,
+        "four_steps_passed": true,
+        "full_body_canonical_sha256": "b2af82952ca4d14167185684353af18186f26af9f3cc93f61669f1b7393360a2",
+        "index": 2,
+        "job_id": "51d1373fc3874bbbbed69e8d44d088ae",
+        "manifest_sha256": "b12f083c8ee3d9d4f295041319ecc72c011939ae2da1798f6e72833aa29541e8",
+        "state": "completed"
+      },
+      {
+        "CPU": true,
+        "four_steps_passed": true,
+        "full_body_canonical_sha256": "ccbef5d1ca029812df15e8487d7615c050c06aec8bb745107b710b728ea20a74",
+        "index": 3,
+        "job_id": "f7507f5f9b6a4d7d990a3b31957a418c",
+        "manifest_sha256": "f678711eafc8a79c29d111c44059ff7c6140ffa430eb47b2b59743c361b18a73",
+        "state": "completed"
+      }
+    ],
+    "plan_id": "8d98c692b8fa4da18fb17b62ebbea087",
+    "reopen": "original page reload then owning saved-plan selection returned completed before rollback",
+    "rollback": "both targets returned ready/matches_active for the first manifest; fourth CPU job completed after rollback",
+    "saved_plan_revisions": [
+      1,
+      2,
+      6,
+      12,
+      20
+    ],
+    "saved_plan_statuses": [
+      "planned",
+      "paused",
+      "waiting_canary_confirmation",
+      "completed",
+      "rolled_back"
+    ],
+    "targets_per_plan": 2
+  },
+  "attempts": 1,
+  "closure": {
+    "agent_cleanup_stop_responses": [
+      "stopped",
+      "stopped"
+    ],
+    "agent_individual_exit_codes_retained": false,
+    "agent_original_exit_awaits_completed_as_tested": true,
+    "global_teardown": {
+      "leftovers": [],
+      "scan_error": null,
+      "unowned_references": []
+    },
+    "original_backend_stop": {
+      "durationMs": 1262,
+      "escaped": [],
+      "exitCode": 0,
+      "exited": true,
+      "exitedBeforeStop": false,
+      "forced": false,
+      "forcedReason": null,
+      "groupAlive": false,
+      "healthy_at_end": true,
+      "pid_alive": false,
+      "port_closed": true,
+      "scanError": null,
+      "signal": null,
+      "stoppedAt": "2026-10-17T11:48:48.666Z",
+      "unownedReferences": []
+    },
+    "original_runner_Popen_natural_wait_returned": true,
+    "original_scanner_group_escaped_guards_unchanged": true,
+    "signals_sent_by_runner": false,
+    "source_tracked_files_before_after_exact": 2876
+  },
+  "evidence": [
+    {
+      "bytes": 1052,
+      "logical_evidence_name": "gui-execution-receipt.json",
+      "raw_original_unchanged": true,
+      "sha256": "5bb7c039d3efa6c2ec7be2cf67936c2e2bb3f9312965a7391edda1c8dc922cb2"
+    },
+    {
+      "bytes": 127156,
+      "logical_evidence_name": "browser-01/results/fleet-actual-rollout-actua-f1279-ect-continuity-and-rollback-browser/harness-manifest.json",
+      "raw_original_unchanged": true,
+      "sha256": "d6f45cffb7bfe1f71d9fd35eeecbe2bf5c555ff624d07d02ec3505645ed951c6"
+    },
+    {
+      "bytes": 6421,
+      "logical_evidence_name": "browser-01/report.json",
+      "raw_original_unchanged": true,
+      "sha256": "c6818f618dcb5c647449e0e17947d0b6a15912c44085aa6db584a642adbb08ec"
+    },
+    {
+      "bytes": 350,
+      "logical_evidence_name": "browser-01/teardown.json",
+      "raw_original_unchanged": true,
+      "sha256": "53e539481ac6da73e15bfec784b96abb46c06ba29ede38aea308471421a5bc27"
+    },
+    {
+      "bytes": 681,
+      "logical_evidence_name": "browser-01.log",
+      "raw_original_unchanged": true,
+      "sha256": "7ef8087b1bd9f3809d8236d1dd68ab375d283cb04c134bbe30252bfe0cc5f913"
+    },
+    {
+      "bytes": 1556,
+      "logical_evidence_name": "run-result.json",
+      "raw_original_unchanged": true,
+      "sha256": "d42e711a1a6d55ca34676c1dbc31f5f00579a0013101558fcaf4976911d5944c"
+    },
+    {
+      "bytes": 1029527,
+      "logical_evidence_name": "source-before.json",
+      "raw_original_unchanged": true,
+      "sha256": "4cfaf88e538981b0450a4583dbb646bce5c5706f7a23fde95a751e77a6b7f4fa"
+    },
+    {
+      "bytes": 1029527,
+      "logical_evidence_name": "source-after.json",
+      "raw_original_unchanged": true,
+      "sha256": "4cfaf88e538981b0450a4583dbb646bce5c5706f7a23fde95a751e77a6b7f4fa"
+    },
+    {
+      "bytes": 17290,
+      "logical_evidence_name": "independent-full-readback.json",
+      "raw_original_unchanged": true,
+      "sha256": "bd26f2243f54b887cf3d705f0708e8325fade48d163f4cf70be886f8f34acbaa"
+    },
+    {
+      "bytes": 184966,
+      "logical_evidence_name": "browser-01/results/fleet-actual-rollout-actua-f1279-ect-continuity-and-rollback-browser/browser-actual-fleet-rollback.png",
+      "raw_original_unchanged": true,
+      "sha256": "d4eb4373587774c776e49caee518f2b85f930ad9a37e80398f6ad83e9466e5dd"
+    }
+  ],
+  "expected": 1,
+  "fixture": {
+    "actual_local_CPU_inference": true,
+    "approval_setup": "controlled_synthetic_report_not_quality_acceptance",
+    "checkpoint_kind": "untrained_deterministic",
+    "cohort_count_per_release": 2,
+    "distinct_model_checkpoint_hashes": 1,
+    "generated_input_images": 16,
+    "image_dimensions": [
+      8,
+      8
+    ],
+    "model_files": 3,
+    "model_weight_limit": "All three logical model files have the same deterministic untrained checkpoint bytes; release identifiers differ. No learned-model comparison or quality finding.",
+    "physical_field_devices": false,
+    "release_manifests": {
+      "candidate": "b12f083c8ee3d9d4f295041319ecc72c011939ae2da1798f6e72833aa29541e8",
+      "first": "f678711eafc8a79c29d111c44059ff7c6140ffa430eb47b2b59743c361b18a73"
+    },
+    "synthetic_owned_CPU_agents": 2
+  },
+  "flaky": 0,
+  "limits": {
+    "GPU_execution": false,
+    "active_child_never_emits_exit": "still a distinct unbounded fixture failure path; not exercised or resolved by this pass",
+    "external_service_execution": false,
+    "historical079_cause_identified": false,
+    "independent_review_accepted": false,
+    "native_install_or_GUI_qualified": false,
+    "parent_job_complete": false,
+    "physical_device_approved": false,
+    "quality_approved": false,
+    "registry_action_state_changed": false,
+    "scope": "Executed synthetic CPU browser fleet panel/runtime/continuity/canary/rollback/reopen case and original closure only",
+    "whole_app_healthy": false
+  },
+  "mode": "browser",
+  "post_stop_readback": {
+    "SQLite_reads": "immutable read-only original files; no nonempty WAL; original DB raw9/SHA stable before and after reads",
+    "agent_store_job_counts": [
+      3,
+      1
+    ],
+    "all19protected_image_checkpoint_hashes_equal_fixture_baseline": true,
+    "full_fixture_jobs_plans_bodies_read": true,
+    "protected_inputs": [
+      {
+        "bytes": 69,
+        "kind": "fixture_image",
+        "logical_input": "source/test/NG/ng_00.png",
+        "matches_before_run_fixture_pin": true,
+        "sha256": "4a0945534329d26ce523a2f096e203aae59a9fffaec71895599fa3ef42d23f22"
+      },
+      {
+        "bytes": 69,
+        "kind": "fixture_image",
+        "logical_input": "source/test/NG/ng_01.png",
+        "matches_before_run_fixture_pin": true,
+        "sha256": "4a0945534329d26ce523a2f096e203aae59a9fffaec71895599fa3ef42d23f22"
+      },
+      {
+        "bytes": 69,
+        "kind": "fixture_image",
+        "logical_input": "source/test/NG/ng_02.png",
+        "matches_before_run_fixture_pin": true,
+        "sha256": "4a0945534329d26ce523a2f096e203aae59a9fffaec71895599fa3ef42d23f22"
+      },
+      {
+        "bytes": 69,
+        "kind": "fixture_image",
+        "logical_input": "source/test/NG/ng_03.png",
+        "matches_before_run_fixture_pin": true,
+        "sha256": "4a0945534329d26ce523a2f096e203aae59a9fffaec71895599fa3ef42d23f22"
+      },
+      {
+        "bytes": 69,
+        "kind": "fixture_image",
+        "logical_input": "source/test/NG/ng_04.png",
+        "matches_before_run_fixture_pin": true,
+        "sha256": "4a0945534329d26ce523a2f096e203aae59a9fffaec71895599fa3ef42d23f22"
+      },
+      {
+        "bytes": 69,
+        "kind": "fixture_image",
+        "logical_input": "source/test/NG/ng_05.png",
+        "matches_before_run_fixture_pin": true,
+        "sha256": "4a0945534329d26ce523a2f096e203aae59a9fffaec71895599fa3ef42d23f22"
+      },
+      {
+        "bytes": 69,
+        "kind": "fixture_image",
+        "logical_input": "source/test/NG/ng_06.png",
+        "matches_before_run_fixture_pin": true,
+        "sha256": "4a0945534329d26ce523a2f096e203aae59a9fffaec71895599fa3ef42d23f22"
+      },
+      {
+        "bytes": 69,
+        "kind": "fixture_image",
+        "logical_input": "source/test/NG/ng_07.png",
+        "matches_before_run_fixture_pin": true,
+        "sha256": "4a0945534329d26ce523a2f096e203aae59a9fffaec71895599fa3ef42d23f22"
+      },
+      {
+        "bytes": 78,
+        "kind": "fixture_image",
+        "logical_input": "source/test/OK/ok_00.png",
+        "matches_before_run_fixture_pin": true,
+        "sha256": "47c0b232b83e0aaf92d46f39b9066c67528fc4c31fc88bc50d7d8e2291137145"
+      },
+      {
+        "bytes": 78,
+        "kind": "fixture_image",
+        "logical_input": "source/test/OK/ok_01.png",
+        "matches_before_run_fixture_pin": true,
+        "sha256": "47c0b232b83e0aaf92d46f39b9066c67528fc4c31fc88bc50d7d8e2291137145"
+      },
+      {
+        "bytes": 78,
+        "kind": "fixture_image",
+        "logical_input": "source/test/OK/ok_02.png",
+        "matches_before_run_fixture_pin": true,
+        "sha256": "47c0b232b83e0aaf92d46f39b9066c67528fc4c31fc88bc50d7d8e2291137145"
+      },
+      {
+        "bytes": 78,
+        "kind": "fixture_image",
+        "logical_input": "source/test/OK/ok_03.png",
+        "matches_before_run_fixture_pin": true,
+        "sha256": "47c0b232b83e0aaf92d46f39b9066c67528fc4c31fc88bc50d7d8e2291137145"
+      },
+      {
+        "bytes": 78,
+        "kind": "fixture_image",
+        "logical_input": "source/test/OK/ok_04.png",
+        "matches_before_run_fixture_pin": true,
+        "sha256": "47c0b232b83e0aaf92d46f39b9066c67528fc4c31fc88bc50d7d8e2291137145"
+      },
+      {
+        "bytes": 78,
+        "kind": "fixture_image",
+        "logical_input": "source/test/OK/ok_05.png",
+        "matches_before_run_fixture_pin": true,
+        "sha256": "47c0b232b83e0aaf92d46f39b9066c67528fc4c31fc88bc50d7d8e2291137145"
+      },
+      {
+        "bytes": 78,
+        "kind": "fixture_image",
+        "logical_input": "source/test/OK/ok_06.png",
+        "matches_before_run_fixture_pin": true,
+        "sha256": "47c0b232b83e0aaf92d46f39b9066c67528fc4c31fc88bc50d7d8e2291137145"
+      },
+      {
+        "bytes": 78,
+        "kind": "fixture_image",
+        "logical_input": "source/test/OK/ok_07.png",
+        "matches_before_run_fixture_pin": true,
+        "sha256": "47c0b232b83e0aaf92d46f39b9066c67528fc4c31fc88bc50d7d8e2291137145"
+      },
+      {
+        "bytes": 16335929,
+        "kind": "untrained_checkpoint",
+        "logical_input": "models/job_base/best_model.pt",
+        "matches_before_run_fixture_pin": true,
+        "sha256": "56ad0c5dcbd33deb7e482da444e3eda71787088c8fd3e600f612c577f815997c"
+      },
+      {
+        "bytes": 16335929,
+        "kind": "untrained_checkpoint",
+        "logical_input": "models/job_candidate/best_model.pt",
+        "matches_before_run_fixture_pin": true,
+        "sha256": "56ad0c5dcbd33deb7e482da444e3eda71787088c8fd3e600f612c577f815997c"
+      },
+      {
+        "bytes": 16335929,
+        "kind": "untrained_checkpoint",
+        "logical_input": "models/job_third/best_model.pt",
+        "matches_before_run_fixture_pin": true,
+        "sha256": "56ad0c5dcbd33deb7e482da444e3eda71787088c8fd3e600f612c577f815997c"
+      }
+    ],
+    "stopped_agent_store_full_results_and_runtime_bindings_equal_raw_HTTP_bodies": true
+  },
+  "public_redaction": {
+    "kind": "structured path-redacted derivative",
+    "omitted": [
+      "personal absolute paths",
+      "tokens and credential material",
+      "runtime PID and loopback port values"
+    ],
+    "original_raw_bodies_preserved": true,
+    "raw_files_joined_by_sha256": true
+  },
+  "recorded_at_utc": "2026-10-17T11:53:48.555996+00:00",
+  "runtime_elapsed_seconds": 131.26179754105397,
+  "schema": "modu-vision.current-browser-fleet-details/v1",
+  "skipped": 0,
+  "source_dirty": false,
+  "source_sha": "30a3475148ba6ba337d30a7dc9984638145f559e",
+  "status": "passed executed browser case; Root reviewed public checkpoint",
+  "test": "scripts/e2e/fleet-actual-rollout.spec.ts::actual authenticated CPU fleet canary, disconnect continuity and rollback",
+  "test_source_sha256": "21a8724a10ecb15703b3d2787b77c56deda7464d90ac74e0ca12bcb9d9ad8cd9",
+  "unexpected": 0,
+  "visible_UI_limit": {
+    "actual_current_summary_response_body_retained": false,
+    "classification": "source-consistent minimum-dimension inference; no claim actual PNG headers were corrupt",
+    "no_page_or_console_errors_does_not_remove_visible_gallery_limit": true,
+    "observed_screenshot": "owning rollback panel shows rolled_back for both targets and first-manifest readbacks; background dataset shows \uc190\uc0c1\ub41c \uc774\ubbf8\uc9c0 16\uac74 / ERR_005 / 8\u00d78 px",
+    "source_consistent_explanation": "Original fixture creates 16 decoded 8\u00d78 PNGs. Original dataset validator rejects dimensions below16\u00d716 as DIMENSION_TOO_SMALL. DatasetStudio displays every corrupted_images item under generic ERR_005 header/corruption wording.",
+    "whole_UI_healthy_claim": false
+  }
+}
