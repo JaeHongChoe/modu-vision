@@ -76,6 +76,23 @@ def _copy_references(root):
         dest=root/name;dest.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(ROOT/name,dest)
     dest=root/'docs/verification/receipts';dest.parent.mkdir(parents=True,exist_ok=True)
     shutil.copytree(ROOT/'docs/verification/receipts',dest,dirs_exist_ok=True)
+    # These copied receipts retain real historical spec declarations. Give the
+    # fixture their exact registry and real local Git objects/ancestry as well;
+    # an authored receipt or a copied current spec cannot stand in for either.
+    history=Path(gate.GUI_TEST_HISTORY_FILE)
+    shutil.copyfile(ROOT/history,root/history)
+    git=_git_executable()
+    expected=subprocess.check_output([git,'-C',str(ROOT),'rev-parse','HEAD'],text=True).strip()
+    subprocess.run([git,'clone','--quiet','--shared','--bare','--no-hardlinks',str(ROOT),str(root/'.git')],
+                   check=True,capture_output=True,timeout=30)
+    actual=subprocess.check_output([git,'-C',str(root),'rev-parse','HEAD'],text=True).strip()
+    assert actual==expected, 'The temporary evidence fixture must retain the exact source ancestry'
+
+
+def _git_executable():
+    executable=shutil.which('git')
+    assert executable is not None, 'The real historical-spec checker requires Git'
+    return str(Path(executable).resolve())
 
 
 def test_the_repository_has_one_pending_record_per_legacy_feature_and_nothing_promoted():
@@ -332,7 +349,7 @@ def test_only_the_main_coverage_table_counts_and_it_keeps_every_owner_once():
 
 def test_the_gate_prints_only_ascii_so_a_windows_console_cannot_fail_it():
     done = subprocess.run([sys.executable, str(ROOT / 'scripts/check_service_plan.py')], capture_output=True, cwd=ROOT,
-                          env={'PYTHONIOENCODING': 'cp1252', 'PATH': ''}, timeout=120)
+                          env={'PYTHONIOENCODING': 'cp1252', 'PATH': str(Path(_git_executable()).parent)}, timeout=120)
     assert done.returncode == 0, done.stderr.decode('utf-8', 'replace')
     assert done.stdout.isascii()
 
