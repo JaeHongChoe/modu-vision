@@ -1,0 +1,103 @@
+{
+  "acceptance_promoted": false,
+  "backend_closure": {
+    "escaped": [],
+    "exit_code": 0,
+    "exited": true,
+    "forced": false,
+    "group_alive": false,
+    "pid_alive": false,
+    "port_closed": true,
+    "scan_error": null,
+    "unowned_references": []
+  },
+  "backend_guard": "Selected-dataset image containment/file validation; not direction/axial-angle payload validation",
+  "browser_case": {
+    "duration_ms": 9623,
+    "passed": 1,
+    "retries": 0,
+    "unexpected": 0
+  },
+  "limits": [
+    "Exact failed image/project pairing is not retained in this observer.",
+    "Historical CI preparation timeout was not reproduced or identified.",
+    "No installed application, model-quality, whole-CI, action or parent acceptance is added."
+  ],
+  "observed_non2xx": [
+    {
+      "body_detail": "Image must be a file inside the selected dataset",
+      "complete_body_bytes": 61,
+      "complete_body_sha256": "7220de497d57d4b5ae31dc1861eac0559cade3359aafbe80c41c056d2be9e70b",
+      "finished_null": true,
+      "method": "GET",
+      "operation_phase": "original A reopen",
+      "operation_phase_is_not_request_context_proof": true,
+      "pathname": "/api/annotations/part",
+      "request_sequence": 85,
+      "resource_type": "fetch",
+      "status": 422
+    },
+    {
+      "body_detail": "Image must be a file inside the selected dataset",
+      "complete_body_bytes": 61,
+      "complete_body_sha256": "7220de497d57d4b5ae31dc1861eac0559cade3359aafbe80c41c056d2be9e70b",
+      "finished_null": true,
+      "method": "GET",
+      "operation_phase": "actual B handoff",
+      "operation_phase_is_not_request_context_proof": true,
+      "pathname": "/api/annotations/part",
+      "request_sequence": 125,
+      "resource_type": "fetch",
+      "status": 422
+    },
+    {
+      "body_detail": "Image must be a file inside the selected dataset",
+      "complete_body_bytes": 61,
+      "complete_body_sha256": "7220de497d57d4b5ae31dc1861eac0559cade3359aafbe80c41c056d2be9e70b",
+      "finished_null": true,
+      "method": "GET",
+      "operation_phase": "actual A return and custody",
+      "operation_phase_is_not_request_context_proof": true,
+      "pathname": "/api/annotations/part",
+      "request_sequence": 144,
+      "resource_type": "fetch",
+      "status": 422
+    }
+  ],
+  "observer": {
+    "errors": [],
+    "failed_file_path_project_context_pair_proven": false,
+    "no_extra_HTTP": true,
+    "no_route_response_or_business_mutation": true,
+    "non2xx_seen": 3,
+    "omitted_by_cap": 0,
+    "pending_captures": 0,
+    "request_query_body_or_headers_retained": false
+  },
+  "original_actions_awaits_predicates_and_deadlines_unchanged": true,
+  "original_process_naturally_reaped": true,
+  "original_request_frame_ms": 10000,
+  "private_observer_only_source": true,
+  "private_raw_pins": {
+    "observer": {
+      "bytes": 5881,
+      "sha256": "6ba1351e5566b7d3a3c8d90109d4c62828a43e7b7b2ffcd6e084bdf5ce3ae372"
+    },
+    "report": {
+      "bytes": 7834,
+      "sha256": "65b1b47695e2cbe156e1ae351fa88d0104b386beefcd37becc892094188634d2"
+    },
+    "root_readback": {
+      "bytes": 15346,
+      "sha256": "78d17b6ef356791d29395cbf923597fdc1c8fd498d869830f4cd2c973b8f50d9"
+    },
+    "run_result": {
+      "bytes": 1577,
+      "sha256": "cab4a77bdb7ea1ddaa49d4b0fec4da9cabfc1aefa7e8627cb40605b166840f1a"
+    }
+  },
+  "schema": "modu-vision.public-direction-non2xx-diagnostic/v1",
+  "source_before_after_exact": true,
+  "source_files": 2869,
+  "source_head": "cc77c4f48ef63e484eee223aff6c111d3799c409"
+}
