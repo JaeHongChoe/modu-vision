@@ -5,7 +5,7 @@
 
 import { create } from 'zustand';
 import type { ClassSplitCounts, ImageMeta, VisionTask } from '../types';
-import { api, getApiPersistenceIdentity, getProjectContextGeneration, resolveApiUrl, type DatasetQuickValidation } from '../services/api';
+import { api, getApiPersistenceIdentity, getProjectContext, getProjectContextGeneration, resolveApiUrl, type DatasetQuickValidation } from '../services/api';
 import type {DatasetPartition} from '../services/projectPreferences';
 import { useTrainingStore } from './useTrainingStore';
 import { useEvaluationStore } from './useEvaluationStore';
@@ -15,6 +15,8 @@ interface DatasetState {
   folderPath: string;
   hasSelectedFolder: boolean;
   datasetKey: string | null;
+  /** Accepted source reads belong to this project epoch and transport. */
+  sourceAuthority: string | null;
   lastImportedKey: string | null;
   staleDatasetKeys: string[];
   importError: string | null;
@@ -69,6 +71,7 @@ let latestImportRequest = 0;
 let latestSplitRequest = 0;
 
 const importKey = (folder: string, task: VisionTask) => `${folder}\0${task}`;
+const readAuthority = () => JSON.stringify([getProjectContextGeneration(), getApiPersistenceIdentity(), resolveApiUrl('/')]);
 
 function invalidateDownstream(allowSourceRecovery = false): void {
   useTrainingStore.getState().invalidateForDataChange();
@@ -95,6 +98,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
   folderPath: './datasets/synthetic',
   hasSelectedFolder: false,
   datasetKey: null,
+  sourceAuthority: null,
   lastImportedKey: null,
   staleDatasetKeys: [],
   importError: null,
@@ -131,7 +135,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
     latestImageRequest += 1;
     latestSplitRequest += 1;
     set({
-      folderPath, hasSelectedFolder: Boolean(folderPath), datasetKey: null, importError: null, sourceSaveError: null, splitError: null,
+      folderPath, hasSelectedFolder: Boolean(folderPath), datasetKey: null, sourceAuthority: null, importError: null, sourceSaveError: null, splitError: null,
       splitSupported: null, splitUnavailableReason: null,
       totalImages: 0, sourceImages: 0, unlabeledImages: 0,
       classes: {}, classCountUnit: null, classSplitCounts: null, split: { train: 0, val: 0, test: 0 },
@@ -181,7 +185,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
     latestImageRequest += 1;
     latestSplitRequest += 1;
     set({
-      folderPath: folder, hasSelectedFolder: true, datasetKey: key, importError: null, sourceSaveError: null, splitError: null,
+      folderPath: folder, hasSelectedFolder: true, datasetKey: key, sourceAuthority: null, importError: null, sourceSaveError: null, splitError: null,
       splitSupported: null, splitUnavailableReason: null,
       images: [], totalImagesCount: 0, totalImages: 0,
       sourceImages: 0, unlabeledImages: 0, classes: {}, classCountUnit: null, classSplitCounts: null, corruptedImages: [], quickValidation: null,
@@ -235,6 +239,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
       }
       if (!current()) return;
       set({
+        sourceAuthority: readAuthority(),
         totalImages: res.total_images,
         sourceImages: res.source_images ?? res.total_images,
         unlabeledImages: res.unlabeled_images ?? 0,
@@ -265,11 +270,24 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
   },
 
   ensureImported: async (task) => {
-    const { folderPath, hasSelectedFolder, datasetKey } = get();
-    if (!folderPath || !hasSelectedFolder || datasetKey === importKey(folderPath, task)) return;
+    const { folderPath, hasSelectedFolder, datasetKey, sourceAuthority, isLoading, importError } = get();
+    const authority = readAuthority();
+    if (!folderPath || !hasSelectedFolder || isLoading || importError
+      || (datasetKey === importKey(folderPath, task) && sourceAuthority === authority)) return;
+    const {useProjectStore} = await import('./useProjectStore');
+    // Another caller can start the same restore while the module is loading.
+    if (get().isLoading || get().importError
+      || (get().datasetKey === importKey(folderPath, task) && get().sourceAuthority === authority)) return;
+    const accepted = () => {
+      const state = useProjectStore.getState(), project = state.project, context = getProjectContext();
+      return Boolean(project && context?.project_id === project.id && state.projectDir === project.project_dir
+        && state.task === task && project.task === task && project.source_dataset_dir === folderPath
+        && get().folderPath === folderPath && readAuthority() === authority);
+    };
+    if (!accepted()) return;
     // Reopening a saved source is a read. Choosing/replacing a source uses
     // importFolder directly and still requires project write permission.
-    await get().importFolder(folderPath, task, undefined, true);
+    await get().importFolder(folderPath, task, undefined, true, accepted);
   },
 
   generateSynthetic: async (params) => {
@@ -296,8 +314,12 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
   },
 
   applySplit: async (ratio, valRatio, testRatio = 0) => {
+    const authority = readAuthority();
+    if (get().sourceAuthority !== authority) return;
     const requestId = ++latestSplitRequest;
     const { folderPath, datasetKey } = get();
+    const current = () => requestId === latestSplitRequest && get().datasetKey === datasetKey
+      && get().sourceAuthority === authority && readAuthority() === authority;
     const task = datasetKey?.slice(datasetKey.lastIndexOf('\0') + 1) as VisionTask | undefined;
     set({ isSplitting: true, splitError: null });
     try {
@@ -309,7 +331,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
         test_ratio: testRatio,
         seed: 42,
       });
-      if (requestId !== latestSplitRequest || get().datasetKey !== datasetKey) return;
+      if (!current()) return;
       if (datasetKey) {
         set((state) => ({ staleDatasetKeys: [...new Set([...state.staleDatasetKeys, datasetKey])] }));
       }
@@ -322,14 +344,15 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
       });
       await get().loadImages(1);
     } catch (err) {
-      if (requestId === latestSplitRequest && get().datasetKey === datasetKey) {
-        set({ isSplitting: false, splitError: importErrorMessage(err, 'Dataset split failed') });
-      }
+      if (!current()) return;
+      set({ isSplitting: false, splitError: importErrorMessage(err, 'Dataset split failed') });
       throw err;
     }
   },
 
   annotationsChanged: async () => {
+    const authority = readAuthority();
+    if (get().sourceAuthority !== authority) return;
     const currentKey = get().datasetKey;
     if (currentKey) {
       set((state) => ({ staleDatasetKeys: [...new Set([...state.staleDatasetKeys, currentKey])] }));
@@ -342,9 +365,11 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
     set({ split: { train: 0, val: 0, test: 0 }, classSplitCounts: null, splitError: null });
     const task = datasetKey.slice(datasetKey.lastIndexOf('\0') + 1) as VisionTask;
     const requestId = ++latestImportRequest;
+    const current = () => requestId === latestImportRequest && get().datasetKey === datasetKey
+      && get().sourceAuthority === authority && readAuthority() === authority;
     try {
       const res = await api.dataset.import({ folder_path: folderPath, task, validate_images: false });
-      if (requestId !== latestImportRequest || get().datasetKey !== datasetKey) return;
+      if (!current()) return;
       set({
         totalImages: res.total_images,
         sourceImages: res.source_images ?? res.total_images,
@@ -359,19 +384,22 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
       });
       await get().loadImages(1);
     } catch (error) {
-      if (requestId === latestImportRequest && get().datasetKey === datasetKey) {
+      if (current()) {
         set({ importError: importErrorMessage(error) });
       }
     }
   },
 
   loadImages: async (pageArg) => {
-    if (get().isLoading || get().importError) return;
+    const authority = readAuthority();
+    if (get().isLoading || get().importError || get().sourceAuthority !== authority) return;
     const requestId = ++latestImageRequest;
     const { folderPath, datasetKey, pageSize, activeSplitFilter, activeClassFilter, activeLabelFilter } = get();
     const task = datasetKey?.slice(datasetKey.lastIndexOf('\0') + 1) as VisionTask | undefined;
     const p = pageArg || get().page;
     const offset = (p - 1) * pageSize;
+    const current = () => requestId === latestImageRequest && get().folderPath === folderPath && get().datasetKey === datasetKey
+      && get().sourceAuthority === authority && readAuthority() === authority;
     try {
       const res = await api.dataset.getImages({
         folder_path: folderPath,
@@ -382,7 +410,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
         class_name: activeClassFilter || undefined,
         label_status: activeLabelFilter === 'all' ? undefined : activeLabelFilter,
       });
-      if (requestId !== latestImageRequest || get().folderPath !== folderPath || get().datasetKey !== datasetKey) return;
+      if (!current()) return;
       set({
         images: res.items || [],
         totalImagesCount: res.total || 0,
@@ -394,7 +422,7 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
       if (get().classSplitCounts === null && (task === 'classification' || task === 'anomaly')
         && (activeSplitFilter !== 'all' || activeClassFilter || activeLabelFilter !== 'all')) {
         const summary = await api.dataset.getImages({ folder_path: folderPath, task, limit: 1, offset: 0 });
-        if (requestId !== latestImageRequest || get().folderPath !== folderPath || get().datasetKey !== datasetKey) return;
+        if (!current()) return;
         if (summary.class_split_counts != null) set({ classSplitCounts: summary.class_split_counts });
       }
     } catch {

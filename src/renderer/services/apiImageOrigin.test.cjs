@@ -53,3 +53,65 @@ test('standalone fallback remains available and an invalid browser port is never
     }
   } finally {global.window = prior;}
 });
+
+test('a changed local port retires old project headers until the new project is accepted', async () => {
+  const priorWindow = global.window, priorFetch = global.fetch;
+  try {
+    global.window = {location: {search: ''}, api: {}};
+    const api = client(), calls = [];
+    const original = {workspace_id: 'workspace-a', project_id: 'same-id', actor_id: 'actor', mode: 'local'};
+    const current = {...original, workspace_id: 'workspace-b'};
+    const project = {id: 'same-id', name: 'B', project_dir: '/projects/B', task: 'classification', source_dataset_dir: '/source'};
+    api.setCachedPort(56050); api.setProjectContext(original);
+    const epoch = api.getProjectContextGeneration();
+    api.setCachedPort(56052);
+    assert.equal(api.getProjectContext(), null, 'old authority cannot survive a local transport change');
+    assert.equal(api.getProjectContextGeneration(), epoch + 1);
+    global.fetch = async (url, options) => {
+      calls.push({url, headers: new Headers(options.headers)});
+      return {ok: true, status: 200, headers: new Headers({'X-Vision-Context': JSON.stringify(current)}), json: async () => project};
+    };
+    await api.request('/api/dataset/current-summary?folder_path=/source');
+    assert.equal(calls[0].headers.get('X-Vision-Context'), null);
+    assert.equal(calls[0].headers.get('X-Vision-Project'), null);
+    const selected = await api.api.project.getCurrent();
+    assert.equal(api.getProjectContext(), null, 'discovery alone cannot commit the new authority');
+    api.api.project.acceptContext(selected);
+    assert.deepEqual(api.getProjectContext(), current);
+    await api.request('/api/dataset/current-summary?folder_path=/source');
+    assert.deepEqual(JSON.parse(calls.at(-1).headers.get('X-Vision-Context')), current);
+    assert.equal(calls.at(-1).headers.get('X-Vision-Project'), current.project_id);
+  } finally {global.window = priorWindow; global.fetch = priorFetch;}
+});
+
+test('same local port and unrelated local-port updates preserve accepted shared authority', () => {
+  const api = client(), local = {workspace_id: 'w', project_id: 'p', actor_id: 'a', mode: 'local'};
+  api.setCachedPort(56050); api.setProjectContext(local);
+  let epoch = api.getProjectContextGeneration(); api.setCachedPort(56050);
+  assert.deepEqual(api.getProjectContext(), local); assert.equal(api.getProjectContextGeneration(), epoch);
+  api.setSharedApiBase('https://shared.example.invalid/studio');
+  const shared = {...local, mode: 'team'}; api.setProjectContext(shared);
+  epoch = api.getProjectContextGeneration(); api.setCachedPort(56052);
+  assert.deepEqual(api.getProjectContext(), shared); assert.equal(api.getProjectContextGeneration(), epoch);
+});
+
+for (const returning of [false, true]) {
+test(`a pending discovery with no accepted context cannot cross local ports${returning ? ' A B A' : ' A B'}`, async () => {
+  const priorWindow = global.window, priorFetch = global.fetch;
+  try {
+    global.window = {location: {search: ''}, api: {}};
+    const api = client(); api.setCachedPort(56050);
+    let release; const pending = new Promise(resolve => {release = resolve;});
+    global.fetch = async () => pending;
+    const discovery = api.api.project.getCurrent(); await new Promise(setImmediate);
+    const epoch = api.getProjectContextGeneration();
+    api.setCachedPort(56052); if (returning) api.setCachedPort(56050);
+    const context = {workspace_id: 'old-workspace', project_id: 'same-id', actor_id: 'actor', mode: 'local'};
+    release({ok: true, status: 200, headers: new Headers({'X-Vision-Context': JSON.stringify(context)}), json: async () => ({id: 'same-id'})});
+    const candidate = await discovery;
+    assert.throws(() => api.api.project.acceptContext(candidate), /프로젝트 선택 문맥이 바뀌었습니다/);
+    assert.ok(api.getProjectContextGeneration() > epoch);
+    assert.equal(api.getProjectContext(), null);
+  } finally {global.window = priorWindow; global.fetch = priorFetch;}
+});
+}

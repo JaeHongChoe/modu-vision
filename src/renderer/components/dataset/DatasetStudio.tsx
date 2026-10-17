@@ -43,6 +43,7 @@ export const DatasetStudio: React.FC = () => {
   const {
     folderPath,
     datasetKey,
+    sourceAuthority,
     hasSelectedFolder,
     importError,
     sourceSaveError,
@@ -79,6 +80,13 @@ export const DatasetStudio: React.FC = () => {
     setShowGeneratorModal,
     generateSynthetic,
   } = useDatasetStore();
+  // Relative thumbnails must never be rebuilt on a transport that did not
+  // accept this source. Project acceptance can follow a server change later.
+  const currentAuthority = JSON.stringify([
+    getProjectContextGeneration(), getApiPersistenceIdentity(), resolveApiUrl('/'),
+  ]);
+  const sourceIsCurrent = sourceAuthority === currentAuthority;
+  const galleryImages = sourceIsCurrent ? images : [];
 
   // Thumbnail Grid Density (S: compact 96px, M: default 144px, L: detailed 200px)
   const [density, setDensity] = useState<'S' | 'M' | 'L'>('M');
@@ -154,7 +162,8 @@ export const DatasetStudio: React.FC = () => {
 
   useEffect(() => {
     if (folderPath) ensureImported(task).catch(() => {});
-  }, [folderPath, datasetKey, task, ensureImported]);
+  }, [folderPath, datasetKey, task, sourceAuthority, currentAuthority, sourceContextKey,
+    project?.id, project?.project_dir, project?.source_dataset_dir, project?.task, projectDir, ensureImported]);
 
   const handleSelectFolder = async () => {
     const selection = ++folderSelection.current;
@@ -527,7 +536,7 @@ export const DatasetStudio: React.FC = () => {
             <button
               type="button"
               onClick={() => void applySplit(splitRatios.train / 100, splitRatios.val / 100, splitRatios.test / 100).catch(() => {})}
-              disabled={isSplitting || totalImages === 0 || splitUnavailableForTask}
+              disabled={!sourceIsCurrent || isSplitting || totalImages === 0 || splitUnavailableForTask}
               title={splitUnavailableForTask ? splitUnavailableHint : undefined}
               className="w-full py-1.5 bg-[#2563EB] hover:bg-blue-500 text-white rounded-[4px] border border-blue-400 text-xs font-semibold flex items-center justify-center space-x-1.5 transition-tactile cursor-pointer disabled:opacity-40"
             >
@@ -860,18 +869,20 @@ export const DatasetStudio: React.FC = () => {
 
           {/* Thumbnail Grid */}
           <div className="flex-1 p-6 overflow-y-auto">
-            {images.length === 0 ? (
+            {galleryImages.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center text-slate-400">
                 <FolderOpen className="w-12 h-12 mb-3 text-slate-500" />
                 <p className="text-sm font-medium">
-                  {sourceImages > 0
+                  {!sourceIsCurrent && hasSelectedFolder
+                    ? (language === 'ko' ? '프로젝트·서버 선택을 확인하는 중입니다.' : 'Confirming the selected project and server.')
+                    : sourceImages > 0
                     ? (language === 'ko' ? '현재 필터에 맞는 이미지가 없습니다. 라벨 상태나 분할 조건을 바꿔보세요.' : 'No images match these filters. Change the label status or split.')
                     : (language === 'ko' ? '가져온 이미지가 없습니다. 상단에서 폴더를 열거나 합성 데이터를 생성하세요.' : 'No images available. Open a folder or generate synthetic data.')}
                 </p>
               </div>
             ) : (
               <div className={gridClassByDensity}>
-                {images.map((img) => {
+                {galleryImages.map((img) => {
                   const thumbUrl = resolveApiUrl(img.thumbnail_url);
                   const isNormal = img.label?.toLowerCase() === 'ok' || img.label?.toLowerCase() === 'good';
                   const dim = imgDimensions[img.file_path];

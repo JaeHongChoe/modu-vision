@@ -1,0 +1,19 @@
+{
+  "schema": "modu-vision.action-source-declaration-delta/v1",
+  "created_at": "2026-10-17T04:52:34.923731+00:00",
+  "source_declaration_only": true,
+  "changes": [
+    {
+      "relative": "src/renderer/components/dataset/DatasetStudio.tsx",
+      "previous_declaration_sha256": "b5a01e5de2236780e035206511e19ede82ca0bb9b3b9af849f68a6cf1e8c382d",
+      "current_declaration_sha256": "05001ce30dd9b6c8490735f1c2ce23140f9bc4651fd4ed95bb9b6fc528ceca3b"
+    }
+  ],
+  "previous_ledger_sha256": "aa65b6f62bff2c8c88efe8b05eb88251d74c0affe9099ef43c1a2a83327e144a",
+  "historical_action_and_scenario_records_unchanged": true,
+  "historical_receipts_modified": false,
+  "historical_acceptance_rebound": false,
+  "new_GUI_execution_claimed_by_this_delta": false,
+  "parent_or_quality_acceptance_credit": false,
+  "reason": "Dataset gallery and source-bound actions now retain project/backend authority through transport transitions. Actual current GUI replay is recorded separately after execution."
+}
