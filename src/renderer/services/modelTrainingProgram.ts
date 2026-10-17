@@ -1,6 +1,7 @@
 import type {ParentCandidate} from '../types/parentCandidate';
 import { request, type JobObservation } from './api';
 import {submitModelTraining,executeModelRecipe} from './modelExecution';
+import {workflowError} from './datasetWorkflow';
 import type {TrainingSchedulingOptions} from '../stores/useTrainingStore';
 import type {PatchRecipe} from '../components/flowchart/flowchartGraph';
 import type {FlowchartPipeline} from '../types';
@@ -35,7 +36,8 @@ const post = <T>(path: string, body: unknown) => request<T>(path, {method: 'POST
 const query = (values: Record<string, string | number>) => new URLSearchParams(Object.entries(values).map(([key, value]) => [key, String(value)])).toString();
 // A job in any of these states is still working (a server job also transfers and syncs); a new start waits for it.
 export const activeProgramJob = (status: string) => ['queued', 'preparing', 'transferring', 'running', 'stopping', 'cancelling', 'syncing'].includes(status);
-export const programError = (cause: unknown) => cause instanceof Error ? cause.message : String(cause);
+export const programError = (cause: unknown) => cause instanceof Error ? cause.message
+  : typeof cause === 'string' ? cause : workflowError(cause);
 
 export const modelTrainingProgram = {
   patch: {
