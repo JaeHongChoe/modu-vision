@@ -31,3 +31,10 @@ The later current-source receipt records 1,299 passing renderer checks, current 
 The populated app's ordinary shutdown is a retained **failure**: the three original processes exited and the original controller was reaped, but six pending managed request scopes left `uncovered_request_protocol` and `recovery_required`. No failed lease was repaired or released. This limits the installation/recovery acceptance independently of the successful GUI/model actions. The fixed original HTTP-run capture was not exercised by the different two-image batch route, so no Provider18/manual8 acceptance is inferred.
 
 The first published source's GitHub browser job failed 24 cases (272 passed, 2 skipped). Those failures remain visible while current fixture, source-history and UI regressions are repaired. Local checks do not inherit GitHub CI success. The ten remaining requirements and external approval boundaries above stay open.
+
+
+## CI recovery checkpoint 990898f
+
+The focused recovery record is `receipts/2026-10-17-ci-recovery-checkpoint.json`. CPU protocol/source cohorts passed 65 + 84 + 91 cases; the existing browser harness now executes all 44 source guards. Service/action evidence validation and both TypeScript checks passed on the clean 990898f checkout. Seventeen browser controls passed with original request, response, context, deadline and owned teardown checks. Their exact working fixture bodies match this checkpoint; this does not claim a clean full-checkpoint or native execution.
+
+The old full CI failure remains recorded. Comparison submission, DICOM overlapping open requests and the installed GUI managed-scope refusal still need resolution. The first fresh compiled diagnostic failed at its parent AppKit prerequisite before HTTP, without a product result. Historical receipts and action states remain unchanged; these focused checks do not complete any parent requirement or approve model quality, signing or operations.
