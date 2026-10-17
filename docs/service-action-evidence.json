@@ -2512,7 +2512,35 @@
               ]
             },
             "empty": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S3-03",
+                  "source_sha": "74fd6e3a337b4b931081f4a466ebcee5ddcd9fa2",
+                  "kind": "click",
+                  "action": "데이터셋 폴더 열기 · 라벨 완료·미완료 집계",
+                  "expected": "Accept an existing empty classification source with exact zero label and partition counts, persist only its owning source pointer and preserve original assets through ordinary reload.",
+                  "observed": "Actual ordinary Chrome folder button imported an existing owned empty source with genuine200 total/source/unlabeled0,classes{},split0 and validation0. Only owning sourcePUT followed; saved project changed source_dataset_dir and updated_at only. Actual cold empty body/path/zero view is retained. The protected6-to-empty transition uses a genuinely initialized warm metadata namespace: original6 image bytes/raw7, models,labelset registry and all other project paths stayed exact. Ordinary reload restored the selected empty source, zero label/partition counts and empty gallery readiness. FD72/72; natural backend exit0.",
+                  "reviewer": "Root reviewed exact source and guards before clean execution; unchanged ordinary GUI collector, same original Request/context/fullbody,10s bounds, raw7/file hashes and backend closure qualify only this bounded source browser scenario. Controlled desktop-shim answer; no real OS picker, installed/native, full RGB canvas, model quality or parent acceptance.",
+                  "test": "scripts/e2e/classification-import-empty-cancel-controls.spec.ts::classification folder import accepts an empty source with zero label and partition counts after reload",
+                  "receipt": "2026-10-17-classification-import-empty-current-browser.json",
+                  "receipt_sha256": "3bdb12e3900c1025242f2856162008c76ef9f5f6691bfcc18eeb1a505d616b98",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "62f7caa89375b4b85e5d247bbad9e704c6bfc5722c0e2e7e87c31b11ace46347"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "575071fe30f8e5c6347af63ed7477211d245ac6e6db535ec6b213ae7dbf82178"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "9cc50b6627dd2858ca3372e434a9fb29d45665e3160abfbb3846db3a98631c24"
+                    }
+                  ]
+                }
+              ]
             },
             "invalid": {
               "state": "verified",
@@ -2545,7 +2573,31 @@
               "state": "pending"
             },
             "cancel": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S3-03",
+                  "source_sha": "74fd6e3a337b4b931081f4a466ebcee5ddcd9fa2",
+                  "kind": "click",
+                  "action": "데이터셋 폴더 열기 · 라벨 완료·미완료 집계",
+                  "expected": "A null folder chooser answer preserves the owning source, label and partition counts without import or source update; ordinary reload remains on that source.",
+                  "observed": "Actual ordinary Chrome folder button awaited its owned desktop-shim folder answer and received null. One completed chooser return plus rendering settlement emitted no importPOST/sourcePUT or other nonGET mutation. Owning6 eligible/6 labeled/0 unlabeled and Train3/Val2/Test1 stayed current; gallery readiness/dimensions/paths and entire original source/project namespace stayed exact through ordinary reload. FD56/56; natural backend exit0. This is folder selection cancellation, not running-job cancellation.",
+                  "reviewer": "Root reviewed exact source and guards before clean execution; unchanged ordinary GUI collector, same original Request/context/fullbody,10s bounds, raw7/file hashes and backend closure qualify only this bounded source browser scenario. Controlled desktop-shim answer; no real OS picker, installed/native, full RGB canvas, model quality or parent acceptance.",
+                  "test": "scripts/e2e/classification-import-empty-cancel-controls.spec.ts::classification null folder selection preserves owning source label and partition counts after reload",
+                  "receipt": "2026-10-17-classification-import-cancel-current-browser.json",
+                  "receipt_sha256": "e56921779030b36b366ac1387808f64fdcaa047c7547df920a327d679d6a79f8",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "1a17496d6ad8177e3c6593dd5294369106b2c74f712529467f722dee5a198b3b"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "2fc3f039bcbbae02e16e5c7864544bf8c7bf1107ceaad31859d0367c2ccaa42e"
+                    }
+                  ]
+                }
+              ]
             },
             "reopen": {
               "state": "verified",
@@ -3115,7 +3167,35 @@
               ]
             },
             "empty": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S3-07",
+                  "source_sha": "74fd6e3a337b4b931081f4a466ebcee5ddcd9fa2",
+                  "kind": "click",
+                  "action": "데이터셋 폴더 열기 · Train·Val·Test 표시",
+                  "expected": "Accept an existing empty classification source with exact zero label and partition counts, persist only its owning source pointer and preserve original assets through ordinary reload.",
+                  "observed": "Actual ordinary Chrome folder button imported an existing owned empty source with genuine200 total/source/unlabeled0,classes{},split0 and validation0. Only owning sourcePUT followed; saved project changed source_dataset_dir and updated_at only. Actual cold empty body/path/zero view is retained. The protected6-to-empty transition uses a genuinely initialized warm metadata namespace: original6 image bytes/raw7, models,labelset registry and all other project paths stayed exact. Ordinary reload restored the selected empty source, zero label/partition counts and empty gallery readiness. FD72/72; natural backend exit0.",
+                  "reviewer": "Root reviewed exact source and guards before clean execution; unchanged ordinary GUI collector, same original Request/context/fullbody,10s bounds, raw7/file hashes and backend closure qualify only this bounded source browser scenario. Controlled desktop-shim answer; no real OS picker, installed/native, full RGB canvas, model quality or parent acceptance.",
+                  "test": "scripts/e2e/classification-import-empty-cancel-controls.spec.ts::classification folder import accepts an empty source with zero label and partition counts after reload",
+                  "receipt": "2026-10-17-classification-import-empty-current-browser.json",
+                  "receipt_sha256": "3bdb12e3900c1025242f2856162008c76ef9f5f6691bfcc18eeb1a505d616b98",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "62f7caa89375b4b85e5d247bbad9e704c6bfc5722c0e2e7e87c31b11ace46347"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "575071fe30f8e5c6347af63ed7477211d245ac6e6db535ec6b213ae7dbf82178"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "9cc50b6627dd2858ca3372e434a9fb29d45665e3160abfbb3846db3a98631c24"
+                    }
+                  ]
+                }
+              ]
             },
             "invalid": {
               "state": "verified",
@@ -3148,7 +3228,31 @@
               "state": "pending"
             },
             "cancel": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S3-07",
+                  "source_sha": "74fd6e3a337b4b931081f4a466ebcee5ddcd9fa2",
+                  "kind": "click",
+                  "action": "데이터셋 폴더 열기 · Train·Val·Test 표시",
+                  "expected": "A null folder chooser answer preserves the owning source, label and partition counts without import or source update; ordinary reload remains on that source.",
+                  "observed": "Actual ordinary Chrome folder button awaited its owned desktop-shim folder answer and received null. One completed chooser return plus rendering settlement emitted no importPOST/sourcePUT or other nonGET mutation. Owning6 eligible/6 labeled/0 unlabeled and Train3/Val2/Test1 stayed current; gallery readiness/dimensions/paths and entire original source/project namespace stayed exact through ordinary reload. FD56/56; natural backend exit0. This is folder selection cancellation, not running-job cancellation.",
+                  "reviewer": "Root reviewed exact source and guards before clean execution; unchanged ordinary GUI collector, same original Request/context/fullbody,10s bounds, raw7/file hashes and backend closure qualify only this bounded source browser scenario. Controlled desktop-shim answer; no real OS picker, installed/native, full RGB canvas, model quality or parent acceptance.",
+                  "test": "scripts/e2e/classification-import-empty-cancel-controls.spec.ts::classification null folder selection preserves owning source label and partition counts after reload",
+                  "receipt": "2026-10-17-classification-import-cancel-current-browser.json",
+                  "receipt_sha256": "e56921779030b36b366ac1387808f64fdcaa047c7547df920a327d679d6a79f8",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "1a17496d6ad8177e3c6593dd5294369106b2c74f712529467f722dee5a198b3b"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "2fc3f039bcbbae02e16e5c7864544bf8c7bf1107ceaad31859d0367c2ccaa42e"
+                    }
+                  ]
+                }
+              ]
             },
             "reopen": {
               "state": "verified",

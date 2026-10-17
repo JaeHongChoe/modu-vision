@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "74fd6e3a337b4b931081f4a466ebcee5ddcd9fa2",
+  "source_dirty": false,
+  "test": "scripts/e2e/classification-import-empty-cancel-controls.spec.ts::classification null folder selection preserves owning source label and partition counts after reload",
+  "test_source_sha256": "df427b8df5e489b2f625fdd732b7be64486c50fe9a2bf312afb9cefbbbaf0828",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "1c25f6f3e916dc1c8d3434d54451704f8aebdf0b1da435680b0f5574b2475b6c",
+  "harness_sha256": "56b9b8e5dda52f3e2fe1c431793e9dc6aafbfa71b79d7375ecbcc4e04c3cd1c5",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "1a17496d6ad8177e3c6593dd5294369106b2c74f712529467f722dee5a198b3b"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "2fc3f039bcbbae02e16e5c7864544bf8c7bf1107ceaad31859d0367c2ccaa42e"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}
