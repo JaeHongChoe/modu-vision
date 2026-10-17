@@ -1,0 +1,91 @@
+{
+  "schema": "modu-vision.dicom-and-compiled-diagnostic-followup/v1",
+  "base_public_checkpoint": "e5d870502ba856b2ea2ff461a5d744912b9b5873",
+  "scope": "DICOM browser fixture ownership correction and separate compiled HTTP diagnostic; no parent acceptance",
+  "DICOM": {
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "duration_seconds": 23.760305,
+    "source_files": [
+      {
+        "path": "scripts/e2e/dicom-first-frame-thumbnail-owned-abort.spec.ts",
+        "sha256": "d406769bd884aac6df777ee3b05d46738ddaed1f52d5df7f358d8cf491c48166"
+      },
+      {
+        "path": "scripts/tests/dicom-owned-capture.test.cjs",
+        "sha256": "8ac3e5259259bc47ee86f1d1be9d5f1945e96df814f2234c920e5739d41ac094"
+      }
+    ],
+    "report_sha256": "4d9301119514ce86c18f56ff433f7190bf95e9b4816cec8c9f57549cbaa4f9fe",
+    "teardown_sha256": "8d0a585687d68163d77deefac56a8aeaba5ea610c4e25a277ee1d94491602465",
+    "completion_sha256": "bdf4a250e66e69a635c21c45f055d02ff3506ec0e2a8079f4f17994e5f51b240",
+    "original_Request_response_join_count": 7,
+    "guards": {
+      "original_10s_fullbody_context_FD_pixel_guards_retained": true,
+      "synthetic_single_and_RLE_RGB_pixels_equal": true,
+      "owned_FDs_opened": 165,
+      "owned_FDs_closed": 165,
+      "remaining_owned_handlers": 0,
+      "all_waiters_and_abort_handler_joined": true,
+      "uncertain": []
+    },
+    "preparation": "Restore exact observed startup project body before protected baselines; no pre-opening Single or RLE.",
+    "source_guard_passed": 5,
+    "source_guard_log_sha256": "ad773a3206ad095025245d5a6136469ed6785851586d3f81e3a2df6c4f851ddb",
+    "historical_receipts_mutated": false,
+    "native_electron_executed": false,
+    "actual_busy_worker_button_cancel_verified": false,
+    "source_provenance": "Exact two working test bodies pinned above. This is not a clean whole-commit execution."
+  },
+  "existing_harness_command": {
+    "passed": 49,
+    "returncode": 0,
+    "elapsed_seconds": 8.72387058287859,
+    "log_sha256": "a96545b4757098e84a7ef56395ab5d2a58fba35b21a8bdb2885807e8d1a44ba4",
+    "new_DICOM_guards_included": true
+  },
+  "separate_compiled_HTTP_diagnostic": {
+    "status": "passed",
+    "passed": 1,
+    "duration_seconds": 260.88,
+    "real_HTTP_200_requests": 10,
+    "frontend_source_commit": "2bf54a90cbde0ec9ecef0f777699a33a9669e75e",
+    "compiled_backend_source_commit": "35ac911a83dd105a794f83e0a65e108d29461054",
+    "backend_binary_sha256": "11aecb7dc6398db41d02f9bc117f5c5262526fb25d11e568f9f829fb9a44fc58",
+    "diagnostic_source_sha256": "a8ed551927272f4a739d57aa866ed315b032bd2d9801a0f31d47c4aecfb07c35",
+    "pytest_log_sha256": "e193f8a665f7bd61f37fe63b370a43592c2c2e336c50088ef04a9b7fd7298e50",
+    "private_readback_sha256": "e45a495d5f9d0d3215af5abe35b8f4175fe8ea99dff9bf7999b03395227b4a21",
+    "independently_rehashed_evidence_pins": 20,
+    "synthetic_input_files": 12,
+    "synthetic_input_hashes_unchanged": true,
+    "GPU_training_or_model_forward_dispatched": false,
+    "observer_uncertain": false,
+    "drain_active_scopes": 0,
+    "unsupported": [],
+    "original_controller_natural_zero_and_reaped": true,
+    "normal_AppKit_quit": true,
+    "lease_protocol": 5,
+    "lease_state": "writer_store_closed",
+    "closure_scope": "original_managed_store_writers",
+    "whole_process_tree_exit_verified": false,
+    "whole_writer_coverage": false,
+    "manual_GUI_acceptance": false,
+    "failed_first_diagnostic_preserved": true,
+    "original_six_pending_GUI_scopes_cause_identified": false,
+    "conclusion": "Compilation and this finite synthetic HTTP thumbnail sequence alone did not reproduce the prior GUI managed-scope failure. The prior failed lease is unchanged."
+  },
+  "root_readback_sha256": "c0cf7a95f93cdb19387b0265e8691b1848979e47d506260cb6449719c97f7171",
+  "still_pending": [
+    "comparison submission and actual running-worker cancellation",
+    "original installed GUI six pending managed request scopes",
+    "complete current native GUI and install/recovery acceptance",
+    "remaining ten parent requirements and external approvals"
+  ],
+  "parent_acceptance": false,
+  "model_quality_approved": false,
+  "publisher_approved": false,
+  "release_ready": false,
+  "historical_action_states_changed": false
+}
