@@ -1,0 +1,221 @@
+{
+  "schema": "shared-compute-profile-ui-readiness-source-regression/v1",
+  "scope": "Automatic compute-profile UI loading during shared login only.",
+  "source": {
+    "base_commit": "d748b536252c1de87b164b500dabc14acd299448",
+    "private_checkpoint": "9a730a7d5c78ba97c66d525de0ab8c49a78c9de2",
+    "baseline_tracked_files": 2941,
+    "final_source_files": 2942,
+    "clean_checkpoint_after_gates": true,
+    "gates_execution": "Dirty three-file overlay on base, then exact executed file bodies committed; not a clean-checkpoint execution.",
+    "files": [
+      {
+        "path": "src/renderer/stores/useComputeStore.ts",
+        "bytes": 5961,
+        "sha256": "d4e0be9d443d1b4e902f7ce965dc3c9a7a952f74e4ae54f8125ecf9b6edab9e2"
+      },
+      {
+        "path": "src/renderer/stores/computeContextReadiness.test.cjs",
+        "bytes": 6716,
+        "sha256": "30e8e1c66bfaceb946c7261d0c6fef0f4ac424494de20c5900005216e9764ffd"
+      },
+      {
+        "path": "src/renderer/components/compute/SharedProjectPanel.test.cjs",
+        "bytes": 12543,
+        "sha256": "75f24424d1f7eb9eb68289604c6616f33dbd5575332071b1914dc4b625ba5e74"
+      }
+    ]
+  },
+  "actual_causal_ASGI_RED": {
+    "result": "Intended managed-drain assertion failed after full original HTTP/body/custody assertions.",
+    "request": "GET /api/compute/profiles",
+    "status": 200,
+    "body": {
+      "profiles": []
+    },
+    "body_bytes": 15,
+    "body_sha256": "3eeabb0a752ada5c3bbe7f5640bd1a27f00710e7cf76fb19886269b7cee97c9d",
+    "project_and_context_headers_absent": true,
+    "passive_first_original_cache_frame": {
+      "same_retained_producer_code": true,
+      "owned": false,
+      "active_attempt": "None",
+      "failure": "owned_ancillary_foreign_flow_production"
+    },
+    "both_original_envelopes_completed_released_normally": true,
+    "drain": {
+      "status": "refused",
+      "active_scopes": 0,
+      "unsupported": [
+        "uncovered_request_protocol"
+      ]
+    },
+    "protected_files_equal": 7,
+    "original_conftest_and_import_time_lease_isolated": true,
+    "profile_hook_restored": true,
+    "source_2941_full_raw9_and_body_before_after_equal": true,
+    "natural_pytest_child_exit": 1,
+    "seconds": 5.745457417098805,
+    "setup": "Original project loader ran before the immutable baseline. It added only an empty migration-admission lock; six existing file bodies stayed exact. No HTTP or included-router cache production ran in setup.",
+    "retained_first_attempt": "Earlier attempt stopped at a custody assertion because the same normal lazy lock had not been initialized; it is not clean causal RED/drain evidence."
+  },
+  "frontend_TDD": {
+    "initial_new_tests": {
+      "passed": 3,
+      "failed": 3,
+      "evidence_origin": "Original tool transcript; failure was undesired automatic dispatch, not an import error."
+    },
+    "first_adjacent_slice": {
+      "passed": 37,
+      "failed": 4,
+      "failure": "Old API test doubles lacked newly consumed readiness getters. Retained original tool objects record these TypeErrors.",
+      "repair": "Expose accepted shared-context getters already modeled by that fixture; assertions unchanged."
+    },
+    "final_focused": {
+      "passed": 41,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 1.1713036249857396
+    },
+    "renderer_typecheck": {
+      "exit_code": 0,
+      "seconds": 6.338592041982338
+    },
+    "full_2942_source_raw9_and_body_before_after_equal": true,
+    "controls": [
+      "Actual API and Zustand store load on reset defers before context, then accepted-context reset loads both discovery responses with exact headers.",
+      "No-project shared UI stays unloaded with explicit readiness text and no dispatch.",
+      "Same-origin new-actor invalidation does not load the old selection; new accepted context refreshes.",
+      "Local no-context automatic discovery still dispatches.",
+      "Direct shared administrator discovery API still dispatches before project publication.",
+      "Accepted-context discovery failure keeps the original error.",
+      "Existing real login-handler auth rejection keeps prior canonical context and telemetry."
+    ],
+    "external_boundaries": "Renderer tests use disclosed synthetic fetch responses and existing host/React test facades; not real browser rendering."
+  },
+  "change": {
+    "production": "Only compute-store automatic load defers in a shared namespace while canonical context is null. The accepted-project reset performs the refresh.",
+    "no_project_UI_tradeoff": "Automatic shared compute-profile loading requires selecting a project and shows explicit readiness until then.",
+    "direct_discovery_API_unchanged": true,
+    "backend_unchanged": true,
+    "observer_and_auth_refusals_unchanged": true,
+    "timers_caps_and_existing_five_project_read_guards_unchanged": true
+  },
+  "private_artifact_pins": [
+    {
+      "name": "actual-red-01/evidence.json",
+      "bytes": 822,
+      "sha256": "8c180d833cb41c245617b29132818e0cda801891327be4d22137899bb779b570"
+    },
+    {
+      "name": "actual-red-01/pytest.log",
+      "bytes": 5940,
+      "sha256": "c84b7835ad5d39615657e797040ddb35f113ea796531e5f72f2b60230338db79"
+    },
+    {
+      "name": "actual-red-01/result.json",
+      "bytes": 239,
+      "sha256": "eb7d85d95cf8de4d2e8c86adbb683177cb57e99d9ddf12f2463ad082bf256e2a"
+    },
+    {
+      "name": "actual-red-02/evidence.json",
+      "bytes": 3630,
+      "sha256": "52fec6e0474aae345d0e85257667fdd41e3e2776c2bd1c1acc00714f378d44db"
+    },
+    {
+      "name": "actual-red-02/pytest.log",
+      "bytes": 7898,
+      "sha256": "9c27101f28eddd6b97a813391293042ad55c5a3fbb393c67c914bbf381c0b6e7"
+    },
+    {
+      "name": "actual-red-02/result.json",
+      "bytes": 239,
+      "sha256": "97188b855f223f5c49f5787452a21d4af0949f26d63361bc070f6868cb8e3758"
+    },
+    {
+      "name": "actual-red-02/source-before.json",
+      "bytes": 985741,
+      "sha256": "c85df67f231125deead3e434536874c080fb6507590055e9a83feca1841509c7"
+    },
+    {
+      "name": "actual-red-02/source-after.json",
+      "bytes": 985741,
+      "sha256": "c85df67f231125deead3e434536874c080fb6507590055e9a83feca1841509c7"
+    },
+    {
+      "name": "test_shared_profile_preselection.py",
+      "bytes": 5569,
+      "sha256": "01416ac627e00c5ed1b6a783fc01bac170ffb36ed924bd610beedd9c6fa7a73a"
+    },
+    {
+      "name": "run_one.py",
+      "bytes": 3048,
+      "sha256": "214a5070260867e7340bff738b32491f6888e0049a97332a0bbe38e4988fd166"
+    },
+    {
+      "name": "test_shared_profile_preselection_v2.py",
+      "bytes": 6399,
+      "sha256": "8e89d70547451a2879a54c17bf76ee7c2e64c739f5f7412ee4d2276f7097285a"
+    },
+    {
+      "name": "run_one_v2.py",
+      "bytes": 3051,
+      "sha256": "0fb3da91cf9be6f4505fde8f129ebe2ef6cd4119b86012e217773c16fda73961"
+    },
+    {
+      "name": "renderer-green-original-tool-start.json",
+      "bytes": 754,
+      "sha256": "4064c05b1b81454b8f4f9d7e0a51abc2b334128df4cb510b045dfa4adfeb228d"
+    },
+    {
+      "name": "renderer-green-original-tool-completion.json",
+      "bytes": 8145,
+      "sha256": "1db133e5d60309f00fd3eb5d6c821fcf7ef95b7bac56aba01b0a9ed2b49a5745"
+    },
+    {
+      "name": "final-gates-original-tool-start.json",
+      "bytes": 131,
+      "sha256": "1e7a4eb79633d94d9396e225bd0580019616c0ddb977b73789ef9410ec19c4e8"
+    },
+    {
+      "name": "final-renderer.log",
+      "bytes": 4272,
+      "sha256": "a832cf521f9fff010c947a53a516536b06dfc5d22ebf4cdda5116f36c1fce237"
+    },
+    {
+      "name": "final-typecheck.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "final-gates-result.json",
+      "bytes": 1177,
+      "sha256": "4415ae6a3676fa2e6ab07ce876ac850fa2fe32978ed75e9b43030ba737b58fd4"
+    },
+    {
+      "name": "final-source-before.json",
+      "bytes": 986058,
+      "sha256": "a734568987fbd498fd3353ed72a474a7d1a65c8707c4c26fe135560fd32e21da"
+    },
+    {
+      "name": "final-source-after.json",
+      "bytes": 986058,
+      "sha256": "a734568987fbd498fd3353ed72a474a7d1a65c8707c4c26fe135560fd32e21da"
+    },
+    {
+      "name": "final-three-file.diff",
+      "bytes": 9768,
+      "sha256": "b8dda3d59c922febec2939d7c832d247646f7e96f83b690c33769958707bd091"
+    }
+  ],
+  "limits": {
+    "saved_Graph13_exact_first_emitter_identified": false,
+    "native_Root09_cause_proven": false,
+    "Graph_GREEN_executed": false,
+    "browser_executed": false,
+    "native_executed": false,
+    "parent_or_action_state_promoted": false,
+    "whole_CI_pass_claim": false,
+    "PUB_modified_during_fixture_execution": false
+  }
+}

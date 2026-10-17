@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { api } from '../services/api';
+import { api, getApiPersistenceIdentity, getProjectContext } from '../services/api';
 import type { ComputeProfile, ComputeProfileInput, ComputeProbeResult } from '../services/api';
 
 interface ComputeState {
@@ -47,6 +47,13 @@ export const useComputeStore = create<ComputeState>((set, get) => ({
   probeResults: {},
 
   load: async () => {
+    // Shared login resets old targets before its selected project is accepted.
+    // The accepted-project reset refreshes this UI; direct admin discovery stays available.
+    if (getApiPersistenceIdentity() !== 'local' && !getProjectContext()) {
+      set({ profiles: [], selectedProfileId: null, isLoaded: false, isLoading: false,
+        loadError: '공유 프로젝트 선택을 완료한 뒤 서버 설정을 확인하세요.' });
+      return;
+    }
     if (loadingPromise) return loadingPromise;
     set({ isLoading: true, loadError: null });
     const epoch=transportEpoch;
