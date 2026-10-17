@@ -1,0 +1,498 @@
+{
+  "schema": "modu-vision.actual-installed-native-negative/v1",
+  "result": "negative",
+  "frontend_source_sha": "10164c02f6eb87a173057cab5ee5f06e971c3170",
+  "backend_source_sha": "3086fb8114ae1e55e335dde5813dc5e4e21251ef",
+  "scope": "One current compiled offline-installed native startup/login observation interval. READY was reached; original request-lifetime uncertainty appeared before any claimed manual flow/model qualification. Strict scoped shutdown refused. No GUI, manual8, model-quality, publisher, whole-tree or parent acceptance.",
+  "build_and_install": {
+    "backend_binary_sha256": "637def5d2ef08a34635fa02c4a505e5f695b17a2724036bc9e1079ccf249a241",
+    "backend_build_identity_sha256": "27ae5d76c875d1174e96d87b6a30902f4222a3153ca69d803634314fcd1b0f17",
+    "backend_release_sha256": "448aced92b244af065eb51079443585fa8d9427560c9145cd1e6099b8b0ab57b",
+    "backend_build_exit_code": 0,
+    "compiled_preview_and_install_exit_codes": [
+      0,
+      0
+    ],
+    "actual_compiled_CLI_install": true,
+    "setup_seconds": 177.88070837501436,
+    "controlled_private_authority_only": true,
+    "publisher_or_native_signature_acceptance": false,
+    "native_READY_reached": true
+  },
+  "health_observations": {
+    "baseline": {
+      "HTTP_status": 200,
+      "uncertain": false,
+      "request_count": 15,
+      "sampled_active_scopes": 2
+    },
+    "login": {
+      "HTTP_status": 200,
+      "uncertain": true,
+      "request_count": 67,
+      "sampled_active_scopes": 5,
+      "stop_further_UI": true
+    },
+    "first_poisoned_interval": true,
+    "exact_request_or_cause_identified": false,
+    "first_failure_interval": "Between baseline and login/automatic-hydration samples.",
+    "limits": "Active scopes are concurrent samples, including in-flight observation work, not counts of failed requests or model jobs. Health v1 does not serialize original observer failure reasons."
+  },
+  "CUA_observation": {
+    "evidence_kind": "Root conversation transcript observation only",
+    "reported_actions": "Local fixture login and automatic cohort selection, then immediate ordinary quit after the stop indication.",
+    "hashed_action_transcript_available_in_this_receipt": false,
+    "GUI_actions_verified": false,
+    "flow_or_model_execution_claimed": false
+  },
+  "ordinary_shutdown": {
+    "hold_tool_exit_code": 1,
+    "hold_seconds": 294.0401336250361,
+    "original_nonce_bound_quit_requested": true,
+    "original_main_exited": true,
+    "original_backend_exited": true,
+    "original_controller_reaped": true,
+    "original_controller_still_live": false,
+    "signals_sent_by_holder": false,
+    "state_repaired": false,
+    "strict_lifetime_and_scoped_closure_verified": false,
+    "complete_Electron_helper_tree_closed": false,
+    "whole_process_tree_exit_verified": false,
+    "saved_error": {
+      "class": "ValueError",
+      "phase": "normal-closure"
+    },
+    "protocol_version": 4,
+    "lease_state": "recovery_required",
+    "writer_drain_status": "refused",
+    "active_scopes_at_drain": 1,
+    "unsupported": [
+      "uncovered_request_protocol"
+    ],
+    "can_release_launch_lease": false
+  },
+  "custody": {
+    "recorded_original_model_source_profile_bodies": 68,
+    "before_setup_after_setup_after_attempt_pin_maps_equal": true,
+    "installed_active_pointer_unchanged": true,
+    "installed_profile_unchanged": true,
+    "frontend_snapshot_rows": 2868,
+    "backend_build_before_after_source_snapshots_equal": true,
+    "large_models_archives_or_binary_payloads_rehashed_by_this_reader": false,
+    "basis": "Complete small saved control/evidence files independently read; original large input and build payloads were not rehashed again."
+  },
+  "raw_evidence_pins": [
+    {
+      "id": "declaration",
+      "bytes": 6147,
+      "sha256": "964f226c943d8099ef1f13880c2b6dfb9ed91fd71497a8b1a668714b1d236521"
+    },
+    {
+      "id": "adapter",
+      "bytes": 14597,
+      "sha256": "92ae0e1a2792587ad942c981cef18faa915e56c2bb30630b22c6ff5079012fa6"
+    },
+    {
+      "id": "actual-input-verification",
+      "bytes": 1957237,
+      "sha256": "51cdd43187eb6aa0f33860c415fc7aa47f06d54e69b4899201ce609c169f6830"
+    },
+    {
+      "id": "bind-preflight-artifacts.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "id": "bind-preflight-artifacts.stdout.log",
+      "bytes": 1386,
+      "sha256": "0b731cd5ed7bc180250a92c643f6784deb72bef5295fa9a8f878f439a39eefb6"
+    },
+    {
+      "id": "bind-preflight-bind.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "id": "bind-preflight-bind.stdout.log",
+      "bytes": 402,
+      "sha256": "4f3fa79d56ef3eaff739f37991d1c7b857bbd0ac1d2923606df74a722235a49e"
+    },
+    {
+      "id": "bind-preflight-invocation.json",
+      "bytes": 1881,
+      "sha256": "8a2e07ef9eed22350ae683b10cccfdcd24b1d50a52f898c65da5b916aa373bf2"
+    },
+    {
+      "id": "bind-preflight-result.json",
+      "bytes": 791,
+      "sha256": "04c555594af48b0cbcffa5bc223d7b55e895c2890b4edac806c9a256a3fc5554"
+    },
+    {
+      "id": "bind-preflight-source.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "id": "bind-preflight-source.stdout.log",
+      "bytes": 1321,
+      "sha256": "118384bd1959dc57fe00cc3b5bc7cdd3fdd366b9bb5c38544f4c330d552149bb"
+    },
+    {
+      "id": "bound-inputs",
+      "bytes": 7204,
+      "sha256": "654864dc4fa5dc2be79ee57502cbb217cecd5278a0fcb70ba754c6fd365315bb"
+    },
+    {
+      "id": "frontend-source-snapshot",
+      "bytes": 1026745,
+      "sha256": "38f84373ab4982184a3f6c0ce4cf824f0279a2a1155ae629bcea22a8b014b564"
+    },
+    {
+      "id": "artifact_pins",
+      "bytes": 58975,
+      "sha256": "c1d475a3392e2d1b3adbdc13ba44ad92017d08f1928da663c5be79c944a1aa97"
+    },
+    {
+      "id": "assembly_provenance",
+      "bytes": 2164989,
+      "sha256": "3ecd70680c9af71c3bf17e242cd3a733f4f9daf21c7a42788033d0ab14fe11de"
+    },
+    {
+      "id": "backend_release",
+      "bytes": 957684,
+      "sha256": "448aced92b244af065eb51079443585fa8d9427560c9145cd1e6099b8b0ab57b"
+    },
+    {
+      "id": "build_tool_result",
+      "bytes": 953,
+      "sha256": "b7dfea1af13158731ae440b4a2ef214571e35a12d1e2e5cefd622220416b2456"
+    },
+    {
+      "id": "assembly-original_tool_result",
+      "bytes": 460,
+      "sha256": "9fa1ea97472db908e087d53b9beb15bcf977f82d416f34051704220652c5d742"
+    },
+    {
+      "id": "assembly-wrapper_result",
+      "bytes": 168,
+      "sha256": "994fedcb2ed4df6123b4d47f24cd852a2972e752b5f7a0fb04a2316ce319f353"
+    },
+    {
+      "id": "assembly-child_stdout",
+      "bytes": 302,
+      "sha256": "092c8c175dbf75c886ce620fe267ddd1542f5b631822303cc301f669118c855c"
+    },
+    {
+      "id": "backend-snapshot",
+      "bytes": 526532,
+      "sha256": "d8e6913585f9dc7d41987deb45835317bb05e41fb847e042168490b68d23cb46"
+    },
+    {
+      "id": "backend-after_snapshot",
+      "bytes": 526532,
+      "sha256": "d8e6913585f9dc7d41987deb45835317bb05e41fb847e042168490b68d23cb46"
+    },
+    {
+      "id": "backend-start",
+      "bytes": 5189,
+      "sha256": "9a7a74154dee321e88f21166c76fbc2261fd8868c80cc39f96078df9920c5534"
+    },
+    {
+      "id": "backend-result",
+      "bytes": 650,
+      "sha256": "72f7bfa51b6f82e4632b17c80ec53b07e3f0508bd72eb38dd6e001e84cc19709"
+    },
+    {
+      "id": "protected-before-setup",
+      "bytes": 58318,
+      "sha256": "87b59f77aadd52d35b62718985eb38b0c4bb56b8d99ac47552f99306f9763bac"
+    },
+    {
+      "id": "protected-after-setup",
+      "bytes": 60281,
+      "sha256": "604c9823080e0cb7eeb17e4c4f3f23e105f25a6193e69c8ab51fdf0b002afb8d"
+    },
+    {
+      "id": "protected-after-UI",
+      "bytes": 59899,
+      "sha256": "39807b425b099eba83b1159abe6fd19e21a56ef476a573d38075d46e04c82813"
+    },
+    {
+      "id": "installed-active",
+      "bytes": 410,
+      "sha256": "8af1eb6fe7da83610dbc04350e60081f1f484542ec11c666aa82b0e23eff29cc"
+    },
+    {
+      "id": "installed-profile",
+      "bytes": 451,
+      "sha256": "87644365d6064acb7d7d3590367113d2576daea5a6495af5900dafa166f65887"
+    },
+    {
+      "id": "active-before-UI-copy",
+      "bytes": 410,
+      "sha256": "8af1eb6fe7da83610dbc04350e60081f1f484542ec11c666aa82b0e23eff29cc"
+    },
+    {
+      "id": "setup-result",
+      "bytes": 15387,
+      "sha256": "82e45e92f1fe9c28f8cdd96c6bc0842ed517532abbdabf04b720db38eb510743"
+    },
+    {
+      "id": "preview-child",
+      "bytes": 2950,
+      "sha256": "d2e9ed8b0e263b37452a8f96772227ddff1b59210278661f85a150e13695989d"
+    },
+    {
+      "id": "preview-child-start.json",
+      "bytes": 2004,
+      "sha256": "ca340302eacaeb095d5d78b41f2456df61318d9da15debaebed57c542d5bc4ad"
+    },
+    {
+      "id": "preview-stdout.log",
+      "bytes": 2373,
+      "sha256": "3611ef9d44d88f1183453c81201765f9cca51460939aae2813209c228542534c"
+    },
+    {
+      "id": "preview-stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "id": "preview-reply",
+      "bytes": 2571,
+      "sha256": "8984ed03be511cc7562caeb12fff2a95efe4f9af905d3b801be5cb6c1efa39cc"
+    },
+    {
+      "id": "install-child",
+      "bytes": 3050,
+      "sha256": "f340d71cd4d728ee6d35dfa817d09b9a8aa4f20b494511090aa03298ffdf4d78"
+    },
+    {
+      "id": "install-child-start.json",
+      "bytes": 2106,
+      "sha256": "1c62242a7cc18dd7ddd76b0df633b642dc53344845685c8113e34a267c33843c"
+    },
+    {
+      "id": "install-stdout.log",
+      "bytes": 503,
+      "sha256": "d437789c8e71e3ea3e3d219799a53915501a8bbe42f2a7e399f5c2ce00caeb77"
+    },
+    {
+      "id": "install-stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "id": "install-reply",
+      "bytes": 545,
+      "sha256": "3d2a55f19b0df958e1d6b1ab6cd7e1c9a71d6c9d1eb0e4783374173020e192c5"
+    },
+    {
+      "id": "setup-canary-pins.json",
+      "bytes": 194,
+      "sha256": "bb5c8ece69c3ee78e5d77febbe9642b44b04b82f25733180657368a673b6438a"
+    },
+    {
+      "id": "setup-populated-setup.json",
+      "bytes": 21332,
+      "sha256": "b737d03304432a1ca3c03ffc1160d7df68d076675f06c4463c2f8c25c2c259e1"
+    },
+    {
+      "id": "setup-controller-inputs.json",
+      "bytes": 548,
+      "sha256": "bc22940e3186c517e1edc0684508c5fcff8ec13a72a319915ad09eb19751f1f0"
+    },
+    {
+      "id": "setup-controller-argv.json",
+      "bytes": 927,
+      "sha256": "ac074c8ef19df2d5b1586f50cd2f47c8d68648aba7eb2caeb8ea785a92e200c6"
+    },
+    {
+      "id": "setup-tool-after-setup.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "id": "setup-tool-after-setup.stdout.log",
+      "bytes": 257,
+      "sha256": "f8c610504ced76ea73e24a5270bed904badc09688cff2fb4e0274f67821a8e71"
+    },
+    {
+      "id": "setup-tool-before-setup.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "id": "setup-tool-before-setup.stdout.log",
+      "bytes": 258,
+      "sha256": "d35786eaaf37b62930275a36170e9dbb36ec9bbfd71d2440eaf4d62720f43c92"
+    },
+    {
+      "id": "setup-tool-invocation.json",
+      "bytes": 3038,
+      "sha256": "5c06e25ba7d12d4698d1a55ee0c684ef4485212cbe3c1d7e65b8cc341c4ade77"
+    },
+    {
+      "id": "setup-tool-lifetime-inputs.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "id": "setup-tool-lifetime-inputs.stdout.log",
+      "bytes": 153,
+      "sha256": "3b7ec185c3711a7ccb0e6de0f09aae7ed933fbe95c8ea48f3e00ede223f0236e"
+    },
+    {
+      "id": "setup-tool-progress.json",
+      "bytes": 1073,
+      "sha256": "1d11c3a3396881bb94f99bf050f88940cc37070f1fba139b2c63428fc4382708"
+    },
+    {
+      "id": "setup-tool-result.json",
+      "bytes": 1073,
+      "sha256": "1d11c3a3396881bb94f99bf050f88940cc37070f1fba139b2c63428fc4382708"
+    },
+    {
+      "id": "setup-tool-scope-clarification.json",
+      "bytes": 469,
+      "sha256": "e4320afe828772f4068361dc812d5918c370867c9e3a2a8145e321ceb8a1cc24"
+    },
+    {
+      "id": "setup-tool-setup.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "id": "setup-tool-setup.stdout.log",
+      "bytes": 230,
+      "sha256": "6b0efbe3db79f301d53c226a3295d9b837a9879a6475d5d76727e2f91ca9b8b7"
+    },
+    {
+      "id": "lifetime-inputs",
+      "bytes": 1705,
+      "sha256": "d2591d052c1efe0542db38571d716e39f6f92a20307d87b9830d00a3ffe652e0"
+    },
+    {
+      "id": "hold-tool-invocation.json",
+      "bytes": 744,
+      "sha256": "672779429d49989f09c5b7723659355ea8a24702cee3428db24ab8936ba5f276"
+    },
+    {
+      "id": "hold-tool-result.json",
+      "bytes": 227,
+      "sha256": "3590825c8c1b6777316b5f6042d2d7b75482440e6a11b526aec961ee2415115d"
+    },
+    {
+      "id": "hold-tool-start.json",
+      "bytes": 83,
+      "sha256": "45f0b613b856878d899cf93e41b903544256ccafc8439b7fab5efee1e2cd7d65"
+    },
+    {
+      "id": "hold-tool-stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "id": "hold-tool-stdout.log",
+      "bytes": 711,
+      "sha256": "8eaf42e5ece97b6d6c1ca7724881ba116a9150355404ff4a2e1d3c541f17ebca"
+    },
+    {
+      "id": "ready",
+      "bytes": 1732,
+      "sha256": "64e96969009730398f3192037782b14dd1cff9c5b82bb919f209c8344991795d"
+    },
+    {
+      "id": "readiness-proof",
+      "bytes": 19878,
+      "sha256": "46322cd149bd5cfc6841cf8ba0e95ce53365a314b5470134c73d9a9b5cec6d51"
+    },
+    {
+      "id": "lifetime-result",
+      "bytes": 4673,
+      "sha256": "3f256a4e77645ddf434efce42a4a5c8df64745823692baf6a64931e5f1a77f18"
+    },
+    {
+      "id": "lifetime-controller-start.json",
+      "bytes": 3546,
+      "sha256": "258271f2d1c9bbefa0bb715beac24e583962c8a4ab5c1bf9806b0a7fd5e3eb0c"
+    },
+    {
+      "id": "lifetime-controller-ack.json",
+      "bytes": 404,
+      "sha256": "d695d4c3ead7cd97115012209cd2a45b89d4cedb1875b7f48e4b2704b5b73c47"
+    },
+    {
+      "id": "lifetime-controller-stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "id": "lifetime-quit.json",
+      "bytes": 222,
+      "sha256": "74de96383ae18b818fb1b87777703c561dd7ef2c84d909c707edd984eb7b4722"
+    },
+    {
+      "id": "health-01-baseline",
+      "bytes": 7840,
+      "sha256": "83f428d8f5b693a58327d7215d61d020d15612457797b0edf2f45a2806388d8c"
+    },
+    {
+      "id": "health-02-login",
+      "bytes": 26343,
+      "sha256": "a1321719a78227ee46c3d1d5a06f9d740d8b019674b8f26da38f97215c0d0972"
+    },
+    {
+      "id": "lease-journal",
+      "bytes": 5373,
+      "sha256": "1718c4ce0c3f03ec68a2b47775076b92275b708e02013e087605c2f4bcd18935"
+    },
+    {
+      "id": "bootstrap-receipt",
+      "bytes": 2596,
+      "sha256": "1b1526f708fd3470f89c76df4d23dde1f1783153066d2841bd537b14958515b6"
+    },
+    {
+      "id": "writer-registry.json",
+      "bytes": 1112,
+      "sha256": "15ba747fcf4a5bbc82a314e9aa66b8061a08261cdd05d93b9772702e459c0136"
+    },
+    {
+      "id": "writer-publication.json",
+      "bytes": 168,
+      "sha256": "63a2b6fce9f1d40cc07cf716b856c21e801049ef3fab7c9c038953b34fdeff46"
+    },
+    {
+      "id": "main-startup-diagnostic",
+      "bytes": 6648,
+      "sha256": "1c14af170c2ff7a1662134f9895ec29e17af2954a9b0e7aa64cc45e48e6e42d4"
+    },
+    {
+      "id": "original-supplier-0",
+      "bytes": 10860,
+      "sha256": "a051b93f37ccac81ecedf7327f71cac8bbd5f09d32b34fa671413b5b77f3e338"
+    },
+    {
+      "id": "original-supplier-1",
+      "bytes": 23838,
+      "sha256": "9dbc5cf29f099fd5fec37e360b29645a63741c0eaedb838385d4fe4a291c85d1"
+    }
+  ],
+  "private_readback": {
+    "bytes": 41636,
+    "sha256": "27f491ac827318421e835023329af6ad73fbb3531c7fbff64b95b8cea9176744"
+  },
+  "limits": {
+    "source_or_runtime_reexecuted_for_readback": false,
+    "lease_repaired_recovered_released_or_relaunched": false,
+    "manual8_accepted": false,
+    "GUI_accepted": false,
+    "known_image_flow_accepted": false,
+    "GPU_or_model_quality_accepted": false,
+    "whole_tree_accepted": false,
+    "publisher_accepted": false,
+    "parent_accepted": false,
+    "historical_negatives_replaced": false,
+    "count_or_ledger_credit_added": false
+  }
+}
