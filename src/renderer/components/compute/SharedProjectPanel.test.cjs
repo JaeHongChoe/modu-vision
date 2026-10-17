@@ -23,7 +23,7 @@ for(const operation of ['activate','login','disconnect','login_inventory_failure
   const panel=load(path.resolve(__dirname,'SharedProjectPanel.tsx'),{
     react:{__esModule:true,default:react,...react},
     'lucide-react':{Users:'icon',LogIn:'icon',LogOut:'icon'},
-    '../../services/api':{api,request,setSharedApiBase:()=>{},getProjectContext:()=>({workspace_id:'fixture',project_id:project.id,actor_id:'user',mode:'team'}),getApiPersistenceIdentity:()=>`shared:https://${server}.example`},
+    '../../services/api':{api,request,setSharedApiBase:()=>{},setProjectContext:()=>{},getProjectContext:()=>({workspace_id:'fixture',project_id:project.id,actor_id:'user',mode:'team'}),getProjectContextGeneration:()=>0,getApiPersistenceIdentity:()=>`shared:https://${server}.example`},
     '../../stores/useProjectStore':{useProjectStore:projectStore,saveOpenEdits:async()=>{}},
     '../../stores/useComputeStore':compute,
     '../../stores/useDatasetStore':{useDatasetStore:{getState:()=>({setFolderPath:()=>{}})}},

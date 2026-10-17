@@ -1,6 +1,6 @@
 import React,{useEffect,useState} from 'react';
 import {Users,LogIn,LogOut} from 'lucide-react';
-import {api,request,setSharedApiBase,getApiPersistenceIdentity,getProjectContext} from '../../services/api';
+import {api,request,setSharedApiBase,setProjectContext,getApiPersistenceIdentity,getProjectContext,getProjectContextGeneration} from '../../services/api';
 import {useProjectStore,saveOpenEdits} from '../../stores/useProjectStore';
 import {resetComputeTransportCache} from '../../stores/useComputeStore';
 import {useDatasetStore} from '../../stores/useDatasetStore';
@@ -37,11 +37,20 @@ export const SharedProjectPanel:React.FC=()=>{
   const refresh=async()=>{const result=await request<{projects:SharedProject[];selected_project_id:string|null}>('/api/accounts/me');setProjects(result.projects);if(connection?.user.administrator)setUsers((await request<{users:SharedUser[]}>('/api/accounts/users')).users);return result;};
   const activate=async(id:string)=>{assertProjectIdle();await saveOpenEdits();assertProjectIdle();setSourceDraft(emptySource);await request('/api/accounts/select-project',{method:'POST',body:JSON.stringify({project_id:id})});assertProjectIdle();const selected=await host.shared.select(id);resetComputeTransportCache();setConnection(selected);setSelection(id);telemetryService.disconnect();assertProjectIdle();await useProjectStore.getState().syncCurrentProject();await telemetryService.connect();};
   useEffect(()=>{let current=true;host.shared.connection().then(async value=>{if(!current||!value)return;setConnection(value);setSharedApiBase(value.server_url,host.shared.requestOptions);setSelection(value.project_id||'');setServer(value.server_url);const result=await request<{projects:SharedProject[]}>('/api/accounts/me');if(current)setProjects(result.projects);if(value.user.administrator){const accounts=await request<{users:SharedUser[]}>('/api/accounts/users');if(current)setUsers(accounts.users);}}).catch(e=>{if(current)setError(String(e));});return()=>{current=false;};},[]);
-  const login=async()=>{assertProjectIdle();await saveOpenEdits({allowCleanDisconnect:host.kind()==='browser'&&!connection});assertProjectIdle();setSourceDraft(emptySource);const value=await host.shared.login({server_url:server,username,password});telemetryService.disconnect();setPassword('');setConnection(value);setSharedApiBase(value.server_url,host.shared.requestOptions);resetComputeTransportCache();useAnnotationStore.getState().setReviewerName(value.user.username);
-    const result=await request<{projects:SharedProject[];selected_project_id:string|null}>('/api/accounts/me');setProjects(result.projects);
-    if(value.user.administrator)setUsers((await request<{users:SharedUser[]}>('/api/accounts/users')).users);
+  const login=async()=>{assertProjectIdle();await saveOpenEdits({allowCleanDisconnect:host.kind()==='browser'&&!connection});assertProjectIdle();setSourceDraft(emptySource);const value=await host.shared.login({server_url:server,username,password});telemetryService.disconnect();setProjectContext(null);setPassword('');setConnection(value);setSharedApiBase(value.server_url,host.shared.requestOptions);resetComputeTransportCache();useAnnotationStore.getState().setReviewerName(value.user.username);
+    const transport=getApiPersistenceIdentity(),generation=getProjectContextGeneration();
+    const current=()=>getApiPersistenceIdentity()===transport&&getProjectContextGeneration()===generation;
+    const changed=()=>new Error('서버 연결이 변경됐습니다. 현재 서버의 프로젝트를 다시 선택하세요.');
+    const result=await request<{projects:SharedProject[];selected_project_id:string|null}>('/api/accounts/me');if(!current())throw changed();setProjects(result.projects);
+    if(value.user.administrator){const accounts=await request<{users:SharedUser[]}>('/api/accounts/users');if(!current())throw changed();setUsers(accounts.users);}
     const id=result.selected_project_id||result.projects[0]?.id;
-    if(id){assertProjectIdle();await request('/api/accounts/select-project',{method:'POST',body:JSON.stringify({project_id:id})});assertProjectIdle();setConnection(await host.shared.select(id));resetComputeTransportCache();setSelection(id);assertProjectIdle();await useProjectStore.getState().syncCurrentProject();}
+    if(id){assertProjectIdle();await request('/api/accounts/select-project',{method:'POST',body:JSON.stringify({project_id:id})});if(!current())throw changed();assertProjectIdle();const selected=await host.shared.select(id);
+      if(!current()||selected.server_url!==value.server_url||selected.user.id!==value.user.id||selected.project_id!==id)throw changed();
+      setConnection(selected);setSelection(id);assertProjectIdle();await useProjectStore.getState().syncCurrentProject();
+      if(!acceptedSourceScope(selected))throw new Error(useProjectStore.getState().projectError||'공유 프로젝트 선택을 완료하지 못했습니다. 현재 프로젝트를 다시 확인하세요.');
+      // The immediate reset already retired old targets. Refresh this accepted
+      // project now, including a re-login whose project ID did not change.
+      resetComputeTransportCache();}
     else{useProjectStore.setState({project:null,projectDir:null,projectName:'공유 프로젝트 선택',activeStep:1});useDatasetStore.getState().setFolderPath('');await useAnnotationStore.getState().setImages([],0);}
     if(id)await telemetryService.connect();
   };

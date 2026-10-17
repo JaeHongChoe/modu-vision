@@ -1,0 +1,215 @@
+{
+  "schema": "modu-vision.shared-project-hydration-source-regression/v1",
+  "date": "2026-10-18",
+  "result": "passed_source_controls",
+  "scope": "Shared-login project hydration ordering only. No browser, native, release, action-cell or parent acceptance.",
+  "source": {
+    "base_commit": "fafa790b8c175dc1e6b4d72075d1293bace51dfe",
+    "intermediate_private_commit": "f5f0d306db986d3aeb474851dee2ec6aa4aea755",
+    "final_private_commit": "515aa8c0078eba41c141d7dccc19048e728ef19e",
+    "tracked_files": 2934,
+    "final_checkout_clean": true,
+    "product_files": {
+      "src/renderer/components/compute/SharedProjectPanel.tsx": {
+        "bytes": 13916,
+        "sha256": "fbf520a57805d81090266c80969b13eaa9be61b75e090866efd9a6db6be374e9"
+      },
+      "src/renderer/services/api.ts": {
+        "bytes": 77487,
+        "sha256": "8ec0aa68f5d5b42101cd9a732e01146b3744ce67cad563c10ad32fb032409ce0"
+      }
+    },
+    "test_files": {
+      "src/renderer/components/compute/SharedProjectHydration.test.cjs": {
+        "bytes": 8371,
+        "sha256": "cb9c518dadce071ddc412c6e973a9f4a0801eadce5439f0a616012fc6e14b62a"
+      },
+      "src/renderer/components/compute/SharedProjectPanel.test.cjs": {
+        "bytes": 12186,
+        "sha256": "867a1c6cf94d73795b05fe37aea11f40f7c79ccc50e23d8429287675ab7f9fe5"
+      },
+      "src/renderer/components/compute/sharedSourceScope.test.cjs": {
+        "bytes": 14158,
+        "sha256": "43d1aea8a1ebee97541da74f7d540b151b3cb697bdba0608375a36ee5a794ffc"
+      },
+      "src/renderer/services/apiSharedProjectReads.test.cjs": {
+        "bytes": 4200,
+        "sha256": "801bd5ee93094fba5d51e8d4b13650c23b1119afb65d5cba186a8bf45869b0be"
+      }
+    }
+  },
+  "changes": [
+    "Exactly five shared GET paths refuse before fetch while their captured project context is null; local, account, discovery and other-method behavior is retained.",
+    "Successful host login retires prior context through the existing setter before transport reset, including same-origin session replacement. Authentication failure retains the prior context.",
+    "Immediate old-target invalidation is retained. The existing second refresh follows actual accepted context and matching project publication, including same-project login.",
+    "Existing context-generation checks fence superseded account inventory and project selection; a resolved synchronization promise alone does not establish accepted scope."
+  ],
+  "results": {
+    "initial_controls_RED": {
+      "passed": 1,
+      "failed": 9,
+      "cause": "Missing predispatch refusal and premature project hydration refresh."
+    },
+    "initial_controls_GREEN": {
+      "passed": 10,
+      "failed": 0
+    },
+    "initial_adjacent_fixture_failures": {
+      "passed": 28,
+      "failed": 2,
+      "cause": "Two older boundary doubles lacked the newly consumed generation getter; getter added without changing assertions."
+    },
+    "relative_path_RED": {
+      "passed": 0,
+      "failed": 1,
+      "cause": "The API-supported leading-slash-free path bypassed the first guard draft; the equivalent path is now checked."
+    },
+    "stale_inventory_RED": {
+      "passed": 0,
+      "failed": 1,
+      "cause": "Superseded inventory initially replaced the visible list before its generation check; the check now precedes publication."
+    },
+    "same_origin_RED": {
+      "passed": 0,
+      "failed": 2,
+      "cause": "Same-base login retained the old actor context, and old same-account context falsely authorized refresh after synchronization returned without acceptance."
+    },
+    "final_focused_GREEN": {
+      "passed": 42,
+      "failed": 0,
+      "skipped": 0,
+      "duration_ms": 1378.553209,
+      "test_files": [
+        "src/renderer/services/apiSharedProjectReads.test.cjs",
+        "src/renderer/services/apiImageOrigin.test.cjs",
+        "src/renderer/components/compute/SharedProjectHydration.test.cjs",
+        "src/renderer/components/compute/SharedProjectPanel.test.cjs",
+        "src/renderer/components/compute/sharedSourceScope.test.cjs"
+      ]
+    },
+    "renderer_typecheck": {
+      "exit_code": 0,
+      "command": "node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit"
+    }
+  },
+  "execution_binding": {
+    "final_tests_executed_from_clean_final_commit": false,
+    "executed_checkout_HEAD": "f5f0d306db986d3aeb474851dee2ec6aa4aea755",
+    "executed_overlay": "The final same-origin fix and test changes were applied over the intermediate private commit before running the final focused controls and typecheck.",
+    "all_2934_source_rows_raw9_and_SHA_before_after_equal": true,
+    "postcommit_all_source_rows_equal_executed_rows": true,
+    "final_commit_created_after_successful_gates": true,
+    "initial_RED_current_raw9_continuity_claim": false,
+    "initial_RED_test_evolution": "Two additional assertions and two same-origin cases were added during later causal checks. Earlier logs and actual tool objects remain separate; final tests are not retroactively attributed to the original RED."
+  },
+  "backend_refusal": {
+    "modified": false,
+    "test": "backend/tests/test_original_authenticated_unselected_denial.py",
+    "sha256": "caf19536b04b83ad8482ddd99d48f25fd83a043b9afe00964b1d84e860760470",
+    "claim": "Bytes unchanged from base; the stored-selection refusal was not broadened. This frontend gate does not claim a new backend-test execution."
+  },
+  "private_evidence_pins": {
+    "red.log": {
+      "bytes": 8936,
+      "sha256": "a85b6cd945e2e9c4ac6b6757d7b33b1fecc4f3a60b408051a77f02bfabe7ed67"
+    },
+    "green.log": {
+      "bytes": 1104,
+      "sha256": "85437cdcae352466d924655296391f7181b431523fe61aca067e0158a4a3db05"
+    },
+    "adjacent-first.log": {
+      "bytes": 4888,
+      "sha256": "64a4099abe5062b3f080ff323361b4e64d7efb3d917ff4ca439cb76082627d73"
+    },
+    "relative-path-red.log": {
+      "bytes": 1073,
+      "sha256": "c7b839a61a387a39177b4de94b783f418ec3518a7b684a58b165579b9f39f9cf"
+    },
+    "stale-inventory-red.log": {
+      "bytes": 1199,
+      "sha256": "b08cbf89d372c15f4b450b9a846584a4316e3ae9061b83a6b0ad663b7ee00af5"
+    },
+    "same-origin-red.log": {
+      "bytes": 2197,
+      "sha256": "0799c278056c41ba6bb8d1cfb76d44fe56ff2e18e0a4a632550414e1121cf061"
+    },
+    "same-origin-focused-green.log": {
+      "bytes": 4374,
+      "sha256": "e50e4d48bacb3412746840b5386579d6ebfdb9f02380ff782266544985b9409c"
+    },
+    "same-origin-renderer-typecheck.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "red-actual-tool-start.json": {
+      "bytes": 125,
+      "sha256": "22f74e369e267550b15e7e8e419a30853be695d429b5582491174180f5217917"
+    },
+    "relative-path-red-actual-tool.json": {
+      "bytes": 126,
+      "sha256": "fccb8b56a4c61ba8566770a7fde6bd6602f1c38a986d9bf4e653ebe4f762b6ca"
+    },
+    "stale-inventory-red-actual-tool.json": {
+      "bytes": 126,
+      "sha256": "677c0ed0b8aeb02d760d84383b75459a30f86cab61de2632a34a32583845aa72"
+    },
+    "same-origin-red-actual-tool.json": {
+      "bytes": 126,
+      "sha256": "1340a90dbb3c5d8c300acd8bf15086b82d68b6437c1049fb315b5b5748027d5e"
+    },
+    "same-origin-focused-actual-tool-start.json": {
+      "bytes": 130,
+      "sha256": "8f2e320ba3ba35efaedfec1ecd33d4f078a4cc3edf222e221e755f34106fb4be"
+    },
+    "same-origin-focused-actual-tool-completion.json": {
+      "bytes": 125,
+      "sha256": "3d080f034253ab5683a3919e19b0d4416f638fe56ecb27308b7b51e3aa94abf6"
+    },
+    "same-origin-typecheck-actual-tool-start.json": {
+      "bytes": 131,
+      "sha256": "8a0ba0d87c3d909c7db1744d1eb529aa1d6f30bcee1ba2e977671e2541a6323c"
+    },
+    "same-origin-typecheck-actual-tool-completion.json": {
+      "bytes": 126,
+      "sha256": "b4998ed48ed96a007f1e22d70edb35d54729d29b610a931ee9e131a14e736631"
+    },
+    "same-origin-source-before.json": {
+      "bytes": 684175,
+      "sha256": "024a3d21e03f8833c7a1b48e78595012b677337c9ddeda6e61dff1b28c7f4c13"
+    },
+    "same-origin-source-after.json": {
+      "bytes": 684175,
+      "sha256": "024a3d21e03f8833c7a1b48e78595012b677337c9ddeda6e61dff1b28c7f4c13"
+    },
+    "same-origin-final-six-file.diff": {
+      "bytes": 23472,
+      "sha256": "060e71730d21715c2e3a58583b3b7ad7020d99e4f70bdf2b986f2821c86beaf0"
+    },
+    "same-origin-minimal-product.diff": {
+      "bytes": 7609,
+      "sha256": "f5b9654861c2e4a4509b6308d34e1d5be5421e3c6f99317ea8e4ec76c8a1c77f"
+    },
+    "verification.json": {
+      "bytes": 10712,
+      "sha256": "4da6d61cc0f6a219911a373b5b400f1059c2979b1a22a18a3b7dccd86d4d23ab"
+    },
+    "same-origin-verification.json": {
+      "bytes": 8229,
+      "sha256": "29a74c9b4417d2f4276868a9829bfad069f341913c8547e22d0c390c265f6ed0"
+    }
+  },
+  "limits": {
+    "production_logic": "Actual API module, shared-panel handler and compute-store invalidation under a controlled React-hook/store facade and external host/fetch boundary doubles. This is not a real React DOM or browser execution.",
+    "whole_renderer_suite_passed": false,
+    "browser_graph_GREEN_executed": false,
+    "native_executed": false,
+    "backend_guard_relaxed": false,
+    "new_models_or_training": false,
+    "native_failure_request_identity_established": false,
+    "historical_receipts_rebound": false,
+    "action_cells_or_parent_states_promoted": false,
+    "runtime_provider_body_before_after_custody_added": false,
+    "existing_Node_localStorage_experimental_warning_retained": true,
+    "publication_checkout_modified_by_this_work": false
+  }
+}

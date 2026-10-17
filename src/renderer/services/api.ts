@@ -761,6 +761,12 @@ export function resolveApiUrl(path: string, port?: number): string {
   return `http://127.0.0.1:${effectivePort}${cleanPath}`;
 }
 
+const sharedProjectReads = new Set(['/api/compute/reservations', '/api/compute/targets',
+  '/api/compute/jobs', '/api/compute/inputs', '/api/dataset/revisions']);
+export class ProjectContextRequiredError extends Error {
+  constructor() {super('공유 프로젝트 선택을 완료한 뒤 다시 확인하세요.'); this.name = 'ProjectContextRequiredError';}
+}
+
 export async function request<T>(path: string, options: ContextRequestOptions = {}): Promise<T> {
   const {projectContext,responseType='json',...fetchOptions}=options;
   const selecting=['/api/project/current','/api/project/create','/api/project/open','/api/project/restore'].includes(path)
@@ -769,6 +775,10 @@ export async function request<T>(path: string, options: ContextRequestOptions = 
   const selected=projectContext===null||selecting?null:projectContext??boundProjectContext;
   if(selected&&!validContext(selected))throw new Error('프로젝트 요청 문맥을 확인하세요.');
   const captured=selected?{...selected}:null;
+  // Login publishes a session before project selection. These automatic reads
+  // must not fall back to the server account's previously stored selection.
+  if(transport&&!captured&&(fetchOptions.method||'GET').toUpperCase()==='GET'
+      &&sharedProjectReads.has((path.startsWith('/')?path:'/'+path).split('?')[0]))throw new ProjectContextRequiredError();
   const headers=new Headers(fetchOptions.headers);
   if(!headers.has('Content-Type'))headers.set('Content-Type','application/json');
   if(captured){
