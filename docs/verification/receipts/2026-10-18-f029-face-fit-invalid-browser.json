@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "172c6a29605fb3948fc2e54510125acf3f018515",
+  "source_dirty": false,
+  "test": "scripts/e2e/obb-face-irregular-invalid.spec.ts::face fitting refuses actual degenerate points without changing saved truth and reopens exact baseline",
+  "test_source_sha256": "99b643bf118177fea212291a67e1edb1b37eaa9eafb840586ac4b4512a0164d3",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "76f814440356afd1cfe4f1b638bb183f6c258786269799bc02f35f3a5bbd41c4",
+  "harness_sha256": "837459fc8c9f5bef5697c7bf52d65a7f7121f855d9b32da31ede61dec2eddf1e",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "bb77a9edcf64e00efc5a1d5adfd9a4201dc24a8d5186c07fdda670ad66bb2215"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "4b8238020f0c1b13b325d31b1536789394fa30cdd750decc103e4b3ca45b5891"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Only original face degenerate-point geometric refusal, no append/persistent mutation and exact saved-truth reload in headless browser. No native, model quality, whole-CI, release or parent acceptance inferred."
+}

@@ -10767,7 +10767,31 @@
               ]
             },
             "invalid": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S4-07",
+                  "source_sha": "172c6a29605fb3948fc2e54510125acf3f018515",
+                  "kind": "click",
+                  "action": "한 면 기준 · 회전 박스 맞추기 · 정답 표에 추가",
+                  "expected": "Original geometric fitter refuses actual degenerate face source points with exact owning error while preserving saved truth and originals.",
+                  "observed": "Trusted original SVG clicks produced first two actual source points exactly equal and zero edge length. The actual owning fit-boxPOST422 returned exact detail Fitting edge must have positive length within10s; owning alert displayed it, no polygon was returned and append stayed disabled. Exactly one geometricPOST and no persistent mutation occurred. Saved3-row train1/val1/test1 truth, original full manifestGET200/reload and source/project/prepared raw9 and bodies stayed exact through natural backend shutdown. One exact owning Chrome422 diagnostic was expected; unexpected errors0.",
+                  "reviewer": "Codex Root reviewed exact source/contract before authorized clean headless run; report, full responses, independent geometry, all4PNG and source/provider/protected custody read back. Independent acceptance and parent/human quality remain pending.",
+                  "test": "scripts/e2e/obb-face-irregular-invalid.spec.ts::face fitting refuses actual degenerate points without changing saved truth and reopens exact baseline",
+                  "receipt": "2026-10-18-f029-face-fit-invalid-browser.json",
+                  "receipt_sha256": "2c97138a44d6b8e448f72ee3abbabcd9d5fff723dec1b359b0e1e049f8bd1f16",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "bb77a9edcf64e00efc5a1d5adfd9a4201dc24a8d5186c07fdda670ad66bb2215"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "4b8238020f0c1b13b325d31b1536789394fa30cdd750decc103e4b3ca45b5891"
+                    }
+                  ]
+                }
+              ]
             },
             "error": {
               "state": "pending"
@@ -10931,7 +10955,31 @@
               ]
             },
             "invalid": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S4-07",
+                  "source_sha": "172c6a29605fb3948fc2e54510125acf3f018515",
+                  "kind": "click",
+                  "action": "불규칙 외곽 · 회전 박스 맞추기 · 정답 표에 추가",
+                  "expected": "Original geometric fitter refuses actual degenerate irregular source points with exact owning error while preserving saved truth and originals.",
+                  "observed": "Trusted original SVG clicks produced three distinct actual source points exactly horizontal with independently computed zero triangle area. The actual owning fit-boxPOST422 returned exact detail Polygon has no positive area within10s; owning alert displayed it, no polygon was returned and append stayed disabled. Exactly one geometricPOST and no persistent mutation occurred. Saved3-row train1/val1/test1 truth, original full manifestGET200/reload and source/project/prepared raw9 and bodies stayed exact through natural backend shutdown. One exact owning Chrome422 diagnostic was expected; unexpected errors0.",
+                  "reviewer": "Codex Root reviewed exact source/contract before authorized clean headless run; report, full responses, independent geometry, all4PNG and source/provider/protected custody read back. Independent acceptance and parent/human quality remain pending.",
+                  "test": "scripts/e2e/obb-face-irregular-invalid.spec.ts::irregular fitting refuses actual degenerate points without changing saved truth and reopens exact baseline",
+                  "receipt": "2026-10-18-f029-irregular-fit-invalid-browser.json",
+                  "receipt_sha256": "fac6e6ea9e5b18492f3da5cbae650f473d357b1ee6064a3f8775a7a2460d9a60",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "2e4d6625a7acdc3b8b3cacaf0b3cdb1e64c3a20057c68edb41def276a56e61d9"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "47c7efcfce61664fb21841d1c872c48984a75a51ef6b7d6db6177e502a2c313d"
+                    }
+                  ]
+                }
+              ]
             },
             "error": {
               "state": "pending"
