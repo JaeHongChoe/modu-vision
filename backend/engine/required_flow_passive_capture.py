@@ -389,7 +389,8 @@ def verify_bound_functions(functions, source_root, source_pins):
         ordinary = code.co_filename in compiled and any(candidate == code for candidate in compiled[code.co_filename])
         if (spec.role == 'original_required_execute'
                 and (source_pins == CURRENT_PRODUCER_SOURCE_PINS
-                     or source_pins == COMBINED_PRODUCER_SOURCE_PINS)):
+                     or source_pins == COMBINED_PRODUCER_SOURCE_PINS
+                     or source_pins == PARAMETERLESS_ROTATION_PRODUCER_SOURCE_PINS)):
             # Current execute must remain the registered observer even when an
             # unwrapped original engine code object is otherwise source-pinned.
             relative = 'backend/engine/original_owned_flow_execution_request.py'
@@ -454,6 +455,11 @@ CURRENT_PRODUCER_SOURCE_PINS = types.MappingProxyType({name: types.MappingProxyT
 COMBINED_PRODUCER_SOURCE_PINS = types.MappingProxyType({name: types.MappingProxyType(dict(row))
     for name, row in {**CURRENT_PRODUCER_SOURCE_PINS, 'backend/engine/flowchart_engine.py': {
         'size': 149647, 'sha256': '958fb9f1d1047d351615f435b3ec16cb4dd5a5d21415ce886948b822f9bf7cba'}}.items()})
+# Separate exact successor: rotation's parameterless-adapter input-device fallback.
+# The observed _predict/forward functions and the other five producer sources stay fixed.
+PARAMETERLESS_ROTATION_PRODUCER_SOURCE_PINS = types.MappingProxyType({name: types.MappingProxyType(dict(row))
+    for name, row in {**COMBINED_PRODUCER_SOURCE_PINS, 'backend/engine/rotation.py': {
+        'size': 20800, 'sha256': '6fd1d70540d08263f46d1165dddd3e0ca1071abf2c1723bf2aa7572e9bd82899'}}.items()})
 REGISTERED_ENGINE_OBSERVER_PIN = types.MappingProxyType({'size': 40214,
     'sha256': '9102a6126774d9d68b6097d844dcc5c8984b09fe0ab14b97fd06ce7d4db80fe3'})
 
@@ -744,6 +750,10 @@ RETAINED_EXECUTION_PROFILE_SHA='3e0ff9bf6a23791b64b4decd1d51fdbc2af8bb5d4d9ea37b
 
 # These profile SHA values use the unchanged original default-ASCII model_dump
 # codec. Current ID43/image stay stable across fresh private build namespaces.
+PARAMETERLESS_ROTATION_CAPTURE_COHORT = types.MappingProxyType({
+    'profile_id': 'server42-l40s-2-native43-20261016-01',
+    'execution_profile_sha256': '6f36f621864d3c6b327295f684118434c6c1d18ddee8b21f30071527b0e7ea49',
+    'source_pins': PARAMETERLESS_ROTATION_PRODUCER_SOURCE_PINS})
 RETAINED_CAPTURE_COHORTS = (
     types.MappingProxyType({'profile_id': RETAINED_PROFILE_ID,
         'execution_profile_sha256': RETAINED_EXECUTION_PROFILE_SHA,
@@ -754,6 +764,7 @@ RETAINED_CAPTURE_COHORTS = (
     types.MappingProxyType({'profile_id': 'server42-l40s-2-native43-20261016-01',
         'execution_profile_sha256': '6f36f621864d3c6b327295f684118434c6c1d18ddee8b21f30071527b0e7ea49',
         'source_pins': COMBINED_PRODUCER_SOURCE_PINS}),
+    PARAMETERLESS_ROTATION_CAPTURE_COHORT,
 )
 
 
