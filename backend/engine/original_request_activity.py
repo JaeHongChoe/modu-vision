@@ -397,6 +397,35 @@ class OriginalRequestActivityObserver:
                 'can_release_launch_lease': False,
             }
 
+    def health_failure_diagnostic(self, original_scope):
+        """Read-only reason hashes; no strings, reset, or quiescence authority."""
+        if (type(original_scope) is not dict
+                or any(type(original_scope.get(key)) is not str or original_scope[key] != value
+                    for key, value in (('type', 'http'), ('method', 'GET'), ('path', '/health')))):
+            return None
+        condition = self._binding[2] if self._binding is not None else self._lock
+        with condition, self._lock:
+            original = self.health_diagnostic(original_scope)
+            reasons = self._failures
+            if (original is None or type(self._uncertain) is not bool
+                    or type(reasons) is not list or len(reasons) > 32):
+                return None
+            hashes = []
+            for reason in reasons:
+                if type(reason) is not str or not 1 <= len(reason) <= 256:
+                    return None
+                try: hashes.append(hashlib.sha256(reason.encode('utf-8')).hexdigest())
+                except UnicodeEncodeError: return None
+            if len(set(hashes)) != len(hashes) or self._uncertain != bool(hashes): return None
+            return {
+                'schema': 'modu-vision.original-owned-health-failure-diagnostic/v1',
+                'sequence': original['sequence'], 'request_count': original['request_count'],
+                'diagnostic_request_identity': original['diagnostic_request_identity'],
+                'uncertain': self._uncertain, 'failure_count': len(hashes), 'reason_sha256': hashes,
+                'whole_writer_coverage': False, 'process_tree_exit_verified': False,
+                'can_release_launch_lease': False,
+            }
+
     def _snapshot_locked(self):
         with self._lock:
             if self._admission is None or not self._original(self._admission):self.poison('original_observer_unavailable')

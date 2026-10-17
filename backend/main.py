@@ -575,6 +575,11 @@ def _admitted_create_app(project_dir: Optional[str] = None, shared_auth_dir: Opt
                 and secrets.compare_digest(request.headers.get('x-vision-token', '').encode('utf-8'), health_token.encode('utf-8'))):
             diagnostic = health_observer.health_diagnostic(request.scope)
             if diagnostic is not None: result['owned_request_diagnostic'] = diagnostic
+            if diagnostic is not None:
+                failures = health_observer.health_failure_diagnostic(request.scope)
+                if (failures is not None
+                        and failures['diagnostic_request_identity'] == diagnostic['diagnostic_request_identity']):
+                    result['owned_request_failure_diagnostic'] = failures
         return result
 
     # Error catalog endpoints

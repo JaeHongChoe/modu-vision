@@ -1,0 +1,454 @@
+{
+  "aggregate_interpretation": "One combined cohort produced55PASS/1fixtureFAIL. Only its final fixture was corrected and executed separately, ending1PASS on the final test-only checkpoint. This is not one56PASS run or a full suite result. All three fixture-failure attempts and the separate original feature RED remain retained.",
+  "base_source_sha": "60abf066db049d81101f5b4dd50904cf09aa7c3f",
+  "bounds": {
+    "hash_encoding": "lowercase SHA256 of exact UTF8 reason",
+    "input_UTF8_bytes_max_per_reason": 1024,
+    "input_exact_string_characters_max": 256,
+    "missing_invalid_or_inconsistent_projection": "None; omit only new sibling; never reset or poison during projection",
+    "ordered_unique_reason_hashes_max": 32,
+    "raw_reasons_headers_tokens_paths_serialized_in_new_packet": false
+  },
+  "can_release_launch_lease": false,
+  "changed_files": {
+    "backend/engine/original_request_activity.py": {
+      "bytes": 31632,
+      "sha256": "62f9e1171b9627a5a640d48ec652b331666baa799ec31be2c07140c542c9d345"
+    },
+    "backend/main.py": {
+      "bytes": 44856,
+      "sha256": "8d9cb8a191cf9f0a80c4f5fec5fa959eba298f950be1fe5f287998f1d48c26ec"
+    },
+    "backend/tests/test_owned_health_failure_diagnostic.py": {
+      "bytes": 8328,
+      "sha256": "acc2fe1024178eafa61f40c87ccbbeca14ff06949dfc5669cfb04c946407d7d2"
+    }
+  },
+  "final_private_source_sha": "b06de9ba8f198fe0977a20e52f457bb5445cc1a7",
+  "final_source_dirty": false,
+  "final_source_files": 2891,
+  "known_limits": [
+    "Actual original pytest subprocesses ran source-level factory/ASGI tests; no compiled/native application, model/training/inference subprocess, GPU or business-store execution.",
+    "Real ASGI body-send failure control and ordinary health requests use original admission/observer/middleware. Controlled poison/storage-format cases and collector socket callbacks are disclosed synthetic contract controls, not native reproductions.",
+    "Public-config refusal is a deliberate uncovered source negative control. No current production renderer/main caller was found; it is not attributed to Root06.",
+    "Root06 first actual failure reason remains unknown. No current failed lease health read, UI, reopen, recovery, retry or cleanup occurred.",
+    "No whole writer coverage, process-tree/launch-lease release, model quality, release, parent or original native acceptance is granted."
+  ],
+  "native_startup_or_Root06_cause_proven": false,
+  "new_packet_schema": "modu-vision.original-owned-health-failure-diagnostic/v1",
+  "parent_accepted": false,
+  "preserved_code": {
+    "all_existing_observer_methods_byte_identical_count": 21,
+    "all_other_tracked_source_files_and_git_modes_unchanged": true,
+    "final_followups_changed_only_last_new_negative_test": true,
+    "original_collector_sha256": "a051b93f37ccac81ecedf7327f71cac8bbd5f09d32b34fa671413b5b77f3e338",
+    "original_five_helpers_byte_unchanged": true,
+    "original_health_v1_validator_and_HTTP_transport_deadline_cleanup_unchanged": true,
+    "original_observer_method_source_pins": {
+      "__copy__": "9aea44ae87b2c99aaa9530317aa084ddd520cd1e92ef8b1c0f889e73e73b7d13",
+      "__deepcopy__": "8ff6542e70175a3dac811086b52234d66687b65173dcc649d7b43780c8bc6727",
+      "__init__": "205ae3510f49eb29b37886b3a6d17b0700bb1d3f47ea79cd755cccf3d4e57712",
+      "__reduce_ex__": "a51c7b7726baed038dc44a3da0e39aaa9d2d74f018452321e05af5429a778a26",
+      "_frame": "d8a551be5bf3648ac9e6b3357b7e6c8da5cc89e574b1a8c01b0696a3c7b93a1b",
+      "_original": "dbd345a7c1c0e7d4cad95ec1a5cbe0560813c415b94800173d186c6e9446f738",
+      "_room_for_original_event": "a8018ce4ca94f8b97442a68a371fa78a10d3a9121ab8a31d790afee9a55d804e",
+      "_row": "6f3ce41761a457bb38a57f75799d89d8382299770a064407deec9cccb3f230a9",
+      "_settled_history_original": "4888e0b06b26fb728fc84f562fa2cb89469dc751c78252feab1e8600d921eaa6",
+      "_settled_payload": "2f9c378f2e4a221e49f23f89a3034e45b8da0daa1c28e366b7fd11c7dad69273",
+      "_snapshot_locked": "949f4798ba08853210353a7d11ea6e4bcbd61897d604511da94c7445c01abbbe",
+      "_valid": "9c3b8158d78f926770dd850eae3080fa06b250be74b0ba389c5b897cd208fe37",
+      "bind": "eb1c78f7d89928fa2cd092b683e83f60e2c4875f58aa2c07e71f2384eb97650f",
+      "bind_middleware": "b7bd3d68f1cb96c564b0d72fa8872b32cf562a832d43caddda0f276950c77af8",
+      "bind_telemetry_sender": "152e7aafe6c9b12df997fa6aa672604a2e483422eec993137447257ed0179e31",
+      "capture": "afed316af093d54bfbdf78e0dee933a57864fdbb75895be815329c3db72026ae",
+      "event": "3a8a78955a96bd97ad14cc5257f172c071e19883e6c9b8905c89c7a5fa4e5b43",
+      "health_diagnostic": "b98bb42eeeec06798c6c404ad472108b44ac00a7a5772e30c005d053aafeb6e4",
+      "original_request_settled": "20b766eae0ca3d37e1b964bf84fab9f3bf672ac2ede19e01684cba959a4ed283",
+      "poison": "fa825b05fd67cb8c9a9952898b16f088c23072fdd0dd51a1ca92ec5993adcea6",
+      "snapshot": "15b86f81601c0c48facf9c705eaa3b962b9b01550f3a9736aa11086d46449f23"
+    },
+    "previous_55_passed_tests_not_rerun": true
+  },
+  "private_collector_v2": {
+    "bytes": 12603,
+    "controls_sha256": "50c35a52061ff4a6ea51acbe17bb55b87dadce3f86f0302944d547daf6aff1db",
+    "native_collector_actual_execution": false,
+    "new_sibling_strict_validation": true,
+    "new_trace_schema": "modu-vision.compiled-original-health-trace/v2",
+    "original15s_health_action_and_absolute_deadline": true,
+    "original_owned_health_v1_validator_byte_unchanged": true,
+    "same_single_original_HTTP_response": true,
+    "sha256": "29fcc4af12110b300b4440875bbabcb23259861b1ba8d915c530acedc90828d4",
+    "tests_are_synthetic_metadata_and_socket_callbacks": true
+  },
+  "process_tree_exit_verified": false,
+  "product_change": "Separate authenticated top-level bounded failure-hash packet for the same original active health scope. Existing original-owned health/v1 remains unchanged.",
+  "publication_state": "Product changes and this derivative receipt are included in the containing public source checkpoint; measured private source identities above remain unchanged.",
+  "quality_approved": false,
+  "runs": [
+    {
+      "all_isolation_checks_passed": true,
+      "exit_code": 1,
+      "id": "red",
+      "interpretation": "Baseline feature RED: genuine originalHTTP200 has existing v1 but lacks new sibling.",
+      "isolation_rows": 5,
+      "original_pytest_process": {
+        "deadline_expired": false,
+        "natural_exit": true,
+        "reaped": true,
+        "signals_sent": false
+      },
+      "private_inputs_raw9_and_bodies_before_after_equal": true,
+      "raw_pins": {
+        "isolation-before.json": {
+          "bytes": 6713,
+          "sha256": "730d498eaba006cfc1ca491d379da2b049a9e7a001c5e273067b5f036f2577e3"
+        },
+        "isolation-final.json": {
+          "bytes": 21470,
+          "sha256": "e58d15af53bb6c425388770b4dda088afff1526e55088b1a785cf6a9d93c9cf3"
+        },
+        "junit.xml": {
+          "bytes": 1240,
+          "sha256": "8093032497ff76a187daedfa89b86546980699ee273967b677bdc202207d0057"
+        },
+        "launch.json": {
+          "bytes": 3047,
+          "sha256": "b4abd856a747ff1b45a71995794c196679ad54fb64db338269fa9c1683e296b6"
+        },
+        "original-popen.json": {
+          "bytes": 55,
+          "sha256": "d8e2e3acb2e31dccdcdff01d63de2054b88ceb8e6463a0b10a74d1a6ca6613e7"
+        },
+        "private-inputs-after.json": {
+          "bytes": 5143,
+          "sha256": "051d6a57faca5a6e55b87ea293dc5572d456b97b705828b0c26946fd045362a9"
+        },
+        "private-inputs-before.json": {
+          "bytes": 5143,
+          "sha256": "051d6a57faca5a6e55b87ea293dc5572d456b97b705828b0c26946fd045362a9"
+        },
+        "pytest.log": {
+          "bytes": 2009,
+          "sha256": "71fe29527a9884ecf6e93dff0bf0a00a257c8143c2f72dc7f9860b74f873fd63"
+        },
+        "result.json": {
+          "bytes": 488,
+          "sha256": "bd57e270c16e459f9cfa995533b6b35f8d94e53984349e1f0df44bab79f22b3c"
+        },
+        "source-after.json": {
+          "bytes": 1037701,
+          "sha256": "3c3820b9be963c8e253ea7d9e61c64872e97524d76b77c63680f922855a2a1b1"
+        },
+        "source-before.json": {
+          "bytes": 1037701,
+          "sha256": "3c3820b9be963c8e253ea7d9e61c64872e97524d76b77c63680f922855a2a1b1"
+        }
+      },
+      "result": {
+        "errors": 0,
+        "failures": 1,
+        "skipped": 0,
+        "tests": 1
+      },
+      "retained_wrapper_seconds": 8.142757666064426,
+      "separately_guarded_private_inputs": 12,
+      "source_dirty": false,
+      "source_files_guarded": 2890,
+      "source_sha": "60abf066db049d81101f5b4dd50904cf09aa7c3f",
+      "tracked_source_raw9_and_bodies_before_after_equal": true
+    },
+    {
+      "all_isolation_checks_passed": true,
+      "exit_code": 1,
+      "id": "green",
+      "interpretation": "Combined reviewed slice;55passed and final fixture failed expected404/actual401 before intended projection assertion.",
+      "isolation_rows": 115,
+      "original_pytest_process": {
+        "deadline_expired": false,
+        "natural_exit": true,
+        "reaped": true,
+        "signals_sent": false
+      },
+      "private_inputs_raw9_and_bodies_before_after_equal": true,
+      "raw_pins": {
+        "isolation-before.json": {
+          "bytes": 6745,
+          "sha256": "b8ed57fdc88f4217ff1b2ba279f68dab9167b6a53411fc1497b2ad8f7d23eb29"
+        },
+        "isolation-final.json": {
+          "bytes": 558869,
+          "sha256": "742fd35d344b2b400b4860f39cd3684ee7e993d06f19b1cd9cb1109be2cccb39"
+        },
+        "junit.xml": {
+          "bytes": 12694,
+          "sha256": "11dfe7cca40c1429a512f3b1090a8986512ec7a4480c52deb60ff22df0c51770"
+        },
+        "launch.json": {
+          "bytes": 3085,
+          "sha256": "88e067a28e02406e384d47a7b43a81bab49ba34ab7237a974f7d72620b59e08d"
+        },
+        "original-popen.json": {
+          "bytes": 55,
+          "sha256": "5698b9eec028958b08d2aa15b836425b4c5b5b5b15b36530918e2aa2b1fbd8b3"
+        },
+        "private-inputs-after.json": {
+          "bytes": 5143,
+          "sha256": "051d6a57faca5a6e55b87ea293dc5572d456b97b705828b0c26946fd045362a9"
+        },
+        "private-inputs-before.json": {
+          "bytes": 5143,
+          "sha256": "051d6a57faca5a6e55b87ea293dc5572d456b97b705828b0c26946fd045362a9"
+        },
+        "pytest.log": {
+          "bytes": 1517,
+          "sha256": "ac17c1420450eb73e2338e18be4d4f327c6d67ec41297b74b50b60fd7c6b598d"
+        },
+        "result.json": {
+          "bytes": 493,
+          "sha256": "b66d3f9dad86132e14ec054115afa2a41a82db19a5bbb5be25177451a48ba089"
+        },
+        "source-after.json": {
+          "bytes": 1038059,
+          "sha256": "0f6dee6119b23ade36511b8b302c938b368d2bb8131958e97bc288ca7ead7d68"
+        },
+        "source-before.json": {
+          "bytes": 1038059,
+          "sha256": "0f6dee6119b23ade36511b8b302c938b368d2bb8131958e97bc288ca7ead7d68"
+        }
+      },
+      "result": {
+        "errors": 0,
+        "failures": 1,
+        "skipped": 0,
+        "tests": 56
+      },
+      "retained_wrapper_seconds": 19.710250542033464,
+      "separately_guarded_private_inputs": 12,
+      "source_dirty": false,
+      "source_files_guarded": 2891,
+      "source_sha": "1ffd50a58b2d7b6a0f4f7b174372014249194407",
+      "tracked_source_raw9_and_bodies_before_after_equal": true
+    },
+    {
+      "all_isolation_checks_passed": true,
+      "exit_code": 1,
+      "id": "corrected",
+      "interpretation": "Single final control: real public-config200, then wrong fixture active0 expectation failed against actual1.",
+      "isolation_rows": 5,
+      "original_pytest_process": {
+        "deadline_expired": false,
+        "natural_exit": true,
+        "reaped": true,
+        "signals_sent": false
+      },
+      "private_inputs_raw9_and_bodies_before_after_equal": true,
+      "raw_pins": {
+        "isolation-before.json": {
+          "bytes": 6809,
+          "sha256": "bc554ab8d813e79918812e1332bfbf9ad9aa96118ac355535bff0869279cf21a"
+        },
+        "isolation-final.json": {
+          "bytes": 21782,
+          "sha256": "6cb2411104cda6e6c921039cc017fb5d48226cc4e5d57b5cef9ed97bf5b4f7e7"
+        },
+        "junit.xml": {
+          "bytes": 1667,
+          "sha256": "5acf9f36d36a6666b33644fb811ac06ffd0cd724ff217dda13fbf03ddb018979"
+        },
+        "launch.json": {
+          "bytes": 2966,
+          "sha256": "aa9561eb8051fd0695b5ad7aa32bdcb145f6c29fa5b8c06d145913ae8ec5785b"
+        },
+        "original-popen.json": {
+          "bytes": 54,
+          "sha256": "243bded02b071c40b7ecf18eb27ffb44cd47a4a637a83f10199b34555dadc95f"
+        },
+        "private-inputs-after.json": {
+          "bytes": 5153,
+          "sha256": "8420fae7414274b7a4a51b4bc2f4319e545d1d389441bf6f72b306ec5217b785"
+        },
+        "private-inputs-before.json": {
+          "bytes": 5153,
+          "sha256": "8420fae7414274b7a4a51b4bc2f4319e545d1d389441bf6f72b306ec5217b785"
+        },
+        "pytest.log": {
+          "bytes": 1613,
+          "sha256": "dbbc7898653d767dea8b468bbfb0baa18f08685824a442be95e87d729c429aed"
+        },
+        "result.json": {
+          "bytes": 493,
+          "sha256": "dbce86a3b5ecb5448818c9092ded9f9fa34e45e78cb274c918dc229aff873e6e"
+        },
+        "source-after.json": {
+          "bytes": 1038059,
+          "sha256": "1b6651ba39f27baf7eec51205b8724d32678a8a367486039b2e010b3bd000c35"
+        },
+        "source-before.json": {
+          "bytes": 1038059,
+          "sha256": "1b6651ba39f27baf7eec51205b8724d32678a8a367486039b2e010b3bd000c35"
+        }
+      },
+      "result": {
+        "errors": 0,
+        "failures": 1,
+        "skipped": 0,
+        "tests": 1
+      },
+      "retained_wrapper_seconds": 6.172358291922137,
+      "separately_guarded_private_inputs": 12,
+      "source_dirty": false,
+      "source_files_guarded": 2891,
+      "source_sha": "94d805c44070de9f4118ee8d9b5ef45dae0ef29e",
+      "tracked_source_raw9_and_bodies_before_after_equal": true
+    },
+    {
+      "all_isolation_checks_passed": true,
+      "exit_code": 1,
+      "id": "final",
+      "interpretation": "Single final control: actual active1/uncovered passed; incorrect singleton-reason fixture expectation failed against full ordered vector.",
+      "isolation_rows": 5,
+      "original_pytest_process": {
+        "deadline_expired": false,
+        "natural_exit": true,
+        "reaped": true,
+        "signals_sent": false
+      },
+      "private_inputs_raw9_and_bodies_before_after_equal": true,
+      "raw_pins": {
+        "isolation-before.json": {
+          "bytes": 6745,
+          "sha256": "7245756dd762c38611f3ca09acd2a6cec989856e1c7fee90c3ca2c8b997d5664"
+        },
+        "isolation-final.json": {
+          "bytes": 21574,
+          "sha256": "655c22c01d3077453774bce2186b3110b7eae4b7b69612b9cf39b05243be0681"
+        },
+        "junit.xml": {
+          "bytes": 1950,
+          "sha256": "fb04444c30cb88f5dd5f18faa51e07528f0eddca164ce65e2b6718ba31ce4798"
+        },
+        "launch.json": {
+          "bytes": 2946,
+          "sha256": "c526b7b56f11e89a8b596e45d164f8e501b2616ad1dcd2a9ad0283aee03ebfdc"
+        },
+        "original-popen.json": {
+          "bytes": 55,
+          "sha256": "5fff326a5e22300cfa1ec1954547f86df1ce00ac57b0b8600d1ebc4cac4f0e94"
+        },
+        "private-inputs-after.json": {
+          "bytes": 5151,
+          "sha256": "767a7919420ad73ccf61d5497111f42103e428026c7e91bf6a29d048008fc094"
+        },
+        "private-inputs-before.json": {
+          "bytes": 5151,
+          "sha256": "767a7919420ad73ccf61d5497111f42103e428026c7e91bf6a29d048008fc094"
+        },
+        "pytest.log": {
+          "bytes": 1803,
+          "sha256": "973e15124360cded9061060ad4f173be3585e0b2fa27caccc7698240c65ef45e"
+        },
+        "result.json": {
+          "bytes": 490,
+          "sha256": "970ba41a0d3c655bc5892445349be177150721883b32d01107675fa0b58a08d7"
+        },
+        "source-after.json": {
+          "bytes": 1038059,
+          "sha256": "1f63e42bea39673213ee7eb23b9e11f4d0ea8fab417c7860b54804d9caaa9a80"
+        },
+        "source-before.json": {
+          "bytes": 1038059,
+          "sha256": "1f63e42bea39673213ee7eb23b9e11f4d0ea8fab417c7860b54804d9caaa9a80"
+        }
+      },
+      "result": {
+        "errors": 0,
+        "failures": 1,
+        "skipped": 0,
+        "tests": 1
+      },
+      "retained_wrapper_seconds": 6.076872042147443,
+      "separately_guarded_private_inputs": 12,
+      "source_dirty": false,
+      "source_files_guarded": 2891,
+      "source_sha": "3a7d82c90a86ebc43d3d5bacce46dd1eabb5eafd",
+      "tracked_source_raw9_and_bodies_before_after_equal": true
+    },
+    {
+      "all_isolation_checks_passed": true,
+      "exit_code": 0,
+      "id": "vector",
+      "interpretation": "Single final control passed with actual nonempty ordered bounded vector, full hash/count/order conservation, strongowner1 and unchanged refusal/falseauthority.",
+      "isolation_rows": 5,
+      "original_pytest_process": {
+        "deadline_expired": false,
+        "natural_exit": true,
+        "reaped": true,
+        "signals_sent": false
+      },
+      "private_inputs_raw9_and_bodies_before_after_equal": true,
+      "raw_pins": {
+        "isolation-before.json": {
+          "bytes": 6761,
+          "sha256": "027ed878995d7e1b3d3e8bd1af841564a59d77a4a0d36941922e28f7cfea81bb"
+        },
+        "isolation-final.json": {
+          "bytes": 21626,
+          "sha256": "3ab5121427c69b4c2b863d2e37796912d23b8687c794492f181d921cb7725a49"
+        },
+        "junit.xml": {
+          "bytes": 404,
+          "sha256": "29d65c632344868a5934d1155c7c64843f9d16bb0cf23f17f99d05406976b9d6"
+        },
+        "launch.json": {
+          "bytes": 2951,
+          "sha256": "5ebf228ac2fe1c5872aa58bde6a3e4808b3807bbb80bc5b0649f94bf5e6b5f18"
+        },
+        "original-popen.json": {
+          "bytes": 55,
+          "sha256": "0cf8edb22d1f1219968d2a18bd0a744c1826ed82ee2caa6fa27d8539d0124610"
+        },
+        "private-inputs-after.json": {
+          "bytes": 5152,
+          "sha256": "b97f938f7b72621acfc31414653c829151ec62aad95a1f8f75b339463a8c3d62"
+        },
+        "private-inputs-before.json": {
+          "bytes": 5152,
+          "sha256": "b97f938f7b72621acfc31414653c829151ec62aad95a1f8f75b339463a8c3d62"
+        },
+        "pytest.log": {
+          "bytes": 273,
+          "sha256": "dd25430e8056f1d223aadf42522471ca0233fff1dcd34638cabbe200d7972632"
+        },
+        "result.json": {
+          "bytes": 491,
+          "sha256": "277e2bd2fe2c9a806b3bc08fab813d4c17fea260c13190a8db71114cbb20e9be"
+        },
+        "source-after.json": {
+          "bytes": 1038059,
+          "sha256": "b36745253366b6ec20619a3f759aebbbe0b661db39a13479f23bbd94a0f6a1c7"
+        },
+        "source-before.json": {
+          "bytes": 1038059,
+          "sha256": "b36745253366b6ec20619a3f759aebbbe0b661db39a13479f23bbd94a0f6a1c7"
+        }
+      },
+      "result": {
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0,
+        "tests": 1
+      },
+      "retained_wrapper_seconds": 5.779934333870187,
+      "separately_guarded_private_inputs": 12,
+      "source_dirty": false,
+      "source_files_guarded": 2891,
+      "source_sha": "b06de9ba8f198fe0977a20e52f457bb5445cc1a7",
+      "tracked_source_raw9_and_bodies_before_after_equal": true
+    }
+  ],
+  "schema": "modu-vision.owned-health-failure-hashes-source-verification/v1",
+  "scope_identity_and_time": "Each packet validates its own live original health request. Siblings require equal original request identity; sequence/request counters may advance between their separate lock acquisitions. No atomic two-packet snapshot claim.",
+  "status": "bounded_source_verification_across_explicit_cohorts",
+  "whole_writer_coverage": false
+}
