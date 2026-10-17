@@ -157,5 +157,5 @@ async function exercise(mode: 'empty' | 'cancel', {page, request, renderer, work
   }
 }
 
-test('classification folder import accepts an empty source with zero label and partition counts after reload', async fixtures => exercise('empty', fixtures));
-test('classification null folder selection preserves owning source label and partition counts after reload', async fixtures => exercise('cancel', fixtures));
+test('classification folder import accepts an empty source with zero label and partition counts after reload', async ({page, request, renderer, workspace, evidence}) => exercise('empty', {page, request, renderer, workspace, evidence}));
+test('classification null folder selection preserves owning source label and partition counts after reload', async ({page, request, renderer, workspace, evidence}) => exercise('cancel', {page, request, renderer, workspace, evidence}));
