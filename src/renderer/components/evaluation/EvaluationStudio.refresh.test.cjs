@@ -14,7 +14,8 @@ function fixture({commonCohort=false}={}){
   useMemo(compute){index++;return compute();},
   useEffect(effect,deps){const i=index++;if(JSON.stringify(slots[i]?.deps)!==JSON.stringify(deps)){const previous=slots[i];slots[i]={deps};effects.push(()=>{previous?.cleanup?.();slots[i].cleanup=effect();});}},
  };
- const project={language:'ko',task:'classification',projectDir:'/project',project:{id:'project-1',active_labelset_id:'default'},setStep(){}};
+ const project={language:'ko',task:'classification',projectDir:'/project',isProjectBusy:false,
+  project:{id:'project-1',project_dir:'/project',task:'classification',source_dataset_dir:'/source',active_labelset_id:'default'},setStep(){}};
  const dataset={folderPath:'/source',datasetKey:'/source\0classification',isLoading:false,importError:null};
  const compute={selectedProfileId:null,profiles:[],transportRevision:1,isLoaded:true};
  const training={status:'idle',jobId:null,warmStartParentJobId:null};

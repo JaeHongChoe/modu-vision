@@ -12,7 +12,20 @@ test('actual completed OCR action invokes overlay callback and preserves exact d
  const oldStorage=global.localStorage,oldInterval=global.setInterval;global.localStorage=storage;global.setInterval=()=>0;try{const render=()=>{cursor=0;const tree=m.TaskCenter({initialOpen:true,onNavigate:async step=>calls.push(['navigate',step])});effects.splice(0).forEach(fn=>fn());return tree;};render();await new Promise(setImmediate);const tree=render();const nodes=[];const walk=n=>{if(n&&typeof n==='object'){nodes.push(n);n.children?.flat().forEach(walk);}};walk(tree);const familySelector=nodes.find(n=>n.props['aria-label']==='작업 모델 종류');assert.equal(familySelector.children.flat().filter(n=>n?.type==='option').length,11);await nodes.find(n=>n.type==='button'&&n.children.includes('완료 후보 평가로 이동')).props.onClick();assert.deepEqual(calls,[['step',3],['navigate',3]]);const api=load('taskHandoff.ts');assert.equal(api.readTaskHandoff(storage,state,'ocr').jobId,'exact');}finally{global.localStorage=oldStorage;global.setInterval=oldInterval;}
 });
 
-test('basic handoff loads the requested evaluation job instead of transient newest completed job',async()=>{const calls=[];const training={isCurrentData:true,status:'completed',jobId:'newest'};const m=load('../../stores/useEvaluationStore.ts',{'./useTrainingStore':{useTrainingStore:{getState:()=>training}},'../services/api':{api:{evaluation:{getOverkillUnderkill:async()=>({}),getResults:async(id)=>{calls.push(id);return{job_id:id,metrics:{accuracy:1},test_predictions:[]};}}},getApiBaseUrl:()=>''}});m.useEvaluationStore.setState({allowLatestRecovery:false});await m.useEvaluationStore.getState().loadEvaluation('exact',{folderPath:'/source',task:'classification'});assert.deepEqual(calls,['exact']);assert.equal(m.useEvaluationStore.getState().jobId,'exact');});
+test('basic handoff loads the requested evaluation job instead of transient newest completed job',async()=>{
+ const calls=[],training={isCurrentData:true,status:'completed',jobId:'newest'};
+ const project={id:'p',project_dir:'/project',task:'classification',source_dataset_dir:'/source',active_labelset_id:'default'};
+ const m=load('../../stores/useEvaluationStore.ts',{
+  './useTrainingStore':{useTrainingStore:{getState:()=>training}},
+  './useProjectStore':{useProjectStore:{getState:()=>({project,projectDir:'/project',task:'classification',isProjectBusy:false})}},
+  './useDatasetStore':{useDatasetStore:{getState:()=>({hasSelectedFolder:true,folderPath:'/source',datasetKey:'/source\0classification',isLoading:false,importError:null})}},
+  '../services/api':{getApiPersistenceIdentity:()=> 'local',getProjectContextGeneration:()=>0,getProjectContext:()=>null,
+   api:{evaluation:{getOverkillUnderkill:async()=>({}),getResults:async(id)=>{calls.push(id);return{job_id:id,metrics:{accuracy:1},test_predictions:[]};}}}}
+ });
+ m.useEvaluationStore.setState({allowLatestRecovery:false});
+ await m.useEvaluationStore.getState().loadEvaluation('exact',{folderPath:'/source',task:'classification'});
+ assert.deepEqual(calls,['exact']);assert.equal(m.useEvaluationStore.getState().jobId,'exact');
+});
 
 function hookHarness(){let cursor=0;const slots=[],effects=[];const react={useState:initial=>{const i=cursor++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return[slots[i],v=>slots[i]=typeof v==='function'?v(slots[i]):v];},useRef:initial=>{const i=cursor++;if(!(i in slots))slots[i]={current:initial};return slots[i];},useEffect:(fn,deps)=>{const i=cursor++;if(!slots[i]||deps.some((v,j)=>v!==slots[i].deps[j])){slots[i]?.cleanup?.();slots[i]={deps};effects.push(()=>{slots[i].cleanup=fn();});}},useCallback:fn=>fn};return{react,render:fn=>{cursor=0;const result=fn();effects.splice(0).forEach(fn=>fn());return result;}};}
 for(const family of ['patch','rotation'])test(`${family} interrupted handoff remains visible when preparation never created a dataset`,async()=>{
