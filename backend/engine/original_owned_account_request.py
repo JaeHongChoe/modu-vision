@@ -8,7 +8,7 @@ import stat
 import sys
 import threading
 import time
-from types import MethodType
+from types import FunctionType, MethodType
 
 from backend.engine.original_request_activity import _context
 
@@ -120,6 +120,7 @@ class OriginalOwnedAccountRequest:
         from backend import main
         from backend.api import routes_accounts
         from backend.engine import shared_accounts
+        from backend.engine import original_owned_UI_ancillary_request as ancillary
         from backend.engine.application_launch_handshake import BackendWorkAdmission
         from fastapi import routing
         from starlette import concurrency
@@ -139,11 +140,21 @@ class OriginalOwnedAccountRequest:
         self.chain = ()
         self.pending, self.records = {}, []
         self.deadline = None
+        self.role_wrapper = ancillary._RESOURCES.get('global_project_role')
+        self.role_origin = ancillary._RESOURCES.get('global_project_role_origin')
+        self.role_body, self.role_body_code = (self.role_origin
+            if type(self.role_origin) is tuple and len(self.role_origin) == 2 else (None, None))
+        self.role_closure = getattr(self.role_wrapper, '__closure__', None)
+        role_codes = tuple(code for code in ancillary.observe_original_UI_global_project_role.__code__.co_consts
+            if type(code) is type(ancillary.observe_original_UI_global_project_role.__code__) and code.co_name == 'observed')
+        self.role_code = role_codes[0] if len(role_codes) == 1 else None
         self.calls = tuple((owner, name, getattr(owner, name)) for owner, names in (
             (shared_accounts.AccountStore, ('login', 'bind_workspace', '_db', '_session', '_password', '_public',
                  'authenticate', 'project_for', 'project_role', 'authorize', '_role',
                  'metadata', 'projects_for', 'users', 'select_project')),
             (shared_accounts, ('sqlite3', 'store_admission', 'secrets', 'hmac', 'time')),
+            (ancillary, ('_RESOURCES', '_ACTIVE', '_AncillaryAttempt', '_global_attempt',
+                'observe_original_UI_global_project_role')),
             (sqlite3, ('connect', 'Connection')),
             (routes_accounts, ('login', 'store', 'Login', 'me', 'users', 'select_project',
                 'user', 'admin', 'ProjectSelection')),
@@ -151,10 +162,10 @@ class OriginalOwnedAccountRequest:
             (concurrency, ('run_in_threadpool',)),
             (main.OwnedWorkAdmissionMiddleware, ('__call__', '_observed_call')),
             (BackendWorkAdmission, ('enter', 'leave')),
-            (sys.modules[__name__], ('_ACTIVE', '_LOGIN', '_ACCOUNT_HANDLERS', '_identity', '_headers',
+            (sys.modules[__name__], ('_ACTIVE', '_LOGIN', '_ACCOUNT_HANDLERS', '_identity', '_headers', 'FunctionType', 'OriginalOwnedAccountRequest',
                 'observe_original_owned_login', 'original_owned_login_production', 'bind_original_owned_account_request',
                 'observe_original_owned_account', 'owned_login_database_observation', 'original_owned_account_request_scope')),
-            (OriginalOwnedAccountRequest, ('__init__', 'bind_chain', 'original', 'begin', 'begin_current', 'begin_account',
+            (OriginalOwnedAccountRequest, ('__init__', 'bind_chain', 'original', '_role_wrapper_original', 'begin', 'begin_current', 'begin_account',
                 'finish', '__copy__', '__deepcopy__', '__reduce_ex__')),
             (_LoginAttempt, ('__init__', 'fail', 'base', 'original', 'activate', 'enter_worker',
                 'worker_original', 'worker_return', 'begin_db', 'end_db', 'method',
@@ -182,8 +193,26 @@ class OriginalOwnedAccountRequest:
         self.eligible = (type(self.store) is shared_accounts.AccountStore and self.path_identity is not None
                          and self.parent_identity is not None and routes_accounts.login is self.endpoint
                          and self.endpoint.__wrapped__ is self.handler
-                         and {row[0] for row in self.account_handlers} == {'me','users','select_project'})
+                         and {row[0] for row in self.account_handlers} == {'me','users','select_project'}
+                         and OriginalOwnedAccountRequest._role_wrapper_original(self))
         self.selection_model = routes_accounts.ProjectSelection
+
+    def _role_wrapper_original(self):
+        from backend.engine import shared_accounts
+        from backend.engine import original_owned_UI_ancillary_request as ancillary
+        wrapper, body, closure = self.role_wrapper, self.role_body, self.role_closure
+        return (type(wrapper) is FunctionType and type(body) is FunctionType
+            and shared_accounts.AccountStore.project_role is wrapper
+            and ancillary._RESOURCES.get('global_project_role') is wrapper
+            and body.__code__ is self.role_body_code
+            and ancillary._RESOURCES.get('global_project_role_origin') is self.role_origin
+            and type(self.role_origin) is tuple and len(self.role_origin) == 2
+            and self.role_origin[0] is body and self.role_origin[1] is self.role_body_code
+            and wrapper.__globals__ is ancillary.__dict__ and body.__globals__ is shared_accounts.__dict__
+            and wrapper.__code__ is self.role_code and wrapper.__wrapped__ is body
+            and wrapper.__code__.co_freevars == ('function',)
+            and wrapper.__closure__ is closure and type(closure) is tuple and len(closure) == 1
+            and closure[0].cell_contents is body)
 
     def bind_chain(self, middleware, downstream):
         named = self.admission._current_project_requests
@@ -202,6 +231,7 @@ class OriginalOwnedAccountRequest:
                 and all(a is b for a,b in zip(self.binding,
                     (self,self.app,self.admission,self.store,self.named,self.observer,self.condition)))
                 and self.admission._account_requests is self and self.admission._current_project_requests is self.named
+                and OriginalOwnedAccountRequest._role_wrapper_original(self)
                 and all(type(getattr(self.store,name)) is MethodType
                     and getattr(self.store,name).__self__ is self.store
                     and getattr(self.store,name).__func__ is value
@@ -614,6 +644,18 @@ class _AccountAttempt(_LoginAttempt):
                     valid = valid and frame.f_locals.get('project_id')==self.body.project_id
                 elif selected=='project_role':
                     parent = frame.f_back
+                    # Exactly the registered pass-through role wrapper may sit
+                    # between its original body and the original caller below.
+                    if parent is not None and parent.f_code is self.adapter.role_code:
+                        valid = (valid and OriginalOwnedAccountRequest._role_wrapper_original(self.adapter)
+                            and frame.f_code is self.adapter.role_body.__code__
+                            and parent.f_globals is self.adapter.role_wrapper.__globals__
+                            and parent.f_locals.get('function') is self.adapter.role_body
+                            and parent.f_locals.get('attempt') is None
+                            and parent.f_locals.get('store') is store
+                            and parent.f_locals.get('user_id') == frame.f_locals.get('user_id')
+                            and parent.f_locals.get('project_id') == frame.f_locals.get('project_id'))
+                        parent = parent.f_back
                     if parent is not None and parent.f_code is functions['project_for'].__code__:
                         valid = valid and frame.f_locals.get('project_id')==parent.f_locals.get('project_id')
                     elif parent is not None and parent.f_code is functions['projects_for'].__code__:
