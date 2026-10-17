@@ -85,7 +85,7 @@ async function harness({ connected = true, additive = true } = {}) {
   const Panel = load('./SharedProjectPanel.tsx', {
     react: { __esModule: true, default: react, ...react }, 'react/jsx-runtime': { jsx, jsxs: jsx },
     'lucide-react': { Users: 'icon', LogIn: 'icon', LogOut: 'icon' },
-    '../../services/api': { api: { project: projectApi }, getProjectContext: () => accepted,
+    '../../services/api': { api: { project: projectApi }, getProjectContext: () => accepted, setProjectContext: value => { accepted = value; }, getProjectContextGeneration: () => 0,
       getApiPersistenceIdentity: () => identity, setSharedApiBase: base => { identity = base ? `shared:${base}` : 'local'; },
       request: async (endpoint, options) => {
         if (endpoint === '/api/accounts/select-project') { calls.push('select-api'); backend = JSON.parse(options.body).project_id === second.id ? second : first; }
