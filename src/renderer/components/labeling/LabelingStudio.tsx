@@ -38,7 +38,7 @@ export const LabelingStudio: React.FC = () => {
     currentImage, annotationLoadStatus, annotationLoadError, loadAnnotationsForCurrent,
     autoSelectError, clearAutoSelectError,
   } = useAnnotationStore();
-  const { task: projectTask } = useProjectStore();
+  const { task: projectTask, isProjectBusy } = useProjectStore();
   // Focus editing folds the helper panels so the canvas keeps the window's height; the choice is remembered.
   const [focus, setFocus] = useState(() => readLabelingFocus());
   const toggleFocus = () => setFocus(value => { writeLabelingFocus(!value); return !value; });
@@ -58,12 +58,13 @@ export const LabelingStudio: React.FC = () => {
 
   // Keep the selected file when the gallery refreshes or changes page.
   useEffect(() => {
+    if (isProjectBusy) return;
     const currentImg = useAnnotationStore.getState().currentImage;
     if (currentImg && useAnnotationStore.getState().externalSelectionPath === currentImg.file_path) return;
     if (annotImages !== datasetImages || (datasetImages.length > 0 && !currentImg)) {
       void syncDatasetImages(datasetImages);
     }
-  }, [datasetImages, annotImages, syncDatasetImages]);
+  }, [datasetImages, annotImages, syncDatasetImages, isProjectBusy]);
 
   return (
     <div className="flex flex-col h-full w-full bg-[#0B0E14] text-slate-200 overflow-hidden select-none">

@@ -421,6 +421,26 @@
       "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
       "current_test_source_sha256": "debbfb4153d4a5a26d8029a00d61fedaa313fd7eec469b39917272e35c4df3df",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Reviewed current fixture uses real authenticated project/provider and validated library image identity under original10s execution/recovery guards; no new GUI execution or current acceptance is supplied."
+    },
+    {
+      "current_test_source_sha256": "5d865b7eeb5ef966a908732a283056dc071799e0379d0e2943083e29554b6e11",
+      "execution_source_sha": "fdc004bef91f51b8bcae01735b68be9a5277f727",
+      "reason": "The retained public ancestor preserves the exact historical spec body. Current spec adds a non2xx annotation-read regression guard; historical receipts and scenario states are unchanged and do not supply new execution.",
+      "receipt": "2026-10-10-root443-direction-old-electron.json",
+      "receipt_sha256": "03051bb997d3bcd8d6bda737b4472322b964ba63f606060c384b30dd18c3d49b",
+      "recorded_test_source_sha256": "859276df7e87a7247793a712f740e60deac40a4558350c1720fc0759e234f9fb",
+      "retained_spec_commit": "f4e1cde796e0684e0b2f4f8c55a27520c7beb888",
+      "test": "scripts/e2e/direction-field-input-boundaries.spec.ts::native independent direction rejects invalid values and persists an intentional empty label"
+    },
+    {
+      "current_test_source_sha256": "5d865b7eeb5ef966a908732a283056dc071799e0379d0e2943083e29554b6e11",
+      "execution_source_sha": "fdc004bef91f51b8bcae01735b68be9a5277f727",
+      "reason": "The retained public ancestor preserves the exact historical spec body. Current spec adds a non2xx annotation-read regression guard; historical receipts and scenario states are unchanged and do not supply new execution.",
+      "receipt": "2026-10-10-root443-direction-handoff-browser.json",
+      "receipt_sha256": "abc8df73ae55dd2b09a11682ea2b1ff0efd4246377352cf4381b0f90a1c38735",
+      "recorded_test_source_sha256": "859276df7e87a7247793a712f740e60deac40a4558350c1720fc0759e234f9fb",
+      "retained_spec_commit": "f4e1cde796e0684e0b2f4f8c55a27520c7beb888",
+      "test": "scripts/e2e/direction-field-input-boundaries.spec.ts::independent direction and axial angle stay scoped through A B A project handoff and an old owning label read"
     }
   ]
 }

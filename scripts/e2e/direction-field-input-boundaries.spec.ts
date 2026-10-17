@@ -307,7 +307,14 @@ async function directionHandoffExercise(page:Page,w:Workspace,e:Evidence,origin:
  };
  const writes:Array<{method:string;path:string;body:unknown}>=[];
  const observe=(request:Request)=>{const u=new URL(request.url());if(u.origin===origin&&u.pathname.startsWith('/api/')&&!['GET','HEAD','OPTIONS'].includes(request.method()))writes.push({method:request.method(),path:u.pathname,body:request.postDataJSON()});};
+ const refusedAnnotationReads:number[]=[];
+ const observeAnnotationRead=(response:Response)=>{
+  if(response.ok())return;
+  const address=new URL(response.url()),request=response.request();
+  if(address.origin===origin&&address.pathname==='/api/annotations/part'&&request.method()==='GET'&&request.frame()===page.mainFrame())refusedAnnotationReads.push(response.status());
+ };
  let late:Awaited<ReturnType<typeof directionHandoffLateRead>>|undefined,primary:unknown;
+ page.on('response',observeAnnotationRead);
  try{
   await page.goto(url);await directionHandoffProject(page,A,origin);await enter(A);await prepare(A);const beforeA=await state(A);
   await directionHandoffProject(page,B,origin);await enter(B);await prepare(B);const beforeB=await state(B);
@@ -325,6 +332,7 @@ async function directionHandoffExercise(page:Page,w:Workspace,e:Evidence,origin:
   const toA=await directionHandoffProject(page,A,origin);await enter(A);await selectSaved(A);const afterA=await state(A);expect(afterA).toEqual(beforeA);
   await e.screenshot(page,'direction-A-original315-axis30-restored-after-handoff');
   expect(writes).toEqual([toB,toA].map(row=>({method:'POST',path:'/api/project/open',body:{project_dir:row.project_dir}})));
+  expect(refusedAnnotationReads,'Original renderer annotation GET non2xx responses').toEqual([]);
   directionHandoffSave(e,w,'direction-input-handoff-custody',{beforeA,beforeB,afterA,afterB,owning_save_and_refresh_responses:proof,transitions:[toB,toA],held_original_A_read:{context:oldContext,raw_response:heldRaw,disposition},business_mutations_after_baseline:writes});
   e.note('direction_input_project_handoff',{action:'U020.independent-direction-input',dimensions:['handoff'],actual_browser_UI:true,
    two_owning_UI_annotation_saves:true,distinct_project_and_image_UUIDs:true,same_relative_filename_distinct_original_pixels:true,
@@ -333,7 +341,8 @@ async function directionHandoffExercise(page:Page,w:Workspace,e:Evidence,origin:
    source_Electron:false,installed_native:false,model_training:false,model_inference:false,human_quality:false,parent_target_acceptance:false});
  }catch(error){primary=error;throw error;}finally{
   let cleanupError:unknown;
-  try{page.off('request',observe);}catch(error){cleanupError=error;}
+  try{page.off('response',observeAnnotationRead);}catch(error){cleanupError=error;}
+  try{page.off('request',observe);}catch(error){if(cleanupError===undefined)cleanupError=error;}
   if(late){try{await late.close();}catch(error){if(cleanupError===undefined)cleanupError=error;}}
   if(primary===undefined&&cleanupError!==undefined)throw cleanupError;
  }
