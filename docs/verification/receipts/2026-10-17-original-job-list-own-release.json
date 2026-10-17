@@ -1,0 +1,158 @@
+{
+  "acceptance_promoted": false,
+  "adjacent_gate": {
+    "all_store_isolation_checks_passed": true,
+    "failed": 1,
+    "failed_selector": "backend/tests/test_original_owned_account_request_lifetime.py::test_original_login_me_users_select_commits_and_drains",
+    "failure": "Original .03-second admission drain refused active1/uncovered after normal complete account HTTP envelopes; baseline/order investigation remains open",
+    "new_controls_passed": 4,
+    "passed": 35,
+    "source_before_after_exact": true
+  },
+  "causal_control": {
+    "HTTP_bodies_sha256": [
+      "0a5796e93f9b57ddf7c45f860485cbb7353fc0eda3dca753a444d0fd2a1573fe",
+      "0a5796e93f9b57ddf7c45f860485cbb7353fc0eda3dca753a444d0fd2a1573fe"
+    ],
+    "HTTP_complete_statuses": [
+      200,
+      200
+    ],
+    "actual_distinct_AnyIO_workers": true,
+    "actual_two_loopback_HTTP_requests": true,
+    "one_original_builtin_lock": true,
+    "original_A_postcondition_observed_while_B_held_same_lock": true,
+    "original_call_A_released_before_original_B_acquired": true,
+    "original_deadline_seconds": 30,
+    "original_functions_lock_observer_or_responses_replaced": false,
+    "trace_restored": true,
+    "trace_used_for_scheduling_and_passive_observation": true
+  },
+  "custody": {
+    "forced_termination": false,
+    "full_source_before_after_exact_per_run": true,
+    "job_records_empty": true,
+    "ordinary_server_thread_exit_and_listener_close": true,
+    "original_pytest_child_natural_exit_and_reaped": true,
+    "protected_project_body_unchanged": true,
+    "providers_unchanged": true
+  },
+  "isolated_green": {
+    "all_four_HTTP_envelopes_completed_and_released": true,
+    "drain": {
+      "active_scopes": 0,
+      "status": "managed_scopes_drained",
+      "unsupported": []
+    },
+    "first_poison": [],
+    "passed": 1,
+    "uncertain": false
+  },
+  "isolated_red": {
+    "drain": {
+      "active_scopes": 3,
+      "status": "refused",
+      "unsupported": [
+        "uncovered_request_protocol"
+      ]
+    },
+    "expected_failures": 1,
+    "first_failure": "owned_ancillary_job_list_return",
+    "first_failure_request_count": 4,
+    "first_failure_sequence": 15,
+    "original_four_HTTP_envelopes_completed_and_released": true,
+    "post_server_join_admission_snapshot_retained": false
+  },
+  "isolation": {
+    "HOME_changed": false,
+    "actual_store_path_rows_verified_per_run": 5,
+    "all_checks_passed": true,
+    "fresh_private_session_root_before_application_import": true,
+    "original_RED01_import_time_store_custody_not_proven": true,
+    "original_RED01_preserved_with_limitation": true,
+    "original_backend_conftest_explicitly_preloaded": true
+  },
+  "limits": [
+    "This source-level causal result does not identify the original Root05 installed-app poisoning request or cause.",
+    "The adjacent account-drain failure remains unresolved; no whole-related-suite or whole-CI success is claimed.",
+    "No actual native app, model, GPU, whole writer coverage, lease release, action or parent acceptance is granted."
+  ],
+  "public_redaction": "Structured derivative omits private paths, PIDs, tokens and authority frames; original raw evidence retained",
+  "raw_private_evidence_pins": {
+    "actual-green-01/evidence.json": {
+      "bytes": 21631,
+      "sha256": "4d9e3e142bd2e4e05cd891171c735326b309ad32a6aac81c5eedd4c8f4cd7486"
+    },
+    "actual-green-01/isolation-final.json": {
+      "bytes": 21497,
+      "sha256": "b8d13d603cc1a6d05ad8463aa30e60880db0ef6f2fbc9c23bf1d7cbd81c98730"
+    },
+    "actual-green-01/pytest.log": {
+      "bytes": 1167,
+      "sha256": "010859e1db9943cf1fd3c92a5cc378bce8715549c9fd0e88b9cd621da2268058"
+    },
+    "actual-green-01/result.json": {
+      "bytes": 308,
+      "sha256": "94ded43c30b9644133812da627a680b3b062f08cd3be6e77903af10656aac139"
+    },
+    "actual-green-01/source-after.json": {
+      "bytes": 1032212,
+      "sha256": "ba1175cdf3cb49f5147b034c0fad551de495ce1738ebdbd544c5a6075db79c23"
+    },
+    "actual-green-01/source-before.json": {
+      "bytes": 1032212,
+      "sha256": "ba1175cdf3cb49f5147b034c0fad551de495ce1738ebdbd544c5a6075db79c23"
+    },
+    "actual-red-02/evidence.json": {
+      "bytes": 24013,
+      "sha256": "a3fd3fee5e2e27e7463fae179e74fb6ed5137c900d2611cf4f56cccd63c30b9a"
+    },
+    "actual-red-02/isolation-final.json": {
+      "bytes": 21393,
+      "sha256": "f67949f81b25598d44b87baa945ea924b001eb195475a5a726d5fb181c45f02b"
+    },
+    "actual-red-02/pytest.log": {
+      "bytes": 19603,
+      "sha256": "f254f56952b572994bd6043810f8b37ba7d40338577895a555073ab704de98a2"
+    },
+    "actual-red-02/result.json": {
+      "bytes": 308,
+      "sha256": "1968957d0092f2d083bb5265a18d67c3a2240f6fe12a89ecbc7b8617d5762665"
+    },
+    "actual-red-02/source-after.json": {
+      "bytes": 1030020,
+      "sha256": "a914e97a009c480f9e0c1cd2549a245d2b8b321e09056fedbc94702e6d99b918"
+    },
+    "actual-red-02/source-before.json": {
+      "bytes": 1030020,
+      "sha256": "a914e97a009c480f9e0c1cd2549a245d2b8b321e09056fedbc94702e6d99b918"
+    },
+    "adjacent-source-tests-01/isolation-final.json": {
+      "bytes": 368353,
+      "sha256": "cf6fad872d4bbf3f3dcc7d2aebfc33a65fe3592de98a377744be7ff4f9737f93"
+    },
+    "adjacent-source-tests-01/pytest.log": {
+      "bytes": 3714,
+      "sha256": "6de2ac6563d1563c215e5f42165ae0054e6e7aed80368959ae68e6c111b9994b"
+    },
+    "adjacent-source-tests-01/result.json": {
+      "bytes": 272,
+      "sha256": "df2556e4198722e454511aec3910af02c3b7f3ca69c269949b53f28319a0175e"
+    },
+    "adjacent-source-tests-01/source-after.json": {
+      "bytes": 1032212,
+      "sha256": "ba1175cdf3cb49f5147b034c0fad551de495ce1738ebdbd544c5a6075db79c23"
+    },
+    "adjacent-source-tests-01/source-before.json": {
+      "bytes": 1032212,
+      "sha256": "ba1175cdf3cb49f5147b034c0fad551de495ce1738ebdbd544c5a6075db79c23"
+    }
+  },
+  "schema": "modu-vision.public-original-job-list-own-release/v1",
+  "source_change": [
+    "canonical existing LockType identity check",
+    "remove global post-return locked() sample; original builtin-lock with block and function/entry/worker/result/code checks retained"
+  ],
+  "source_green": "088327f9c8064cdbdf42b9442e4bc16a82671a47",
+  "source_red": "3a582ef3f41969d7d8272dbd926ea06c034b1413"
+}
