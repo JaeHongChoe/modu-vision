@@ -1,0 +1,206 @@
+{
+  "GUI_actions_performed": false,
+  "READY_reached": false,
+  "closure": {
+    "adopted_Popen": false,
+    "bootstrap_receipt_missing": true,
+    "controller_still_live_at_saved_result": true,
+    "later_PID_absence_is_natural_reaping_or_closure_proof": false,
+    "later_readonly_three_recorded_PIDs_absent": true,
+    "lease_release_ready": false,
+    "lease_repaired": false,
+    "ordinary_AppKit_quit_requested": true,
+    "original_controller_natural_reap_verified": false,
+    "original_main_exit_observed": true,
+    "signals_sent_by_original_hold": false,
+    "strict_closure_verified": false,
+    "strict_protocol": 4,
+    "strict_state": "recovery_required",
+    "whole_process_tree_exit_verified": false
+  },
+  "compiled_identity": {
+    "assembly_artifact_pins_sha256": "55cd9d32e696a6253ec7daf627d67b37e8e758cae5da5aa099af26e6c3e256a4",
+    "assembly_exit_code": 0,
+    "assembly_provenance_sha256": "139c9af6db4224726321bbc306b7bcbcfa30fd14fe257d5507f2306c6a2af577",
+    "backend_build_exit_code": 0,
+    "backend_build_identity": "60eaf58bc8ff04a4b72609f07ecb869f8cf0b9744a14131213b089f0e31bde5b",
+    "backend_executable_sha256": "2f78d5a6b124c7901239454e1bcab59b03709eb37490a9884b5f1f4012fab672",
+    "backend_release_sha256": "be949c2dea6211426853b68f2baf8ed70c424f6b42e39d2eec1528e05a4a30fa"
+  },
+  "custody": {
+    "active_pointer_changed": false,
+    "basis": "Root executed the original after-attempt custody control successfully; this read-only review independently joined its68 captured pin objects to before/after-setup records.",
+    "before_setup_after_setup_after_attempt_pins_equal": true,
+    "installed_profile_unchanged": true,
+    "original_control_phase_label": "after-UI (no UI actions were reached)",
+    "original_model_source_profile_unchanged": true,
+    "protected_body_rehashes_by_this_review": false,
+    "protected_original_bodies": 68
+  },
+  "diagnostic_only": true,
+  "hold": {
+    "deadline_changes": false,
+    "elapsed_seconds": 91.45323995803483,
+    "exit_code": 1,
+    "original_AppKit_parent": true
+  },
+  "later_readonly_process_observation": {
+    "sha256": "b82d602d44e7f025e018c6253f7f4d1310cd909bf8228d6980379b863417c5ce",
+    "size": 696
+  },
+  "limits": [
+    "No READY, UI, manual8, inference, GPU/model quality, native final closure, lease-release or parent acceptance.",
+    "Later PID absence does not replace retained original Popen ownership or an original natural controller reap.",
+    "The exact transition-lock holder was not observed; identical Root02 EOF text does not prove the same cause."
+  ],
+  "native_or_GUI_acceptance": false,
+  "observed_failure": {
+    "Root02_same_EOF_cause_proven": false,
+    "backend_exit_code": 1,
+    "backend_signal": null,
+    "backend_stderr_exception_chain": [
+      "BlockingIOError:EWOULDBLOCK35",
+      "LeaseTransitionBusy",
+      "HandshakeError"
+    ],
+    "captured_cached_revalidation_call": "early_backend_bootstrap:1035",
+    "controller_recovery_reason": "Private descriptor EOF before complete frame",
+    "exact_lock_holder_observed": false,
+    "source_reading": "Cached revalidation calls _validate without an explicit deadline; its None default selects original nonblocking transition admission."
+  },
+  "private_readback": {
+    "sha256": "355f74cb7f118a41cfe28ec374eb1be9e74c7cadffbd67da664cb3b652cbb4f8",
+    "size": 13540
+  },
+  "raw_evidence_pins": {
+    "adapter": {
+      "sha256": "7104d301ad57478cdbb32f85ccf8dbc8ed18e44daef42d561be404014c9cf04c",
+      "size": 14568
+    },
+    "after_attempt_custody": {
+      "sha256": "a15b94b70ca47c15e539c5ee20a7d3e78d323e9250444b7889af1af473f42d0d",
+      "size": 59899
+    },
+    "after_setup_custody": {
+      "sha256": "3fb0a8550ba8976f849d52f920d0e73c276e0426b6872d166b214891d26e5916",
+      "size": 60281
+    },
+    "artifact_pins": {
+      "sha256": "55cd9d32e696a6253ec7daf627d67b37e8e758cae5da5aa099af26e6c3e256a4",
+      "size": 58967
+    },
+    "assembly_child_stdout": {
+      "sha256": "a1ec1b91faa73112fae1c6ccbd7d6b48b0972e3ef05251162c1265d7e01f0b80",
+      "size": 294
+    },
+    "assembly_original_tool_result": {
+      "sha256": "1ba71cb17ab3c5d30bb7388c2f50047877d30086e44bbd9ff8d8dc5be397c956",
+      "size": 459
+    },
+    "assembly_provenance": {
+      "sha256": "139c9af6db4224726321bbc306b7bcbcfa30fd14fe257d5507f2306c6a2af577",
+      "size": 2164989
+    },
+    "assembly_wrapper_result": {
+      "sha256": "7c61e134000ca5b28eece9cd12128e6c7c1f24769f31ab2ac2616a553b73a651",
+      "size": 167
+    },
+    "backend_executable": {
+      "sha256": "2f78d5a6b124c7901239454e1bcab59b03709eb37490a9884b5f1f4012fab672",
+      "size": 61206640
+    },
+    "backend_release": {
+      "sha256": "be949c2dea6211426853b68f2baf8ed70c424f6b42e39d2eec1528e05a4a30fa",
+      "size": 957567
+    },
+    "before_setup_custody": {
+      "sha256": "a274d745b033bd70f6da0c4c0671eaf3997dfc77b9f204859ebf57f5414e7688",
+      "size": 58318
+    },
+    "build_tool_result": {
+      "sha256": "582147360a65e9bf1756ac48baedf25470a6e04c9dac2baf47d96a5b4b7d0ad2",
+      "size": 953
+    },
+    "controller_ack": {
+      "sha256": "44ad44015331c955205a30747150864f6bd708582a7b3e5b80b03e77c14d7a2e",
+      "size": 404
+    },
+    "controller_stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    "declaration": {
+      "sha256": "5e2ca4a7aca52487468a327e8aaf852ae90dc270674e3d401728130609a8ff3e",
+      "size": 6025
+    },
+    "first_recovery": {
+      "sha256": "fb98c1ec4494be149e6ba48494a12778bdad4fd2de700674a18bdfb4a6b061e4",
+      "size": 15582
+    },
+    "frontend_source_inventory": {
+      "sha256": "dc2fe5c7a7fd5814c3793be7b572b40edcbb3bd59aa6b4d83606dcdd6d72db9c",
+      "size": 1023078
+    },
+    "hold_original_invocation": {
+      "sha256": "b21758133013e72fad1ae8d29255744e33b33d13fa723920bc9ae517217d2443",
+      "size": 683
+    },
+    "hold_stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    "hold_stdout": {
+      "sha256": "6e603638a4e50021f6bedcf772c43fefe997c3163645241e1a1e9722983d0c27",
+      "size": 196
+    },
+    "hold_wrapper_result": {
+      "sha256": "8a1ae093ddd0d23831b1878d2db4caca6f730fa33acbf14f89b6ec9fcbcbf681",
+      "size": 226
+    },
+    "inputs": {
+      "sha256": "94805ce81058099488b780a444327c7e335ec20365a54d6736a598f970668093",
+      "size": 7082
+    },
+    "native_lifetime_result": {
+      "sha256": "ac41619c4e98a00858b9cb22490f76e22cdcccf8359ae3165e2e781191b876ee",
+      "size": 3963
+    },
+    "native_startup_diagnostic": {
+      "sha256": "75c2067c735c9bd6d6176bd7b176f7c0c03b5a903924791c8655feb071a170c1",
+      "size": 11332
+    },
+    "original_controller_start": {
+      "sha256": "776cabcfbd2bdad8b51487f722421187ec7857202c6ea0c0ecbb08744a4d0c7f",
+      "size": 3546
+    },
+    "setup_original_invocation": {
+      "sha256": "a7b33deaa81ac180bef8eada1560e039bca6230912a4eeffbcc795f69b61b4ba",
+      "size": 3038
+    },
+    "setup_original_results": {
+      "sha256": "bd45ea582f779363159d5b8ee035a170e8f85f608f50681030f3014a932056b4",
+      "size": 1077
+    },
+    "setup_stdout": {
+      "sha256": "649e2c23555c9c9357fffe622046235d6b7f4cdc847532d0e08be4ed947fad83",
+      "size": 230
+    },
+    "source_handshake": {
+      "sha256": "e40fe423d6dfdb018175d595417e8c3f2dc02c49bf1b46df42ff02ee1628ecbc",
+      "size": 107737
+    },
+    "source_lease": {
+      "sha256": "2685509047c0bb73a9e0f988b5294c83fb595b8b7869ed3a35a6ccbd781a401f",
+      "size": 58805
+    }
+  },
+  "redaction": {
+    "absolute_private_paths_in_public_copy": false,
+    "authority_or_tokens_or_nonce_or_raw_frames_in_public_copy": false,
+    "raw_diagnostic_published": false
+  },
+  "schema": "modu-vision.native-startup-failure/v1",
+  "source_backend_sha": "2c132d0d6b43200baf39248d21abee08113d4968",
+  "source_frontend_sha": "4dea7c109d5c41635569907ab285365e7e76cc3b",
+  "status": "failed_before_READY"
+}
