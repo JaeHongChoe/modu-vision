@@ -9771,10 +9771,58 @@
               ]
             },
             "empty": {
-              "state": "pending"
+              "evidence": [
+                {
+                  "action": "영역 라벨에서 패치 준비",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "0ee4a1b73b5b1eecc7337db00e13dec5697b85e098fba56ac88eab7bb97fc6ed"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "81269b313dffac04d7bb24f499fc846c773977590907c6f2558bfa686de2c1e0"
+                    }
+                  ],
+                  "expected": "Reject a persisted empty source without annotated images without creating prepared data or changing originals; ordinary reload retains owning source and no prepared data.",
+                  "kind": "click",
+                  "observed": "Actual ordinary Chrome prepare click on a genuinely saved empty source sent valid16/16 and returned original422 annotated-source refusal. No patch directory/manifest was created. Saved source and empty prepared selection survived ordinary reload; all14 protected source/project files and directory witness raw7+SHA remained exact after action/reload/natural shutdown. FD54/54. Only one rejected preparePOST occurred; no training/model execution. Actual422console entry retained. Screenshots cover inputs/upper workbench; belowviewport alert uses original DOM proof.",
+                  "receipt": "2026-10-18-patch-prepare-empty-current-browser.json",
+                  "receipt_sha256": "733f5ab3f4d8436a5a97577ca4d0b6670fdd5c8a3cb212d15625c52175c2f9b0",
+                  "reviewer": "Root reviewed exact source, conditionaldiff, runner, selectionproof and fullpins before one actual2case invocation; ordinarycollector/rawbody/custody/normalclosure readback. Browserfunctional validation only; no native, training, GPU, modelquality or parent acceptance.",
+                  "source_sha": "b82908610207a8e1d54687f614b9ad66cbb9436e",
+                  "task": "S4-03",
+                  "test": "scripts/e2e/patch-prepare-empty-invalid-controls.spec.ts::patch preparation rejects a persisted empty source without generating prepared data or training"
+                }
+              ],
+              "state": "verified"
             },
             "invalid": {
-              "state": "pending"
+              "evidence": [
+                {
+                  "action": "영역 라벨에서 패치 준비",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "e53ff82893f2b88d2828f3bba5e0b6b5ae8bb0127ebc5eaa08585ef6e648fb79"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "7aebbd8e5d8a30eaa967917fc21474888b398c8b4a89980186b5482ef068ff82"
+                    }
+                  ],
+                  "expected": "Reject a genuinely entered invalid patch_size15 without clamping without creating prepared data or changing originals; ordinary reload retains owning source and no prepared data.",
+                  "kind": "click",
+                  "observed": "Actual ordinary input retained size15 with rangeUnderflowtrue; originalpreparePOST carried15/stride1 unchanged and returned real422 body.patch_size ge16. The actual UI displayed the field-specific message. Saved source and empty prepared selection survived ordinary reload; all14 protected source/project files and directory witness raw7+SHA remained exact after action/reload/natural shutdown. FD54/54. Only one rejected preparePOST occurred; no training/model execution. Actual422console entry retained. Screenshots cover inputs/upper workbench; belowviewport alert uses original DOM proof.",
+                  "receipt": "2026-10-18-patch-prepare-invalid-current-browser.json",
+                  "receipt_sha256": "6db19be079b77d815071dc66c07ee038bc3544929c33c3ea3d553309d013e33c",
+                  "reviewer": "Root reviewed exact source, conditionaldiff, runner, selectionproof and fullpins before one actual2case invocation; ordinarycollector/rawbody/custody/normalclosure readback. Browserfunctional validation only; no native, training, GPU, modelquality or parent acceptance.",
+                  "source_sha": "b82908610207a8e1d54687f614b9ad66cbb9436e",
+                  "task": "S4-03",
+                  "test": "scripts/e2e/patch-prepare-empty-invalid-controls.spec.ts::patch preparation forwards an invalid original size15 and rejects it without changing source or prepared data"
+                }
+              ],
+              "state": "verified"
             },
             "error": {
               "state": "pending"

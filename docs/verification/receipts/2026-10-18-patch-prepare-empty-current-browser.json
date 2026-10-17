@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "b82908610207a8e1d54687f614b9ad66cbb9436e",
+  "source_dirty": false,
+  "test": "scripts/e2e/patch-prepare-empty-invalid-controls.spec.ts::patch preparation rejects a persisted empty source without generating prepared data or training",
+  "test_source_sha256": "f8091145afaac29b874359885c81310bd5b8c0910b5a2573045e7916ae42a6a1",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "8d934f7a5a7cb5c5107dc62d18ba26ae52c4a4b14673c1a6bf48971e607993c3",
+  "harness_sha256": "1cab21172937ea5707b3bea62a7d3b35c9bf2cb3564432349b0943224d0397a3",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "0ee4a1b73b5b1eecc7337db00e13dec5697b85e098fba56ac88eab7bb97fc6ed"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "81269b313dffac04d7bb24f499fc846c773977590907c6f2558bfa686de2c1e0"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

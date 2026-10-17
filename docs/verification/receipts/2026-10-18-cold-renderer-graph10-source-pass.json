@@ -1,0 +1,172 @@
+{
+  "actual_execution": {
+    "deadline_expired": false,
+    "exit_code": 0,
+    "original_pytest_child_naturally_reaped": true,
+    "pytest_failed": 0,
+    "pytest_passed": 1,
+    "pytest_seconds": 26.97,
+    "runner_seconds": 32.64860395900905,
+    "runtime_signals_sent": false
+  },
+  "actual_stack": {
+    "desktop_host_shim_and_explicit_proxy_derivative": true,
+    "extra_health_HTTP_calls": 0,
+    "full_recovery_maintenance_sweep_exercised": false,
+    "global_profile_or_trace": false,
+    "lifespan": "off",
+    "loopback_TCP_Uvicorn_and_Chrome": true,
+    "ordinary_UI_login_and_auto_project_gallery": true,
+    "original_framework_initialization_and_periodic_workers": true
+  },
+  "bounds": {
+    "builder_seconds": "min(original300,remaining test120)",
+    "one_UI_frame_seconds": 30,
+    "periodic_and_drain_shared_seconds": 3.903,
+    "product_login_seconds": 15,
+    "retry_count": 0,
+    "server_join_seconds": 10,
+    "test_seconds": 120
+  },
+  "capture_limits": {
+    "console_endpoint_identity_joins_or_zero_error_gate": false,
+    "console_generic_messages": 17,
+    "favicon_proxy404_observed": true,
+    "full_retained_API_response_bodies": 52,
+    "main_process_login_response_body_not_retained": true,
+    "retained_body_total_bytes": 24988,
+    "retained_statuses": {
+      "200": 36,
+      "401": 11,
+      "409": 5
+    },
+    "three_late_browser_response_bodies_not_retained": true
+  },
+  "claim_limits": {
+    "GUI_action_cell_credit": false,
+    "Root05_or_Root06_cause_proven": false,
+    "all_HTTP_response_bodies_retained": false,
+    "all_console_errors_expected_or_zero": false,
+    "historical_Graph09_first_poison_identity_proven": false,
+    "launch_lease_release_authority": false,
+    "ledger_count_delta": 0,
+    "model_quality_or_operational_approval": false,
+    "native_or_compiled_acceptance": false,
+    "whole_UI_or_parent_acceptance": false,
+    "whole_startup_or_writer_tree_coverage": false
+  },
+  "evidence": [
+    {
+      "bytes": 130,
+      "label": "original-tool-start.json",
+      "sha256": "1c733b900a1d3caa18ae66e41963cd20920aa05f670cffd184e942e99efc85a5"
+    },
+    {
+      "bytes": 767,
+      "label": "original-tool-completion.json",
+      "sha256": "5141b28d739abe2dfcd9edc937654a6e68d2d939d7f2f0b5d3580fb579502b9f"
+    },
+    {
+      "bytes": 646,
+      "label": "result.json",
+      "sha256": "af6d59706ce37939a5f42d3173bbba155b871b87e2a2f6b82a419e41e106dca0"
+    },
+    {
+      "bytes": 208058,
+      "label": "source-readback.private.json",
+      "sha256": "67112871f61613af7401accc2fde795b9ae7d58fa6072dac48f77efda650cb6f"
+    },
+    {
+      "bytes": 386,
+      "label": "junit.xml",
+      "sha256": "2cc6fdd0dac5184a8c9d174f29adbeaff5a6d3b7156a640c2801120196bdd760"
+    },
+    {
+      "bytes": 1610,
+      "label": "pytest.log",
+      "sha256": "0c6e12eb75b826eb0c56941073338be9974992d31ddd6f5d3bc96fa50718f003"
+    },
+    {
+      "bytes": 1024,
+      "label": "root-finite-readback-01.json",
+      "sha256": "66babde92b813f516ca7d28e41fe1be5b3035d41814bdaa365891fb8ebad3172"
+    },
+    {
+      "bytes": 31437,
+      "label": "controller/graph-04.json",
+      "sha256": "55da9250146d98b401e9645090f6d8d9fe069a33c0281a54914b2bc3123ee1b5"
+    },
+    {
+      "bytes": 844,
+      "label": "controller/controller-close.json",
+      "sha256": "0cfe4d66a904d47305c5ad87c4120c10dacae3d05430c496b3ded3f7100ae354"
+    },
+    {
+      "bytes": 151565,
+      "label": "controller/01-startup.png",
+      "sha256": "fe3d932af8b2ff92c0191088f8fe0c01cf17c6b102149084b3fd1b9d1ed84588"
+    },
+    {
+      "bytes": 168233,
+      "label": "controller/02-after-login-auto-hydration.png",
+      "sha256": "f92c98b608bb73fa6ec2d853ad643f1ffb9ff6960c2df76858b7743cb9b28cec"
+    },
+    {
+      "bytes": 139779,
+      "label": "preparation/preparation.json",
+      "sha256": "741b6f6d88481114d77307ae6a05df5c3988a896584f81174e3327d7f5e61b9f"
+    }
+  ],
+  "historical_failures_preserved": "Graph09 remains failed; this fresh source-specific pass does not identify its first unsupported ingress or any native cause.",
+  "preservation": {
+    "frozen_provider_links": 321,
+    "full_source_raw9_SHA_before_after_exact": true,
+    "original_runtime_pins": 3,
+    "private_inputs_before_after_exact": true,
+    "protected_synthetic_project_files_raw9_SHA_unchanged": 16,
+    "provider_links_before_after_exact": true,
+    "runtime_pins_before_after_exact": true,
+    "six_store_isolation_passed": true,
+    "source_files": 2927,
+    "strict_private_inputs": 59
+  },
+  "private_readback": {
+    "bytes": 90999,
+    "sha256": "9858c16dc017a49d9087ce3ffcb148c6b3e3bd57bed4f432a7af9b0f13f73221"
+  },
+  "result": {
+    "HTTP_envelopes": 56,
+    "WS": {
+      "actual_disconnect_and_completed_normal_release": true,
+      "connections": 1,
+      "dispatch_attempts": 14,
+      "dispatch_errors": 0,
+      "dispatch_successes": 14,
+      "send_pending": false
+    },
+    "WS_envelopes": 1,
+    "all_original_envelopes_completed_normal_released": 57,
+    "controller_browser_context_proxy_closed_naturally": true,
+    "observer_failures": [],
+    "observer_uncertain": false,
+    "periodic_tasks_joined": 2,
+    "server_thread_closed_no_force_or_errors": true,
+    "six_actual_gallery_images_loaded_32x32": true,
+    "strict_drain": {
+      "active_scopes": 0,
+      "status": "managed_scopes_drained",
+      "unsupported": []
+    }
+  },
+  "schema_version": 1,
+  "scope": "one_actual_source_renderer_cold_login_and_original_managed_scope_drain",
+  "source": {
+    "WS_projection_sha256": "8028e9a49489176e7e43411a7f42036069e4bec15f7b519fba9971bbd4aed93e",
+    "controller_sha256": "581176864fdec9b0f1a092924ffe1a023e860838019f5e35e9c1fbb8162ae06b",
+    "proxy_sha256": "eecc292003cdfc91ea9cbc5749742482f46cedcae748a12c335d06ee9c1e5272",
+    "sha": "ad8fbee8684fc243704d46f639314d62656a95b1",
+    "test_sha256": "74b129bbead02c0cf7dccbc287385c149236dc32b71a9794f5bacdee5f6ac009",
+    "tracked_files": 2927
+  },
+  "visual_limit": "Two original screenshots viewed: selected SEG project and six gallery tiles are visible behind server dialog; tiles partly clipped. Loaded dimensions are independently asserted, not visual quality acceptance."
+}
