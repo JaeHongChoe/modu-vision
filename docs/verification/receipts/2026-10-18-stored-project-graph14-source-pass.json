@@ -1,0 +1,224 @@
+{
+  "can_release_launch_lease": false,
+  "caps": {
+    "builder_seconds": "min(original300,remaining test120)",
+    "one_UI_frame_seconds": 30,
+    "periodic_and_drain_shared_seconds": 3.903,
+    "product_login_seconds": 15,
+    "retry_count": 0,
+    "server_join_seconds": 10,
+    "test_seconds": 120
+  },
+  "cell_or_count_credit": 0,
+  "closure": {
+    "controller_reader_alive": false,
+    "controller_reaped_exit_code": 0,
+    "ordinary_context_browser_proxy_all_fulfilled": true,
+    "periodic_original_workers_joined": 2,
+    "periodic_pending": 0,
+    "response_captures_pending": 0,
+    "server_errors": [],
+    "server_force_exit": false,
+    "server_thread_alive": false,
+    "strict_drain_active": 0,
+    "strict_drain_status": "managed_scopes_drained",
+    "strict_drain_unsupported": []
+  },
+  "custody": {
+    "HOME_changed": false,
+    "all_before_after_current_exact": true,
+    "private_inputs": 117,
+    "protected_originals": 16,
+    "runtime_files": 3,
+    "store_isolation_all_checks_passed": true,
+    "store_isolation_rows": 5,
+    "thin_provider_links": 321,
+    "tracked_source_before_after_current_raw9_SHA": true
+  },
+  "execution": {
+    "automatic_retries": 0,
+    "case_seconds": 23.92,
+    "cases": 1,
+    "exit_code": 0,
+    "explicit_runtime_OS_signals_sent": false,
+    "failed": 0,
+    "original_pytest_reaped": true,
+    "passed": 1,
+    "pytest_suite_seconds": 23.942,
+    "root_original_tool_objects_retained_verbatim": true,
+    "skipped": 0,
+    "wrapper_seconds": 29.71611158293672
+  },
+  "limits": [
+    "Source renderer/real loopback HTTP and original periodic broadcaster only; original FastAPI middleware was initialized with lifespan off. Recovery, maintenance, sweep and whole startup backgrounds were not exercised.",
+    "Original product shared-session/header functions were compiled into a controlled desktop host shim with an explicit static HTTP/WebSocket proxy derivative. No native Electron app, installed package or CUA action was executed.",
+    "46 complete API bodies were retained; 51 backend envelopes settled. These counts are distinct. Three final browser compute GET rows lacked a response in the terminal browser graph, although the original backend observer later completed all envelopes.",
+    "Twelve generic console errors are retained. Endpoint/body attribution for each console message is not separately established. No zero-console or whole-UI-health claim is made.",
+    "Two screenshots were independently viewed; after-login six synthetic source cards are partly clipped below an open server panel. No model or flow quality is established.",
+    "Graph12 pre-runtime bad SOURCE refusal, Graph13 strict negative and its separate outer bad-cwd failure remain unchanged. This current combined-source pass does not rewrite those runs or prove an exact native request identity/cause.",
+    "Private metadata reader initially used an interpreter without psutil before test/provider preparation. Its disclosed failure is separate from this one original actual qualification run.",
+    "No GPU/model/training, native closure, whole-writer or process-tree release authority, action-cell, count or parent acceptance is granted."
+  ],
+  "native_accepted": false,
+  "observations": {
+    "HTTP_envelopes": 50,
+    "WS_dispatch": {
+      "actual_disconnect_received": true,
+      "attempts": 20,
+      "errors": 0,
+      "normal_envelope_completed": true,
+      "pending": false,
+      "successes": 20
+    },
+    "WebSocket_envelopes": 1,
+    "all_backend_envelopes_completed_normal_released": true,
+    "backend_original_ASGI_envelopes": 51,
+    "browser_graph_rows": 52,
+    "browser_rows_without_response_at_terminal_snapshot": [
+      {
+        "identity": 50,
+        "method": "GET",
+        "path": "/api/compute/reservations"
+      },
+      {
+        "identity": 51,
+        "method": "GET",
+        "path": "/api/compute/targets"
+      },
+      {
+        "identity": 52,
+        "method": "GET",
+        "path": "/api/compute/jobs"
+      }
+    ],
+    "console_messages_retained": {
+      "generic401": 11,
+      "generic404": 1,
+      "not_a_zero_console_error_or_all_expected_errors_claim": true,
+      "total": 12
+    },
+    "no_every_browser_request_fullbody_claim": true,
+    "ordinary_UI_operations": [
+      "open",
+      "inspect-and-login-controls",
+      "login",
+      "close"
+    ],
+    "original_observer_all_settled": true,
+    "original_observer_failures": [],
+    "original_observer_uncertain": false,
+    "retained_browser_API_bodies": 46,
+    "six_original_thumbnail_requests": {
+      "decoded_dimensions": [
+        32,
+        32
+      ],
+      "full_RGB_parity_claim": false,
+      "six_full200_response_bodies": true,
+      "source_path_SHA_join": true
+    },
+    "strict_drain": {
+      "active_scopes": 0,
+      "status": "managed_scopes_drained",
+      "unsupported": []
+    }
+  },
+  "parent_accepted": false,
+  "private_readback": {
+    "bytes": 74830,
+    "file": "readback.json",
+    "role": "separate-finite-current-postreadback",
+    "sha256": "e21ae722be9f1cd7a103650c33c6cee629c48ab19c937d76dbf1274d0207e4e0"
+  },
+  "process_tree_exit_verified": false,
+  "quality_approved": false,
+  "raw_evidence": [
+    {
+      "bytes": 130,
+      "file": "root-actual-start-01.json",
+      "role": "actual-original-tool-start",
+      "sha256": "51e896374e17ba7688119839ae3b2459d1de6ce338ca01eb78d0a18d0d015188"
+    },
+    {
+      "bytes": 767,
+      "file": "root-actual-completion-01.json",
+      "role": "actual-original-tool-completion",
+      "sha256": "d6b67222171d3b498a84fe2c2913275a3656290be381301c1b24116b9c69bd4e"
+    },
+    {
+      "bytes": 646,
+      "file": "result.json",
+      "role": "original-wrapper-result",
+      "sha256": "424392d96a2bd679e90270d05911c56925fc0c2536b980b68ff0537c2c814bf6"
+    },
+    {
+      "bytes": 386,
+      "file": "junit.xml",
+      "role": "original-pytest-junit",
+      "sha256": "12501a79c81208f3e67de2c22de1b858440da2f04d396da80f1aadfc7e4dea75"
+    },
+    {
+      "bytes": 1616,
+      "file": "pytest.log",
+      "role": "original-pytest-log",
+      "sha256": "be3785cb8e25d4108f6f710c10672e91a916709d8abc22460a21ce6fbda91ef1"
+    },
+    {
+      "bytes": 190412,
+      "file": "source-readback.private.json",
+      "role": "original-backend-request-lifetime-readback",
+      "sha256": "4166c7bb0fedf3bf485bdac7760a5c0e51f15af4e0cd89ee3cba338d6bdce580"
+    },
+    {
+      "bytes": 28100,
+      "file": "graph-04.json",
+      "role": "original-browser-terminal-graph",
+      "sha256": "9ae82b1570283ba99c3e1c515a7fac1a28dc9bc9dab940b8c1271b7622cf15d0"
+    },
+    {
+      "bytes": 844,
+      "file": "controller-close.json",
+      "role": "ordinary-controller-closure",
+      "sha256": "051c62da5ce4b29a0095ffd6dd8a0deaf9ac923e4faf66c27b7afddbd2fc526b"
+    },
+    {
+      "bytes": 22666,
+      "file": "isolation-final.json",
+      "role": "original-private-store-isolation",
+      "sha256": "48ec4a64a29d70702f6997ae126ab3b15dabdff9ed3686cf587c5336ab53536c"
+    }
+  ],
+  "schema": "modu-vision.source-owned-renderer-login-readback/v1",
+  "screenshots": [
+    {
+      "bytes": 151603,
+      "file": "01-startup.png",
+      "role": "startup",
+      "sha256": "6fe02e13bc9569c61fec2d21f7c27c939764f6ea6ad8b972f8846cce60b4fa9e"
+    },
+    {
+      "bytes": 168844,
+      "file": "02-after-login-auto-hydration.png",
+      "role": "after-login",
+      "sha256": "c55b5fa372735857dd0d39f3f1e6cb5f91bb10cadf8a382eb81478f1dc2084d2"
+    }
+  ],
+  "source": {
+    "WS_observation_sha256": "8028e9a49489176e7e43411a7f42036069e4bec15f7b519fba9971bbd4aed93e",
+    "actual_login_performed_through_renderer": true,
+    "controller_sha256": "581176864fdec9b0f1a092924ffe1a023e860838019f5e35e9c1fbb8162ae06b",
+    "dirty": false,
+    "driver_sha256": "39715cd309f36385ecaa0b9daf23cf2c64b04a8986ab23f7c12e710883e732b1",
+    "preauthenticated_account_session_seeded": false,
+    "private_fixture_select_project_before_observation": true,
+    "proxy_sha256": "eecc292003cdfc91ea9cbc5749742482f46cedcae748a12c335d06ee9c1e5272",
+    "public_commit": "71d17a08cdbcef82502b8fb6c1a27a87763433fd",
+    "stored_selection_fixture": true,
+    "test_body_changed_only_SOURCE_binding_since_corrected_Graph13": true,
+    "test_sha256": "a498ca637a144fdf4fc238a31abcab4f564c8f0bd115bf837572e0144eb3a22e",
+    "tracked_bytes": 35718817,
+    "tracked_files": 2953
+  },
+  "status": "passed-source-scope-only",
+  "whole_writer_coverage": false
+}

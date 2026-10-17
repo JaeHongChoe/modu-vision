@@ -1,0 +1,538 @@
+{
+  "schema": "modu-vision.gui-action-details/v1",
+  "scope": "Metadata-visible ordinary browser confirmation of the existing prepared-data reopen case; no additional scenario/cell/parent credit.",
+  "path_redaction": {
+    "derivative": true,
+    "raw_private_original_unchanged": {
+      "file": "passed-reopen-independent-readback.private.json",
+      "bytes": 26604,
+      "sha256": "72a0b6b02f98685453b93144951cd3115b4da5848391735b227a7fa5afef9367"
+    },
+    "rule": "Personal absolute paths, request headers and credentials omitted; raw source/body hashes preserved."
+  },
+  "source": {
+    "public_product_base": "71d17a08cdbcef82502b8fb6c1a27a87763433fd",
+    "executed_private_clean_checkpoint": "c4f0ff46c13237ef653def40e1ce0e4d68505d35",
+    "test": "scripts/e2e/patch-prepare-reopen-error-controls.spec.ts::patch preparation reopens its actual saved dataset manifest and original-coordinate preview without training",
+    "test_source_sha256": "5e03e8604b1cd97c67c6af0b2092d68ca7d77485085dbed7ebd1932e0c11e661",
+    "only_source_difference_from_public_base": "Existing single spec exact six-field prepare expectation expanded to exact ten-field metadata plus pre-reload numeric DOM assertions. All original flow/context/body/custody/scanner/time assertions retained.",
+    "reviewed_spec_diff": {
+      "file": "one-spec-contract.diff",
+      "bytes": 3210,
+      "sha256": "71907469cba2a472485ef56e7a2b8d90666d7329ce1e1c2a2fc14273bde7ba7d"
+    },
+    "product_changed_for_this_attempt": false,
+    "product_metadata_sha256": "f3021d01cf4f03a81621cec80a67f5db54c26ac0cbf22ae7088c1481718a5e9e",
+    "tracked_count": 2953,
+    "tracked_bytes": 35720367,
+    "tracked_source_raw9_SHA_modes_before_after_and_postshutdown_exact": true,
+    "private_input_pins_raw9_SHA": 62,
+    "provider_links": {
+      "count": 321,
+      "witness": "target/inode/mode/mtimeNs/ctimeNs; not raw9",
+      "container": "owned0700 thin directory"
+    },
+    "selected_provider_files_raw9_SHA": 10,
+    "resolved_runtime_files_raw9_SHA": 3,
+    "dependencies": {
+      "scripts/e2e/patch-prepare-reopen-error-controls.spec.ts": "5e03e8604b1cd97c67c6af0b2092d68ca7d77485085dbed7ebd1932e0c11e661",
+      "scripts/e2e/fixtures/test.ts": "49171e2d0d4d7d9559416fdb43bc7dae9394129bbc237fe4f2a4cea0a7afa480",
+      "scripts/e2e/fixtures/harness.cjs": "171460c1cf1697b7a44b8f86a197d2b944928381f736f81af304412126464975",
+      "scripts/e2e/fixtures/desktop-host-shim.ts": "4f598862ec0e08189628c72bbb552f72bf8fd73f5a9a05b8da1d3ddf516dcfa6",
+      "scripts/e2e/fixtures/remaining-project-handoff.ts": "7a7c74a2f42a5d6ad991dadc97626c1f8330f962edaf73fd461d31f9c4764904",
+      "scripts/e2e/qa/appFlow.ts": "4eed3e5dad1d9d65a6b19fc9bb51a1f9b0e23911a39e7f255220bec0ce37fea2",
+      "playwright.config.ts": "91495f41ce2b89d5472fc5851c4fc9c5937684958ac453d0a6a759df2a10b936",
+      "src/renderer/components/training/PatchClassificationWorkbench.tsx": "1e1ffa525e9db32c058d89620a13cf219f9f5deed943466d8a20c71641aa4cc5",
+      "src/renderer/components/training/useProgramWorkbench.ts": "c41ce026bc338b2bc62c9c27af79f40cdd5aa4564307fcb6a03c210c269fbc8d",
+      "src/renderer/components/training/ProgramWorkbenchControls.tsx": "f982a95aefdd2b5360bedefbe4703e80bdd81d18e3a24e5cbcbc9297a2b95a51",
+      "src/renderer/services/modelTrainingProgram.ts": "cd8594aa2ec17fce979858e8276d46264fe53bc7edb65c429b06b2582763357c",
+      "src/renderer/services/datasetWorkflow.ts": "67a0b469b78b0d991921244d81d571c954e5c9bda5b767f1c3b0d55270f90bab",
+      "src/renderer/services/api.ts": "8ec0aa68f5d5b42101cd9a732e01146b3744ce67cad563c10ad32fb032409ce0",
+      "backend/api/routes_patch_classification.py": "65f6abeb38c77b2b86cfa0cfcd252b7723f291244b769fec082932c3605f456b",
+      "backend/engine/patch_preparation.py": "f3021d01cf4f03a81621cec80a67f5db54c26ac0cbf22ae7088c1481718a5e9e",
+      "backend/engine/grouped_dataset_views.py": "ebe6722dd1e809bc150465e03f284d9ad84aa94c2c080844f574159e57f1e57f",
+      "backend/engine/patch_classification.py": "c90ce5ad03308034493f689cfa8bc84b036c75ee905c91106d833fdf0b7d52b8",
+      "src/renderer/components/training/PatchRecipePreview.tsx": "fb0b91b076e0512583cd955a9a2bc134275db03145961a488c89ce2e1c63f542"
+    }
+  },
+  "execution": {
+    "one_Root_owned_invocation": true,
+    "attempts": 1,
+    "retries": 0,
+    "case_ms": 8431,
+    "Playwright_ms": 18313.333,
+    "wrapper_seconds": 18.79199745785445,
+    "passed": 1,
+    "failed": 0,
+    "flaky": 0,
+    "skipped": 0,
+    "original_case_ms_cap": 240000,
+    "original_action_fullbody_ms_cap": 10000,
+    "original_Popen_natural_wait_returned": true,
+    "signals_sent": false,
+    "original_Root_tool_start_completion_copied_byte_identical": true
+  },
+  "complete_prepare_contract": {
+    "status": 200,
+    "exact_full_ten_keys": [
+      "dataset_path",
+      "classes",
+      "patch_count",
+      "normal_class",
+      "patch_size",
+      "stride",
+      "provenance",
+      "split_counts",
+      "warnings",
+      "source_dataset_path"
+    ],
+    "classes": [
+      "OK",
+      "chip"
+    ],
+    "normal_class": "OK",
+    "patch_size": 16,
+    "stride": 16,
+    "patch_count": 12,
+    "split_counts": {
+      "train": 4,
+      "val": 4,
+      "test": 4
+    },
+    "warnings": [],
+    "provenance": {
+      "dataset_sha256": "sha256:265433b2df3b645081e856e5dc8ebc94bdfa4ae225036016a8a5db70294e797a",
+      "manifest_sha256": "6b8a5b99c88a081fddf5f70fac8eef74d259fa46005ce2056b20d41a71590470",
+      "source_sha256": {
+        "images/part-0.png": "7b73f33571010de874df4cb082a9197871d4ad0d95f7b0430be6220d0a2e5315",
+        "images/part-1.png": "8c32b8ba6b4878006a6f5b3d35ceda685c70f7b5793a369c9c14b89bc3e78fc5",
+        "images/part-2.png": "aa235ff39fa35a63a38e69645f0fca21ef4de7b3b99f2e77f10f9b50e99ae32d"
+      },
+      "split_counts": {
+        "train": 4,
+        "val": 4,
+        "test": 4
+      },
+      "source_image_count": 3,
+      "patch_count": 12,
+      "source_dataset_path": "<owning-source-path-redacted>",
+      "source_map": {
+        "images/part-0.png": {
+          "source_relative_path": "part-0.png",
+          "source_sha256": "7b73f33571010de874df4cb082a9197871d4ad0d95f7b0430be6220d0a2e5315"
+        },
+        "images/part-1.png": {
+          "source_relative_path": "part-1.png",
+          "source_sha256": "8c32b8ba6b4878006a6f5b3d35ceda685c70f7b5793a369c9c14b89bc3e78fc5"
+        },
+        "images/part-2.png": {
+          "source_relative_path": "part-2.png",
+          "source_sha256": "aa235ff39fa35a63a38e69645f0fca21ef4de7b3b99f2e77f10f9b50e99ae32d"
+        }
+      }
+    },
+    "independent_derivation": "Manifest rawSHA + original three source imageSHA + ordered relativeimage/SHA digest + original source mapping, not expected values copied from response. Saved twelve rows, copied original bytes and source manifest independently matched.",
+    "entire_10field_response_exact": true,
+    "no_toMatchObject_relaxation": true
+  },
+  "visible_metadata": {
+    "pre_reload_PNG_viewed_with_image_tool": true,
+    "pre_reload_select_visible": "준비 1 · 패치 12개 · 16px / 간격 16px",
+    "pre_reload_caption_visible": "클래스 OK · chip · 원본 크기 16px · train/val/test 이미지 단위 분할",
+    "both_new_DOM_assertions_passed_within_original_prepare_frame": true,
+    "ordinary_reload_PNG_viewed": true,
+    "ordinary_reload_PNG_limit": "Upper patch-classification setup only; lower prepared selector/preview correctness is established by original DOM/fullbody assertions.",
+    "screenshots": [
+      {
+        "id": "screenshot-0",
+        "sha256": "611735fbe9749a0921830dfedc44991127069918bf321bd1fd3a825dd2384a35"
+      },
+      {
+        "id": "screenshot-1",
+        "sha256": "a8f5c2304d576c45a0fdd9fe5f491b07b2a0b725dcc227c1c355950c2ade08c3"
+      }
+    ]
+  },
+  "original_reopen_checks": {
+    "genuine_page_reload": true,
+    "original_sameRequest_datasets200_entire_body_equals_baseline": true,
+    "original_sameRequest_sample200_entire_body_equals_baseline": true,
+    "separate_original_manifest_GET_fullbody_equals_baseline": true,
+    "saved12patch_rows_class_splits_boxes_and3copyhashes_exact": true,
+    "after_reload_exact16px_16px_selection_and_no_alert": true,
+    "preview": "Decoded readiness/source dimensions32x32/crop16x16, owning relativepath/hash and encoded original samplebody equality; no independent fullRGB parity.",
+    "parents_response_fullbody_captured": false
+  },
+  "original_UI_fullbodies": {
+    "count": 5,
+    "rows": [
+      {
+        "label": "owning-source-import",
+        "method": "POST",
+        "path": "/api/dataset/import",
+        "status": 200,
+        "bytes": 346,
+        "sha256": "c5454eb0fcf388da965adf9433ecfc9b31a5907409addc443d413b1f5d48114d",
+        "same_Request": true,
+        "main_frame": true,
+        "finished": true,
+        "deadline": 19503.942083,
+        "completed": 9690.640958
+      },
+      {
+        "label": "owning-source-persist",
+        "method": "PUT",
+        "path": "/api/project/update",
+        "status": 200,
+        "bytes": 1517,
+        "sha256": "b709f8afad2cd88398e47f4ec3596ebcd965e593cbe5384d7f661c942d238b82",
+        "same_Request": true,
+        "main_frame": true,
+        "finished": true,
+        "deadline": 19503.942083,
+        "completed": 9710.265417
+      },
+      {
+        "label": "actual-reopen-prepare",
+        "method": "POST",
+        "path": "/api/patch-classification/prepare",
+        "status": 200,
+        "bytes": 1811,
+        "sha256": "2125085f067e2ea0d2225c46cda2257c00b0084083940a57b7cc7b1263df8536",
+        "same_Request": true,
+        "main_frame": true,
+        "finished": true,
+        "deadline": 20470.712667,
+        "completed": 10556.780625
+      },
+      {
+        "label": "ordinary-reload-datasets",
+        "method": "GET",
+        "path": "/api/patch-classification/datasets",
+        "status": 200,
+        "bytes": 1560,
+        "sha256": "d5c78aa99b1c228cfb95f0fc424aa3fc26ec30e9ae273c7ba8611c62d997990d",
+        "same_Request": true,
+        "main_frame": true,
+        "finished": true,
+        "deadline": 20738.085542,
+        "completed": 11334.099167
+      },
+      {
+        "label": "ordinary-reload-sample",
+        "method": "GET",
+        "path": "/api/patch-classification/sample",
+        "status": 200,
+        "bytes": 617,
+        "sha256": "cfe59b1adec7e3d7fdf432bc1637e0478c1a88e9ebedfc64a6c3b7c3ad277964",
+        "same_Request": true,
+        "main_frame": true,
+        "finished": true,
+        "deadline": 20738.085542,
+        "completed": 11343.462542
+      }
+    ],
+    "all_same_Request_main_frame_finished_and_within_absolute_original_deadlines": true,
+    "full_request_context_header_equality_against_first_known_owning200": true,
+    "independent_server_accepted_context_receipt": false
+  },
+  "custody": {
+    "business_witness": "raw7(dev,ino,mode,nlink,size,mtimeNs,ctimeNs)+SHA, not baselineUID/GID; tracked source separately raw9.",
+    "source6files_unchanged": true,
+    "existing_project_nodes_preserved_except_dataset_directory_metadata_for_declared_new_subtree": true,
+    "new_owned_regular_files": 5,
+    "after_prepare_reload_and_current_postshutdown_business_files": 19,
+    "after_prepare_equals_after_reload_equals_postshutdown": true,
+    "descriptor_opened": 64,
+    "descriptor_closed": 64,
+    "all20artifact_refs_reopened_SHA_bytes_exact": true,
+    "sole_valid_prepare_POST_after_setup": [
+      {
+        "method": "POST",
+        "path": "/api/patch-classification/prepare",
+        "body": {
+          "patch_size": 16,
+          "stride": 16,
+          "normal_class": "OK",
+          "minimum_overlap": 0.05
+        }
+      }
+    ]
+  },
+  "closure": {
+    "run_readback_errors": [],
+    "original_backend_exitcode": 0,
+    "forced": false,
+    "PID_alive": false,
+    "group_alive": false,
+    "port_closed": true,
+    "escaped": [],
+    "unowned_references": [],
+    "scanner_error": null,
+    "global_leftovers": [],
+    "global_unowned_references": [],
+    "global_scanner_error": null,
+    "page_errors": [],
+    "console_errors_retained": [
+      "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)",
+      "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+    ],
+    "not_whole_UI_health_claim": true
+  },
+  "preserved04_negative": {
+    "source": "71d17a08cdbcef82502b8fb6c1a27a87763433fd",
+    "test_source_sha256": "f397d085539bc381133f62a00d5dddfc526d5ccfca8e1ef7380d2acf81a13fa7",
+    "actual_failed": 1,
+    "wrapper_seconds": 15.68047699984163,
+    "cause": "Old exact six-field expected body rejected four legitimate newly implemented metadata fields; actual full ten-field prepare200 was independently correct.",
+    "same_original_body_context_and_cleanup_guards_not_relaxed": true,
+    "stopped_before_reload_assertions": true,
+    "natural_backend0_source_equal_empty_scanners": true,
+    "not_rewritten_retried_or_promoted": true
+  },
+  "typecheck": {
+    "command": [
+      "npm",
+      "run",
+      "typecheck:e2e"
+    ],
+    "original_script": "tsc -p scripts/e2e/fixtures/tsconfig.json",
+    "executed_after_browser05_closed": true,
+    "source_clean_checkpoint": "c4f0ff46c13237ef653def40e1ce0e4d68505d35",
+    "exit_code": 0,
+    "seconds": 5.524351292056963,
+    "original_NPM_Popen_natural_reaped": true,
+    "signals_sent": false,
+    "full_source_and_private_provider_runtime_before_after_exact": true,
+    "log": {
+      "file": "npm.log",
+      "bytes": 80,
+      "sha256": "0919024eaa08b11e2a01bdac079bf8c8debb38d3c424bdc824ed6c296484d515"
+    },
+    "not_additional_browser_execution": true
+  },
+  "claims": {
+    "no_new_action_cell_or_parent_or_counter_credit": true,
+    "original03_pass_at74fc_retained": true,
+    "old_error_pass_atabf_retained": true,
+    "all_old_failure_cohorts_unchanged": true,
+    "no_training_model_inference_GPU_native_or_quality_approval": true,
+    "no_parent_catalog_fullbody_or_whole_feature_acceptance_claim": true,
+    "no_product_registry_or_PUB_mutation_by_this_readback": true
+  },
+  "generic_receipt": {
+    "file": "2026-10-18-patch-prepare-complete-metadata-current-browser.json",
+    "bytes": 1226,
+    "sha256": "0d911a2e1b43ebaa365d3809599f243349e8e4b915f0c5caddbdab7141a0912a"
+  },
+  "finite_original_refs": [
+    {
+      "phase": "05",
+      "reference": {
+        "file": "harness-manifest.json",
+        "bytes": 94239,
+        "sha256": "ed503eabfc99b13d9166198f0b3d996c25b065a9aca8ce789097bd52314c8388"
+      }
+    },
+    {
+      "phase": "05",
+      "reference": {
+        "file": "report.json",
+        "bytes": 6615,
+        "sha256": "4b97424d809f4b04ccc781347a1433969b9420f27d18124a4c5a51c47a06bc46"
+      }
+    },
+    {
+      "phase": "05",
+      "reference": {
+        "file": "browser-01.log",
+        "bytes": 421,
+        "sha256": "4f8f9ce233b15ec5c19999a6ff628f199548e61fedb0bc911bb8f1d86a1f45ad"
+      }
+    },
+    {
+      "phase": "05",
+      "reference": {
+        "file": "run-result.json",
+        "bytes": 1615,
+        "sha256": "ca0b6432c10c6e4b6d281c509a457cf16933a3f6264e3d84ad59b62da2bec2d4"
+      }
+    },
+    {
+      "phase": "05",
+      "reference": {
+        "file": "source-before.json",
+        "bytes": 1049846,
+        "sha256": "fb695bcf6f6d9ffa677614bcdc9780c915560dabffa874fde8c2ea438093313b"
+      }
+    },
+    {
+      "phase": "05",
+      "reference": {
+        "file": "source-after.json",
+        "bytes": 1049846,
+        "sha256": "fb695bcf6f6d9ffa677614bcdc9780c915560dabffa874fde8c2ea438093313b"
+      }
+    },
+    {
+      "phase": "05",
+      "reference": {
+        "file": "original-tool-start.json",
+        "bytes": 130,
+        "sha256": "8d58f96bd6d2695e6539de4e6dd15e2b41909b7d288749d3ae2087292ee7bc4f"
+      }
+    },
+    {
+      "phase": "05",
+      "reference": {
+        "file": "original-tool-completion.json",
+        "bytes": 126,
+        "sha256": "2d4bee5820307e7f6addf4787937b666a3fc2603d89ce8471f658a043dd520b5"
+      }
+    },
+    {
+      "phase": "05",
+      "reference": {
+        "file": "collector-original-popen.json",
+        "bytes": 1223,
+        "sha256": "d9dd6e0f322635fd87346f81d0ac481e3234b6203898bbda42541257dec9bdf6"
+      }
+    },
+    {
+      "phase": "05",
+      "reference": {
+        "file": "collector-result.json",
+        "bytes": 280,
+        "sha256": "07154e860122a2250c1b5b86f358e11162bc40012381aa8812079bad2cbf6339"
+      }
+    },
+    {
+      "phase": "05",
+      "reference": {
+        "file": "collector.stdout.log",
+        "bytes": 294,
+        "sha256": "3c4cf0c6c8b07e3f452d386c6423e4c6851125e7b4a68731d944fc7cab976c06"
+      }
+    },
+    {
+      "phase": "05",
+      "reference": {
+        "file": "collector.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "phase": "04-preserved",
+      "reference": {
+        "file": "report.json",
+        "bytes": 21138,
+        "sha256": "d9dd5d9774f8dd126fe6a6d580a00ec12f62b70847bf160f47c3f8ccfc27a683"
+      }
+    },
+    {
+      "phase": "04-preserved",
+      "reference": {
+        "file": "browser-01.log",
+        "bytes": 7335,
+        "sha256": "fc62f434592158598a2cbc2adac508b8db082a2b9815bf63f0ea1ede4ae142c4"
+      }
+    },
+    {
+      "phase": "04-preserved",
+      "reference": {
+        "file": "run-result.json",
+        "bytes": 1650,
+        "sha256": "c49093a2140366d4f8a84aa9d91627632cb7b77510824f05237018663e9df802"
+      }
+    },
+    {
+      "phase": "04-preserved",
+      "reference": {
+        "file": "original04-readback.private.json",
+        "bytes": 5128,
+        "sha256": "68c797a48894f9dcbd46d8dbd0f88d508e536d1a2051561d95ea5d212dae77ee"
+      }
+    },
+    {
+      "phase": "04-preserved",
+      "reference": {
+        "file": "original04-tool-start.copy.json",
+        "bytes": 131,
+        "sha256": "1eea4e2576f8d81e94e6ef0731bb5c8a543950cb6630a189c992ca6bd842a8a0"
+      }
+    },
+    {
+      "phase": "04-preserved",
+      "reference": {
+        "file": "original04-tool-completion.copy.json",
+        "bytes": 676,
+        "sha256": "8a8880fb16d301d30016ee6465830125fbd3b38497223598d65878d406f27673"
+      }
+    },
+    {
+      "phase": "typecheck",
+      "reference": {
+        "file": "invocation.json",
+        "bytes": 292,
+        "sha256": "f6cc6ce15fe4b924857a16c99001eb6b17af61525737585d74e1a706b9769d3a"
+      }
+    },
+    {
+      "phase": "typecheck",
+      "reference": {
+        "file": "original-popen.json",
+        "bytes": 131,
+        "sha256": "e3c0c00ad0f7c281a049274ffce86076584f1fb476434c7f584f4d6bf59d8db8"
+      }
+    },
+    {
+      "phase": "typecheck",
+      "reference": {
+        "file": "npm.log",
+        "bytes": 80,
+        "sha256": "0919024eaa08b11e2a01bdac079bf8c8debb38d3c424bdc824ed6c296484d515"
+      }
+    },
+    {
+      "phase": "typecheck",
+      "reference": {
+        "file": "result.json",
+        "bytes": 549,
+        "sha256": "9529e97e7d52dc3b2a3ecbc19c42fac1b58d9274d27179a4c8f3b6a62921cd6e"
+      }
+    },
+    {
+      "phase": "typecheck",
+      "reference": {
+        "file": "inputs-before.json",
+        "bytes": 1250030,
+        "sha256": "c2fc56b8b86ba95f22c19af621035288c950cb4dcef74f09f9c082c7893b5cad"
+      }
+    },
+    {
+      "phase": "typecheck",
+      "reference": {
+        "file": "inputs-after.json",
+        "bytes": 1250030,
+        "sha256": "c2fc56b8b86ba95f22c19af621035288c950cb4dcef74f09f9c082c7893b5cad"
+      }
+    },
+    {
+      "phase": "typecheck",
+      "reference": {
+        "file": "original-tool-start.json",
+        "bytes": 131,
+        "sha256": "4873e8d59a39af5e88dfa0c032006a92a192c7aaec64c8a47ffb1c560fb4a80d"
+      }
+    },
+    {
+      "phase": "typecheck",
+      "reference": {
+        "file": "original-tool-completion.json",
+        "bytes": 608,
+        "sha256": "57ee9a303a93dfc385b8b8eb0030bd32651e7ab7a7a18f9e0c4aa768153ee01a"
+      }
+    }
+  ]
+}
