@@ -189,6 +189,12 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
       activeSplitFilter: 'all', activeClassFilter: null, activeLabelFilter: 'all', page: 1, isLoading: true, isSplitting: false,
     });
     try {
+      // Validate the picked source before persisting it, so a rejected import
+      // leaves the project's previously saved source intact.
+      const res = restoreSaved
+        ? await api.dataset.currentSummary({ folder_path: folder, task })
+        : await api.dataset.import({ folder_path: folder, task, validate_images: true });
+      if (!current()) return;
       if (!restoreSaved) try {
         const project = await api.project.update({ source_dataset_dir: folder });
         if (!current()) return;
@@ -227,10 +233,6 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
           set({ sourceSaveError: `데이터는 불러왔지만 프로젝트에 경로를 저장하지 못했습니다: ${importErrorMessage(error)}` });
         }
       }
-      if (!current()) return;
-      const res = restoreSaved
-        ? await api.dataset.currentSummary({ folder_path: folder, task })
-        : await api.dataset.import({ folder_path: folder, task, validate_images: true });
       if (!current()) return;
       set({
         totalImages: res.total_images,
