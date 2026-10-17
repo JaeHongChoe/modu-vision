@@ -1,0 +1,135 @@
+{
+  "schema": "modu-vision.direction-owning-preparation-diagnostic/v1",
+  "status": "one_current_case_assertions_passed_historical_timeout_not_reproduced",
+  "public_base_source": "3a582ef3f41969d7d8272dbd926ea06c034b1413",
+  "private_source": "9b00b6e02b2e3f2090280dbe292554f953b48708",
+  "private_diagnostic_only_delta": "seven original owning-preparation awaits gain timestamps and observe their existing one-pixel poll; no predicate/deadline/assertion weakening",
+  "original_test_title": "independent direction and axial angle stay scoped through A B A project handoff and an old owning label read",
+  "test_count": 1,
+  "passed": 1,
+  "failed": 0,
+  "retries": 0,
+  "case_seconds": 11.3,
+  "runner_seconds": 20.835468207951635,
+  "preparation": [
+    {
+      "scope": "A",
+      "original_frame_ms": 10000,
+      "duration_ms": 145.30995799999982,
+      "remaining_ms": 9854.690042,
+      "pixel_poll_count": 1,
+      "pixel_RGBA": [
+        128,
+        128,
+        100,
+        255
+      ],
+      "all_seven_original_awaits_completed": true
+    },
+    {
+      "scope": "B",
+      "original_frame_ms": 10000,
+      "duration_ms": 141.22158299999865,
+      "remaining_ms": 9858.778417000001,
+      "pixel_poll_count": 1,
+      "pixel_RGBA": [
+        128,
+        128,
+        101,
+        255
+      ],
+      "all_seven_original_awaits_completed": true
+    }
+  ],
+  "actual_A_B_A_handoff_and_late_original_response": true,
+  "ordinary_UI_saves": 2,
+  "handoff_business_writes_after_baseline": 0,
+  "protected_project_source_annotation_model_report_dataset_labelset_trees_and_registry_unchanged": true,
+  "original_source_pins_exact_before_after": 2869,
+  "original_backend_stop": {
+    "exited": true,
+    "exitCode": 0,
+    "signal": null,
+    "exitedBeforeStop": false,
+    "forced": false,
+    "forcedReason": null,
+    "groupAlive": false,
+    "escaped": [],
+    "unownedReferences": [],
+    "scanError": null,
+    "durationMs": 969,
+    "stoppedAt": "2026-10-17T11:16:23.897Z",
+    "healthy_at_end": true,
+    "port_closed": true,
+    "pid_alive": false
+  },
+  "global_teardown_clean": true,
+  "console_errors": 3,
+  "page_errors": 0,
+  "Root_rehashed_all_25_manifest_file_refs": true,
+  "Root_viewed_original_screenshots": 4,
+  "setup_failure_retained": {
+    "selected_tests": 0,
+    "error": "No tests found",
+    "cause": "Anchored standalone title did not match the Playwright full title. The unique original title was then selected without anchors in a fresh output directory.",
+    "test_or_product_failure": false,
+    "initial_result": {
+      "size": 381,
+      "sha256": "6bc70cf9a8f059a1f584239d27a4e8942e968b11d60fc5f3666597275a9d2812"
+    }
+  },
+  "raw_evidence_pins": {
+    "invocation": {
+      "size": 1160,
+      "sha256": "688636cabd134710b6e2a70265142d4a6abb7b265b038e80e4a222fb56ceadf9"
+    },
+    "source_before": {
+      "size": 1027006,
+      "sha256": "73582aa2ff4f43f1141bb0dc4aa74551f744b9e31fd10c17d24e3316c9d634bf"
+    },
+    "source_after": {
+      "size": 1027006,
+      "sha256": "73582aa2ff4f43f1141bb0dc4aa74551f744b9e31fd10c17d24e3316c9d634bf"
+    },
+    "runner_result": {
+      "size": 1584,
+      "sha256": "2605cc93c115d00fe5c9b68da021ac4b38e8990748d2a323cef4d3c7684eba4a"
+    },
+    "runner_log": {
+      "size": 419,
+      "sha256": "5f4166b53709b09c20481268601e3699bdcee51b6a5cb0b320109a3a531a2cb7"
+    },
+    "manifest": {
+      "size": 16977,
+      "sha256": "8240e1277d48215be1aed7bf223ae2cd0b95dc3cb487d40c3508c87fbcf9bd1c"
+    },
+    "timing": {
+      "size": 6328,
+      "sha256": "ed0be6e1417eb352c54c37ba515016652fc52f23ff471a415b577cd35c237e00"
+    },
+    "Root_rehash": {
+      "size": 5576,
+      "sha256": "359de64bb4ec6219eb3c22b333fc7065a3a5e0edf2f8a41850ec5fc857fa1994"
+    }
+  },
+  "limits": [
+    "A passing instrumented local execution does not identify or fix the historical079 CI timeout.",
+    "The original alpha-only pixel predicate remains; it is not a full source-image parity gate.",
+    "No source Electron, installed native, model training/inference, human quality or parent acceptance.",
+    "No action or parent ledger cell changes.",
+    "The harness records three HTTP422 console messages without exact endpoint/body joins; passing case assertions are not an error-free whole-UI claim."
+  ],
+  "redaction": {
+    "raw_private_paths_published": false,
+    "credentials_or_tokens_published": false
+  },
+  "parent_acceptance": false,
+  "ledger_credit": false,
+  "observed_console_messages": {
+    "count": 3,
+    "all_status": 422,
+    "error": "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)",
+    "endpoint_and_body_join_retained": false,
+    "treated_as_expected_control": false
+  }
+}
