@@ -1022,22 +1022,81 @@ def _finish_fresh_startup_observation(original_cache, deadline, receipts):
     return original_cache['admission'].finish_original_startup(observed, deadline, reader, receipts)
 
 
+def _startup_remaining(deadline):
+    if type(deadline) not in (int, float) or not math.isfinite(deadline):
+        raise HandshakeError('Original backend startup deadline differs')
+    remaining = deadline - time.monotonic()
+    if not 0 < remaining <= MAX_DEADLINE:
+        raise HandshakeError('Original backend startup deadline expired or differs')
+    return remaining
+
+
+def _startup_cache_freshness(cache):
+    """Pin only the original pre-READY endpoint and immutable binding values."""
+    from backend.engine.application_preflight_child_relay import BackendRelayQueue
+    deadline = cache['startup_deadline']; context = cache['context']; root = cache['root']
+    sock = cache['socket']; queue = cache.get('preflight_queue')
+    challenge = cache['challenge']; proof = cache['proof']
+    challenge_bytes = _canonical(challenge); proof_bytes = _canonical(proof)
+    def fresh():
+        _startup_remaining(deadline)
+        current = _root_context()
+        if (_CACHE is not cache or current is None or current[0] != root or _context() != context
+                or cache['context'] != context or cache['root'] != root or cache['ready'] is not False
+                or type(cache['startup_deadline']) is not type(deadline) or cache['startup_deadline'] != deadline
+                or cache['socket'] is not sock or cache.get('preflight_queue') is not queue
+                or type(queue) is not BackendRelayQueue
+                or cache['challenge'] is not challenge or cache['proof'] is not proof
+                or _canonical(challenge) != challenge_bytes or _canonical(proof) != proof_bytes):
+            raise HandshakeError('Original backend startup cache or binding changed')
+        queue._fresh(sock, reader=False)
+        _startup_remaining(deadline)
+    fresh()
+    return deadline, fresh
+
+
 def early_backend_bootstrap():
     """Authenticate once before application imports; recheck every local reuse."""
     global _CACHE
     try:
+        startup_deadline = _deadline(210) if _CACHE is None else None
         context = _root_context()
         if _CACHE is not None:
             if context is None or _context() != _CACHE['context']:
                 raise HandshakeError('Verified backend process context changed')
             root, values = context
             _no_replay(_CACHE['socket'], ready=_CACHE['ready'])
-            proof = _validate(root, values, _CACHE['challenge'])
+            if _CACHE['ready']:
+                proof = _validate(root, values, _CACHE['challenge'])
+            else:
+                original_cache = _CACHE
+                deadline, fresh = _startup_cache_freshness(original_cache)
+                def before_acquire():
+                    fresh()
+                    _no_replay(original_cache['socket'], ready=False)
+                    fresh()
+                proof = _validate(root, values, original_cache['challenge'],
+                                  absolute_deadline=deadline, before_acquire=before_acquire)
+                before_acquire()
             if proof != _CACHE['proof']: raise HandshakeError('Verified backend process binding changed')
             return dict(proof)
         if context is None: return None
+        _startup_remaining(startup_deadline)
         root, values = context; sock = _transport(values['VISION_APPLICATION_BACKEND_FD'])
-        frame = read_frame(sock, 210); proof = _validate(root, values, frame)
+        from backend.engine.application_preflight_child_relay import BackendRelayQueue
+        queue = BackendRelayQueue(sock); original_context = _context()
+        frame = read_frame(sock, _startup_remaining(startup_deadline)); frame_bytes = _canonical(frame)
+        def initial_fresh():
+            _startup_remaining(startup_deadline)
+            if (_CACHE is not None or _context() != original_context or _root_context() != context
+                    or _canonical(frame) != frame_bytes):
+                raise HandshakeError('Original backend startup context or challenge changed')
+            queue._fresh(sock, reader=False)
+            _no_replay(sock, ready=False)
+            _startup_remaining(startup_deadline)
+        proof = _validate(root, values, frame, absolute_deadline=startup_deadline,
+                          before_acquire=initial_fresh)
+        initial_fresh()
         guard = None; handle = None; fd_identity = None; private_fd = None
         if 'writer' in frame:
             from backend.engine.application_launch_quiescence import writer_guard, inspect_epoch
@@ -1048,15 +1107,17 @@ def early_backend_bootstrap():
             handle = guard.__enter__()  # Retained before claim/mutable imports.
             info = os.fstat(handle.pass_fds[0]); fd_identity = (info.st_dev, info.st_ino)
             private_fd = os.dup(handle.pass_fds[0])  # Original acquired OFD, never exported.
-        _no_replay(sock); send_frame(sock, proof)
-        _CACHE = {'context': _context(), 'root': root, 'socket': sock, 'challenge': frame, 'proof': proof,
+        initial_fresh(); send_frame(sock, proof, absolute_deadline=startup_deadline)
+        initial_fresh()
+        _CACHE = {'context': original_context, 'root': root, 'socket': sock, 'challenge': frame, 'proof': proof,
+            'startup_deadline': startup_deadline,
             'ready': False, 'writer_guard': guard, 'writer_handle': handle, 'writer_private_fd': private_fd, 'writer_fd_identity': fd_identity,
             'admission': _new_original_work_admission()}
-        from backend.engine.application_preflight_child_relay import BackendRelayQueue
-        _CACHE['preflight_queue'] = BackendRelayQueue(sock)
+        _CACHE['preflight_queue'] = queue
         if proof['frozen'] is False and 'writer' in frame:
             from backend.engine.application_owned_cpu_child_relay import CpuRelayQueue
             _CACHE['source_cpu_queue'] = CpuRelayQueue(_CACHE)
+        _startup_remaining(startup_deadline)
         return dict(proof)
     except (OSError, ValueError, KeyError, TypeError, StopIteration) as exc:
         if isinstance(exc, HandshakeError): raise
@@ -1072,7 +1133,12 @@ def backend_bootstrap_ready():
     if not shared_admitted(root):
         raise HandshakeError('Backend readiness requires admitted shared application lifespan')
     if not _CACHE['ready']:
-        send_frame(_CACHE['socket'], {**proof, 'kind': 'backend_ready'}); _CACHE['ready'] = True
+        cache = _CACHE; deadline, fresh = _startup_cache_freshness(cache)
+        _no_replay(cache['socket'], ready=False)
+        send_frame(cache['socket'], {**proof, 'kind': 'backend_ready'}, absolute_deadline=deadline)
+        # The peer may already have queued the next valid phase. Only its
+        # original service reader consumes that frame after READY publication.
+        fresh(); cache['ready'] = True
     return {**proof, 'kind': 'backend_ready'}
 
 
