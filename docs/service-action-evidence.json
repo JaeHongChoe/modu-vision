@@ -10544,7 +10544,39 @@
               ]
             },
             "empty": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S4-07",
+                  "source_sha": "c849ad4a6a6a48b4bf5b870c6a18c23e780947c1",
+                  "kind": "click",
+                  "action": "중심 기준 · 회전 박스 맞추기 · 정답 표에 추가",
+                  "expected": "A real loaded source with no fitting points disables fitting and append while preserving saved truth and originals.",
+                  "observed": "Actual original fit-sourceGET200 decoded the selected256x256 source with exact sourceSHA. With0points the original fitting and append buttons were disabled, no fit or persistent write occurred, and saved3-row train1/val1/test1 truth stayed exact. Positive fit and redraw control then used the same owning source. Full source/project/prepared raw9 and bodies remained exact through real reload and natural backend shutdown.",
+                  "reviewer": "Codex scoped source and actual execution evidence review completed, including independent peer readback; human quality and parent acceptance remain pending.",
+                  "test": "scripts/e2e/obb-center-fit-empty-reset.spec.ts::center fitting empty and redraw discard only the unsent proposal and reopen exact saved truth",
+                  "receipt": "2026-10-17-f029-center-fit-empty-reset-browser.json",
+                  "receipt_sha256": "2c7b59a27e3d805589301cad50417793d4d98b3f0943cb97bb266186ba55e67e",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "66132ae922b3e53cd995980cfa32d3c23978e1c4a457436feb503af7ab6b6eec"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "20c5feef76cb3d9fa248be69ec109887352371b4f7aad3e54e8b797ef3eb3e55"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "8daa5ef168d8cf2058200c3ae6d8cb4c31c1755423ffe8ee4d18ba67671a0dd0"
+                    },
+                    {
+                      "id": "screenshot-3",
+                      "sha256": "7c28e94bcc1ce8585a7f4beba3de6602162e1f2732313d7f5c344923f1464349"
+                    }
+                  ]
+                }
+              ]
             },
             "invalid": {
               "state": "pending"
@@ -10553,7 +10585,39 @@
               "state": "pending"
             },
             "cancel": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S4-07",
+                  "source_sha": "c849ad4a6a6a48b4bf5b870c6a18c23e780947c1",
+                  "kind": "click",
+                  "action": "중심 기준 · 회전 박스 맞추기 · 정답 표에 추가",
+                  "expected": "The original redraw button discards only an unappended, unsaved center-fitting proposal without changing saved truth or source.",
+                  "observed": "Actual delivered mouse points and trusted fit click completed original fit-boxPOST200 within10s; returned box/corners matched independent geometry and append became enabled. Trusted 점 다시 그리기 click removed all points/polygon and disabled fit/append without appending or saving. Exactly one geometric fitPOST and zero persistent API writes occurred; real owning manifestGET200/reload retained the exact three-row truth and all protected raw9/bodies. No HTTP/job/saved-manifest cancellation is claimed.",
+                  "reviewer": "Codex scoped source and actual execution evidence review completed, including independent peer readback; human quality and parent acceptance remain pending.",
+                  "test": "scripts/e2e/obb-center-fit-empty-reset.spec.ts::center fitting empty and redraw discard only the unsent proposal and reopen exact saved truth",
+                  "receipt": "2026-10-17-f029-center-fit-empty-reset-browser.json",
+                  "receipt_sha256": "2c7b59a27e3d805589301cad50417793d4d98b3f0943cb97bb266186ba55e67e",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "66132ae922b3e53cd995980cfa32d3c23978e1c4a457436feb503af7ab6b6eec"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "20c5feef76cb3d9fa248be69ec109887352371b4f7aad3e54e8b797ef3eb3e55"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "8daa5ef168d8cf2058200c3ae6d8cb4c31c1755423ffe8ee4d18ba67671a0dd0"
+                    },
+                    {
+                      "id": "screenshot-3",
+                      "sha256": "7c28e94bcc1ce8585a7f4beba3de6602162e1f2732313d7f5c344923f1464349"
+                    }
+                  ]
+                }
+              ]
             },
             "reopen": {
               "state": "verified",
