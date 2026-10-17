@@ -423,28 +423,34 @@ class DatasetImportJobs:
             raise ImportNotAcceptable('Only the revision this completed import published can be accepted')
         return self.index.activate(project_key, revision_id, expected_active)
 
-    def recover_orphans(self, reason: str = 'the backend restarted while the import was running') -> dict:
+    def recover_orphans(self, reason: str = 'the backend restarted while the import was running', *, outcome_observer=None) -> dict:
         """At startup no import thread survives. An import whose revision was already sealed under its job id is
         completed with that receipt under a new attempt; every other unfinished import ends interrupted (resuming is
         an explicit continuation). Only the backend that owns the data folder may call this.
         """
-        outcome = {'completed': [], 'interrupted': []}
-        for row in self.store.active(KIND):
-            try:
-                sealed = self.index._published(row['project_key'], row['id'])
-                if sealed is not None:
-                    ref = self.store.get(row['id'])
-                    if ref.state == 'accepted':
-                        ref = self.store.transition(row['id'], ref.revision, 'start')
-                    fence = self.store.begin_attempt(row['id'], ref.revision, 'startup-recovery', None, os.getpid()).fencing_token
-                    self.store.finish(row['id'], 'complete', {'revision': asdict(sealed), 'recovered': True}, fencing_token=fence)
-                    outcome['completed'].append(row['id'])
-                else:
-                    self.store.transition(row['id'], row['revision'], 'interrupt', {'reason': reason})
-                    outcome['interrupted'].append(row['id'])
-            except Exception:  # changed concurrently; the next start reconciles it
-                logger.exception('Could not recover dataset import %s', row['id'])
-        return outcome
+        from backend.engine.startup_recovery_outcomes import recovery_stage
+        with recovery_stage(outcome_observer, 'import_orphans', self) as observed:
+            observed.store(self.store)
+            outcome = {'completed': [], 'interrupted': []}
+            rows = self.store.active(KIND)
+            observed.records(rows, 'active_rows')
+            for row in rows:
+                try:
+                    sealed = self.index._published(row['project_key'], row['id'])
+                    if sealed is not None:
+                        ref = self.store.get(row['id'])
+                        if ref.state == 'accepted':
+                            ref = self.store.transition(row['id'], ref.revision, 'start')
+                        fence = self.store.begin_attempt(row['id'], ref.revision, 'startup-recovery', None, os.getpid()).fencing_token
+                        self.store.finish(row['id'], 'complete', {'revision': asdict(sealed), 'recovered': True}, fencing_token=fence)
+                        outcome['completed'].append(row['id'])
+                    else:
+                        self.store.transition(row['id'], row['revision'], 'interrupt', {'reason': reason})
+                        outcome['interrupted'].append(row['id'])
+                except Exception as error:  # changed concurrently; the next start reconciles it
+                    observed.error(error, 'orphan_recovery_error')
+                    logger.exception('Could not recover dataset import %s', row['id'])
+            return outcome
 
     def _operation(self, job_id: str, ended: Optional[dict]) -> dict:
         operation = self.store.checkpoint_value(job_id) or {}

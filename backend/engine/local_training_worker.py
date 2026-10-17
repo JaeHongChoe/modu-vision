@@ -412,72 +412,84 @@ def _restore_confirmed_terminal(manager, record, journal, root, leases):
     leases.release(record.job_id, terminal=True)
 
 
-def recover_local_jobs(manager, *, job_id=None):
+def recover_local_jobs(manager, *, job_id=None, outcome_observer=None):
     """Observe persisted owned children; never replay preparation or training."""
-    _recover_local_journals(manager, job_id=job_id)
-    if job_id is None:
-        # Startup: once workers are observed, every job the ledger accepted is accounted for and
-        # none is launched again (S1-02). A ledger problem never blocks worker recovery.
-        from backend.api.routes_training import reconcile_job_ledger
-        try:
-            reconcile_job_ledger(manager)
-        except (OSError, sqlite3.Error, ValueError, KeyError):
-            logger.exception('Could not reconcile the persistent job ledger after worker recovery')
+    from backend.engine.startup_recovery_outcomes import recovery_stage
+    with recovery_stage(outcome_observer, 'local_recovery', manager) as observed:
+        observed.manager(manager)
+        if outcome_observer is None:_recover_local_journals(manager, job_id=job_id)
+        else:_recover_local_journals(manager, job_id=job_id, outcome_observer=outcome_observer)
+        if job_id is None:
+            # Startup: once workers are observed, every job the ledger accepted is accounted for and
+            # none is launched again (S1-02). A ledger problem never blocks worker recovery.
+            from backend.api.routes_training import reconcile_job_ledger
+            try:
+                if outcome_observer is None:reconcile_job_ledger(manager)
+                else:reconcile_job_ledger(manager, outcome_observer=outcome_observer)
+            except (OSError, sqlite3.Error, ValueError, KeyError) as error:
+                observed.error(error, "ledger_recovery_error")
+                logger.exception('Could not reconcile the persistent job ledger after worker recovery')
 
 
-def _recover_local_journals(manager, *, job_id=None):
-    from backend.api.routes_training import JobRecord
-    from backend.engine.shared_scheduler import ResourceLeases
-    index = _index()
-    if not index.is_dir():
-        return
-    for path in sorted(index.glob('job_*.json')):
-        try:
-            journal = json.loads(path.read_text(encoding='utf-8'))
-            if job_id is not None and journal['job_id'] != job_id:
-                continue
-            existing = manager.get_job(journal['job_id'])
-            if existing is not None and (job_id is None or existing.status not in ('disconnected', 'stopping')
-                                         or existing.thread is not None and existing.thread.is_alive()):
-                continue
-            root = Path(journal['output_dir']).resolve()
-            spec_path = Path(journal['spec_path'])
-            if (spec_path.is_symlink() or spec_path.resolve() != root / 'local_spec.json'
-                    or hashlib.sha256(spec_path.read_bytes()).hexdigest() != journal['spec_sha256']):
-                raise ValueError('Recovered local launch specification differs from its journal')
-            spec = json.loads(spec_path.read_text(encoding='utf-8'))
-            if (spec['job_id'] != journal['job_id'] or Path(spec['output_dir']).resolve() != root
-                    or resolve_store_path(spec['lease_path']).resolve() != manager._leases.path.resolve()):
-                raise ValueError('Recovered local specification differs from its job or reservation store')
-            leases = ResourceLeases(spec['lease_path'], owner=spec['lease_owner'])
-            record = JobRecord(journal['job_id'], spec['task'], spec['preset'], spec['dataset_path'], str(root), 'running',
-                               phase='reconnecting', source_dataset_path=spec.get('source_dataset_path'),
-                               dataset_fingerprint=spec.get('dataset_fingerprint'), dataset_binding=spec.get('dataset_binding'))
-            if spec.get('warm_start'):
-                from backend.engine.warm_start import WarmStartParent
-                parent = dict(spec['warm_start'], checkpoint_path=Path(spec['warm_start']['checkpoint_path']),
-                              classes=tuple(spec['warm_start']['classes']))
-                record.warm_start = WarmStartParent(**parent)
-            if journal.get('worker_exit_confirmed') is True and journal.get('status') in _TERMINAL_STATES:
-                # An observer already confirmed the owned session exited. Restore
-                # history only; probing its old PID could match another process.
-                _restore_confirmed_terminal(manager, record, journal, root, leases)
-                continue
-            if journal.get('cancel_requested_at') or _cancelled(root, record.job_id):
-                record.preparation_cancel.set()
-            if _liveness(journal) is None:
-                record.status = record.phase = 'disconnected'
-                record.result = {'status': 'disconnected', 'optimizer_resume': False}
-                leases.mark_uncertain(record.job_id)
-                manager.restore_local_job(record)
-                continue
-            process = _AttachedProcess(journal)
-            record.process = process
-            def runner(callback, row=record, state=journal, child=process, directory=root):
-                return _monitor_with_cleanup(row, callback, state, child, state['spec_sha256'], directory)
-            manager.restore_local_job(record, runner=runner, leases=leases)
-        except (OSError, ValueError, KeyError, TypeError):
-            logger.exception('Could not recover local worker journal %s', path)
+def _recover_local_journals(manager, *, job_id=None, outcome_observer=None):
+    from backend.engine.startup_recovery_outcomes import recovery_stage
+    with recovery_stage(outcome_observer, 'local_journals', manager) as observed:
+        from backend.api.routes_training import JobRecord
+        from backend.engine.shared_scheduler import ResourceLeases
+        index = _index()
+        observed.inventory(index)
+        if not index.is_dir():
+            return
+        paths = sorted(index.glob('job_*.json'))
+        observed.records(paths, 'journal_paths')
+        for path in paths:
+            try:
+                journal = json.loads(path.read_text(encoding='utf-8'))
+                if job_id is not None and journal['job_id'] != job_id:
+                    continue
+                existing = manager.get_job(journal['job_id'])
+                if existing is not None and (job_id is None or existing.status not in ('disconnected', 'stopping')
+                                             or existing.thread is not None and existing.thread.is_alive()):
+                    continue
+                root = Path(journal['output_dir']).resolve()
+                spec_path = Path(journal['spec_path'])
+                if (spec_path.is_symlink() or spec_path.resolve() != root / 'local_spec.json'
+                        or hashlib.sha256(spec_path.read_bytes()).hexdigest() != journal['spec_sha256']):
+                    raise ValueError('Recovered local launch specification differs from its journal')
+                spec = json.loads(spec_path.read_text(encoding='utf-8'))
+                if (spec['job_id'] != journal['job_id'] or Path(spec['output_dir']).resolve() != root
+                        or resolve_store_path(spec['lease_path']).resolve() != manager._leases.path.resolve()):
+                    raise ValueError('Recovered local specification differs from its job or reservation store')
+                leases = ResourceLeases(spec['lease_path'], owner=spec['lease_owner'])
+                record = JobRecord(journal['job_id'], spec['task'], spec['preset'], spec['dataset_path'], str(root), 'running',
+                                   phase='reconnecting', source_dataset_path=spec.get('source_dataset_path'),
+                                   dataset_fingerprint=spec.get('dataset_fingerprint'), dataset_binding=spec.get('dataset_binding'))
+                if spec.get('warm_start'):
+                    from backend.engine.warm_start import WarmStartParent
+                    parent = dict(spec['warm_start'], checkpoint_path=Path(spec['warm_start']['checkpoint_path']),
+                                  classes=tuple(spec['warm_start']['classes']))
+                    record.warm_start = WarmStartParent(**parent)
+                if journal.get('worker_exit_confirmed') is True and journal.get('status') in _TERMINAL_STATES:
+                    # An observer already confirmed the owned session exited. Restore
+                    # history only; probing its old PID could match another process.
+                    _restore_confirmed_terminal(manager, record, journal, root, leases)
+                    continue
+                if journal.get('cancel_requested_at') or _cancelled(root, record.job_id):
+                    record.preparation_cancel.set()
+                if _liveness(journal) is None:
+                    record.status = record.phase = 'disconnected'
+                    record.result = {'status': 'disconnected', 'optimizer_resume': False}
+                    leases.mark_uncertain(record.job_id)
+                    manager.restore_local_job(record)
+                    continue
+                process = _AttachedProcess(journal)
+                record.process = process
+                def runner(callback, row=record, state=journal, child=process, directory=root):
+                    return _monitor_with_cleanup(row, callback, state, child, state['spec_sha256'], directory)
+                manager.restore_local_job(record, runner=runner, leases=leases)
+            except (OSError, ValueError, KeyError, TypeError) as error:
+                observed.error(error, 'journal_recovery_error')
+                logger.exception('Could not recover local worker journal %s', path)
 def _spec(record, overrides, device, split_root, leases):
     parent = asdict(record.warm_start) if record.warm_start else None
     if parent:

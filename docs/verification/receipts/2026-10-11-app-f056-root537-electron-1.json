@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "e39a45f52f3787b480be4acaaa6d131f5176f2e5",
+  "source_dirty": false,
+  "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved ROC boundary attempts failed history and canceled A read preserve exact reports across A B A",
+  "test_source_sha256": "8b7d897b1cba02997750e95273ea7ba9352ceb885436ce58831b0e2132d6e18b",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "98950e9c578b084d5d2b176ad5547ecdae3ccd3dffa7362f974f1305d7082d1e",
+  "harness_sha256": "3193cbbd7af3c588f212e26e47403d2dc9258bf231b68c40a959bf5694fe4383",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "52b1f2ac44aeddf40be99510c272309fdd152f6e79e94d777dba75f78aee54ae"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "e08e191814c1f8381fe354c8f298655f93228220145be58ba04585d380a8c332"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "7b682a3490b4f172e0ea226926de908361a918cc66fdeafafdfa39e44c2ca961"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "cbff286e70eb6ad48cbd831ebf1f80cc3faedea7e38c2f444a4fc91f0901949d"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

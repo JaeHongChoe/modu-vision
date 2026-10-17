@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "2a7edd3df0b339ab83a175ab7446ed2cec8aacbe",
+  "source_dirty": false,
+  "test": "scripts/e2e/flow-existing-refusal-controls.spec.ts::native F064 empty model history mapping and keyboard layout connection deletion refusals preserve saved originals",
+  "test_source_sha256": "90d100eab9cccde0a6992e91da468aed4ece7eaaa44ffbad2d9cbd924a9ca244",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "9fbe4ba90252426cc4b8d7b7d85c14462a2231b8a3ada083e3028ca471fad7b7",
+  "harness_sha256": "c38819c3c4f1b38bd80041e6fb1240d5582e656e6835fd5a23917d583b87180c",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "8b596ecc06acfe1cb715c873246091b0deeb3d146f712775b8b9b0356712487f"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

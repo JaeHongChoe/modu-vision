@@ -1,0 +1,44 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "1bc21ab8360027a643b60f8c4149720073c5f83b",
+  "source_dirty": false,
+  "test": "scripts/e2e/runtime-optimization-exact-cancel-controls.spec.ts::optimization exact cancel has no empty POST, preserves owned 503 retry and fences A B A late receipt",
+  "test_source_sha256": "2f24aafee1fa33f7353db01faab12c7274f04f65691328d448d42f72b49996f7",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "6b1059e8b32dff4e63108bee879ecab659aebf401f522355dc60b77ae196d6be",
+  "harness_sha256": "8bdf4af90c9453e9a2cc10459c3fc3a719dc85a73c2c25046b66f127aa26f142",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "87884fd4e4a4757c4337d0ed4c36d6c9da53d3543a073e64203e4976c5774251"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "c0d2b5657d3fa0ae64da1222966bcad00746de0efb4b8bd061b87b41745430e0"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "6432de1616944e9d8540989acc5430c087414ea2a26bc69c64ddf1b503df35a4"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "dcc4d8ace80217426781add683c916e75a25b5a285a3e06e4e9530cdf8c124e0"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "3c54c3229c8ba5bf2528c8b4018db4e2060b430adaa5a3bfc8072cc4afb456b6"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

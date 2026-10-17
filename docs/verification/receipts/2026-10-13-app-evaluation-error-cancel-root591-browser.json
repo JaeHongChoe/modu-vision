@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "095eead84fa44225c4cf6fd8d93346ff0e92b864",
+  "source_dirty": false,
+  "test": "scripts/e2e/evaluation-evidence-transition-controls.spec.ts::three saved evaluation families remove stale controls on failed history and fence canceled A read",
+  "test_source_sha256": "78a256fb77c8086dc0ceb0ca8ad6433193a440d778301d791c74421109684fd4",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "21325816fec9de3dbd09753906596b5ed0f5d867a3ae6b429e617f034df2d536",
+  "harness_sha256": "5f3b69a24274ac821a39d69c6145c04ffd6910f03f14de90c361503c630a3153",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "320714115ba21d5ea03ab5d7221baad189a275693d4234c23494d85e6a5ce8cb"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "e01b1bc9c41be4b720e221461a4d0c967bddd389a5b3633f702b60542594f7e7"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "f5c0f035b37bb695e316a8aa8d5d0033c8f46547501187eb20a07f5c1b9d6976"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "a99400b0311673417110f1f4aa95207225f0e0ebd216f48abbdeac589d7fe8b2"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

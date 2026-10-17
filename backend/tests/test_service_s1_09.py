@@ -653,11 +653,14 @@ def test_a_deadline_run_uses_session_isolation(monkeypatch):
     launched = []
     real_popen = subprocess.Popen
 
+    command = [sys.executable, '-c', 'print(1)']
+
     def popen(*args, **kwargs):
-        launched.append(kwargs)
+        if args and args[0] == command:
+            launched.append(kwargs)
         return real_popen(*args, **kwargs)
     monkeypatch.setattr(runtime_deadline.subprocess, 'Popen', popen)
-    result = runtime_deadline.execute_owned_process([sys.executable, '-c', 'print(1)'], deadline_ms=60_000)
+    result = runtime_deadline.execute_owned_process(command, deadline_ms=60_000)
     assert calls == [real()], 'the child was launched with the shared isolation options'
     assert len(launched) == 1 and all(launched[0].get(key) == value for key, value in real().items()), 'Popen received them'
     assert result.get('status') != 'timeout', result
@@ -686,3 +689,36 @@ def test_a_generation_package_carries_what_its_owned_run_imports():
         needed = {node.module.rsplit('.', 1)[1] + '.py' for node in ast.walk(tree)
                   if isinstance(node, ast.ImportFrom) and node.module and node.module.startswith('backend.engine.')}
         assert needed <= set(GENERATOR_PACKAGE_ENGINE_FILES), (name, needed - set(GENERATOR_PACKAGE_ENGINE_FILES))
+
+
+def test_session_store_setup_retires_a_removed_case_ledger_before_fixture_overrides(tmp_path, monkeypatch, request):
+    """Failed-only tmp retention must not leave a cached ledger at a recreated case path."""
+    import shutil
+    import sqlite3
+    from backend.engine import job_store
+
+    setup = next(plugin for plugin in request.config.pluginmanager.get_plugins()
+                 if getattr(plugin, '__file__', None)
+                 and Path(plugin.__file__).resolve() == ROOT / 'backend' / 'conftest.py')
+    baseline = dict(setup._SESSION_STORE_ENV)
+    case_root = tmp_path / 'case-user-data'
+    for name in baseline:
+        monkeypatch.setenv(name, str(case_root if name == 'VISION_AI_STUDIO_USER_DATA_DIR'
+                                    else tmp_path / ('case-' + name.lower())))
+    removed = job_store.ledger()
+    expected = case_root / 'jobs' / 'ledger.sqlite3'
+    assert removed.path == expected and expected.is_file()
+    shutil.rmtree(case_root)  # only this case's owned store, as passed tmp retention does
+    case_root.mkdir()
+    with pytest.raises(sqlite3.OperationalError, match='unable to open database file'):
+        with removed._connect():
+            pass
+
+    setup.pytest_runtest_setup(request.node)
+    assert {name: os.environ.get(name) for name in baseline} == baseline
+    assert job_store.ledger().path == Path(baseline['VISION_AI_STUDIO_USER_DATA_DIR']) / 'jobs' / 'ledger.sqlite3'
+    monkeypatch.setenv('VISION_AI_STUDIO_USER_DATA_DIR', str(case_root))
+    reopened = job_store.ledger()
+    assert reopened is not removed and reopened.path == expected and expected.is_file()
+    with reopened._connect() as db:
+        assert db.execute('PRAGMA foreign_keys').fetchone()[0] == 1

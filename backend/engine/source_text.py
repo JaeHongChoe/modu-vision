@@ -8,6 +8,7 @@ is not UTF-8 (exactly what the platform default did), and otherwise refused with
 Nothing is guessed: no code page is tried that the platform would not have used.
 """
 from __future__ import annotations
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_handler, observe_original_dataset_UI_operation, observe_original_dataset_UI_connection, original_dataset_UI_read_text, original_dataset_UI_read_bytes, original_dataset_UI_image_open, original_dataset_UI_file, original_dataset_UI_diagnostics_missing
 
 import codecs
 import locale
@@ -38,4 +39,4 @@ def decode_source_text(data: bytes, name: str = 'file') -> str:
 def read_source_text(path: Path | str) -> str:
     """The text of a user-supplied label file, decoded as described above."""
     path = Path(path)
-    return decode_source_text(path.read_bytes(), path.name)
+    return decode_source_text(original_dataset_UI_read_bytes(path), path.name)

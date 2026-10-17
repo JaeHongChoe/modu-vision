@@ -1,5 +1,7 @@
 """SQLite leases shared by app processes; uncertain remote runs remain reserved."""
 from __future__ import annotations
+from backend.engine.original_owned_selected_compute_request import observe_original_selected_compute, observe_original_selected_lease_connection
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_context
 import os
 import sqlite3
 from backend.engine.sqlite_wal import use_wal  # a concurrent WAL switch is retried, not failed
@@ -31,6 +33,8 @@ class ResourceLeases:
                     except sqlite3.OperationalError as exc:
                         if 'duplicate column' not in str(exc):raise
             conn.execute('CREATE TABLE IF NOT EXISTS devices(host TEXT NOT NULL,selector TEXT NOT NULL,uuid TEXT NOT NULL,parent_uuid TEXT,memory_mb INTEGER NOT NULL,PRIMARY KEY(host,selector))')
+    @observe_original_UI_ancillary_context("compute_lease_connection")
+    @observe_original_selected_lease_connection
     @contextmanager
     def connect(self, timeout=10, *, execution_grant=False):
         from backend.engine.live_control_migration import lease_admission
@@ -131,6 +135,7 @@ class ResourceLeases:
         with self.connect() as conn:
             return self._available(conn,host,selector,0,False,skip_expired=True)
 
+    @observe_original_selected_compute("acquire")
     def acquire(self, job_id, host, selector='all', *, remote=False,memory_budget_mb=0,allow_sharing=False,task=None,project_id=None,account_id=None):
         with self.connect(execution_grant=True) as conn:
             conn.execute('BEGIN IMMEDIATE')
@@ -214,13 +219,16 @@ class ResourceLeases:
             if row is None: return True
             if row['owner'] != self.owner and row['expires'] > time.time(): return False
             conn.execute('UPDATE leases SET owner=?,expires=?,app_schema=2 WHERE job_id=?', (self.owner,time.time()+self.lease_seconds,job_id)); return True
+    @observe_original_selected_compute("heartbeat")
     def heartbeat(self, job_id):
         with self.connect() as conn:
             # A row this version keeps alive is no longer an older app's reservation (drain does not apply to it).
             return conn.execute('UPDATE leases SET expires=?,app_schema=2 WHERE job_id=? AND owner=?', (time.time()+self.lease_seconds,job_id,self.owner)).rowcount == 1
+    @observe_original_selected_compute("uncertain")
     def mark_uncertain(self, job_id):
         with self.connect() as conn:
             conn.execute('UPDATE leases SET uncertain=1 WHERE job_id=? AND owner=?', (job_id,self.owner))
+    @observe_original_selected_compute("release")
     def release(self, job_id, *, terminal=False):
         """Remove this owner's reservation of ``job_id``; True when one was removed (the release evidence, S1-04)."""
         with self.connect() as conn:

@@ -14,6 +14,8 @@ from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_handler, observe_original_UI_global_cursor
+
 router = APIRouter(prefix="/api/job-events", tags=["job-events"])
 
 
@@ -26,6 +28,7 @@ def _cursor(stream: str, ledger_id: str, position: int, anchor: Optional[tuple])
     return f"v1.{stream}.{position}.{_digest(ledger_id, *anchor)[:16] if anchor else '0'}"
 
 
+@observe_original_UI_global_cursor
 def _position(cursor: str, stream: str, ledger_id: str, store) -> Optional[int]:
     """The ledger position a cursor of this stream continues from, or None when it cannot be continued."""
     try:
@@ -51,7 +54,7 @@ def _event(row: Dict[str, Any]) -> Dict[str, Any]:
             "at": row["at_ns"] / 1e9, "payload": payload}
 
 
-@router.get("")
+@observe_original_UI_ancillary_handler(router.get(""))
 def job_events(request: Request, after: Optional[str] = Query(None, max_length=200),
                limit: int = Query(200, ge=1, le=500)) -> Dict[str, Any]:
     from backend.api.routes_training import _LEDGER_ERRORS, job_ledger

@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "bbc531dd32b4304be74ce1ebdfa1773d88848762",
+  "source_dirty": false,
+  "test": "scripts/e2e/flow-model-less-reopen-controls.spec.ts::F064 model-less inspection ROI and typed connection drafts reopen with exact saved graphs",
+  "test_source_sha256": "2055dacdc591178b81ebef1dc85598d2b0cc322ddc49c509e5635a724cefe3b0",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "8105759c4cf0526a9e47527c83ffa958e9f6dda081c8048f7d4311422811908c",
+  "harness_sha256": "c7b248f312cd427d25aa704c9da13fd63bef474d996c573eda0825b204b17f53",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "3e4bd1c5f374fab5bfc32decb5d1e31fbe817b0087b848cbd9473e2b82bf560f"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

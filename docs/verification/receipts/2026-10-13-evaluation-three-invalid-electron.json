@@ -1,0 +1,44 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "c4583475979f41743708e975087a33fd3de8ed1c",
+  "source_dirty": false,
+  "test": "scripts/e2e/evaluation-three-invalid-controls.spec.ts::native three saved evaluation invalid records preserve original report JSON and restore valid controls",
+  "test_source_sha256": "5630bb01dc4711512a9f4be016c48f5c9426f0f188264706f2b89e29da98c2fd",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "33d7e35c37eb3c7cf6a72b0c2931cd7a207a0fb1017a0e1c026a26b91b6678db",
+  "harness_sha256": "bc9b77fa4cf887e017cfcb581662ea6fd131a644f6746b1c65afa5bf5bb582eb",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "064b0b0aa888171df4d5da8920b0eec24ccd639e1a26649f9f9a8fd46ca9b0e6"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "3ca1a255e593db07a84dcaac78064bc9976e8087c795b944bd8d8a344c3fcf09"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "12039331aea89925c3a7e28d144588632de80498bfda54fed9a32d95f09e8173"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "f6c6655c9300d07c45d268734ed9f8bb14431c57b9a7a58cb72cb6b3d3a0d962"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "c3c4320db88bb487e2a44c57dc5c980ba3889b5969b14b84493eaa908df8e237"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

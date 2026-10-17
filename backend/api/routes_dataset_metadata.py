@@ -1,5 +1,6 @@
 """Review metadata, split leakage and annotation interoperability endpoints."""
 from __future__ import annotations
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_handler, observe_original_dataset_UI_operation, observe_original_dataset_UI_connection, original_dataset_UI_read_text, original_dataset_UI_read_bytes, original_dataset_UI_image_open, original_dataset_UI_file, original_dataset_UI_diagnostics_missing
 import hashlib
 import io
 import json
@@ -73,7 +74,7 @@ def _errors(exc):
     if isinstance(exc,KeyError): return HTTPException(404,detail='Image not found in current project')
     return HTTPException(422,detail=str(exc))
 
-@router.get('/statistics')
+@observe_original_UI_ancillary_handler(router.get('/statistics'))
 def dataset_statistics(request:Request,folder_path:Optional[str]=None):
     project,source=_context(request,folder_path)
     from backend.engine.dataset_summary import dataset_summary

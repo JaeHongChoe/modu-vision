@@ -1,0 +1,44 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "f42c399d34275b750f2e9944344ff25a3214535d",
+  "source_dirty": false,
+  "test": "scripts/e2e/image-picker-empty-reopen-focus.spec.ts::native saved image picker identity and keyboard focus stay owned through A B A project handoff",
+  "test_source_sha256": "cf14edbf7a8ae3de9916fde18db546ab6774116471d9deda8cf4d4b7831a718a",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "69d2fc0203a8b9a164fbe9266022c5f58bc8a0cce489f0234ba534a9de5df494",
+  "harness_sha256": "64de0fc1136594a1e9cd154e7b76d28443874f3e68587a75ff1a21ab4f0b97bf",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "bb10b9b75157a80515f5e35602b3c3e7dce97fbca9ebe53b02d367703e912641"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "673999aac5026410b0461b72f2b995e69eb3af71b94d32e0024f9a195119dec3"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "673999aac5026410b0461b72f2b995e69eb3af71b94d32e0024f9a195119dec3"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "1a5251401fb10ed6781b1a5f255f124a01b0adc656bfd0a7ee365942d6ce4d1e"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "c0246cf6e1880e242a6f498b7203b5d50dd7ba908c21511a1435de08df1d89a8"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

@@ -34,25 +34,55 @@ const ticks=async()=>{for(let i=0;i<20;i++)await Promise.resolve();};
 async function main(){
  const controller=new Channel(),backend=new Channel(),proc=new EventEmitter();
  Object.assign(proc,{pid:31,exitCode:null,signalCode:null,stdio:[null,null,null,backend]});
- const nonce='1'.repeat(32),binding={application_generation:'2'.repeat(32)},mainProcess={pid:21},writer={writer_id:'3'.repeat(32),registration_sha256:'4'.repeat(64)};
- const launch=new OwnedApplicationLaunch('/modeled-original',nonce,binding,mainProcess,'5'.repeat(64),new Frames(controller),writer);
+ const nonce='1'.repeat(32),binding={installation_id:'a'.repeat(32),update_id:'b'.repeat(32),application_generation:'2'.repeat(32),database_pointer:{generation_id:'c'.repeat(32),fence:1}},mainProcess={pid:21,created_at:1.0,command_sha256:'d'.repeat(64)},writer={writer_id:'3'.repeat(32),registration_sha256:'4'.repeat(64)};
+ // Real private storage rows are consumed by untouched registeredBackend.
+ // Process/binding validation remains explicitly modeled; no lease authority.
+ const path=require('node:path'),os=require('node:os'),root=fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()),'mv-reader-control-'));
+ const directory=path.join(root,'.application-writer-epochs',nonce),journalDirectory=path.join(root,'.application-launches',nonce);
+ fs.mkdirSync(directory,{recursive:true});fs.mkdirSync(journalDirectory,{recursive:true});
+ const controllerProcess={pid:11,created_at:.5,command_sha256:'e'.repeat(64)};
+ fs.writeFileSync(path.join(journalDirectory,'journal.json'),canonical({supervisor:controllerProcess}),{flag:'wx',mode:0o600});
+ const launch=new OwnedApplicationLaunch(root,nonce,binding,mainProcess,'5'.repeat(64),new Frames(controller),writer);
  launch.bindingCurrent=()=>{if(!bindingFresh)throw new Error('Modeled original binding ended');if(crossArm&&scenario==='validation-crosses-deadline')now=5000;};
  launch.current=()=>launch.bindingCurrent();launch.executable=()=>({sha256:'6'.repeat(64),build:null});
  let claim,epoch,challenge,drainRequest,heldDrainAck=null,heldRelayAck=null,lastExitAck=null,exitSent=0,resolveCalls=0;
+ let originalRegistration=null,proofCount=0,registrationEchoCount=0,shutdownPrepare=null,preparedCount=0,forwardedDrainRaw=null;
+ const currentTwoPhase=scenario==='two-phase-final-ack-replay';
  const child={pid:41,created_at:1.25,command_sha256:'a'.repeat(64)};
  controller.onWrite=(value,raw)=>{
-  if(value.kind==='main_drain_request'){
+  if(value.kind==='backend_proof'){
+   assert.equal(++proofCount,1);assert.equal(value.nonce,nonce);assert.equal(value.challenge,'5'.repeat(64));
+   assert.equal(Buffer.from(value.claim_b64,'base64').toString(),canonical(claim));
+   assert.equal(Buffer.from(value.ready_b64,'base64').toString(),canonical({...claim,kind:'backend_ready'}));
+   const lock=path.join(directory,'authority.lock');fs.writeFileSync(lock,'',{flag:'wx',mode:0o600});const info=fs.statSync(lock);
+   const registry={schema_version:1,binding:{installation_id:binding.installation_id,nonce,update_id:binding.update_id,application_generation:binding.application_generation,database_generation_id:binding.database_pointer.generation_id,database_fence:binding.database_pointer.fence,launch_binding_sha256:hash(canonical(binding)),controller:controllerProcess},revision:1,state:'open',authority_lock_identity:{device:info.dev,inode:info.ino},writers:[{...writer,role:'backend',status:'active',lock_identity:{device:info.dev,inode:info.ino},process:claim.process,exit_code:null,reason_code:null}]};
+   const registryRaw=Buffer.from(canonical(registry));fs.writeFileSync(path.join(directory,'registry.json'),registryRaw,{flag:'wx',mode:0o600});
+   fs.writeFileSync(path.join(directory,'publication.json'),canonical({schema_version:1,nonce,revision:1,registry_sha256:hash(registryRaw)}),{flag:'wx',mode:0o600});
+   originalRegistration={schema_version:1,kind:'backend_registered',nonce,epoch,binding_sha256:hash(canonical(binding)),backend_claim_sha256:hash(canonical(claim)),main_process:mainProcess,backend_process:claim.process,...writer,active_registry_sha256:hash(registryRaw)};
+   queueMicrotask(()=>controller.receive(originalRegistration));
+  }else if(value.kind==='backend_registration_admitted'){
+   assert.equal(++registrationEchoCount,1);assert.ok(originalRegistration);
+   assert.equal(canonical(value),canonical({...originalRegistration,kind:'backend_registration_admitted'}));
+  }else if(value.kind==='main_shutdown_prepare'){
+   assert.equal(currentTwoPhase,true);assert.equal(++preparedCount,1);assert.equal(value.nonce,nonce);assert.equal(value.epoch,epoch);
+   assert.equal(value.binding_sha256,hash(canonical(binding)));assert.equal(value.backend_claim_sha256,hash(canonical(claim)));
+   assert.match(value.request_id,/^[0-9a-f]{32}$/);assert.ok(Number.isSafeInteger(value.budget_ms)&&value.budget_ms>0&&value.budget_ms<=30000);
+   shutdownPrepare={...value,kind:'backend_shutdown_prepare'};queueMicrotask(()=>controller.receive(shutdownPrepare));
+  }else if(value.kind==='main_shutdown_prepared'){
+   assert.equal(currentTwoPhase,true);assert.ok(shutdownPrepare);assert.equal(canonical(value),canonical({schema_version:1,kind:'main_shutdown_prepared',nonce,request_id:shutdownPrepare.request_id,backend_claim_sha256:hash(canonical(claim))}));
+   queueMicrotask(()=>controller.receive({schema_version:1,kind:'shutdown_prepared',nonce,request_id:shutdownPrepare.request_id,post_budget_ms:30000}));
+  }else if(value.kind==='main_drain_request'){
    drainRequest={schema_version:1,kind:'backend_drain_request',challenge:'7'.repeat(64),request_id:value.request_id,nonce,epoch,
     binding_sha256:hash(canonical(binding)),backend_claim_sha256:hash(canonical(claim)),...writer,closed_registry_sha256:'8'.repeat(64),budget_ms:['shorter-original-drain','late-drain-ack'].includes(scenario)?1000:value.budget_ms};
    queueMicrotask(()=>controller.receive(drainRequest));
   }else if(value.kind==='managed_drain_proof'){
-   const proof=Buffer.from(value.proof_b64,'base64');const receipt=JSON.parse(proof);
+   const proof=Buffer.from(value.proof_b64,'base64');const receipt=JSON.parse(proof);forwardedDrainRaw=Buffer.from(proof);
    const ack={schema_version:1,kind:'managed_drain_admitted',nonce,request_id:drainRequest.request_id,receipt_sha256:hash(proof),status:receipt.status};
    if(scenario==='late-drain-ack')now=2000;
    if(scenario==='pending-drain-ack')heldDrainAck=ack;else queueMicrotask(()=>controller.receive(ack));
   }else if(value.kind==='main_backend_exit'){
    exitSent++;if(scenario==='late-exit-ack')now=5001;
-   lastExitAck={schema_version:1,kind:'backend_exit_observed',nonce,request_id:value.request_id,exit_sha256:hash(canonical(value))};
+   lastExitAck=currentTwoPhase?{schema_version:1,kind:'shutdown_validation_final',nonce,request_id:value.request_id,receipt_sha256:hash(forwardedDrainRaw),exit_sha256:hash(canonical(value)),status:JSON.parse(forwardedDrainRaw).status,whole_writer_coverage:false,process_tree_exit_verified:false,can_release_launch_lease:false}:{schema_version:1,kind:'backend_exit_observed',nonce,request_id:value.request_id,exit_sha256:hash(canonical(value))};
    if(scenario!=='silent-no-ack')queueMicrotask(()=>controller.receive(lastExitAck));
   }else if(value.kind==='main_preflight_request'){
    const req=value.request,ack={schema_version:1,kind:'controller_preflight_reply',nonce,epoch,request_id:req.request_id,
@@ -66,13 +96,16 @@ async function main(){
     binding_sha256:hash(canonical(binding)),process:{pid:proc.pid,created_at:1.5,command_sha256:'9'.repeat(64)},
     executable:'/modeled-backend',executable_sha256:'6'.repeat(64),build_identity_sha256:null,frozen:false};
    queueMicrotask(()=>{backend.receive(claim);backend.receive({...claim,kind:'backend_ready'});});
+  }else if(value.kind==='backend_shutdown_prepare'){
+   assert.equal(currentTwoPhase,true);assert.equal(canonical(value),canonical(shutdownPrepare));
+   queueMicrotask(()=>backend.receive({schema_version:1,kind:'backend_shutdown_prepared',nonce,request_id:value.request_id,backend_claim_sha256:hash(canonical(claim))}));
   }else if(value.kind==='backend_drain_request'){
    const refused=scenario==='refused-drain';queueMicrotask(()=>backend.receive({schema_version:1,kind:'backend_managed_drain',request:value,
     backend_proof:claim,status:refused?'refused':'managed_scopes_drained',active_scopes:0,unsupported:refused?['modeled-uncovered']:[],
     scope:'reviewed_foreground_scopes_only',whole_writer_coverage:false,process_tree_exit_verified:false,can_release_launch_lease:false}));
   }
  };
- await launch.bindBackend(proc,'/modeled-backend',null);await ticks();
+ await launch.bindBackend(proc,'/modeled-backend',null);await ticks();assert.equal(proofCount,1);assert.equal(registrationEchoCount,1);
  const header={schema_version:1,kind:'backend_preflight_request',nonce,epoch,binding_sha256:hash(canonical(binding)),backend_claim_sha256:hash(canonical(claim)),request_id:'d'.repeat(32)};
  const plan={task:'train',device:'cpu',stages:['train'],workdir:'/modeled-original',source_sha256:'e'.repeat(64),budget_ms:10000,deadline_monotonic:12.75,command:Array(18).fill('modeled')};
  if(['unfinished-row','finished-row','pending-relay'].includes(scenario)){
@@ -85,6 +118,7 @@ async function main(){
  if(scenario==='no-drain'||scenario==='pending-relay'){
   backend.emit('end');await ticks();assert.equal(controller.destroyed,true);assert.equal(exitSent,0);
  }else{
+  if(currentTwoPhase){await launch.prepareBackendShutdown(proc);assert.equal(preparedCount,1);}
   const drain=launch.prepareBackendDrain(proc,4000);void drain.catch(()=>{});await ticks();
   if(scenario==='pending-drain-ack'){
    assert.ok(heldDrainAck);backend.emit('end');await ticks();assert.equal(controller.destroyed,true);assert.equal(exitSent,0);
@@ -93,7 +127,7 @@ async function main(){
   }else{
    const receipt=await drain;assert.equal(receipt.status,'managed_scopes_drained');
    assert.equal(receipt.can_release_launch_lease,false);assert.equal(controller.destroyed,false);
-   if(scenario==='replayed-exit-ack'){
+   if(scenario==='replayed-exit-ack'||currentTwoPhase){
     // Observe/delegate the genuinely installed callback; never fabricate an
     // admitted receipt, exit frame, resolved promise, or callback authority.
     const originalResolve=launch.exitResolve;assert.equal(typeof originalResolve,'function');
@@ -115,7 +149,7 @@ async function main(){
    if(scenario==='end-then-error')backend.emit('error',new Error('Modeled socket error after end'));
    if(scenario==='end-then-close')backend.emit('close');
    await ticks();
-   const positive=['clean-end','clean-close','end-then-close','finished-row','late-exit','late-exit-ack','nonzero-exit','signal-exit','silent-no-exit','silent-no-ack','replayed-exit-ack'].includes(scenario);
+   const positive=['clean-end','clean-close','end-then-close','finished-row','late-exit','late-exit-ack','nonzero-exit','signal-exit','silent-no-exit','silent-no-ack','replayed-exit-ack','two-phase-final-ack-replay'].includes(scenario);
    assert.equal(controller.destroyed,!positive,'Only exact fully admitted clean backend end keeps the original controller reader');
    assert.equal(exitSent,0,'EOF never grants an exit publication');
    if(positive){
@@ -136,12 +170,12 @@ async function main(){
     const failed=['late-exit','late-exit-ack','nonzero-exit','signal-exit'].includes(scenario);
     if(failed){assert.equal(controller.destroyed,true);await assert.rejects(launch.confirmBackendExit(proc));}
     else{assert.equal(exitSent,1);await launch.confirmBackendExit(proc);assert.equal(controller.destroyed,false);
-     if(scenario==='replayed-exit-ack'){assert.equal(resolveCalls,1);controller.receive(lastExitAck);await ticks();assert.equal(resolveCalls,1,'Identical acknowledgement was consumed twice');assert.equal(controller.destroyed,true,'Replay did not invalidate original private channel');assert.equal(exitSent,1);}}
+     if(scenario==='replayed-exit-ack'||currentTwoPhase){assert.equal(resolveCalls,1);controller.receive(lastExitAck);await ticks();assert.equal(resolveCalls,1,'Identical acknowledgement was consumed twice');assert.equal(controller.destroyed,true,'Replay did not invalidate original private channel');assert.equal(exitSent,1);}}
    }
   }
  }
  launch.refuse();backend.destroy();await ticks();for(const timer of ownedTimers)clearTimeout(timer);
- console.log(JSON.stringify({scenario,pass:true,scope:'inert-original-reader-lifetime',application:false,cpu:false,process_authority:'modeled',validation:'modeled',resolve_calls:resolveCalls,identical_ack_replay_refused:scenario==='replayed-exit-ack',actual_dispatcher:true,modeled_handles_only:true}));
+ console.log(JSON.stringify({scenario,pass:true,scope:'inert-original-reader-lifetime',application:false,cpu:false,process_authority:'modeled',validation:'modeled',resolve_calls:resolveCalls,identical_ack_replay_refused:scenario==='replayed-exit-ack'||currentTwoPhase,current_two_phase_final_replay:currentTwoPhase,original_registration_consumed_once:proofCount===1&&registrationEchoCount===1,original_registration_validator_unchanged:true,actual_dispatcher:true,modeled_handles_only:true}));
 }
 main().catch(error=>{for(const timer of ownedTimers)clearTimeout(timer);console.error(error.stack);process.exitCode=1;});
 """
@@ -210,3 +244,17 @@ def test_exact_original_frames_end_token(scenario, tmp_path):
     assert result.returncode == 0, result.stderr
     receipt = json.loads(result.stdout)
     assert receipt["scenario"] == scenario and receipt["pass"] is True
+
+
+@pytest.mark.no_child
+def test_current_two_phase_final_ack_replay_uses_original_source_lifetime(tmp_path):
+    source=Path(__file__).resolve().parents[2]/"src/main/applicationLaunch.ts"
+    result=subprocess.run(["node","-e",CONTROL,str(source),"two-phase-final-ack-replay"],capture_output=True,text=True,timeout=5)
+    (tmp_path/"original-current-two-phase.stdout").write_text(result.stdout)
+    (tmp_path/"original-current-two-phase.stderr").write_text(result.stderr)
+    assert result.returncode==0,result.stderr
+    receipt=json.loads(result.stdout)
+    assert receipt["pass"] and receipt["resolve_calls"]==1 and receipt["identical_ack_replay_refused"]
+    assert receipt["current_two_phase_final_replay"] and receipt["original_registration_consumed_once"]
+    assert receipt["original_registration_validator_unchanged"]
+    assert receipt["application"] is False and receipt["cpu"] is False and receipt["process_authority"]=="modeled"

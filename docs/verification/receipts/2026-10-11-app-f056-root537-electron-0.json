@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "e39a45f52f3787b480be4acaaa6d131f5176f2e5",
+  "source_dirty": false,
+  "test": "scripts/e2e/evaluation-filter-controls.spec.ts::native saved filter project handoff retains original sources filters and reports",
+  "test_source_sha256": "8b7d897b1cba02997750e95273ea7ba9352ceb885436ce58831b0e2132d6e18b",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "98950e9c578b084d5d2b176ad5547ecdae3ccd3dffa7362f974f1305d7082d1e",
+  "harness_sha256": "a848618b994edf64b8077fbbc7bbc3df290ea7e71f87742cee053e09c9e4833b",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "294e57828e3135f66cda9e93c443e51665646fb27c1380797fe2ade5b0006e27"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "c9aae22ff1c46a3111e45d989230b9678172165a38ed3dcea3989ea1b309ce8c"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

@@ -9,6 +9,7 @@ import tempfile
 import threading
 import time
 import psutil
+from backend.engine.original_owned_flow_execution_request import observe_original_execution_effect, observe_original_export_lock
 
 from backend.remote.file_replace import replace_file  # Windows: waits out a reader of the file
 from backend.engine.process_isolation import session_isolation  # noqa: F401  (re-exported for existing callers)
@@ -18,6 +19,7 @@ _THREAD_LOCKS={}
 _LOCAL=threading.local()
 
 
+@observe_original_export_lock
 @contextmanager
 def runtime_state_lock(root):
     """Reject concurrent mutations; nested calls on the owning thread reenter."""
@@ -59,6 +61,12 @@ def runtime_state_lock(root):
         lock.release()
 
 
+def private_json_bytes(value):
+    """Exact bytes written by the private disk protocol, distinct from wire JSON."""
+    return json.dumps(value,allow_nan=False).encode('utf-8')
+
+
+@observe_original_execution_effect('publish')
 def atomic_private_json(path,value):
     path=Path(path)
     if path.is_symlink():raise ValueError('Runtime state file is linked')

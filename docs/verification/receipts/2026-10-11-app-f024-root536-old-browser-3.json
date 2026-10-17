@@ -1,0 +1,40 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "f8ea5bdd9441faa33a2534b89c4701d81ef6f5b4",
+  "source_dirty": false,
+  "test": "scripts/e2e/team-draft-lease-error-lifecycle.spec.ts::draft apply503 and accepted dialog cancel preserve the original draft; lease503 explicitly recovers",
+  "test_source_sha256": "e0947986ddfe8e995c965d9a80f8c4fa1d1fd44b31e45cae5482c46d1d457473",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "d305413a9a75a2339b13b280a1a8d91760d1e4762f4adc22499ddc277bc568a8",
+  "harness_sha256": "22457accfe3ce36077b2c64fd25ddecb532232581d71f65370cab64a604f7edd",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "01b0f8bf7f7ba6ac3f98e0fcca55ec37fe56e3432428499b7de4fc86b2396ae9"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "2830da1b16831f4d566790eb7a6d0b243f703d4c4fc67610272398ed146b43d1"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "7e48d2c7dd05dc5ecde40c22c03565b87941b4711c4635d3aadc1bb876db4406"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "748d999f43fd4add991bfb5fea375a5f537d589ab7259eeb12be5152924b6ea9"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

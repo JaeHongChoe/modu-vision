@@ -1,0 +1,48 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "418039a91d8293fae13f161dc3f688b846e09d56",
+  "source_dirty": false,
+  "test": "scripts/e2e/evaluation-error-class-selector-transitions.spec.ts::saved error overlays and class changes recover after source outage and fence old A replies from B",
+  "test_source_sha256": "19f4ee228a36c3ce12b76e6c766507f84a0eb5eda8834d8527ca82139ae9ea26",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "e0f108ef62e1042433c21174dbd42e4d98a731ecdac90ef19c404ad67fe0067b",
+  "harness_sha256": "1bb64a8a5ed16e4c34b8b71cb109c2456175628c2e2d806bb066cbb2e91636ce",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "03133e295d91e2fca27856121146247766ae073e7b079f2ae77e0d347e80de6f"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "eb858d71d2e69eb06e65826f06f90cbd07accfafba20daf1a6164babcef90165"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "97d0c9bb5a8505f63c058c0053b6f456b95967eb18ba25c41a19d7c8d79819d5"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "23564dc86f1b79b8d1326e5b5e73de5fd38404adc6a21000596a2b8957ef06ad"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "83947cab64f75b0a5fc5004059e5fde6ab9704da9afbaccecdf857c66004732d"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "6fbaed151ff22036b70e8c612de2b7b687969007dedbecd8b17cb9c954a4c1f9"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

@@ -1,6 +1,7 @@
 """Run an exported inspection flow with the exact bundled graph engine."""
 
 from __future__ import annotations
+from backend.engine.original_owned_UI_ancillary_request import observe_original_dataset_provenance_operation, original_dataset_provenance_file, original_dataset_provenance_database, original_dataset_provenance_journal_read, original_dataset_UI_read_text, original_dataset_UI_read_bytes
 
 import argparse
 import hashlib
@@ -19,6 +20,7 @@ from backend.engine.specialized_models import flow_model_task
 def _sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as source:
+        original_dataset_provenance_file(source,path)
         for block in iter(lambda: source.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
@@ -38,11 +40,12 @@ def _package_file(root: Path, relative: str) -> Path:
     return path
 
 
+@observe_original_dataset_provenance_operation('verify_package')
 def verify_flow_package(package_dir: Path) -> tuple[FlowchartPipeline, dict[str, Path]]:
     """Reject changed files and model links before loading a PyTorch checkpoint."""
     root = Path(package_dir).resolve()
     manifest_path = _package_file(root, "manifest.json")
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest = json.loads(original_dataset_UI_read_text(manifest_path,encoding="utf-8"))
     if not isinstance(manifest, dict) or manifest.get("schema_version") != 1:
         raise ValueError("Unsupported flow package manifest")
     files = manifest.get("files")
@@ -63,9 +66,9 @@ def verify_flow_package(package_dir: Path) -> tuple[FlowchartPipeline, dict[str,
         raise ValueError('Flow package contains unlisted runtime code')
     if 'runtime' in manifest:
         from backend.engine.runtime_configuration import runtime_options
-        if 'runtime_config.json' not in seen or runtime_options(json.loads((root/'runtime_config.json').read_text(encoding='utf-8')))!=manifest['runtime']:
+        if 'runtime_config.json' not in seen or runtime_options(json.loads(original_dataset_UI_read_text(root/'runtime_config.json',encoding='utf-8')))!=manifest['runtime']:
             raise ValueError('Runtime configuration differs from the verified manifest')
-    pipeline = FlowchartPipeline.model_validate(json.loads((root / "pipeline.json").read_text(encoding="utf-8")))
+    pipeline = FlowchartPipeline.model_validate(json.loads(original_dataset_UI_read_text(root / "pipeline.json",encoding="utf-8")))
     ordered_linear_nodes(pipeline)
     from backend.engine.spatial_calibration import calibration_refs, package_calibrations
     needed = calibration_refs(pipeline)
@@ -101,7 +104,7 @@ def verify_flow_package(package_dir: Path) -> tuple[FlowchartPipeline, dict[str,
     if found != expected:
         raise ValueError("Packaged model jobs do not match the saved graph")
     if 'openvino_models.json' in seen:
-        converted=json.loads((root/'openvino_models.json').read_text(encoding='utf-8'))
+        converted=json.loads(original_dataset_UI_read_text(root/'openvino_models.json',encoding='utf-8'))
         records=converted.get('models',[]) if isinstance(converted,dict) else []
         if len(records)!=len(models) or {(row.get('job_id'),row.get('task')) for row in records}!=found:
             raise ValueError('OpenVINO model artifacts do not cover the complete saved graph')
@@ -114,7 +117,7 @@ def verify_flow_package(package_dir: Path) -> tuple[FlowchartPipeline, dict[str,
         if 'release' in manifest:
             if 'runtime_acceptance.json' not in seen or _sha256(root/'runtime_acceptance.json')!=manifest.get('runtime_acceptance_sha256'):
                 raise ValueError('Approved OpenVINO release requires explicit verified precision acceptance')
-            acceptance=json.loads((root/'runtime_acceptance.json').read_text(encoding='utf-8'))
+            acceptance=json.loads(original_dataset_UI_read_text(root/'runtime_acceptance.json',encoding='utf-8'))
             if (acceptance.get('holdout_reviewed') is not True or acceptance.get('models')!=records
                 or acceptance.get('input_receipt')!=converted.get('input_receipt')
                 or acceptance.get('heldout_flow_results_sha256')!=converted.get('heldout_flow_results_sha256')
@@ -129,8 +132,8 @@ def run_flow_package(package_dir: Path, image_path: Path, image_id: str | None =
     from backend.engine.runtime_configuration import runtime_options
     root=Path(package_dir).expanduser().resolve()
     config=root/'runtime_config.json'
-    saved=json.loads(config.read_text(encoding='utf-8')) if config.is_file() else {}
-    manifest=json.loads((root/'manifest.json').read_text(encoding='utf-8'))
+    saved=json.loads(original_dataset_UI_read_text(config,encoding='utf-8')) if config.is_file() else {}
+    manifest=json.loads(original_dataset_UI_read_text(root/'manifest.json',encoding='utf-8'))
     if manifest.get('runtime_acceptance_sha256') and device is not None and device!=saved.get('device'):
         raise ValueError('Reviewed precision runtime requires its explicitly accepted device')
     for key,value in [('device',device),('deadline_ms',deadline_ms),('cpu_threads',cpu_threads)]:
@@ -258,7 +261,7 @@ def _run_isolated_admitted(package_dir, image_path, image_id, options, cancel_ev
     root=Path(package_dir).expanduser().resolve()
     # Validate graph and content before executing a packaged Python entry point.
     verify_flow_package(root)
-    manifest=json.loads((root/'manifest.json').read_text(encoding='utf-8'))
+    manifest=json.loads(original_dataset_UI_read_text(root/'manifest.json',encoding='utf-8'))
     if options['device'].startswith('openvino:') and not any(row['path']=='openvino_models.json' for row in manifest['files']):
         raise ValueError('OpenVINO requires a verified converted package')
     if manifest.get('runtime_acceptance_sha256') and options['device']!=manifest['runtime']['device']:
@@ -295,14 +298,14 @@ def _run_isolated_admitted(package_dir, image_path, image_id, options, cancel_ev
             raise RuntimeError(f"Owned inference failed: {outcome['stderr'] or outcome['stdout']}; diagnostic="+_owned_outcome_diagnostic(outcome))
         if not output.is_file() or output.stat().st_size>128*1024*1024:
             raise RuntimeError('Owned inference returned no bounded result')
-        result=json.loads(output.read_text(encoding='utf-8'))
+        result=json.loads(original_dataset_UI_read_text(output,encoding='utf-8'))
         result['runtime_execution']={**options,'isolated_process':True,'pid':outcome['pid'],'elapsed_ms':outcome['elapsed_ms']}
         return result
 
 
 def worker_main():
     root,request,output=map(Path,sys.argv[1:4])
-    raw=json.loads(request.read_text(encoding='utf-8'))
+    raw=json.loads(original_dataset_UI_read_text(request,encoding='utf-8'))
     from backend.engine.runtime_configuration import runtime_options
     options=runtime_options(raw['options'])
     import torch
@@ -318,7 +321,7 @@ class Predictor:
         self.package_dir=Path(package_dir).expanduser().resolve()
         verify_flow_package(self.package_dir)
         config=self.package_dir/'runtime_config.json'
-        saved=json.loads(config.read_text(encoding='utf-8')) if config.is_file() else {}
+        saved=json.loads(original_dataset_UI_read_text(config,encoding='utf-8')) if config.is_file() else {}
         for key,value in [('device',device),('deadline_ms',deadline_ms),('cpu_threads',cpu_threads)]:
             if value is not None:saved[key]=value
         if saved.get('deadline_ms') is None:saved['deadline_ms']=300000

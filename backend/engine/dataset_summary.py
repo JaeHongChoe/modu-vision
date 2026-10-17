@@ -1,5 +1,6 @@
 """Image-grain, active-labelset statistics without mutating source data."""
 from __future__ import annotations
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_handler, observe_original_dataset_UI_operation, observe_original_dataset_UI_connection, original_dataset_UI_read_text, original_dataset_UI_read_bytes, original_dataset_UI_image_open, original_dataset_UI_file, original_dataset_UI_diagnostics_missing
 
 from collections import Counter
 from pathlib import Path, PurePath
@@ -10,6 +11,7 @@ from backend.engine.grouped_dataset_views import _annotations,source_image_paths
 from backend.engine.dataset_inventory import folder_label_split
 
 
+@observe_original_dataset_UI_operation('dataset_summary')
 def dataset_summary(source:Path,task:str,*,assignments:dict[str,str]|None=None,
                     usage:dict[str,str]|None=None,metadata:dict[str,dict]|None=None,
                     tolerate_schema_errors:bool=False)->dict[str,Any]:

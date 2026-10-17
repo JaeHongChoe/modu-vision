@@ -30,6 +30,11 @@ _ACTIVE_FILE_NAME = ".active_project.json"
 _HISTORY_FILE_NAME = ".recent_projects.json"
 
 
+from backend.engine.original_current_project_request import observe_publication, observe_resolution
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_handler, observe_original_UI_global_project, original_UI_global_maintenance, original_UI_global_read_text
+
+
+@observe_publication('project_json')
 def _write_json(path: Path, value: Dict[str, Any] | List[Dict[str, Any]]) -> None:
     """Replace JSON atomically so a crash cannot truncate the only manifest."""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -124,6 +129,7 @@ def _activate_project(request: Request, project: Dict[str, Any]) -> Dict[str, An
     return project
 
 
+@observe_original_UI_global_project
 def _load_project(path: Path) -> Dict[str, Any]:
     # Includes legacy normalization and lazy labelset initialization, even when
     # called by authorization/context selection before the general API guard.
@@ -132,7 +138,7 @@ def _load_project(path: Path) -> Dict[str, Any]:
     try:legacy_preview_migration(path)  # reject unsupported input before creating admission files
     except (MigrationError,OSError,ValueError) as exc:raise HTTPException(422,detail=str(exc)) from exc
     from backend.engine.migration_guard import maintenance_guard
-    guard=maintenance_guard(path)
+    guard=original_UI_global_maintenance(maintenance_guard(path),path)
     try:guard.__enter__()
     except ValueError as exc:raise HTTPException(423,detail=str(exc)) from exc
     try:return _load_project_unfenced(path)
@@ -152,7 +158,7 @@ def _load_project_unfenced(path: Path) -> Dict[str, Any]:
         # stores and belongs to the explicit compatibility/migration routes.
         legacy_preview_migration(path)
         stage = "manifest-read"
-        saved = json.loads(manifest.read_text(encoding="utf-8"))
+        saved = json.loads(original_UI_global_read_text(manifest,encoding="utf-8",role="manifest_text"))
         if not isinstance(saved, dict):
             raise ValueError("project.json must contain an object")
         # A workspace can be moved; its managed folders move with project.json.
@@ -163,7 +169,7 @@ def _load_project_unfenced(path: Path) -> Dict[str, Any]:
         stage = "legacy-normalization"
         normalize_legacy_manifest(path)
         stage = "normalized-manifest-read"
-        saved = json.loads(manifest.read_text(encoding="utf-8"));data=dict(saved)
+        saved = json.loads(original_UI_global_read_text(manifest,encoding="utf-8",role="manifest_text"));data=dict(saved)
         stage = "labelset-read"
         active_set = load_labelsets(path)["active_id"]
         data.update({
@@ -409,6 +415,7 @@ def open_project(req: ProjectOpenRequest, request: Request):
 
 
 @router.get("/current", response_model=ProjectConfigResponse)
+@observe_resolution
 def get_current_project(request: Request):
     scoped=getattr(request.state,'scoped_project',None)
     if scoped is not None:return scoped
@@ -465,7 +472,7 @@ def update_project(req: ProjectUpdateRequest, request: Request):
         return _activate_project(request, validated)
 
 
-@router.get("/list")
+@observe_original_UI_ancillary_handler(router.get("/list"))
 def list_projects(request: Request):
     account=getattr(request.state,'account_user',None)
     if account:

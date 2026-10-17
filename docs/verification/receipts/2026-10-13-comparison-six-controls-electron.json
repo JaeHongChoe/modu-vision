@@ -1,0 +1,56 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "734e681373f9e7ea48a52fd0beebb4c877b30401",
+  "source_dirty": false,
+  "test": "scripts/e2e/comparison-manual-nine-controls.spec.ts::native manual comparison invalid pair errors and canceled A submit preserve distinct B and stored history",
+  "test_source_sha256": "726eaa3d1292eec51854073327d5312b0c461135358e2ee801e61c4301e1d74f",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "56d285ed79f89fc3330e4ca15f06c8f92108d6daf18a0712fc5a2cbedc39957d",
+  "harness_sha256": "148aa7a092df267ab38a953a9c493c08fefa5792146829eec6e30c088033f2e1",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "f564150d67cbe50cdb794857483bc0be71f1c4f85b4c6c66c91a7b6956a8dc70"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "57825640cb37afdeebd74ce1e448d31c8d5c84dcfd4caaf6aa8809877e844e37"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "2ccabaeb5f15d44f83c0f98bc1e675fa758d6ae77d5631cc8b8ddb6deb7ad364"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "68b22e5ef49d1429c7ac1efebd0d06229d4c88d95f5ca1bcc14cc4b9396fd00e"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "a16e7495e24e62f995fb02051de6643f6b30695eec82efb430c74398e086c32a"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "e3133f35eb3b6451065d374fb33573b8c55e3581a733f88380ee07da2d3e0207"
+    },
+    {
+      "id": "screenshot-6",
+      "sha256": "3e0158a0a222961d9b5bbcf76ef253872fef491096404afc47bb4f866be2fba8"
+    },
+    {
+      "id": "screenshot-7",
+      "sha256": "b946a77072a548d20f8541b40227249effc962b64e3b91833438ffad485a4459"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

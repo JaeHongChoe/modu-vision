@@ -25,23 +25,26 @@ const sample = (id, truth, prediction, confidence = 0.9) => ({
   ground_truth: truth, predicted_class: prediction, confidence, thumbnail_url: '',
 });
 const samples = [sample('escape', 'OK', 'scratch'), sample('overkill', 'scratch', 'OK')];
-function fixture() {
+function fixture(task = 'classification') {
   const training = { isCurrentData: true, status: 'completed', jobId: 'job' };
   const results = { job_id: 'job', class_semantics: semantics, metrics: { accuracy: 0 }, test_predictions: samples };
   const api = { evaluation: {
     getResults: async () => results,
+    calibrateZeroEscape: async body => (await fetch('http://test/api/evaluation/zero-escape-calibrate', {method:'POST',body:JSON.stringify(body)})).json(),
     getOverkillUnderkill: async () => ({ optimal_threshold: 0.2 }),
     getHeatmap: async () => ({ overlay_base64: null }),
   } };
   const m = load('useEvaluationStore.ts', {
+    './useProjectStore': {useProjectStore:{getState:()=>({projectDir:'/project',task,isProjectBusy:false,project:{id:'A',project_dir:'/project',task,source_dataset_dir:'/source',active_labelset_id:'default'}})}},
+    './useDatasetStore': {useDatasetStore:{getState:()=>({folderPath:'/source',datasetKey:`/source\0${task}`,hasSelectedFolder:true,isLoading:false,importError:null})}},
     './useTrainingStore': { useTrainingStore: { getState: () => training } },
-    '../services/api': { api, getApiBaseUrl: async () => 'http://test' },
+    '../services/api': { api, getApiBaseUrl: async () => 'http://test', getProjectContext:()=>null,getProjectContextGeneration:()=>0,getApiPersistenceIdentity:()=> 'local' },
   });
   return { ...m, state: () => m.useEvaluationStore.getState(), api, training, results };
 }
 
 test('heldout anomaly results cannot send a threshold replacement even for probability scores', async () => {
-  const f = fixture();
+  const f = fixture('anomaly');
   await f.state().loadEvaluation('job', { folderPath: '/source', task: 'anomaly' });
   f.useEvaluationStore.setState({metrics:{evaluated_split:'test',anomaly_mode:'classification',score_spec:{domain:'probability'}}});
   const previousFetch = global.fetch;

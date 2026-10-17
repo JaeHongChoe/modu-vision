@@ -1,0 +1,48 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "3ac991e717ae64427d19914424a9a692eec32a48",
+  "source_dirty": false,
+  "test": "scripts/e2e/evaluation-mask-truth-prediction-transitions.spec.ts::saved truth and prediction overlays recover after source outage and fence old A replies from B",
+  "test_source_sha256": "7ba7cabc4aab3d517693444b0660b144ebcf4b9c0214ebcbb2b9f9436fe15fae",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "750f39540ed70df589ebf821be9a4b1373732852dd065faabc73ee956630a04f",
+  "harness_sha256": "3b7eddd0f923b787c8cb169d2bc43f8fccca6211c3f912afb80473192d7bccc7",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "6879f6ee992912cbad31d453c989649f7ff560e320d10954b857d4cc186e6bdb"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "ea3b9a80d072011ea1352d09ec2c717aaccaa2eeae54c07e3caddc95e307fc30"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "ef31ba107a19a9f2d5a2a8b64fd1b9584bce83f40438ba6492e304c3f4052c24"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "c1713a8d3bad7d1be1a8aecb5f0274c2d841d81dca1291b90e29b289f675b864"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "25f8772c6ca67e2d2d02fa0e2e3d1573c01cf57fbbd70eee873637cd89d05682"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "c6a3adba8cb833078d344a33dbaf12efd80a293df528d8e123b1b46a8f7c0b94"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

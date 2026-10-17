@@ -1,3 +1,4 @@
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_handler, observe_original_dataset_UI_operation, observe_original_dataset_UI_connection, original_dataset_UI_read_text, original_dataset_UI_read_bytes, original_dataset_UI_image_open, original_dataset_UI_file, original_dataset_UI_diagnostics_missing
 from pathlib import Path
 import re
 from typing import Any
@@ -18,7 +19,7 @@ class PreferenceUpdate(BaseModel):
     changes:dict[str,Any]
 
 
-@router.get('')
+@observe_original_UI_ancillary_handler(router.get(''))
 def preferences(request:Request):
     return read_preferences(Path(get_current_project(request)['project_dir']))
 

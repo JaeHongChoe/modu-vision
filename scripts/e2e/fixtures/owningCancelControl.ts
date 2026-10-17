@@ -1,0 +1,34 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import type {Page,Request,Response,Route} from '@playwright/test';
+import {expect,type Evidence,type Workspace} from './test';
+export const hash=(b:Buffer|string)=>crypto.createHash('sha256').update(b).digest('hex');
+export type Custody={opened:number;closed:number;uncertain:Array<{file:string;fd:number;error:string}>};
+const raw=(s:fs.BigIntStats)=>[s.dev,s.ino,s.mode,s.nlink,s.size,s.mtimeNs,s.ctimeNs,s.uid,s.gid].map(String);
+export function ownedFile(file:string,c:Custody){
+ const old=fs.lstatSync(file,{bigint:true});expect(old.isFile()).toBe(true);expect(old.isSymbolicLink()).toBe(false);expect(old.nlink).toBe(1n);let fd:number|undefined,first:unknown,failed=false,result:any;
+ try{fd=fs.openSync(file,fs.constants.O_RDONLY|fs.constants.O_NOFOLLOW);c.opened++;expect(raw(fs.fstatSync(fd,{bigint:true}))).toEqual(raw(old));const b=fs.readFileSync(fd);expect(BigInt(b.length)).toBe(old.size);expect(raw(fs.fstatSync(fd,{bigint:true}))).toEqual(raw(old));expect(raw(fs.lstatSync(file,{bigint:true}))).toEqual(raw(old));result={raw:raw(old),sha256:hash(b),size:b.length};}
+ catch(error){first=error;failed=true;}finally{if(fd!==undefined){const f=fd;fd=undefined;try{fs.closeSync(f);c.closed++;}catch(error){c.uncertain.push({file,fd:f,error:String(error)});if(!failed){first=error;failed=true;}}}}
+ if(failed)throw first;return result;
+}
+export function ownedTree(root:string,c:Custody){const out:Record<string,any>={};const walk=(file:string,n:string)=>{const old=fs.lstatSync(file,{bigint:true});expect(old.isSymbolicLink()).toBe(false);if(old.isDirectory()){const names=fs.readdirSync(file).sort();out[n]={kind:'directory',raw:raw(old),names};for(const a of names)walk(path.join(file,a),n?n+'/'+a:a);expect(fs.readdirSync(file).sort()).toEqual(names);expect(raw(fs.lstatSync(file,{bigint:true}))).toEqual(raw(old));}else out[n]={kind:'file',...ownedFile(file,c)};};walk(root,'');return out;}
+export async function within<T>(p:Promise<T>,deadline:number,label:string){const left=deadline-performance.now();if(left<=0)throw Error('Original 10s control frame expired: '+label);let timer:ReturnType<typeof setTimeout>|undefined;try{return await Promise.race([p,new Promise<never>((_,reject)=>timer=setTimeout(()=>reject(Error('Original 10s control frame expired: '+label)),left))]);}finally{if(timer!==undefined)clearTimeout(timer);}}
+export function owner(request:Request,page:Page,origin:string,project:string){expect(request.frame()).toBe(page.mainFrame());expect(new URL(request.url()).origin).toBe(origin);expect(request.headers()['x-vision-project']).toBe(project);expect(JSON.parse(request.headers()['x-vision-context']).project_id).toBe(project);}
+export function matches(request:Request,page:Page,origin:string,pathname:string,search:string){const u=new URL(request.url());return request.method()==='GET'&&request.frame()===page.mainFrame()&&u.origin===origin&&u.pathname===pathname&&u.search===search;}
+export async function originalBody(response:Response,page:Page,w:Workspace,e:Evidence,origin:string,project:string,label:string,deadline=performance.now()+10_000){owner(response.request(),page,origin,project);expect(response.status()).toBe(200);const b=await within(response.body(),deadline,label+' full original body');expect(b.length).toBeLessThanOrEqual(1024*1024);expect(await within(response.finished(),deadline,label+' original finish')).toBeNull();const f=path.join(w.logs,label+'-original-body.json');fs.writeFileSync(f,b,{flag:'wx'});e.addFile(f);return {bytes:b,body:JSON.parse(b.toString('utf8')),proof:{file:f,sha256:hash(b),size:b.length,status:200,method:response.request().method(),path:new URL(response.url()).pathname,search:new URL(response.url()).search,main_frame:true,original_HTTP:true,response_fabricated:false,finished:true}};}
+// A disclosed transport-abort control holds only the real UI-dispatched owning
+// GET. It never forwards that request, fulfills a body or treats a deadline as a pass.
+export async function holdOwningAbort(page:Page,origin:string,pathname:string,search:string,project:string){
+ const pattern=origin+pathname+search;let request:Request|undefined,route:Route|undefined,count=0,done=false,closed=false,primary:unknown;
+ let reached!:()=>void,release!:()=>void,joined!:()=>void,failed!:()=>void;const ready=new Promise<void>(r=>reached=r),gate=new Promise<void>(r=>release=r),completed=new Promise<void>(r=>joined=r),failure=new Promise<void>(r=>failed=r);let failureText:string|null=null,unexpectedFinish=false;let deadline=performance.now()+10_000;
+ const onFailed=(r:Request)=>{if(r===request){failureText=r.failure()?.errorText||null;failed();}};const onFinished=(r:Request)=>{if(r===request){unexpectedFinish=true;failed();}};page.on('requestfailed',onFailed);page.on('requestfinished',onFinished);
+ const handler=async(r:Route)=>{const q=r.request();if(count!==0||!matches(q,page,origin,pathname,search)){await r.continue();return;}request=q;route=r;count++;deadline=performance.now()+10_000;
+  try{owner(q,page,origin,project);reached();await within(gate,deadline,'owning abort release');await within(r.abort('aborted'),deadline,'real dispatched Request abort');}
+  catch(error){primary=error;try{await within(r.abort('aborted'),deadline,'failed owning-handler abort');}catch{/* first error remains fatal */}}
+  finally{done=true;joined();}
+ };await page.route(pattern,handler);
+ const finish=async()=>{release();await within(completed,deadline,'owning route handler joined');await within(failure,deadline,'genuine original requestfailed');if(primary!==undefined)throw primary;expect(count).toBe(1);expect(done).toBe(true);expect(unexpectedFinish).toBe(false);expect(failureText).toContain('ERR_ABORTED');expect(await within(request!.response(),deadline,'aborted original Response absence')).toBeNull();return {count,method:'GET',origin,path:pathname,search,project_id:project,main_frame:true,errorText:failureText,genuine_requestfailed:true,original_Response:null,forwarded_to_backend:false,response_fabricated:false,controlled_transport_abort:true,user_cancel_button_claim:false,timeout_as_pass:false};};
+ const close=async()=>{if(closed)return;closed=true;let first=primary;try{if(request&&!done){release();await within(completed,deadline,'teardown route joined');}if(request){await within(failure,deadline,'teardown original request disposition');expect(unexpectedFinish).toBe(false);}await page.unroute(pattern,handler);}catch(error){first??=error;}finally{page.off('requestfailed',onFailed);page.off('requestfinished',onFinished);}if(first!==undefined)throw first;};
+ return {ready:async()=>{await within(ready,performance.now()+10_000,'real UI-dispatched GET captured');if(primary!==undefined)throw primary;expect(count).toBe(1);return request!;},finish,close};
+}

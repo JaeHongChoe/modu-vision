@@ -123,7 +123,7 @@ class DataRestoreJobs:
                 raise ImportNotAcceptable('Restore target is already reserved or reservation failed') from exc
         return ref
 
-    def _verified_target(self,job_id,spec,operation):
+    def _verified_target(self,job_id,spec,operation, *, outcome_stage=None):
         result=operation.get('result_ref');target=Path(spec['target_dir'])
         if not result or not target.is_dir() or target.is_symlink():return False
         try:
@@ -131,7 +131,9 @@ class DataRestoreJobs:
             if result.get('directory_identity')!=[current.st_dev,current.st_ino]:return False
             marker=target/MARKER
             return not marker.is_symlink() and json.loads(marker.read_text(encoding='utf-8'))==self._owner(job_id,spec) and inventory(target)=={key:result[key] for key in ('sha256','count','bytes')}
-        except (OSError,ValueError,ImportNotAcceptable):return False
+        except (OSError,ValueError,ImportNotAcceptable) as error:
+            if outcome_stage is not None:outcome_stage.error(error, 'restore_verification_error')
+            return False
 
     def view(self,job_id,project_key,actor_id):
         row=self._record(job_id,project_key,actor_id);spec=json.loads(row['spec_json']);operation=self.store.checkpoint_value(job_id)
@@ -244,29 +246,43 @@ class DataRestoreJobs:
     def start(self,job_id):
         thread=threading.Thread(target=self.run,args=(job_id,),daemon=True,name=f'Restore-{job_id[:8]}');thread.start();return thread
 
-    def recover_orphans(self):
-        interrupted,completed=[],[]
-        for row in self.store.active(KIND):
-            try:
-                spec=json.loads(row['spec_json']);operation=self.store.checkpoint_value(row['id'])
-                # Publication preceded any later cancellation. Only this exact inode+receipt proves it.
-                if self._verified_target(row['id'],spec,operation):
-                    self._check_reservation(row['id'],spec)
+    def recover_orphans(self, *, outcome_observer=None):
+        from backend.engine.startup_recovery_outcomes import recovery_stage
+        with recovery_stage(outcome_observer, 'restore_orphans', self) as observed:
+            observed.store(self.store)
+            interrupted,completed=[],[]
+            rows = self.store.active(KIND)
+            observed.records(rows, 'active_rows')
+            for row in rows:
+                try:
+                    spec=json.loads(row['spec_json']);operation=self.store.checkpoint_value(row['id'])
+                    # Publication preceded any later cancellation. Only this exact inode+receipt proves it.
+                    verified = (self._verified_target(row['id'],spec,operation) if outcome_observer is None
+                                else self._verified_target(row['id'],spec,operation,outcome_stage=observed))
+                    if verified:
+                        self._check_reservation(row['id'],spec)
+                        ref=self.store.get(row['id'])
+                        self.store.transition(row['id'],ref.revision,'complete',{'operation':operation,'recovered':True});completed.append(row['id'])
+                    elif self.store.cancel_intent(row['id']):
+                        try:self._cleanup_cancelled(row['id'],spec,operation)
+                        except (OSError,ValueError,ImportNotAcceptable) as error:
+                            observed.error(error, 'cancellation_cleanup_error')
+                            pass
+                        ref=self.store.get(row['id'])
+                        self.store.transition(row['id'],ref.revision,'abort',{'reason':'cancelled unpublished restore recovered'})
+                    else:
+                        self._check_reservation(row['id'],spec)
+                        ref=self.store.get(row['id'])
+                        self.store.transition(row['id'],ref.revision,'interrupt',{'reason':'Backend restarted; explicit owned restore resume required'});interrupted.append(row['id'])
+                except StaleRevision as error:
+                    observed.error(error, 'orphan_recovery_error')
+                    pass
+                except (OSError,ValueError,ImportNotAcceptable) as error:
+                    observed.error(error, 'orphan_recovery_error')
                     ref=self.store.get(row['id'])
-                    self.store.transition(row['id'],ref.revision,'complete',{'operation':operation,'recovered':True});completed.append(row['id'])
-                elif self.store.cancel_intent(row['id']):
-                    try:self._cleanup_cancelled(row['id'],spec,operation)
-                    except (OSError,ValueError,ImportNotAcceptable):pass
-                    ref=self.store.get(row['id'])
-                    self.store.transition(row['id'],ref.revision,'abort',{'reason':'cancelled unpublished restore recovered'})
-                else:
-                    self._check_reservation(row['id'],spec)
-                    ref=self.store.get(row['id'])
-                    self.store.transition(row['id'],ref.revision,'interrupt',{'reason':'Backend restarted; explicit owned restore resume required'});interrupted.append(row['id'])
-            except StaleRevision:pass
-            except (OSError,ValueError,ImportNotAcceptable):
-                ref=self.store.get(row['id'])
-                try:self.store.transition(row['id'],ref.revision,'interrupt',{'reason':'Restore ownership or result drift requires review'})
-                except StaleRevision:continue
-                interrupted.append(row['id'])
-        return {'interrupted':interrupted,'completed':completed}
+                    try:self.store.transition(row['id'],ref.revision,'interrupt',{'reason':'Restore ownership or result drift requires review'})
+                    except StaleRevision as error:
+                        observed.error(error, 'orphan_recovery_error')
+                        continue
+                    interrupted.append(row['id'])
+            return {'interrupted':interrupted,'completed':completed}

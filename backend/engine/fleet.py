@@ -65,7 +65,8 @@ class FleetRegistry:
             conn.execute('BEGIN IMMEDIATE')
             if 'reason' not in {row[1] for row in conn.execute('PRAGMA table_info(credential_events)')}:
                 conn.execute("ALTER TABLE credential_events ADD COLUMN reason TEXT NOT NULL DEFAULT ''")
-        self.path.chmod(0o600)
+        if self.path.stat().st_mode & 0o7777 != 0o600:
+            self.path.chmod(0o600)
     def connect(self):
         conn=sqlite3.connect(self.path,timeout=30);conn.row_factory=sqlite3.Row;return conn
     def targets(self):

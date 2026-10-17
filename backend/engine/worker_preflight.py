@@ -402,24 +402,30 @@ def default_runs_root(store: Optional[PreflightStore] = None) -> Path:
     return (store or PreflightStore()).path.parent / 'worker_preflight_runs'
 
 
-def sweep_stale_runs(root: Optional[Path] = None, *, older_than: float = STALE_RUN_SECONDS, now: Optional[float] = None) -> list[str]:
+def sweep_stale_runs(root: Optional[Path] = None, *, older_than: float = STALE_RUN_SECONDS, now: Optional[float] = None, stop_event=None, outcome_observer=None) -> list[str]:
     """Remove run folders an app left behind when it stopped mid-run (only folders older than any live run can be).
     A folder that cannot be removed now (a file still open on Windows) is left for the next sweep."""
     root = Path(root) if root is not None else default_runs_root()
-    removed = []
-    try:
-        entries = list(root.iterdir())
-    except OSError:
-        return removed
-    moment = time.time() if now is None else now
-    for entry in entries:
+    from backend.engine.original_preflight_sweep_outcome import original_sweep_stage
+    with original_sweep_stage(outcome_observer, root, stop_event) as observed:
+        removed = []
         try:
-            if entry.is_dir() and not entry.is_symlink() and moment - entry.stat().st_mtime > older_than:
-                shutil.rmtree(entry)
-                removed.append(entry.name)
-        except OSError:
-            continue
-    return removed
+            entries = list(root.iterdir())
+        except OSError as error:
+            observed.read_error(error)
+            return removed
+        moment = time.time() if now is None else now
+        for entry in entries:
+            if stop_event is not None and stop_event.is_set():
+                break
+            try:
+                if entry.is_dir() and not entry.is_symlink() and moment - entry.stat().st_mtime > older_than:
+                    shutil.rmtree(entry)
+                    removed.append(entry.name)
+            except OSError as error:
+                observed.error(error, 'sweep_entry_error')
+                continue
+        return removed
 
 
 def stop_running_preflights(wait: float = 5.0) -> int:

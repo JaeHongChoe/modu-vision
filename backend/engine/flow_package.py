@@ -20,6 +20,7 @@ from backend.engine.flowchart_engine import FlowchartEngine, FlowchartPipeline, 
 from backend.engine.flow_package_runtime import compare_flow_results, verify_flow_package
 from backend.engine.industrial_adapters import read_image_safely_rgb
 from backend.engine.edge_runtime import create_edge_profile
+from backend.engine.original_owned_flow_execution_request import observe_original_execution_effect
 
 
 _RUNNER = """#!/usr/bin/env python3
@@ -200,6 +201,7 @@ def _runtime_requirements(checkpoints: Mapping[str, Path]) -> str:
     return _REQUIREMENTS + "".join(f"{requirement}\n" for requirement in sorted(extra))
 
 
+@observe_original_execution_effect('package')
 def build_flow_package(
     *,
     pipeline: FlowchartPipeline,

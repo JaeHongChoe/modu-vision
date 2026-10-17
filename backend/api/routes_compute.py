@@ -1,6 +1,7 @@
 """Desktop-token-protected compute profile management and connection probe."""
 
 from __future__ import annotations
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_handler, observe_original_UI_ancillary_job_row
 
 from uuid import uuid4
 
@@ -31,6 +32,7 @@ def _owned(record,project):
     return record is not None and Path(record.output_dir).resolve().is_relative_to(Path(project['models_dir']).resolve())
 
 
+@observe_original_UI_ancillary_job_row
 def _row(record):
     import sqlite3
     from backend.api.routes_training import _job_observation, training_job_manager
@@ -65,7 +67,7 @@ class SelectionInput(BaseModel):
     compute_profile_id: str | None
 
 
-@router.get("/profiles")
+@observe_original_UI_ancillary_handler(router.get("/profiles"))
 def list_profiles(request:Request=None) -> dict:
     _administrator(request)
     return {"profiles": [profile.model_dump() for profile in get_profile_store().list()]}
@@ -86,7 +88,7 @@ def delete_profile(profile_id: str,request:Request=None) -> Response:
     return Response(status_code=204)
 
 
-@router.get("/selection")
+@observe_original_UI_ancillary_handler(router.get("/selection"))
 def get_selection(request:Request=None) -> dict:
     _administrator(request)
     return {"compute_profile_id": get_profile_store().get_selected()}
@@ -117,7 +119,7 @@ def probe_profile(profile_id: str,request:Request=None) -> dict:
     return result
 
 
-@router.get("/reservations")
+@observe_original_UI_ancillary_handler(router.get("/reservations"))
 def reservations(request:Request=None):
     from backend.engine.shared_scheduler import shared_leases
     import time
@@ -138,7 +140,7 @@ def capabilities():
             'remote_model_prerequisites':{'label':'worker VISION_MASK_MODEL_DIR; text additionally VISION_GROUNDING_MODEL_DIR; examples additionally VISION_DINO_CHECKPOINT and VISION_DINO_SHA256'}}
 
 
-@router.get('/targets')
+@observe_original_UI_ancillary_handler(router.get('/targets'))
 def targets():
     return {'targets':[{'id':p.id,'name':p.name,'gpu_selector':p.gpu_selector,'memory_budget_mb':p.memory_budget_mb,
                         'allow_sharing':p.allow_sharing,'distributed_processes':p.distributed_processes} for p in get_profile_store().list()]}
@@ -156,7 +158,7 @@ def devices(request:Request):
     return {'local':observed,'observed_remote':leases.devices()}
 
 
-@router.get('/inputs')
+@observe_original_UI_ancillary_handler(router.get('/inputs'))
 def inputs(task:str,request:Request):
     project=_project(request);root=Path(project['dataset_dir'])
     names={'patch_classification':'patches.json','rotation':'rotation.json','ocr':'ocr.json','rotated_detection':'rotated_boxes.json','enhancement':'pairs.json','defect_gan':'defect_gan.json'}
@@ -246,7 +248,7 @@ def submit_job(body:ComputeJobInput,request:Request):
     except (ValueError,OSError,RuntimeError) as exc:raise HTTPException(422,str(exc)) from exc
 
 
-@router.get('/jobs')
+@observe_original_UI_ancillary_handler(router.get('/jobs'))
 def jobs(request:Request):
     from backend.api.routes_training import training_job_manager
     project=_project(request)

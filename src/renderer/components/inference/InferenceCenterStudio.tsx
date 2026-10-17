@@ -42,7 +42,7 @@ import {ModelOperationsPanel} from '../runtime/ModelOperationsPanel';
 import { exportPackageGuidance } from './exportGuidance';
 
 export const InferenceCenterStudio: React.FC = () => {
-  const { language, backendStatus, task } = useProjectStore();
+  const { language, backendStatus, task, isProjectBusy } = useProjectStore();
   const { benchmarkResult, isBenchmarking, isLoading: isFindingModel, loadEvaluation } = useEvaluationStore();
   const trainingJobId = useTrainingStore((state) => state.jobId);
   const trainingStatus = useTrainingStore((state) => state.status);
@@ -62,10 +62,10 @@ export const InferenceCenterStudio: React.FC = () => {
   const currentJobId = () => selectInferenceJobId(useTrainingStore.getState(), useEvaluationStore.getState());
 
   useEffect(() => {
-    if (!jobId && !trainingIsCurrentData && !trainingJobId && sourceFolder && allowLatestRecovery) {
+    if (!isProjectBusy && !jobId && !trainingIsCurrentData && !trainingJobId && sourceFolder && allowLatestRecovery) {
       loadEvaluation(undefined, { folderPath: sourceFolder, task }).catch(() => {});
     }
-  }, [jobId, trainingIsCurrentData, trainingJobId, sourceFolder, allowLatestRecovery, task, loadEvaluation]);
+  }, [jobId, trainingIsCurrentData, trainingJobId, sourceFolder, allowLatestRecovery, task, loadEvaluation, isProjectBusy]);
 
   const [isExporting, setIsExporting] = useState(false);
   const [exportResult, setExportResult] = useState<RuntimeExportResult | null>(null);

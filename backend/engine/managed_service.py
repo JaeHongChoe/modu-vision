@@ -216,13 +216,13 @@ class ManagedService:
         if release is None:raise ValueError('Apply an approved package before starting the service')
         self.validate_accepted_device(release['package_path'],release.get('device','cpu'),expected_receipt_sha256=(release.get('parity_receipt_sha256') or release.get('runtime_acceptance_sha256')))
         resolve_runtime_device(release.get('device','cpu'))
-        from backend.engine.service_bootstrap import runtime_command, runtime_cwd
+        from backend.engine.service_bootstrap import runtime_command, runtime_cwd, inspection_environment
         arguments=runtime_command(['--package',release['package_path'],'--state-dir',str(self.root/'state'),'--runtime-root',str(self.releases),'--release-policy',release['release_policy'],'--require-approved-release','--device',release.get('device','cpu'),'--port',str(self.config['port'])])
         if release.get('input_root'):arguments+=['--input-root',release['input_root']]
         arguments+=self.input_arguments(release)
         adapter_path=self.root/'adapters.json'
         if adapter_path.exists():arguments+=['--adapter-config',str(adapter_path)]
-        env=dict(os.environ);env['VISION_INSPECTION_TOKEN']=self.config['token']
+        env=inspection_environment(self.config['token'])
         # Runtime modules are loaded from this checkout, never from untrusted release code.
         checkout=runtime_cwd()
         log=(self.root/'service.log').open('ab')

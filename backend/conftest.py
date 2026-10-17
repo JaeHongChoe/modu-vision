@@ -29,6 +29,28 @@ os.environ['MODU_SPLIT_MANIFEST_DIR'] = os.path.join(_SESSION_DATA, 'splits')
 os.environ['MODU_THUMBNAIL_CACHE_DIR'] = os.path.join(_SESSION_DATA, 'thumbnails')
 os.environ.pop('VISION_RESOURCE_LEASE_DB', None)  # derived from the user-data folder above
 
+# Keep the import-time session baseline separate from per-case fixture overrides.
+_SESSION_STORE_ENV = {name: os.environ.get(name) for name in (
+    'MODU_TEST_DATA_DIR', 'VISION_AI_STUDIO_USER_DATA_DIR', 'MODU_FLOW_TEMPLATE_DIR',
+    'MODU_SPLIT_MANIFEST_DIR', 'MODU_THUMBNAIL_CACHE_DIR', 'VISION_RESOURCE_LEASE_DB',
+)}
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_runtest_setup(item):
+    """Restore the session stores before fixtures; their per-case monkeypatches still take precedence."""
+    for name, value in _SESSION_STORE_ENV.items():
+        if value is None:
+            os.environ.pop(name, None)
+        else:
+            os.environ[name] = value
+    # A passed tmp_path may have been removed and then reused by the next
+    # parameter. Repoint the already-loaded ledger through its ordinary public
+    # resolver before that case selects its own path; never weaken its guards.
+    job_store = sys.modules.get('backend.engine.job_store')
+    if job_store is not None:
+        job_store.ledger()
+
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:

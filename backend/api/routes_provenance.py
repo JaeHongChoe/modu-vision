@@ -1,5 +1,6 @@
 """Read attributable image/label/data/model/flow/inspection evidence together."""
 from __future__ import annotations
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_handler, observe_original_dataset_UI_operation, observe_original_dataset_UI_connection, original_dataset_UI_read_text, original_dataset_UI_read_bytes, original_dataset_UI_image_open, original_dataset_UI_file, original_dataset_UI_diagnostics_missing
 
 import hashlib
 import json
@@ -17,7 +18,7 @@ from backend.engine.dataset_metadata import metadata_for_path
 router = APIRouter(prefix="/api/provenance", tags=["provenance"])
 
 
-@router.get('/impact')
+@observe_original_UI_ancillary_handler(router.get('/impact'))
 def workflow_impact(request: Request):
     from backend.engine.workflow_impact import analyze
     try:

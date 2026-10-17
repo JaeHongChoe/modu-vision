@@ -1,6 +1,7 @@
 """Server-bound evaluation and inspection operations for completed remote jobs."""
 
 from __future__ import annotations
+from backend.engine.original_owned_selected_compute_request import (observe_original_selected_compute, selected_operation_fd, selected_operation_closed, selected_thread_born, selected_heartbeat, selected_read_text)
 
 import hashlib
 try:
@@ -397,6 +398,7 @@ def _launch_or_resume(
     return journal
 
 
+@observe_original_selected_compute("worker")
 def _run_remote_operation_artifacts(
     context: RemoteJobContext, operation: str, extra_spec: dict[str, Any],
     *, transport: SSHTransport | None = None, force_new: bool = False,
@@ -593,6 +595,7 @@ def _open_operation_lock(path: Path) -> int:
                 os.write(descriptor, b"0")
             os.lseek(descriptor, 0, os.SEEK_SET)
             msvcrt.locking(descriptor, msvcrt.LK_NBLCK, 1)
+        selected_operation_fd(descriptor,path)
         return descriptor
     except OSError as exc:
         os.close(descriptor)
@@ -604,6 +607,7 @@ def _open_operation_lock(path: Path) -> int:
         raise
 
 
+@observe_original_selected_compute("monitor")
 def run_remote_operation_artifacts(
     context: RemoteJobContext, operation: str, extra_spec: dict[str, Any],
     *, transport: SSHTransport | None = None, force_new: bool = False,
@@ -636,9 +640,12 @@ def run_remote_operation_artifacts(
             raise RemoteComputeBusy('The selected compute resource is reserved by another operation or training job')
         acquired=True
         def heartbeat():
-            while not stop.wait(5):
-                if not leases.heartbeat(lease_key):return
-        thread=threading.Thread(target=heartbeat,daemon=True,name=lease_key);thread.start()
+            with selected_heartbeat():
+                while not stop.wait(5):
+                    if not leases.heartbeat(lease_key):return
+        thread=threading.Thread(target=heartbeat,daemon=True,name=lease_key)
+        selected_thread_born(thread,heartbeat,stop,leases,lease_key)
+        thread.start()
         return _run_remote_operation_artifacts(context,operation,extra_spec,transport=transport,force_new=force_new,
             timeout_seconds=timeout_seconds,input_files=input_files,**({'cancelled':cancelled} if cancelled is not None else {}))
     except RemoteWorkerExited:
@@ -648,12 +655,13 @@ def run_remote_operation_artifacts(
         stop.set()
         if thread:thread.join(timeout=1)
         if acquired:
-            try:journal=json.loads(journal_path.read_text(encoding='utf-8')) if journal_path.is_file() else {'state':'preparing'}
+            try:journal=json.loads(selected_read_text(journal_path,encoding='utf-8')) if journal_path.is_file() else {'state':'preparing'}
             except (OSError,ValueError):journal={'state':'unknown'}
             state=journal.get('state')
             if not worker_exit_confirmed and not journal.get('worker_exit_confirmed') and (journal.get('remote_handle') or state in ('launching','launched','unknown')):leases.mark_uncertain(lease_key)
             else:leases.release(lease_key,terminal=True)
         os.close(descriptor)
+        selected_operation_closed(descriptor)
 
 
 def run_remote_operation(
@@ -836,11 +844,12 @@ def run_remote_flowchart(
     return result
 
 
+@observe_original_selected_compute("run")
 def run_verified_flowchart_on_compute(
     profile: ComputeProfile, project: dict[str, Any], pipeline: dict[str, Any],
     verified_checkpoints: dict[tuple[str,str],Path], image: Path, image_id: str | None = None,
     *, device: str = 'cuda', transport: SSHTransport | None = None, stop_node_id: str | None = None,
-    comparison_binding_sha256: str | None = None, cancelled=None,
+    comparison_binding_sha256: str | None = None, cancelled=None, required_passive_capture_grant=None,
 ) -> dict[str, Any]:
     """Transfer project-owned verified models to the explicitly selected server."""
     import torch
@@ -862,21 +871,26 @@ def run_verified_flowchart_on_compute(
     reports=Path(project['reports_dir'])
     if any(path.is_symlink() for path in (root,project_root,reports)) or root.resolve()!=(project_root/'models').resolve() or reports.resolve()!=(project_root/'reports').resolve():
         raise ArtifactValidationError('Portable flow project storage is invalid')
-    references=[];inputs={};total=0
+    references=[];inputs={};total=0;retained_inputs=[]
     for (job_id,task),requested in sorted(verified_checkpoints.items()):
         if not valid_flow_job(job_id,task):raise ArtifactValidationError('Portable flow model job is invalid')
         expected=root/task/job_id/'best_model.pt' if task in SPECIALIZED_TASKS else root/job_id/'best_model.pt'
         checkpoint=Path(requested);metadata=checkpoint.parent/'model_meta.json'
+        model_root=root
         if checkpoint.resolve()!=expected.resolve() or not checkpoint.resolve().is_relative_to(root.resolve()):
-            raise ArtifactValidationError('Portable checkpoint belongs to another project')
-        paths=[root,*[root.joinpath(*checkpoint.relative_to(root).parts[:index]) for index in range(1,len(checkpoint.relative_to(root).parts)+1)],metadata]
+            from backend.engine.retained_preprocessors import retained_transport_model_root
+            model_root=retained_transport_model_root(project,job_id,task,checkpoint)
+            if model_root is None:
+                raise ArtifactValidationError('Portable checkpoint belongs to another project')
+            retained_inputs.append((job_id,task,checkpoint,model_root))
+        paths=[model_root,*[model_root.joinpath(*checkpoint.relative_to(model_root).parts[:index]) for index in range(1,len(checkpoint.relative_to(model_root).parts)+1)],metadata]
         if any(path.is_symlink() for path in paths) or not checkpoint.is_file() or not metadata.is_file():
             raise ArtifactValidationError('Portable checkpoint or metadata is absent or linked')
         size=checkpoint.stat().st_size;meta_size=metadata.stat().st_size;total+=size+meta_size
         if not 0<size<=512*1024*1024 or not 0<meta_size<=4*1024*1024 or total>2*1024*1024*1024:
             raise ArtifactValidationError('Portable model assets exceed transfer limits')
         payload=torch.load(checkpoint,map_location='cpu',weights_only=True)
-        meta=json.loads(metadata.read_text(encoding='utf-8'))
+        meta=json.loads(selected_read_text(metadata,encoding='utf-8'))
         digest=_sha256(checkpoint)
         if (not isinstance(payload,dict) or payload.get('task')!=task or not isinstance(payload.get('model_state_dict'),dict)
                 or not isinstance(meta,dict) or meta.get('task')!=task or meta.get('checkpoint_sha256',digest)!=digest):
@@ -894,16 +908,26 @@ def run_verified_flowchart_on_compute(
     binding=hashlib.sha256(json.dumps(references,sort_keys=True,separators=(',',':')).encode()).hexdigest()
     context=RemoteJobContext('job_flow_'+binding[:24],references[0]['task'] if references else 'classification',reports/'remote_flow',
         Path(project.get('dataset_dir',project_root/'dataset')),profile,binding,portable=True)
+    required_capture_spec=None
+    if required_passive_capture_grant is not None:
+        from backend.engine.required_flow_passive_capture import serialize_required_flow_grant
+        required_capture_spec=serialize_required_flow_grant(required_passive_capture_grant,
+            profile_id=profile.id,execution_profile_sha256=hashlib.sha256(json.dumps(profile.model_dump(),sort_keys=True,separators=(',',':')).encode()).hexdigest(),
+            pipeline=pipeline,image_sha256=image_hash,models=references)
+    for retained_job,retained_task,retained_checkpoint,retained_root in retained_inputs:
+        if retained_transport_model_root(project,retained_job,retained_task,retained_checkpoint)!=retained_root:
+            raise ArtifactValidationError('Retained portable checkpoint binding changed before transfer')
     artifacts=run_remote_operation_artifacts(context,'flowchart_run',{
         'portable_models':True,'models':references,'pipeline':pipeline,'image_path':relative,
         'image_sha256':image_hash,'image_id':image_id,'device':device,
         **({'stop_node_id':stop_node_id} if stop_node_id else {}),
         **({'comparison_operation_contract':1,'comparison_binding_sha256':comparison_binding_sha256} if comparison_binding_sha256 else {}),
+        **({'required_passive_capture':required_capture_spec} if required_capture_spec is not None else {}),
         'execution_profile_sha256':hashlib.sha256(json.dumps(profile.model_dump(),sort_keys=True,separators=(',',':')).encode()).hexdigest(),
     },transport=transport,input_files=inputs,**({'cancelled':cancelled} if cancelled is not None else {}))
     result_file=artifacts.get('outputs/flowchart_result.json')
     if result_file is None:raise ArtifactValidationError('Portable flow result is missing')
-    result=json.loads(result_file.read_text(encoding='utf-8'))
+    result=json.loads(selected_read_text(result_file,encoding='utf-8'))
     if (not isinstance(result,dict) or result.get('image_path')!=relative or result.get('image_sha256')!=image_hash
             or result.get('model_job_ids')!=sorted(job for job,_ in needed)):
         raise ArtifactValidationError('Portable flow result has a different image or model binding')
@@ -913,6 +937,9 @@ def run_verified_flowchart_on_compute(
         raise ArtifactValidationError('Portable flow execution device differs from the selected device')
     if comparison_binding_sha256 and result.get('comparison_binding_sha256')!=comparison_binding_sha256:
         raise ArtifactValidationError('Portable comparison result has a different operation binding')
+    if required_capture_spec is not None:
+        from backend.engine.required_flow_passive_capture import read_required_capture_for_original_operation
+        result['required_passive_capture']=read_required_capture_for_original_operation(result.get('required_passive_capture'),artifacts,required_capture_spec,result_file)
     result['annotated_image']=_verified_preview_uri(result.get('annotated_image'),artifacts)
     if not isinstance(result.get('crops'),list):raise ArtifactValidationError('Portable flow crops are missing')
     for crop in result['crops']:

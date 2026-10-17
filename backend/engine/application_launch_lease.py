@@ -28,7 +28,8 @@ LEASES = '.application-launches'
 RUNTIME_HOMES = '.application-runtime-homes'
 DATABASE_LOCK = 'application-database-ownership.lock'
 TRANSITION_LOCK = 'transition.lock'
-CONTROL_PATHS = {ACTIVE_LEASE, LEASES, DATABASE_LOCK, RUNTIME_HOMES, '.application-writer-epochs'}
+CONTROL_PATHS = {ACTIVE_LEASE, LEASES, DATABASE_LOCK, RUNTIME_HOMES, '.application-writer-epochs',
+    '.application-writer-archives', '.application-writer-closures'}
 STATES = {'reserved', 'starting', 'ready', 'exited', 'recovery_required'}
 
 
@@ -105,6 +106,55 @@ def _identity_shape(value):
         and type(value['pid']) is int and value['pid'] > 0
         and type(value['created_at']) in (int, float) and math.isfinite(value['created_at']) and value['created_at'] > 0
         and _update()._hex(value['command_sha256']))
+
+
+def _local_ssh_agent_environment():
+    """Pass one same-user local socket, never an agent process or caller env.
+
+    macOS launchd sockets may be 0666 inside their owner-only 0700 directory.
+    The descriptor-relative checks retain that private namespace. Only the
+    standard root-owned /var and /tmp aliases may precede it as symlinks.
+    """
+    supplied = os.environ.get('SSH_AUTH_SOCK')
+    if supplied is None: return {}
+    parent_fd = None
+    try:
+        path = Path(supplied)
+        if not path.is_absolute() or str(path) != supplied or '\x00' in supplied:
+            raise LaunchLeaseError('SSH agent socket path must be an absolute normalized path')
+        original = path.lstat(); parent = path.parent.lstat()
+        if (not stat.S_ISSOCK(original.st_mode) or original.st_uid != os.geteuid() or original.st_nlink != 1
+                or not stat.S_ISDIR(parent.st_mode) or parent.st_uid != os.geteuid()
+                or stat.S_IMODE(parent.st_mode) != 0o700):
+            raise LaunchLeaseError('SSH agent socket must have its same-user private original parent')
+        aliases = {Path('/var'): Path('/private/var'), Path('/tmp'): Path('/private/tmp')}
+        for ancestor in path.parent.parents:
+            info = ancestor.lstat()
+            if stat.S_ISLNK(info.st_mode):
+                target = aliases.get(ancestor)
+                if target is None or info.st_uid != 0 or ancestor.resolve(strict=True) != target:
+                    raise LaunchLeaseError('SSH agent socket ancestor link is not a system alias')
+                target_info = target.lstat()
+                if not stat.S_ISDIR(target_info.st_mode) or target_info.st_uid != 0:
+                    raise LaunchLeaseError('SSH agent socket system alias target differs')
+            elif not stat.S_ISDIR(info.st_mode):
+                raise LaunchLeaseError('SSH agent socket ancestor is not an original directory')
+        canonical = path.resolve(strict=True)
+        def identity(info):
+            return (info.st_dev, info.st_ino, info.st_mode, info.st_nlink, info.st_uid, info.st_gid,
+                    info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+        parent_fd = os.open(canonical.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        if (identity(os.fstat(parent_fd)) != identity(parent)
+                or identity(os.stat(canonical.name, dir_fd=parent_fd, follow_symlinks=False)) != identity(original)
+                or identity(path.lstat()) != identity(original)
+                or identity(path.parent.lstat()) != identity(parent)
+                or identity(canonical.lstat()) != identity(original)):
+            raise LaunchLeaseError('SSH agent socket or private parent changed during admission')
+        return {'SSH_AUTH_SOCK': str(canonical)}
+    except (OSError, RuntimeError) as exc:
+        raise LaunchLeaseError('SSH agent socket could not be validated') from exc
+    finally:
+        if parent_fd is not None: os.close(parent_fd)
 
 
 def _runtime_home_environment(root, nonce):
@@ -187,6 +237,17 @@ def _record(root, nonce, *, record=None):
     update = _update(); directory = update._unlinked(root/LEASES/nonce)
     if not update._hex(nonce, 32) or not directory.is_dir(): _refuse('missing lease history')
     if record is None: record = update._json(update._read(directory/'journal.json'))
+    if (isinstance(record, dict) and type(record.get('protocol_version')) is int
+            and record['protocol_version'] == 5):
+        from backend.engine.application_store_writer_closure import inspect_store_closure
+        if (record.get('state') != 'writer_store_closed'
+                or not update._hex(record.get('writer_store_closure_sha256'))):
+            _refuse('invalid terminal store writer closure')
+        shadow = {k: v for k, v in record.items() if k != 'writer_store_closure_sha256'}
+        shadow.update(protocol_version=4, state='recovery_required')
+        _record(root, nonce, record=shadow)  # Same full original protocol4 validation.
+        inspect_store_closure(root, record)
+        return record
     names = {'schema_version', 'protocol_version', 'nonce', 'revision', 'state', 'binding', 'supervisor', 'process',
         'spawn_attempted', 'claimed', 'ready_receipt_sha256', 'exit_observation', 'known_image_receipt_sha256', 'reason', 'transition_lock_identity'}
     if isinstance(record, dict) and record.get('protocol_version') in (3, 4): names.add('cpu_execution')
@@ -303,7 +364,7 @@ def _load(root):
             if record['revision'] != current['revision'] or update._sha(update._canonical(record)) != current['record_sha256']:
                 _refuse('ownership publication interrupted or changed')
             active = record
-        elif record['state'] != 'exited': _refuse('another unresolved launch history')
+        elif record['state'] not in {'exited', 'writer_store_closed'}: _refuse('another unresolved launch history')
     if active is None: _refuse('current launch history is missing')
     return active
 
@@ -428,6 +489,10 @@ def assert_quiescent(root):
             with os.scandir(epochs) as entries:
                 if next(entries, None) is not None: _refuse('writer epoch ownership remains unresolved')
         row = _load(root)
+        if (row is not None and row.get('protocol_version') == 5
+                or any((root/name).exists() for name in ('.application-writer-archives', '.application-writer-closures'))):
+            from backend.engine.application_store_writer_closure import assert_store_quiescent
+            return assert_store_quiescent(root, row)
         if row is not None and row['state'] != 'exited': _refuse('durable '+row['state']+' lease')
         with _database_lock(root, create=False): pass
         return {'status': 'quiescent', 'nonce': row['nonce'] if row else None}
@@ -455,7 +520,7 @@ class LaunchSupervisor:
     def __init__(self, root, nonce):
         self.root, _ = _update()._root(root)
         if not _update()._hex(nonce, 32): raise LaunchLeaseError('Invalid launch nonce')
-        self.nonce = nonce; self._process = None; self._lock = None; self._snapshot = None
+        self.nonce = nonce; self._process = None; self._lock = None; self._database_fd = None; self._snapshot = None
         self._bootstrap_channel = None
         self._bootstrap_transport = None
         self._writer_epoch = None
@@ -509,7 +574,7 @@ class LaunchSupervisor:
             row = self._owned()
             if row['state'] != 'reserved': raise LaunchLeaseError('Only an unspawned reservation can start')
             self._binding(row)
-            self._lock = _database_lock(self.root); self._lock.__enter__()
+            self._lock = _database_lock(self.root); self._database_fd = self._lock.__enter__()
             directory = self.root/LEASES/self.nonce
             _update()._write(directory/'spawn-intent.json', {'schema_version': 1, 'nonce': self.nonce,
                 'binding_sha256': _update()._sha(_update()._canonical(row['binding']))})
@@ -522,6 +587,7 @@ class LaunchSupervisor:
                     'VISION_APPLICATION_LAUNCH_NONCE': self.nonce, 'VISION_APPLICATION_GENERATION': row['binding']['application_generation'],
                     'VISION_APPLICATION_DATABASE_GENERATION': row['binding']['database_generation_path']}
                 environment.update(_runtime_home_environment(self.root, self.nonce))
+                environment.update(_local_ssh_agent_environment())
                 pass_fds = ()
                 if bootstrap:
                     self._bootstrap_channel, child_channel = socket.socketpair(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -592,8 +658,35 @@ class LaunchSupervisor:
         if os.getsid(process['pid']) != process['pid'] or os.getpgid(process['pid']) != process['pid']:
             raise LaunchLeaseError('Owned child process session changed')
 
-    def claim(self, process):
-        with _transition_admission(self.root, self.nonce):
+    def claim(self, process, *, absolute_deadline=None, before_attempt=None):
+        """Retry only mutex entry for the original authenticated main claim."""
+        update = _update()
+        if absolute_deadline is None:
+            if before_attempt is not None: raise LaunchLeaseError('Claim callback requires its original deadline')
+            admission = _transition_admission(self.root, self.nonce)
+        else:
+            from backend.engine.application_launch_handshake import _transition_admission_before_deadline
+            if (type(absolute_deadline) not in (int, float) or not math.isfinite(absolute_deadline)
+                    or not 0 < absolute_deadline-time.monotonic() <= 210 or not callable(before_attempt)):
+                raise LaunchLeaseError('Original authenticated main claim deadline differs')
+            original_root = self.root; original_nonce = self.nonce
+            original_channel = self._bootstrap_channel; original_transport = update._canonical(self._bootstrap_transport)
+            original_child = self._process; original_process = update._canonical(process)
+            original_authority = getattr(self, '_node_backend_authority', None)
+            def validate_original():
+                if (self.root != original_root or self.nonce != original_nonce
+                        or self._bootstrap_channel is not original_channel or self._process is not original_child
+                        or update._canonical(self._bootstrap_transport) != original_transport
+                        or getattr(self, '_node_backend_authority', None) is not original_authority
+                        or update._canonical(process) != original_process):
+                    raise LaunchLeaseError('Original authenticated main claim scope changed while entering')
+                row = self._owned(); self._binding(row); self._live(row, process)
+                if row['state'] != 'starting': raise LaunchLeaseError('Claim requires starting admission')
+                before_attempt()
+            admission = _transition_admission_before_deadline(original_root, original_nonce,
+                absolute_deadline, before_attempt=validate_original)
+        with admission:
+            if absolute_deadline is not None: validate_original()
             row = self._owned(); self._binding(row)
             if row['state'] != 'starting': raise LaunchLeaseError('Claim requires starting admission')
             self._live(row, process)
@@ -608,12 +701,49 @@ class LaunchSupervisor:
             receipt = {'nonce': self.nonce, 'binding': binding, 'process': process, 'kind': 'controller_binding_only'}
             return self._persist(row, state='ready', ready_receipt_sha256=_update()._sha(_update()._canonical(receipt)))
 
-    def _publish_bootstrap(self, receipt):
+    def _publish_bootstrap(self, receipt, *, absolute_deadline=None):
         """Publish only after this original controller verifies private channels."""
-        with _transition_admission(self.root, self.nonce):
+        update = _update()
+        if absolute_deadline is None:
+            admission = _transition_admission(self.root, self.nonce)
+        else:
+            from backend.engine.application_launch_handshake import _transition_admission_before_deadline
+            claim = getattr(self, '_authenticated_backend_proof', None)
+            authority = getattr(self, '_node_backend_authority', None)
+            if (type(absolute_deadline) not in (int, float) or not math.isfinite(absolute_deadline)
+                    or not 0 < absolute_deadline-time.monotonic() <= 210
+                    or authority is None or not isinstance(claim, dict)
+                    or claim.get('kind') != 'backend_claim' or not isinstance(receipt, dict)
+                    or receipt.get('kind') != 'authenticated_controller_binding_only'
+                    or receipt.get('nonce') != self.nonce or claim.get('nonce') != self.nonce
+                    or any(receipt.get(key) != claim.get(source) for key, source in (
+                        ('epoch', 'epoch'), ('backend_process', 'process'),
+                        ('backend_executable', 'executable'),
+                        ('backend_executable_sha256', 'executable_sha256'),
+                        ('backend_build_identity_sha256', 'build_identity_sha256'),
+                        ('backend_frozen', 'frozen')))
+                    or update._sha(update._canonical(receipt.get('binding'))) != claim.get('binding_sha256')):
+                raise LaunchLeaseError('Original authenticated bootstrap publication differs')
+            original_receipt = update._canonical(receipt); original_claim = update._canonical(claim)
+            original_root = self.root; original_nonce = self.nonce
+            original_channel = self._bootstrap_channel
+            def before_attempt():
+                if (self.root != original_root or self.nonce != original_nonce
+                        or self._bootstrap_channel is not original_channel
+                        or getattr(self, '_node_backend_authority', None) is not authority
+                        or update._canonical(receipt) != original_receipt
+                        or update._canonical(self._authenticated_backend_proof) != original_claim):
+                    raise LaunchLeaseError('Original authenticated bootstrap publication changed while entering')
+            admission = _transition_admission_before_deadline(original_root, original_nonce,
+                absolute_deadline, before_attempt=before_attempt)
+        with admission:
             row = self._owned(); self._binding(row)
             if row['state'] != 'starting' or not row['claimed'] or self._bootstrap_channel is None:
                 raise LaunchLeaseError('Authenticated bootstrap requires the original private channel')
+            if absolute_deadline is not None and (row['protocol_version'] != 4
+                    or update._canonical(receipt['binding']) != update._canonical(row['binding'])
+                    or update._canonical(receipt['main_process']) != update._canonical(row['process'])):
+                raise LaunchLeaseError('Original authenticated bootstrap publication binding differs')
             self._live(row, row['process'])
             path = self.root/LEASES/self.nonce/'bootstrap-receipt.json'
             if path.exists(): _refuse('unpublished bootstrap receipt requires recovery')
@@ -643,16 +773,40 @@ class LaunchSupervisor:
             self._persist(row,protocol_version=max(3,row['protocol_version']),cpu_execution=state)
             return intent
 
-    def _publish_cpu_execution(self, receipt):
+    def _publish_cpu_execution(self, receipt, *, absolute_deadline=None):
         """Exact publication retry only; no redispatch, repair or quality claim."""
         update=_update()
-        with _transition_admission(self.root,self.nonce):
+        if absolute_deadline is None:
+            admission=_transition_admission(self.root,self.nonce)
+        else:
+            from backend.engine.application_launch_handshake import _transition_admission_before_deadline
+            claim=getattr(self,'_authenticated_backend_proof',None)
+            if (type(absolute_deadline) not in (int,float) or not math.isfinite(absolute_deadline)
+                    or not 0 < absolute_deadline-time.monotonic() <= 210
+                    or getattr(self,'_cpu_reply_deadline',None)!=absolute_deadline
+                    or not isinstance(receipt,dict) or receipt.get('backend_frozen') is not True
+                    or receipt.get('nonce')!=self.nonce
+                    or not isinstance(claim,dict) or claim.get('frozen') is not True):
+                raise LaunchLeaseError('Original frozen CPU receipt publication bound differs')
+            original_receipt=update._canonical(receipt);original_claim=update._canonical(claim)
+            original_root=self.root;original_nonce=self.nonce
+            def before_attempt():
+                if (self.root!=original_root or self.nonce!=original_nonce
+                        or getattr(self,'_cpu_reply_deadline',None)!=absolute_deadline
+                        or update._canonical(receipt)!=original_receipt
+                        or update._canonical(self._authenticated_backend_proof)!=original_claim):
+                    raise LaunchLeaseError('Original frozen CPU receipt publication changed while entering')
+            admission=_transition_admission_before_deadline(original_root,original_nonce,absolute_deadline,
+                                                             before_attempt=before_attempt)
+        with admission:
             row=self._owned();self._binding(row);self._live(row,row['process'])
             state=row.get('cpu_execution')
             if row['state']!='ready' or state is None or self._bootstrap_channel is None:
                 raise LaunchLeaseError('CPU receipt requires original authenticated ready admission')
             from backend.engine.application_launch_execution import recheck_receipt_artifacts
             recheck_receipt_artifacts(self.root,row,receipt)
+            if absolute_deadline is not None and time.monotonic()>=absolute_deadline:
+                raise LaunchLeaseError('Original frozen CPU receipt publication deadline expired')
             path=self.root/LEASES/self.nonce/'cpu-execution-receipt.json'; prior=state['receipt_sha256']
             raw=update._canonical(receipt)
             if len(raw)>65536:raise LaunchLeaseError('CPU receipt exceeds its bound')
@@ -673,7 +827,9 @@ class LaunchSupervisor:
             if self._process is None: raise LaunchLeaseError('Original supervisor OS child handle is unavailable')
             returncode = self._process.poll()
             if returncode is None: raise LaunchLeaseError('Direct child has not exited')
-            return self._persist(row, state='recovery_required', reason='Process-tree exit is unverified',
+            # Keep the original durable refusal when direct exit is observed later.
+            reason = row['reason'] if row['state'] == 'recovery_required' and row['reason'] else 'Process-tree exit is unverified'
+            return self._persist(row, state='recovery_required', reason=reason,
                 exit_observation={'direct_child_pid': self._process.pid, 'direct_child_returncode': returncode,
                     'process_tree_exit_verified': False})
 
@@ -731,12 +887,12 @@ class LaunchSupervisor:
             try:
                 if self._process is not None:
                     row = self._owned()
-                    if row['state'] != 'recovery_required': self._persist(row, state='recovery_required', reason='Supervisor handle released; process-tree ownership unverified')
+                    if row['state'] not in {'recovery_required', 'writer_store_closed'}: self._persist(row, state='recovery_required', reason='Supervisor handle released; process-tree ownership unverified')
             finally:
                 if self._bootstrap_channel is not None:
                     self._bootstrap_channel.close(); self._bootstrap_channel = None
                 if self._lock is not None:
-                    self._lock.__exit__(None, None, None); self._lock = None
+                    self._lock.__exit__(None, None, None); self._lock = None; self._database_fd = None
 
 
 def main(argv=None):

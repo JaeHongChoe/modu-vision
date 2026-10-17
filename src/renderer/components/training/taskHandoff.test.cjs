@@ -30,6 +30,171 @@ test('diagnostic scope differs for same project after transport-only or selected
 
 test('reopening the same completed task creates a new selection identity',()=>{const api=load('taskHandoff.ts');const storage=memory();const first=api.saveTaskHandoff(storage,scope,task('ocr','ocr'));const next=api.saveTaskHandoff(storage,scope,task('ocr','ocr'));assert.equal(next.jobId,first.jobId);assert.ok(first.selectionId);assert.notEqual(next.selectionId,first.selectionId);});
 
-test('API persistence identity omits credentials and transient parameters and keeps local restart identity stable',()=>{const api=load('../../services/api.ts');api.setCachedPort(8000);assert.equal(api.getApiPersistenceIdentity(),'local');api.setCachedPort(9123);assert.equal(api.getApiPersistenceIdentity(),'local');api.setSharedApiBase('https://user:password@api-a.example/base/?token=sentinel#private');assert.equal(api.getApiPersistenceIdentity(),'shared:https://api-a.example/base');api.setSharedApiBase('https://api-a.example/base');assert.equal(api.getApiPersistenceIdentity(),'shared:https://api-a.example/base');api.setSharedApiBase('https://api-b.example/base');assert.equal(api.getApiPersistenceIdentity(),'shared:https://api-b.example/base');api.setSharedApiBase(null);assert.equal(api.getApiPersistenceIdentity(),'local');});
+test('API persistence identity omits credentials and transient parameters and keeps local restart identity stable',()=>{const api=load('../../services/api.ts');api.setCachedPort(8000);assert.equal(api.getApiPersistenceIdentity(),'local');api.setCachedPort(9123);assert.equal(api.getApiPersistenceIdentity(),'local');api.setSharedApiBase(("https://" + "user:password" + "@" + "api-a.example/base/?token=sentinel#private"));assert.equal(api.getApiPersistenceIdentity(),'shared:https://api-a.example/base');api.setSharedApiBase('https://api-a.example/base');assert.equal(api.getApiPersistenceIdentity(),'shared:https://api-a.example/base');api.setSharedApiBase('https://api-b.example/base');assert.equal(api.getApiPersistenceIdentity(),'shared:https://api-b.example/base');api.setSharedApiBase(null);assert.equal(api.getApiPersistenceIdentity(),'local');});
 
 test('review queue storage scope survives reconnect but isolates stable API identity',()=>{const {dataWorkbenchPersistenceScope,dataWorkbenchScope}=load('../../services/dataWorkbench.ts',{'./api':{request(){}}});const initial={...scope,transportRevision:9,selectedProfileId:'gpu-a',apiTransportIdentity:'shared:https://api-a/base'};assert.equal(dataWorkbenchPersistenceScope(initial),dataWorkbenchPersistenceScope({...initial,transportRevision:0}));assert.notEqual(dataWorkbenchScope(initial),dataWorkbenchScope({...initial,transportRevision:0}));assert.notEqual(dataWorkbenchPersistenceScope(initial),dataWorkbenchPersistenceScope({...initial,apiTransportIdentity:'shared:https://api-b/base'}));});
+
+
+// Exercise actual controller keys, workbench draft state and warm-start effects.
+// Passive effects are committed child-first: a parent reset cannot repair a
+// request already dispatched by its child's effect in the same commit.
+function ocrProjectSwitchHarness() {
+  let active;
+  const frame = () => ({slots: [], cursor: 0, pending: [], disposed: false});
+  const react = {
+    useState(initial) {
+      const owner = active, i = owner.cursor++;
+      if (!(i in owner.slots)) {
+        const slot = {value: typeof initial === 'function' ? initial() : initial};
+        slot.set = value => { if (!owner.disposed) slot.value = typeof value === 'function' ? value(slot.value) : value; };
+        owner.slots[i] = slot;
+      }
+      return [owner.slots[i].value, owner.slots[i].set];
+    },
+    useEffect(fn, deps) {
+      const owner = active, i = owner.cursor++, previous = owner.slots[i];
+      if (!previous || deps.some((value, index) => value !== previous.deps[index])) {
+        const slot = {deps: [...deps], cleanup: previous?.cleanup};
+        owner.slots[i] = slot;
+        owner.pending.push(() => { slot.cleanup?.(); slot.cleanup = fn(); });
+      }
+    },
+  };
+  const render = (owner, callback) => {
+    owner.cursor = 0; active = owner;
+    try { return callback(); } finally { active = undefined; }
+  };
+  const flush = owner => { for (const effect of owner.pending.splice(0)) effect(); };
+  const dispose = owner => {
+    if (!owner) return;
+    owner.disposed = true;
+    for (const slot of owner.slots) slot?.cleanup?.();
+    assert.equal(owner.pending.length, 0, 'Previous committed effects have all settled');
+  };
+  const jsx = (type, props, key) => ({type, key, props: props || {}, children: [props?.children].flat().filter(Boolean)});
+  const nodes = tree => {
+    const result = [];
+    const walk = value => {
+      if (Array.isArray(value)) { value.forEach(walk); return; }
+      if (!value || typeof value !== 'object') return;
+      result.push(value); value.children?.forEach(walk);
+    };
+    walk(tree); return result;
+  };
+  const state = {projectDir: '/project-A', project: {id: 'A', source_dataset_dir: '/source-A', active_labelset_id: 'labels-A'},
+    task: 'classification', language: 'ko', isProjectBusy: false, setStep: async () => {}};
+  const compute = {profiles: [], selectedProfileId: null, transportRevision: 0, isLoaded: true, isLoading: false, probeResults: {}};
+  const store = Object.assign(selector => selector ? selector(state) : state, {getState: () => state});
+  const dataset = {folderPath: '', totalImages: 0, split: {train: 0, val: 0, test: 0}, datasetKey: '', isLoading: false, isSplitting: false};
+  const training = {jobId: '', status: 'idle', preset: 'default', recoverActiveJob: async () => {}, refreshCurrentJob: async () => {}};
+  const requests = [];
+  const request = async url => {
+    if (url === '/api/ocr/datasets') return {datasets: []};
+    assert.match(url, /^\/api\/ocr\/warm-start-parents\?/);
+    requests.push({datasetPath: new URL(url, 'http://test.invalid').searchParams.get('dataset_path'),
+      projectDir: state.projectDir, projectId: state.project.id,
+      source: state.project.source_dataset_dir, labelset: state.project.active_labelset_id});
+    return {parents: []};
+  };
+  const mocks = {
+    react, 'react/jsx-runtime': {jsx, jsxs: jsx, Fragment: 'fragment'}, 'lucide-react': {},
+    '../../stores/useProjectStore': {useProjectStore: store},
+    '../../stores/useDatasetStore': {useDatasetStore: Object.assign(() => dataset, {getState: () => dataset})},
+    '../../stores/useTrainingStore': {useTrainingStore: () => training},
+    '../../stores/useComputeStore': {useComputeStore: Object.assign(() => compute, {getState: () => compute})},
+    '../../services/api': {api: {ocr: {models: async () => ({models: []})}}, request, getApiPersistenceIdentity: () => 'local'},
+    '../../services/modelExecution': {},
+    './useTaskHandoff': {useTaskHandoff: family => family === 'ocr' ? null : {family: 'ocr'}},
+    './taskHandoff': {clearTaskHandoff: () => {}, selectHandoffRecord: () => undefined},
+    './useSpecializedTraining': {useSpecializedTraining: () => ({active: false})},
+    './parentCandidate': {parentCandidateLabel: () => '', parentCandidateNotice: ''},
+    './modelAdapterRecipes': {
+      ocrRecipeDraft: () => ({mode: 'crop', charset: '', normalizer: 'none', regex: '', minLength: '', maxLength: '', allowedValues: ''}),
+      ocrRecipePayload: () => ({}), ocrTrainingOptions: () => ({}), formatOCRRate: String,
+    },
+    './preparedSampleRows': {}, './ModelExecutionEvidence': {}, './SpecializedTrainingStatus': {},
+    './ProgramWorkbenchControls': {}, './ProjectImagePicker': {},
+    '../../utils/datasetSplitCapability': {isSplitUnavailable: () => false},
+    '../../utils/trainingComputeReadiness': {trainingComputeReadiness: () => ({ready: true})},
+    './modelTrainingOptions': {modelChoices: {classification: [{value: 'model'}]}, dinoSyntheticDefaults: {},
+      manualTrainingRecipe: () => ({}), trainingModelOverrides: () => ({})},
+    '../wizard/TaskChangeImpactDialog': {taskPreviewScope: () => 'scope'},
+    '../common/errorActions': {}, './trainingLog': {},
+    './TrainingSchedulingSettings': {defaultTrainingScheduling: {}, trainingSchedulingOptions: () => ({})},
+    './useSelectedCoreJob': {useSelectedCoreJob: () => null},
+  };
+  for (const name of ['../common/OperatorGuidanceBanner', '../common/GuardrailBanner', '../common/LedAnnunciator',
+    './OscilloscopeLossCurve', './HardwareTelemetryPanel', './RecipePresetSelector', './RotatedDetectionPanel',
+    './DefectGANWorkbench', './EnhancementWorkbench', './ModelFamilyCatalog', './DinoSyntheticOptions',
+    './PatchClassificationWorkbench', './RotationWorkbench', './AutoDLWorkbench', './TrainingPreparationPanel',
+    './JobProgressView', '../runtime/OperationsObservabilityPanel']) mocks[name] = {};
+  const {WarmStartSelector} = load('WarmStartSelector.tsx', mocks);
+  mocks['./WarmStartSelector'] = {WarmStartSelector};
+  const {OCRWorkbench} = load('OCRWorkbench.tsx', mocks);
+  mocks['./OCRWorkbench'] = {OCRWorkbench};
+  const {TrainingController} = load('TrainingController.tsx', mocks);
+  const controller = frame();
+  let workbench, warm, currentKey, lastTree, mounts = 0;
+  const commit = () => {
+    const controllerTree = render(controller, () => TrainingController());
+    const element = nodes(controllerTree).find(node => node.type === OCRWorkbench);
+    assert.ok(element, 'The original OCR workspace is rendered');
+    if (!workbench || element.key !== currentKey) {
+      dispose(warm); dispose(workbench); workbench = frame(); warm = frame(); currentKey = element.key; mounts++;
+    }
+    lastTree = render(workbench, () => OCRWorkbench(element.props));
+    const warmElement = nodes(lastTree).find(node => node.type === WarmStartSelector);
+    assert.ok(warmElement, 'The actual owning warm-start selector is rendered');
+    render(warm, () => WarmStartSelector(warmElement.props));
+    flush(warm); flush(workbench); flush(controller);
+    return lastTree;
+  };
+  const input = () => nodes(lastTree).find(node => node.type === 'input' && node.props.placeholder === '/path/to/text-crops');
+  return {state, compute, requests, commit, input, mounts: () => mounts,
+    async settle() { await new Promise(setImmediate); commit(); await new Promise(setImmediate); },
+    close() { dispose(warm); dispose(workbench); dispose(controller); }};
+}
+
+test('OCR namespace switches cannot dispatch a retained dataset draft before the parent passive reset', async () => {
+  for (const changed of ['projectDir', 'source_dataset_dir', 'active_labelset_id']) {
+    const app = ocrProjectSwitchHarness();
+    try {
+      app.commit(); await app.settle();
+      const original = {projectDir: app.state.projectDir, project: {...app.state.project}};
+      const oldDraft = '/project-A/prepared/operator-selected';
+      app.input().props.onChange({target: {value: oldDraft}}); app.commit(); await app.settle();
+      assert.ok(app.requests.some(row => row.datasetPath === oldDraft && row.projectId === 'A'), 'The previous scope really dispatched its selected draft');
+      app.requests.length = 0;
+      if (changed === 'projectDir') { app.state.projectDir = '/project-B'; app.state.project = {...app.state.project, id: 'B'}; }
+      else app.state.project = {...app.state.project, [changed]: changed === 'source_dataset_dir' ? '/source-B' : 'labels-B'};
+      app.commit();
+      assert.equal(app.input().props.value, '', `${changed}: the new child starts before the parent reset runs`);
+      assert.equal(app.requests.some(row => row.datasetPath === oldDraft), false, `${changed}: no stale draft dispatch in the new namespace`);
+      await app.settle();
+      assert.ok(app.requests.some(row => row.datasetPath === app.state.project.source_dataset_dir
+        && row.projectDir === app.state.projectDir && row.projectId === app.state.project.id
+        && row.labelset === app.state.project.active_labelset_id), `${changed}: the new source is still queried normally`);
+      const nextDraft = '/next-scope/prepared/operator-selected';
+      app.input().props.onChange({target: {value: nextDraft}}); app.commit(); await app.settle();
+      app.requests.length = 0; app.state.projectDir = original.projectDir; app.state.project = original.project;
+      app.commit();
+      assert.equal(app.input().props.value, '', `${changed}: returning to A starts a fresh owning draft`);
+      assert.equal(app.requests.some(row => row.datasetPath === nextDraft), false, `${changed}: returning to A cannot dispatch B's draft`);
+      await app.settle();
+      assert.ok(app.requests.some(row => row.datasetPath === original.project.source_dataset_dir && row.projectId === 'A'));
+    } finally { app.close(); }
+  }
+});
+
+test('OCR dataset draft survives a compute transport change within the same namespace', async () => {
+  const app = ocrProjectSwitchHarness();
+  try {
+    app.commit(); await app.settle();
+    const draft = '/project-A/prepared/operator-selected';
+    app.input().props.onChange({target: {value: draft}}); app.commit(); await app.settle();
+    const mounts = app.mounts(); app.compute.transportRevision++; app.compute.selectedProfileId = 'other-worker';
+    app.commit(); await app.settle();
+    assert.equal(app.mounts(), mounts, 'Changing the worker retains the same OCR workspace');
+    assert.equal(app.input().props.value, draft, 'The current namespace draft remains selected');
+  } finally { app.close(); }
+});

@@ -295,11 +295,53 @@ def _retain_private_running_application(root, row, bundle_identifier):
 def _original_process_exited(identity):
     import psutil
     try:
+        original = psutil.Process(identity['pid'])
+        if original.create_time() != identity['created_at']:
+            return True
+        # Zombie cmdline may be unreadable; establish birth/status first.
+        if original.status() == psutil.STATUS_ZOMBIE:
+            return True
         fresh = lease._identity(identity['pid'])
         # Changed command at the same birth is unresolved ownership, not exit.
-        return fresh['created_at'] != identity['created_at'] or psutil.Process(identity['pid']).status() == psutil.STATUS_ZOMBIE
+        return fresh['created_at'] != identity['created_at']
     except psutil.NoSuchProcess:
         return True
+    except psutil.AccessDenied:
+        # A running process can become zombie between status and cmdline.
+        # Read back the same original PID/birth once; unknown is never exit.
+        try:
+            observed = psutil.Process(identity['pid'])
+            if observed.create_time() != identity['created_at']:
+                return True
+            if observed.status() == psutil.STATUS_ZOMBIE:
+                return True
+        except psutil.NoSuchProcess:
+            return True
+        except Exception:
+            pass
+        raise
+
+def _wait_original_process_exit(identity, absolute_deadline):
+    import psutil
+    first_access_denied = None
+    while time.monotonic() < absolute_deadline:
+        try:
+            exited = _original_process_exited(identity)
+        except psutil.AccessDenied as error:
+            if first_access_denied is None:
+                first_access_denied = error
+        else:
+            if exited:
+                if time.monotonic() < absolute_deadline:
+                    return True
+                break
+        remaining = absolute_deadline-time.monotonic()
+        if remaining <= 0:
+            break
+        time.sleep(min(.05, remaining))
+    if first_access_denied is not None:
+        raise first_access_denied
+    raise AssertionError('Original process exit deadline expired; controller retained')
 
 
 def _stop_original_controller(controller, original_controller, cleanup):
@@ -503,9 +545,8 @@ def test_actual_private_electron_original_controller_backend_epoch_and_cpu_pins(
                 cleanup['normal_quit_requested'] = bool(native.terminate())
                 assert cleanup['normal_quit_requested'], 'Normal private app quit refused; original controller retained'
             until = time.monotonic()+30
-            while row['process'] is not None and not _original_process_exited(row['process']) and time.monotonic()<until:
-                time.sleep(.05)
-            assert row['process'] is None or _original_process_exited(row['process']), 'Original main still live; controller retained'
+            if row['process'] is not None:
+                _wait_original_process_exit(row['process'], until)
             # The original controller can durably claim/spawn while normal
             # quit is in progress. Missing-backend decisions use this fresh,
             # mutex-validated state, never the pre-quit claimed flag.
@@ -516,9 +557,7 @@ def test_actual_private_electron_original_controller_backend_epoch_and_cpu_pins(
                 'Admitted main has no registered backend receipt; original controller retained'
             if bootstrap is not None:
                 until = time.monotonic()+15
-                while not _original_process_exited(bootstrap['backend_process']) and time.monotonic()<until:
-                    time.sleep(.05)
-                assert _original_process_exited(bootstrap['backend_process']), 'Original backend still live; controller retained'
+                _wait_original_process_exit(bootstrap['backend_process'], until)
             until = time.monotonic()+5
             final = _fresh_original_launch(root, row)
             while final['state'] != 'recovery_required' and time.monotonic()<until:

@@ -5,6 +5,8 @@ policy, reviews and annotation writes. Source files remain read-only. Two-person
 review examines one saved annotation; it is not independent double annotation.
 """
 from __future__ import annotations
+from backend.engine.original_owned_UI_ancillary_request import observe_original_dataset_provenance_operation, original_dataset_provenance_file, original_dataset_provenance_database, original_dataset_provenance_journal_read, original_dataset_UI_read_text, original_dataset_UI_read_bytes
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_handler, observe_original_dataset_UI_operation, observe_original_dataset_UI_connection, original_dataset_UI_read_text, original_dataset_UI_read_bytes, original_dataset_UI_image_open, original_dataset_UI_file, original_dataset_UI_diagnostics_missing
 
 import copy
 import hashlib
@@ -387,7 +389,7 @@ def _training_state(ledger, project, source, root, annotations):
             if book:
                 from backend.engine.annotation_storage import dataset_annotation_dir
                 overlay=dataset_annotation_dir(path.parent,annotations,use_scope=False)/f'{path.stem}.json'
-                if overlay.is_file():labels=json.loads(overlay.read_text(encoding='utf-8')).get('annotations',[])
+                if overlay.is_file():labels=json.loads(original_dataset_UI_read_text(overlay, encoding='utf-8')).get('annotations',[])
                 else:
                     from backend.engine.grouped_dataset_views import _annotations
                     labels=_annotations(source,path)[0] or []
@@ -410,6 +412,7 @@ def _training_state(ledger, project, source, root, annotations):
             'eligibility': eligibility, 'settings': copy.deepcopy(settings), 'gold': gold_receipt(quality_scope)}
 
 
+@observe_original_dataset_UI_operation('training_readiness')
 def training_readiness(project, source):
     root, source, annotations = _context(project, source)
     with dm.metadata_transaction(root, source, annotations) as ledger:
@@ -418,6 +421,7 @@ def training_readiness(project, source):
         return result
 
 
+@observe_original_dataset_provenance_operation('training_binding')
 def training_binding(project, source):
     root, source, annotations = _context(project, source)
     with dm.metadata_transaction(root, source, annotations) as ledger:

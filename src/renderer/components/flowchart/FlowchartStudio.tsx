@@ -129,7 +129,7 @@ function datasetImageReference(imagePath: string) {
 }
 
 export const FlowchartStudio: React.FC = () => {
-  const { language, task, setStep } = useProjectStore();
+  const { language, task, setStep, isProjectBusy } = useProjectStore();
   const { jobId: trainedJobId, status: trainingStatus, isCurrentData } = useTrainingStore();
   const evaluatedJobId = useEvaluationStore((state) => state.jobId);
   const allowLatestRecovery = useEvaluationStore((state) => state.allowLatestRecovery);
@@ -150,6 +150,7 @@ export const FlowchartStudio: React.FC = () => {
     isLoading,
     isSaving,
     isRunning,
+    partialRun,
     activeRunningNodeId,
     selectedNodeId,
     saveMessage,
@@ -162,6 +163,8 @@ export const FlowchartStudio: React.FC = () => {
     loadSingleSegmentationTemplate,
     savePipeline,
     runPipeline,
+    cancelPartialRun,
+    refreshPartialRun,
     selectNode,
     updateNodeData,
     replacePipeline,
@@ -176,6 +179,23 @@ export const FlowchartStudio: React.FC = () => {
     setInspectedCrop,
     clearError,
   } = useFlowchartStore();
+  const partialRunButton = useRef<HTMLButtonElement>(null);
+  const partialStopHadFocus = useRef(false);
+  useEffect(() => {
+    if (!isRunning && partialRun && partialStopHadFocus.current) {
+      partialStopHadFocus.current = false;
+      partialRunButton.current?.focus();
+    }
+  }, [isRunning, partialRun?.phase]);
+  const partialStatus = partialRun ? (language === 'ko' ? {
+    preparing: '부분 실행 준비 중…', running: '부분 실행 중', cancelling: '현재 작업이 끝나면 중단합니다.',
+    cancelled: '부분 실행이 중단되었습니다.', completed: '부분 실행이 완료되었습니다.',
+    failed: '부분 실행 중 오류가 발생했습니다.', unknown: '종료 상태를 확인하지 못했습니다. 중단 상태를 확인하세요.',
+  } : {
+    preparing: 'Preparing partial run…', running: 'Partial run in progress', cancelling: 'Stop requested; waiting for current work.',
+    cancelled: 'Partial run stopped.', completed: 'Partial run completed.',
+    failed: 'Partial run failed.', unknown: 'Completion is unknown. Check stop status.',
+  })[partialRun.phase] : '';
   const sourceKey=`${getProjectContextGeneration()}/${folderPath}/${selectedImage?.imagePath||''}`;
   const [sourceInfo,setSourceInfo]=useState<{key:string;size?:number[];error?:string}|null>(null);
   useEffect(()=>{
@@ -286,6 +306,7 @@ export const FlowchartStudio: React.FC = () => {
   }, [folderPath, hasSelectedFolder, contextRevision, verificationRetry]);
 
   useEffect(() => {
+    if (isProjectBusy) return;
     let cancelled = false;
     const openFlow = async () => {
       setModelCheck({ status: 'checking' });
@@ -338,7 +359,7 @@ export const FlowchartStudio: React.FC = () => {
     return () => { cancelled = true; };
   }, [loadPipeline, loadSingleSegmentationTemplate, loadEvaluation, updateNodeData,
     folderPath, datasetKey, hasSelectedFolder, datasetIsLoading, importError,
-    allowLatestRecovery, completedCurrentJobId, evaluatedJobId, contextRevision, verificationRetry, task]);
+    allowLatestRecovery, completedCurrentJobId, evaluatedJobId, contextRevision, verificationRetry, task, isProjectBusy]);
 
   useEffect(() => { setActionValidationError(null); }, [pipeline]);
 
@@ -1774,8 +1795,21 @@ export const FlowchartStudio: React.FC = () => {
               <option value="model_compute">모델 학습 서버 · 기존 방식</option>
             </select>
           </label>
-          <button type="button" onClick={handleRunToNode} disabled={!pipeline||!selectedNodeId||!selectedImage||isRunning||isLoading||!!graphError}
+          <button ref={partialRunButton} type="button" onClick={handleRunToNode} disabled={!pipeline||!selectedNodeId||!selectedImage||isRunning||isLoading||!!graphError}
             className="rounded border border-sky-700 px-3 py-1.5 text-sky-200 disabled:opacity-50" title="선택한 실행 위치에서 이 노드와 그 상류만 실행합니다. 모델 학습 서버 자동 선택 방식에서는 이 컴퓨터 CPU로 디버그합니다.">선택 노드까지 실행</button>
+          <span className="inline-flex w-40 shrink-0">
+            {isRunning && partialRun && <button type="button"
+              aria-describedby="flow-partial-run-status"
+              disabled={partialRun.checking || (partialRun.phase !== 'unknown' && partialRun.cancelRequested)}
+              onFocus={() => { partialStopHadFocus.current = true; }}
+              onBlur={event => { if (event.relatedTarget) partialStopHadFocus.current = false; }}
+              onClick={() => { void (partialRun.phase === 'unknown' ? refreshPartialRun() : cancelPartialRun()); }}
+              className="min-h-8 w-full cursor-pointer rounded border border-amber-600 px-3 py-1.5 text-sm text-amber-200 hover:bg-amber-950/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--workspace-focus)] disabled:cursor-not-allowed disabled:opacity-40">
+              {language === 'ko'
+                ? (partialRun.checking ? '중단 상태 확인 중…' : partialRun.phase === 'unknown' ? '중단 상태 확인' : partialRun.cancelRequested ? '중단 요청됨' : '부분 실행 중단')
+                : (partialRun.checking ? 'Checking stop status…' : partialRun.phase === 'unknown' ? 'Check stop status' : partialRun.cancelRequested ? 'Stop requested' : 'Stop partial run')}
+            </button>}
+          </span>
           <button
             data-primary-action="true" onClick={handleRun}
             disabled={!selectedImage || !canVerifyGraph || !executionReady || isVerifyingAction || isRunning || isLoading || needsModel || !!graphError}
@@ -1794,6 +1828,10 @@ export const FlowchartStudio: React.FC = () => {
             </span>
           </button>
         </div>
+        <p id="flow-partial-run-status" role="status" aria-live="polite"
+          className="min-h-8 shrink-0 px-4 py-1 text-sm text-[var(--workspace-muted)]">
+          {partialStatus}{partialRun?.stopNodeLabel ? ` · ${partialRun.stopNodeLabel}` : ''}
+        </p>
         {!selectedImage&&<p className="px-4 py-2 text-sm text-amber-200">먼저 검사할 이미지를 선택하세요.</p>}
         {!executionResult&&<p className="p-4 text-sm text-slate-400">검사 결과가 없습니다. 선택 이미지 검사로 현재 초안을 확인하세요. 저장된 일괄 평가·승인과 구분됩니다.</p>}
         {selectedImage?.thumbnailUrl&&<details className="px-4 py-2"><summary className="cursor-pointer text-sm text-cyan-300">다음 검사 이미지 미리보기</summary><img alt="다음 검사 이미지 원본 보기" src={resolveApiUrl(selectedImage.thumbnailUrl)} className="max-h-64 object-contain"/></details>}

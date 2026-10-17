@@ -73,7 +73,7 @@ def test_closed_work_admission_refuses_all_http_and_websocket_without_entering_w
 
 def test_accepted_scope_holds_drain_until_real_request_lifetime_finishes():
     state = admission()
-    scope = {'type': 'http', 'path': '/api/errors', 'method': 'GET'}
+    scope = {'type': 'http', 'path': '/health', 'method': 'GET'}
     assert state.enter(scope)
     state.close()
     finished = threading.Event()
@@ -96,7 +96,7 @@ def test_uncovered_background_and_spawn_protocols_sticky_refuse(case):
     if case == 'startup':
         state.uncovered('startup_background_protocols')
     else:
-        path = '/api/errors' if case == 'accepted_202' else '/api/training/start' if case == 'spawn_route' else '/unreviewed-writer'
+        path = '/health' if case == 'accepted_202' else '/api/training/start' if case == 'spawn_route' else '/unreviewed-writer'
         assert state.enter({'type': 'http', 'method': 'POST', 'path': path})
         if case == 'accepted_202': state.response(202)
         state.leave()
@@ -108,14 +108,14 @@ def test_uncovered_background_and_spawn_protocols_sticky_refuse(case):
 
 def test_busy_scope_refuses_with_original_budget_and_never_reopens():
     state = admission()
-    assert state.enter({'type': 'http', 'method': 'GET', 'path': '/api/errors'})
+    assert state.enter({'type': 'http', 'method': 'GET', 'path': '/health'})
     state.close()
     start = time.monotonic()
     outcome = state.drain(.03)
     assert time.monotonic() - start < .3
     assert outcome['status'] == 'refused' and outcome['active_scopes'] == 1
     state.leave()
-    assert not state.enter({'type': 'http', 'method': 'GET', 'path': '/api/errors'})
+    assert not state.enter({'type': 'http', 'method': 'GET', 'path': '/health'})
 
 
 def test_failed_cpu_producer_stays_unconfirmed_after_its_scope_returns():
@@ -437,8 +437,8 @@ threading.Thread(target=cooperative_exit,daemon=True).start()
 with maintenance_guard(root):
  backend_bootstrap_ready();state=backend_work_admission()
  original_leave=state.leave
- def observed_leave():
-  original_leave()
+ def observed_leave(*,activity=None,normal_return=False):
+  original_leave(activity=activity,normal_return=normal_return)
   if state.snapshot()['active_scopes']==0:
    (projects/'managed-http-idle.json').write_text(json.dumps({{'pid':os.getpid(),**state.snapshot()}}))
  state.leave=observed_leave
@@ -451,7 +451,7 @@ with maintenance_guard(root):
  fds=h._CACHE['writer_handle'].pass_fds
  info=os.fstat(fds[0]);(projects/'original-writer-fd.json').write_text(json.dumps({{'pid':os.getpid(),'fd':fds[0],'device':info.st_dev,'inode':info.st_ino}}))
  app=FastAPI()
- @app.get('/api/errors')
+ @app.get('/health')
  def errors():
   with owned_cpu_writer_scope() as admitted:
    info=os.fstat(admitted[0]);return {{'controlled':True,'fd':admitted[0],'device':info.st_dev,'inode':info.st_ino}}
@@ -560,6 +560,7 @@ def _fixture_readonly_managed_launch(root):
     from backend.engine.application_launch_controller import _inspection_snapshot
     from backend.engine.application_launch_lease import _load, _public, LaunchLeaseError
     from backend.engine.application_launch_handshake import HandshakeError
+    from backend.engine.runtime_update import UpdateError
     try:
         with _inspection_snapshot(root):
             row = _load(root)
@@ -572,6 +573,9 @@ def _fixture_readonly_managed_launch(root):
             raise
     except LaunchLeaseError as exc:
         if str(exc) != 'Application launch ownership requires recovery: ownership publication interrupted or changed':
+            raise
+    except UpdateError as exc:
+        if str(exc) != 'Update input is not a bounded unlinked regular file':
             raise
     return None
 
@@ -672,16 +676,16 @@ def _managed_stop_diagnostic(projects, result):
 def test_actual_source_cpu_then_managed_drain_and_original_node_exit_keeps_lease_blocked(tmp_path,monkeypatch,uncovered):
     import urllib.request,urllib.error
     values=managed_stack(tmp_path,monkeypatch,uncovered=uncovered);root=values[0];projects=root/'projects'
-    child,ack=start_cpu_stack(values)
+    child,ack=start_cpu_stack(values,prefix=['-c',_source_cpu_settlement_fixture_prefix()])
     try:
-        _,cpu=wait_receipt(root,ack['nonce'],child)
+        _,cpu=_wait_receipt_and_cpu_settlement(root,ack['nonce'],child)
         assert cpu['semantic_output']['final_verdict']=='OK'
         server=json.loads(wait_file(projects/'managed-server.json'))
         fd=json.loads(wait_file(projects/'original-writer-fd.json'))
         environment=json.loads(wait_file(projects/'managed-private-environment.json'))
         assert environment['HOME']==str(root/'.application-runtime-homes'/ack['nonce'])
         assert fd['pid']==cpu['backend_process']['pid']==server['pid']
-        with urllib.request.urlopen(f"http://127.0.0.1:{server['port']}/api/errors",timeout=1) as response:
+        with urllib.request.urlopen(f"http://127.0.0.1:{server['port']}/health",timeout=1) as response:
             assert response.status==200
             admitted=json.load(response)
             assert all(admitted[k]==fd[k] for k in ('device','inode'))
@@ -699,7 +703,7 @@ def test_actual_source_cpu_then_managed_drain_and_original_node_exit_keeps_lease
         # Both positive scope and refused unsupported work close admission.
         wait_file(projects/'late-producer-refusal.txt',seconds=3)
         with pytest.raises(urllib.error.HTTPError) as error:
-            urllib.request.urlopen(f"http://127.0.0.1:{server['port']}/api/errors",timeout=1)
+            urllib.request.urlopen(f"http://127.0.0.1:{server['port']}/health",timeout=1)
         assert error.value.code==409
         import fcntl
         lock=root/'.application-writer-epochs'/ack['nonce']/'writers'/registered['writer_id']/'ownership.lock'
@@ -713,8 +717,31 @@ def test_actual_source_cpu_then_managed_drain_and_original_node_exit_keeps_lease
         result=json.loads(wait_file(projects/'managed-stop-result.json',seconds=5))
         assert result['direct_exit']==0 and result['signal'] is None, _managed_stop_diagnostic(projects, result)
         assert (result['error'] is not None)==uncovered
-        finish_managed(child,root)  # Original direct-main observation settles publication.
-        snapshot=inspect_epoch(root,ack['nonce']);assert snapshot['registry']['state']=='closed'
+        if uncovered:
+            finish_managed(child,root)  # Original refused/uncovered path stays blocked.
+            snapshot=inspect_epoch(root,ack['nonce'])
+        else:
+            # Same original final five-second observation cap, without the
+            # failure-only finalizer's controller termination racing closure.
+            assert child.wait(timeout=5)==0
+            from backend.engine.application_launch_lease import _load
+            from backend.engine import application_store_writer_closure as closure
+            from backend.engine import runtime_update as update
+            row=_load(root)
+            assert row['protocol_version']==5 and row['state']=='writer_store_closed'
+            closed=closure.inspect_store_closure(root,row)
+            assert closed['scope']=='original_managed_store_writers'
+            assert closed['nonce']==ack['nonce'] and closed['unsupported']==[]
+            assert closed['managed_scopes_drained'] is True
+            assert closed['all_enrolled_writers_direct_exited'] is True
+            assert closed['all_writer_lock_references_closed'] is True
+            assert all(closed[name] is False for name in closure.FALSE_FLAGS)
+            archived=root/closure.ARCHIVES/ack['nonce']
+            registry_raw=update._read(archived/'registry.json',128*1024)
+            assert sha(registry_raw)==closed['registry_sha256']
+            snapshot={'registry':update._json(registry_raw),'registry_sha256':sha(registry_raw)}
+            assert not (root/'.application-writer-epochs'/ack['nonce']).exists()
+        assert snapshot['registry']['state']=='closed'
         backend=next(r for r in snapshot['registry']['writers'] if r['role']=='backend')
         assert backend['status']==('active' if uncovered else 'direct_exited')
         assert backend['exit_code']==(None if uncovered else 0)
@@ -722,18 +749,24 @@ def test_actual_source_cpu_then_managed_drain_and_original_node_exit_keeps_lease
         assert backend['lock_identity']=={'device':fd['device'],'inode':fd['inode']}
         assert {p:p.read_bytes() for p in controls}==controls
         from backend.engine.application_launch_lease import _load,assert_quiescent
-        deadline=time.monotonic()+3
-        while time.monotonic()<deadline:
-            row=_load(root)
-            if row['state']=='recovery_required':break
-            time.sleep(.01)
-        assert row['state']=='recovery_required'
+        if uncovered:
+            deadline=time.monotonic()+3
+            while time.monotonic()<deadline:
+                row=_load(root)
+                if row['state']=='recovery_required':break
+                time.sleep(.01)
+            assert row['state']=='recovery_required'
+        else:
+            assert row['protocol_version']==5 and row['state']=='writer_store_closed'
         drain=row['writer_drain']
         assert drain['phase']==('refused' if uncovered else 'backend_exited')
         assert drain['receipt']['whole_writer_coverage'] is False
         assert drain['receipt']['can_release_launch_lease'] is False
         assert (drain['backend_exit'] is None)==uncovered
-        with pytest.raises(ValueError):assert_quiescent(root)
+        if uncovered:
+            with pytest.raises(ValueError):assert_quiescent(root)
+        else:
+            assert assert_quiescent(root)['scope']=='original_managed_store_mutation_only'
         (projects/'managed-drain-proof.json').write_bytes(canonical({'scope':'controlled_source_backend_without_normal_startup_services',
             'cpu':cpu,'writer':snapshot,'drain':drain,'stop':result,'native':False,'whole_tree':False,'lease_release':False}))
     finally:finish_managed(child,root)
@@ -870,8 +903,13 @@ def _record_returned_cpu_settlement(owner, receipt):
     assert finished['process']==state['child'] and finished['role']=='owned_cpu_worker'
     raw=canonical(observation);assert len(raw)<=65536
     target=owner.root/'projects'/'source-cpu-controller-returned.json'
-    descriptor=os.open(target,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
-    with os.fdopen(descriptor,'wb') as output:output.write(raw)
+    from backend.tests.test_application_launch_execution import _atomic_fixture_json
+    _atomic_fixture_json(target,observation,exclusive=True,sort_keys=True)
+    # This empty marker follows full write/fsync and temporary-link cleanup.
+    # It is publication metadata; the original reader still verifies all facts.
+    complete=Path(str(target)+'.complete')
+    descriptor=os.open(complete,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+    os.close(descriptor)
 
 
 def _source_cpu_settlement_fixture_prefix():
@@ -893,6 +931,7 @@ def _wait_returned_cpu_settlement(root, nonce, child, cpu, deadline):
     import stat
     from backend.engine.application_launch_lease import inspect_launch, _identity, LeaseTransitionBusy
     target=root/'projects'/'source-cpu-controller-returned.json'
+    complete=Path(str(target)+'.complete')
     witness=getattr(child,'_original_cpu_fixture_supervisor',None)
     assert type(deadline) in (int,float) and math.isfinite(deadline)
     assert getattr(child,'_original_cpu_fixture_nonce',None)==nonce and witness is not None
@@ -901,6 +940,11 @@ def _wait_returned_cpu_settlement(root, nonce, child, cpu, deadline):
         assert child.poll() is None, 'Original controller died before CPU settlement observation'
         assert _identity(child.pid)==witness and cpu['nonce']==nonce
         assert time.monotonic()<deadline
+        try:
+            published=complete.lstat()
+        except FileNotFoundError:
+            time.sleep(max(0,min(.01,deadline-time.monotonic())));continue
+        assert stat.S_ISREG(published.st_mode) and published.st_nlink==1 and published.st_size==0
         try:
             named=target.lstat()
         except FileNotFoundError:
@@ -961,7 +1005,7 @@ def _assert_damaged_refusal(refusal, damage, cpu):
     """Exact captured protocol rejection, never a generic failure allowance."""
     assert damage in {'changed_nonce','identical_request_replay'}
     cause = ('Original main managed drain request differs or replayed' if damage=='changed_nonce'
-             else 'Original controller reply kind differs')
+             else 'Prepared shutdown reply kind differs')
     assert refusal['state']=='recovery_required'
     assert refusal['reason']=='Process-tree ownership is unresolved: '+cause
     assert refusal['nonce']==cpu['nonce'] and refusal['binding']==cpu['binding']
@@ -995,20 +1039,31 @@ def _assert_damaged_stop(result, damage, cpu, stderr):
     if result['direct_exit']==0:
         assert stderr==''  # Cooperative exit cannot hide a background exception.
     else:
-        # After the exact durable bad-frame refusal, original _validate must
-        # reject recovery_required ownership. It must not be relaxed to ready.
+        # The completed original preparation makes these current exact guards
+        # authoritative. Durable bad-frame refusal must never restore ready.
         import re
-        service=str(Path(__file__).resolve().parents[2]/'backend/engine/application_launch_handshake.py')
+        repository=Path(__file__).resolve().parents[2]
+        service=str(repository/'backend/engine/application_launch_handshake.py')
+        quiescence=str(repository/'backend/engine/application_launch_quiescence.py')
+        lease=str(repository/'backend/engine/application_launch_lease.py')
         rows=re.findall(r'^  File "([^"\n]+)", line [1-9][0-9]*, in ([^\n]+)$',stderr,re.M)
-        stdlib=str(Path(contextmanager.__code__.co_filename).resolve())
-        assert rows==[(cpu['backend_executable'],'<module>'),(service,'backend_execution_service'),
-                      (service,'_validate_service_action'),(service,'_validate'),(stdlib,'__enter__'),
-                      (service,'_validated_backend_admission'),(service,'original_owner')]
         assert stderr.startswith('Traceback (most recent call last):\n')
-        assert stderr.splitlines()[-1]=='backend.engine.application_launch_handshake.HandshakeError: Backend challenge has no current spawned main owner'
-        assert stderr.count('Traceback (most recent call last):')==1
         terminal=[line for line in stderr.splitlines() if re.match(r'^[A-Za-z_][A-Za-z_0-9.]*: ',line)]
-        assert terminal==[stderr.splitlines()[-1]]
+        prepared_guard=[(cpu['backend_executable'],'<module>'),(service,'backend_execution_service'),
+                        (service,'fresh'),(service,'_current'),(service,'_backend_shutdown_controls')]
+        if rows==prepared_guard:
+            assert damage in {'changed_nonce','identical_request_replay'}
+            assert stderr.count('Traceback (most recent call last):')==1
+            assert terminal==['backend.engine.application_launch_handshake.HandshakeError: Original shutdown launch/writer controls changed']
+        else:
+            assert damage=='identical_request_replay'
+            assert rows==[(quiescence,'_launch'),(lease,'_load'),(lease,'_refuse'),
+                          (cpu['backend_executable'],'<module>'),(service,'backend_execution_service'),
+                          (quiescence,'inspect_epoch'),(quiescence,'_load'),(quiescence,'_launch')]
+            assert stderr.count('Traceback (most recent call last):')==2
+            assert terminal==['backend.engine.application_launch_lease.LaunchLeaseError: Application launch ownership requires recovery: ownership publication interrupted or changed',
+                              'backend.engine.application_launch_quiescence.QuiescenceError: Owned writer epoch refuses foreign installation/database binding']
+        assert stderr.splitlines()[-1]==terminal[-1]
 
 
 def _assert_damaged_registry(registry, damage, refusal, cpu, registry_sha256):

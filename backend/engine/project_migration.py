@@ -7,6 +7,7 @@ from pathlib import Path
 import tempfile
 import time
 from backend.engine.runtime_process_control import runtime_state_lock
+from backend.engine.original_owned_UI_ancillary_request import original_UI_global_read_bytes, original_UI_global_read_text, observe_original_UI_global_normalization
 
 CURRENT_SCHEMA = 1
 MAX_MANIFEST_BYTES = 4 * 1024 * 1024
@@ -22,7 +23,7 @@ def _read(root):
     if any(parent.is_symlink() for parent in (root,*root.parents)) or path.is_symlink() or not root.is_dir() or not path.is_file():
         raise MigrationError('Open an existing project with an unlinked project.json')
     if path.stat().st_size > MAX_MANIFEST_BYTES:raise MigrationError('Project manifest exceeds 4 MiB')
-    raw=path.read_bytes();value=json.loads(raw)
+    raw=original_UI_global_read_bytes(path,role="manifest_bytes");value=json.loads(raw)
     if not isinstance(value,dict):raise MigrationError('project.json must contain an object')
     schema=value.get('schema_version')
     if 'schema_version' in value and (type(schema) is not int or schema!=CURRENT_SCHEMA):
@@ -59,6 +60,7 @@ def _atomic_json(path,value):
     _atomic_bytes(path,json.dumps(value,ensure_ascii=False,indent=2).encode())
 
 
+@observe_original_UI_global_normalization
 def normalize_legacy_manifest(project_dir,expected_manifest_sha256=None):
     preview=legacy_preview_migration(project_dir)  # Future versions fail before creating a lock or folder.
     if expected_manifest_sha256 and expected_manifest_sha256!=preview['manifest_sha256']:
@@ -71,7 +73,7 @@ def normalize_legacy_manifest(project_dir,expected_manifest_sha256=None):
         if storage.is_dir():
             for record in storage.glob('*/receipt.json'):
                 if record.is_symlink() or record.parent.is_symlink():raise MigrationError('Migration records cannot be linked')
-                receipt=json.loads(record.read_text(encoding='utf-8'))
+                receipt=json.loads(original_UI_global_read_text(record,encoding='utf-8',role='migration_receipt'))
                 if receipt.get('status')!='prepared':continue
                 backup=record.parent/'project.original.json'
                 if backup.is_symlink() or not backup.is_file() or hashlib.sha256(backup.read_bytes()).hexdigest()!=receipt.get('original_sha256'):

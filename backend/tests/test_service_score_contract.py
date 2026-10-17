@@ -276,8 +276,15 @@ def test_probability_optimizer_rejects_distance_without_normalizing(tmp_path):
 
 def test_remote_orchestrator_transmits_and_verifies_score_binding(tmp_path,monkeypatch):
     import json
-    from backend.remote import operations
+    from backend.remote import coordinator, operations
     from backend.tests.test_remote_operations import _completed_remote,_PNG
+    from backend.tests.test_remote_coordinator import _digest
+    # Reuse bounded_fake_foundation's controlled bytes for this transport test only.
+    # Production copy/hash/spec/upload run; these bytes are not executable weights.
+    path = tmp_path / 'controlled-foundation.safetensors'
+    path.write_bytes(b'controlled transport bytes; not an executable model')
+    monkeypatch.setattr(coordinator, '_local_pretrained_weights',
+                        lambda *args: (path, _digest(path.read_bytes()), 'controlled fixture', 'dinov3_vits16'))
     context,_=_completed_remote(tmp_path,monkeypatch)
     image=context.dataset_path/'training_image.png';captured=[];spec=distance_spec()
     def operation(context,kind,params,**kwargs):

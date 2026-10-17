@@ -697,7 +697,7 @@ def _execute_backend_admitted(frame, proof, root, writer_pass_fds, *, source_pro
             'semantic_output':semantic,'worker_pid':outcome['pid'],'runtime_source_sha256':plan['runtime_source_sha256']}
 
 
-def verify_completion(owner, intent, proof):
+def verify_completion(owner, intent, proof, *, absolute_deadline=None):
     from backend.engine import application_launch_lease as lease
     from backend.engine.application_launch_controller import _same_identity, _backend_artifact
     names={'schema_version','kind','request','backend_proof','output_path','output_sha256','semantic_output','worker_pid','runtime_source_sha256'}
@@ -709,7 +709,33 @@ def verify_completion(owner, intent, proof):
     capability=intent['capability']; request_=intent['request']; plan=capability['plan']
     fresh=admit_plan(owner.root,request_['workspace_id'],request_['project_id'],request_['plan_sha256'])
     if update._canonical(fresh)!=update._canonical(capability): raise ExecutionError('CPU completion source capability changed')
-    with lease._transition_admission(owner.root,owner.nonce):
+    if absolute_deadline is None:
+        admission=lease._transition_admission(owner.root,owner.nonce)
+    else:
+        from time import monotonic
+        from backend.engine.application_launch_handshake import _transition_admission_before_deadline
+        backend=proof['backend_proof']
+        original_claim=getattr(owner,'_authenticated_backend_proof',None)
+        if (type(absolute_deadline) not in (int,float) or not math.isfinite(absolute_deadline)
+                or not 0 < absolute_deadline-monotonic() <= 210
+                or getattr(owner,'_cpu_reply_deadline',None)!=absolute_deadline
+                or not isinstance(backend,dict) or backend.get('frozen') is not True
+                or not isinstance(original_claim,dict) or original_claim.get('frozen') is not True
+                or request_['nonce']!=owner.nonce):
+            raise ExecutionError('Original frozen controller settlement bound differs')
+        original_intent=update._canonical(intent);original_proof=update._canonical(proof)
+        original_claim_bytes=update._canonical(original_claim)
+        original_root=owner.root;original_nonce=owner.nonce
+        def before_attempt():
+            if (owner.root!=original_root or owner.nonce!=original_nonce
+                    or getattr(owner,'_cpu_reply_deadline',None)!=absolute_deadline
+                    or update._canonical(intent)!=original_intent
+                    or update._canonical(proof)!=original_proof
+                    or update._canonical(owner._authenticated_backend_proof)!=original_claim_bytes):
+                raise ExecutionError('Original frozen controller settlement changed while entering')
+        admission=_transition_admission_before_deadline(original_root,original_nonce,absolute_deadline,
+                                                         before_attempt=before_attempt)
+    with admission:
         row=owner._owned();owner._binding(row);owner._live(row,row['process'])
         bootstrap=_json(_read(owner.root/lease.LEASES/owner.nonce/'bootstrap-receipt.json'))
         backend=proof['backend_proof']; expected={'schema_version':1,'kind':'backend_claim',

@@ -12,6 +12,7 @@ Supports:
 """
 
 from __future__ import annotations
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_handler, observe_original_dataset_UI_operation, observe_original_dataset_UI_connection, original_dataset_UI_read_text, original_dataset_UI_read_bytes, original_dataset_UI_image_open, original_dataset_UI_file, original_dataset_UI_diagnostics_missing
 
 import functools
 import glob
@@ -79,7 +80,7 @@ def _classification_split_assignments(root: Path) -> Optional[Dict[str, str]]:
         if not manifest.is_file():
             continue
         try:
-            data = json.loads(manifest.read_text(encoding="utf-8"))
+            data = json.loads(original_dataset_UI_read_text(manifest, encoding="utf-8"))
             if data.get("folder_path") != str(selected_root) or not isinstance(data.get("assignments"), dict):
                 raise ValueError("folder path or assignments are invalid")
             assignments = {}
@@ -235,9 +236,9 @@ def validate_image_file(file_path: Union[str, Path]) -> ValidationResult:
 
     # Decodability check with PIL
     try:
-        with Image.open(p) as im:
+        with original_dataset_UI_image_open(Image.open, p) as im:
             im.verify()
-        with Image.open(p) as im:
+        with original_dataset_UI_image_open(Image.open, p) as im:
             w, h = im.size
     except Exception as e:
         return ValidationResult(valid=False, error_code="CORRUPT_HEADER", details=str(e))
@@ -248,6 +249,7 @@ def validate_image_file(file_path: Union[str, Path]) -> ValidationResult:
     return ValidationResult(valid=True, error_code="OK", dimensions=(w, h), details="Valid image")
 
 
+@observe_original_dataset_UI_operation('decode_image_file')
 def decode_image_file(file_path: Union[str, Path]) -> ValidationResult:
     """validate_image_file, then a full pixel decode.
 
@@ -259,7 +261,7 @@ def decode_image_file(file_path: Union[str, Path]) -> ValidationResult:
     if not result.valid or is_dicom(Path(file_path)):
         return result
     try:
-        with Image.open(file_path) as image:
+        with original_dataset_UI_image_open(Image.open, file_path) as image:
             image.load()
     except Exception as exc:
         return ValidationResult(valid=False, error_code="DECODE_ERROR", dimensions=result.dimensions, details=str(exc))
@@ -853,7 +855,7 @@ def mask_folder_classes(dataset_root: Union[str, Path], masks: Sequence[Union[st
     """
     largest = 1
     for mask in dict.fromkeys(Path(item) for item in masks):
-        with Image.open(mask) as image:
+        with original_dataset_UI_image_open(Image.open, mask) as image:
             values = np.unique(np.asarray(image.convert("L")))
         if not set(values.tolist()).issubset({0, 255}):
             largest = max(largest, int(values.max(initial=0)))
@@ -939,7 +941,7 @@ class SegmentationDataset(Dataset):
         rgb = _read_image_rgb(img_p)
         h, w = rgb.shape[:2]
 
-        with Image.open(str(mask_p)) as m_im:
+        with original_dataset_UI_image_open(Image.open, str(mask_p)) as m_im:
             mask_l = m_im.convert("L")
             mask_np = np.array(mask_l)
 
@@ -1210,7 +1212,7 @@ class AnomalyDataset(Dataset):
         img_t = torch.from_numpy(rgb.transpose(2, 0, 1)).float() / 255.0
 
         if mask_p is not None and mask_p.exists():
-            with Image.open(str(mask_p)) as m_im:
+            with original_dataset_UI_image_open(Image.open, str(mask_p)) as m_im:
                 mask_l = m_im.convert("L")
                 mask_np = np.array(mask_l)
             if mask_np.shape != (target_h, target_w):

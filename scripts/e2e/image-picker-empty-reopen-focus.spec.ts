@@ -151,3 +151,109 @@ test('native image picker refuses empty selection and reopens the exact validate
    source_electron:true,actual_keyboard_selection_and_reopen:true,actual_original_resolve_UUID_and_SHA:true,empty_and_whitespace_confirmation_disabled:true,focus_wrap_and_escape_restore:true,all_complete_protected_trees_unfiltered:true,same_scoped_preference_bytes:true,model_training_inference_or_flow_execution:false,native_file_dialog_used:false,native_installed_release_acceptance:false,human_quality_approval:false,parent_82_acceptance:false});
  }finally{io.finish();}
 });
+
+
+// F064 handoff: the saved picker identity and keyboard focus belong to one project.
+// Two original controlled inventories share file names but never their path, UUID or bytes.
+function pickerHandoffWrite(file:string,raw:Buffer|string){
+ const fd=fs.openSync(file,fs.constants.O_WRONLY|fs.constants.O_CREAT|fs.constants.O_EXCL,0o600);let first:unknown,failed=false;
+ try{const bytes=Buffer.isBuffer(raw)?raw:Buffer.from(raw);let at=0;while(at<bytes.length){const n=fs.writeSync(fd,bytes,at,bytes.length-at);expect(n).toBeGreaterThan(0);at+=n;}fs.fsyncSync(fd);}
+ catch(error){failed=true;first=error;}
+ finally{try{fs.closeSync(fd);}catch(error){if(!failed){failed=true;first=error;}}}
+ if(failed)throw first;
+}
+function pickerHandoffCustody(root:string){
+ const rows:Record<string,unknown>={};
+ const raw7=(s:fs.BigIntStats)=>[s.dev,s.ino,s.mode,s.nlink,s.size,s.mtimeNs,s.ctimeNs].map(String);
+ const walk=(directory:string)=>{
+  const before=fs.lstatSync(directory,{bigint:true});expect(before.isDirectory()).toBe(true);expect(before.isSymbolicLink()).toBe(false);expect(fs.realpathSync(directory)).toBe(directory);
+  const names=fs.readdirSync(directory).sort();rows[path.relative(root,directory).split(path.sep).join('/')]={kind:'directory',raw7:raw7(before),names};
+  for(const name of names){const file=path.join(directory,name),named=fs.lstatSync(file,{bigint:true});expect(named.isSymbolicLink()).toBe(false);
+   if(named.isDirectory()){walk(file);continue;}
+   expect(named.isFile()).toBe(true);expect(named.nlink).toBe(1n);expect(fs.realpathSync(file)).toBe(file);
+   const fd=fs.openSync(file,fs.constants.O_RDONLY|fs.constants.O_NOFOLLOW);let first:unknown,failed=false,raw:Buffer|undefined;
+   try{expect(raw7(fs.fstatSync(fd,{bigint:true}))).toEqual(raw7(named));raw=fs.readFileSync(fd);expect(BigInt(raw.length)).toBe(named.size);
+    expect(raw7(fs.fstatSync(fd,{bigint:true}))).toEqual(raw7(named));expect(raw7(fs.lstatSync(file,{bigint:true}))).toEqual(raw7(named));}
+   catch(error){failed=true;first=error;}
+   finally{try{fs.closeSync(fd);}catch(error){if(!failed){failed=true;first=error;}}}
+   if(failed)throw first;
+   rows[path.relative(root,file).split(path.sep).join('/')]={kind:'file',raw7:raw7(named),size:raw!.length,sha256:sha(raw!)};
+  }
+  expect(fs.readdirSync(directory).sort()).toEqual(names);expect(raw7(fs.lstatSync(directory,{bigint:true}))).toEqual(raw7(before));
+ };walk(root);return rows;
+}
+
+test('native saved image picker identity and keyboard focus stay owned through A B A project handoff',{tag:'@electron'},async({electronSession,workspace:w,evidence:e})=>{
+ test.setTimeout(180_000);const page=electronSession.window,backend=await electronSession.waitForBackend(),io=transport(page,w,e,nativeApi(page,backend.port),'picker-project-handoff');
+ let primary:unknown,hasPrimary=false;const cleanupErrors:string[]=[],visits:any[]=[],openingReplies:any[]=[];
+ try{
+  const make=async(letter:'A'|'B')=>{
+   const source=path.join(w.root,'picker-handoff-original-'+letter),folder=path.join(source,'train','good');fs.mkdirSync(folder,{recursive:true});
+   const originals=[0,1].map(index=>{const blue=letter==='A'?100+index:101-index,file=path.join(folder,'part-'+index+'.png');pickerHandoffWrite(file,png(256,3,(x,y)=>[x,y,blue]));const raw=fs.readFileSync(file);
+    return{path:file,relative:path.relative(source,file).split(path.sep).join('/'),sha256:sha(raw),size:raw.length,blue,pixels:assertSourcePixels(raw,blue)};});
+   const project=await io.value('/api/project/create',{name:'Owned picker handoff '+letter,task:'classification'});ownedProject(project,w);expect(project.task).toBe('classification');await io.value('/api/project/update',{source_dataset_dir:source},'PUT');
+   const importDeadline=performance.now()+10_000,started=await io.value('/api/dataset/imports',{task:'classification',verify:true},undefined,importDeadline);expect(typeof started.job_id).toBe('string');let imported:any;
+   while(performance.now()<importDeadline){imported=await io.value('/api/dataset/imports/'+started.job_id,undefined,undefined,importDeadline);if(['completed','failed','aborted','interrupted'].includes(imported.state))break;await new Promise(resolve=>setTimeout(resolve,Math.min(50,Math.max(0,importDeadline-performance.now()))));}
+   expect(performance.now()).toBeLessThanOrEqual(importDeadline);expect(imported.state).toBe('completed');expect(imported.job_id).toBe(started.job_id);expect(imported.source.root).toBe(source);
+   const revision=imported.result.revision.revision_id,accepted=await io.value('/api/dataset/imports/'+started.job_id+'/accept',{revision_id:revision,expected_active:null});expect(accepted).toEqual({active_revision:revision,job_id:started.job_id});
+   const revisions=await io.value('/api/dataset/revisions');expect(revisions.active_revision).toBe(revision);expect(revisions.revisions).toHaveLength(1);
+   const listing=await io.value('/api/dataset/library/images?limit=120');expect(listing.items).toHaveLength(2);expect(listing.revision_id).toBe(revision);expect(listing.active).toBe(true);expect(listing.source_root).toBe(source);expect(listing.next_cursor).toBeNull();
+   for(const row of listing.items){const image=originals.find(value=>value.relative===row.relative_path);expect(image).toBeDefined();expect(row.valid===true||row.valid===1).toBe(true);expect(row.sha256).toBe(image!.sha256);expect(row.file_path).toBe(image!.path);expect(typeof row.image_uuid).toBe('string');expect(row.image_uuid.length).toBeGreaterThan(0);expect(sha(fs.readFileSync(row.file_path))).toBe(row.sha256);}
+   const first=listing.items.find((row:any)=>row.file_name==='part-0.png');expect(first).toBeDefined();
+   return{letter,project,source,originals,revision,started,imported,accepted,listing,first};
+  };
+  const a=await make('A'),b=await make('B');expect(a.project.id).not.toBe(b.project.id);expect(a.revision).not.toBe(b.revision);expect(a.first.image_uuid).not.toBe(b.first.image_uuid);expect(a.first.sha256).not.toBe(b.first.sha256);expect(a.first.file_name).toBe(b.first.file_name);expect(a.first.relative_path).toBe(b.first.relative_path);
+  await io.settle();await page.reload();
+  const picker=page.getByRole('dialog',{name:'검사 대상 이미지 선택'}),opener=page.getByRole('button',{name:'이미지 변경...',exact:true}),close=picker.getByRole('button',{name:'닫기 (Esc)',exact:true}),confirm=picker.getByRole('button',{name:'선택 확정',exact:true}),cancel=picker.getByRole('button',{name:'취소',exact:true});
+  const expectedSelection=(owner:typeof a)=>({source:'dataset',imagePath:owner.first.file_path,imageId:owner.first.image_uuid,imageUuid:owner.first.image_uuid,sha256:owner.first.sha256,relativePath:owner.first.relative_path,fileName:owner.first.file_name,thumbnailUrl:'/api/dataset/thumbnail/'+encodeURIComponent(owner.first.file_name)+'?file_path='+encodeURIComponent(owner.first.file_path)});
+  const preferences=async()=>Object.entries(await io.storage()).filter(([key])=>key.startsWith('modu.inspectionImage.v2:')).map(([key,raw])=>({key,raw,scope:JSON.parse(key.slice('modu.inspectionImage.v2:'.length)),value:JSON.parse(raw)}));
+  const selectionFor=async(owner:typeof a)=>{const rows=(await preferences()).filter(row=>row.scope.at(-1)===owner.project.id);expect(rows).toHaveLength(1);expect(rows[0].scope).toHaveLength(4);expect(rows[0].value).toEqual(expectedSelection(owner));return rows[0];};
+  const owningCurrent=async(owner:typeof a)=>{await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(owner.project.name);const current=await io.value('/api/project/current');expect(current.id).toBe(owner.project.id);expect(current.project_dir).toBe(owner.project.project_dir);expect(current.source_dataset_dir).toBe(owner.source);expect(current.active_labelset_id).toBe(owner.project.active_labelset_id);return current;};
+  const enterFlow=async(owner:typeof a)=>{await owningCurrent(owner);await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(4).click();await expect(page.getByRole('heading',{name:'검사 플로우 편집기',exact:true})).toBeVisible();await expect(opener).toBeEnabled();await io.settle();};
+  const open=async(owner:typeof a)=>{
+   await io.settle();await page.getByTitle('프로젝트 관리',{exact:true}).click();const dialog=page.getByRole('dialog',{name:'프로젝트 관리',exact:true});await expect(dialog).toBeVisible();
+   const wire=page.waitForResponse(reply=>new URL(reply.url()).pathname==='/api/project/open'&&reply.request().method()==='POST'&&reply.request().postData()===JSON.stringify({project_dir:owner.project.project_dir}),{timeout:10_000});void wire.catch(()=>undefined);
+   await dialog.getByRole('button').filter({hasText:owner.project.name}).click();const reply=await wire,captured=await io.captured(reply);expect(captured.status,captured.body).toBe(200);expect(JSON.parse(captured.request.body!)).toEqual({project_dir:owner.project.project_dir});const returned=JSON.parse(captured.body);expect(returned.id).toBe(owner.project.id);expect(returned.source_dataset_dir).toBe(owner.source);expect(returned.project_dir).toBe(owner.project.project_dir);await expect(dialog).toBeHidden();openingReplies.push({owner:owner.letter,...captured});await enterFlow(owner);
+  };
+  const initialChoose=async(owner:typeof a)=>{
+   await enterFlow(owner);await opener.focus();await opener.press('Enter');await expect(picker).toBeVisible();await expect(close).toBeFocused();await expect(confirm).toBeDisabled();await picker.getByRole('button',{name:'검증된 데이터 버전',exact:true}).click();
+   const grid=picker.getByRole('list',{name:'데이터 버전 이미지'});await expect(grid.getByRole('listitem')).toHaveCount(2);const item=grid.getByRole('listitem').filter({hasText:owner.first.file_name});await expect(item).toHaveCount(1);await item.focus();await item.press('Enter');await expect(item).toHaveAttribute('aria-pressed','true');await expect(confirm).toBeEnabled();await confirm.focus();await confirm.press('Enter');await expect(picker).toBeHidden();await expect(opener).toBeFocused();await expect(page.getByRole('region',{name:'플로우 식별 정보'})).toContainText(owner.first.file_path);await selectionFor(owner);await io.settle();
+  };
+  const resolveOpen=async(owner:typeof a)=>{
+   await opener.focus();const request={selections:[{image_uuid:owner.first.image_uuid,sha256:owner.first.sha256}]};
+   const wire=page.waitForResponse(reply=>new URL(reply.url()).pathname==='/api/dataset/library/resolve'&&reply.request().method()==='POST'&&reply.request().postData()===JSON.stringify(request),{timeout:10_000});void wire.catch(()=>undefined);
+   await opener.press('Enter');await expect(picker).toBeVisible();await expect(close).toBeFocused();const reply=await wire,captured=await io.captured(reply),headers=reply.request().headers(),responseHeaders=await reply.allHeaders();expect(captured.status,captured.body).toBe(200);expect(JSON.parse(captured.request.body!)).toEqual(request);expect(headers['x-vision-project']).toBe(owner.project.id);const context=JSON.parse(headers['x-vision-context']);expect(context.project_id).toBe(owner.project.id);expect(context.mode).toBe('local');expect(JSON.parse(responseHeaders['x-vision-context'])).toEqual(context);
+   const resolution=JSON.parse(captured.body);expect(resolution.revision_id).toBe(owner.revision);expect(resolution.active).toBe(true);expect(resolution.results).toHaveLength(1);const result=resolution.results[0];expect(result.status).toBe('found');expect(result.current.image_uuid).toBe(owner.first.image_uuid);expect(result.current.sha256).toBe(owner.first.sha256);expect(result.current.relative_path).toBe(owner.first.relative_path);expect(result.current.file_path).toBe(owner.first.file_path);expect(result.current.valid===true||result.current.valid===1).toBe(true);expect(result.candidates).toEqual([]);
+   await expect(picker).toContainText('선택: '+owner.first.relative_path);await expect(confirm).toBeEnabled();const grid=picker.getByRole('list',{name:'데이터 버전 이미지'});await expect(grid.getByRole('listitem')).toHaveCount(2);await expect(grid.getByRole('listitem').filter({hasText:owner.first.file_name})).toHaveAttribute('aria-pressed','true');
+   return{request,captured,request_headers:headers,response_headers:responseHeaders,context,resolution};
+  };
+  const revisit=async(owner:typeof a,other:typeof a,tag:string)=>{
+   const current=await owningCurrent(owner),resolved=await resolveOpen(owner);await selectionFor(owner);
+   await close.focus();await close.press('Shift+Tab');await expect(confirm).toBeFocused();await confirm.press('Tab');await expect(close).toBeFocused();await confirm.focus();await confirm.press('Enter');await expect(picker).toBeHidden();await expect(opener).toBeFocused();const identity=page.getByRole('region',{name:'플로우 식별 정보'});await expect(identity).toContainText(owner.first.file_path);await expect(identity).not.toContainText(other.first.file_path);
+   const reopened=await resolveOpen(owner);await close.focus();await close.press('Shift+Tab');await expect(confirm).toBeFocused();await confirm.press('Tab');await expect(close).toBeFocused();await close.press('Escape');await expect(picker).toBeHidden();await expect(opener).toBeFocused();await expect(identity).toContainText(owner.first.file_path);await expect(identity).not.toContainText(other.first.file_path);await io.settle();await e.screenshot(page,'native-picker-'+tag+'-owns-identity-and-opener');visits.push({owner:owner.letter,current,resolved,reopened,preference:await selectionFor(owner)});
+  };
+  // Prime both owning views and annotation metadata before the immutable A/B/A boundary.
+  expect(await preferences()).toEqual([]);await initialChoose(b);await open(a);await initialChoose(a);await open(b);await revisit(b,a,'warm-B');
+  await io.value('/api/annotations/'+encodeURIComponent(path.parse(b.first.file_name).name)+'?file_path='+encodeURIComponent(b.first.file_path));await open(a);await revisit(a,b,'warm-A');
+  const remembered=await preferences();expect(remembered).toHaveLength(2);const choiceA=await selectionFor(a),choiceB=await selectionFor(b);expect(choiceA.key).not.toBe(choiceB.key);expect(choiceA.scope.slice(0,3)).toEqual(choiceB.scope.slice(0,3));
+  const roots={project_A:a.project.project_dir,project_B:b.project.project_dir,source_A:a.source,source_B:b.source,harness_dataset:w.dataset};
+  const custody=()=>Object.fromEntries(Object.entries(roots).map(([key,root])=>[key,pickerHandoffCustody(root)]));
+  const routes=[...stableRoutes,'/api/dataset/library/images?limit=120','/api/annotations/'+encodeURIComponent(path.parse(a.first.file_name).name)+'?file_path='+encodeURIComponent(a.first.file_path)];
+  const before=await io.snapshot('before-ABA',routes,roots),beforeRaw=custody(),writeStart=io.writes.length,visitStart=visits.length;
+  await revisit(a,b,'A-first');await open(b);await revisit(b,a,'B');await open(a);await revisit(a,b,'A-return');
+  const after=await io.snapshot('after-ABA',routes,roots),afterRaw=custody();expect(after).toEqual(before);expect(afterRaw).toEqual(beforeRaw);expect(await preferences()).toEqual(remembered);
+  const actualVisits=visits.slice(visitStart);expect(actualVisits.map(row=>row.owner)).toEqual(['A','B','A']);const expectedWrites:Array<{method:string;route:string;body:unknown}>=[];
+  for(const [index,owner]of [a,b,a].entries()){if(index)expectedWrites.push({method:'POST',route:'/api/project/open',body:{project_dir:owner.project.project_dir}});for(let n=0;n<2;n++)expectedWrites.push({method:'POST',route:'/api/dataset/library/resolve',body:{selections:[{image_uuid:owner.first.image_uuid,sha256:owner.first.sha256}]}});}
+  assertWrites(io.writes.slice(writeStart),expectedWrites);for(const owner of [a,b])for(const image of owner.originals){const raw=fs.readFileSync(image.path);expect(raw.length).toBe(image.size);expect(sha(raw)).toBe(image.sha256);assertSourcePixels(raw,image.blue);}await io.settle();
+  const proof=path.join(w.logs,'picker-project-handoff-custody.json');pickerHandoffWrite(proof,JSON.stringify({roots,beforeRaw,afterRaw,before,after},null,2));e.addFile(proof);
+  e.note('native_picker_project_handoff',{cells:[{action:'F064.native-image-picker-keyboard-focus',dimension:'handoff'}],owners:[a,b],openingReplies,visits,actualVisits,choiceA,choiceB,remembered,expectedWrites,proof,
+   source_electron:true,actual_owning_project_ABA:true,distinct_source_UUID_SHA_revision:true,original_resolve_headers_and_full_bodies:true,explicit_keyboard_confirmation_and_escape_focus_restore:true,all_protected_roots_raw7_hash_namespace_exact:true,
+   native_file_dialog_used:false,model_training_inference_or_flow_execution:false,native_installed_release_acceptance:false,human_quality_approval:false,parent_82_acceptance:false});
+ }catch(error){hasPrimary=true;primary=error;}
+ finally{
+  try{await io.settle();}catch(error){cleanupErrors.push(String(error));if(!hasPrimary){hasPrimary=true;primary=error;}}
+  try{io.finish();}catch(error){cleanupErrors.push(String(error));if(!hasPrimary){hasPrimary=true;primary=error;}}
+  try{e.note('picker_project_handoff_cleanup',{errors:cleanupErrors,original_primary_preserved:hasPrimary,independent_transport_settle_and_finish_attempted:true});}catch(error){if(!hasPrimary){hasPrimary=true;primary=error;}}
+ }
+ if(hasPrimary)throw primary;
+});

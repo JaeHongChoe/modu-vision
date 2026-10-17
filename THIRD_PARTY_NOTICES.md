@@ -74,6 +74,7 @@ Python dependencies are not locked. This interpreter satisfies `requirements.txt
 | opencv-python-headless | 4.12.0.88 | Apache 2.0 AND Apache Software License | resolved | https://github.com/opencv/opencv-python |
 | opentelemetry-api | 1.45.0 | Apache-2.0 | resolved | https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-api |
 | packaging | 24.2 | Apache Software License AND BSD License | resolved | https://github.com/pypa/packaging |
+| pi-heif | 1.4.0 | BSD-3-Clause AND GNU Lesser General Public License v3 (LGPLv3) | needs_review | https://github.com/bigcat88/pillow_heif |
 | pillow | 12.3.0 | MIT-CMU | resolved | https://python-pillow.github.io |
 | polars | 1.40.1 | MIT License | resolved | https://www.pola.rs/ |
 | polars-runtime-32 | 1.40.1 | MIT AND MIT License | resolved | https://www.pola.rs/ |
@@ -123,6 +124,7 @@ Python dependencies are not locked. This interpreter satisfies `requirements.txt
 - `electron_runtime:electron`: needs_review
 - `python_runtime:certifi`: needs_review
 - `python_runtime:httptools`: not_installed_in_inventory_environment
+- `python_runtime:pi-heif`: needs_review
 - `python_runtime:python-dateutil`: needs_review
 - `python_runtime:tqdm`: needs_review
 - `python_runtime:ultralytics`: needs_decision

@@ -34,19 +34,32 @@ def request(port, route, token, payload=None):
     with urllib.request.urlopen(req,timeout=3) as response:return json.load(response)
 
 
+class _SecondaryLifecycleErrors(RuntimeError):
+    """Retain actual secondary objects without rendering or replacing the first."""
+    def __init__(self, errors):
+        super().__init__('Secondary owned release lifecycle failures')
+        self.errors=tuple(errors)
+
+
 def launch(executable, arguments, directory, environment, *, port=None, timeout=60):
     process=subprocess.Popen([str(executable),*arguments],cwd=directory,env={**environment,'PYTHONIOENCODING':'utf-8'},
                              stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,encoding='utf-8',errors='replace')
-    lines=[];port_holder=[port]
-    def consume():
-        for line in process.stdout:
-            lines.append(line.rstrip())
-            if line.startswith('VISION_AI_STUDIO_PORT='):
-                try:port_holder[0]=int(line.split('=',1)[1])
-                except ValueError:pass
-    reader=threading.Thread(target=consume,daemon=True);reader.start()
-    deadline=time.monotonic()+timeout
+    reader=None;lines=[];port_holder=[port]
     try:
+        owned_stdout=process.stdout;reader_errors=[]
+        def consume():
+            try:
+                for line in owned_stdout:
+                    lines.append(line.rstrip())
+                    if line.startswith('VISION_AI_STUDIO_PORT='):
+                        try:port_holder[0]=int(line.split('=',1)[1])
+                        except ValueError:pass
+            except BaseException as error:reader_errors.append(error)
+        reader=threading.Thread(target=consume,daemon=True)
+        reader._release_acceptance_errors=reader_errors
+        reader._release_acceptance_stdout=owned_stdout
+        reader.start()
+        deadline=time.monotonic()+timeout
         while time.monotonic()<deadline:
             if process.poll() is not None:raise RuntimeError('Frozen process exited during launch: '+'\n'.join(lines[-12:]))
             if port_holder[0]:
@@ -56,18 +69,59 @@ def launch(executable, arguments, directory, environment, *, port=None, timeout=
                 except (OSError,ValueError):pass
             time.sleep(.1)
         raise TimeoutError('Frozen process readiness timed out: '+'\n'.join(lines[-12:]))
-    except BaseException:
-        shutdown(process,reader)
+    except BaseException as primary:
+        try:shutdown(process,reader)
+        except BaseException as cleanup:raise primary from cleanup
         raise
 
 
 def shutdown(process,reader):
-    if process.poll() is None:
-        process.terminate()
+    errors=[];reader_errors=[];reader_errors_seen=0
+    if reader is not None:
+        try:
+            reader_errors=reader._release_acceptance_errors
+            errors.extend(reader_errors);reader_errors_seen=len(reader_errors)
+        except AttributeError:pass
+        except BaseException as error:errors.append(error)
+    owned_stdout=process.stdout
+    if reader is not None:
+        try:
+            owned_stdout=reader._release_acceptance_stdout
+            if process.stdout is not owned_stdout:errors.append(RuntimeError('Owned frozen stdout identity changed'))
+        except AttributeError:pass
+        except BaseException as error:errors.append(error)
+    running=None
+    try:running=process.poll() is None
+    except BaseException as error:errors.append(error)
+    if running is True:
+        try:process.terminate()
+        except BaseException as error:errors.append(error)
+    if running is not False:
         try:process.wait(timeout=15)
         except subprocess.TimeoutExpired:
-            process.kill();process.wait(timeout=10)
-    reader.join(timeout=2)
+            try:process.kill()
+            except BaseException as error:errors.append(error)
+            try:process.wait(timeout=10)
+            except BaseException as error:errors.append(error)
+        except BaseException as error:errors.append(error)
+    reader_closed=reader is None
+    if reader is not None:
+        try:reader.join(timeout=2)
+        except BaseException as error:errors.append(error)
+        try:reader_closed=not reader.is_alive()
+        except BaseException as error:errors.append(error)
+        if not reader_closed:errors.append(RuntimeError('Owned frozen stdout reader closure is unverified'))
+        errors.extend(reader_errors[reader_errors_seen:])
+    # Buffered close can block behind a still-running reader. Fail with explicit
+    # unknown stdout closure rather than extending the original join deadline.
+    if reader_closed:
+        try:owned_stdout.close()
+        except BaseException as error:errors.append(error)
+    else:errors.append(RuntimeError('Owned stdout closure is unverified while its reader remains active'))
+    if process.returncode is None:errors.append(RuntimeError('Owned frozen process closure is unverified'))
+    if errors:
+        if len(errors)>1:raise errors[0] from _SecondaryLifecycleErrors(errors[1:])
+        raise errors[0]
 
 
 def verify_known_image_execution(runtime,job,package_sha,image_sha,device,build_sha):
@@ -118,7 +172,11 @@ def validate(directory, *, package=None, image=None, device='cpu'):
             process,reader,port,health,lines=launch(executable,args,state,env)
             try:
                 report['health' if number==0 else 'restart_health']={**health,'pid':process.pid,'port':port}
-            finally:shutdown(process,reader)
+            except BaseException as primary:
+                try:shutdown(process,reader)
+                except BaseException as cleanup:raise primary from cleanup
+                raise
+            else:shutdown(process,reader)
         if package is not None:
             package=Path(package).resolve(strict=True);image=Path(image).resolve(strict=True)
             package_hash=sha256(package/'manifest.json');image_hash=sha256(image)
@@ -143,7 +201,11 @@ def validate(directory, *, package=None, image=None, device='cpu'):
                     executions.append({'runtime':runtime,'job_id':job['job_id'],'state':result['state'],'verdict':result['verdict'],
                                        'result_sha256':hashlib.sha256(json.dumps(result['result'],sort_keys=True,separators=(',',':')).encode()).hexdigest(),
                                        'result':result['result']})
-                finally:shutdown(process,reader)
+                except BaseException as primary:
+                    try:shutdown(process,reader)
+                    except BaseException as cleanup:raise primary from cleanup
+                    raise
+                else:shutdown(process,reader)
             if sha256(image)!=image_hash or sha256(package/'manifest.json')!=package_hash:
                 raise ValueError('Acceptance source image or package changed during execution')
             report['inspection']={'manifest_sha256':package_hash,'image_sha256':image_hash,'device':device,'executions':executions}

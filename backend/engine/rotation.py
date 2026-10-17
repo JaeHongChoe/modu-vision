@@ -278,7 +278,14 @@ def _predict(model, image_size, rgb, device):
 
 def predict_rotation_array(checkpoint, rgb, *, device='cpu'):
     model, payload = load_rotation_model(checkpoint, device)
-    return {**_predict(model, payload['image_size'], rgb, next(model.parameters()).device), 'checkpoint_sha256': _hash(checkpoint)}
+    try:
+        input_device = next(model.parameters()).device
+    except StopIteration:
+        # Compiled adapters have no Torch parameters. Resolve the declared
+        # tensor-input device; never substitute CPU for an unknown accelerator.
+        from backend.engine.runtime_device import resolve_runtime_device
+        input_device = resolve_runtime_device(device)
+    return {**_predict(model, payload['image_size'], rgb, input_device), 'checkpoint_sha256': _hash(checkpoint)}
 
 
 def export_rotation_package(checkpoint, output_dir):

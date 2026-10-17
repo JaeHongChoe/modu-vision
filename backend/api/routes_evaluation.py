@@ -1546,6 +1546,8 @@ def get_overkill_underkill_analysis(
     cost_escape: float = Query(500.0, ge=0.0),
     cost_scrap: float = Query(25.0, ge=0.0),
     current_threshold: float = Query(0.5),
+    source_dataset_path: Optional[str] = None,
+    source_task: Optional[str] = None,
 ):
     """
     Industrial Overkill (과검) vs Underkill (미검) Optimization & Trade-off Curve.
@@ -1561,6 +1563,11 @@ def get_overkill_underkill_analysis(
         raise HTTPException(status_code=422, detail="A completed training job is required for calibration analysis.")
     from backend.engine.calibration_evidence import validate_calibration_evidence
 
+    source_options = {key: value for key, value in (
+        ("source_dataset_path", source_dataset_path), ("source_task", source_task),
+    ) if value is not None}
+    if source_options and Path(target_job).is_dir():
+        raise HTTPException(422, "Selected-source calibration requires a completed job ID, not an imported evaluation directory")
     eval_payload = None
     # Explicit directory inputs retain their import contract. Normal jobs always
     # use the checkpoint/data binding checks shared with the evaluation screen.
@@ -1573,7 +1580,7 @@ def get_overkill_underkill_analysis(
             eval_payload = None
     if eval_payload is None:
         try:
-            eval_payload = run_or_load_evaluation(job_id=target_job)
+            eval_payload = run_or_load_evaluation(job_id=target_job, **source_options)
         except (ValueError, OSError) as exc:
             raise HTTPException(422, detail=f"No usable evaluation predictions for calibration: {exc}") from exc
     try:
@@ -1619,6 +1626,8 @@ class ZeroEscapeCalibrateRequest(BaseModel):
     cost_scrap: Optional[float] = 25.0
     current_threshold: Optional[float] = 0.50
     apply_to_eval_results: Optional[bool] = True
+    source_dataset_path: Optional[str] = None
+    source_task: Optional[str] = None
 
 
 def run_zero_escape_calibration(
@@ -1628,14 +1637,18 @@ def run_zero_escape_calibration(
     cost_scrap: float = 25.0,
     current_threshold: float = 0.50,
     apply_to_eval_results: bool = True,
+    source_dataset_path: Optional[str] = None,
+    source_task: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Runs authentic zero-escape calibration and updates eval_results.json."""
+    source_options = {key: value for key, value in (("source_dataset_path", source_dataset_path), ("source_task", source_task)) if value is not None}
     result = get_overkill_underkill_analysis(
         job_id=job_id,
         target_max_underkill=target_max_underkill,
         cost_escape=cost_escape,
         cost_scrap=cost_scrap,
         current_threshold=current_threshold,
+        **source_options,
     )
     if result.get("total_defects", 0) == 0 or result.get("total_normals", 0) == 0:
         raise HTTPException(status_code=422, detail="Calibration requires both NG and OK validation samples.")
@@ -1648,7 +1661,7 @@ def run_zero_escape_calibration(
         if Path(target_job).is_dir():
             eval_path = Path(target_job) / "eval_results.json"
         else:
-            eval_path = _resolve_job_artifacts(job_id=target_job)[0] / "eval_results.json"
+            eval_path = _resolve_job_artifacts(job_id=target_job, **source_options)[0] / "eval_results.json"
         with _eval_file_lock:
             try:
                 data = json.loads(eval_path.read_text(encoding="utf-8"))
@@ -1685,6 +1698,7 @@ def post_zero_escape_calibrate(req: ZeroEscapeCalibrateRequest):
         cost_scrap=req.cost_scrap if req.cost_scrap is not None else 25.0,
         current_threshold=req.current_threshold if req.current_threshold is not None else 0.50,
         apply_to_eval_results=bool(req.apply_to_eval_results),
+        **{key: value for key, value in (("source_dataset_path", req.source_dataset_path), ("source_task", req.source_task)) if value is not None},
     )
 
 
@@ -1696,6 +1710,8 @@ def get_zero_escape_calibrate_endpoint(
     cost_scrap: float = Query(25.0, ge=0.0),
     current_threshold: float = Query(0.5),
     apply_to_eval_results: bool = Query(True),
+    source_dataset_path: Optional[str] = None,
+    source_task: Optional[str] = None,
 ):
     return run_zero_escape_calibration(
         job_id=job_id,
@@ -1704,6 +1720,7 @@ def get_zero_escape_calibrate_endpoint(
         cost_scrap=cost_scrap,
         current_threshold=current_threshold,
         apply_to_eval_results=apply_to_eval_results,
+        **{key: value for key, value in (("source_dataset_path", source_dataset_path), ("source_task", source_task)) if value is not None},
     )
 
 

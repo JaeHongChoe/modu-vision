@@ -1,6 +1,7 @@
 """Dependency-layer execution with bounded workers and copied context variables."""
 from concurrent.futures import ThreadPoolExecutor
 from contextvars import copy_context
+from backend.engine.original_owned_flow_execution_request import observe_original_cpu_layers
 
 
 def execution_layers(nodes, incoming):
@@ -15,6 +16,7 @@ def execution_layers(nodes, incoming):
     return layers
 
 
+@observe_original_cpu_layers
 def execute_layers(nodes, incoming, callback, max_workers):
     """Wait for each dependency layer, then publish results in graph order."""
     with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix='vision-flow') as pool:

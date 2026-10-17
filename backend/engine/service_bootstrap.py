@@ -42,6 +42,18 @@ def trusted_runtime_identity():
     return {'mode':'source','status':'identified','source_sha256':digest.hexdigest()}
 
 
+def inspection_environment(token):
+    """Copy runtime policy without inheriting foreground application authority."""
+    env=dict(os.environ)
+    for name in ('VISION_AI_STUDIO_USER_DATA_DIR', 'VISION_APPLICATION_LAUNCH_NONCE',
+                 'VISION_APPLICATION_GENERATION', 'VISION_APPLICATION_DATABASE_GENERATION',
+                 'VISION_APPLICATION_BACKEND_FD', 'VISION_APPLICATION_LAUNCH_FD',
+                 'VISION_AI_STUDIO_API_TOKEN'):
+        env.pop(name,None)
+    env['VISION_INSPECTION_TOKEN']=token
+    return env
+
+
 def bootstrap_command(project_dir):
     service=ManagedService(project_dir)
     active=service.ledger.active()
@@ -68,7 +80,7 @@ def bootstrap_command(project_dir):
     if (service.root/'adapters.json').is_file():args+=['--adapter-config',str(service.root/'adapters.json')]
     if service.config.get('native_kind')=='windows_scm' and service.config.get('scm_configuration',{}).get('warmup_image'):
         args+=['--warmup-image',service.config['scm_configuration']['warmup_image']]
-    env=dict(os.environ);env['VISION_INSPECTION_TOKEN']=service.config['token']
+    env=inspection_environment(service.config['token'])
     env['PYTHONDONTWRITEBYTECODE']='1'
     return runtime_command(args),env
 

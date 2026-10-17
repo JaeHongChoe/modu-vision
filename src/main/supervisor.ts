@@ -84,6 +84,7 @@ export interface SupervisorConfig {
 }
 
 const MAX_LOG_BUFFER_LINES = 100;
+const MAX_STARTUP_STDERR_BYTES = 16 * 1024;
 
 /** Spawn options for the backend. Its stdin stays open as the graceful stop channel, closed by stopBackend (when the
  *  app itself exits, the exit hook force-stops the backend instead), and no console window opens for it on Windows. */
@@ -129,6 +130,11 @@ export class BackendSupervisor extends EventEmitter {
 
   private stdoutBuffer: string[] = [];
   private stderrBuffer: string[] = [];
+  private startupStderr = new WeakMap<ChildProcess, {tail: Buffer; apiToken: string | null; truncated: boolean}>();
+  private startupCrashDelivery: {
+    proc: ChildProcess | null; portPending: boolean;
+    pendingCrash: CrashEventData | null; notified: boolean;
+  } | null = null;
 
   constructor(customConfig?: SupervisorConfig) {
     super();
@@ -232,6 +238,11 @@ export class BackendSupervisor extends EventEmitter {
     if (this.childProcess && this.childProcess.exitCode === null && this.childProcess.signalCode === null) {
       throw new Error('Previous backend exit is unverified; wait for its original exit event');
     }
+    const startupAttempt = {
+      proc: null as ChildProcess | null, portPending: true,
+      pendingCrash: null as CrashEventData | null, notified: false,
+    };
+    this.startupCrashDelivery = startupAttempt;
     this.isShuttingDown = false;
     this.setState('STARTING');
     const apiToken = randomBytes(32).toString('hex');
@@ -300,6 +311,7 @@ export class BackendSupervisor extends EventEmitter {
         throw new Error(`Failed to spawn backend process at '${spawnBin}': ${spawnError.message}`);
       }
 
+      startupAttempt.proc = this.childProcess;
       const pid = this.childProcess.pid;
       console.log(`[Supervisor] Python daemon spawned with PID ${pid}`);
       // Closing the stop channel of a backend that already exited reports EPIPE; it must not crash the main process.
@@ -338,14 +350,23 @@ export class BackendSupervisor extends EventEmitter {
     } catch (startupError: any) {
       this.ownedApplicationLaunch?.refuse();
       console.error(`[Supervisor] Startup failed: ${startupError.message}`);
-      const alreadyReported = this.state === 'CRASHED';
+      const deferredCrash = startupAttempt.pendingCrash;
+      const alreadyReported = startupAttempt.notified || (!deferredCrash && this.state === 'CRASHED');
       await this.stopBackend();
       this.setState('CRASHED');
-      if (!alreadyReported) this.emit('crashed', {
-        exitCode: null, signal: null, recentStderr: [...this.stderrBuffer],
-        recentStdout: [...this.stdoutBuffer], restartsAttempted: this.restartCount,
-        message: startupError.message,
-      } satisfies CrashEventData);
+      // State changes and cleanup remain immediate. Only this attempt's startup
+      // notification waits for the original discovery close/deadline and tail.
+      if (this.startupCrashDelivery === startupAttempt && !alreadyReported) {
+        startupAttempt.notified = true;
+        const detail = deferredCrash && startupAttempt.proc ? this.startupStderrText(startupAttempt.proc) : '';
+        this.emit('crashed', {
+          exitCode: deferredCrash?.exitCode ?? null, signal: deferredCrash?.signal ?? null,
+          recentStderr: deferredCrash ? (detail ? detail.split('\n') : []) : [...this.stderrBuffer],
+          recentStdout: deferredCrash?.recentStdout || [...this.stdoutBuffer],
+          restartsAttempted: deferredCrash?.restartsAttempted ?? this.restartCount,
+          message: startupError.message,
+        } satisfies CrashEventData);
+      }
       throw startupError;
     }
   }
@@ -368,7 +389,10 @@ export class BackendSupervisor extends EventEmitter {
     console.log(`[Supervisor] Initiating graceful shutdown for PID ${pid}...`);
     this.stoppingPromise = new Promise<void>((resolve, reject) => {
       const owned = this.ownedApplicationLaunch;
+      const twoPhase = !!owned?.requiresWriterDrain && typeof owned.prepareBackendShutdown === 'function';
       let expired = false, prepared = false, drainError: Error | null = null;
+      let forceKillTimer: NodeJS.Timeout | null = null, physicalDeadline: number | null = null;
+      const clearPhysicalTimer = () => { if (forceKillTimer !== null) { clearTimeout(forceKillTimer); forceKillTimer = null; } };
       const refuse = () => {
         try { owned?.refuse(); }
         catch (error) { console.error('[Supervisor] Owned drain refusal failed; ownership stays unresolved:', error); }
@@ -376,13 +400,19 @@ export class BackendSupervisor extends EventEmitter {
       const onExit = (code: number | null, signal: string | null) => {
         console.log(`[Supervisor] Daemon PID ${pid} exited (code: ${code}, signal: ${signal})`);
         const finish = () => {
-          clearTimeout(forceKillTimer);
+          clearPhysicalTimer();
           if (this.childProcess === proc) this.cleanupState();
           drainError ? reject(drainError) : resolve();
         };
-        if (!expired && owned?.requiresWriterDrain && prepared && code === 0 && signal === null) {
-          // Keep the original main/controller channel until it authenticates
-          // this same Node ChildProcess exit. The original timer still runs.
+        if (twoPhase && physicalDeadline !== null && performance.now() >= physicalDeadline) {
+          expired = true;
+          drainError = new Error('Original backend exit is unverified after the shutdown deadline');
+          refuse();
+        }
+        if (!expired && owned?.requiresWriterDrain && prepared && code === 0 && signal === null && proc.exitCode === code && proc.signalCode === signal) {
+          // The actual original exit ends only the physical window. The new
+          // final validation phase retains this main and controller channel.
+          if (twoPhase) clearPhysicalTimer();
           void owned.confirmBackendExit(proc).then(finish, error => {
             drainError = error instanceof Error ? error : new Error(String(error));
             refuse(); finish();
@@ -396,20 +426,25 @@ export class BackendSupervisor extends EventEmitter {
       // Install the timer before requesting shutdown: a controlled or native
       // close may synchronously deliver exit. Keep the original exit listener
       // after timeout so only that same handle can finish late cleanup.
-      const forceKillTimer = setTimeout(() => {
-        expired = true;
-        drainError = new Error('Original backend exit is unverified after the shutdown deadline');
-        // A controlled/native kill can synchronously emit the original exit.
-        // Refuse before invoking any process operation so it cannot resolve.
-        reject(drainError);
-        console.warn(`[Supervisor] Daemon PID ${pid} did not exit within ${this.config.gracefulShutdownTimeoutMs}ms. Forcing it to stop.`);
-        forceStop(proc);
-        try {
-          if (this.childProcess === proc) this.ownedApplicationLaunch?.refuse();
-        } catch (error) {
-          console.error('[Supervisor] Owned launch refusal failed; exit remains unverified:', error);
-        }
-      }, Math.max(0, this.config.gracefulShutdownTimeoutMs - (performance.now() - shutdownStarted)));
+      const startPhysicalTimer = () => {
+        const budget = twoPhase ? Math.min(4000, this.config.gracefulShutdownTimeoutMs) : this.config.gracefulShutdownTimeoutMs;
+        physicalDeadline = twoPhase ? performance.now() + budget : shutdownStarted + budget;
+        forceKillTimer = setTimeout(() => {
+          expired = true;
+          drainError = new Error('Original backend exit is unverified after the shutdown deadline');
+          // A controlled/native kill can synchronously emit the original exit.
+          // Refuse before invoking any process operation so it cannot resolve.
+          reject(drainError);
+          console.warn(`[Supervisor] Daemon PID ${pid} did not exit within ${this.config.gracefulShutdownTimeoutMs}ms. Forcing it to stop.`);
+          forceStop(proc);
+          try {
+            if (this.childProcess === proc) this.ownedApplicationLaunch?.refuse();
+          } catch (error) {
+            console.error('[Supervisor] Owned launch refusal failed; exit remains unverified:', error);
+          }
+        }, Math.max(0, physicalDeadline - performance.now()));
+      };
+      if (!twoPhase) startPhysicalTimer();
       proc.once('exit', onExit);
       const requestOriginalStop = () => {
         if (expired || proc.exitCode !== null || proc.signalCode !== null) return;
@@ -418,16 +453,26 @@ export class BackendSupervisor extends EventEmitter {
           try { proc.kill('SIGTERM'); } catch { /* Retain the original handle. */ }
         }
       };
-      if (owned?.requiresWriterDrain) {
-        const remaining = Math.floor(this.config.gracefulShutdownTimeoutMs - (performance.now() - shutdownStarted));
-        void owned.prepareBackendDrain(proc, remaining).then(() => {
+      const prepareDrain = () => {
+        if (expired || proc.exitCode !== null || proc.signalCode !== null) return;
+        if (twoPhase) startPhysicalTimer();
+        const remaining = Math.floor(physicalDeadline! - performance.now());
+        void owned!.prepareBackendDrain(proc, remaining).then(() => {
           if (expired) return; prepared = true; requestOriginalStop();
         }, error => {
           if (expired) return;
           drainError = error instanceof Error ? error : new Error(String(error));
           refuse(); requestOriginalStop();
         });
-      } else requestOriginalStop();
+      };
+      if (twoPhase) {
+        void owned!.prepareBackendShutdown(proc).then(prepareDrain, error => {
+          if (expired || proc.exitCode !== null || proc.signalCode !== null) return;
+          drainError = error instanceof Error ? error : new Error(String(error));
+          startPhysicalTimer(); refuse(); requestOriginalStop();
+        });
+      } else if (owned?.requiresWriterDrain) prepareDrain();
+      else requestOriginalStop();
     });
     try { await this.stoppingPromise; }
     finally { this.stoppingPromise = null; }
@@ -444,6 +489,8 @@ export class BackendSupervisor extends EventEmitter {
   // --------------------------------------------------------------------------
 
   private attachProcessListeners(proc: ChildProcess): void {
+    const diagnostic = {tail: Buffer.alloc(0), apiToken: this.apiToken, truncated: false};
+    this.startupStderr.set(proc, diagnostic);
     let stdoutRemainder = '';
     proc.stdout?.on('data', (chunk: Buffer) => {
       stdoutRemainder += chunk.toString();
@@ -458,6 +505,11 @@ export class BackendSupervisor extends EventEmitter {
 
     let stderrRemainder = '';
     proc.stderr?.on('data', (chunk: Buffer) => {
+      // Preserve partial lines for this child only, without retaining an unbounded chunk.
+      diagnostic.truncated ||= diagnostic.tail.length + chunk.length > MAX_STARTUP_STDERR_BYTES;
+      diagnostic.tail = chunk.length >= MAX_STARTUP_STDERR_BYTES
+        ? Buffer.from(chunk.subarray(-MAX_STARTUP_STDERR_BYTES))
+        : Buffer.concat([diagnostic.tail, chunk]).subarray(-MAX_STARTUP_STDERR_BYTES);
       stderrRemainder += chunk.toString();
       let newlineIdx: number;
       while ((newlineIdx = stderrRemainder.indexOf('\n')) !== -1) {
@@ -476,7 +528,7 @@ export class BackendSupervisor extends EventEmitter {
         return;
       }
 
-      this.handleUnexpectedCrash(code, signal);
+      this.handleUnexpectedCrash(code, signal, proc);
     });
 
     proc.on('error', (err) => {
@@ -484,7 +536,7 @@ export class BackendSupervisor extends EventEmitter {
     });
   }
 
-  private handleUnexpectedCrash(code: number | null, signal: NodeJS.Signals | string | null): void {
+  private handleUnexpectedCrash(code: number | null, signal: NodeJS.Signals | string | null, proc: ChildProcess): void {
     const crashData: CrashEventData = {
       exitCode: code,
       signal,
@@ -519,8 +571,16 @@ export class BackendSupervisor extends EventEmitter {
       }, 1000);
     } else {
       this.setState('CRASHED');
-      console.error('[Supervisor] Max restart attempts exceeded or autoRestart disabled. Emitting crash event.');
-      this.emit('crashed', crashData);
+      console.error('[Supervisor] Max restart attempts exceeded or autoRestart disabled. Preparing crash event.');
+      const delivery = this.startupCrashDelivery;
+      if (delivery?.proc === proc && delivery.portPending) {
+        // Exit precedes final stderr delivery. The existing discovery promise
+        // owns the close/deadline; do not add a timer or touch the child here.
+        delivery.pendingCrash = crashData;
+      } else {
+        if (delivery?.proc === proc) delivery.notified = true;
+        this.emit('crashed', crashData);
+      }
     }
   }
 
@@ -528,33 +588,75 @@ export class BackendSupervisor extends EventEmitter {
   // Port Discovery & Health Polling
   // --------------------------------------------------------------------------
 
+  private startupStderrText(proc: ChildProcess): string {
+    const diagnostic = this.startupStderr.get(proc);
+    let text = diagnostic?.tail.toString('utf8') || '';
+    // The crash handler clears apiToken before port discovery handles exit.
+    // Retain the original child's token solely for redaction, never as output.
+    for (const token of new Set([diagnostic?.apiToken, this.apiToken])) {
+      if (!token) continue;
+      text = text.split(token).join('[REDACTED]');
+      // A byte bound can cut through the token. Also hide any surviving suffix
+      // at that boundary instead of disclosing a partial capability.
+      if (diagnostic?.truncated) {
+        for (let size = Math.min(token.length - 1, text.length); size > 0; size--) {
+          if (text.startsWith(token.slice(-size))) {
+            text = '[REDACTED]' + text.slice(size);
+            break;
+          }
+        }
+      }
+    }
+    const encoded = Buffer.from(text);
+    let start = Math.max(0, encoded.length - MAX_STARTUP_STDERR_BYTES);
+    while (start < encoded.length && (encoded[start] & 0xc0) === 0x80) start++;
+    return encoded.subarray(start).toString('utf8').trim();
+  }
+
   private discoverPort(proc: ChildProcess, timeoutMs: number): Promise<number> {
     return new Promise((resolve, reject) => {
       let isResolved = false;
+      let exitedCode: number | null | undefined;
       const portRegex = /VISION_AI_STUDIO_PORT=(\d+)/;
+
+      const prematureExit = (code: number | null) => {
+        const detail = this.startupStderrText(proc);
+        return new Error(`Python process exited prematurely with code ${code} before port discovery.`
+          + (detail ? `\nRecent stderr:\n${detail}` : ''));
+      };
 
       const timer = setTimeout(() => {
         if (!isResolved) {
           isResolved = true;
           cleanup();
-          reject(new Error(`Port discovery timed out after ${timeoutMs}ms. Recent stderr: ${this.stderrBuffer.slice(-5).join(' | ')}`));
+          reject(exitedCode !== undefined ? prematureExit(exitedCode)
+            : new Error(`Port discovery timed out after ${timeoutMs}ms. Recent stderr: ${this.startupStderrText(proc)}`));
         }
       }, timeoutMs);
 
       const onLine = (line: string) => {
         const match = line.match(portRegex);
-        if (match && !isResolved) {
+        if (match && !isResolved && exitedCode === undefined) {
           isResolved = true;
+          const delivery = this.startupCrashDelivery;
+          if (delivery?.proc === proc) delivery.portPending = false;
           cleanup();
           resolve(parseInt(match[1], 10));
         }
       };
 
       const onExit = (code: number | null) => {
+        exitedCode = code;
+        // Node may deliver buffered stderr after exit. Keep the original timer
+        // and wait for stdio close; no new launch or extended budget is allowed.
+        if (!proc.stderr || proc.stderr.readableEnded) onClose(code);
+      };
+
+      const onClose = (code: number | null) => {
         if (!isResolved) {
           isResolved = true;
           cleanup();
-          reject(new Error(`Python process exited prematurely with code ${code} before port discovery.`));
+          reject(prematureExit(exitedCode === undefined ? code : exitedCode));
         }
       };
 
@@ -570,11 +672,13 @@ export class BackendSupervisor extends EventEmitter {
         clearTimeout(timer);
         this.removeListener('stdout', onLine);
         proc.removeListener('exit', onExit);
+        proc.removeListener('close', onClose);
         proc.removeListener('error', onError);
       };
 
       this.on('stdout', onLine);
       proc.once('exit', onExit);
+      proc.once('close', onClose);
       proc.once('error', onError);
     });
   }

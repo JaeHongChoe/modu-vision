@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Download, History, Image as ImageIcon, Play, Save, Square, Layers } from 'lucide-react';
-import { api, getApiBaseUrl, resolveApiUrl, type SavedFlowVersion } from '../../services/api';
+import { api, getApiBaseUrl, resolveApiUrl, request, getApiPersistenceIdentity, getProjectContext, getProjectContextGeneration, type SavedFlowVersion } from '../../services/api';
+import { inspectionCountKey, startInspectionCountRead, type InspectionCountState } from './inspectionSourceCounts';
+import type { DatasetStatistics } from '../../services/projectPreferences';
 import { flowExecutionOptions, type FlowExecutionChoice } from '../flowchart/flowExecution';
 import { useComputeStore } from '../../stores/useComputeStore';
 import { useDatasetStore } from '../../stores/useDatasetStore';
@@ -60,7 +62,7 @@ export const BatchInspectionPanel: React.FC = () => {
   const setStep = useProjectStore((state) => state.setStep);
   const hasUnsavedDraft = useFlowchartStore((state) => state.pipelineDirty);
   const { folderPath, datasetKey, hasSelectedFolder, importError, sourceSaveError, isLoading: datasetIsLoading,
-    isSplitting, split, sourceImages } = useDatasetStore();
+    isSplitting, lastImportedKey, staleDatasetKeys } = useDatasetStore();
   const contextRevision = useFlowchartStore((state) => state.contextRevision);
   const [scope, setScope] = useState<BatchScope>('test');
   const [report, setReport] = useState<BatchInspectionReport | null>(null);
@@ -107,6 +109,38 @@ export const BatchInspectionPanel: React.FC = () => {
   };
   const sourceReady = isBatchSourceReady(renderedSource);
   const resetKey = batchSourceResetKey(renderedSource);
+  const [countState, setCountState] = useState<InspectionCountState | null>(null);
+  const [countRefresh, setCountRefresh] = useState(0);
+  const apiCountScope = () => JSON.stringify([getApiPersistenceIdentity(), getProjectContextGeneration(), getProjectContext()]);
+  const countKey = inspectionCountKey({sourceReady: sourceReady && !sourceSaveError,
+    sourceKey: JSON.stringify([resetKey, lastImportedKey, staleDatasetKeys]), folderPath, task, projectDir,
+    project, apiScope: apiCountScope()});
+  const currentCountKey = () => {
+    const dataset = useDatasetStore.getState(), source = currentBatchSource();
+    return inspectionCountKey({sourceReady: isBatchSourceReady(source) && !source.sourceSaveError,
+      sourceKey: JSON.stringify([batchSourceResetKey(source), dataset.lastImportedKey, dataset.staleDatasetKeys]),
+      folderPath: source.folderPath, task: source.task, projectDir: source.projectDir,
+      project: useProjectStore.getState().project, apiScope: apiCountScope()});
+  };
+  const visibleCounts = countState?.key === countKey ? countState : null;
+  const countLabel = (partition: 'all' | 'train' | 'val' | 'test') => visibleCounts?.state === 'ready'
+    ? visibleCounts.counts[partition].toLocaleString('ko-KR') : '—';
+  useEffect(() => {
+    const refresh = () => setCountRefresh(value => value + 1);
+    window.addEventListener('dataset-statistics-changed', refresh);
+    return () => window.removeEventListener('dataset-statistics-changed', refresh);
+  }, []);
+  useEffect(() => {
+    setCountState(null);
+    if (!countKey || !project) return;
+    // The same image-grain authority powers /dataset/images and batch execution.
+    // Keep the training import summary intact for task-specific training readiness.
+    const read = startInspectionCountRead({key: countKey, labelset: project.active_labelset_id || 'default',
+      isCurrent: () => currentCountKey() === countKey,
+      read: signal => request<DatasetStatistics>('/api/dataset/metadata/statistics?'
+        + new URLSearchParams({folder_path: folderPath}), {signal}), publish: setCountState});
+    return read.cancel;
+  }, [countKey, countRefresh]);
   const historyContext = createInspectionHistoryContext(renderedSource, project);
   const currentHistoryContext = () => createInspectionHistoryContext(
     currentBatchSource(), useProjectStore.getState().project,
@@ -426,10 +460,10 @@ export const BatchInspectionPanel: React.FC = () => {
             disabled={isRunning}
             className="rounded border border-[#364357] bg-[#0B0E14] px-2 py-1.5 text-xs text-white disabled:opacity-50"
           >
-            <option value="test">테스트 ({split.test})</option>
-            <option value="val">검증 ({split.val})</option>
-            <option value="train">학습 ({split.train})</option>
-            <option value="all">전체 ({sourceImages}) · 직접 선택</option>
+            <option value="test">테스트 ({countLabel('test')})</option>
+            <option value="val">검증 ({countLabel('val')})</option>
+            <option value="train">학습 ({countLabel('train')})</option>
+            <option value="all">전체 ({countLabel('all')}) · 직접 선택</option>
           </select>
           <button
             type="button"
@@ -459,6 +493,12 @@ export const BatchInspectionPanel: React.FC = () => {
       {savedFlow && <div className="space-y-1">
         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-300">다음 검사에 사용할 활성 플로우</p>
         <SavedFlowIdentityCard identity={savedFlow.identity} isActive={savedFlow.version.is_active} />
+      </div>}
+      {visibleCounts?.state === 'loading' && <p role="status" className="text-xs text-slate-400">검사할 이미지 수를 확인하는 중입니다.</p>}
+      {visibleCounts?.state === 'error' && <div className="flex flex-wrap items-center gap-2 text-xs text-amber-300">
+        <span role="alert">{visibleCounts.message}</span>
+        <button type="button" onClick={() => setCountRefresh(value => value + 1)}
+          className="rounded border border-amber-600 px-2 py-1 font-semibold hover:bg-amber-900/40">이미지 수 다시 확인</button>
       </div>}
       {savedFlowLoading && <p role="status" className="text-xs text-sky-300">활성 저장 플로우를 확인하는 중입니다.</p>}
       {savedFlowError && <p role="alert" className="text-xs text-amber-300">{savedFlowError}</p>}

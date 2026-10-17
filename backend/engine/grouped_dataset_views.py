@@ -4,6 +4,7 @@ No images or labels are relocated. The same helper supplies training and
 reevaluation partitions. A missing annotation/mask or a defect selected for
 anomaly training fails explicitly.
 """
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_handler, observe_original_dataset_UI_operation, observe_original_dataset_UI_connection, original_dataset_UI_read_text, original_dataset_UI_read_bytes, original_dataset_UI_image_open, original_dataset_UI_file, original_dataset_UI_diagnostics_missing
 from pathlib import Path
 import json
 import cv2
@@ -43,7 +44,7 @@ def is_anomaly_normal(image,source=None):
 def _annotations(source,image):
     studio=dataset_annotation_dir(image.parent)/f'{image.stem}.json'
     if studio.is_file():
-        data=json.loads(studio.read_text(encoding='utf-8'));annotations=data.get('annotations')
+        data=json.loads(original_dataset_UI_read_text(studio, encoding='utf-8'));annotations=data.get('annotations')
         if not isinstance(annotations,list):raise ValueError(f'Invalid Studio labels: {image.name}')
         return annotations,data.get('mask_file')
     adjacent=image.with_suffix('.json')
@@ -79,7 +80,7 @@ def _paired_mask(source,image):
 def _mask_class_mapping(image):
     studio=dataset_annotation_dir(Path(image).parent)/f'{Path(image).stem}.json'
     if not studio.is_file():return {}
-    classes=json.loads(studio.read_text(encoding='utf-8')).get('mask_classes',[])
+    classes=json.loads(original_dataset_UI_read_text(studio, encoding='utf-8')).get('mask_classes',[])
     return {c['id']:c['name'] for c in classes if c['id']>0}
 
 def _mask_pixels(path,explicit_ids=None):

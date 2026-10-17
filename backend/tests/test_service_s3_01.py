@@ -339,7 +339,7 @@ def test_identical_bytes_decoded_as_dicom_and_as_tiff_are_different_thumbnails(d
     dicom = tmp_path / 'slide.dcm'
     dicom.write_bytes(tiff.read_bytes())
     monkeypatch.setattr(dicom_input, 'is_dicom', lambda path: Path(path).suffix == '.dcm')
-    monkeypatch.setattr(dicom_input, 'read_dicom', lambda path: (Image.new('RGB', (20, 20), 'blue'),
+    monkeypatch.setattr(dicom_input, 'read_dicom', lambda path, **options: (Image.new('RGB', (20, 20), 'blue'),
                                                                 {'source_sha256': _hashlib.sha256(Path(path).read_bytes()).hexdigest()}))
     from_dicom, from_tiff = thumbnail(dataset_client, dicom), thumbnail(dataset_client, tiff)
     assert from_dicom.headers['etag'] != from_tiff.headers['etag']
@@ -348,7 +348,7 @@ def test_identical_bytes_decoded_as_dicom_and_as_tiff_are_different_thumbnails(d
     dicom.unlink()
     other = tmp_path / 'gone.dcm'
     other.write_bytes(b'DICM')
-    monkeypatch.setattr(dicom_input, 'read_dicom', lambda path: Path(path).read_bytes())
+    monkeypatch.setattr(dicom_input, 'read_dicom', lambda path, **options: Path(path).read_bytes())
     real_stat = Path.stat
     other_unlinked = []
 
@@ -424,7 +424,7 @@ def test_a_dicom_that_vanishes_while_it_is_decoded_is_not_found(dataset_client, 
     source.write_bytes(b'DICM' * 16)
     monkeypatch.setattr(dicom_input, 'is_dicom', lambda path: True)
 
-    def vanished(path):
+    def vanished(path, **options):
         Path(path).unlink()  # gone after the cache lookup read it
         raise FileNotFoundError(2, 'No such file or directory', str(path))
 

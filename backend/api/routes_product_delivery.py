@@ -1,4 +1,5 @@
 """Project-scoped package, setup, operator and support workflows."""
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_handler
 from pathlib import Path
 import json
 import time
@@ -31,7 +32,7 @@ def execute(action):
     except (ValueError,OSError,KeyError,RuntimeError,TimeoutError,httpx.HTTPError) as exc:raise HTTPException(409,str(exc)) from exc
 
 
-@router.get('/packages')
+@observe_original_UI_ancillary_handler(router.get('/packages'))
 def packages(request:Request):return execute(lambda:delivery.package_library(project(request)))
 
 

@@ -1,0 +1,48 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "03d65b02519ff10ecfed6d62244a161b19d8a7cb",
+  "source_dirty": false,
+  "test": "scripts/e2e/derived-adoption-import-four-controls.spec.ts::native derived review real revision conflict and owned abort retries plus original non LabelMe folder refusal preserve original data",
+  "test_source_sha256": "9eb213a22f9f4868af39277eb96a6a841e49272039bf82fb5a314ed4ac7d6a2d",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "7a0aea13a915d04186379827141d214321fa47f3a3138dc73c0fb7b22e88a345",
+  "harness_sha256": "c265807c6db2990d6384e521bfc7420edad22d57dce69f8332c3660ca990e95a",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "f14f8ef94e065853c987b0926bbaf10ad702dd8a3a4140f85bf6da521453267b"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "cc32ac1271cda0bfb425e5f04fb41c80b59d7e005c56b51116e6465dbb854987"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "b8f4f38384dbbfa9c53b0320bb51ae345e637e43f40d5917852ffd2f9624328c"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "b97f572c1dc974b421cee1e50913748ca4e5388c9c3995d120fd9fc9c9f4c1d8"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "aecf0388d0a448339f6163616dc69e35a1e3bbdb354396e58a295842e7959c17"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "5b116f3c3f0dfea61200317f4c1b11a27a958e3da88e1bee4d60591d11b6cbe8"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

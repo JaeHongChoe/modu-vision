@@ -374,8 +374,20 @@ export interface FlowchartExecutionStep {
   artifacts?: Array<{ roi_id: string; bbox: number[]; image: string; mask?: string; source_transform?: number[][]; image_size?: number[]; evidence?: Record<string, unknown> }>;
 }
 
+export interface FlowchartPartialRunSnapshot {
+  run_id: string;
+  project_id: string;
+  stop_node_id: string;
+  execution_target: 'local';
+  device: 'cpu';
+  state: 'prepared' | 'running' | 'cancelling' | 'cancelled' | 'completed' | 'failed';
+  execution_finished: boolean;
+  error_type: string | null;
+}
+
 export interface FlowchartExecutionResult {
   status: string;
+  partial_run_id?: string;
   debug_cache?: { status: 'hit' | 'miss' | 'bypassed'; identity_sha256?: string; original_latency_ms?: number };
   stop_node_id?: string | null;
   graph_sha256?: string | null;

@@ -90,6 +90,9 @@ def originating_context() -> dict | None:
     return context.model_dump() if context is not None else None
 
 
+from backend.engine.original_current_project_request import observe_context_db
+
+
 class ContextRegistry:
     """Workspace-scoped atomic identities and project-scoped immutable references."""
     def __init__(self, root: Path):
@@ -125,6 +128,7 @@ class ContextRegistry:
         self.workspace_id = identities['workspace_id']
         self.local_actor_id = identities['local_actor_id']
 
+    @observe_context_db
     @contextmanager
     def _db(self):
         with store_admission(self.path):

@@ -21,6 +21,9 @@ from pathlib import Path
 from typing import Any, Literal, Optional
 
 from backend.engine.sqlite_wal import use_wal
+from backend.engine.original_owned_flow_request import (
+    observe_original_flow_audit_connection, observe_original_flow_audit_append,
+)
 
 Action = Literal['save', 'activate']
 SCHEMA = (
@@ -56,6 +59,7 @@ class ConfigAuditStore:
         self.path = Path(project_dir) / 'configuration_changes.sqlite3'
         self.timeout = timeout
 
+    @observe_original_flow_audit_connection
     def _connect(self) -> sqlite3.Connection:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         db = sqlite3.connect(self.path, timeout=self.timeout, isolation_level=None)
@@ -64,6 +68,7 @@ class ConfigAuditStore:
             db.execute(statement)
         return db
 
+    @observe_original_flow_audit_append
     def append(self, *, actor: dict, subject: dict, action: Action, parent_revision: Optional[str], next_revision: str,
                semantic_delta: dict, reason: Optional[str], observed_runtime_release: Optional[dict] = None) -> dict:
         if action not in ('save', 'activate'):

@@ -9,13 +9,14 @@ import type {
   FlowchartCrop,
   FlowchartExecutionResult,
   FlowchartPipeline,
+  FlowchartPartialRunSnapshot,
   FlowNode,
   FlowNodeData,
   SelectedInspectionImage,
   VisionTask,
   FlowModelTask,
 } from '../types';
-import { api } from '../services/api';
+import { api, getApiPersistenceIdentity, getProjectContext, getProjectContextGeneration } from '../services/api';
 import { flowDraft, type FlowDraft, type FlowDraftContext } from '../services/flowDraft';
 import { useProjectStore } from './useProjectStore';
 import { getFlowchartModelTask } from '../components/flowchart/flowchartStartup';
@@ -24,12 +25,23 @@ let flowchartGeneration = 0;
 let flowchartSaveGeneration = 0;
 let flowchartRunInputRevision = 0;
 let flowchartRunSequence = 0;
+let activePartialOwner: { stop: () => Promise<boolean>; refresh: () => Promise<boolean> } | null = null;
 const HISTORY_LIMIT = 50;
 
 /** Versions of the edited flow: semantic edits change what it computes, layout
  * edits only move nodes. Results are bound to the semantic key they ran with. */
 export interface FlowIdentity { semantic_revision: number; layout_revision: number }
 export interface ExecutionIdentity { semantic_key: string; semantic_revision: number }
+
+export interface FlowPartialRunView {
+  runId: string | null;
+  projectId: string;
+  stopNodeId: string;
+  stopNodeLabel: string;
+  phase: 'preparing' | 'running' | 'cancelling' | 'cancelled' | 'completed' | 'failed' | 'unknown';
+  cancelRequested: boolean;
+  checking: boolean;
+}
 
 const semanticKeys = new WeakMap<FlowchartPipeline, string>();
 
@@ -88,6 +100,7 @@ interface FlowchartState {
   isLoading: boolean;
   isSaving: boolean;
   isRunning: boolean;
+  partialRun: FlowPartialRunView | null;
   activeRunningNodeId: string | null;
   selectedNodeId: string | null;
   pipelineDirty: boolean;
@@ -127,6 +140,8 @@ interface FlowchartState {
   runPipeline: (customImagePath?: string, customImageId?: string,
     source?: { savedVersionId: string | null; executionTarget?: 'local' | 'selected_compute' | 'model_compute';
       device?: 'cpu' | 'mps' | 'cuda'; computeProfileId?: string; stopNodeId?: string }) => Promise<boolean>;
+  cancelPartialRun: () => Promise<boolean>;
+  refreshPartialRun: () => Promise<boolean>;
   selectNode: (id: string | null) => void;
   updateNodeData: (id: string, patch: Partial<FlowNodeData>) => void;
   addNode: (node: FlowNode) => void;
@@ -178,6 +193,169 @@ export function isStaleBaseError(error: unknown): boolean {
 
 export const STALE_SAVE_MESSAGE = '이 편집을 시작한 뒤 다른 곳에서 활성 플로우가 바뀌었습니다. 편집 내용은 그대로 있습니다. 활성 버전을 다시 열어 확인한 뒤 저장하세요.';
 
+/** Own one explicit CPU partial request. A cancel acknowledgement never settles
+ * the original Run, and execution_finished is not native/launch-lease closure. */
+async function runOwnedCPUPartial(
+  request: Parameters<typeof api.flowchart.preparePartialRun>[0],
+  sequence: number,
+  ranWith: ExecutionIdentity,
+  savedVersionId: string | null,
+  inputCurrent: () => boolean,
+  discardStaleRun: () => void,
+  set: (next: Partial<FlowchartState>) => void,
+): Promise<boolean> {
+  const context = getProjectContext();
+  const epoch = getProjectContextGeneration();
+  const transport = getApiPersistenceIdentity();
+  let runId: string | null = null;
+  let stopRequested = false, runSettled = false, finished = false;
+  let runResult: FlowchartExecutionResult | null = null;
+  let runError: unknown = null;
+  let cancelFlight: Promise<void> | null = null;
+  let stopCompletion: Promise<boolean> | null = null;
+  let refreshFlight: Promise<boolean> | null = null;
+  let preparedDone: () => void = () => {};
+  let originalDone: () => void = () => {};
+  const preparation = new Promise<void>(resolve => { preparedDone = resolve; });
+  const original = new Promise<void>(resolve => { originalDone = resolve; });
+  const owner = { stop: () => stop(), refresh: () => refresh() };
+  activePartialOwner = owner;
+  const current = () => activePartialOwner === owner && sequence === flowchartRunSequence
+    && useProjectStore.getState().project?.id === request.project_id
+    && getProjectContextGeneration() === epoch && getApiPersistenceIdentity() === transport;
+  const commit = (next: Partial<FlowchartState>) => { if (current()) set(next); };
+  const view = (phase: FlowPartialRunView['phase'], checking = false) => {
+    commit({ partialRun: { runId, projectId: request.project_id, stopNodeId: request.stop_node_id,
+      stopNodeLabel: request.pipeline.nodes.find(node => node.id === request.stop_node_id)?.data.label || '',
+      phase, cancelRequested: stopRequested, checking } });
+  };
+  const matches = (value: FlowchartPartialRunSnapshot, preparing = false) => Boolean(value
+    && typeof value.run_id === 'string' && /^[0-9a-f]{32}$/.test(value.run_id)
+    && (preparing || value.run_id === runId) && value.project_id === request.project_id
+    && value.stop_node_id === request.stop_node_id && value.execution_target === 'local' && value.device === 'cpu'
+    && typeof value.execution_finished === 'boolean');
+  const noResult = { executionResult: null, executionIdentity: null, lastRunSource: null, inspectedCrop: null,
+    activeRunningNodeId: null };
+  const uncertain = () => {
+    view('unknown');
+    commit({ ...noResult, isRunning: true,
+      errorMessage: '부분 실행의 종료 상태를 확인하지 못했습니다. 중단 상태를 확인한 뒤 다시 실행하세요.' });
+    return false;
+  };
+
+  async function refresh(): Promise<boolean> {
+    if (!current() || !runId || !runSettled) return false;
+    if (refreshFlight) return refreshFlight;
+    if (finished) return false;
+    const checking = (async () => {
+      view(stopRequested ? 'cancelling' : 'running', true);
+      try {
+        if (!current()) return false;
+        const terminal = await api.flowchart.getPartialRun(runId!, context);
+        if (!current()) return false;
+        if (!matches(terminal) || terminal.execution_finished !== true
+            || !['cancelled', 'completed', 'failed'].includes(terminal.state)) return uncertain();
+        if (terminal.state === 'cancelled') {
+          finished = true; view('cancelled');
+          commit({ ...noResult, isRunning: false, errorMessage: null });
+          return false;
+        }
+        if (terminal.state === 'failed') {
+          finished = true; view('failed');
+          commit({ ...noResult, isRunning: false,
+            errorMessage: runError instanceof Error ? runError.message : '부분 실행 중 오류가 발생했습니다.' });
+          return false;
+        }
+        if (!runResult) {
+          // The server finished, but a lost HTTP body is not a result to adopt.
+          finished = true; view('completed');
+          commit({ ...noResult, isRunning: false,
+            errorMessage: '부분 실행은 종료됐지만 결과를 받지 못했습니다. 입력을 확인한 뒤 다시 실행하세요.' });
+          return false;
+        }
+        if (runResult.status !== 'partial' || runResult.partial_run_id !== runId
+            || runResult.stop_node_id !== request.stop_node_id || runResult.execution_target !== 'local'
+            || runResult.execution_device !== 'cpu' || runResult.compute_profile_id != null
+            || runResult.final_verdict !== 'REVIEW' || runResult.is_ok !== false) return uncertain();
+        finished = true; view('completed');
+        if (!current()) return false;
+        if (!inputCurrent()) { discardStaleRun(); return false; }
+        commit({ executionResult: runResult, executionIdentity: ranWith,
+          lastRunSource: savedVersionId ? { kind: 'saved', versionId: savedVersionId } : { kind: 'draft', versionId: null },
+          isRunning: false, activeRunningNodeId: null, errorMessage: null });
+        return true;
+      } catch {
+        return current() ? uncertain() : false;
+      }
+    })();
+    refreshFlight = checking;
+    try { return await checking; }
+    finally { if (refreshFlight === checking) refreshFlight = null; }
+  }
+
+  function stop(): Promise<boolean> {
+    if (stopCompletion) return stopCompletion;
+    if (!current() || finished) return Promise.resolve(false);
+    stopRequested = true; view('cancelling');
+    cancelFlight = (async () => {
+      await preparation;
+      if (!current() || !runId || finished) return;
+      try {
+        const ack = await api.flowchart.cancelPartialRun(runId, context);
+        if (current() && (!matches(ack) || !['cancelling', 'cancelled'].includes(ack.state))) uncertain();
+      } catch {
+        // A 409 may mean completion won. Any other transport error is also
+        // reconciled through the same terminal GET, never treated as stopped.
+      }
+    })();
+    stopCompletion = (async () => { await cancelFlight; await original; return refresh(); })();
+    return stopCompletion;
+  }
+
+  view('preparing');
+  commit({ executionIdentity: null });
+  try {
+    if (!current()) return false;
+    const prepared = await api.flowchart.preparePartialRun(request, context);
+    if (!current()) return false;
+    if (!matches(prepared, true) || prepared.state !== 'prepared' || prepared.execution_finished !== false)
+      throw new Error('부분 실행의 프로젝트·노드·실행 위치를 확인할 수 없습니다. 다시 확인하세요.');
+    runId = prepared.run_id;
+  } catch (cause) {
+    if (current()) {
+      finished = true; view('failed');
+      commit({ ...noResult, isRunning: false, errorMessage: cause instanceof Error ? cause.message : '부분 실행을 준비하지 못했습니다.' });
+    }
+    return false;
+  } finally {
+    preparedDone();
+    if (!runId) { runSettled = true; originalDone(); }
+  }
+  if (!current()) { runSettled = true; originalDone(); return false; }
+  if (!inputCurrent() && !stopRequested) {
+    // No admitted Run exists. Do not start one with an obsolete image/graph.
+    runSettled = true; originalDone();
+    view('preparing');
+    commit({ ...noResult, isRunning: true,
+      errorMessage: '입력이 변경되어 부분 실행을 시작하지 않았습니다. 준비된 부분 실행을 중단한 뒤 다시 실행하세요.' });
+    return false;
+  }
+  if (!stopRequested) {
+    view('running');
+    try {
+      if (!current()) return false;
+      runResult = await api.flowchart.run({ ...request, partial_run_id: runId! }, context);
+    }
+    catch (cause) { runError = cause; }
+    finally { runSettled = true; originalDone(); }
+  } else {
+    // Stop intent arrived before prepare returned; never consume that ID in Run.
+    runSettled = true; originalDone();
+  }
+  if (cancelFlight) await cancelFlight;
+  return refresh();
+}
+
 export const useFlowchartStore = create<FlowchartState>((set, get) => ({
   executionChoiceOverride: null,
   setExecutionChoice: (choice) => { get().resetExecution(); set({ executionChoiceOverride: choice }); },
@@ -189,6 +367,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
   isLoading: false,
   isSaving: false,
   isRunning: false,
+  partialRun: null,
   activeRunningNodeId: null,
   selectedNodeId: null,
   pipelineDirty: false,
@@ -492,13 +671,24 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
         });
       }
     };
-    set({ isRunning: true, errorMessage: null, executionResult: null, lastRunSource: null,
+    set({ isRunning: true, partialRun: null, errorMessage: null, executionResult: null, lastRunSource: null,
       inspectedCrop: null, activeRunningNodeId: null });
+
+    if (source?.stopNodeId && source.executionTarget === 'local' && source.device === 'cpu' && !source.computeProfileId) {
+      if (!requestedProjectId) { set({ isRunning: false, errorMessage: '현재 프로젝트를 다시 확인하세요.' }); return false; }
+      // Freeze once: prepare and Run must serialize the same original input.
+      const request = JSON.parse(JSON.stringify({ image_path: imagePath, image_id: imageId ?? null, pipeline,
+        project_id: requestedProjectId, stop_node_id: source.stopNodeId, execution_target: 'local', device: 'cpu' })) as Parameters<typeof api.flowchart.preparePartialRun>[0];
+      return runOwnedCPUPartial(request, runSequence, ranWith, savedVersionId,
+        () => generation === flowchartGeneration && inputRevision === flowchartRunInputRevision
+          && flowSemanticKey(get().pipeline) === ranWith.semantic_key,
+        discardStaleRun, set);
+    }
 
     try {
       const res = await api.flowchart.run({
         image_path: imagePath,
-        image_id: imageId,
+        image_id: imageId ?? null,
         ...(source?.stopNodeId ? {stop_node_id:source.stopNodeId} : {}),
         pipeline: pipeline || undefined,
         ...(requestedProjectId ? { project_id: requestedProjectId } : {}),
@@ -544,6 +734,9 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       return false;
     }
   },
+
+  cancelPartialRun: () => activePartialOwner?.stop() ?? Promise.resolve(false),
+  refreshPartialRun: () => activePartialOwner?.refresh() ?? Promise.resolve(false),
 
   selectNode: (id) => set({ selectedNodeId: id }),
 
@@ -706,7 +899,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       baseVersionId: undefined,
       modelContextInvalidated: true,
       contextRevision: get().contextRevision + 1,
-      executionResult: null, lastRunSource: null, isLoading: false, isSaving: false, isRunning: false,
+      executionResult: null, lastRunSource: null, isLoading: false, isSaving: false, isRunning: false, partialRun: null,
       activeRunningNodeId: null, selectedNodeId: null,
       selectedImage: null, isImagePickerOpen: false, inspectedCrop: null,
       saveMessage: null, errorMessage: null,

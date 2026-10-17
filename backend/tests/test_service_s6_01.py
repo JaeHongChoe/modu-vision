@@ -119,7 +119,10 @@ def test_worker_image_contents_are_inventoried_from_its_own_pins_and_cache_is_co
     assert worker['ultralytics']['version'] == '8.4.41' and worker['base_image']['version'].startswith('pytorch/pytorch@sha256:')
     assert 'onnx' in worker and worker['torchvision']['version'] == '==0.21.0+cu126', 'unquoted pins are captured'
     runtime = _component(receipt, 'python_runtime', 'ultralytics')
-    assert worker['ultralytics']['status'] == runtime['status'], 'the same package has the same status in the worker image'
+    if runtime['version'] == worker['ultralytics']['version']:
+        assert worker['ultralytics']['status'] == runtime['status'], 'only the exact pinned version shares metadata'
+    else:
+        assert worker['ultralytics']['status'] == 'needs_review', 'another or missing inventory version cannot clear the pin'
     cached = [item for item in receipt['components'] if item['category'] == 'model_weights'
               and 'remote_worker_image_cache' in item['distribution']]
     assert {item['name'] for item in cached} >= {'resnet18', 'deeplabv3_resnet50'}
@@ -223,3 +226,132 @@ def test_cli_receipt_is_deterministic_apart_from_its_timestamp(tmp_path):
         outputs.append(receipt)
     assert outputs[0] == outputs[1]
     assert '/Users/' not in json.dumps(outputs[0])
+
+
+@pytest.mark.parametrize(('runtime_version', 'worker_version'), [
+    ('1.0', '2.0'), ('1.0', '==2.0'), ('1.0', None), ('1.0', ''),
+    (None, '1.0'), ('', '1.0'), (None, None), ('1.0', '>=1.0'),
+    ('1.0', '==1.0.*'), ('1.0', '1.0.0'), ('1.0', 1), (1, '1'),
+])
+def test_worker_license_metadata_does_not_cross_version_or_missing_pin(runtime_version, worker_version):
+    from scripts.license_inventory import _share_worker_licenses
+    runtime = {'category': 'python_runtime', 'name': 'example-package', 'version': runtime_version,
+               'license': 'MIT', 'status': 'resolved'}
+    worker = {'category': 'python_remote_worker', 'name': 'example-package', 'version': worker_version,
+              'license': 'see the package metadata of the pinned version', 'status': 'needs_review'}
+    before = dict(worker)
+    _share_worker_licenses([runtime, worker])
+    assert worker == before, 'unverified worker identity must retain its independent review state'
+
+
+@pytest.mark.parametrize('omitted_from', ['runtime', 'worker', 'both'])
+def test_worker_license_metadata_requires_a_present_version_field(omitted_from):
+    from scripts.license_inventory import _share_worker_licenses
+    runtime = {'category': 'python_runtime', 'name': 'example-package', 'version': '1.0',
+               'license': 'MIT', 'status': 'resolved'}
+    worker = {'category': 'python_remote_worker', 'name': 'example-package', 'version': '1.0',
+              'license': 'version metadata not established', 'status': 'needs_review'}
+    if omitted_from in ('runtime', 'both'):
+        runtime.pop('version')
+    if omitted_from in ('worker', 'both'):
+        worker.pop('version')
+    before = dict(worker)
+    _share_worker_licenses([runtime, worker])
+    assert worker == before
+
+
+@pytest.mark.parametrize('worker_version', ['1.0', '==1.0'])
+@pytest.mark.parametrize(('license_text', 'status'), [('MIT', 'resolved'), ('AGPL-3.0', 'needs_decision'),
+                                                   ('MPL-2.0', 'needs_review')])
+def test_worker_exact_version_retains_the_recorded_license_and_status(worker_version, license_text, status):
+    from scripts.license_inventory import _share_worker_licenses
+    runtime = {'category': 'python_runtime', 'name': 'example-package', 'version': '1.0',
+               'license': license_text, 'status': status}
+    worker = {'category': 'python_remote_worker', 'name': 'example-package', 'version': worker_version,
+              'license': 'see package metadata', 'status': 'needs_review'}
+    _share_worker_licenses([runtime, worker])
+    assert worker['version'] == worker_version
+    assert worker['license'] == license_text + ' (as recorded for the inventory interpreter version)'
+    assert worker['status'] == status, 'matching identity does not convert restricted terms to permissive'
+
+
+@pytest.mark.parametrize('reverse', [False, True])
+def test_worker_exact_version_is_not_overwritten_by_another_inventory_version(reverse):
+    from scripts.license_inventory import _share_worker_licenses
+    known = [{'category': 'python_runtime', 'name': 'example-package', 'version': '1.0',
+              'license': 'AGPL-3.0', 'status': 'needs_decision'},
+             {'category': 'python_runtime', 'name': 'example-package', 'version': '2.0',
+              'license': 'MIT', 'status': 'resolved'}]
+    worker = {'category': 'python_remote_worker', 'name': 'example-package', 'version': '==1.0',
+              'license': 'see package metadata', 'status': 'needs_review'}
+    _share_worker_licenses((list(reversed(known)) if reverse else known) + [worker])
+    assert worker['status'] == 'needs_decision'
+    assert worker['license'].startswith('AGPL-3.0 ')
+
+
+def test_pyz_only_mapping_never_borrows_local_interpreter_version_or_license(tmp_path, monkeypatch):
+    from email import message_from_string
+    from scripts.license_inventory import scan_frozen_build
+    build = tmp_path / 'vision_ai_backend'
+    (build / '_internal').mkdir(parents=True)
+    toc = tmp_path / 'PYZ-00.toc'
+    toc.write_text(repr(('PYZ-00.pyz', [('example_module.core', 'x', 'PYMODULE')])))
+    monkeypatch.setattr(metadata, 'packages_distributions', lambda: {'example_module': ['example-package']})
+    lookups = []
+
+    class LocalInterpreterDistribution:
+        version = '99.0'
+        metadata = message_from_string('Name: example-package\nVersion: 99.0\nLicense-Expression: MIT\n')
+
+    def local_distribution(name):
+        lookups.append(name)
+        return LocalInterpreterDistribution()
+
+    monkeypatch.setattr(metadata, 'distribution', local_distribution)
+    components, coverage = scan_frozen_build(build, toc)
+    row = next(item for item in components if item['category'] == 'frozen_backend_module_package')
+    assert lookups == [], 'local metadata is not provenance for the frozen code'
+    assert row['name'] == 'example-package' and row['version'] is None
+    assert row['license'] == 'UNKNOWN' and row['status'] == 'needs_review'
+    assert 'build version and license unverified' in row['source']
+    assert row['bundled'] is True and row['notices_required'] is True and row['distribution'] == 'frozen_backend'
+    assert coverage['pyz_toc'] is True and coverage['unmapped_modules'] == 0
+
+
+def test_pyz_mapping_retains_unmapped_modules_as_independent_review_items(tmp_path, monkeypatch):
+    from scripts.license_inventory import scan_frozen_build
+    build = tmp_path / 'vision_ai_backend'
+    (build / '_internal').mkdir(parents=True)
+    toc = tmp_path / 'PYZ-00.toc'
+    toc.write_text(repr(('PYZ-00.pyz', [('unmapped_example.core', 'x', 'PYMODULE')])))
+    monkeypatch.setattr(metadata, 'packages_distributions', lambda: {})
+    components, coverage = scan_frozen_build(build, toc)
+    assert len(components) == 1
+    assert components[0]['category'] == 'frozen_backend_module_unmapped'
+    assert components[0]['name'] == 'unmapped_example' and components[0]['version'] is None
+    assert components[0]['status'] == 'needs_review' and coverage['unmapped_modules'] == 1
+
+
+@pytest.mark.parametrize(('license_text', 'status'), [('MIT', 'resolved'), ('AGPL-3.0', 'needs_decision')])
+def test_frozen_build_own_metadata_remains_authoritative_over_pyz_name_mapping(tmp_path, monkeypatch, license_text, status):
+    from scripts.license_inventory import scan_frozen_build
+    build = tmp_path / 'vision_ai_backend'
+    info = build / '_internal' / 'example_package-7.0.dist-info'
+    info.mkdir(parents=True)
+    (info / 'METADATA').write_text('Metadata-Version: 2.4\nName: example-package\nVersion: 7.0\n'
+                                 f'License-Expression: {license_text}\n')
+    toc = tmp_path / 'PYZ-00.toc'
+    toc.write_text(repr(('PYZ-00.pyz', [('example_module.core', 'x', 'PYMODULE')])))
+    monkeypatch.setattr(metadata, 'packages_distributions', lambda: {'example_module': ['example-package']})
+
+    def unexpected_local_lookup(name):
+        pytest.fail(f'build metadata must not be replaced by inventory metadata for {name}')
+
+    monkeypatch.setattr(metadata, 'distribution', unexpected_local_lookup)
+    components, coverage = scan_frozen_build(build, toc)
+    assert len(components) == 1
+    row = components[0]
+    assert row['category'] == 'frozen_backend_package' and row['name'] == 'example-package'
+    assert row['version'] == '7.0' and row['license'] == license_text and row['status'] == status
+    assert row['source'] == '_internal/example_package-7.0.dist-info'
+    assert coverage['dist_info'] == 1 and coverage['unmapped_modules'] == 0

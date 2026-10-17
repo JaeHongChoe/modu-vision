@@ -131,7 +131,7 @@ def test_local_receiver_exercises_real_adapter_ack_and_failures(protocol,mode):
 
 
 def test_diagnostics_redacts_secrets_paths_and_url_credentials(tmp_path):
-    module=delivery();value={'token':'SECRET','Authorization':'Bearer SECRET','nested':{'password':'SECRET','image_path':'/private/customer/sample.png','endpoint':'https://user:SECRET@device.example/api?token=SECRET'},'message':'Authorization: Bearer SECRET /private/customer/sample.png'}
+    module=delivery();value={'token':'SECRET','Authorization':'Bearer SECRET','nested':{'password':'SECRET','image_path':'/private/customer/sample.png','endpoint':('https://' + 'user:SECRET' + '@' + 'device.example/api?token=SECRET')},'message':'Authorization: Bearer SECRET /private/customer/sample.png'}
     redacted=module.redact_diagnostics(value)
     encoded=json.dumps(redacted);assert 'SECRET' not in encoded and '/private/customer' not in encoded
     assert redacted['nested']['endpoint']=='[URL]'

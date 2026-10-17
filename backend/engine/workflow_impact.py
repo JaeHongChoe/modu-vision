@@ -1,5 +1,7 @@
 """Read current dependencies without rewriting historical results or approvals."""
 from __future__ import annotations
+from backend.engine.original_owned_UI_ancillary_request import observe_original_dataset_provenance_operation, original_dataset_provenance_file, original_dataset_provenance_database, original_dataset_provenance_journal_read, original_dataset_UI_read_text, original_dataset_UI_read_bytes
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_handler, observe_original_dataset_UI_operation, observe_original_dataset_UI_connection, original_dataset_UI_read_text, original_dataset_UI_read_bytes, original_dataset_UI_image_open, original_dataset_UI_file, original_dataset_UI_diagnostics_missing
 import hashlib
 import json
 import math
@@ -12,18 +14,21 @@ from fastapi import HTTPException
 def _read(path):
     if path.is_symlink() or not path.is_file():return None
     try:
-        value=json.loads(path.read_text(encoding='utf-8'));return value if isinstance(value,dict) else None
+        value=json.loads(original_dataset_UI_read_text(path, encoding='utf-8'));return value if isinstance(value,dict) else None
     except (OSError,ValueError):return None
 
 
+@observe_original_dataset_provenance_operation('checkpoint_hash')
 def _hash(path):
     if path.is_symlink() or not path.is_file():return None
     digest=hashlib.sha256()
     with path.open('rb') as stream:
+        original_dataset_provenance_file(stream,path)
         for chunk in iter(lambda:stream.read(1024*1024),b''):digest.update(chunk)
     return digest.hexdigest()
 
 
+@observe_original_dataset_provenance_operation('data_state')
 def _data_state(project,binding):
     if not binding or not binding.get('version_dir'):return 'unverified','No immutable training label/split version'
     root=Path(project['project_dir']).resolve();directory=Path(binding['version_dir'])
@@ -57,6 +62,7 @@ def _data_state(project,binding):
         return 'changed',str(getattr(exc,'detail',exc))
 
 
+@observe_original_dataset_UI_operation('workflow_analyze')
 def analyze(project):
     from backend.engine.annotation_storage import set_request_annotation_root,reset_request_annotation_root
     from backend.engine.dataset_loaders import set_request_split_root,reset_request_split_root
@@ -121,6 +127,7 @@ def _analyze(project):
     approvals=[];database=root/'model_deployments.sqlite3'
     if database.is_file() and not database.is_symlink():
         with closing(sqlite3.connect(f'file:{database}?mode=ro',uri=True)) as connection, connection:
+            original_dataset_provenance_database(connection,database)
             connection.row_factory=sqlite3.Row
             for row in connection.execute('SELECT revisions.* FROM active_revisions JOIN revisions ON revisions.revision_id=active_revisions.revision_id'):
                 scope_matches=row['source_dataset_path']==source

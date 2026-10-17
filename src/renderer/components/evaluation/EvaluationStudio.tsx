@@ -99,6 +99,11 @@ export const EvaluationStudio: React.FC = () => {
   const importError = useDatasetStore((state) => state.importError);
   const sourceFolder = !datasetIsLoading && !importError && datasetKey === `${folderPath}\0${task}` ? folderPath : '';
   const project = useProjectStore(state => state.project);
+  const projectBusy = useProjectStore(state => state.isProjectBusy);
+  const evaluationReadScope = !projectBusy && sourceFolder && project?.id
+    && projectDir === project.project_dir && project.task === task && project.source_dataset_dir === sourceFolder
+    ? JSON.stringify([project.id, projectDir, sourceFolder, task, project.active_labelset_id || 'default',
+      getProjectContextGeneration(), getApiPersistenceIdentity()]) : '';
   const {selectedProfileId, profiles, transportRevision} = useComputeStore();
   const [cohortVersions, setCohortVersions] = useState<DatasetVersionSummary[]>([]);
   const [cohortVersion, setCohortVersion] = useState('');
@@ -113,6 +118,7 @@ export const EvaluationStudio: React.FC = () => {
   const scopeRef = useRef(scope); scopeRef.current = scope;
   const [evalTab, setEvalTab] = useState<'matrix' | 'overkill'>('matrix');
   const [comparisonTask, setComparisonTask] = useState<FlowModelTask>(task);
+  const [comparisonRefreshRevision, setComparisonRefreshRevision] = useState(0);
   const [reportError, setReportError] = useState<string | null>(null);
   const [hoveredCell, setHoveredCell] = useState<{
     i: number;
@@ -204,14 +210,18 @@ export const EvaluationStudio: React.FC = () => {
     } catch(error) { if(scopeRef.current===expected) setCohortError(error instanceof Error ? error.message : String(error)); }
   };
   const runSelectedCohort = () => runCohortEvaluation(requestedCohortJob,cohortVersion,selectedProfileId,evaluationDevice);
-  const refreshEvaluation = () => executionEvidence?.common_cohort
-    ? runCohortEvaluation(jobId,executionEvidence.common_cohort.dataset_version_id,executionEvidence.compute_profile_id,executionEvidence.device)
-    : loadEvaluation(handoff?.step===4&&handoff.family===task?handoff.jobId:undefined, sourceFolder ? { folderPath: sourceFolder, task } : undefined);
+  const refreshEvaluation = () => {
+    setComparisonRefreshRevision(revision => revision + 1);
+    return (executionEvidence?.common_cohort
+      ? runCohortEvaluation(jobId,executionEvidence.common_cohort.dataset_version_id,executionEvidence.compute_profile_id,executionEvidence.device)
+      : loadEvaluation(handoff?.step===4&&handoff.family===task?handoff.jobId:undefined, sourceFolder ? { folderPath: sourceFolder, task } : undefined)).catch(() => {});
+  };
 
   useEffect(() => {
+    if (!evaluationReadScope) return;
     loadEvaluation(handoff?.step===4&&handoff.family===task?handoff.jobId:undefined, sourceFolder ? { folderPath: sourceFolder, task } : undefined).catch(() => {});
     loadOverkillUnderkill().catch(() => {});
-  }, [loadEvaluation, loadOverkillUnderkill, sourceFolder, task,handoff?.jobId,handoff?.selectionId]);
+  }, [loadEvaluation, loadOverkillUnderkill, sourceFolder, task,handoff?.jobId,handoff?.selectionId,evaluationReadScope]);
 
   useEffect(() => {
     const requested = handoff?.kind === 'model_comparison' ? handoff.comparisonTask : undefined;
@@ -530,6 +540,7 @@ export const EvaluationStudio: React.FC = () => {
             task={comparisonTask}
             preferredJobId={warmCandidateJobId || jobId}
             preferredParentJobId={warmParentJobId}
+            refreshRevision={comparisonRefreshRevision}
             language={language}
           />
           <ModelDeploymentPanel taskOverride={comparisonTask} />

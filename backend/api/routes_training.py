@@ -7,6 +7,7 @@ and handles clean aborts with GPU/MPS memory clearing.
 """
 
 from __future__ import annotations
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_job_list, original_UI_ancillary_job_snapshot
 
 import hashlib
 import json
@@ -387,6 +388,7 @@ class TrainingJobManager:
         # Set by a normal quit: waiting jobs stay queued in the ledger for the next start instead of being claimed now.
         self._shutdown = threading.Event()
         self._maintenance: Optional[threading.Thread] = None
+        self._maintenance_owners = []
 
     def _lease_host(self, profile):
         return f"ssh:{profile.ssh_target.rsplit('@', 1)[-1].lower()}:{profile.ssh_port}"
@@ -460,9 +462,10 @@ class TrainingJobManager:
             None,
         )
 
+    @observe_original_UI_ancillary_job_list
     def list_jobs(self) -> List[JobRecord]:
         with self._lock:
-            return list(self._jobs.values())
+            return original_UI_ancillary_job_snapshot(self,list(self._jobs.values()))
 
     def restore_terminal_job(self, record: JobRecord) -> None:
         if record.status not in ("completed", "aborted", "failed", "interrupted", "stopped"):
@@ -952,6 +955,10 @@ class TrainingJobManager:
         thread.start()
 
     def _start_waiting_remote_jobs_locked(self) -> None:
+        # An original completion callback can run after normal shutdown.
+        # Keep accepted jobs queued before any queue mutation or new launch.
+        if self._shutdown.is_set():
+            return
         self._remote_queue.sort(key=lambda identifier: (
             -(self._jobs[identifier].launch_spec or {}).get('priority', 0),
             self._jobs[identifier].start_time, identifier) if identifier in self._jobs else (0,0,identifier))
@@ -965,6 +972,10 @@ class TrainingJobManager:
                 continue
             if record.remote_profile is not None and self._remote_slot_busy(record.remote_profile):
                 continue
+            # Shutdown closes its Event before taking this lock; a slot probe
+            # may have been in flight when that original close occurred.
+            if self._shutdown.is_set():
+                return
             self._remote_queue.remove(job_id)
             record.status = "running"
             record.phase = "preparing"
@@ -1072,6 +1083,29 @@ class TrainingJobManager:
         for job_id in local_ids:
             self.abort_job(job_id)
 
+    def capture_startup_maintenance_join(self):
+        """Bind every original session thread before the startup adapter registers."""
+        from backend.engine.startup_thread_lifetime import StartupThreadError
+        owners = tuple(self._maintenance_owners)
+        original_thread, stop = self._maintenance, self._shutdown
+        def join(absolute_deadline):
+            if not owners or owners[-1].thread is not original_thread:
+                raise StartupThreadError('Original job ledger maintenance handle is unavailable')
+            # A later session, a replaced handle, or omitted old owner cannot
+            # become closure proof for this startup's original handles.
+            if (tuple(self._maintenance_owners) != owners or self._maintenance is not original_thread
+                    or self._shutdown is not stop):
+                raise StartupThreadError('Original job ledger maintenance handles changed')
+            for owner in owners:
+                owner.stop_and_join(absolute_deadline, expected_thread=owner.thread, expected_stop=stop)
+            if (tuple(self._maintenance_owners) != owners or self._maintenance is not original_thread
+                    or self._shutdown is not stop or not stop.is_set()):
+                raise StartupThreadError('Original job ledger maintenance handles changed during join')
+            return {'role': 'job_ledger_maintenance', 'original_thread_joined': True,
+                    'original_threads_joined': len(owners), 'whole_writer_coverage': False,
+                    'process_tree_exit_verified': False, 'can_release_launch_lease': False}
+        return join
+
     def detach_all_for_shutdown(self) -> None:
         """A normal shutdown keeps job ownership and the recovery policy instead of aborting.
 
@@ -1097,37 +1131,53 @@ class TrainingJobManager:
 training_job_manager = TrainingJobManager()
 
 
-def reconcile_job_ledger(manager: TrainingJobManager) -> List[str]:
+def reconcile_job_ledger(manager: TrainingJobManager, *, outcome_observer=None) -> List[str]:
     """After worker recovery, every job the ledger accepted is accounted for and none is launched again.
 
     A recovered worker or receipt is authoritative for its job; a job with neither becomes interrupted
     and stays readable in its own project through the ledger. Cancel intents recorded while a worker was
     unreachable are applied once it is back.
     """
-    store = job_ledger()
-    if isinstance(manager, TrainingJobManager):
-        _start_ledger_maintenance(manager, store)
-    if not _own_data_folder(store.path.parent):
-        # Another live backend uses this data folder and owns its jobs: interrupting or freeing anything here
-        # without exit evidence could stop or double-book its work. Maintenance takes over once that backend exits.
-        logger.warning("Another backend owns %s; job reconciliation waits until it exits", store.path.parent)
-        return []
-    known = {record.job_id: record for record in manager.list_jobs()}
-    interrupted: List[str] = []
-    for row in store.active("training"):
-        try:
-            _reconcile_one(store, manager, known, row, interrupted)
+    from backend.engine.startup_recovery_outcomes import recovery_stage
+    with recovery_stage(outcome_observer, 'ledger_reconcile', manager) as observed:
+        observed.manager(manager)
+        store = job_ledger()
+        observed.store(store)
+        if isinstance(manager, TrainingJobManager):
+            if outcome_observer is None: _start_ledger_maintenance(manager, store)
+            else: _start_ledger_maintenance(manager, store, outcome_observer=outcome_observer)
+            observed.retained_thread("job_ledger_maintenance", manager._maintenance)
+        if not _own_data_folder(store.path.parent):
+            observed.skipped("another_folder_owner")
+            # Another live backend uses this data folder and owns its jobs: interrupting or freeing anything here
+            # without exit evidence could stop or double-book its work. Maintenance takes over once that backend exits.
+            logger.warning("Another backend owns %s; job reconciliation waits until it exits", store.path.parent)
+            return []
+        if outcome_observer is not None:
+            observed.folder_owner(_FOLDER_LOCKS.get(str(Path(store.path.parent).resolve())))
+        known = {record.job_id: record for record in manager.list_jobs()}
+        interrupted: List[str] = []
+        rows = store.active("training")
+        observed.records(rows, "training_rows")
+        for row in rows:
+            try:
+                _reconcile_one(store, manager, known, row, interrupted)
+            except _LEDGER_ERRORS as exc:
+                observed.error(exc, "reconcile_row_error")
+                logger.warning("Job ledger could not reconcile %s: %s", row["id"], exc)
+        try:  # a claim whose worker never launched (or that ended) must not keep the device reserved
+            from backend.engine.shared_scheduler import shared_leases
+            leases = getattr(manager, "_leases", None) or shared_leases()
+            observed.leases(leases)
+            JobScheduler(store, leases).sweep_orphaned_reservations()
         except _LEDGER_ERRORS as exc:
-            logger.warning("Job ledger could not reconcile %s: %s", row["id"], exc)
-    try:  # a claim whose worker never launched (or that ended) must not keep the device reserved
-        from backend.engine.shared_scheduler import shared_leases
-        JobScheduler(store, getattr(manager, "_leases", None) or shared_leases()).sweep_orphaned_reservations()
-    except _LEDGER_ERRORS as exc:
-        logger.warning("Job ledger could not sweep orphaned reservations: %s", exc)
-    return interrupted
+            observed.error(exc, "reservation_sweep_error")
+            logger.warning("Job ledger could not sweep orphaned reservations: %s", exc)
+        return interrupted
 
 
 _FOLDER_LOCKS: Dict[str, Any] = {}
+_FOLDER_LOCK_OBSERVATIONS: Dict[str, Any] = {}
 _MAINTENANCE_SECONDS = 10.0
 
 
@@ -1135,28 +1185,36 @@ def _configured_folders() -> Dict[str, str]:
     return {key: value for key, value in os.environ.items() if key.startswith("VISION_")}
 
 
-def _start_ledger_maintenance(manager: TrainingJobManager, store: JobStore) -> None:
+def _start_ledger_maintenance(manager: TrainingJobManager, store: JobStore, *, outcome_observer=None) -> None:
     """One maintenance thread per manager session; a later startup of the same manager replaces it."""
     if threading.current_thread() is manager._maintenance:
         return  # the takeover recovery below runs reconcile from this thread
     manager._shutdown.clear()  # startup: this manager serves a new session
-    thread = threading.Thread(target=_maintain_job_ledger, args=(manager, store, _configured_folders()),
-                              daemon=True, name="JobLedgerMaintenance")
-    manager._maintenance = thread
-    thread.start()
+    from backend.engine.startup_thread_lifetime import OriginalStartupThread
+    folders = _configured_folders()
+    owner = OriginalStartupThread('job_ledger_maintenance',
+        lambda stop: (_maintain_job_ledger(manager, store, folders) if outcome_observer is None
+            else _maintain_job_ledger(manager, store, folders, outcome_observer=outcome_observer)),
+        stop_event=manager._shutdown, name='JobLedgerMaintenance')
+    manager._maintenance = owner.thread
+    manager._maintenance_owners.append(owner)
+    if outcome_observer is not None: outcome_observer.before_maintenance_start(manager, store, owner)
+    owner.start()
 
 
-def _maintain_job_ledger(manager: TrainingJobManager, store: JobStore, folders: Dict[str, str]) -> None:
+def _maintain_job_ledger(manager: TrainingJobManager, store: JobStore, folders: Dict[str, str], *, outcome_observer=None) -> None:
     while not manager._shutdown.wait(_MAINTENANCE_SECONDS):
         if threading.current_thread() is not manager._maintenance or _configured_folders() != folders:
             return  # replaced by a later startup, or the configured data folders changed: never touch another folder
         try:
-            _ledger_maintenance_tick(manager, store)
-        except Exception:  # one bad tick (a locked file, a busy database) never ends maintenance for the session
+            if outcome_observer is None: _ledger_maintenance_tick(manager, store)
+            else: _ledger_maintenance_tick(manager, store, outcome_observer=outcome_observer)
+        except Exception as error:  # one bad tick (a locked file, a busy database) never ends maintenance for the session
+            if outcome_observer is not None: outcome_observer.maintenance_outcome(manager, error=error)
             logger.exception("Job ledger maintenance tick failed; retrying at the next tick")
 
 
-def _ledger_maintenance_tick(manager: TrainingJobManager, store: JobStore) -> bool:
+def _ledger_maintenance_tick(manager: TrainingJobManager, store: JobStore, *, outcome_observer=None) -> bool:
     """A backend that found the data folder owned takes it over once that backend exits, recovering as at startup;
     the owner keeps freeing reservations of ended jobs once nothing refreshes them any more."""
     folder = store.path.parent
@@ -1165,12 +1223,14 @@ def _ledger_maintenance_tick(manager: TrainingJobManager, store: JobStore) -> bo
         return True
     try:
         if took_over:
+            if outcome_observer is not None: outcome_observer.maintenance_outcome(manager, reason="maintenance_takeover")
             logger.warning("The backend that owned %s exited; recovering its jobs", folder)
             from backend.engine.local_training_worker import recover_local_jobs
             recover_local_jobs(manager)  # observe its workers first, then reconcile and sweep
         else:
             JobScheduler(store, manager._leases).sweep_orphaned_reservations()
     except _LEDGER_ERRORS as exc:
+        if outcome_observer is not None: outcome_observer.maintenance_outcome(manager, error=exc)
         logger.warning("Job ledger maintenance failed: %s", exc)
     return True
 
@@ -1197,8 +1257,25 @@ def _own_data_folder(folder: Path) -> bool:
     except OSError:
         handle.close()
         return False
+    from backend.engine.original_lock_acquisition import _capture_successful_acquisition
+    from backend.engine.migration_guard import _execution_owner
+    cache = _FOLDER_LOCKS
+    try:
+        _FOLDER_LOCK_OBSERVATIONS[key] = _capture_successful_acquisition(
+            handle,Path(folder)/"owner.lock",owner=_execution_owner(),
+            current=lambda: cache.get(key) if _FOLDER_LOCKS is cache else None,exclusive=True)
+    except (OSError,ValueError):_FOLDER_LOCK_OBSERVATIONS[key] = None
     _FOLDER_LOCKS[key] = handle  # released when the process exits
     return True
+
+
+def _original_folder_lock_observation(folder):
+    """Read an earlier actual acquisition; a cached True cannot mint one."""
+    key = str(Path(folder).resolve())
+    held = _FOLDER_LOCK_OBSERVATIONS.get(key)
+    if held is None: return None
+    held.current()
+    return held
 
 
 def _reconcile_one(store: JobStore, manager: TrainingJobManager, known: Dict[str, JobRecord], row: Dict[str, Any],

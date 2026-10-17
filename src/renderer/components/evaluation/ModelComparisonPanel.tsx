@@ -26,6 +26,7 @@ interface Props {
   task: FlowModelTask;
   preferredJobId?: string | null;
   preferredParentJobId?: string | null;
+  refreshRevision?: number;
   language: Language;
 }
 
@@ -70,7 +71,7 @@ function Verdict({ outcome }: { outcome: ModelComparisonOutcome }) {
   );
 }
 
-export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder, task, preferredJobId, preferredParentJobId, language }) => {
+export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder, task, preferredJobId, preferredParentJobId, refreshRevision = 0, language }) => {
   const handoff=useTaskHandoff();
   const compute={...useComputeStore(),apiTransportIdentity:getApiPersistenceIdentity()};
   const project=useProjectStore(state=>state.project);
@@ -130,9 +131,16 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
   const imageChoice=useRef(0);
   const [editBusy,setEditBusy]=useState(false);
   const [editError,setEditError]=useState('');
+  const catalogRequest = useRef({scope:modelSelectionScope,refreshRevision});
 
   useEffect(() => {
     let active = true;
+    const sameScopeRefresh=catalogRequest.current.scope===modelSelectionScope
+      && catalogRequest.current.refreshRevision!==refreshRevision;
+    catalogRequest.current={scope:modelSelectionScope,refreshRevision};
+    // A refresh cannot abandon an owned POST or running comparison. Scope
+    // changes still reset below; a later idle refresh reloads the catalog.
+    if(sameScopeRefresh&&isRunning)return () => { active = false; };
     const keepManualPair=manualModels.current.scope===modelSelectionScope
       && (manualModels.current.incumbent!==undefined||manualModels.current.candidate!==undefined);
     if(manualModels.current.scope!==modelSelectionScope)manualModels.current={scope:modelSelectionScope};
@@ -209,7 +217,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
       if (active && currentScope.current === scopeKey) setIsLoading(false);
     });
     return () => { active = false; };
-  }, [scopeKey, projectDir, sourceFolder, task, preferredJobId, preferredParentJobId,crossTasks,handedId,handoff?.selectionId]);
+  }, [scopeKey, projectDir, sourceFolder, task, preferredJobId, preferredParentJobId,crossTasks,handedId,handoff?.selectionId,refreshRevision]);
 
   useEffect(() => {
     if (!comparisonJob) return;

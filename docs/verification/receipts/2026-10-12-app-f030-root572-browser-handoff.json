@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "2489104fa58a9330cbf8d66daf323024d7ed0720",
+  "source_dirty": false,
+  "test": "scripts/e2e/ocr-prepared-unsent-handoff.spec.ts::OCR unsent alphabet draft and saved alphabet split handoff preserve whole originals",
+  "test_source_sha256": "47d0083f0980707408476282bd8f72bea3b472b3138b2c39560180f4fdc99368",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "067e5a15828b63f4bd45961a21fbae4e07578e2a0b56537ff924bdbb6aef1e1f",
+  "harness_sha256": "cbd0badd559bab5c2c9636de7240bdf27a3c45d06f368a923b82cb4046a7c4a2",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "37f61db1cf0bd60e3c3a7d56ba2f571172a138ede461de13180f8e17ce070f18"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "f5c0aacbe4ab1d3b67c167bf8ada6ef34a0ff934d7025c73a3d3fe14cd69264b"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

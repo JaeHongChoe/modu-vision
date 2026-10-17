@@ -16,6 +16,11 @@ from typing import Any
 _SET_ID = re.compile(r"ls_[0-9a-f]{12}")
 
 
+from backend.engine.original_current_project_request import observe_publication
+from backend.engine.original_owned_UI_ancillary_request import original_UI_global_read_text
+
+
+@observe_publication('labelset_json')
 def _atomic_json(path: Path, value: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
@@ -52,7 +57,7 @@ def load_labelsets(project_dir: Path) -> dict[str, Any]:
         _atomic_json(path, registry)
         return registry
     try:
-        registry = json.loads(path.read_text(encoding="utf-8"))
+        registry = json.loads(original_UI_global_read_text(path,encoding="utf-8",role="labelsets"))
         rows = registry["labelsets"]
         ids = [row["id"] for row in rows]
         if (registry["schema_version"] != 1 or not isinstance(rows, list)

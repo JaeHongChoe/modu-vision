@@ -93,6 +93,83 @@ def test_the_training_engine_advertises_only_this_computers_devices(monkeypatch)
         model_catalog._device_kinds.cache_clear()
 
 
+def _finish_devices_jobs(manager, owned, seconds=30):
+    """Drain only this fixture's manager while its mock and per-case stores still exist."""
+    import json
+    import time
+    from backend.engine.job_store import TERMINAL
+
+    deadline = time.monotonic() + seconds
+    threads = {}
+    join_errors = []
+    while True:
+        records = manager.list_jobs()  # queued records are replaced when their Trainer starts
+        for record in records:
+            if record.thread is not None:
+                threads[id(record.thread)] = record.thread
+        for name in ('_local_watcher', '_queue_watcher', '_maintenance'):
+            thread = getattr(manager, name)
+            if thread is not None:
+                threads[id(thread)] = thread
+        with owned['lock']:
+            for thread in owned['heartbeats']:
+                threads[id(thread)] = thread
+        alive = [thread for thread in threads.values() if thread.is_alive()]
+        pending = [record.job_id for record in records
+                   if record.status in manager.ACTIVE_STATES + ('queued',)]
+        waiting = manager.local_queue_waiting()
+        if not alive and not pending and not waiting:
+            break
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            owned['unresolved'] = {'job_ids': pending, 'thread_names': [thread.name for thread in alive],
+                                   'local_queue_waiting': waiting}
+            timeout_error = AssertionError(('device fixture jobs did not close within 30 s',
+                                            owned['unresolved']))
+            if join_errors:
+                try:
+                    join_errors[0].add_note(str(timeout_error))
+                except BaseException:
+                    pass
+                raise join_errors[0]
+            raise timeout_error  # preserve live work; never manufacture closed or release leases
+        for thread in alive:
+            try:
+                thread.join(timeout=min(0.05, max(0, deadline - time.monotonic())))
+            except BaseException as exc:
+                join_errors.append(exc)
+        if not alive:
+            time.sleep(min(0.01, remaining))
+
+    # Joining Trainer includes its receipt write, lease release, ledger finish and dispatch.
+    # Joining the exact heartbeat/queue handles proves their callbacks no longer use the stores.
+    with owned['lock']:
+        observer_errors = list(owned['observer_errors'])
+        launched_ids = list(owned['launched_ids'])
+    readback = []
+    for record in records:
+        assert record.remote_profile_id is None, 'this fixture submits only local jobs'
+        assert record.thread is not None and not record.thread.is_alive(), record.job_id
+        assert record.ledger is not None, record.job_id
+        ledger_state = record.ledger.store.get(record.job_id).state
+        assert ledger_state in TERMINAL, (record.job_id, ledger_state)
+        receipt = json.loads((Path(record.output_dir) / 'job_receipt.json').read_text())
+        assert receipt['job_id'] == record.job_id and receipt['status'] == record.status
+        readback.append({'job_id': record.job_id, 'status': record.status, 'error': record.error,
+                         'ledger_state': ledger_state, 'receipt': receipt,
+                         'thread_closed': not record.thread.is_alive()})
+    own_ids = {record.job_id for record in records}
+    assert not any(row['job_id'] in own_ids for row in manager._leases.list())
+    assert not observer_errors, observer_errors
+    owned.update(readback=readback, launched_ids=launched_ids,
+                 closed_threads=[thread.name for thread in threads.values()], closed=True)
+    if join_errors:
+        raise join_errors[0]
+
+
+from contextlib import contextmanager
+
+
 def _devices_app(tmp_path, monkeypatch, launcher):
     from fastapi.testclient import TestClient
     from PIL import Image
@@ -119,20 +196,104 @@ def _devices_app(tmp_path, monkeypatch, launcher):
     return api, {'task': 'classification', 'dataset_path': str(source), 'preset': 'fast'}
 
 
+@contextmanager
+def _owned_devices_app(tmp_path, monkeypatch, launcher):
+    from fastapi.testclient import TestClient
+    from PIL import Image
+    import threading
+    monkeypatch.setenv('VISION_AI_STUDIO_USER_DATA_DIR', str(tmp_path / 'user_data'))
+    import backend.main as main
+    from backend.api import routes_training
+    from backend.contracts import capabilities
+    from backend.engine import local_training_worker
+    manager = routes_training.TrainingJobManager()
+    owned = {'lock': threading.Lock(), 'heartbeats': [], 'observer_errors': [],
+             'launched_ids': [], 'readback': [], 'closed': False, 'cleanup_errors': [], 'unresolved': None}
+    original_heartbeat = manager._heartbeat
+
+    def observed_heartbeat(record):
+        stop = original_heartbeat(record)
+        matches = [thread for thread in threading.enumerate() if thread.name == f'Lease-{record.job_id}']
+        with owned['lock']:
+            owned['heartbeats'].extend(matches)
+            if len(matches) != 1:
+                owned['observer_errors'].append((record.job_id, 'expected one own heartbeat', len(matches)))
+        return stop  # the original worker still sets this event after its own finally
+
+    def observed_launcher(record, *args, **kwargs):
+        with owned['lock']:
+            owned['launched_ids'].append(record.job_id)
+        return launcher(record, *args, **kwargs)
+
+    monkeypatch.setattr(manager, '_heartbeat', observed_heartbeat)
+    monkeypatch.setattr(routes_training, 'training_job_manager', manager)
+    monkeypatch.setattr(main, 'training_job_manager', manager)
+    monkeypatch.setattr(capabilities, 'local_device_kinds', lambda *args, **kwargs: ['cpu'])
+    monkeypatch.setattr(local_training_worker, 'run_owned_training', observed_launcher)
+    api = None
+    primary = None
+    try:
+        source = tmp_path / 'source'
+        for split in ('train', 'val'):
+            for label in ('ok', 'ng'):
+                (source / split / label).mkdir(parents=True)
+                for index in range(2):
+                    Image.new('RGB', (32, 32), (200 if label == 'ok' else 40, 0, index)).save(source / split / label / f'{index}.png')
+        app = main.create_app(project_dir=str(tmp_path / 'projects'))
+        api = TestClient(app, headers={'X-Vision-Token': app.state.api_token})
+        api.post('/api/project/create', json={'name': 'Devices'})
+        assert api.put('/api/project/update', json={'source_dataset_dir': str(source)}).status_code == 200
+        yield api, {'task': 'classification', 'dataset_path': str(source), 'preset': 'fast'}, manager, owned
+    except BaseException as exc:
+        primary = exc
+        raise
+    finally:
+        failures = []
+        try:
+            _finish_devices_jobs(manager, owned)
+        except BaseException as exc:
+            failures.append(exc)
+        if api is not None:
+            try:
+                api.close()
+            except BaseException as exc:
+                failures.append(exc)
+        owned['cleanup_errors'] = [f'{type(exc).__name__}: {exc}' for exc in failures]
+        if failures:
+            if primary is None:
+                raise failures[0]
+            for exc in failures:
+                try:
+                    primary.add_note(f'device fixture cleanup: {type(exc).__name__}: {exc}')
+                except BaseException:
+                    pass  # cleanup diagnostics must not replace the original test exception
+
+
 def test_a_training_start_on_a_device_this_computer_lacks_is_refused_not_moved_to_the_cpu(tmp_path, monkeypatch):
-    api, body = _devices_app(tmp_path, monkeypatch, lambda *args, **kwargs: pytest.fail('nothing may launch'))
-    for request in ({**body, 'device': 'cuda'}, {**body, 'device': 'mps'}, {**body, 'device': 'cuda:3'}):
-        refused = api.post('/api/training/start', json=request)
-        assert refused.status_code == 409 and '바꿔 실행하지 않습니다' in refused.text, refused.text
+    with _owned_devices_app(tmp_path, monkeypatch, lambda *args, **kwargs: pytest.fail('nothing may launch')) as (api, body, manager, owned):
+        for request in ({**body, 'device': 'cuda'}, {**body, 'device': 'mps'}, {**body, 'device': 'cuda:3'}):
+            refused = api.post('/api/training/start', json=request)
+            assert refused.status_code == 409 and '바꿔 실행하지 않습니다' in refused.text, refused.text
+    assert owned['closed'] and manager.list_jobs() == [] and owned['launched_ids'] == []
 
 
 def test_no_device_auto_and_cpu_starts_pass_the_device_check(tmp_path, monkeypatch):
     launched = []
-    api, body = _devices_app(tmp_path, monkeypatch,
-                             lambda *args, **kwargs: launched.append(kwargs) or {'status': 'aborted', 'worker_exit_confirmed': True})
-    for request in ({**body}, {**body, 'device': 'auto'}, {**body, 'device': 'cpu'}):
-        response = api.post('/api/training/start', json=request)
-        assert response.status_code == 200 and '바꿔 실행하지 않습니다' not in response.text, (request.get('device'), response.text)
+    accepted_ids = []
+    with _owned_devices_app(tmp_path, monkeypatch,
+                      lambda *args, **kwargs: launched.append(kwargs) or {'status': 'aborted', 'worker_exit_confirmed': True}) as (api, body, manager, owned):
+        for request in ({**body}, {**body, 'device': 'auto'}, {**body, 'device': 'cpu'}):
+            response = api.post('/api/training/start', json=request)
+            assert response.status_code == 200 and '바꿔 실행하지 않습니다' not in response.text, (request.get('device'), response.text)
+            job_id = response.json()['job_id']
+            assert job_id not in accepted_ids and manager.get_job(job_id) is not None
+            accepted_ids.append(job_id)
+    assert owned['closed'] and len(accepted_ids) == len(launched) == 3
+    assert sorted(owned['launched_ids']) == sorted(accepted_ids)
+    assert {row['job_id'] for row in owned['readback']} == set(accepted_ids)
+    assert all(row['status'] == 'aborted' and row['error'] is None and row['thread_closed']
+               and row['receipt']['status'] == 'aborted' and row['receipt']['error'] is None
+               for row in owned['readback'])
 
 
 # --- Slice 2: real preflights move a support state to verified for the runtime they ran on ------------------------

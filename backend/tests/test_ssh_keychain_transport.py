@@ -44,7 +44,7 @@ def test_platform_transport_preserves_target_and_authentication_bounds(monkeypat
         command = shlex.split(transfer[transfer.index("-e") + 1])
         assert "--" not in command and selected.ssh_target not in command
         port_flag = "-p"
-    expected = ["scp" if kind == "scp" else "ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
+    expected = ["scp" if kind == "scp" else "ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes", "-o", "ForwardAgent=no",
         port_flag, "2222", "-o", "ConnectTimeout=10", "-o", "ConnectionAttempts=1", "-o", "ServerAliveInterval=5", "-o", "ServerAliveCountMax=2"]
     if platform == "darwin":
         expected += ["-o", "UseKeychain=yes", "-o", "AddKeysToAgent=no"]

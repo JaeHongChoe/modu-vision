@@ -1,0 +1,44 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "e4a15ea7deba4a9662d03b2b0f71405cb9a4fabe",
+  "source_dirty": false,
+  "test": "scripts/e2e/ocr-fitting-content.spec.ts::human OCR text and three fitting modes save and reopen exact native content",
+  "test_source_sha256": "e6351e953a85f6d1440bff5689e00de91c53be6cf8f273e00b3e4349ce2749db",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "c96c4ab3afcc8c9444ccdb872083b87446e7fa7f719077d0c35564ddf65494a7",
+  "harness_sha256": "babc9b7d4318b8431da35df3382abf844953f114805213bc147e40d9344a2ba3",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "8edc5948d6b5d95ffd7fdb8d14f8a656f810254d3fedd91d0d35970ad2588b8d"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "683af7fd9bd6c74961937ddb4cfff7f5fae4e42f6330c8708e424b15c614f19a"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "510e38edbeda30eaf2576144353437e349c141f5b86b5d4231003908b3a0f734"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "53fdba7d12eb4168c193c4d27a73d58b60bcd327f93130aa957b21d53d4d3f41"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "06949bae315af62e1db4bb70cd1026293ee654dee1967dfdab8b05f658adfe25"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

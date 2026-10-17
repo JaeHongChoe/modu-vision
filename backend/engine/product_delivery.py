@@ -1,5 +1,7 @@
 """Persisted delivery inventories and truthful device/installation evidence."""
 from __future__ import annotations
+from backend.engine.original_owned_UI_ancillary_request import observe_original_dataset_provenance_operation, original_dataset_provenance_file, original_dataset_provenance_database, original_dataset_provenance_journal_read, original_dataset_UI_read_text, original_dataset_UI_read_bytes
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_package_storage,original_UI_ancillary_read_text
 
 import base64
 import hashlib
@@ -18,6 +20,7 @@ from pathlib import Path
 
 from backend.engine.runtime_process_control import atomic_private_json, runtime_state_lock
 from backend.engine.flow_package_runtime import verify_flow_package, _sha256
+from backend.engine.original_owned_flow_execution_request import observe_original_execution_effect
 
 
 def _root(project):
@@ -35,6 +38,7 @@ def _preference_key(project):
     return hashlib.sha256(str(project.get('_delivery_account_id','local-desktop')).encode()).hexdigest()
 
 
+@observe_original_UI_ancillary_package_storage
 def _storage(project):
     root=_root(project)/'delivery'
     if root.is_symlink():raise ValueError('Delivery storage cannot be linked')
@@ -47,7 +51,7 @@ def _storage(project):
 def _journal(project):
     path=_storage(project)/'library.json'
     if not path.exists():return {'schema_version':1,'packages':{},'selection':None}
-    value=json.loads(path.read_text(encoding='utf-8'))
+    value=json.loads(original_dataset_provenance_journal_read(path,encoding='utf-8',role='package'))
     if value.get('schema_version')!=1:raise ValueError('Unsupported delivery inventory version')
     return value
 
@@ -59,6 +63,7 @@ def _owned_package(project,path):
     return candidate.resolve()
 
 
+@observe_original_execution_effect('record')
 def record_package(project,path,*,version_id=None,recipe_task=None,parity=None):
     package=_owned_package(project,path);verify_flow_package(package)
     identifier=hashlib.sha256(package.relative_to(_root(project)).as_posix().encode()).hexdigest()[:32]
@@ -80,18 +85,19 @@ def _legacy_binding(project,package,pipeline):
         for path in sorted(directory.glob('*.json')):
             if path.is_symlink():continue
             try:
-                row=json.loads(path.read_text(encoding='utf-8'))
+                row=json.loads(original_dataset_UI_read_text(path,encoding='utf-8'))
                 if row.get('source_dataset_path')==source and FlowchartPipeline.model_validate(row['pipeline'])==pipeline:
                     return {'version_id':row.get('version_id'),'recipe_task':row.get('recipe_task'),**_scope(project)}
             except (ValueError,KeyError,OSError):continue
     elif directory.parent.is_symlink() or (directory.parent.exists() and not directory.parent.is_dir()):return None
     converted=package/'openvino_models.json'
     if converted.is_file() and not converted.is_symlink():
-        receipt=json.loads(converted.read_text(encoding='utf-8')).get('input_receipt',{})
+        receipt=json.loads(original_dataset_UI_read_text(converted,encoding='utf-8')).get('input_receipt',{})
         if receipt.get('source_dataset_path')==source:return {**_scope(project),'version_id':None,'recipe_task':project.get('task')}
     return None
 
 
+@observe_original_dataset_provenance_operation('package_library')
 def package_library(project):
     root=_root(project);directory=root/'exports'/'flows';journal=_journal(project);rows=[];scope=_scope(project)
     if directory.is_symlink():raise ValueError('Package inventory cannot follow linked storage')
@@ -102,7 +108,7 @@ def package_library(project):
             saved=journal['packages'].get(identifier,{});row={'package_id':identifier,'name':package.name,'package_path':str(package),
                 'integrity':'failed','scope_matches':False,'parity':saved.get('parity',{'status':'not_run'}),'optimization_jobs':[]}
             try:
-                pipeline,_=verify_flow_package(package);manifest=json.loads((package/'manifest.json').read_text(encoding='utf-8'));digest=_sha256(package/'manifest.json')
+                pipeline,_=verify_flow_package(package);manifest=json.loads(original_dataset_UI_read_text(package/'manifest.json',encoding='utf-8'));digest=_sha256(package/'manifest.json')
                 binding=saved or _legacy_binding(project,package,pipeline) or {}
                 matches=all(binding.get(key)==value for key,value in scope.items())
                 if saved and saved['manifest_sha256']!=digest:raise ValueError('Package manifest differs from the saved inventory receipt')
@@ -118,7 +124,7 @@ def package_library(project):
         for file in jobs.glob('*.json'):
             if file.is_symlink():continue
             try:
-                job=json.loads(file.read_text(encoding='utf-8'));selected=job.get('options',{}).get('package_dir')
+                job=json.loads(original_dataset_UI_read_text(file,encoding='utf-8'));selected=job.get('options',{}).get('package_dir')
                 for row in rows:
                     if selected==row['package_path']:row['optimization_jobs'].append({'job_id':job['job_id'],'status':job['status']})
             except (OSError,ValueError,KeyError):continue
@@ -168,7 +174,7 @@ def server_preflight(project,profile,image_path,*,transport=None):
     transport=transport or SSHTransport();probe=transport.probe(profile)
     result={'ready':False,'profile_id':profile.id,'probe':probe,'training_started':False,'observed_at':time.time()}
     if not probe.get('runtime_ready',probe.get('ready')):return result
-    data=image.read_bytes();scratch=None;script=_INPUT_SCRIPT;argument=base64.b64encode(data).decode()
+    data=original_dataset_UI_read_bytes(image);scratch=None;script=_INPUT_SCRIPT;argument=base64.b64encode(data).decode()
     try:
         if len(data)>48*1024:
             run_id='preflight_'+uuid.uuid4().hex;scratch=profile.remote_root+'/runs/'+run_id;relative='runs/'+run_id+'/input'+image.suffix.lower()
@@ -211,20 +217,20 @@ def installation_readiness(project):
     from backend.engine.runtime_pack_store import inventory as runtime_pack_inventory
     root=_root(project);manifest=root/'project.json';schema=1
     if manifest.is_symlink():raise ValueError('Project manifest cannot be linked')
-    if manifest.exists():schema=json.loads(manifest.read_text(encoding='utf-8')).get('schema_version',1)
+    if manifest.exists():schema=json.loads(original_dataset_UI_read_text(manifest,encoding='utf-8')).get('schema_version',1)
     compiler=shutil.which('c++') or shutil.which('clang++') or shutil.which('g++')
     headers=Path(sysconfig.get_path('include'))/'Python.h'
     dependencies={name:importlib.util.find_spec(name) is not None for name in ('torch','numpy','PIL','cv2','pydantic','httpx')}
     app_version=os.environ.get('VISION_AI_APP_VERSION') or None;version_source='desktop_process' if app_version else 'unavailable'
     package=Path(__file__).resolve().parents[2]/'package.json'
     if not app_version and package.is_file():
-        app_version=json.loads(package.read_text(encoding='utf-8')).get('version');version_source='package_manifest'
+        app_version=json.loads(original_dataset_UI_read_text(package,encoding='utf-8')).get('version');version_source='package_manifest'
     receipts=root/'.migrations'
     migrated=False
     if receipts.is_dir() and not receipts.is_symlink():
         for record in receipts.glob('*/receipt.json'):
             if record.is_symlink() or record.parent.is_symlink():continue
-            try:migrated=migrated or json.loads(record.read_text(encoding='utf-8')).get('status')=='applied'
+            try:migrated=migrated or json.loads(original_dataset_UI_read_text(record,encoding='utf-8')).get('status')=='applied'
             except (OSError,ValueError):continue
     return {'app_version':app_version,'version_source':version_source,'host':{'os':platform.system(),'architecture':platform.machine(),'python':platform.python_version()},
         'project':{'schema_version':schema,'supported_schema_versions':[1],'compatible':type(schema)is int and schema==1,'migration_performed':migrated},
@@ -272,7 +278,7 @@ def hardware_matrix(project,*,capabilities=None):
         from backend.api.routes_export import runtime_capabilities
         capabilities=runtime_capabilities()
     verified=[];root=_storage(project);path=root/'hardware.json'
-    if path.exists():verified=json.loads(path.read_text(encoding='utf-8')).get('executions',[])
+    if path.exists():verified=json.loads(original_dataset_UI_read_text(path,encoding='utf-8')).get('executions',[])
     devices=[{'device':d,'kind':'cuda' if d.startswith('cuda') else d,'configured':True} for d in capabilities['torch_devices']]
     devices += [{'device':'openvino:'+d,'kind':d.lower(),'configured':True} for d in capabilities['openvino'].get('devices',[])]
     for device,kind in [('MIG','mig'),('openvino:NPU','npu'),('linux-arm64','edge'),('cuda:0','cuda')]:
@@ -293,7 +299,7 @@ def hardware_matrix(project,*,capabilities=None):
 def record_execution(project,package,image,result,device):
     root=_storage(project)
     with runtime_state_lock(root):
-        path=root/'hardware.json';journal=json.loads(path.read_text(encoding='utf-8')) if path.exists() else {'executions':[]}
+        path=root/'hardware.json';journal=json.loads(original_dataset_UI_read_text(path,encoding='utf-8')) if path.exists() else {'executions':[]}
         record={'scope':_scope(project),'device':device,'manifest_sha256':_sha256(Path(package)/'manifest.json'),
             'image_sha256':_sha256(Path(image)),'verdict':result.get('final_verdict'),'observed_at':time.time()}
         journal['executions'].append(record);journal['executions']=journal['executions'][-100:];atomic_private_json(path,journal)
@@ -324,7 +330,7 @@ def read_operator_inputs(project):
     root=_root(project)/'runtime_service';path=root/'inputs.json'
     if root.is_symlink() or path.is_symlink():raise ValueError('Input configuration cannot follow links')
     if not path.exists():return {'mode':'manual','folder':None,'camera':None,'scope':_scope(project)}
-    value=json.loads(path.read_text(encoding='utf-8'))
+    value=json.loads(original_dataset_UI_read_text(path,encoding='utf-8'))
     if value.get('scope')!=_scope(project):return {'mode':'manual','folder':None,'camera':None,'scope':_scope(project),'needs_reconfiguration':True}
     if value.get('mode')=='camera':
         from backend.engine.camera_admission import camera_identity

@@ -150,14 +150,19 @@ def capture_original_main(authority, row):
         raise
 
 
-def _fresh(authority):
+def _fresh(authority, *, shutdown=None):
     state = _state(authority); owner = state['owner']; process = state['main']
     if (process is None or owner._process is not process or type(process) is not subprocess.Popen
             or owner._bootstrap_channel is not state['channel']
             or _endpoint(state['channel']) != state['endpoint']
             or owner._bootstrap_transport != state['transport']):
         raise HandshakeError('Original retained main handle or private Node endpoint changed')
-    row = owner._owned(); owner._binding(row); owner._live(row, state['main_identity'])
+    row = owner._owned()
+    if shutdown is None: owner._binding(row)
+    else:
+        from backend.engine.application_shutdown_transaction import current_controller
+        current_controller(shutdown, authority, row)
+    owner._live(row, state['main_identity'])
     if (row['state'] not in {'starting', 'ready'} or row['protocol_version'] != 4
             or row['binding'] != state['binding'] or process.poll() is not None
             or process.pid != state['main_identity']['pid']
@@ -183,13 +188,13 @@ def send_authentication_challenge(authority, frame):
     _fresh(authority)
 
 
-def receive_frame(authority, timeout):
-    state, _ = _fresh(authority)
+def receive_frame(authority, timeout, *, shutdown=None):
+    state, _ = _fresh(authority, shutdown=shutdown)
     try:
         value = read_frame(state['channel'], timeout)
-        _fresh(authority)
+        _fresh(authority, shutdown=shutdown)
         event = _new(NodeBackendEvent)
-        _EVENTS[event] = {'authority': authority, 'frame': value, 'used': False}
+        _EVENTS[event] = {'authority': authority, 'frame': value, 'used': False, 'shutdown': shutdown}
         return event
     except BaseException:
         # Lost endpoint/partial frame/dead original main is never reopened or
@@ -198,16 +203,16 @@ def receive_frame(authority, timeout):
         raise
 
 
-def _event(authority, event):
-    _fresh(authority)
+def _event(authority, event, *, shutdown=None):
+    _fresh(authority, shutdown=shutdown)
     value = _EVENTS.get(event) if type(event) is NodeBackendEvent else None
-    if value is None or value['authority'] is not authority or value['used']:
+    if value is None or value['authority'] is not authority or value['used'] or value.get('shutdown') is not shutdown:
         raise HandshakeError('Original one-use Node receive event differs or replayed')
     return value
 
 
-def frame_value(authority, event):
-    return copy.deepcopy(_event(authority, event)['frame'])
+def frame_value(authority, event, *, shutdown=None):
+    return copy.deepcopy(_event(authority, event, shutdown=shutdown)['frame'])
 
 
 def consume_preflight_receive(authority, event):
@@ -255,7 +260,7 @@ def consume_cpu_receive(authority, event):
 def seal_authentication(authority, event):
     from backend.engine import application_launch_controller as controller
     state, row = _fresh(authority); received = _event(authority, event)
-    if state['phase'] != 'captured' or row['state'] != 'ready':
+    if state['phase'] != 'captured' or row['state'] != 'starting' or not row['claimed']:
         raise HandshakeError('Original Node authentication cannot be rebound')
     frame = received['frame']
     if (set(frame) != {'schema_version', 'kind', 'challenge', 'nonce', 'claim_b64', 'ready_b64'}
@@ -283,6 +288,35 @@ def seal_authentication(authority, event):
         raise
 
 
+def seal_registration_admission(authority, event, registered):
+    """Consume the original main's exact registration ACK before readiness."""
+    state, row = _fresh(authority); received = _event(authority, event)
+    if (state['phase'] != 'bound' or row['state'] != 'starting' or not row['claimed']
+            or state.get('registration_admitted') is not None):
+        raise HandshakeError('Original backend registration admission differs or replayed')
+    proof = state['proof']; snapshot = state['epoch'].snapshot()
+    writers = [writer for writer in snapshot['registry']['writers'] if writer['writer_id'] == state['writer_id']]
+    if (snapshot['registry']['state'] != 'open' or len(writers) != 1 or writers[0]['role'] != 'backend'
+            or writers[0]['status'] != 'active' or writers[0]['process'] != proof['process']
+            or writers[0]['registration_sha256'] != state['registration_sha256']):
+        raise HandshakeError('Original active backend registry changed before admission')
+    if (_lease()._identity(proof['process']['pid']) != proof['process']
+            or _parent_pid(proof['process']['pid']) != state['main'].pid):
+        raise HandshakeError('Original registered backend birth or parent differs before admission')
+    expected = {'schema_version': 1, 'kind': 'backend_registered', 'nonce': row['nonce'],
+        'epoch': proof['epoch'], 'binding_sha256': proof['binding_sha256'],
+        'backend_claim_sha256': _update()._sha(_update()._canonical(proof)),
+        'main_process': state['main_identity'], 'backend_process': proof['process'],
+        'writer_id': state['writer_id'], 'registration_sha256': state['registration_sha256'],
+        'active_registry_sha256': snapshot['registry_sha256']}
+    if (_update()._canonical(registered) != _update()._canonical(expected)
+            or _update()._canonical(received['frame']) != _update()._canonical({**expected, 'kind': 'backend_registration_admitted'})):
+        raise HandshakeError('Original backend registration acknowledgement differs')
+    _fresh(authority)
+    received['used'] = True
+    state['registration_admitted'] = _update()._sha(_update()._canonical(expected))
+
+
 def _core_binding(authority, epoch, writer_id):
     state, _ = _fresh(authority)
     if (state['epoch'] is not epoch or state['writer_id'] != writer_id
@@ -295,8 +329,8 @@ def _core_binding(authority, epoch, writer_id):
     return copy.deepcopy(process), state['registration_sha256']
 
 
-def begin_drain(authority, frame, started):
-    state, row = _fresh(authority)
+def begin_drain(authority, frame, started, *, shutdown=None):
+    state, row = _fresh(authority, shutdown=shutdown)
     if (state['phase'] != 'bound' or state['deadline'] is not None
             or row['writer_drain']['phase'] != 'enrolled'
             or type(frame['budget_ms']) is not int or not 0 < frame['budget_ms'] <= 4000):
@@ -308,25 +342,39 @@ def begin_drain(authority, frame, started):
 
 def _core_exit(authority, event, epoch, writer_id):
     from backend.engine.application_launch_handshake import validate_backend_exit
-    state, row = _fresh(authority); received = _event(authority, event)
+    stored = _EVENTS.get(event) if type(event) is NodeBackendEvent else None
+    shutdown = stored.get('shutdown_reserved') if stored is not None else None
+    state, row = _fresh(authority, shutdown=shutdown)
+    received = _event(authority, event, shutdown=shutdown)
+    deadline = state['deadline']
+    if shutdown is not None:
+        from backend.engine.application_shutdown_transaction import original_exit_postdeadline
+        deadline = original_exit_postdeadline(shutdown, authority, event, epoch, writer_id)
     if (state['epoch'] is not epoch or state['writer_id'] != writer_id or state['phase'] != 'bound'
-            or state['exit_attempted'] or state['deadline'] is None or _now() >= state['deadline']
+            or state['exit_attempted'] or deadline is None or _now() >= deadline
             or row['writer_drain']['phase'] != 'drained'):
-        raise HandshakeError('Original Node exit lacks its live admitted drain and budget')
+        raise HandshakeError('Original Node exit lacks its admitted drain and original phase budget')
     validate_backend_exit(received['frame'], row['writer_drain']['request'], state['proof']['process'])
-    _fresh(authority)
-    if _now() >= state['deadline']:
-        raise HandshakeError('Original Node shutdown budget expired before exit publication')
-    # Consume before publication. A crash/partial CAS never allows a new event
-    # or caller JSON to repair the interrupted original observation.
+    _fresh(authority, shutdown=shutdown)
+    if _now() >= deadline:
+        raise HandshakeError('Original Node exit publication phase expired')
     received['used'] = True; state['exit_attempted'] = True
+    if shutdown is not None: state['shutdown_exit'] = shutdown
     return copy.deepcopy(state['proof']['process'])
 
 
 def finish_exit_publication(authority):
-    state, _ = _fresh(authority)
+    state = _state(authority); shutdown = state.get('shutdown_exit')
+    if shutdown is not None:
+        from backend.engine.application_shutdown_transaction import accept_original_registry_exit
+        accept_original_registry_exit(shutdown, authority)
+    state, _ = _fresh(authority, shutdown=shutdown)
+    deadline = state['deadline']
+    if shutdown is not None:
+        from backend.engine.application_shutdown_transaction import _state as shutdown_state
+        deadline = shutdown_state(shutdown)['post_deadline']
     if (not state['exit_attempted'] or state['phase'] != 'bound'
-            or state['deadline'] is None or _now() >= state['deadline']):
+            or deadline is None or _now() >= deadline):
         raise HandshakeError('Original Node exit publication is late or replayed')
     state['phase'] = 'exited'
 
@@ -336,3 +384,95 @@ def assert_exit_acknowledgement(authority):
     if (state['phase'] != 'exited' or row['writer_drain']['phase'] != 'backend_exited'
             or _now() >= state['deadline']):
         raise HandshakeError('Original Node exit acknowledgement is late or uncommitted')
+
+
+_PREP_ADMISSIONS = {}
+
+
+def _preparation_controls(authority):
+    """Read/classify intent only. This cannot seal a binding or authorize work."""
+    state=_state(authority);owner=state['owner'];process=state['main']
+    if (process is None or owner._process is not process or type(process) is not subprocess.Popen
+            or owner._bootstrap_channel is not state['channel']
+            or _endpoint(state['channel'])!=state['endpoint'] or owner._bootstrap_transport!=state['transport']):
+        raise HandshakeError('Original shutdown intent handle/endpoint differs')
+    row=owner._owned();owner._live(row,state['main_identity'])
+    if (row['state']!='ready' or row['protocol_version']!=4 or row['binding']!=state['binding']
+            or process.poll() is not None or process.pid!=state['main_identity']['pid']
+            or _parent_pid(process.pid)!=state['pid'] or _session_identity(process.pid)!=(process.pid,process.pid)
+            or row['writer_drain']['writer_id']!=state['writer_id']
+            or row['writer_drain']['registration_sha256']!=state['registration_sha256']
+            or row['writer_drain']['phase']!='enrolled' or state['phase']!='bound'
+            or state['deadline'] is not None or state['proof'] is None):
+        raise HandshakeError('Original shutdown intent ownership/phase differs')
+    return state,row
+
+
+def pending_shutdown_preparation(authority):
+    """Nonconsuming bounded routing only; partial input never enters old drain."""
+    state=_state(authority)
+    raw=state['channel'].recv(65537,socket.MSG_PEEK|getattr(socket,'MSG_DONTWAIT',0))
+    if not raw:return False
+    if len(raw)>65536:raise HandshakeError('Original private intent exceeds frame bound')
+    if b'\n' not in raw:return None
+    try:value=_update()._json(raw.split(b'\n',1)[0])
+    except ValueError:return False  # Original full reader retains malformed-frame error order.
+    if type(value) is not dict or value.get('kind')!='main_shutdown_prepare':return False
+    _preparation_controls(authority)
+    return True
+
+
+def receive_shutdown_preparation(authority, timeout):
+    state,_=_preparation_controls(authority)
+    try:
+        value=read_frame(state['channel'],timeout)
+        _preparation_controls(authority)
+        if type(value) is not dict or value.get('kind')!='main_shutdown_prepare':
+            raise HandshakeError('Original routed shutdown intent changed')
+        event=_new(NodeBackendEvent)
+        _EVENTS[event]={'authority':authority,'frame':value,'used':False,'shutdown':None,'preparation':True}
+        return event
+    except BaseException:
+        state['failed']=True
+        raise
+
+
+def admit_shutdown_preparation(authority,event):
+    # Pin original object custody BEFORE the slow byte validator. A callback
+    # cannot replace a handle/table field and have its replacement captured.
+    original,before=_preparation_controls(authority);owner=original['owner']
+    main=original['main'];channel=original['channel'];epoch=original['epoch'];proof=original['proof']
+    main_identity=copy.deepcopy(original['main_identity']);transport=copy.deepcopy(original['transport'])
+    endpoint=original['endpoint'];proof_raw=_update()._canonical(proof)
+    database_lock=owner._lock;database_fd=owner._database_fd
+    # ONE genuine original full byte pass. No table row may replace that call.
+    state,row=_fresh(authority)
+    if (state is not original or state['owner'] is not owner or state['main'] is not main
+            or state['channel'] is not channel or state['epoch'] is not epoch or state['proof'] is not proof
+            or state['main_identity']!=main_identity or state['transport']!=transport
+            or state['endpoint']!=endpoint or _update()._canonical(proof)!=proof_raw
+            or owner._process is not main or owner._bootstrap_channel is not channel
+            or owner._writer_epoch is not epoch or owner._lock is not database_lock
+            or owner._database_fd!=database_fd or row!=before):
+        original['failed']=True
+        raise HandshakeError('Original shutdown custody changed across complete admission')
+    received=_EVENTS.get(event) if type(event) is NodeBackendEvent else None
+    if (received is None or received['authority'] is not authority or received['used']
+            or received.get('preparation') is not True or received.get('shutdown') is not None):
+        raise HandshakeError('Original shutdown preparation event differs or replayed')
+    _preparation_controls(authority)
+    token=object();received['used']=True
+    _PREP_ADMISSIONS[token]={'authority':authority,'state':state,'row':copy.deepcopy(row),
+        'frame':copy.deepcopy(received['frame']),'pid':os.getpid(),'thread':threading.current_thread()}
+    return token,copy.deepcopy(received['frame'])
+
+
+def consume_shutdown_preparation(token,authority,owner,frame):
+    value=_PREP_ADMISSIONS.pop(token,None)
+    if (value is None or value['pid']!=os.getpid() or value['thread'] is not threading.current_thread()
+            or value['authority'] is not authority or value['state'] is not _state(authority)
+            or value['state']['owner'] is not owner or value['frame']!=frame):
+        raise HandshakeError('Original single-use full-byte shutdown admission differs')
+    state,row=_preparation_controls(authority)
+    if row!=value['row']:raise HandshakeError('Original shutdown lease changed after full-byte admission')
+    return state,row

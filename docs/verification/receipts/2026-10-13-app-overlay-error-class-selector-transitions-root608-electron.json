@@ -1,0 +1,48 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "418039a91d8293fae13f161dc3f688b846e09d56",
+  "source_dirty": false,
+  "test": "scripts/e2e/evaluation-error-class-selector-transitions.spec.ts::source Electron saved error overlays and class changes recover after outage and preserve B after canceled A read",
+  "test_source_sha256": "19f4ee228a36c3ce12b76e6c766507f84a0eb5eda8834d8527ca82139ae9ea26",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "37b72ec51ba5e03889b8de4d59b08b4e2987c9e610c2741cbc0bcd0eb18981b5",
+  "harness_sha256": "a6ab3a8b636ef16a940ad355e61f3ccc88ca70a33dd8b59a96a8be1cdf3c9fbf",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "cb41e606d4643519c45a4958992676ec23a465345c7b301ec9df848156c1313b"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "9541edea0f0be36bef45f12404d6997b38d74c1dedc040ad5cbf3b66b39e7b93"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "16680afec49bff11c8d9e1aab3f3c2abb143a42ced0a4e74c7df27b5f48043ad"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "30269ffdd446c6882cc8975ac15da4b1887d68383f9fe60d64b85b4ff3dea597"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "c5ac7f5fb8f4fe7c1adad35ca29017b4936ad63edf3f9d6bc6232336776d7b53"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "c9ea130497b2268482c06400e1e1d2a027125e12c87d3f0b604612f865a5fbe2"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}
