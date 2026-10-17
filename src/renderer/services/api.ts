@@ -726,7 +726,15 @@ export async function getBackendPort(): Promise<number> {
 }
 
 export function setCachedPort(port: number | null): void {
+  if (cachedPort === port) return;
   cachedPort = port;
+  // A local daemon's accepted project cannot authorize a different transport.
+  // Shared-server authority is independent of local supervisor status.
+  if (!sharedBase) {
+    boundProjectContext = null;
+    contextGeneration++;
+    notifyContext();
+  }
 }
 
 export async function getApiBaseUrl(): Promise<string> {

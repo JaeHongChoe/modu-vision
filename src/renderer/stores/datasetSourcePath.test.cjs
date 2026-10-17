@@ -15,12 +15,12 @@ function load(api, project, evaluation = { allowLatestRecovery: null }) {
   m.paths = Module._nodeModulePaths(__dirname);
   const store = getState => ({ getState: () => getState });
   const mocks = {
-    '../services/api': { ...contextApi, api },
+    '../services/api': { ...contextApi, api, getProjectContext: () => ({workspace_id:'workspace',project_id:project.project.id,actor_id:'actor',mode:'local'}) },
     './useTrainingStore': { useTrainingStore: store({ invalidateForDataChange() {} }) },
     './useEvaluationStore': { useEvaluationStore: { getState: () => ({ invalidateForDataChange(allow) { evaluation.allowLatestRecovery = allow; } }),
       setState: update => Object.assign(evaluation, update) } },
     './useFlowchartStore': { useFlowchartStore: store({ invalidateForDataChange() {} }) },
-    './useProjectStore': { useProjectStore: { setState: update => Object.assign(project, typeof update === 'function' ? update(project) : update) } },
+    './useProjectStore': { useProjectStore: { getState:()=>({...project,projectDir:project.project.project_dir,task:project.project.task}), setState: update => Object.assign(project, typeof update === 'function' ? update(project) : update) } },
   };
   const req = m.require.bind(m);
   m.require = key => (Object.hasOwn(mocks, key) ? mocks[key] : req(key));
@@ -228,7 +228,7 @@ test('reopening a saved source only reads its scoped summary and never saves/imp
     dataset:{import:async()=>{writes.push('import');throw new Error('viewer cannot import');},
       currentSummary:async data=>{assert.deepEqual(data,{folder_path:'/saved/source',task:'segmentation'});return summary;},
       getImages:async()=>({items:[],total:6})}};
-  const store=load(api,{project:{id:'p1'}});
+  const store=load(api,{project:{id:'p1',project_dir:'/projects/p1',task:'segmentation',source_dataset_dir:'/saved/source'}});
   store.getState().setFolderPath('/saved/source');
   await store.getState().ensureImported('segmentation');
   assert.deepEqual(writes,[]);
@@ -240,7 +240,7 @@ test('reopening a saved source only reads its scoped summary and never saves/imp
 
 test('a saved-source mismatch refuses restoration instead of importing a different folder', async () => {
   const api={dataset:{currentSummary:async()=>{throw new Error('saved source changed');}},project:{update:async()=>{throw new Error('must not save');}}};
-  const store=load(api,{project:{id:'p1'}});
+  const store=load(api,{project:{id:'p1',project_dir:'/projects/p1',task:'segmentation',source_dataset_dir:'/saved/source'}});
   store.getState().setFolderPath('/saved/source');
   await assert.rejects(store.getState().ensureImported('segmentation'),/saved source changed/);
   assert.match(store.getState().importError,/saved source changed/);

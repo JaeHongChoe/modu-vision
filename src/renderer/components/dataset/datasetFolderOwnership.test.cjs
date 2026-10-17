@@ -24,16 +24,19 @@ function load(filename, mocks) {
   return m.exports;
 }
 
-function harness({ holdSave = false, holdImport = false, importFailure, saveFailure } = {}) {
+function harness({ holdSave = false, holdImport = false, holdImages = false, holdSplit = false, withImages = false, importFailure, saveFailure } = {}) {
   let generation = 0, backend = 'A', port = 8001, cursor = 0;
+  let context = {workspace_id: 'workspace', project_id: 'A', actor_id: 'actor', mode: 'local'};
   const project = { task: 'classification', language: 'en', projectDir: '/projects/A', backendPort: port,
-    project: { id: 'A', name: 'A', project_dir: '/projects/A', source_dataset_dir: '/source/A' } };
+    project: { id: 'A', name: 'A', project_dir: '/projects/A', task: 'classification', source_dataset_dir: '/source/A' } };
   const hook = state => Object.assign(selector => selector ? selector(state) : state, {
     getState: () => state,
     setState: change => Object.assign(state, typeof change === 'function' ? change(state) : change),
   });
-  const projectStore = hook(project), calls = [], pickers = [], saves = [], imports = [], slots = [], effects = [];
+  const projectStore = hook(project), calls = [], pickers = [], saves = [], imports = [], imageReads = [], imageRequests = [], summaries = [], splits = [], slots = [], effects = [];
   const summary = { total_images: 3, source_images: 3, classes: { OK: 3 }, split: { train: 2, val: 1, test: 0 } };
+  const imageResult = folder => ({items: withImages ? [{image_id: 'part', file_name: 'part.png', file_path: `${folder}/part.png`,
+    thumbnail_url: `/api/dataset/thumbnail/part.png?file_path=${folder}/part.png`, label: 'OK', split: 'train', width: 24, height: 24}] : [], total: 3});
   const api = {
     project: { update: async data => {
       calls.push({ kind: 'save', backend, project: project.project.id, folder: data.source_dataset_dir });
@@ -49,13 +52,22 @@ function harness({ holdSave = false, holdImport = false, importFailure, saveFail
         if (holdImport) { const pending = deferred(); imports.push(pending); return pending.promise; }
         return summary;
       },
-      getImages: async () => ({ items: [], total: 3 }),
-      currentSummary: async () => summary,
+      getImages: async data => {
+        imageReads.push({backend, port, ...data});
+        if (holdImages) {const pending = deferred(); imageRequests.push(pending); return pending.promise;}
+        return imageResult(data.folder_path);
+      },
+      currentSummary: async data => {summaries.push({backend, ...data}); return summary;},
+      split: async data => {
+        calls.push({kind: 'split', backend, ...data});
+        if (holdSplit) {const pending = deferred(); splits.push(pending); return pending.promise;}
+        return {split: {train: 1, val: 1, test: 1}};
+      },
     },
     datasetImports: { revisions: async () => ({ revisions: [], active_revision: null }) },
   };
   const apiModule = { api, resolveApiUrl: x => `http://127.0.0.1:${port}${x}`, getProjectContextGeneration: () => generation,
-    getApiPersistenceIdentity: () => backend, getProjectContext: () => null };
+    getApiPersistenceIdentity: () => backend, getProjectContext: () => context };
   const inert = { getState: () => ({ invalidateForDataChange() {} }), setState() {} };
   const store = load(path.resolve(__dirname, '../../stores/useDatasetStore.ts'), {
     '../services/api': apiModule, './useProjectStore': { useProjectStore: projectStore },
@@ -100,15 +112,20 @@ function harness({ holdSave = false, holdImport = false, importFailure, saveFail
   }; visit(tree); return result; };
   const select = () => nodes(render()).find(node => node.type === 'button'
     && nodes(node).some(child => child.props?.children === 'Open Dataset Folder')).props.onClick();
-  const move = ({ id = project.project.id, transport = backend, backendPort = port, advanceGeneration = true } = {}) => {
+  const changeAuthority = ({transport = backend, backendPort = port, advanceGeneration = true} = {}) => {
     if (advanceGeneration) generation++;
-    backend = transport; port = backendPort;
+    backend = transport; port = backendPort; context = null;
+  };
+  const move = ({ id = project.project.id, transport = backend, backendPort = port, advanceGeneration = true } = {}) => {
+    changeAuthority({transport, backendPort, advanceGeneration});
     projectStore.setState({ projectDir: `/projects/${id}`, backendPort: port, project: {
-      id, name: id, project_dir: `/projects/${id}`, source_dataset_dir: `/source/${id}`,
+      id, name: id, project_dir: `/projects/${id}`, task: 'classification', source_dataset_dir: `/source/${id}`,
     } });
     store.setState({ folderPath: `/source/${id}`, datasetKey: `/source/${id}\0classification`, totalImages: 17, isLoading: false });
   };
-  return { store, project, render, select, pickers, saves, imports, summary, calls, move,
+  return { store, project, render, select, pickers, saves, imports, imageReads, imageRequests, imageResult, summaries, splits, summary, calls, move, changeAuthority,
+    acceptAuthority: () => {generation++; context = {workspace_id: `workspace-${backend}`, project_id: project.project.id, actor_id: 'actor', mode: backend === 'A' ? 'local' : 'team'};},
+    gallery: () => nodes(render()).filter(node => node.type === 'img').map(node => node.props.src),
     unmount: () => slots.forEach(slot => slot?.cleanup?.()) };
 }
 
@@ -179,4 +196,64 @@ test('failed validation never announces that unimported data merely failed to sa
   assert.equal(h.store.getState().sourceSaveError, null);
   assert.deepEqual(h.calls.map(call => call.kind), ['import']);
   assert.equal(h.project.project.source_dataset_dir, '/source/A');
+});
+
+for (const [name, change] of [['shared backend', {transport: 'B'}],
+  ['local backend port', {backendPort: 8002, advanceGeneration: false}], ['accepted context epoch', {}]]) {
+test(`a loaded gallery retires its old pixels when the ${name} changes before project acceptance`, async () => {
+  const h = harness({withImages: true});
+  await h.store.getState().importFolder('/source/A', 'classification');
+  assert.equal(h.gallery().length, 1, 'the original accepted source is visible');
+  h.changeAuthority(change);
+  assert.deepEqual(h.gallery(), [], 'old source thumbnails must not be rebound under the new authority');
+  await h.store.getState().importFolder('/source/current', 'classification');
+  assert.equal(h.gallery().length, 1, 'a freshly accepted source may show its own pixels');
+  assert.match(h.gallery()[0], /\/source\/current\/part.png/);
+});
+}
+
+test('a gallery refresh cannot dispatch the old source to a newly selected backend', async () => {
+  const h = harness({withImages: true});
+  await h.store.getState().importFolder('/source/A', 'classification');
+  const before = h.imageReads.slice();
+  h.changeAuthority({transport: 'B'});
+  await h.store.getState().loadImages();
+  assert.deepEqual(h.imageReads, before, 'a new source must be accepted before reading its gallery');
+});
+
+test('a late gallery reply cannot adopt old pixels after a same-folder backend change', async () => {
+  const h = harness({withImages: true, holdImages: true});
+  const pending = h.store.getState().importFolder('/source/A', 'classification'); await tick();
+  assert.equal(h.imageRequests.length, 1);
+  h.changeAuthority({transport: 'B'});
+  h.imageRequests[0].resolve(h.imageResult('/source/A')); await pending;
+  assert.deepEqual(h.store.getState().images, []);
+  assert.deepEqual(h.gallery(), []);
+});
+
+test('same-folder same-ID source restores once after backend acceptance, never during selection', async () => {
+  const h = harness({withImages: true});
+  await h.store.getState().importFolder('/source/A', 'classification'); h.render();
+  h.changeAuthority({transport: 'B'}); h.render(); await tick();
+  assert.deepEqual(h.summaries, [], 'the old folder cannot be read before project acceptance');
+  h.acceptAuthority(); h.render(); await h.store.getState().ensureImported('classification'); await tick(); h.render(); await tick();
+  assert.deepEqual(h.summaries, [{backend: 'B', folder_path: '/source/A', task: 'classification'}]);
+  assert.equal(h.gallery().length, 1, 'the accepted new backend supplies current pixels');
+  h.render(); await tick(); assert.equal(h.summaries.length, 1, 'acceptance does not create a restore loop');
+});
+
+test('old-source split and annotation refresh actions cannot dispatch on a new backend', async () => {
+  const h = harness({withImages: true});
+  await h.store.getState().importFolder('/source/A', 'classification');
+  const before = h.calls.slice(); h.changeAuthority({transport: 'B'});
+  await h.store.getState().applySplit(.5, .25, .25); await h.store.getState().annotationsChanged();
+  assert.deepEqual(h.calls, before);
+});
+
+test('a late old-backend split reply cannot change the current split summary', async () => {
+  const h = harness({withImages: true, holdSplit: true});
+  await h.store.getState().importFolder('/source/A', 'classification');
+  const before = h.store.getState().split, pending = h.store.getState().applySplit(.5, .25, .25); await tick();
+  h.changeAuthority({transport: 'B'}); h.splits[0].resolve({split: {train: 99, val: 0, test: 0}}); await pending;
+  assert.deepEqual(h.store.getState().split, before);
 });
