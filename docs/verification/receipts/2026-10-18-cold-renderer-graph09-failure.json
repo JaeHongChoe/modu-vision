@@ -1,0 +1,158 @@
+{
+  "schema": "modu-vision.source-renderer-graph-negative/v1",
+  "date": "2026-10-18",
+  "title": "Cold renderer login Graph09: strict admission drain refused",
+  "outcome": "FAILED",
+  "source_commit": "c522a50311226924659ba0ffddb49ebde79ec5e2",
+  "scope": {
+    "source_renderer_with_real_local_HTTP_and_WebSocket": true,
+    "private_source_fixture": true,
+    "native": false,
+    "installed_application": false,
+    "whole_lifespan": false,
+    "GUI_action_cell_credit": false,
+    "parent_credit": false,
+    "model_or_GPU_quality_credit": false,
+    "lease_release_authority": false,
+    "Root06_cause_proven": false
+  },
+  "execution": {
+    "attempts": 1,
+    "retries": 0,
+    "pytest_exit_code": 1,
+    "seconds": 27.456068999832496,
+    "deadline_expired": false,
+    "original_tool_start": {
+      "bytes": 129,
+      "sha256": "cbee48a8922eefe5882257d92a68c2299d53b2ae55cfc4bc044524017b696c0a"
+    },
+    "original_tool_completion": {
+      "bytes": 768,
+      "sha256": "773226d748c0067e503612d04b4007808eb581aae59bee8af0b6c9d7b31679e3"
+    },
+    "raw_result": {
+      "bytes": 647,
+      "sha256": "89ba31df51e661dc3960dca9d0689cf9bc7a3eee86a7a150308b06354c012349"
+    },
+    "pytest_log": {
+      "bytes": 21795,
+      "sha256": "f4e3ee5d9583922e89662ac27aefbf2190e57a4e508f0bcc186881fba680a045"
+    }
+  },
+  "source_and_custody": {
+    "tracked_files": 2921,
+    "tracked_bytes": 35429706,
+    "original_before_after_and_current_body_raw9_equal": true,
+    "Git_index_body_and_modes_equal": true,
+    "private_input_files": 44,
+    "frozen_provider_links": 321,
+    "runtime_executables": 3,
+    "protected_synthetic_files": 16,
+    "all_recorded_before_after_and_current_pins_equal": true,
+    "original_conftest_isolation_rows": 5,
+    "isolation_errors": 0,
+    "source_before": {
+      "bytes": 1037823,
+      "sha256": "b885b82d5fa69686ce85426481a53299e7cf5325286c95daf1dd25d17530f983"
+    },
+    "source_after": {
+      "bytes": 1037823,
+      "sha256": "b885b82d5fa69686ce85426481a53299e7cf5325286c95daf1dd25d17530f983"
+    },
+    "mode_inventory": {
+      "bytes": 329361,
+      "sha256": "dca47796a4823125e035aa1c3edf9040711e3dfbea3d932d4783e67f5199606c"
+    },
+    "preparation": {
+      "bytes": 132990,
+      "sha256": "82b1fc9d15aeb8d17bd9d9699c5059bb3ffde10f1705e171a1ab66d3aa43b6ff"
+    },
+    "private_finite_review": {
+      "bytes": 54377,
+      "sha256": "0bf46bae32c3b9b956086acab6e33730631498147cb8f83ccdc4059f516f0316"
+    }
+  },
+  "observations": {
+    "original_envelope_records": 54,
+    "all_54_completed_normally_and_released": true,
+    "final_pending_requests": 0,
+    "activity_failures": [],
+    "activity_uncertain": false,
+    "observer_all_settled": false,
+    "WS": {
+      "connections_observed": 1,
+      "dispatch_attempts": 17,
+      "dispatch_successes": 17,
+      "dispatch_errors": 0,
+      "normal_completed_released": true,
+      "transport_failed": false,
+      "framing_error": false,
+      "ClientDisconnected_recurrence_observed": false
+    },
+    "full_API_response_bodies": 52,
+    "HTTP_status_counts": {
+      "200": 36,
+      "401": 11,
+      "409": 5
+    },
+    "prelogin_401_detail": "Account session expired or unavailable",
+    "five_409_detail": "Select an authorized project first",
+    "shared_401_body_sha256": "86decbe3e71d8b53f7fc5e1287505e090cf4d004684e806af805824170ab86b8",
+    "shared_409_body_sha256": "407de163f2132e54e1876dab7599ee18cf866c8f0fb07de5ec3aad63da6a9a6a",
+    "page_errors": 0,
+    "callback_errors": 0,
+    "console_error_entries_retained": 17,
+    "unsupported_first_observed_after_login": true,
+    "first_unsupported_request_or_eligibility_predicate_proven": false
+  },
+  "closure": {
+    "controller_exit_code": 0,
+    "controller_reaped": true,
+    "context_browser_proxy_normal_close_fulfilled": true,
+    "response_capture_pending": 0,
+    "server_thread_alive": false,
+    "server_force_exit": false,
+    "server_errors": [],
+    "broadcaster_pending_tasks": 0,
+    "broadcaster_idle": true,
+    "outer_pytest_child_reaped": true,
+    "explicit_runtime_OS_signals_sent": false,
+    "final_admission_drain": {
+      "status": "refused",
+      "active_scopes": 0,
+      "unsupported": [
+        "uncovered_request_protocol"
+      ]
+    },
+    "whole_process_tree_or_lease_acceptance": false,
+    "whole_writer_coverage": false,
+    "process_tree_exit_verified": false,
+    "can_release_launch_lease": false
+  },
+  "evidence": {
+    "original_private_completion_readback": {
+      "bytes": 36980,
+      "sha256": "14200f94e06dbddd1651d6512dec850afe9542087eb355f529fc636e95bdeb9e"
+    },
+    "original_source_readback": {
+      "bytes": 203409,
+      "sha256": "52fb3cdd803320e01e7d30681f9e12f72daf724ded053750c3f1e69217517b62"
+    },
+    "original_graph": {
+      "bytes": 30629,
+      "sha256": "7963312cae81676249553894d09486cf27d163d40bb4944537f8595939ef2763"
+    },
+    "original_controller_close": {
+      "bytes": 844,
+      "sha256": "bff05b04582c3ff66ee39acbd0252e383abe3aa2ae93f0fc6546ec332343570e"
+    }
+  },
+  "limits": [
+    "Overall FAILED: normal individual envelopes and zero active scopes do not override sticky unsupported/refused admission or observer all_settled:false.",
+    "No ClientDisconnected recurrence was observed in this single attempt; this does not prove the prior native failure fixed.",
+    "Five genuine complete409 bodies show the no-selected-project denial path. A static eligibility-gap hypothesis is not an exact first-offending request or predicate attribution.",
+    "Eleven prelogin401 responses and seventeen resource console error entries remain recorded; this is not zero-error or whole-graph acceptance.",
+    "The fixture uses lifespan off with original periodic tasks, an owned host shim/proxy and six synthetic32x32 inputs. It establishes no native/installed/full-lifespan, action-cell, parent, model-quality or lease authority.",
+    "Credentials, private user names, absolute paths, raw request/response contents and images are excluded from this public derivative; original private evidence remains unchanged."
+  ]
+}
