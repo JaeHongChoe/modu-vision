@@ -1,0 +1,283 @@
+{
+  "schema": "modu-vision.source-regression-evidence/v1",
+  "scope": "Complete prepared patch POST response metadata only; actual original FastAPI/TestClient path with synthetic region truth, no browser/native/model-quality credit.",
+  "source": {
+    "base_private_checkpoint": "74fcce8bdc55c22036a8035a5641b7a5d81c2a3f",
+    "test_only_RED_checkpoint": "e2cbef64672c0cf5b84c89923d7f8912eb059735",
+    "fixed_GREEN_clean_checkpoint": "368b4e90631197c1371787e6cda86913d41f553d",
+    "tracked_count": 2936,
+    "tracked_bytes": 35570660,
+    "only_changed_files": [
+      "backend/engine/patch_preparation.py",
+      "backend/tests/test_patch_prepare_response.py"
+    ],
+    "product_sha256": "f3021d01cf4f03a81621cec80a67f5db54c26ac0cbf22ae7088c1481718a5e9e",
+    "permanent_test_sha256": "7c6ee8018033a1156ece1413221b1fbced2b0cc328097b29f005b6a52199f8fb",
+    "full_diff": {
+      "bytes": 4893,
+      "sha256": "5b849b9fe67542239305bad104e1402577e645714f5bf02a18d321bcf9bc2ee6",
+      "file": "final-two-file.diff"
+    },
+    "actual_function_preservation": "All guards, validation, copying, saved payload, staging, rename and cleanup unchanged; two return-dict lines add four fields from the already-validated manifest."
+  },
+  "causal_evidence": {
+    "prior_actual_browser03": "Successful reopen remains unchanged; its pre-reload screenshot exposed blank size/stride metadata. Same original test explicitly restored16px/16px after reload; this is a separate defect.",
+    "failure_chain": "Prepare returns dataset path/classes/count but omits four metadata fields; original renderer immediately stores that exact response via addDataset and renders undefined size/stride. Reload datasets has complete metadata.",
+    "RED": {
+      "source_head": "e2cbef64672c0cf5b84c89923d7f8912eb059735",
+      "clean_source": true,
+      "tracked_count": 2936,
+      "test_sha256": "7c6ee8018033a1156ece1413221b1fbced2b0cc328097b29f005b6a52199f8fb",
+      "result": "1 intended functional failure",
+      "wrapper_seconds": 6.177274124929681,
+      "original_pytest_child_pid": 6423,
+      "natural_wait_reaped": true,
+      "signals_sent": false,
+      "all_inputs_before_after_exact": true,
+      "isolation_rows": 5,
+      "isolation_errors": [],
+      "actual_pytest_status": 1,
+      "log": {
+        "bytes": 3985,
+        "sha256": "6b887512a726029f004ca5d5b3c2d5eab9d8ef3940afbad29a8cb73603ab2b8d",
+        "file": "pytest.log"
+      },
+      "junit": {
+        "bytes": 4381,
+        "sha256": "cbef4b5f25703d50837f1e9d60d2907938323c2cb14d31cf105fd7cc33836e49",
+        "file": "junit.xml"
+      },
+      "isolation": {
+        "bytes": 22042,
+        "sha256": "f5c721b0f97f4f89551a8089bb269a8174acf52922cd6b501d0f86be3d076380",
+        "file": "isolation-final.json"
+      }
+    },
+    "RED_assertion": "Original POST200 and original GETmanifest/datasets200 succeeded; complete seven-field comparison failed only normal_class/patch_size/stride/provenance being missing.",
+    "GREEN": {
+      "source_head": "368b4e90631197c1371787e6cda86913d41f553d",
+      "clean_source": true,
+      "tracked_count": 2936,
+      "test_sha256": "7c6ee8018033a1156ece1413221b1fbced2b0cc328097b29f005b6a52199f8fb",
+      "result": "2 passed",
+      "wrapper_seconds": 5.393075708067045,
+      "original_pytest_child_pid": 6517,
+      "natural_wait_reaped": true,
+      "signals_sent": false,
+      "all_inputs_before_after_exact": true,
+      "isolation_rows": 7,
+      "isolation_errors": [],
+      "actual_pytest_status": 0,
+      "log": {
+        "bytes": 283,
+        "sha256": "84b8e660cf033f29b541103cd6cc14b8cc8132bff95a044c887f33f55998074c",
+        "file": "pytest.log"
+      },
+      "junit": {
+        "bytes": 521,
+        "sha256": "628793fb3709377d66913987c16d657cc9edd0043e71481966036822aeb25473",
+        "file": "junit.xml"
+      },
+      "isolation": {
+        "bytes": 32179,
+        "sha256": "3f7c4918c0251ab12fa754aad5a31b04eff2445a9b23361d4ed8b3a8587de01f",
+        "file": "isolation-final.json"
+      }
+    },
+    "same_test_body_RED_GREEN": true
+  },
+  "repair": {
+    "fields": [
+      "normal_class",
+      "patch_size",
+      "stride",
+      "provenance"
+    ],
+    "origin": "Existing load_patch_manifest(staging) result, validated before the unchanged rename(target).",
+    "no_extra_fetch_load_or_IO": true,
+    "no_handler_permission_or_path_guard_change": true,
+    "staging_root_not_serialized_in_new_metadata": "Provenance contains manifest/source hashes, relative copied-image mapping and canonical original source path; target dataset_path retains its original value."
+  },
+  "permanent_controls": {
+    "test": "backend/tests/test_patch_prepare_response.py::test_prepare_response_contains_the_complete_saved_dataset_metadata",
+    "real_prepare_200_full_parsed_response_metadata_equals_manifest_and_only_datasets_row": true,
+    "seven_common_fields": [
+      "dataset_path",
+      "classes",
+      "normal_class",
+      "patch_size",
+      "stride",
+      "patch_count",
+      "provenance"
+    ],
+    "nondefault_normal_class": "NORMAL",
+    "patch_size": 16,
+    "stride": 16,
+    "patch_count": 12,
+    "split_counts": {
+      "train": 4,
+      "val": 4,
+      "test": 4
+    },
+    "source_three_32x32_PNG_and_three_label_JSON_preserved": true,
+    "copied_original_hashes_and_manifest_SHA_verified": true,
+    "manifest_datasets_reads_preserve_prepared_project_files": true,
+    "training_jobs_empty": true,
+    "existing_adjacent_control": "backend/tests/test_patch_preparation.py::test_patch_preparation_uses_manual_regions_and_preserves_sources",
+    "parsed_response_asserted_in_real_test": "Full HTTP response body was not separately exported; the ordinary permanent test asserts parsed response equality. Raw pytest log/JUnit and generated fixture manifests are retained."
+  },
+  "isolation": {
+    "original_backend_conftest_explicit_preload": true,
+    "MODU_TEST_DATA_DIR_fresh_before_application_imports": true,
+    "reviewed_isolation_probe_sha256": "5a23a61a2e53a318a9d38a8e89069c10e549cda19f34c45cfb1343ceb3acd101",
+    "full_tracked_source_raw9_SHA_before_after_exact": true,
+    "provider_symlink_witness": "321 targets/inode/mode/mtime/ctime, not raw9",
+    "selected_provider_files_raw9_SHA": 10,
+    "resolved_runtime_files_raw9_SHA": 3,
+    "original_pytest_120s_frame": true,
+    "no_forced_signals_or_cleanup": true
+  },
+  "limitations": {
+    "actual_pytest_Popen_children_executed": true,
+    "no_standalone_native_product_process": true,
+    "no_model_checkpoint_or_training_or_inference": true,
+    "no_browser_UI_after_fix_executed": true,
+    "pre_reload_visible_numeric_fix_not_yet_observed": true,
+    "old03_success_and_prior01_02_failures_not_rewritten_or_repinned": true,
+    "no_registry_or_parent_cell_promotion": true,
+    "no_PUB_write": true,
+    "no_new_TypeScript_gate": "Backend-only change; no renderer or TypeScript files changed."
+  },
+  "raw_evidence_refs_path_redacted": [
+    {
+      "bytes": 23290,
+      "sha256": "8c29387d1b109f160368c556def84bb3f3df26dcef180c2dc4b49e3d590b5d77",
+      "file": "result.json",
+      "phase": "red"
+    },
+    {
+      "bytes": 1214283,
+      "sha256": "1b84ba02eb89f0d41d6f3b42b95c4266b267000b8383e430abf6b91adb9f7ea6",
+      "file": "inputs-before.json",
+      "phase": "red"
+    },
+    {
+      "bytes": 1214283,
+      "sha256": "1b84ba02eb89f0d41d6f3b42b95c4266b267000b8383e430abf6b91adb9f7ea6",
+      "file": "inputs-after.json",
+      "phase": "red"
+    },
+    {
+      "bytes": 3985,
+      "sha256": "6b887512a726029f004ca5d5b3c2d5eab9d8ef3940afbad29a8cb73603ab2b8d",
+      "file": "pytest.log",
+      "phase": "red"
+    },
+    {
+      "bytes": 4381,
+      "sha256": "cbef4b5f25703d50837f1e9d60d2907938323c2cb14d31cf105fd7cc33836e49",
+      "file": "junit.xml",
+      "phase": "red"
+    },
+    {
+      "bytes": 1483,
+      "sha256": "9aa97d024796aacb70eeb778e3f1a66b71032a5ac0d54a36f4ef08dde5596a86",
+      "file": "invocation.json",
+      "phase": "red"
+    },
+    {
+      "bytes": 768,
+      "sha256": "790a332de6797528889b85e3d95f7c1f91c72cfefc38a8a9d877ea9d21207ca2",
+      "file": "original-popen.json",
+      "phase": "red"
+    },
+    {
+      "bytes": 22042,
+      "sha256": "f5c721b0f97f4f89551a8089bb269a8174acf52922cd6b501d0f86be3d076380",
+      "file": "isolation-final.json",
+      "phase": "red"
+    },
+    {
+      "bytes": 131,
+      "sha256": "3eb0307b5b82a9b60bc7b0b1cb09e7c1b1c2bf26c0810bd181975f688f8eb066",
+      "file": "red-original-tool-start.json",
+      "phase": "red"
+    },
+    {
+      "bytes": 491,
+      "sha256": "420373f3286ec8428b489bb53fa8f5fc0c773567dd4165ad3cf74922736507af",
+      "file": "red-original-tool-completion.json",
+      "phase": "red"
+    },
+    {
+      "bytes": 33765,
+      "sha256": "12b87bbde53d44c7970815aa8e0334cf3afe6b213a60783bd7cef0d9ee7a4fa2",
+      "file": "result.json",
+      "phase": "green"
+    },
+    {
+      "bytes": 1214283,
+      "sha256": "dac0f80b1f9601a96e16f7e329cfc6c7f1423a746594f94e5ce1f72859204b9b",
+      "file": "inputs-before.json",
+      "phase": "green"
+    },
+    {
+      "bytes": 1214283,
+      "sha256": "dac0f80b1f9601a96e16f7e329cfc6c7f1423a746594f94e5ce1f72859204b9b",
+      "file": "inputs-after.json",
+      "phase": "green"
+    },
+    {
+      "bytes": 283,
+      "sha256": "84b8e660cf033f29b541103cd6cc14b8cc8132bff95a044c887f33f55998074c",
+      "file": "pytest.log",
+      "phase": "green"
+    },
+    {
+      "bytes": 521,
+      "sha256": "628793fb3709377d66913987c16d657cc9edd0043e71481966036822aeb25473",
+      "file": "junit.xml",
+      "phase": "green"
+    },
+    {
+      "bytes": 1534,
+      "sha256": "ea7add9b94330587f00053c4c24ca5ade4764fd79da2226ce7f54e1f09d6ad1f",
+      "file": "invocation.json",
+      "phase": "green"
+    },
+    {
+      "bytes": 817,
+      "sha256": "ab91e5503259175a49672f8485bd894f55a45fdb9ef8d8079d132d39ad3f9fdd",
+      "file": "original-popen.json",
+      "phase": "green"
+    },
+    {
+      "bytes": 32179,
+      "sha256": "3f7c4918c0251ab12fa754aad5a31b04eff2445a9b23361d4ed8b3a8587de01f",
+      "file": "isolation-final.json",
+      "phase": "green"
+    },
+    {
+      "bytes": 131,
+      "sha256": "dbd4c548b76c6f5dd07e3f3c11cc66dd54fb5e7c7b8532cf07def0e3526c498c",
+      "file": "green-original-tool-start.json",
+      "phase": "green"
+    },
+    {
+      "bytes": 487,
+      "sha256": "96d7239a9484dec7ec7689c8cc2acbd994f5f530c5e1802b03040ecb6debae88",
+      "file": "green-original-tool-completion.json",
+      "phase": "green"
+    }
+  ],
+  "private_full_checkpoint": {
+    "bytes": 4943,
+    "sha256": "208bf01a41991b38ecfca6d26548c33f9b89c0f55a5c2b56816c6abf410bea8b",
+    "file": "final-private-checkpoint.json"
+  },
+  "old03_generic": {
+    "bytes": 1226,
+    "sha256": "dd04cb6848d18d8343d608b066d093faf92e6e372fa16ac88ef7f44b00858c90",
+    "file": "2026-10-18-patch-prepare-reopen-current-browser.json"
+  }
+}

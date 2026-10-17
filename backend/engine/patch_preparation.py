@@ -115,6 +115,8 @@ def prepare_patch_dataset(source, target, *, patch_size=256, stride=128,
         manifest = load_patch_manifest(staging)
         staging.rename(target)
         return {'dataset_path': str(target), 'classes': classes, 'patch_count': len(rows),
+                'normal_class': manifest.normal_class, 'patch_size': manifest.patch_size,
+                'stride': manifest.stride, 'provenance': manifest.provenance,
                 'split_counts': manifest.provenance['split_counts'], 'warnings': warnings,
                 'source_dataset_path': str(source)}
     except Exception:
