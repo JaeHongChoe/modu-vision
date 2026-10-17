@@ -1,0 +1,1694 @@
+{
+  "schema": "modu-vision.classification-import-invalid-current-browser-details/v1",
+  "source_sha": "d29485680c75f00baed9085cd17c871e647128a3",
+  "source_dirty": false,
+  "test": "scripts/e2e/classification-import-invalid-controls.spec.ts::classification folder import rejects a missing source and restores owning label and partition counts on reload",
+  "test_source_sha256": "714c90a6e30b246b19e5e745afcc13e2f2978033954f0445e9d0c7e819221f45",
+  "generic_receipt_sha256": "7ae278472d3549fece0f9847d372a14e724ef8f6f3b500ce223ec5053565bf6a",
+  "report_sha256": "8d07145f9b17ea3ed267d42b58cf281a468936f95660253ec98dccf04151a6f8",
+  "harness_sha256": "d10fba0d3f997374f70a1841dae582e418dd8032444d43f0c4b4cef454d2fd85",
+  "launch_sha256": "33d061221dc4ac6750c7ee0da868d5bd3d69193871c1e17b46934f190e19f9a3",
+  "wrapper_result_sha256": "548e28dc64cb0917a77730b3ced3786e28f4ce45f6a0d2b9454fd3f98e6de925",
+  "teardown_sha256": "96fe0fd00c96d13bfbf8798133630b19ac5dc46640798ff2e748533d78ef9d86",
+  "source_dependencies": {
+    "scripts/e2e/classification-import-invalid-controls.spec.ts": "714c90a6e30b246b19e5e745afcc13e2f2978033954f0445e9d0c7e819221f45",
+    "scripts/e2e/fixtures/test.ts": "49171e2d0d4d7d9559416fdb43bc7dae9394129bbc237fe4f2a4cea0a7afa480",
+    "scripts/e2e/fixtures/harness.cjs": "171460c1cf1697b7a44b8f86a197d2b944928381f736f81af304412126464975",
+    "scripts/e2e/fixtures/desktop-host-shim.ts": "4f598862ec0e08189628c72bbb552f72bf8fd73f5a9a05b8da1d3ddf516dcfa6",
+    "scripts/e2e/fixtures/remaining-project-handoff.ts": "7a7c74a2f42a5d6ad991dadc97626c1f8330f962edaf73fd461d31f9c4764904",
+    "scripts/e2e/qa/appFlow.ts": "4eed3e5dad1d9d65a6b19fc9bb51a1f9b0e23911a39e7f255220bec0ce37fea2",
+    "playwright.config.ts": "91495f41ce2b89d5472fc5851c4fc9c5937684958ac453d0a6a759df2a10b936",
+    "src/renderer/components/dataset/DatasetStudio.tsx": "05001ce30dd9b6c8490735f1c2ce23140f9bc4651fd4ed95bb9b6fc528ceca3b",
+    "src/renderer/components/dataset/DatasetStatisticsPanel.tsx": "3f4e30772fdcde856f8c2e294558607ea0edac3966ed11870e16a848a6a3d925",
+    "src/renderer/stores/useDatasetStore.ts": "2be93b612936ab7fc9f515382c205737e7a22237fc7efe5dfa58434efd004cb3",
+    "src/renderer/stores/useProjectStore.ts": "3eca2fbca3e3a5cd528dee9f80f87fe4b126d52392b9b7bdececc5b0e48453c3",
+    "src/renderer/services/api.ts": "ba82fc801fb827ab16b453ee4722ede933a641177be9994f6666f82965bc472e",
+    "backend/api/routes_dataset.py": "7a4bcea5d2aed6cee0f61d6a0d5c8a09e048dcc38e644d83c1c301ac59c7e801",
+    "backend/api/routes_project.py": "db435109bb82cedaea63b7a4ef3a7994757839f1ccbf50e399dbc6ec7967e97f"
+  },
+  "result": {
+    "status": "passed",
+    "attempts": 1,
+    "retries": 0,
+    "workers": 1,
+    "skipped": 0,
+    "flaky": 0,
+    "unexpected": 0,
+    "wrapper_seconds": 14.849086374975741,
+    "report_duration_ms": 14408.752
+  },
+  "action_fit": {
+    "cells": [
+      "F019.native-classification-import-label-summary.invalid",
+      "F022.native-classification-partitions-import-reopen.invalid"
+    ],
+    "previous_states": [
+      "pending",
+      "pending"
+    ],
+    "scope": "One genuine missing-folder input from the ordinary folder import action; two narrowly identified label-summary and partition-display invalid dimensions",
+    "not_duplicate_of": "Prior source-empty disabled controls or stale-picker project/backend handoff; this case issues a genuine owning import POST and reads its real404",
+    "parent_state_change": false
+  },
+  "actual_UI": {
+    "controlled_boundary": "desktop host shim selectFolder return value only; owned empty directory was created, chooser held, then that exact empty directory removed and returned",
+    "real_native_picker": false,
+    "source_electron": false,
+    "installed_native": false,
+    "request_response_body_override": false,
+    "actual_import_status": 404,
+    "error_code": "ERR_NO_DATA",
+    "error_detail": "Folder not found: <owned-current-browser-run>/browser-01/ws/0-33ec0287-r0/owned-removed-chooser-answer",
+    "same_original_Request_context_and_full_body": true,
+    "body_receipts": [
+      {
+        "kind": "original UI response",
+        "label": "setup-import",
+        "method": "POST",
+        "url": "<owned-renderer-origin>/api/dataset/import",
+        "request_body": {
+          "folder_path": "<owned-current-browser-run>/browser-01/ws/0-33ec0287-r0/owned-classification-source",
+          "task": "classification",
+          "validate_images": true
+        },
+        "project_id": "3a1b1f9c",
+        "context": {
+          "workspace_id": "0e710b251f044c50984b952159a266ab",
+          "project_id": "3a1b1f9c",
+          "actor_id": "00605f1676094b01894ff23a39029292",
+          "mode": "local"
+        },
+        "status": 200,
+        "response": {
+          "status": "success",
+          "total_images": 6,
+          "source_images": 6,
+          "unlabeled_images": 0,
+          "classes": {
+            "OK": 3,
+            "NG": 3
+          },
+          "split": {
+            "train": 3,
+            "val": 2,
+            "test": 1
+          },
+          "corrupted_images": [],
+          "validation": {
+            "requested": true,
+            "checked_images": 6,
+            "complete": true,
+            "scope": "all images: every image file under the folder was decoded"
+          },
+          "split_supported": true,
+          "split_unavailable_reason": null
+        },
+        "response_sha256": "c952dc35cc8dfc6d662ddfc2a0327b9c92f7a5ae01b524d191786f7d2a54e5d3",
+        "bytes": 351,
+        "raw_file": "<owned-current-browser-run>/browser-01/ws/0-33ec0287-r0/logs/setup-import-raw-response.json",
+        "same_Request": true,
+        "main_frame": true,
+        "finished": true,
+        "deadline": 17572.939958,
+        "completed": 7768.611125
+      },
+      {
+        "kind": "original UI response",
+        "label": "setup-source",
+        "method": "PUT",
+        "url": "<owned-renderer-origin>/api/project/update",
+        "request_body": {
+          "source_dataset_dir": "<owned-current-browser-run>/browser-01/ws/0-33ec0287-r0/owned-classification-source"
+        },
+        "project_id": "3a1b1f9c",
+        "context": {
+          "workspace_id": "0e710b251f044c50984b952159a266ab",
+          "project_id": "3a1b1f9c",
+          "actor_id": "00605f1676094b01894ff23a39029292",
+          "mode": "local"
+        },
+        "status": 200,
+        "response": {
+          "schema_version": 1,
+          "id": "3a1b1f9c",
+          "name": "Owned invalid classification import",
+          "task": "classification",
+          "project_dir": "<owned-current-browser-run>/browser-01/ws/0-33ec0287-r0/projects/owned_invalid_classification_import",
+          "dataset_dir": "<owned-current-browser-run>/browser-01/ws/0-33ec0287-r0/projects/owned_invalid_classification_import/dataset",
+          "models_dir": "<owned-current-browser-run>/browser-01/ws/0-33ec0287-r0/projects/owned_invalid_classification_import/models",
+          "reports_dir": "<owned-current-browser-run>/browser-01/ws/0-33ec0287-r0/projects/owned_invalid_classification_import/reports",
+          "annotations_dir": "<owned-current-browser-run>/browser-01/ws/0-33ec0287-r0/projects/owned_invalid_classification_import/annotations",
+          "active_labelset_id": "default",
+          "description": "",
+          "active_preset": "fast",
+          "source_dataset_dir": "<owned-current-browser-run>/browser-01/ws/0-33ec0287-r0/owned-classification-source",
+          "created_at": "2026-10-17T08:55:54Z",
+          "updated_at": "2026-10-17T08:55:54Z"
+        },
+        "response_sha256": "94a51b407974a319a6469d20e92b965f6f482d620abc2c5656daf476d4ac6ab0",
+        "bytes": 1584,
+        "raw_file": "<owned-current-browser-run>/browser-01/ws/0-33ec0287-r0/logs/setup-source-raw-response.json",
+        "same_Request": true,
+        "main_frame": true,
+        "finished": true,
+        "deadline": 17572.939958,
+        "completed": 7786.827958
+      },
+      {
+        "kind": "original UI response",
+        "label": "invalid-import",
+        "method": "POST",
+        "url": "<owned-renderer-origin>/api/dataset/import",
+        "request_body": {
+          "folder_path": "<owned-current-browser-run>/browser-01/ws/0-33ec0287-r0/owned-removed-chooser-answer",
+          "task": "classification",
+          "validate_images": true
+        },
+        "project_id": "3a1b1f9c",
+        "context": {
+          "workspace_id": "0e710b251f044c50984b952159a266ab",
+          "project_id": "3a1b1f9c",
+          "actor_id": "00605f1676094b01894ff23a39029292",
+          "mode": "local"
+        },
+        "status": 404,
+        "response": {
+          "detail": {
+            "status": "error",
+            "error_code": "ERR_NO_DATA",
+            "canonical_code": "ERR_002",
+            "title_en": "Insufficient Training Samples",
+            "title_kr": "\ud559\uc2b5 \ub370\uc774\ud130 \ubd80\uc871",
+            "title_ko": "\ud559\uc2b5 \ub370\uc774\ud130 \ubd80\uc871",
+            "description_en": "The dataset does not contain the minimum required number of samples per class (at least 2 samples per class required for train/val splitting; recommended minimum 10).",
+            "description_kr": "\ub370\uc774\ud130\uc14b\uc758 \ud074\ub798\uc2a4\ubcc4 \uc0d8\ud50c \uc218\uac00 \ucd5c\uc18c \uae30\uc900\uc5d0 \ubbf8\ub2ec\ud569\ub2c8\ub2e4 (\ud559\uc2b5/\uac80\uc99d \uc138\ud2b8 \ubd84\ud560\uc744 \uc704\ud574 \ud074\ub798\uc2a4\ub2f9 \ucd5c\uc18c 2\uac1c \uc774\uc0c1 \ud544\uc694, \uad8c\uc7a5 \ucd5c\uc18c 10\uac1c \uc774\uc0c1).",
+            "message_en": "The dataset does not contain the minimum required number of samples per class (at least 2 samples per class required for train/val splitting; recommended minimum 10).",
+            "message_ko": "\ub370\uc774\ud130\uc14b\uc758 \ud074\ub798\uc2a4\ubcc4 \uc0d8\ud50c \uc218\uac00 \ucd5c\uc18c \uae30\uc900\uc5d0 \ubbf8\ub2ec\ud569\ub2c8\ub2e4 (\ud559\uc2b5/\uac80\uc99d \uc138\ud2b8 \ubd84\ud560\uc744 \uc704\ud574 \ud074\ub798\uc2a4\ub2f9 \ucd5c\uc18c 2\uac1c \uc774\uc0c1 \ud544\uc694, \uad8c\uc7a5 \ucd5c\uc18c 10\uac1c \uc774\uc0c1).",
+            "cause_en": "Supervised vision models require sufficient labeled examples across all classes for statistical learning.",
+            "cause_kr": "\uc9c0\ub3c4 \ud559\uc2b5 \ube44\uc804 \ubaa8\ub378\uc740 \ud1b5\uacc4\uc801 \uc77c\ubc18\ud654\ub97c \uc704\ud574 \ubaa8\ub4e0 \ud074\ub798\uc2a4\uc5d0 \uac78\uccd0 \ucda9\ubd84\ud55c \ub77c\ubca8\ub9c1\ub41c \uc0d8\ud50c\uc774 \ud544\uc694\ud569\ub2c8\ub2e4.",
+            "remediation_en": "Add more labeled images to the deficient classes or execute the Procedural Synthetic Dataset Generator to augment defective samples.",
+            "remediation_kr": "\ubd80\uc871\ud55c \ud074\ub798\uc2a4\uc5d0 \ub77c\ubca8\ub9c1\ub41c \uc774\ubbf8\uc9c0\ub97c \ucd94\uac00\ud558\uac70\ub098 \uc808\ucc28\uc801 \ud569\uc131 \ub370\uc774\ud130 \uc0dd\uc131\uae30(Synthetic Generator)\ub97c \uc2e4\ud589\ud558\uc5ec \uacb0\ud568 \uc0d8\ud50c\uc744 \ubcf4\ucda9\ud558\uc2ed\uc2dc\uc624.",
+            "remediation": "\ubd80\uc871\ud55c \ud074\ub798\uc2a4\uc5d0 \ub77c\ubca8\ub9c1\ub41c \uc774\ubbf8\uc9c0\ub97c \ucd94\uac00\ud558\uac70\ub098 \uc808\ucc28\uc801 \ud569\uc131 \ub370\uc774\ud130 \uc0dd\uc131\uae30(Synthetic Generator)\ub97c \uc2e4\ud589\ud558\uc5ec \uacb0\ud568 \uc0d8\ud50c\uc744 \ubcf4\ucda9\ud558\uc2ed\uc2dc\uc624.",
+            "action": "open_synthetic_dialog",
+            "severity": "high",
+            "auto_fixable": false,
+            "details": "Folder not found: <owned-current-browser-run>/browser-01/ws/0-33ec0287-r0/owned-removed-chooser-answer"
+          }
+        },
+        "response_sha256": "10fbf327080cad622503241531c0fb9a1ba6018fff824bc07ee28ee039ba54d7",
+        "bytes": 2067,
+        "raw_file": "<owned-current-browser-run>/browser-01/ws/0-33ec0287-r0/logs/invalid-import-raw-response.json",
+        "same_Request": true,
+        "main_frame": true,
+        "finished": true,
+        "deadline": 18037.323666,
+        "completed": 8089.376416
+      },
+      {
+        "kind": "original UI response",
+        "label": "reload-summary",
+        "method": "GET",
+        "url": "<owned-renderer-origin>/api/dataset/current-summary?folder_path=<owned-current-browser-run>%2Fbrowser-01%2Fws%2F0-33ec0287-r0%2Fowned-classification-source&task=classification",
+        "request_body": null,
+        "project_id": "3a1b1f9c",
+        "context": {
+          "workspace_id": "0e710b251f044c50984b952159a266ab",
+          "project_id": "3a1b1f9c",
+          "actor_id": "00605f1676094b01894ff23a39029292",
+          "mode": "local"
+        },
+        "status": 200,
+        "response": {
+          "status": "success",
+          "total_images": 6,
+          "source_images": 6,
+          "unlabeled_images": 0,
+          "classes": {
+            "OK": 3,
+            "NG": 3
+          },
+          "split": {
+            "train": 3,
+            "val": 2,
+            "test": 1
+          },
+          "corrupted_images": [],
+          "validation": {
+            "requested": true,
+            "checked_images": 6,
+            "complete": true,
+            "scope": "all images: every image file under the folder was decoded"
+          },
+          "split_supported": true,
+          "split_unavailable_reason": null
+        },
+        "response_sha256": "c952dc35cc8dfc6d662ddfc2a0327b9c92f7a5ae01b524d191786f7d2a54e5d3",
+        "bytes": 351,
+        "raw_file": "<owned-current-browser-run>/browser-01/ws/0-33ec0287-r0/logs/reload-summary-raw-response.json",
+        "same_Request": true,
+        "main_frame": true,
+        "finished": true,
+        "deadline": 18222.040166,
+        "completed": 8438.010958
+      }
+    ],
+    "original_absolute_10s_action_and_reload_guards_passed": true,
+    "visible_failure_state": "real error shown; zero transient gallery and no accepted label-statistics chips",
+    "ordinary_reload": "prior owning saved source,6 eligible/6 labeled/0 unlabeled, Train3/Val2/Test1, gallery readiness/dimensions/paths restored",
+    "full_RGB_canvas_parity_claim": false
+  },
+  "protection": {
+    "before_after_invalid_reload_exact": true,
+    "original_source_and_whole_project_namespace_preserved": true,
+    "project_source_PUTs_after_baseline": 0,
+    "own_invalid_import_POSTs_after_baseline": 1,
+    "no_training_model_or_worker_dispatch": true,
+    "before": {
+      "source": {
+        ".": {
+          "kind": "directory",
+          "raw7": [
+            "16777231",
+            "177432450",
+            "16877",
+            "5",
+            "160",
+            "1792227354068610358",
+            "1792227354068610358"
+          ]
+        },
+        "test": {
+          "kind": "directory",
+          "raw7": [
+            "16777231",
+            "177432462",
+            "16877",
+            "3",
+            "96",
+            "1792227354068648317",
+            "1792227354068648317"
+          ]
+        },
+        "test/NG": {
+          "kind": "directory",
+          "raw7": [
+            "16777231",
+            "177432463",
+            "16877",
+            "3",
+            "96",
+            "1792227354068794319",
+            "1792227354068794319"
+          ]
+        },
+        "test/NG/f.png": {
+          "kind": "file",
+          "raw7": [
+            "16777231",
+            "177432464",
+            "33188",
+            "1",
+            "1840",
+            "1792227354068834112",
+            "1792227354068834112"
+          ],
+          "sha256": "71e6437c0779f4f440640d9defea3454220f7f029b950e1b68f53d6d210e3aaa"
+        },
+        "train": {
+          "kind": "directory",
+          "raw7": [
+            "16777231",
+            "177432451",
+            "16877",
+            "4",
+            "128",
+            "1792227354067808804",
+            "1792227354067808804"
+          ]
+        },
+        "train/NG": {
+          "kind": "directory",
+          "raw7": [
+            "16777231",
+            "177432455",
+            "16877",
+            "3",
+            "96",
+            "1792227354067998349",
+            "1792227354067998349"
+          ]
+        },
+        "train/NG/c.png": {
+          "kind": "file",
+          "raw7": [
+            "16777231",
+            "177432456",
+            "33188",
+            "1",
+            "1808",
+            "1792227354068049141",
+            "1792227354068049141"
+          ],
+          "sha256": "407a1dc3ca8c6317be95f99cd7cda32493fe7d6be882f69f4e7a368289f6269a"
+        },
+        "train/OK": {
+          "kind": "directory",
+          "raw7": [
+            "16777231",
+            "177432452",
+            "16877",
+            "4",
+            "128",
+            "1792227354067649468",
+            "1792227354067649468"
+          ]
+        },
+        "train/OK/a.png": {
+          "kind": "file",
+          "raw7": [
+            "16777231",
+            "177432453",
+            "33188",
+            "1",
+            "1780",
+            "1792227354067280213",
+            "1792227354067280213"
+          ],
+          "sha256": "8539772d38c545d1ba183b4f18f894f84c9078d7fc36e336c5d7ec2afb1d68ee"
+        },
+        "train/OK/b.png": {
+          "kind": "file",
+          "raw7": [
+            "16777231",
+            "177432454",
+            "33188",
+            "1",
+            "1792",
+            "1792227354067729094",
+            "1792227354067729094"
+          ],
+          "sha256": "c74ed1640e03e43fe95eb290c1403727fdc6469db0248690a3e30eee4dbf16df"
+        },
+        "val": {
+          "kind": "directory",
+          "raw7": [
+            "16777231",
+            "177432457",
+            "16877",
+            "4",
+            "128",
+            "1792227354068386105",
+            "1792227354068386105"
+          ]
+        },
+        "val/NG": {
+          "kind": "directory",
+          "raw7": [
+            "16777231",
+            "177432460",
+            "16877",
+            "3",
+            "96",
+            "1792227354068526648",
+            "1792227354068526648"
+          ]
+        },
+        "val/NG/e.png": {
+          "kind": "file",
+          "raw7": [
+            "16777231",
+            "177432461",
+            "33188",
+            "1",
+            "1829",
+            "1792227354068561816",
+            "1792227354068561816"
+          ],
+          "sha256": "143e3c59718c6d55934341861ab1aab82671736210294b61df9f4f7abe4c6c9d"
+        },
+        "val/OK": {
+          "kind": "directory",
+          "raw7": [
+            "16777231",
+            "177432458",
+            "16877",
+            "3",
+            "96",
+            "1792227354068309687",
+            "1792227354068309687"
+          ]
+        },
+        "val/OK/d.png": {
+          "kind": "file",
+          "raw7": [
+            "16777231",
+            "177432459",
+            "33188",
+            "1",
+            "1795",
+            "1792227354068342979",
+            "1792227354068342979"
+          ],
+          "sha256": "1593ce692e5dd3a165d4bf3d10207647c7ffeca7a94928d4b7c0a85a4e46f4b9"
+        }
+      },
+      "project": {
+        ".": {
+          "kind": "directory",
+          "raw7": [
+            "16777231",
+            "177432466",
+            "16877",
+            "14",
+            "448",
+            "1792227354744663422",
+            "1792227354744663422"
+          ]
+        },
+        ".metadata_locks": {
+          "kind": "directory",
+          "raw7": [
+            "16777231",
+            "177432539",
+            "16877",
+            "3",
+            "96",
+            "1792227354589998399",
+            "1792227354589998399"
+          ]
+        },
+        ".metadata_locks/4ba8a0bdc18a415f4d56a7bd4705197b936159d54ff33e4c9bea4f097f5721a5.lock": {
+          "kind": "file",
+          "raw7": [
+            "16777231",
+            "177432540",
+            "33188",
+            "1",
+            "0",
+            "1792227354589994066",
+            "1792227354590059567"
+          ],
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "annotations": {
+          "kind": "directory",
+          "raw7": [
+            "16777231",
+            "177432470",
+            "16877",
+            "3",
+            "96",
+            "1792227354604859213",
+            "1792227354604859213"
+          ]
+        },
+        "annotations/by_dataset": {
+          "kind": "directory",
+          "raw7": [
+            "16777231",
+            "177432543",
+            "16877",
+            "3",
+            "96",
+            "1792227354605015090",
+            "1792227354605015090"
+          ]
+        },
+        "annotations/by_dataset/8abed332c6799097": {
+          "kind": "directory",
+          "raw7": [
+            "16777231",
+            "177432544",
+            "16877",
+            "3",
+            "96",
+            "1792227354605130300",
+            "1792227354605130300"
+          ]
+        },
+        "annotations/by_dataset/8abed332c6799097/metadata": {
+          "kind": "directory",
+          "raw7": [
+            "16777231",
+            "177432545",
+            "16877",
+            "3",
+            "96",
+            "1792227354705943738",
+            "1792227354705943738"
+          ]
+        },
+        "annotations/by_dataset/8abed332c6799097/metadata/workflow.json": {
+          "kind": "file",
+          "raw7": [
+            "16777231",
+            "177432573",
+            "33152",
+            "1",
+            "8492",
+            "1792227354705812736",
+            "1792227354705943738"
+          ],
+          "sha256": "cdcfe25d12448dca693edbdb6ed5be46770ed5420de15ad9035dc02ee958f363"
+        },
+        "dataset": {
+          "kind": "directory",
+          "raw7": [
+            "16777231",
+            "177432467",
+            "16877",
+            "3",
+            "96",
+            "1792227354559271548",
+            "1792227354559271548"
+          ]
+        },
+        "dataset/splits": {
+          "kind": "directory",
+          "raw7": [
+            "16777231",
+            "177432530",
+            "16877",
+            "3",
+            "96",
+            "1792227354559734347",
+            "1792227354559734347"
+          ]
+        },
+        "dataset/splits/.legacy-split-migration-8abed332c67990973e6f2da4138083ec694e928ab4f62c41aa1f847568271cdf.json": {
+          "kind": "file",
+          "raw7": [
+            "16777231",
+            "177432531",
+            "33152",
+            "1",
+            "227",
+            "1792227354559523968",
+            "1792227354559734305"
+          ],
+          "sha256": "ea55c471630db34f6f0836b6beea9fb74cffc35d32e8250d2e3f02463fb61fc3"
+        },
+        "delivery": {
+          "kind": "directory",
+          "raw7": [
+            "16777231",
+            "177432591",
+            "16877",
+            "2",
+            "64",
+            "1792227354744660088",
+            "1792227354744681922"
+          ]
+        },
+        "inspection_history.sqlite3": {
+          "kind": "file",
+          "raw7": [
+            "16777231",
+            "177432587",
+            "33188",
+            "1",
+            "36864",
+            "1792227354743215941",
+            "1792227354743215941"
+          ],
+          "sha256": "41c3446e547273401ced85bc5b162a8a7b8bbda0e9fdc5a0aa771631a1781fae"
+        },
+        "labeling_jobs": {
+          "kind": "directory",
+          "raw7": [
+            "16777231",
+            "177432586",
+            "16877",
+            "2",
+            "64",
+            "1792227354740859571",
+            "1792227354740889613"
+          ]
+        },
+        "labelsets.json": {
+          "kind": "file",
+          "raw7": [
+            "16777231",
+            "177432471",
+            "33152",
+            "1",
+            "187",
+            "1792227354091291585",
+            "1792227354091414753"
+          ],
+          "sha256": "25e20d5cf7909511b54d080b7d12b1aec70d3e34c3fb9547843809bb475e77fd"
+        },
+        "migration_admission.lock": {
+          "kind": "file",
+          "raw7": [
+            "16777231",
+            "177432491",
+            "33152",
+            "1",
+            "0",
+            "1792227354370782376",
+            "1792227354370812168"
+          ],
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "models": {
+          "kind": "directory",
+          "raw7": [
+            "16777231",
+            "177432468",
+            "16877",
+            "2",
+            "64",
+            "1792227354089956897",
+            "1792227354089975064"
+          ]
+        },
+        "project.json": {
+          "kind": "file",
+          "raw7": [
+            "16777231",
+            "177432529",
+            "33152",
+            "1",
+            "1645",
+            "1792227354558878667",
+            "1792227354559036336"
+          ],
+          "sha256": "1e09438c56b8f82ed1ad7198f6a5d6cca21f8279cc5b0b08b17e1f76a6ab6e60"
+        },
+        "reports": {
+          "kind": "directory",
+          "raw7": [
+            "16777231",
+            "177432469",
+            "16877",
+            "3",
+            "96",
+            "1792227354584926445",
+            "1792227354584926445"
+          ]
+        },
+        "reports/evaluations": {
+          "kind": "directory",
+          "raw7": [
+            "16777231",
+            "177432538",
+            "16877",
+            "2",
+            "64",
+            "1792227354584921862",
+            "1792227354584948613"
+          ]
+        },
+        "runtime_lifecycle.lock": {
+          "kind": "file",
+          "raw7": [
+            "16777231",
+            "177432528",
+            "33152",
+            "1",
+            "0",
+            "1792227354557113598",
+            "1792227354557153098"
+          ],
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      }
+    },
+    "after": {
+      "invalid": {
+        "source": {
+          ".": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432450",
+              "16877",
+              "5",
+              "160",
+              "1792227354068610358",
+              "1792227354068610358"
+            ]
+          },
+          "test": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432462",
+              "16877",
+              "3",
+              "96",
+              "1792227354068648317",
+              "1792227354068648317"
+            ]
+          },
+          "test/NG": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432463",
+              "16877",
+              "3",
+              "96",
+              "1792227354068794319",
+              "1792227354068794319"
+            ]
+          },
+          "test/NG/f.png": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177432464",
+              "33188",
+              "1",
+              "1840",
+              "1792227354068834112",
+              "1792227354068834112"
+            ],
+            "sha256": "71e6437c0779f4f440640d9defea3454220f7f029b950e1b68f53d6d210e3aaa"
+          },
+          "train": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432451",
+              "16877",
+              "4",
+              "128",
+              "1792227354067808804",
+              "1792227354067808804"
+            ]
+          },
+          "train/NG": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432455",
+              "16877",
+              "3",
+              "96",
+              "1792227354067998349",
+              "1792227354067998349"
+            ]
+          },
+          "train/NG/c.png": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177432456",
+              "33188",
+              "1",
+              "1808",
+              "1792227354068049141",
+              "1792227354068049141"
+            ],
+            "sha256": "407a1dc3ca8c6317be95f99cd7cda32493fe7d6be882f69f4e7a368289f6269a"
+          },
+          "train/OK": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432452",
+              "16877",
+              "4",
+              "128",
+              "1792227354067649468",
+              "1792227354067649468"
+            ]
+          },
+          "train/OK/a.png": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177432453",
+              "33188",
+              "1",
+              "1780",
+              "1792227354067280213",
+              "1792227354067280213"
+            ],
+            "sha256": "8539772d38c545d1ba183b4f18f894f84c9078d7fc36e336c5d7ec2afb1d68ee"
+          },
+          "train/OK/b.png": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177432454",
+              "33188",
+              "1",
+              "1792",
+              "1792227354067729094",
+              "1792227354067729094"
+            ],
+            "sha256": "c74ed1640e03e43fe95eb290c1403727fdc6469db0248690a3e30eee4dbf16df"
+          },
+          "val": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432457",
+              "16877",
+              "4",
+              "128",
+              "1792227354068386105",
+              "1792227354068386105"
+            ]
+          },
+          "val/NG": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432460",
+              "16877",
+              "3",
+              "96",
+              "1792227354068526648",
+              "1792227354068526648"
+            ]
+          },
+          "val/NG/e.png": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177432461",
+              "33188",
+              "1",
+              "1829",
+              "1792227354068561816",
+              "1792227354068561816"
+            ],
+            "sha256": "143e3c59718c6d55934341861ab1aab82671736210294b61df9f4f7abe4c6c9d"
+          },
+          "val/OK": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432458",
+              "16877",
+              "3",
+              "96",
+              "1792227354068309687",
+              "1792227354068309687"
+            ]
+          },
+          "val/OK/d.png": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177432459",
+              "33188",
+              "1",
+              "1795",
+              "1792227354068342979",
+              "1792227354068342979"
+            ],
+            "sha256": "1593ce692e5dd3a165d4bf3d10207647c7ffeca7a94928d4b7c0a85a4e46f4b9"
+          }
+        },
+        "project": {
+          ".": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432466",
+              "16877",
+              "14",
+              "448",
+              "1792227354744663422",
+              "1792227354744663422"
+            ]
+          },
+          ".metadata_locks": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432539",
+              "16877",
+              "3",
+              "96",
+              "1792227354589998399",
+              "1792227354589998399"
+            ]
+          },
+          ".metadata_locks/4ba8a0bdc18a415f4d56a7bd4705197b936159d54ff33e4c9bea4f097f5721a5.lock": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177432540",
+              "33188",
+              "1",
+              "0",
+              "1792227354589994066",
+              "1792227354590059567"
+            ],
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "annotations": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432470",
+              "16877",
+              "3",
+              "96",
+              "1792227354604859213",
+              "1792227354604859213"
+            ]
+          },
+          "annotations/by_dataset": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432543",
+              "16877",
+              "3",
+              "96",
+              "1792227354605015090",
+              "1792227354605015090"
+            ]
+          },
+          "annotations/by_dataset/8abed332c6799097": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432544",
+              "16877",
+              "3",
+              "96",
+              "1792227354605130300",
+              "1792227354605130300"
+            ]
+          },
+          "annotations/by_dataset/8abed332c6799097/metadata": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432545",
+              "16877",
+              "3",
+              "96",
+              "1792227354705943738",
+              "1792227354705943738"
+            ]
+          },
+          "annotations/by_dataset/8abed332c6799097/metadata/workflow.json": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177432573",
+              "33152",
+              "1",
+              "8492",
+              "1792227354705812736",
+              "1792227354705943738"
+            ],
+            "sha256": "cdcfe25d12448dca693edbdb6ed5be46770ed5420de15ad9035dc02ee958f363"
+          },
+          "dataset": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432467",
+              "16877",
+              "3",
+              "96",
+              "1792227354559271548",
+              "1792227354559271548"
+            ]
+          },
+          "dataset/splits": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432530",
+              "16877",
+              "3",
+              "96",
+              "1792227354559734347",
+              "1792227354559734347"
+            ]
+          },
+          "dataset/splits/.legacy-split-migration-8abed332c67990973e6f2da4138083ec694e928ab4f62c41aa1f847568271cdf.json": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177432531",
+              "33152",
+              "1",
+              "227",
+              "1792227354559523968",
+              "1792227354559734305"
+            ],
+            "sha256": "ea55c471630db34f6f0836b6beea9fb74cffc35d32e8250d2e3f02463fb61fc3"
+          },
+          "delivery": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432591",
+              "16877",
+              "2",
+              "64",
+              "1792227354744660088",
+              "1792227354744681922"
+            ]
+          },
+          "inspection_history.sqlite3": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177432587",
+              "33188",
+              "1",
+              "36864",
+              "1792227354743215941",
+              "1792227354743215941"
+            ],
+            "sha256": "41c3446e547273401ced85bc5b162a8a7b8bbda0e9fdc5a0aa771631a1781fae"
+          },
+          "labeling_jobs": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432586",
+              "16877",
+              "2",
+              "64",
+              "1792227354740859571",
+              "1792227354740889613"
+            ]
+          },
+          "labelsets.json": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177432471",
+              "33152",
+              "1",
+              "187",
+              "1792227354091291585",
+              "1792227354091414753"
+            ],
+            "sha256": "25e20d5cf7909511b54d080b7d12b1aec70d3e34c3fb9547843809bb475e77fd"
+          },
+          "migration_admission.lock": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177432491",
+              "33152",
+              "1",
+              "0",
+              "1792227354370782376",
+              "1792227354370812168"
+            ],
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "models": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432468",
+              "16877",
+              "2",
+              "64",
+              "1792227354089956897",
+              "1792227354089975064"
+            ]
+          },
+          "project.json": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177432529",
+              "33152",
+              "1",
+              "1645",
+              "1792227354558878667",
+              "1792227354559036336"
+            ],
+            "sha256": "1e09438c56b8f82ed1ad7198f6a5d6cca21f8279cc5b0b08b17e1f76a6ab6e60"
+          },
+          "reports": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432469",
+              "16877",
+              "3",
+              "96",
+              "1792227354584926445",
+              "1792227354584926445"
+            ]
+          },
+          "reports/evaluations": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432538",
+              "16877",
+              "2",
+              "64",
+              "1792227354584921862",
+              "1792227354584948613"
+            ]
+          },
+          "runtime_lifecycle.lock": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177432528",
+              "33152",
+              "1",
+              "0",
+              "1792227354557113598",
+              "1792227354557153098"
+            ],
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        }
+      },
+      "reload": {
+        "source": {
+          ".": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432450",
+              "16877",
+              "5",
+              "160",
+              "1792227354068610358",
+              "1792227354068610358"
+            ]
+          },
+          "test": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432462",
+              "16877",
+              "3",
+              "96",
+              "1792227354068648317",
+              "1792227354068648317"
+            ]
+          },
+          "test/NG": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432463",
+              "16877",
+              "3",
+              "96",
+              "1792227354068794319",
+              "1792227354068794319"
+            ]
+          },
+          "test/NG/f.png": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177432464",
+              "33188",
+              "1",
+              "1840",
+              "1792227354068834112",
+              "1792227354068834112"
+            ],
+            "sha256": "71e6437c0779f4f440640d9defea3454220f7f029b950e1b68f53d6d210e3aaa"
+          },
+          "train": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432451",
+              "16877",
+              "4",
+              "128",
+              "1792227354067808804",
+              "1792227354067808804"
+            ]
+          },
+          "train/NG": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432455",
+              "16877",
+              "3",
+              "96",
+              "1792227354067998349",
+              "1792227354067998349"
+            ]
+          },
+          "train/NG/c.png": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177432456",
+              "33188",
+              "1",
+              "1808",
+              "1792227354068049141",
+              "1792227354068049141"
+            ],
+            "sha256": "407a1dc3ca8c6317be95f99cd7cda32493fe7d6be882f69f4e7a368289f6269a"
+          },
+          "train/OK": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432452",
+              "16877",
+              "4",
+              "128",
+              "1792227354067649468",
+              "1792227354067649468"
+            ]
+          },
+          "train/OK/a.png": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177432453",
+              "33188",
+              "1",
+              "1780",
+              "1792227354067280213",
+              "1792227354067280213"
+            ],
+            "sha256": "8539772d38c545d1ba183b4f18f894f84c9078d7fc36e336c5d7ec2afb1d68ee"
+          },
+          "train/OK/b.png": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177432454",
+              "33188",
+              "1",
+              "1792",
+              "1792227354067729094",
+              "1792227354067729094"
+            ],
+            "sha256": "c74ed1640e03e43fe95eb290c1403727fdc6469db0248690a3e30eee4dbf16df"
+          },
+          "val": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432457",
+              "16877",
+              "4",
+              "128",
+              "1792227354068386105",
+              "1792227354068386105"
+            ]
+          },
+          "val/NG": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432460",
+              "16877",
+              "3",
+              "96",
+              "1792227354068526648",
+              "1792227354068526648"
+            ]
+          },
+          "val/NG/e.png": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177432461",
+              "33188",
+              "1",
+              "1829",
+              "1792227354068561816",
+              "1792227354068561816"
+            ],
+            "sha256": "143e3c59718c6d55934341861ab1aab82671736210294b61df9f4f7abe4c6c9d"
+          },
+          "val/OK": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432458",
+              "16877",
+              "3",
+              "96",
+              "1792227354068309687",
+              "1792227354068309687"
+            ]
+          },
+          "val/OK/d.png": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177432459",
+              "33188",
+              "1",
+              "1795",
+              "1792227354068342979",
+              "1792227354068342979"
+            ],
+            "sha256": "1593ce692e5dd3a165d4bf3d10207647c7ffeca7a94928d4b7c0a85a4e46f4b9"
+          }
+        },
+        "project": {
+          ".": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432466",
+              "16877",
+              "14",
+              "448",
+              "1792227354744663422",
+              "1792227354744663422"
+            ]
+          },
+          ".metadata_locks": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432539",
+              "16877",
+              "3",
+              "96",
+              "1792227354589998399",
+              "1792227354589998399"
+            ]
+          },
+          ".metadata_locks/4ba8a0bdc18a415f4d56a7bd4705197b936159d54ff33e4c9bea4f097f5721a5.lock": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177432540",
+              "33188",
+              "1",
+              "0",
+              "1792227354589994066",
+              "1792227354590059567"
+            ],
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "annotations": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432470",
+              "16877",
+              "3",
+              "96",
+              "1792227354604859213",
+              "1792227354604859213"
+            ]
+          },
+          "annotations/by_dataset": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432543",
+              "16877",
+              "3",
+              "96",
+              "1792227354605015090",
+              "1792227354605015090"
+            ]
+          },
+          "annotations/by_dataset/8abed332c6799097": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432544",
+              "16877",
+              "3",
+              "96",
+              "1792227354605130300",
+              "1792227354605130300"
+            ]
+          },
+          "annotations/by_dataset/8abed332c6799097/metadata": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432545",
+              "16877",
+              "3",
+              "96",
+              "1792227354705943738",
+              "1792227354705943738"
+            ]
+          },
+          "annotations/by_dataset/8abed332c6799097/metadata/workflow.json": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177432573",
+              "33152",
+              "1",
+              "8492",
+              "1792227354705812736",
+              "1792227354705943738"
+            ],
+            "sha256": "cdcfe25d12448dca693edbdb6ed5be46770ed5420de15ad9035dc02ee958f363"
+          },
+          "dataset": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432467",
+              "16877",
+              "3",
+              "96",
+              "1792227354559271548",
+              "1792227354559271548"
+            ]
+          },
+          "dataset/splits": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432530",
+              "16877",
+              "3",
+              "96",
+              "1792227354559734347",
+              "1792227354559734347"
+            ]
+          },
+          "dataset/splits/.legacy-split-migration-8abed332c67990973e6f2da4138083ec694e928ab4f62c41aa1f847568271cdf.json": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177432531",
+              "33152",
+              "1",
+              "227",
+              "1792227354559523968",
+              "1792227354559734305"
+            ],
+            "sha256": "ea55c471630db34f6f0836b6beea9fb74cffc35d32e8250d2e3f02463fb61fc3"
+          },
+          "delivery": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432591",
+              "16877",
+              "2",
+              "64",
+              "1792227354744660088",
+              "1792227354744681922"
+            ]
+          },
+          "inspection_history.sqlite3": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177432587",
+              "33188",
+              "1",
+              "36864",
+              "1792227354743215941",
+              "1792227354743215941"
+            ],
+            "sha256": "41c3446e547273401ced85bc5b162a8a7b8bbda0e9fdc5a0aa771631a1781fae"
+          },
+          "labeling_jobs": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432586",
+              "16877",
+              "2",
+              "64",
+              "1792227354740859571",
+              "1792227354740889613"
+            ]
+          },
+          "labelsets.json": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177432471",
+              "33152",
+              "1",
+              "187",
+              "1792227354091291585",
+              "1792227354091414753"
+            ],
+            "sha256": "25e20d5cf7909511b54d080b7d12b1aec70d3e34c3fb9547843809bb475e77fd"
+          },
+          "migration_admission.lock": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177432491",
+              "33152",
+              "1",
+              "0",
+              "1792227354370782376",
+              "1792227354370812168"
+            ],
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "models": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432468",
+              "16877",
+              "2",
+              "64",
+              "1792227354089956897",
+              "1792227354089975064"
+            ]
+          },
+          "project.json": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177432529",
+              "33152",
+              "1",
+              "1645",
+              "1792227354558878667",
+              "1792227354559036336"
+            ],
+            "sha256": "1e09438c56b8f82ed1ad7198f6a5d6cca21f8279cc5b0b08b17e1f76a6ab6e60"
+          },
+          "reports": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432469",
+              "16877",
+              "3",
+              "96",
+              "1792227354584926445",
+              "1792227354584926445"
+            ]
+          },
+          "reports/evaluations": {
+            "kind": "directory",
+            "raw7": [
+              "16777231",
+              "177432538",
+              "16877",
+              "2",
+              "64",
+              "1792227354584921862",
+              "1792227354584948613"
+            ]
+          },
+          "runtime_lifecycle.lock": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177432528",
+              "33152",
+              "1",
+              "0",
+              "1792227354557113598",
+              "1792227354557153098"
+            ],
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        }
+      }
+    }
+  },
+  "closure": {
+    "original_descriptors": {
+      "opened": 42,
+      "closed": 42
+    },
+    "callback_errors": [],
+    "page_errors": [],
+    "console_errors": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ],
+    "console_scope": "one expected real404 resource console error retained",
+    "blocked_loopback": [],
+    "backend": {
+      "exited": true,
+      "exitCode": 0,
+      "signal": null,
+      "exitedBeforeStop": false,
+      "forced": false,
+      "forcedReason": null,
+      "groupAlive": false,
+      "escaped": [],
+      "unownedReferences": [],
+      "scanError": null,
+      "durationMs": 969,
+      "stoppedAt": "2026-10-17T08:55:56.432Z",
+      "healthy_at_end": true,
+      "port_closed": true,
+      "pid_alive": false
+    },
+    "teardown": {
+      "schema": "modu-vision.e2e-evidence/v1",
+      "written_at": "2026-10-17T08:55:56.621Z",
+      "receipt": "HarnessTeardown",
+      "run_dir": "<owned-current-browser-run>/browser-01",
+      "leftovers": [],
+      "unowned_references": [],
+      "scan_error": null,
+      "files": []
+    }
+  },
+  "screenshots": [
+    {
+      "id": "screenshot-0",
+      "sha256": "13953f26cac05691db70cdb1602a52aef5cd7e0e338fc0edf5aefc4e5b229861"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "f5687011c00db06965eb2b18efd4279d85fe5c85e5d522f6a572411f5ddababc"
+    }
+  ],
+  "limits": {
+    "quality_approved": false,
+    "independent_review_accepted": false,
+    "installed_native_accepted": false,
+    "real_OS_picker_executed": false,
+    "parent_accepted": false,
+    "model_training_or_inference_executed": false,
+    "full_RGB_canvas_parity": false,
+    "normal_case_and_reopen_do_not_add_new_scenarios": true
+  },
+  "retained_original_failed_or_overlay_receipts": "Previous079+untracked-test successful overlay remains unchanged in classification-import-invalid-current-01; it is not admitted as a clean receipt.",
+  "public_derivative": {
+    "kind": "path-redacted private detail derivative",
+    "original_private_detail_sha256": "47dbe231373ffd3dd601ecad634afdbd3027a33b4e6b23ba3d2242f2c0656673",
+    "original_private_detail_bytes": 53253,
+    "machine_paths_and_loopback_origin_redacted": true,
+    "original_response_digests_and_qualification_findings_unchanged": true,
+    "original_private_receipt_mutated": false
+  }
+}

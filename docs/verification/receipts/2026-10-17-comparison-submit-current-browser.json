@@ -1,0 +1,36 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "07978db97775f46fa40738c99ace2ec8c94f95d4",
+  "source_dirty": false,
+  "test": "scripts/e2e/comparison-submit-real-cancel.spec.ts::original manual comparison submit cancels its accepted owned CPU job and preserves earlier records",
+  "test_source_sha256": "5a8d1d5b0692f8b52665b6287b57cc1bb5c18826bf66e87d8577622a90c717a5",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "55d2d38feb9fc278c0663cc233f3d4d721e43f7ccc66c050dc8d3923da3c2ddb",
+  "harness_sha256": "6ae7b50c9897739984b15d1b82c596996b9cbf3fe99ae5f37ebeee845e9078d7",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "a9f7f77ddb26074bb43fda4aa9c325feaca24f024c2daba7a6dd4f46bbdb3d48"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "1b0b7780cfeb2c7b639b6aabc25b06215acb29163ec49ceefdb5b4bc5990c09c"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "715ab9ba0ecc9205a327967596ec367b1c6dc5cae47c4a23c959dd3974bd2811"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}
