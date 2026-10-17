@@ -1,0 +1,118 @@
+{
+  "schema": "modu-vision.comparison-evaluation-readiness-fixture-fix/v1",
+  "scope": "Join ordinary stage-entry evaluation responses before comparison custody snapshots.",
+  "source": {
+    "base": "58fd9ae7652c81f2165ec69a49aac1a3bfbaf587",
+    "checkpoint": "b2fb07b929700a0232022b7e638ffaca804ff0fb",
+    "changed_file": "scripts/e2e/comparison-manual-selection.spec.ts",
+    "spec_sha256": "52cc4b8f2edb4cd8b97526527890cd31b2bedb36f5202c42b2588b8926ef9a7f",
+    "fixture_diff_sha256": "26d40c2d28c7ee679af86648147950dbabd08dfb8a88f5800d4966157ba2f635",
+    "product_and_shared_harness_changed": false
+  },
+  "reason": "Comparison completion does not prove the independent evaluator has returned. The evaluator publishes its cache/report before its original HTTP response returns. The prior CI failure retained new evaluation cache/report files after its initial custody snapshot; its exact scheduling was not reconstructed.",
+  "new_gate": {
+    "passive_original_GET_capture": true,
+    "extra_HTTP": 0,
+    "request_start_deadline_ms": 10000,
+    "full_body_retained_byte_cap": 1048576,
+    "original_response_finished_required": true,
+    "same_request_source_job_task_project_context_checks": true,
+    "completed_rows_retain_original_completion_deadline": true,
+    "concurrent_original_cold_reads_supported": true,
+    "final_cache_matches_one_parsed_original_body_in_same_source_job_group": true,
+    "all_original_full_root_custody_assertions_preserved": true,
+    "report_or_cache_exclusions": false
+  },
+  "actual_browser": {
+    "title": "manual baseline empty and exact saved comparison pair reopen through owning A B A project handoff",
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "retry": 0,
+    "workers": 1,
+    "test_duration_ms": 31618,
+    "runner_elapsed_seconds": 40.38667470798828,
+    "original_evaluations": {
+      "count": 7,
+      "all_HTTP_200": true,
+      "full_original_bodies_retained": true,
+      "original_finished_inside_request_start_10s": true,
+      "elapsed_ms": [
+        560.352583,
+        460.771208,
+        67.276125,
+        60.5795,
+        66.944875,
+        80.799833,
+        59.956166
+      ]
+    },
+    "actual_CPU_comparison_jobs": 2,
+    "comparison_manual_choices_saved_pair_reopen_and_late_original_A_exclusion_passed": true,
+    "strict_full_retained_root_custody": {
+      "A": true,
+      "B": true,
+      "postshutdown_readback": true
+    },
+    "source_before_after_exact_files": 2897,
+    "provider_link_and_four_package_pins_before_after_exact": true,
+    "page_errors": 0,
+    "blocked_loopback_requests": 0,
+    "console_errors": {
+      "recorded_count": 37,
+      "recorded_statuses": [
+        404,
+        409
+      ],
+      "all_messages_expected": false,
+      "endpoint_body_joins": false,
+      "global_zero_gate": false
+    },
+    "device_scope": {
+      "baseline_health_device": "mps",
+      "independent_evaluator": "Original get_device(auto); health/source attribution only, no separate per-request device receipt.",
+      "comparisons": "Explicit local_cpu/cpu",
+      "whole_case_no_GPU_claim": false
+    },
+    "closure": {
+      "original_runner_natural_wait_returned": true,
+      "backend_exit_code": 0,
+      "forced": false,
+      "pid_alive": false,
+      "port_closed": true,
+      "group_alive": false,
+      "escaped": [],
+      "unowned_references": [],
+      "scan_error": null,
+      "global_leftovers": []
+    }
+  },
+  "typecheck_e2e_exit": 0,
+  "evidence": {
+    "readback": {
+      "size": 92008,
+      "sha256": "7af9cde2d0069774b16cedbd2b073014a58fec10f22972be06dff3c5244b0aac"
+    },
+    "run_result": {
+      "size": 1607,
+      "sha256": "79f7197241a198ddb2d5b4592ab855bad2e57f1c123c9df9d9d02eb923634a0d"
+    },
+    "harness_manifest": {
+      "size": 392205,
+      "sha256": "dd6f34d50e9abed21774262865cd2112681f1b29f60fc04c76639dd44a242fac"
+    },
+    "finite_rehashed_original_refs": 158
+  },
+  "limits": {
+    "prior_CI_failure_unchanged": true,
+    "prior_CI_exact_timing_reproduced": false,
+    "comparison_submit_cancel_readiness_fixed": false,
+    "native_acceptance": false,
+    "parent_acceptance": false,
+    "model_quality_approval": false,
+    "counts_changed": false,
+    "registry_changed": false,
+    "publication": false
+  }
+}

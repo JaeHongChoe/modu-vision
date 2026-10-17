@@ -1,0 +1,119 @@
+{
+  "schema": "modu-vision.scoped-current-browser-execution/v1",
+  "result": "passed_one_original_browser_case",
+  "source_commit": "20e68d22c57ddc8e35b504d41218b64d5352a58f",
+  "source_clean": true,
+  "test_path": "scripts/e2e/flow-debug-model-freeze-f064-controls.spec.ts",
+  "test_sha256": "debbfb4153d4a5a26d8029a00d61fedaa313fd7eec469b39917272e35c4df3df",
+  "selector": "actual CPU debug cache and frozen model A B survive history reopen",
+  "browser_channel": "chrome",
+  "browser_version": "155.0.8059.80",
+  "playwright_version": "1.63.0",
+  "platform": "darwin-arm64",
+  "selected": 1,
+  "passed": 1,
+  "failed": 0,
+  "skipped": 0,
+  "flaky": 0,
+  "retries": 0,
+  "workers": 1,
+  "report_seconds": 28.97443,
+  "original_guards_unchanged": {
+    "total_timeout_ms": 180000,
+    "action_timeout_ms": 15000,
+    "authenticated_API_handoff_ms": 10000,
+    "fixture_script_caps_ms": [
+      15000,
+      30000,
+      15000
+    ]
+  },
+  "actual_scope": {
+    "real_authenticated_browser_login": true,
+    "untrained_synthetic_checkpoints": 2,
+    "controlled_partial_cache": "miss -> hit; changed ROI -> miss",
+    "GUI_partial_cache": "miss -> hit",
+    "partial_results_remain_REVIEW_not_final_OK": true,
+    "saved_whole_flow_AB_comparison": "completed; integrity verified; model hashes and cohort pinned",
+    "explicit_requested_flow_device": "cpu",
+    "automatic_local_preparation_device": "unobserved; ordinary selection was not overridden",
+    "new_training_or_remote_job": false,
+    "active_flow_unchanged_and_absent": true
+  },
+  "diagnostics": {
+    "page_errors": 0,
+    "blocked_loopback_requests": 0,
+    "recorded_console_errors": 14,
+    "recorded_console_classes": {
+      "HTTP401": 9,
+      "HTTP404": 2,
+      "WebSocket404": 3
+    },
+    "zero_console_error_claim": false,
+    "original_backend_stderr_bytes": 0,
+    "old_CI_fetch_failure_reproduced": false,
+    "old_CI_failure_cause_established": false
+  },
+  "custody": {
+    "tracked_source_files": 2899,
+    "full_raw9_SHA_before_after_equal": true,
+    "existing_provider_pins": 8,
+    "provider_before_after_equal": true,
+    "original_synthetic_images_rehashed": 8,
+    "untrained_checkpoint_hashes_rechecked": 2
+  },
+  "closure": {
+    "backend_direct_exit_code": 0,
+    "forced": false,
+    "backend_port_closed": true,
+    "proxy_port_closed": true,
+    "group_alive": false,
+    "escaped": [],
+    "global_teardown_leftovers": []
+  },
+  "pins": {
+    "readback": {
+      "bytes": 65142,
+      "sha256": "f9158f942df03e2272fd8500886b89f1085541660178842ac56959beaaf93a14"
+    },
+    "report": {
+      "bytes": 6670,
+      "sha256": "74530ff7050d316e1721e1a9b6ba02ccc3aa95489a35b374c3a22d2537fb96fc"
+    },
+    "harness_manifest": {
+      "bytes": 111754,
+      "sha256": "3981fd50f7a9eb8da237740a919d6d6abeb665f7c389b46ed327f1731b612f10"
+    },
+    "command_log": {
+      "bytes": 382,
+      "sha256": "095a66938dc220170cfab3ddf323657f46e6839c6b1bf7a78642f3c5627f2d1f"
+    },
+    "teardown": {
+      "bytes": 355,
+      "sha256": "4a0e683da98cbc22716d2ce2e7754cee981736e6b7202fd40fbd63f0813c5bb8"
+    },
+    "actual_tool_completion": {
+      "bytes": 479,
+      "sha256": "e55ce1612dbf82219e2861b3241f5f530e385935d22f5c2c5d332cfa7631a947"
+    },
+    "screenshots": [
+      {
+        "bytes": 161565,
+        "sha256": "03681f42e26798064330bd75c1938a63744264bff21d360b6dfc9ab393c6b56c"
+      },
+      {
+        "bytes": 173421,
+        "sha256": "c2e122cd3d3df96ae2e2fafce0799024789e22e68ebf619daeccf14bc89f5729"
+      }
+    ]
+  },
+  "limits": {
+    "whole_run_zero_GPU_claim": false,
+    "Linux_CI_reexecution": false,
+    "second_F064_or_base_spec_executed": false,
+    "all_CI_pass_claim": false,
+    "native_or_parent_or_action_promotion": false,
+    "quality_approval": false,
+    "product_test_harness_or_ledger_modified": false
+  }
+}

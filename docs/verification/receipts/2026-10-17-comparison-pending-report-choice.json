@@ -83,7 +83,8 @@
       "leftovers": [],
       "unowned_references": [],
       "scan_error": null
-    }
+    },
+    "automatic_evaluation_preparation_device": "Legacy evaluator selects get_device(auto). This run did not preserve a distinct device receipt for that automatic preparation; no claim that the whole case avoided MPS/GPU. The reported comparison jobs and explicit inspection use CPU."
   },
   "raw_evidence": {
     "readback": {
@@ -111,9 +112,9 @@
     "native_acceptance": false,
     "model_quality_acceptance": false,
     "training": false,
-    "gpu": false,
     "whole_parent_acceptance": false,
     "ledger_or_count_promotion": false,
-    "publication": false
+    "publication": false,
+    "gpu_quality_approval": false
   }
 }

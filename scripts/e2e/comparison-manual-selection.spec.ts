@@ -123,6 +123,63 @@ async function manualExercise(page:Page,w:Workspace,e:Evidence,origin:string,url
   const lifecycleRows:Array<any>=[],pendingLifecycle=new Set<Promise<void>>();
   let lifecycleSerial=0,visitFloor=0,visitScope:ManualScope=B;
   const lifecycleProofs:Array<any>=[];
+  // Stage-entry evaluation is independent of the comparison job. Its genuine
+  // response publishes the model cache/report before returning, so join it
+  // before changing evaluation selection or freezing those retained roots.
+  const evaluationRows:Array<any>=[];
+  let evaluationSerial=0,visitEvaluationFloor=0;
+  const observeEvaluation=(request:ManualHandoffRequest)=>{
+    const address=new URL(request.url());
+    if(address.origin!==origin||request.method()!=='GET'||address.pathname!=='/api/evaluation/results')return;
+    const started=performance.now(),deadline=started+10_000;
+    const row:any={id:evaluationSerial++,source:address.searchParams.get('source_dataset_path'),
+      requested_job:address.searchParams.get('job_id'),project:request.headers()['x-vision-project'],
+      context:request.headers()['x-vision-context'],started,deadline};
+    evaluationRows.push(row);
+    row.done=(async()=>{
+      expect(request.frame()).toBe(page.mainFrame());row.main_frame=true;
+      const response=await manualWithin(request.response(),deadline,'original evaluation response');
+      expect(response).toBeTruthy();row.status=response!.status();
+      const bytes=await manualWithin(response!.body(),deadline,'original evaluation full body');
+      expect(bytes.length).toBeLessThanOrEqual(1024*1024);
+      expect(await manualWithin(response!.finished(),deadline,'original evaluation finished')).toBeNull();
+      row.body=JSON.parse(bytes.toString('utf8'));row.sha256=manualSHA(bytes);row.size=bytes.length;
+      row.file=path.join(w.logs,'manual-evaluation-original-'+row.id+'.json');
+      fs.writeFileSync(row.file,bytes,{flag:'wx'});e.addFile(row.file);
+      row.finished=performance.now();expect(row.finished).toBeLessThan(deadline);
+    })().catch(error=>{row.failed=String(error);});
+  };
+  const joinEvaluation=async(row:any)=>{
+    // A full body already finished inside its original budget stays valid
+    // later; pending work gets only that same request-start deadline.
+    if(row.finished===undefined)await manualWithin(row.done,row.deadline,'pending original evaluation');
+    expect(row.failed).toBeUndefined();expect(row.status).toBe(200);expect(row.main_frame).toBe(true);
+    expect(row.finished).toBeLessThan(row.deadline);expect(row.file).toBeTruthy();
+    const owner=[A,B].find(scope=>scope.source===row.source);expect(owner).toBeTruthy();
+    expect(row.project).toBe(owner!.project.id);expect(JSON.parse(row.context).project_id).toBe(owner!.project.id);
+    expect(row.body.task).toBe('classification');expect(row.body.binding.source_dataset_path).toBe(owner!.source);
+    expect([owner!.baseline,owner!.candidate]).toContain(row.body.job_id);
+    if(row.requested_job)expect(row.body.job_id).toBe(row.requested_job);
+    expect(row.body.test_predictions).toHaveLength(2);
+  };
+  const verifyEvaluationCaches=(rows:Array<any>)=>{
+    // Concurrent original cold reads can publish distinct evaluation IDs.
+    // The final cache must be an exact response from this same scoped group.
+    const groups=new Map<string,Array<any>>();
+    for(const row of rows){expect(row.body).toBeTruthy();const key=JSON.stringify([row.source,row.body.job_id]);groups.set(key,[...(groups.get(key)||[]),row]);}
+    for(const group of groups.values()){
+      const row=group[0],owner=[A,B].find(scope=>scope.source===row.source)!;
+      const cache=JSON.parse(manualFile(path.join(owner.project.models_dir,row.body.job_id,'eval_results.json'),owner.project.models_dir).bytes.toString('utf8'));
+      expect(group.map(item=>item.body)).toContainEqual(cache);
+    }
+  };
+  const settleEvaluation=async(scope:ManualScope,deadline:number)=>{
+    await manualWithin(expect.poll(()=>evaluationRows.some(row=>row.id>=visitEvaluationFloor&&row.source===scope.source
+      &&row.project===scope.project.id),{timeout:Math.max(1,Math.floor(deadline-performance.now()))}).toBe(true),deadline,'own stage-entry evaluation issued');
+    const rows=evaluationRows.filter(row=>row.id>=visitEvaluationFloor);
+    for(const row of rows)await joinEvaluation(row);
+    verifyEvaluationCaches(rows);
+  };
   const readObserver=(request:ManualHandoffRequest)=>{
     const address=new URL(request.url());
     if(address.origin!==origin||request.method()!=='GET'
@@ -142,10 +199,10 @@ async function manualExercise(page:Page,w:Workspace,e:Evidence,origin:string,url
     pendingLifecycle.add(waiting);
   };
   const ownOpen=async(scope:ManualScope)=>{
-    visitScope=scope;visitFloor=lifecycleSerial;return manualProject(page,scope,origin);
+    visitScope=scope;visitFloor=lifecycleSerial;visitEvaluationFloor=evaluationSerial;return manualProject(page,scope,origin);
   };
   const ownReload=async(scope:ManualScope)=>{
-    visitScope=scope;visitFloor=lifecycleSerial;return page.reload();
+    visitScope=scope;visitFloor=lifecycleSerial;visitEvaluationFloor=evaluationSerial;return page.reload();
   };
   const drainLifecycle=async(deadline:number)=>{
     for(;;){
@@ -217,13 +274,14 @@ async function manualExercise(page:Page,w:Workspace,e:Evidence,origin:string,url
       posts.push({body:request.postDataJSON(),main_frame:request.frame()===page.mainFrame(),headers:{
         'x-vision-project':request.headers()['x-vision-project'],'x-vision-context':request.headers()['x-vision-context']}});
   };
-  page.on('request',observe);page.on('request',readObserver);
+  page.on('request',observe);page.on('request',readObserver);page.on('request',observeEvaluation);
   const panel=()=>page.getByRole('region',{name:'현행과 후보 모델 비교'});
   const enter=async(scope:ManualScope)=>{
     const deadline=performance.now()+10_000;
     await manualWithin(expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(scope.project.name,{timeout:10_000}),deadline,'own project title');
     await manualWithin(page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(3).click(),deadline,'evaluation stage');
     await manualWithin(expect(panel().getByLabel('비교 기준 모델',{exact:true})).toBeEnabled({timeout:10_000}),deadline,'own catalog settled');
+    await settleEvaluation(scope,deadline);
     const current=await api('/api/project/current');expect(current.id).toBe(scope.project.id);expect(current.source_dataset_dir).toBe(scope.source);
   };
   const view=async(scope:ManualScope)=>{
@@ -315,7 +373,11 @@ async function manualExercise(page:Page,w:Workspace,e:Evidence,origin:string,url
       installed_native_execution:false,independent_acceptance:false});
   }catch(error){primary=error;}finally{
     try{page.off('request',observe);}catch(error){primary=manualRemember(primary,error,'request observer removal');}
+    try{page.off('request',observeEvaluation);}catch(error){primary=manualRemember(primary,error,'evaluation observer removal');}
     if(late)try{await late.close();}catch(error){primary=manualRemember(primary,error,'held original read close');}
+    for(const row of evaluationRows)try{await joinEvaluation(row);}
+    catch(error){primary=manualRemember(primary,error,'original evaluation settlement');}
+    try{verifyEvaluationCaches(evaluationRows);}catch(error){primary=manualRemember(primary,error,'original evaluation cache group');}
     if(before)try{await settleLifecycle(visitScope,'final retained custody');}
     catch(error){primary=manualRemember(primary,error,'final original lifecycle settlement');}
     if(before)for(const scope of [A,B]){
@@ -329,6 +391,10 @@ async function manualExercise(page:Page,w:Workspace,e:Evidence,origin:string,url
     try{e.note('manual_sqlite_lifecycle_settlement',{proofs:lifecycleProofs,read_dispositions:lifecycleRows.map(({bytes,body,...row})=>row),
       original_body_completion_required:true,every_ordinary_project_top_file_retained:true,no_sleep_retry_checkpoint_filter_signal:true,
       actual_execution_by_Source_author:false});}catch(error){primary=manualRemember(primary,error,'lifecycle proof note');}
+    try{e.note('manual_evaluation_readiness',{original_request_deadline_ms:10_000,
+      rows:evaluationRows.map(({done,body,...row})=>({...row,returned_job:body?.job_id})),
+      extra_requests:0,response_fabricated:false,cache_or_report_exclusions:false});}
+    catch(error){primary=manualRemember(primary,error,'evaluation readiness note');}
   }
   if(primary!==undefined)throw primary;
 }
