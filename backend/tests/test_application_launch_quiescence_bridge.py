@@ -1001,6 +1001,56 @@ def _wait_receipt_and_cpu_settlement(root, nonce, child):
     return target,cpu
 
 
+def _finish_returned_source_cpu_fixture(root, child):
+    """Positive counterpart of the original five/seven/five-second cleanup.
+
+    The caller already observed the returned typed CPU settlement. Let the
+    original controller finish its successful publication and exit naturally;
+    the failure-only finalizer must not race it with controller termination.
+    """
+    projects=root/'projects'
+    (projects/'drain.trigger').touch()
+    ordinary=json.loads(wait_file(projects/'ordinary-stop-requested.json',seconds=5))
+    assert type(ordinary['pid']) is int and ordinary['requested'] is True
+    (projects/'exit.trigger').touch()
+    stopped=json.loads(wait_file(projects/'managed-stop-result.json',seconds=7))
+    assert stopped['backend']==ordinary['pid'] and stopped['error'] is None, _managed_stop_diagnostic(projects,stopped)
+    assert stopped['direct_exit']==0 and stopped['signal'] is None
+    assert child.wait(timeout=5)==0
+
+
+def _closed_source_cpu_fixture_epoch(root, nonce, cpu):
+    """Validate the original protocol5 archive; no native or tree approval."""
+    from backend.engine import application_launch_lease as lease, application_store_writer_closure as closure
+    from backend.engine import runtime_update as update
+    row=lease._load(root)
+    assert row['protocol_version']==5 and row['state']=='writer_store_closed' and row['nonce']==nonce
+    closed=closure.inspect_store_closure(root,row)
+    assert closed['scope']=='original_managed_store_writers' and closed['nonce']==nonce
+    assert closed['unsupported']==[] and closed['managed_scopes_drained'] is True
+    assert closed['all_enrolled_writers_direct_exited'] is True and closed['all_writer_lock_references_closed'] is True
+    assert all(closed[name] is False for name in closure.FALSE_FLAGS)
+    drain=row['writer_drain'];receipt=drain['receipt']
+    assert drain['phase']=='backend_exited' and receipt['status']=='managed_scopes_drained'
+    assert receipt['active_scopes']==0 and receipt['unsupported']==[]
+    assert all(receipt[name] is False for name in ('whole_writer_coverage','process_tree_exit_verified','can_release_launch_lease'))
+    assert drain['backend_exit']['backend_process']==cpu['backend_process']
+    assert drain['backend_exit']['returncode']==0 and drain['backend_exit']['signal'] is None
+    archived=root/closure.ARCHIVES/nonce
+    registry_raw=update._read(archived/'registry.json',128*1024)
+    assert sha(registry_raw)==closed['registry_sha256']
+    snapshot={'registry':update._json(registry_raw),'registry_sha256':sha(registry_raw)}
+    assert snapshot['registry']['state']=='closed' and not (root/'.application-writer-epochs'/nonce).exists()
+    writers=snapshot['registry']['writers']
+    assert [(writer['role'],writer['status'],writer['exit_code'],writer['reason_code']) for writer in writers]==[
+        ('backend','direct_exited',0,None),('owned_cpu_worker','direct_exited',0,None)]
+    assert writers[0]['process']==cpu['backend_process'] and writers[1]['process']['pid']==cpu['worker_pid']
+    mutation=lease.assert_quiescent(root)
+    assert mutation['scope']=='original_managed_store_mutation_only' and mutation['nonce']==nonce
+    assert all(mutation[name] is False for name in closure.FALSE_FLAGS)
+    return row,snapshot
+
+
 def _assert_damaged_refusal(refusal, damage, cpu):
     """Exact captured protocol rejection, never a generic failure allowance."""
     assert damage in {'changed_nonce','identical_request_replay'}

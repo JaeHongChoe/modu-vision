@@ -247,7 +247,9 @@ def test_actual_original_cpu_epoch_inherits_writer_inode_and_keeps_scope_through
     """Actual CPU arithmetic; controlled source scripts are not a native release."""
     import zipfile
     from backend.tests import test_application_launch_execution as fixtures
-    from backend.tests.test_application_launch_quiescence_bridge import managed_stack, finish_managed
+    from backend.tests.test_application_launch_quiescence_bridge import (managed_stack, finish_managed,
+        _source_cpu_settlement_fixture_prefix, _wait_receipt_and_cpu_settlement,
+        _finish_returned_source_cpu_fixture, _closed_source_cpu_fixture_epoch)
     from backend.tests.test_staged_update_canary import controlled_proof
     from backend.tests.test_service_s6_04 import canonical, sha
     from backend.engine import application_launch_lease as lease
@@ -308,9 +310,12 @@ def test_actual_original_cpu_epoch_inherits_writer_inode_and_keeps_scope_through
     inputs=[project/'project.json',project/reviewed['input_path'],project/reviewed['package_path']/'manifest.json',
             project/reviewed['package_path']/'models'/('a'*32)/'best_model.pt']
     protected={str(p):sha(p.read_bytes()) for p in inputs}
-    child,ack=fixtures.start_cpu_stack(values)
+    child,ack=fixtures.start_cpu_stack(values, prefix=['-c', _source_cpu_settlement_fixture_prefix()])
     try:
-        target,cpu=fixtures.wait_receipt(root,ack['nonce'],child)
+        # Published output precedes the returned controller's final settlement.
+        # Keep the original 50s receipt budget and verify that actual boundary
+        # before asking the original main to begin two-phase shutdown.
+        target,cpu=_wait_receipt_and_cpu_settlement(root,ack['nonce'],child)
         observation=wait_file(root/'projects/actual-cpu-writer-observation.json')
         assert wait_file(root/'projects/actual-cpu-scope-returned.json')=={'active_scopes':0,'unsupported':[]}
         snapshot=inspect_epoch(root,ack['nonce']);writers=snapshot['registry']['writers']
@@ -343,15 +348,10 @@ def test_actual_original_cpu_epoch_inherits_writer_inode_and_keeps_scope_through
                'actual_cpu_math':True,'whole_writer_coverage':False,'process_tree_exit_verified':False,
                'native_release_qualified':False,'model_quality_approved':False,'lease_release':False}
         (root/'projects/actual-cpu-writer-proof.json').write_text(json.dumps(proof,indent=2))
+        _finish_returned_source_cpu_fixture(root,child)
     finally:
         finish_managed(child,root)
-    final=lease._load(root)
-    assert final['state']=='recovery_required'
-    final_writers=inspect_epoch(root,ack['nonce'])['registry']['writers']
-    assert [(row['role'],row['status'],row['reason_code']) for row in final_writers]==[
-        ('backend','direct_exited',None),('owned_cpu_worker','direct_exited',None)]
-    with pytest.raises(ValueError,match='launch ownership'):
-        lease.assert_quiescent(root)
+    _closed_source_cpu_fixture_epoch(root,ack['nonce'],cpu)
 
 
 def test_incomplete_controlled_cache_never_grants_authenticated_source_cpu(epoch,monkeypatch):
