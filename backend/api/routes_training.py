@@ -1524,6 +1524,18 @@ def list_warm_start_parents(
     if request is None:
         raise HTTPException(status_code=409, detail="Open a project before selecting a warm-start parent")
     source = Path(dataset_path).expanduser().resolve()
+    prepared_classes = None
+    if task == 'patch_classification':
+        from backend.api.routes_project import get_current_project
+        from backend.api.routes_patch_classification import _owned
+        project = get_current_project(request)
+        try:
+            prepared_classes = tuple(_owned(project, dataset_path).classes)
+        except (ValueError, OSError) as exc:
+            raise HTTPException(422, str(exc)) from exc
+        # Prepared classes belong to this source; completed parent receipts
+        # retain the original source identity, as the patch train route does.
+        source = Path(project['source_dataset_dir']).expanduser().resolve()
     models = _warm_start_scope(request, source)
     try:
         architecture = architecture_for(task, preset, {key: value for key, value in {
@@ -1535,7 +1547,7 @@ def list_warm_start_parents(
     from backend.engine.parent_summary import parent_summary
     from backend.engine.warm_start import training_classes
     try:
-        current_classes = training_classes(task, source)
+        current_classes = prepared_classes if prepared_classes is not None else training_classes(task, source)
     except (OSError, ValueError, KeyError, TypeError) as exc:
         raise HTTPException(422, str(exc)) from exc
     for job_dir in sorted(models.iterdir()):

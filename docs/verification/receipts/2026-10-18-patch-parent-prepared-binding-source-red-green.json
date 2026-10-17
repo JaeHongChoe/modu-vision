@@ -1,0 +1,104 @@
+{
+  "attempts": {
+    "final_same_corrected_test_green": {
+      "composition": "4 new plus3 original scheduling",
+      "failed": 0,
+      "passed": 7,
+      "skipped": 0
+    },
+    "final_same_corrected_test_red": {
+      "failed": 3,
+      "passed": 1,
+      "reason": "same functional path binding mismatch on separate original product clone"
+    },
+    "initial_unit_green": {
+      "failed": 1,
+      "passed": 6,
+      "reason": "test JSX walker omitted nested parent option array; product query bindings and scheduling controls passed"
+    },
+    "initial_unit_red": {
+      "failed": 3,
+      "passed": 1,
+      "reason": "original source query instead of prepared A/B"
+    },
+    "original_browser_01": {
+      "failed": "reopen final no-alert assertion after full restored datasets/sample/preview passed",
+      "passed": 1,
+      "passed_error_separate_receipt": true
+    },
+    "renderer_main_typecheck": {
+      "exit_code": 0
+    }
+  },
+  "browser_reopen_after_fix_executed": false,
+  "cause": {
+    "backend": "routes_training.list_warm_start_parents calls training_classes(patch_classification,path), which loads path/patches.json",
+    "component": "PatchClassificationWorkbench.tsx35 passed original source to parents(dataset_path)",
+    "real_service": "modelTrainingProgram.patch.parents serializes dataset_path",
+    "repair": "Pass selected state.dataset.dataset_path; keep existing source/dataset gate, dependency, freshness and error behavior"
+  },
+  "fixture_correction": "Only nested JSX traversal flat\u2192flat(Infinity); assertions unchanged; original bytes/results preserved",
+  "native_training_GPU_quality_parent_credit": false,
+  "raw_logs": {
+    "actual-green-01": {
+      "all_inputs_unchanged": true,
+      "exit_code": 1,
+      "natural_reaped": true,
+      "seconds": 0.6807608748786151,
+      "sha256": "a9e6e5eae0984c70fe9b21f49bbf6e057f48be9c9d3b92d82c78aead911826cf",
+      "signals_sent": false
+    },
+    "actual-green-final-02": {
+      "all_inputs_unchanged": true,
+      "exit_code": 0,
+      "natural_reaped": true,
+      "seconds": 0.7109633330255747,
+      "sha256": "d3219a104dfcdf23a78edb300a1f745cf619a103dea753d11df7cf927d51b42c",
+      "signals_sent": false
+    },
+    "actual-red-01": {
+      "all_inputs_unchanged": true,
+      "exit_code": 1,
+      "natural_reaped": true,
+      "seconds": 0.8627221249043941,
+      "sha256": "e05c2bc8ab34cc25b393242f0fcacc5b0aa8cc1ebe394bbb1dd088109a92b6a9",
+      "signals_sent": false
+    },
+    "actual-red-final-02": {
+      "all_inputs_unchanged": true,
+      "exit_code": 1,
+      "natural_reaped": true,
+      "seconds": 1.077104332856834,
+      "sha256": "1e0d0dc07961f64f3573f2833f48eecd22d67118dc718ee4c84118ad345c3cc2",
+      "signals_sent": false
+    },
+    "typecheck-renderer-main-01": {
+      "all_inputs_unchanged": true,
+      "exit_code": 0,
+      "natural_reaped": true,
+      "seconds": 9.49867208302021,
+      "sha256": "3cea01ca6731d254d8cb8265f4fb29f0abcddf05eb43593ffedb269501b44fad",
+      "signals_sent": false
+    }
+  },
+  "schema": "modu-vision.patch-prepared-parent-binding-source-red-green/v1",
+  "scope": "One original component argument correction and permanent component+real request-building service controls; modeled React and transport, no HTTP/native/model acceptance",
+  "source": {
+    "actual_browser_red_source": "abf68757ea15784945f2dc8b60132569faaf21c5",
+    "browser_spec_sha256": "f397d085539bc381133f62a00d5dddfc526d5ccfca8e1ef7380d2acf81a13fa7",
+    "other_source_bytes_unchanged": true,
+    "permanent_test_sha256": "c915cf61480e8f661b6580b473abafb5a1ac31422710e42f762d4b466629ebbb",
+    "private_candidate": "cd73cd39a50a72c420a87e193b70620e92667edd",
+    "product_sha256": "1e1ffa525e9db32c058d89620a13cf219f9f5deed943466d8a20c71641aa4cc5",
+    "public_base": "fafa790b8c175dc1e6b4d72075d1293bace51dfe",
+    "typecheck": "actual original renderer+main gate on clean candidate",
+    "unit_runs": "frozen abf overlay with exact final product/test bytes; post-run clean private commit is byte-joined, not retrospective execution credit"
+  },
+  "unchanged_guards": [
+    "original API authorization/path guards",
+    "error visibility",
+    "late response active/isCurrent refusal",
+    "training scheduling",
+    "browser test240/action/fullbody10s/retries0"
+  ]
+}
