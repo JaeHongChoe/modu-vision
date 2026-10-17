@@ -1,0 +1,49 @@
+{
+  "schema": "modu-vision.scoped-test-fixture-repair/v1",
+  "scope": "Existing CPU service deadline models implement the unchanged service classifier MSG_PEEK API. No product service/parser/authority change.",
+  "baseline_source_sha": "2c132d0d6b43200baf39248d21abee08113d4968",
+  "baseline_exact_four_selectors_failed": true,
+  "baseline_cause": "Modeled Socket missing recv; AttributeError in original _peek_backend_shutdown_prepare",
+  "baseline_log": {
+    "size": 9810,
+    "sha256": "e8c0f261f5cf41d170b9153477f3e33ac6bc41b447c065a4573d911ebf2a649d"
+  },
+  "integrated_initial_slice": {
+    "passed": 82,
+    "failed": 4,
+    "new_startup_controls_passed": 19,
+    "log": {
+      "size": 9743,
+      "sha256": "c4ca52c6c08ba7c2eb615f0d4ab0bd7c735b882419b977a80f5476e4f20aacc6"
+    }
+  },
+  "repair": {
+    "test_file": "backend/tests/test_application_frozen_service_authentication_deadline.py",
+    "test_file_sha256": "c18f950d66d9ec801410ffab4b480f2718c19db36d811177db321acddf2d1778",
+    "product_source_sha": "3086fb8114ae1e55e335dde5813dc5e4e21251ef",
+    "tracked_product_files_unchanged_from_source": true,
+    "executed_with_uncommitted_fixture_change": true,
+    "peek_consumes_or_advances_modeled_clock": false,
+    "later_read_requires_same_canonical_frame_and_consumes_once": true,
+    "original_authentication_deadline_and_negative_assertions_retained": true
+  },
+  "after": {
+    "entire_affected_file_passed": 45,
+    "failed": 0,
+    "pytest_seconds": 0.19,
+    "command_result": {
+      "exit_code": 0,
+      "seconds": 0.656809207983315,
+      "log_sha256": "bb95bea8fde017295f3104a645884d639024a0157980efaa7c80d7d90b57078a"
+    },
+    "log": {
+      "size": 99,
+      "sha256": "bb95bea8fde017295f3104a645884d639024a0157980efaa7c80d7d90b57078a"
+    }
+  },
+  "limits": {
+    "socket_OS_identity_signed_validation_clock_CPU_callback_are_models": true,
+    "native_or_GPU_or_parent_or_whole_CI_acceptance": false,
+    "scenario_count_promotions": 0
+  }
+}

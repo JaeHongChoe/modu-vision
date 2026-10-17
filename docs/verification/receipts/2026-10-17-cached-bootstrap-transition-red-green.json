@@ -1,0 +1,140 @@
+{
+  "date": "2026-10-17",
+  "fixture_contract": {
+    "failed_lease_reused": false,
+    "fresh_lease_each_attempt": true,
+    "no_production_budget_increase": true,
+    "original_methods": "Original validators/context/identity/hash/proof/cache population/inspect_launch/flock execute unchanged within each pinned source checkpoint.",
+    "original_production_startup_budget_seconds": 210,
+    "real_mutex": "Original POSIX flock on the same pinned transition-lock inode; parent independently observed kernel LOCK_NB Busy.",
+    "real_processes": "Separate original backend and original inspect_launch observer processes; anonymous local UNIX descriptor for actual authentication.",
+    "single_controlled_schedule_seconds": 30,
+    "synthetic_setup_limits": [
+      "Existing test-only controlled-canary provider prepares the signed inert layout; this is not actual staged canary execution.",
+      "Starting journal is disclosed fixture data naming the real current parent identity; no original controller/main app spawn is established.",
+      "Protocol3 source transport only; no protocol4 writer enrollment, native app, activation, owner or lease acceptance."
+    ]
+  },
+  "green": {
+    "actual_disassembly_unchanged": true,
+    "actual_order": [
+      "initial original bootstrap computed proof/cache",
+      "distinct original inspect_launch process acquired original same-inode flock",
+      "actual first Busy released observer immediately",
+      "same original cached call completed after bounded mutex entry",
+      "original READY body exactly matched initial actual claim",
+      "both original Popen handles naturally closed0"
+    ],
+    "actual_original_mutex_busy_count": 1,
+    "cleanup_errors": [],
+    "completion_sha256": "2aa34a67e6f878961d34bcbf343725eecea06da5f0d756296a187309ca3325aa",
+    "fixture_script_bytes_unchanged": true,
+    "full_tracked_source_raw9_and_sha256_unchanged": true,
+    "original_READY_exactly_equals_actual_claim_with_kind_changed_only": true,
+    "original_backend_exit_code": 0,
+    "original_function_code_identity_and_stable_fields_unchanged": true,
+    "original_observer_exit_code": 0,
+    "primary_fixture_error": null,
+    "protected_fixture_file_count": 39,
+    "protected_fixture_file_raw9_and_sha256_unchanged": true,
+    "pytest_passed": 1,
+    "pytest_seconds": 1.89,
+    "raw_artifact_sha256": {
+      "backend.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "backend.stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence.json": "760db96abe9cb347d09021d414a8126373bb3321f1da4c710059c36523dc6404",
+      "invocation.json": "adf933c130239877df4170e401fe37dacde4eefec6a3730239f8faae26895da5",
+      "observer.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "observer.stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "pytest.log": "4fd0a12c6502eeb3efa078323d8ae8fd777840228978f1311783d25dca9ac8d1",
+      "result.json": "30fac56220e21e14b2ff37fca4db126548fdee8a1538895d1d7fbf00f6db66af",
+      "source-after.json": "d880aaad3f0a1442c5404acdd81eebd1eaa995dd878664a066efad57e2a7f05e",
+      "source-before.json": "d880aaad3f0a1442c5404acdd81eebd1eaa995dd878664a066efad57e2a7f05e"
+    },
+    "readback_sha256": "70691cb8851e570269970d6cbad29ae8e25c4b1dbbb4c0c2ee1add7e7fc43e7d",
+    "runner_exit_code": 0,
+    "runner_seconds": 2.595228249905631,
+    "selected_cache_binding_change": {
+      "ready": [
+        false,
+        true
+      ]
+    },
+    "signals_sent": false,
+    "source_commit": "3086fb8114ae1e55e335dde5813dc5e4e21251ef",
+    "status": "passed",
+    "trace_restored": true,
+    "tracked_source_files": 2867
+  },
+  "ledger_modified": false,
+  "limits": [
+    "No native UI execution, packaged-backend runtime or installed-app startup credit from this source fixture.",
+    "No model training, model inference, GPU execution or quality approval.",
+    "No actual controller, activation, owner/lease acceptance or whole process-tree acceptance.",
+    "The actual Root04 competing holder PID and the separate Root03 login-hydration poison are not established by this reproduction.",
+    "This unchanged causal fixture captures selected cache binding fields; direct startup-deadline expiry/drift/post-READY controls are separate source tests."
+  ],
+  "product_file": "backend/engine/application_launch_handshake.py",
+  "product_source_sha256": {
+    "after": "6df6f8b6ae7bf383e7112891d441e14c5d34f066adafcee580597bd33b8de89b",
+    "before": "e40fe423d6dfdb018175d595417e8c3f2dc02c49bf1b46df42ff02ee1628ecbc"
+  },
+  "red": {
+    "actual_disassembly_unchanged": true,
+    "actual_order": [
+      "initial original bootstrap computed proof/cache",
+      "distinct original inspect_launch process acquired original same-inode flock",
+      "actual cached revalidation raised LeaseTransitionBusy",
+      "first original Busy released observer immediately",
+      "cached caller still failed and backend exited1; observer completed0"
+    ],
+    "actual_original_mutex_busy_count": 1,
+    "cleanup_errors": [],
+    "exception": "Owned backend bootstrap refused: Lease transition is busy; retry after it completes",
+    "exception_type": "HandshakeError",
+    "fixture_script_bytes_unchanged": true,
+    "full_tracked_source_raw9_and_sha256_unchanged": true,
+    "original_backend_exit_code": 1,
+    "original_channel_error": "Private descriptor EOF before complete frame",
+    "original_function_code_identity_and_stable_fields_unchanged": true,
+    "original_observer_exit_code": 0,
+    "primary_fixture_error": null,
+    "protected_fixture_file_count": 39,
+    "protected_fixture_file_raw9_and_sha256_unchanged": true,
+    "pytest_failed": 1,
+    "pytest_seconds": 1.94,
+    "raw_artifact_sha256": {
+      "backend.stderr.log": "fa586a91e21f9b7b00ef1038bb9216bda409f3d0c0a59ea36221c6c9551e9e0f",
+      "backend.stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "evidence.json": "79d7a3c06cb78f57d138861897281ccf86dd48e92f41467ae5eff13eef39c7b5",
+      "invocation.json": "b4f010662882c78dc690f10cf4a04f0ec38147533ab161cd3c9cb453d66bf4e2",
+      "observer.stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "observer.stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "pytest.log": "69e3cd9c3746e908335da23ea0304247b9b3700651fcda8109161174ef19e14e",
+      "result.json": "9abddc6b6cba0bd3907ae38afea1740ec631ff07f7d00bb969da93d0fc0621bc",
+      "source-after.json": "bd9ae3e9d99fa5b33ba6c5aa7c2830984603e3ec138ece9e98ca2244959b340a",
+      "source-before.json": "bd9ae3e9d99fa5b33ba6c5aa7c2830984603e3ec138ece9e98ca2244959b340a"
+    },
+    "runner_exit_code": 1,
+    "runner_seconds": 2.647990042110905,
+    "signals_sent": false,
+    "source_commit": "2c132d0d6b43200baf39248d21abee08113d4968",
+    "status": "expected_failure_at_final_backend_exit_assertion",
+    "trace_restored": true,
+    "tracked_source_files": 2857
+  },
+  "retained_measurement_failure": {
+    "explanation": "Raw code serialization can change reference flags while exact code identity/explicit fields/disassembly remain unchanged. The retained clean RED/GREEN use stable explicit code fields and disassembly guards.",
+    "raw_result_sha256": "b61e89ca9c8ff8b2d201cae33c24684f007bca2abd56e9ba7e1e87a270e470a6",
+    "status": "separate prior attempt failed its marshal-only fingerprint guard; no clean causal RED credit"
+  },
+  "same_fixture_bytes": {
+    "roles_sha256": "11b4f549497371de8c5f19e5c2e3c7d412ac144d420b3f79bde9117413fbaba6",
+    "test_sha256": "25d7fa5b15f45e5eb64aa719e5a12199c058166c5d85a6f84e54a553645123c3"
+  },
+  "schema": "modu-vision.scoped-source-causal-regression/v1",
+  "scope": "Pre-READY cached backend authentication survives one brief legitimate observer transition-lock holder within its original startup action bound.",
+  "source_join": "Ten other named product/fixture source pins remain byte-identical between the retained RED source and the clean GREEN checkpoint; only the handshake differs among the eleven checked inputs.",
+  "state_or_parent_count_promotions": 0,
+  "status": "scoped_source_contract_passed"
+}
