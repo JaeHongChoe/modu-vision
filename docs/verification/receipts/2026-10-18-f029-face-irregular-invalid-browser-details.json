@@ -1,0 +1,376 @@
+{
+  "schema": "modu-vision.F029-face-irregular-invalid-browser-details/v1",
+  "source_sha": "172c6a29605fb3948fc2e54510125acf3f018515",
+  "source_base_sha": "b7b2c27c78194de6714d717180147d2dee2cad92",
+  "source_dirty": false,
+  "test_source_sha256": "99b643bf118177fea212291a67e1edb1b37eaa9eafb840586ac4b4512a0164d3",
+  "raw_readback_sha256": "d85ce067c1525a9ae6dd369b0fc2121dff4f433eb4bf1bffa6303e3d8d59b45a",
+  "raw_report_sha256": "76f814440356afd1cfe4f1b638bb183f6c258786269799bc02f35f3a5bbd41c4",
+  "raw_harness_sha256": {
+    "irregular": "9207bc582c32119a19651ebe2bfd59392b70ff4b19657008df0b6eceb8655bde",
+    "face": "837459fc8c9f5bef5697c7bf52d65a7f7121f855d9b32da31ede61dec2eddf1e"
+  },
+  "raw_log_sha256": "89cb5440e37d81fb96196f5cde555e22366460b547574c7f375d3b91cd93e6c5",
+  "raw_original_tool_observations_sha256": "33610ebabe0a3126762c721a08c958ee47c4207286cd60c6a97f279036e02c77",
+  "raw_teardown_sha256": "6798e683a1229e5f902e1dad8e0dc4202a8a6b38b59f906cba08fcc0bd04a10d",
+  "source_snapshot_before_after_sha256": "6dde79e3b6d24700c50bbc5cdac0cf1c09038174fe5d2929e29ec0ab0bdf6aa7",
+  "provider_snapshot_before_after_sha256": "6fb16feb442471f7c2018dfe2781ba33c474e453bf6a6028bdb5edc3daf16ac5",
+  "source_tracked_files": 2906,
+  "source_and_locked_provider_before_after_equal": true,
+  "source_diff": "Only this new spec added to exact b7 public base; product/shared fixtures byte-identical.",
+  "execution": {
+    "selected": 2,
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0,
+    "retries": 0,
+    "flaky": 0,
+    "report_seconds": 23.325906,
+    "wrapper_seconds": 23.781570167047903,
+    "start_UTC": "2026-10-17T15:04:02.520Z",
+    "local_date": "2026-10-18 Asia/Seoul",
+    "channel": "chrome",
+    "version": "155.0.8059.80",
+    "workers": 1,
+    "headless": true
+  },
+  "typecheck": {
+    "argv": [
+      "node",
+      "node_modules/typescript/bin/tsc",
+      "-p",
+      "scripts/e2e/fixtures/tsconfig.json"
+    ],
+    "exit_code": 0,
+    "seconds": 4.461013291962445,
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cases": {
+    "face": {
+      "test": "scripts/e2e/obb-face-irregular-invalid.spec.ts::face fitting refuses actual degenerate points without changing saved truth and reopens exact baseline",
+      "generic_receipt_sha256": "2c97138a44d6b8e448f72ee3abbabcd9d5fff723dec1b359b0e1e049f8bd1f16",
+      "duration_ms": 7649,
+      "actual_client_points": [
+        [
+          615,
+          532
+        ],
+        [
+          615,
+          532
+        ],
+        [
+          720,
+          584
+        ]
+      ],
+      "actual_source_points": [
+        [
+          64,
+          64
+        ],
+        [
+          64,
+          64
+        ],
+        [
+          128,
+          95.6952380952381
+        ]
+      ],
+      "independently_recomputed_degeneracy": {
+        "zero_edge_length": 0.0
+      },
+      "trusted_pointer_and_fit_clicks": true,
+      "source_size": [
+        256,
+        256
+      ],
+      "source_sha256": "a637bc630cbf369e26ea1d1525263cf1f26ff90cc29d66ae8a70478d37628f73",
+      "expected_original_fit_status": 422,
+      "original_full_error_body": {
+        "detail": "Fitting edge must have positive length"
+      },
+      "owning_alert_exact_visible": true,
+      "append_disabled": true,
+      "returned_polygon_count": 0,
+      "fit_action_enabled_after_refusal": true,
+      "original_body_not_fabricated": true,
+      "readback": {
+        "original_responses": [
+          {
+            "label": "initial-own-saved-manifest",
+            "method": "GET",
+            "route": "rotated-detection/manifest",
+            "status": 200,
+            "sha256": "73b56058f0d930fff223367aa8ed0ea332670267df09d785e5c9117f38dc4c4a",
+            "bytes": 2384,
+            "same_Request_main_frame": true,
+            "full_body_finished_within_original10s": true
+          },
+          {
+            "label": "own-fitting-source",
+            "method": "GET",
+            "route": "rotated-detection/fit-source",
+            "status": 200,
+            "sha256": "3bfdf72304c07340fce6f384f4458164ca489c4d43467550b15c8ee316afffa1",
+            "bytes": 1172,
+            "same_Request_main_frame": true,
+            "full_body_finished_within_original10s": true
+          },
+          {
+            "label": "actual-face-degenerate-refusal",
+            "method": "POST",
+            "route": "rotated-detection/fit-box",
+            "status": 422,
+            "sha256": "a669bda34b02a51c0e8cc67d11c15d1139104097b6f2b10e5c50104b5120890a",
+            "bytes": 51,
+            "same_Request_main_frame": true,
+            "full_body_finished_within_original10s": true
+          },
+          {
+            "label": "real-reload-own-saved-manifest",
+            "method": "GET",
+            "route": "rotated-detection/manifest",
+            "status": 200,
+            "sha256": "73b56058f0d930fff223367aa8ed0ea332670267df09d785e5c9117f38dc4c4a",
+            "bytes": 2384,
+            "same_Request_main_frame": true,
+            "full_body_finished_within_original10s": true
+          }
+        ],
+        "full_request_context_header_equality": true,
+        "distinct_server_accepted_context_receipt_claim": false,
+        "initial_and_reloaded_manifest_bodies_equal": true,
+        "saved_table_exact": true,
+        "saved_samples": 3,
+        "splits": {
+          "train": 1,
+          "val": 1,
+          "test": 1
+        },
+        "protected_tree_counts": {
+          "source": 4,
+          "project": 23,
+          "prepared": 5
+        },
+        "source_project_prepared_raw9_and_bodies_exact_through_natural_shutdown": true,
+        "only_after_baseline_nonGET": "Original geometric fitPOST1",
+        "persistent_API_mutations_after_baseline": 0
+      },
+      "errors": {
+        "page": 0,
+        "callback": 0,
+        "expected_original_owning_HTTP422": 1,
+        "expected_same_owning_Chrome422_network_console_diagnostic": 1,
+        "unexpected": 0,
+        "blanket_console_exemption": false
+      },
+      "natural_backend_closure": {
+        "exit_code": 0,
+        "forced": false,
+        "port_closed": true,
+        "pid_alive": false,
+        "group_alive": false,
+        "escaped": [],
+        "scan_error": null,
+        "FD_custody": {
+          "opened": 96,
+          "closed": 96,
+          "uncertain": []
+        }
+      },
+      "visual_review": {
+        "refusal": "Actual input points/path, owning exact refusal, disabled append and unchanged saved three rows visible. The duplicate face marker visually overlaps; exact duplicate identity and count3 come from original DOM/request equality, not PNG alone.",
+        "reload": "Saved three-row table visible and equal original full manifest body. Original image/mode resets on reload; no active-fitting-mode persistence claimed."
+      },
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "bb77a9edcf64e00efc5a1d5adfd9a4201dc24a8d5186c07fdda670ad66bb2215"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "4b8238020f0c1b13b325d31b1536789394fa30cdd750decc103e4b3ca45b5891"
+        }
+      ],
+      "limits": {
+        "model_or_training_actions_requested": false,
+        "GPU_unavailable_claim": false,
+        "health_device_capability_only": "mps",
+        "native_installed_GUI": false,
+        "quality_approval": false,
+        "parent_acceptance": false,
+        "mode_persistence_on_reload": false
+      }
+    },
+    "irregular": {
+      "test": "scripts/e2e/obb-face-irregular-invalid.spec.ts::irregular fitting refuses actual degenerate points without changing saved truth and reopens exact baseline",
+      "generic_receipt_sha256": "fac6e6ea9e5b18492f3da5cbae650f473d357b1ee6064a3f8775a7a2460d9a60",
+      "duration_ms": 7223,
+      "actual_client_points": [
+        [
+          615,
+          532
+        ],
+        [
+          720,
+          532
+        ],
+        [
+          825,
+          532
+        ]
+      ],
+      "actual_source_points": [
+        [
+          64,
+          64
+        ],
+        [
+          128,
+          64
+        ],
+        [
+          192,
+          64
+        ]
+      ],
+      "independently_recomputed_degeneracy": {
+        "same_horizontal_y": 64,
+        "triangle_cross_product_area": 0.0
+      },
+      "trusted_pointer_and_fit_clicks": true,
+      "source_size": [
+        256,
+        256
+      ],
+      "source_sha256": "a637bc630cbf369e26ea1d1525263cf1f26ff90cc29d66ae8a70478d37628f73",
+      "expected_original_fit_status": 422,
+      "original_full_error_body": {
+        "detail": "Polygon has no positive area"
+      },
+      "owning_alert_exact_visible": true,
+      "append_disabled": true,
+      "returned_polygon_count": 0,
+      "fit_action_enabled_after_refusal": true,
+      "original_body_not_fabricated": true,
+      "readback": {
+        "original_responses": [
+          {
+            "label": "initial-own-saved-manifest",
+            "method": "GET",
+            "route": "rotated-detection/manifest",
+            "status": 200,
+            "sha256": "dbb918504cd9db476001e9bd4162d55c5bf39e35e09ba1b9958f70336c21baa0",
+            "bytes": 2394,
+            "same_Request_main_frame": true,
+            "full_body_finished_within_original10s": true
+          },
+          {
+            "label": "own-fitting-source",
+            "method": "GET",
+            "route": "rotated-detection/fit-source",
+            "status": 200,
+            "sha256": "3bfdf72304c07340fce6f384f4458164ca489c4d43467550b15c8ee316afffa1",
+            "bytes": 1172,
+            "same_Request_main_frame": true,
+            "full_body_finished_within_original10s": true
+          },
+          {
+            "label": "actual-irregular-degenerate-refusal",
+            "method": "POST",
+            "route": "rotated-detection/fit-box",
+            "status": 422,
+            "sha256": "26bf31ea55926ef7b62188ab3c64a15ebc470cd7405cfb573a13032fb68a08fd",
+            "bytes": 41,
+            "same_Request_main_frame": true,
+            "full_body_finished_within_original10s": true
+          },
+          {
+            "label": "real-reload-own-saved-manifest",
+            "method": "GET",
+            "route": "rotated-detection/manifest",
+            "status": 200,
+            "sha256": "dbb918504cd9db476001e9bd4162d55c5bf39e35e09ba1b9958f70336c21baa0",
+            "bytes": 2394,
+            "same_Request_main_frame": true,
+            "full_body_finished_within_original10s": true
+          }
+        ],
+        "full_request_context_header_equality": true,
+        "distinct_server_accepted_context_receipt_claim": false,
+        "initial_and_reloaded_manifest_bodies_equal": true,
+        "saved_table_exact": true,
+        "saved_samples": 3,
+        "splits": {
+          "train": 1,
+          "val": 1,
+          "test": 1
+        },
+        "protected_tree_counts": {
+          "source": 4,
+          "project": 23,
+          "prepared": 5
+        },
+        "source_project_prepared_raw9_and_bodies_exact_through_natural_shutdown": true,
+        "only_after_baseline_nonGET": "Original geometric fitPOST1",
+        "persistent_API_mutations_after_baseline": 0
+      },
+      "errors": {
+        "page": 0,
+        "callback": 0,
+        "expected_original_owning_HTTP422": 1,
+        "expected_same_owning_Chrome422_network_console_diagnostic": 1,
+        "unexpected": 0,
+        "blanket_console_exemption": false
+      },
+      "natural_backend_closure": {
+        "exit_code": 0,
+        "forced": false,
+        "port_closed": true,
+        "pid_alive": false,
+        "group_alive": false,
+        "escaped": [],
+        "scan_error": null,
+        "FD_custody": {
+          "opened": 96,
+          "closed": 96,
+          "uncertain": []
+        }
+      },
+      "visual_review": {
+        "refusal": "Actual input points/path, owning exact refusal, disabled append and unchanged saved three rows visible. The duplicate face marker visually overlaps; exact duplicate identity and count3 come from original DOM/request equality, not PNG alone.",
+        "reload": "Saved three-row table visible and equal original full manifest body. Original image/mode resets on reload; no active-fitting-mode persistence claimed."
+      },
+      "artifacts": [
+        {
+          "id": "screenshot-0",
+          "sha256": "2e4d6625a7acdc3b8b3cacaf0b3cdb1e64c3a20057c68edb41def276a56e61d9"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "47c7efcfce61664fb21841d1c872c48984a75a51ef6b7d6db6177e502a2c313d"
+        }
+      ],
+      "limits": {
+        "model_or_training_actions_requested": false,
+        "GPU_unavailable_claim": false,
+        "health_device_capability_only": "mps",
+        "native_installed_GUI": false,
+        "quality_approval": false,
+        "parent_acceptance": false,
+        "mode_persistence_on_reload": false
+      }
+    }
+  },
+  "limits": {
+    "only_two_existing_invalid_cells": true,
+    "parent_state_promotion": false,
+    "native_or_F057_OS_credit": false,
+    "model_quality_approval": false,
+    "whole_CI_credit": false,
+    "Root05_Root06_cause_claim": false,
+    "global_counts_assumed": false
+  }
+}
