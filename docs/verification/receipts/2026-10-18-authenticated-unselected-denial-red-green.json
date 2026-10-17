@@ -1,0 +1,135 @@
+{
+  "cause_reproduced_in_source": "A legitimate bearer-authenticated GET before project selection returned original409 and complete envelopes with three closed SQLite connections, but retained unsupported admission status.",
+  "change": "Provisional ownership for five literal GET routes settles only after original authentication, project_for(None), three original DB exits, retained no-project middleware return and terminal ASGI envelope.",
+  "claim_limits": {
+    "GPU_or_model_quality_acceptance": false,
+    "Graph09_first_ingress_identity_proven": false,
+    "Graph09_pass": false,
+    "Root05_or_Root06_cause_proven": false,
+    "full_runtime_inventory": false,
+    "ledger_count_delta": 0,
+    "native_or_compiled_acceptance": false,
+    "source_ASGI_only": true,
+    "whole_graph_or_parent_acceptance": false
+  },
+  "evidence": [
+    {
+      "bytes": 490,
+      "label": "causal_red/result.json",
+      "sha256": "023ea17c0ff08ec9fd980affa85214eb3c7bf3f8717abbf4e9c10ab81c5c9064"
+    },
+    {
+      "bytes": 2910,
+      "label": "causal_red/original-ASGI-readback.json",
+      "sha256": "11f4b21b3ee0d3bdf7c0d59b87d6725ad36dabdfc28297c6e5cda1b0e3582819"
+    },
+    {
+      "bytes": 5519,
+      "label": "causal_red/junit.xml",
+      "sha256": "2b613396f961a81fe660a511a8e38c70c1d61cddbdb1e3addcf0bc93d39d7685"
+    },
+    {
+      "bytes": 5414,
+      "label": "causal_red/pytest.log",
+      "sha256": "d48ee358622be834890f95e70e4a75f1a2674e142922b74d3567427361034229"
+    },
+    {
+      "bytes": 491,
+      "label": "combined_green/result.json",
+      "sha256": "6a92e90e628a8b8f21d3ebbff820fcc820274fba7865588e1f24aac50b04d00e"
+    },
+    {
+      "bytes": 2844,
+      "label": "combined_green/original-ASGI-readback.json",
+      "sha256": "5f65651cb6669d837d39cce0df9f364423f41f69e6bda2903de5b312d679c933"
+    },
+    {
+      "bytes": 5745,
+      "label": "combined_green/junit.xml",
+      "sha256": "0a440c44cb4f6ea4764b8ec816cfd07e7f15096eac1ae9e7e0cc8c40a6ae8bd7"
+    },
+    {
+      "bytes": 205,
+      "label": "combined_green/pytest.log",
+      "sha256": "449978f6bd39e7415d5e75684d00456a0efb622e995beaa01c2e83b8c652de93"
+    },
+    {
+      "bytes": 796,
+      "label": "red-original-tool-results.json",
+      "sha256": "862f3231588ca718a4980600ef76eb961b55518c118678079be99a565d5a9c3f"
+    },
+    {
+      "bytes": 799,
+      "label": "green-original-tool-results.json",
+      "sha256": "3fc3718daa59fdf7283ed6cae9c03769eed5c017078bbc291ee21d4b04b6bcbc"
+    },
+    {
+      "bytes": 25960,
+      "label": "final-two-file.diff",
+      "sha256": "e96f7111e72368913a22f778c53cffbe44b183523810c5471d28d8fa70881748"
+    }
+  ],
+  "execution_guards": {
+    "deadlines_extended": false,
+    "original_children_naturally_reaped": true,
+    "original_helper_provider_pins_and_runtime_binding_unchanged": true,
+    "original_six_store_isolation_passed": true,
+    "signals_sent": false,
+    "source_and_private_inputs_before_after_exact": true
+  },
+  "private_readback": {
+    "bytes": 15846,
+    "sha256": "fa08d964763ba9bfe872fa85a4f3f71a8969758a52ed1c1ad8613c0d10d997c9"
+  },
+  "provenance_disclosures": {
+    "RED_execution_Git_base_blobs_and_before_after_snapshots_remain_original": true,
+    "executed_external_bytes_reconstituted_from_saved_source_match_execution_hash": {
+      "bytes": 3814,
+      "sha256": "520ffb7b82226e8f10384a86d00c752dcd3e6debdbcf4e7da0e76313a68b96ce"
+    },
+    "external_causal_test_one_thread_sys_setprofile_observation_restored_finally": true,
+    "external_red_test_input_overwritten_after_run_during_permanent_copy": true,
+    "metadata_only_psutil_and_optional_hardlinked_supplier_refusals_had_no_test_child": true,
+    "permanent_controls_use_original_DB_observations_without_profile": true,
+    "post_run_original_raw9_continuity_not_claimed": true,
+    "red_checkout_and_unexecuted_draft_preserved_no_reset_or_retry": true,
+    "red_checkout_edited_after_completed_execution": true
+  },
+  "schema_version": 1,
+  "scope": "source_authenticated_no_selected_project_denial_lifetime",
+  "source": {
+    "base_sha": "c522a50311226924659ba0ffddb49ebde79ec5e2",
+    "files": {
+      "backend/engine/original_shared_auth_denial.py": {
+        "bytes": 27064,
+        "git_blob": "687bf2471ae04062dc1bc9417bf969c9d6ed91ad",
+        "sha256": "dd26cd29dd9f681d65bfb95bbadc1bf530168b9045f5c02a49402d3c174d03aa"
+      },
+      "backend/tests/test_original_authenticated_unselected_denial.py": {
+        "bytes": 7838,
+        "git_blob": "577afa04cba11c22ce0f5f7917cd764c4cdd369b",
+        "sha256": "caf19536b04b83ad8482ddd99d48f25fd83a043b9afe00964b1d84e860760470"
+      }
+    },
+    "fixed_sha": "d00ac4d8d041a0841f8ae7ccbc20b4fb3a309ff6",
+    "green_source_clean": true,
+    "green_tracked_files": 2922
+  },
+  "tests": {
+    "causal_red": {
+      "failed": 1,
+      "failure": "strict drain refused active_scopes0 with uncovered_request_protocol",
+      "pytest_seconds": 1.22,
+      "tests": 1
+    },
+    "combined_green": {
+      "failed": 0,
+      "passed": 33,
+      "pytest_seconds": 10.55,
+      "runner_seconds": 16.628649584017694
+    },
+    "existing_shared_denial_controls_passed": 14,
+    "new_permanent_controls_passed": 18,
+    "same_external_body_green": 1
+  }
+}
