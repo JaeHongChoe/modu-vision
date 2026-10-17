@@ -1,0 +1,142 @@
+{
+  "schema": "modu-vision.comparison-model-input-contract-fix/v1",
+  "scope": "Align controlled comparison fixture metadata with its existing checkpoint input contract.",
+  "source": {
+    "base_commit": "20e68d22c57ddc8e35b504d41218b64d5352a58f",
+    "red_test_only_commit": "63c4ea1ea58b4ff5df18abafff8bc5cffa8a0315",
+    "green_commit": "19bb758c2bbfddbd13199bff1bd0c81fc9499a35",
+    "only_changed_files": [
+      "backend/tests/test_comparison_fixture_input_contract.py",
+      "scripts/e2e/fixtures/comparison_models.py"
+    ],
+    "fixture_sha256": "a5263205f6e45bac34130826445c946457b40348c92f5cc4c50d81a261307f39",
+    "regression_test_sha256": "218c10a7b7f0341b3188245bdb425a0840deeed0b8ea3112246084ca652d9ae4",
+    "full_two_file_diff_sha256": "a0cb39f26a7886b7fae035e824989e883a5763da83e06ed8a410f1cf5512f698",
+    "product_evaluator_or_browser_harness_changed": false
+  },
+  "contract": {
+    "task": "classification",
+    "backbone": "resnet18",
+    "classes": [
+      "OK",
+      "NG"
+    ],
+    "checkpoint_declared_image_size": [
+      64,
+      64
+    ],
+    "old_metadata_image_size": "absent; original evaluator defaulted to256x256",
+    "fixed_metadata_image_size": [
+      64,
+      64
+    ],
+    "same_two_generated_checkpoint_bytes_across_RED_GREEN": true,
+    "same_six_synthetic_original_bytes_across_RED_GREEN": true,
+    "training_or_pretrained_download": false
+  },
+  "regression": {
+    "test": "backend/tests/test_comparison_fixture_input_contract.py::test_owned_comparison_fixture_keeps_declared_checkpoint_input_in_real_evaluator",
+    "instrumentation": {
+      "real_factory_wrapper": true,
+      "calls_original_factory": true,
+      "records_original_real_model_forward_input_with_pre_hook": true,
+      "forward_or_result_replaced": false,
+      "hook_handles_removed_in_finally": true,
+      "torch_thread_count_restored_in_finally": true
+    },
+    "red": {
+      "tests": 1,
+      "failed": 1,
+      "pytest_exit": 1,
+      "actual_input_shapes": [
+        [
+          1,
+          3,
+          256,
+          256
+        ],
+        [
+          1,
+          3,
+          256,
+          256
+        ]
+      ],
+      "checkpoint_expected_shapes": [
+        [
+          1,
+          3,
+          64,
+          64
+        ],
+        [
+          1,
+          3,
+          64,
+          64
+        ]
+      ],
+      "pytest_elapsed_seconds": 4.88,
+      "original_log_sha256": "81761f5ae568fd2ed10dcd3adc6b33f9762503eaf8a61cc4c4dedb698d4ac6d9"
+    },
+    "green": {
+      "tests": 1,
+      "passed": 1,
+      "pytest_exit": 0,
+      "asserted_actual_input_shapes": [
+        [
+          1,
+          3,
+          64,
+          64
+        ],
+        [
+          1,
+          3,
+          64,
+          64
+        ]
+      ],
+      "metadata_equals_checkpoint_task_backbone_classes_image_size": true,
+      "pytest_elapsed_seconds": 4.13,
+      "original_log_sha256": "ab03266b42f4850d05dadb4460935cf4fe4bc3ee306cfbc04a22b5762cec22d0"
+    },
+    "timing_assertions": false,
+    "explicit_device": "cpu",
+    "whole_model_quality_evaluation": false
+  },
+  "isolation": {
+    "fresh_owned_external_fixture": true,
+    "original_backend_pytest_conftest_retained": true,
+    "stores_TMP_cache_and_basetemp_owned_external_before_product_imports": true,
+    "HOME_reassigned": false,
+    "per_stage_source_raw9_hash_files_unchanged": 2900,
+    "per_stage_selected_provider_pins_unchanged": true,
+    "both_original_pytest_Popen_handles_naturally_waited_and_reaped": true,
+    "signals_sent": false,
+    "browser_repeats": 0
+  },
+  "prerequisite_readback_failure": {
+    "preserved": true,
+    "before_pytest_Popen_or_model_generation": true,
+    "reason": "The initial provider readback assumed local site-packages. The qualified environment uses an existing retained .pth supplier chain. Only readback discovery was corrected to pin that chain and actual module origins.",
+    "counts_as_causal_RED": false
+  },
+  "raw_evidence": {
+    "readback_bytes": 27910,
+    "readback_sha256": "393c6b00f253f0636874189190bed11a98927679e34b7700570cf3fe16f23089",
+    "generated_input_readback_sha256": "1d2dc2956866fd6c7e546dfdec8ca5e94b57c527709b64419090c2cb1a1be9ba",
+    "red_result_sha256": "750d949a9f3e4587ef653b7a48433a222b077ba48f866a76c1ea891679bf3fa6",
+    "green_result_sha256": "09d0e0e5d48cc83da6fbadb5ba576ff45cd8869d4df3400dbf393bb3baf773cc",
+    "finite_rehashed_original_refs": 51
+  },
+  "limits": {
+    "old_Linux_CI_latency_cause_or_fix_proven": false,
+    "browser_performance_comparison": false,
+    "quality_or_model_approval": false,
+    "native_acceptance": false,
+    "whole_parent_acceptance": false,
+    "counts_or_registry_changed": false,
+    "publication": false
+  }
+}
