@@ -440,7 +440,7 @@ with maintenance_guard(root):
  def observed_leave(*,activity=None,normal_return=False):
   original_leave(activity=activity,normal_return=normal_return)
   if state.snapshot()['active_scopes']==0:
-   (projects/'managed-http-idle.json').write_text(json.dumps({{'pid':os.getpid(),**state.snapshot()}}))
+   _atomic_fixture_json(projects/'managed-http-idle.json',{{'pid':os.getpid(),**state.snapshot()}})
  state.leave=observed_leave
  home=Path(os.environ['HOME']);cache=Path(os.environ['XDG_CACHE_HOME']);temporary=Path(os.environ['TMPDIR'])
  assert home==root/'.application-runtime-homes'/os.environ['VISION_APPLICATION_LAUNCH_NONCE']
@@ -672,12 +672,29 @@ def _managed_stop_diagnostic(projects, result):
         return 'Controlled stop diagnostic unavailable: ' + type(error).__name__[:80]
 
 
+@contextmanager
+def _managed_fixture_cleanup(child, root):
+    """Run original cleanup without replacing an earlier test failure."""
+    primary=None
+    try:
+        yield
+    except BaseException as error:
+        primary=error
+        raise
+    finally:
+        try:finish_managed(child, root)
+        except BaseException as error:
+            if primary is None:raise
+            try:primary.add_note('Controlled managed fixture cleanup also failed: '+type(error).__name__+': '+str(error))
+            except BaseException:pass
+
+
 @pytest.mark.parametrize('uncovered',[False,True])
 def test_actual_source_cpu_then_managed_drain_and_original_node_exit_keeps_lease_blocked(tmp_path,monkeypatch,uncovered):
     import urllib.request,urllib.error
     values=managed_stack(tmp_path,monkeypatch,uncovered=uncovered);root=values[0];projects=root/'projects'
     child,ack=start_cpu_stack(values,prefix=['-c',_source_cpu_settlement_fixture_prefix()])
-    try:
+    with _managed_fixture_cleanup(child, root):
         _,cpu=_wait_receipt_and_cpu_settlement(root,ack['nonce'],child)
         assert cpu['semantic_output']['final_verdict']=='OK'
         server=json.loads(wait_file(projects/'managed-server.json'))
@@ -769,7 +786,82 @@ def test_actual_source_cpu_then_managed_drain_and_original_node_exit_keeps_lease
             assert assert_quiescent(root)['scope']=='original_managed_store_mutation_only'
         (projects/'managed-drain-proof.json').write_bytes(canonical({'scope':'controlled_source_backend_without_normal_startup_services',
             'cpu':cpu,'writer':snapshot,'drain':drain,'stop':result,'native':False,'whole_tree':False,'lease_release':False}))
-    finally:finish_managed(child,root)
+
+
+def test_managed_idle_callback_never_exposes_a_partial_final_json_name(tmp_path, monkeypatch):
+    """Exercise the generated fixture callback, not an application/owner proof."""
+    import ast
+    import inspect
+    import io
+    from types import SimpleNamespace
+    from backend.tests.test_application_launch_execution import _atomic_fixture_json
+
+    tree=ast.parse(inspect.getsource(managed_stack))
+    script=next(node for node in ast.walk(tree) if isinstance(node,ast.JoinedStr)
+        and any(isinstance(part,ast.Constant) and 'managed-http-idle.json' in str(part.value)
+                for part in node.values))
+    # Interpolated repository/boolean inputs are irrelevant to this exact
+    # extracted callback; preserve its actual literal body and helper call.
+    literal=''.join(part.value if isinstance(part,ast.Constant) else 'None' for part in script.values)
+    callback=next(node for node in ast.walk(ast.parse(literal))
+        if isinstance(node,ast.FunctionDef) and node.name=='observed_leave')
+    target=tmp_path/'managed-http-idle.json'
+    fact={'active_scopes':0,'unsupported':[]};calls=[];visible_partial=[]
+    real_open=io.open
+    def observe_open(name,mode='r',*args,**kwargs):
+        opened=real_open(name,mode,*args,**kwargs)
+        if os.fspath(name)==os.fspath(target) and ('w' in mode or 'x' in mode):
+            with real_open(target,'rb') as reader:visible_partial.append(reader.read())
+        return opened
+    monkeypatch.setattr(io,'open',observe_open)
+    def original_leave(*,activity=None,normal_return=False):
+        calls.append((activity,normal_return))
+    namespace={'original_leave':original_leave,'state':SimpleNamespace(snapshot=lambda:dict(fact)),
+        'projects':tmp_path,'json':json,'os':os,'_atomic_fixture_json':_atomic_fixture_json}
+    exec(compile(ast.Module(body=[callback],type_ignores=[]),'<actual managed idle fixture callback>','exec'),namespace)
+    namespace['observed_leave'](activity='controlled-request',normal_return=True)
+    assert calls==[('controlled-request',True)]
+    assert json.loads(target.read_bytes())=={'pid':os.getpid(),**fact}
+    assert visible_partial==[], 'Reader could observe the empty final marker before JSON was written'
+    assert sorted(path.name for path in tmp_path.iterdir())==['managed-http-idle.json']
+
+
+@pytest.mark.parametrize('primary_type',[RuntimeError,KeyboardInterrupt,SystemExit])
+def test_managed_cleanup_retains_primary_and_reports_secondary(monkeypatch,primary_type):
+    """Modeled cleanup errors only; no process or lifecycle credit."""
+    primary=primary_type('original controlled body failure')
+    secondary=ValueError('controlled cleanup lock busy')
+    calls=[];child=object();root=object()
+    def cleanup(actual_child,actual_root):
+        assert actual_child is child and actual_root is root
+        calls.append('original-cleanup');raise secondary
+    monkeypatch.setitem(globals(),'finish_managed',cleanup)
+    with pytest.raises(primary_type) as caught:
+        with _managed_fixture_cleanup(child,root):raise primary
+    assert caught.value is primary
+    assert calls==['original-cleanup']
+    assert getattr(primary,'__notes__',[])==[
+        'Controlled managed fixture cleanup also failed: ValueError: controlled cleanup lock busy']
+
+
+def test_managed_cleanup_without_primary_propagates_exact_cleanup_error(monkeypatch):
+    secondary=ValueError('controlled cleanup lock busy')
+    def cleanup(*args):raise secondary
+    monkeypatch.setitem(globals(),'finish_managed',cleanup)
+    with pytest.raises(ValueError) as caught:
+        with _managed_fixture_cleanup(object(),object()):pass
+    assert caught.value is secondary
+
+
+def test_managed_cleanup_success_retains_original_body_error_or_result(monkeypatch):
+    calls=[]
+    monkeypatch.setitem(globals(),'finish_managed',lambda *args:calls.append('cleanup'))
+    primary=RuntimeError('original controlled body failure')
+    with pytest.raises(RuntimeError) as caught:
+        with _managed_fixture_cleanup(object(),object()):raise primary
+    assert caught.value is primary and not getattr(primary,'__notes__',[])
+    with _managed_fixture_cleanup(object(),object()):calls.append('body')
+    assert calls==['cleanup','body','cleanup']
 
 
 def _assert_writer_snapshot_raw(snapshot, registry_raw, publication_raw):

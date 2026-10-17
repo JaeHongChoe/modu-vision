@@ -103,6 +103,9 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
   // Preserve each explicit choice (including an empty choice) only in this
   // source/target/handoff scope; a late recommendation must not reverse it.
   const modelSelectionScope = `${scopeKey}\0${handedSelection || ''}`;
+  // Keep an explicit report choice through same-scope catalog restarts, but
+  // persist it only after its response identity has been accepted.
+  const pendingManualReport = useRef<{scope:string;id:string}|null>(null);
   const manualModels = useRef<{scope:string;incumbent?:string;candidate?:string}>({scope:modelSelectionScope});
   const chooseModel = (side:'incumbent'|'candidate',id:string) => {
     manualModels.current = {...(manualModels.current.scope===modelSelectionScope
@@ -140,6 +143,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
   useEffect(() => {
     let active = true;
     if(reviewReturnChoice.current?.scope!==scopeKey)reviewReturnChoice.current=null;
+    if(pendingManualReport.current?.scope!==modelSelectionScope)pendingManualReport.current=null;
     const sameScopeRefresh=catalogRequest.current.scope===modelSelectionScope
       && catalogRequest.current.refreshRevision!==refreshRevision;
     catalogRequest.current={scope:modelSelectionScope,refreshRevision};
@@ -181,23 +185,32 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
       const reviewReturn=consumeReviewContext(localStorage,evaluationOriginScope(project?.id,sourceFolder,task,project?.active_labelset_id||'default',compute),history.comparisons.map(row=>row.comparison_id),'comparison');
       if(freshHandoff||reviewReturnChoice.current?.scope!==scopeKey)reviewReturnChoice.current=null;
       if(!freshHandoff&&reviewReturn)reviewReturnChoice.current={scope:scopeKey,origin:reviewReturn};
+      if(freshHandoff||reviewReturn)pendingManualReport.current=null;
+      const manualReport=pendingManualReport.current?.scope===modelSelectionScope?pendingManualReport.current:null;
       const retainedOrigin=reviewReturnChoice.current?.origin;
       const origin=freshHandoff?null:retainedOrigin&&history.comparisons.some(row=>row.comparison_id===retainedOrigin.comparison_id)?retainedOrigin:null;
       const requested=freshHandoff?{kind:'job' as const,id:handedId!}:origin?.comparison_id?{kind:'report' as const,id:origin.comparison_id}
-        :remembered||((handedId||localStorage.getItem(selectionKey))?{kind:'job' as const,id:handedId||localStorage.getItem(selectionKey)!}:null);
+        :manualReport?{kind:'report' as const,id:manualReport.id}:remembered||((handedId||localStorage.getItem(selectionKey))?{kind:'job' as const,id:handedId||localStorage.getItem(selectionKey)!}:null);
       const requestedId=requested?.kind==='job'?requested.id:null;
       const savedId=requested?.kind==='report'?requested.id:origin?.comparison_id;
       if(savedId){
-        if(!history.comparisons.some(row=>row.comparison_id===savedId))setError(`선택한 비교 보고서 ${savedId}을 현재 출처·작업·정답 버전에서 찾지 못했습니다. 작업 센터에서 다시 확인하세요.`);
+        if(!history.comparisons.some(row=>row.comparison_id===savedId)){
+          if(pendingManualReport.current===manualReport)pendingManualReport.current=null;
+          setError(`선택한 비교 보고서 ${savedId}을 현재 출처·작업·정답 버전에서 찾지 못했습니다. 작업 센터에서 다시 확인하세요.`);
+        }
         else void api.evaluation.getComparison(savedId,sourceFolder,task).then(saved=>{if(active&&currentScope.current===scopeKey&&reportChoice.current===choice){
           if(saved.comparison_id!==savedId)throw new Error('비교 결과의 식별자가 선택한 기록과 일치하지 않습니다.');
-          if(origin)rememberSelection('report',savedId);
+          if(origin||manualReport)rememberSelection('report',savedId);
+          if(pendingManualReport.current===manualReport)pendingManualReport.current=null;
           setReport(saved);setReportScope(scopeKey);setOriginPath(saved.images.some(row=>row.file_path===origin?.file_path)?origin?.file_path||'':'');
           if(origin){
             setProductFilter(typeof origin.product_filter==='string'&&(!origin.product_filter||saved.images.some(row=>(row.product||'(미지정)')===origin.product_filter))?origin.product_filter:'');
             setLotFilter(typeof origin.lot_filter==='string'&&(!origin.lot_filter||saved.images.some(row=>(row.lot||'(미지정)')===origin.lot_filter))?origin.lot_filter:'');
           }
-        }}).catch(cause=>{if(active&&currentScope.current===scopeKey&&reportChoice.current===choice)setError(errorMessage(cause));});
+        }}).catch(cause=>{if(active&&currentScope.current===scopeKey&&reportChoice.current===choice){
+          if(pendingManualReport.current===manualReport)pendingManualReport.current=null;
+          setError(errorMessage(cause));
+        }});
       }
       setJobs(jobHistory.jobs);
       const running = jobHistory.jobs.find((j) => (j.status === 'queued' || j.status === 'running')
@@ -220,7 +233,10 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
       setCandidateId(nextCandidate);
       if(missingManual)setError('수동으로 선택한 비교 모델을 현재 목록에서 찾지 못했습니다. 기준·후보 모델을 직접 다시 선택하세요.');
     }).catch((cause) => {
-      if (active && currentScope.current === scopeKey) setError(errorMessage(cause));
+      if (active && currentScope.current === scopeKey && reportChoice.current===choice) {
+        if(pendingManualReport.current?.scope===modelSelectionScope)pendingManualReport.current=null;
+        setError(errorMessage(cause));
+      }
     }).finally(() => {
       if (active && currentScope.current === scopeKey) setIsLoading(false);
     });
@@ -261,6 +277,8 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
   const openReport = async (comparisonId: string) => {
     if (!comparisonId || !sourceFolder) return;
     reviewReturnChoice.current=null;setOriginPath('');
+    const manualReport={scope:modelSelectionScope,id:comparisonId};
+    pendingManualReport.current=manualReport;
     const requestedScope = scopeKey;
     const choice = ++reportChoice.current;
     setComparisonJob(null);
@@ -274,11 +292,15 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
       if (currentScope.current === requestedScope && reportChoice.current === choice) {
         if (saved.comparison_id !== comparisonId) throw new Error('비교 결과의 식별자가 선택한 기록과 일치하지 않습니다.');
         rememberSelection('report',comparisonId);
+        if(pendingManualReport.current===manualReport)pendingManualReport.current=null;
         setReport(saved);
         setReportScope(requestedScope);
       }
     } catch (cause) {
-      if (currentScope.current === requestedScope && reportChoice.current === choice) { setError(errorMessage(cause)); setIsRunning(false); }
+      if (currentScope.current === requestedScope && reportChoice.current === choice) {
+        if(pendingManualReport.current===manualReport)pendingManualReport.current=null;
+        setError(errorMessage(cause)); setIsRunning(false);
+      }
     } finally {
       if (currentScope.current === requestedScope && reportChoice.current === choice) setIsLoading(false);
     }
@@ -287,6 +309,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
   const runComparison = async () => {
     if (!sourceFolder || !incumbentId || !candidateId || incumbentId === candidateId || missingProfile) return;
     reviewReturnChoice.current=null;setOriginPath('');
+    pendingManualReport.current=null;
     const requestedScope = scopeKey;
     const choice=++reportChoice.current;
     setComparisonJob(null);setReport(null);setReportScope('');
@@ -474,6 +497,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
           {jobs.length > 0 && <label className="mt-2 block text-slate-300">비교 작업 다시 열기<select aria-label="비교 작업 다시 열기" value={comparisonJob?.job_id || ''} onChange={(e) => {
             const job = jobs.find((j) => j.job_id === e.target.value); if (!job) return;
             reviewReturnChoice.current=null;setOriginPath('');
+            pendingManualReport.current=null;
             reportChoice.current++;setReport(null);setReportScope('');setError(null);setComparisonJob(job); setIsRunning(['queued', 'running'].includes(job.status));rememberSelection('job',job.job_id);
           }} className="mt-1 block w-full rounded border border-[#3D5266] bg-[#0F1B27] px-2 py-1.5"><option value="">작업 선택</option>{jobs.map((j) => <option value={j.job_id} key={j.job_id}>{j.job_id.slice(-12)} · {j.status} · {j.completed_images}/{j.total_images}</option>)}</select></label>}
           <p className="mt-2 text-[10px] leading-relaxed text-slate-400">
