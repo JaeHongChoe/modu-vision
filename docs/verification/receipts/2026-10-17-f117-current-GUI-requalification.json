@@ -1,0 +1,54 @@
+{
+  "schema": "modu-vision.action-current-GUI-requalification/v1",
+  "cell": "F117.format-export-bundle.cancel",
+  "prior_current_dimension": {
+    "state": "pending",
+    "evidence": [
+      {
+        "task": "S3-05",
+        "source_sha": "114d908cf73ef9bef25f62af2b968436895522c0",
+        "kind": "click",
+        "action": "\ub77c\ubca8 \ub0b4\ubcf4\ub0b4\uae30 \uc694\uccad \ucde8\uc18c",
+        "expected": "Abort only the currently owned export request; prevent download adoption and allow explicit fresh retry without claiming backend bundle rollback or worker interruption.",
+        "observed": "Clean browser actual Root04 used the owning AbortSignal after the original backend completed200. Original client socket closed with0bytes and no Response/download adoption; original server ZIP remained. A separate real project-context switch also rejected adoption; two ordinary fresh ZIP downloads recovered exact source and label member hashes. No panel-dismissal, worker-stop, installed-native, model quality or whole-parent credit.",
+        "reviewer": "Root actual proof review plus immutable source/HTTP/ZIP/screenshot receipts; canonical click reference only, no whole feature acceptance",
+        "test": "scripts/e2e/label-export-own-request-cancel.spec.ts::real owning export Abort cancels download adoption then recovers without deleting completed server bundles",
+        "receipt": "2026-10-15-f117-own-export-cancel-root04-browser.json",
+        "receipt_sha256": "b1442969771692791f891ef464598a6a8fef3af52234a022379439a5273698e5",
+        "artifacts": [
+          {
+            "id": "screenshot-0",
+            "sha256": "fff1cc7752e2d207e0faa819c85320bb855acf83103fc146c27c94612b279a2f"
+          },
+          {
+            "id": "screenshot-1",
+            "sha256": "7832d2bf4c3c3b46d1e6a1335003767d064d4713bf79e93012979a4e7e63b911"
+          },
+          {
+            "id": "screenshot-2",
+            "sha256": "5abc5ba1ef5c01e908dce5265e5f021107347544da10cba82e33186e2334d5d8"
+          },
+          {
+            "id": "screenshot-3",
+            "sha256": "697b0e58a1881e906933dce77874605aa4b6139b0b8454bacad561f8b30562f6"
+          }
+        ]
+      }
+    ],
+    "reason": "Historical Root04 browser cancellation passed at its retained source and test bytes. The test now loads the exact unchanged passive observer from a repository fixture after a source-only path portability change; no current GUI rerun was performed. The original evidence and receipt remain historical. See 2026-10-17-action-source-portability-provenance-delta.json.",
+    "reviewer": "Root source-only publication provenance reconciliation; current GUI execution remains pending"
+  },
+  "new_GUI_receipt": "2026-10-17-f117-owned-export-cancel-current-browser.json",
+  "new_GUI_receipt_sha256": "ff308a663356eebe2c09a6c73497897d1f78ea9abd5440c6ac716b1f41c5b658",
+  "historical_receipt_unchanged": {
+    "name": "2026-10-15-f117-own-export-cancel-root04-browser.json",
+    "sha256": "b1442969771692791f891ef464598a6a8fef3af52234a022379439a5273698e5"
+  },
+  "historical_complete_dimension_preserved_in": "2026-10-17-action-source-portability-provenance-delta.json",
+  "current_source": "d00f07f3d7c940317848762abdf6743831dfe63d",
+  "new_source_Electron_credit": false,
+  "new_native_or_parent_acceptance": false,
+  "independent_model_quality_approval": false,
+  "direct_browser_context_close_witness": false,
+  "clean_backend_and_harness_teardown_verified": true
+}
