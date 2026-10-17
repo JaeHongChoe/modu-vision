@@ -2570,7 +2570,31 @@
               ]
             },
             "error": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S3-03",
+                  "source_sha": "2fbe931cf308f88e906f2b439cc0a1cf79a1f992",
+                  "kind": "click",
+                  "action": "데이터셋 폴더 열기 · 라벨 완료·미완료 집계",
+                  "expected": "A current owning classification folder chooser failure displays its concrete error without import or source mutation; preserve source, label/partition counts and original bytes through ordinary reload.",
+                  "observed": "Actual Chrome ordinary folder button awaited one owned desktop-shim chooser and caught its explicit rejection. Exact alert appeared within10s;6eligible/6labeled/0unlabeled and Train3/Val2/Test1 remained. No postbaseline importPOST/sourcePUT or other nonGET mutation occurred. Ordinary reload completed the original owning200 current-summary Request/fullbody/equal context headers and cleared the transient alert. Source, complete project and original harness namespace raw9/body stayed exact through natural backend shutdown; FD48/48. Strict page/console/non2xx guards were zero. This qualifies chooser failure only, not backend500 or native OS chooser.",
+                  "reviewer": "Codex Root reviewed exact source/guards before one clean browser execution; retained original response/custody/screenshot/closure readback. Independent scoped evidence review completed; no human quality or parent approval.",
+                  "test": "scripts/e2e/classification-folder-chooser-error.spec.ts::classification folder chooser failure preserves owning source counts and bytes through ordinary reload",
+                  "receipt": "2026-10-17-classification-chooser-error-current-browser.json",
+                  "receipt_sha256": "f5c2fe90558ba2c4553e86dca0578e72b5c9283040f6f03eadcca922fb57abc4",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "f2915aaa187cdfab258ec538934506f3e1ccb8172b487e80e66141f29cfae8ad"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "4cf4c8de34436583c169079ba7448b502b5a8cdc572ac2c5feb82b6270c6395a"
+                    }
+                  ]
+                }
+              ]
             },
             "cancel": {
               "state": "verified",
@@ -3225,7 +3249,31 @@
               ]
             },
             "error": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S3-07",
+                  "source_sha": "2fbe931cf308f88e906f2b439cc0a1cf79a1f992",
+                  "kind": "click",
+                  "action": "데이터셋 폴더 열기 · Train·Val·Test 표시",
+                  "expected": "A current owning classification folder chooser failure displays its concrete error without import or source mutation; preserve source, label/partition counts and original bytes through ordinary reload.",
+                  "observed": "Actual Chrome ordinary folder button awaited one owned desktop-shim chooser and caught its explicit rejection. Exact alert appeared within10s;6eligible/6labeled/0unlabeled and Train3/Val2/Test1 remained. No postbaseline importPOST/sourcePUT or other nonGET mutation occurred. Ordinary reload completed the original owning200 current-summary Request/fullbody/equal context headers and cleared the transient alert. Source, complete project and original harness namespace raw9/body stayed exact through natural backend shutdown; FD48/48. Strict page/console/non2xx guards were zero. This qualifies chooser failure only, not backend500 or native OS chooser.",
+                  "reviewer": "Codex Root reviewed exact source/guards before one clean browser execution; retained original response/custody/screenshot/closure readback. Independent scoped evidence review completed; no human quality or parent approval.",
+                  "test": "scripts/e2e/classification-folder-chooser-error.spec.ts::classification folder chooser failure preserves owning source counts and bytes through ordinary reload",
+                  "receipt": "2026-10-17-classification-chooser-error-current-browser.json",
+                  "receipt_sha256": "f5c2fe90558ba2c4553e86dca0578e72b5c9283040f6f03eadcca922fb57abc4",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "f2915aaa187cdfab258ec538934506f3e1ccb8172b487e80e66141f29cfae8ad"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "4cf4c8de34436583c169079ba7448b502b5a8cdc572ac2c5feb82b6270c6395a"
+                    }
+                  ]
+                }
+              ]
             },
             "cancel": {
               "state": "verified",
