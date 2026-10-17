@@ -6,6 +6,7 @@ const path = require('node:path');
 const Module = require('node:module');
 const test = require('node:test');
 const ts = require('typescript');
+const contextApi = { getProjectContextGeneration: () => 0, getApiPersistenceIdentity: () => 'local', resolveApiUrl: x => x };
 
 function load(api, project, evaluation = { allowLatestRecovery: null }) {
   const name = path.resolve(__dirname, 'useDatasetStore.ts');
@@ -14,7 +15,7 @@ function load(api, project, evaluation = { allowLatestRecovery: null }) {
   m.paths = Module._nodeModulePaths(__dirname);
   const store = getState => ({ getState: () => getState });
   const mocks = {
-    '../services/api': { api },
+    '../services/api': { ...contextApi, api },
     './useTrainingStore': { useTrainingStore: store({ invalidateForDataChange() {} }) },
     './useEvaluationStore': { useEvaluationStore: { getState: () => ({ invalidateForDataChange(allow) { evaluation.allowLatestRecovery = allow; } }),
       setState: update => Object.assign(evaluation, update) } },
@@ -158,7 +159,7 @@ test('a newer pick made while the project store module loads keeps the newer fol
   m.paths = Module._nodeModulePaths(__dirname);
   const holder = { useProjectStore: { setState: update => Object.assign(project, typeof update === 'function' ? update(project) : update) } };
   const mocks = {
-    '../services/api': { api: { project: { update: async ({ source_dataset_dir }) => ({ id: 'p1', name: 'P', project_dir: '/projects/p1', source_dataset_dir: canonicalVar(source_dataset_dir) }) },
+    '../services/api': { ...contextApi, api: { project: { update: async ({ source_dataset_dir }) => ({ id: 'p1', name: 'P', project_dir: '/projects/p1', source_dataset_dir: canonicalVar(source_dataset_dir) }) },
       dataset: { import: async request => { imports.push(request.folder_path); return { total_images: 3, split: { train: 2, val: 1, test: 0 }, classes: {} }; }, getImages: async () => ({ images: [], total: 0 }) } } },
     './useTrainingStore': { useTrainingStore: { getState: () => ({ invalidateForDataChange() {} }) } },
     './useEvaluationStore': { useEvaluationStore: { getState: () => ({ invalidateForDataChange(allow) { evaluation.allowLatestRecovery = allow; } }), setState: update => Object.assign(evaluation, update) } },
