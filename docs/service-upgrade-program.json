@@ -6270,7 +6270,7 @@
       },
       "proposed_test_file": "scripts/e2e/service-s7-01.spec.ts",
       "remaining": [
-        "207 curated actions now have806 verified and643 pending scenarios. Exactly three new browser handoff cells and42 existing receipt pointers are backed by ten genuine Root433/434/435 official GUI receipts. Earlier action snapshots and failed runs remain historical evidence. S7-01 implementation, full GUI/persist/reopen/failure/handoff/Windows-native/target acceptance and representative human review remain pending; omitted menus/shortcuts and unexecuted dimensions remain outstanding."
+        "As of the 2026-10-17 clean-source browser receipts at d294856 and74fd6e3,207 curated actions have978 verified and471 pending scenarios. Exactly six previously pending classification import invalid/empty/chooser-cancel cells were verified; current comparison cancellation adds refreshed evidence to an already verified cell. This count comes from docs/service-action-evidence.json. Historical806/643 and earlier evidence snapshots are retained. S7-01 implementation and complete feature/target acceptance remain pending; the original installed GUI six-scope refusal and separate pre-ready EOF remain unresolved. Native OS picker, actual running partial-worker cancellation, publisher/operator/model-quality approvals and other unexecuted dimensions are not promoted. Windows-only S6-02/S7-03 remain excluded by the owner, without claiming Windows execution."
       ]
     },
     {

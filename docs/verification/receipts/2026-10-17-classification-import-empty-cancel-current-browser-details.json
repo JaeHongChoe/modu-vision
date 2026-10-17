@@ -1,0 +1,4803 @@
+{
+  "schema": "modu-vision.classification-import-empty-cancel-current-browser-details/v1",
+  "source_sha": "74fd6e3a337b4b931081f4a466ebcee5ddcd9fa2",
+  "source_dirty": false,
+  "test_source_sha256": "df427b8df5e489b2f625fdd732b7be64486c50fe9a2bf312afb9cefbbbaf0828",
+  "report_sha256": "1c25f6f3e916dc1c8d3434d54451704f8aebdf0b1da435680b0f5574b2475b6c",
+  "result": {
+    "passed": 2,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0,
+    "wrapper_seconds": 23.145917291054502,
+    "report_duration_ms": 22747.795
+  },
+  "cases": {
+    "empty": {
+      "test": "scripts/e2e/classification-import-empty-cancel-controls.spec.ts::classification folder import accepts an empty source with zero label and partition counts after reload",
+      "generic_receipt_sha256": "3bdb12e3900c1025242f2856162008c76ef9f5f6691bfcc18eeb1a505d616b98",
+      "harness_sha256": "78ba46aa28b7f79e69e3548cb5414ae09e483c14384cf6c25a9e9278375eea64",
+      "source_dependencies": {
+        "scripts/e2e/classification-import-empty-cancel-controls.spec.ts": "df427b8df5e489b2f625fdd732b7be64486c50fe9a2bf312afb9cefbbbaf0828",
+        "scripts/e2e/fixtures/test.ts": "49171e2d0d4d7d9559416fdb43bc7dae9394129bbc237fe4f2a4cea0a7afa480",
+        "scripts/e2e/fixtures/harness.cjs": "171460c1cf1697b7a44b8f86a197d2b944928381f736f81af304412126464975",
+        "scripts/e2e/fixtures/desktop-host-shim.ts": "4f598862ec0e08189628c72bbb552f72bf8fd73f5a9a05b8da1d3ddf516dcfa6",
+        "scripts/e2e/fixtures/remaining-project-handoff.ts": "7a7c74a2f42a5d6ad991dadc97626c1f8330f962edaf73fd461d31f9c4764904",
+        "scripts/e2e/qa/appFlow.ts": "4eed3e5dad1d9d65a6b19fc9bb51a1f9b0e23911a39e7f255220bec0ce37fea2",
+        "playwright.config.ts": "91495f41ce2b89d5472fc5851c4fc9c5937684958ac453d0a6a759df2a10b936",
+        "src/renderer/components/dataset/DatasetStudio.tsx": "05001ce30dd9b6c8490735f1c2ce23140f9bc4651fd4ed95bb9b6fc528ceca3b",
+        "src/renderer/components/dataset/DatasetStatisticsPanel.tsx": "3f4e30772fdcde856f8c2e294558607ea0edac3966ed11870e16a848a6a3d925",
+        "src/renderer/stores/useDatasetStore.ts": "2be93b612936ab7fc9f515382c205737e7a22237fc7efe5dfa58434efd004cb3",
+        "src/renderer/stores/useProjectStore.ts": "3eca2fbca3e3a5cd528dee9f80f87fe4b126d52392b9b7bdececc5b0e48453c3",
+        "src/renderer/services/api.ts": "ba82fc801fb827ab16b453ee4722ede933a641177be9994f6666f82965bc472e",
+        "backend/api/routes_dataset.py": "7a4bcea5d2aed6cee0f61d6a0d5c8a09e048dcc38e644d83c1c301ac59c7e801",
+        "backend/api/routes_project.py": "db435109bb82cedaea63b7a4ef3a7994757839f1ccbf50e399dbc6ec7967e97f",
+        "backend/api/routes_dataset_metadata.py": "dbe9ca7edab694241693ce942c56cb013223fcd2f26d76f898a3a947805b489a",
+        "backend/engine/dataset_summary.py": "f1cb4fa23dcbd3565b5e6b2c86d22df0e431a5db9fecd276ea0b6b1c45623b91",
+        "backend/engine/dataset_loaders.py": "5f562a629e9f0d3f32662a2bb7ad555c38326485facac75f84212fd2411cc2ed",
+        "backend/engine/industrial_adapters.py": "307b024ba594783121c7ca241872e41fdf60723a6a74c3f3597bc82f6b23b746"
+      },
+      "result": {
+        "passed": 1,
+        "attempts": 1,
+        "retries": 0,
+        "workers": 1
+      },
+      "cells": [
+        "F019.native-classification-import-label-summary.empty",
+        "F022.native-classification-partitions-import-reopen.empty"
+      ],
+      "raw_UI_body_receipts": [
+        {
+          "kind": "original UI response",
+          "label": "prepare-empty-import",
+          "method": "POST",
+          "url": "<owned-renderer-origin>/api/dataset/import",
+          "request_body": {
+            "folder_path": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/owned-empty-classification-source",
+            "task": "classification",
+            "validate_images": true
+          },
+          "project_id": "4f1444ee",
+          "context": {
+            "workspace_id": "10599d90d01847689d65c7c91a3457e0",
+            "project_id": "4f1444ee",
+            "actor_id": "ee93feb149ac4d18ae5a41f69d9b8a32",
+            "mode": "local"
+          },
+          "status": 200,
+          "response": {
+            "status": "success",
+            "total_images": 0,
+            "source_images": 0,
+            "unlabeled_images": 0,
+            "classes": {},
+            "split": {
+              "train": 0,
+              "val": 0,
+              "test": 0
+            },
+            "corrupted_images": [],
+            "validation": {
+              "requested": true,
+              "checked_images": 0,
+              "complete": true,
+              "scope": "all images: every image file under the folder was decoded"
+            },
+            "split_supported": true,
+            "split_unavailable_reason": null
+          },
+          "response_sha256": "7ebc4bf94c9ebcff242e51676d85e14db9aa2797116c56e383d010f066fdcb50",
+          "bytes": 338,
+          "raw_file": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/logs/prepare-empty-import-raw-response.json",
+          "same_Request": true,
+          "main_frame": true,
+          "finished": true,
+          "deadline": 19232.582541,
+          "completed": 9376.105291
+        },
+        {
+          "kind": "original UI response",
+          "label": "prepare-empty-source",
+          "method": "PUT",
+          "url": "<owned-renderer-origin>/api/project/update",
+          "request_body": {
+            "source_dataset_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/owned-empty-classification-source"
+          },
+          "project_id": "4f1444ee",
+          "context": {
+            "workspace_id": "10599d90d01847689d65c7c91a3457e0",
+            "project_id": "4f1444ee",
+            "actor_id": "ee93feb149ac4d18ae5a41f69d9b8a32",
+            "mode": "local"
+          },
+          "status": 200,
+          "response": {
+            "schema_version": 1,
+            "id": "4f1444ee",
+            "name": "Owned classification empty controls",
+            "task": "classification",
+            "project_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/projects/owned_classification_empty_controls",
+            "dataset_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/projects/owned_classification_empty_controls/dataset",
+            "models_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/projects/owned_classification_empty_controls/models",
+            "reports_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/projects/owned_classification_empty_controls/reports",
+            "annotations_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/projects/owned_classification_empty_controls/annotations",
+            "active_labelset_id": "default",
+            "description": "",
+            "active_preset": "fast",
+            "source_dataset_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/owned-empty-classification-source",
+            "created_at": "2026-10-17T09:09:10Z",
+            "updated_at": "2026-10-17T09:09:11Z"
+          },
+          "response_sha256": "bc6c68bf7a95390ba4d5b7a4d84c3680e970b89a5358ba7e572879686546f2be",
+          "bytes": 1620,
+          "raw_file": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/logs/prepare-empty-source-raw-response.json",
+          "same_Request": true,
+          "main_frame": true,
+          "finished": true,
+          "deadline": 19232.582541,
+          "completed": 9399.108125
+        },
+        {
+          "kind": "original UI response",
+          "label": "prepare-six-import",
+          "method": "POST",
+          "url": "<owned-renderer-origin>/api/dataset/import",
+          "request_body": {
+            "folder_path": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/owned-classification-source",
+            "task": "classification",
+            "validate_images": true
+          },
+          "project_id": "4f1444ee",
+          "context": {
+            "workspace_id": "10599d90d01847689d65c7c91a3457e0",
+            "project_id": "4f1444ee",
+            "actor_id": "ee93feb149ac4d18ae5a41f69d9b8a32",
+            "mode": "local"
+          },
+          "status": 200,
+          "response": {
+            "status": "success",
+            "total_images": 6,
+            "source_images": 6,
+            "unlabeled_images": 0,
+            "classes": {
+              "OK": 3,
+              "NG": 3
+            },
+            "split": {
+              "train": 3,
+              "val": 2,
+              "test": 1
+            },
+            "corrupted_images": [],
+            "validation": {
+              "requested": true,
+              "checked_images": 6,
+              "complete": true,
+              "scope": "all images: every image file under the folder was decoded"
+            },
+            "split_supported": true,
+            "split_unavailable_reason": null
+          },
+          "response_sha256": "c952dc35cc8dfc6d662ddfc2a0327b9c92f7a5ae01b524d191786f7d2a54e5d3",
+          "bytes": 351,
+          "raw_file": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/logs/prepare-six-import-raw-response.json",
+          "same_Request": true,
+          "main_frame": true,
+          "finished": true,
+          "deadline": 19639.283750000002,
+          "completed": 9699.374083
+        },
+        {
+          "kind": "original UI response",
+          "label": "prepare-six-source",
+          "method": "PUT",
+          "url": "<owned-renderer-origin>/api/project/update",
+          "request_body": {
+            "source_dataset_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/owned-classification-source"
+          },
+          "project_id": "4f1444ee",
+          "context": {
+            "workspace_id": "10599d90d01847689d65c7c91a3457e0",
+            "project_id": "4f1444ee",
+            "actor_id": "ee93feb149ac4d18ae5a41f69d9b8a32",
+            "mode": "local"
+          },
+          "status": 200,
+          "response": {
+            "schema_version": 1,
+            "id": "4f1444ee",
+            "name": "Owned classification empty controls",
+            "task": "classification",
+            "project_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/projects/owned_classification_empty_controls",
+            "dataset_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/projects/owned_classification_empty_controls/dataset",
+            "models_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/projects/owned_classification_empty_controls/models",
+            "reports_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/projects/owned_classification_empty_controls/reports",
+            "annotations_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/projects/owned_classification_empty_controls/annotations",
+            "active_labelset_id": "default",
+            "description": "",
+            "active_preset": "fast",
+            "source_dataset_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/owned-classification-source",
+            "created_at": "2026-10-17T09:09:10Z",
+            "updated_at": "2026-10-17T09:09:11Z"
+          },
+          "response_sha256": "79b217ab89aed1b6be5e96dae71cdb8889c095e342b591e8e00cf92b962359d5",
+          "bytes": 1614,
+          "raw_file": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/logs/prepare-six-source-raw-response.json",
+          "same_Request": true,
+          "main_frame": true,
+          "finished": true,
+          "deadline": 19639.283750000002,
+          "completed": 9717.891958
+        },
+        {
+          "kind": "original UI response",
+          "label": "actual-empty-import",
+          "method": "POST",
+          "url": "<owned-renderer-origin>/api/dataset/import",
+          "request_body": {
+            "folder_path": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/owned-empty-classification-source",
+            "task": "classification",
+            "validate_images": true
+          },
+          "project_id": "4f1444ee",
+          "context": {
+            "workspace_id": "10599d90d01847689d65c7c91a3457e0",
+            "project_id": "4f1444ee",
+            "actor_id": "ee93feb149ac4d18ae5a41f69d9b8a32",
+            "mode": "local"
+          },
+          "status": 200,
+          "response": {
+            "status": "success",
+            "total_images": 0,
+            "source_images": 0,
+            "unlabeled_images": 0,
+            "classes": {},
+            "split": {
+              "train": 0,
+              "val": 0,
+              "test": 0
+            },
+            "corrupted_images": [],
+            "validation": {
+              "requested": true,
+              "checked_images": 0,
+              "complete": true,
+              "scope": "all images: every image file under the folder was decoded"
+            },
+            "split_supported": true,
+            "split_unavailable_reason": null
+          },
+          "response_sha256": "7ebc4bf94c9ebcff242e51676d85e14db9aa2797116c56e383d010f066fdcb50",
+          "bytes": 338,
+          "raw_file": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/logs/actual-empty-import-raw-response.json",
+          "same_Request": true,
+          "main_frame": true,
+          "finished": true,
+          "deadline": 20004.819708000003,
+          "completed": 10058.427916
+        },
+        {
+          "kind": "original UI response",
+          "label": "actual-empty-source",
+          "method": "PUT",
+          "url": "<owned-renderer-origin>/api/project/update",
+          "request_body": {
+            "source_dataset_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/owned-empty-classification-source"
+          },
+          "project_id": "4f1444ee",
+          "context": {
+            "workspace_id": "10599d90d01847689d65c7c91a3457e0",
+            "project_id": "4f1444ee",
+            "actor_id": "ee93feb149ac4d18ae5a41f69d9b8a32",
+            "mode": "local"
+          },
+          "status": 200,
+          "response": {
+            "schema_version": 1,
+            "id": "4f1444ee",
+            "name": "Owned classification empty controls",
+            "task": "classification",
+            "project_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/projects/owned_classification_empty_controls",
+            "dataset_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/projects/owned_classification_empty_controls/dataset",
+            "models_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/projects/owned_classification_empty_controls/models",
+            "reports_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/projects/owned_classification_empty_controls/reports",
+            "annotations_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/projects/owned_classification_empty_controls/annotations",
+            "active_labelset_id": "default",
+            "description": "",
+            "active_preset": "fast",
+            "source_dataset_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/owned-empty-classification-source",
+            "created_at": "2026-10-17T09:09:10Z",
+            "updated_at": "2026-10-17T09:09:12Z"
+          },
+          "response_sha256": "bec694742c3d949a53c7f35e6aac37b873d7120d61fb89ca6c240c56d0119b93",
+          "bytes": 1620,
+          "raw_file": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/logs/actual-empty-source-raw-response.json",
+          "same_Request": true,
+          "main_frame": true,
+          "finished": true,
+          "deadline": 20004.819708000003,
+          "completed": 10073.811458
+        },
+        {
+          "kind": "original UI response",
+          "label": "reload-summary",
+          "method": "GET",
+          "url": "<owned-renderer-origin>/api/dataset/current-summary?folder_path=<private-verification-root>%2Fclassification-import-empty-cancel-current-02%2Fbrowser-01%2Fws%2F0-33fa6309-r0%2Fowned-empty-classification-source&task=classification",
+          "request_body": null,
+          "project_id": "4f1444ee",
+          "context": {
+            "workspace_id": "10599d90d01847689d65c7c91a3457e0",
+            "project_id": "4f1444ee",
+            "actor_id": "ee93feb149ac4d18ae5a41f69d9b8a32",
+            "mode": "local"
+          },
+          "status": 200,
+          "response": {
+            "status": "success",
+            "total_images": 0,
+            "source_images": 0,
+            "unlabeled_images": 0,
+            "classes": {},
+            "split": {
+              "train": 0,
+              "val": 0,
+              "test": 0
+            },
+            "corrupted_images": [],
+            "validation": {
+              "requested": true,
+              "checked_images": 0,
+              "complete": true,
+              "scope": "all images: every image file under the folder was decoded"
+            },
+            "split_supported": true,
+            "split_unavailable_reason": null
+          },
+          "response_sha256": "7ebc4bf94c9ebcff242e51676d85e14db9aa2797116c56e383d010f066fdcb50",
+          "bytes": 338,
+          "raw_file": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/logs/reload-summary-raw-response.json",
+          "same_Request": true,
+          "main_frame": true,
+          "finished": true,
+          "deadline": 20265.671833,
+          "completed": 10459.1545
+        }
+      ],
+      "cold_original_assets": {
+        "before": {
+          "source": {
+            ".": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443633",
+                "16877",
+                "5",
+                "160",
+                "1792228150737896393",
+                "1792228150737896393"
+              ]
+            },
+            "test": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443645",
+                "16877",
+                "3",
+                "96",
+                "1792228150737935685",
+                "1792228150737935685"
+              ]
+            },
+            "test/NG": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443646",
+                "16877",
+                "3",
+                "96",
+                "1792228150738094563",
+                "1792228150738094563"
+              ]
+            },
+            "test/NG/f.png": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177443647",
+                "33188",
+                "1",
+                "1840",
+                "1792228150738128855",
+                "1792228150738128855"
+              ],
+              "sha256": "71e6437c0779f4f440640d9defea3454220f7f029b950e1b68f53d6d210e3aaa"
+            },
+            "train": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443634",
+                "16877",
+                "4",
+                "128",
+                "1792228150737079589",
+                "1792228150737079589"
+              ]
+            },
+            "train/NG": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443638",
+                "16877",
+                "3",
+                "96",
+                "1792228150737248925",
+                "1792228150737248925"
+              ]
+            },
+            "train/NG/c.png": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177443639",
+                "33188",
+                "1",
+                "1808",
+                "1792228150737295300",
+                "1792228150737295300"
+              ],
+              "sha256": "407a1dc3ca8c6317be95f99cd7cda32493fe7d6be882f69f4e7a368289f6269a"
+            },
+            "train/OK": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443635",
+                "16877",
+                "4",
+                "128",
+                "1792228150736972837",
+                "1792228150736972837"
+              ]
+            },
+            "train/OK/a.png": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177443636",
+                "33188",
+                "1",
+                "1780",
+                "1792228150736709916",
+                "1792228150736709916"
+              ],
+              "sha256": "8539772d38c545d1ba183b4f18f894f84c9078d7fc36e336c5d7ec2afb1d68ee"
+            },
+            "train/OK/b.png": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177443637",
+                "33188",
+                "1",
+                "1792",
+                "1792228150737018629",
+                "1792228150737018629"
+              ],
+              "sha256": "c74ed1640e03e43fe95eb290c1403727fdc6469db0248690a3e30eee4dbf16df"
+            },
+            "val": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443640",
+                "16877",
+                "4",
+                "128",
+                "1792228150737661431",
+                "1792228150737661431"
+              ]
+            },
+            "val/NG": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443643",
+                "16877",
+                "3",
+                "96",
+                "1792228150737819475",
+                "1792228150737819475"
+              ]
+            },
+            "val/NG/e.png": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177443644",
+                "33188",
+                "1",
+                "1829",
+                "1792228150737852684",
+                "1792228150737852684"
+              ],
+              "sha256": "143e3c59718c6d55934341861ab1aab82671736210294b61df9f4f7abe4c6c9d"
+            },
+            "val/OK": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443641",
+                "16877",
+                "3",
+                "96",
+                "1792228150737564096",
+                "1792228150737564096"
+              ]
+            },
+            "val/OK/d.png": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177443642",
+                "33188",
+                "1",
+                "1795",
+                "1792228150737602388",
+                "1792228150737602388"
+              ],
+              "sha256": "1593ce692e5dd3a165d4bf3d10207647c7ffeca7a94928d4b7c0a85a4e46f4b9"
+            }
+          },
+          "models": {
+            ".": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443651",
+                "16877",
+                "2",
+                "64",
+                "1792228150763958048",
+                "1792228150763974173"
+              ]
+            }
+          },
+          "labelset_registry": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177443654",
+              "33152",
+              "1",
+              "187",
+              "1792228150765081524",
+              "1792228150765196025"
+            ],
+            "sha256": "25e20d5cf7909511b54d080b7d12b1aec70d3e34c3fb9547843809bb475e77fd"
+          }
+        },
+        "after": {
+          "empty_preparation": {
+            "source": {
+              ".": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443633",
+                  "16877",
+                  "5",
+                  "160",
+                  "1792228150737896393",
+                  "1792228150737896393"
+                ]
+              },
+              "test": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443645",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228150737935685",
+                  "1792228150737935685"
+                ]
+              },
+              "test/NG": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443646",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228150738094563",
+                  "1792228150738094563"
+                ]
+              },
+              "test/NG/f.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443647",
+                  "33188",
+                  "1",
+                  "1840",
+                  "1792228150738128855",
+                  "1792228150738128855"
+                ],
+                "sha256": "71e6437c0779f4f440640d9defea3454220f7f029b950e1b68f53d6d210e3aaa"
+              },
+              "train": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443634",
+                  "16877",
+                  "4",
+                  "128",
+                  "1792228150737079589",
+                  "1792228150737079589"
+                ]
+              },
+              "train/NG": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443638",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228150737248925",
+                  "1792228150737248925"
+                ]
+              },
+              "train/NG/c.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443639",
+                  "33188",
+                  "1",
+                  "1808",
+                  "1792228150737295300",
+                  "1792228150737295300"
+                ],
+                "sha256": "407a1dc3ca8c6317be95f99cd7cda32493fe7d6be882f69f4e7a368289f6269a"
+              },
+              "train/OK": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443635",
+                  "16877",
+                  "4",
+                  "128",
+                  "1792228150736972837",
+                  "1792228150736972837"
+                ]
+              },
+              "train/OK/a.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443636",
+                  "33188",
+                  "1",
+                  "1780",
+                  "1792228150736709916",
+                  "1792228150736709916"
+                ],
+                "sha256": "8539772d38c545d1ba183b4f18f894f84c9078d7fc36e336c5d7ec2afb1d68ee"
+              },
+              "train/OK/b.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443637",
+                  "33188",
+                  "1",
+                  "1792",
+                  "1792228150737018629",
+                  "1792228150737018629"
+                ],
+                "sha256": "c74ed1640e03e43fe95eb290c1403727fdc6469db0248690a3e30eee4dbf16df"
+              },
+              "val": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443640",
+                  "16877",
+                  "4",
+                  "128",
+                  "1792228150737661431",
+                  "1792228150737661431"
+                ]
+              },
+              "val/NG": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443643",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228150737819475",
+                  "1792228150737819475"
+                ]
+              },
+              "val/NG/e.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443644",
+                  "33188",
+                  "1",
+                  "1829",
+                  "1792228150737852684",
+                  "1792228150737852684"
+                ],
+                "sha256": "143e3c59718c6d55934341861ab1aab82671736210294b61df9f4f7abe4c6c9d"
+              },
+              "val/OK": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443641",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228150737564096",
+                  "1792228150737564096"
+                ]
+              },
+              "val/OK/d.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443642",
+                  "33188",
+                  "1",
+                  "1795",
+                  "1792228150737602388",
+                  "1792228150737602388"
+                ],
+                "sha256": "1593ce692e5dd3a165d4bf3d10207647c7ffeca7a94928d4b7c0a85a4e46f4b9"
+              }
+            },
+            "models": {
+              ".": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443651",
+                  "16877",
+                  "2",
+                  "64",
+                  "1792228150763958048",
+                  "1792228150763974173"
+                ]
+              }
+            },
+            "labelset_registry": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177443654",
+                "33152",
+                "1",
+                "187",
+                "1792228150765081524",
+                "1792228150765196025"
+              ],
+              "sha256": "25e20d5cf7909511b54d080b7d12b1aec70d3e34c3fb9547843809bb475e77fd"
+            }
+          },
+          "final": {
+            "source": {
+              ".": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443633",
+                  "16877",
+                  "5",
+                  "160",
+                  "1792228150737896393",
+                  "1792228150737896393"
+                ]
+              },
+              "test": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443645",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228150737935685",
+                  "1792228150737935685"
+                ]
+              },
+              "test/NG": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443646",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228150738094563",
+                  "1792228150738094563"
+                ]
+              },
+              "test/NG/f.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443647",
+                  "33188",
+                  "1",
+                  "1840",
+                  "1792228150738128855",
+                  "1792228150738128855"
+                ],
+                "sha256": "71e6437c0779f4f440640d9defea3454220f7f029b950e1b68f53d6d210e3aaa"
+              },
+              "train": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443634",
+                  "16877",
+                  "4",
+                  "128",
+                  "1792228150737079589",
+                  "1792228150737079589"
+                ]
+              },
+              "train/NG": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443638",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228150737248925",
+                  "1792228150737248925"
+                ]
+              },
+              "train/NG/c.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443639",
+                  "33188",
+                  "1",
+                  "1808",
+                  "1792228150737295300",
+                  "1792228150737295300"
+                ],
+                "sha256": "407a1dc3ca8c6317be95f99cd7cda32493fe7d6be882f69f4e7a368289f6269a"
+              },
+              "train/OK": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443635",
+                  "16877",
+                  "4",
+                  "128",
+                  "1792228150736972837",
+                  "1792228150736972837"
+                ]
+              },
+              "train/OK/a.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443636",
+                  "33188",
+                  "1",
+                  "1780",
+                  "1792228150736709916",
+                  "1792228150736709916"
+                ],
+                "sha256": "8539772d38c545d1ba183b4f18f894f84c9078d7fc36e336c5d7ec2afb1d68ee"
+              },
+              "train/OK/b.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443637",
+                  "33188",
+                  "1",
+                  "1792",
+                  "1792228150737018629",
+                  "1792228150737018629"
+                ],
+                "sha256": "c74ed1640e03e43fe95eb290c1403727fdc6469db0248690a3e30eee4dbf16df"
+              },
+              "val": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443640",
+                  "16877",
+                  "4",
+                  "128",
+                  "1792228150737661431",
+                  "1792228150737661431"
+                ]
+              },
+              "val/NG": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443643",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228150737819475",
+                  "1792228150737819475"
+                ]
+              },
+              "val/NG/e.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443644",
+                  "33188",
+                  "1",
+                  "1829",
+                  "1792228150737852684",
+                  "1792228150737852684"
+                ],
+                "sha256": "143e3c59718c6d55934341861ab1aab82671736210294b61df9f4f7abe4c6c9d"
+              },
+              "val/OK": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443641",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228150737564096",
+                  "1792228150737564096"
+                ]
+              },
+              "val/OK/d.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443642",
+                  "33188",
+                  "1",
+                  "1795",
+                  "1792228150737602388",
+                  "1792228150737602388"
+                ],
+                "sha256": "1593ce692e5dd3a165d4bf3d10207647c7ffeca7a94928d4b7c0a85a4e46f4b9"
+              }
+            },
+            "models": {
+              ".": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443651",
+                  "16877",
+                  "2",
+                  "64",
+                  "1792228150763958048",
+                  "1792228150763974173"
+                ]
+              }
+            },
+            "labelset_registry": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177443654",
+                "33152",
+                "1",
+                "187",
+                "1792228150765081524",
+                "1792228150765196025"
+              ],
+              "sha256": "25e20d5cf7909511b54d080b7d12b1aec70d3e34c3fb9547843809bb475e77fd"
+            }
+          }
+        },
+        "all_equal": true
+      },
+      "custody": {
+        "before": {
+          "source": {
+            ".": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443633",
+                "16877",
+                "5",
+                "160",
+                "1792228150737896393",
+                "1792228150737896393"
+              ]
+            },
+            "test": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443645",
+                "16877",
+                "3",
+                "96",
+                "1792228150737935685",
+                "1792228150737935685"
+              ]
+            },
+            "test/NG": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443646",
+                "16877",
+                "3",
+                "96",
+                "1792228150738094563",
+                "1792228150738094563"
+              ]
+            },
+            "test/NG/f.png": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177443647",
+                "33188",
+                "1",
+                "1840",
+                "1792228150738128855",
+                "1792228150738128855"
+              ],
+              "sha256": "71e6437c0779f4f440640d9defea3454220f7f029b950e1b68f53d6d210e3aaa"
+            },
+            "train": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443634",
+                "16877",
+                "4",
+                "128",
+                "1792228150737079589",
+                "1792228150737079589"
+              ]
+            },
+            "train/NG": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443638",
+                "16877",
+                "3",
+                "96",
+                "1792228150737248925",
+                "1792228150737248925"
+              ]
+            },
+            "train/NG/c.png": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177443639",
+                "33188",
+                "1",
+                "1808",
+                "1792228150737295300",
+                "1792228150737295300"
+              ],
+              "sha256": "407a1dc3ca8c6317be95f99cd7cda32493fe7d6be882f69f4e7a368289f6269a"
+            },
+            "train/OK": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443635",
+                "16877",
+                "4",
+                "128",
+                "1792228150736972837",
+                "1792228150736972837"
+              ]
+            },
+            "train/OK/a.png": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177443636",
+                "33188",
+                "1",
+                "1780",
+                "1792228150736709916",
+                "1792228150736709916"
+              ],
+              "sha256": "8539772d38c545d1ba183b4f18f894f84c9078d7fc36e336c5d7ec2afb1d68ee"
+            },
+            "train/OK/b.png": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177443637",
+                "33188",
+                "1",
+                "1792",
+                "1792228150737018629",
+                "1792228150737018629"
+              ],
+              "sha256": "c74ed1640e03e43fe95eb290c1403727fdc6469db0248690a3e30eee4dbf16df"
+            },
+            "val": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443640",
+                "16877",
+                "4",
+                "128",
+                "1792228150737661431",
+                "1792228150737661431"
+              ]
+            },
+            "val/NG": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443643",
+                "16877",
+                "3",
+                "96",
+                "1792228150737819475",
+                "1792228150737819475"
+              ]
+            },
+            "val/NG/e.png": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177443644",
+                "33188",
+                "1",
+                "1829",
+                "1792228150737852684",
+                "1792228150737852684"
+              ],
+              "sha256": "143e3c59718c6d55934341861ab1aab82671736210294b61df9f4f7abe4c6c9d"
+            },
+            "val/OK": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443641",
+                "16877",
+                "3",
+                "96",
+                "1792228150737564096",
+                "1792228150737564096"
+              ]
+            },
+            "val/OK/d.png": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177443642",
+                "33188",
+                "1",
+                "1795",
+                "1792228150737602388",
+                "1792228150737602388"
+              ],
+              "sha256": "1593ce692e5dd3a165d4bf3d10207647c7ffeca7a94928d4b7c0a85a4e46f4b9"
+            }
+          },
+          "empty": {
+            ".": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443632",
+                "16877",
+                "2",
+                "64",
+                "1792228150735396271",
+                "1792228150735437313"
+              ]
+            }
+          },
+          "project": {
+            ".": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443649",
+                "16877",
+                "14",
+                "448",
+                "1792228151911512374",
+                "1792228151911512374"
+              ]
+            },
+            ".metadata_locks": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443716",
+                "16877",
+                "4",
+                "128",
+                "1792228151764878346",
+                "1792228151764878346"
+              ]
+            },
+            ".metadata_locks/52eb57c026bca43572a56c3b2844c7cdbb38d8205187ca30ffcbf53edc6dde7c.lock": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177443717",
+                "33188",
+                "1",
+                "0",
+                "1792228151455843837",
+                "1792228151455870504"
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            ".metadata_locks/9d14f78be6e0272ce34908d32d2d16012e97ad762cb69ebfaecb47f0de564dfe.lock": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177443803",
+                "33188",
+                "1",
+                "0",
+                "1792228151764872013",
+                "1792228151764941555"
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "annotations": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443653",
+                "16877",
+                "3",
+                "96",
+                "1792228151456202468",
+                "1792228151456202468"
+              ]
+            },
+            "annotations/by_dataset": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443718",
+                "16877",
+                "4",
+                "128",
+                "1792228151780119125",
+                "1792228151780119125"
+              ]
+            },
+            "annotations/by_dataset/4df2dd4c75b64466": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443804",
+                "16877",
+                "3",
+                "96",
+                "1792228151780239376",
+                "1792228151780239376"
+              ]
+            },
+            "annotations/by_dataset/4df2dd4c75b64466/metadata": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443806",
+                "16877",
+                "3",
+                "96",
+                "1792228151887902466",
+                "1792228151887902466"
+              ]
+            },
+            "annotations/by_dataset/4df2dd4c75b64466/metadata/workflow.json": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177443840",
+                "33152",
+                "1",
+                "8522",
+                "1792228151887731921",
+                "1792228151887902466"
+              ],
+              "sha256": "ca52a376e6ffb1083c250b83c9f8e613cea6b7ee64e719f4498efafcd6204e79"
+            },
+            "annotations/by_dataset/7aeb8c0bc153f1a3": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443719",
+                "16877",
+                "3",
+                "96",
+                "1792228151456318970",
+                "1792228151456318970"
+              ]
+            },
+            "annotations/by_dataset/7aeb8c0bc153f1a3/metadata": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443720",
+                "16877",
+                "3",
+                "96",
+                "1792228151557160911",
+                "1792228151557160911"
+              ]
+            },
+            "annotations/by_dataset/7aeb8c0bc153f1a3/metadata/workflow.json": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177443738",
+                "33152",
+                "1",
+                "315",
+                "1792228151557027326",
+                "1792228151557160869"
+              ],
+              "sha256": "ac39ced502434a400d2e8c130fff3b68fd17ea24d63979793fad076eee9cfa1e"
+            },
+            "dataset": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443650",
+                "16877",
+                "3",
+                "96",
+                "1792228151428659998",
+                "1792228151428659998"
+              ]
+            },
+            "dataset/splits": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443709",
+                "16877",
+                "4",
+                "128",
+                "1792228151747032777",
+                "1792228151747032777"
+              ]
+            },
+            "dataset/splits/.legacy-split-migration-4df2dd4c75b6446639258898a5a9a680038272fb0321ce242982202db65b8534.json": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177443796",
+                "33152",
+                "1",
+                "232",
+                "1792228151746872192",
+                "1792228151747032777"
+              ],
+              "sha256": "48e959be74766c06d08314533b419601a1dbc0981682681daa3405f67abfd9ad"
+            },
+            "dataset/splits/.legacy-split-migration-7aeb8c0bc153f1a35dfc359d98b3ef5cc204f61d907fcd95d3950d774cfbccca.json": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177443710",
+                "33152",
+                "1",
+                "238",
+                "1792228151428843626",
+                "1792228151428942128"
+              ],
+              "sha256": "8b4f3e668882d12e5ce005dbc6b6f335e726502460f2444fc3141aa353002579"
+            },
+            "delivery": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443756",
+                "16877",
+                "2",
+                "64",
+                "1792228151583738282",
+                "1792228151583766533"
+              ]
+            },
+            "inspection_history.sqlite3": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177443752",
+                "33188",
+                "1",
+                "36864",
+                "1792228151582265593",
+                "1792228151582265593"
+              ],
+              "sha256": "41c3446e547273401ced85bc5b162a8a7b8bbda0e9fdc5a0aa771631a1781fae"
+            },
+            "labeling_jobs": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443751",
+                "16877",
+                "2",
+                "64",
+                "1792228151580288895",
+                "1792228151580310646"
+              ]
+            },
+            "labelsets.json": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177443654",
+                "33152",
+                "1",
+                "187",
+                "1792228150765081524",
+                "1792228150765196025"
+              ],
+              "sha256": "25e20d5cf7909511b54d080b7d12b1aec70d3e34c3fb9547843809bb475e77fd"
+            },
+            "migration_admission.lock": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177443676",
+                "33152",
+                "1",
+                "0",
+                "1792228151221606574",
+                "1792228151221634574"
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "models": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443651",
+                "16877",
+                "2",
+                "64",
+                "1792228150763958048",
+                "1792228150763974173"
+              ]
+            },
+            "project.json": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177443794",
+                "33152",
+                "1",
+                "1675",
+                "1792228151746324599",
+                "1792228151746471560"
+              ],
+              "sha256": "9dedcdfde7d8a62833da1ba20dbd1efcdea0114e1d6e14bb869706d0edd8544a"
+            },
+            "reports": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443652",
+                "16877",
+                "3",
+                "96",
+                "1792228151551385238",
+                "1792228151551385238"
+              ]
+            },
+            "reports/evaluations": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177443736",
+                "16877",
+                "2",
+                "64",
+                "1792228151551379321",
+                "1792228151551406280"
+              ]
+            },
+            "runtime_lifecycle.lock": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177443707",
+                "33152",
+                "1",
+                "0",
+                "1792228151427044223",
+                "1792228151427091516"
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        "after": {
+          "action": {
+            "source": {
+              ".": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443633",
+                  "16877",
+                  "5",
+                  "160",
+                  "1792228150737896393",
+                  "1792228150737896393"
+                ]
+              },
+              "test": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443645",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228150737935685",
+                  "1792228150737935685"
+                ]
+              },
+              "test/NG": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443646",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228150738094563",
+                  "1792228150738094563"
+                ]
+              },
+              "test/NG/f.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443647",
+                  "33188",
+                  "1",
+                  "1840",
+                  "1792228150738128855",
+                  "1792228150738128855"
+                ],
+                "sha256": "71e6437c0779f4f440640d9defea3454220f7f029b950e1b68f53d6d210e3aaa"
+              },
+              "train": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443634",
+                  "16877",
+                  "4",
+                  "128",
+                  "1792228150737079589",
+                  "1792228150737079589"
+                ]
+              },
+              "train/NG": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443638",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228150737248925",
+                  "1792228150737248925"
+                ]
+              },
+              "train/NG/c.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443639",
+                  "33188",
+                  "1",
+                  "1808",
+                  "1792228150737295300",
+                  "1792228150737295300"
+                ],
+                "sha256": "407a1dc3ca8c6317be95f99cd7cda32493fe7d6be882f69f4e7a368289f6269a"
+              },
+              "train/OK": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443635",
+                  "16877",
+                  "4",
+                  "128",
+                  "1792228150736972837",
+                  "1792228150736972837"
+                ]
+              },
+              "train/OK/a.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443636",
+                  "33188",
+                  "1",
+                  "1780",
+                  "1792228150736709916",
+                  "1792228150736709916"
+                ],
+                "sha256": "8539772d38c545d1ba183b4f18f894f84c9078d7fc36e336c5d7ec2afb1d68ee"
+              },
+              "train/OK/b.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443637",
+                  "33188",
+                  "1",
+                  "1792",
+                  "1792228150737018629",
+                  "1792228150737018629"
+                ],
+                "sha256": "c74ed1640e03e43fe95eb290c1403727fdc6469db0248690a3e30eee4dbf16df"
+              },
+              "val": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443640",
+                  "16877",
+                  "4",
+                  "128",
+                  "1792228150737661431",
+                  "1792228150737661431"
+                ]
+              },
+              "val/NG": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443643",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228150737819475",
+                  "1792228150737819475"
+                ]
+              },
+              "val/NG/e.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443644",
+                  "33188",
+                  "1",
+                  "1829",
+                  "1792228150737852684",
+                  "1792228150737852684"
+                ],
+                "sha256": "143e3c59718c6d55934341861ab1aab82671736210294b61df9f4f7abe4c6c9d"
+              },
+              "val/OK": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443641",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228150737564096",
+                  "1792228150737564096"
+                ]
+              },
+              "val/OK/d.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443642",
+                  "33188",
+                  "1",
+                  "1795",
+                  "1792228150737602388",
+                  "1792228150737602388"
+                ],
+                "sha256": "1593ce692e5dd3a165d4bf3d10207647c7ffeca7a94928d4b7c0a85a4e46f4b9"
+              }
+            },
+            "empty": {
+              ".": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443632",
+                  "16877",
+                  "2",
+                  "64",
+                  "1792228150735396271",
+                  "1792228150735437313"
+                ]
+              }
+            },
+            "project": {
+              ".": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443649",
+                  "16877",
+                  "14",
+                  "448",
+                  "1792228152104907503",
+                  "1792228152104907503"
+                ]
+              },
+              ".metadata_locks": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443716",
+                  "16877",
+                  "4",
+                  "128",
+                  "1792228151764878346",
+                  "1792228151764878346"
+                ]
+              },
+              ".metadata_locks/52eb57c026bca43572a56c3b2844c7cdbb38d8205187ca30ffcbf53edc6dde7c.lock": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443717",
+                  "33188",
+                  "1",
+                  "0",
+                  "1792228151455843837",
+                  "1792228151455870504"
+                ],
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              },
+              ".metadata_locks/9d14f78be6e0272ce34908d32d2d16012e97ad762cb69ebfaecb47f0de564dfe.lock": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443803",
+                  "33188",
+                  "1",
+                  "0",
+                  "1792228151764872013",
+                  "1792228151764941555"
+                ],
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              },
+              "annotations": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443653",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228151456202468",
+                  "1792228151456202468"
+                ]
+              },
+              "annotations/by_dataset": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443718",
+                  "16877",
+                  "4",
+                  "128",
+                  "1792228151780119125",
+                  "1792228151780119125"
+                ]
+              },
+              "annotations/by_dataset/4df2dd4c75b64466": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443804",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228151780239376",
+                  "1792228151780239376"
+                ]
+              },
+              "annotations/by_dataset/4df2dd4c75b64466/metadata": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443806",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228151887902466",
+                  "1792228151887902466"
+                ]
+              },
+              "annotations/by_dataset/4df2dd4c75b64466/metadata/workflow.json": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443840",
+                  "33152",
+                  "1",
+                  "8522",
+                  "1792228151887731921",
+                  "1792228151887902466"
+                ],
+                "sha256": "ca52a376e6ffb1083c250b83c9f8e613cea6b7ee64e719f4498efafcd6204e79"
+              },
+              "annotations/by_dataset/7aeb8c0bc153f1a3": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443719",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228151456318970",
+                  "1792228151456318970"
+                ]
+              },
+              "annotations/by_dataset/7aeb8c0bc153f1a3/metadata": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443720",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228151557160911",
+                  "1792228151557160911"
+                ]
+              },
+              "annotations/by_dataset/7aeb8c0bc153f1a3/metadata/workflow.json": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443738",
+                  "33152",
+                  "1",
+                  "315",
+                  "1792228151557027326",
+                  "1792228151557160869"
+                ],
+                "sha256": "ac39ced502434a400d2e8c130fff3b68fd17ea24d63979793fad076eee9cfa1e"
+              },
+              "dataset": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443650",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228151428659998",
+                  "1792228151428659998"
+                ]
+              },
+              "dataset/splits": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443709",
+                  "16877",
+                  "4",
+                  "128",
+                  "1792228151747032777",
+                  "1792228151747032777"
+                ]
+              },
+              "dataset/splits/.legacy-split-migration-4df2dd4c75b6446639258898a5a9a680038272fb0321ce242982202db65b8534.json": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443796",
+                  "33152",
+                  "1",
+                  "232",
+                  "1792228151746872192",
+                  "1792228151747032777"
+                ],
+                "sha256": "48e959be74766c06d08314533b419601a1dbc0981682681daa3405f67abfd9ad"
+              },
+              "dataset/splits/.legacy-split-migration-7aeb8c0bc153f1a35dfc359d98b3ef5cc204f61d907fcd95d3950d774cfbccca.json": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443710",
+                  "33152",
+                  "1",
+                  "238",
+                  "1792228151428843626",
+                  "1792228151428942128"
+                ],
+                "sha256": "8b4f3e668882d12e5ce005dbc6b6f335e726502460f2444fc3141aa353002579"
+              },
+              "delivery": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443756",
+                  "16877",
+                  "2",
+                  "64",
+                  "1792228151583738282",
+                  "1792228151583766533"
+                ]
+              },
+              "inspection_history.sqlite3": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443752",
+                  "33188",
+                  "1",
+                  "36864",
+                  "1792228151582265593",
+                  "1792228151582265593"
+                ],
+                "sha256": "41c3446e547273401ced85bc5b162a8a7b8bbda0e9fdc5a0aa771631a1781fae"
+              },
+              "labeling_jobs": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443751",
+                  "16877",
+                  "2",
+                  "64",
+                  "1792228151580288895",
+                  "1792228151580310646"
+                ]
+              },
+              "labelsets.json": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443654",
+                  "33152",
+                  "1",
+                  "187",
+                  "1792228150765081524",
+                  "1792228150765196025"
+                ],
+                "sha256": "25e20d5cf7909511b54d080b7d12b1aec70d3e34c3fb9547843809bb475e77fd"
+              },
+              "migration_admission.lock": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443676",
+                  "33152",
+                  "1",
+                  "0",
+                  "1792228151221606574",
+                  "1792228151221634574"
+                ],
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              },
+              "models": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443651",
+                  "16877",
+                  "2",
+                  "64",
+                  "1792228150763958048",
+                  "1792228150763974173"
+                ]
+              },
+              "project.json": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443880",
+                  "33152",
+                  "1",
+                  "1681",
+                  "1792228152104759209",
+                  "1792228152104907503"
+                ],
+                "sha256": "d330ab466fd8b602339be4bfbca13906eb30693580848b3c6b3c8ee770514669"
+              },
+              "reports": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443652",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228151551385238",
+                  "1792228151551385238"
+                ]
+              },
+              "reports/evaluations": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443736",
+                  "16877",
+                  "2",
+                  "64",
+                  "1792228151551379321",
+                  "1792228151551406280"
+                ]
+              },
+              "runtime_lifecycle.lock": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443707",
+                  "33152",
+                  "1",
+                  "0",
+                  "1792228151427044223",
+                  "1792228151427091516"
+                ],
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              }
+            }
+          },
+          "reload": {
+            "source": {
+              ".": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443633",
+                  "16877",
+                  "5",
+                  "160",
+                  "1792228150737896393",
+                  "1792228150737896393"
+                ]
+              },
+              "test": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443645",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228150737935685",
+                  "1792228150737935685"
+                ]
+              },
+              "test/NG": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443646",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228150738094563",
+                  "1792228150738094563"
+                ]
+              },
+              "test/NG/f.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443647",
+                  "33188",
+                  "1",
+                  "1840",
+                  "1792228150738128855",
+                  "1792228150738128855"
+                ],
+                "sha256": "71e6437c0779f4f440640d9defea3454220f7f029b950e1b68f53d6d210e3aaa"
+              },
+              "train": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443634",
+                  "16877",
+                  "4",
+                  "128",
+                  "1792228150737079589",
+                  "1792228150737079589"
+                ]
+              },
+              "train/NG": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443638",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228150737248925",
+                  "1792228150737248925"
+                ]
+              },
+              "train/NG/c.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443639",
+                  "33188",
+                  "1",
+                  "1808",
+                  "1792228150737295300",
+                  "1792228150737295300"
+                ],
+                "sha256": "407a1dc3ca8c6317be95f99cd7cda32493fe7d6be882f69f4e7a368289f6269a"
+              },
+              "train/OK": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443635",
+                  "16877",
+                  "4",
+                  "128",
+                  "1792228150736972837",
+                  "1792228150736972837"
+                ]
+              },
+              "train/OK/a.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443636",
+                  "33188",
+                  "1",
+                  "1780",
+                  "1792228150736709916",
+                  "1792228150736709916"
+                ],
+                "sha256": "8539772d38c545d1ba183b4f18f894f84c9078d7fc36e336c5d7ec2afb1d68ee"
+              },
+              "train/OK/b.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443637",
+                  "33188",
+                  "1",
+                  "1792",
+                  "1792228150737018629",
+                  "1792228150737018629"
+                ],
+                "sha256": "c74ed1640e03e43fe95eb290c1403727fdc6469db0248690a3e30eee4dbf16df"
+              },
+              "val": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443640",
+                  "16877",
+                  "4",
+                  "128",
+                  "1792228150737661431",
+                  "1792228150737661431"
+                ]
+              },
+              "val/NG": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443643",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228150737819475",
+                  "1792228150737819475"
+                ]
+              },
+              "val/NG/e.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443644",
+                  "33188",
+                  "1",
+                  "1829",
+                  "1792228150737852684",
+                  "1792228150737852684"
+                ],
+                "sha256": "143e3c59718c6d55934341861ab1aab82671736210294b61df9f4f7abe4c6c9d"
+              },
+              "val/OK": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443641",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228150737564096",
+                  "1792228150737564096"
+                ]
+              },
+              "val/OK/d.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443642",
+                  "33188",
+                  "1",
+                  "1795",
+                  "1792228150737602388",
+                  "1792228150737602388"
+                ],
+                "sha256": "1593ce692e5dd3a165d4bf3d10207647c7ffeca7a94928d4b7c0a85a4e46f4b9"
+              }
+            },
+            "empty": {
+              ".": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443632",
+                  "16877",
+                  "2",
+                  "64",
+                  "1792228150735396271",
+                  "1792228150735437313"
+                ]
+              }
+            },
+            "project": {
+              ".": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443649",
+                  "16877",
+                  "14",
+                  "448",
+                  "1792228152104907503",
+                  "1792228152104907503"
+                ]
+              },
+              ".metadata_locks": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443716",
+                  "16877",
+                  "4",
+                  "128",
+                  "1792228151764878346",
+                  "1792228151764878346"
+                ]
+              },
+              ".metadata_locks/52eb57c026bca43572a56c3b2844c7cdbb38d8205187ca30ffcbf53edc6dde7c.lock": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443717",
+                  "33188",
+                  "1",
+                  "0",
+                  "1792228151455843837",
+                  "1792228151455870504"
+                ],
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              },
+              ".metadata_locks/9d14f78be6e0272ce34908d32d2d16012e97ad762cb69ebfaecb47f0de564dfe.lock": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443803",
+                  "33188",
+                  "1",
+                  "0",
+                  "1792228151764872013",
+                  "1792228151764941555"
+                ],
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              },
+              "annotations": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443653",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228151456202468",
+                  "1792228151456202468"
+                ]
+              },
+              "annotations/by_dataset": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443718",
+                  "16877",
+                  "4",
+                  "128",
+                  "1792228151780119125",
+                  "1792228151780119125"
+                ]
+              },
+              "annotations/by_dataset/4df2dd4c75b64466": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443804",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228151780239376",
+                  "1792228151780239376"
+                ]
+              },
+              "annotations/by_dataset/4df2dd4c75b64466/metadata": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443806",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228151887902466",
+                  "1792228151887902466"
+                ]
+              },
+              "annotations/by_dataset/4df2dd4c75b64466/metadata/workflow.json": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443840",
+                  "33152",
+                  "1",
+                  "8522",
+                  "1792228151887731921",
+                  "1792228151887902466"
+                ],
+                "sha256": "ca52a376e6ffb1083c250b83c9f8e613cea6b7ee64e719f4498efafcd6204e79"
+              },
+              "annotations/by_dataset/7aeb8c0bc153f1a3": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443719",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228151456318970",
+                  "1792228151456318970"
+                ]
+              },
+              "annotations/by_dataset/7aeb8c0bc153f1a3/metadata": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443720",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228151557160911",
+                  "1792228151557160911"
+                ]
+              },
+              "annotations/by_dataset/7aeb8c0bc153f1a3/metadata/workflow.json": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443738",
+                  "33152",
+                  "1",
+                  "315",
+                  "1792228151557027326",
+                  "1792228151557160869"
+                ],
+                "sha256": "ac39ced502434a400d2e8c130fff3b68fd17ea24d63979793fad076eee9cfa1e"
+              },
+              "dataset": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443650",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228151428659998",
+                  "1792228151428659998"
+                ]
+              },
+              "dataset/splits": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443709",
+                  "16877",
+                  "4",
+                  "128",
+                  "1792228151747032777",
+                  "1792228151747032777"
+                ]
+              },
+              "dataset/splits/.legacy-split-migration-4df2dd4c75b6446639258898a5a9a680038272fb0321ce242982202db65b8534.json": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443796",
+                  "33152",
+                  "1",
+                  "232",
+                  "1792228151746872192",
+                  "1792228151747032777"
+                ],
+                "sha256": "48e959be74766c06d08314533b419601a1dbc0981682681daa3405f67abfd9ad"
+              },
+              "dataset/splits/.legacy-split-migration-7aeb8c0bc153f1a35dfc359d98b3ef5cc204f61d907fcd95d3950d774cfbccca.json": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443710",
+                  "33152",
+                  "1",
+                  "238",
+                  "1792228151428843626",
+                  "1792228151428942128"
+                ],
+                "sha256": "8b4f3e668882d12e5ce005dbc6b6f335e726502460f2444fc3141aa353002579"
+              },
+              "delivery": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443756",
+                  "16877",
+                  "2",
+                  "64",
+                  "1792228151583738282",
+                  "1792228151583766533"
+                ]
+              },
+              "inspection_history.sqlite3": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443752",
+                  "33188",
+                  "1",
+                  "36864",
+                  "1792228151582265593",
+                  "1792228151582265593"
+                ],
+                "sha256": "41c3446e547273401ced85bc5b162a8a7b8bbda0e9fdc5a0aa771631a1781fae"
+              },
+              "labeling_jobs": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443751",
+                  "16877",
+                  "2",
+                  "64",
+                  "1792228151580288895",
+                  "1792228151580310646"
+                ]
+              },
+              "labelsets.json": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443654",
+                  "33152",
+                  "1",
+                  "187",
+                  "1792228150765081524",
+                  "1792228150765196025"
+                ],
+                "sha256": "25e20d5cf7909511b54d080b7d12b1aec70d3e34c3fb9547843809bb475e77fd"
+              },
+              "migration_admission.lock": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443676",
+                  "33152",
+                  "1",
+                  "0",
+                  "1792228151221606574",
+                  "1792228151221634574"
+                ],
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              },
+              "models": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443651",
+                  "16877",
+                  "2",
+                  "64",
+                  "1792228150763958048",
+                  "1792228150763974173"
+                ]
+              },
+              "project.json": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443880",
+                  "33152",
+                  "1",
+                  "1681",
+                  "1792228152104759209",
+                  "1792228152104907503"
+                ],
+                "sha256": "d330ab466fd8b602339be4bfbca13906eb30693580848b3c6b3c8ee770514669"
+              },
+              "reports": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443652",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228151551385238",
+                  "1792228151551385238"
+                ]
+              },
+              "reports/evaluations": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177443736",
+                  "16877",
+                  "2",
+                  "64",
+                  "1792228151551379321",
+                  "1792228151551406280"
+                ]
+              },
+              "runtime_lifecycle.lock": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177443707",
+                  "33152",
+                  "1",
+                  "0",
+                  "1792228151427044223",
+                  "1792228151427091516"
+                ],
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              }
+            }
+          }
+        },
+        "all_source_and_nonmanifest_project_paths_preserved": true,
+        "project_manifest_allowed_changes": [
+          "source_dataset_dir",
+          "updated_at"
+        ],
+        "project_root_directory_only_mtime_ctime_may_change": true,
+        "post_action_reload_exact": true
+      },
+      "writes": [
+        {
+          "method": "POST",
+          "route": "/api/dataset/import",
+          "body": {
+            "folder_path": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/owned-empty-classification-source",
+            "task": "classification",
+            "validate_images": true
+          }
+        },
+        {
+          "method": "PUT",
+          "route": "/api/project/update",
+          "body": {
+            "source_dataset_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-33fa6309-r0/owned-empty-classification-source"
+          }
+        }
+      ],
+      "cancel_acknowledgement": null,
+      "empty_scope": "Genuine initial empty import and initialization retained; protected6-to-empty transition uses warmed source-specific metadata namespace",
+      "closure": {
+        "descriptors": {
+          "opened": 72,
+          "closed": 72
+        },
+        "callback_errors": [],
+        "backend_stop": {
+          "exited": true,
+          "exitCode": 0,
+          "signal": null,
+          "exitedBeforeStop": false,
+          "forced": false,
+          "forcedReason": null,
+          "groupAlive": false,
+          "escaped": [],
+          "unownedReferences": [],
+          "scanError": null,
+          "durationMs": 986,
+          "stoppedAt": "2026-10-17T09:09:13.709Z",
+          "healthy_at_end": true,
+          "port_closed": true,
+          "pid_alive": false
+        },
+        "page_errors": [],
+        "console_errors": [],
+        "blocked_loopback_requests": []
+      },
+      "screenshots": [
+        {
+          "id": "screenshot-0",
+          "sha256": "62f7caa89375b4b85e5d247bbad9e704c6bfc5722c0e2e7e87c31b11ace46347"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "575071fe30f8e5c6347af63ed7477211d245ac6e6db535ec6b213ae7dbf82178"
+        },
+        {
+          "id": "screenshot-2",
+          "sha256": "9cc50b6627dd2858ca3372e434a9fb29d45665e3160abfbb3846db3a98631c24"
+        }
+      ]
+    },
+    "cancel": {
+      "test": "scripts/e2e/classification-import-empty-cancel-controls.spec.ts::classification null folder selection preserves owning source label and partition counts after reload",
+      "generic_receipt_sha256": "e56921779030b36b366ac1387808f64fdcaa047c7547df920a327d679d6a79f8",
+      "harness_sha256": "56b9b8e5dda52f3e2fe1c431793e9dc6aafbfa71b79d7375ecbcc4e04c3cd1c5",
+      "source_dependencies": {
+        "scripts/e2e/classification-import-empty-cancel-controls.spec.ts": "df427b8df5e489b2f625fdd732b7be64486c50fe9a2bf312afb9cefbbbaf0828",
+        "scripts/e2e/fixtures/test.ts": "49171e2d0d4d7d9559416fdb43bc7dae9394129bbc237fe4f2a4cea0a7afa480",
+        "scripts/e2e/fixtures/harness.cjs": "171460c1cf1697b7a44b8f86a197d2b944928381f736f81af304412126464975",
+        "scripts/e2e/fixtures/desktop-host-shim.ts": "4f598862ec0e08189628c72bbb552f72bf8fd73f5a9a05b8da1d3ddf516dcfa6",
+        "scripts/e2e/fixtures/remaining-project-handoff.ts": "7a7c74a2f42a5d6ad991dadc97626c1f8330f962edaf73fd461d31f9c4764904",
+        "scripts/e2e/qa/appFlow.ts": "4eed3e5dad1d9d65a6b19fc9bb51a1f9b0e23911a39e7f255220bec0ce37fea2",
+        "playwright.config.ts": "91495f41ce2b89d5472fc5851c4fc9c5937684958ac453d0a6a759df2a10b936",
+        "src/renderer/components/dataset/DatasetStudio.tsx": "05001ce30dd9b6c8490735f1c2ce23140f9bc4651fd4ed95bb9b6fc528ceca3b",
+        "src/renderer/components/dataset/DatasetStatisticsPanel.tsx": "3f4e30772fdcde856f8c2e294558607ea0edac3966ed11870e16a848a6a3d925",
+        "src/renderer/stores/useDatasetStore.ts": "2be93b612936ab7fc9f515382c205737e7a22237fc7efe5dfa58434efd004cb3",
+        "src/renderer/stores/useProjectStore.ts": "3eca2fbca3e3a5cd528dee9f80f87fe4b126d52392b9b7bdececc5b0e48453c3",
+        "src/renderer/services/api.ts": "ba82fc801fb827ab16b453ee4722ede933a641177be9994f6666f82965bc472e",
+        "backend/api/routes_dataset.py": "7a4bcea5d2aed6cee0f61d6a0d5c8a09e048dcc38e644d83c1c301ac59c7e801",
+        "backend/api/routes_project.py": "db435109bb82cedaea63b7a4ef3a7994757839f1ccbf50e399dbc6ec7967e97f",
+        "backend/api/routes_dataset_metadata.py": "dbe9ca7edab694241693ce942c56cb013223fcd2f26d76f898a3a947805b489a",
+        "backend/engine/dataset_summary.py": "f1cb4fa23dcbd3565b5e6b2c86d22df0e431a5db9fecd276ea0b6b1c45623b91",
+        "backend/engine/dataset_loaders.py": "5f562a629e9f0d3f32662a2bb7ad555c38326485facac75f84212fd2411cc2ed",
+        "backend/engine/industrial_adapters.py": "307b024ba594783121c7ca241872e41fdf60723a6a74c3f3597bc82f6b23b746"
+      },
+      "result": {
+        "passed": 1,
+        "attempts": 1,
+        "retries": 0,
+        "workers": 1
+      },
+      "cells": [
+        "F019.native-classification-import-label-summary.cancel",
+        "F022.native-classification-partitions-import-reopen.cancel"
+      ],
+      "raw_UI_body_receipts": [
+        {
+          "kind": "original UI response",
+          "label": "prepare-six-import",
+          "method": "POST",
+          "url": "<owned-renderer-origin>/api/dataset/import",
+          "request_body": {
+            "folder_path": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-4a32be5f-r0/owned-classification-source",
+            "task": "classification",
+            "validate_images": true
+          },
+          "project_id": "4b9d22e1",
+          "context": {
+            "workspace_id": "2ba72aa9ece84cf6ab7e5a0a8574df5e",
+            "project_id": "4b9d22e1",
+            "actor_id": "2ec5f9fb57134d8c92f5d5bb7654b826",
+            "mode": "local"
+          },
+          "status": 200,
+          "response": {
+            "status": "success",
+            "total_images": 6,
+            "source_images": 6,
+            "unlabeled_images": 0,
+            "classes": {
+              "OK": 3,
+              "NG": 3
+            },
+            "split": {
+              "train": 3,
+              "val": 2,
+              "test": 1
+            },
+            "corrupted_images": [],
+            "validation": {
+              "requested": true,
+              "checked_images": 6,
+              "complete": true,
+              "scope": "all images: every image file under the folder was decoded"
+            },
+            "split_supported": true,
+            "split_unavailable_reason": null
+          },
+          "response_sha256": "c952dc35cc8dfc6d662ddfc2a0327b9c92f7a5ae01b524d191786f7d2a54e5d3",
+          "bytes": 351,
+          "raw_file": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-4a32be5f-r0/logs/prepare-six-import-raw-response.json",
+          "same_Request": true,
+          "main_frame": true,
+          "finished": true,
+          "deadline": 25498.417625000002,
+          "completed": 15609.560625
+        },
+        {
+          "kind": "original UI response",
+          "label": "prepare-six-source",
+          "method": "PUT",
+          "url": "<owned-renderer-origin>/api/project/update",
+          "request_body": {
+            "source_dataset_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-4a32be5f-r0/owned-classification-source"
+          },
+          "project_id": "4b9d22e1",
+          "context": {
+            "workspace_id": "2ba72aa9ece84cf6ab7e5a0a8574df5e",
+            "project_id": "4b9d22e1",
+            "actor_id": "2ec5f9fb57134d8c92f5d5bb7654b826",
+            "mode": "local"
+          },
+          "status": 200,
+          "response": {
+            "schema_version": 1,
+            "id": "4b9d22e1",
+            "name": "Owned classification cancel controls",
+            "task": "classification",
+            "project_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-4a32be5f-r0/projects/owned_classification_cancel_controls",
+            "dataset_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-4a32be5f-r0/projects/owned_classification_cancel_controls/dataset",
+            "models_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-4a32be5f-r0/projects/owned_classification_cancel_controls/models",
+            "reports_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-4a32be5f-r0/projects/owned_classification_cancel_controls/reports",
+            "annotations_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-4a32be5f-r0/projects/owned_classification_cancel_controls/annotations",
+            "active_labelset_id": "default",
+            "description": "",
+            "active_preset": "fast",
+            "source_dataset_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-4a32be5f-r0/owned-classification-source",
+            "created_at": "2026-10-17T09:09:17Z",
+            "updated_at": "2026-10-17T09:09:17Z"
+          },
+          "response_sha256": "890830b427a5c2c6fcbda6b17adf948402c287b54476b6d4512b6e62341c2817",
+          "bytes": 1620,
+          "raw_file": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-4a32be5f-r0/logs/prepare-six-source-raw-response.json",
+          "same_Request": true,
+          "main_frame": true,
+          "finished": true,
+          "deadline": 25498.417625000002,
+          "completed": 15624.160916
+        },
+        {
+          "kind": "original UI response",
+          "label": "reload-summary",
+          "method": "GET",
+          "url": "<owned-renderer-origin>/api/dataset/current-summary?folder_path=<private-verification-root>%2Fclassification-import-empty-cancel-current-02%2Fbrowser-01%2Fws%2F0-4a32be5f-r0%2Fowned-classification-source&task=classification",
+          "request_body": null,
+          "project_id": "4b9d22e1",
+          "context": {
+            "workspace_id": "2ba72aa9ece84cf6ab7e5a0a8574df5e",
+            "project_id": "4b9d22e1",
+            "actor_id": "2ec5f9fb57134d8c92f5d5bb7654b826",
+            "mode": "local"
+          },
+          "status": 200,
+          "response": {
+            "status": "success",
+            "total_images": 6,
+            "source_images": 6,
+            "unlabeled_images": 0,
+            "classes": {
+              "OK": 3,
+              "NG": 3
+            },
+            "split": {
+              "train": 3,
+              "val": 2,
+              "test": 1
+            },
+            "corrupted_images": [],
+            "validation": {
+              "requested": true,
+              "checked_images": 6,
+              "complete": true,
+              "scope": "all images: every image file under the folder was decoded"
+            },
+            "split_supported": true,
+            "split_unavailable_reason": null
+          },
+          "response_sha256": "c952dc35cc8dfc6d662ddfc2a0327b9c92f7a5ae01b524d191786f7d2a54e5d3",
+          "bytes": 351,
+          "raw_file": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01/ws/0-4a32be5f-r0/logs/reload-summary-raw-response.json",
+          "same_Request": true,
+          "main_frame": true,
+          "finished": true,
+          "deadline": 26126.885083,
+          "completed": 16328.897666
+        }
+      ],
+      "cold_original_assets": {
+        "before": {
+          "source": {
+            ".": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444065",
+                "16877",
+                "5",
+                "160",
+                "1792228157194064350",
+                "1792228157194064350"
+              ]
+            },
+            "test": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444077",
+                "16877",
+                "3",
+                "96",
+                "1792228157194108642",
+                "1792228157194108642"
+              ]
+            },
+            "test/NG": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444078",
+                "16877",
+                "3",
+                "96",
+                "1792228157194208186",
+                "1792228157194208186"
+              ]
+            },
+            "test/NG/f.png": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177444079",
+                "33188",
+                "1",
+                "1840",
+                "1792228157194246895",
+                "1792228157194246895"
+              ],
+              "sha256": "71e6437c0779f4f440640d9defea3454220f7f029b950e1b68f53d6d210e3aaa"
+            },
+            "train": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444066",
+                "16877",
+                "4",
+                "128",
+                "1792228157193429548",
+                "1792228157193429548"
+              ]
+            },
+            "train/NG": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444070",
+                "16877",
+                "3",
+                "96",
+                "1792228157193547217",
+                "1792228157193547217"
+              ]
+            },
+            "train/NG/c.png": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177444071",
+                "33188",
+                "1",
+                "1808",
+                "1792228157193585968",
+                "1792228157193585968"
+              ],
+              "sha256": "407a1dc3ca8c6317be95f99cd7cda32493fe7d6be882f69f4e7a368289f6269a"
+            },
+            "train/OK": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444067",
+                "16877",
+                "4",
+                "128",
+                "1792228157193347756",
+                "1792228157193347756"
+              ]
+            },
+            "train/OK/a.png": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177444068",
+                "33188",
+                "1",
+                "1780",
+                "1792228157193196003",
+                "1792228157193196003"
+              ],
+              "sha256": "8539772d38c545d1ba183b4f18f894f84c9078d7fc36e336c5d7ec2afb1d68ee"
+            },
+            "train/OK/b.png": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177444069",
+                "33188",
+                "1",
+                "1792",
+                "1792228157193388256",
+                "1792228157193388256"
+              ],
+              "sha256": "c74ed1640e03e43fe95eb290c1403727fdc6469db0248690a3e30eee4dbf16df"
+            },
+            "val": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444072",
+                "16877",
+                "4",
+                "128",
+                "1792228157193855347",
+                "1792228157193855347"
+              ]
+            },
+            "val/NG": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444075",
+                "16877",
+                "3",
+                "96",
+                "1792228157193985140",
+                "1792228157193985140"
+              ]
+            },
+            "val/NG/e.png": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177444076",
+                "33188",
+                "1",
+                "1829",
+                "1792228157194015141",
+                "1792228157194015141"
+              ],
+              "sha256": "143e3c59718c6d55934341861ab1aab82671736210294b61df9f4f7abe4c6c9d"
+            },
+            "val/OK": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444073",
+                "16877",
+                "3",
+                "96",
+                "1792228157193781929",
+                "1792228157193781929"
+              ]
+            },
+            "val/OK/d.png": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177444074",
+                "33188",
+                "1",
+                "1795",
+                "1792228157193812096",
+                "1792228157193812096"
+              ],
+              "sha256": "1593ce692e5dd3a165d4bf3d10207647c7ffeca7a94928d4b7c0a85a4e46f4b9"
+            }
+          },
+          "models": {
+            ".": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444083",
+                "16877",
+                "2",
+                "64",
+                "1792228157211483871",
+                "1792228157211499287"
+              ]
+            }
+          },
+          "labelset_registry": {
+            "kind": "file",
+            "raw7": [
+              "16777231",
+              "177444086",
+              "33152",
+              "1",
+              "187",
+              "1792228157211932169",
+              "1792228157212137631"
+            ],
+            "sha256": "25e20d5cf7909511b54d080b7d12b1aec70d3e34c3fb9547843809bb475e77fd"
+          }
+        },
+        "after": {
+          "final": {
+            "source": {
+              ".": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444065",
+                  "16877",
+                  "5",
+                  "160",
+                  "1792228157194064350",
+                  "1792228157194064350"
+                ]
+              },
+              "test": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444077",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157194108642",
+                  "1792228157194108642"
+                ]
+              },
+              "test/NG": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444078",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157194208186",
+                  "1792228157194208186"
+                ]
+              },
+              "test/NG/f.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444079",
+                  "33188",
+                  "1",
+                  "1840",
+                  "1792228157194246895",
+                  "1792228157194246895"
+                ],
+                "sha256": "71e6437c0779f4f440640d9defea3454220f7f029b950e1b68f53d6d210e3aaa"
+              },
+              "train": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444066",
+                  "16877",
+                  "4",
+                  "128",
+                  "1792228157193429548",
+                  "1792228157193429548"
+                ]
+              },
+              "train/NG": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444070",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157193547217",
+                  "1792228157193547217"
+                ]
+              },
+              "train/NG/c.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444071",
+                  "33188",
+                  "1",
+                  "1808",
+                  "1792228157193585968",
+                  "1792228157193585968"
+                ],
+                "sha256": "407a1dc3ca8c6317be95f99cd7cda32493fe7d6be882f69f4e7a368289f6269a"
+              },
+              "train/OK": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444067",
+                  "16877",
+                  "4",
+                  "128",
+                  "1792228157193347756",
+                  "1792228157193347756"
+                ]
+              },
+              "train/OK/a.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444068",
+                  "33188",
+                  "1",
+                  "1780",
+                  "1792228157193196003",
+                  "1792228157193196003"
+                ],
+                "sha256": "8539772d38c545d1ba183b4f18f894f84c9078d7fc36e336c5d7ec2afb1d68ee"
+              },
+              "train/OK/b.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444069",
+                  "33188",
+                  "1",
+                  "1792",
+                  "1792228157193388256",
+                  "1792228157193388256"
+                ],
+                "sha256": "c74ed1640e03e43fe95eb290c1403727fdc6469db0248690a3e30eee4dbf16df"
+              },
+              "val": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444072",
+                  "16877",
+                  "4",
+                  "128",
+                  "1792228157193855347",
+                  "1792228157193855347"
+                ]
+              },
+              "val/NG": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444075",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157193985140",
+                  "1792228157193985140"
+                ]
+              },
+              "val/NG/e.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444076",
+                  "33188",
+                  "1",
+                  "1829",
+                  "1792228157194015141",
+                  "1792228157194015141"
+                ],
+                "sha256": "143e3c59718c6d55934341861ab1aab82671736210294b61df9f4f7abe4c6c9d"
+              },
+              "val/OK": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444073",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157193781929",
+                  "1792228157193781929"
+                ]
+              },
+              "val/OK/d.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444074",
+                  "33188",
+                  "1",
+                  "1795",
+                  "1792228157193812096",
+                  "1792228157193812096"
+                ],
+                "sha256": "1593ce692e5dd3a165d4bf3d10207647c7ffeca7a94928d4b7c0a85a4e46f4b9"
+              }
+            },
+            "models": {
+              ".": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444083",
+                  "16877",
+                  "2",
+                  "64",
+                  "1792228157211483871",
+                  "1792228157211499287"
+                ]
+              }
+            },
+            "labelset_registry": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177444086",
+                "33152",
+                "1",
+                "187",
+                "1792228157211932169",
+                "1792228157212137631"
+              ],
+              "sha256": "25e20d5cf7909511b54d080b7d12b1aec70d3e34c3fb9547843809bb475e77fd"
+            }
+          }
+        },
+        "all_equal": true
+      },
+      "custody": {
+        "before": {
+          "source": {
+            ".": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444065",
+                "16877",
+                "5",
+                "160",
+                "1792228157194064350",
+                "1792228157194064350"
+              ]
+            },
+            "test": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444077",
+                "16877",
+                "3",
+                "96",
+                "1792228157194108642",
+                "1792228157194108642"
+              ]
+            },
+            "test/NG": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444078",
+                "16877",
+                "3",
+                "96",
+                "1792228157194208186",
+                "1792228157194208186"
+              ]
+            },
+            "test/NG/f.png": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177444079",
+                "33188",
+                "1",
+                "1840",
+                "1792228157194246895",
+                "1792228157194246895"
+              ],
+              "sha256": "71e6437c0779f4f440640d9defea3454220f7f029b950e1b68f53d6d210e3aaa"
+            },
+            "train": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444066",
+                "16877",
+                "4",
+                "128",
+                "1792228157193429548",
+                "1792228157193429548"
+              ]
+            },
+            "train/NG": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444070",
+                "16877",
+                "3",
+                "96",
+                "1792228157193547217",
+                "1792228157193547217"
+              ]
+            },
+            "train/NG/c.png": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177444071",
+                "33188",
+                "1",
+                "1808",
+                "1792228157193585968",
+                "1792228157193585968"
+              ],
+              "sha256": "407a1dc3ca8c6317be95f99cd7cda32493fe7d6be882f69f4e7a368289f6269a"
+            },
+            "train/OK": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444067",
+                "16877",
+                "4",
+                "128",
+                "1792228157193347756",
+                "1792228157193347756"
+              ]
+            },
+            "train/OK/a.png": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177444068",
+                "33188",
+                "1",
+                "1780",
+                "1792228157193196003",
+                "1792228157193196003"
+              ],
+              "sha256": "8539772d38c545d1ba183b4f18f894f84c9078d7fc36e336c5d7ec2afb1d68ee"
+            },
+            "train/OK/b.png": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177444069",
+                "33188",
+                "1",
+                "1792",
+                "1792228157193388256",
+                "1792228157193388256"
+              ],
+              "sha256": "c74ed1640e03e43fe95eb290c1403727fdc6469db0248690a3e30eee4dbf16df"
+            },
+            "val": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444072",
+                "16877",
+                "4",
+                "128",
+                "1792228157193855347",
+                "1792228157193855347"
+              ]
+            },
+            "val/NG": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444075",
+                "16877",
+                "3",
+                "96",
+                "1792228157193985140",
+                "1792228157193985140"
+              ]
+            },
+            "val/NG/e.png": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177444076",
+                "33188",
+                "1",
+                "1829",
+                "1792228157194015141",
+                "1792228157194015141"
+              ],
+              "sha256": "143e3c59718c6d55934341861ab1aab82671736210294b61df9f4f7abe4c6c9d"
+            },
+            "val/OK": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444073",
+                "16877",
+                "3",
+                "96",
+                "1792228157193781929",
+                "1792228157193781929"
+              ]
+            },
+            "val/OK/d.png": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177444074",
+                "33188",
+                "1",
+                "1795",
+                "1792228157193812096",
+                "1792228157193812096"
+              ],
+              "sha256": "1593ce692e5dd3a165d4bf3d10207647c7ffeca7a94928d4b7c0a85a4e46f4b9"
+            }
+          },
+          "empty": {
+            ".": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444064",
+                "16877",
+                "2",
+                "64",
+                "1792228157192594202",
+                "1792228157192626994"
+              ]
+            }
+          },
+          "project": {
+            ".": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444081",
+                "16877",
+                "14",
+                "448",
+                "1792228157824847440",
+                "1792228157824847440"
+              ]
+            },
+            ".metadata_locks": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444135",
+                "16877",
+                "3",
+                "96",
+                "1792228157684114379",
+                "1792228157684114379"
+              ]
+            },
+            ".metadata_locks/917af92a209aef8133b7f5f4a154dcd450399a44c3de5c66d794d63c5ccd0d8c.lock": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177444136",
+                "33188",
+                "1",
+                "0",
+                "1792228157684111546",
+                "1792228157684132504"
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "annotations": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444085",
+                "16877",
+                "3",
+                "96",
+                "1792228157697667340",
+                "1792228157697667340"
+              ]
+            },
+            "annotations/by_dataset": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444142",
+                "16877",
+                "3",
+                "96",
+                "1792228157697723299",
+                "1792228157697723299"
+              ]
+            },
+            "annotations/by_dataset/890ee927e19449d7": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444143",
+                "16877",
+                "3",
+                "96",
+                "1792228157697776925",
+                "1792228157697776925"
+              ]
+            },
+            "annotations/by_dataset/890ee927e19449d7/metadata": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444144",
+                "16877",
+                "3",
+                "96",
+                "1792228157793220824",
+                "1792228157793220824"
+              ]
+            },
+            "annotations/by_dataset/890ee927e19449d7/metadata/workflow.json": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177444161",
+                "33152",
+                "1",
+                "8522",
+                "1792228157793063821",
+                "1792228157793220824"
+              ],
+              "sha256": "6eca04f0de5e2e2fe76a50a7ac9db24f450f9bee3e6529899f13f294eeb882f9"
+            },
+            "dataset": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444082",
+                "16877",
+                "3",
+                "96",
+                "1792228157656064360",
+                "1792228157656064360"
+              ]
+            },
+            "dataset/splits": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444127",
+                "16877",
+                "3",
+                "96",
+                "1792228157656370990",
+                "1792228157656370990"
+              ]
+            },
+            "dataset/splits/.legacy-split-migration-890ee927e19449d7f3c214ffd2e1b4d123fbf34bca4386bbfa9ee3bf83536f03.json": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177444128",
+                "33152",
+                "1",
+                "232",
+                "1792228157656259613",
+                "1792228157656370990"
+              ],
+              "sha256": "d5172ffaa0df3579ea51990b44f86539da79ed86383e4b4d6a60867ff94dde59"
+            },
+            "delivery": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444179",
+                "16877",
+                "2",
+                "64",
+                "1792228157824842774",
+                "1792228157824866774"
+              ]
+            },
+            "inspection_history.sqlite3": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177444175",
+                "33188",
+                "1",
+                "36864",
+                "1792228157823522420",
+                "1792228157823522420"
+              ],
+              "sha256": "41c3446e547273401ced85bc5b162a8a7b8bbda0e9fdc5a0aa771631a1781fae"
+            },
+            "labeling_jobs": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444174",
+                "16877",
+                "2",
+                "64",
+                "1792228157820667250",
+                "1792228157820688209"
+              ]
+            },
+            "labelsets.json": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177444086",
+                "33152",
+                "1",
+                "187",
+                "1792228157211932169",
+                "1792228157212137631"
+              ],
+              "sha256": "25e20d5cf7909511b54d080b7d12b1aec70d3e34c3fb9547843809bb475e77fd"
+            },
+            "migration_admission.lock": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177444099",
+                "33152",
+                "1",
+                "0",
+                "1792228157467449347",
+                "1792228157467484722"
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "models": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444083",
+                "16877",
+                "2",
+                "64",
+                "1792228157211483871",
+                "1792228157211499287"
+              ]
+            },
+            "project.json": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177444126",
+                "33152",
+                "1",
+                "1681",
+                "1792228157655635187",
+                "1792228157655793773"
+              ],
+              "sha256": "22ce42917694bf6342dfa299ee9ac9ab4d2f61d2b265b4c0042e614aa40ba3e4"
+            },
+            "reports": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444084",
+                "16877",
+                "3",
+                "96",
+                "1792228157787332899",
+                "1792228157787332899"
+              ]
+            },
+            "reports/evaluations": {
+              "kind": "directory",
+              "raw7": [
+                "16777231",
+                "177444160",
+                "16877",
+                "2",
+                "64",
+                "1792228157787326857",
+                "1792228157787355733"
+              ]
+            },
+            "runtime_lifecycle.lock": {
+              "kind": "file",
+              "raw7": [
+                "16777231",
+                "177444125",
+                "33152",
+                "1",
+                "0",
+                "1792228157654382751",
+                "1792228157654420709"
+              ],
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        "after": {
+          "action": {
+            "source": {
+              ".": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444065",
+                  "16877",
+                  "5",
+                  "160",
+                  "1792228157194064350",
+                  "1792228157194064350"
+                ]
+              },
+              "test": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444077",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157194108642",
+                  "1792228157194108642"
+                ]
+              },
+              "test/NG": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444078",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157194208186",
+                  "1792228157194208186"
+                ]
+              },
+              "test/NG/f.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444079",
+                  "33188",
+                  "1",
+                  "1840",
+                  "1792228157194246895",
+                  "1792228157194246895"
+                ],
+                "sha256": "71e6437c0779f4f440640d9defea3454220f7f029b950e1b68f53d6d210e3aaa"
+              },
+              "train": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444066",
+                  "16877",
+                  "4",
+                  "128",
+                  "1792228157193429548",
+                  "1792228157193429548"
+                ]
+              },
+              "train/NG": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444070",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157193547217",
+                  "1792228157193547217"
+                ]
+              },
+              "train/NG/c.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444071",
+                  "33188",
+                  "1",
+                  "1808",
+                  "1792228157193585968",
+                  "1792228157193585968"
+                ],
+                "sha256": "407a1dc3ca8c6317be95f99cd7cda32493fe7d6be882f69f4e7a368289f6269a"
+              },
+              "train/OK": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444067",
+                  "16877",
+                  "4",
+                  "128",
+                  "1792228157193347756",
+                  "1792228157193347756"
+                ]
+              },
+              "train/OK/a.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444068",
+                  "33188",
+                  "1",
+                  "1780",
+                  "1792228157193196003",
+                  "1792228157193196003"
+                ],
+                "sha256": "8539772d38c545d1ba183b4f18f894f84c9078d7fc36e336c5d7ec2afb1d68ee"
+              },
+              "train/OK/b.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444069",
+                  "33188",
+                  "1",
+                  "1792",
+                  "1792228157193388256",
+                  "1792228157193388256"
+                ],
+                "sha256": "c74ed1640e03e43fe95eb290c1403727fdc6469db0248690a3e30eee4dbf16df"
+              },
+              "val": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444072",
+                  "16877",
+                  "4",
+                  "128",
+                  "1792228157193855347",
+                  "1792228157193855347"
+                ]
+              },
+              "val/NG": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444075",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157193985140",
+                  "1792228157193985140"
+                ]
+              },
+              "val/NG/e.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444076",
+                  "33188",
+                  "1",
+                  "1829",
+                  "1792228157194015141",
+                  "1792228157194015141"
+                ],
+                "sha256": "143e3c59718c6d55934341861ab1aab82671736210294b61df9f4f7abe4c6c9d"
+              },
+              "val/OK": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444073",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157193781929",
+                  "1792228157193781929"
+                ]
+              },
+              "val/OK/d.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444074",
+                  "33188",
+                  "1",
+                  "1795",
+                  "1792228157193812096",
+                  "1792228157193812096"
+                ],
+                "sha256": "1593ce692e5dd3a165d4bf3d10207647c7ffeca7a94928d4b7c0a85a4e46f4b9"
+              }
+            },
+            "empty": {
+              ".": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444064",
+                  "16877",
+                  "2",
+                  "64",
+                  "1792228157192594202",
+                  "1792228157192626994"
+                ]
+              }
+            },
+            "project": {
+              ".": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444081",
+                  "16877",
+                  "14",
+                  "448",
+                  "1792228157824847440",
+                  "1792228157824847440"
+                ]
+              },
+              ".metadata_locks": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444135",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157684114379",
+                  "1792228157684114379"
+                ]
+              },
+              ".metadata_locks/917af92a209aef8133b7f5f4a154dcd450399a44c3de5c66d794d63c5ccd0d8c.lock": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444136",
+                  "33188",
+                  "1",
+                  "0",
+                  "1792228157684111546",
+                  "1792228157684132504"
+                ],
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              },
+              "annotations": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444085",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157697667340",
+                  "1792228157697667340"
+                ]
+              },
+              "annotations/by_dataset": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444142",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157697723299",
+                  "1792228157697723299"
+                ]
+              },
+              "annotations/by_dataset/890ee927e19449d7": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444143",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157697776925",
+                  "1792228157697776925"
+                ]
+              },
+              "annotations/by_dataset/890ee927e19449d7/metadata": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444144",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157793220824",
+                  "1792228157793220824"
+                ]
+              },
+              "annotations/by_dataset/890ee927e19449d7/metadata/workflow.json": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444161",
+                  "33152",
+                  "1",
+                  "8522",
+                  "1792228157793063821",
+                  "1792228157793220824"
+                ],
+                "sha256": "6eca04f0de5e2e2fe76a50a7ac9db24f450f9bee3e6529899f13f294eeb882f9"
+              },
+              "dataset": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444082",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157656064360",
+                  "1792228157656064360"
+                ]
+              },
+              "dataset/splits": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444127",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157656370990",
+                  "1792228157656370990"
+                ]
+              },
+              "dataset/splits/.legacy-split-migration-890ee927e19449d7f3c214ffd2e1b4d123fbf34bca4386bbfa9ee3bf83536f03.json": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444128",
+                  "33152",
+                  "1",
+                  "232",
+                  "1792228157656259613",
+                  "1792228157656370990"
+                ],
+                "sha256": "d5172ffaa0df3579ea51990b44f86539da79ed86383e4b4d6a60867ff94dde59"
+              },
+              "delivery": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444179",
+                  "16877",
+                  "2",
+                  "64",
+                  "1792228157824842774",
+                  "1792228157824866774"
+                ]
+              },
+              "inspection_history.sqlite3": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444175",
+                  "33188",
+                  "1",
+                  "36864",
+                  "1792228157823522420",
+                  "1792228157823522420"
+                ],
+                "sha256": "41c3446e547273401ced85bc5b162a8a7b8bbda0e9fdc5a0aa771631a1781fae"
+              },
+              "labeling_jobs": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444174",
+                  "16877",
+                  "2",
+                  "64",
+                  "1792228157820667250",
+                  "1792228157820688209"
+                ]
+              },
+              "labelsets.json": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444086",
+                  "33152",
+                  "1",
+                  "187",
+                  "1792228157211932169",
+                  "1792228157212137631"
+                ],
+                "sha256": "25e20d5cf7909511b54d080b7d12b1aec70d3e34c3fb9547843809bb475e77fd"
+              },
+              "migration_admission.lock": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444099",
+                  "33152",
+                  "1",
+                  "0",
+                  "1792228157467449347",
+                  "1792228157467484722"
+                ],
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              },
+              "models": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444083",
+                  "16877",
+                  "2",
+                  "64",
+                  "1792228157211483871",
+                  "1792228157211499287"
+                ]
+              },
+              "project.json": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444126",
+                  "33152",
+                  "1",
+                  "1681",
+                  "1792228157655635187",
+                  "1792228157655793773"
+                ],
+                "sha256": "22ce42917694bf6342dfa299ee9ac9ab4d2f61d2b265b4c0042e614aa40ba3e4"
+              },
+              "reports": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444084",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157787332899",
+                  "1792228157787332899"
+                ]
+              },
+              "reports/evaluations": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444160",
+                  "16877",
+                  "2",
+                  "64",
+                  "1792228157787326857",
+                  "1792228157787355733"
+                ]
+              },
+              "runtime_lifecycle.lock": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444125",
+                  "33152",
+                  "1",
+                  "0",
+                  "1792228157654382751",
+                  "1792228157654420709"
+                ],
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              }
+            }
+          },
+          "reload": {
+            "source": {
+              ".": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444065",
+                  "16877",
+                  "5",
+                  "160",
+                  "1792228157194064350",
+                  "1792228157194064350"
+                ]
+              },
+              "test": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444077",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157194108642",
+                  "1792228157194108642"
+                ]
+              },
+              "test/NG": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444078",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157194208186",
+                  "1792228157194208186"
+                ]
+              },
+              "test/NG/f.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444079",
+                  "33188",
+                  "1",
+                  "1840",
+                  "1792228157194246895",
+                  "1792228157194246895"
+                ],
+                "sha256": "71e6437c0779f4f440640d9defea3454220f7f029b950e1b68f53d6d210e3aaa"
+              },
+              "train": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444066",
+                  "16877",
+                  "4",
+                  "128",
+                  "1792228157193429548",
+                  "1792228157193429548"
+                ]
+              },
+              "train/NG": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444070",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157193547217",
+                  "1792228157193547217"
+                ]
+              },
+              "train/NG/c.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444071",
+                  "33188",
+                  "1",
+                  "1808",
+                  "1792228157193585968",
+                  "1792228157193585968"
+                ],
+                "sha256": "407a1dc3ca8c6317be95f99cd7cda32493fe7d6be882f69f4e7a368289f6269a"
+              },
+              "train/OK": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444067",
+                  "16877",
+                  "4",
+                  "128",
+                  "1792228157193347756",
+                  "1792228157193347756"
+                ]
+              },
+              "train/OK/a.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444068",
+                  "33188",
+                  "1",
+                  "1780",
+                  "1792228157193196003",
+                  "1792228157193196003"
+                ],
+                "sha256": "8539772d38c545d1ba183b4f18f894f84c9078d7fc36e336c5d7ec2afb1d68ee"
+              },
+              "train/OK/b.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444069",
+                  "33188",
+                  "1",
+                  "1792",
+                  "1792228157193388256",
+                  "1792228157193388256"
+                ],
+                "sha256": "c74ed1640e03e43fe95eb290c1403727fdc6469db0248690a3e30eee4dbf16df"
+              },
+              "val": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444072",
+                  "16877",
+                  "4",
+                  "128",
+                  "1792228157193855347",
+                  "1792228157193855347"
+                ]
+              },
+              "val/NG": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444075",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157193985140",
+                  "1792228157193985140"
+                ]
+              },
+              "val/NG/e.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444076",
+                  "33188",
+                  "1",
+                  "1829",
+                  "1792228157194015141",
+                  "1792228157194015141"
+                ],
+                "sha256": "143e3c59718c6d55934341861ab1aab82671736210294b61df9f4f7abe4c6c9d"
+              },
+              "val/OK": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444073",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157193781929",
+                  "1792228157193781929"
+                ]
+              },
+              "val/OK/d.png": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444074",
+                  "33188",
+                  "1",
+                  "1795",
+                  "1792228157193812096",
+                  "1792228157193812096"
+                ],
+                "sha256": "1593ce692e5dd3a165d4bf3d10207647c7ffeca7a94928d4b7c0a85a4e46f4b9"
+              }
+            },
+            "empty": {
+              ".": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444064",
+                  "16877",
+                  "2",
+                  "64",
+                  "1792228157192594202",
+                  "1792228157192626994"
+                ]
+              }
+            },
+            "project": {
+              ".": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444081",
+                  "16877",
+                  "14",
+                  "448",
+                  "1792228157824847440",
+                  "1792228157824847440"
+                ]
+              },
+              ".metadata_locks": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444135",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157684114379",
+                  "1792228157684114379"
+                ]
+              },
+              ".metadata_locks/917af92a209aef8133b7f5f4a154dcd450399a44c3de5c66d794d63c5ccd0d8c.lock": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444136",
+                  "33188",
+                  "1",
+                  "0",
+                  "1792228157684111546",
+                  "1792228157684132504"
+                ],
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              },
+              "annotations": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444085",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157697667340",
+                  "1792228157697667340"
+                ]
+              },
+              "annotations/by_dataset": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444142",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157697723299",
+                  "1792228157697723299"
+                ]
+              },
+              "annotations/by_dataset/890ee927e19449d7": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444143",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157697776925",
+                  "1792228157697776925"
+                ]
+              },
+              "annotations/by_dataset/890ee927e19449d7/metadata": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444144",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157793220824",
+                  "1792228157793220824"
+                ]
+              },
+              "annotations/by_dataset/890ee927e19449d7/metadata/workflow.json": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444161",
+                  "33152",
+                  "1",
+                  "8522",
+                  "1792228157793063821",
+                  "1792228157793220824"
+                ],
+                "sha256": "6eca04f0de5e2e2fe76a50a7ac9db24f450f9bee3e6529899f13f294eeb882f9"
+              },
+              "dataset": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444082",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157656064360",
+                  "1792228157656064360"
+                ]
+              },
+              "dataset/splits": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444127",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157656370990",
+                  "1792228157656370990"
+                ]
+              },
+              "dataset/splits/.legacy-split-migration-890ee927e19449d7f3c214ffd2e1b4d123fbf34bca4386bbfa9ee3bf83536f03.json": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444128",
+                  "33152",
+                  "1",
+                  "232",
+                  "1792228157656259613",
+                  "1792228157656370990"
+                ],
+                "sha256": "d5172ffaa0df3579ea51990b44f86539da79ed86383e4b4d6a60867ff94dde59"
+              },
+              "delivery": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444179",
+                  "16877",
+                  "2",
+                  "64",
+                  "1792228157824842774",
+                  "1792228157824866774"
+                ]
+              },
+              "inspection_history.sqlite3": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444175",
+                  "33188",
+                  "1",
+                  "36864",
+                  "1792228157823522420",
+                  "1792228157823522420"
+                ],
+                "sha256": "41c3446e547273401ced85bc5b162a8a7b8bbda0e9fdc5a0aa771631a1781fae"
+              },
+              "labeling_jobs": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444174",
+                  "16877",
+                  "2",
+                  "64",
+                  "1792228157820667250",
+                  "1792228157820688209"
+                ]
+              },
+              "labelsets.json": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444086",
+                  "33152",
+                  "1",
+                  "187",
+                  "1792228157211932169",
+                  "1792228157212137631"
+                ],
+                "sha256": "25e20d5cf7909511b54d080b7d12b1aec70d3e34c3fb9547843809bb475e77fd"
+              },
+              "migration_admission.lock": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444099",
+                  "33152",
+                  "1",
+                  "0",
+                  "1792228157467449347",
+                  "1792228157467484722"
+                ],
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              },
+              "models": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444083",
+                  "16877",
+                  "2",
+                  "64",
+                  "1792228157211483871",
+                  "1792228157211499287"
+                ]
+              },
+              "project.json": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444126",
+                  "33152",
+                  "1",
+                  "1681",
+                  "1792228157655635187",
+                  "1792228157655793773"
+                ],
+                "sha256": "22ce42917694bf6342dfa299ee9ac9ab4d2f61d2b265b4c0042e614aa40ba3e4"
+              },
+              "reports": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444084",
+                  "16877",
+                  "3",
+                  "96",
+                  "1792228157787332899",
+                  "1792228157787332899"
+                ]
+              },
+              "reports/evaluations": {
+                "kind": "directory",
+                "raw7": [
+                  "16777231",
+                  "177444160",
+                  "16877",
+                  "2",
+                  "64",
+                  "1792228157787326857",
+                  "1792228157787355733"
+                ]
+              },
+              "runtime_lifecycle.lock": {
+                "kind": "file",
+                "raw7": [
+                  "16777231",
+                  "177444125",
+                  "33152",
+                  "1",
+                  "0",
+                  "1792228157654382751",
+                  "1792228157654420709"
+                ],
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              }
+            }
+          }
+        },
+        "all_source_and_nonmanifest_project_paths_preserved": true,
+        "project_manifest_allowed_changes": [],
+        "project_root_directory_only_mtime_ctime_may_change": false,
+        "post_action_reload_exact": true
+      },
+      "writes": [],
+      "cancel_acknowledgement": {
+        "calls": 1,
+        "answer": null,
+        "returned": true,
+        "running_job_cancel": false,
+        "deadline": 25885.562250000003,
+        "completed": 16022.256958
+      },
+      "empty_scope": null,
+      "closure": {
+        "descriptors": {
+          "opened": 56,
+          "closed": 56
+        },
+        "callback_errors": [],
+        "backend_stop": {
+          "exited": true,
+          "exitCode": 0,
+          "signal": null,
+          "exitedBeforeStop": false,
+          "forced": false,
+          "forcedReason": null,
+          "groupAlive": false,
+          "escaped": [],
+          "unownedReferences": [],
+          "scanError": null,
+          "durationMs": 964,
+          "stoppedAt": "2026-10-17T09:09:19.593Z",
+          "healthy_at_end": true,
+          "port_closed": true,
+          "pid_alive": false
+        },
+        "page_errors": [],
+        "console_errors": [],
+        "blocked_loopback_requests": []
+      },
+      "screenshots": [
+        {
+          "id": "screenshot-0",
+          "sha256": "1a17496d6ad8177e3c6593dd5294369106b2c74f712529467f722dee5a198b3b"
+        },
+        {
+          "id": "screenshot-1",
+          "sha256": "2fc3f039bcbbae02e16e5c7864544bf8c7bf1107ceaad31859d0367c2ccaa42e"
+        }
+      ]
+    }
+  },
+  "original_timers": "Each actual folder action and owning reload shares its original absolute10s frame through same main-frame Request/context/fullbody/finished and required view checks. No timeout change.",
+  "prior_collection_failure": {
+    "source_sha": "68821555e8e67373af90c06314df21f54dc93482",
+    "test_source_sha256": "767b93983715c1203ec1497ff72538e5febb4eed667ba4ac9e4652056958a48d",
+    "stage": "Playwright collection before either case entered",
+    "error": "First argument must use the object destructuring pattern",
+    "exit_code": 1,
+    "wrapper_seconds": 5.156855958979577,
+    "command_log_sha256": "82d70a09f96b131eb60e0b448baba3af63adb01d1998fbdf5bcc6608c6af56b4",
+    "result_sha256": "d42efd430afee8645b0a5d568e443853bc273195c0153865b8fd6d6be0a91f4c",
+    "retained_source_sha256": "767b93983715c1203ec1497ff72538e5febb4eed667ba4ac9e4652056958a48d",
+    "fix": "Only two test callbacks now name and destructure required fixtures; no product, budget, API or custody changes. Clean fixed-source two-case run is separate; no failed receipt was removed or relabelled."
+  },
+  "teardown": {
+    "schema": "modu-vision.e2e-evidence/v1",
+    "written_at": "2026-10-17T09:09:19.867Z",
+    "receipt": "HarnessTeardown",
+    "run_dir": "<private-verification-root>/classification-import-empty-cancel-current-02/browser-01",
+    "leftovers": [],
+    "unowned_references": [],
+    "scan_error": null,
+    "files": []
+  },
+  "limits": {
+    "controlled_desktop_shim_folder_answer_only": true,
+    "real_OS_picker_executed": false,
+    "installed_native": false,
+    "source_electron": false,
+    "cancel_is_picker_null_not_running_job_cancellation": true,
+    "full_RGB_canvas_parity": false,
+    "gallery_claim": "readiness/dimensions/paths only",
+    "cold_empty_original_body_path_zero_view_retained": true,
+    "whole_project_immutability_scope": "warm namespace transition only; only source pointer/updated_at and parent directory timestamps may change in empty case",
+    "metadata_fabricated": false,
+    "route_or_HTTP_body_override": false,
+    "model_or_worker_dispatch": false,
+    "quality_approved": false,
+    "independent_review_accepted": false,
+    "parent_accepted": false
+  },
+  "public_derivative": {
+    "kind": "path-redacted private detail derivative",
+    "original_private_detail_sha256": "60b68328f1764ddc639dabb9849eae12871b4d6ad61afe41fc2403d5f7738959",
+    "original_private_detail_bytes": 160905,
+    "machine_paths_and_loopback_origin_redacted": true,
+    "original_response_digests_and_qualification_findings_unchanged": true,
+    "original_private_receipt_mutated": false
+  }
+}
