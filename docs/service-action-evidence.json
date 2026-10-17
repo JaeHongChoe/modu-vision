@@ -9825,7 +9825,31 @@
               "state": "verified"
             },
             "error": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "action": "영역 라벨에서 패치 준비",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "aeeb70b2cb5125d4c21ed4b20f7efd73da564f039101b8387bd2fb596efe047f"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "033c09bf2386d453eb0b78a12fefee85b308e539ad2406f769d393ef8eda7e11"
+                    }
+                  ],
+                  "expected": "Report actual owned preparation-storage obstruction without creating prepared data or mutating originals; ordinary reload preserves source and an empty prepared selection.",
+                  "kind": "click",
+                  "observed": "Real valid16/16 prepare encountered a newly fixture-owned regularfile at empty dataset_dir/patch and original staging.mkdir returned422 NotADirectoryError. Exact fullbody/UIalert, originalUI reload datasets200[], all15 protected files raw7+SHA and FD58/58 preserved; originalbackend natural0/normalclosure. Pre-staging error only; no partial-copy rollback/native/training/model quality claim. Sibling reopencase failed and remains pending.",
+                  "receipt": "2026-10-18-patch-prepare-owned-filesystem-error-current-browser.json",
+                  "receipt_sha256": "cc6bcf17f32486294a7dbdda8315889fd4c322760e18c47f23a63c69337891f5",
+                  "reviewer": "Root approved unchanged originalcaps/sourceguards and actual Root-owned two-case invocation; independent postshutdown custody/body/source/provider/runtime check. Metadata precheck failure and whole1PASS1FAIL are disclosed in details.",
+                  "source_sha": "abf68757ea15784945f2dc8b60132569faaf21c5",
+                  "task": "S4-03",
+                  "test": "scripts/e2e/patch-prepare-reopen-error-controls.spec.ts::patch preparation reports a real owned filesystem obstruction and reloads without fabricated prepared data"
+                }
+              ]
             },
             "cancel": {
               "state": "pending"

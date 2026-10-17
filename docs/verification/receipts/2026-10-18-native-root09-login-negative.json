@@ -1,0 +1,407 @@
+{
+  "caps": {
+    "backend_exit_seconds": 15,
+    "controller_exit_seconds": 10,
+    "main_exit_seconds": 30,
+    "manual_seconds": 600,
+    "original_export_seconds": 115,
+    "original_run_seconds": 60,
+    "readiness_seconds": 360,
+    "startup_seconds": 210
+  },
+  "custody": {
+    "active_pointer_unchanged_by_UI": true,
+    "before_setup_after_setup_after_UI_maps_exact": true,
+    "current_backend2927_and_frontend2928_full_raw9_body_source_exact": true,
+    "current_protected68_raw9_and_body_exact": true,
+    "failed_lease_preserved": true,
+    "installed_profile_unchanged": true,
+    "original_protected_inputs": 68,
+    "source_worktrees_clean": true
+  },
+  "health_interval": {
+    "after_login": {
+      "pending_records": 2,
+      "released_records": 65,
+      "request_count": 67,
+      "sampled_active_scopes": 9,
+      "sequence": 539,
+      "uncertain": true
+    },
+    "after_login_failure_count": 4,
+    "all65_released_envelopes_completed_normally": true,
+    "baseline": {
+      "pending_records": 1,
+      "released_records": 14,
+      "request_count": 15,
+      "sampled_active_scopes": 2,
+      "sequence": 85,
+      "uncertain": false
+    },
+    "baseline_failure_count": 0,
+    "exact_first_failing_request_or_root_cause_identified": false,
+    "first_poisoned_interval": true,
+    "ordered_reason_sha256": [
+      "4c02a8cdcc2deb026cf58834ea638cf3124f51b38e7f327beeb54dd705a7fc1e",
+      "cee6652ccc8dd0d5b40f1827e191551a5964fd6a75ffd70b643ae1bb067d18e3",
+      "c1a9ece2259e7d0588f14e6b1ebd87a1dc08c902080fad25dcb12605578b9554",
+      "322e09de3d1084ec9c70c419d20a2ebfa6333088b11822df0411b767e0a1d55d"
+    ],
+    "stop_further_UI": true
+  },
+  "limits": [
+    "READY and ordinary process exits do not establish strict closure or lease release.",
+    "Only baseline-to-post-login failure interval and four ordered reason hashes are retained here; no causal request identity or cross-cohort equivalence is claimed.",
+    "CUA observations are transcript observations without a persisted PNG; no image hash is manufactured.",
+    "No flow save, inference, GPU, model-quality, full manual workflow, native acceptance, release, parent, ledger cell or scenario-count credit.",
+    "Original build and assembly envelopes bind immutable artifacts; the reader did not rehash the full archive or all compiled payload members again."
+  ],
+  "observed_UI": {
+    "PNG_persisted": false,
+    "independent_GUI_execution_acceptance": false,
+    "reported_actions": [
+      "login through controlled local fixture account",
+      "automatic retained segmentation-project selection"
+    ],
+    "source": "Root actual CUA accessibility/action tool transcript only"
+  },
+  "private_readback": {
+    "bytes": 31246,
+    "sha256": "c9bdce645002770ad54a1d69d22fa21757d44f647540c6060829d647f73e5439"
+  },
+  "raw_evidence": [
+    {
+      "bytes": 547,
+      "label": "adapter_bind-inputs-actual-tool-completion",
+      "sha256": "229294d0254261906837d06f7a70c8563a0f7e4baad5ddcb30dc972b1fe1a1f3"
+    },
+    {
+      "bytes": 131,
+      "label": "adapter_bind-inputs-actual-tool-start",
+      "sha256": "ed39d8ab4830bc423216e671a43001d292c592288c1effe501ce54af9883d397"
+    },
+    {
+      "bytes": 390,
+      "label": "adapter_controls-after-UI-actual-tool",
+      "sha256": "8d3479bf57109f68b34ac0dea99e837d04994c5e3316d89ebd1f42e450f5cddf"
+    },
+    {
+      "bytes": 393,
+      "label": "adapter_controls-after-setup-actual-tool",
+      "sha256": "49bd2121f67d113e15eaa10a2afd4f26e7f50c1b61730242309c9ab5647ee161"
+    },
+    {
+      "bytes": 392,
+      "label": "adapter_controls-before-setup-actual-tool-completion",
+      "sha256": "9dbc5a79967b0dcfa43f930e6ad48ff59e015b009bc3ee03de147eafd011a7ec"
+    },
+    {
+      "bytes": 130,
+      "label": "adapter_controls-before-setup-actual-tool-start",
+      "sha256": "f06cea7844610088a853f0341fffcd1f01799b0a6b2545e304b645f15653be5b"
+    },
+    {
+      "bytes": 281,
+      "label": "adapter_controls-lifetime-inputs-actual-tool",
+      "sha256": "b3c463d9cb1d1150fbf5993a00c9d26f9da070b73ef090327b7d78b65e8acc1c"
+    },
+    {
+      "bytes": 241,
+      "label": "adapter_controls-quit-request-actual-tool",
+      "sha256": "523b9d5dc4873f9ddc74b11dbe89328c2bf07ec659f937940cffd8ec32b45c79"
+    },
+    {
+      "bytes": 443,
+      "label": "adapter_health-baseline-actual-tool",
+      "sha256": "226c6b1288ab4bc1d3840a3cc9cea6d2b6921cef164737d51b3aacc3ada0e942"
+    },
+    {
+      "bytes": 435,
+      "label": "adapter_health-login-actual-tool",
+      "sha256": "ad24c312abb8fcf5c4a8ab5cac9de6ab62473355bfca80b82d6a43ed3e533f5e"
+    },
+    {
+      "bytes": 318,
+      "label": "adapter_hold-actual-tool-completion",
+      "sha256": "e085991915add9fff4965346c940caa84dbf3412777f25a941fc87318491b347"
+    },
+    {
+      "bytes": 129,
+      "label": "adapter_hold-actual-tool-start",
+      "sha256": "a372409f5fc954024499dc502bf0904d60d8d83b3c18ffb60ee967693ed9bc68"
+    },
+    {
+      "bytes": 642,
+      "label": "adapter_hold-readiness-actual-tool",
+      "sha256": "99f09c04b33ca715a722785e84cc963875ac33128e53f27b90d7aa4a699d51ff"
+    },
+    {
+      "bytes": 355,
+      "label": "adapter_setup-actual-tool-completion",
+      "sha256": "a72e9199d39a673f73e18f91dfcee9fa4ef338ddd4ff280e9fd4e6a1504a72f3"
+    },
+    {
+      "bytes": 131,
+      "label": "adapter_setup-actual-tool-start",
+      "sha256": "a318a6f999abe580a1188dee09f736d1a392cfc76648eaa9912719b061c7ac29"
+    },
+    {
+      "bytes": 20373,
+      "label": "adapter",
+      "sha256": "a215baa2d1d1b18a4f2baf9dc6671e1ef39346c5638811f7a03f0c0d9ccaf46b"
+    },
+    {
+      "bytes": 5846,
+      "label": "declaration",
+      "sha256": "d75136b1b73498a67a12a2d86979fd7f2052b594d2c6aa2f94d8829044319142"
+    },
+    {
+      "bytes": 10237,
+      "label": "binding_readback",
+      "sha256": "77b85566f7cf4407e0befc67741e5012c0b4903c75ab569823f030ed91f6e9dd"
+    },
+    {
+      "bytes": 6892,
+      "label": "input_manifest",
+      "sha256": "2391a3b092c8dd2a98e782e8245930d562e2599a67eabd173b4a53caaad021ac"
+    },
+    {
+      "bytes": 1037606,
+      "label": "frontend_snapshot",
+      "sha256": "bde2f22a1ef8f11afd9ddfd1913b2abaedcf2e3d21dff72d48e30bdc36599b1d"
+    },
+    {
+      "bytes": 1675,
+      "label": "lifetime_inputs",
+      "sha256": "ddba6a5861a157e8ea1ac72853006f62f05a139bbe75bd205ce597bbacc586b9"
+    },
+    {
+      "bytes": 410,
+      "label": "active_before_UI",
+      "sha256": "8af1eb6fe7da83610dbc04350e60081f1f484542ec11c666aa82b0e23eff29cc"
+    },
+    {
+      "bytes": 58318,
+      "label": "protected_before_setup",
+      "sha256": "18b3c85402bc9ccffd590f46465a7027c0a712f905a8556e0060c6ba41ac4578"
+    },
+    {
+      "bytes": 60251,
+      "label": "protected_after_setup",
+      "sha256": "18800ac5f1e12a0885395e6a851606a61fb0d3bd71a76709a3b4cd99d69114a4"
+    },
+    {
+      "bytes": 59869,
+      "label": "protected_after_UI",
+      "sha256": "043c8f9a740c0bd8a726607a60aa22867910b8571657de20cc196c9264e36b23"
+    },
+    {
+      "bytes": 8240,
+      "label": "health_baseline",
+      "sha256": "186e6c308d38aea888521f7693ee5829296c42c5096231e61008b2a4db72a186"
+    },
+    {
+      "bytes": 27039,
+      "label": "health_login",
+      "sha256": "9f71ca97f7e3e678e27d0e6c30504004cba7686f8132662ad7924a271abe482b"
+    },
+    {
+      "bytes": 14905,
+      "label": "setup_result",
+      "sha256": "ca5af60b46c1b513c463d9860193bc35acbc87d4b6f8e035aa7051a322aeb438"
+    },
+    {
+      "bytes": 22564,
+      "label": "populated_setup",
+      "sha256": "d9075579c750cd17a9b16f1a073775126e2bfeb0b38f3367daa47eeae89a238b"
+    },
+    {
+      "bytes": 2571,
+      "label": "preview",
+      "sha256": "7ea23212d40dd35c9100627cec766a571808f7bc6989696fb56fd82cf2fcfdf2"
+    },
+    {
+      "bytes": 2849,
+      "label": "preview_child",
+      "sha256": "f1ccff47ac1513b181e2f46561ad2d51e60f1c30ac20f0bddae564e6e9ccb9e0"
+    },
+    {
+      "bytes": 2373,
+      "label": "preview_stdout",
+      "sha256": "87a1a2dbaf3e5a593ae03d3b45a90c7a99894cfa4ffbb64722c0f0b111e2ecac"
+    },
+    {
+      "bytes": 0,
+      "label": "preview_stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 545,
+      "label": "install",
+      "sha256": "9ae967840fdf2f7f6e5022a499584bd14e247ce7567dd4cf98cdcbb5ea85dd12"
+    },
+    {
+      "bytes": 2949,
+      "label": "install_child",
+      "sha256": "c6973aa27862845af666b3d2445892e741212353f26df2036275bfdef0ddfb2c"
+    },
+    {
+      "bytes": 503,
+      "label": "install_stdout",
+      "sha256": "0a31fc84f07f029dd10bdc3fadf88ae43c2d5c62984c8126274937ad34fa0858"
+    },
+    {
+      "bytes": 0,
+      "label": "install_stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 891,
+      "label": "controller_argv",
+      "sha256": "ae5a5641555d5618299f49c2dfb6e3ad3189544c46e19a5713fc75e5227d9b26"
+    },
+    {
+      "bytes": 524,
+      "label": "controller_inputs",
+      "sha256": "16a7b0b971437da8f48511daf2bed1461a16ccf3cffcfea2b3e35052780fdfa3"
+    },
+    {
+      "bytes": 1716,
+      "label": "ready",
+      "sha256": "7d3e65898399500d49f7aa08e085dfd514cd48e0e3091bcd217181f817bdbcb6"
+    },
+    {
+      "bytes": 19483,
+      "label": "readiness_proof",
+      "sha256": "cd8459d01ca8f35c758d7ec98dbe7fa8075eacfcde6d6f2d017c564c90582bee"
+    },
+    {
+      "bytes": 3483,
+      "label": "controller_start",
+      "sha256": "a21939bc928b558db173409a75c1da0eefa4ac444a2eea3efbe0a000f5dbca74"
+    },
+    {
+      "bytes": 404,
+      "label": "controller_ack",
+      "sha256": "b1ef7bd45976347c2d97cc4c0f7416eac78127b43d8fa92fa6a2ee6331c4e921"
+    },
+    {
+      "bytes": 222,
+      "label": "ordinary_quit",
+      "sha256": "13147d66219141986ef76cc96d598a34d90a5cd38f151cc4f7beb05ae9e23bb5"
+    },
+    {
+      "bytes": 4580,
+      "label": "lifetime_result",
+      "sha256": "9d893e437597ce36458917087b74b60991fec738a4ea220e93078f2571d61c5e"
+    },
+    {
+      "bytes": 0,
+      "label": "controller_stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 5321,
+      "label": "final_journal",
+      "sha256": "3862fd675bad95719a8cc1dbe435ff2d19520e9999dee392e631921ca7995dfc"
+    },
+    {
+      "bytes": 650,
+      "label": "B9_build_result",
+      "sha256": "ea29ba55b575ad8f64def980a8bc29bfb78ae6254efec39b8115835c590ebc13"
+    },
+    {
+      "bytes": 538655,
+      "label": "B9_source_before",
+      "sha256": "48d0dda1e3ea38ac3a0aa076d5de8d6cfae8883df6b963a6f63604ce24c172e0"
+    },
+    {
+      "bytes": 538655,
+      "label": "B9_source_after",
+      "sha256": "48d0dda1e3ea38ac3a0aa076d5de8d6cfae8883df6b963a6f63604ce24c172e0"
+    },
+    {
+      "bytes": 1020,
+      "label": "B9_build_original_tool",
+      "sha256": "e47711d979395d2c9d6e8a0c3ae690262c1b5ad6d149c2b3c2437611a59c4e0c"
+    },
+    {
+      "bytes": 59073,
+      "label": "A9_artifact_pins",
+      "sha256": "5de95998f5a94e737ffd8e21d954de564aa03bf0d0d808286c97c1ac2b49fc71"
+    },
+    {
+      "bytes": 2164989,
+      "label": "A9_provenance",
+      "sha256": "fac7c37ec2bf3db98fd50e1385d9033dec14f73412a3186ebdf2a18b8f05eb95"
+    },
+    {
+      "bytes": 525,
+      "label": "A9_assembly_original_tool",
+      "sha256": "d86b2e7742524265b0358737ba57d00010c1b434b5e587f435a00fd35b173d9b"
+    },
+    {
+      "bytes": 168,
+      "label": "A9_wrapper_result",
+      "sha256": "0e0613b50639df38b8d2ac93d6a2bf7bf74347e7c56a3af87e19de340a08f8b4"
+    },
+    {
+      "bytes": 279,
+      "label": "A9_assembly_stdout",
+      "sha256": "da7930dab1ca777b0bbe3fb7b68d4ed0e5500b00c291affb80edd2996e849388"
+    },
+    {
+      "bytes": 2120280,
+      "label": "source_freeze",
+      "sha256": "9c91bc9d2c0e11cffc5a1aa677eaef5c1f749f473aacd53869a2283eff4530d6"
+    }
+  ],
+  "schema": "modu-vision.native-root09-login-negative-scoped-receipt/v1",
+  "setup": {
+    "GUI_or_model_quality_acceptance": false,
+    "actual_compiled_CLI_preview_install": true,
+    "complete": true,
+    "direct_original_children_naturally_reaped": true,
+    "install_exit_code": 0,
+    "install_seconds": 142.19128329097293,
+    "preview_exit_code": 0,
+    "preview_seconds": 31.195926583837718,
+    "signals_sent": false
+  },
+  "shutdown": {
+    "can_release_launch_lease": false,
+    "complete_Electron_helper_tree_closed": false,
+    "error_class": "ValueError",
+    "error_phase": "normal-closure",
+    "final_journal_protocol": 4,
+    "final_journal_state": "recovery_required",
+    "hold_tool_exit_code": 1,
+    "nonce_bound_ordinary_quit_requested": true,
+    "original_backend_exited": true,
+    "original_controller_reaped": true,
+    "original_main_exited": true,
+    "result_returncode": 1,
+    "signals_sent": false,
+    "state_repaired": false,
+    "strict_lifetime_and_scoped_closure_verified": false,
+    "unsupported": [
+      "uncovered_request_protocol"
+    ],
+    "whole_process_tree_exit_verified": false,
+    "writer_drain_active_scopes": 5,
+    "writer_drain_status": "refused"
+  },
+  "source_cohort": {
+    "archive_sha256": "ed7f48a5e5524c9af06c1f9284a8f00f4b50aac5036b27639e98f2e230f5cde6",
+    "artifact_pins_sha256": "5de95998f5a94e737ffd8e21d954de564aa03bf0d0d808286c97c1ac2b49fc71",
+    "backend_build_identity_sha256": "cb3b7f51cda4e85447b87e857cdcac9ef5a4a154e7bec591a94eb710d0a604c5",
+    "backend_executable_sha256": "bafd1f7ddd3edde3bcf4638a693781e1a7e7b8f166b22b22f3b61b0f48194232",
+    "backend_head": "ad8fbee8684fc243704d46f639314d62656a95b1",
+    "backend_tracked_count": 2927,
+    "frontend_diagnostic_overlay_count": 2,
+    "frontend_head": "3c1e7bcfa02230b1909147503dfd5dbad285c041",
+    "frontend_tracked_count": 2928,
+    "portable_manifest_sha256": "11e687565a124a3a1ffdf766e4bb4c79d9bf4aba289bba030ea79c128029f1fb"
+  },
+  "status": "failed_native_scoped_closure_preserved"
+}

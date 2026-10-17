@@ -1,0 +1,213 @@
+{
+  "caps": {
+    "builder_seconds": "min(original300,remaining test120)",
+    "one_UI_frame_seconds": 30,
+    "periodic_and_drain_shared_seconds": 3.903,
+    "product_login_seconds": 15,
+    "retry_count": 0,
+    "server_join_seconds": 10,
+    "test_seconds": 120
+  },
+  "controlled_setup_delta": "One original AccountStore.select_project call for the fresh synthetic owner account before observed HTTP. Existing UI login still required; no account session preauthentication.",
+  "custody": {
+    "original_six_store_isolation_checks_passed": true,
+    "private64_before_after_and_current_exact": true,
+    "provider321_before_after_and_current_exact": true,
+    "runtime3_before_after_and_current_exact": true,
+    "six_synthetic_images_and_six_labels_plus_project_recipe_active_version_protected16_exact": true,
+    "source_before_after_and_current2927_exact": true
+  },
+  "execution": {
+    "automatic_retry": false,
+    "deadline_expired": false,
+    "expected_failure_remains_failed": true,
+    "original_pytest_reaped": true,
+    "pytest_exit_code": 1,
+    "pytest_summary": "1 failed, 3 warnings in9.80s",
+    "runtime_signals_sent": false,
+    "wrapper_seconds": 15.552225541789085
+  },
+  "first_failure_interval": {
+    "after_login_admission_active_scopes": 7,
+    "after_login_request_count": 46,
+    "after_login_sequence": 282,
+    "ordered_four_hashes_equal_native_Root09_login": true,
+    "ordered_reason_sha256": [
+      "4c02a8cdcc2deb026cf58834ea638cf3124f51b38e7f327beeb54dd705a7fc1e",
+      "cee6652ccc8dd0d5b40f1827e191551a5964fd6a75ffd70b643ae1bb067d18e3",
+      "c1a9ece2259e7d0588f14e6b1ebd87a1dc08c902080fad25dcb12605578b9554",
+      "322e09de3d1084ec9c70c419d20a2ebfa6333088b11822df0411b767e0a1d55d"
+    ],
+    "ordered_reason_strings": [
+      "shared_denial_shared_account_authenticated_database_entry",
+      "shared_denial_shared_account_authenticated_database_exit",
+      "owned_ancillary_foreign_flow_production",
+      "shared_denial_unconfirmed_or_late"
+    ],
+    "prior_admission_active_scopes": 0,
+    "prior_observer_failure_count": 0,
+    "prior_phase": "after actual open and server-panel controls",
+    "same_native_request_identity_or_complete_native_root_cause_proven": false
+  },
+  "limits": [
+    "This is a failed source/renderer cohort with one controlled stored-project setup delta; no native run was performed.",
+    "Matching four ordered reason hashes establish first-failure-class reproduction only; native request identity and complete native cause remain unproven.",
+    "Seven additional WebSocket/send lifetime failures appeared by ordinary controller close and remain separate from the first four post-login failures.",
+    "Forty-four retained browser bodies do not equal forty-six backend request envelopes; one final WebSocket envelope is incomplete.",
+    "Original lifespan is off; periodic hardware workers ran, while recovery/maintenance/sweep and complete application lifespan were not exercised.",
+    "Two screenshots are private evidence; gallery cards are clipped behind the server panel. No model/inference/GPU/quality, lease release, native/parent, ledger cell or count credit."
+  ],
+  "ordinary_close": {
+    "WebSocket_send_pending_at_final_observation": true,
+    "additional_failure_count": 7,
+    "additional_failure_strings": [
+      "owned_socket_producer_send_failed",
+      "send_error",
+      "owned_socket_unregister_entry",
+      "owned_socket_unregister_return",
+      "owned_socket_handler_return",
+      "incomplete_original_envelope",
+      "owned_socket_unconfirmed_lifetime"
+    ],
+    "context_browser_proxy_normal_closes_fulfilled": true,
+    "controller_exit_code": 0,
+    "controller_reaped": true,
+    "final_drain_active_scopes": 6,
+    "final_drain_status": "refused",
+    "final_drain_unsupported": [
+      "uncovered_request_protocol"
+    ],
+    "forced_socket_close": false,
+    "one_actual_WebSocket_ClientDisconnected": true,
+    "periodic_pending_tasks": 0,
+    "periodic_tasks_joined": 2,
+    "server_force_exit": false,
+    "server_thread_closed": true,
+    "strict_graph_pass": false
+  },
+  "private_readback": {
+    "bytes": 82268,
+    "sha256": "d1d947b6dd7b1633ed42b16f31c5f4854c7adccc6e92f1b6f5d9300194e9f80a"
+  },
+  "raw_evidence": [
+    {
+      "bytes": 22354,
+      "label": "isolation-final",
+      "sha256": "97318c67ec49547cafc44e1c306a8e4fce89e521ef6932f5eaa12f0d1170e3df"
+    },
+    {
+      "bytes": 19377,
+      "label": "junit",
+      "sha256": "56894ca89ec4c0b3128225fa911ef94d6adeb8d079797a73048f0f3ae3c72526"
+    },
+    {
+      "bytes": 767,
+      "label": "original-tool-completion",
+      "sha256": "0cd5afd9d14de89da749dd25f3c40b921287ab90611e752817f2b4cc140026e6"
+    },
+    {
+      "bytes": 131,
+      "label": "original-tool-start",
+      "sha256": "7965ac162db15cc856cf1e7021df6e975b6b0851ba16cc1dab5801297ac73773"
+    },
+    {
+      "bytes": 21555,
+      "label": "pytest",
+      "sha256": "0840aa85b45037d9437bfcc5845e70b6186b67e8125657721ba9bf76c9c370b4"
+    },
+    {
+      "bytes": 646,
+      "label": "result",
+      "sha256": "f179e1322162353fff73a3d12dc32449f7ca02b2f725cb8cce27a67b0d8580fc"
+    },
+    {
+      "bytes": 1040063,
+      "label": "source-after",
+      "sha256": "2152e2788af7f88c7a9b9c4b397df7548a5d8037130927a940f96a09843933f6"
+    },
+    {
+      "bytes": 1040063,
+      "label": "source-before",
+      "sha256": "2152e2788af7f88c7a9b9c4b397df7548a5d8037130927a940f96a09843933f6"
+    },
+    {
+      "bytes": 185119,
+      "label": "source-readback.private",
+      "sha256": "c0e2557c7eace41ececb8e82887617ca1c8b3bab3813e99112c664393d03fb1e"
+    },
+    {
+      "bytes": 151545,
+      "label": "controller_01-startup",
+      "sha256": "b9a2b62ce1d5788c77cdbd066695487d533926c068628985c8a8a40a750832ec"
+    },
+    {
+      "bytes": 168468,
+      "label": "controller_02-after-login-auto-hydration",
+      "sha256": "ce9928685c1d735fb1eef5c5ca2f2deafb5fa826097d9981852e11ceaa4ebf17"
+    },
+    {
+      "bytes": 844,
+      "label": "controller_controller-close",
+      "sha256": "4b775ea8f4389eec9d46fea363e8a292fba036ec6d843df2667b3ef33394b6e0"
+    },
+    {
+      "bytes": 26064,
+      "label": "controller_graph-04",
+      "sha256": "003a231ad90079abc92c8eb84e44c7c24e7bb6f85616e1fe2fa16278b91fe56e"
+    },
+    {
+      "bytes": 1871,
+      "label": "preparation_stored-selection-only",
+      "sha256": "f50ebb119a2ad624745bf42436d2073bbc113331bfaa33bd8828cc0f834f472d"
+    },
+    {
+      "bytes": 18131,
+      "label": "preparation_test_owned_renderer_login",
+      "sha256": "3968374e91851d2596952d1554620831a2a4dcb4331d44786629b1471a508208"
+    },
+    {
+      "bytes": 15575,
+      "label": "preparation_renderer_controller",
+      "sha256": "581176864fdec9b0f1a092924ffe1a023e860838019f5e35e9c1fbb8162ae06b"
+    },
+    {
+      "bytes": 7519,
+      "label": "preparation_owned-renderer-proxy",
+      "sha256": "eecc292003cdfc91ea9cbc5749742482f46cedcae748a12c335d06ee9c1e5272"
+    },
+    {
+      "bytes": 5622,
+      "label": "preparation_ws_terminal_observation",
+      "sha256": "8028e9a49489176e7e43411a7f42036069e4bec15f7b519fba9971bbd4aed93e"
+    },
+    {
+      "bytes": 27039,
+      "label": "Root09_native_health_hash_comparison_only",
+      "sha256": "9f71ca97f7e3e678e27d0e6c30504004cba7686f8132662ad7924a271abe482b"
+    }
+  ],
+  "retained_bodies": {
+    "all46_completed": false,
+    "all46_final_normal_return_and_released": true,
+    "backend_original_envelopes": 46,
+    "body_status_counts": {
+      "200": 35,
+      "401": 9
+    },
+    "browser_response_bodies": 44,
+    "console_messages_recorded": 10,
+    "console_to_endpoint_individual_identity_join": false,
+    "final_completed_envelopes": 45,
+    "full_body_and_finished_joins": true,
+    "thumbnail_bodies_with_protected_source_image_join": 6,
+    "zero_or_expected_console_error_gate_claimed": false
+  },
+  "schema": "modu-vision.source-stored-selection-coldgraph-negative/v1",
+  "source": {
+    "current_full_source_raw9_and_body_exact": true,
+    "head": "ad8fbee8684fc243704d46f639314d62656a95b1",
+    "product_source_modified_for_case": false,
+    "tracked_count": 2927
+  },
+  "status": "preserved_failed_source_case_first_failure_class_reproduced"
+}

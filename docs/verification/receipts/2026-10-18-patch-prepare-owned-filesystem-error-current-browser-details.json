@@ -1,0 +1,348 @@
+{
+  "body_proof_limits": {
+    "all_four_same_original_Request_full_response_bodies_finished_before_original10s_deadline": true,
+    "original_raw_body_files_retained": true,
+    "redacted_body_values_not_original_raw_bytes": true,
+    "request_context_header_equality": true,
+    "server_accepted_context_receipt_claim": false
+  },
+  "case": {
+    "attempts": 1,
+    "generic_receipt": {
+      "bytes": 1224,
+      "file": "2026-10-18-patch-prepare-owned-filesystem-error-current-browser.json",
+      "sha256": "cc6bcf17f32486294a7dbdda8315889fd4c322760e18c47f23a63c69337891f5"
+    },
+    "original240s_test_and10s_action_full_body_caps": true,
+    "retries": 0,
+    "status": "passed",
+    "title": "patch preparation reports a real owned filesystem obstruction and reloads without fabricated prepared data"
+  },
+  "exact_raw_refs": [
+    {
+      "bytes": 131,
+      "file": "actual-tool-start.json",
+      "sha256": "54415b07eb043a87e203b246b8b4b576a8b97615655602c49e6f600e2c842230"
+    },
+    {
+      "bytes": 690,
+      "file": "actual-tool-completion.json",
+      "sha256": "e0ecaccd30c96229114bf493c71dfe902ab9d573b3a4ecb092b6e01ce4ff46dd"
+    },
+    {
+      "bytes": 1040910,
+      "file": "source-before.json",
+      "sha256": "ac4432895b7181f3cd5d9d43f7b263183dee180915dd27c078d7e54eb8f99c24"
+    },
+    {
+      "bytes": 1040910,
+      "file": "source-after.json",
+      "sha256": "ac4432895b7181f3cd5d9d43f7b263183dee180915dd27c078d7e54eb8f99c24"
+    },
+    {
+      "bytes": 536,
+      "file": "root-source-post-readback-01.json",
+      "sha256": "5b03a266458915885e9b221a0bf3560658805f8ebf1431c81cbfd53bceb3ef85"
+    },
+    {
+      "bytes": 1717,
+      "file": "error-collector-result.json",
+      "sha256": "a5a259f54d9ebe6f0b17e608558cc432e4c59028d64e803137e005b5a76c65ce"
+    }
+  ],
+  "fixture": {
+    "error_fixture": {
+      "created_before_custody": true,
+      "original_or_shared_file_modified": false,
+      "path": "<ORIGINAL_RUN>/browser-01/ws/1-bf101b46-r0/projects/owned_patch_prepare_error/dataset/patch",
+      "regular_file": true,
+      "sha256": "fa7eb53a3cae13a4f0e173823e27694be73b15f5d9248e174c1b9532d721d80c"
+    },
+    "normal_source_adoption_via_real_UI_import_and_persist": true,
+    "obstruction": "Exclusive regular0600 sentinel at this NEW project dataset_dir/patch, created before custody. No existing shared/original file altered, no chmod/deletion/product flag.",
+    "post_staging_rollback_exercised": false,
+    "staging_directory_never_created": true,
+    "three_generated32x32_images_with_three_adjacent_LabelMe_rectangles": true
+  },
+  "no_credit": {
+    "native_picker_or_installed_app": true,
+    "prepare_cancel": true,
+    "quality_independent_human_release_or_parent": true,
+    "reopen_cell": true,
+    "training_inference_GPU_physical_device": true
+  },
+  "normal_closure": {
+    "backend": {
+      "durationMs": 946,
+      "escaped": [],
+      "exitCode": 0,
+      "exited": true,
+      "exitedBeforeStop": false,
+      "forced": false,
+      "forcedReason": null,
+      "groupAlive": false,
+      "healthy_at_end": true,
+      "pid_alive": false,
+      "port_closed": true,
+      "scanError": null,
+      "signal": null,
+      "stoppedAt": "2026-10-17T16:22:32.374Z",
+      "unownedReferences": []
+    },
+    "callback_errors": [],
+    "expected422console_error_retained": [
+      "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+    ],
+    "global": {
+      "leftovers": [],
+      "scan_error": null,
+      "unowned_references": []
+    },
+    "page_errors": [],
+    "secondary_errors": []
+  },
+  "observed": {
+    "captured_business_writes": [
+      {
+        "body": {
+          "minimum_overlap": 0.05,
+          "normal_class": "OK",
+          "patch_size": 16,
+          "stride": 16
+        },
+        "method": "POST",
+        "path": "/api/patch-classification/prepare"
+      }
+    ],
+    "no_prepared_manifest_or_directory_created": true,
+    "no_training_request": true,
+    "only_original32hex_staging_UUID_varies_in_fullbody_assertion": true,
+    "ordinary_UI_reload_dataset_list": {
+      "datasets": []
+    },
+    "ordinary_UI_reload_raw_sha256": "0cff26bf2ee4ff5a741fd326248fefb7cd0e663053a0f152a0d18b6c351721e0",
+    "ordinary_page_reload_executed": true,
+    "original_reload_clears_error_assertion_passed": true,
+    "owning_source_persisted_and_no_prepared_selection": true,
+    "real_error_detail_path_redacted": "[Errno 20] Not a directory: '<ORIGINAL_RUN>/browser-01/ws/1-bf101b46-r0/projects/owned_patch_prepare_error/dataset/patch/.patch-preparation-faba989f0d104941becbd44e23e713ad'",
+    "real_prepare_raw_sha256": "eee3ece6648a2ff8c80a85c86744775dc7eb8489ac7b06ea90ed31b2d2b6afec",
+    "real_prepare_status": 422,
+    "valid_prepare_body": {
+      "minimum_overlap": 0.05,
+      "normal_class": "OK",
+      "patch_size": 16,
+      "stride": 16
+    }
+  },
+  "original_UI_bodies": [
+    {
+      "bytes": 346,
+      "completed": 8885.129875,
+      "deadline": 18739.406415999998,
+      "finished": true,
+      "label": "owning-source-import",
+      "main_frame": true,
+      "method": "POST",
+      "path": "/api/dataset/import",
+      "request_body": {
+        "folder_path": "<ORIGINAL_RUN>/browser-01/ws/1-bf101b46-r0/patch-original-region-source",
+        "task": "segmentation",
+        "validate_images": true
+      },
+      "response": {
+        "classes": {
+          "chip": 3
+        },
+        "corrupted_images": [],
+        "source_images": 3,
+        "split": {
+          "test": 0,
+          "train": 0,
+          "val": 0
+        },
+        "split_supported": true,
+        "split_unavailable_reason": null,
+        "status": "success",
+        "total_images": 3,
+        "unlabeled_images": 0,
+        "validation": {
+          "checked_images": 3,
+          "complete": true,
+          "requested": true,
+          "scope": "all images: every image file under the folder was decoded"
+        }
+      },
+      "same_Request": true,
+      "sha256": "c5454eb0fcf388da965adf9433ecfc9b31a5907409addc443d413b1f5d48114d",
+      "status": 200
+    },
+    {
+      "bytes": 1535,
+      "completed": 8907.296625,
+      "deadline": 18739.406415999998,
+      "finished": true,
+      "label": "owning-source-persist",
+      "main_frame": true,
+      "method": "PUT",
+      "path": "/api/project/update",
+      "request_body": {
+        "source_dataset_dir": "<ORIGINAL_RUN>/browser-01/ws/1-bf101b46-r0/patch-original-region-source"
+      },
+      "response": {
+        "active_labelset_id": "default",
+        "active_preset": "fast",
+        "annotations_dir": "<ORIGINAL_RUN>/browser-01/ws/1-bf101b46-r0/projects/owned_patch_prepare_error/annotations",
+        "created_at": "2026-10-17T16:22:29Z",
+        "dataset_dir": "<ORIGINAL_RUN>/browser-01/ws/1-bf101b46-r0/projects/owned_patch_prepare_error/dataset",
+        "description": "",
+        "id": "dc338ecd",
+        "models_dir": "<ORIGINAL_RUN>/browser-01/ws/1-bf101b46-r0/projects/owned_patch_prepare_error/models",
+        "name": "Owned patch prepare error",
+        "project_dir": "<ORIGINAL_RUN>/browser-01/ws/1-bf101b46-r0/projects/owned_patch_prepare_error",
+        "reports_dir": "<ORIGINAL_RUN>/browser-01/ws/1-bf101b46-r0/projects/owned_patch_prepare_error/reports",
+        "schema_version": 1,
+        "source_dataset_dir": "<ORIGINAL_RUN>/browser-01/ws/1-bf101b46-r0/patch-original-region-source",
+        "task": "segmentation",
+        "updated_at": "2026-10-17T16:22:30Z"
+      },
+      "same_Request": true,
+      "sha256": "35cf8c3d90935610a187408ddd8850776be85a96c7a600c456e9f3d3121d0039",
+      "status": 200
+    },
+    {
+      "bytes": 302,
+      "completed": 9590.8475,
+      "deadline": 19537.456958000002,
+      "finished": true,
+      "label": "actual-error-prepare",
+      "main_frame": true,
+      "method": "POST",
+      "path": "/api/patch-classification/prepare",
+      "request_body": {
+        "minimum_overlap": 0.05,
+        "normal_class": "OK",
+        "patch_size": 16,
+        "stride": 16
+      },
+      "response": {
+        "detail": "[Errno 20] Not a directory: '<ORIGINAL_RUN>/browser-01/ws/1-bf101b46-r0/projects/owned_patch_prepare_error/dataset/patch/.patch-preparation-faba989f0d104941becbd44e23e713ad'"
+      },
+      "same_Request": true,
+      "sha256": "eee3ece6648a2ff8c80a85c86744775dc7eb8489ac7b06ea90ed31b2d2b6afec",
+      "status": 422
+    },
+    {
+      "bytes": 15,
+      "completed": 10140.554833,
+      "deadline": 19726.79825,
+      "finished": true,
+      "label": "ordinary-reload-datasets",
+      "main_frame": true,
+      "method": "GET",
+      "path": "/api/patch-classification/datasets",
+      "request_body": null,
+      "response": {
+        "datasets": []
+      },
+      "same_Request": true,
+      "sha256": "0cff26bf2ee4ff5a741fd326248fefb7cd0e663053a0f152a0d18b6c351721e0",
+      "status": 200
+    }
+  ],
+  "preflight_disclosure": {
+    "Root_preliminary_error": "Metadata-only KeyError(files) before Root fullsource iteration; no full Root preexecution source-pass claim.",
+    "actual_inner_driver": "Own mandatory tracked-source before/after and original harness/scanners; provider/runtime/private guards are external, not falsely attributed to innerdriver.",
+    "after_run": "Independent complete2933source+41private+321links+10providerfiles+3runtimes+15protected+4bodies+17artifacts reopened exactly. Root postsource readback also retained."
+  },
+  "protected_custody": {
+    "FD_opened_closed": {
+      "closed": 58,
+      "opened": 58
+    },
+    "before_action_after_action_after_reload_exact": true,
+    "business_raw7_plus_SHA": "dev,ino,mode,nlink,size,mtimeNs,ctimeNs and fileSHA. Original UID/GID baseline not claimed.",
+    "independent17manifest_artifact_refs_rehashed": true,
+    "independent_postshutdown_all15files_reopened_exact": true,
+    "independent_private_readback": {
+      "bytes": 1623,
+      "file": "passed-error-independent-readback.private.json",
+      "sha256": "0bfa80076934b1740e8bd367d971f38264082bd074f2ecc212f50c7734ad4a19"
+    },
+    "private_input_pins": 41,
+    "project_files_including_owned_sentinel": 9,
+    "provider_links": 321,
+    "runtime_binaries": 3,
+    "selected_provider_files": 10,
+    "source_files": 6,
+    "whole_tracked_source": "2933 raw9+SHA before/after and independent postshutdown exact"
+  },
+  "publication_form": "Explicit path-redacted derivative. Original report/manifest/UI raw bodies/private readback unchanged; SHA values below identify originals.",
+  "schema": "modu-vision.f026-prepare-owned-filesystem-error-browser-details/v1",
+  "scope": "Exactly F026.dino-patch-native-prepare.error source-browser functional case; controlled filesystem obstruction before staging, not post-copy rollback/diskfull/native/training/quality acceptance.",
+  "screenshots": {
+    "actual_artifacts": [
+      {
+        "id": "screenshot-0",
+        "sha256": "aeeb70b2cb5125d4c21ed4b20f7efd73da564f039101b8387bd2fb596efe047f"
+      },
+      {
+        "id": "screenshot-1",
+        "sha256": "033c09bf2386d453eb0b78a12fefee85b308e539ad2406f769d393ef8eda7e11"
+      }
+    ],
+    "visual_review": "Actual error image visibly shows originalErrno20 alert. Reload screenshot shows upperworkbench/original3-image readiness, while exact empty selection and cleared alert use mandatory DOM+UI GET/fullbody/custody assertions. No full RGB or whole-app health claim."
+  },
+  "source": {
+    "clean": true,
+    "dependencies": {
+      "backend/api/routes_patch_classification.py": "65f6abeb38c77b2b86cfa0cfcd252b7723f291244b769fec082932c3605f456b",
+      "backend/engine/grouped_dataset_views.py": "ebe6722dd1e809bc150465e03f284d9ad84aa94c2c080844f574159e57f1e57f",
+      "backend/engine/patch_classification.py": "c90ce5ad03308034493f689cfa8bc84b036c75ee905c91106d833fdf0b7d52b8",
+      "backend/engine/patch_preparation.py": "48e84c0afcb9fc8d05a1f29fc01054a3cc7b388be379824e715fb31aa62f7fc9",
+      "playwright.config.ts": "91495f41ce2b89d5472fc5851c4fc9c5937684958ac453d0a6a759df2a10b936",
+      "scripts/e2e/fixtures/desktop-host-shim.ts": "4f598862ec0e08189628c72bbb552f72bf8fd73f5a9a05b8da1d3ddf516dcfa6",
+      "scripts/e2e/fixtures/harness.cjs": "171460c1cf1697b7a44b8f86a197d2b944928381f736f81af304412126464975",
+      "scripts/e2e/fixtures/remaining-project-handoff.ts": "7a7c74a2f42a5d6ad991dadc97626c1f8330f962edaf73fd461d31f9c4764904",
+      "scripts/e2e/fixtures/test.ts": "49171e2d0d4d7d9559416fdb43bc7dae9394129bbc237fe4f2a4cea0a7afa480",
+      "scripts/e2e/patch-prepare-reopen-error-controls.spec.ts": "f397d085539bc381133f62a00d5dddfc526d5ccfca8e1ef7380d2acf81a13fa7",
+      "scripts/e2e/qa/appFlow.ts": "4eed3e5dad1d9d65a6b19fc9bb51a1f9b0e23911a39e7f255220bec0ce37fea2",
+      "src/renderer/components/training/PatchClassificationWorkbench.tsx": "cde9853f3daf15749f7e42f8dbcd9f41a2bdc58acd624ae64ba0e9c93eb98b4c",
+      "src/renderer/components/training/PatchRecipePreview.tsx": "fb0b91b076e0512583cd955a9a2bc134275db03145961a488c89ce2e1c63f542",
+      "src/renderer/components/training/ProgramWorkbenchControls.tsx": "f982a95aefdd2b5360bedefbe4703e80bdd81d18e3a24e5cbcbc9297a2b95a51",
+      "src/renderer/components/training/useProgramWorkbench.ts": "c41ce026bc338b2bc62c9c27af79f40cdd5aa4564307fcb6a03c210c269fbc8d",
+      "src/renderer/services/api.ts": "ba82fc801fb827ab16b453ee4722ede933a641177be9994f6666f82965bc472e",
+      "src/renderer/services/datasetWorkflow.ts": "67a0b469b78b0d991921244d81d571c954e5c9bda5b767f1c3b0d55270f90bab",
+      "src/renderer/services/modelTrainingProgram.ts": "cd8594aa2ec17fce979858e8276d46264fe53bc7edb65c429b06b2582763357c"
+    },
+    "executed_private_HEAD": "abf68757ea15784945f2dc8b60132569faaf21c5",
+    "not_repinned_to_fixed_successor": "cd73cd39a50a72c420a87e193b70620e92667edd",
+    "public_base": "fafa790b8c175dc1e6b4d72075d1293bace51dfe",
+    "spec": "scripts/e2e/patch-prepare-reopen-error-controls.spec.ts",
+    "spec_sha256": "f397d085539bc381133f62a00d5dddfc526d5ccfca8e1ef7380d2acf81a13fa7",
+    "tracked_count": 2933
+  },
+  "whole_original_invocation": {
+    "driver_exit_code": 1,
+    "failed": 1,
+    "failed_reopen": "All prepared manifest/datasets/sample/preview assertions passed before final no-stale-alert failed. Missing source/patches.json is diagnosed separately; this receipt does not qualify reopen.",
+    "original_log": {
+      "bytes": 5884,
+      "file": "browser-01.log",
+      "sha256": "4d37eddcea06e775427d8f471de46ae767cdc82b7261e31ec51b0ea17a750085"
+    },
+    "original_report": {
+      "bytes": 13268,
+      "file": "report.json",
+      "sha256": "5757aa8a6ba1144b5dbd618329203d72d1be8fc9227f287f10b007c7d649ea85"
+    },
+    "original_result": {
+      "bytes": 2317,
+      "file": "run-result.json",
+      "sha256": "75779f625b28810d74b081541d95c7242f36546bb7324396888c14fb28b1483b"
+    },
+    "original_runner_natural_exit": true,
+    "passed": 1,
+    "runner_signals_sent": false,
+    "whole_run_success": false
+  }
+}
