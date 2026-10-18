@@ -250,6 +250,7 @@ export const FlowchartStudio: React.FC = () => {
   const [modelCatalog, setModelCatalog] = useState<FlowModelCatalogItem[]>([]);
   const [modelCatalogLoading, setModelCatalogLoading] = useState(false);
   const [savedVersions, setSavedVersions] = useState<SavedFlowVersion[]>([]);
+  const savedVersionsRequest = useRef(0);
   const [selectedVersionId, setSelectedVersionId] = useState('');
   // E04: a save or activation waits in this dialog for the rule difference and the reason.
   const [changeDialog, setChangeDialog] = useState<null
@@ -304,6 +305,7 @@ export const FlowchartStudio: React.FC = () => {
   useEffect(() => {
     if (!folderPath || !hasSelectedFolder) { setModelCatalog([]); setSavedVersions([]); return; }
     let active = true;
+    const versionRequest = ++savedVersionsRequest.current;
     setModelCatalogLoading(true);
     Promise.all([
       api.flowchart.modelCatalog(folderPath),
@@ -311,9 +313,12 @@ export const FlowchartStudio: React.FC = () => {
     ]).then(([catalog, versions]) => {
       if (!active) return;
       setModelCatalog(catalog.models);
-      setSavedVersions(versions.pipelines);
-      if (!useFlowchartStore.getState().pipelineDirty && !useFlowchartStore.getState().pipelineIsDraft) {
-        setSelectedVersionId(versions.pipelines.find((version) => version.is_active)?.version_id || '');
+      // A list begun before a save must not replace its newer active-version readback.
+      if (versionRequest === savedVersionsRequest.current) {
+        setSavedVersions(versions.pipelines);
+        if (!useFlowchartStore.getState().pipelineDirty && !useFlowchartStore.getState().pipelineIsDraft) {
+          setSelectedVersionId(versions.pipelines.find((version) => version.is_active)?.version_id || '');
+        }
       }
     }).catch((cause) => {
       if (active) setEditorError(cause instanceof Error ? cause.message : String(cause));
@@ -664,8 +669,9 @@ export const FlowchartStudio: React.FC = () => {
       }
       if (!current()) return;
       setChangeDialog(null);
+      const versionRequest = ++savedVersionsRequest.current;
       const readback = await api.flowchart.listPipelines(folderPath);
-      if (!current()) return;
+      if (!current() || versionRequest !== savedVersionsRequest.current) return;
       if (dialog.mode === 'activate' && !readback.pipelines.some(v => v.version_id === dialog.versionId && v.is_active))
         throw new Error('활성 버전 변경을 확인하지 못했습니다.');
       if (useDatasetStore.getState().datasetKey === dialog.sourceKey) {
