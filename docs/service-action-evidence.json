@@ -23280,7 +23280,39 @@
               ]
             },
             "handoff": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S2-05",
+                  "source_sha": "a429cc8f14b9d732b8de4063ca113211900a0796",
+                  "kind": "click",
+                  "action": "속성 패널 크기 조절 · 접기 · 펼치기",
+                  "expected": "Ordinary A-to-B-to-A project selection preserves the app-global inspector preference and each owning saved46-node52-edge draft/threshold, with no model binding or inference acceptance.",
+                  "observed": "browser: Real keyboard/pointer inspector resize reached360 and collapse44. Ordinary A-to-B-to-A selection retained the global preference and reopened own A model-007 marker/threshold0.8, B model-000 marker/threshold0.1, then exact A saved truth. Prebaseline real owning draftPUTs saved an explicitly unbound clone with only the exact eight unavailable fixture model_job_id fields set null; original recipe/version/source/topology/thresholds stayed intact. Only two project-open writes and zero draft writes followed baseline. All144 UI and76 fixture full responses completed within original bounds, with no model-verification POST, unexpected response or page/console error. Declared protected files remained raw9/SHA exact after natural backend0 and original Popen closure.",
+                  "reviewer": "Codex Root four canonical PNG inspection and finite full-body/source/protected-custody/natural-closure review; independent human quality, installed native, model/device and parent acceptance remain pending.",
+                  "test": "scripts/e2e/flow-inspector-project-handoff.spec.ts::F064 global inspector resize and collapse preserve owning large DAG drafts through A B A project handoff",
+                  "receipt": "2026-10-18-f064-large-dag-inspector-project-handoff-browser.json",
+                  "receipt_sha256": "42b64e62b158cc74d16c208965679297a77f5f028330c9719d057487e563a37d",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "d6023e43a72b59a03543007295c59727a8ba0b2145df4273add5bf073634eaa6"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "7d7aea080324e2faa8584f7e37045b45e9f4c2f2712705d54cc02356b3e32cd2"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "a8f15b73193349cf6510109f13f2163f8e1a8c74fa989c3abc3607d55604b59e"
+                    },
+                    {
+                      "id": "screenshot-3",
+                      "sha256": "b8f7a4b6a58f80cddeb2c1a84517b0750d804391cd7cc19bb0a278d513e1fc57"
+                    }
+                  ]
+                }
+              ]
             }
           }
         },
