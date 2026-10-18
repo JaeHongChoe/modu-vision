@@ -1,0 +1,325 @@
+{
+  "schema": "modu-vision.scoped-native-readback/v1",
+  "status": "actual-installed-edit-observed-draft-lifetime-refused-strict-closure-not-passed",
+  "source_cohort": {
+    "backend_HEAD": "e3442a51724122ff2c842e01b72e5a39a05d03f8",
+    "frontend_HEAD": "d60a50b7556650ae7b22409bcdf9f34836e8c164",
+    "backend_source_files": 2987,
+    "frontend_source_files": 2988,
+    "backend_release_sha256": "89b19945deea66968809281a0e3076d685b8a6ca845cf4437744729486bd41d9",
+    "backend_executable_sha256": "3df0dc0c2fb091349e6207903d403465b9d82c88d110f87c92253d857f2c8b23",
+    "backend_build_identity_sha256": "2dd750ca22d88331b130e39884c817013b8a6b7057eedd799a6e4f51fe076ba9",
+    "assembly_pins_sha256": "64639b12c8d9362e67db388229f27d1c543748251d2b12ca86341a5cf7596fcf"
+  },
+  "actual_GUI": {
+    "Root_reported_synthetic_login_gallery_and_flow_edit": true,
+    "first_poisoned_sample": "flow-edit06",
+    "further_UI_stopped_at_first_poisoned_sample": true,
+    "explicit_flow_save_POST_performed": false,
+    "new_header_validation_performed": false,
+    "inference_or_model_training": false,
+    "export": false,
+    "app_relaunch": false,
+    "standalone_PNG_claim": false,
+    "evidence_scope": "Root CUA interaction report and unchanged original health/holder/protected records; no new interaction by readback author"
+  },
+  "health_intervals": [
+    {
+      "stage": "baseline",
+      "sequence": 1,
+      "request_count": 15,
+      "diagnostic_sequence": 85,
+      "uncertain": false,
+      "truncated": false,
+      "failure_count": 0,
+      "first_poisoned_interval": false,
+      "stop_further_UI": false
+    },
+    {
+      "stage": "login",
+      "sequence": 2,
+      "request_count": 58,
+      "diagnostic_sequence": 568,
+      "uncertain": false,
+      "truncated": false,
+      "failure_count": 0,
+      "first_poisoned_interval": false,
+      "stop_further_UI": false
+    },
+    {
+      "stage": "gallery",
+      "sequence": 3,
+      "request_count": 59,
+      "diagnostic_sequence": 781,
+      "uncertain": false,
+      "truncated": false,
+      "failure_count": 0,
+      "first_poisoned_interval": false,
+      "stop_further_UI": false
+    },
+    {
+      "stage": "flow-open",
+      "sequence": 4,
+      "request_count": 86,
+      "diagnostic_sequence": 1012,
+      "uncertain": false,
+      "truncated": false,
+      "failure_count": 0,
+      "first_poisoned_interval": false,
+      "stop_further_UI": false
+    },
+    {
+      "stage": "flow-open",
+      "sequence": 5,
+      "request_count": 88,
+      "diagnostic_sequence": 1192,
+      "uncertain": false,
+      "truncated": false,
+      "failure_count": 0,
+      "first_poisoned_interval": false,
+      "stop_further_UI": false
+    },
+    {
+      "stage": "flow-edit",
+      "sequence": 6,
+      "request_count": 100,
+      "diagnostic_sequence": 1577,
+      "uncertain": true,
+      "truncated": false,
+      "failure_count": 3,
+      "first_poisoned_interval": true,
+      "stop_further_UI": true
+    }
+  ],
+  "failure_diagnostic": {
+    "reason_sha256": [
+      "053bab123798adda7bce51cd91edccfe622331c3daa431e24c7908ebe7771115",
+      "68033b051f0d81eabadc7021524e7764a6d490b81b5c52f141550fe868839757",
+      "cf3373bd2331ce814764588f08596da2c9475dd774a774e6aceba06d30d98da8"
+    ],
+    "all_three_ancillary_attributions_null": true,
+    "exact_first_emitter_request_or_frame_identified": false,
+    "retained_PUT_envelope_count": 2,
+    "retained_PUTs_HTTP200_normal_complete_released": true,
+    "PUT_routes_retained_as_UNKNOWN": true,
+    "HTTP_failure_or_route_body_claim": false
+  },
+  "shutdown": {
+    "actual_original_holder_exit": 1,
+    "nonce_bound_ordinary_quit_request_accepted": true,
+    "normal_quit_requested": true,
+    "original_main_backend_exited_controller_reaped": true,
+    "original_controller_still_live": false,
+    "signals_sent": false,
+    "strict_managed_writer_closure_verified": false,
+    "whole_process_tree_verified": false,
+    "journal_protocol_version": 4,
+    "journal_state": "recovery_required",
+    "writer_drain_status": "refused",
+    "active_scopes": 2,
+    "unsupported": [
+      "uncovered_request_protocol"
+    ],
+    "backend_exit_proof_present": false,
+    "failed_lease_preserved_no_relaunch_or_adoption": true
+  },
+  "custody": {
+    "original68_after_UI_gate_exit": 0,
+    "original68_recorded_raw9_SHA_maps_equal_before_setup_after_setup_after_UI": true,
+    "installed_profile_unchanged": true,
+    "active_pointer_current_raw9_SHA_and_body_equal_preUI": true,
+    "prior_saved_versions_current_raw9_SHA_exact": 32,
+    "extra_observed_unactivated_version_matches_controlled_setup_seed": true,
+    "GUI_saved_version_publication_claim": false
+  },
+  "limits": [
+    "Root CUA interaction account is supplied by the parent; no new UI/PNG/HTTP actions performed by this reader.",
+    "First poisoned sampled interval is identified; no original exact emitter attribution or mapping from hashes to reason literals is claimed.",
+    "Two retained PUT envelopes are200normal; their routes areUNKNOWN, so no fabricated backend HTTP error or exact request-path body claim.",
+    "The observed extra version is proven equal to original populated setup seed; no GUI save publication credit.",
+    "Original68model/data/profile body gate reportedPASS and full recordedmaps were compared; this reader did not reopen all model/image bodies.",
+    "Full release/archive member body validation is the original retained reader result; this derivative verified record joins and current archive raw9 only.",
+    "No strict lifetime/native/helper-tree/release/lease/parent/cell/model-quality credit; failed lease untouched."
+  ],
+  "private_finite_readback": {
+    "bytes": 60704,
+    "sha256": "886445a665522220a2067f538fa7efe57ba675965d08850ecef6d32aaca42c8e"
+  },
+  "raw_evidence": [
+    {
+      "label": "source-freeze",
+      "bytes": 2172421,
+      "sha256": "6927e457575043a05c7744105c282ce4c4a00139e1592486de7e5ab08aa7f103"
+    },
+    {
+      "label": "original-inputs",
+      "bytes": 6904,
+      "sha256": "bdb4fedaa3602e3d393129ac8b924882153b349f1bea71e784a6425df7196eae"
+    },
+    {
+      "label": "lifetime-inputs",
+      "bytes": 1675,
+      "sha256": "b727ad970a56cea20012034f522d74e5c85108c4b69d1df090d50e5dc09b923b"
+    },
+    {
+      "label": "actual-declaration",
+      "bytes": 5858,
+      "sha256": "4325a34a226de51f6cf5afb6f3d740836c550b11e3f4c043fb16606f9ddbdbd7"
+    },
+    {
+      "label": "actual-artifact-readback",
+      "bytes": 1757426,
+      "sha256": "71fbc1864f3a62e28e651f08e4f5cc1fce85e4c6af2cd485ed60630b87779957"
+    },
+    {
+      "label": "artifact_pins",
+      "bytes": 59985,
+      "sha256": "64639b12c8d9362e67db388229f27d1c543748251d2b12ca86341a5cf7596fcf"
+    },
+    {
+      "label": "assembly_provenance",
+      "bytes": 2164989,
+      "sha256": "0df041be3129617f548892f5678cf14c1b8565347c423c8e4dba875538ad740e"
+    },
+    {
+      "label": "backend_release",
+      "bytes": 957364,
+      "sha256": "89b19945deea66968809281a0e3076d685b8a6ca845cf4437744729486bd41d9"
+    },
+    {
+      "label": "build_tool_result",
+      "bytes": 1020,
+      "sha256": "752972b7c6b129da2b8921c60557e4b6a86b7e4f39c04d97f782976e2c97662d"
+    },
+    {
+      "label": "assembly-original_tool_result",
+      "bytes": 524,
+      "sha256": "dbd37c668ab532600d4b4f6b90e3f747f5be8bdea2b6c86155585e31f60e9afe"
+    },
+    {
+      "label": "assembly-wrapper_result",
+      "bytes": 168,
+      "sha256": "3b4715ea125b75f998dd2f4292ff0c5ea088630ff1cd3c956997690cc3fe5611"
+    },
+    {
+      "label": "assembly-child_stdout",
+      "bytes": 279,
+      "sha256": "6aed67e8dcb780aedf0c8807da5d8d8ef3cebb8b872597ae55681206077571a7"
+    },
+    {
+      "label": "protected-before-setup",
+      "bytes": 58318,
+      "sha256": "8d25d5b79ad4b90639889a86a219956c59707d36b0d6c04169b7a4e2349a5341"
+    },
+    {
+      "label": "protected-after-setup",
+      "bytes": 60251,
+      "sha256": "3e73ce424d0df3c4c6d1d394e172432ef2e38a9f3aa945db6915773110470734"
+    },
+    {
+      "label": "protected-after-UI",
+      "bytes": 59869,
+      "sha256": "26964569819b55fa766fc9b9013091834ce131eb1381b1c8fa3361d6040a84de"
+    },
+    {
+      "label": "populated-setup",
+      "bytes": 27128,
+      "sha256": "f03d562e2b177aba0a7927acae2cec17cc437d6df910bd42ba362d6705a5a58b"
+    },
+    {
+      "label": "pre-UI-active-copy",
+      "bytes": 410,
+      "sha256": "1e0fc86b0d74147b2c2e546ce3c269e972e7c2e6dce04d11a94ff4bbc24640ee"
+    },
+    {
+      "label": "active-pointer-current",
+      "bytes": 410,
+      "sha256": "1e0fc86b0d74147b2c2e546ce3c269e972e7c2e6dce04d11a94ff4bbc24640ee"
+    },
+    {
+      "label": "controlled-setup-seed-record",
+      "bytes": 4111,
+      "sha256": "0ef0373d3374e646d92d14f46a04f284f51ed2b11622ce31fb984943e323b8a5"
+    },
+    {
+      "label": "original-setup-result",
+      "bytes": 14908,
+      "sha256": "8a192df222bdbebf1986aa61e934de1561f50c7515b2bbf2bc96c66b12b89c87"
+    },
+    {
+      "label": "original-ready",
+      "bytes": 1719,
+      "sha256": "a9f54de121b6f0fcaaf0eb69ab8d24eed162e9aa2d4a6ee9b71e961f379d824d"
+    },
+    {
+      "label": "original-holder-result",
+      "bytes": 4580,
+      "sha256": "9cd757fb66c0a90393e6fa56c47e9e85b836ae6c6d0b7492cd0c6aa439e41864"
+    },
+    {
+      "label": "original-quit-request",
+      "bytes": 222,
+      "sha256": "65e0a31abb6bdd43f36b313599195f5b5a0bcd509a630b4335d7bf71c0c43a37"
+    },
+    {
+      "label": "original-final-journal",
+      "bytes": 5321,
+      "sha256": "758d37c62e35825bb63537a31a7008d787f61649c123fad157e2945f2f982e84"
+    },
+    {
+      "label": "actual-tool-root-hold-actual-start.json",
+      "bytes": 130,
+      "sha256": "6c19f50b907c39c7ab666a3a6daff870d0dc9d3716a6b04e4038c06f84f21ffc"
+    },
+    {
+      "label": "actual-tool-root-hold-actual-completion.json",
+      "bytes": 320,
+      "sha256": "8f6e9b4904a1fe7f181b5de69bfeb0e97bdfa7d79d8365538e141198ad44f2b9"
+    },
+    {
+      "label": "actual-tool-root-quit-actual-tool.json",
+      "bytes": 241,
+      "sha256": "d149a203acd196a3c421039bd5b9fc6ea09252bc1abafc8ba60ebf59ce12c958"
+    },
+    {
+      "label": "actual-tool-root-after-UI-actual-completion.json",
+      "bytes": 390,
+      "sha256": "33c7b07b85fc742a37e684b4339680be130bc5506787a482114eac2554478c57"
+    },
+    {
+      "label": "health-01-baseline.json",
+      "bytes": 8582,
+      "sha256": "758d0202e06e88794c8ff5a1eaa25f1e284369244d31acb80470e1b52140c8cc"
+    },
+    {
+      "label": "health-02-login.json",
+      "bytes": 23959,
+      "sha256": "31c2e73d31bc6c0dccc7a5d4932d4dba3f506a0495fc26f2b9963ff5857315b8"
+    },
+    {
+      "label": "health-03-gallery.json",
+      "bytes": 24305,
+      "sha256": "051a376ed22ce29ba1c3d7eb5ff296ea4a1c63b51e6c7402525a498aab792b06"
+    },
+    {
+      "label": "health-04-flow-open.json",
+      "bytes": 33711,
+      "sha256": "951e2d7fec91a5fa50f8e70e14a2af57323d0af45df07488af53f11fe781cc31"
+    },
+    {
+      "label": "health-05-flow-open.json",
+      "bytes": 34398,
+      "sha256": "72775f4b6a1b81be0921fb13996601f95920b8a5e73ab415199c2dd9185378cc"
+    },
+    {
+      "label": "health-06-flow-edit.json",
+      "bytes": 39265,
+      "sha256": "523cb31cb3e3187837ef1a8f48d2050de9586e55c83225181a67a125b32dfdbe"
+    }
+  ],
+  "native_acceptance": false,
+  "lease_release_authority": false,
+  "parent_or_scenario_credit": 0,
+  "action_cell_promotions": 0,
+  "model_quality_approved": false
+}

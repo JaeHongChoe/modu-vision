@@ -176,6 +176,8 @@ function sameContext(expected: FlowDraftContext | null, actual: FlowDraftContext
 }
 
 function draftBase(draft: FlowDraft): string | null | undefined {
+  // The same response proves this draft equals the active saved graph.
+  if (typeof draft.active_version_id === 'string' && /^[a-f0-9]{32}$/.test(draft.active_version_id)) return draft.active_version_id;
   return draft.base_version_id === 'none' ? null : draft.base_version_id || undefined;
 }
 
