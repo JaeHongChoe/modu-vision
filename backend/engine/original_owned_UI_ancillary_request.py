@@ -386,7 +386,7 @@ class OriginalOwnedUIAncillaryRequest:
             (profiles,('ProfileStore','default_profile_path','get_profile_store','resolve_store_path','store_admission','_STORE_LOCK','ComputeProfile')),
             (profiles.ProfileStore,('__init__','_read','list','get_selected')),
             (global_store_paths,('resolve_store_path','store_admission','owned_root','active_generation','_assert_current_store')),
-            (routes_flowchart,('get_current_project','_FLOW_SAVE_LOCK','_draft_context','_draft_file','_draft_active_version','_active_flow_file','_version_dir','_active_version','_valid_expected_version','_stale','pipeline_sha256','FlowchartPipeline')),
+            (routes_flowchart,('get_current_project','_FLOW_SAVE_LOCK','_draft_context','_draft_file','_draft_active_version','observe_original_UI_draft_active_return','_active_flow_file','_version_dir','_active_version','_valid_expected_version','_stale','pipeline_sha256','FlowchartPipeline')),
             (routes_flow_workspace,('get_current_project','_image','open_source_image','_library','_comparisons','load_templates','_comparison_digest','_unique_record_fields','MAX_COMPARISON_RECORD_BYTES')),
             (flow_workspace,('load_templates','_digest')),
             (routes_dataset,('open_source_image','_split_manifest_file','STUDIO_ANNOTATIONS_DIR')),
@@ -717,6 +717,7 @@ class _AncillaryAttempt:
         self.package_rows=[];self.result=None;self.status=None;self.body_binding=None
         self.lease_connections=[];self.job_lists=[];self.job_snapshots=[];self.job_rows=[];self.job_live=None
         self.workspace_listings=[]
+        self.draft_active_reads=[]
         self.dataset_operations=[];self.dataset_connections=[];self.dataset_live=[]
         self.dataset_objects=[];self.provenance_operations=[];self.provenance_connections=[]
         self.thumbnail_operations=[];self.thumbnail_spools=[];self.thumbnail_publications=[]
@@ -1049,6 +1050,51 @@ class _AncillaryAttempt:
         return bool(valid and all(closed for _,_,closed in self.dataset_connections))
 
 
+    def draft_superseded_return(self,error,frame,project):
+        """A normal 404 needs the original valid, different saved graph read."""
+        from backend.api import routes_flowchart as flows
+        from fastapi import HTTPException
+        if (self.name!='get_flow_draft' or type(error) is not HTTPException or error.status_code!=404
+                or error.detail!='A newer saved flow supersedes this draft' or error.headers is not None
+                or frame is None or type(project) is not dict or frame.f_locals.get('project') is not project
+                or len(self.draft_active_reads)!=1 or self.images or self.profiles or self.metadata or self.processes):
+            return False
+        held=self.draft_active_reads[0]
+        if type(held) is not tuple or len(held)!=7:return False
+        context=frame.f_locals.get('context');record=frame.f_locals.get('record')
+        pipeline=frame.f_locals.get('pipeline');checksum=frame.f_locals.get('checksum')
+        active=frame.f_locals.get('active');file=frame.f_locals.get('file')
+        if (type(context) is not dict or context!=flows._draft_context(project) or type(record) is not dict
+                or type(pipeline) is not flows.FlowchartPipeline or type(checksum) is not str
+                or record.get('context')!=context or record.get('pipeline')!=pipeline.model_dump()
+                or record.get('draft_sha256')!=checksum or flows.pipeline_sha256(pipeline)!=checksum
+                or type(active) is not dict or type(file) is not type(Path('.'))
+                or type(record.get('saved_at_ns')) is not int or record['saved_at_ns']<=0
+                or type(active.get('activated_at_ns')) is not int
+                or active['activated_at_ns']<=record['saved_at_ns']):
+            return False
+        actual_project,actual_context,actual_checksum,actual_active,version,saved_pipeline,returned=held
+        identifier=active.get('version_id')
+        if (actual_project is not project or actual_context is not context or actual_checksum is not checksum
+                or actual_active!=active or returned is not None or type(identifier) is not str
+                or re.fullmatch(r'[0-9a-f]{32}',identifier) is None
+                or active.get('project_id')!=context['project_id']
+                or active.get('source_dataset_path')!=context['source_dataset_path']
+                or active.get('labelset_id','default')!=context['labelset_id']
+                or type(version) is not dict or version.get('version_id')!=identifier
+                or version.get('source_dataset_path')!=context['source_dataset_path']
+                or type(saved_pipeline) is not flows.FlowchartPipeline
+                or version.get('pipeline')!=saved_pipeline.model_dump()
+                or flows.pipeline_sha256(saved_pipeline)==checksum):
+            return False
+        root=Path(project['project_dir']);pointer=flows._active_flow_file(root)
+        version_file=flows._version_dir(root)/f'{identifier}.json'
+        paths=[flows._draft_file(project,context),pointer,pointer,version_file]
+        return (file==paths[0] and frame.f_locals.get('active_file')==pointer and len(self.files)==4
+            and all(path==expected and role=='flow' and handle.closed
+                and not any(part.is_symlink() for part in (path,*path.parents))
+                for (handle,path,role),expected in zip(self.files,paths)))
+
     def returned(self,result,error):
         caller=sys._getframe(1);endpoint,function=self.owner.handlers[self.name]
         codes=tuple(code for code in endpoint.__code__.co_consts if type(code) is type(endpoint.__code__) and code.co_name=='invoke')
@@ -1070,11 +1116,13 @@ class _AncillaryAttempt:
                 if tb.tb_frame.f_code is function.__code__:frame=tb.tb_frame
                 tb=tb.tb_next
             project=self.scope.get('state',{}).get('scoped_project')
+            original_valid=valid
             valid=(valid and self.name=='get_flow_draft' and type(error) is HTTPException and error.status_code==404
                 and error.detail=='No draft for this project, source and labelset' and error.headers is None
                 and frame is not None and frame.f_locals.get('project') is project
                 and type(frame.f_locals.get('file')) is type(Path('.')) and not frame.f_locals['file'].is_file()
                 and not self.files and not self.images and not self.profiles and not self.metadata and not self.processes)
+            if not valid and original_valid:valid=self.draft_superseded_return(error,frame,project)
             status=404
         elif self.name in {'list_profiles','get_selection'}:
             valid=valid and len(self.profiles)==1 and type(result) is dict
@@ -1477,6 +1525,26 @@ def original_UI_ancillary_read_text(path,encoding=None,errors=None,*,role):
     with path.open(mode='r',encoding=encoding,errors=errors) as handle:
         attempt.record_file(handle,path,role)
         return handle.read()
+
+
+def observe_original_UI_draft_active_return(project,context,checksum,active,version,pipeline,result):
+    """Retain only the original helper's normal, fully parsed return boundary."""
+    attempt=_ACTIVE.get()
+    if type(attempt) is not _AncillaryAttempt or attempt.name!='get_flow_draft':return
+    from backend.api import routes_flowchart as flows
+    frame=sys._getframe(1)
+    values=(project,context,checksum,active,version,pipeline,result)
+    names=('project','context','checksum','active','version','pipeline','result')
+    valid=(attempt.resource_entry('draft_active_return') and attempt.owner.flow_lock._is_owned()
+        and frame.f_code is flows._draft_active_version.__code__
+        and all(frame.f_locals.get(name) is value for name,value in zip(names,values))
+        and project is attempt.scope.get('state',{}).get('scoped_project')
+        and type(context) is dict and type(active) is dict and type(version) is dict
+        and type(pipeline) is flows.FlowchartPipeline and type(checksum) is str
+        and result==(active.get('version_id') if flows.pipeline_sha256(pipeline)==checksum else None)
+        and len(attempt.draft_active_reads)<2)
+    if not valid:attempt.fail('draft_active_return');return
+    attempt.draft_active_reads.append(values)
 
 
 def original_UI_ancillary_read_bytes(path,*,role):

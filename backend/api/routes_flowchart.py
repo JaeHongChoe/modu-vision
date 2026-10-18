@@ -9,6 +9,7 @@ Enables visual assembly of multi-stage vision AI inspection:
 from __future__ import annotations
 from backend.engine.original_owned_UI_ancillary_request import original_UI_ancillary_read_text
 from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_handler
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_draft_active_return
 
 import json
 import hashlib
@@ -257,7 +258,9 @@ def _draft_active_version(project: dict, context: dict, checksum: str) -> Option
             return None
         version = json.loads(original_UI_ancillary_read_text(version_file,encoding='utf-8',role='flow'))
         pipeline = FlowchartPipeline.model_validate(version["pipeline"])
-        return active["version_id"] if pipeline_sha256(pipeline) == checksum else None
+        result = active["version_id"] if pipeline_sha256(pipeline) == checksum else None
+        observe_original_UI_draft_active_return(project, context, checksum, active, version, pipeline, result)
+        return result
     except (OSError, ValueError, KeyError, TypeError):
         return None
 
