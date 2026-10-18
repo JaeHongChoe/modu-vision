@@ -78,9 +78,18 @@ function refuseEditsMadeDuringSelection(): void {
 function acceptSelectedProject(project: ProjectConfig, view: { activeStep?: WizardStep } = {}): void {
   // acceptContext validates the selection, binds its request context, runs this synchronous setter and only
   // then notifies telemetry; a stale selection or a failing setter throws and leaves the previous binding.
-  api.project.acceptContext(project, () => useProjectStore.setState({
-    project, projectName: project.name, projectDir: project.project_dir, task: project.task, ...view,
-  }));
+  const previousScope = projectViewScope(useProjectStore.getState().project, getApiPersistenceIdentity());
+  api.project.acceptContext(project, () => {
+    // Annotation clearing below may await. Never publish the next namespace
+    // with an image whose automatic reads still belong to the previous one.
+    if (previousScope !== projectViewScope(project, getApiPersistenceIdentity())
+        && useFlowchartStore.getState().selectedImage) {
+      useFlowchartStore.getState().setSelectedImage(null);
+    }
+    useProjectStore.setState({
+      project, projectName: project.name, projectDir: project.project_dir, task: project.task, ...view,
+    });
+  });
 }
 
 function viewStorage(): Storage | undefined {
