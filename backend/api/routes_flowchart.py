@@ -70,7 +70,7 @@ from backend.engine.original_owned_flow_request import (
     observe_original_flow_specialist_resolution, observe_original_flow_retained_source,
     observe_original_flow_draft_atomic, original_flow_draft_read_text, observe_original_flow_draft_active_return,
     observe_original_flow_recipe_read, observe_original_flow_no_legacy, observe_original_flow_recipe_return,
-    observe_original_jobless_template_constructor,
+    observe_original_jobless_template_constructor, observe_original_flow_resource_engines,
 )
 
 _resolve_job_artifacts = observe_original_flow_model_resolution(_resolve_job_artifacts)
@@ -87,6 +87,7 @@ DEFAULT_PIPELINE_FILE = FLOWCHARTS_DIR / "pipeline.json"
 # Persistent cached engine instance for rapid warm execution
 _ENGINE = FlowchartEngine()
 _CPU_ENGINE = FlowchartEngine(device='cpu')
+observe_original_flow_resource_engines(_ENGINE, _CPU_ENGINE, FlowchartEngine)
 from backend.engine.flow_debug_cache import DebugRunCache, local_debug_run
 _DEBUG_RUN_CACHE = DebugRunCache()
 _FLOW_SAVE_LOCK = threading.RLock()
@@ -102,8 +103,8 @@ class FlowExecutionResourcesRequest(BaseModel):
     device: Optional[Literal['cpu']] = None
 
 
-@router.get('/execution-resources')
-def execution_resources(device: Optional[Literal['cpu']] = None):
+@observe_original_flow_handler(router.get('/execution-resources'))
+def execution_resources(device: Optional[Literal['cpu']] = None, *, request: Request = None):
     return (_CPU_ENGINE if device == 'cpu' else _ENGINE).execution_resources()
 
 

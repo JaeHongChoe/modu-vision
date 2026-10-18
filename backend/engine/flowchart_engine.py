@@ -60,6 +60,7 @@ from backend.engine.rule_evaluation import validate_blob_rules, measure_blob_rul
 from backend.engine.geometry_measurement import measure_geometry, validate_measurement_params
 from backend.engine.flow_executor import execute_layers
 from backend.engine.original_owned_flow_execution_request import observe_original_execution_effect
+from backend.engine.original_owned_flow_request import observe_original_flow_resource_result
 
 logger = logging.getLogger("vision_ai_studio.flowchart_engine")
 MAX_SEGMENTATION_TILES = 1024
@@ -974,12 +975,14 @@ class FlowchartEngine:
 
     def execution_resources(self):
         with self._execution_state_lock:
-            return {'device': str(self.device), 'engine_device_capacity': self._max_device_concurrency,
+            result = {'device': str(self.device), 'engine_device_capacity': self._max_device_concurrency,
                     'active_executions': self._active_executions,
                     'maximum_cpu_slots': min(8, os.cpu_count() or 1),
                     'configuration_available': self.device.type == 'cpu',
                     'cpu_configuration_available': True,
                     'gpu_capacity_requires_reservation': self.device.type != 'cpu'}
+            observe_original_flow_resource_result(self, result)
+            return result
 
     def configure_execution_resources(self, *, device_slots, device=None):
         if device not in (None, 'cpu'):

@@ -24,7 +24,9 @@ from backend.engine.original_owned_account_request import _headers, _SelectedCur
 _ACTIVE = ContextVar('original_owned_flow_request', default=None)
 _HANDLERS = {}
 _TEMPLATE_CONSTRUCTOR_ORIGIN = None
+_RESIDENT_RESOURCE_ORIGIN = None
 _SPEC = {
+    'execution_resources':('GET','/api/flowchart/execution-resources'),
     'get_pipeline':('GET','/api/flowchart/pipeline'),
     'get_single_segmentation_template':('GET','/api/flowchart/templates/single-segmentation'),
     'list_saved_pipelines':('GET','/api/flowchart/pipelines'),
@@ -35,6 +37,22 @@ _SPEC = {
     'catalog_flowchart_models':('GET','/api/flowchart/models/catalog'),
     'verify_flowchart_models':('POST','/api/flowchart/models/verify'),
 }
+
+
+def observe_original_flow_resource_engines(default_engine, cpu_engine, kind):
+    """First route-import resident identities; later replacements never rebind."""
+    global _RESIDENT_RESOURCE_ORIGIN
+    if _RESIDENT_RESOURCE_ORIGIN is None:
+        function = kind.execution_resources
+        _RESIDENT_RESOURCE_ORIGIN = (default_engine,cpu_engine,kind,function,function.__code__,
+            default_engine._execution_state_lock,cpu_engine._execution_state_lock)
+
+
+def observe_original_flow_resource_result(engine, result):
+    attempt = _ACTIVE.get()
+    if type(attempt)is not _FlowAttempt or attempt.name!='execution_resources':return
+    try:attempt.resource_observation(engine,result,sys._getframe(1))
+    except Exception:attempt.fail('resource_inspection_failed')
 
 
 def _observe_flow_get(kind, *values):
@@ -460,8 +478,11 @@ class OriginalOwnedFlowRequest:
                 'observe_original_flow_draft_atomic','observe_original_flow_draft_active_return',
                 '_legacy_owner','_get_pipeline_unlocked','_single_inspection_template','_pipeline_matches_recipe',
                 'DEFAULT_PIPELINE_FILE','get_single_segmentation_flowchart','observe_original_flow_recipe_read',
+                '_ENGINE','_CPU_ENGINE','FlowchartEngine',
                 'observe_original_flow_no_legacy','observe_original_flow_recipe_return')),
-            (flowchart_engine, ('get_single_segmentation_flowchart','FlowchartPipeline','FlowNode','FlowNodeData','FlowEdge')),
+            (flowchart_engine, ('get_single_segmentation_flowchart','FlowchartPipeline','FlowNode','FlowNodeData','FlowEdge',
+                'FlowchartEngine','observe_original_flow_resource_result','os')),
+            (flowchart_engine.FlowchartEngine, ('execution_resources',)),
             (retained_preprocessors, ('resolve_retained_rotation','retained_rotation_jobs','read_registered_project',
                 '_source_model','_location','_target','_path','_pin','_json','_exact','_raw','_require',
                 'SCHEMA','DIRECTORY','_PIN_NAMES')),
@@ -503,11 +524,11 @@ class OriginalOwnedFlowRequest:
             (original_owned_flow_execution_request, ('original_owned_execution_production',)),
             (original_owned_UI_ancillary_request, ('original_owned_UI_ancillary_production',)),
             (main.OwnedWorkAdmissionMiddleware, ('__call__','_observed_call')),
-            (os, ('replace','fsync','getpid','getuid','fstat','open','close','unlink')),
+            (os, ('replace','fsync','getpid','getuid','fstat','open','close','unlink','cpu_count')),
             (tempfile, ('NamedTemporaryFile','_mkstemp_inner','_sanitize_params','_infer_return_type')),
             (time, ('time_ns',)),
             (builtins, ('open',)), (json, ('load','dump','loads','dumps')), (hashlib, ('sha256',)),
-            (sys.modules[__name__], ('_ACTIVE','_HANDLERS','_SPEC','_TEMPLATE_CONSTRUCTOR_ORIGIN','_context','_headers','_SelectedCurrentAuth',
+            (sys.modules[__name__], ('_ACTIVE','_HANDLERS','_SPEC','_TEMPLATE_CONSTRUCTOR_ORIGIN','_RESIDENT_RESOURCE_ORIGIN','_context','_headers','_SelectedCurrentAuth',
                 'OriginalOwnedFlowRequest','_FlowAttempt','_FlowAuth','_FlowIncluded')),
         ) for name in names]
         for name,(endpoint,function) in self.handlers.items(): self.calls.append((flows,name,function))
@@ -540,10 +561,27 @@ class OriginalOwnedFlowRequest:
             and flows.get_single_segmentation_flowchart.__wrapped__ is _TEMPLATE_CONSTRUCTOR_ORIGIN[1]
             and flows.get_single_segmentation_flowchart.__code__ is _TEMPLATE_CONSTRUCTOR_ORIGIN[2]
             and flowchart_engine.get_single_segmentation_flowchart.__code__ is _TEMPLATE_CONSTRUCTOR_ORIGIN[3]
+            and type(_RESIDENT_RESOURCE_ORIGIN)is tuple and len(_RESIDENT_RESOURCE_ORIGIN)==7
+            and flows._ENGINE is _RESIDENT_RESOURCE_ORIGIN[0] and flows._CPU_ENGINE is _RESIDENT_RESOURCE_ORIGIN[1]
+            and flows.FlowchartEngine is flowchart_engine.FlowchartEngine is _RESIDENT_RESOURCE_ORIGIN[2]
+            and flowchart_engine.FlowchartEngine.execution_resources is _RESIDENT_RESOURCE_ORIGIN[3]
+            and _RESIDENT_RESOURCE_ORIGIN[3].__code__ is _RESIDENT_RESOURCE_ORIGIN[4]
             and type(self.registry) is ContextRegistry
             and flows.get_current_project is routes_project.get_current_project is main.get_current_project
             and routes_project.get_current_project is original_current_project_request._DECORATED.get('resolution')
             and ContextRegistry._db is original_current_project_request._DECORATED.get('context_db'))
+
+    def resident_resources_original(self):
+        from backend.api import routes_flowchart as flows
+        origin=_RESIDENT_RESOURCE_ORIGIN
+        return (type(origin)is tuple and len(origin)==7 and flows._ENGINE is origin[0] and flows._CPU_ENGINE is origin[1]
+            and flows.FlowchartEngine is origin[2] and origin[2].execution_resources is origin[3]
+            and origin[3].__code__ is origin[4] and all(type(engine)is origin[2]
+                and type(engine.execution_resources)is MethodType and engine.execution_resources.__self__ is engine
+                and engine.execution_resources.__func__ is origin[3]
+                and engine._execution_state_lock is origin[5+index] and type(origin[5+index])is self.lock_type
+                and type(engine.device)is flows.torch.device
+                for index,engine in enumerate(origin[:2])))
 
     def bind_chain(self,middleware,downstream):
         self.owned,self.downstream = middleware,downstream
@@ -704,6 +742,7 @@ class _FlowAttempt:
         self.draft_prior=self.draft_prior_binding=None;self.draft_read_pins=[]
         self.get_stages=();self.get_read=None;self.get_no_legacy=None;self.get_return=None
         self.template_constructor=None;self.template_value=None;self.get_result_binding=None
+        self.resource_state=None;self.resource_result=None;self.resource_result_binding=None
         self.auth=_FlowAuth(self,headers,project,token)
 
     def fail(self,reason):
@@ -732,6 +771,8 @@ class _FlowAttempt:
             and (self.values is None or self.values.get(
                 'http_request' if self.name=='verify_flowchart_models' else 'request') is self.request)
             and (self.get_result_binding is None or _draft_original(self.result,self.get_result_binding))
+            and (self.resource_result is None or self.resource_result_binding is not None
+                and _draft_original(self.resource_result,self.resource_result_binding))
             and self.activity.scope is self.scope and self.scope.get('query_string',b'') is self.query
             and _headers(self.scope)==self.headers
             and (self.header_container is None or self.scope.get('headers') is self.header_container))
@@ -800,6 +841,8 @@ class _FlowAttempt:
                     or not 1<=len(body.models)<=24 or any(type(model) is not FlowchartModelReference for model in body.models)):
                 valid=False
             else:self.model_body=body,body.source_dataset_path,tuple((model,model.job_id,model.task) for model in body.models)
+        if self.name=='execution_resources':
+            valid=(valid and (values.get('device') is None or type(values.get('device'))is str and values['device']=='cpu'))
         if self.name=='get_single_segmentation_template':
             valid=(valid and values.get('job_id') is None and type(values.get('inspection_task'))is str
                 and values['inspection_task'] in {'segmentation','classification','anomaly','patch_classification','ocr','rotated_detection'})
@@ -831,6 +874,55 @@ class _FlowAttempt:
                 return frame if frame.f_locals.get(field) is self.request else None
             frame=frame.f_back
         return None
+
+    def resource_observation(self,engine,result,frame):
+        from backend.api import routes_flowchart as flows
+        origin=_RESIDENT_RESOURCE_ORIGIN
+        caller=frame.f_back;function=self.owner.handlers[self.name][1]
+        selected=origin[1] if self.values.get('device')=='cpu' else origin[0]
+        project=self.scope.get('state',{}).get('scoped_project')
+        valid=(self.worker_original() and self.handler_frame() is not None and self.name=='execution_resources'
+            and self.owner.resident_resources_original() and engine is selected and self.resource_state is None
+            and type(project)is dict and self.resolutions and all(item is project for item in self.resolutions)
+            and frame.f_code is origin[4] and frame.f_locals.get('self') is engine and frame.f_locals.get('result') is result
+            and caller is not None and caller.f_code is function.__code__ and caller.f_locals.get('request') is self.request
+            and caller.f_locals.get('device') is self.values.get('device') and engine._execution_state_lock._is_owned()
+            and type(engine._max_device_concurrency)is int and 1<=engine._max_device_concurrency<=8
+            and type(engine._active_executions)is int and engine._active_executions>=0
+            and type(result)is dict and set(result)=={'device','engine_device_capacity','active_executions',
+                'maximum_cpu_slots','configuration_available','cpu_configuration_available','gpu_capacity_requires_reservation'}
+            and type(result['device'])is str
+            and all(type(result[key])is int for key in ('engine_device_capacity','active_executions','maximum_cpu_slots'))
+            and all(type(result[key])is bool for key in ('configuration_available','cpu_configuration_available','gpu_capacity_requires_reservation'))
+            and result=={'device':str(engine.device),'engine_device_capacity':engine._max_device_concurrency,
+                'active_executions':engine._active_executions,'maximum_cpu_slots':min(8,os.cpu_count()or 1),
+                'configuration_available':engine.device.type=='cpu','cpu_configuration_available':True,
+                'gpu_capacity_requires_reservation':engine.device.type!='cpu'})
+        if not valid:self.fail('resident_resource_result');return
+        self.resource_state=(self,self.token,engine,engine._execution_state_lock,engine.device,
+            engine._max_device_concurrency,engine._active_executions)
+        self.resource_result=result;self.resource_result_binding=_draft_capture(result,(),[32])
+
+    def resource_response_original(self):
+        """The actual getter result stays in custody after its own lock exits."""
+        try:
+            state=self.resource_state
+            return (state is not None and state[0] is self and state[1] is self.token
+                and self.owner.resident_resources_original() and self.resource_result_binding is not None
+                and self.result is self.resource_result and _draft_original(self.result,self.resource_result_binding)
+                and state[2]._execution_state_lock is state[3] and not state[3]._is_owned()
+                and state[2].device is state[4] and state[2]._max_device_concurrency==state[5]
+                and state[2]._active_executions==state[6])
+        except Exception:return False
+
+    def resource_completed_result(self,result):
+        # self.result is assigned by the unchanged outer returned() only afterward.
+        held=self.resource_result
+        return (result is held and self.resource_state is not None and self.resource_result_binding is not None
+            and _draft_original(result,self.resource_result_binding) and self.owner.resident_resources_original()
+            and not self.resource_state[3]._is_owned() and not self.locked and not self.publications
+            and self.audit_db is None and self.audit_result is None and not self.model_calls and not self.retained_sources
+            and not self.get_stages and self.get_read is None and self.template_value is None)
 
     def get_observation(self,kind,values,helper_frame):
         from backend.api import routes_flowchart as flows
@@ -1434,7 +1526,10 @@ class _FlowAttempt:
             and caller.f_locals.get('attempt') is self and caller.f_locals.get('function') is function
             and caller.f_locals.get('values') is self.values and caller.f_locals.get('result') is result
             and len(live)==1 and live[0][0]=='storage_scope' and live[0][1] is self.owner.storage)
-        if self.name in {'get_pipeline','get_single_segmentation_template'}:
+        if self.name=='execution_resources':
+            try:valid=valid and self.resource_completed_result(result)
+            except Exception:valid=False
+        elif self.name in {'get_pipeline','get_single_segmentation_template'}:
             try:valid=valid and self.get_completed_result(result)
             except Exception:valid=False  # New optional inspection cannot replace business return.
         elif self.name=='save_pipeline':
@@ -1478,7 +1573,8 @@ class _FlowAttempt:
             and self.events[3][0]=='storage_scope' and self.events[3][1] is self.owner.storage
             and self.model_live is None and self.specialist_live is None and self.source_live is None
             and (self.name not in {'get_pipeline','get_single_segmentation_template'} or self.get_response_original())
-            and len(self.resolutions)==(1 if self.name=='get_single_segmentation_template' else
+            and (self.name!='execution_resources' or self.resource_response_original())
+            and len(self.resolutions)==(1 if self.name in {'get_single_segmentation_template','execution_resources'} else
                 4 if self.name=='get_active_pipeline_record' else
                 1+len(self.retained_sources) if self.name=='verify_flowchart_models' else 2)
             and all(result is project for result in self.resolutions)
