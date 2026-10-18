@@ -1,0 +1,49 @@
+{
+  "schema": "modu-vision.source-only-public-get-route-projection/v1",
+  "source_base": "a132c48cb6df797b73847a936c487156b5f7678c",
+  "scope": "Fixed public literal GET labels in the existing health and final-drain route field",
+  "source_files": [
+    {
+      "path": "backend/engine/original_request_activity.py",
+      "bytes": 56312,
+      "sha256": "cef19a1f0c291a13af45f0bac2d6248014f40fff31e812c225fa078cdb2cf1f0"
+    },
+    {
+      "path": "backend/tests/test_original_request_route_projection.py",
+      "bytes": 9558,
+      "sha256": "cf933639bb71aa33f83fd9aaa909a7f0f1541755ed53d5cee9431eb6ac59f277"
+    }
+  ],
+  "causal_test_first": {
+    "unchanged_source": {
+      "failed": 16,
+      "passed": 6,
+      "exit_code": 1,
+      "reported_seconds": 6.38
+    },
+    "candidate_and_related_observer_controls": {
+      "passed": 104,
+      "exit_code": 0,
+      "reported_seconds": 21.85
+    },
+    "final_drain_and_CI_dependency_controls": {
+      "passed": 6,
+      "exit_code": 0,
+      "reported_seconds": 6.44
+    }
+  },
+  "preserved_boundaries": [
+    "Existing eight route labels retain priority",
+    "New fifteen labels apply only to literal GET paths",
+    "Private, dynamic and near-literal paths remain UNKNOWN",
+    "No request path, query, header, body, credentials or private identifiers are newly exported",
+    "Admission, first unsupported origin, poison, sequence, counts, bounds and refusal behavior unchanged",
+    "Whole-writer, process-tree and lease-release flags remain false"
+  ],
+  "limits": [
+    "This is controlled CPU ASGI and source evidence, not an installed native replay.",
+    "The original unknown GET 200 request remains unsupported. Its exact route is not yet established.",
+    "A label does not make evaluation or any GET route read-only or covered.",
+    "No native shutdown, lease closure, whole-flow, model, equipment or parent acceptance credit."
+  ]
+}
