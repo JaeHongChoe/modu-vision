@@ -575,7 +575,7 @@ export const TrainingController: React.FC = () => {
         {selectedFamily === 'patch_classification' && <PatchClassificationWorkbench />}
         {selectedFamily === 'rotation' && <RotationWorkbench />}
         {selectedFamily === 'ocr' && <OCRWorkbench key={JSON.stringify([projectDir, project?.source_dataset_dir ?? '', project?.active_labelset_id ?? 'default'])} />}
-        {selectedFamily === 'rotated_detection' && <RotatedDetectionPanel />}
+        {selectedFamily === 'rotated_detection' && <RotatedDetectionPanel key={JSON.stringify([projectDir, project?.source_dataset_dir ?? '', project?.active_labelset_id ?? 'default'])} />}
         {selectedFamily === 'defect_gan' && <DefectGANWorkbench />}
         {selectedFamily === 'enhancement' && <EnhancementWorkbench />}
       </div>

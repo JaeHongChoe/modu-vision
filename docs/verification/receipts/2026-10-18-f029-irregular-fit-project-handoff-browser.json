@@ -1,0 +1,257 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "290e77ff39b0d6634ce1b58dfea32dbafb5640f6",
+  "source_dirty": false,
+  "test": "scripts/e2e/obb-fitting-project-handoff.spec.ts::irregular fitting proposal stays scoped through ordinary A B A project handoff and exact saved truth reopen",
+  "test_source_sha256": "178c7af98c51ed485f65f1b0a8a8d224877cf3a00791ad1398e2ca85feb1f8db",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "workers": 1,
+  "retries": 0,
+  "report_sha256": "51c104bbb051cc9c794dc88c18ccdba33e3bee080dbd2a53edc889243f3289ca",
+  "harness_sha256": "ff9597f6f9599b6ecc2fc8536a7eaf4a770fccf498616d0171e1ec7fe7744ab3",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "99ba89576c480971eca69f0153290330e9c60643d06f83fef3414ef055831694"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "271fd81106abb540cf2468ae4b859b6e6a79b69fd796ff1d05afd424e4c805cb"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "818649ad609427b9df5b9e11f32a9d688e88d0061f7e09e50f034a606acaf186"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Only F029.obb-native-irregular-fit-save-reopen.handoff in the actual source-browser geometric fitting UI. A positive own-source fit precedes ordinary A-to-B-to-A project selection; each owner reopens its original saved truth and clears the unapplied proposal, points, preview and summary. No installed-native lifetime, model quality or parent acceptance.",
+  "execution": {
+    "command_exit_code": 0,
+    "command_elapsed_seconds": 17.747032791841775,
+    "test_cases": 1,
+    "passed": 1,
+    "failed": 0,
+    "flaky": 0,
+    "skipped": 0,
+    "original_action_and_full_response_budget_ms": 10000,
+    "test_timeout_ms": 240000,
+    "browser_version": "155.0.8059.80",
+    "source_clean_before_after": true,
+    "automatic_retries": 0
+  },
+  "positive_control": {
+    "source_dimensions": [
+      256,
+      256
+    ],
+    "actual_pointer_points": [
+      [
+        64,
+        64
+      ],
+      [
+        192,
+        64
+      ],
+      [
+        192,
+        128
+      ],
+      [
+        64,
+        128
+      ]
+    ],
+    "independently_recomputed_box": {
+      "cx": 128,
+      "cy": 96,
+      "width": 128,
+      "height": 64,
+      "angle_deg": 0
+    },
+    "original_fit_POST200": true,
+    "trusted_pointer_and_button_events": true,
+    "rendered_points_and_returned_polygon_exact": true,
+    "own_source_SHA_in_preview_and_fit_exact": true
+  },
+  "handoff_control": {
+    "ordinary_project_UI_sequence": [
+      "A",
+      "B",
+      "A"
+    ],
+    "postbaseline_project_open_POSTs": 2,
+    "project_selection_request_context_headers_omitted_by_original_contract": true,
+    "project_selection_response_context_matches_target": true,
+    "subsequent_saved_manifest_preview_and_fit_request_response_context_exact": true,
+    "original_complete_UI_responses": 14,
+    "UI_status_counts": {
+      "200": 14
+    },
+    "fixture_setup_responses_separate": 20,
+    "same_original_Request_main_frame_and_finished": true,
+    "saved_rows_per_owner": 3,
+    "saved_split_counts_per_owner": {
+      "train": 1,
+      "val": 1,
+      "test": 1
+    },
+    "distinct_synthetic_source_bodies": 6,
+    "own_source_preview_selected_after_B_and_return_A": true,
+    "old_unapplied_proposal_points_preview_and_summary_reset": true,
+    "append_requires_new_own_proposal": true,
+    "saved_truth_unchanged_through_reopen": true,
+    "postbaseline_fit_POSTs": 1,
+    "postbaseline_manifest_label_model_mutation_APIs": 0
+  },
+  "custody": {
+    "tracked_source_files_raw9_and_SHA_exact_through_poststop": 2979,
+    "declared_source_project_and_prepared_trees_per_owner_raw9_SHA_exact_through_poststop": true,
+    "declared_protected_owners": 2,
+    "whole_global_context_store_preservation_claim": false,
+    "exact_postbaseline_activation_metadata_updates": 2,
+    "activation_metadata_current_serialized_pointer_history_and_raw9_contract_exact": true,
+    "only_activation_metadata_allowed_deltas": [
+      "inode",
+      "size matching exact serialized body",
+      "mtime_ns",
+      "ctime_ns"
+    ],
+    "harness_artifact_references_rehashed": 25,
+    "original_test_FD_opened": 316,
+    "original_test_FD_closed": 316,
+    "original_test_close_uncertainties": 0,
+    "finite_reader_FD_opened": 3079,
+    "finite_reader_FD_closed": 3079,
+    "finite_reader_distinct_file_references": 3040
+  },
+  "guards": {
+    "page_errors": 0,
+    "console_errors": 0,
+    "unexpected_API_non2xx": 0,
+    "foreign_origin_requests": 0,
+    "renderer_rejected_requests": 0,
+    "response_fabrication": false,
+    "route_or_full_body_policy_changes": false,
+    "deadline_or_retry_relaxation": false,
+    "browser_spec_changed_to_accept_prior_422": false
+  },
+  "owned_original_closure": {
+    "backend_exit_code": 0,
+    "backend_naturally_exited": true,
+    "forced": false,
+    "original_Popen_reaped": true,
+    "wrapper_signals_sent": false,
+    "backend_pid_alive": false,
+    "backend_port_closed": true,
+    "escaped_processes": 0,
+    "unowned_references": 0,
+    "global_leftovers": 0,
+    "scan_error": null
+  },
+  "visual_review": {
+    "Root_viewed_all_nine_canonical_PNGs": true,
+    "this_case_canonical_PNGs": 3,
+    "actual_rendered_canvas_and_owning_anchor_wholly_in_viewport": true,
+    "A_polygon_numeric_summary_and_original_three_saved_rows_seen": true,
+    "B_and_returning_A_own_preview_zero_markers_no_old_polygon_or_summary_disabled_append_seen": true,
+    "saved_table_visible_in_every_PNG_claim": false,
+    "B_and_returning_A_saved_truth_basis": "Original DOM/full-response/declared protected-file assertions; tables are not claimed visible in every PNG.",
+    "original_review_sha256": "981d7e42abb54aa1ced8bb2da92cd34d9e31e5a02dff5a18812a0399f20f7a0c"
+  },
+  "raw_evidence_pins": {
+    "original_tool_start": {
+      "sha256": "027250c41bf24e2ae1812fb78ade44c5e41ed27d2c4a5ad80c4ddf50c6d8fb79",
+      "bytes": 108
+    },
+    "original_tool_completion": {
+      "sha256": "5d2d3d345f29750ea85f1e26b4b2163efc7898bbfdb5f922447bc569e2521cda",
+      "bytes": 105
+    },
+    "run_result": {
+      "sha256": "3c43c5bffe3933d047bd33939faea274ca7c06eb656e1cc4b4d01aee465c7dab",
+      "bytes": 1676
+    },
+    "original_Popen": {
+      "sha256": "abc8721c34a35c556eabb1c9e88e25afe936b671eff709a7ba10d034f2f591f7",
+      "bytes": 610
+    },
+    "invocation": {
+      "sha256": "33952876af59785b4b7613a46667137c7f2714741aa6d0cd828e497893957b56",
+      "bytes": 1214
+    },
+    "source_before": {
+      "sha256": "8e265ce5950e0f93e0c5a00adb62bf9c7aa9f09e315db83648c427aae7b717d3",
+      "bytes": 1068651
+    },
+    "source_after": {
+      "sha256": "8e265ce5950e0f93e0c5a00adb62bf9c7aa9f09e315db83648c427aae7b717d3",
+      "bytes": 1068651
+    },
+    "browser_log": {
+      "sha256": "1079466570c4784884cc79cd4770811aeeab96e5f320eb08334a77234928fd9a",
+      "bytes": 412
+    },
+    "report": {
+      "sha256": "51c104bbb051cc9c794dc88c18ccdba33e3bee080dbd2a53edc889243f3289ca",
+      "bytes": 7780
+    },
+    "harness": {
+      "sha256": "ff9597f6f9599b6ecc2fc8536a7eaf4a770fccf498616d0171e1ec7fe7744ab3",
+      "bytes": 666482
+    },
+    "global_teardown": {
+      "sha256": "901af8775fc75027b675a713039ff0addab9b8db18282b7e333a80ac301cdda2",
+      "bytes": 390
+    }
+  },
+  "finite_readback_pin": {
+    "sha256": "43b4a975a9ce814af2bbbe3d0b1a0b935d23adba0937e1baa7b3b006f9c65d34",
+    "bytes": 1016191,
+    "reader_sha256": "9a3707f2c1d4b79c8d77da4bedc92b44deeba0886231f4de299dfef6a7758be9",
+    "data_only_no_runtime_started": true
+  },
+  "source_regression_context": {
+    "original_browser_negative_preserved": true,
+    "original_browser_negative_source": "f541f07c31b5d80184ccd8fb01842c30c0a6df7d",
+    "original_center_422_responses": 8,
+    "finite_negative_readback_sha256": "e8eee21b2b777bc8d5670ce6a9b126f093a646d3b04fa3f0b225ab6b338da8c7",
+    "product_fix": "Original rotated workbench is keyed by project/source/labelset namespace before child passive effects. Backend ownership refusals remain unchanged.",
+    "controlled_original_component_causal_RED": {
+      "failed": 3,
+      "passed": 1
+    },
+    "same_body_GREEN": {
+      "passed": 4,
+      "failed": 0
+    },
+    "related_source_regression_GREEN": {
+      "passed": 31,
+      "failed": 0
+    },
+    "executed_test_SHA256": "4707da2a6f9704d1a6fb64bb5d01c3d04d2a9f78003ad521927bc9058c7427f6",
+    "executed_test_unchanged": true,
+    "publication_only_whitespace_note": "A terminal blank line may be trimmed in the publication copy; executed frozen source and original results remain unchanged."
+  },
+  "limits": {
+    "training_or_model_inference_invoked": false,
+    "health_device_availability_is_model_execution": false,
+    "installed_native_lifetime_qualified": false,
+    "cancel_cell_recredit": false,
+    "HTTP_abort_or_inflight_isolation_claim": false,
+    "parent_acceptance": false,
+    "whole_feature_accepted": false,
+    "independent_acceptance": false,
+    "publication_or_registry_written_by_draft": false
+  }
+}
