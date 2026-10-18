@@ -34,7 +34,7 @@
     "src/renderer/components/inference/PackageLibraryPanel.tsx": "e6eaa53f27415cd1be5e10e5b620565762bd43bdd4f3265d4ea33d5fc000b3b8",
     "src/renderer/components/runtime/RuntimeServicePanel.tsx": "8e6f6defd490e4a055a09f143da98f3b2d1c8cd33c3e869ab08c49b8090d5144",
     "src/renderer/components/flowchart/FlowGraphNavigator.tsx": "656832c214f41742d5bc0f66c9f8983c5fb6892cfaf3b42b48ee353f282da20a",
-    "src/renderer/components/training/TrainingController.tsx": "136007b7deacecc461f594b8f65b79b909dd210ae6c0a1d0d641172c9a0cd932",
+    "src/renderer/components/training/TrainingController.tsx": "9bf1d6206a4f77dafbac01a0dcbdd269a592f65adde830a297b34abe70d5b722",
     "src/renderer/components/wizard/WizardHeader.tsx": "1d62c46aa0ade805dc1390fb48ed194fb6192638abd5257fe7e5f93985f6cf86",
     "src/renderer/components/training/PatchClassificationWorkbench.tsx": "1e1ffa525e9db32c058d89620a13cf219f9f5deed943466d8a20c71641aa4cc5",
     "src/renderer/components/training/PatchRecipePreview.tsx": "fb0b91b076e0512583cd955a9a2bc134275db03145961a488c89ce2e1c63f542",
@@ -10811,7 +10811,35 @@
               ]
             },
             "handoff": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S4-07",
+                  "source_sha": "290e77ff39b0d6634ce1b58dfea32dbafb5640f6",
+                  "kind": "click",
+                  "action": "회전 박스 center 제안 · 프로젝트 A → B → A 전환 · 저장된 정답 읽기",
+                  "expected": "A proposal stays scoped to its owning project; switching B and back A clears unsent geometry and reloads only each owner saved truth.",
+                  "observed": "Original trusted fit POST200 and independent box/corner geometry preceded ordinary A→B→A selection. Each owner reopened exact3 saved train/val/test rows and own source preview; old points, polygon and summary were removed and append disabled.14same-request full UI200 responses, declared source/project/prepared file identities and bytes, exact2 activation metadata transitions and source2979 stayed exact through original natural backend0 closure; console/page/API errors0.",
+                  "reviewer": "Codex Root exact source/provider admission, independent source review, actual original browser/tool completion, finite poststop readback and all9 canonical PNG reviewed. Source browser handoff only; installed-native, model/human quality and parent acceptance remain pending.",
+                  "test": "scripts/e2e/obb-fitting-project-handoff.spec.ts::center fitting proposal stays scoped through ordinary A B A project handoff and exact saved truth reopen",
+                  "receipt": "2026-10-18-f029-center-fit-project-handoff-browser.json",
+                  "receipt_sha256": "983111634760895f92b13612b102c6c5b760680f4bd9ca93f08c25aea60b5d89",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "38349741a5745a2f1f97f88288011b74a3b2c1055f7690313ddf3e65ee49866d"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "a92fa271b732ad26cbea472a6b2b6f1c945186880cd272134119b82ea353cf27"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "f63f51d3d1a12651b3c53b563844eeaa5c581c0b0ea4709222b72ffbeced672c"
+                    }
+                  ]
+                }
+              ]
             }
           }
         },
@@ -11031,7 +11059,35 @@
               ]
             },
             "handoff": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S4-07",
+                  "source_sha": "290e77ff39b0d6634ce1b58dfea32dbafb5640f6",
+                  "kind": "click",
+                  "action": "회전 박스 face 제안 · 프로젝트 A → B → A 전환 · 저장된 정답 읽기",
+                  "expected": "A proposal stays scoped to its owning project; switching B and back A clears unsent geometry and reloads only each owner saved truth.",
+                  "observed": "Original trusted fit POST200 and independent box/corner geometry preceded ordinary A→B→A selection. Each owner reopened exact3 saved train/val/test rows and own source preview; old points, polygon and summary were removed and append disabled.14same-request full UI200 responses, declared source/project/prepared file identities and bytes, exact2 activation metadata transitions and source2979 stayed exact through original natural backend0 closure; console/page/API errors0.",
+                  "reviewer": "Codex Root exact source/provider admission, independent source review, actual original browser/tool completion, finite poststop readback and all9 canonical PNG reviewed. Source browser handoff only; installed-native, model/human quality and parent acceptance remain pending.",
+                  "test": "scripts/e2e/obb-fitting-project-handoff.spec.ts::face fitting proposal stays scoped through ordinary A B A project handoff and exact saved truth reopen",
+                  "receipt": "2026-10-18-f029-face-fit-project-handoff-browser.json",
+                  "receipt_sha256": "cf55c66e1036bf0ffd746fa10f3d977b37833258de0dfba8735ea70b07ee5efa",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "a63516f72fc31e9d7092574b8e339a27c2baf05f2fbb2957dc01fe9b87dafd03"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "5ca6047c28c2da6331727afe8f913e146b9945fe4c428376651f874b4a7c15a5"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "61ba336d3d02e54bc8af680760571b63f190412d761314b3594fce4cf8e78b59"
+                    }
+                  ]
+                }
+              ]
             }
           }
         },
@@ -11251,7 +11307,35 @@
               ]
             },
             "handoff": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S4-07",
+                  "source_sha": "290e77ff39b0d6634ce1b58dfea32dbafb5640f6",
+                  "kind": "click",
+                  "action": "회전 박스 irregular 제안 · 프로젝트 A → B → A 전환 · 저장된 정답 읽기",
+                  "expected": "A proposal stays scoped to its owning project; switching B and back A clears unsent geometry and reloads only each owner saved truth.",
+                  "observed": "Original trusted fit POST200 and independent box/corner geometry preceded ordinary A→B→A selection. Each owner reopened exact3 saved train/val/test rows and own source preview; old points, polygon and summary were removed and append disabled.14same-request full UI200 responses, declared source/project/prepared file identities and bytes, exact2 activation metadata transitions and source2979 stayed exact through original natural backend0 closure; console/page/API errors0.",
+                  "reviewer": "Codex Root exact source/provider admission, independent source review, actual original browser/tool completion, finite poststop readback and all9 canonical PNG reviewed. Source browser handoff only; installed-native, model/human quality and parent acceptance remain pending.",
+                  "test": "scripts/e2e/obb-fitting-project-handoff.spec.ts::irregular fitting proposal stays scoped through ordinary A B A project handoff and exact saved truth reopen",
+                  "receipt": "2026-10-18-f029-irregular-fit-project-handoff-browser.json",
+                  "receipt_sha256": "1e95901db65e22edf95b015f5319244b02eae1e88001489e74d7fe96215f64ff",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "99ba89576c480971eca69f0153290330e9c60643d06f83fef3414ef055831694"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "271fd81106abb540cf2468ae4b859b6e6a79b69fd796ff1d05afd424e4c805cb"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "818649ad609427b9df5b9e11f32a9d688e88d0061f7e09e50f034a606acaf186"
+                    }
+                  ]
+                }
+              ]
             }
           }
         },
