@@ -1,0 +1,39 @@
+{
+  "schema": "modu-vision.local-transport-execution/v1",
+  "source_sha": "0cad86975e825f49b570c437883ffd3b2a0243ee",
+  "product_base": "b1aeb8e3172326fc81669ae71f1daa64ab875d56",
+  "source_dirty": true,
+  "dirty_scope": "Only the unrelated new portable browser test was untracked during this execution; seven production/test pins matched the frozen product source before and after.",
+  "tests": [
+    "backend/tests/test_inspection_service_loopback_delivery.py::test_real_503_unavailable_same_port_reconnect_and_durable_reopen",
+    "backend/tests/test_inspection_service_loopback_delivery.py::test_real_ack_loss_receiver_dedup_reconnect_and_sender_reopen"
+  ],
+  "passed": 2,
+  "failed": 0,
+  "elapsed_seconds": 7.924929141998291,
+  "actual_network": "Owned 127.0.0.1 TCP receiver only; proxy variables removed",
+  "source_pins_unchanged": true,
+  "cases": [
+    {
+      "name": "503-offline-reconnect.json",
+      "receipt_sha256": "0f7f4d3342ce6d8111ef63a77739c4cc2c88d2cdb34f7d50e7d08c7dbbea063d",
+      "same_original_port_reconnected": true,
+      "owned_receiver_threads_and_sockets_closed": true,
+      "delivery_attempts": 3,
+      "one_inference_record_only": true,
+      "original_image_preserved": true
+    },
+    {
+      "name": "ACK-loss-dedup-reconnect.json",
+      "receipt_sha256": "738324ae683d62c7f85a5cfe84d319ac5c6884deb2ccd83dee6331578aa3b0f2",
+      "same_original_port_reconnected": true,
+      "owned_receiver_threads_and_sockets_closed": true,
+      "delivery_attempts": 2,
+      "one_inference_record_only": true,
+      "original_image_preserved": true
+    }
+  ],
+  "new_model_inference": false,
+  "external_MES_qualified": false,
+  "parent_credit": 0
+}

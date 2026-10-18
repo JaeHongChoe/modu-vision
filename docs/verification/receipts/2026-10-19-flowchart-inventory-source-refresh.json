@@ -1,0 +1,17 @@
+{
+  "schema": "modu-vision.action-inventory-source-refresh/v1",
+  "source_sha": "1d208d2083cf8c1e353a724e4f6bc80f2a5e0174",
+  "file": "src/renderer/components/flowchart/FlowchartStudio.tsx",
+  "previous_inventory_sha256": "42ca12de813581bfc8ebc6684a0d6cc9b2ffe53fbbf454c3602305f2c8194616",
+  "current_inventory_sha256": "d6530330ff043fe30f432ae7b55689201c991efaf6665de732f07ede063db97e",
+  "reason": "Saved fully-bound flow startup fix changed this current TSX file. Current inventory pin is refreshed; original execution cohorts and receipts remain separately fixed.",
+  "unchanged_historical_flowchart_actions": 13,
+  "unchanged_historical_verified_scenarios": 49,
+  "unchanged_pending_flowchart_scenarios": 42,
+  "current_native_receipt": "2026-10-19-saved-bound-flow-native.json",
+  "current_native_receipt_sha256": "59540deafc27f33c1d35505e1f487cd6fdc8521a3bb9ca3929d6e28ef7302c7a",
+  "historical_source_sha_or_receipt_changes": 0,
+  "new_current_GUI_credit_for_historical_flowchart_scenarios": 0,
+  "independent_source_review": "Current inventory SHA and each evidence execution commit are distinct in the unchanged reference-integrity gates. No existing scenario is requalified by this pin refresh.",
+  "gate_or_approval_rules_changed": false
+}
