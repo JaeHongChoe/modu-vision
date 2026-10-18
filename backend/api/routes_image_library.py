@@ -13,6 +13,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend.engine.image_query import load_ledger_rows, query_images, resolve_image_ids
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_handler, register_original_library_revision
 
 router = APIRouter(prefix="/api/dataset/library", tags=["Image library"])
 
@@ -31,6 +32,7 @@ class ResolveRequest(BaseModel):
     selections: List[Selection] = Field(max_length=500)
 
 
+@register_original_library_revision
 def _revision(request: Request, revision_id: Optional[str]) -> tuple:
     """(index, project_key, project, revision row) of the named revision or the project's active one."""
     from backend.api.routes_dataset_imports import _jobs, _scope
@@ -51,7 +53,7 @@ def _with_paths(items: list, source_root: str) -> list:
     return items
 
 
-@router.get("/images")
+@observe_original_UI_ancillary_handler(router.get("/images"))
 def library_images(request: Request, revision_id: Optional[str] = Query(None, pattern=r"^[0-9a-f]{32}$"),
                    q: Optional[str] = Query(None, max_length=256), label: Optional[str] = Query(None, max_length=512),
                    split: Optional[Literal["train", "val", "test"]] = None, state: Optional[Literal["valid", "invalid"]] = None,

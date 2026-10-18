@@ -32,7 +32,7 @@ _ACTIVE = ContextVar('original_owned_UI_ancillary_request', default=None)
 _HANDLERS = {}
 _RESOURCES = {}
 _PROFILE_KIND = None
-_DATASET_NAMES = frozenset({'current_dataset_summary','list_revisions','revision_source_status','preferences','dataset_statistics','saved_diagnostics','readiness','workflow_impact'})
+_DATASET_NAMES = frozenset({'current_dataset_summary','list_revisions','revision_source_status','preferences','dataset_statistics','saved_diagnostics','readiness','workflow_impact','library_images'})
 _DATASET_METADATA_NAMES = frozenset({'dataset_statistics','readiness','saved_diagnostics','workflow_impact'})
 _SPEC = {
     'list_profiles':('GET','/api/compute/profiles','routes_compute'),
@@ -64,6 +64,7 @@ _SPEC = {
     'saved_diagnostics':('GET','/api/data-workbench/diagnostics','routes_data_workbench'),
     'readiness':('GET','/api/team-data/readiness','routes_team_data'),
     'workflow_impact':('GET','/api/provenance/impact','routes_provenance'),
+    'library_images':('GET','/api/dataset/library/images','routes_image_library'),
 }
 
 
@@ -80,6 +81,11 @@ def _methods_original(instance,kind,calls):
 
 def register_original_preview_denial_audit(function):
     _RESOURCES.setdefault('preview_denial_audit_origin',(function,function.__code__))
+    return function
+
+
+def register_original_library_revision(function):
+    _RESOURCES.setdefault('library_revision_origin',(function,function.__code__))
     return function
 
 
@@ -287,7 +293,7 @@ class OriginalOwnedUIAncillaryRequest:
         from backend import main
         from backend.api import routes_dataset_imports,routes_project_preferences,routes_dataset_metadata,routes_data_workbench,routes_team_data,routes_provenance
         from backend.engine import dataset_index,job_store,dataset_loaders,source_text,project_preferences,team_data,workflow_impact,evaluation_history,flow_package_runtime
-        from backend.api import routes_dataset_versions
+        from backend.api import routes_dataset_versions,routes_image_library
         from backend.engine import data_workbench
         from fastapi import routing
         from starlette import concurrency,routing as starlette_routing
@@ -322,7 +328,7 @@ class OriginalOwnedUIAncillaryRequest:
             raise ValueError('Original execution owner must precede ancillary binding')
         self.shared_export=self.execution.export_included
         self.binding=self,app,admission,self.accounts,self.observer,self.condition,self.registry,self.storage,self.flow,self.execution,self.shared_export
-        self.modules={m.__name__.split('.')[-1]:m for m in (routes_compute,routes_flowchart,routes_flow_workspace,routes_export,routes_dataset,routes_product_delivery,routes_onboarding,routes_project,routes_job_events,routes_dataset_imports,routes_project_preferences,routes_dataset_metadata,routes_data_workbench,routes_team_data,routes_provenance)}
+        self.modules={m.__name__.split('.')[-1]:m for m in (routes_compute,routes_flowchart,routes_flow_workspace,routes_export,routes_dataset,routes_product_delivery,routes_onboarding,routes_project,routes_job_events,routes_dataset_imports,routes_project_preferences,routes_dataset_metadata,routes_data_workbench,routes_team_data,routes_provenance,routes_image_library)}
         self.route_kind=routing.APIRoute;self.routes={};self.included={};self.route_included={}
         modern=getattr(routing,'_IncludedRouter',None)
         for module in self.modules.values():
@@ -457,8 +463,10 @@ class OriginalOwnedUIAncillaryRequest:
             (sys.modules[__name__],('_ThumbnailFileResponseBase','_DatasetThumbnailFileResponse','_ThumbnailNotModifiedResponseBase','_DatasetThumbnailNotModifiedResponse')),
         )for name in names)
         self.dataset_index_kind,self.dataset_job_kind=dataset_index.DatasetIndex,job_store.JobStore
+        self.library_kind=routes_dataset_imports.DatasetImportJobs
+        self.library_origin=_RESOURCES.get('library_revision_origin')
         self.dataset_evaluation_kind=evaluation_history.EvaluationHistory
-        self.dataset_modules=(routes_dataset_imports,routes_project_preferences,routes_dataset_metadata,routes_data_workbench,routes_team_data,routes_provenance,dataset_index,job_store,dataset_loaders,source_text,project_preferences,team_data,workflow_impact,evaluation_history,flow_package_runtime,routes_dataset_versions,product_delivery)
+        self.dataset_modules=(routes_dataset_imports,routes_project_preferences,routes_dataset_metadata,routes_data_workbench,routes_team_data,routes_provenance,dataset_index,job_store,dataset_loaders,source_text,project_preferences,team_data,workflow_impact,evaluation_history,flow_package_runtime,routes_dataset_versions,product_delivery,routes_image_library)
         self.dataset_binding=self.dataset_modules,self.dataset_index_kind,self.dataset_job_kind,routes_dataset_imports._JOBS_LOCK
         for module in self.dataset_modules:
             for name,function in tuple(vars(module).items()):
@@ -470,7 +478,7 @@ class OriginalOwnedUIAncillaryRequest:
         self.calls.extend((module,name,getattr(module,name)) for module,names in (
             (sqlite3,('connect','Connection','ProgrammingError')),
             (dataset_index,('DatasetIndex','index_path')), (job_store,('JobStore',)),
-            (routes_dataset_imports,('_JOBS_LOCK',)),
+            (routes_dataset_imports,('_JOBS_LOCK','DatasetImportJobs')),
             (evaluation_history,('EvaluationHistory',)),
             (routes_dataset,('import_dataset','decode_image_file')),
             (routes_dataset_metadata,('dm',)),(routes_team_data,('td','dm')),
@@ -543,6 +551,7 @@ class OriginalOwnedUIAncillaryRequest:
             and type(self.job_lease) is self.lease_kind and self.job_manager._leases is self.job_lease
             and self.job_lease.path==self.job_lease_path and _methods_original(self.job_lease,self.lease_kind,self.calls)
             and self.dataset_binding==(self.dataset_modules,self.dataset_index_kind,self.dataset_job_kind,self.dataset_modules[0]._JOBS_LOCK)
+            and self.library_kind is self.dataset_modules[0].DatasetImportJobs
             and _HANDLERS==self.handlers and _SPEC==self.spec and _RESOURCES==self.resources
             and all(getattr(module,name) is function for module,name,function in self.calls)
             and all(function.__code__ is code for function,code in self.codes)
@@ -611,6 +620,31 @@ class OriginalOwnedUIAncillaryRequest:
         self._settled_history=(count,digest);self._settled_history_binding=self._settled_history
         return True
 
+    def library_cache(self):
+        """Only an already initialized original coordinator; never warm it here."""
+        try:
+            from backend.engine.dataset_index import index_path
+            origin=self.library_origin;module=self.modules['routes_image_library']
+            if (type(origin) is not tuple or len(origin)!=2 or type(origin[0]) is not FunctionType
+                    or _RESOURCES.get('library_revision_origin') is not origin
+                    or self.resources.get('library_revision_origin') is not origin
+                    or module._revision is not origin[0] or origin[0].__code__ is not origin[1]
+                    or origin[0].__globals__ is not module.__dict__):return None
+            jobs=getattr(self.app.state,'dataset_imports',None)
+            if (type(jobs) is not self.library_kind
+                    or not _store_methods_original(jobs.index,self.dataset_index_kind,self.calls)
+                    or not _store_methods_original(jobs.store,self.dataset_job_kind,self.calls)
+                    or any(getattr(self.dataset_index_kind,name) is not self.resources[resource]
+                        for name,resource in (('active','dataset_operation_index_active'),
+                            ('revisions','dataset_operation_index_revisions'),('_connect','dataset_connection_index')))):
+                return None
+            path=jobs.index.path
+            if (path!=index_path(self.registry.root)
+                    or path.resolve(strict=True)!=path
+                    or any(part.is_symlink() for part in (path,*path.parents))):return None
+            return jobs,jobs.index,jobs.store,path,jobs.store.path
+        except Exception:return None  # New optional inspection cannot alter business admission.
+
     def begin(self,activity):
         if (activity is None or not self.original() or not self.observer._valid(activity)
                 or activity.ingress.get('type')!='http' or activity.scope.get('app') is not self.app):return False
@@ -621,6 +655,8 @@ class OriginalOwnedUIAncillaryRequest:
                 or name=='revision_source_status' and re.fullmatch(r'/api/dataset/revisions/[0-9a-f]{32}/source-status',activity.ingress.get('path','')))),None)
         headers=_headers(activity.scope)
         if name is None or headers is None:return False
+        library=self.library_cache() if name=='library_images' else None
+        if name=='library_images' and library is None:return False
         tokens=[v for k,v in headers if k.lower()==b'authorization'];projects=[v for k,v in headers if k.lower()==b'x-vision-project']
         contexts=[v for k,v in headers if k.lower()==b'x-vision-context']
         if (len(tokens)!=1 or not tokens[0].startswith(b'Bearer ') or not 7<len(tokens[0])<=263
@@ -636,6 +672,7 @@ class OriginalOwnedUIAncillaryRequest:
         # over a legacy selected-project header captured during a switch.
         if declared is not None:project=declared.project_id
         attempt=_AncillaryAttempt(self,activity,name,headers,project,token)
+        attempt.library_binding=attempt._library_binding=library
         self.pending[activity.token]=attempt;self.records.append(attempt);self._attempt_count+=1;self.admission._active+=1
         return True
 
@@ -929,6 +966,7 @@ class _AncillaryAttempt:
         self.workspace_listings=[]
         self.draft_active_reads=[]
         self.dataset_operations=[];self.dataset_connections=[];self.dataset_live=[]
+        self.library_binding=self._library_binding=None;self.library_connections=[]
         self.dataset_objects=[];self.provenance_operations=[];self.provenance_connections=[]
         self.thumbnail_operations=[];self.thumbnail_spools=[];self.thumbnail_publications=[]
         self.thumbnail_response=None;self.thumbnail_binding=None;self.thumbnail_response_live=self.thumbnail_response_done=False
@@ -977,6 +1015,7 @@ class _AncillaryAttempt:
                 for row in self.workspace_listings)
 
             and all(_methods_original(value,kind,self.owner.calls) for value,kind in self.dataset_objects)
+            and (self.library_binding is None or self.library_original())
             and (self.body_binding is None or self.original_values.get('pipeline') is self.body_binding[0]
                 and self.body_binding[0].model_dump()==self.body_binding[1]))
 
@@ -1050,6 +1089,55 @@ class _AncillaryAttempt:
 
     def resource_entry(self,kind):
         if not self.worker_original() or self.handler_frame() is None:self.fail(kind+'_entry');return False
+        return True
+
+    def library_original(self):
+        current=self.owner.library_cache()
+        return (self.library_binding is self._library_binding
+            and type(self.library_binding) is tuple and type(current) is tuple
+            and len(current)==len(self.library_binding)==5
+            and all(now is held for now,held in zip(current,self.library_binding)))
+
+    def library_revision_frame(self):
+        function=self.owner.modules['routes_image_library']._revision
+        frame=sys._getframe(1)
+        for _ in range(16):
+            if frame is None:return None
+            if frame.f_code is function.__code__:
+                return frame if frame.f_locals.get('request') is self.request else None
+            frame=frame.f_back
+        return None
+
+    def library_no_revision_return(self,error):
+        """The original warm two-read refusal, not a status-only GET allowance."""
+        from fastapi import HTTPException
+        function=self.owner.modules['routes_image_library']._revision
+        if (self.name!='library_images' or not self.library_original()
+                or type(error) is not HTTPException or error.status_code!=409
+                or error.detail!='No validated dataset revision is active; validate the source and accept a revision first'
+                or error.headers is not None or self.original_values.get('revision_id') is not None):return False
+        frame=None;tb=error.__traceback__
+        while tb is not None:
+            if tb.tb_frame.f_code is function.__code__:frame=tb.tb_frame
+            tb=tb.tb_next
+        operations=self.dataset_operations
+        if (frame is None or frame.f_locals.get('request') is not self.request
+                or frame.f_locals.get('project') is not self.scope['state'].get('scoped_project')
+                or frame.f_locals.get('_context') is not self.scope['state'].get('project_context')
+                or frame.f_locals.get('index') is not self.library_binding[1]
+                or frame.f_locals.get('chosen') is not None
+                or [kind for kind,_ in operations]!=['index_revisions','index_active']
+                or type(operations[0][1]) is not list or operations[1][1] is not None
+                or frame.f_locals.get('rows')!={row['revision_id']:row for row in operations[0][1]}
+                or len(self.dataset_connections)!=2 or len(self.library_connections)!=2
+                or any(kind!='index' or store is not self.library_binding[1] or not closed
+                    for kind,store,closed in self.dataset_connections)
+                or self.files or self.images or self.profiles or self.metadata or self.processes):return False
+        for connection in self.library_connections:
+            if type(connection) is not sqlite3.Connection:return False
+            try:connection.in_transaction
+            except sqlite3.ProgrammingError:pass
+            else:return False
         return True
 
     def workspace_root(self,role):
@@ -1400,6 +1488,10 @@ class _AncillaryAttempt:
                 and not self.files and not self.images and not self.profiles and not self.metadata and not self.processes)
             if not valid and original_valid:valid=self.draft_superseded_return(error,frame,project)
             status=404
+            if not valid and original_valid and self.name=='library_images':
+                try:valid=self.library_no_revision_return(error)
+                except Exception:valid=False  # Optional proof cannot replace the original exception.
+                status=409
         elif self.name in {'list_profiles','get_selection'}:
             valid=valid and len(self.profiles)==1 and type(result) is dict
             if valid:
@@ -1479,7 +1571,7 @@ class _AncillaryAttempt:
         return bool(self.original() and not self.failed and self.handler_done and not self.worker_live and not self.inflight and not self.dataset_live
             and self.selected_image_inputs_valid()
             and (self.name!='get_thumbnail' or self.thumbnail_response_done and not self.thumbnail_response_live)
-            and self.storage==1 and self.entries==1 and len(self.events)==(5 if self.name in {'job_events','list_revisions','revision_source_status'} else 4) and len(self.resolutions)==resolutions
+            and self.storage==1 and self.entries==1 and len(self.events)==(5 if self.name in {'job_events','list_revisions','revision_source_status','library_images'} else 4) and len(self.resolutions)==resolutions
             and all(kind=='context_db' and registry is self.owner.registry for kind,registry in self.events[:-1])
             and self.events[-1]==('storage_scope',self.owner.storage) and all(result is project for result in self.resolutions)
             and self.auth.original() and self.auth.middleware_calls==self.auth.middleware_returns==1
@@ -2385,8 +2477,8 @@ def observe_original_UI_global_job_store(kind):
 _DATASET_OPERATION_ROUTES = {
     'import_dataset':frozenset({'current_dataset_summary'}),
     'decode_image_file':frozenset({'current_dataset_summary'}),
-    'index_active':frozenset({'list_revisions'}),
-    'index_revisions':frozenset({'list_revisions'}),
+    'index_active':frozenset({'list_revisions','library_images'}),
+    'index_revisions':frozenset({'list_revisions','library_images'}),
     'index_source_status':frozenset({'revision_source_status'}),
     'read_preferences':frozenset({'preferences'}),
     'dataset_summary':frozenset({'dataset_statistics'}),
@@ -2422,6 +2514,12 @@ def observe_original_dataset_UI_operation(kind):
                     and len(args)==(3 if kind=='index_source_status' else 2) and not kwargs)
                 if valid and kind=='index_source_status':
                     valid=args[2]==attempt.original_values.get('revision_id')
+                if attempt.name=='library_images':
+                    frame=attempt.library_revision_frame()
+                    valid=(valid and frame is not None and attempt.library_original()
+                        and index is attempt.library_binding[1]
+                        and args[1] is frame.f_locals.get('project_key')
+                        and frame.f_locals.get('_context') is attempt.scope['state'].get('project_context'))
             elif kind=='read_preferences':
                 valid=valid and len(args)==1 and not kwargs and Path(args[0]).resolve()==Path(project['project_dir']).resolve()
             elif kind in {'workflow_analyze','training_readiness'}:
@@ -2450,7 +2548,7 @@ def observe_original_dataset_UI_connection(kind):
         @wraps(function)
         def observed(store):
             original=function(store);attempt=_ACTIVE.get()
-            if type(attempt) is not _AncillaryAttempt or attempt.name not in {'list_revisions','revision_source_status'}:return original
+            if type(attempt) is not _AncillaryAttempt or attempt.name not in {'list_revisions','revision_source_status','library_images'}:return original
             @contextmanager
             def retained():
                 from backend.engine import dataset_index,job_store
@@ -2473,7 +2571,9 @@ def observe_original_dataset_UI_connection(kind):
                     except sqlite3.ProgrammingError:closed=True
                     if not valid or not closed or original.gen.gi_frame is not None or not attempt.resource_entry('dataset_database_return'):
                         attempt.fail('dataset_database_not_closed')
-                    else:attempt.dataset_connections.append((kind,store,closed))
+                    else:
+                        attempt.dataset_connections.append((kind,store,closed))
+                        if attempt.name=='library_images':attempt.library_connections.append(connection)
                 finally:
                     if ticket not in attempt.dataset_live:attempt.fail('dataset_database_ticket')
                     else:attempt.dataset_live.remove(ticket)
