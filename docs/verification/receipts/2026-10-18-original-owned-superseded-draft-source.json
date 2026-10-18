@@ -1,0 +1,101 @@
+{
+  "schema": "modu-vision.source-superseded-draft-validation/v1",
+  "base": "1513d228b32908e567e9dcff9e00ed950662278c",
+  "source_commit": "fa5907bf80103b2b1d133cda525e9c2de48b30fd",
+  "source_only": true,
+  "scope": "Recognize a genuine valid saved flow that supersedes an older valid draft as a normal owned read404; keep the original HTTP business result.",
+  "source_files": {
+    "backend/api/routes_flowchart.py": "a99d1872e50ee0051ccd52d95f23848418418cc20f3aa4faa05067bde07ff900",
+    "backend/engine/original_owned_UI_ancillary_request.py": "4cc1bd6cc7f2ac89c13655c1a5b31e5a2ac730f6b9af974a0bfbc92b35539dc8",
+    "backend/tests/test_original_owned_superseded_flow_draft.py": "024224dd2577c025fb343516d02dbc24d07134fc1fadeeb98e677d4f5bf55634"
+  },
+  "actual_focused_pytest": {
+    "passed": 52,
+    "deselected": 2,
+    "elapsed_seconds": 94.63
+  },
+  "command_template": "PYTHONDONTWRITEBYTECODE=1 <existing-no-bytecode-python> -I -B -m pytest -c backend/pytest.ini -o pythonpath=<isolated-source> --basetemp=<private-output> -q backend/tests/test_original_owned_superseded_flow_draft.py backend/tests/test_original_owned_UI_ancillary_reads_lifetime.py backend/tests/test_original_owned_flow_lifetime.py backend/tests/test_flowchart_drafts.py backend/tests/test_owned_ancillary_failure_attribution.py backend/tests/test_original_owned_account_request_lifetime.py::test_wrong_password_preserves_original_rejection_and_rate_limit -k 'not export-runtime-capabilities and not joined_discovery'",
+  "run_history": [
+    {
+      "name": "superseded-red-01",
+      "classification": "causal source RED, exact normal superseded404 and original two lifetime failures",
+      "exit_code": 1,
+      "private_log_sha256": "73c528f2773727818026c05d57166d252e12671c6599d96c23febe02d7f26b5c",
+      "actual_tool_start_sha256": "019da45003aab75a7789654712d207d7845705c9fbe95e9d4e3f4f64c840a1ea",
+      "actual_tool_completion_sha256": "bcd66523034c6645791aa940cade844d83faf2280c9d5a42a2753b4067c9b87b"
+    },
+    {
+      "name": "superseded-green-01",
+      "classification": "first same original causal test GREEN",
+      "exit_code": 0,
+      "private_log_sha256": "7000d425d3858265156c3153372b1ada26d0cc85b74803ba5ef81117410b8665",
+      "actual_tool_start_sha256": "9a926f36b5cab253520ca04a1c34428f4d84b4ccef6e83515a0bc1b83ecf4d0e",
+      "actual_tool_completion_sha256": "541fc6cabefa0bd72f924ccf7777349313ea02e9a8cd4da239040105f4db6e41"
+    },
+    {
+      "name": "superseded-green-02",
+      "classification": "noncausal equal-graph fixture basis captured before login, creating extra migration lock",
+      "exit_code": 1,
+      "private_log_sha256": "ca4afee7e44d9b3b46c9a22e804ef174f819ad869ba6bec31cd8a492b2291f97",
+      "actual_tool_start_sha256": "dbdc50183301bfa2a65cf3c2b8967399aefb325300a095b054cbaaf76db5392a",
+      "actual_tool_completion_sha256": "08b8737d4134d3a9cb4260ae229120f8964fd36a6dd7bc59d657b233899b3892"
+    },
+    {
+      "name": "superseded-sentinel-red-03",
+      "classification": "causal negative RED: sentinel none identifier wrongly acquired lifetime credit",
+      "exit_code": 1,
+      "private_log_sha256": "ad3b51f15cd9f83e864f0b3151dea9e79a99b18bc60135e0bc2718ef9a86fb9b",
+      "actual_tool_start_sha256": "1a201820c49d96a481e9206af537316acd45fc9011136cab5fffbb93cf40f00a",
+      "actual_tool_completion_sha256": "91ac811892f589fad5b3a3eafab95d6387ace8621f91ecd1e992769b48e5434a"
+    },
+    {
+      "name": "superseded-final-green-04",
+      "classification": "final focused source GREEN, no native or whole-writer credit",
+      "exit_code": 0,
+      "private_log_sha256": "9c9d344a710c3225ac593803200bb9338142622d53ac387aff9ccf37a843bdef",
+      "actual_tool_start_sha256": "b51d0f8ce13b89134271ff926cfc9c7642d19c55484c9f774c8ff98aa2e6a1b4",
+      "actual_tool_completion_sha256": "acaf1cca8d190ab71f22995c0efc6a3e0cfc31a289093b9fff8b5a9ed8e6cfe4"
+    }
+  ],
+  "new_focused_cases": 12,
+  "normal_controls": [
+    "Actual original POST saved a later valid different graph; exact GET404 preserved; four original reads closed; project bytes and raw9 unchanged; managed drain.",
+    "Later activation of same valid graph still returns original200, six reads and two normal helper observations, no poison."
+  ],
+  "strict_negative_controls": [
+    "corrupt draft checksum",
+    "corrupt version JSON",
+    "foreign version source",
+    "foreign active project",
+    "missing active version",
+    "boolean draft timestamp",
+    "symlink version",
+    "sentinel version identifier",
+    "nonhex identifier",
+    "foreign response sender repeating real observer arguments"
+  ],
+  "original_preserved": {
+    "unchanged_function_bodies": 161,
+    "routes_inverse_byteexact": true,
+    "missing404_expression_byteexact": true,
+    "original_complete_finish_poison_auth_deadline_and_old_health_payloads_unchanged": true
+  },
+  "excluded_original_subprocess_cases": [
+    "export-runtime-capabilities",
+    "joined_discovery"
+  ],
+  "excluded_reason": "Original optional device-discovery subprocess cases are outside the authorized in-process ASGI scope.",
+  "evidence_custody_sha256": "ca65e452127a27f519a56354796cdfd7ab2f8ab5b3b2ccf58f2c4e95798b1db4",
+  "limits": {
+    "native_Root13_404_detail_proven": false,
+    "native_Root13_same_cause_proven": false,
+    "native_application_acceptance": false,
+    "whole_writer_coverage": false,
+    "process_tree_exit_verified": false,
+    "can_release_launch_lease": false,
+    "parent_or_action_count_promotion": false,
+    "Root13_fixture_read_or_native_API_UI_actions_by_this_agent": false,
+    "PUB_modified_by_this_agent": false
+  },
+  "native_boundary": "The native earlier request was GET_FLOW_DRAFT404 with two attributed lifetime failures. Its exact 404 detail and causal equivalence to this source fixture are not yet proven; this source result grants no native acceptance or parent/action cell credit."
+}
