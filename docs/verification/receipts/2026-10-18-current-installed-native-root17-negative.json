@@ -1,0 +1,198 @@
+{
+  "build_and_assembly": {
+    "actual_binding_readback_sha256": "303c642e7acfd17faf4781ed4d5f996a612fd9caec69211564b5bfbb5102e40a",
+    "archive_bytes": 487673969,
+    "archive_sha256": "b9bfd6d87700f8e6d430d83ffb14e3f04f9729c94107dbb30b1241b246a99fb5",
+    "artifact_pin_sha256": "367ace9b2ce2f62f3569d020327742a9d6890bb4c590ca49a2c5fff6bbf8fa50",
+    "assembly_exit_code": 0,
+    "assembly_seconds": 30.534452458145097,
+    "assembly_source_clean_after": true,
+    "backend_build_identity_sha256": "4f02ff6f4fb721ae1999e4e4ff8c55d18af02f836a9385a3b24281f5a8a3b35e",
+    "backend_executable_sha256": "0582973426637600bfd079aa4df7e53492e587f68e17ca003946bc00f3e677ac",
+    "backend_exit_code": 0,
+    "backend_seconds": 124.68835575017147,
+    "backend_source_unchanged": true,
+    "full_body_archive_join_previously_completed": true,
+    "full_payload_hashing_repeated_by_receipt_preparer": false,
+    "publisher_signature_accepted": false
+  },
+  "failure_scope": {
+    "Root16_or_source_fix_causal_equivalence_claimed": false,
+    "exact_first_request_or_root_cause_proven": false,
+    "first_poisoned_observation": "project03 after the clean login02 snapshot; this is an interval, not an exact causal request identification.",
+    "first_reason_sha256": "6eece17e2a850fb28e04b39d4e22145766708676c88ef96e3b6b9532d53b8c5e",
+    "project_observation_reason_hashes": 32,
+    "raw_reason_text_exported": false,
+    "second_reason_sha256": "e2b84a155bf8e5221cc49efcfb2a1a2faa19417df454768fbc631ef021461088",
+    "truncation_not_relaxed_or_cleared": true
+  },
+  "health_chain": [
+    {
+      "HTTP_status": 200,
+      "failure_count": 0,
+      "first_poisoned_interval": false,
+      "observer_sequence": 85,
+      "pending_records": 1,
+      "released_records": 14,
+      "request_count": 15,
+      "sampled_active_scopes": 2,
+      "settled_records": 14,
+      "stage": "baseline",
+      "stage_sequence": 1,
+      "stop_further_UI": false,
+      "truncated": false,
+      "uncertain": false
+    },
+    {
+      "HTTP_status": 200,
+      "failure_count": 0,
+      "first_poisoned_interval": false,
+      "observer_sequence": 479,
+      "pending_records": 6,
+      "released_records": 77,
+      "request_count": 83,
+      "sampled_active_scopes": 12,
+      "settled_records": 77,
+      "stage": "login",
+      "stage_sequence": 2,
+      "stop_further_UI": false,
+      "truncated": false,
+      "uncertain": false
+    },
+    {
+      "HTTP_status": 200,
+      "failure_count": 32,
+      "first_poisoned_interval": true,
+      "observer_sequence": 1436,
+      "pending_records": 8,
+      "released_records": 131,
+      "request_count": 139,
+      "sampled_active_scopes": 24,
+      "settled_records": 131,
+      "stage": "project",
+      "stage_sequence": 3,
+      "stop_further_UI": true,
+      "truncated": true,
+      "uncertain": true
+    }
+  ],
+  "installed_CLI_setup": {
+    "actual_compiled_CLI_install": true,
+    "canary_monkeypatch": false,
+    "complete": true,
+    "controlled_seed_only": true,
+    "install": {
+      "exit_code": 0,
+      "original_child_reaped": true,
+      "original_natural_join": true,
+      "seconds": 123.42790670809336
+    },
+    "operation_result_sha256": "d60b97d1af231a4bd31f4b21243718b3d0dd821676ed8953f384dc9b40dc954b",
+    "populated_setup_complete": true,
+    "preview": {
+      "exit_code": 0,
+      "original_child_reaped": true,
+      "original_natural_join": true,
+      "seconds": 27.328814917011186
+    },
+    "private_controlled_signer_only": true,
+    "result_sha256": "45188fe8e12edd3366d5f71b68baf56062934a920312fb218ed44ba4fb391aad",
+    "temporary_QA_session_revoked": true
+  },
+  "native_launch": {
+    "CUA_basis": "Root original CUA transcript/operator observations. No screenshot file is claimed by this receipt.",
+    "READY_reached": true,
+    "business_request_response_bodies_claimed": false,
+    "observed_UI": "Earlier local Recent-B selection was guarded/refused. Root then used the authorized shared project control to select B. Baseline and login snapshots were unpoisoned; project03 first reported uncertainty.",
+    "original_ACK_and_readiness_retained": true,
+    "original_caps_unchanged": true,
+    "ready_sha256": "8817c5b002e91d790e32b416a24ff9812b19ef839dafe3c73c204ac5c345c1ec"
+  },
+  "not_reached_or_not_credited": [
+    "gallery",
+    "flow open/edit/save",
+    "GUI known-image RUN",
+    "export",
+    "reopen",
+    "native scoped closure",
+    "model-quality approval",
+    "parent or action-cell promotion",
+    "whole process-tree or launch-lease release"
+  ],
+  "ordinary_closure": {
+    "errors": [
+      {
+        "exception_class": "ValueError",
+        "phase": "normal-closure"
+      }
+    ],
+    "final_journal": {
+      "active_scopes": 8,
+      "protocol_version": 4,
+      "revision": 9,
+      "sha256": "e50b3cd7b06b0ad3fa3d7923878fc881db4851afb92e95b753a92b295a71d14b",
+      "state": "recovery_required",
+      "unsupported": [
+        "uncovered_request_protocol"
+      ],
+      "writer_drain": "refused"
+    },
+    "holder_returncode": 1,
+    "lease_released_or_whole_tree_closed": false,
+    "normal_quit_requested": true,
+    "original_backend_exited": true,
+    "original_controller_reaped": true,
+    "original_controller_still_live": false,
+    "original_main_exited": true,
+    "quit_request_sha256": "36f3ff82a82b40cd605c16686190fd7fcaf07ad4de6fb19b8c0e55a16c51c631",
+    "signals_sent": false,
+    "state_repaired": false,
+    "strict_lifetime_and_scoped_closure_verified": false
+  },
+  "original_custody": {
+    "active_pointer_changed_by_UI": false,
+    "after_UI_sha256": "732648a7919f23cdedceee865228af84d95a3493fb260f9b78f0c9a1128ae1c3",
+    "before_after_setup_after_UI_full_pin_maps_equal": true,
+    "captured_original_protected_files": 68,
+    "installed_profile_unchanged": true,
+    "original_model_source_profile_pins_unchanged": true,
+    "receipt_preparer_reopened_all_original_payloads": false
+  },
+  "preparation_limits": {
+    "cause_investigation_remains_separate": true,
+    "no_PUB_source_ledger_or_original_file_mutation": true,
+    "no_import_test_browser_native_process_or_network_execution": true,
+    "no_original_tool_object_reconstruction": true,
+    "read_only_existing_evidence": true
+  },
+  "raw_pins": {
+    "assembly_actual_tool_envelope_sha256": "3786b1d1d7a66026970098b9cfdc93bb7f5465dc993881f9c50fb0a94f0a2845",
+    "baseline_health_sha256": "00e218ab86c1c61b05754d60864e60db4ac62b3a0f6ef0035bc7fb3763435ac4",
+    "holder_result_sha256": "ee756e5903eb217351788910605812f51da1e1d3a4380c9df59b516a6dd52756",
+    "login_health_sha256": "fd3e8d00b025f63633b4836caa9ff518bf1579596e37a7afd211b32fadc549a4",
+    "project_health_sha256": "b4b1d35e3167fcf1cc7f890fad81a7cd8979bfaa3a4b00610bca126b184fa20e",
+    "source_build_actual_tool_envelope_sha256": "d26e57873f889c2d6eac00ca71a44d12eacd84e12ebca5bf824f2fb4591e92e7"
+  },
+  "result": "failed",
+  "retained_pre_READY_invocation_failure": {
+    "exit_code": 1,
+    "health_observer_invoked": false,
+    "health_target_written": false,
+    "kind": "Invoker metadata/readiness-file timing failure",
+    "original_holder_interrupted": false,
+    "product_failure_or_UI_action": false,
+    "record_sha256": "f97fd106e57109a9d5013434b9c81b7a936a031d00f98a8545be53723666374d",
+    "retry_relabelled_as_native_pass": false
+  },
+  "schema": "modu-vision.current-installed-native-root17-negative/v1",
+  "scope": "One fresh current installed native launch; stop at the first poisoned project-stage observation and request original nonce-bound ordinary quit. This is negative evidence, not native acceptance.",
+  "source_cohort": {
+    "backend_HEAD": "f5d2165ac2b0c7fc440e239cc2e650491dcc6c28",
+    "backend_captured_tracked_count": 3009,
+    "frontend_HEAD": "ec4e46716895045900068dbc29b01b7dfb4bb26d",
+    "frontend_captured_tracked_count": 3010,
+    "frontend_delta": "Only the same two original startup-diagnostic overlays relative to the captured public source.",
+    "snapshot_sha256": "bf88a3561464212cc76de988127ad3d66ee9b9e680baf44216ef6264e63ce76d"
+  },
+  "source_only": false
+}

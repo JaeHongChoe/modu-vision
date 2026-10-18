@@ -351,7 +351,7 @@ class OriginalOwnedUIAncillaryRequest:
             (_GeneratorContextManager,('__enter__','__exit__')),(concurrency,('run_in_threadpool',)),(self.account_kind,('original',)),
             (shared_accounts,('AccountStore',)),(shared_accounts.AccountStore,('record_decision',)),
             (ContextRegistry,('_db','transaction','register_project','context','project_key')),
-            (project_context,('get_project_context',)),
+            (project_context,('get_project_context','declared_context')),
             (shared_accounts.AccountStore,('projects_for','project_role')),
             (routes_onboarding,('_team_request',)),
             (demo_dataset,('DEMO_ID','DEMO_VERSION','DEMO_TASK','DEMO_CLASSES','DEMO_SPLITS')),
@@ -368,7 +368,7 @@ class OriginalOwnedUIAncillaryRequest:
             (sqlite3,('connect','Connection')),
             (sqlite3.Connection,('execute','commit','rollback','close','__enter__','__exit__')),
             (routes_project,('get_current_project',)),(main,('get_current_project',)),
-            (shared_authorization,('permission_action',)),
+            (shared_authorization,('permission_action','Headers','HTTPException')),
             (original_current_project_request,('observe_resolution','observe_context_db','observe_storage_scope','_CURRENT')),
             (original_owned_flow_request,('_FlowIncluded','_methods_original')),
             (original_owned_flow_execution_request,('OriginalOwnedFlowExecutionRequest','original_owned_execution_production')),
@@ -593,6 +593,13 @@ class OriginalOwnedUIAncillaryRequest:
                 or any(k.lower()==b'cookie' for k,_ in headers)):return False
         try:token,project=tokens[0][7:].decode('ascii'),projects[0].decode('ascii')
         except UnicodeError:return False
+        from backend.api.shared_authorization import Headers,HTTPException
+        from backend.contracts.context import declared_context
+        try:declared=declared_context(Headers(scope=activity.scope))
+        except HTTPException:return False
+        # The original authorization contract gives explicit context precedence
+        # over a legacy selected-project header captured during a switch.
+        if declared is not None:project=declared.project_id
         attempt=_AncillaryAttempt(self,activity,name,headers,project,token)
         self.pending[activity.token]=attempt;self.records.append(attempt);self._attempt_count+=1;self.admission._active+=1
         return True
