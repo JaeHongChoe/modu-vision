@@ -53,7 +53,7 @@ export const WizardHeader: React.FC = () => {
     isProjectBusy,
   } = useProjectStore();
   const {
-    profiles, selectedProfileId, isLoaded, isLoading, loadError, error,
+    profiles, selectedProfileId, isLoaded, isLoading, loadError, error, transportRevision,
     probeResults, load, selectTarget,
   } = useComputeStore();
   const { jobId, jobComputeProfileId, jobComputeLabel } = useTrainingStore();
@@ -88,7 +88,7 @@ export const WizardHeader: React.FC = () => {
       cancelled = true;
       if (retry !== undefined) window.clearTimeout(retry);
     };
-  }, [load, backendStatus.healthy, backendStatus.port]);
+  }, [load, backendStatus.healthy, backendStatus.port, transportRevision]);
 
   const selectedProfile = profiles.find((profile) => profile.id === selectedProfileId);
   const selectedProbe = selectedProfileId ? probeResults[selectedProfileId] : null;

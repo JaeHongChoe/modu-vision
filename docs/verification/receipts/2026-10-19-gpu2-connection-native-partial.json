@@ -1,0 +1,61 @@
+{
+  "schema": "modu-vision.current-native-GPU-connection-partial/v1",
+  "date": "2026-10-19",
+  "public_product_ancestor": "b1aeb8e3172326fc81669ae71f1daa64ab875d56",
+  "native_frontend_source": "9a60782f123cf70e7dbeaf0465eaac04a557db13",
+  "case": "Root47",
+  "compiled_CLI_install_passed": true,
+  "actual_CUA_account_login_and_existing_project_gallery_observed": true,
+  "gallery_images": 6,
+  "existing_selected_compute": "Server42 GPU2",
+  "actual_CUA_connection_probe": {
+    "ssh": "passed",
+    "runtime": "passed",
+    "device": "NVIDIA L40S",
+    "device_type": "cuda",
+    "visible_physical_selector": "2",
+    "required_packages_present": 12,
+    "required_packages_checked": 13,
+    "ultralytics_present": false,
+    "weights_verified": 7,
+    "weights_checked": 12,
+    "model_inference_verified": false
+  },
+  "health": {
+    "baseline_login_project_gallery_passed": true,
+    "flow_open_exit_code": 2,
+    "poisoned": false,
+    "stop_further_UI": true,
+    "first_unsupported": {
+      "entered_sequence": 1067,
+      "family": "ADMISSION",
+      "method": "GET",
+      "observed_sequence": 1067,
+      "request_identity": 77,
+      "source": "DIRECT_ENTER"
+    },
+    "failure_count": 0
+  },
+  "actual_new_Save": false,
+  "actual_Run": false,
+  "actual_Export": false,
+  "continued_after_stop": false,
+  "normal_quit_requested": true,
+  "normal_main_backend_controller_exits_observed": true,
+  "lifetime_exit_code": 1,
+  "lifetime_errors": [
+    {
+      "exception_class": "ValueError",
+      "phase": "normal-closure"
+    }
+  ],
+  "managed_store_quiescence_or_whole_tree_not_verified": true,
+  "original_68_and_installed_profile_after_UI_unchanged": true,
+  "signals_sent": false,
+  "GUI_GPU_manual8_or_parent_accepted": false,
+  "origin_candidate": "Reopening account-global me/users while bound to a project attaches project headers by default. The recorded first unsupported request does not disclose its URL, so this candidate is not a native causal proof.",
+  "retained_pins": {
+    "health5_sha256": "d49625b0a02fe5a6e1079050a250611e7805b602fbf1ae665ce65be8d5a92595",
+    "lifetime_result_sha256": "bc27b4ed0f8f811da87267b2a497192c931f4dfd546681228d61728b3542cba6"
+  }
+}
