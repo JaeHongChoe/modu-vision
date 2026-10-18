@@ -1,0 +1,285 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "3da66ecb18358d67275269ed31239bcd2f5ec3be",
+  "source_dirty": false,
+  "test": "scripts/e2e/obb-mode-fit-source-change-error.spec.ts::face fitting source-change error retires the unsent proposal and recovers original saved truth",
+  "test_source_sha256": "7ac0360d84b1835a3b6e2c8d4ebfe0b0d8be42639a93296102adf4d6e841f5e8",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "workers": 1,
+  "retries": 0,
+  "report_sha256": "ba500390664708139dab468d8f362e91fa28c7e83af619bd288107eddd848a37",
+  "harness_sha256": "37d498c71a69de158991f703ebfd075ef894f22305f367640f186dea06386915",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "5fc7f66f43099f873f25460b7b8e09ce9c62d8e3c6aa8be287836bb63dd6c6f1"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "8cd76d02a54741286d487bb6ffc3bdbe96b28e9466c4efcd2136388709dbf147"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "9e3595ae9f74996a5d3884a1a8d8eac32e43a5e33a62d3315eb7f9d2b9b3f465"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "603cb119f80c429c46351d0a814662127335fb519a5bd34a44f675b3dac57d0b"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Only F029.obb-native-face-fit-save-reopen.error. Source browser geometric fit, owned synthetic image-byte error and recovery. No installed-native or parent acceptance.",
+  "execution": {
+    "command_exit_code": 0,
+    "seconds": 17.689164583804086,
+    "stats": {
+      "duration": 17355.799,
+      "expected": 1,
+      "flaky": 0,
+      "skipped": 0,
+      "startTime": "2026-10-18T02:49:41.805Z",
+      "unexpected": 0
+    },
+    "original_action_full_response_budget_ms": 10000,
+    "browser_version": "155.0.8059.80",
+    "source2972_raw9_SHA_exact": true
+  },
+  "error_control": {
+    "HTTP_status": 422,
+    "body": {
+      "detail": "Fitting source changed after preview"
+    },
+    "body_bytes": 49,
+    "body_sha256": "813070a0b99c284ce2d33cd4d2e1da635f4d8c2a96caee9b23e33665fc78d330",
+    "old_polygon_removed_append_disabled": true,
+    "saved_three_rows_unchanged": true,
+    "source_bytes_restored_original_identity": true,
+    "mtime_ctime_restored": false,
+    "fresh_preview_fit_recovered": true,
+    "independent_expected_box": {
+      "cx": 128,
+      "cy": 96,
+      "width": 128,
+      "height": 64,
+      "angle_deg": 0
+    }
+  },
+  "custody": {
+    "FD_opened": 175,
+    "FD_closed": 175,
+    "close_uncertainties": 0,
+    "poststop_source_project_prepared_raw9_SHA_exact": true,
+    "full_UI_responses": 7,
+    "fixture_responses_separate": 9,
+    "artifact_references_rehashed": 17
+  },
+  "natural_closure": {
+    "exited": true,
+    "exitCode": 0,
+    "signal": null,
+    "exitedBeforeStop": false,
+    "forced": false,
+    "forcedReason": null,
+    "groupAlive": false,
+    "escaped": [],
+    "unownedReferences": [],
+    "scanError": null,
+    "durationMs": 900,
+    "stoppedAt": "2026-10-18T02:49:58.961Z",
+    "healthy_at_end": true,
+    "port_closed": true,
+    "pid_alive": false
+  },
+  "global_teardown": {
+    "leftovers": [],
+    "unowned_references": [],
+    "scan_error": null
+  },
+  "visual_review": {
+    "Root_viewed_all_four_actual_PNG": true,
+    "rendered_points_and_corners_verified": true,
+    "actual_returned_summary_visible": true,
+    "canvas_and_error_or_summary_in_viewport": true,
+    "reopen_three_row_saved_table_visible": true
+  },
+  "raw_evidence_pins": {
+    "run-result.json": {
+      "raw9": [
+        16777231,
+        178211032,
+        33152,
+        1,
+        501,
+        20,
+        1678,
+        1792291799682034719,
+        1792291799682092469
+      ],
+      "bytes": 1678,
+      "sha256": "06d1486effff714cfafe62dc600abe9b6907c76aa484bfb355734c6db7df42c7"
+    },
+    "invocation.json": {
+      "raw9": [
+        16777231,
+        178207506,
+        33152,
+        1,
+        501,
+        20,
+        1186,
+        1792291781531228103,
+        1792291781531262895
+      ],
+      "bytes": 1186,
+      "sha256": "aa0cd13e961b3ba77a11360016bf5e96e00ef695205193f41f76c79c098be8ab"
+    },
+    "original-popen.json": {
+      "raw9": [
+        16777231,
+        178207508,
+        33152,
+        1,
+        501,
+        20,
+        581,
+        1792291781532884583,
+        1792291781532976460
+      ],
+      "bytes": 581,
+      "sha256": "2f5d240cf661448ca5d48027e97ec61d09cc9599a3bad7f9596ce65adcb43527"
+    },
+    "source-before.json": {
+      "raw9": [
+        16777231,
+        178207505,
+        33152,
+        1,
+        501,
+        20,
+        1066010,
+        1792291781530584761,
+        1792291781530670970
+      ],
+      "bytes": 1066010,
+      "sha256": "edd582d50f1193ff6da13e057e33c4ecc0b3a3f3454a62cfc27e92702eee496b"
+    },
+    "source-after.json": {
+      "raw9": [
+        16777231,
+        178211031,
+        33152,
+        1,
+        501,
+        20,
+        1066010,
+        1792291799679669770,
+        1792291799679795022
+      ],
+      "bytes": 1066010,
+      "sha256": "edd582d50f1193ff6da13e057e33c4ecc0b3a3f3454a62cfc27e92702eee496b"
+    },
+    "browser-01.log": {
+      "raw9": [
+        16777231,
+        178207507,
+        33188,
+        1,
+        501,
+        20,
+        403,
+        1792291799161649513,
+        1792291799161649513
+      ],
+      "bytes": 403,
+      "sha256": "151fb90466c801ce36ffd2b11a739059249c4fb751b803044a72491c257e9d85"
+    },
+    "browser-01/report.json": {
+      "raw9": [
+        16777231,
+        178211012,
+        33188,
+        1,
+        501,
+        20,
+        8213,
+        1792291799162840988,
+        1792291799162840988
+      ],
+      "bytes": 8213,
+      "sha256": "ba500390664708139dab468d8f362e91fa28c7e83af619bd288107eddd848a37"
+    },
+    "browser-01/teardown.json": {
+      "raw9": [
+        16777231,
+        178211011,
+        33188,
+        1,
+        501,
+        20,
+        391,
+        1792291799160935754,
+        1792291799161044047
+      ],
+      "bytes": 391,
+      "sha256": "08770deabb20b97aeee436e5abc3089b9db81bd99e03555a5ee3b79ecd7f12c8"
+    },
+    "harness-manifest.json": {
+      "raw9": [
+        16777231,
+        178210996,
+        33188,
+        1,
+        501,
+        20,
+        252302,
+        1792291798966013618,
+        1792291798966120744
+      ],
+      "bytes": 252302,
+      "sha256": "37d498c71a69de158991f703ebfd075ef894f22305f367640f186dea06386915"
+    },
+    "root-face-browser-actual-start.json": {
+      "raw9": [
+        16777231,
+        178207512,
+        33188,
+        1,
+        501,
+        20,
+        110,
+        1792291782101591733,
+        1792291782101591733
+      ],
+      "bytes": 110,
+      "sha256": "0a9dac643503644f48d75a7900ef42c2f680defeb9f6f9e80eabdc80ce84de11"
+    },
+    "root-face-browser-actual-completion.json": {
+      "raw9": [
+        16777231,
+        178211033,
+        33188,
+        1,
+        501,
+        20,
+        105,
+        1792291799735261480,
+        1792291799735261480
+      ],
+      "bytes": 105,
+      "sha256": "96775763a32aa53e07716773dd99f349c0f263ce04ad4cb225150ba1297fb9f2"
+    }
+  },
+  "parent_acceptance": false,
+  "whole_feature_accepted": false,
+  "installed_native_qualified": false
+}
