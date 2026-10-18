@@ -4,6 +4,7 @@ from contextvars import ContextVar
 from functools import wraps
 import builtins
 import inspect
+import io
 import json
 import os
 from pathlib import Path
@@ -26,9 +27,61 @@ _SPEC = {
     'get_active_pipeline_record':('GET','/api/flowchart/pipeline/active/record'),
     'get_saved_pipeline_version':('GET','/api/flowchart/pipelines/{version_id}'),
     'save_pipeline':('POST','/api/flowchart/pipeline'),
+    'save_flow_draft':('PUT','/api/flowchart/draft'),
     'catalog_flowchart_models':('GET','/api/flowchart/models/catalog'),
     'verify_flowchart_models':('POST','/api/flowchart/models/verify'),
 }
+
+
+def _draft_capture(value,kinds,budget,depth=0):
+    """Finite identity tree of the actual parsed body, including graph models."""
+    budget[0]-=1
+    if budget[0]<0 or depth>32:raise ValueError('Draft body exceeds ownership bounds')
+    if type(value) in (str,int,float,bool,type(None)):
+        return 'atom',value
+    if type(value) in kinds:
+        return 'model',value,_draft_capture(value.__dict__,kinds,budget,depth+1)
+    if type(value) is dict:
+        return 'dict',value,tuple((key,_draft_capture(item,kinds,budget,depth+1))for key,item in value.items())
+    if type(value) is list:
+        return 'list',value,tuple(_draft_capture(item,kinds,budget,depth+1)for item in value)
+    raise ValueError('Unknown original draft body value')
+
+
+def _draft_original(value,held):
+    kind,original,*children=held
+    if value is not original:return False
+    if kind=='atom':return True
+    if kind=='model':return _draft_original(value.__dict__,children[0])
+    if kind=='dict':
+        return (type(value)is dict and len(value)==len(children[0]) and all(
+            key is old and _draft_original(item,captured)
+            for (key,item),(old,captured)in zip(value.items(),children[0])))
+    return type(value)is list and len(value)==len(children[0]) and all(
+        _draft_original(item,captured)for item,captured in zip(value,children[0]))
+
+
+def observe_original_flow_draft_atomic(stage,path,value,temporary_path,handle):
+    attempt=_ACTIVE.get()
+    if type(attempt)is _FlowAttempt and attempt.name=='save_flow_draft':
+        attempt.draft_atomic(stage,path,value,temporary_path,handle,sys._getframe(1))
+
+
+def original_flow_draft_read_text(path,encoding=None,errors=None,*,role):
+    """Retain actual draft helper handles; other owners keep their old read."""
+    from backend.engine.original_owned_UI_ancillary_request import original_UI_ancillary_read_text
+    attempt=_ACTIVE.get()
+    if type(attempt)is not _FlowAttempt or attempt.name!='save_flow_draft':
+        return original_UI_ancillary_read_text(path,encoding=encoding,errors=errors,role=role)
+    with path.open(mode='r',encoding=io.text_encoding(encoding),errors=errors)as handle:
+        attempt.draft_read(handle,path,role,sys._getframe(1))
+        return handle.read()
+
+
+def observe_original_flow_draft_active_return(project,context,checksum,active,version,pipeline,result):
+    attempt=_ACTIVE.get()
+    if type(attempt)is _FlowAttempt and attempt.name=='save_flow_draft':
+        attempt.draft_active_return(project,context,checksum,active,version,pipeline,result,sys._getframe(1))
 
 
 def _methods_original(instance,kind,calls):
@@ -290,6 +343,7 @@ class OriginalOwnedFlowRequest:
         from backend import main
         from fastapi import routing
         from starlette import concurrency, routing as starlette_routing
+        from backend.engine.flowchart_engine import FlowchartPipeline,FlowNode,FlowNodeData,FlowEdge,FlowExecutionConfig
         self.app,self.admission,self.accounts = app,admission,admission._account_requests
         self.account_kind=type(self.accounts)
         self.manager,self.manager_kind=flows.training_job_manager,type(flows.training_job_manager)
@@ -304,6 +358,10 @@ class OriginalOwnedFlowRequest:
         self.pending,self.records,self.failed = {},[],False
         self.binding = self,app,admission,self.accounts,self.observer,self.condition,self.registry,self.storage,self.lock
         self.handlers = dict(_HANDLERS)
+        self.draft_model_calls=tuple((kind,kind.model_dump,kind.model_validate.__func__,
+            kind.__pydantic_validator__,kind.__pydantic_serializer__)for kind in (
+                flows.FlowDraftSaveRequest,FlowchartPipeline,FlowNode,FlowNodeData,FlowEdge,FlowExecutionConfig))
+        self.draft_model_binding=self.draft_model_calls
         self.spec=dict(_SPEC)
         self.route_kind=routing.APIRoute
         self.routes = {}
@@ -330,7 +388,9 @@ class OriginalOwnedFlowRequest:
                 '_resolve_job_artifacts','_catalog_model_settings','training_job_manager',
                 'FlowchartModelVerificationRequest','FlowchartModelReference','request_shared_scope',
                 '_resolve_project_specialist','_registered_retained_source','resolve_specialized_checkpoint',
-                'valid_flow_job','SPECIALIZED_TASKS')),
+                'valid_flow_job','SPECIALIZED_TASKS','_draft_context','_draft_file','_draft_active_version',
+                'FlowDraftSaveRequest','FlowchartPipeline','pipeline_sha256','original_flow_draft_read_text',
+                'observe_original_flow_draft_atomic','observe_original_flow_draft_active_return')),
             (retained_preprocessors, ('resolve_retained_rotation','retained_rotation_jobs','read_registered_project',
                 '_source_model','_location','_target','_path','_pin','_json','_exact','_raw','_require',
                 'SCHEMA','DIRECTORY','_PIN_NAMES')),
@@ -350,7 +410,12 @@ class OriginalOwnedFlowRequest:
             (dataset_fingerprint, ('fingerprint_dataset','_files_under','_update_file','request_project_root')),
             (routes_dataset, ('_split_manifest_file','STUDIO_ANNOTATIONS_DIR')),
             (annotation_storage, ('request_project_root','request_shared_scope')),
-            (self.manager_kind, ('get_job',)), (Path, ('open','read_text','read_bytes')),
+            (self.manager_kind, ('get_job',)), (Path, ('open','read_text','read_bytes','mkdir','unlink','lstat','stat','resolve','is_file','exists')),
+            (io, ('text_encoding','TextIOWrapper','open')),
+            (io.TextIOWrapper, ('write','flush','close','read','fileno','__enter__','__exit__')),
+            (tempfile._TemporaryFileWrapper, ('__enter__','__exit__')),
+            (tempfile._TemporaryFileCloser, ('cleanup','close')),
+            (original_owned_UI_ancillary_request, ('original_UI_ancillary_read_text','observe_original_UI_draft_active_return')),
             (original_owned_telemetry_socket_request, ('original_owned_telemetry_production',)),
             (config_audit.ConfigAuditStore, ('__init__','append','_connect','_public')),
             (config_audit, ('ConfigAuditStore','sqlite3','closing','_row_hash','actor_from_request','observed_runtime_release')),
@@ -367,7 +432,9 @@ class OriginalOwnedFlowRequest:
             (original_owned_flow_execution_request, ('original_owned_execution_production',)),
             (original_owned_UI_ancillary_request, ('original_owned_UI_ancillary_production',)),
             (main.OwnedWorkAdmissionMiddleware, ('__call__','_observed_call')),
-            (os, ('replace','fsync','getpid')), (tempfile, ('NamedTemporaryFile',)),
+            (os, ('replace','fsync','getpid','getuid','fstat','open','close','unlink')),
+            (tempfile, ('NamedTemporaryFile','_mkstemp_inner','_sanitize_params','_infer_return_type')),
+            (time, ('time_ns',)),
             (builtins, ('open',)), (json, ('load','dump','loads','dumps')),
             (sys.modules[__name__], ('_ACTIVE','_HANDLERS','_SPEC','_context','_headers','_SelectedCurrentAuth',
                 'OriginalOwnedFlowRequest','_FlowAttempt','_FlowAuth','_FlowIncluded')),
@@ -380,6 +447,7 @@ class OriginalOwnedFlowRequest:
                 value=getattr(kind,name)
                 if type(value) is FunctionType: self.calls.append((kind,name,value))
         self.codes=[]
+        self.codes.extend((function,function.__code__)for _,dump,validate,_,_ in self.draft_model_calls for function in (dump,validate))
         self.codes.extend((endpoint,endpoint.__code__) for endpoint,_ in self.handlers.values())
         for _,_,value in self.calls:
             for _ in range(5):
@@ -425,6 +493,11 @@ class OriginalOwnedFlowRequest:
         from backend.contracts.context import ContextRegistry
         from backend.engine import retained_preprocessors as retained
         return (self.eligible and not self.failed and self.pid==os.getpid()
+            and self.draft_model_calls is self.draft_model_binding and len(self.draft_model_calls)==6
+            and all(kind.model_dump is dump and type(kind.model_validate)is MethodType
+                and kind.model_validate.__self__ is kind and kind.model_validate.__func__ is validate
+                and kind.__pydantic_validator__ is validator and kind.__pydantic_serializer__ is serializer
+                for kind,dump,validate,validator,serializer in self.draft_model_calls)
             and self.retained_constants==(retained.SCHEMA,retained.DIRECTORY,frozenset(retained._PIN_NAMES))
             and all(a is b for a,b in zip(self.binding,(self,self.app,self.admission,self.accounts,self.observer,
                 self.condition,self.registry,self.storage,self.lock)))
@@ -525,7 +598,7 @@ class _FlowAuth(_SelectedCurrentAuth):
                 and frame.f_locals.get('action')==action)
         elif expected=='record_decision':
             decision=self.attempt.activity.scope.get('state',{}).get('permission_decision')
-            valid=(valid and self.attempt.name in {'save_pipeline','verify_flowchart_models'}
+            valid=(valid and self.attempt.name in {'save_pipeline','save_flow_draft','verify_flowchart_models'}
                 and frame.f_locals.get('decision') is decision
                 and decision is not None and decision.allowed and decision.action==self.action)
         if not valid:self.fail('database_entry')
@@ -547,6 +620,10 @@ class _FlowAttempt:
         self.audit_live=False;self.result=None
         self.model_live=None;self.model_calls=[];self.model_body=None
         self.specialist_live=self.source_live=None;self.retained_sources=[]
+        self.draft_body=self.draft_raw=self.draft_parsed=None
+        self.draft_stages=[];self.draft_handle=self.draft_temporary=self.draft_record=None
+        self.draft_pin=None;self.draft_reads=[];self.draft_active=[]
+        self.draft_record_binding=None
         self.auth=_FlowAuth(self,headers,project,token)
 
     def fail(self,reason):
@@ -565,6 +642,10 @@ class _FlowAttempt:
             and _methods_original(self.auth,_FlowAuth,self.owner.calls)
             and (self.audit_store is None or _audit_store_original(self.owner,self.audit_store))
             and (self.model_body is None or self.model_body_original())
+            and (self.draft_body is None or self.draft_body_original())
+            and (self.draft_record is None or self.draft_record_binding is not None
+                and self.draft_record is self.draft_record_binding[0]
+                and _draft_original(self.draft_record,self.draft_record_binding[1]))
             and (self.values is None or self.values.get(
                 'http_request' if self.name=='verify_flowchart_models' else 'request') is self.request)
             and self.activity.scope is self.scope and self.scope.get('query_string',b'') is self.query
@@ -613,6 +694,21 @@ class _FlowAttempt:
             and handler and response and owned and (self.owner.included is None
                 or self.owner.included.selected(self.scope,route,dependant)))
         self.entries+=1;self.values,self.request=values,request
+        if self.name=='save_flow_draft':
+            from backend.api.routes_flowchart import FlowDraftSaveRequest
+            from backend.engine.flowchart_engine import FlowchartPipeline,FlowNode,FlowNodeData,FlowEdge,FlowExecutionConfig
+            body=values.get('req');raw=getattr(request,'_body',None);parsed=getattr(request,'_json',None)
+            try:
+                good=(type(body)is FlowDraftSaveRequest and type(raw)is bytes and 0<len(raw)<=20*1024*1024
+                    and type(parsed)is dict and set(parsed)<={'pipeline','context','base_version_id'}
+                    and {'pipeline','context'}<=set(parsed) and json.loads(raw)==parsed
+                    and FlowDraftSaveRequest.model_validate(parsed).model_dump()==body.model_dump())
+                if good:
+                    kinds=(FlowDraftSaveRequest,FlowchartPipeline,FlowNode,FlowNodeData,FlowEdge,FlowExecutionConfig)
+                    self.draft_body=_draft_capture(body,kinds,[65536])
+                    self.draft_raw=raw;self.draft_parsed=_draft_capture(parsed,(),[65536])
+                else:valid=False
+            except (ValueError,TypeError,AttributeError):valid=False
         if self.name=='verify_flowchart_models':
             from backend.api.routes_flowchart import FlowchartModelVerificationRequest, FlowchartModelReference
             body=values.get('request')
@@ -655,6 +751,130 @@ class _FlowAttempt:
             and type(body.models) is list and len(body.models)==len(models)
             and all(current is model and current.job_id==job and current.task==task
                 for current,(model,job,task) in zip(body.models,models)))
+
+    def draft_body_original(self):
+        return (self.request is not None and self.values.get('req')is self.draft_body[1]
+            and getattr(self.request,'_body',None)is self.draft_raw
+            and _draft_original(self.values['req'],self.draft_body)
+            and _draft_original(getattr(self.request,'_json',None),self.draft_parsed))
+
+    def draft_entry(self,frame):
+        from backend.api import routes_flowchart as flows
+        project=self.scope.get('state',{}).get('scoped_project')
+        return (self.worker_original() and self.handler_frame()is not None and self.owner.lock._is_owned()
+            and self.draft_body is not None and type(project)is dict and frame is not None
+            and self.handler_frame().f_locals.get('req')is self.values['req']
+            and self.handler_frame().f_locals.get('project')is project
+            and self.values['req'].context==flows._draft_context(project))
+
+    def draft_publication_entry(self,path,value):
+        from backend.api import routes_flowchart as flows
+        frame=self.handler_frame();project=self.scope.get('state',{}).get('scoped_project')
+        body=self.values.get('req')
+        valid=(self.draft_entry(frame) and not self.publications and not self.draft_stages
+            and type(value)is dict and value is frame.f_locals.get('record')
+            and set(value)=={'version','context','draft_sha256','saved_at_ns','pipeline','base_version_id'}
+            and value['version']==1 and type(value['saved_at_ns'])is int and value['saved_at_ns']>0
+            and value['context']is frame.f_locals.get('context') and value['context']==body.context
+            and value['pipeline']==body.pipeline.model_dump() and value['base_version_id']==body.base_version_id
+            and value['draft_sha256']==flows.pipeline_sha256(body.pipeline)
+            and Path(path)==flows._draft_file(project,value['context']) and Path(path).resolve()==Path(path))
+        if valid:
+            try:self.draft_record_binding=value,_draft_capture(value,(),[65536])
+            except (ValueError,TypeError):valid=False
+        if not valid:self.fail('draft_publication_entry')
+        else:self.draft_record=value
+        return valid
+
+    def draft_atomic(self,stage,path,value,temporary,handle,frame):
+        from backend.api import routes_flowchart as flows
+        try:
+            valid=(self.draft_entry(frame) and frame.f_code is flows._write_json.__wrapped__.__code__
+                and frame.f_locals.get('path')is path and frame.f_locals.get('value')is value
+                and frame.f_locals.get('temporary_path')is temporary and frame.f_locals.get('handle')is handle
+                and value is self.draft_record and type(handle)is tempfile._TemporaryFileWrapper
+                and type(handle.file)is io.TextIOWrapper and stage==('open','flushed','published','clean')[len(self.draft_stages)]
+                and Path(temporary).parent==Path(path).parent and Path(temporary).name.startswith('.'+Path(path).name+'.')
+                and Path(temporary).suffix=='.tmp')
+            if valid and stage=='open':
+                info=os.fstat(handle.fileno());listed=Path(temporary).lstat()
+                valid=(not handle.closed and stat.S_ISREG(info.st_mode) and info.st_nlink==1 and info.st_uid==os.getuid()
+                    and info.st_dev==listed.st_dev and info.st_ino==listed.st_ino)
+                if valid:self.draft_handle,self.draft_temporary=handle,temporary;self.draft_pin=(info.st_dev,info.st_ino)
+            elif valid:
+                valid=handle is self.draft_handle and temporary is self.draft_temporary
+                if stage=='flushed':valid=valid and not handle.closed and self.draft_pin==(os.fstat(handle.fileno()).st_dev,os.fstat(handle.fileno()).st_ino)
+                else:
+                    info=Path(path).lstat()
+                    valid=(valid and handle.closed and not Path(temporary).exists()
+                        and stat.S_ISREG(info.st_mode) and info.st_nlink==1 and info.st_uid==os.getuid()
+                        and self.draft_pin==(info.st_dev,info.st_ino))
+            if not valid:self.fail('draft_atomic_'+str(stage))
+            else:self.draft_stages.append(stage)
+        except (OSError,ValueError,TypeError,AttributeError,IndexError):self.fail('draft_atomic_observation')
+
+    def draft_publication_exit(self,path,value,valid):
+        try:
+            before=Path(path).lstat()
+            with open(path,'rb')as handle:raw=handle.read(4*1024*1024+1)
+            after=Path(path).lstat()
+            fields=('st_dev','st_ino','st_mode','st_nlink','st_size','st_mtime_ns','st_ctime_ns','st_uid','st_gid')
+            good=(len(raw)<=4*1024*1024 and json.loads(raw)==value
+                and self.draft_pin==(after.st_dev,after.st_ino) and all(getattr(before,name)==getattr(after,name)for name in fields)
+                and self.draft_stages==['open','flushed','published','clean'] and self.draft_handle.closed)
+        except (OSError,ValueError,TypeError):good=False
+        if not valid or not good or not self.draft_entry(self.handler_frame()):self.fail('draft_publication_exit')
+        else:self.publications.append(Path(path))
+
+    def draft_read(self,handle,path,role,frame):
+        from backend.api import routes_flowchart as flows
+        try:
+            project=self.scope.get('state',{}).get('scoped_project')
+            pointer=flows._active_flow_file(Path(project['project_dir']))
+            expected=pointer if not self.draft_reads else flows._version_dir(Path(project['project_dir']))/(frame.f_locals['active']['version_id']+'.json')
+            valid=(self.draft_entry(frame) and frame.f_code is flows._draft_active_version.__code__
+                and len(self.publications)==1 and not self.draft_active and len(self.draft_reads)<2
+                and frame.f_locals.get('project')is project and frame.f_locals.get('context')is self.draft_record['context']
+                and frame.f_locals.get('checksum')==self.draft_record['draft_sha256'] and role=='flow'
+                and type(handle)is io.TextIOWrapper and not handle.closed and Path(path)==expected
+                and Path(path).resolve(strict=True)==Path(path))
+            info=os.fstat(handle.fileno())
+            valid=(valid and stat.S_ISREG(info.st_mode) and info.st_nlink==1 and info.st_uid==os.getuid()
+                and info.st_size<=4*1024*1024)
+            if not valid:self.fail('draft_read_entry')
+            else:self.draft_reads.append((handle,Path(path)))
+        except (OSError,ValueError,TypeError,KeyError,AttributeError):self.fail('draft_read_observation')
+
+    def draft_active_return(self,project,context,checksum,active,version,pipeline,result,frame):
+        from backend.api import routes_flowchart as flows
+        try:
+            values=(project,context,checksum,active,version,pipeline,result)
+            names=('project','context','checksum','active','version','pipeline','result')
+            valid=(self.draft_entry(frame) and frame.f_code is flows._draft_active_version.__code__
+                and not self.draft_active and project is self.scope.get('state',{}).get('scoped_project')
+                and context is self.draft_record['context'] and checksum==self.draft_record['draft_sha256']
+                and len(self.publications)==1 and all(handle.closed for handle,_ in self.draft_reads))
+            if active is None:
+                pointer=flows._active_flow_file(Path(project['project_dir']))
+                try:pointer.lstat()
+                except FileNotFoundError:absent=True
+                else:absent=False
+                valid=(valid and not self.draft_reads and version is pipeline is result is None
+                    and self.values['req'].base_version_id in (None,'none')
+                    and absent
+                    and all(frame.f_locals.get(name)is value for name,value in zip(names[:3],values[:3])))
+            else:
+                identifier=active.get('version_id')if type(active)is dict else None
+                valid=(valid and len(self.draft_reads)==2 and all(frame.f_locals.get(name)is value for name,value in zip(names,values))
+                    and type(identifier)is str and re.fullmatch('[0-9a-f]{32}',identifier)is not None
+                    and self.values['req'].base_version_id==identifier and type(version)is dict
+                    and version.get('version_id')==identifier and version.get('source_dataset_path')==context['source_dataset_path']
+                    and active.get('project_id')==context['project_id'] and active.get('source_dataset_path')==context['source_dataset_path']
+                    and active.get('labelset_id','default')==context['labelset_id'] and type(pipeline)is flows.FlowchartPipeline
+                    and result==(identifier if flows.pipeline_sha256(pipeline)==checksum else None))
+            if not valid:self.fail('draft_active_return')
+            else:self.draft_active.append(result)
+        except (OSError,ValueError,TypeError,KeyError,AttributeError):self.fail('draft_active_observation')
 
     def model_entry(self,args,kwargs):
         from backend.engine.annotation_storage import request_project_root,request_shared_scope
@@ -836,6 +1056,7 @@ class _FlowAttempt:
             self.model_calls.append((live['job'],'rotation',checkpoint,metadata));self.specialist_live=None
 
     def publication_entry(self,path,value):
+        if self.name=='save_flow_draft':return self.draft_publication_entry(path,value)
         from backend.api import routes_flowchart as flows
         frame=self.handler_frame();project=self.scope.get('state',{}).get('scoped_project')
         valid=(self.worker_original() and self.name=='save_pipeline' and frame is not None
@@ -858,6 +1079,7 @@ class _FlowAttempt:
         return valid
 
     def publication_exit(self,path,value,valid):
+        if self.name=='save_flow_draft':return self.draft_publication_exit(path,value,valid)
         path=Path(path)
         try:
             info=path.lstat()
@@ -928,6 +1150,12 @@ class _FlowAttempt:
             valid=(valid and len(self.publications)==3 and self.audit_result is not None and not self.audit_live
                 and type(result) is dict and result.get('version_id')==self.saved_version
                 and result.get('change_id')==self.audit_result.get('change_id'))
+        elif self.name=='save_flow_draft':
+            valid=(valid and len(self.publications)==1 and len(self.draft_active)==1
+                and self.draft_stages==['open','flushed','published','clean'] and self.draft_handle.closed
+                and all(handle.closed for handle,_ in self.draft_reads) and self.audit_db is None
+                and self.audit_result is None and not self.audit_live and type(result)is dict
+                and result=={**self.draft_record,'active_version_id':self.draft_active[0]})
         elif self.name in {'catalog_flowchart_models','verify_flowchart_models'}:
             valid=(valid and self.model_live is None and self.specialist_live is None and self.source_live is None
                 and not self.locked and not self.publications and self.audit_db is None)
@@ -950,7 +1178,7 @@ class _FlowAttempt:
         state=self.scope.get('state',{});project=state.get('scoped_project')
         decision,context=state.get('permission_decision'),state.get('project_context')
         expected=['bind_workspace','authenticate','project_role','project_for','project_role','authorize']
-        if self.name in {'save_pipeline','verify_flowchart_models'}:expected.append('record_decision')
+        if self.name in {'save_pipeline','save_flow_draft','verify_flowchart_models'}:expected.append('record_decision')
         expected+=['authorize','project_role','project_for']*len(self.retained_sources)
         return bool(self.original() and not self.failed and self.handler_done and not self.worker_live
             and not self.inflight and self.storage==1 and self.entries==1 and not self.owner.lock._is_owned()

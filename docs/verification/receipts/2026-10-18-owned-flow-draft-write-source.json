@@ -1,0 +1,221 @@
+{
+  "schema": "modu-vision.source-owned-draft-write-validation/v1",
+  "source_only": true,
+  "base": "9274d273881b1366bf21dbda6202c9058dcdc486",
+  "reviewed_private_source_commit": "2da45cb71e0c45707ab8850b97034d6cd9fada5e",
+  "scope": "Recognize only the genuine original authenticated PUT /api/flowchart/draft write and full normal response/leave as managed work, preserving business return and exception behavior.",
+  "source_files": {
+    "backend/api/routes_flowchart.py": "0a5089591f4e3c82da44e8d2098bd587a7c290209335d755c5cf012ed7f30ed8",
+    "backend/engine/original_owned_flow_request.py": "88619b08324f1b17552866725cd920deb34450e2134df5e302318f1f25b230d7",
+    "backend/tests/test_original_owned_flow_draft_write.py": "66b391c98ce8bbb4a6bd4b4655bb5e6e40bc2801929bc0b7b656dce776ea42e8"
+  },
+  "causal_original_source_RED02": {
+    "base_product_source_unchanged": true,
+    "actual_exit_code": 1,
+    "failed": 1,
+    "elapsed_seconds": 6.45,
+    "real_HTTP_method": "PUT",
+    "literal_route": "/api/flowchart/draft",
+    "HTTP_status": 200,
+    "durable_context_pipeline_checksum_and_original_saved_version_protection_passed": true,
+    "configuration_audit_rows_unchanged": 0,
+    "normally_completed_released_original_HTTP_rows": 4,
+    "observer_failures": [],
+    "preclose_admission": {
+      "active_scopes": 0,
+      "unsupported": [
+        "uncovered_request_protocol"
+      ]
+    },
+    "drain": {
+      "status": "refused",
+      "active_scopes": 0,
+      "unsupported": [
+        "uncovered_request_protocol"
+      ]
+    },
+    "only_final_managed_drain_assertion_failed": true,
+    "private_original_source_pins_sha256": "be30569689651d64e0f19088fe3a8f95d579a1a6c8b0f4c1dd996ca103dd2b29",
+    "private_original_test_snapshot_sha256": "fad8d324df3b88542a61780b3b52798362e6fd6cd0c0448b6fe04881d7f680ce",
+    "private_actual_proof_sha256": "1997a9b57e64d0d95edb789e0347847457c6e5ff8b0056b2b8b46fef7d780a13"
+  },
+  "candidate_proof_gap_RED03": {
+    "actual_exit_code": 1,
+    "failed": 3,
+    "passed": 9,
+    "elapsed_seconds": 21.15,
+    "gaps": [
+      "equal copied publication record",
+      "delegated graph serializer",
+      "delegated tempfile opener"
+    ],
+    "observed_failure": "The real business200 write incorrectly acquired managed drain before identity/callee proof guards were strengthened.",
+    "subsequent_GREEN02": {
+      "actual_exit_code": 0,
+      "passed": 12,
+      "elapsed_seconds": 22.92
+    }
+  },
+  "reviewer_found_absent_pointer_RED04": {
+    "actual_exit_code": 1,
+    "failed": 2,
+    "elapsed_seconds": 7.88,
+    "pointer_states": [
+      "dangling symlink",
+      "directory"
+    ],
+    "observed_failure": "Original business200/None and normal HTTP rows incorrectly acquired managed drain as though the nonfile active pointer were absent.",
+    "final_ownership_guard": "Require actual pointer.lstat() FileNotFoundError; preserve the original business200/None for unproved nonfile states while refusing ownership."
+  },
+  "final_current_source_GREEN04": {
+    "actual_exit_code": 0,
+    "passed": 19,
+    "elapsed_seconds": 28.87,
+    "scope": "Exact draft-write controls, including genuine absence and both nonfile-pointer negatives.",
+    "owner_sha256": "88619b08324f1b17552866725cd920deb34450e2134df5e302318f1f25b230d7"
+  },
+  "previous_candidate_related_GREEN03": {
+    "actual_exit_code": 0,
+    "passed": 63,
+    "elapsed_seconds": 68.57,
+    "owner_sha256": "3d2c16a258645ac0e49face586009702cb2ddb260a2e32aaa50e68b4f2907db3",
+    "scope": "17 then-current draft controls plus 46 related original flow/draft/account/auth controls; before final isolated absent-pointer narrowing.",
+    "current_final_source_result": false
+  },
+  "test_count_boundary": "Final19 and previous-candidate63 are separate actual runs. No combined final65 or final82 pass is claimed.",
+  "original_preserved": {
+    "save_flow_draft_and_get_flow_draft_business_bodies_AST_exact": true,
+    "routes_inverse_byteexact": true,
+    "original_routes_sha256": "a99d1872e50ee0051ccd52d95f23848418418cc20f3aa4faa05067bde07ff900",
+    "single_original_atomic_write_flush_fsync_replace_finally_cleanup_retained": true,
+    "no_configuration_audit_append_or_version_deletion_added": true,
+    "original_mutation_authorization_decision_required": true,
+    "diagnostic_caps_telemetry_shutdown_and_closure_sources_unchanged": true
+  },
+  "ownership_proofs": "Original parsed body identity; real authenticated request/context/closed DB/storage/worker/lock joins; actual temporary handle stages and inode continuity; closed active/version reads; full normal response and admission leave.",
+  "strict_negative_controls": [
+    "wrong context",
+    "invalid or stale base",
+    "malformed JSON",
+    "copied body or record",
+    "delegated serializer/tempfile/write helper",
+    "publication permission failure",
+    "response send failure",
+    "corrupt active JSON",
+    "symlink active pointer",
+    "foreign version source",
+    "dangling active symlink",
+    "directory active pointer"
+  ],
+  "independent_static_review": "SOURCE-ONLY ACCEPT; absent-pointer finding reproduced and fixed. Initial helper-binding concern withdrawn after checking existing automatic globals/code bindings.",
+  "actual_raw_tool_custody": {
+    "source_test_invocations": 8,
+    "retained_raw_test_tool_objects": 17,
+    "definition": "8 starts + 8 final completions + one retained in-progress green03 poll; static repository reads and commit are separate.",
+    "preparation_manifest_sha256": "049acaddf6e1843326dd5b3dc7d8aa910ff342146bb6bcabd6e06fd2cc6f3a07",
+    "final_private_handoff_sha256": "dcd15dafa4bf5495c45f5e0ada826e0165fd7eca9c0b55b2f2d67c22706e61ec",
+    "final_business_body_custody_sha256": "4ad3de6570a94edeca26dc38325e227bd77372b290a9c48eac8058d33ee00eac",
+    "private_commit_actual_tool_sha256": "2c94b1e6c24a3c2d61f96bc7108ec0e3f98481b13c250311886359efb7a3c834",
+    "final_static_source_audit_actual_tool_sha256": "938490e886237bc18c796578696c2d405e9f8e37802a643877d343aaaecf147e",
+    "green03_intermediate_poll_sha256": "f3287839cfa0089e0778073ec469119ef9c49791b189b6318614539107471e29"
+  },
+  "actual_run_history": [
+    {
+      "name": "red01",
+      "classification": "noncausal cold-cache probe",
+      "actual_exit_code": 1,
+      "outcome": "1 failed in 5.76s",
+      "private_command_sha256": "1a5d703c03fd9a4ca4a07171227d3f08072ad8d1338ef8f0cc7f3b20152938a4",
+      "private_log_sha256": "9afc466f4bddd520a203a4fc43371538754680077d5e0d68fd2e85b4d429145c",
+      "actual_tool_start_sha256": "5cc8f64d139116e12b0e8963d905f850758361f1ef50cecacfd4f96a74565c6b",
+      "actual_tool_completion_sha256": "079d472b46e9d7289f5647f786a513b1721b999f07b009ddae156112874bc86d"
+    },
+    {
+      "name": "red02",
+      "classification": "definitive original-source causal RED",
+      "actual_exit_code": 1,
+      "outcome": "1 failed in 6.45s",
+      "private_command_sha256": "9143b918f66551c23c2083589a7949b6542ebdc0f59d7b6f1a07bb120bd55110",
+      "private_log_sha256": "170c64ceefd6fb96d7542ebcbd574e82c28ee31bf45ded93ff73366dc60a6e7a",
+      "actual_tool_start_sha256": "a8a15e54eaa4b6d619d562153afa5ac9a8ac7d64c41e51f89ec0ef4ff9edace5",
+      "actual_tool_completion_sha256": "b9cf946a2c23d88098c6a86d554e9d57af44168ad4b4cd0592a5d99a515a0e8a"
+    },
+    {
+      "name": "green01",
+      "classification": "initial draft owner candidate",
+      "actual_exit_code": 0,
+      "outcome": "1 passed in 6.31s",
+      "private_command_sha256": "382ebec75c392c5b1e90aebbb3d86ade6d1818f007cb8b96d406298899229357",
+      "private_log_sha256": "a23fc12d084996ecfe431dacd5ca2be50498b9eb9a12d5d321700f4ac5556bdb",
+      "actual_tool_start_sha256": "35f8c5c313bb94a8e2857466f3bd44974edde6c4183a2d991aa3d301c79260ed",
+      "actual_tool_completion_sha256": "500bd5c209a535fdddcee8b2a4c7f4b93069f802dbbb4322ce3131760f45bf82"
+    },
+    {
+      "name": "red03",
+      "classification": "candidate guard RED before identity/callee fixes",
+      "actual_exit_code": 1,
+      "outcome": "3 failed, 9 passed in 21.15s",
+      "private_command_sha256": "542a2c18b443a1baf00487f16c6c89dd128b47229e76affce8fab972f343c7cd",
+      "private_log_sha256": "2f4e48da9e48a6b2a26329b2f5d3f729dd5cc8d215d330f40aa38a204d408b06",
+      "actual_tool_start_sha256": "bce4e1cdd71622db56c02cc1013647aafe6d6526d4d9518541b94d0e7a737676",
+      "actual_tool_completion_sha256": "6f7e4578a00162ef0adbf70b9ad727b21bc1431570b95836d9448b14ce95548e"
+    },
+    {
+      "name": "green02",
+      "classification": "identity/callee corrected candidate",
+      "actual_exit_code": 0,
+      "outcome": "12 passed in 22.92s",
+      "private_command_sha256": "341446623947170e0858e9a4d9eaeed75bff18d346b75585f8d49ad748e1a161",
+      "private_log_sha256": "9c0688e65900dd862873e6665a70b29642ae1a1dcfde2d77b1dd4c9625fe2423",
+      "actual_tool_start_sha256": "6f2b23ef0e7527c15ba135f684fa08b8f18a8e637d4c3c1efa02c909a4c7de00",
+      "actual_tool_completion_sha256": "c8031e8989585ebba1f4227e63f4be59c9d6242309ce8917f33b510ac7a04a77"
+    },
+    {
+      "name": "green03",
+      "classification": "previous candidate related regression",
+      "actual_exit_code": 0,
+      "outcome": "63 passed in 68.57s (0:01:08)",
+      "private_command_sha256": "eb65a2f24334caa1217978035210d38326505e28feb0fc5ad7e1290ddafdd06e",
+      "private_log_sha256": "40a9fb3d6537691ae8380dd3dd0926addb9696eb6927edd84f488c2bc3abcf30",
+      "actual_tool_start_sha256": "6fbe9e5cdabf25ff663183433c469fb8bbeec2ec4c4288263f902690a7e336cc",
+      "actual_tool_completion_sha256": "92fc51ffedfb72788083ea43a403ac8ba9c0c443184535df3d1ea9032b9ca91e"
+    },
+    {
+      "name": "red04",
+      "classification": "reviewer-found nonfile pointer RED",
+      "actual_exit_code": 1,
+      "outcome": "2 failed in 7.88s",
+      "private_command_sha256": "3f342a5e2ca19f214b39ac8508c1cc57813b967527d33c59c0faedec18cd1a5c",
+      "private_log_sha256": "b25e1f06fa1ad24757d05e52ac6e3ba5da5f373381110e798abe54d3d69cdd61",
+      "actual_tool_start_sha256": "1998e6a578e814e063c325d9228d3d5f24692bb4ec50decc47c8a5a60d9ff0f8",
+      "actual_tool_completion_sha256": "0c60f61c498bb314d76bf7ff7bb0e2366013c1b50709eb78e4dd2330388f4e18"
+    },
+    {
+      "name": "green04",
+      "classification": "FINAL exact19 draft controls",
+      "actual_exit_code": 0,
+      "outcome": "19 passed in 28.87s",
+      "private_command_sha256": "4b23731e245212052f5e01acfaefa9b8d1e21e6b7839a30224174a9ee786a3fc",
+      "private_log_sha256": "bd07a13966600dfeb35d96b19b639faf592831cc9cc5c6f4884e4b070a0bcf96",
+      "actual_tool_start_sha256": "b0b0d92d33cc50fe6287c8704fca464c86f2f421a58fe2d3d0f161d54da00696",
+      "actual_tool_completion_sha256": "a58e59e2f3553eebcada8ddea5537a785cfe711c210518e83ef97fac8aafe3bb"
+    }
+  ],
+  "execution_boundary": "Only the authorized source inprocess component controls ran during preparation. This receipt drafting step ran no test or application runtime. Optional device-discovery/Popen cases, services, browser, native app, models and installers were not executed.",
+  "limits": {
+    "native_Root14_exact_request_cause_proven": false,
+    "native_Root14_causal_equivalence_proven": false,
+    "native_application_acceptance": false,
+    "whole_writer_coverage": false,
+    "process_tree_exit_verified": false,
+    "can_release_launch_lease": false,
+    "parent_or_action_count_promotion": false,
+    "Root14_original_failure_modified": false
+  },
+  "native_boundary": "The source causal RED proves this real draft PUT was uncovered. It does not identify the original native UNKNOWN request URL or prove that it caused Root14 closure failure; Root14 negative evidence remains immutable.",
+  "Root_adoption": {
+    "all_preparation_references_rehashed": 60,
+    "exact_three_source_bodies_adopted": true,
+    "source_review_only": true
+  }
+}
