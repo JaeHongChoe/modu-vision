@@ -1,0 +1,80 @@
+{
+  "schema": "modu-vision.source-regression-receipt/v1",
+  "source_private_HEAD": "a3e661eba7a79126f763d2e9faaa647342f04eed",
+  "baseline_private_HEAD": "b4ba6fa4fdfb7414acc3df68ea933aba29087cdd",
+  "product": "Only saved-version list request ordering in FlowchartStudio; stale opening rows cannot replace newer post-save readback. Model catalog still updates independently.",
+  "source_files": {
+    "src/renderer/components/flowchart/FlowchartStudio.tsx": "42ca12de813581bfc8ebc6684a0d6cc9b2ffe53fbbf454c3602305f2c8194616",
+    "src/renderer/components/flowchart/flowSavedHeaderRefresh.test.cjs": "107683ad9265e829318c5a46f92506feac0cd251ffdb216f7dda26cacf8534fd"
+  },
+  "actual_focused_node_tests": {
+    "RED": {
+      "passed": 2,
+      "failed": 1,
+      "causal_failure": "late pre-save rows selected old version after new saved/readback header"
+    },
+    "GREEN": {
+      "passed": 3,
+      "failed": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "same_exact_test_bytes": true,
+    "renderer_typecheck_exit": 0
+  },
+  "preserved": [
+    "save compare-and-swap expected version",
+    "real model verification and save serializer",
+    "accepted context-change fence",
+    "store and API and dialog source unchanged",
+    "evaluation and approval not promoted"
+  ],
+  "fixture_failures_retained": [
+    "two pre-causal fixture setup failures",
+    "one fixed-product run failed only the test header whitespace matcher before final same-test RED/GREEN"
+  ],
+  "raw_evidence": [
+    {
+      "label": "red-04.log",
+      "bytes": 1417,
+      "sha256": "3bbff349ad397543f89c89219278a4f633bd6a2782cadd6a751fad003c4b0499"
+    },
+    {
+      "label": "green-02.log",
+      "bytes": 457,
+      "sha256": "49d8ce1e42f6dec1f7eaf6836606253c68b921a73dbf21cad93a15ad1bf7cc2d"
+    },
+    {
+      "label": "renderer-tsc-01.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "red-04-original-tool-completion.json",
+      "bytes": 126,
+      "sha256": "6cd68dd43ff49b34d2b023bb3889c0fa18891e33bbd60db2a11f2c4f901af91c"
+    },
+    {
+      "label": "green-02-original-tool-completion.json",
+      "bytes": 126,
+      "sha256": "6f50c8729f42a2e8f1c8175fbb33c482d9a6c63c892210348cd9fc31ab530924"
+    },
+    {
+      "label": "renderer-tsc-01-original-tool-completion.json",
+      "bytes": 126,
+      "sha256": "b55b40c230e392ea6f687a4a854036d0d7d1ba11497d37b8ae01d45ea8f2a753"
+    },
+    {
+      "label": "readback.json",
+      "bytes": 15943,
+      "sha256": "c26b31886a7de6d422bef4b8cd6ef2b5f8a95715b27755cfa5277081e229c3d1"
+    }
+  ],
+  "actual_browser_or_native_reexecuted": false,
+  "exact_native_Root14_cause_proven": false,
+  "action_source_pin_refreshed_without_reexecuting_historical_cases": {
+    "previous_sha256": "b046065d152575c1bd4d9a5e95eef60c15f8c56dec7c9f758173c8566b31c0e6",
+    "current_sha256": "42ca12de813581bfc8ebc6684a0d6cc9b2ffe53fbbf454c3602305f2c8194616"
+  },
+  "parent_or_scenario_credit": 0
+}
