@@ -1,0 +1,111 @@
+{
+  "schema": "modu-vision.saved-bound-flow-native-seven-stage-receipt/v1",
+  "date": "2026-10-19",
+  "product_source_commit": "b1aeb8e3172326fc81669ae71f1daa64ab875d56",
+  "scope": "Installed macOS application with isolated synthetic segmentation fixture; seven UI stages and normal scoped closure.",
+  "native_application_business_sources_match_product_commit": true,
+  "stages": [
+    {
+      "stage": "baseline",
+      "sequence": 1,
+      "receipt_sha256": "87148b23727562c7fd5045a501a298edd3a850b7febef75e5a4091bc4844b209",
+      "unsupported_origin": null,
+      "stop_further_UI": false
+    },
+    {
+      "stage": "login",
+      "sequence": 2,
+      "receipt_sha256": "0a4fee068ae8a94b99db9b6af4cd8fdc136fa80b851fd42e0669673837e0bd23",
+      "unsupported_origin": null,
+      "stop_further_UI": false
+    },
+    {
+      "stage": "project",
+      "sequence": 3,
+      "receipt_sha256": "18f3f16c1e9b4cec736f975a9bea45a868a02afd5e11556a77c009823eca9c31",
+      "unsupported_origin": null,
+      "stop_further_UI": false
+    },
+    {
+      "stage": "gallery",
+      "sequence": 4,
+      "receipt_sha256": "8971b6ce241cbbb972787a5375fc6b27babff00a016b3a3fe0ab72237323df3d",
+      "unsupported_origin": null,
+      "stop_further_UI": false
+    },
+    {
+      "stage": "flow-open",
+      "sequence": 5,
+      "receipt_sha256": "1a9dceaebfab7c8b5ee7a8eb85ddb6b28b36bfc3383e83e8d9d4448c87b233b7",
+      "unsupported_origin": null,
+      "stop_further_UI": false
+    },
+    {
+      "stage": "flow-edit",
+      "sequence": 6,
+      "receipt_sha256": "2a4f9d82046d18d973a9fa4e59a97a33ba866b240edfb47c78c4699762526659",
+      "unsupported_origin": null,
+      "stop_further_UI": false
+    },
+    {
+      "stage": "flow-save",
+      "sequence": 7,
+      "receipt_sha256": "df03230e6ddb384323a8e1211fcfc22ce2c7d8fbec1968bd1fdcdcf4cccdcd37",
+      "unsupported_origin": null,
+      "stop_further_UI": false
+    }
+  ],
+  "Root_CUA_observations": {
+    "login": "Local fixture account session visibly connected.",
+    "project": "Six labeled 64x64 images; train2/val2/test2.",
+    "gallery": "Test filter displayed sample-4.png and sample-5.png thumbnails.",
+    "flow_open": "Existing active saved flow loaded five nodes and two model bindings; evaluation evidence stayed unqueried.",
+    "flow_edit": {
+      "node": "node_input",
+      "before_position": [
+        40,
+        160
+      ],
+      "after_position": [
+        68,
+        132
+      ],
+      "unsaved_indicator_observed": true
+    },
+    "flow_save": {
+      "comparison": "Layout and names only; inspection rules and evaluation evidence retained.",
+      "success_message_observed": true,
+      "before_active_version": "03aa1a731558414ca2a7e36e2d2148f8",
+      "after_active_version": "09a5b909af6840e09db1e094e7118f0b",
+      "saved_and_active_version_match_observed": true
+    }
+  },
+  "strict_original_lifetime": {
+    "returncode": 0,
+    "receipt_sha256": "0c0830d460cd3f47f9b713878e1936126176004a2a5f6950977d766568699025",
+    "normal_main_exit": true,
+    "normal_backend_exit": true,
+    "original_controller_reaped": true,
+    "managed_store_quiescent": true,
+    "errors": [],
+    "signals_sent": false,
+    "state_repaired": false
+  },
+  "protected_original_inputs": {
+    "count": 68,
+    "unchanged": true,
+    "receipt_sha256": "89cd42cad45398b7e8a9a5dd62bffa82d69eab6a2ac1dfd0a520b2641243e13d"
+  },
+  "evidence_capture_sha256": "db80768a2e6bf4592d66963c8e048bf6f6af4de2ea39441f70c0046cf7fe2470",
+  "limits": {
+    "manual8_accepted": false,
+    "parent_acceptance": false,
+    "whole_Electron_helper_tree_exit_verified": false,
+    "model_inference_executed": false,
+    "remote_GPU_connection_verified": false,
+    "model_quality_approved": false,
+    "hardware_validation_deferred": true,
+    "production_deployment_performed": false
+  },
+  "previous_fix_receipt": "2026-10-19-saved-bound-flow-startup.json"
+}
