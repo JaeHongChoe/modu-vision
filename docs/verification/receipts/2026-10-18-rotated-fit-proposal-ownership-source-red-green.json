@@ -1,0 +1,64 @@
+{
+  "all_owned_node_children_naturally_reaped": true,
+  "base_source": "0e7e03833bc3683899e00b3aec0051da7ef8462e",
+  "changed_files": [
+    "src/renderer/components/training/RotatedBoxFitting.test.cjs",
+    "src/renderer/components/training/RotatedBoxFitting.tsx"
+  ],
+  "checks": [
+    "fresh request payload and exact append",
+    "pending redraw and mode changes discard late success",
+    "image/project/source A-to-B-to-A discard old proposal",
+    "source replacement clears old proposal",
+    "old rejection preserves newer busy and no stale error",
+    "old success cannot overwrite newer refusal",
+    "rejected refit removes previous appendable proposal",
+    "current refusal remains visible",
+    "unmount has no later state updates"
+  ],
+  "claims": {
+    "actual_browser": false,
+    "backend_http_or_engine": false,
+    "controlled_component_regression": true,
+    "installed_native": false,
+    "ledger_cell_credit": 0,
+    "model_quality": false,
+    "parent_acceptance": false,
+    "publication": false,
+    "source_electron": false
+  },
+  "external_boundary": "Deferred request promises, controlled hook scheduler, JSX tree, and dataset selector; actual TSX handlers and fittingPoint helper execute. No real React DOM, HTTP, backend fitting engine or decoder executes.",
+  "green": {
+    "cancelled": 0,
+    "failed": 0,
+    "log_sha256": "593db112d4a9ebe6089585f05674e7472d68176df6cf989293662533dfc8080b",
+    "passed": 12,
+    "skipped": 0,
+    "tests": 12
+  },
+  "green_source": "0f059c38b0bfc7b14780dceac90222f711fb6e36",
+  "historical_source_note": "RED execution before/after snapshots were identical. The same private checkout was subsequently advanced from the test-only checkpoint to the fixed checkpoint. Historical RED raw9 is execution evidence, not a claim about the current checkout.",
+  "product_sha256": "0baf99e83b1c35f8ca59b61bfee41bcb983ea463ce67ed15841c5282a167f768",
+  "provider_before_after_exact_each_stage": true,
+  "red": {
+    "cancelled": 0,
+    "expected_behavioral_failures_only": true,
+    "failed": 9,
+    "log_sha256": "6c1a05fb8a95fe1db5b0092faaf2568443b1d7575bc39946b256846406edfff2",
+    "passed": 3,
+    "skipped": 0,
+    "tests": 12
+  },
+  "red_source": "ad7bfd7abaa15e24be9becda10d931bcc1b27b29",
+  "same_red_green_test_body": true,
+  "schema": "modu-source-component-regression/v1",
+  "signals_sent": [],
+  "source_before_after_exact_each_stage": true,
+  "test_sha256": "1375abae5d56bcda77dad7f9eccc7114535aaceae072263c0277eedb18e066e7",
+  "topic": "rotated fitting pending proposal ownership",
+  "tracked_files": 2966,
+  "typecheck": {
+    "main_no_emit_exit_code": 0,
+    "renderer_no_emit_exit_code": 0
+  }
+}
