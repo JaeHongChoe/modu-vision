@@ -1,0 +1,110 @@
+{
+  "schema": "source-only-owned-ancillary-canonical-context-v1",
+  "date": "2026-10-18",
+  "scope": "Original ancillary request ownership follows the same explicit project context that original shared authorization already treats as authoritative.",
+  "source": {
+    "public_base": "f5d2165ac2b0c7fc440e239cc2e650491dcc6c28",
+    "private_commit": "79dbd6706de0ddadb05d4f3283aef6ff2670c274",
+    "files": [
+      {
+        "path": "source/backend/engine/original_owned_UI_ancillary_request.py",
+        "size": 179330,
+        "sha256": "b7de75a458a5d603047c2d982877c5e744f6321621669f40d93080329c891e53"
+      },
+      {
+        "path": "source/backend/tests/test_original_owned_ancillary_project_context.py",
+        "size": 7672,
+        "sha256": "9613b23a7c5af87c080ea71cee311028dfd3e2033cbba77d104f3677ae99cbdf"
+      }
+    ],
+    "product_diff": {
+      "insertions": 9,
+      "deletions": 2
+    },
+    "shared_authorization_base_auth_observer_caps_and_business_handlers_unchanged": true
+  },
+  "causal_source_case": {
+    "request": "GET /api/compute/selection",
+    "operands": "A and B are genuine projects of the same authenticated actor/workspace. The original response-produced explicit B context is sent with the retained obsolete legacy A header.",
+    "business_result": "Original fully consumed HTTP200 selects B context; both project files remain exact.",
+    "original_failure_reasons": [
+      "owned_ancillary_selected_account_database_entry",
+      "owned_ancillary_selected_account_database_exit"
+    ],
+    "original_first_reason_sha256": [
+      "6eece17e2a850fb28e04b39d4e22145766708676c88ef96e3b6b9532d53b8c5e",
+      "e2b84a155bf8e5221cc49efcfb2a1a2faa19417df454768fbc631ef021461088"
+    ],
+    "original_failure_later_cascades": true,
+    "meaning": "A controlled source reproduction matches two reason strings/hashes; it does not identify the original installed request or failed operand."
+  },
+  "actual_source_runs": [
+    {
+      "name": "RED01",
+      "exit": 1,
+      "failed": 1,
+      "passed": 2,
+      "seconds": 7.09
+    },
+    {
+      "name": "RED02_same_positive_plus_refusals",
+      "exit": 1,
+      "failed": 1,
+      "passed": 6,
+      "seconds": 8.46
+    },
+    {
+      "name": "GREEN01_exact_RED02_test_bytes",
+      "exit": 0,
+      "passed": 7,
+      "seconds": 7.83
+    },
+    {
+      "name": "existing_related_ASGI",
+      "exit": 0,
+      "passed": 22,
+      "seconds": 58.6,
+      "files": [
+        "test_owned_ancillary_failure_attribution.py",
+        "test_original_owned_global_UI_read_controls.py",
+        "test_original_account_role_parent_binding.py"
+      ]
+    }
+  ],
+  "refusal_controls": [
+    "foreign authenticated actor",
+    "foreign workspace",
+    "real user without membership in target project",
+    "invalid explicit context"
+  ],
+  "separate_unresolved_denial": {
+    "request": "A real viewer with matching project/context POSTs /api/flowchart/pipeline/diff.",
+    "business_result": "Original403 and durable denied flow.execute audit are preserved; handler is not entered.",
+    "actual_source_probe": {
+      "exit": 1,
+      "failed": 1,
+      "seconds": 5.63,
+      "first_reasons_same_pair": true
+    },
+    "status": "Distinct denied-preview lifetime remains unowned and refused. The probe is preserved privately outside the clean candidate. No denial fix or general 4xx completion is included."
+  },
+  "implementation_boundaries": [
+    "Raw legacy request header remains unchanged.",
+    "Original declared_context parser and Headers identities/codes are retained.",
+    "Original bearer authentication, actor/workspace/membership checks, caller/source/lock/DB-close, ASGI framing and original caps remain in force."
+  ],
+  "review": {
+    "independent_source_static_accept": true,
+    "reviewer_execution": false
+  },
+  "acceptance": {
+    "installed_native_replay": false,
+    "original_native_first_emitter_or_exact_cause": false,
+    "process_tree_or_launch_lease_credit": false,
+    "parent_action_or_feature_credit": false,
+    "model_or_inference_credit": false,
+    "browser_credit": false,
+    "publication_or_remote_credit": false
+  },
+  "privacy": "No raw bearer/session values, actor/project IDs, headers, private absolute paths or data paths, environment or request body is retained in this public receipt draft."
+}
