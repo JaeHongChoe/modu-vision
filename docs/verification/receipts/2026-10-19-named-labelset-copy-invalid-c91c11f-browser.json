@@ -1,0 +1,49 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "c91c11fdd4028859c69b007ddb4e5fc4c830a2f5",
+  "source_dirty": false,
+  "product_base": "8a3a3ab7f0e5cccec63aebc8190fb5ce0d4bb17f",
+  "test": "scripts/e2e/named-labelset-copy-invalid.spec.ts::named labelset copy rejects its own invalid source tree with actual 422 and preserves original labels",
+  "test_source_sha256": "ff2fa39a7a51f08e19577863b6cbd284a5b65cb2b0cc065c6edbfda281fe7fd2",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "ceba6a045cdb0aab7f40d47686b5ea63810d919a7d4282f58eb397be85771360",
+  "harness_sha256": "18d3dae1fa6bbc216e6bf54c0880787dedf633ade46e8e4dbb27bf1c891202df",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "e6e9e083a6a7775765da26b01255f433fb2832c1fbab92d41b61725b49182b93"
+    }
+  ],
+  "cell": "F015.named-labelset-copy.invalid",
+  "actual_backend_status": 422,
+  "actual_backend_detail": "Label set contains a symbolic link",
+  "HTTP_mock_or_abort": false,
+  "renderer_state_injected": false,
+  "fixture_transition": "One contained non-JSON symlink in one fresh owned active annotation tree; the exact newly created link was removed in finally.",
+  "registry_active_project_source_and_annotation_originals_preserved": true,
+  "new_named_targets": 0,
+  "activation_requests": 0,
+  "only_UI_mutation": "POST /api/project/labelsets",
+  "observed_original_requests": 4,
+  "all_observed_original_responses_completed": true,
+  "raw_PNG_exact_owned_source_bytes_verified": true,
+  "owned_link_removed": true,
+  "directory_mtime_ctime_nlink_unchanged_claimed": false,
+  "owned_backend_forced": false,
+  "owned_backend_port_closed": true,
+  "teardown_leftovers": [],
+  "native_execution": false,
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "parent_accepted": false,
+  "scope": "Single browser invalid-source-label-tree copy rejection. No invalid-name, model, native installer, human quality, hardware or whole-feature acceptance."
+}
