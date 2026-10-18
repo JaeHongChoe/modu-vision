@@ -25,7 +25,10 @@ _ACTIVE = ContextVar('original_owned_flow_request', default=None)
 _HANDLERS = {}
 _TEMPLATE_CONSTRUCTOR_ORIGIN = None
 _RESIDENT_RESOURCE_ORIGIN = None
+_HISTORY_ORIGINS = {}
+_HISTORY_ACTIVE_ORIGIN = None
 _SPEC = {
+    'list_configuration_changes':('GET','/api/flowchart/changes'),
     'execution_resources':('GET','/api/flowchart/execution-resources'),
     'get_pipeline':('GET','/api/flowchart/pipeline'),
     'get_single_segmentation_template':('GET','/api/flowchart/templates/single-segmentation'),
@@ -71,6 +74,146 @@ def original_flow_resource_call(engine):
         if attempt.resource_call is call:attempt.resource_call=(*call[:5],None)
         else:attempt.fail('resource_call_changed')
         frame=call=None
+
+
+def register_original_flow_history_sources(kind, runtime_status=None):
+    """Remember each first module definition without wrapping business methods."""
+    label='audit' if runtime_status is not None else 'ledger'
+    names=(('__init__','_connect','list','verify','_public') if label=='audit' else
+        ('__init__','connect','diagnostics','active','history','_operation'))
+    functions=[]
+    for name in names:
+        function=getattr(kind,name)
+        chain=[];current=function
+        for _ in range(5):
+            chain.append((current,current.__code__))
+            current=getattr(current,'__wrapped__',None)
+            if current is None:break
+        functions.append((name,function,tuple(chain)))
+    module=sys.modules[kind.__module__]
+    from backend.engine import sqlite_wal
+    owners=[(module,name)for name in ('sqlite3','closing','use_wal','Path')]
+    owners+=[(sqlite3,'connect'),(sqlite_wal,'use_wal'),(sqlite_wal,'_busy')]
+    if label=='audit':owners+=[(module,name)for name in ('_row_hash','SCHEMA','_GENESIS','_FIELDS')]
+    if label=='ledger':
+        from backend.engine import artifact_retention
+        owners.append((artifact_retention,'retention_project_root'))
+        owners.append((module,'observe_original_flow_history_ledger_connection'))
+    dependencies=tuple((owner,name,getattr(owner,name),getattr(getattr(owner,name),'__code__',None))
+        for owner,name in owners)
+    _HISTORY_ORIGINS.setdefault(label,(kind,tuple(functions),runtime_status,
+        runtime_status.__code__ if runtime_status is not None else None,dependencies))
+
+
+def register_original_flow_history_active(function):
+    global _HISTORY_ACTIVE_ORIGIN
+    if _HISTORY_ACTIVE_ORIGIN is None:_HISTORY_ACTIVE_ORIGIN=(function,function.__code__)
+
+
+def _history_attempt():
+    attempt=_ACTIVE.get()
+    return attempt if type(attempt)is _FlowAttempt and attempt.name=='list_configuration_changes' else None
+
+
+def original_flow_history_call(operation,*args):
+    """Invoke the existing list, verify or ledger projection exactly once."""
+    attempt=_history_attempt()
+    if attempt is None:return operation(*args)
+    frame=sys._getframe()
+    try:
+        try:attempt.history_entry(operation,args,frame)
+        except Exception:attempt.fail('history_inspection_failed')
+        result=operation(*args)
+        try:attempt.history_return(operation,args,result,frame)
+        except Exception:attempt.fail('history_inspection_failed')
+        return result
+    finally:
+        attempt.history_live=None
+        frame=None
+
+
+def original_flow_history_read_text(path,encoding=None,errors=None,*,role):
+    """Retain the actual active-pointer/version handles only in this history lane."""
+    from backend.engine.original_owned_UI_ancillary_request import original_UI_ancillary_read_text
+    attempt=_history_attempt()
+    if attempt is None:
+        return original_UI_ancillary_read_text(path,encoding=encoding,errors=errors,role=role)
+    try:attempt.history_read('before',path,None,None,role,sys._getframe(1))
+    except Exception:attempt.fail('history_inspection_failed')
+    with path.open(mode='r',encoding=io.text_encoding(encoding),errors=errors)as handle:
+        try:attempt.history_read('open',path,handle,None,role,sys._getframe(1))
+        except Exception:attempt.fail('history_inspection_failed')
+        text=handle.read()
+        try:attempt.history_read('read',path,handle,text,role,sys._getframe(1))
+        except Exception:attempt.fail('history_inspection_failed')
+        return text
+
+
+def observe_original_flow_history_active(project_dir,version,pipeline):
+    attempt=_history_attempt()
+    if attempt is not None:
+        try:attempt.history_active(project_dir,version,pipeline,sys._getframe(1))
+        except Exception:attempt.fail('history_inspection_failed')
+
+
+def observe_original_flow_history_result(project_dir,store,result):
+    attempt=_history_attempt()
+    if attempt is not None:
+        try:attempt.history_result(project_dir,store,result,sys._getframe(1))
+        except Exception:attempt.fail('history_inspection_failed')
+
+
+def observe_original_flow_history_ledger_connection(store,connection):
+    attempt=_history_attempt()
+    if attempt is not None:
+        try:attempt.history_connection('ledger',store,connection,sys._getframe(1))
+        except Exception:attempt.fail('history_inspection_failed')
+
+
+def _history_closed(connection):
+    if type(connection)is not sqlite3.Connection:return False
+    try:connection.in_transaction
+    except sqlite3.ProgrammingError:return True
+    return False
+
+
+def _history_path(path,project):
+    """No links or foreign path component; absence is a distinct state."""
+    path,project=Path(path),Path(project)
+    relative=path.relative_to(project)
+    root=project.lstat()
+    if (project.resolve(strict=True)!=project or not stat.S_ISDIR(root.st_mode)
+            or root.st_uid!=os.getuid()):raise ValueError('Unproved history root')
+    current=project
+    for index,part in enumerate(relative.parts):
+        current=current/part
+        try:info=current.lstat()
+        except FileNotFoundError:
+            return ('absent',str(current),tuple(relative.parts[index:]))
+        final=index==len(relative.parts)-1
+        if (current.is_symlink() or current.resolve(strict=True)!=current or info.st_uid!=os.getuid()
+                or (not stat.S_ISREG(info.st_mode) or info.st_nlink!=1 if final else not stat.S_ISDIR(info.st_mode))):
+            raise ValueError('Unproved history path')
+    return ('file',str(path),(info.st_dev,info.st_ino,info.st_mode,info.st_nlink,info.st_uid,info.st_gid))
+
+
+def _history_sources_original():
+    from backend.engine import config_audit, runtime_deployment
+    for label,kind in (('audit',config_audit.ConfigAuditStore),('ledger',runtime_deployment.DeploymentLedger)):
+        origin=_HISTORY_ORIGINS.get(label)
+        if (type(origin)is not tuple or len(origin)!=5 or kind is not origin[0]
+                or any(getattr(kind,name) is not function or any(current.__code__ is not code for current,code in chain)
+                    or any(getattr(current,'__wrapped__',None)is not following
+                        for (current,_),(following,_)in zip(chain,chain[1:]))
+                    for name,function,chain in origin[1])
+                or any(getattr(owner,name)is not value or getattr(value,'__code__',None)is not code
+                    for owner,name,value,code in origin[4])):return False
+    origin=_HISTORY_ORIGINS['audit']
+    from backend.api import routes_flowchart as flows
+    active=_HISTORY_ACTIVE_ORIGIN
+    return (config_audit.runtime_release_status is origin[2] and origin[2].__code__ is origin[3]
+        and type(active)is tuple and len(active)==2 and flows._active_version is active[0]
+        and active[0].__code__ is active[1])
 
 
 def _observe_flow_get(kind, *values):
@@ -326,7 +469,10 @@ def observe_original_flow_audit_connection(function):
         except BaseException:
             attempt.fail('audit_connection_failed')
             raise
-        attempt.audit_connection(store,connection)
+        if attempt.name=='list_configuration_changes':
+            try:attempt.history_connection('audit',store,connection,sys._getframe())
+            except Exception:attempt.fail('history_inspection_failed')
+        else:attempt.audit_connection(store,connection)
         return connection
     return observed
 
@@ -437,7 +583,7 @@ class OriginalOwnedFlowRequest:
         from backend.contracts.context import ContextRegistry
         from backend.engine import (config_audit, original_current_project_request, shared_accounts,
             annotation_storage, checkpoint_paths, dataset_fingerprint, retained_preprocessors,
-            specialized_models, rotation, flowchart_engine)
+            specialized_models, rotation, flowchart_engine, runtime_deployment, artifact_retention, sqlite_wal)
         from backend.api import routes_dataset_versions, routes_patch_classification
         from backend.engine import patch_classification, source_aliases
         from backend.engine import original_owned_flow_execution_request
@@ -466,6 +612,7 @@ class OriginalOwnedFlowRequest:
                 flows.FlowDraftSaveRequest,FlowchartPipeline,FlowNode,FlowNodeData,FlowEdge,FlowExecutionConfig))
         self.draft_model_binding=self.draft_model_calls
         self.spec=dict(_SPEC)
+        self.history_origins=dict(_HISTORY_ORIGINS)
         self.route_kind=routing.APIRoute
         self.routes = {}
         modern = getattr(routing,'_IncludedRouter',None)
@@ -497,7 +644,9 @@ class OriginalOwnedFlowRequest:
                 '_legacy_owner','_get_pipeline_unlocked','_single_inspection_template','_pipeline_matches_recipe',
                 'DEFAULT_PIPELINE_FILE','get_single_segmentation_flowchart','observe_original_flow_recipe_read',
                 '_ENGINE','_CPU_ENGINE','FlowchartEngine','original_flow_resource_call',
-                'observe_original_flow_no_legacy','observe_original_flow_recipe_return')),
+                'observe_original_flow_no_legacy','observe_original_flow_recipe_return',
+                'original_flow_history_call','original_flow_history_read_text',
+                'observe_original_flow_history_active','observe_original_flow_history_result')),
             (flowchart_engine, ('get_single_segmentation_flowchart','FlowchartPipeline','FlowNode','FlowNodeData','FlowEdge',
                 'FlowchartEngine','os')),
             (flowchart_engine.FlowchartEngine, ('execution_resources',)),
@@ -527,8 +676,18 @@ class OriginalOwnedFlowRequest:
             (tempfile._TemporaryFileCloser, ('cleanup','close')),
             (original_owned_UI_ancillary_request, ('original_UI_ancillary_read_text','observe_original_UI_draft_active_return')),
             (original_owned_telemetry_socket_request, ('original_owned_telemetry_production',)),
-            (config_audit.ConfigAuditStore, ('__init__','append','_connect','_public')),
-            (config_audit, ('ConfigAuditStore','sqlite3','closing','_row_hash','actor_from_request','observed_runtime_release')),
+            (config_audit.ConfigAuditStore, ('__init__','append','_connect','_public','list','verify')),
+            (config_audit, ('ConfigAuditStore','sqlite3','closing','_row_hash','actor_from_request','observed_runtime_release',
+                'runtime_release_status','use_wal','SCHEMA','_GENESIS','_FIELDS')),
+            (runtime_deployment, ('DeploymentLedger','sqlite3','closing','use_wal','json',
+                'observe_original_flow_history_ledger_connection')),
+            (runtime_deployment.DeploymentLedger, ('__init__','connect','diagnostics','active','history','_operation')),
+            (artifact_retention, ('retention_project_root',)),
+            (sqlite_wal, ('use_wal','_busy')),
+            (config_audit.closing, ('__init__','__enter__','__exit__')),
+            (sqlite3, ('connect','Connection','ProgrammingError','Row')),
+            (sqlite3.Connection, ('execute','executescript','close','__enter__','__exit__')),
+            (stat, ('S_ISDIR','S_ISREG')),
             (shared_accounts.AccountStore, ('record_decision',)),
             (self.account_kind, ('original',)),
             (ContextRegistry, ('_db','transaction','register_project','context')),
@@ -545,8 +704,8 @@ class OriginalOwnedFlowRequest:
             (os, ('replace','fsync','getpid','getuid','fstat','open','close','unlink','cpu_count')),
             (tempfile, ('NamedTemporaryFile','_mkstemp_inner','_sanitize_params','_infer_return_type')),
             (time, ('time_ns',)),
-            (builtins, ('open',)), (json, ('load','dump','loads','dumps')), (hashlib, ('sha256',)),
-            (sys.modules[__name__], ('_ACTIVE','_HANDLERS','_SPEC','_TEMPLATE_CONSTRUCTOR_ORIGIN','_RESIDENT_RESOURCE_ORIGIN','_context','_headers','_SelectedCurrentAuth',
+            (builtins, ('open','globals')), (json, ('load','dump','loads','dumps')), (hashlib, ('sha256',)),
+            (sys.modules[__name__], ('_ACTIVE','_HANDLERS','_SPEC','_TEMPLATE_CONSTRUCTOR_ORIGIN','_RESIDENT_RESOURCE_ORIGIN','_HISTORY_ORIGINS','_HISTORY_ACTIVE_ORIGIN','_context','_headers','_SelectedCurrentAuth',
                 'OriginalOwnedFlowRequest','_FlowAttempt','_FlowAuth','_FlowIncluded')),
         ) for name in names]
         for name,(endpoint,function) in self.handlers.items(): self.calls.append((flows,name,function))
@@ -650,6 +809,7 @@ class OriginalOwnedFlowRequest:
                 and getattr(self.registry,name).__func__ is function for name,function in self.registry_calls)
             and self.owned is self.accounts.owned and self.owned.app is self.downstream
             and self.storage is self.accounts.named.storage and type(self.lock) is self.lock_type
+            and _HISTORY_ORIGINS==self.history_origins
             and _HANDLERS==self.handlers and _SPEC==self.spec and all(getattr(owner,name) is value for owner,name,value in self.calls)
             and all(value.__code__ is code for value,code in self.codes)
             and all(endpoint.__wrapped__ is function for endpoint,function in self.handlers.values())
@@ -761,6 +921,8 @@ class _FlowAttempt:
         self.get_stages=();self.get_read=None;self.get_no_legacy=None;self.get_return=None
         self.template_constructor=None;self.template_value=None;self.get_result_binding=None
         self.resource_state=None;self.resource_result=None;self.resource_result_binding=None;self.resource_call=None
+        self.history_project=self.history_store=self.history_live=self.history_active_value=None
+        self.history_reads=[];self.history_calls=[];self.history_result_binding=None
         self.auth=_FlowAuth(self,headers,project,token)
 
     def fail(self,reason):
@@ -859,6 +1021,8 @@ class _FlowAttempt:
                     or not 1<=len(body.models)<=24 or any(type(model) is not FlowchartModelReference for model in body.models)):
                 valid=False
             else:self.model_body=body,body.source_dataset_path,tuple((model,model.job_id,model.task) for model in body.models)
+        if self.name=='list_configuration_changes':
+            valid=(valid and type(values.get('limit'))is int and 1<=values['limit']<=1000 and _history_sources_original())
         if self.name=='execution_resources':
             valid=(valid and (values.get('device') is None or type(values.get('device'))is str and values['device']=='cpu'))
         if self.name=='get_single_segmentation_template':
@@ -892,6 +1056,180 @@ class _FlowAttempt:
                 return frame if frame.f_locals.get(field) is self.request else None
             frame=frame.f_back
         return None
+
+    def history_entry(self,operation,args,frame):
+        from backend.engine import config_audit
+        caller=frame.f_back
+        stages=('list','verify','runtime')
+        index=len(self.history_calls)
+        if index>=3:raise ValueError('Extra history call')
+        stage=stages[index]
+        if stage=='runtime':
+            valid=operation is config_audit.runtime_release_status and args==(self.history_project,)
+            path=self.history_project/'runtime_service'/'runtime_deployments.sqlite3'
+        else:
+            valid=(type(operation)is MethodType and operation.__self__ is self.history_store
+                and operation.__func__ is getattr(config_audit.ConfigAuditStore,stage)
+                and args==((self.values['limit'],)if stage=='list' else ()))
+            path=self.history_store.path
+        valid=(valid and self.worker_original() and _history_sources_original() and self.history_live is None
+            and self.history_active_value is not None and not self.owner.lock._is_owned()
+            and caller is not None and caller.f_code is self.owner.handlers[self.name][1].__code__
+            and caller.f_locals.get('request')is self.request and caller.f_locals.get('store')is self.history_store
+            and caller.f_locals.get('project_dir')is self.history_project and frame.f_code is original_flow_history_call.__code__)
+        if not valid:self.fail('history_call_entry')
+        self.history_live=(stage,operation,args,frame,_history_path(path,self.history_project),[])
+
+    def history_connection(self,kind,store,connection,frame):
+        from backend.engine import config_audit,runtime_deployment
+        live=self.history_live
+        if not self.worker_original() or live is None or type(connection)is not sqlite3.Connection:
+            self.fail('history_connection');return
+        stage,operation,args,_,before,connections=live
+        if kind=='audit':
+            function=getattr(config_audit.ConfigAuditStore,stage)if stage in {'list','verify'}else None
+            caller=frame
+            for _ in range(8):
+                if caller is None or function is not None and caller.f_code is function.__code__:break
+                caller=caller.f_back
+            valid=(function is not None and store is self.history_store and not connections
+                and caller is not None and caller.f_locals.get('self')is store
+                and _audit_store_original(self.owner,store) and before[0]=='file')
+            label=stage
+        else:
+            labels=('__init__','diagnostics','active','history')
+            label=labels[len(connections)]if len(connections)<4 else None
+            caller=frame.f_back
+            valid=(stage=='runtime' and label is not None and type(store)is runtime_deployment.DeploymentLedger
+                and frame.f_code is runtime_deployment.DeploymentLedger.connect.__code__
+                and frame.f_locals.get('self')is store and frame.f_locals.get('conn')is connection
+                and caller is not None and caller.f_code is getattr(runtime_deployment.DeploymentLedger,label).__code__
+                and caller.f_locals.get('self')is store and before[0]=='file'
+                and store.path==self.history_project/'runtime_service'/'runtime_deployments.sqlite3'
+                and store.directory==self.history_project/'runtime_service' and store.project_dir==self.history_project
+                and store.pin_owner=='derived:active-release:runtime_service'
+                and (not connections or all(row[1]is store for row in connections)))
+            if valid:
+                runtime_frame=caller
+                for _ in range(12):
+                    if runtime_frame is None or runtime_frame.f_code is config_audit.runtime_release_status.__code__:break
+                    runtime_frame=runtime_frame.f_back
+                valid=(runtime_frame is not None and runtime_frame.f_locals.get('project_dir')is self.history_project)
+        if (not valid or not _history_sources_original() or _history_path(store.path,self.history_project)!=before
+                or connection.in_transaction):self.fail('history_connection')
+        if len(connections)>=4:self.fail('history_connection_limit');return
+        connections.append((label,store,connection,caller))
+
+    def history_return(self,operation,args,result,frame):
+        live=self.history_live
+        if live is None:self.fail('history_call_return');return
+        stage,held,args_held,live_frame,before,connections=live
+        path=(self.history_project/'runtime_service'/'runtime_deployments.sqlite3'if stage=='runtime'
+            else self.history_store.path)
+        valid=(self.worker_original() and operation is held and args is args_held and frame is live_frame
+            and frame.f_code is original_flow_history_call.__code__ and frame.f_locals.get('result')is result
+            and _history_sources_original() and _history_path(path,self.history_project)==before
+            and all(_history_closed(row[2])and row[3]is not None and row[3].f_locals.get('self')is row[1]
+                and row[3].f_locals.get('conn'if stage=='runtime'else'db')is row[2]for row in connections))
+        if before[0]=='absent':
+            valid=(valid and not connections and (result==[]if stage=='list'else
+                result=={'intact':True,'rows':0}if stage=='verify'else result=={'active':None,'pending':None}))
+        elif stage=='runtime':
+            valid=(valid and len(connections)==4 and [row[0]for row in connections]==['__init__','diagnostics','active','history']
+                and type(result)is dict and set(result)=={'active','pending'})
+        else:
+            valid=(valid and len(connections)==1 and (type(result)is list and len(result)<=self.values['limit']
+                if stage=='list'else type(result)is dict and type(result.get('intact'))is bool
+                and type(result.get('rows'))is int and result['rows']>=0))
+        if not valid:self.fail('history_call_return')
+        # Keep actual closed connections and values, but retire completed Python frames.
+        self.history_calls.append((stage,result,_draft_capture(result,(),[65536]),path,before,
+            tuple((label,store,connection)for label,store,connection,_ in connections)))
+        connections.clear()
+
+    def history_read(self,stage,path,handle,text,role,caller):
+        from backend.api import routes_flowchart as flows
+        handler=self.handler_frame()
+        if (not self.worker_original() or not self.owner.lock._is_owned() or handler is None
+                or caller.f_code is not flows._active_version.__code__ or role!='flow'
+                or caller.f_locals.get('project_dir')is not handler.f_locals.get('project_dir')):
+            self.fail('history_active_read');return
+        project_dir=handler.f_locals['project_dir']
+        if self.history_project is None:
+            self.history_project=project_dir;self.history_store=handler.f_locals.get('store')
+        if stage=='before':
+            expected=(flows._active_flow_file(project_dir)if not self.history_reads else
+                flows._version_dir(project_dir)/(self.history_reads[0]['value']['version_id']+'.json'))
+            if len(self.history_reads)>=2 or path!=expected:self.fail('history_active_read');return
+            pin=_history_path(path,project_dir)
+            self.history_reads.append({'path':path,'pin':pin,'raw9':None,'handle':None,'value':None})
+            return
+        row=self.history_reads[-1]
+        if path!=row['path']or row['pin'][0]!='file' or type(handle)is not io.TextIOWrapper:
+            self.fail('history_active_read');return
+        raw9=_draft_raw9(path.lstat())
+        if (raw9!=_draft_raw9(os.fstat(handle.fileno()))or _history_path(path,project_dir)!=row['pin']
+                or raw9[4]>4*1024*1024):self.fail('history_active_read');return
+        if stage=='open':
+            row['raw9']=raw9;row['handle']=handle
+        elif stage=='read':
+            if (row['handle']is not handle or row['raw9']!=raw9 or type(text)is not str
+                    or len(text.encode('utf-8'))!=raw9[4]):self.fail('history_active_read');return
+            row['value']=json.loads(text)
+        else:self.fail('history_active_read')
+
+    def history_active(self,project_dir,version,pipeline,caller):
+        from backend.api import routes_flowchart as flows
+        reads=self.history_reads
+        valid=(self.worker_original() and _history_sources_original() and self.owner.lock._is_owned()
+            and caller.f_code is self.owner.handlers[self.name][1].__code__
+            and caller.f_locals.get('request')is self.request and caller.f_locals.get('project_dir')is project_dir
+            and self.history_project is project_dir and self.history_store is caller.f_locals.get('store')
+            and _audit_store_original(self.owner,self.history_store) and self.history_store.timeout==10.0
+            and self.history_store.path==project_dir/'configuration_changes.sqlite3'
+            and self.history_active_value is None and not self.history_calls
+            and all(row['pin']==_history_path(row['path'],project_dir)for row in reads))
+        if len(reads)==1 and reads[0]['pin'][0]=='absent':
+            valid=valid and version is pipeline is None
+        else:
+            valid=(valid and len(reads)==2 and all(row['handle']is not None and row['handle'].closed
+                and row['raw9']==_draft_raw9(row['path'].lstat())for row in reads)
+                and type(version)is str and re.fullmatch('[0-9a-f]{32}',version)is not None
+                and reads[0]['value']['version_id']==version and type(pipeline)is flows.FlowchartPipeline
+                and pipeline.model_dump()==reads[1]['value']['pipeline'])
+        if not valid:self.fail('history_active_return')
+        self.history_active_value=(version,pipeline)
+
+    def history_result(self,project_dir,store,result,caller):
+        project=self.scope.get('state',{}).get('scoped_project')
+        valid=(self.worker_original() and _history_sources_original() and not self.owner.lock._is_owned()
+            and self.history_live is None and self.history_project is project_dir and self.history_store is store
+            and type(project)is dict and project_dir==Path(project['project_dir']).resolve()
+            and caller.f_code is self.owner.handlers[self.name][1].__code__
+            and caller.f_locals.get('request')is self.request and caller.f_locals.get('result')is result
+            and len(self.history_calls)==3 and [row[0]for row in self.history_calls]==['list','verify','runtime']
+            and type(result)is dict and list(result)==['changes','integrity','active_version_id','runtime']
+            and result['changes']is self.history_calls[0][1] and result['integrity']is self.history_calls[1][1]
+            and result['runtime']is self.history_calls[2][1]
+            and result['active_version_id']is self.history_active_value[0])
+        if not valid:self.fail('history_result')
+        self.history_result_binding=_draft_capture(result,(),[65536])
+
+    def history_response_original(self):
+        try:return self._history_response_original()
+        except Exception:return False
+
+    def _history_response_original(self):
+        return (self.history_live is None and self.history_active_value is not None and _history_sources_original()
+            and self.history_result_binding is not None and _draft_original(self.result,self.history_result_binding)
+            and len(self.history_calls)==3 and all(_draft_original(value,binding)
+                and _history_path(path,self.history_project)==pin and all(_history_closed(row[2])for row in connections)
+                for _,value,binding,path,pin,connections in self.history_calls)
+            and all(row['pin']==_history_path(row['path'],self.history_project)
+                and (row['pin'][0]=='absent'or row['handle'].closed
+                     and row['raw9']==_draft_raw9(row['path'].lstat()))for row in self.history_reads)
+            and not self.audit_live and self.audit_store is self.audit_db is self.audit_result is None
+            and not self.publications and not self.locked)
 
     def resource_entry(self,engine,method,lock,frame):
         from backend.api import routes_flowchart as flows
@@ -1580,7 +1918,10 @@ class _FlowAttempt:
             and caller.f_locals.get('attempt') is self and caller.f_locals.get('function') is function
             and caller.f_locals.get('values') is self.values and caller.f_locals.get('result') is result
             and len(live)==1 and live[0][0]=='storage_scope' and live[0][1] is self.owner.storage)
-        if self.name=='execution_resources':
+        if self.name=='list_configuration_changes':
+            self.result=result
+            valid=valid and self.history_response_original()
+        elif self.name=='execution_resources':
             try:valid=valid and self.resource_completed_result(result)
             except Exception:valid=False
         elif self.name in {'get_pipeline','get_single_segmentation_template'}:
@@ -1628,6 +1969,7 @@ class _FlowAttempt:
             and self.model_live is None and self.specialist_live is None and self.source_live is None
             and (self.name not in {'get_pipeline','get_single_segmentation_template'} or self.get_response_original())
             and (self.name!='execution_resources' or self.resource_response_original())
+            and (self.name!='list_configuration_changes' or self.history_response_original())
             and len(self.resolutions)==(1 if self.name in {'get_single_segmentation_template','execution_resources'} else
                 4 if self.name=='get_active_pipeline_record' else
                 1+len(self.retained_sources) if self.name=='verify_flowchart_models' else 2)
