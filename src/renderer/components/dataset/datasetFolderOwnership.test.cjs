@@ -67,13 +67,14 @@ function harness({ holdSave = false, holdImport = false, holdImages = false, hol
     datasetImports: { revisions: async () => ({ revisions: [], active_revision: null }) },
   };
   const apiModule = { api, resolveApiUrl: x => `http://127.0.0.1:${port}${x}`, getProjectContextGeneration: () => generation,
-    getApiPersistenceIdentity: () => backend, getProjectContext: () => context };
+    getApiPersistenceIdentity: () => backend === 'A' ? 'local' : `shared:https://${backend}.invalid`, getProjectContext: () => context };
   const inert = { getState: () => ({ invalidateForDataChange() {} }), setState() {} };
-  const store = load(path.resolve(__dirname, '../../stores/useDatasetStore.ts'), {
+  const datasetModule = load(path.resolve(__dirname, '../../stores/useDatasetStore.ts'), {
     '../services/api': apiModule, './useProjectStore': { useProjectStore: projectStore },
     './useTrainingStore': { useTrainingStore: inert }, './useEvaluationStore': { useEvaluationStore: inert },
     './useFlowchartStore': { useFlowchartStore: inert },
-  }).useDatasetStore;
+  });
+  const store = datasetModule.useDatasetStore;
   store.setState({ folderPath: '/source/A', hasSelectedFolder: true, datasetKey: '/source/A\0classification' });
   const same = (a, b) => a && a.length === b.length && a.every((v, i) => Object.is(v, b[i]));
   const react = {
@@ -89,12 +90,15 @@ function harness({ holdSave = false, holdImport = false, holdImages = false, hol
   const helpers = Object.fromEntries(['classDistribution', 'datasetImportView'].map(name =>
     ['./' + name, load(path.join(__dirname, name + '.ts'), {})]));
   helpers['../../utils/datasetSplitCapability'] = load(path.resolve(__dirname, '../../utils/datasetSplitCapability.ts'), {});
+  const scopedThumbnail = load(path.resolve(__dirname, '../common/ScopedDatasetThumbnail.tsx'), {'../../services/api': apiModule});
   const filename = path.join(__dirname, 'DatasetStudio.tsx'), m = new Module(filename, module);
   m.filename = filename; m.paths = Module._nodeModulePaths(__dirname);
   const original = m.require.bind(m);
   m.require = name => name === 'react' ? react : name === 'react/jsx-runtime' ? { jsx, jsxs: jsx }
     : name === '../../stores/useProjectStore' ? { useProjectStore: projectStore }
-    : name === '../../stores/useDatasetStore' ? { useDatasetStore: selector => selector ? selector(store.getState()) : store.getState() }
+    : name === '../../stores/useDatasetStore' ? { readDatasetAuthority: datasetModule.readDatasetAuthority,
+      useDatasetStore: Object.assign(selector => selector ? selector(store.getState()) : store.getState(), {getState: store.getState}) }
+    : name === '../common/ScopedDatasetThumbnail' ? scopedThumbnail
     : name === '../../services/api' ? apiModule
     : name === '../../services/hostAdapter' ? { host: { selectFolder: () => {
       const pending = deferred(); pickers.push(pending); return pending.promise;
@@ -125,7 +129,8 @@ function harness({ holdSave = false, holdImport = false, holdImages = false, hol
   };
   return { store, project, render, select, pickers, saves, imports, imageReads, imageRequests, imageResult, summaries, splits, summary, calls, move, changeAuthority,
     acceptAuthority: () => {generation++; context = {workspace_id: `workspace-${backend}`, project_id: project.project.id, actor_id: 'actor', mode: backend === 'A' ? 'local' : 'team'};},
-    gallery: () => nodes(render()).filter(node => node.type === 'img').map(node => node.props.src),
+    // This source harness sees the real scoped component's input, not decoded DOM pixels.
+    gallery: () => nodes(render()).filter(node => node.type === scopedThumbnail.ScopedDatasetThumbnail).map(node => node.props.path),
     unmount: () => slots.forEach(slot => slot?.cleanup?.()) };
 }
 
@@ -206,6 +211,7 @@ test(`a loaded gallery retires its old pixels when the ${name} changes before pr
   assert.equal(h.gallery().length, 1, 'the original accepted source is visible');
   h.changeAuthority(change);
   assert.deepEqual(h.gallery(), [], 'old source thumbnails must not be rebound under the new authority');
+  h.acceptAuthority();
   await h.store.getState().importFolder('/source/current', 'classification');
   assert.equal(h.gallery().length, 1, 'a freshly accepted source may show its own pixels');
   assert.match(h.gallery()[0], /\/source\/current\/part.png/);

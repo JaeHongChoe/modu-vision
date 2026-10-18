@@ -1,0 +1,87 @@
+{
+  "schema": "modu-vision.scoped-gallery-current-action-requalification/v1",
+  "source_path": "src/renderer/components/dataset/DatasetStudio.tsx",
+  "previous_source_sha256": "05001ce30dd9b6c8490735f1c2ce23140f9bc4651fd4ed95bb9b6fc528ceca3b",
+  "current_source_sha256": "924b5cc4036ca295c75c01982748e23feead610166dbd87a660ce1ce3f19fc40",
+  "historical_receipts_or_evidence_entries_removed": false,
+  "current_verified_to_pending": [
+    [
+      "F019",
+      "native-classification-import-label-summary",
+      "success"
+    ],
+    [
+      "F019",
+      "native-classification-import-label-summary",
+      "empty"
+    ],
+    [
+      "F019",
+      "native-classification-import-label-summary",
+      "invalid"
+    ],
+    [
+      "F019",
+      "native-classification-import-label-summary",
+      "error"
+    ],
+    [
+      "F019",
+      "native-classification-import-label-summary",
+      "cancel"
+    ],
+    [
+      "F019",
+      "native-classification-import-label-summary",
+      "reopen"
+    ],
+    [
+      "F019",
+      "native-classification-import-label-summary",
+      "handoff"
+    ],
+    [
+      "F022",
+      "native-classification-partitions-import-reopen",
+      "success"
+    ],
+    [
+      "F022",
+      "native-classification-partitions-import-reopen",
+      "empty"
+    ],
+    [
+      "F022",
+      "native-classification-partitions-import-reopen",
+      "invalid"
+    ],
+    [
+      "F022",
+      "native-classification-partitions-import-reopen",
+      "error"
+    ],
+    [
+      "F022",
+      "native-classification-partitions-import-reopen",
+      "cancel"
+    ],
+    [
+      "F022",
+      "native-classification-partitions-import-reopen",
+      "reopen"
+    ],
+    [
+      "F022",
+      "native-classification-partitions-import-reopen",
+      "handoff"
+    ]
+  ],
+  "other_scenarios_modified": false,
+  "previous_verified": 1008,
+  "previous_pending": 441,
+  "current_verified": 994,
+  "current_pending": 455,
+  "parent_required_pending": 10,
+  "source_unit_or_typecheck_used_as_UI_credit": false,
+  "actual_replay_required": true
+}

@@ -6,7 +6,7 @@ const path = require('node:path');
 const Module = require('node:module');
 const test = require('node:test');
 const ts = require('typescript');
-const contextApi = { getProjectContextGeneration: () => 0, getApiPersistenceIdentity: () => 'local', resolveApiUrl: x => x };
+const contextApi = { getProjectContextGeneration: () => 0, getApiPersistenceIdentity: () => 'local', getProjectContext: () => null, resolveApiUrl: x => x };
 
 function load(api, project, evaluation = { allowLatestRecovery: null }) {
   const name = path.resolve(__dirname, 'useDatasetStore.ts');

@@ -71,7 +71,16 @@ let latestImportRequest = 0;
 let latestSplitRequest = 0;
 
 const importKey = (folder: string, task: VisionTask) => `${folder}\0${task}`;
-const readAuthority = () => JSON.stringify([getProjectContextGeneration(), getApiPersistenceIdentity(), resolveApiUrl('/')]);
+function datasetAuthorityParts() {
+  const context = getProjectContext();
+  return {generation: getProjectContextGeneration(), identity: getApiPersistenceIdentity(), base: resolveApiUrl('/'),
+    context: context ? [context.workspace_id, context.project_id, context.actor_id, context.mode] : null};
+}
+export function readDatasetAuthority(): string {
+  const value = datasetAuthorityParts();
+  return JSON.stringify([value.generation, value.identity, value.base, value.context]);
+}
+const readAuthority = readDatasetAuthority;
 
 function invalidateDownstream(allowSourceRecovery = false): void {
   useTrainingStore.getState().invalidateForDataChange();
@@ -159,11 +168,16 @@ export const useDatasetStore = create<DatasetState>((set, get) => ({
   setTrainRatio: (trainRatio) => set({ trainRatio }),
 
   importFolder: async (folder, task, allowRecoveryOverride, restoreSaved = false, isCurrent) => {
-    const generation = getProjectContextGeneration();
-    const backend = getApiPersistenceIdentity();
-    const transport = resolveApiUrl('/');
-    const sameAuthority = () => generation === getProjectContextGeneration() && backend === getApiPersistenceIdentity()
-      && (!transport || transport === resolveApiUrl('/'));
+    const authority = datasetAuthorityParts();
+    const sameAuthority = () => {
+      const current = datasetAuthorityParts();
+      // The first local port lookup may learn its base without changing the
+      // accepted epoch. Preserve that original unknown-base allowance only.
+      return authority.generation === current.generation && authority.identity === current.identity
+        && (!authority.base || authority.base === current.base)
+        && (authority.context === current.context || Boolean(authority.context && current.context
+          && authority.context.every((value, index) => value === current.context![index])));
+    };
     if (isCurrent && !isCurrent()) return;
     const pickedFolder = folder;
     let key = importKey(folder, task);
