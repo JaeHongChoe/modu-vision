@@ -47,7 +47,7 @@
     "src/renderer/components/training/RotatedBoxFitting.tsx": "0baf99e83b1c35f8ca59b61bfee41bcb983ea463ce67ed15841c5282a167f768",
     "src/renderer/components/flowchart/CustomNode.tsx": "c0219bf9a011c5a86c7122bd100f5e88259b425164cee6d6a3e93548482e7fad",
     "src/renderer/components/flowchart/ImageRoiEditor.tsx": "498b466db43f32795b63f7f5cabb5bed5549c67d7be5d3d1e611b037dbe0016c",
-    "src/renderer/components/dataset/DatasetStudio.tsx": "05001ce30dd9b6c8490735f1c2ce23140f9bc4651fd4ed95bb9b6fc528ceca3b",
+    "src/renderer/components/dataset/DatasetStudio.tsx": "924b5cc4036ca295c75c01982748e23feead610166dbd87a660ce1ce3f19fc40",
     "src/renderer/components/evaluation/EvaluationHistoryPanel.tsx": "ce9cfa541e63988176973a0966d031c5b8722b356feb1472671da73299d6e2fe",
     "src/renderer/components/evaluation/EvaluationEvidencePanel.tsx": "9ab0454b4433afdd10fc9c6cbcc12e0ac4c71e3f43e0ed0aa829cd687d38672e",
     "src/renderer/components/runtime/FleetPanel.tsx": "572144e60bbe38efc208ca2d2d19e87de58793da783269e5498970c1d97243ab",
@@ -2455,7 +2455,7 @@
           "source": "src/renderer/components/dataset/DatasetStudio.tsx",
           "scenarios": {
             "success": {
-              "state": "verified",
+              "state": "pending",
               "evidence": [
                 {
                   "task": "S3-03",
@@ -2509,10 +2509,12 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "reason": "Current gallery transport and context authority changed; original receipts remain historical evidence. Fresh current browser/native replay is required.",
+              "reviewer": "Codex Root current-source impact review; no source-unit result substitutes for UI execution."
             },
             "empty": {
-              "state": "verified",
+              "state": "pending",
               "evidence": [
                 {
                   "task": "S3-03",
@@ -2540,10 +2542,12 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "reason": "Current gallery transport and context authority changed; original receipts remain historical evidence. Fresh current browser/native replay is required.",
+              "reviewer": "Codex Root current-source impact review; no source-unit result substitutes for UI execution."
             },
             "invalid": {
-              "state": "verified",
+              "state": "pending",
               "evidence": [
                 {
                   "task": "S3-03",
@@ -2567,10 +2571,12 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "reason": "Current gallery transport and context authority changed; original receipts remain historical evidence. Fresh current browser/native replay is required.",
+              "reviewer": "Codex Root current-source impact review; no source-unit result substitutes for UI execution."
             },
             "error": {
-              "state": "verified",
+              "state": "pending",
               "evidence": [
                 {
                   "task": "S3-03",
@@ -2594,10 +2600,12 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "reason": "Current gallery transport and context authority changed; original receipts remain historical evidence. Fresh current browser/native replay is required.",
+              "reviewer": "Codex Root current-source impact review; no source-unit result substitutes for UI execution."
             },
             "cancel": {
-              "state": "verified",
+              "state": "pending",
               "evidence": [
                 {
                   "task": "S3-03",
@@ -2621,10 +2629,12 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "reason": "Current gallery transport and context authority changed; original receipts remain historical evidence. Fresh current browser/native replay is required.",
+              "reviewer": "Codex Root current-source impact review; no source-unit result substitutes for UI execution."
             },
             "reopen": {
-              "state": "verified",
+              "state": "pending",
               "evidence": [
                 {
                   "task": "S3-03",
@@ -2656,10 +2666,12 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "reason": "Current gallery transport and context authority changed; original receipts remain historical evidence. Fresh current browser/native replay is required.",
+              "reviewer": "Codex Root current-source impact review; no source-unit result substitutes for UI execution."
             },
             "handoff": {
-              "state": "verified",
+              "state": "pending",
               "evidence": [
                 {
                   "task": "S3-03",
@@ -2757,7 +2769,9 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "reason": "Current gallery transport and context authority changed; original receipts remain historical evidence. Fresh current browser/native replay is required.",
+              "reviewer": "Codex Root current-source impact review; no source-unit result substitutes for UI execution."
             }
           }
         }
@@ -3156,7 +3170,7 @@
           "source": "src/renderer/components/dataset/DatasetStudio.tsx",
           "scenarios": {
             "success": {
-              "state": "verified",
+              "state": "pending",
               "evidence": [
                 {
                   "task": "S3-07",
@@ -3188,10 +3202,12 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "reason": "Current gallery transport and context authority changed; original receipts remain historical evidence. Fresh current browser/native replay is required.",
+              "reviewer": "Codex Root current-source impact review; no source-unit result substitutes for UI execution."
             },
             "empty": {
-              "state": "verified",
+              "state": "pending",
               "evidence": [
                 {
                   "task": "S3-07",
@@ -3219,10 +3235,12 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "reason": "Current gallery transport and context authority changed; original receipts remain historical evidence. Fresh current browser/native replay is required.",
+              "reviewer": "Codex Root current-source impact review; no source-unit result substitutes for UI execution."
             },
             "invalid": {
-              "state": "verified",
+              "state": "pending",
               "evidence": [
                 {
                   "task": "S3-07",
@@ -3246,10 +3264,12 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "reason": "Current gallery transport and context authority changed; original receipts remain historical evidence. Fresh current browser/native replay is required.",
+              "reviewer": "Codex Root current-source impact review; no source-unit result substitutes for UI execution."
             },
             "error": {
-              "state": "verified",
+              "state": "pending",
               "evidence": [
                 {
                   "task": "S3-07",
@@ -3273,10 +3293,12 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "reason": "Current gallery transport and context authority changed; original receipts remain historical evidence. Fresh current browser/native replay is required.",
+              "reviewer": "Codex Root current-source impact review; no source-unit result substitutes for UI execution."
             },
             "cancel": {
-              "state": "verified",
+              "state": "pending",
               "evidence": [
                 {
                   "task": "S3-07",
@@ -3300,10 +3322,12 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "reason": "Current gallery transport and context authority changed; original receipts remain historical evidence. Fresh current browser/native replay is required.",
+              "reviewer": "Codex Root current-source impact review; no source-unit result substitutes for UI execution."
             },
             "reopen": {
-              "state": "verified",
+              "state": "pending",
               "evidence": [
                 {
                   "task": "S3-07",
@@ -3335,10 +3359,12 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "reason": "Current gallery transport and context authority changed; original receipts remain historical evidence. Fresh current browser/native replay is required.",
+              "reviewer": "Codex Root current-source impact review; no source-unit result substitutes for UI execution."
             },
             "handoff": {
-              "state": "verified",
+              "state": "pending",
               "evidence": [
                 {
                   "task": "S3-07",
@@ -3386,7 +3412,9 @@
                     }
                   ]
                 }
-              ]
+              ],
+              "reason": "Current gallery transport and context authority changed; original receipts remain historical evidence. Fresh current browser/native replay is required.",
+              "reviewer": "Codex Root current-source impact review; no source-unit result substitutes for UI execution."
             }
           }
         }

@@ -16,9 +16,9 @@ import {
   ListChecks,
 } from 'lucide-react';
 import { useProjectStore } from '../../stores/useProjectStore';
-import { useDatasetStore } from '../../stores/useDatasetStore';
+import { readDatasetAuthority, useDatasetStore } from '../../stores/useDatasetStore';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
-import { api, getApiPersistenceIdentity, getProjectContextGeneration, resolveApiUrl, type DatasetRevisionRow, type DatasetSourceStatus } from '../../services/api';
+import { api, getApiPersistenceIdentity, getProjectContext, getProjectContextGeneration, type DatasetRevisionRow, type DatasetSourceStatus } from '../../services/api';
 import { host, hostErrorMessage } from '../../services/hostAdapter';
 import { ProceduralGeneratorModal } from './ProceduralGeneratorModal';
 import { DatasetVersionPanel } from './DatasetVersionPanel';
@@ -36,6 +36,7 @@ import { JargonTooltip } from '../common/JargonTooltip';
 import { GuardrailBanner } from '../common/GuardrailBanner';
 import { classDistributionStats } from './classDistribution';
 import { isSplitUnavailable } from '../../utils/datasetSplitCapability';
+import { ScopedDatasetThumbnail } from '../common/ScopedDatasetThumbnail';
 
 export const DatasetStudio: React.FC = () => {
   const {key:sourceContextKey}=useDeliveryScope();
@@ -82,10 +83,16 @@ export const DatasetStudio: React.FC = () => {
   } = useDatasetStore();
   // Relative thumbnails must never be rebuilt on a transport that did not
   // accept this source. Project acceptance can follow a server change later.
-  const currentAuthority = JSON.stringify([
-    getProjectContextGeneration(), getApiPersistenceIdentity(), resolveApiUrl('/'),
-  ]);
-  const sourceIsCurrent = sourceAuthority === currentAuthority;
+  const currentAuthority = readDatasetAuthority();
+  const galleryCurrent = useCallback(() => {
+    const selected = useProjectStore.getState(), dataset = useDatasetStore.getState(), context = getProjectContext();
+    return Boolean(selected.project && !selected.isProjectBusy && sourceAuthority
+      && dataset.sourceAuthority === sourceAuthority && sourceAuthority === readDatasetAuthority()
+      && selected.project.source_dataset_dir === dataset.folderPath && selected.project.task === selected.task
+      && dataset.datasetKey === `${dataset.folderPath}\0${selected.task}`
+      && (context ? context.project_id === selected.project.id : getApiPersistenceIdentity() === 'local'));
+  }, [sourceAuthority]);
+  const sourceIsCurrent = galleryCurrent();
   const galleryImages = sourceIsCurrent ? images : [];
 
   // Thumbnail Grid Density (S: compact 96px, M: default 144px, L: detailed 200px)
@@ -883,7 +890,6 @@ export const DatasetStudio: React.FC = () => {
             ) : (
               <div className={gridClassByDensity}>
                 {galleryImages.map((img) => {
-                  const thumbUrl = resolveApiUrl(img.thumbnail_url);
                   const isNormal = img.label?.toLowerCase() === 'ok' || img.label?.toLowerCase() === 'good';
                   const dim = imgDimensions[img.file_path];
                   const w = img.width || dim?.w || 0;
@@ -900,11 +906,12 @@ export const DatasetStudio: React.FC = () => {
                       className="group bg-[#1A212E] rounded-[4px] border border-[#2B3547] hover:border-[#3B82F6] hover:bg-[#222B3D] overflow-hidden transition-tactile flex flex-col cursor-pointer select-none text-left disabled:opacity-60 disabled:cursor-wait"
                     >
                       <div className="relative aspect-square bg-[#0B0E14] overflow-hidden flex items-center justify-center border-b border-[#2B3547]">
-                        <img
-                          src={thumbUrl}
+                        <ScopedDatasetThumbnail
+                          path={img.thumbnail_url}
+                          authority={sourceAuthority!}
+                          context={getProjectContext()}
+                          current={galleryCurrent}
                           alt={img.file_name}
-                          loading="lazy"
-                          decoding="async"
                           onLoad={(e) =>
                             handleImageLoad(img.file_path, e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)
                           }

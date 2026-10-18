@@ -1,0 +1,164 @@
+{
+  "schema": "source-only-scoped-gallery-media-v1",
+  "date": "2026-10-18",
+  "scope": "Project-bound lazy dataset gallery thumbnails and explicit-context source authority. Source-only verification; no native or action acceptance.",
+  "source": {
+    "public_base": "472ab751f5f0304f6d0685a9f3f3a7eea63afd99",
+    "private_commit": "ace24c8fa427c43f3289d7bbf814777a89e2d29c",
+    "files": [
+      {
+        "path": "src/renderer/stores/useDatasetStore.ts",
+        "bytes": 19847,
+        "sha256": "4f5e10dadfdc187c386f94109b91e763c6b246633b004bb1e6e7f956d442957c"
+      },
+      {
+        "path": "src/renderer/components/dataset/DatasetStudio.tsx",
+        "bytes": 53472,
+        "sha256": "924b5cc4036ca295c75c01982748e23feead610166dbd87a660ce1ce3f19fc40"
+      },
+      {
+        "path": "src/renderer/components/common/ScopedDatasetThumbnail.tsx",
+        "bytes": 4911,
+        "sha256": "484eb07f6fb4aa9655b0a132cbdcdbb940373432518e98a9f8fa0d08b501268e"
+      },
+      {
+        "path": "src/renderer/stores/datasetMediaAuthority.test.cjs",
+        "bytes": 5929,
+        "sha256": "2703cea3794e7f3bec76301751b9d50cf88551f31a4f64257faf1e89fadd148b"
+      },
+      {
+        "path": "src/renderer/components/common/ScopedDatasetThumbnail.test.cjs",
+        "bytes": 9978,
+        "sha256": "bea70cf8e61eb67af3f431c6f3270b8b4e759b730518ee1d963132f7e5abb638"
+      },
+      {
+        "path": "src/renderer/stores/datasetSourcePath.test.cjs",
+        "bytes": 17780,
+        "sha256": "9556abb6df103d60f032bd06e1578e94a0e2d3d23e17dc86341be99c39904e83"
+      },
+      {
+        "path": "src/renderer/components/dataset/datasetSourceRestore.test.cjs",
+        "bytes": 7062,
+        "sha256": "82186db42ccd229a1d04d717fde479b68c674bf5d87c67bcb958fcab9146372e"
+      },
+      {
+        "path": "src/renderer/components/dataset/datasetFolderOwnership.test.cjs",
+        "bytes": 16956,
+        "sha256": "750f0f723d431f844ac965fc4014d4480b6c51e267e6c3e5f55b81f0925c41ab"
+      }
+    ],
+    "products": 3,
+    "tests": 5,
+    "auth_main_API_serializer_CSP_backend_observer_and_original_caps_unchanged": true
+  },
+  "changes": [
+    "Lazy visible gallery thumbnails use the existing Blob response client with a copied explicit project context. Only owned Blob URLs reach image elements.",
+    "Source authority includes explicit workspace/project/actor/mode in addition to the existing epoch, transport identity and API base; same-folder and pre-epoch changes cannot reuse prior source authority.",
+    "Abort, late-response refusal and Blob URL revocation retire prior resources; original layout, alt text, async decode, natural-dimension callback and 48-image page remain.",
+    "The original unknown initial local API-base allowance remains; learned first port does not discard a valid initial local source response."
+  ],
+  "actual_runs": {
+    "original_characterization": {
+      "pass": 4,
+      "fail": 0,
+      "duration_ms": 294.284,
+      "scope": "Unchanged original main header supplier and API serialization with controlled HTTP; no backend authorization or mounted pixels."
+    },
+    "desired_authority_RED01": {
+      "pass": 1,
+      "fail": 3,
+      "duration_ms": 365.899834,
+      "scope": "Original real dataset store dispatched with changed explicit project/actor inside the original pre-epoch acceptance callback."
+    },
+    "candidate_local_port_RED02": {
+      "pass": 0,
+      "fail": 1,
+      "duration_ms": 247.152083,
+      "scope": "Previous candidate incorrectly dropped initial local restore after original API port discovery; original behavior restored in final source."
+    },
+    "final_focused03": {
+      "pass": 61,
+      "fail": 0,
+      "skipped": 0,
+      "duration_ms": 1556.712458,
+      "exit_code": 0,
+      "argv": [
+        "--test",
+        "src/renderer/stores/datasetMediaAuthority.test.cjs",
+        "src/renderer/components/common/ScopedDatasetThumbnail.test.cjs",
+        "src/renderer/stores/datasetSourcePath.test.cjs",
+        "src/renderer/components/dataset/datasetSourceRestore.test.cjs",
+        "src/renderer/components/dataset/datasetFolderOwnership.test.cjs",
+        "src/renderer/services/apiSharedProjectReads.test.cjs",
+        "src/renderer/stores/projectImageSelectionHandoff.test.cjs"
+      ]
+    },
+    "final_renderer_typecheck03": {
+      "exit_code": 0,
+      "log_bytes": 0,
+      "argv": [
+        "node_modules/typescript/bin/tsc",
+        "-p",
+        "tsconfig.json",
+        "--noEmit"
+      ]
+    }
+  },
+  "controls": [
+    "Same-folder different-project and same-project different-actor pre-epoch retirement; unchanged-context refresh allowed.",
+    "Visibility-only one fetch; copied explicit B retained when main legacy selection is A.",
+    "Held-response abort, late A-to-B-to-A refusal, real Blob URL revocation and StrictMode-style separate resource lifetimes.",
+    "Original response-context mismatch and current HTTP403 remain failures with no ready URL.",
+    "Shared null context refuses; actual local null client and first-port discovery remain available.",
+    "External/non-thumbnail/ambiguous paths and absent IntersectionObserver do not dispatch."
+  ],
+  "final_evidence": [
+    {
+      "name": "focused-final03.log",
+      "bytes": 6649,
+      "sha256": "3284a3d4470a9cd5d5d4cfdc5d8ea9f845a976069c57d0c0c0b46639c7fc8616"
+    },
+    {
+      "name": "focused-final03-actual-start.json",
+      "bytes": 131,
+      "sha256": "befcc79a680dd60f64e0748653a0a0285e23df1ea210edc2a62fbbc6993d9ec3"
+    },
+    {
+      "name": "focused-final03-actual-completion.json",
+      "bytes": 125,
+      "sha256": "9ee29c5959f95fa1dc554fcb050adb44bbfa782d5d31b3e8669ad87249e6b47f"
+    },
+    {
+      "name": "renderer-typecheck03.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "renderer-typecheck03-actual-start.json",
+      "bytes": 131,
+      "sha256": "03c61c89fd2c3bc46165dd793a1c4e973ec2b8846f4fc5e9a3619fc5c29bb7b9"
+    },
+    {
+      "name": "renderer-typecheck03-actual-completion.json",
+      "bytes": 124,
+      "sha256": "b04e8057215fd2520676d620afa0ed0a18956d693bd7cf6d8849c79317be1b92"
+    }
+  ],
+  "preserved_intermediate_failures": [
+    "New component absent: initial 10-case feature run failed with missing module; not causal runtime evidence; original tool output is retained in truncated form.",
+    "First resource-supplier test run: 3 passed/7 failed because one event-loop turn did not prove Response.blob settlement and failed cases left their test lifetime active. Original full log retained; tests now wait actual body completion and retire their resources. No production workaround or runtime cap change.",
+    "Related01: 44 passed/15 failed in obsolete partial test fixtures; retained as intermediate, including product changes in flight. Final03 began only after final source freeze.",
+    "Typecheck01: unused old URL import; retained. Previous 60-pass/typecheck02 candidate was not adopted after the initial local-port regression was discovered."
+  ],
+  "limitations": [
+    "Global HTTP/visibility/DOM URL suppliers are source-test boundaries; React mount, browser decoding and genuine backend authorization were not executed by these tests.",
+    "The synchronous authority tests do not prove physical DOM removal before React commits. Actual browser/native replay remains required.",
+    "Original Root18 first emitting request, telemetry cascade cause, installed acceptance, strict launch closure, parent/action/GPU/model/Windows acceptance remain unproved.",
+    "Existing Blob response materialization and original transport/body limits remain; no new streaming client, credential query, auth policy or record-cap change.",
+    "Historical evidence metadata is retained as immutable prior-state evidence; its old live-source pins are not current-file assertions."
+  ],
+  "privacy": {
+    "private_paths_auth_tokens_raw_headers_real_project_ids_and_raw_app_bodies_embedded": false,
+    "public_counts_or_action_cells_promoted": false
+  }
+}
