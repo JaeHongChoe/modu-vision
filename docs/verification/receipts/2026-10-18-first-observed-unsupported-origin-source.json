@@ -1,0 +1,241 @@
+{
+  "schema": "source-only-first-observed-unsupported-origin-v1",
+  "date": "2026-10-18",
+  "scope": "Add bounded diagnostic data for the first observed unsupported hook. Existing request/refusal/authorization/drain/lease decisions remain original.",
+  "source": {
+    "public_base": "31830c8cdc1eb689c82bb46b0aefd33fabf2a7b0",
+    "private_commit": "ff3af02ee9575ce191f4f3a5987ed5c9198025d2",
+    "files": [
+      {
+        "path": "backend/engine/application_launch_handshake.py",
+        "bytes": 116435,
+        "sha256": "8fa84b967344305706807f7966b7856bde76628bb575dbb3848ccb2ed261b4c1"
+      },
+      {
+        "path": "backend/engine/original_request_activity.py",
+        "bytes": 55083,
+        "sha256": "662a90fe75d3f1c4845f49c1dd075f0d69afe226cde2781df67d9712a5f57bfc"
+      },
+      {
+        "path": "backend/main.py",
+        "bytes": 46044,
+        "sha256": "0c34b8fdbd8ca8f1c268cd4e7f3ed7366cae2cdcfa5472b67c91adf9c30deeea"
+      },
+      {
+        "path": "backend/tests/test_first_unsupported_origin_diagnostic.py",
+        "bytes": 16348,
+        "sha256": "2e9944c7d17d23be7da1118cf1432af559b34f62c473a84ac888e8a7765ff23a"
+      }
+    ],
+    "products": 3,
+    "new_tests": 1,
+    "unchanged_original_function_AST_count": 151,
+    "original_function_AST_count_exact_after_removing_only_declared_additive_diagnostic_statements": 159
+  },
+  "changes": [
+    "After the original uncovered enter/add, retain one fixed DIRECT_ENTER observation; original uncovered() adds retain OTHER_UNSUPPORTED. A sticky diagnostic gap marker prevents an unavailable earlier direct observation from being claimed by a later typed failure.",
+    "The original poison still sets sticky uncertainty and retains the first 32 distinct reasons. Optional inspection then maps only an exact original caller class/method code/module to a finite family. Existing admission-condition ownership is required for typed attribution; unknown/unlocked/prior-gap paths stay UNKNOWN with null correlation.",
+    "Request correlation requires the retained original carrier/token/binding, current task/loop/thread/process context, original middleware/downstream/scope and finite existing row identity/sequences. Foreign/copied carrier bindings cannot become the current request; no latest-row inference is used.",
+    "The same original authenticated health guard may return a new optional outer sibling only when its sequence and request count match the old health sample. All old health/failure/ancillary subobjects remain unchanged.",
+    "The optional final stderr sibling keeps the original 8 KiB total cap and one-write descriptor transport. An oversized optional envelope is omitted while an original bounded packet remains available. No new API, credentials, remote operation or authority is introduced."
+  ],
+  "actual_runs": {
+    "initial_causal_RED01": {
+      "pass_count": 0,
+      "fail_count": 3,
+      "duration_s": 5.12,
+      "exit_code": 1,
+      "meaning": "Original admission/middleware and actual typed refusal reached desired missing-diagnostic assertions; no setup error."
+    },
+    "initial_same_body_GREEN01": {
+      "pass_count": 3,
+      "fail_count": 0,
+      "duration_s": 6.46,
+      "exit_code": 0
+    },
+    "intermediate_final01": {
+      "pass_count": 10,
+      "setup_errors": 40,
+      "exit_code": 1,
+      "meaning": "Test temporary parent directory absent; preserved original artifacts, not a product failure."
+    },
+    "intermediate_final02": {
+      "pass_count": 50,
+      "fail_count": 1,
+      "duration_s": 18.76,
+      "exit_code": 1,
+      "meaning": "New fixture expected404 but original unknown-path unauthorized response was401; expectation corrected without changing authorization."
+    },
+    "intermediate_final03": {
+      "pass_count": 52,
+      "fail_count": 1,
+      "duration_s": 20.27,
+      "exit_code": 1,
+      "meaning": "New endpoint fixture used a genuinely covered unauthorized request and correctly had no origin. Fixture aligned to the existing original unknown-ingress control headers; original guards unchanged."
+    },
+    "final04": {
+      "pass_count": 53,
+      "fail_count": 0,
+      "duration_s": 18.81,
+      "exit_code": 0,
+      "new_cases": 14,
+      "existing_health_failure_and_final_drain_cases": 39,
+      "argv": [
+        "backend/tests/test_first_unsupported_origin_diagnostic.py",
+        "backend/tests/test_owned_health_diagnostic.py",
+        "backend/tests/test_owned_health_failure_diagnostic.py",
+        "backend/tests/test_application_final_drain_diagnostic.py",
+        "-p",
+        "no:cacheprovider",
+        "--tb=short",
+        "-q"
+      ]
+    }
+  },
+  "controls": [
+    "Original direct admission, response bodies, sticky unsupported/uncertainty and 32-reason cap.",
+    "Two simultaneous original ASGI requests; only the genuinely failing current carrier is correlated.",
+    "First observation is immutable across duplicate/later failures; earlier unbound poison and missing earlier direct capture remain unknown.",
+    "Foreign observer carrier and copied attempt binding have null correlation; optional inspection error preserves original response/refusal.",
+    "Original same-token health visibility, exact ordinary unauthorized health, old subobject schemas and no private path/query/body/reason/token text in the new data.",
+    "Controlled oversized optional metadata around the original emitter proves that the old bounded packet is retained. This format-boundary control does not claim a genuine fixed-size origin naturally overflows."
+  ],
+  "evidence": [
+    {
+      "name": "source-freeze-final04.json",
+      "bytes": 960,
+      "sha256": "92406232f51187cc5b4250873bd644054a8082c74bea37a9c853473889d84296"
+    },
+    {
+      "name": "product-final03.diff",
+      "bytes": 15547,
+      "sha256": "d611a13cb9376666c0436351f656b8df40d10bcbba60e892110d85d93d761bfb"
+    },
+    {
+      "name": "original-source-controls-final04.json",
+      "bytes": 20454,
+      "sha256": "008d2353259d3f7b10e91f5798fc8037df43763a1a9cb39d2b7b67c048f0c193"
+    },
+    {
+      "name": "proof/red01.log",
+      "bytes": 3083,
+      "sha256": "95b3156199b4f17bcc3051f3af3972589b0bed1d19f43fc608fbbcfc8c8fd838"
+    },
+    {
+      "name": "proof/red01-test.py.copy",
+      "bytes": 3946,
+      "sha256": "8e378168b5b8aa55aa62c74e2bf4a00ccc2cb0a4d8a80c60afeca108462ff886"
+    },
+    {
+      "name": "proof/red01-command.json",
+      "bytes": 769,
+      "sha256": "22f9b32838c13fb473f08def841ac19547f00cc68d8e5363d0cf48c83280db18"
+    },
+    {
+      "name": "proof/red01-original-tool-start.json",
+      "bytes": 110,
+      "sha256": "d7690ae86f604d1470ecc4fc0a096ad0591d2e955d9d45ac21a54a484473e8e5"
+    },
+    {
+      "name": "proof/red01-original-tool-completion.json",
+      "bytes": 103,
+      "sha256": "c9547aaaf2c7613aec829e4589fe7b1a3fc9b72adb4b3c09db22390163e290ad"
+    },
+    {
+      "name": "proof/green01.log",
+      "bytes": 98,
+      "sha256": "18f84f072d93206f1333cc4b95e85eef8018eced939cd0ed264bfffd1ef8651c"
+    },
+    {
+      "name": "proof/green01-command.json",
+      "bytes": 566,
+      "sha256": "85daf4febf1b254484f635ce8fdcc0d6756420555d093280e2ec342dcc4da0ed"
+    },
+    {
+      "name": "proof/green01-original-tool-start.json",
+      "bytes": 131,
+      "sha256": "fa33b7a913ca8bf03f3480e5065bf8c35494bb8dfcf05df6b5b0c7c36bd91a00"
+    },
+    {
+      "name": "proof/green01-original-tool-completion.json",
+      "bytes": 126,
+      "sha256": "3c630563900422b327ded8c398da0cb776a7e0620f723f727e1315137b9d680a"
+    },
+    {
+      "name": "proof/final01.log",
+      "bytes": 27638,
+      "sha256": "226be02b8687583d4486e4e05c7a8a444dfb8a1d046ce0c9aa6aa5262da880a0"
+    },
+    {
+      "name": "proof/final01-original-tool-start.json",
+      "bytes": 131,
+      "sha256": "8fa1fd71ce4d1523e8cf31959a62ae3be46fa08d71bc06976a50de4d7345316c"
+    },
+    {
+      "name": "proof/final01-original-tool-completion.json",
+      "bytes": 125,
+      "sha256": "aa566cdbc12588a7b9eab109ef34099f0d9711234618596d18bf65b1cfe86e19"
+    },
+    {
+      "name": "proof/final02.log",
+      "bytes": 1036,
+      "sha256": "cc8edaabca2f8d5904cdaec8abb8221ba86bb009ffd9aab29feae6ca94d041b3"
+    },
+    {
+      "name": "proof/final02-original-tool-start.json",
+      "bytes": 131,
+      "sha256": "e2cd730d16042af5e71ed066249569896998a25b281caccc6bc0d46eb4861369"
+    },
+    {
+      "name": "proof/final02-original-tool-completion.json",
+      "bytes": 124,
+      "sha256": "9d93e33178a90f8833988fdb3d48fd95f0d11b7b3547468555cd66d78e474056"
+    },
+    {
+      "name": "proof/final03.log",
+      "bytes": 793,
+      "sha256": "a9aff4a8fbc6e4dc20cbf2de33680c76a001a2de723aa7a3284dbb526faf7c8b"
+    },
+    {
+      "name": "proof/final03-original-tool-start.json",
+      "bytes": 128,
+      "sha256": "e45b6925fb4ffeaf45e560c89b739104409896bcb5feb1a00d9f0654f3c015de"
+    },
+    {
+      "name": "proof/final03-original-tool-completion.json",
+      "bytes": 126,
+      "sha256": "2c8dbf57a462b3eb15656ff66d2f8f987c3f110addd58c3db356df1c80b78279"
+    },
+    {
+      "name": "proof/final04.log",
+      "bytes": 100,
+      "sha256": "d1614907aa9f5db82693a9687404239bf064782a36041fd68be37954f2ac98a6"
+    },
+    {
+      "name": "proof/final04-command.json",
+      "bytes": 728,
+      "sha256": "33fefa74097a7594d2b489512293d5c0db77d011bd940611c20f11b3960fedf3"
+    },
+    {
+      "name": "proof/final04-original-tool-start.json",
+      "bytes": 131,
+      "sha256": "464464f57b1a24301b64c89656014034560c830d4dbd8ede83ffe5dc85568cdb"
+    },
+    {
+      "name": "proof/final04-original-tool-completion.json",
+      "bytes": 126,
+      "sha256": "7b6df808323b7ce20bf55d1e26ee81d2bb27006cb0199ad76529a61ccd5b4fe1"
+    }
+  ],
+  "limits": [
+    "The slot describes the first observed hook under original observer synchronization, not the global first unsupported set.add across arbitrary unlocked concurrent callers.",
+    "A family/identity/sequence is diagnostic data, not proof of original ownership or successful work. Null, UNKNOWN or absent metadata is not clean, completed or accepted.",
+    "No original Root23 emitter or cause is established by these tests; no failed native fixture is repaired, reopened or reclassified.",
+    "Pure/original in-process ASGI and modeled external descriptor-sink controls only. No real app, native/browser, process/listener, remote/server, model/GPU, deployment or launch lease acceptance.",
+    "Current private v4 reader accepts the extra outer field but omits it. A separately reviewed private v5 strict optional validator retains it while preserving all old transport/validator bodies. Future actual adapter binding remains separate.",
+    "No action-cell, parent-plan, native, whole-writer or runtime-performance credit is promoted."
+  ],
+  "whole_writer_coverage": false,
+  "process_tree_exit_verified": false,
+  "can_release_launch_lease": false
+}

@@ -45,11 +45,144 @@ class OriginalRequestActivityObserver:
         self._settled_history=(0,0,hashlib.sha256(b'').hexdigest())
         self._settled_history_binding=self._settled_history
         self._settled_ready={};self._event_owners={};self._settlement_caller=None
+        # One immutable data slot; never a request, owner, or refusal decision.
+        self._first_unsupported_origin=None
 
     def poison(self,reason):
         with self._lock:
+            origin_first=self._uncertain is False
             self._uncertain=True
             if reason not in self._failures and len(self._failures)<32:self._failures.append(reason)
+            try:self._observe_poison_origin(sys._getframe(1),origin_first)
+            except Exception:pass  # Optional inspection cannot replace the original poison.
+
+    def _origin_carrier(self,carrier):
+        """Non-poisoning inspection. Never guess the latest or another task's row."""
+        if type(carrier) is not _RequestActivity:return None
+        binding=carrier.binding;current=_context()
+        if (type(binding) is not tuple or len(binding)!=7
+                or any(binding[i] is not value for i,value in enumerate(
+                    (carrier,self,self._middleware,self._downstream,carrier.scope,carrier.context)))
+                or type(carrier.scope) is not dict or type(carrier.ingress) is not dict
+                or tuple(carrier.ingress.items())!=binding[6]
+                or {key:carrier.scope.get(key) for key in ('type','method','path')}!=carrier.ingress
+                or type(carrier.context) is not tuple or len(carrier.context)!=4
+                or any(carrier.context[i] is not current[i] for i in (0,1,2))
+                or carrier.context[3]!=current[3] or current[0] is None or current[1] is None
+                or carrier.observer is not self or carrier.middleware is not self._middleware
+                or carrier.downstream is not self._downstream):return None
+        row=self._records.get(carrier.token)
+        if (type(row) is not dict or row.get('carrier') is not carrier
+                or row.get('released') is not False or row.get('accepted') is not True
+                or any(type(row.get(k)) is not int or not 1<=row[k]<=1_000_000
+                    for k in ('identity','entered_sequence'))
+                or row['identity']>self._request_count or row['entered_sequence']>self._sequence):return None
+        method=carrier.ingress.get('method')
+        method=method if type(method) is str and method in {'GET','HEAD','OPTIONS','POST','PUT','PATCH','DELETE'} else 'NONE' if method is None else 'UNKNOWN'
+        return row['identity'],row['entered_sequence'],method
+
+    def _remember_unsupported_origin(self,source,family,carrier=None):
+        if self._first_unsupported_origin is not None:return
+        if (not self._original(self._admission) or type(self._sequence) is not int
+                or not 0<=self._sequence<=1_000_000):return
+        found=self._origin_carrier(carrier)
+        identity,entered,method=found if found is not None else (None,None,'NONE')
+        self._first_unsupported_origin=(source,family,identity,entered,self._sequence,method)
+
+    def observe_unsupported_origin(self,admission,source,activity=None):
+        """Called only after the original admission has added its sticky reason."""
+        from backend.engine.application_launch_handshake import BackendWorkAdmission
+        frame=sys._getframe(1)
+        allowed=(BackendWorkAdmission.enter if source=='DIRECT_ENTER' else
+            BackendWorkAdmission.uncovered if source=='OTHER_UNSUPPORTED' else None)
+        with self._lock:
+            if (allowed is None or frame.f_code is not allowed.__code__
+                    or frame.f_locals.get('self') is not admission or not self._original(admission)
+                    or not admission._unsupported):return
+            if self._uncertain and self._first_unsupported_origin is None:
+                self._remember_unsupported_origin('OTHER_UNSUPPORTED','UNKNOWN')
+            else:self._remember_unsupported_origin(source,'ADMISSION',activity)
+
+    def _observe_poison_origin(self,frame,first):
+        if self._first_unsupported_origin is not None:return
+        # Code/class/global identity, not private reason text or a reason prefix.
+        families=(
+            ('original_current_project_request','_Attempt','fail','CURRENT_PROJECT'),
+            ('original_included_current_project','OriginalIncludedCurrentProject','fail','INCLUDED_CURRENT'),
+            ('original_desktop_auth_denial','_DenialAttempt','fail','DESKTOP_DENIAL'),
+            ('original_shared_auth_denial','_SharedDenialAttempt','fail','SHARED_DENIAL'),
+            ('original_shared_auth_denial','_AuthenticatedUnselectedAttempt','fail','SHARED_DENIAL'),
+            ('original_shared_current_project','OriginalSharedAccountObservation','__copy__','SHARED_ACCOUNT'),
+            ('original_owned_account_request','OriginalOwnedAccountRequest','__copy__','ACCOUNT'),
+            ('original_owned_account_request','_LoginAttempt','fail','LOGIN'),
+            ('original_owned_account_request','_AccountAttempt','fail','ACCOUNT'),
+            ('original_owned_flow_request','OriginalOwnedFlowRequest','fail','FLOW'),
+            ('original_owned_flow_request','_FlowAttempt','fail','FLOW'),
+            ('original_owned_flow_execution_request','OriginalOwnedFlowExecutionRequest','fail','EXECUTION'),
+            ('original_owned_flow_execution_request','_ExecutionAttempt','fail','EXECUTION'),
+            ('original_owned_UI_ancillary_request','OriginalOwnedUIAncillaryRequest','fail','UI_ANCILLARY'),
+            ('original_owned_UI_ancillary_request','_AncillaryAttempt','fail','UI_ANCILLARY'),
+            ('original_owned_telemetry_socket_request','OriginalOwnedTelemetrySocketRequest','fail','TELEMETRY'),
+            ('original_owned_telemetry_socket_request','_SocketAttempt','fail','TELEMETRY'))
+        source,family,carrier='OTHER_UNSUPPORTED','UNKNOWN',None
+        receiver=frame.f_locals.get('self')
+        for module_name,class_name,method_name,public in families:
+            module=sys.modules.get('backend.engine.'+module_name)
+            kind=getattr(module,class_name,None);function=getattr(kind,method_name,None)
+            if (kind is not None and type(receiver) is kind and getattr(function,'__code__',None) is frame.f_code
+                    and frame.f_globals is module.__dict__):
+                owner=getattr(receiver,'owner',getattr(receiver,'adapter',receiver))
+                if (getattr(owner,'admission',None) is self._admission
+                        and self._admission._activity_observer is self):
+                    source,family,carrier='TYPED_POISON',public,getattr(receiver,'activity',None)
+                    binding=getattr(receiver,'binding',None)
+                    if binding is not None:
+                        if (type(binding) is not tuple or len(binding)<4
+                                or any(binding[i] is not value for i,value in enumerate(
+                                    (receiver,owner,carrier,getattr(carrier,'token',None))))):carrier=None
+                    elif (type(getattr(owner,'pending',None)) is not dict
+                            or owner.pending.get(getattr(carrier,'token',None)) is not receiver
+                            or type(getattr(owner,'records',None)) is not list
+                            or sum(value is receiver for value in owner.records)!=1):carrier=None
+                break
+        if (frame.f_globals is globals() and
+                (receiver is self and any(getattr(method,'__code__',None) is frame.f_code
+                    for method in vars(OriginalRequestActivityObserver).values())
+                or type(receiver) is _RequestActivity and any(getattr(method,'__code__',None) is frame.f_code
+                    for method in vars(_RequestActivity).values()))):
+            family='ACTIVITY_OBSERVER';carrier=receiver if type(receiver) is _RequestActivity else None
+        # Earlier unobserved unsupported lanes cannot be attributed to this fail.
+        if first is not True or not self._condition._is_owned() or self._admission is not None and (
+                self._admission._unsupported-{'uncovered_request_protocol'}
+                or self._admission._unsupported_origin_observation_gap):
+            source,family,carrier='OTHER_UNSUPPORTED','UNKNOWN',None
+        self._remember_unsupported_origin(source,family,carrier)
+
+    def first_unsupported_origin_diagnostic(self):
+        """First observed hook, not global set.add chronology or refusal authority.
+
+        Fixed enums/local numbers only; old diagnostics and decisions are separate.
+        """
+        condition=self._binding[2] if self._binding is not None else self._lock
+        with condition,self._lock:
+            if (not self._original(self._admission) or self._sequence!=self._admission._activity_sequence
+                    or any(type(v) is not int or not 0<=v<=1_000_000 for v in (self._sequence,self._request_count))):return None
+            held=self._first_unsupported_origin;first=None
+            if held is not None:
+                if (type(held) is not tuple or len(held)!=6
+                        or held[0] not in {'DIRECT_ENTER','TYPED_POISON','OTHER_UNSUPPORTED'}
+                        or held[1] not in {'ADMISSION','UNKNOWN','ACTIVITY_OBSERVER','CURRENT_PROJECT','INCLUDED_CURRENT','DESKTOP_DENIAL','SHARED_DENIAL','SHARED_ACCOUNT','LOGIN','ACCOUNT','FLOW','EXECUTION','UI_ANCILLARY','TELEMETRY'}
+                        or type(held[4]) is not int or not 0<=held[4]<=self._sequence
+                        or held[5] not in {'GET','HEAD','OPTIONS','POST','PUT','PATCH','DELETE','NONE','UNKNOWN'}
+                        or not (held[2] is held[3] is None and held[5]=='NONE' or all(type(v) is int and 1<=v<=1_000_000 for v in held[2:4]) and held[2]<=self._request_count and held[3]<=held[4])):return None
+                first=dict(zip(('source','family','request_identity','entered_sequence','observed_sequence','method'),held))
+            elif self._admission._unsupported:
+                # An uninstrumented old direct lane is explicitly uncorrelated.
+                first=dict(source='OTHER_UNSUPPORTED',family='UNKNOWN',request_identity=None,
+                    entered_sequence=None,observed_sequence=self._sequence,method='NONE')
+            return dict(schema='modu-vision.original-first-unsupported-origin/v1',sequence=self._sequence,
+                request_count=self._request_count,first=first,whole_writer_coverage=False,
+                process_tree_exit_verified=False,can_release_launch_lease=False)
 
     def _ancillary_failure_owner(self,attempt):
         """Original retained identity only, including a refused but real attempt."""

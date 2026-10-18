@@ -40,6 +40,7 @@ class BackendWorkAdmission:
         self._closed = False
         self._active = 0
         self._unsupported = set()
+        self._unsupported_origin_observation_gap = False  # Diagnostic only, sticky.
         self._startup_joins = {}
         self._startup_join_preparing = False
         self._startup_pending = {}
@@ -191,6 +192,10 @@ class BackendWorkAdmission:
             # still work normally, but cannot qualify a clean managed drain.
             if not covered and not (scope.get('type') == 'http' and scope.get('path') == '/health'):
                 self._unsupported.add('uncovered_request_protocol')
+                self._unsupported_origin_observation_gap = True
+                if self._activity_observer is not None:
+                    try:self._activity_observer.observe_unsupported_origin(self,'DIRECT_ENTER',activity)
+                    except Exception:pass  # Optional data cannot change the original admission.
             return True
 
     def leave(self, *, activity=None, normal_return=False):
@@ -235,7 +240,12 @@ class BackendWorkAdmission:
     def uncovered(self, reason):
         if reason not in {'uncovered_request_protocol', 'accepted_background_work', 'startup_background_protocols', 'cpu_producer_unconfirmed'}:
             raise HandshakeError('Unknown uncovered writer protocol')
-        with self._condition: self._unsupported.add(reason)
+        with self._condition:
+            self._unsupported.add(reason)
+            self._unsupported_origin_observation_gap = True
+            if self._activity_observer is not None:
+                try:self._activity_observer.observe_unsupported_origin(self,'OTHER_UNSUPPORTED')
+                except Exception:pass
 
     @contextmanager
     def producer(self):
@@ -1595,6 +1605,14 @@ def _emit_final_drain_diagnostic(admission, receipt):
         if value is None: return False
         value.update(capture_phase='after_original_receipt_send',
             receipt_sha256=hashlib.sha256(_canonical(receipt)).hexdigest())
+        try:
+            origin=observer.first_unsupported_origin_diagnostic()
+            if (origin is not None and origin['sequence']==value['sequence']
+                    and origin['request_count']==value['request_count']):
+                candidate=dict(value,first_unsupported_origin=origin)
+                encoded='OWNED_FINAL_DRAIN_DIAGNOSTIC '+json.dumps(candidate,sort_keys=True,separators=(',',':'),allow_nan=False)+'\n'
+                if len(encoded.encode('utf-8'))<=8*1024:value=candidate
+        except Exception:pass  # Optional data cannot suppress an old bounded packet.
         line = 'OWNED_FINAL_DRAIN_DIAGNOSTIC '+json.dumps(value, sort_keys=True, separators=(',', ':'), allow_nan=False)+'\n'
         if len(line.encode('utf-8')) > 8 * 1024: return False
         return _write_final_diagnostic_descriptor(2, line.encode('utf-8'))

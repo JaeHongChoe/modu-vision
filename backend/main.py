@@ -576,6 +576,14 @@ def _admitted_create_app(project_dir: Optional[str] = None, shared_auth_dir: Opt
             diagnostic = health_observer.health_diagnostic(request.scope)
             if diagnostic is not None: result['owned_request_diagnostic'] = diagnostic
             if diagnostic is not None:
+                try:
+                    origin = health_observer.first_unsupported_origin_diagnostic()
+                    if (origin is not None and origin['sequence'] == diagnostic['sequence']
+                            and origin['request_count'] == diagnostic['request_count']):
+                        result['owned_first_unsupported_origin'] = origin
+                except Exception:
+                    pass  # Only optional data; the original health objects remain unchanged.
+            if diagnostic is not None:
                 failures = health_observer.health_failure_diagnostic(request.scope)
                 if (failures is not None
                         and failures['diagnostic_request_identity'] == diagnostic['diagnostic_request_identity']):
