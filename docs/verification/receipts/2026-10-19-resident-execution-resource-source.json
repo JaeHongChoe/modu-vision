@@ -1,0 +1,62 @@
+{
+  "schema": "modu-vision.source-regression-receipt/v1",
+  "recorded_date": "2026-10-19",
+  "base_commit": "5e6e4eb976f2f6eac6d05e01587574d69e6a632c",
+  "change_scope": "Track the original resident execution-resources GET lifetime; retain original response and CPU PUT behavior.",
+  "actual_tests": {
+    "before_change_causal": {
+      "failed": 2,
+      "seconds": 6.37,
+      "point": "Strict final drain after genuine HTTP200, context echo, normal terminal and unchanged project/cache/capacity."
+    },
+    "focused": {
+      "passed": 9,
+      "seconds": 16.83,
+      "test": "backend/tests/test_original_resident_execution_resources.py"
+    },
+    "related": {
+      "passed": 81,
+      "seconds": 51.75,
+      "public_tests": [
+        "backend/tests/test_original_owned_flow_lifetime.py",
+        "backend/tests/test_flowchart_flow_contract.py",
+        "backend/tests/test_warm_scoped_get_lifetime.py",
+        "backend/tests/test_original_owned_run_export_lifetime.py"
+      ],
+      "additional_private_original_causal_cases": 2
+    },
+    "CI_gates": {
+      "passed": 7,
+      "seconds": 8.9,
+      "public_tests": [
+        "backend/tests/test_service_ci_dependencies.py",
+        "backend/tests/test_original_unchanged_flow_save_lifetime.py",
+        "backend/tests/test_application_final_drain_diagnostic.py"
+      ]
+    }
+  },
+  "proof_scope": {
+    "route": "GET /api/flowchart/execution-resources",
+    "result": "same resident-engine dictionary made under original execution-state RLock; exact worker/context/terminal/send identity required",
+    "PUT_configuration_coverage": false,
+    "model_load_or_execute_added": false,
+    "blanket_GET_exemption": false,
+    "whole_writer_coverage": false,
+    "can_release_launch_lease": false,
+    "parent_acceptance": false
+  },
+  "independent_source_review_sha256": "d57803293470a76b8abf88bb7351384ba8cb9af6fc773104e7d6436bba5ceaa9",
+  "changed_source_sha256": {
+    "backend/api/routes_flowchart.py": "60ff00a4756e3b8ef67c44afc4cc11f9a225d4cab5350198af9335415af23d0f",
+    "backend/engine/original_owned_flow_request.py": "699d1e37dd1be8da713593d631308150b3c22a0b2068f2a0d6126f00f4557db8",
+    "backend/engine/flowchart_engine.py": "cc026ddfdf01e2d13f9e6cc8ac68dd75b4f423c8180c2194b22dba8694e0a443",
+    "backend/tests/test_original_resident_execution_resources.py": "1989f339f8d7d4162c6d7d15ebd0521606dc3b31575c41f0f3a4002f0058bf8e",
+    ".github/workflows/ci.yml": "a401ed5d128091cb414d9f49d65667e4369324c8b0643a8110a70809a8d3a274"
+  },
+  "limitations": [
+    "Concurrent selected-engine metadata changes conservatively refuse proof.",
+    "No attribution of native request78 established.",
+    "Compiled installed-app QA remains to be run on this source.",
+    "No equipment, model-quality, signing, pilot or release acceptance is implied."
+  ]
+}
