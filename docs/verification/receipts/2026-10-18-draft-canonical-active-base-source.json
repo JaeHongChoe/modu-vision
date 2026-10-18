@@ -1,0 +1,89 @@
+{
+  "schema": "source-draft-canonical-base-verification-v1",
+  "scope": "source-only frontend normalization of a restored draft already identical to the same response active saved graph",
+  "source_base": "e3442a51724122ff2c842e01b72e5a39a05d03f8",
+  "private_verified_commit": "d81526b8642362f34e7cbcf48b12872273c4f39d",
+  "changed_product": {
+    "path": "src/renderer/stores/useFlowchartStore.ts",
+    "sha256": "962ae231b9a46b718065b2cf3bba10e4f35be65f30a5213421c554567a662218",
+    "added_lines": 2
+  },
+  "new_test": {
+    "path": "src/renderer/stores/flowDraftCanonicalBase.test.cjs",
+    "sha256": "416f9fd776f72a7195f04401fde1afca408fdb236ff26bd600ba1c5021e26418",
+    "case_count": 18
+  },
+  "behavior": "Prefer the same GET draft response lowerhex32 active_version_id as the editor base. Preserve old base, none and omitted values when no valid active id is present.",
+  "tests": {
+    "causal_no_fix_RED02": {
+      "same_final_18_cases": true,
+      "passed": 12,
+      "failed": 6,
+      "exit_code": 1,
+      "duration_ms": 3857.475292,
+      "failure": "Both load entry points emitted older A in raw draft PUT or version POST despite the response identifying identical active B."
+    },
+    "final_GREEN01": {
+      "passed": 18,
+      "failed": 0,
+      "exit_code": 0,
+      "duration_ms": 3774.083583
+    },
+    "existing_related_separate": {
+      "files": [
+        "src/renderer/components/flowchart/flowchartDraft.test.cjs",
+        "src/renderer/stores/flowSaveAdoption.test.cjs",
+        "src/renderer/stores/flowIdentity.test.cjs"
+      ],
+      "passed": 30,
+      "failed": 0,
+      "exit_code": 0,
+      "duration_ms": 4199.552875
+    },
+    "renderer_typecheck": {
+      "exit_code": 0
+    }
+  },
+  "test_boundary": "Original store, flowDraft service, API request serializer and edit/save state; only HTTP and selected project supplied. Controlled 409 replies verify unchanged CAS forwarding/refusal state, not actual backend CAS execution.",
+  "preserved": [
+    "Divergent draft base A remains A; none and omitted base remain unchanged.",
+    "Loaded B remains expected B if server later changes to C; controlled 409 keeps edits dirty.",
+    "Empty or malformed active id never becomes the base.",
+    "All backend product bytes, ownership guard, format/stale refusal controls and business body remain unchanged."
+  ],
+  "backend_unchanged_pins": [
+    {
+      "path": "backend/api/routes_flowchart.py",
+      "sha256": "0a5089591f4e3c82da44e8d2098bd587a7c290209335d755c5cf012ed7f30ed8"
+    },
+    {
+      "path": "backend/engine/original_owned_flow_request.py",
+      "sha256": "88619b08324f1b17552866725cd920deb34450e2134df5e302318f1f25b230d7"
+    },
+    {
+      "path": "backend/tests/test_original_owned_flow_draft_write.py",
+      "sha256": "66b391c98ce8bbb4a6bd4b4655bb5e6e40bc2801929bc0b7b656dce776ea42e8"
+    }
+  ],
+  "evidence_sha256": {
+    "actual_tool_custody": "76ef41ec89fc4a1904eb3e7fa8c53f43c8de5ea2d00b3175e659bcbb60893ae8",
+    "source_body_custody": "18784904957861789df89af2efa289ce1dcf026fdbc9ebc39fe2cb847ab7dfd5",
+    "independent_review": "dd0678d9616082e34ed91ff2b132418248cf31a104c643ab3f389d3808bc823d",
+    "RED02_log": "b1ce16c7982d3038ad419eeec9eb55229fae8b43e9b37da567cb83144849376c",
+    "GREEN01_log": "1034908266e052599f03c0238eada3a9ccad3193c65f94fb6e9b220414d4bab4",
+    "related_log": "70a0dea9ffc0e10afc0a2babcdf191574e5c6dda2a1ca1e3c571f305503fcd5b",
+    "typecheck_log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "actual_test_invocations": 4,
+  "actual_renderer_typechecks": 1,
+  "raw_tool_objects_retained": 9,
+  "independent_static_review": "SOURCE-ONLY ACCEPT",
+  "native_Root15_persisted_old_base_current_active_mismatch_is_context_only": true,
+  "native_Root15_first_emitter_proven": false,
+  "native_Root14_exact_cause_proven": false,
+  "native_fix_passed": false,
+  "native_browser_model_process_or_parent_credit": false,
+  "whole_writer_coverage": false,
+  "process_tree_exit_verified": false,
+  "can_release_launch_lease": false
+}
