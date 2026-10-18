@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
+from contextvars import ContextVar
 import json
 import locale
 import csv
@@ -25,6 +27,7 @@ from backend.remote.profiles import ComputeProfile
 
 _RUN_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}\Z")
 _REMOTE_PART = re.compile(r"[A-Za-z0-9_.-]+\Z")
+_DOWNLOAD_CAPABILITY_SCOPE = ContextVar('remote_download_capability_scope', default=None)
 _REQUIRED_WEIGHTS = (
     "resnet18", "convnext_tiny", "efficientnet_b0",
     "fasterrcnn_mobilenet_v3_large_fpn", "fasterrcnn_resnet50_fpn_v2",
@@ -309,15 +312,35 @@ def _keychain_options() -> list[str]:
 class SSHTransport:
     """Uses OpenSSH key/agent authentication and strict known-host checking."""
 
+    @contextmanager
+    def download_capability_scope(self, profile: ComputeProfile):
+        """Reuse only a positive probe within this exact operation/profile."""
+        cache = {'active': True}
+        token = _DOWNLOAD_CAPABILITY_SCOPE.set((self, profile, profile.model_dump(), cache))
+        try:
+            yield
+        finally:
+            cache['active'] = False
+            _DOWNLOAD_CAPABILITY_SCOPE.reset(token)
+
     def supports_resumable_transfer(self, profile: ComputeProfile) -> bool:
         """Rsync is a host transport capability, independent of the worker image."""
         if not shutil.which('rsync'):
             return False
+        scope = _DOWNLOAD_CAPABILITY_SCOPE.get()
+        cache = (scope[3] if scope is not None and scope[3].get('active') is True
+                 and scope[0] is self and scope[1] is profile
+                 and scope[2] == profile.model_dump() else None)
+        if cache is not None and cache.get('resumable') is True:
+            return True
         try:
             result = self.exec(profile, ['rsync', '--version'], timeout=10)
         except (OSError, subprocess.TimeoutExpired):
             return False
-        return result.returncode == 0 and result.stdout.lstrip().startswith('rsync ')
+        supported = result.returncode == 0 and result.stdout.lstrip().startswith('rsync ')
+        if supported and cache is not None:
+            cache['resumable'] = True
+        return supported
 
     def _rsync_argv(self, profile: ComputeProfile, source: str, target: str) -> list[str]:
         return ['rsync', '--times', '--perms', '--checksum', '--partial', '--partial-dir=.transfer-partials',

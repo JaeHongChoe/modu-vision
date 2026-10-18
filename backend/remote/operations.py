@@ -1,6 +1,7 @@
 """Server-bound evaluation and inspection operations for completed remote jobs."""
 
 from __future__ import annotations
+from contextlib import nullcontext
 from backend.engine.original_owned_selected_compute_request import (observe_original_selected_compute, selected_operation_fd, selected_operation_closed, selected_thread_born, selected_heartbeat, selected_read_text)
 
 import hashlib
@@ -527,33 +528,36 @@ def _run_remote_operation_artifacts(
     local_dir.mkdir(parents=True, exist_ok=True)
     downloads: dict[str, Path] = {}
     staged_paths: list[Path] = []
+    capability_scope = (transport.download_capability_scope(context.profile)
+                        if isinstance(transport, SSHTransport) else nullcontext())
     try:
-        for entry in entries:
-            if not isinstance(entry, dict):
-                raise ArtifactValidationError(f"Remote {operation} artifact entry is invalid")
-            relative = entry.get("path")
-            if (not isinstance(relative, str) or not relative.startswith("outputs/")
-                    or any(part in ("", ".", "..") for part in relative.split("/"))
-                    or "\\" in relative):
-                raise ArtifactValidationError(f"Remote {operation} artifact path is unsafe")
-            if relative in downloads:
-                raise ArtifactValidationError(f"Remote {operation} artifact path is duplicated")
-            if (not isinstance(entry.get("size"), int) or entry["size"] <= 0
-                    or not isinstance(entry.get("sha256"), str) or len(entry["sha256"]) != 64):
-                raise ArtifactValidationError(f"Remote {operation} artifact metadata is invalid")
-            with tempfile.NamedTemporaryFile(dir=local_dir, prefix=".artifact-", delete=False) as temporary:
-                staged = Path(temporary.name)
-            staged_paths.append(staged)
-            try:
-                transport.download(context.profile, f"runs/{op_id}/{relative}", staged)
-            except Exception as exc:
-                raise RemoteDisconnected(f"Could not retrieve remote {operation} output: {exc}") from exc
-            if staged.stat().st_size != entry["size"] or _sha256(staged) != entry["sha256"]:
-                raise ArtifactValidationError(f"Remote {operation} output hash mismatch")
-            destination = local_dir.joinpath(*PurePosixPath(relative).parts)
-            if not destination.resolve().is_relative_to(local_dir.resolve()):
-                raise ArtifactValidationError("Remote operation output escaped its local directory")
-            downloads[relative] = staged
+        with capability_scope:
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    raise ArtifactValidationError(f"Remote {operation} artifact entry is invalid")
+                relative = entry.get("path")
+                if (not isinstance(relative, str) or not relative.startswith("outputs/")
+                        or any(part in ("", ".", "..") for part in relative.split("/"))
+                        or "\\" in relative):
+                    raise ArtifactValidationError(f"Remote {operation} artifact path is unsafe")
+                if relative in downloads:
+                    raise ArtifactValidationError(f"Remote {operation} artifact path is duplicated")
+                if (not isinstance(entry.get("size"), int) or entry["size"] <= 0
+                        or not isinstance(entry.get("sha256"), str) or len(entry["sha256"]) != 64):
+                    raise ArtifactValidationError(f"Remote {operation} artifact metadata is invalid")
+                with tempfile.NamedTemporaryFile(dir=local_dir, prefix=".artifact-", delete=False) as temporary:
+                    staged = Path(temporary.name)
+                staged_paths.append(staged)
+                try:
+                    transport.download(context.profile, f"runs/{op_id}/{relative}", staged)
+                except Exception as exc:
+                    raise RemoteDisconnected(f"Could not retrieve remote {operation} output: {exc}") from exc
+                if staged.stat().st_size != entry["size"] or _sha256(staged) != entry["sha256"]:
+                    raise ArtifactValidationError(f"Remote {operation} output hash mismatch")
+                destination = local_dir.joinpath(*PurePosixPath(relative).parts)
+                if not destination.resolve().is_relative_to(local_dir.resolve()):
+                    raise ArtifactValidationError("Remote operation output escaped its local directory")
+                downloads[relative] = staged
         if _request_comparison_cancel(context,journal,cancelled) is not None:
             journal.update(state="aborted",cancel_acknowledged_at=time.time())
             _save_operation(journal_path,journal)
