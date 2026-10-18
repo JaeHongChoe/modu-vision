@@ -19,6 +19,7 @@ import os
 from pathlib import Path
 import re
 import sqlite3
+import stat
 import subprocess
 import sys
 import threading
@@ -49,6 +50,7 @@ _SPEC = {
     'image_info':('GET','/api/flow-workspace/image-info','routes_flow_workspace'),
     'runtime_capabilities':('GET','/api/export/runtime-capabilities','routes_export'),
     'edge_targets':('GET','/api/export/edge-targets','routes_export'),
+    'list_flow_preflights':('GET','/api/export/flow/preflights','routes_export'),
     'list_dataset_images':('GET','/api/dataset/images','routes_dataset'),
     'packages':('GET','/api/product-delivery/packages','routes_product_delivery'),
     # GLOBAL3: selected-team onboarding, member projects, original initial/cursor ledger reads.
@@ -77,6 +79,106 @@ def _methods_original(instance,kind,calls):
 
 
 
+
+
+def register_original_UI_preflight_store(kind):
+    """Definition-origin anchor; return the exact original class unchanged."""
+    _RESOURCES.setdefault('preflight_store_origin',(kind,kind.__init__,kind.__init__.__code__,
+        kind.list,kind.list.__code__,kind.list.__globals__))
+    return kind
+
+
+def _preflight_raw9(info):
+    return tuple(getattr(info,name)for name in ('st_dev','st_ino','st_mode','st_nlink','st_size',
+        'st_mtime_ns','st_ctime_ns','st_uid','st_gid'))
+
+
+def _preflight_path_pin(path,directory=False,missing=False):
+    if type(path)is not type(Path('.')) or not path.is_absolute() or any(p.is_symlink()for p in (path,*path.parents)):
+        raise ValueError('Unproved original preflight path')
+    try:info=path.lstat()
+    except FileNotFoundError:
+        if missing and path.parent.resolve(strict=True)==path.parent:return None
+        raise
+    if (path.resolve(strict=True)!=path or info.st_uid!=os.getuid()
+            or (not stat.S_ISDIR(info.st_mode)if directory else
+                not stat.S_ISREG(info.st_mode)or info.st_nlink!=1 or info.st_size>4*1024*1024)):
+        raise ValueError('Unproved original preflight file')
+    return _preflight_raw9(info)
+
+
+def observe_original_UI_preflight(stage,*values):
+    attempt=_ACTIVE.get()
+    if type(attempt)is not _AncillaryAttempt or attempt.name!='list_flow_preflights':return
+    try:attempt.preflight_observation(stage,values,sys._getframe(1))
+    except Exception:attempt.fail('preflight_inspection')
+
+
+def original_UI_preflight_glob(store,present):
+    """Retain the actual original conditional glob, without a second scan."""
+    original=store.folder.glob('*.json')if present else []
+    attempt=_ACTIVE.get()
+    if type(attempt)is not _AncillaryAttempt or attempt.name!='list_flow_preflights':return original
+    frame=sys._getframe(1)
+    try:
+        valid=(attempt.worker_original() and attempt.preflight_store_original() and store is attempt.preflight_store
+            and attempt.preflight_listing is None and type(present)is bool
+            and frame.f_code is attempt.owner.preflight_origin[4] and frame.f_locals.get('self')is store
+            and frame.f_locals.get('present')is present and frame.f_back is attempt.preflight_handler
+            and _preflight_path_pin(store.folder,True,True)==attempt.preflight_folder_pin
+            and present==(attempt.preflight_folder_pin is not None))
+    except Exception:valid=False
+    row={'iterator':original if present else None,'kind':type(original),'path':store.folder,'members':[],
+        'member_binding':None,'complete':False,'live':bool(present),'wrapper':None,'methods':()}
+    attempt.preflight_listing=row
+    if not present:
+        if not valid:attempt.fail('preflight_absent_listing')
+        else:row['member_binding']=();row['complete']=True
+        return original
+    if type(original)in (GeneratorType,map):
+        row['methods']=tuple((name,getattr(type(original),name),getattr(original,name))for name in ('__iter__','__next__'))
+    else:valid=False
+    def retained():
+        if not valid:attempt.fail('preflight_listing_entry')
+        try:
+            for path in original:
+                if (not valid or not attempt.worker_original() or not _workspace_iterator_original(row)
+                        or type(path)is not type(Path('.')) or path.parent!=store.folder or len(row['members'])>=128):
+                    attempt.fail('preflight_listing_member')
+                else:row['members'].append(path)
+                yield path
+        except BaseException:attempt.fail('preflight_listing_failed');raise
+        else:
+            if (not valid or not attempt.worker_original() or not _workspace_iterator_original(row)
+                    or type(original)is GeneratorType and original.gi_frame is not None):
+                attempt.fail('preflight_listing_exit')
+            else:row['member_binding']=tuple(row['members']);row['complete']=True
+        finally:row['live']=False
+    row['wrapper']=retained()
+    return row['wrapper']
+
+
+def original_UI_preflight_read_text(store,path,*,encoding):
+    attempt=_ACTIVE.get()
+    if type(attempt)is not _AncillaryAttempt or attempt.name!='list_flow_preflights':return path.read_text(encoding=encoding)
+    frame=sys._getframe(1)
+    try:
+        with path.open(mode='r',encoding=io.text_encoding(encoding))as handle:
+            try:row=attempt.preflight_read(store,path,handle,frame)
+            except Exception:attempt.fail('preflight_file_inspection');row=None
+            text=handle.read()
+            if row is not None:
+                try:
+                    raw=text.encode('utf-8')
+                    valid=(attempt.worker_original() and encoding=='utf-8' and type(text)is str
+                        and len(raw)==row['raw9'][4] and handle.tell()==row['raw9'][4]
+                        and _preflight_raw9(os.fstat(handle.fileno()))==row['raw9']
+                        and _preflight_path_pin(path)==row['raw9'])
+                except Exception:valid=False
+                if not valid:attempt.fail('preflight_file_return')
+                else:row['text']=text
+            return text
+    except BaseException:attempt.fail('preflight_file_failed');raise
 
 
 def register_original_preview_denial_audit(function):
@@ -294,7 +396,7 @@ class OriginalOwnedUIAncillaryRequest:
         from backend.api import routes_dataset_imports,routes_project_preferences,routes_dataset_metadata,routes_data_workbench,routes_team_data,routes_provenance
         from backend.engine import dataset_index,job_store,dataset_loaders,source_text,project_preferences,team_data,workflow_impact,evaluation_history,flow_package_runtime
         from backend.api import routes_dataset_versions,routes_image_library
-        from backend.engine import data_workbench
+        from backend.engine import data_workbench,flow_preflight
         from fastapi import routing
         from starlette import concurrency,routing as starlette_routing
         from PIL import Image,ImageFile,PngImagePlugin
@@ -362,6 +464,9 @@ class OriginalOwnedUIAncillaryRequest:
         self.flow_lock=routes_flowchart._FLOW_SAVE_LOCK
         self.png_kind=PngImagePlugin.PngImageFile
         self.process_kind=subprocess.Popen
+        self.preflight_module=flow_preflight;self.preflight_origin=_RESOURCES.get('preflight_store_origin')
+        self.preflight_capture=original_owned_flow_request._draft_capture
+        self.preflight_original=original_owned_flow_request._draft_original
         # GLOBAL3 source identities are retained through the final ASGI finish.
         self.global_job_kind=job_store.JobStore
         self.global_demo=(demo_dataset.DEMO_ID,demo_dataset.DEMO_VERSION,demo_dataset.DEMO_TASK,
@@ -399,7 +504,7 @@ class OriginalOwnedUIAncillaryRequest:
             (shared_authorization,('permission_action','Headers','HTTPException','JSONResponse')),
             (shared_authorization.JSONResponse,('__init__','__call__','render','init_headers')),
             (original_current_project_request,('observe_resolution','observe_context_db','observe_storage_scope','_CURRENT')),
-            (original_owned_flow_request,('_FlowIncluded','_methods_original')),
+            (original_owned_flow_request,('_FlowIncluded','_methods_original','_draft_capture','_draft_original')),
             (original_owned_flow_execution_request,('OriginalOwnedFlowExecutionRequest','original_owned_execution_production')),
             (original_owned_telemetry_socket_request,('original_owned_telemetry_production',)),
             (original_owned_flow_execution_request.OriginalOwnedFlowExecutionRequest,('original',)),
@@ -425,17 +530,22 @@ class OriginalOwnedUIAncillaryRequest:
             (dicom_input,('open_source_image','is_dicom','read_dicom')),
             (routes_product_delivery,('get_current_project','project','execute')),
             (product_delivery,('package_library','_storage','_journal','_scope','_root','_preference_key')),
-            (routes_export,('normalize_target','SUPPORTED_TARGETS','torch')),
+            (routes_export,('normalize_target','SUPPORTED_TARGETS','torch','_preflight_store','get_current_project','Path','observe_original_UI_preflight')),
+            (flow_preflight,('PreflightStore','Path','json','observe_original_UI_preflight','original_UI_preflight_glob','original_UI_preflight_read_text')),
+            (flow_preflight.PreflightStore,('__init__','list')),
+            (io.TextIOWrapper,('read','tell','fileno','__enter__','__exit__')),
+            (builtins,('sorted',)),
             (openvino_runtime,('available_openvino_devices',)),
             (runtime_deadline,('execute_owned_process','validate_deadline','_writer_transport','_OwnedGroup','_observe_owned','_optional_psutil')),
             (subprocess,('Popen',)),(subprocess.Popen,('__init__','wait','poll','_internal_poll','_wait')),
             (Image,('open','Image')),(Image.Image,('__enter__','__exit__','close')),
             (ImageFile.ImageFile,('load',)),(PngImagePlugin,('PngImageFile',)),(PngImagePlugin.PngImageFile,('_open','load')),
-            (Path,('open','read_text','read_bytes','glob','resolve','is_symlink','is_relative_to','is_absolute','lstat','stat','is_dir')),(builtins,('open','map','iter','next','staticmethod')),(io,('open','text_encoding','TextIOWrapper','BufferedReader','BufferedRandom','FileIO')),
+            (Path,('open','read_text','read_bytes','glob','_glob_selector','resolve','is_symlink','is_relative_to','is_absolute','lstat','stat','is_dir')),(builtins,('open','map','iter','next','staticmethod')),(io,('open','text_encoding','TextIOWrapper','BufferedReader','BufferedRandom','FileIO')),
             (io.BufferedReader,('fileno',)),
-            (json,('load','loads','dump','dumps')),(os,('replace','fsync','getpid','open','fdopen','fstat','close')),
+            (json,('load','loads','dump','dumps')),(os,('replace','fsync','getpid','getuid','open','fdopen','fstat','close')),
+            (stat,('S_ISDIR','S_ISREG')),
             (sys.modules[__name__],('_ACTIVE','_HANDLERS','_SPEC','_RESOURCES','_PROFILE_KIND','_context','_headers','_SelectedCurrentAuth',
-                'OriginalOwnedUIAncillaryRequest','_AncillaryAttempt','_AncillaryAuth','_AncillaryIncluded','GeneratorType','LockType','Path','_DATASET_NAMES','_DATASET_METADATA_NAMES','_DATASET_OPERATION_ROUTES')),
+                'OriginalOwnedUIAncillaryRequest','_AncillaryAttempt','_AncillaryAuth','_AncillaryIncluded','GeneratorType','LockType','Path','os','stat','_DATASET_NAMES','_DATASET_METADATA_NAMES','_DATASET_OPERATION_ROUTES')),
         ) for name in names]
         if os.name!='nt':
             import fcntl
@@ -545,6 +655,8 @@ class OriginalOwnedUIAncillaryRequest:
             and self.execution.common is self.flow and self.execution.export_included is self.shared_export
             and _methods_original(self.execution,original_owned_flow_execution_request.OriginalOwnedFlowExecutionRequest,self.calls)
             and self.execution.original()
+            and self.preflight_capture is original_owned_flow_request._draft_capture
+            and self.preflight_original is original_owned_flow_request._draft_original
             and type(self.job_manager) is self.job_kind and type(self.job_lock) is LockType
             and self.job_manager._lock is self.job_lock and self.job_manager._jobs is self.job_records
             and _methods_original(self.job_manager,self.job_kind,self.calls)
@@ -960,6 +1072,10 @@ class _AncillaryAttempt:
         self.events=[];self.inflight={};self.resolutions=[];self.storage=0
         self.files=[];self.images=[];self.contexts=[];self.profiles=[];self.profile_live=None
         self.selected_image_inputs=[]
+        self.preflight_store=self.preflight_folder=self.preflight_handler=None
+        self.preflight_root_pin=self.preflight_folder_pin=self.preflight_listing=None
+        self.preflight_list_result=self.preflight_list_binding=self.preflight_result_binding=None
+        self.preflight_reads=[];self.preflight_rows=[]
         self.metadata=[];self.metadata_live=None;self.processes=[];self.process_live=False
         self.package_rows=[];self.result=None;self.status=None;self.body_binding=None
         self.lease_connections=[];self.job_lists=[];self.job_snapshots=[];self.job_rows=[];self.job_live=None
@@ -1016,6 +1132,7 @@ class _AncillaryAttempt:
 
             and all(_methods_original(value,kind,self.owner.calls) for value,kind in self.dataset_objects)
             and (self.library_binding is None or self.library_original())
+            and (self.preflight_store is None or self.preflight_store_original())
             and (self.body_binding is None or self.original_values.get('pipeline') is self.body_binding[0]
                 and self.body_binding[0].model_dump()==self.body_binding[1]))
 
@@ -1090,6 +1207,129 @@ class _AncillaryAttempt:
     def resource_entry(self,kind):
         if not self.worker_original() or self.handler_frame() is None:self.fail(kind+'_entry');return False
         return True
+
+    def preflight_store_original(self):
+        origin=self.owner.preflight_origin;store=self.preflight_store
+        return (type(origin)is tuple and len(origin)==6
+            and _RESOURCES.get('preflight_store_origin')is origin
+            and origin[0]is self.owner.preflight_module.PreflightStore
+            and origin[0].__init__ is origin[1] and origin[1].__code__ is origin[2]
+            and origin[0].list is origin[3] and origin[3].__code__ is origin[4]
+            and origin[1].__globals__ is origin[3].__globals__ is origin[5]
+            and origin[5] is self.owner.preflight_module.__dict__
+            and (store is None or type(store)is origin[0] and store.folder is self.preflight_folder
+                and _methods_original(store,origin[0],self.owner.calls)))
+
+    def preflight_observation(self,stage,values,frame):
+        origin=self.owner.preflight_origin;function=self.owner.handlers[self.name][1]
+        if stage=='store':
+            store,project=values;handler=self.handler_frame()
+            version=self.original_values.get('version_id')
+            valid=(self.worker_original() and self.name=='list_flow_preflights' and self.preflight_store is None
+                and self.preflight_store_original() and type(project)is dict
+                and project is self.scope.get('state',{}).get('scoped_project')
+                and (version is None or type(version)is str and re.fullmatch('[0-9a-f]{32}',version))
+                and frame.f_code is self.owner.modules['routes_export']._preflight_store.__code__
+                and frame.f_locals.get('project')is project and frame.f_locals.get('store')is store
+                and frame.f_back is handler
+                and handler is not None and handler.f_code is function.__code__)
+            if not valid:self.fail('preflight_store');return
+            root=Path(project['project_dir']);folder=root/'deployment_preflight'
+            root_pin=_preflight_path_pin(root,True)
+            folder_pin=_preflight_path_pin(folder,True,True)
+            if type(store)is not origin[0] or store.folder!=folder:self.fail('preflight_store_path');return
+            self.preflight_store,self.preflight_folder,self.preflight_handler=store,store.folder,handler
+            self.preflight_root_pin,self.preflight_folder_pin=root_pin,folder_pin
+            return
+        store=values[0]
+        valid=(self.worker_original() and self.name=='list_flow_preflights' and store is self.preflight_store
+            and self.preflight_store_original() and frame.f_code is origin[4] and frame.f_locals.get('self') is store
+            and frame.f_back is self.preflight_handler and self.handler_frame() is self.preflight_handler)
+        if not valid:self.fail('preflight_observation');return
+        if stage=='row':
+            _,path,report,row,rows=values
+            held=next((item for item in self.preflight_reads if item['path'] is path),None)
+            keys=('report_id','checked_at','status','recipe_release','target_identity','counts')
+            valid=(held is not None and held['text'] is not None and held['handle'].closed
+                and frame.f_locals.get('path') is path and frame.f_locals.get('report') is report
+                and frame.f_locals.get('row') is row and frame.f_locals.get('rows') is rows
+                and type(report)is dict and type(row)is dict and tuple(row)==keys
+                and all(row[key]is report.get(key) for key in keys)
+                and type(rows)is list and len(rows)==len(self.preflight_rows)+1 and rows[-1]is row
+                and all(now is old for now,old in zip(rows,self.preflight_rows))
+                and len(self.preflight_rows)<128
+                and all(row[key]is None or type(row[key])is str for key in ('report_id','checked_at')))
+            if not valid:self.fail('preflight_row');return
+            held['report']=report;self.preflight_rows.append(row)
+        elif stage=='return':
+            _,rows,result=values;listing=self.preflight_listing
+            valid=(self.preflight_list_result is None and type(rows)is list and type(result)is list
+                and frame.f_locals.get('rows')is rows and frame.f_locals.get('result')is result
+                and len(rows)==len(self.preflight_rows)==len(self.preflight_reads)==len(result)
+                and all(now is old for now,old in zip(rows,self.preflight_rows))
+                and len({id(row)for row in result})==len(result)
+                and all(any(row is original for original in rows)for row in result)
+                and result==sorted(rows,key=lambda row:(row['checked_at']or'',row['report_id']or''),reverse=True)
+                and listing is not None and listing['complete'] and not listing['live']
+                and (listing['iterator']is None or _workspace_iterator_original(listing)
+                    and listing['wrapper'].gi_frame is None)
+                and len(listing['members'])==len(self.preflight_reads)
+                and all(any(item['path']is member for item in self.preflight_reads)for member in listing['members']))
+            if not valid:self.fail('preflight_list_return');return
+            self.preflight_list_result=result
+            self.preflight_list_binding=self.owner.preflight_capture(result,(),[4096])
+        else:self.fail('preflight_stage')
+
+    def preflight_read(self,store,path,handle,frame):
+        listing=self.preflight_listing
+        valid=(self.worker_original() and self.name=='list_flow_preflights' and self.preflight_store_original()
+            and store is self.preflight_store and listing is not None and listing['live']
+            and _workspace_iterator_original(listing) and any(path is member for member in listing['members'])
+            and frame.f_code is self.owner.preflight_origin[4] and frame.f_locals.get('self')is store
+            and frame.f_locals.get('path')is path and frame.f_back is self.preflight_handler
+            and type(path)is type(Path('.')) and path.parent==self.preflight_folder and path.suffix=='.json'
+            and not any(item['path']is path for item in self.preflight_reads) and len(self.preflight_reads)<128
+            and type(handle)is io.TextIOWrapper and not handle.closed)
+        if not valid:self.fail('preflight_file_entry');return None
+        pin=_preflight_path_pin(path)
+        if _preflight_raw9(os.fstat(handle.fileno()))!=pin:self.fail('preflight_file_descriptor');return None
+        row={'path':path,'handle':handle,'raw9':pin,'text':None,'report':None}
+        self.preflight_reads.append(row)
+        return row
+
+    def preflight_files_current(self):
+        project=self.scope.get('state',{}).get('scoped_project')
+        return (type(project)is dict and self.preflight_store_original()
+            and _preflight_path_pin(Path(project['project_dir']),True)==self.preflight_root_pin
+            and _preflight_path_pin(self.preflight_folder,True,True)==self.preflight_folder_pin
+            and all(item['handle'].closed and type(item['text'])is str and type(item['report'])is dict
+                and _preflight_path_pin(item['path'])==item['raw9']for item in self.preflight_reads))
+
+    def preflight_returned(self,result):
+        frame=self.preflight_handler;rows=self.preflight_list_result
+        version=self.original_values.get('version_id')
+        valid=(frame is not None and frame.f_code is self.owner.handlers[self.name][1].__code__
+            and frame.f_locals.get('request')is self.request and frame.f_locals.get('version_id')is version
+            and frame.f_locals.get('store')is self.preflight_store and frame.f_locals.get('rows')is rows
+            and type(rows)is list and self.preflight_list_binding is not None
+            and self.owner.preflight_original(rows,self.preflight_list_binding)
+            and type(result)is dict and set(result)=={'reports'} and type(result['reports'])is list
+            and len(result['reports'])==len([row for row in rows if version is None or(row.get('recipe_release')or{}).get('version_id')==version])
+            and all(actual is wanted for actual,wanted in zip(result['reports'],
+                [row for row in rows if version is None or(row.get('recipe_release')or{}).get('version_id')==version]))
+            and self.preflight_files_current())
+        if not valid:return False
+        self.preflight_result_binding=self.owner.preflight_capture(result,(),[4096])
+        self.preflight_handler=None
+        return True
+
+    def preflight_response_original(self):
+        try:
+            return (self.preflight_handler is None and self.preflight_result_binding is not None
+                and self.owner.preflight_original(self.result,self.preflight_result_binding)
+                and self.owner.preflight_original(self.preflight_list_result,self.preflight_list_binding)
+                and self.preflight_files_current())
+        except Exception:return False
 
     def library_original(self):
         current=self.owner.library_cache()
@@ -1546,6 +1786,9 @@ class _AncillaryAttempt:
         elif self.name=='list_dataset_images':valid=valid and type(result) is dict and type(result.get('items')) is list and len(self.metadata)==1 and all(row['file_path'] in {str(path) for _,_,path in self.images} for row in result['items'])
         elif self.name=='runtime_capabilities':valid=valid and type(result) is dict and type(result.get('openvino')) is dict and len(self.processes)==1 and self.processes[0][-1] is True
         elif self.name=='edge_targets':valid=valid and type(result) is dict and result.get('device')=='cpu' and not self.files and not self.images and not self.processes
+        elif self.name=='list_flow_preflights':
+            try:valid=valid and self.preflight_returned(result)
+            except Exception:valid=False  # New optional witness cannot replace the original result.
         elif self.name=='packages':
             valid=(valid and type(result) is dict and len(self.package_rows)==1
                 and (result.get('packages')==[] and result.get('selected_package_id') is None
@@ -1567,9 +1810,10 @@ class _AncillaryAttempt:
         expected=['bind_workspace','authenticate','project_role','project_for','project_role','authorize']
         if self.name=='preview_pipeline_change':expected.append('record_decision')
         if self.name=='list_projects':expected=expected[:5]
-        resolutions=2 if self.name in {'get_flow_draft','preview_pipeline_change','image_info','packages','reservations','jobs','inputs','comparisons','get_active_version_id',*_DATASET_NAMES} else 1
+        resolutions=2 if self.name in {'get_flow_draft','preview_pipeline_change','image_info','packages','reservations','jobs','inputs','comparisons','get_active_version_id','list_flow_preflights',*_DATASET_NAMES} else 1
         return bool(self.original() and not self.failed and self.handler_done and not self.worker_live and not self.inflight and not self.dataset_live
             and self.selected_image_inputs_valid()
+            and (self.name!='list_flow_preflights'or self.preflight_response_original())
             and (self.name!='get_thumbnail' or self.thumbnail_response_done and not self.thumbnail_response_live)
             and self.storage==1 and self.entries==1 and len(self.events)==(5 if self.name in {'job_events','list_revisions','revision_source_status','library_images'} else 4) and len(self.resolutions)==resolutions
             and all(kind=='context_db' and registry is self.owner.registry for kind,registry in self.events[:-1])

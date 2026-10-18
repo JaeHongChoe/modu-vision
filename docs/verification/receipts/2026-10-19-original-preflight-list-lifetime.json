@@ -1,0 +1,107 @@
+{
+  "schema": "modu-vision.source-regression-receipt/v1",
+  "recorded_date": "2026-10-19",
+  "base_commit": "df56852bbe2eedd1a6faa98f05346f756cb5434a",
+  "change_scope": "Retain original authenticated deployment-preflight metadata list reads through complete normal HTTP termination.",
+  "business_semantics_preserved": true,
+  "actual_tests": {
+    "before_correction": {
+      "failed": 1,
+      "seconds": 5.76,
+      "point": "Strict drain refused after the actual original GET returned its full HTTP200 response, context echo and normal terminal; four protected project/recipe files remained exact."
+    },
+    "focused": {
+      "passed": 14,
+      "seconds": 31.43,
+      "public_test": "backend/tests/test_original_owned_preflight_list_lifetime.py",
+      "public_cases": 13,
+      "unchanged_private_original_read_case": 1
+    },
+    "related": {
+      "passed": 52,
+      "seconds": 57.31,
+      "tests": [
+        "backend/tests/test_original_owned_UI_ancillary_reads_lifetime.py",
+        "backend/tests/test_original_owned_ancillary_project_context.py",
+        "backend/tests/test_original_owned_flow_lifetime.py",
+        "backend/tests/test_original_owned_run_export_lifetime.py",
+        "backend/tests/test_original_resident_execution_resources.py"
+      ]
+    },
+    "CI_gates": {
+      "passed": 7,
+      "seconds": 7.65,
+      "tests": [
+        "backend/tests/test_service_ci_dependencies.py",
+        "backend/tests/test_original_unchanged_flow_save_lifetime.py",
+        "backend/tests/test_application_final_drain_diagnostic.py"
+      ]
+    },
+    "private_closed_diagnostic_consumer": {
+      "before": {
+        "failed": 1,
+        "passed": 4,
+        "seconds": 0.03
+      },
+      "after": {
+        "passed": 5,
+        "seconds": 0.01
+      },
+      "scope": "Only the new exact internal GET name joins its existing public route. All function bodies, authority flags and other consumer bytes remain unchanged."
+    }
+  },
+  "proof_scope": {
+    "list": "Same original current project, store constructor/list, exhausted iterator, actual closed file descriptors and raw file identities, projected row identities, ordering/filtering and final response object custody.",
+    "positive_cases": [
+      "absent folder",
+      "empty folder",
+      "populated metadata list",
+      "version-filtered metadata list"
+    ],
+    "refusal_cases": [
+      "corrupt metadata",
+      "linked file",
+      "linked folder",
+      "cloned producer",
+      "delegated producer",
+      "result mutation",
+      "file mutation",
+      "foreign explicit context",
+      "failed HTTP send"
+    ],
+    "report_semantic_or_hash_validity_claim": false,
+    "report_detail_or_POST_preflight_coverage": false,
+    "model_or_device_execution_added": false,
+    "original_six_producer_cohort_changed": false,
+    "whole_writer_coverage": false,
+    "can_release_launch_lease": false,
+    "parent_acceptance": false
+  },
+  "compiled_predecessor": {
+    "backend_and_assembly_exit": 0,
+    "offline_install_exit": 0,
+    "startup_login_project_and_gallery_health_exit": 0,
+    "flow_open_health_exit": 2,
+    "first_unsupported_method": "GET",
+    "first_unsupported_route": "FLOW_PREFLIGHTS",
+    "request_pending_when_observed": true,
+    "normal_quit_requested": true,
+    "holder_exit": 1,
+    "original_three_retained_processes_later_absent": true,
+    "whole_process_tree_or_lease_acceptance": false,
+    "original_68_protected_inputs_unchanged": true
+  },
+  "independent_source_review_sha256": "9c4ceb4937b032b7f96acce120d767dd36013fad266696ba48083d5f55180a99",
+  "changed_source_sha256": {
+    "backend/api/routes_export.py": "c96c5b6c3aafaf10516db586ae1f75e0ecc76a466c35ce678e9d69f18a2facc6",
+    "backend/engine/flow_preflight.py": "89f5147ab381d256ec0201e742f639c773ec0f4f6619a3c02abee368e731ae67",
+    "backend/engine/original_owned_UI_ancillary_request.py": "842a1a8002c2978749faaaca8175ab3f0dda7dc946f4b8f5626791041e19dd6d",
+    "backend/tests/test_original_owned_preflight_list_lifetime.py": "67f7589d33027848994ac37ca6e5766288910c87878199c104e9e909751cfc4d",
+    ".github/workflows/ci.yml": "70acd7e189023f86d8281b83b91ee29dfbaf6a382e8b56b0d1eb311530ff4e25"
+  },
+  "limitations": [
+    "The corrected source still needs a fresh compiled installed-app qualification.",
+    "Metadata test fixtures are not generated model or deployment-preflight evidence.",
+    "No equipment, model quality, signing, pilot or release acceptance is implied."
+  ]
+}
