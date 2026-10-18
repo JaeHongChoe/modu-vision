@@ -1,0 +1,149 @@
+{
+  "schema": "source-only-original-viewer-preview-role-denial-v1",
+  "date": "2026-10-18",
+  "scope": "Ownership of the exact original viewer POST /api/flowchart/pipeline/diff role-policy rejection.",
+  "source": {
+    "public_base": "472ab751f5f0304f6d0685a9f3f3a7eea63afd99",
+    "private_commit": "dac1cd89191f8ba42f1700ae3ab898418a2e27d4",
+    "files": [
+      {
+        "path": "source/backend/engine/original_owned_UI_ancillary_request.py",
+        "size": 195550,
+        "sha256": "36f7ad76ec76e532471837602f4b65fa14c5347fac8b9f4c17c7a8052c756bb2"
+      },
+      {
+        "path": "source/backend/engine/shared_accounts.py",
+        "size": 30202,
+        "sha256": "70cc18d3157244aaafad2f635c541bc0617b46e9486a2dbbd3248e15d7eb0523"
+      },
+      {
+        "path": "source/backend/tests/test_original_owned_preview_role_denial.py",
+        "size": 14926,
+        "sha256": "a527c8b4d2b8264a0c5b7838615bbd9f1bcdb89bcbd5358958ed3320f91d81ce"
+      }
+    ],
+    "product_lines": {
+      "added": 229,
+      "removed": 6
+    },
+    "shared_authorization_business_body_base_auth_observer_main_and_original_caps_unchanged": true,
+    "static_audit_business_body_and_signature_and_staticmethod_unchanged": true
+  },
+  "controlled_source_behavior": {
+    "original_status": 403,
+    "original_response": {
+      "detail": "This project role cannot perform the requested action"
+    },
+    "handler_worker_storage_entries": 0,
+    "input_body_receives": 0,
+    "input_body_consumed_claim": false,
+    "audit": "Both original permission and legacy audit tables retain older rows and append paired durable denied flow.execute rows; repeated real denial is covered. The mutable audit DB is not treated as byte-immutable.",
+    "preload": "Only warm current manifest/existing labelsets with original closed read handles and naturally closed maintenance guard can qualify. Original cold initialization still runs and refuses new ownership."
+  },
+  "ownership_proof": [
+    "Same original carrier/task/admission/observer/middleware and canonical context.",
+    "Identical original denied decision and exact original role-policy rejection frame/closure/return.",
+    "Seven distinct real account SQLite transactions with normal commit/context exit and retained closed connections.",
+    "First-definition static audit function/code/globals and original class staticmethod/instance attribute identities.",
+    "Original forwarded 403 start/terminal response, normal release/completion, no framing/transport error or pending send.",
+    "New optional completion inspection errors refuse ownership without replacing the original reply."
+  ],
+  "actual_runs": [
+    {
+      "name": "red01",
+      "exit_code": 1,
+      "failed": 1,
+      "passed": 0,
+      "seconds": 5.86,
+      "meaning": "original same preserved viewer witness"
+    },
+    {
+      "name": "red02",
+      "exit_code": 1,
+      "failed": 2,
+      "passed": 7,
+      "seconds": 10.06,
+      "meaning": "expanded controls before candidate"
+    },
+    {
+      "name": "green01",
+      "exit_code": 1,
+      "failed": 2,
+      "passed": 7,
+      "seconds": 9.72,
+      "meaning": "failed candidate01; DB mismatch removed but preload proof incomplete"
+    },
+    {
+      "name": "diagnostic01",
+      "exit_code": 1,
+      "failed": 1,
+      "passed": 0,
+      "seconds": 5.57,
+      "meaning": "read-only post-failure inspection; original test outcome preserved"
+    },
+    {
+      "name": "green02",
+      "exit_code": 0,
+      "failed": 0,
+      "passed": 9,
+      "seconds": 9.25,
+      "meaning": "intermediate nine-case pass"
+    },
+    {
+      "name": "red03",
+      "exit_code": 1,
+      "failed": 1,
+      "passed": 0,
+      "seconds": 5.61,
+      "meaning": "malformed optional normalization proof raised after original reply"
+    },
+    {
+      "name": "green03",
+      "exit_code": 0,
+      "failed": 0,
+      "passed": 17,
+      "seconds": 13.17,
+      "meaning": "final ten new plus seven original canonical-context cases"
+    },
+    {
+      "name": "related01",
+      "exit_code": 0,
+      "failed": 0,
+      "passed": 23,
+      "seconds": 60.8,
+      "meaning": "existing related source controls including original allowed preview"
+    }
+  ],
+  "final_results_separate": {
+    "new_denial_and_existing_context_cases": "17 passed in 13.17s",
+    "existing_related_cases": "23 passed in 60.80s"
+  },
+  "refusal_controls": [
+    "Foreign actor/workspace/memberless/invalid context remain refused.",
+    "Real audit-trigger rollback propagates its original exception and refuses.",
+    "Real terminal-send failure leaves the already committed audit but refuses.",
+    "Before-factory and late static audit delegates refuse.",
+    "Changed denial binding and malformed optional normalization keep original403 and refuse.",
+    "Missing labelsets/legacy manifest preserve original initialization writes but do not get read-only-denial credit."
+  ],
+  "retention_budget": {
+    "new_optional_read_records": 64,
+    "original_business_read_short_circuit": false,
+    "excess": "Refuses only this new ownership lane; original activity/request caps are unchanged."
+  },
+  "independent_review": {
+    "result": "SOURCE_ONLY_STATIC_ACCEPT_AND_OBSERVED_CONTROLS",
+    "sha256": "0e011b43fb4eebbaca83e935ff700855c132ff149be971445fcd3b4e0b25a618",
+    "reviewer_executed_tests": false
+  },
+  "limitations": {
+    "exact_original_native_first_emitter_identified": false,
+    "native_Root17_or_Root18_failure_overridden": false,
+    "native_or_browser_replay": false,
+    "input_body_consumption_or_network_transport_drain": false,
+    "process_tree_or_launch_lease_release_credit": false,
+    "model_or_inference_or_parent_action_credit": false,
+    "publication_or_remote_credit": false
+  },
+  "privacy": "No raw bearer/session values, actor/project IDs, request headers/bodies, private absolute paths, data paths or environment values are included. Source filenames are repository-relative provenance."
+}

@@ -10,6 +10,7 @@ from contextvars import ContextVar
 from functools import wraps
 from _thread import LockType
 import builtins
+import dis
 import inspect
 import hashlib
 import io
@@ -75,6 +76,11 @@ def _methods_original(instance,kind,calls):
 
 
 
+
+
+def register_original_preview_denial_audit(function):
+    _RESOURCES.setdefault('preview_denial_audit_origin',(function,function.__code__))
+    return function
 
 
 def observe_original_UI_ancillary_handler(register):
@@ -272,6 +278,7 @@ class OriginalOwnedUIAncillaryRequest:
         from backend.api import routes_compute,routes_flowchart,routes_flow_workspace,routes_export,routes_dataset,routes_product_delivery,routes_project,routes_onboarding,routes_job_events,routes_training,shared_authorization
         from backend.contracts.context import ContextRegistry
         from backend.contracts import context as project_context
+        from backend.contracts import authentication
         from backend.engine import original_current_project_request,shared_accounts,global_store_paths,dataset_metadata,dataset_summary,grouped_dataset_views,dicom_input,openvino_runtime,product_delivery,runtime_deadline,job_store,project_labelsets,project_migration,migration_guard,original_lock_acquisition,demo_dataset
         from backend.engine import original_owned_flow_request,original_owned_flow_execution_request
         from backend.engine import original_owned_telemetry_socket_request
@@ -295,6 +302,16 @@ class OriginalOwnedUIAncillaryRequest:
         self.registry_calls=self.accounts.named.registry_calls
         self.pid,self.deadline=os.getpid(),None
         self.pending,self.records,self.failed={},[],False
+        self.denial_audit_origin=_RESOURCES.get('preview_denial_audit_origin')
+        self.denial_audit_descriptor=vars(shared_accounts.AccountStore).get('_audit')
+        self.denial_audit_globals=shared_accounts.__dict__
+        authorization_code=shared_authorization.SharedAuthorizationMiddleware.__call__.__wrapped__.__code__
+        instructions=tuple(dis.get_instructions(authorization_code))
+        markers=[index for index,row in enumerate(instructions) if row.opname=='LOAD_CONST'
+            and row.argval=='This project role cannot perform the requested action']
+        self.denial_returns=tuple(next((row.offset for row in instructions[index+1:index+25]
+            if row.opname=='RETURN_VALUE'),None) for index in markers)
+        self.denial_return_binding=authorization_code,self.denial_returns
         self._settled_history=(0,hashlib.sha256(b'').hexdigest())
         self._settled_history_binding=self._settled_history
         self._settled_seals={};self._attempt_count=0
@@ -352,6 +369,11 @@ class OriginalOwnedUIAncillaryRequest:
             (shared_accounts,('AccountStore',)),(shared_accounts.AccountStore,('record_decision',)),
             (ContextRegistry,('_db','transaction','register_project','context','project_key')),
             (project_context,('get_project_context','declared_context')),
+            (authentication,('PermissionDecision',)),
+            (authentication.PermissionDecision,('__init__','__setattr__')),
+            (dis,('get_instructions',)),
+            (shared_accounts,('uuid','json','time')),
+            (shared_accounts.uuid,('uuid4',)),(shared_accounts.json,('dumps',)),(shared_accounts.time,('time',)),
             (shared_accounts.AccountStore,('projects_for','project_role')),
             (routes_onboarding,('_team_request',)),
             (demo_dataset,('DEMO_ID','DEMO_VERSION','DEMO_TASK','DEMO_CLASSES','DEMO_SPLITS')),
@@ -368,7 +390,8 @@ class OriginalOwnedUIAncillaryRequest:
             (sqlite3,('connect','Connection')),
             (sqlite3.Connection,('execute','commit','rollback','close','__enter__','__exit__')),
             (routes_project,('get_current_project',)),(main,('get_current_project',)),
-            (shared_authorization,('permission_action','Headers','HTTPException')),
+            (shared_authorization,('permission_action','Headers','HTTPException','JSONResponse')),
+            (shared_authorization.JSONResponse,('__init__','__call__','render','init_headers')),
             (original_current_project_request,('observe_resolution','observe_context_db','observe_storage_scope','_CURRENT')),
             (original_owned_flow_request,('_FlowIncluded','_methods_original')),
             (original_owned_flow_execution_request,('OriginalOwnedFlowExecutionRequest','original_owned_execution_production')),
@@ -494,7 +517,7 @@ class OriginalOwnedUIAncillaryRequest:
 
     def original(self):
         from backend.engine import original_owned_flow_request,original_owned_flow_execution_request
-        return (self.eligible and not self.failed and self.pid==os.getpid()
+        return (self.eligible and not self.failed and self.pid==os.getpid() and self.denial_audit_original()
             and self._settled_history_original() and self.global_original()
             and self.binding==(self,self.app,self.admission,self.accounts,self.observer,self.condition,self.registry,self.storage,self.flow,self.execution,self.shared_export)
             and self.admission._UI_ancillary_requests is self and _methods_original(self,OriginalOwnedUIAncillaryRequest,self.calls)
@@ -533,6 +556,17 @@ class OriginalOwnedUIAncillaryRequest:
                 and _methods_original(route,self.route_kind,self.calls)
                 and (route.endpoint,route.dependant,route.dependant.call,route.app,route.get_route_handler.__func__)==self.route_bindings[name]
                 for name,route in self.routes.items()))
+
+    def denial_audit_original(self):
+        origin=self.denial_audit_origin;kind=self.account_store_kind
+        return (type(origin) is tuple and len(origin)==2
+            and _RESOURCES.get('preview_denial_audit_origin') is origin
+            and type(origin[0]) is FunctionType and origin[0].__code__ is origin[1]
+            and origin[0].__globals__ is self.denial_audit_globals
+            and vars(kind).get('_audit') is self.denial_audit_descriptor
+            and type(self.denial_audit_descriptor) is staticmethod
+            and self.denial_audit_descriptor.__func__ is origin[0]
+            and kind._audit is origin[0] and self.accounts.store._audit is origin[0])
 
     def global_original(self):
         from backend.engine import demo_dataset,job_store
@@ -625,6 +659,8 @@ class _AncillaryAuth(_SelectedCurrentAuth):
         super().__init__(attempt.owner.accounts,attempt,headers,project,token)
         from backend.api.shared_authorization import permission_action
         self.action=permission_action(attempt.activity.ingress['path'],attempt.activity.ingress['method'])
+        self.denial_frame=self.denial_binding=self._denial_binding=self.denial_preload=None
+        self.denial_preload_live=False;self.denial_databases=[];self.denial_token=object();self.denial_channels=None
 
     def begin_db(self,store):
         if self.attempt.name=='list_projects' and self.attempt.worker_live:return self.global_project_db(store)
@@ -636,9 +672,15 @@ class _AncillaryAuth(_SelectedCurrentAuth):
         for _ in range(10):
             if frame is None or function is not None and frame.f_code is function.__code__:break
             frame=frame.f_back
+        authorization=self._authorization_frame()
         valid=(self.original() and store is self.owner.store and not self.db_live and self.middleware_calls==1
-            and not self.middleware_returns and self._authorization_frame() is not None and frame is not None
+            and not self.middleware_returns and authorization is not None and frame is not None
             and function is not None and frame.f_code is function.__code__ and frame.f_locals.get('self') is store)
+        if valid and self.attempt.name=='preview_pipeline_change':
+            if self.denial_frame is None:
+                self.denial_frame=authorization
+                self.denial_channels=authorization.f_locals.get('receive'),authorization.f_locals.get('send')
+            valid=authorization is self.denial_frame
         if expected in {'project_role','project_for'}:
             valid=(valid and type(self.account) is dict and frame.f_locals.get('user_id')==self.account.get('id')
                 and frame.f_locals.get('project_id')==self.project_id)
@@ -649,10 +691,165 @@ class _AncillaryAuth(_SelectedCurrentAuth):
         elif expected=='record_decision':
             decision=self.attempt.scope.get('state',{}).get('permission_decision')
             valid=(valid and self.attempt.name=='preview_pipeline_change' and frame.f_locals.get('decision') is decision
-                and decision is not None and decision.allowed and decision.action==self.action)
+                and decision is not None and decision.allowed and decision.action==self.action
+                or valid and self.denial_entry(frame,authorization))
         if not valid:self.fail('database_entry')
         self.db_live=True
         return valid,expected
+
+    def denial_entry(self,frame,authorization):
+        from backend.contracts.authentication import PermissionDecision
+        attempt=self.attempt;state=attempt.scope.get('state',{})
+        decision=frame.f_locals.get('decision')
+        valid=(attempt.name=='preview_pipeline_change' and type(self.account) is dict
+            and self.denial_parent_original(authorization) and attempt.scope.get('method')=='POST'
+            and attempt.scope.get('path')=='/api/flowchart/pipeline/diff'
+            and authorization is self.denial_frame and frame.f_back is authorization
+            and type(decision) is PermissionDecision and decision is authorization.f_locals.get('denied')
+            and decision.allowed is False and decision.role=='viewer'
+            and decision.reason=='role_or_membership_required' and decision.action==self.action=='flow.execute'
+            and decision.actor_id==self.account.get('id') and decision.workspace_id==self.owner.workspace
+            and decision.project_id==self.project_id and type(decision.membership_revision) is int
+            and decision.membership_revision>0 and decision.resource_revision is None
+            and decision.resource_revision_verified is False and authorization.f_locals.get('role')=='viewer'
+            and authorization.f_locals.get('allowed') is False and 'permission_decision' not in state
+            and authorization.f_locals.get('account') is self.account
+            and authorization.f_locals.get('token')==self.token
+            and authorization.f_locals.get('project') is state.get('scoped_project')
+            and type(state.get('scoped_project')) is dict and state['scoped_project'].get('id')==self.project_id
+            and self.databases==['bind_workspace','authenticate','project_role','project_for','project_role','authorize']
+            and self.denial_binding is None)
+        if valid:
+            self.denial_binding=(self,attempt,attempt.activity,authorization,decision,self.denial_preload,self.denial_token)
+            self._denial_binding=self.denial_binding
+        return valid
+
+    def denial_parent_original(self,authorization):
+        if (authorization is None or authorization is not self.denial_frame or type(self.denial_channels) is not tuple
+                or len(self.denial_channels)!=2 or authorization.f_locals.get('receive') is not self.denial_channels[0]
+                or authorization.f_locals.get('send') is not self.denial_channels[1]):return False
+        owner=self.attempt.owner;frame=sys._getframe(1);authorization_seen=False
+        for _ in range(64):
+            if frame is None:return False
+            if frame is authorization:authorization_seen=True
+            if frame.f_code is type(owner.owned)._observed_call.__code__:
+                return (authorization_seen and frame.f_locals.get('self') is owner.owned and frame.f_locals.get('admitted') is True
+                    and frame.f_locals.get('scope') is self.attempt.scope
+                    and frame.f_locals.get('activity') is self.attempt.activity
+                    and frame.f_locals.get('tracked_receive') is self.denial_channels[0])
+            frame=frame.f_back
+        return False
+
+    def preload_original(self):
+        attempt=self.attempt;frame=self.denial_frame
+        return (self.original() and attempt.name=='preview_pipeline_change' and not attempt.failed
+            and not attempt.worker_live and attempt.worker is None and attempt.entries==0
+            and frame is self.denial_frame and frame is not None and self.denial_parent_original(frame)
+            and self.databases==['bind_workspace','authenticate','project_role','project_for']
+            and self.middleware_calls==1 and self.middleware_returns==0 and not self.db_live
+            and _ACTIVE.get() is attempt)
+
+    def preload(self,function,path):
+        frame=self._authorization_frame();selected=frame.f_locals.get('selected') if frame is not None else None
+        valid=(self.preload_original() and type(selected) is dict and selected.get('id')==self.project_id
+            and Path(selected.get('path',''))==path and self.denial_preload is None
+            and sys._getframe(1).f_back is frame)
+        live={'path':path,'valid':valid,'reads':[],'guard':None,'normal':None,'returned':None}
+        self.denial_preload=live;self.denial_preload_live=True
+        try:
+            result=function(path)
+            live['valid'] &= (self.preload_original() and type(result) is dict
+                and result.get('id')==self.project_id and result.get('project_dir')==str(path))
+            live['returned']=result
+            return result
+        finally:self.denial_preload_live=False
+
+    def preload_read(self,path,role,mode,encoding,errors,caller):
+        from backend.api import routes_project
+        from backend.engine import project_migration,project_labelsets
+        live=self.denial_preload;root=live['path']
+        expected=(routes_project._load_project_unfenced if role=='manifest_text' else
+            project_migration._read if role=='manifest_bytes' else project_labelsets.load_labelsets if role=='labelsets'
+            else project_migration.normalize_legacy_manifest.__wrapped__ if role=='migration_receipt' else None)
+        live['valid'] &= (self.preload_original() and expected is not None and caller.f_code is expected.__code__
+            and not any(member.is_symlink() for member in (path,*path.parents))
+            and (path==root/'project.json' if role in {'manifest_text','manifest_bytes'} else
+                 path==root/'labelsets.json' if role=='labelsets' else
+                 role=='migration_receipt' and path.is_relative_to(root/'.migrations') and path.name=='receipt.json'))
+        with path.open(mode=mode,encoding=encoding,errors=errors) as handle:
+            good=type(handle) in (io.TextIOWrapper,io.BufferedReader) and not handle.closed
+            result=handle.read()
+        live['valid'] &= good and handle.closed and self.preload_original() and len(live['reads'])<64
+        if len(live['reads'])<64:live['reads'].append((handle,path,role))
+        return result
+
+    @contextmanager
+    def preload_maintenance(self,manager,path):
+        from backend.engine import migration_guard,original_lock_acquisition
+        live=self.denial_preload;handle=record=None
+        live['valid'] &= (self.preload_original() and path==live['path'] and type(manager) is _GeneratorContextManager
+            and manager.gen.gi_code is migration_guard.maintenance_guard.__wrapped__.__wrapped__.__code__)
+        with manager as value:
+            frame=manager.gen.gi_frame;handle=frame.f_locals.get('handle') if frame is not None else None
+            record=frame.f_locals.get('ownership') if frame is not None else None
+            observation=record.get('original_lock_observation') if type(record) is dict else None
+            good=(type(record) is dict and record.get('active') is True and record.get('exclusive') is False
+                and record.get('key')==str(path.resolve()) and record.get('owner')==migration_guard._execution_owner()
+                and type(observation) is original_lock_acquisition.OriginalLockAcquisition
+                and _methods_original(observation,original_lock_acquisition.OriginalLockAcquisition,self.attempt.owner.calls)
+                and isinstance(handle,io.IOBase) and not handle.closed)
+            if good:
+                try:observation.current(record=record)
+                except (OSError,ValueError):good=False
+            live['valid'] &= good
+            yield value
+        live['valid'] &= (self.preload_original() and manager.gen.gi_frame is None
+            and handle is not None and handle.closed and type(record) is dict and record.get('active') is False)
+        live['guard']=manager,handle,record
+
+    def denial_complete(self,row):
+        attempt=self.attempt;state=attempt.scope.get('state',{});bound=self.denial_binding;live=self.denial_preload
+        frame=self.denial_frame;owner=attempt.owner
+        if (type(bound) is not tuple or len(bound)!=7 or bound is not self._denial_binding
+                or any(a is not b for a,b in zip(bound,(self,attempt,attempt.activity,frame,bound[4],live,self.denial_token)))
+                or type(live) is not dict or live.get('valid') is not True or live.get('guard') is None
+                or type(live.get('reads')) is not list or not live['reads'] or live.get('normal') is None):return False
+        for _,connection in self.denial_databases:
+            if type(connection) is not sqlite3.Connection:return False
+            try:connection.in_transaction
+            except sqlite3.ProgrammingError:pass
+            else:return False
+        manager,handle,record=live['guard']
+        if (type(manager) is not _GeneratorContextManager or manager.gen.gi_frame is not None
+                or not isinstance(handle,io.IOBase) or not handle.closed
+                or type(record) is not dict or record.get('active') is not False):return False
+        project=live['returned'];decision=bound[4];reject=frame.f_locals.get('reject') if frame is not None else None
+        code,returns=owner.denial_return_binding
+        rejection=tuple(c for c in code.co_consts if hasattr(c,'co_name') and c.co_name=='reject')
+        return bool(self.original() and not attempt.failed and self.middleware_calls==self.middleware_returns==1
+            and not self.db_live and self.method_name is None and not self.denial_preload_live
+            and self.databases==[name for name,_ in self.denial_databases]
+            ==['bind_workspace','authenticate','project_role','project_for','project_role','authorize','record_decision']
+            and len({id(connection) for _,connection in self.denial_databases})==7
+            and frame is not None and frame.f_code is code and len(returns)==1 and returns[0] is not None
+            and frame.f_lasti in returns and frame.f_locals.get('denied') is decision
+            and type(reject) is FunctionType and len(rejection)==1 and reject.__code__ is rejection[0]
+            and reject.__globals__ is self.authorization.__globals__ and reject.__closure__ is not None
+            and all(dict(zip(reject.__code__.co_freevars,(cell.cell_contents for cell in reject.__closure__))).get(name) is value
+                for name,value in zip(('scope','receive','send'),(attempt.scope,*self.denial_channels)))
+            and project is state.get('scoped_project') is frame.f_locals.get('project')
+            and state.get('account_user') is self.account and state.get('account_session_token')==self.token
+            and 'permission_decision' not in state and 'project_context' not in state
+            and all(handle.closed for handle,_,_ in live['reads'])
+            and {'manifest_text','manifest_bytes','labelsets'}<=set(role for _,_,role in live['reads'])
+            and live['normal'].get('migration_required') is False and live['normal'].get('status')=='current'
+            and not attempt.entries and attempt.worker is None and not attempt.worker_live and not attempt.storage
+            and not attempt.events and not attempt.resolutions and not attempt.inflight
+            and not attempt.files and not attempt.images and not attempt.processes and not attempt.dataset_live
+            and row is not None and row['carrier'] is attempt.activity and row['released'] and row['normal_return']
+            and row['completed'] and row['response_status']==403 and not row['transport_failed'] and not row['framing_error']
+            and row['send_attempt'] is None and row['start_forwarded'] and row['terminal_forwarded']
+            and not row['trailers_expected'] and (owner.deadline is None or time.monotonic()<owner.deadline))
 
 
     def global_project_db(self,store):
@@ -691,7 +888,11 @@ class _AncillaryAuth(_SelectedCurrentAuth):
     def end_db(self,connection,entry,body_error,exit_error):
         valid,expected=entry
         if type(expected) is not tuple or expected[:1]!=('global_project',):
-            return super().end_db(connection,entry,body_error,exit_error)
+            before=len(self.databases)
+            result=super().end_db(connection,entry,body_error,exit_error)
+            if self.attempt.name=='preview_pipeline_change' and len(self.databases)==before+1:
+                self.denial_databases.append((expected,connection))
+            return result
         _,name,frame=expected;attempt=self.attempt;closed=False
         if type(connection) is sqlite3.Connection:
             try:connection.in_transaction
@@ -1199,6 +1400,9 @@ class _AncillaryAttempt:
         else:self.handler_done,self.result,self.status=True,result,status
 
     def complete(self,row):
+        if self.auth.denial_binding is not None:
+            try:return self.auth.denial_complete(row)
+            except Exception:return False  # Optional witness inspection cannot replace the original reply.
         state=self.scope.get('state',{});project=state.get('scoped_project');decision=state.get('permission_decision');context=state.get('project_context')
         expected=['bind_workspace','authenticate','project_role','project_for','project_role','authorize']
         if self.name=='preview_pipeline_change':expected.append('record_decision')
@@ -1849,6 +2053,9 @@ def observe_original_UI_global_projects_for(function):
 def observe_original_UI_global_project(function):
     @wraps(function)
     def observed(path):
+        preview=_global_attempt('preview_pipeline_change')
+        if preview is not None and preview.auth.preload_original():
+            return preview.auth.preload(function,Path(path))
         attempt=_global_attempt('list_projects')
         if attempt is None or not attempt.worker_live:return function(path)
         root=Path(path)
@@ -1873,6 +2080,9 @@ def observe_original_UI_global_project(function):
 
 
 def original_UI_global_maintenance(manager,path):
+    preview=_global_attempt('preview_pipeline_change')
+    if preview is not None and preview.auth.denial_preload_live:
+        return preview.auth.preload_maintenance(manager,Path(path))
     attempt=_global_attempt('list_projects')
     if attempt is None or not attempt.worker_live:return manager
     @contextmanager
@@ -1912,6 +2122,9 @@ def original_UI_global_maintenance(manager,path):
 
 
 def _global_project_read(path,role,mode,encoding=None,errors=None):
+    preview=_global_attempt('preview_pipeline_change')
+    if preview is not None and preview.auth.denial_preload_live:
+        return preview.auth.preload_read(Path(path),role,mode,encoding,errors,sys._getframe(1).f_back)
     attempt=_global_attempt('list_projects')
     if attempt is None or not attempt.worker_live or attempt.global_project_live is None:
         return path.read_bytes() if mode=='rb' else path.read_text(encoding=encoding,errors=errors)
@@ -1948,6 +2161,15 @@ def observe_original_UI_global_normalization(function):
     @wraps(function)
     def observed(project_dir,expected_manifest_sha256=None):
         result=function(project_dir,expected_manifest_sha256)
+        preview=_global_attempt('preview_pipeline_change')
+        if preview is not None and preview.auth.denial_preload_live:
+            from backend.api import routes_project
+            live=preview.auth.denial_preload
+            live['valid'] &= (preview.auth.preload_original() and Path(project_dir)==live['path']
+                and expected_manifest_sha256 is None and type(result) is dict
+                and sys._getframe(1).f_code is routes_project._load_project_unfenced.__code__
+                and result.get('migration_required') is False and result.get('status')=='current')
+            live['normal']=result
         attempt=_global_attempt('list_projects')
         if attempt is not None and attempt.worker_live:
             live=attempt.global_project_live
