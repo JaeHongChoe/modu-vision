@@ -10922,7 +10922,39 @@
               ]
             },
             "error": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S4-07",
+                  "source_sha": "3da66ecb18358d67275269ed31239bcd2f5ec3be",
+                  "kind": "click",
+                  "action": "한 면 기준 · 회전 박스 맞추기 · 정답 표에 추가",
+                  "expected": "An original source change after preview refuses refitting, removes the prior proposal and recovers after exact original-body restoration without changing saved truth.",
+                  "observed": "Actual same-Request 422/49-byte full body within original10s. Prior polygon removed/append disabled; original inode/mode/owner/nlink and bytes restored (mtime/ctime explicitly changed), fresh normal preview and fit succeeded, real reload retained original three-row truth. Exact poststop source/project/prepared custody; original backend natural0; unexpected errors0. Actual saved canvas/alert/summary/table PNG reviewed.",
+                  "reviewer": "Codex Root exact source and actual browser/body/custody/PNG review; independent source review accepted. Native/quality/parent acceptance pending.",
+                  "test": "scripts/e2e/obb-mode-fit-source-change-error.spec.ts::face fitting source-change error retires the unsent proposal and recovers original saved truth",
+                  "receipt": "2026-10-18-f029-face-fit-source-change-error-browser.json",
+                  "receipt_sha256": "d5fcd9778c963e8be9c9252a69679f91ba913804803eb1016855906577933557",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "5fc7f66f43099f873f25460b7b8e09ce9c62d8e3c6aa8be287836bb63dd6c6f1"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "8cd76d02a54741286d487bb6ffc3bdbe96b28e9466c4efcd2136388709dbf147"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "9e3595ae9f74996a5d3884a1a8d8eac32e43a5e33a62d3315eb7f9d2b9b3f465"
+                    },
+                    {
+                      "id": "screenshot-3",
+                      "sha256": "603cb119f80c429c46351d0a814662127335fb519a5bd34a44f675b3dac57d0b"
+                    }
+                  ]
+                }
+              ]
             },
             "cancel": {
               "state": "verified",
@@ -11110,7 +11142,39 @@
               ]
             },
             "error": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S4-07",
+                  "source_sha": "3da66ecb18358d67275269ed31239bcd2f5ec3be",
+                  "kind": "click",
+                  "action": "불규칙 외곽 · 회전 박스 맞추기 · 정답 표에 추가",
+                  "expected": "An original source change after preview refuses refitting, removes the prior proposal and recovers after exact original-body restoration without changing saved truth.",
+                  "observed": "Actual same-Request 422/49-byte full body within original10s. Prior polygon removed/append disabled; original inode/mode/owner/nlink and bytes restored (mtime/ctime explicitly changed), fresh normal preview and fit succeeded, real reload retained original three-row truth. Exact poststop source/project/prepared custody; original backend natural0; unexpected errors0. Actual saved canvas/alert/summary/table PNG reviewed.",
+                  "reviewer": "Codex Root exact source and actual browser/body/custody/PNG review; independent source review accepted. Native/quality/parent acceptance pending.",
+                  "test": "scripts/e2e/obb-mode-fit-source-change-error.spec.ts::irregular fitting source-change error retires the unsent proposal and recovers original saved truth",
+                  "receipt": "2026-10-18-f029-irregular-fit-source-change-error-browser.json",
+                  "receipt_sha256": "170db23b3bf0b79c15fec4be36ae7ccb525d2657dd548a572521c634716c02a9",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "7566e103ee4ca72bfc42720615f6e254f04327e4bbff55f2314741a17a061e01"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "766dcb5e90ddc0876aa94c9e308342a08e3b6e26cff6c0926dbabbc820de104e"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "17a7fc0564944c3538aff14fa670dee8fce3d9716aefb01d9a56840d80d9d752"
+                    },
+                    {
+                      "id": "screenshot-3",
+                      "sha256": "cfc4f63f5346aea3aa0b23f41506e7fa1ec7f430c1eda483414cf2677bdeee16"
+                    }
+                  ]
+                }
+              ]
             },
             "cancel": {
               "state": "verified",
