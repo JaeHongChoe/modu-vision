@@ -1,0 +1,144 @@
+{
+  "schema": "source-only-current-project-image-ownership-v1",
+  "date": "2026-10-18",
+  "scope": "Original owned ancillary proof for current-project PNG image info and existing file-picker thumbnails; source-only verification.",
+  "source": {
+    "public_base": "df5e9e8578bcebddcc84a9fd8d734bcc3850f47a",
+    "private_commit": "d25aed150c8ba79f4fa2471d93a225680692df79",
+    "files": [
+      {
+        "path": "backend/engine/original_owned_UI_ancillary_request.py",
+        "bytes": 200375,
+        "sha256": "0c3c06f37328c9236046dea7e09490df0b9377dda041665fb8b858df12f2b606"
+      },
+      {
+        "path": "backend/tests/test_original_owned_internal_image_read.py",
+        "bytes": 15153,
+        "sha256": "2a7907615dae93c39a17a5b484f611dbe35b960af5ebc880788aa2282f0454ab"
+      }
+    ],
+    "products": 1,
+    "tests": 1,
+    "API_auth_business_decoder_transport_caps_and_drain_protocol_unchanged": true
+  },
+  "changes": [
+    "The existing imported-source image and basename-thumbnail branches remain. Narrow additional ownership covers the current project internal dataset and the existing literal preview picker route.",
+    "Additional claims require exact canonical original query, original project object and directories, no linked path or ancestors, regular single-link file and full file identity retained through original HTTP completion.",
+    "Actual original PNG and source-read file descriptors must match the retained pathname identity through the already bound fstat and native BufferedReader.fileno; the original thumbnail spool chain remains."
+  ],
+  "actual_runs": {
+    "original_causal_RED02": {
+      "pass": 2,
+      "fail": 4,
+      "duration_s": 11.34,
+      "exit_code": 1,
+      "scope": "Six genuine original ASGI requests all returned original 200 bodies before ownership assertions; internal image info and three additional picker paths failed strict drain."
+    },
+    "fd_causal_RED03": {
+      "pass": 0,
+      "fail": 1,
+      "duration_s": 6.25,
+      "exit_code": 1,
+      "scope": "Explicit before-factory negative open supplier physically opened a foreign PNG at the original path then restored names. Actual foreign dimensions and descriptor differed from the restored owned pathname, but the previous candidate incorrectly drained."
+    },
+    "final_focused_GREEN03": {
+      "pass": 15,
+      "fail": 0,
+      "duration_s": 16.62,
+      "exit_code": 0,
+      "argv": [
+        "backend/tests/test_original_owned_internal_image_read.py",
+        "-p",
+        "no:cacheprovider",
+        "--tb=short",
+        "-q"
+      ]
+    },
+    "final_related02": {
+      "pass": 22,
+      "fail": 0,
+      "deselected": 2,
+      "duration_s": 24.21,
+      "exit_code": 0,
+      "argv": [
+        "backend/tests/test_original_owned_UI_ancillary_reads_lifetime.py",
+        "backend/tests/test_original_thumbnail_lock_binding.py",
+        "backend/tests/test_original_owned_ancillary_project_context.py",
+        "-k",
+        "not export-runtime-capabilities and not joined_discovery",
+        "-p",
+        "no:cacheprovider",
+        "--tb=short",
+        "-q"
+      ],
+      "deselected_scope": "Original optional runtime-capabilities device discovery and joined-discovery delegate controls were not executed."
+    }
+  },
+  "controls": {
+    "positive": [
+      "Imported-source and internal PNG image info",
+      "Imported-source and internal basename thumbnails",
+      "Imported-source and internal literal preview thumbnails"
+    ],
+    "negative": [
+      "Outside-project path and linked outside-project path retain original HTTP403 and refused lifetime",
+      "Linked internal PNG and preview alias remain unowned despite original business HTTP200",
+      "Arbitrary thumbnail name remains unowned despite original business HTTP200",
+      "Original HTTP body completed after actual file mutation remains unowned",
+      "Foreign context retains original HTTP403; late bound stat provider remains unowned",
+      "Actual transient foreign opened PNG descriptor cannot gain ownership from a restored pathname"
+    ],
+    "protected": "Real source inputs, project metadata, recipe, active pointer and version bytes/raw identities remain exact in ordinary cases. The deliberate mutation and transient rename controls explicitly disclose changed input identity; all other protected inputs remain exact."
+  },
+  "final_evidence": [
+    {
+      "name": "proof/green03.log",
+      "bytes": 100,
+      "sha256": "4482f0a10578c5071d905aa8686166a7a87b02b6c8dda908970dc4735d594bfa"
+    },
+    {
+      "name": "proof/green03-original-tool-start.json",
+      "bytes": 131,
+      "sha256": "a79b79aa64f41126d3d2f327bc6c108591dbb5b02e46000382c15d5efa28ddcc"
+    },
+    {
+      "name": "proof/green03-original-tool-completion.json",
+      "bytes": 126,
+      "sha256": "9a29c894f3cecdbfca283b6c3db7476af69287c906b21028aeb02933dd426af1"
+    },
+    {
+      "name": "proof/related02.log",
+      "bytes": 114,
+      "sha256": "cb008383fa4c5fc9b5351a9c451f77e463ca1cec367ce461230a280b3c5785c4"
+    },
+    {
+      "name": "proof/related02-original-tool-start.json",
+      "bytes": 131,
+      "sha256": "da756401df8df7805d54c50751bd19cd130c50591cac28f09aad681d31923c84"
+    },
+    {
+      "name": "proof/related02-original-tool-completion.json",
+      "bytes": 125,
+      "sha256": "1e002f41d4ff8492b27cb6831d6c88ce5e30ce3801ecc47b9127fff6696ecb71"
+    },
+    {
+      "name": "finite-evidence-final02.json",
+      "bytes": 6961,
+      "sha256": "c6700c538e0766c93be6626c429a6881ea2dc79a0f5045a188e0d73e28d1e8fe"
+    }
+  ],
+  "preserved_previous_results": [
+    "Initial RED01 had six setup errors because the temporary parent directory was absent; it is not causal evidence.",
+    "Preliminary GREEN01 six-pass candidate and GREEN02 fourteen-pass/related01 twenty-two-pass candidate are retained as superseded; they are not added to final pass counts.",
+    "The descriptor gap is disclosed by the separate causal RED03. All original failure packets, full reason lists, logs and original tool envelopes remain retained."
+  ],
+  "limitations": [
+    "These are genuine in-process original ASGI/auth/worker/IO tests, not installed app, browser, GPU, model or native launch execution.",
+    "Root20 image-info predicate matches the demonstrated source false-negative; the original native first thumbnail request identity and exact native interleaving remain unproved.",
+    "No installed acceptance, strict native lease closure, parent/action cell or hardware credit is granted."
+  ],
+  "privacy": {
+    "private_paths_auth_tokens_raw_headers_real_project_ids_and_raw_app_bodies_embedded": false,
+    "public_counts_or_action_cells_promoted": false
+  }
+}
