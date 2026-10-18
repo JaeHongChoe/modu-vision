@@ -3,7 +3,7 @@
   "kind": "curated_action_evidence_not_complete_feature_acceptance",
   "sources": {
     "src/renderer/components/flowchart/FlowWorkspacePanel.tsx": "6e7c74ae465e6a426601de756a91a9966615195f52c1e6aa9e4691b187baa8bf",
-    "src/renderer/components/flowchart/FlowchartStudio.tsx": "42ca12de813581bfc8ebc6684a0d6cc9b2ffe53fbbf454c3602305f2c8194616",
+    "src/renderer/components/flowchart/FlowchartStudio.tsx": "d6530330ff043fe30f432ae7b55689201c991efaf6665de732f07ede063db97e",
     "src/renderer/components/flowchart/FlowDraftControls.tsx": "3bd10fc68ea4ae2dc600dfad2b6c51b56d74d213f7483923107295aac303f5a8",
     "src/renderer/components/labeling/TeamDataPanel.tsx": "c3e0aa4756127e8b3ae8db14d06ed25261b2948856ebb9d26c7c3fc797979397",
     "src/renderer/components/labeling/LabelingToolbar.tsx": "50eadcc577203c09631c0b23358ef509c4c894bb720b43e74666cf91881d538e",
@@ -45981,7 +45981,27 @@
               ]
             },
             "handoff": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S6-04",
+                  "source_sha": "1d208d2083cf8c1e353a724e4f6bc80f2a5e0174",
+                  "kind": "click",
+                  "action": "portable 설치 폴더 선택",
+                  "expected": "A reopened or remounted portable view ignores its retired response, requires explicit selection of the same owned home and never automatically repeats recovery.",
+                  "observed": "Actual browser UI and production main manager passed owned portable home selection handoff never adopts a retired response. Explicit reselection restored the same home with confirmation reset; original intent was issued at most once. CLI and signature responses were controlled; no native recovery transaction is inferred.",
+                  "reviewer": "Codex root actual clean-source browser execution, request/readback and retained artifacts; independent source review found no defect; no parent or release acceptance",
+                  "test": "scripts/e2e/portable-pending-handoff.spec.ts::owned portable home selection handoff never adopts a retired response",
+                  "receipt": "2026-10-19-portable-selection-handoff-1d208d2-browser.json",
+                  "receipt_sha256": "8f0a52fb7ca52ccea29df2330fb7572b56614b3e1f4b2df28e647a7479a6e1b5",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "f02f9baa468ce9fdff390d9ad6351e5eb462dc3f913130dff1b097f4ca724237"
+                    }
+                  ]
+                }
+              ]
             }
           }
         },
@@ -46130,7 +46150,27 @@
               "state": "pending"
             },
             "reopen": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S6-04",
+                  "source_sha": "1d208d2083cf8c1e353a724e4f6bc80f2a5e0174",
+                  "kind": "click",
+                  "action": "portable 상태 다시 읽기",
+                  "expected": "A reopened or remounted portable view ignores its retired response, requires explicit selection of the same owned home and never automatically repeats recovery.",
+                  "observed": "Actual browser UI and production main manager passed portable inspect state requires explicit same-home read after renderer reopen. Explicit reselection restored the same home with confirmation reset; original intent was issued at most once. CLI and signature responses were controlled; no native recovery transaction is inferred.",
+                  "reviewer": "Codex root actual clean-source browser execution, request/readback and retained artifacts; independent source review found no defect; no parent or release acceptance",
+                  "test": "scripts/e2e/portable-pending-handoff.spec.ts::portable inspect state requires explicit same-home read after renderer reopen",
+                  "receipt": "2026-10-19-portable-inspect-reopen-1d208d2-browser.json",
+                  "receipt_sha256": "cdaf314e0150b0207fa824963d02e6270cc66307e64371809682fd6a5d5a8a81",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "3a281f7f8bd9248cdd9a51a590399127512346a587cdf7e72cfe3352e7ee0f07"
+                    }
+                  ]
+                }
+              ]
             },
             "handoff": {
               "state": "verified",
@@ -46685,7 +46725,27 @@
               ]
             },
             "handoff": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S6-04",
+                  "source_sha": "1d208d2083cf8c1e353a724e4f6bc80f2a5e0174",
+                  "kind": "click",
+                  "action": "같은 업데이트 마무리",
+                  "expected": "A reopened or remounted portable view ignores its retired response, requires explicit selection of the same owned home and never automatically repeats recovery.",
+                  "observed": "Actual browser UI and production main manager passed portable finish handoff preserves one original intent without replay. Explicit reselection restored the same home with confirmation reset; original intent was issued at most once. CLI and signature responses were controlled; no native recovery transaction is inferred.",
+                  "reviewer": "Codex root actual clean-source browser execution, request/readback and retained artifacts; independent source review found no defect; no parent or release acceptance",
+                  "test": "scripts/e2e/portable-pending-handoff.spec.ts::portable finish handoff preserves one original intent without replay",
+                  "receipt": "2026-10-19-portable-finish-handoff-1d208d2-browser.json",
+                  "receipt_sha256": "779825d87a7fec83df90db5655a898448b1d3e203a2814d04475c9688ac7fbe9",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "e99e44742d5b6d1e5fb6870edbf9da758538ac2ab878d91883b94efd3042407a"
+                    }
+                  ]
+                }
+              ]
             }
           }
         },
@@ -46761,7 +46821,27 @@
               ]
             },
             "handoff": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S6-04",
+                  "source_sha": "1d208d2083cf8c1e353a724e4f6bc80f2a5e0174",
+                  "kind": "click",
+                  "action": "새 쓰기 보존하며 복구",
+                  "expected": "A reopened or remounted portable view ignores its retired response, requires explicit selection of the same owned home and never automatically repeats recovery.",
+                  "observed": "Actual browser UI and production main manager passed portable forward handoff preserves one original intent without replay. Explicit reselection restored the same home with confirmation reset; original intent was issued at most once. CLI and signature responses were controlled; no native recovery transaction is inferred.",
+                  "reviewer": "Codex root actual clean-source browser execution, request/readback and retained artifacts; independent source review found no defect; no parent or release acceptance",
+                  "test": "scripts/e2e/portable-pending-handoff.spec.ts::portable forward handoff preserves one original intent without replay",
+                  "receipt": "2026-10-19-portable-forward-handoff-1d208d2-browser.json",
+                  "receipt_sha256": "eeab1136c15bbdefce8ea27ed83333f87ed8bf5c1df4ef6a9d0d5cb92c15fe8a",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "a29d7a79639f5eb381404efd0123185f8fe2bd4008f10c3c8ee1d0dca1a7ac30"
+                    }
+                  ]
+                }
+              ]
             }
           }
         },

@@ -1,0 +1,38 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "1d208d2083cf8c1e353a724e4f6bc80f2a5e0174",
+  "source_dirty": false,
+  "product_base": "b1aeb8e3172326fc81669ae71f1daa64ab875d56",
+  "test": "scripts/e2e/portable-pending-handoff.spec.ts::portable forward handoff preserves one original intent without replay",
+  "test_source_sha256": "ae3661c4353cd0938e6cb0fa754b5215298bfce955ad4858fcd4833fc90ef79d",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "7e0b44ad09d7970b03f0f947d8415777855852d1a8fb5ef880d390b00b4255d7",
+  "harness_sha256": "966e5993bc8338fb5f9720e1395d74592dc07ff60eeadce6ea74b44be3b0c8db",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "a29d7a79639f5eb381404efd0123185f8fe2bd4008f10c3c8ee1d0dca1a7ac30"
+    }
+  ],
+  "scope": "Current production renderer and PortableUpdateManager with controlled CLI/signature outputs. Pending response/reopen handoff only; no real installer recovery transaction, frozen native application, model quality, signing, equipment or parent acceptance.",
+  "scenarios": [
+    "U025.recover-forward.handoff"
+  ],
+  "explicit_same_owned_home_required": true,
+  "retired_response_not_adopted": true,
+  "automatic_recovery_replay": false,
+  "owned_tasks_completed": 3,
+  "quality_approved": false,
+  "native_installer_accepted": false,
+  "independent_review_accepted": false,
+  "parent_accepted": false
+}
