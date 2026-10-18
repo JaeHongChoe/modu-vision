@@ -1,0 +1,161 @@
+{
+  "GREEN": {
+    "actual_tool_completion": {
+      "bytes": 590,
+      "label": "GREEN/tool-completion",
+      "sha256": "2cbd39dce59e20d2f724b19f6e5bd1589305836c55b9fa1b79b082711e8cef1f"
+    },
+    "actual_tool_start": {
+      "bytes": 110,
+      "label": "GREEN/tool-start",
+      "sha256": "0b3fa09cf0499beab806a8dcc9f67c178b4c719899daa0011599b4508559d119"
+    },
+    "errors": 0,
+    "existing_compatibility_controls": [
+      "empty package library",
+      "populated workflow provenance",
+      "original no-parity package export"
+    ],
+    "failures": 0,
+    "junit": {
+      "bytes": 2017,
+      "label": "GREEN/junit.xml",
+      "sha256": "7ade8d5366fb794ce64195bcc17f682bba4efcd35d29f2a40a0f2c8f2db8a426"
+    },
+    "log": {
+      "bytes": 193,
+      "label": "GREEN/pytest.log",
+      "sha256": "f63bf522dfb1d2a47c0240cd7e5bfb7c5a29b4f30ab2b57a93dc6e0b604fa2c5"
+    },
+    "negative_controls": [
+      "changed package bytes",
+      "escaping manifest path",
+      "foreign saved source binding",
+      "delegated verifier",
+      "delegated library",
+      "missing authentication: original 401 settles without downstream read"
+    ],
+    "passed": 11,
+    "positive_original_failures": [],
+    "positive_strict_drain": {
+      "active_scopes": 0,
+      "status": "managed_scopes_drained",
+      "unsupported": []
+    },
+    "pytest_seconds": 36.653,
+    "same_exact_external_positive_body_as_RED02": true,
+    "skipped": 0,
+    "tests": 11,
+    "whole_permanent_module_executed": true,
+    "wrapper_seconds": 43.03319966583513
+  },
+  "RED01": {
+    "actual_tool_completion": {
+      "bytes": 590,
+      "label": "RED01/tool-completion",
+      "sha256": "6d297bc4de9ed92714b442f1971b1faee383da1daf523ca13eb9693776d81447"
+    },
+    "cause": "Fixture whole-project baseline preceded the original first migration_admission.lock creation during login; no intended product RED claim.",
+    "failures": 1,
+    "intended_drain_assertion_reached": false,
+    "preserved": true,
+    "tests": 1,
+    "wrapper_seconds": 8.450668167090043
+  },
+  "RED02": {
+    "actual_tool_completion": {
+      "bytes": 590,
+      "label": "RED02/tool-completion",
+      "sha256": "dca165cd6b81d80dc0b969dd8ff2c433d0a3a2f595bc59055abf920e68d21c65"
+    },
+    "actual_tool_start": {
+      "bytes": 110,
+      "label": "RED02/tool-start",
+      "sha256": "98fc67e2ea946e6fb98648a96476d45c6a578872b4a3dcc1d50b874da8527819"
+    },
+    "all_three_original_envelopes_completed_normal_released": true,
+    "failures": 1,
+    "fixture_correction": "One completed original maintenance_guard before immutable project baseline; no HTTP warmup or file exclusion.",
+    "junit": {
+      "bytes": 5185,
+      "label": "RED02/junit.xml",
+      "sha256": "20315be4a29b9132f31ff74d365b7bc27d166a778352d2e4e745039fea29f836"
+    },
+    "log": {
+      "bytes": 5095,
+      "label": "RED02/pytest.log",
+      "sha256": "5e308f9c057e972f213858b0d09050537e6e3f513b9a3be0baa118c91daeb764"
+    },
+    "original_failures": [
+      "owned_ancillary_handler_return",
+      "owned_ancillary_unconfirmed_lifetime"
+    ],
+    "package_rows": 1,
+    "selected_package_id": null,
+    "status": 200,
+    "strict_drain": {
+      "active_scopes": 1,
+      "status": "refused",
+      "unsupported": [
+        "uncovered_request_protocol"
+      ]
+    },
+    "tests": 1,
+    "whole_project_raw9_and_SHA_unchanged": true,
+    "wrapper_seconds": 8.328257832909003
+  },
+  "fixture": {
+    "data": "Three synthetic64x32 OCR images and one original tiny serialized SmallCTCOCR checkpoint; original package builder and journal publisher.",
+    "model_forward_training_GPU": false,
+    "original_stack": "backend.tests.test_original_owned_run_export_lifetime._model_stack and _login_current",
+    "parity": "not_run"
+  },
+  "isolation": {
+    "full_source_and_private_inputs_before_after_and_current_equal": true,
+    "natural_original_pytest_reaping": true,
+    "original_conftest_and_isolation_probe": true,
+    "original_pytest_cap_seconds": 120,
+    "signals_sent": false,
+    "store_isolation_all_checks_passed": true
+  },
+  "limitations": [
+    "The controlled direct packages GET proves this independent library contract gap. Native Root11 hash classes match but the exact native emitting request is not retained; no native causal identity or native repair is claimed.",
+    "The executed positive has one valid recorded package with no selected package. Two-package and selected-owned-ID combinations were not executed.",
+    "No native/app/browser launch, model forward, inference/training/GPU, quality/parity approval, release/lease recovery, action cell/count or parent acceptance.",
+    "An initial metadata-only preparation reader could not import psutil; this is preserved separately and started no pytest or application. RED01 fixture failure is also preserved separately."
+  ],
+  "minimal_repair": {
+    "new_nonempty_requirements": [
+      "Pinned original library and package verification functions under the exact authenticated project/account.",
+      "Exact original library return object and one actual verifier result for each own canonical package.",
+      "Exact project/source/task scope, package identity, graph identity and own checkpoint paths; linked or foreign paths refuse.",
+      "Original package/journal reads and hash streams are retained, closed and joined before handler completion."
+    ],
+    "no_unsupported_clear_permission_change_or_refusal_reset": true,
+    "original_library_verify_handler_auth_and_persistence_replaced": false,
+    "unchanged_empty_branch": true
+  },
+  "private_readback": {
+    "bytes": 34041,
+    "label": "PREP/final-private-readback.json",
+    "sha256": "937d66626bd304204a10ecf449444ae71c99d70cc6e9b001d7b90a17647b854c"
+  },
+  "schema": "modu-vision.source-regression-evidence/v1",
+  "scope": "Direct authenticated nonempty saved-package library lifetime; original source ASGI only.",
+  "source": {
+    "GREEN_private_commit": "2b52656d4ea1e31cffb4aa7b063b84798a90c144",
+    "baseline_commit": "eb6541e82fa27398878611e0cb98f8d1ea81af81",
+    "full_diff": {
+      "bytes": 18391,
+      "label": "PREP/candidate-two-file.diff",
+      "sha256": "19fa41cc1e93ee9b9ef93590b5fc717ddcfc5ed263ed03d85686ac75b6badd63"
+    },
+    "only_changed_files": [
+      "backend/engine/original_owned_UI_ancillary_request.py",
+      "backend/tests/test_original_owned_populated_package_library.py"
+    ],
+    "permanent_test_sha256": "a516d12d341614f38f60667b97593e4f8cf1c9c738e8c878dda6a86d09b16bb6",
+    "product_sha256": "964ab32e77bbf9bf365b94f32a5f4f0be9e63fb53d2308f56be648443b03bca0",
+    "tracked_count": 2961
+  }
+}

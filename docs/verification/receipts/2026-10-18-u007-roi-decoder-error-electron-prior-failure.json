@@ -1,0 +1,99 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "50e3a7583019039546d2f7bf5cbe92bb3e7cc500",
+  "source_dirty": false,
+  "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native ROI image-info decoder failure preserves the saved draft and recovers the original input",
+  "test_source_sha256": "6ba61188d3dd4613870f5873e0efbb46af4b55bf1854eb94b5e6fd3ff2d77f7b",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "failed",
+  "expected_status": "passed",
+  "result": "unexpected",
+  "attempts": 1,
+  "workers": 1,
+  "retries": 0,
+  "report_sha256": "782da554f6dc1abacf45b154eb526bd5eeb96defed5c773ac96cc512eb22e975",
+  "harness_sha256": "a25c775a09d9145c8e2693149dfd65f649e491673ddcec1386b03a23d899f06b",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "fb80a1d84596c800f897996704e5a253631f980597376ee10421abfb2e5d3b0f"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "69d3a4ff648a4c0017323afac9f47973271c82184a32f5fee5678673f281197a"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Retained original failed source-Electron attempt for U007.native-original-roi-scale-drag.error; no cell or parent credit.",
+  "execution": {
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "flaky": 0,
+    "command_exit_code": 1,
+    "command_elapsed_seconds": 22.547048040898517
+  },
+  "observed_before_failure": {
+    "real_decoder422_and_draft_preservation_reached": true,
+    "normal_original_recovery_reached": true,
+    "normal_reopen_thumbnail_status": 304,
+    "failure": "The original collector called response.body() for a bodyless thumbnail304 revalidation response. Installed Playwright reports all300-399 bodies as unavailable for redirect responses.",
+    "HTTP_location_redirect_claimed": false,
+    "screenshots_retained": 2
+  },
+  "correction": "A new private checkpoint requires the existing original native full-body cache fence and narrows scope to controlled-cache full responses. No backend, route, status allowance, response mock, deadline or retry change.",
+  "acceptance_promoted": false,
+  "raw_evidence_pins": {
+    "result": {
+      "raw9": [
+        16777231,
+        178161396,
+        33152,
+        1,
+        501,
+        20,
+        876,
+        1792285277560759658,
+        1792285277560796617
+      ],
+      "bytes": 876,
+      "sha256": "5eca3b916682d802f4a1b74a26362130c2490d7637a2da1abbe2c3bd7b8e9c48"
+    },
+    "stdout": {
+      "raw9": [
+        16777231,
+        178161168,
+        33188,
+        1,
+        501,
+        20,
+        10924,
+        1792285276765097257,
+        1792285276765097257
+      ],
+      "bytes": 10924,
+      "sha256": "782da554f6dc1abacf45b154eb526bd5eeb96defed5c773ac96cc512eb22e975"
+    },
+    "harness": {
+      "raw9": [
+        16777258,
+        282858,
+        33188,
+        1,
+        501,
+        20,
+        136066,
+        1792285276615874820,
+        1792285276615993988
+      ],
+      "bytes": 136066,
+      "sha256": "a25c775a09d9145c8e2693149dfd65f649e491673ddcec1386b03a23d899f06b"
+    }
+  }
+}

@@ -1,0 +1,287 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "858e4fd6fc3916399480a7671fcc47943bc1ee7e",
+  "source_dirty": false,
+  "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native ROI image-info decoder failure preserves the saved draft and recovers the original input",
+  "test_source_sha256": "5bc7420d2748a7b272ccdc6188c86c699ff1094f5545c6bf4701df0d59717c3b",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "workers": 1,
+  "retries": 0,
+  "report_sha256": "2b2a0be643506f7f2cfa284d4cec94a8856ef9a7b6af581a318de793f4e7048f",
+  "harness_sha256": "97b78e164c0ba30b07c93a9d637816b6969d40072024b0d8e15dec4a4aedaf65",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "6ce7de229f2c446b8a034a49fc3b0207b00903bb9759803121d0f4261000258a"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "d8935dba27398694820dfbddc9713fcd9c7ef8d91ec348f71b1c6fb39c1ebd53"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "e41a3819178c6a1d34fa5928ad3edc344fcaa39b8a9bbc01c01042198728aa3f"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Only U007.native-original-roi-scale-drag.error on source-Electron under the existing original full-body controlled-cache opt-in. Positive drag/save, normal recovery and reopen are controls. No hot-cache304, installed-native lifetime, model quality or parent acceptance.",
+  "execution": {
+    "electron_version": "44.5.1",
+    "playwright_version": "1.63.0",
+    "test_cases": 1,
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "command_exit_code": 0,
+    "command_elapsed_seconds": 21.744103332981467,
+    "test_duration_ms": 12295,
+    "original_action_and_full_response_budget_ms": 10000
+  },
+  "positive_control": {
+    "original_dimensions": [
+      512,
+      256
+    ],
+    "real_UI_local_file_confirmation": true,
+    "real_pointer_drag": true,
+    "saved_ROI": [
+      64,
+      32,
+      257,
+      161
+    ],
+    "one_original_UI_draft_PUT": true,
+    "normal_source_recovered_and_reopened_with_exact_saved_ROI": true
+  },
+  "error_control": {
+    "actual_owned_bad_input_bytes": 56,
+    "bad_input_sha256": "9453fb37dd5219b80789e68278118d91b2d1418eeb5635e6e68e103becd3b4fb",
+    "inside_owned_project_dataset_outside_business_source": true,
+    "created_before_protected_baseline": true,
+    "original_image_info422_count": 2,
+    "original_image_info_body": {
+      "detail": "Image cannot be decoded"
+    },
+    "original_image_info_body_sha256": "1973b35ca48a57bbade80898886636d5ee5300212fe9ca0f42c06ce86b1d06d1",
+    "original_thumbnail400_count": 1,
+    "thumbnail_error_code": "ERR_CORRUPT_IMAGE",
+    "editable_ROI_SVG_absent_on_error": true,
+    "prior_ROI_remained_visible": [
+      64,
+      32,
+      257,
+      161
+    ],
+    "postbaseline_business_mutations": 0,
+    "source_draft_and_protected_roots_exact_after_error_reopen_and_poststop": true
+  },
+  "custody": {
+    "source_tracked_files": 2960,
+    "current_source_provider_runtime_private_equals_original_before_after": true,
+    "thin_provider_links": 321,
+    "selected_provider_files": 10,
+    "runtime_bindings": 3,
+    "private_inputs": 47,
+    "original_UI_complete_responses": 89,
+    "response_status_counts": {
+      "200": 86,
+      "422": 2,
+      "400": 1
+    },
+    "normal_image_info200_count": 6,
+    "harness_artifact_references_rehashed": 96,
+    "poststop_protected_regular_files": {
+      "source": 1,
+      "project": 9,
+      "harness_dataset": 2
+    },
+    "protected_raw9_bytes_SHA_exact_after_error_reopen_poststop": true,
+    "file_descriptors_opened": 48,
+    "file_descriptors_closed": 48,
+    "close_uncertainties": 0
+  },
+  "guards": {
+    "page_errors": 0,
+    "request_failures": 0,
+    "foreign_requests": 0,
+    "console_errors_total": 3,
+    "exact_owned_decoder422_or_corrupt_thumbnail400_console_errors": 3,
+    "unexpected_console_errors": 0,
+    "postbaseline_mutations": 0,
+    "response_fabrication": false,
+    "backend_route_fixture_or_HTTP_body_policy_changed": false,
+    "generic304_or_3xx_allowance": false,
+    "deadline_or_retry_relaxation": false
+  },
+  "controlled_cache_fence": {
+    "environment_key": "MV_E2E_NATIVE_FULL_BODY_READS",
+    "environment_value": "1",
+    "existing_original_fixture": true,
+    "cache_disabled_before_use": true,
+    "use_completed": true,
+    "cache_restored": true,
+    "network_disabled": true,
+    "CDP_detached": true,
+    "all_owned_commands_settled": true,
+    "all_owned_CDP_sessions_closed": true,
+    "first_exception": null,
+    "secondary_exceptions": [],
+    "hot_cache304_coverage": false
+  },
+  "owned_original_closure": {
+    "fixture_app_teardown_attempted": true,
+    "fixture_first_exception": null,
+    "fixture_secondary_exceptions": [],
+    "electron_alive": false,
+    "backend_port_closed": true,
+    "backend_pid_alive": false,
+    "backend_restarted": false,
+    "close_timed_out": false,
+    "escaped_processes": 0,
+    "leftovers": 0,
+    "unowned_references": 0,
+    "scan_error": null,
+    "wrapper_signals_sent": false
+  },
+  "typecheck": {
+    "command": "npm run typecheck:e2e",
+    "exit_code": 0,
+    "elapsed_seconds": 4.352993708103895,
+    "log_sha256": "0919024eaa08b11e2a01bdac079bf8c8debb38d3c424bdc824ed6c296484d515"
+  },
+  "raw_evidence_pins": {
+    "report": {
+      "raw9": [
+        16777231,
+        178163487,
+        33188,
+        1,
+        501,
+        20,
+        6637,
+        1792285933462978768,
+        1792285933462978768
+      ],
+      "bytes": 6637,
+      "sha256": "2b2a0be643506f7f2cfa284d4cec94a8856ef9a7b6af581a318de793f4e7048f"
+    },
+    "harness": {
+      "raw9": [
+        16777258,
+        297861,
+        33188,
+        1,
+        501,
+        20,
+        155916,
+        1792285933332125216,
+        1792285933348516327
+      ],
+      "bytes": 155916,
+      "sha256": "97b78e164c0ba30b07c93a9d637816b6969d40072024b0d8e15dec4a4aedaf65"
+    },
+    "teardown": {
+      "raw9": [
+        16777258,
+        297863,
+        33188,
+        1,
+        501,
+        20,
+        333,
+        1792285933459860398,
+        1792285933459970982
+      ],
+      "bytes": 333,
+      "sha256": "5145296913b24d154a8236359006969e796ac8ee790cc9745e8dc8db446859e7"
+    },
+    "result": {
+      "raw9": [
+        16777231,
+        178163742,
+        33152,
+        1,
+        501,
+        20,
+        874,
+        1792285933935891879,
+        1792285933935934796
+      ],
+      "bytes": 874,
+      "sha256": "02bcbe2e120186791235ebeec1e0c558cd54ce6b6d5c719c10c19328d8df39a5"
+    },
+    "finite_independent_readback": {
+      "raw9": [
+        16777231,
+        178164278,
+        33152,
+        1,
+        501,
+        20,
+        4742,
+        1792286247320435055,
+        1792286247320464680
+      ],
+      "bytes": 4742,
+      "sha256": "cea73c96d66946ef8e95ed858c63d564b3c179e44960b98535f7e778d1617c3a"
+    },
+    "poststop_protected_trees": {
+      "raw9": [
+        16777231,
+        178164276,
+        33152,
+        1,
+        501,
+        20,
+        11045,
+        1792286247319498043,
+        1792286247319541502
+      ],
+      "bytes": 11045,
+      "sha256": "60d638bea0aeacfbcd8ca625286f6a66e6789d8392a218a1003f90d598df1520"
+    }
+  },
+  "limits": {
+    "model_training_or_inference_invoked": false,
+    "backend_health_device_detection": "mps; availability discovery is not model execution",
+    "installed_native_lifetime_qualified": false,
+    "hot_cache304_qualified": false,
+    "full_RGB_pixel_or_cache_branch_coverage": false,
+    "parent_acceptance": false,
+    "Root_visual_review_status": "Root confirmed all three retained original screenshots: decoder alert with preserved prior ROI64/32/193/129 and final normal image restored."
+  },
+  "prior_failed_attempts_retained": [
+    {
+      "attempt": "native-01",
+      "source_sha": "50e3a7583019039546d2f7bf5cbe92bb3e7cc500",
+      "result": "failed",
+      "reason": "Original thumbnail304 cache revalidation had no body; collector called response.body(). Real422 and draft-preservation phase had passed.",
+      "receipt": "2026-10-18-u007-roi-decoder-error-electron-prior-failure.json",
+      "receipt_sha256": "797db2c4759699de782441cf08b534892a89dc1e51398a9377083ff4e88e0feb",
+      "report_sha256": "782da554f6dc1abacf45b154eb526bd5eeb96defed5c773ac96cc512eb22e975",
+      "harness_sha256": "a25c775a09d9145c8e2693149dfd65f649e491673ddcec1386b03a23d899f06b",
+      "acceptance_credit": false
+    }
+  ],
+  "visual_review": {
+    "reviewer": "Codex root",
+    "three_original_PNGs_confirmed": true,
+    "observed": [
+      "Normal original draft saved with ROI64/32/193/129",
+      "Actual decode error alert and prior ROI retained",
+      "Valid normal original restored and reopened"
+    ],
+    "human_quality_acceptance": false
+  }
+}
