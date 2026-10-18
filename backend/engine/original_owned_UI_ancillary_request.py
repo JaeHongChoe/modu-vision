@@ -733,7 +733,14 @@ class _AncillaryAttempt:
 
     def fail(self,reason):
         self.failed=True;self.owner.admission._unsupported.add('uncovered_request_protocol')
-        self.owner.observer.poison('owned_ancillary_'+reason)
+        observed_reason='owned_ancillary_'+reason
+        with self.owner.observer._lock:
+            failures=self.owner.observer._failures
+            first=(type(failures) is list and len(failures)<=32
+                and all(type(value) is str for value in failures) and observed_reason not in failures)
+            self.owner.observer.poison(observed_reason)
+            try:self.owner.observer.observe_ancillary_failure(self,observed_reason,first)
+            except Exception:pass  # Optional observation must not replace the original failure.
     def __copy__(self):self.fail('attempt_copy');raise ValueError('Original ancillary attempt cannot be copied')
     def __deepcopy__(self,memo):return self.__copy__()
     def __reduce_ex__(self,protocol):return self.__copy__()

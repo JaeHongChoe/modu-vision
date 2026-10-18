@@ -38,6 +38,8 @@ class OriginalRequestActivityObserver:
         self._pid=os.getpid();self._admission=None;self._condition=None;self._binding=None
         self._middleware=None;self._downstream=None;self._records={};self._events=[];self._sequence=0
         self._request_count=0;self._close_sequence=None;self._uncertain=False;self._failures=[]
+        self._ancillary_failure_records={}
+        self._ancillary_failure_records_binding=self._ancillary_failure_records
         self._telemetry_sender=None
         # One bounded summary slot, never another request/capability or reset.
         self._settled_history=(0,0,hashlib.sha256(b'').hexdigest())
@@ -48,6 +50,93 @@ class OriginalRequestActivityObserver:
         with self._lock:
             self._uncertain=True
             if reason not in self._failures and len(self._failures)<32:self._failures.append(reason)
+
+    def _ancillary_failure_owner(self,attempt):
+        """Original retained identity only, including a refused but real attempt."""
+        from backend.engine.original_owned_UI_ancillary_request import (
+            _AncillaryAttempt,OriginalOwnedUIAncillaryRequest,_SPEC,_methods_original)
+        if type(attempt) is not _AncillaryAttempt:return None
+        owner=attempt.owner;carrier=attempt.activity
+        if (type(owner) is not OriginalOwnedUIAncillaryRequest or type(carrier) is not _RequestActivity
+                or type(attempt.binding) is not tuple or len(attempt.binding)!=5
+                or any(attempt.binding[i] is not value for i,value in enumerate(
+                    (attempt,owner,carrier,carrier.token,attempt.token)))
+                or type(owner.records) is not list or sum(row is attempt for row in owner.records)!=1
+                or type(owner.pending) is not dict or owner.pending.get(carrier.token) is not attempt
+                or not self._original(self._admission) or owner.admission is not self._admission
+                or self._admission._UI_ancillary_requests is not owner or owner.observer is not self
+                or owner.condition is not self._condition or owner.owned is not self._middleware
+                or owner.downstream is not self._downstream
+                or type(carrier.binding) is not tuple
+                or len(carrier.binding)!=7 or carrier is not carrier.binding[0]
+                or carrier.observer is not self or carrier.binding[1] is not self
+                or carrier.middleware is not self._middleware or carrier.binding[2] is not self._middleware
+                or carrier.downstream is not self._downstream or carrier.binding[3] is not self._downstream
+                or carrier.scope is not carrier.binding[4] or carrier.context is not carrier.binding[5]
+                or type(carrier.ingress) is not dict or tuple(carrier.ingress.items())!=carrier.binding[6]
+                or type(attempt.name) is not str or attempt.name not in _SPEC
+                or type(carrier.scope) is not dict or carrier.scope is not attempt.scope
+                or carrier.scope.get('route') is not owner.routes[attempt.name]
+                or carrier.scope.get('endpoint') is not owner.handlers[attempt.name][0]
+                or carrier.ingress.get('type')!='http'
+                or carrier.ingress.get('method')!=_SPEC[attempt.name][0]
+                or not _methods_original(owner,OriginalOwnedUIAncillaryRequest,owner.calls)
+                or not _methods_original(attempt,_AncillaryAttempt,owner.calls)
+                or not owner.original() or not attempt.base()):return None
+        row=self._records.get(carrier.token)
+        if (type(row) is not dict or row.get('carrier') is not carrier
+                or type(row.get('identity')) is not int or row['identity']<1
+                or type(row.get('entered_sequence')) is not int or row['entered_sequence']<1):return None
+        return carrier,row,attempt.name.upper(),_SPEC[attempt.name][0]
+
+    def observe_ancillary_failure(self,attempt,reason,first):
+        """Data only, atomically after the unchanged poison in original fail."""
+        from backend.engine.original_owned_UI_ancillary_request import _AncillaryAttempt
+        frame=sys._getframe(1)
+        if (first is not True or type(attempt) is not _AncillaryAttempt
+                or frame.f_code is not _AncillaryAttempt.fail.__code__
+                or frame.f_locals.get('self') is not attempt
+                or frame.f_locals.get('observed_reason') is not reason
+                or frame.f_locals.get('first') is not True or not self._lock._is_owned()
+                or type(reason) is not str or type(self._failures) is not list or reason not in self._failures
+                or type(self._ancillary_failure_records) is not dict
+                or self._ancillary_failure_records is not self._ancillary_failure_records_binding
+                or len(self._ancillary_failure_records)>=32 or reason in self._ancillary_failure_records):return
+        try:found=self._ancillary_failure_owner(attempt)
+        except Exception:return  # Optional provenance inspection grants no authority.
+        if found is None:return
+        carrier,row,route,method=found
+        projection=(row['identity'],row['entered_sequence'],self._sequence,'UI_ANCILLARY',route,method)
+        self._ancillary_failure_records[reason]=(attempt,carrier,carrier.binding,attempt.binding,row,projection)
+
+    def health_ancillary_failure_attribution(self,original_scope):
+        """Finite enums and local sequence numbers; never a completion witness."""
+        condition=self._binding[2] if self._binding is not None else self._lock
+        with condition,self._lock:
+            failures=self.health_failure_diagnostic(original_scope)
+            records=self._ancillary_failure_records
+            if (failures is None or type(records) is not dict
+                    or records is not self._ancillary_failure_records_binding or len(records)>32):return None
+            projected=[]
+            for reason,reason_hash in zip(self._failures,failures['reason_sha256']):
+                attribution=None;held=records.get(reason)
+                if type(held) is tuple and len(held)==6:
+                    attempt,carrier,binding,attempt_binding,row,value=held
+                    try:found=self._ancillary_failure_owner(attempt)
+                    except Exception:found=None
+                    if (found is not None and found[0] is carrier and found[1] is row
+                            and carrier.binding is binding and attempt.binding is attempt_binding
+                            and type(value) is tuple and len(value)==6
+                            and all(type(v) is int and v>0 for v in value[:3])
+                            and value[0]==row['identity'] and value[1]==row['entered_sequence']
+                            and value[1]<=value[2]<=self._sequence
+                            and value[3:] == ('UI_ANCILLARY',found[2],found[3])):
+                        attribution=dict(zip(('request_sequence','entered_sequence','observed_sequence','owner','route','method'),value))
+                projected.append({'reason_sha256':reason_hash,'attribution':attribution})
+            return {'schema':'modu-vision.original-owned-ancillary-failure-attribution/v1',
+                'sequence':failures['sequence'],'diagnostic_request_identity':failures['diagnostic_request_identity'],
+                'reasons':projected,'whole_writer_coverage':False,
+                'process_tree_exit_verified':False,'can_release_launch_lease':False}
 
     def __copy__(self):
         self.poison('observer_copy_refused');raise ActivityObservationError('Original activity observer cannot be copied')
