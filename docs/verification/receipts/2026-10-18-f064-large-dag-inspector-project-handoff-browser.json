@@ -1,0 +1,254 @@
+{
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "d6023e43a72b59a03543007295c59727a8ba0b2145df4273add5bf073634eaa6"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "7d7aea080324e2faa8584f7e37045b45e9f4c2f2712705d54cc02356b3e32cd2"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "a8f15b73193349cf6510109f13f2163f8e1a8c74fa989c3abc3607d55604b59e"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "b8f7a4b6a58f80cddeb2c1a84517b0750d804391cd7cc19bb0a278d513e1fc57"
+    }
+  ],
+  "attempts": 1,
+  "custody": {
+    "both_project_source_recipe_version_drafts_registries_and_harness_dataset_exact_after_original_stop": true,
+    "business_timestamps": "Raw HTTP/durable comparisons use Python exact integers. Browser-manifest nanosecond values retain their original IEEE754 parse semantics; filesystem raw9 in the finite proof are exact decimal strings.",
+    "declared_protected_trees_per_owner": 7,
+    "finite_reader_FD_closed": 509,
+    "finite_reader_FD_counter_scope": "Only this finite reader explicit O_NOFOLLOW evidence-read descriptors; no original test FD count or whole-process FD inventory is claimed.",
+    "finite_reader_FD_opened": 509,
+    "finite_reader_distinct_file_references": 275,
+    "harness_artifact_references_rehashed": 226,
+    "tracked_source_files_raw9_SHA_exact_through_poststop": 3003,
+    "whole_global_context_store_preservation_claim": false
+  },
+  "execution": {
+    "action_timeout_ms": 15000,
+    "automatic_retries": 0,
+    "browser_version": "155.0.8059.80",
+    "command_elapsed_seconds": 27.898933707969263,
+    "command_exit_code": 0,
+    "current_fixture_typecheck_exit_code": 0,
+    "exact_one_collection_exit_code": 0,
+    "failed": 0,
+    "flaky": 0,
+    "handoff_body_cap_bytes": 1048576,
+    "original_full_response_budget_ms": 10000,
+    "passed": 1,
+    "response_body_cap_bytes": 2097152,
+    "skipped": 0,
+    "source_clean_before_after": true,
+    "test_cases": 1,
+    "test_timeout_ms": 180000
+  },
+  "expected_status": "passed",
+  "finite_readback_pin": {
+    "bytes": 218995,
+    "data_only_no_runtime_started": true,
+    "reader_sha256": "62a66a01d05a749ac871a9026719d499567548e61571fa183796ad2c8e5a2be4",
+    "sha256": "c8d386fcfcce3ee7e5bc85b31f7a17393b494469f5d964691d343880b5f801c7"
+  },
+  "fixture_policy": {
+    "editable_model_job_ids_all_null": true,
+    "editable_model_references_per_owner": 8,
+    "model_binding_or_inference_acceptance": false,
+    "name": "F064_INSPECTOR_DRAFT_UNBOUND_MODELS_V1",
+    "only_initial_draft_change_from_original_graph": "The exact eight unavailable fixture model_job_id references become null; inverse restoration equals the original graph.",
+    "original_edges": 52,
+    "original_fixture_recipe_and_version_unchanged": true,
+    "original_nodes": 46,
+    "real_verify_terminal_CAS_accept_library_prerequisites_per_owner": true,
+    "saved_markers_before_baseline": [
+      "A model-007 threshold0.8",
+      "B model-000 threshold0.1"
+    ],
+    "synthetic_source_images_per_owner": 6
+  },
+  "guards": {
+    "409_allowlist": false,
+    "console_errors": 0,
+    "deadline_or_retry_relaxation": false,
+    "foreign_origin_requests": 0,
+    "page_errors": 0,
+    "renderer_rejected_requests": 0,
+    "response_fabrication": false,
+    "route_or_full_body_policy_changes": false,
+    "unexpected_API_non2xx": 0
+  },
+  "handoff_control": {
+    "all_UI_statuses_2xx": true,
+    "app_global_collapsed_width": 44,
+    "app_global_width": 360,
+    "distinct_saved_draft_hashes": true,
+    "fixture_setup_responses_separate": 76,
+    "layout_observations": 7,
+    "model_verification_POSTs": 0,
+    "ordinary_project_UI_sequence": [
+      "A",
+      "B",
+      "A"
+    ],
+    "original_complete_UI_responses": 144,
+    "per_project_preference_claimed": false,
+    "postbaseline_draft_writes": 0,
+    "postbaseline_project_open_POSTs": 2,
+    "prebaseline_setup_project_open_POSTs": 1,
+    "project_selection_request_context_headers_omitted_by_original_contract": true,
+    "project_selection_response_context_matches_target": true,
+    "saved": {
+      "A": {
+        "disk_sha256": "465ecff498532ad4bf968a972fc691456854650faa9905a5a72b42dbb6e850cb",
+        "draft_sha256": "83b25b004c1b6de896739a0ae8db341eaba9aa045f0f29031c8aaecc7c525d7f",
+        "explicit_status": 200,
+        "marker": "model-007",
+        "same_original_Request": true,
+        "threshold": 0.8,
+        "unbound_models": 8
+      },
+      "B": {
+        "disk_sha256": "ddb2abcbe7095ebefadf433f38f85ded78c440047de153dcdc23f4693c4d8b75",
+        "draft_sha256": "a089f6998f77179f91006a4b47a285811da4bd4b9c832838130e7bee0a4a3b85",
+        "explicit_status": 200,
+        "marker": "model-000",
+        "same_original_Request": true,
+        "threshold": 0.1,
+        "unbound_models": 8
+      }
+    },
+    "saved_truth_unchanged_through_handoff": true,
+    "subsequent_draft_same_Request_main_frame_context_full_body_checked": true
+  },
+  "harness_sha256": "4cfd225095e11223c88d4db3218aaaefdf0c93ac15ab6f86358fb4e55ad47b33",
+  "independent_review_accepted": false,
+  "limits": {
+    "independent_acceptance": false,
+    "installed_native_lifetime_qualified": false,
+    "model_binding_verified": false,
+    "other_F064_cells_recredited": false,
+    "parent_acceptance": false,
+    "publication_or_registry_written_by_draft": false,
+    "training_or_model_inference_invoked": false,
+    "whole_feature_accepted": false
+  },
+  "mode": "browser",
+  "owned_original_closure": {
+    "backend_exit_code": 0,
+    "backend_naturally_exited": true,
+    "backend_pid_alive": false,
+    "backend_port_closed": true,
+    "escaped_processes": 0,
+    "forced": false,
+    "global_leftovers": 0,
+    "original_Popen_reaped": true,
+    "scan_error": null,
+    "unowned_references": 0,
+    "wrapper_signals_sent": false
+  },
+  "platform": {
+    "arch": "arm64",
+    "os": "darwin",
+    "release": "27.0.0"
+  },
+  "prior_negatives": {
+    "browser01_missing_accepted_revision_preserved": true,
+    "browser02_unavailable_fixture_model_verify409_preserved": true,
+    "failures_are_not_passing_case_credit": true,
+    "fixture_corrections_test_only": true
+  },
+  "private_execution_source_difference": "Exact public385 product and existing3002 Git blobs/modes plus only the new F064 test spec. Execution remains privatea429 source; it is not relabelled as a later publication HEAD.",
+  "public_source_base": "3856216c50a72fd473b9df99c6a63a8cb7d85ead",
+  "quality_approved": false,
+  "raw_evidence_pins": {
+    "Root_visual_review": {
+      "bytes": 2939,
+      "sha256": "702886c2d5dac501400902492ab04f2909aa1521a05dac5cfd3f7c1ddfc8bf73"
+    },
+    "actual_admission": {
+      "bytes": 1040,
+      "sha256": "bc7bc675c0d64d473a6a3236326771050a7b5cec163bc3d919c8f064f78d7ced"
+    },
+    "actual_exact_one_list": {
+      "bytes": 316,
+      "sha256": "507cbdec01df078a3f1c5fc2be917c97c88db7a2412d0f50133df80cfc242c35"
+    },
+    "actual_typecheck_completion": {
+      "bytes": 104,
+      "sha256": "ea99f9f77c68950b32b6cd847087e1ddbd97e195dc036666c11c2b5976baf558"
+    },
+    "actual_typecheck_initial": {
+      "bytes": 110,
+      "sha256": "7fdd45e2292e5e2eee3da2364f6afe8d6033415d7326b42e1122de140cc79f7b"
+    },
+    "browser_log": {
+      "bytes": 412,
+      "sha256": "93f2f6c0490f0e281174b5a43e86d0739c977b5303b3f05795d3d242360e66c8"
+    },
+    "global_teardown": {
+      "bytes": 392,
+      "sha256": "5ef58d1d201e54b2f01c0c0fa406a8259fb2998bb43cc6b09c224845d7640f64"
+    },
+    "harness": {
+      "bytes": 1278737,
+      "sha256": "4cfd225095e11223c88d4db3218aaaefdf0c93ac15ab6f86358fb4e55ad47b33"
+    },
+    "invocation": {
+      "bytes": 1201,
+      "sha256": "d7325974de11335f812fe5ffdb1b56ede68c0b96b3929bc987e14099afb8928f"
+    },
+    "original_Popen": {
+      "bytes": 595,
+      "sha256": "b8bfda67ea266474d22ab32b7fd822ac59d7f72fec09f40d106f8e346424bb67"
+    },
+    "original_tool_completion": {
+      "bytes": 105,
+      "sha256": "3b50db89fac8b29731a3d7889262878bfa2993f528ffeb205fa156244e372fee"
+    },
+    "original_tool_start": {
+      "bytes": 107,
+      "sha256": "40b858c3309398e5d2712b4b3db978e869a42316cfceccbca55626cbf4d55195"
+    },
+    "report": {
+      "bytes": 8164,
+      "sha256": "98bf9664cb384b8ecedccfd89bada6c1d8622f1436ad14f85f5ff2efce95124c"
+    },
+    "run_result": {
+      "bytes": 1689,
+      "sha256": "03da099337a7d21072039c5e2199af7d77e6f7966acb45f48de8984a782d6127"
+    },
+    "source_after": {
+      "bytes": 1077661,
+      "sha256": "5e008c1dd6e5a9ad37dbe887c3f965033ad8bbe6e0794828155a79c72346e5bf"
+    },
+    "source_before": {
+      "bytes": 1077661,
+      "sha256": "5e008c1dd6e5a9ad37dbe887c3f965033ad8bbe6e0794828155a79c72346e5bf"
+    }
+  },
+  "report_sha256": "98bf9664cb384b8ecedccfd89bada6c1d8622f1436ad14f85f5ff2efce95124c",
+  "result": "expected",
+  "retries": 0,
+  "schema": "modu-vision.gui-execution/v1",
+  "scope": "Only F064.large-dag-inspector-layout.handoff: original46-node52-edge editable large DAG, app-global inspector width360/collapse44 through ordinary A-to-B-to-A project selection; each owner retains its distinct saved marker, threshold and draft hash. No per-project layout preference or model binding/execution, installed-native, parent or whole-feature acceptance.",
+  "source_dirty": false,
+  "source_sha": "a429cc8f14b9d732b8de4063ca113211900a0796",
+  "status": "passed",
+  "test": "scripts/e2e/flow-inspector-project-handoff.spec.ts::F064 global inspector resize and collapse preserve owning large DAG drafts through A B A project handoff",
+  "test_source_sha256": "d3650edd14d689344513426fffa9422b05ff211f44a32958d85346bc26a36079",
+  "visual_review": {
+    "Root_viewed_all_four_canonical_PNGs": true,
+    "all8_draft_models_visibly_unbound": true,
+    "original_review_sha256": "702886c2d5dac501400902492ab04f2909aa1521a05dac5cfd3f7c1ddfc8bf73",
+    "owning_markers_thresholds_and_global360_44_seen": true,
+    "separate_scrolled_inspector_frames": true,
+    "whole46_node_graph_simultaneous_visibility_claimed": false
+  },
+  "workers": 1
+}
