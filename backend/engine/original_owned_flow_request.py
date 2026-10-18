@@ -282,7 +282,8 @@ class OriginalOwnedFlowRequest:
         from backend.engine import (config_audit, original_current_project_request, shared_accounts,
             annotation_storage, checkpoint_paths, dataset_fingerprint, retained_preprocessors,
             specialized_models, rotation)
-        from backend.api import routes_dataset_versions
+        from backend.api import routes_dataset_versions, routes_patch_classification
+        from backend.engine import patch_classification, source_aliases
         from backend.engine import original_owned_flow_execution_request
         from backend.engine import original_owned_UI_ancillary_request
         from backend.engine import original_owned_telemetry_socket_request
@@ -337,6 +338,10 @@ class OriginalOwnedFlowRequest:
                 '_verify_historical_source','specialized_dataset_provenance')),
             (rotation, ('load_rotation_manifest',)),
             (routes_dataset_versions, ('_manifest_digest','_file_hash','_safe_backup_path')),
+            (routes_patch_classification, ('_owned','load_patch_manifest')),
+            (patch_classification, ('load_patch_manifest','_sha256','_check_box','PatchManifest','PatchRecord')),
+            (patch_classification.Image, ('open',)),
+            (source_aliases, ('resolve_source_root',)),
             (flows.torch, ('load',)),
             (routes_evaluation, ('_resolve_job_artifacts','_record_for_selected_checkpoint','_matches_source_dataset',
                 'active_project_models_dir','completed_job_receipt','trusted_checkpoint','fingerprint_dataset',
@@ -694,10 +699,36 @@ class _FlowAttempt:
                 and directory==root/job and checkpoint==directory/'best_model.pt'
                 and type(meta) is dict and resolved_job==job and (task is None or resolved_task==task)
                 and resolved_task in {'detection','anomaly','segmentation','classification','patch_classification'}
-                and meta.get('task')==resolved_task and dataset==Path(source).resolve())
+                and meta.get('task')==resolved_task
+                and (dataset==Path(source).resolve() or resolved_task=='patch_classification'
+                    and self.prepared_patch_dataset(directory,checkpoint,meta,dataset,source,job)))
         if not good:self.fail('model_resolution_return')
         else:
             self.model_calls.append((job,resolved_task,checkpoint,meta));self.model_live=None
+
+    def prepared_patch_dataset(self,directory,checkpoint,meta,dataset,source,job):
+        """Admit only the original completed, same-project prepared PATCH view."""
+        from backend.api import routes_patch_classification as patches
+        from backend.engine import retained_preprocessors as retained
+        project=self.scope.get('state',{}).get('scoped_project')
+        try:
+            root=retained._path(Path(project['dataset_dir'])/'patch')
+            if not dataset.is_relative_to(root) or retained._path(dataset)!=dataset:return False
+            receipt,receipt_pin=retained._json(directory/'job_receipt.json')
+            metadata,metadata_pin=retained._json(directory/'model_meta.json')
+            manifest_pin=retained._pin(dataset/'patches.json')
+            checkpoint_pin=retained._pin(checkpoint,maximum=512*1024*1024)
+            if not (receipt.get('status')=='completed' and receipt.get('task')=='patch_classification'
+                    and receipt.get('job_id')==job and receipt.get('dataset_path')==str(dataset)
+                    and receipt.get('source_dataset_path')==str(Path(source).resolve())
+                    and metadata==meta and receipt.get('checkpoint_sha256')==metadata.get('checkpoint_sha256')
+                    ==checkpoint_pin['sha256']):return False
+            manifest=patches._owned(project,str(dataset))
+            valid=(manifest.root==dataset and manifest.classes==meta.get('classes')
+                and manifest.provenance.get('source_dataset_path')==str(Path(source).resolve()))
+            for pin in (receipt_pin,metadata_pin,manifest_pin,checkpoint_pin):retained._exact(pin)
+            return valid and self.worker_original() and self.handler_frame() is not None
+        except (ValueError,OSError,KeyError,TypeError):return False
 
     def specialist_entry(self,args,kwargs):
         project=self.scope.get('state',{}).get('scoped_project');frame=self.handler_frame()

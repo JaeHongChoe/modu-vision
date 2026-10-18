@@ -1,0 +1,159 @@
+{
+  "GREEN": {
+    "actual_tool_completion": {
+      "bytes": 609,
+      "file": "green-original-tool-completion.json",
+      "sha256": "bce733d23852645bf05c6b9d39b270330a6c5b5f01a8a10ffa36d842b212065a"
+    },
+    "actual_tool_start": {
+      "bytes": 131,
+      "file": "green-original-tool-start.json",
+      "sha256": "5744cd817cbcd52fe80fd6bca62bb475cf7edd549459e50d948b26f959775cb8"
+    },
+    "errors": 0,
+    "failures": 0,
+    "junit": {
+      "bytes": 3111,
+      "file": "GREEN-junit.xml",
+      "sha256": "506fdac665abd8efac8a735bd8e8a4b8a7ddad9cd9ae662157495d5adad6d167"
+    },
+    "log": {
+      "bytes": 192,
+      "file": "GREEN-pytest.log",
+      "sha256": "12fa72ebf37f8b39bf4892a9c5e93573ffa0a2e82f1441ed8c34ee87efcf42b4"
+    },
+    "passed": 17,
+    "positive_original_failures": [],
+    "positive_strict_drain": {
+      "active_scopes": 0,
+      "status": "managed_scopes_drained",
+      "unsupported": []
+    },
+    "pytest_seconds": 20.291,
+    "same_exact_external_positive_body_as_RED": true,
+    "six_new_permanent_negatives": [
+      "foreign prepared project",
+      "foreign original source",
+      "prepared manifest points to foreign source",
+      "forged checkpoint SHA",
+      "replaced resolver alias",
+      "replaced original prepared validator alias"
+    ],
+    "skipped": 0,
+    "ten_existing_cases": "Original catalog/verify valid and source/task refusal, replaced resolver/code/fingerprint/manager, request/body alias refusals, and genuine retained rotation+segmentation catalog/verify.",
+    "tests": 17,
+    "whole_new_permanent_module_executed": false,
+    "wrapper_seconds": 27.30663120886311
+  },
+  "RED": {
+    "actual_pytest_failures": 1,
+    "actual_pytest_tests": 1,
+    "actual_tool_completion": {
+      "bytes": 611,
+      "file": "red-original-tool-completion.json",
+      "sha256": "080dff3a68da7a4ea95fc1771876a4fa11d22069593cea01f8dd1203a265c433"
+    },
+    "actual_tool_start": {
+      "bytes": 131,
+      "file": "red-original-tool-start.json",
+      "sha256": "e19e0531a055b456e67582ceb3db0a2918227dad6b47c3ce9ee38aee9f2aeb67"
+    },
+    "all_three_original_envelopes_completed_normal_released": true,
+    "catalog_status": 200,
+    "junit": {
+      "bytes": 5552,
+      "file": "RED-junit.xml",
+      "sha256": "e4cddea866e7092c30c8f53c92f795d460674069b58ea887803aea1178faabb2"
+    },
+    "log": {
+      "bytes": 5442,
+      "file": "RED-pytest.log",
+      "sha256": "a67ce583a19f91129c0ea487fa58b50e3e971687f813350e631d7e954067b0bf"
+    },
+    "models": 1,
+    "original_failures": [
+      "owned_flow_model_resolution_return",
+      "owned_flow_handler_return",
+      "owned_flow_unconfirmed_lifetime"
+    ],
+    "pytest_seconds": 2.315,
+    "strict_drain": {
+      "active_scopes": 1,
+      "status": "refused",
+      "unsupported": [
+        "uncovered_request_protocol"
+      ]
+    },
+    "wrapper_seconds": 8.101697374833748
+  },
+  "concrete_contract_gap": {
+    "controlled_preobservation_tuple": "Original unchanged resolver called once under original project/shared ContextVars before any observed ASGI request; all structural tuple predicates pass except dataset==selected source. This direct metadata call is disclosed and is not an ASGI warmup or request-identity receipt.",
+    "native_exact_emitter_identity_unproven": true,
+    "no_profile_or_trace": true,
+    "old_lifetime_predicate": "OriginalOwnedFlowRequest.model_return required sixth-field dataset == Path(selected original source).resolve() even for patch_classification.",
+    "original_failure_baseline_empty_before_catalog": true,
+    "original_resolver": "The original _matches_source_dataset validates selected original source/fingerprint separately. _resolve_job_artifacts returns the completed job receipt dataset_path as the sixth tuple field; for prepared PATCH data this is a distinct same-project derived directory."
+  },
+  "fixture": {
+    "checkpoint": "A tiny CPU-serialized task dictionary without learned/runnable weights, used only for original completed checkpoint metadata/catalog resolution. No model instance, forward, training or inference.",
+    "original_ASGI_fixture": "backend.tests.test_original_owned_flow_lifetime._stack and _login_current",
+    "original_handler_resolver_auth_database_or_observer_replaced": false,
+    "original_preparer": "prepare_patch_dataset, three synthetic32x32 labelled images, patch_size16/stride16,12patches",
+    "source_fingerprint": "Original scoped fingerprint_dataset of raw originals; current completed receipt source stays the raw source while dataset_path is the prepared view."
+  },
+  "isolation": {
+    "GREEN_isolation_rows": 37,
+    "RED_clean_baseline_tree_preserved_without_later_edits": true,
+    "RED_isolation_rows": 5,
+    "errors": [],
+    "full_source_and_private_input_before_after_and_current_equal": true,
+    "natural_original_pytest_reaping": true,
+    "original_conftest_and_original_probe": true,
+    "original_pytest_cap_seconds": 120,
+    "preimport_private_stores": true,
+    "signals_sent": false
+  },
+  "limitations": [
+    "The controlled ASGI first reason matches the native flow-open failure class, but the native health hashes do not retain an exact original failing request/resolver tuple. No native emitter identity or completed native repair is inferred.",
+    "No new native build, install, GUI, backend API call to a retained fixture, failed-lease recovery or process control was performed.",
+    "No model-quality, real training/inference, GPU, release/signing/operator or parent acceptance; no action cell or count credit.",
+    "The permanent positive includes an optional private evidence output sink so ordinary CI needs no special environment. The exact external original RED body was the GREEN positive, and the six permanent negative cases ran in the same command. No unexecuted full-module pass is claimed."
+  ],
+  "minimal_repair": {
+    "new_branch_only_task": "patch_classification",
+    "new_branch_requires": [
+      "Original canonical resolver/handler/auth source and frame/worker identities remain valid.",
+      "Resolved prepared path is canonical and unlinked under this active project dataset/patch tree.",
+      "Original bounded complete job receipt is completed with exact job, task, source and resolved prepared dataset; receipt and original metadata both identify actual checkpoint SHA.",
+      "Original metadata JSON equals the resolver-returned metadata; strict original file pins prove receipt, metadata, prepared patches.json and checkpoint before/after.",
+      "Original routes_patch_classification._owned/load_patch_manifest validate same-project origin, full original source map, copied/original image hashes and split/patch truth. Their identities/code/dependencies are pinned at request-owner construction.",
+      "Original worker and handler frame are checked again after validation."
+    ],
+    "no_unsupported_clear_permission_change_or_refusal_reset": true,
+    "not_successful_resolver_blanket_admission": true,
+    "old_raw_dataset_equals_source_branch_unchanged": true
+  },
+  "private_checkpoint": {
+    "bytes": 23689,
+    "file": "final-private-checkpoint.json",
+    "sha256": "40800a589ca356e87c2687ad9e3128ccb8ae29a86a6a69116adc5b2e9cd8ced2"
+  },
+  "schema": "modu-vision.source-regression-evidence/v1",
+  "scope": "Original prepared-PATCH model catalog lifetime only; source ASGI regression, no native qualification.",
+  "source": {
+    "GREEN_private_commit": "fca5c44f23f3962b1e56119b52dde27915868486",
+    "baseline_commit": "71d17a08cdbcef82502b8fb6c1a27a87763433fd",
+    "full_diff": {
+      "bytes": 16390,
+      "file": "final-two-file.diff",
+      "sha256": "4bef7b8630c0e91aa38dbe504c8359b2494407b7fc2c28ee3cc46e14c411939a"
+    },
+    "only_changed_files": [
+      "backend/engine/original_owned_flow_request.py",
+      "backend/tests/test_original_owned_prepared_patch_catalog.py"
+    ],
+    "permanent_test_sha256": "3f60c906f9bd6c005fa2a7c44bb9c5b2ca21e70f44bbbca5ebd938b6b58b6edc",
+    "product_sha256": "06e5e8ae7b734a7e479a6c1f602b651dc952fb0a97c1419118841793acc22753",
+    "tracked_count": 2954
+  }
+}
