@@ -35,6 +35,11 @@ from importlib import metadata
 from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping, Optional
 
+from backend.engine.original_owned_UI_ancillary_request import (
+    register_original_UI_preflight_store, observe_original_UI_preflight,
+    original_UI_preflight_glob, original_UI_preflight_read_text,
+)
+
 KINDS = ('model', 'calibration', 'runtime', 'device')
 STATES = ('ready', 'missing', 'mismatch', 'unavailable', 'unverified')
 BLOCKING = ('missing', 'mismatch', 'unavailable')
@@ -335,6 +340,7 @@ def staleness(report: Mapping[str, Any], *, release: Mapping[str, Any], target: 
 
 # ---------------------------------------------------------------------------------------------------------------- storage
 
+@register_original_UI_preflight_store
 class PreflightStore:
     """Reports as files (``<report_id>.json``), each hash-checked when read."""
 
@@ -367,13 +373,18 @@ class PreflightStore:
 
     def list(self) -> list[dict]:
         rows = []
-        for path in self.folder.glob('*.json') if self.folder.is_dir() else []:
+        present = self.folder.is_dir()
+        for path in original_UI_preflight_glob(self, present):
             try:
-                report = json.loads(path.read_text(encoding='utf-8'))
+                report = json.loads(original_UI_preflight_read_text(self, path, encoding='utf-8'))
             except (OSError, ValueError):
                 continue
-            rows.append({key: report.get(key) for key in ('report_id', 'checked_at', 'status', 'recipe_release', 'target_identity', 'counts')})
-        return sorted(rows, key=lambda row: (row['checked_at'] or '', row['report_id'] or ''), reverse=True)
+            row = {key: report.get(key) for key in ('report_id', 'checked_at', 'status', 'recipe_release', 'target_identity', 'counts')}
+            rows.append(row)
+            observe_original_UI_preflight('row', self, path, report, row, rows)
+        result = sorted(rows, key=lambda row: (row['checked_at'] or '', row['report_id'] or ''), reverse=True)
+        observe_original_UI_preflight('return', self, rows, result)
+        return result
 
 
 # ---------------------------------------------------------------------------------------------------------------- package

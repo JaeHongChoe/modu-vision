@@ -10,7 +10,7 @@ Generates a model package with a Python inference runner:
 """
 
 from __future__ import annotations
-from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_handler
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_handler, observe_original_UI_preflight
 
 import logging
 import json
@@ -278,7 +278,9 @@ class FlowPreflightRequest(BaseModel):
 
 def _preflight_store(project: Dict[str, Any]):
     from backend.engine.flow_preflight import PreflightStore
-    return PreflightStore(Path(project["project_dir"]).resolve() / "deployment_preflight")
+    store = PreflightStore(Path(project["project_dir"]).resolve() / "deployment_preflight")
+    observe_original_UI_preflight('store', store, project)
+    return store
 
 
 def _preflight_release(project: Dict[str, Any], source: Path, recipe_task: str, version_id: str) -> tuple[FlowchartPipeline, dict]:
@@ -351,9 +353,10 @@ def flow_preflight(req: FlowPreflightRequest, request: Request):
     return {**report, "stale": False, "stale_reasons": []}
 
 
-@router.get("/flow/preflights")
+@observe_original_UI_ancillary_handler(router.get("/flow/preflights"))
 def list_flow_preflights(request: Request, version_id: Optional[str] = None):
-    rows = _preflight_store(get_current_project(request)).list()
+    store = _preflight_store(get_current_project(request))
+    rows = store.list()
     return {"reports": [row for row in rows if version_id is None or (row.get("recipe_release") or {}).get("version_id") == version_id]}
 
 
