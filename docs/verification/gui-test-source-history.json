@@ -491,6 +491,36 @@
       "retained_spec_commit": "3c7a62bcea0c19e20ca8aa77c5a71b1a41a71e8a",
       "current_test_source_sha256": "5e03e8604b1cd97c67c6af0b2092d68ca7d77485085dbed7ebd1932e0c11e661",
       "reason": "Retained public ancestor preserves the exact historical executed spec and original receipt. Current test adds exact assertions for four intentionally added preparation metadata fields, independently derived provenance, and pre-reload numeric captions within the same original deadline. Existing error and reopen operations, custody and full-response guards remain unchanged. This declaration supplies no new execution or acceptance and does not rewrite either historical result."
+    },
+    {
+      "receipt": "2026-10-10-root456-flow-new-browser.json",
+      "receipt_sha256": "2185945bb7c2e14670c524cf17e1bda4a0a83d7929e0b58769b7284b4bbc62a4",
+      "execution_source_sha": "54cda06a8162fc239752b1d6feb2752e93821d26",
+      "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::keyboard edited graphs ROI and incomplete policies stay owned across A B A project handoff",
+      "recorded_test_source_sha256": "4d378467d88e280bb960e0a060276a5dc2a485b18fff01de11ec498bed0fd1bc",
+      "retained_spec_commit": "eb6541e82fa27398878611e0cb98f8d1ea81af81",
+      "current_test_source_sha256": "5bc7420d2748a7b272ccdc6188c86c699ff1094f5545c6bf4701df0d59717c3b",
+      "reason": "The exact previous public keyboard spec is retained at eb6541e. One separate decoder-error case was appended; all46585 historical bytes remain unchanged. This declaration supplies no new execution or current GUI acceptance for the older cases."
+    },
+    {
+      "receipt": "2026-10-10-root456-flow-new-electron.json",
+      "receipt_sha256": "aa0aac608209f15957a1b1da0565a0dd6974ecaec876d6b4ee8069c3780aa41d",
+      "execution_source_sha": "54cda06a8162fc239752b1d6feb2752e93821d26",
+      "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard edited graphs ROI and incomplete policies stay owned across A B A project handoff",
+      "recorded_test_source_sha256": "4d378467d88e280bb960e0a060276a5dc2a485b18fff01de11ec498bed0fd1bc",
+      "retained_spec_commit": "eb6541e82fa27398878611e0cb98f8d1ea81af81",
+      "current_test_source_sha256": "5bc7420d2748a7b272ccdc6188c86c699ff1094f5545c6bf4701df0d59717c3b",
+      "reason": "The exact previous public keyboard spec is retained at eb6541e. One separate decoder-error case was appended; all46585 historical bytes remain unchanged. This declaration supplies no new execution or current GUI acceptance for the older cases."
+    },
+    {
+      "receipt": "2026-10-10-root456-flow-old-electron.json",
+      "receipt_sha256": "253b1fe66544ec72c0916a40077681b5e60c6aac935921b29a28f07d715ad4f9",
+      "execution_source_sha": "54cda06a8162fc239752b1d6feb2752e93821d26",
+      "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
+      "recorded_test_source_sha256": "4d378467d88e280bb960e0a060276a5dc2a485b18fff01de11ec498bed0fd1bc",
+      "retained_spec_commit": "eb6541e82fa27398878611e0cb98f8d1ea81af81",
+      "current_test_source_sha256": "5bc7420d2748a7b272ccdc6188c86c699ff1094f5545c6bf4701df0d59717c3b",
+      "reason": "The exact previous public keyboard spec is retained at eb6541e. One separate decoder-error case was appended; all46585 historical bytes remain unchanged. This declaration supplies no new execution or current GUI acceptance for the older cases."
     }
   ]
 }

@@ -452,3 +452,160 @@ test('keyboard edited graphs ROI and incomplete policies stay owned across A B A
 test('native keyboard edited graphs ROI and incomplete policies stay owned across A B A project handoff',{tag:'@electron'},async({electronSession,workspace,evidence})=>{
  test.setTimeout(240_000);const {window}=electronSession,backend=await electronSession.waitForBackend();await flowFiveExercise(window,workspace,evidence,'http://127.0.0.1:'+backend.port,true);
 });
+
+// One separate source-Electron error case. Existing keyboard cases above are
+// unchanged; this does not qualify an installed binary or a parent feature.
+test('native ROI image-info decoder failure preserves the saved draft and recovers the original input', {tag:'@electron'}, async ({electronSession,workspace:w,evidence:e}) => {
+ test.setTimeout(240_000);
+ expect(process.env.MV_E2E_NATIVE_FULL_BODY_READS).toBe('1');
+ const page=electronSession.window,backend=await electronSession.waitForBackend(),origin='http://127.0.0.1:'+backend.port;
+ const api=flowFiveApi(page,origin,true),identity=harness.sourceIdentity();expect(identity.dirty).toBe(false);
+ const raw9=(s:fs.BigIntStats)=>[s.dev,s.ino,s.mode,s.nlink,s.uid,s.gid,s.size,s.mtimeNs,s.ctimeNs].map(String);
+ const descriptors={opened:0,closed:0,uncertain:[] as string[]};
+ const tree=(root:string):Record<string,unknown>=>{
+  const rows:Record<string,unknown>={};
+  try{fs.lstatSync(root);}catch(error){if((error as NodeJS.ErrnoException).code==='ENOENT')return{'.':{kind:'absent'}};throw error;}
+  const walk=(file:string)=>{
+   const st=fs.lstatSync(file,{bigint:true}),pin=raw9(st),relative=path.relative(root,file)||'.';
+   expect(st.isSymbolicLink()).toBe(false);expect(fs.realpathSync(file)).toBe(file);
+   if(st.isDirectory()){
+    const names=fs.readdirSync(file).sort();rows[relative]={kind:'directory',raw9:pin,names};
+    for(const name of names)walk(path.join(file,name));
+    expect(fs.readdirSync(file).sort()).toEqual(names);expect(raw9(fs.lstatSync(file,{bigint:true}))).toEqual(pin);return;
+   }
+   expect(st.isFile()).toBe(true);expect(st.nlink).toBe(1n);
+   const fd=fs.openSync(file,fs.constants.O_RDONLY|fs.constants.O_NOFOLLOW);descriptors.opened++;let failed=false;
+   try{expect(raw9(fs.fstatSync(fd,{bigint:true}))).toEqual(pin);const body=fs.readFileSync(fd);
+    expect(BigInt(body.length)).toBe(st.size);expect(raw9(fs.fstatSync(fd,{bigint:true}))).toEqual(pin);
+    expect(raw9(fs.lstatSync(file,{bigint:true}))).toEqual(pin);rows[relative]={kind:'file',raw9:pin,bytes:body.length,sha256:sha(body)};
+   }catch(error){failed=true;throw error;}finally{try{fs.closeSync(fd);descriptors.closed++;}catch(error){descriptors.uncertain.push(String(error));if(!failed)throw error;}}
+  };walk(root);return rows;
+ };
+ const fixture=JSON.parse(execFileSync(harness.resolvePython(),[path.join(harness.REPO_ROOT,'scripts/e2e/fixtures/canvas_source.py'),w.root],{encoding:'utf8',timeout:30_000}));
+ expect(fixture.size).toEqual([512,256]);expect(sha(fs.readFileSync(fixture.path))).toBe(fixture.sha256);
+ const made=await api('/api/project/create',{name:'Owned U007 actual decoder failure',task:'anomaly'});
+ await api('/api/project/update',{source_dataset_dir:fixture.source},'PUT');
+ const imported=await api('/api/dataset/import',{folder_path:fixture.source,task:'anomaly',validate_images:true});
+ expect(imported.total_images).toBe(1);expect(imported.corrupted_images).toEqual([]);expect(imported.validation).toMatchObject({checked_images:1,complete:true});
+ const project=await api('/api/project/current');expect(project.id).toBe(made.id);expect(project.source_dataset_dir).toBe(fixture.source);
+ expect(path.dirname(project.project_dir)).toBe(path.join(w.userData,'projects'));
+ // This is the original real verify -> completed -> CAS-accept prerequisite,
+ // not a legacy-import claim or a tolerated library409.
+ const validationDeadline=performance.now()+10_000;
+ const initial=await flowFiveWithin(api('/api/dataset/revisions'),validationDeadline,'initial revision');expect(initial.active_revision).toBeNull();
+ const submitted=await flowFiveWithin(api('/api/dataset/imports',{task:'anomaly',verify:true,invalid_policy:'reject'}),validationDeadline,'original verification submit');
+ let terminal=submitted;
+ while(!['completed','failed','aborted','interrupted'].includes(terminal.state)){
+  await flowFiveWithin(new Promise<void>(resolve=>setTimeout(resolve,20)),validationDeadline,'original verification cadence');
+  terminal=await flowFiveWithin(api('/api/dataset/imports/'+submitted.job_id),validationDeadline,'same verification job');
+ }
+ expect(terminal.state).toBe('completed');const revision=terminal.result.revision.revision_id;expect(revision).toMatch(/^[0-9a-f]{32}$/);
+ const accepted=await flowFiveWithin(api('/api/dataset/imports/'+submitted.job_id+'/accept',{revision_id:revision,expected_active:null}),validationDeadline,'original CAS accept');
+ expect(accepted).toEqual({active_revision:revision,job_id:submitted.job_id});
+ const library=await flowFiveWithin(api('/api/dataset/library/images?state=valid&limit=120'),validationDeadline,'accepted original library');
+ expect(library.items).toHaveLength(1);expect(library.items[0]).toMatchObject({file_path:fixture.path,valid:true,sha256:fixture.sha256});
+ const badRoot=path.join(project.dataset_dir,'owned-u007-decoder-input');fs.mkdirSync(badRoot);
+ const bad=path.join(badRoot,'decode-error.png'),badBytes=Buffer.from('Owned U007 decoder refusal: deliberately not PNG bytes.\n');
+ fs.writeFileSync(bad,badBytes,{flag:'wx',mode:0o600});expect(sha(badBytes)).not.toBe(fixture.sha256);
+ const roiId='owned-u007-decoder-roi',wanted=[64,32,257,161],context={project_id:project.id,source_dataset_path:fixture.source,labelset_id:project.active_labelset_id};
+ const pipeline={id:'owned-u007-decoder-flow',name:'Owned U007 decoder boundary',nodes:[
+  {id:'owned-decoder-input',position:{x:20,y:160},data:{label:'Input',node_type:'input'}},
+  {id:roiId,position:{x:340,y:160},data:{label:'Owned fixed ROI',node_type:'fixed_roi',params:{roi_bbox:[32,16,128,96]}}},
+  {id:'owned-decoder-model',position:{x:660,y:160},data:{label:'Unbound inspection (never executed)',node_type:'inspection',task:'anomaly',model_job_id:null}},
+  {id:'owned-decoder-decision',position:{x:980,y:160},data:{label:'Decision',node_type:'decision'}},
+  {id:'owned-decoder-output',position:{x:1300,y:160},data:{label:'Output',node_type:'output'}}],edges:[
+  {id:'owned-decoder-edge-1',source:'owned-decoder-input',target:roiId,payload_type:'image'},
+  {id:'owned-decoder-edge-2',source:roiId,target:'owned-decoder-model',payload_type:'roi'},
+  {id:'owned-decoder-edge-3',source:'owned-decoder-model',target:'owned-decoder-decision',payload_type:'result'},
+  {id:'owned-decoder-edge-4',source:'owned-decoder-decision',target:'owned-decoder-output',payload_type:'result'}]};
+ await api('/api/flowchart/draft',{pipeline,context,base_version_id:'none'},'PUT');
+ const draftFile=path.join(project.project_dir,'flowcharts','drafts',context.labelset_id,sha(fixture.source).slice(0,16),'draft.json');
+ type Wire={request:Request;phase:string;started:number;deadline:number;done:Promise<void>;resolve:()=>void;finished?:number;failure?:unknown;status?:number;body?:string;bytes?:number;sha256?:string};
+ const wires:Wire[]=[],byRequest=new Map<Request,Wire>(),writes:Array<{phase:string;method:string;path:string;body:unknown}>=[];
+ const consoleRows:Array<{text:string;url:string;line:number}>=[],pageErrors:string[]=[],failedRequests:unknown[]=[],foreignRequests:string[]=[];
+ let phase='initial_native_UI',sequence=0,primary:unknown,primaryFailed=false,baseline:unknown,saved:any,afterError:unknown,afterReopen:unknown;
+ const retain=(label:string,body:Buffer)=>{const file=path.join(w.logs,`u007-native-decoder-${++sequence}-${label}.body`);fs.writeFileSync(file,body,{flag:'wx',mode:0o600});e.addFile(file);return{body:file,bytes:body.length,sha256:sha(body)};};
+ const request=(own:Request)=>{
+  const url=new URL(own.url());if(!['http:','https:'].includes(url.protocol))return;
+  if(url.origin!==origin){foreignRequests.push(own.url());return;}if(!url.pathname.startsWith('/api/')||own.method()==='OPTIONS')return;
+  let resolve!:()=>void;const started=performance.now(),row:Wire={request:own,phase,started,deadline:started+10_000,done:new Promise<void>(done=>resolve=done),resolve:()=>resolve()};
+  wires.push(row);byRequest.set(own,row);if(!['GET','HEAD'].includes(own.method()))writes.push({phase,method:own.method(),path:url.pathname,body:own.postDataJSON()});
+ };
+ const response=(reply:Response)=>{
+  const row=byRequest.get(reply.request());if(!row)return;row.status=reply.status();
+  void(async()=>{try{
+   const [body,finished]=await flowFiveWithin(Promise.all([reply.body(),reply.finished()]),row.deadline,'original full native response');
+   expect(finished).toBeNull();expect(body.length).toBeLessThanOrEqual(2*1024*1024);Object.assign(row,retain('response',body),{finished:performance.now()});
+   expect(row.finished!).toBeLessThanOrEqual(row.deadline);const url=new URL(row.request.url()),value=()=>JSON.parse(body.toString('utf8'));
+   if(row.status===422&&url.pathname==='/api/flow-workspace/image-info'&&url.searchParams.get('image_path')===bad){
+    expect(row.request.method()).toBe('GET');expect(row.request.frame()).toBe(page.mainFrame());expect(row.phase).toBe('actual_decoder_error');expect(value()).toEqual({detail:'Image cannot be decoded'});
+   }else if(row.status===400&&url.pathname.startsWith('/api/dataset/thumbnail/')&&url.searchParams.get('file_path')===bad){
+    expect(row.request.method()).toBe('GET');expect(row.phase).toBe('actual_decoder_error');expect(value().detail).toMatchObject({status:'error',error_code:'ERR_CORRUPT_IMAGE'});expect(value().detail.details).toContain(bad);
+   }else{expect(row.status).toBeGreaterThanOrEqual(200);expect(row.status).toBeLessThan(300);}
+  }catch(error){row.failure=error;}finally{row.resolve();}})();
+ };
+ const failed=(own:Request)=>{failedRequests.push({url:own.url(),error:own.failure()});const row=byRequest.get(own);if(row){row.failure=own.failure()?.errorText||'Original request failed';row.resolve();}};
+ const consoleError=(message:any)=>{if(message.type()==='error'){const location=message.location();consoleRows.push({text:message.text(),url:location.url,line:location.lineNumber});}};
+ const pageError=(error:Error)=>pageErrors.push(error.message);
+ page.on('request',request);page.on('response',response);page.on('requestfailed',failed);page.on('console',consoleError);page.on('pageerror',pageError);
+ const settle=async()=>{for(let i=0;i<wires.length;i++){
+  const row=wires[i];if(row.finished===undefined)await flowFiveWithin(row.done,row.deadline,'original native response settlement');
+  expect(row.failure).toBeUndefined();expect(row.finished).toBeGreaterThanOrEqual(row.started);expect(row.finished).toBeLessThanOrEqual(row.deadline);
+  expect(row.body).toBeTruthy();expect(row.sha256).toMatch(/^[0-9a-f]{64}$/);
+ }};
+ const custody=()=>({source:tree(fixture.source),project:tree(project.project_dir),harness_dataset:tree(w.dataset)});
+ const roi=()=>page.getByRole('application',{name:'원본 이미지 ROI 편집',exact:true}),node=()=>page.locator(`[data-flow-node-id="${roiId}"]`);
+ const enter=async()=>{await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name,{timeout:10_000});await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(4).click({timeout:10_000});await page.getByRole('tab',{name:'편집',exact:true}).click({timeout:10_000});await node().locator('[data-flow-node-focus]').click({timeout:10_000});};
+ const choose=async(file:string)=>{
+  const deadline=performance.now()+10_000,remaining=()=>Math.max(1,Math.floor(deadline-performance.now()));
+  await flowFiveWithin(page.getByRole('button',{name:'이미지 변경...',exact:true}).click({timeout:remaining()}),deadline,'original modal open');
+  const dialog=page.getByRole('dialog',{name:'검사 대상 이미지 선택',exact:true});
+  await flowFiveWithin(dialog.getByRole('button',{name:'로컬 파일',exact:true}).click({timeout:remaining()}),deadline,'original local path tab');
+  await flowFiveWithin(dialog.getByPlaceholder('예: /path/to/inspection-image.png').fill(file,{timeout:remaining()}),deadline,'actual local path input');
+  await flowFiveWithin(dialog.getByRole('button',{name:'선택 확정',exact:true}).click({timeout:remaining()}),deadline,'actual local path confirm');
+  await expect(dialog).toHaveCount(0,{timeout:remaining()});
+ };
+ try{
+  await page.reload();await enter();await choose(fixture.path);await expect(roi()).toHaveAttribute('viewBox','0 0 512 256',{timeout:10_000});
+  await roi().scrollIntoViewIfNeeded({timeout:10_000});
+  const points=await roi().evaluate(element=>{const matrix=(element as SVGSVGElement).getScreenCTM();if(!matrix)throw Error('Original ROI has no screen transform');return[[64.25,32.25],[256.25,160.25]].map(([x,y])=>{const point=new DOMPoint(x,y).matrixTransform(matrix);return{x:point.x,y:point.y};});});
+  await page.mouse.move(points[0].x,points[0].y);await page.mouse.down();await page.mouse.move(points[1].x,points[1].y,{steps:4});await page.mouse.up();
+  for(const [name,value]of Object.entries({x:'64',y:'32',width:'193',height:'129'}))await expect(roi().locator('rect')).toHaveAttribute(name,value,{timeout:10_000});
+  await page.getByRole('button',{name:'초안 저장',exact:true}).click({timeout:10_000});
+  await expect(page.getByRole('status').filter({hasText:/^초안 저장됨 · 실행본 활성화 전$/})).toHaveCount(1,{timeout:10_000});
+  await expect(page.getByRole('button',{name:'초안 저장',exact:true})).toBeEnabled({timeout:10_000});await settle();
+  saved=JSON.parse(fs.readFileSync(draftFile,'utf8'));expect(saved.pipeline.nodes.find((row:any)=>row.id===roiId).data.params.roi_bbox).toEqual(wanted);
+  const normalInfo=wires.filter(row=>new URL(row.request.url()).pathname==='/api/flow-workspace/image-info'&&new URL(row.request.url()).searchParams.get('image_path')===fixture.path);
+  expect(normalInfo.length).toBeGreaterThan(0);for(const row of normalInfo){expect(row.status).toBe(200);expect(JSON.parse(fs.readFileSync(row.body!,'utf8'))).toEqual({width:512,height:256,sha256:fixture.sha256});}
+  await e.screenshot(page,'native-roi-decoder-normal-original-draft-saved');
+  baseline=custody();const writeBoundary=writes.length;phase='actual_decoder_error';const first=wires.length;
+  await choose(bad);await expect(page.getByRole('alert').filter({hasText:'Image cannot be decoded'})).toHaveCount(1,{timeout:10_000});
+  await expect(roi()).toHaveCount(0,{timeout:10_000});await expect(page.getByText('원본 기준 [64, 32, 257, 161]',{exact:false})).toBeVisible({timeout:10_000});await settle();
+  const refused=wires.slice(first).filter(row=>new URL(row.request.url()).pathname==='/api/flow-workspace/image-info'&&new URL(row.request.url()).searchParams.get('image_path')===bad);
+  expect(refused.length).toBeGreaterThan(0);for(const row of refused)expect(row.status).toBe(422);
+  expect(writes.slice(writeBoundary)).toEqual([]);expect(JSON.parse(fs.readFileSync(draftFile,'utf8'))).toEqual(saved);afterError=custody();expect(afterError).toEqual(baseline);
+  await e.screenshot(page,'native-roi-original-decoder-422-draft-preserved');
+  phase='normal_original_recovery';await choose(fixture.path);await expect(roi()).toHaveAttribute('viewBox','0 0 512 256',{timeout:10_000});
+  await expect(page.getByRole('alert').filter({hasText:'Image cannot be decoded'})).toHaveCount(0,{timeout:10_000});await settle();
+  phase='normal_reopen';await page.reload();await enter();await choose(fixture.path);await expect(roi()).toHaveAttribute('viewBox','0 0 512 256',{timeout:10_000});
+  for(const [name,value]of Object.entries({x:'64',y:'32',width:'193',height:'129'}))await expect(roi().locator('rect')).toHaveAttribute(name,value,{timeout:10_000});
+  await settle();expect(writes.slice(writeBoundary)).toEqual([]);afterReopen=custody();expect(afterReopen).toEqual(baseline);expect(harness.sourceIdentity()).toEqual(identity);
+  expect(sha(fs.readFileSync(fixture.path))).toBe(fixture.sha256);expect(fs.readFileSync(bad)).toEqual(badBytes);expect(JSON.parse(fs.readFileSync(draftFile,'utf8'))).toEqual(saved);
+  expect(pageErrors).toEqual([]);expect(failedRequests).toEqual([]);expect(foreignRequests).toEqual([]);
+  // A generic console422/400 is never silently accepted: it must locate an
+  // exact retained original bad-input response from this error phase.
+  for(const row of consoleRows){const owned=wires.filter(wire=>wire.phase==='actual_decoder_error'&&wire.request.url()===row.url&&(wire.status===422||wire.status===400));expect(owned.length).toBeGreaterThan(0);expect(row.text).toMatch(/^Failed to load resource: the server responded with a status of (422|400) /);}
+  for(const file of[fixture.path,bad,draftFile])e.addFile(file);await e.screenshot(page,'native-roi-original-recovered-and-reopened');
+ }catch(error){primaryFailed=true;primary=error;throw error;}finally{
+  const secondary:Array<{role:string;error:string}>=[];
+  const attempt=async(role:string,work:()=>unknown|Promise<unknown>)=>{try{await work();}catch(error){secondary.push({role,error:String(error)});}};
+  page.off('request',request);await attempt('all-captured-original-response-joins',settle);
+  page.off('response',response);page.off('requestfailed',failed);page.off('console',consoleError);page.off('pageerror',pageError);
+  if(baseline)await attempt('full-original-custody',()=>expect(custody()).toEqual(baseline));
+  await attempt('source-identity',()=>expect(harness.sourceIdentity()).toEqual(identity));
+  await attempt('all-owned-file-descriptors-closed',()=>{expect(descriptors.uncertain).toEqual([]);expect(descriptors.closed).toBe(descriptors.opened);});
+  await attempt('final-proof',()=>e.note('U007_native_actual_decoder_error',{cell:'U007.native-original-roi-scale-drag.error',scope:'one source-Electron original decode422 and recovery case with original full-body controlled-cache opt-in; no hot-cache304 coverage, installed-native or parent acceptance',source:identity,fixture,project,bad_input:{path:bad,bytes:badBytes.length,sha256:sha(badBytes),created_before_baseline:true,inside_owned_dataset_dir:true,outside_original_business_source:true},validation:{submitted,terminal,accepted,library},saved_draft:saved,protected_before:baseline,protected_after_error:afterError,protected_after_reopen:afterReopen,writes,original_responses:wires.map(({request:own,done,resolve,...row})=>({...row,method:own.method(),url:own.url(),main_frame:own.frame()===page.mainFrame()})),descriptors,page_errors:pageErrors,console_errors:consoleRows,failed_requests:failedRequests,foreign_requests:foreignRequests,primary_failed:primaryFailed,primary:primaryFailed?String(primary):null,secondary_errors:[...secondary],original_fixture_owns_Electron_backend_and_global_closure:true,fixture_and_guard_changes:false,full_RGB_pixel_or_cache_coverage:false,model_inference_training_GPU:false,installed_binary_quality_parent_or_count_credit:false}));
+  if(primaryFailed){if(primary instanceof Error&&secondary.length)try{Object.defineProperty(primary,'u007_secondary_errors',{value:secondary});}catch{/* The original primary, including a frozen Error, remains authoritative. */}}
+  else if(secondary.length)throw Error(JSON.stringify(secondary));
+ }
+});

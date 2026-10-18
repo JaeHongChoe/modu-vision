@@ -853,7 +853,11 @@ class _AncillaryAttempt:
         elif role=='thumbnail_cache':valid=valid and self.name=='get_thumbnail' and path.parent==self.owner.thumbnail_cache
         elif role=='dataset_UI':
             roots=(root,source,Path(project['annotations_dir']))
-            valid=valid and self.name in _DATASET_NAMES and any(path.resolve().is_relative_to(r.resolve()) for r in roots)
+            if self.name=='packages':
+                roots=(root/'exports'/'flows',root/'exports'/'optimization_jobs',root/'flowcharts'/'versions')
+                valid=(valid and not any(member.is_symlink() for member in (path,*path.parents))
+                    and any(path.resolve().is_relative_to(r.resolve()) for r in roots))
+            else:valid=valid and self.name in _DATASET_NAMES and any(path.resolve().is_relative_to(r.resolve()) for r in roots)
         elif role=='profile':valid=valid and self.profile_live is not None and path==self.profile_live[0].path
         elif role=='image':valid=valid and path.is_relative_to(source) and self.name in {'image_info','list_dataset_images'}
         elif role=='flow':
@@ -936,6 +940,38 @@ class _AncillaryAttempt:
                 owned|=(frame.f_locals.get('self') is self.owner.owned and frame.f_locals.get('activity') is self.activity and frame.f_locals.get('scope') is scope)
             frame=frame.f_back
         return bool(valid and framework and owned)
+
+
+    def package_return(self,result):
+        # Direct library reads keep the real verifier and every original file
+        # handle, rather than treating a successful nonempty HTTP body as proof.
+        from backend.engine import flow_package_runtime
+        project=self.scope.get('state',{}).get('scoped_project');root=Path(project['project_dir']).resolve()
+        rows=result.get('packages');libraries=[row for row in self.provenance_operations if row[0]=='package_library']
+        verified=[row for row in self.provenance_operations if row[0]=='verify_package']
+        scope={'project_id':project['id'],'source_dataset_path':str(Path(project['source_dataset_dir']).resolve()),'task':project.get('task')}
+        if (set(result)!={'packages','selected_package_id','scope'} or type(rows) is not list or not rows
+                or result['scope']!=scope or len(libraries)!=1 or libraries[0][3] is not result
+                or libraries[0][1]!={**project,'_delivery_account_id':self.auth.account['id']}
+                or len(verified)!=len(rows) or len(self.package_rows)!=1 or self.dataset_live):return False
+        reads={path.resolve() for _,path,_ in self.files}
+        paths=set();identifiers=set()
+        for row,operation in zip(rows,verified):
+            path=operation[2];value=operation[3]
+            if (type(row) is not dict or type(path) is not type(Path('.'))
+                    or not path.is_relative_to(root/'exports'/'flows') or path in paths
+                    or any(member.is_symlink() for member in (path,*path.parents))
+                    or row.get('package_path')!=str(path) or row.get('integrity')!='verified'
+                    or row.get('scope_matches') is not True or type(value) is not tuple or len(value)!=2
+                    or type(value[0]) is not flow_package_runtime.FlowchartPipeline or type(value[1]) is not dict
+                    or row.get('pipeline_id')!=value[0].id
+                    or row.get('package_id')!=hashlib.sha256(path.relative_to(root).as_posix().encode()).hexdigest()[:32]
+                    or not {path/'manifest.json',path/'pipeline.json'}<=reads
+                    or any(type(checkpoint) is not type(Path('.')) or checkpoint!=path/'models'/job/'best_model.pt'
+                        or checkpoint not in reads for job,checkpoint in value[1].items())):return False
+            paths.add(path);identifiers.add(row['package_id'])
+        return (root/'delivery'/'library.json' in reads
+            and result['selected_package_id'] in {None,*identifiers})
 
 
     def provenance_return(self,result):
@@ -1087,7 +1123,10 @@ class _AncillaryAttempt:
         elif self.name=='list_dataset_images':valid=valid and type(result) is dict and type(result.get('items')) is list and len(self.metadata)==1 and all(row['file_path'] in {str(path) for _,_,path in self.images} for row in result['items'])
         elif self.name=='runtime_capabilities':valid=valid and type(result) is dict and type(result.get('openvino')) is dict and len(self.processes)==1 and self.processes[0][-1] is True
         elif self.name=='edge_targets':valid=valid and type(result) is dict and result.get('device')=='cpu' and not self.files and not self.images and not self.processes
-        elif self.name=='packages':valid=valid and type(result) is dict and result.get('packages')==[] and result.get('selected_package_id') is None and len(self.package_rows)==1
+        elif self.name=='packages':
+            valid=(valid and type(result) is dict and len(self.package_rows)==1
+                and (result.get('packages')==[] and result.get('selected_package_id') is None
+                     or self.package_return(result)))
         elif self.name in {'onboarding_state','list_projects','job_events'}:valid=valid and self.global_returned(result)
         elif self.name=='get_thumbnail':
             valid=valid and self.thumbnail_return(result)
@@ -2073,7 +2112,7 @@ def observe_original_dataset_UI_connection(kind):
 
 def original_dataset_UI_read_text(path,encoding=None,errors=None):
     attempt=_ACTIVE.get()
-    if type(attempt) is not _AncillaryAttempt or attempt.name not in _DATASET_NAMES:
+    if type(attempt) is not _AncillaryAttempt or attempt.name not in {*_DATASET_NAMES,'packages'}:
         return path.read_text(encoding=encoding,errors=errors)
     with path.open('r',encoding=io.text_encoding(encoding),errors=errors) as handle:
         attempt.record_file(handle,path,'dataset_UI')
@@ -2082,7 +2121,7 @@ def original_dataset_UI_read_text(path,encoding=None,errors=None):
 
 def original_dataset_UI_read_bytes(path):
     attempt=_ACTIVE.get()
-    if type(attempt) is not _AncillaryAttempt or attempt.name not in _DATASET_NAMES:return path.read_bytes()
+    if type(attempt) is not _AncillaryAttempt or attempt.name not in {*_DATASET_NAMES,'packages'}:return path.read_bytes()
     with path.open('rb') as handle:
         attempt.record_file(handle,path,'dataset_UI')
         return handle.read()
@@ -2401,7 +2440,8 @@ def observe_original_dataset_provenance_operation(kind):
         @wraps(function)
         def observed(*args,**kwargs):
             attempt=_ACTIVE.get()
-            if type(attempt) is not _AncillaryAttempt or attempt.name!='workflow_impact':return function(*args,**kwargs)
+            if (type(attempt) is not _AncillaryAttempt or attempt.name not in {'workflow_impact','packages'}
+                    or attempt.name=='packages' and kind not in {'package_library','verify_package'}):return function(*args,**kwargs)
             project=attempt.scope.get('state',{}).get('scoped_project');root=Path(project['project_dir']).resolve()
             valid=attempt.resource_entry('provenance_'+kind) and not kwargs
             value=args[0] if args else None;input_path=None
@@ -2413,7 +2453,9 @@ def observe_original_dataset_provenance_operation(kind):
                     and value.directory==root/'reports'/'evaluations'
                     and _methods_original(value,attempt.owner.dataset_evaluation_kind,attempt.owner.calls))
                 attempt.dataset_objects.append((value,attempt.owner.dataset_evaluation_kind))
-            elif kind=='package_library':valid=valid and len(args)==1 and value is project
+            elif kind=='package_library':
+                expected={**project,'_delivery_account_id':attempt.auth.account['id']} if attempt.name=='packages' else project
+                valid=valid and len(args)==1 and (value==expected if attempt.name=='packages' else value is project)
             elif kind=='verify_package':
                 input_path=Path(value).resolve() if len(args)==1 else Path('.')
                 valid=valid and len(args)==1 and input_path.is_relative_to(root/'exports'/'flows')
@@ -2438,11 +2480,12 @@ def observe_original_dataset_provenance_operation(kind):
 
 def original_dataset_provenance_file(handle,path):
     attempt=_ACTIVE.get()
-    if type(attempt) is not _AncillaryAttempt or attempt.name!='workflow_impact':return
+    if type(attempt) is not _AncillaryAttempt or attempt.name not in {'workflow_impact','packages'}:return
     from backend.engine import workflow_impact,flow_package_runtime
     from backend.api import routes_dataset_versions
     frame=sys._getframe(1)
-    functions=((workflow_impact._hash.__wrapped__,'stream'),(routes_dataset_versions._file_hash,'source'),(flow_package_runtime._sha256,'source'))
+    functions=((flow_package_runtime._sha256,'source'),) if attempt.name=='packages' else (
+        (workflow_impact._hash.__wrapped__,'stream'),(routes_dataset_versions._file_hash,'source'),(flow_package_runtime._sha256,'source'))
     valid=(attempt.resource_entry('provenance_file') and any(frame.f_code is function.__code__
         and frame.f_locals.get(name) is handle and frame.f_locals.get('path') is path for function,name in functions))
     if not valid:attempt.fail('provenance_file_source')

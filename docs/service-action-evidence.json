@@ -32423,7 +32423,35 @@
               ]
             },
             "error": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S2-05",
+                  "source_sha": "858e4fd6fc3916399480a7671fcc47943bc1ee7e",
+                  "kind": "click",
+                  "action": "원본 이미지 ROI 편집 · 원본 좌표 끌기",
+                  "expected": "Selecting an actual undecodable owned image through the normal local-file modal must expose the original image-info422, remove the editable ROI SVG and preserve the saved original-coordinate ROI/draft/source, then recover and reopen the valid original within unchanged full-response deadlines.",
+                  "observed": "source-Electron under original full-body controlled-cache opt-in: Real512x256 input accepted a pointer drag and saved ROI[64,32,257,161]. Normal local-file confirmation selected an owned56B non-PNG input; two original image-info GETs returned exact422 Image cannot be decoded and one original thumbnail GET returned400 ERR_CORRUPT_IMAGE. The alert rendered, editable ROI SVG disappeared and prior ROI remained visible. No business mutation followed the saved baseline. Valid-original recovery/reopen retained exact source/draft/protected raw9 and bytes. All89 original UI bodies completed inside original10s deadlines; only three console errors exactly owned by those bad-input responses were admitted. Cache state restored, CDP detached and original Electron/backend/global closure completed. No hot-cache304 or installed-native qualification.",
+                  "reviewer": "Codex root confirmed all three original PNGs: actual decoder alert with preserved ROI64/32/193/129 and final normal restored. Source/result/full-body/custody/cache-fence/closure readback independently verified against current pins; human quality, installed-native lifetime and parent acceptance remain pending.",
+                  "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native ROI image-info decoder failure preserves the saved draft and recovers the original input",
+                  "receipt": "2026-10-18-u007-roi-decoder-error-electron.json",
+                  "receipt_sha256": "524f6aa9cf09a3793935d8423b3a3c4c6c2ca1b68660e04898809ba6098e9f2f",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "6ce7de229f2c446b8a034a49fc3b0207b00903bb9759803121d0f4261000258a"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "d8935dba27398694820dfbddc9713fcd9c7ef8d91ec348f71b1c6fb39c1ebd53"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "e41a3819178c6a1d34fa5928ad3edc344fcaa39b8a9bbc01c01042198728aa3f"
+                    }
+                  ]
+                }
+              ]
             },
             "cancel": {
               "state": "pending"
