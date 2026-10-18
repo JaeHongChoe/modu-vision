@@ -1,0 +1,638 @@
+{
+  "schema": "modu-vision.scoped-native-negative/v1",
+  "status": "failed-strict-closure-after-flow-open",
+  "source_cohort": {
+    "backend_HEAD": "71d17a08cdbcef82502b8fb6c1a27a87763433fd",
+    "frontend_HEAD": "f67eec7ef9132dddba045ed5cbc09d8dd68e7efd",
+    "frontend_only_overlay": "Exactly original startupdiagnostic supervisor+test overlays, no authority/behavior upgrade claim.",
+    "backend_executable_sha256": "a1e67d9364dde75175d0bd6f246884dcf08888aa3071d3189b83cc1da8c07805",
+    "backend_release_sha256": "db870ff4f8e3b9d9e0d71548d2e62bd6c1507de833453f9462bd09e49dbfef9c",
+    "build_identity_sha256": "cf259c7ed4d97a0110bfeddda71fe3e0460de6553d84f7c2141b32c69f482c06",
+    "backend_tracked_count": 2953,
+    "frontend_tracked_count": 2954,
+    "declared_release_members": 5104,
+    "declared_both_source_resource_joins": 372,
+    "portable_files": 5387,
+    "portable_links": 14,
+    "whole_build_artifact_join": "Pinned original build/assembly/tool readback retained; reader did not repeat fullarchive/allcompiledmembers sweep."
+  },
+  "setup": {
+    "outer_setup_completion_available": false,
+    "outer_setup_exit_code_inferred": false,
+    "actual_outer_setup_start_retained": true,
+    "missing_completion_disclosure": "Original toolsession unavailable after continuation; no setup rerun or invented completion. Separate original internal fixture result complete; actual preview/install children naturally returned0/reaped.",
+    "preview": {
+      "returncode": 0,
+      "elapsed_seconds": 26.54472158406861,
+      "original_child_reaped": true,
+      "signals_sent": false,
+      "original_bound_seconds": 180
+    },
+    "install": {
+      "returncode": 0,
+      "elapsed_seconds": 127.07343354192562,
+      "original_child_reaped": true,
+      "signals_sent": false,
+      "original_bound_seconds": 360
+    },
+    "setup_fixture_only": true,
+    "publisher_signature_acceptance": false,
+    "newqualification": false
+  },
+  "pre_health_attempts": {
+    "rejected_before_health_capture": [
+      {
+        "reason": "Original native parent runtime required",
+        "runtime": "venv instead of original AppKit-capable parent",
+        "exit_code": 1
+      },
+      {
+        "reason": "Bounded original UI stage sequence required",
+        "sequence": 0,
+        "exit_code": 1
+      }
+    ],
+    "correct_actual_baseline": "01-baseline originaltool exit0, sequence1; neither rejected precondition produced a health capture.",
+    "guard_unchanged": true
+  },
+  "observed_UI": {
+    "source": "Root actual CUA accessibility/action transcript only",
+    "PNG_persisted": false,
+    "screenshot_file_pin": null,
+    "reported_actions": [
+      "login through controlled loopback fixture administrator",
+      "automatic SEGproject with siximages/2train2val2test",
+      "gallery observed",
+      "Flowtab click showedloading; noedit/save/run before immediate healthfailure andordinaryquit"
+    ],
+    "independent_GUI_execution_acceptance": false
+  },
+  "health_intervals": [
+    {
+      "stage": "baseline",
+      "stage_sequence": 1,
+      "v1": {
+        "sequence": 85,
+        "request_count": 15,
+        "diagnostic_request_identity": 15,
+        "pending_records": 1,
+        "released_records": 14,
+        "settled_records": 14,
+        "sampled_active_scopes": 2,
+        "uncertain": false,
+        "truncated": false
+      },
+      "failure_packet": {
+        "sequence": 85,
+        "request_count": 15,
+        "diagnostic_request_identity": 15,
+        "failure_count": 0,
+        "reason_sha256": [],
+        "uncertain": false
+      },
+      "first_poisoned_interval": false,
+      "stop_further_UI": false,
+      "all_released_records_complete_normal": true,
+      "pending_route_classes": {
+        "HEALTH": 1
+      }
+    },
+    {
+      "stage": "login",
+      "stage_sequence": 2,
+      "v1": {
+        "sequence": 327,
+        "request_count": 58,
+        "diagnostic_request_identity": 58,
+        "pending_records": 6,
+        "released_records": 52,
+        "settled_records": 52,
+        "sampled_active_scopes": 12,
+        "uncertain": false,
+        "truncated": false
+      },
+      "failure_packet": {
+        "sequence": 327,
+        "request_count": 58,
+        "diagnostic_request_identity": 58,
+        "failure_count": 0,
+        "reason_sha256": [],
+        "uncertain": false
+      },
+      "first_poisoned_interval": false,
+      "stop_further_UI": false,
+      "all_released_records_complete_normal": true,
+      "pending_route_classes": {
+        "TELEMETRY": 1,
+        "UNKNOWN": 4,
+        "HEALTH": 1
+      }
+    },
+    {
+      "stage": "gallery",
+      "stage_sequence": 3,
+      "v1": {
+        "sequence": 624,
+        "request_count": 68,
+        "diagnostic_request_identity": 68,
+        "pending_records": 2,
+        "released_records": 66,
+        "settled_records": 66,
+        "sampled_active_scopes": 4,
+        "uncertain": false,
+        "truncated": false
+      },
+      "failure_packet": {
+        "sequence": 624,
+        "request_count": 68,
+        "diagnostic_request_identity": 68,
+        "failure_count": 0,
+        "reason_sha256": [],
+        "uncertain": false
+      },
+      "first_poisoned_interval": false,
+      "stop_further_UI": false,
+      "all_released_records_complete_normal": true,
+      "pending_route_classes": {
+        "TELEMETRY": 1,
+        "HEALTH": 1
+      }
+    },
+    {
+      "stage": "flow-open",
+      "stage_sequence": 4,
+      "v1": {
+        "sequence": 871,
+        "request_count": 88,
+        "diagnostic_request_identity": 87,
+        "pending_records": 5,
+        "released_records": 83,
+        "settled_records": 83,
+        "sampled_active_scopes": 11,
+        "uncertain": true,
+        "truncated": false
+      },
+      "failure_packet": {
+        "sequence": 871,
+        "request_count": 88,
+        "diagnostic_request_identity": 87,
+        "failure_count": 9,
+        "reason_sha256": [
+          "aca3865a2288bc681b5bb3801ed4f4f42d2391225ca33357bcbb1124bfdd379e",
+          "1c82396b3bcc309f1ee29dad10d235b38add8affa59d2664dcaf74e18abdfaa9",
+          "e14a41320584feb330422ff475ef1a252c17d52ddca7ea1617a4aeace8aecf59",
+          "97ab58c36953ea4e9981f8e30b6c45d693ff03b3b01a98a16938ce0f503e4349",
+          "f80298ba4e84e8dd9972775c8ed68f380ee3e6ee2772688aa720c90ecc939047",
+          "a6fd085da40377dc1e1139cd32b6be6653b384b5b0bab1365910dadcd05fcf41",
+          "a1ae0240bbd34f6972a24227c5c51cf492ff40346746d73935c91c68b3eb4d63",
+          "68033b051f0d81eabadc7021524e7764a6d490b81b5c52f141550fe868839757",
+          "cf3373bd2331ce814764588f08596da2c9475dd774a774e6aceba06d30d98da8"
+        ],
+        "uncertain": true
+      },
+      "first_poisoned_interval": true,
+      "stop_further_UI": true,
+      "all_released_records_complete_normal": true,
+      "pending_route_classes": {
+        "TELEMETRY": 1,
+        "UNKNOWN": 3,
+        "HEALTH": 1
+      }
+    }
+  ],
+  "causal_limits": {
+    "first_poisoned_interval": "gallery03→flow-open04",
+    "before_login_after_login_gallery_failure_hash_counts": [
+      0,
+      0,
+      0
+    ],
+    "flow_open_ordered_failure_hash_count": 9,
+    "exact_first_emitter_or_request_identity_identified": false,
+    "no_model_or_nativecrosscohort_rootcause_inference": true,
+    "sibling_v1_and_failure_packet": "SameoriginalHTTP response andsameownhealthidentity; separate snapshots neednotbeatomic orsame-sequence in general."
+  },
+  "shutdown": {
+    "ordinary_nonce_bound_quit_requested": true,
+    "signals_sent": false,
+    "original_main_exited": true,
+    "original_backend_exited": true,
+    "original_controller_reaped": true,
+    "original_controller_still_live": false,
+    "hold_actual_returncode": 1,
+    "reported_error": {
+      "phase": "normal-closure",
+      "class": "ValueError"
+    },
+    "main_direct_returncode": 0,
+    "backend_returncode_not_inferred": true,
+    "final_journal_protocol": 4,
+    "final_journal_state": "recovery_required",
+    "writer_drain_status": "refused",
+    "writer_drain_active_scopes": 3,
+    "writer_drain_unsupported": [
+      "uncovered_request_protocol"
+    ],
+    "writer_drain_backend_exit": null,
+    "lease_release_or_archive": false,
+    "strict_scoped_closure_verified": false,
+    "whole_process_tree_verified": false
+  },
+  "custody": {
+    "original68before_setup_after_setup_afterUI_maps_equal": true,
+    "current68raw9_SHA_body_exact": true,
+    "installed_profile_unchanged": true,
+    "active_pointer_unchanged_by_UI": true,
+    "current_backend_body_modes_and_frontend_raw9_body_exact": true,
+    "failed_lease_journal_pointer_preserved": true,
+    "no_recovery_relaunch_or_oldlease_adoption": true
+  },
+  "caps": {
+    "backend_exit_seconds": 15,
+    "controller_exit_seconds": 10,
+    "main_exit_seconds": 30,
+    "manual_seconds": 600,
+    "original_export_seconds": 115,
+    "original_run_seconds": 60,
+    "readiness_seconds": 360,
+    "startup_seconds": 210
+  },
+  "limits": [
+    "READY/login/gallery unpoisoned diagnostic snapshots do not establish complete native acceptance or closure.",
+    "Failure reason SHA values identifyclasses only; exactemitter/currentrequest cause remainsunproven bythisreceipt.",
+    "No edit/save/run/inference/GPU/modelquality/Provider18manual8/featureparent/release/actioncountcredit.",
+    "Natural originalmain/backendexit+controllerreap do not replace refused managedwriter closure.",
+    "CUA screen observations are transcript only; no persistedPNG or manufacturedimagehash."
+  ],
+  "private_readback": {
+    "bytes": 45904,
+    "sha256": "9ae962d5a6a1cf14ea8eaf4e448e23a70d8dd5fc3292ca80c91b7c225b0930b9"
+  },
+  "raw_evidence": [
+    {
+      "label": "health-baseline",
+      "bytes": 8243,
+      "sha256": "e0c8ddafb482fc968a5f7b31c0bfec37e52f2de03c8e57933953e12b59dbd5b6"
+    },
+    {
+      "label": "health-login",
+      "bytes": 23636,
+      "sha256": "7e175b976129ac5b7c7627e2a46d89b925c054d46c298e7faa5fb59f543cb2a9"
+    },
+    {
+      "label": "health-gallery",
+      "bytes": 27085,
+      "sha256": "3046554bb9a69785401ac0e478c2be6c6e21aaeead353d9389d22440a7d596b6"
+    },
+    {
+      "label": "health-flow-open",
+      "bytes": 34728,
+      "sha256": "0522ae5b578ab63dc1bbdf57b0583b493832efcaf19875a5e4c2c6ad2e5da4ef"
+    },
+    {
+      "label": "pre-health-rejected-root-health-baseline-start-actual.json",
+      "bytes": 2232,
+      "sha256": "2801e8978ecdc2b795d045e21002e1f766fcba86c229ce289dba8d2777e4eb7f"
+    },
+    {
+      "label": "pre-health-rejected-root-health-baseline-native-start-actual.json",
+      "bytes": 1966,
+      "sha256": "fd3d8e0d89a45aaa63cebc0d5dc96f78a305755c13afa7d7e8f3734213939aea"
+    },
+    {
+      "label": "adapter-ready-bound-handoff.final.json",
+      "bytes": 8739,
+      "sha256": "b0bfdab7733827d8ffdd72c1c521a3fc3d8f9220ed88118759cfecc7971655b5"
+    },
+    {
+      "label": "adapter-coherent-declaration.tool-schema-corrected.json",
+      "bytes": 5850,
+      "sha256": "073bab1de7e29279baa63f8a86b0c7d512d0d7fabf0bd52fc303373c34fb44d4"
+    },
+    {
+      "label": "adapter-actual-binding-readback.final.json",
+      "bytes": 29131,
+      "sha256": "0050b1ca659db33fa16df05a26383ecbd42388c050ba779ea23fe9292d00c557"
+    },
+    {
+      "label": "adapter-root-setup-completion-unavailable-disclosure.json",
+      "bytes": 714,
+      "sha256": "941f7a5ced692a2c614a063c6c2c3031dc6481c405d0f862cabe1724975487d7"
+    },
+    {
+      "label": "actual-tool-root-after-UI-completion-actual.json",
+      "bytes": 390,
+      "sha256": "be75dfaa5a0e8cf59d93a7077e827205615e229765cc04d40c69e22bc5aa4969"
+    },
+    {
+      "label": "actual-tool-root-after-UI-start-actual.json",
+      "bytes": 131,
+      "sha256": "6001173f7a0c505de1d7aa5710397026f218e9cb151fa52c18919b46562fabba"
+    },
+    {
+      "label": "actual-tool-root-after-setup-completion-actual.json",
+      "bytes": 393,
+      "sha256": "3e0fae04bb44bb71a1a9dae46508a2d6499b7669a1dce5ba915467816a677942"
+    },
+    {
+      "label": "actual-tool-root-after-setup-start-actual.json",
+      "bytes": 131,
+      "sha256": "8ce51441a3af1eea83bc917578786172444e0d32c2bd5daf54115fc5ab91bcf2"
+    },
+    {
+      "label": "actual-tool-root-before-setup-completion-actual.json",
+      "bytes": 394,
+      "sha256": "5004432ee88b5f2b5ce24a0ee3f58d413ad87767948c56a9bc2ddfe92264d9eb"
+    },
+    {
+      "label": "actual-tool-root-before-setup-start-actual.json",
+      "bytes": 131,
+      "sha256": "16c94ebd03d7c8b152188c1bf6752316efd4e2d59955c7ab46d1a5d479bf6b1e"
+    },
+    {
+      "label": "actual-tool-root-bind-completion-actual.json",
+      "bytes": 549,
+      "sha256": "824330a8454078cf73be52bb4cae6482b0fb4293c55c233af1c0c1d447028411"
+    },
+    {
+      "label": "actual-tool-root-bind-start-actual.json",
+      "bytes": 131,
+      "sha256": "012ffe043ac5a1177e7f6ec98ee644de74f5477b3d024853b451c166904d7a0d"
+    },
+    {
+      "label": "actual-tool-root-health-baseline-01-actual.json",
+      "bytes": 443,
+      "sha256": "d444a8b6d02f846e7c6a1ffb476fd8f100eb5e22dafc864b95048dc9428cf3d8"
+    },
+    {
+      "label": "actual-tool-root-health-baseline-native-start-actual.json",
+      "bytes": 1966,
+      "sha256": "fd3d8e0d89a45aaa63cebc0d5dc96f78a305755c13afa7d7e8f3734213939aea"
+    },
+    {
+      "label": "actual-tool-root-health-baseline-start-actual.json",
+      "bytes": 2232,
+      "sha256": "2801e8978ecdc2b795d045e21002e1f766fcba86c229ce289dba8d2777e4eb7f"
+    },
+    {
+      "label": "actual-tool-root-health-flow-open-04-actual.json",
+      "bytes": 131,
+      "sha256": "15ab2f3eb477b94fd6a174844eb4548de1d6741990315a5f1e414faf931e0a9e"
+    },
+    {
+      "label": "actual-tool-root-health-flow-open-04-completion-actual.json",
+      "bytes": 443,
+      "sha256": "ba74683cb412a8373f8b1a0104bfb473944b3bbb88815921b1b86713d6426bf8"
+    },
+    {
+      "label": "actual-tool-root-health-gallery-03-actual.json",
+      "bytes": 441,
+      "sha256": "9329ae3fbe46f530c848ed6a0f13f73117b9aff465ea6cee4b6b9fed6b2f7e14"
+    },
+    {
+      "label": "actual-tool-root-health-login-02-actual.json",
+      "bytes": 131,
+      "sha256": "7151ce4a473b8893b3439b1ee4ef89d5e3db0066cd0203dc0d0fd9e7493eb73d"
+    },
+    {
+      "label": "actual-tool-root-health-login-02-completion-actual.json",
+      "bytes": 437,
+      "sha256": "4a671b94a10dec9cd4da4390792f68ebe8e105d332d2703e010524bc634cb3e6"
+    },
+    {
+      "label": "actual-tool-root-hold-completion-actual.json",
+      "bytes": 320,
+      "sha256": "b40dfcb104e09fc0e1e462f289b06087640b88e07a336609a5ece8cae44ca31b"
+    },
+    {
+      "label": "actual-tool-root-hold-first-output-actual.json",
+      "bytes": 643,
+      "sha256": "0a0377b71f4ec603ccc9ffa5589c04147f4ff02cac14f1c808e671a528121023"
+    },
+    {
+      "label": "actual-tool-root-hold-start-actual.json",
+      "bytes": 131,
+      "sha256": "80c311922580adbe744357ce572368b930a8d410cb3ef50bf02e0a741642d61c"
+    },
+    {
+      "label": "actual-tool-root-lifetime-inputs-start-actual.json",
+      "bytes": 281,
+      "sha256": "749eb260cf1808cc22db3db98470984dba000012a749d6daba9281d86fe18bae"
+    },
+    {
+      "label": "actual-tool-root-quit-request-actual.json",
+      "bytes": 241,
+      "sha256": "f45db91129ef95a2b8f749302996dd79b72c911f365c8fe532fbd61675693b70"
+    },
+    {
+      "label": "actual-tool-root-setup-start-actual.json",
+      "bytes": 131,
+      "sha256": "ec1492af647d04a8d4324ea01dbb584add8f3c849da55d0fb05a8d6936630f50"
+    },
+    {
+      "label": "controls-inputs",
+      "bytes": 6896,
+      "sha256": "44c8e29619e91b11819298d5719be5b2f125fea805659efacb175c54e6047bfb"
+    },
+    {
+      "label": "frontend-snapshot",
+      "bytes": 1050333,
+      "sha256": "1447c34408113540ec776b914ef53bb8ee10f066468a07340426077bca90cd1c"
+    },
+    {
+      "label": "lifetime-inputs",
+      "bytes": 1675,
+      "sha256": "6e7216bc2dfa8225f23cd804894620fa7b7f7ce23907879a17bb733ca5bced27"
+    },
+    {
+      "label": "protected-before",
+      "bytes": 58318,
+      "sha256": "d16b7da17d833ebeb211764ebab7497ae3946a8b3e1a7591c70d118c1bef745d"
+    },
+    {
+      "label": "protected-after-setup",
+      "bytes": 60251,
+      "sha256": "e378940c88b1a40636daedb5dbe966e418b1a83f92e74f490c5e4aeb8b342b26"
+    },
+    {
+      "label": "protected-after-UI",
+      "bytes": 59869,
+      "sha256": "e488634da4854564f627df2cc81d18a3665496e6d52a3f95748cd95c769db377"
+    },
+    {
+      "label": "active-beforeUI",
+      "bytes": 410,
+      "sha256": "8af1eb6fe7da83610dbc04350e60081f1f484542ec11c666aa82b0e23eff29cc"
+    },
+    {
+      "label": "ACK",
+      "bytes": 404,
+      "sha256": "cc5a66b1abb402ce66cf06c045c63bbe910e7e2c0286c1a5aca3510d4069b167"
+    },
+    {
+      "label": "READY",
+      "bytes": 1720,
+      "sha256": "114e5c22d1d78e172fd3922db718d2e1ac06b62aef7da7a9d0dbdea84a5d1cea"
+    },
+    {
+      "label": "readiness-proof",
+      "bytes": 19485,
+      "sha256": "c3bcf894a19272b3d10f903f40f557627954d739d3aae19026cfc2585f5d5921"
+    },
+    {
+      "label": "lifetime-result",
+      "bytes": 4581,
+      "sha256": "3a61ba5bfcb0dfe5baf3f822541bd6701fa3891ebde90d5e8867aaab2a625184"
+    },
+    {
+      "label": "quit",
+      "bytes": 222,
+      "sha256": "32f2c488ee2755bb218a434bd7dfe5814a0187a38b12d376d9961b5e88de2c14"
+    },
+    {
+      "label": "final-journal",
+      "bytes": 5322,
+      "sha256": "a788a76872d6c3646357c97cf025078e12eb27bff90941abc4d7cdf1d10ea779"
+    },
+    {
+      "label": "final-lease-pointer",
+      "bytes": 221,
+      "sha256": "4415ba0bb450e421d75337ca97aba896068375a47aacb0ba4eefef457f864bf9"
+    },
+    {
+      "label": "controller-start",
+      "bytes": 3484,
+      "sha256": "167ffe5583c8b8d63009dba3df31e6f257c3587a917cc36e571a65de95d3865e"
+    },
+    {
+      "label": "controller-stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "fixture-result.json",
+      "bytes": 14908,
+      "sha256": "7e51d64445e44c9b992eeb5b53d84ab5d81bc9a7f163ec2ff56e871ee9817b1c"
+    },
+    {
+      "label": "fixture-preview.json",
+      "bytes": 2571,
+      "sha256": "734442e4d04e5bc66edaf41768164fb593f85d37a7faa76690d9bc1e737c9d41"
+    },
+    {
+      "label": "fixture-install.json",
+      "bytes": 545,
+      "sha256": "cc9b12938b2f44a0e51af03d3fd8f9d9c17d11868e02c51a78c034634aecf6d0"
+    },
+    {
+      "label": "fixture-preview-child-start.json",
+      "bytes": 1932,
+      "sha256": "7ef33d6b4b87669db5928404aee2e0b82323eceda9922d23e36e2aa1b49c3682"
+    },
+    {
+      "label": "fixture-preview-child.json",
+      "bytes": 2847,
+      "sha256": "2db48201ec07d2eebc5a4605139685cb87a5b856cc19fc44ea941b1bd77548b0"
+    },
+    {
+      "label": "fixture-install-child-start.json",
+      "bytes": 2035,
+      "sha256": "97ddde64d3e5da992c1142836674ab40f44b0aa22d16a15401b40920e07be22d"
+    },
+    {
+      "label": "fixture-install-child.json",
+      "bytes": 2949,
+      "sha256": "086eb4f9e22311e5821ec974adebf66fef0d5f4175b44637e8a6cf008824c89c"
+    },
+    {
+      "label": "fixture-preview-stdout.log",
+      "bytes": 2373,
+      "sha256": "9f24db5ead671c98d0919b544b933923f8f99ebe786c60788bd19b4a289c6f3f"
+    },
+    {
+      "label": "fixture-preview-stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "fixture-install-stdout.log",
+      "bytes": 503,
+      "sha256": "0854b1b40de59f0d42258c98a15bf1243737367f1540f3b9fc2e805d6f0aa72d"
+    },
+    {
+      "label": "fixture-install-stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "fixture-populated-setup.json",
+      "bytes": 23216,
+      "sha256": "6fbb4e91e4cac2d945ed8dc0dd67e419c35650e9136ccc3a3226d56f7cd0a5ea"
+    },
+    {
+      "label": "fixture-controller-argv.json",
+      "bytes": 891,
+      "sha256": "368a721de6cf7dc337d746901ef0e422355f58e2757964435529678e7ef62f99"
+    },
+    {
+      "label": "fixture-controller-inputs.json",
+      "bytes": 524,
+      "sha256": "fbf5cd459c308eb3d7dde366c3bd0e19502959bccd72033bb71e44d82bddd302"
+    },
+    {
+      "label": "artifact-artifact_pins",
+      "bytes": 59588,
+      "sha256": "be89af7a9cd0667bf5da0b7ba4cae103e52768cdbd7c63a1e5b5b1f0276de13e"
+    },
+    {
+      "label": "artifact-assembly_provenance",
+      "bytes": 2164989,
+      "sha256": "0dcef8cbb39f4f41ff2efcf28d45466ab5b5244c7e17ed70f79a4c3397062c13"
+    },
+    {
+      "label": "artifact-backend_release",
+      "bytes": 957364,
+      "sha256": "db870ff4f8e3b9d9e0d71548d2e62bd6c1507de833453f9462bd09e49dbfef9c"
+    },
+    {
+      "label": "artifact-build_tool_result",
+      "bytes": 1014,
+      "sha256": "0c85407c8070be02eb1291ad2e6a6fd92d630b582343792a3ef66f535d9eed88"
+    },
+    {
+      "label": "assembly-child_stdout",
+      "bytes": 279,
+      "sha256": "8e53d0d01bf3af3a62b2c23da349d12cd47bd67869b69504b02945150aeb9da5"
+    },
+    {
+      "label": "assembly-wrapper_result",
+      "bytes": 168,
+      "sha256": "ff178ce61a227ecba7bc280478fa50181df7e6a809389829a269ffe495f15164"
+    },
+    {
+      "label": "assembly-original_tool_result",
+      "bytes": 527,
+      "sha256": "35b1f5af59ca3fcbe49da3c372d573ffbc781d5915b31b9ee0ff5bc565189249"
+    },
+    {
+      "label": "backend-snapshot",
+      "bytes": 544000,
+      "sha256": "8f0d3021d6279dc685ecc5f84ad986ac8c4460b7107372d60fd451949ba27446"
+    },
+    {
+      "label": "backend-after_snapshot",
+      "bytes": 544000,
+      "sha256": "8f0d3021d6279dc685ecc5f84ad986ac8c4460b7107372d60fd451949ba27446"
+    },
+    {
+      "label": "backend-result",
+      "bytes": 650,
+      "sha256": "dea2ba65479f412d582d8355c1c85847b943cf2fedcfd140646a883283adc1e1"
+    },
+    {
+      "label": "backend-start",
+      "bytes": 4684,
+      "sha256": "2f62b11810e0e487a75ebccb0b4d562535b7c8ed3f664f33d071beb0652046e3"
+    }
+  ]
+}
