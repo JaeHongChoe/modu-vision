@@ -39572,7 +39572,27 @@
               ]
             },
             "invalid": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S3-09",
+                  "source_sha": "413edc0f8ef534fe3595f8ce42711c1c0033913e",
+                  "kind": "click",
+                  "action": "현재 항목 열기",
+                  "expected": "Opening a queue with an invalid stored evaluation checksum refuses the actual backend response and preserves the queue, selection and source data.",
+                  "observed": "One owned report checksum byte caused the exact queue GET to return HTTP422 Evaluation integrity failure. The real UI showed the error; no POST occurred, other originals were unchanged and the report body was restored.",
+                  "reviewer": "Codex root actual clean-source browser/body and restoration verification; independent source review; no parent acceptance",
+                  "test": "scripts/e2e/saved-queue-open-invalid.spec.ts::saved queue open refuses an actual invalid owned evaluation record without changing the selected queue or originals",
+                  "receipt": "2026-10-19-saved-queue-open-invalid-413edc0-browser.json",
+                  "receipt_sha256": "4c9cb56259dec7d82dd0b26380298d2ac788734e0a26482a6c4effff9a2bbe60",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "ffd401874175d5c05a63cfd0dd5dc0995e9fa2610830d8583a1fc71a07693cda"
+                    }
+                  ]
+                }
+              ]
             },
             "error": {
               "state": "verified",

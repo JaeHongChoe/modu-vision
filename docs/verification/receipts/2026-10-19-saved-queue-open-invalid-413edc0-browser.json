@@ -1,0 +1,42 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "413edc0f8ef534fe3595f8ce42711c1c0033913e",
+  "source_dirty": false,
+  "product_base": "b1aeb8e3172326fc81669ae71f1daa64ab875d56",
+  "test": "scripts/e2e/saved-queue-open-invalid.spec.ts::saved queue open refuses an actual invalid owned evaluation record without changing the selected queue or originals",
+  "test_source_sha256": "b1befd298dcbbe07348affe8a70e485c8220c7e248112c6a5294c332f6703503",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "9220b259cb198424ac9cbd13dd1b7d8de9cefcb28ee11329c3bd7c3cb07b237d",
+  "harness_sha256": "a7583f771c77214df1dd06e23282795a93030378e76e88a954782b2dad03cafd",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "ffd401874175d5c05a63cfd0dd5dc0995e9fa2610830d8583a1fc71a07693cda"
+    }
+  ],
+  "cell": "U015.saved-queue-open.invalid",
+  "actual_backend_status": 422,
+  "actual_backend_detail": "Evaluation integrity failure",
+  "HTTP_mock_or_abort": false,
+  "fixture_transition": "One checksum byte in one fresh owned evaluation report; exact original body restored in finally.",
+  "report_body_restored": true,
+  "mtime_ctime_restored_or_claimed_unchanged": false,
+  "queue_selection_project_originals_preserved": true,
+  "post_baseline_mutations": 0,
+  "owned_FDs_opened": 100,
+  "owned_FDs_closed": 100,
+  "native_execution": false,
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "parent_accepted": false,
+  "scope": "Single browser invalid-input scenario using current production renderer and actual backend with controlled stored evaluation data; no model inference, cancellation, native installer or parent acceptance."
+}
