@@ -1,0 +1,231 @@
+{
+  "build_and_assembly": {
+    "actual_binding_readback_sha256": "9e6efb087b8ab4f9654e7eaaf0dde72118a608f4b864f4a2566eef14ef63039e",
+    "archive_bytes": 487675157,
+    "archive_sha256": "05055d5628ac1228058588bafd40eea3440f4e9bdb39cd309a4a51df1cacff8c",
+    "artifact_pin_sha256": "550df666e06cdd374d7151cb888cfeb4eccd6f0684e9e8c6d8a129d190290587",
+    "assembly_exit_code": 0,
+    "assembly_seconds": 30.76741454191506,
+    "assembly_source_clean_after": true,
+    "backend_build_identity_sha256": "18e176d6d3bed43f442c5d4a649e7d5889a7fe9d81c28a150aa3d2df957b1ee3",
+    "backend_executable_sha256": "618592189c2b62e9d2e6749b24b82f4736807b11664a76fff03e584f1b97acfc",
+    "backend_exit_code": 0,
+    "backend_seconds": 124.58645445900038,
+    "backend_source_unchanged": true,
+    "full_body_archive_join_previously_completed": true,
+    "full_payload_hashing_repeated_by_receipt_preparer": false,
+    "publisher_signature_accepted": false
+  },
+  "failure_scope": {
+    "Root17_causal_equivalence_claimed": false,
+    "ancillary_exact_attributions_available": false,
+    "exact_first_request_or_root_cause_proven": false,
+    "first_poisoned_observation": "project05 after clean gallery04; an observation interval, not an exact causal request identification.",
+    "raw_reason_text_exported": false,
+    "reason_sha256": [
+      "00c7651a85aa999510d02daaa141a489befebd708a9bf37228ae6bbb2080f905",
+      "3dc8ccb5ce9b7eda132f49e7713243069cd4d2e043b37db2fa154777ebb97d6f",
+      "2d9bfecb9f8b0341c8bcab0c3b572c08f7acd977334b59cd352332f302d8da9b",
+      "aa213f37ba8a7cf68164a133bcbd701600adba27cc351d7c198b613b94330b0c",
+      "4bd0b9955a849ca0d3a292d71dcd0d2e91cd681de848806c854755d833d415a9",
+      "dae5acf5a64004e58d157a9a0c725efaaa9d794ee93890e438caea02de4fc874",
+      "8b101edc278b2f3803a93548558bc7a2463d92c45f07ecd60b3deccc04ed903a",
+      "a4444a589f113f6ad981c5652947dc5c0581e29b52904b1505ba7a614fc04bc8"
+    ],
+    "truncation_not_relaxed_or_cleared": true
+  },
+  "health_chain": [
+    {
+      "HTTP_status": 200,
+      "failure_count": 0,
+      "first_poisoned_interval": false,
+      "observer_sequence": 85,
+      "pending_records": 1,
+      "released_records": 14,
+      "request_count": 15,
+      "sampled_active_scopes": 2,
+      "settled_records": 14,
+      "stage": "baseline",
+      "stage_sequence": 1,
+      "stop_further_UI": false,
+      "truncated": false,
+      "uncertain": false
+    },
+    {
+      "HTTP_status": 200,
+      "failure_count": 0,
+      "first_poisoned_interval": false,
+      "observer_sequence": 280,
+      "pending_records": 3,
+      "released_records": 45,
+      "request_count": 48,
+      "sampled_active_scopes": 6,
+      "settled_records": 45,
+      "stage": "login",
+      "stage_sequence": 2,
+      "stop_further_UI": false,
+      "truncated": false,
+      "uncertain": false
+    },
+    {
+      "HTTP_status": 200,
+      "failure_count": 0,
+      "first_poisoned_interval": false,
+      "observer_sequence": 684,
+      "pending_records": 6,
+      "released_records": 87,
+      "request_count": 93,
+      "sampled_active_scopes": 12,
+      "settled_records": 87,
+      "stage": "project",
+      "stage_sequence": 3,
+      "stop_further_UI": false,
+      "truncated": false,
+      "uncertain": false
+    },
+    {
+      "HTTP_status": 200,
+      "failure_count": 0,
+      "first_poisoned_interval": false,
+      "observer_sequence": 1099,
+      "pending_records": 2,
+      "released_records": 110,
+      "request_count": 112,
+      "sampled_active_scopes": 4,
+      "settled_records": 110,
+      "stage": "gallery",
+      "stage_sequence": 4,
+      "stop_further_UI": false,
+      "truncated": false,
+      "uncertain": false
+    },
+    {
+      "HTTP_status": 200,
+      "failure_count": 8,
+      "first_poisoned_interval": true,
+      "observer_sequence": 2202,
+      "pending_records": 2,
+      "released_records": 161,
+      "request_count": 163,
+      "sampled_active_scopes": 15,
+      "settled_records": 160,
+      "stage": "project",
+      "stage_sequence": 5,
+      "stop_further_UI": true,
+      "truncated": true,
+      "uncertain": true
+    }
+  ],
+  "installed_CLI_setup": {
+    "actual_compiled_CLI_install": true,
+    "canary_monkeypatch": false,
+    "complete": true,
+    "controlled_seed_only": true,
+    "install": {
+      "exit_code": 0,
+      "original_child_reaped": true,
+      "original_natural_join": true,
+      "seconds": 123.09722225018777
+    },
+    "operation_result_sha256": "8c0a82de3f15b46566211c73d5f78d5b655c5fc3b8dd1ca0a657c90bec320186",
+    "populated_setup_complete": true,
+    "preview": {
+      "exit_code": 0,
+      "original_child_reaped": true,
+      "original_natural_join": true,
+      "seconds": 25.82631425000727
+    },
+    "private_controlled_signer_only": true,
+    "result_sha256": "ee124d6e7e61eec8261de4bfbc52ac32e180067f8014f859db5be8c8b05b1a73"
+  },
+  "native_launch": {
+    "CUA_basis": "Root original CUA transcript and operator observations; no saved screenshot file is claimed by this receipt.",
+    "READY_reached": true,
+    "business_request_response_bodies_claimed": false,
+    "observed_UI": "Baseline, login, authorized shared project B, and gallery snapshots were unpoisoned. Authorized shared return A first reported uncertainty. Root stopped further UI immediately.",
+    "original_ACK_and_readiness_retained": true,
+    "original_caps_unchanged": true,
+    "ready_sha256": "b9f38f3100cbd64d15612902e84e45d878a6a39b06f241f9f1ca3725b1af6cd7"
+  },
+  "not_reached_or_not_credited": [
+    "flow open/edit/save",
+    "GUI known-image RUN",
+    "export",
+    "reopen",
+    "GPU dispatch or model-quality approval",
+    "native scoped closure",
+    "parent or action-cell promotion",
+    "whole process-tree or launch-lease release"
+  ],
+  "ordinary_closure": {
+    "errors": [
+      {
+        "exception_class": "ValueError",
+        "phase": "normal-closure"
+      }
+    ],
+    "final_journal": {
+      "active_scopes": 11,
+      "protocol_version": 4,
+      "revision": 9,
+      "sha256": "f8320a2790620e66b665f0c70673f3900538dc278c9dd7603ad22099b7d1a489",
+      "state": "recovery_required",
+      "unsupported": [
+        "uncovered_request_protocol"
+      ],
+      "writer_drain": "refused"
+    },
+    "holder_returncode": 1,
+    "lease_released_or_whole_tree_closed": false,
+    "normal_quit_requested": true,
+    "optional_final_diagnostic_emission_claimed": false,
+    "optional_final_drain_stderr_bytes": 0,
+    "original_backend_exited": true,
+    "original_controller_reaped": true,
+    "original_controller_still_live": false,
+    "original_main_exited": true,
+    "quit_request_sha256": "941574bbbd1e0fa6ab74f2cb496244aa302a0823bc43e051fabcce563d51d5c4",
+    "signals_sent": false,
+    "state_repaired": false,
+    "strict_lifetime_and_scoped_closure_verified": false
+  },
+  "original_custody": {
+    "active_pointer_changed_by_UI": false,
+    "after_UI_operation_exit_code": 0,
+    "after_UI_sha256": "ff419d4818df952de0645232fa4926aded1d4d03e1260fc5e78f85473ba56d2e",
+    "before_after_setup_after_UI_full_pin_maps_equal": true,
+    "captured_original_protected_files": 68,
+    "installed_profile_unchanged": true,
+    "original_model_source_profile_pins_unchanged": true,
+    "receipt_preparer_reopened_all_original_payloads": false
+  },
+  "preparation_limits": {
+    "cause_investigation_remains_separate": true,
+    "no_PUB_source_ledger_or_original_file_mutation": true,
+    "no_import_test_browser_native_process_or_network_execution": true,
+    "no_original_tool_object_reconstruction": true,
+    "read_only_existing_evidence": true
+  },
+  "raw_pins": {
+    "01_baseline_health_sha256": "2ea317da603480f9ebbc155c527c7c2619686ed622461376bed5891cbc363aa5",
+    "02_login_health_sha256": "76e6a618aece4fbe30472b6bc8537df2676ed122bd6bced47d0237abb2bea7a1",
+    "03_project_health_sha256": "f4a324f9fe10f2924396e6dcabb7a192920da88490cfeec6c43789eb9c10c13e",
+    "04_gallery_health_sha256": "7b95804e015bbc8af6d97e64afcc1b329d3337db339b7df74fe7fe801eca2c61",
+    "05_project_health_sha256": "ed1a830e838f63b1367a3804da9fb2bdf3ea466d23d824fa413f7d6008422fd9",
+    "assembly_actual_tool_envelope_sha256": "d340bf5749dc8680a61e03e3702e79b7d619b4b00af280b2381b14434b4ab635",
+    "holder_result_sha256": "046d5162c8f13bc34c03958ceb575f690fcbe3510466496c14f7a0857459dfe1",
+    "source_build_actual_tool_envelope_sha256": "87124a899f67e782b0809a76b85353e3fe7bf7703abf2868e80acf57a540b397"
+  },
+  "result": "failed",
+  "schema": "modu-vision.current-installed-native-root18-negative/v1",
+  "scope": "One fresh current installed native launch. The first poisoned snapshot occurred after returning from shared B to shared A following the clean gallery snapshot. Original ordinary quit was requested. No native acceptance or action-cell/parent promotion.",
+  "source_cohort": {
+    "backend_HEAD": "472ab751f5f0304f6d0685a9f3f3a7eea63afd99",
+    "backend_captured_tracked_count": 3012,
+    "frontend_HEAD": "e204de6a9ab3b11d2d801b023a613dd64b62e514",
+    "frontend_captured_tracked_count": 3013,
+    "frontend_delta": "Only the same two original startup-diagnostic overlays relative to the captured public source.",
+    "snapshot_sha256": "cc77694122c50d390f4aa980b184c18049e5d39cb0ffe643c0de9f7eaf48e0d5"
+  },
+  "source_only": false
+}

@@ -14,7 +14,7 @@ import uuid
 
 from backend.contracts.authentication import PermissionDecision
 from backend.engine.original_shared_current_project import observe_account_db, observe_account_method
-from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_global_projects_for, observe_original_UI_global_project_role
+from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_global_projects_for, observe_original_UI_global_project_role, register_original_preview_denial_audit
 
 ROLES={'viewer','labeler','trainer','reviewer','owner'}
 ACTIONS={
@@ -240,6 +240,7 @@ class AccountStore:
         return db.execute('SELECT revision FROM member_revisions WHERE project_id=? AND user_id=?',(project_id,user_id)).fetchone()['revision']
 
     @staticmethod
+    @register_original_preview_denial_audit
     def _audit(db,actor,action,project,decision,**details):
         workspace=db.execute("SELECT value FROM account_meta WHERE name='workspace_id'").fetchone()['value']
         identifier=uuid.uuid4().hex
