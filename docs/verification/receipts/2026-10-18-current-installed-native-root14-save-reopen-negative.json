@@ -1,0 +1,229 @@
+{
+  "schema": "modu-vision.scoped-native-readback/v1",
+  "status": "actual-GUI-save-and-stage-reopen-observed-strict-closure-not-passed",
+  "source_cohort": {
+    "backend_HEAD": "9274d273881b1366bf21dbda6202c9058dcdc486",
+    "frontend_HEAD": "f13378ef72018fe9c1a0e9d5a48906003384b0bd",
+    "backend_release_sha256": "9c4886c14df514d638cb1a842cb5f05f61d59b9ee50c5c6ee2665fdce67c0486",
+    "backend_executable_sha256": "b75c307075ea0acb201c55b2e262d892fba4b3c95f80c5751a0e202136e9b559"
+  },
+  "actual_GUI": {
+    "synthetic_account_login": true,
+    "gallery_AX_images": 6,
+    "loaded_flow_nodes": 5,
+    "linked_models": 2,
+    "inspection_label_edit": true,
+    "layout_and_name_only_dialog_confirmed": true,
+    "save_success_toast": true,
+    "new_saved_version_file_and_active_pointer_match": true,
+    "ordinary_stage_reopen_preserves_label_and_new_active_version": true,
+    "immediate_header_still_old_before_stage_reopen": true,
+    "app_relaunch": false,
+    "run_inference": false,
+    "GPU_connection_test": false,
+    "export": false,
+    "standalone_PNG_retained": false,
+    "evidence": "Root CUA accessibility and screenshot transcript plus saved version readback"
+  },
+  "health_intervals": [
+    {
+      "stage": "baseline",
+      "sequence": 1,
+      "request_count": 15,
+      "uncertain": false,
+      "truncated": false,
+      "failure_count": 0,
+      "first_poisoned_interval": false,
+      "stop_further_UI": false
+    },
+    {
+      "stage": "login",
+      "sequence": 2,
+      "request_count": 58,
+      "uncertain": false,
+      "truncated": false,
+      "failure_count": 0,
+      "first_poisoned_interval": false,
+      "stop_further_UI": false
+    },
+    {
+      "stage": "gallery",
+      "sequence": 3,
+      "request_count": 65,
+      "uncertain": false,
+      "truncated": false,
+      "failure_count": 0,
+      "first_poisoned_interval": false,
+      "stop_further_UI": false
+    },
+    {
+      "stage": "flow-open",
+      "sequence": 4,
+      "request_count": 92,
+      "uncertain": false,
+      "truncated": false,
+      "failure_count": 0,
+      "first_poisoned_interval": false,
+      "stop_further_UI": false
+    },
+    {
+      "stage": "flow-open",
+      "sequence": 5,
+      "request_count": 102,
+      "uncertain": false,
+      "truncated": false,
+      "failure_count": 0,
+      "first_poisoned_interval": false,
+      "stop_further_UI": false
+    },
+    {
+      "stage": "flow-edit",
+      "sequence": 6,
+      "request_count": 111,
+      "uncertain": false,
+      "truncated": false,
+      "failure_count": 0,
+      "first_poisoned_interval": false,
+      "stop_further_UI": false
+    },
+    {
+      "stage": "flow-save",
+      "sequence": 7,
+      "request_count": 114,
+      "uncertain": false,
+      "truncated": false,
+      "failure_count": 0,
+      "first_poisoned_interval": false,
+      "stop_further_UI": false
+    },
+    {
+      "stage": "flow-save",
+      "sequence": 8,
+      "request_count": 122,
+      "uncertain": false,
+      "truncated": false,
+      "failure_count": 0,
+      "first_poisoned_interval": false,
+      "stop_further_UI": false
+    },
+    {
+      "stage": "flow-open",
+      "sequence": 9,
+      "request_count": 151,
+      "uncertain": false,
+      "truncated": true,
+      "failure_count": 0,
+      "first_poisoned_interval": false,
+      "stop_further_UI": true
+    }
+  ],
+  "shutdown": {
+    "actual_original_holder_exit": 1,
+    "normal_quit_requested": true,
+    "original_main_backend_exited_controller_reaped": true,
+    "signals_sent": false,
+    "strict_managed_writer_closure_verified": false,
+    "whole_process_tree_verified": false,
+    "journal_state": "recovery_required",
+    "writer_drain_status": "refused",
+    "active_scopes": 0,
+    "unsupported": [
+      "uncovered_request_protocol"
+    ],
+    "backend_exit_proof_present": false,
+    "failed_lease_preserved_no_relaunch_or_adoption": true
+  },
+  "custody": {
+    "original_model_source_profile68_raw9_SHA_exact": true,
+    "installed_profile_unchanged": true,
+    "active_pointer_intentionally_changed_by_GUI": true,
+    "prior_versions_preserved": true,
+    "prior_versions_raw9_and_SHA_exact": 30,
+    "new_versions_count": 2
+  },
+  "limits": [
+    "The health09 stop is caused by diagnostic projection truncation; it is distinct from the journal managed-drain refusal.",
+    "No failure reason was reported in the health failure packet; this does not establish absence of unsupported managed work.",
+    "The exact native request introducing uncovered_request_protocol is not attributed by these retained diagnostics.",
+    "No native lifetime, parent, scenario, release, model-quality or complete Electron helper-tree acceptance is granted."
+  ],
+  "raw_evidence": [
+    {
+      "label": "original-lifetime-result",
+      "bytes": 4581,
+      "sha256": "ff88ad7db7e5476d822969df1fad6d01ce0f692d18093d93f3316faa76ff3a5c"
+    },
+    {
+      "label": "original-final-journal",
+      "bytes": 5322,
+      "sha256": "164dda5683f5fe80f7254df8abaad12696cfa8dafc278617ab7358320807a51b"
+    },
+    {
+      "label": "original-tool-envelope",
+      "bytes": 3118,
+      "sha256": "b364b7591ef0c4cd294875f7cd48488fbfd7984c1e60c9cfad8c04e9265f6e69"
+    },
+    {
+      "label": "Root-observed-save-reopen-private",
+      "bytes": 15461,
+      "sha256": "2e217041e7a10f9d956f9e9c54b0a7b7798cec11e8192422e26ceea1273dec68"
+    },
+    {
+      "label": "post-UI-protected-custody",
+      "bytes": 59868,
+      "sha256": "3c31574a48346e3c7f5d5624d448e9d7650d47d9115b105ce01ea7e923610d3c"
+    },
+    {
+      "label": "health-01-baseline.json",
+      "bytes": 8582,
+      "sha256": "a3a368d44a18c87d8e17c7fd788fc480c81afa421ebc76d92b91828c240f0b02"
+    },
+    {
+      "label": "health-02-login.json",
+      "bytes": 23986,
+      "sha256": "9448ded23dd43cf408bcf6e1d78cb221c11fd473f22def62b8ae5e1b50a998ae"
+    },
+    {
+      "label": "health-03-gallery.json",
+      "bytes": 26384,
+      "sha256": "44ef5419679d5b7253466d87b116caf5bc775c1e245f49ba882514375597e71c"
+    },
+    {
+      "label": "health-04-flow-open.json",
+      "bytes": 35781,
+      "sha256": "b8de66f1e31760d0f3ced56ce5c028fad08c1546d6b168f6e6eaea6cd8b9a204"
+    },
+    {
+      "label": "health-05-flow-open.json",
+      "bytes": 39245,
+      "sha256": "a4fa12c0c577c37c3232a4ee5edae629e0fd9e4b6d3ffd6730060421c7532343"
+    },
+    {
+      "label": "health-06-flow-edit.json",
+      "bytes": 42400,
+      "sha256": "665f003536846f9946c55fa203f33cddd784a025aa66769adb2e3109cd01ecec"
+    },
+    {
+      "label": "health-07-flow-save.json",
+      "bytes": 43451,
+      "sha256": "f7cd2f3db7110ccaf442b4e9d528f83457f37351c38cfee30b60338a2596b40c"
+    },
+    {
+      "label": "health-08-flow-save.json",
+      "bytes": 46245,
+      "sha256": "ddfa3ee4bb306b85eb9d0c32e2641ac91f31099b935b40e35817eaeb2ed94857"
+    },
+    {
+      "label": "health-09-flow-open.json",
+      "bytes": 48342,
+      "sha256": "5c12a2ed57858e5f005d2189ff51113229ee6e0a589ae313bba8036fdac7a00b"
+    },
+    {
+      "label": "prior-version-custody",
+      "bytes": 19791,
+      "sha256": "25914fb80858d1f1cf369056d4ed5d4925570ab7a48d1ca7790e07e29648b4e6"
+    }
+  ],
+  "native_acceptance": false,
+  "parent_or_scenario_credit": 0
+}
