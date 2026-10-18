@@ -139,13 +139,14 @@ def test_ssh_exec_uses_strict_options_and_quotes_remote_arguments(monkeypatch):
 
     assert result.stdout == "ok"
     argv, kwargs = calls[0]
-    assert argv[:7] == [
-        "ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes", "-p", "22"
-    ]
+    assert argv[0] == "ssh"
+    pairs = list(zip(argv, argv[1:]))
+    for option in ("BatchMode=yes", "StrictHostKeyChecking=yes", "ForwardAgent=no",
+                   "ConnectTimeout=10", "ServerAliveInterval=5", "ServerAliveCountMax=2"):
+        assert ("-o", option) in pairs
+    assert argv.count("-p") == 1
+    assert ("-p", str(profile.ssh_port)) in pairs
     assert argv[argv.index("--") + 1] == profile.ssh_target
-    assert "ConnectTimeout=10" in argv
-    assert "ServerAliveInterval=5" in argv
-    assert "ServerAliveCountMax=2" in argv
     assert shlex.split(argv[-1]) == ["python3", "-c", "print('a; b')"]
     assert kwargs["shell"] is False
 

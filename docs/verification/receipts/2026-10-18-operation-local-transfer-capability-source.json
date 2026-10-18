@@ -1,0 +1,356 @@
+{
+  "schema": "source-only-operation-local-transfer-capability-v1",
+  "date": "2026-10-18",
+  "scope": "Reuse a successful rsync capability probe only during one original operation artifact download loop; source-only counted transport evidence.",
+  "source": {
+    "public_base": "1b2beb194cf2c251027966e09baaee039c73aef1",
+    "private_commit": "306be7760cfa15433fda0787895fe6fa1ce0f7bd",
+    "files": [
+      {
+        "path": "backend/remote/ssh_transport.py",
+        "bytes": 38279,
+        "sha256": "b69db02eb63c3c951d83f18a79732f0c6105babbb9084283cc6dc5cffb75ef25"
+      },
+      {
+        "path": "backend/remote/operations.py",
+        "bytes": 65300,
+        "sha256": "9274ff7da27f207cc7ac410fb0ef6abd5b0ef3b9297ac98a45ef822d934bf90b"
+      },
+      {
+        "path": "backend/engine/original_owned_selected_compute_request.py",
+        "bytes": 41179,
+        "sha256": "3239481563b9d614c5c081d25b6f89be009d3e15f341ed57eb47d97d30b45ff9"
+      },
+      {
+        "path": "backend/tests/test_operation_download_capability_scope.py",
+        "bytes": 10693,
+        "sha256": "b6cab557b651f0a5ac64a123a054e33a6591061c7672b40f67d4a558d979ca90"
+      },
+      {
+        "path": "backend/tests/test_remote_profiles.py",
+        "bytes": 22131,
+        "sha256": "a92fc84ce96507b83a0ec8352eb91b3b6ecc43c35cc4a8f9dfd56414ec26761c"
+      }
+    ],
+    "products": 3,
+    "new_tests": 1,
+    "existing_test_successor": 1,
+    "old_three_product_full_inverse_except_declared_delta_exact": true,
+    "unchanged_original_function_AST_count": 109
+  },
+  "changes": [
+    "The original artifact loop opens a context-local positive capability scope for its exact SSHTransport instance and ComputeProfile object and full value. It marks its shared cache retired before resetting the context binding, including exceptions, so a previously copied context cannot keep the positive result after operation exit.",
+    "Only successful recognizable rsync --version results are reused. Local executable checks remain; unsupported, malformed, error and timeout results are not memoized. Another host, port, transport, profile instance or later operation receives no cached capability.",
+    "All original output transfers, manifest/path/size/SHA validation, temporary-file cleanup, adoption, strict known-host and non-forwarding SSH options remain. There is no new remote command, transfer batch, connection authority or timeout change.",
+    "Existing selected-compute original-source bindings additionally retain the scope object and capability methods; original request/body/deadline/drain/authentication and ownership refusals are unchanged.",
+    "An existing SSH test had a stale fixed argv prefix. Exact clean-base execution reproduced it. Its narrow test-only successor verifies option/value adjacency for all existing stronger options, one configured port, target delimiter and original remote command quoting."
+  ],
+  "actual_runs": {
+    "causal_RED02": {
+      "pass": 0,
+      "fail": 1,
+      "duration_s": 0.3,
+      "exit_code": 1,
+      "actual_probes": 33,
+      "original_output_transfers": 33,
+      "scope": "Original operation and SSH exec/download code with explicit local subprocess and remote-exit suppliers; all valid files reached the desired probe-count assertion."
+    },
+    "same_body_GREEN01": {
+      "pass": 1,
+      "fail": 0,
+      "duration_s": 0.25,
+      "exit_code": 0,
+      "actual_probes": 1,
+      "original_output_transfers": 33
+    },
+    "previous_candidate_focused02": {
+      "pass": 11,
+      "fail": 0,
+      "duration_s": 0.3,
+      "exit_code": 0,
+      "argv": [
+        "backend/tests/test_operation_download_capability_scope.py",
+        "-p",
+        "no:cacheprovider",
+        "--tb=short",
+        "-q"
+      ]
+    },
+    "previous_candidate_related02": {
+      "pass": 16,
+      "fail": 0,
+      "duration_s": 11.55,
+      "exit_code": 0,
+      "argv": [
+        "backend/tests/test_original_selected_profile_generation.py",
+        "backend/tests/test_remote_profiles.py::test_ssh_exec_uses_strict_options_and_quotes_remote_arguments",
+        "backend/tests/test_remote_profiles.py::test_ssh_transfer_rejects_paths_outside_a_run",
+        "backend/tests/test_remote_operations.py::test_remote_evaluation_maps_real_snapshot_files_back_to_local_urls",
+        "backend/tests/test_remote_operations.py::test_remote_evaluation_rejects_tampered_result",
+        "-p",
+        "no:cacheprovider",
+        "--tb=short",
+        "-q"
+      ]
+    },
+    "causal_retirement_RED03": {
+      "pass": 0,
+      "fail": 1,
+      "duration_s": 0.26,
+      "exit_code": 1,
+      "scope": "A genuine contextvars.copy_context retained during the operation reused its prior positive after scope exit; expected a second probe, observed only one."
+    },
+    "final_combined03": {
+      "pass": 28,
+      "fail": 0,
+      "duration_s": 11.96,
+      "exit_code": 0,
+      "focused_cases": 12,
+      "existing_related_cases": 16,
+      "same_retirement_test_body_as_RED03": true,
+      "argv": [
+        "backend/tests/test_operation_download_capability_scope.py",
+        "backend/tests/test_original_selected_profile_generation.py",
+        "backend/tests/test_remote_profiles.py::test_ssh_exec_uses_strict_options_and_quotes_remote_arguments",
+        "backend/tests/test_remote_profiles.py::test_ssh_transfer_rejects_paths_outside_a_run",
+        "backend/tests/test_remote_operations.py::test_remote_evaluation_maps_real_snapshot_files_back_to_local_urls",
+        "backend/tests/test_remote_operations.py::test_remote_evaluation_rejects_tampered_result",
+        "-p",
+        "no:cacheprovider",
+        "--tb=short",
+        "-q"
+      ]
+    }
+  },
+  "controls": [
+    "All 33 original output transfers retain exact manifest and saved SHA truth. Actual third-file tampering retains original hash refusal and temporary-file cleanup without adoption.",
+    "Foreign host, port, transport instance and equal-value different profile object are not lent the positive result; no cache survives operation exit.",
+    "Negative capability, OSError, TimeoutExpired and unrecognized stdout are re-probed rather than cached.",
+    "An operation exception retires the positive scope.",
+    "Original current-generation profile getter, foreign/retired/malformed/link/delegate controls, strict SSH options and six unsafe transfer paths remain covered. Existing custom non-SSH transport evaluation and tamper controls remain passing.",
+    "A real copied context uses the positive during the live scope, but each call after scope exit performs a new original capability probe; it cannot reuse or refill the retired scope."
+  ],
+  "final_evidence": [
+    {
+      "name": "proof/red01.log",
+      "bytes": 1479,
+      "sha256": "90e2c819010c6c8f0a4da769817a8f3d1b675963807931998329355795a21075"
+    },
+    {
+      "name": "proof/red01-original-tool-start.json",
+      "bytes": 102,
+      "sha256": "7321acc8c68046bf8b63b7d12666ffd9d0b1f31c0c61a1919e33258d92bd0015"
+    },
+    {
+      "name": "proof/red01-command.json",
+      "bytes": 705,
+      "sha256": "c73f7d07977a6552c23bac07b885805bb06744f59acc3bb00c0ac758681e838c"
+    },
+    {
+      "name": "proof/red01-test.copy.py",
+      "bytes": 5070,
+      "sha256": "3d16659549ae94c0055088895a28b1edd3ea65f05585fe12e7bf98e0b973aee7"
+    },
+    {
+      "name": "proof/red02.log",
+      "bytes": 904,
+      "sha256": "29e0b691e51cc7bb150e34082fd54bf202719f519435087065df0893d9672d1f"
+    },
+    {
+      "name": "proof/red02-original-tool.json",
+      "bytes": 104,
+      "sha256": "ecaeb113f8960105be7c19d3975cb0fa35e7452bda1811f95523d796291ac8d9"
+    },
+    {
+      "name": "proof/red02-command.json",
+      "bytes": 705,
+      "sha256": "ea94db0da6f33eaa7ac3db4546c4165b1d115170cccd81d3267bec9506ac77fd"
+    },
+    {
+      "name": "proof/red02-test.copy.py",
+      "bytes": 5195,
+      "sha256": "95eb493fbc04f249b957f35781b1fb846fdd12c5463edbf367cfbb0943d91d27"
+    },
+    {
+      "name": "proof/green01.log",
+      "bytes": 98,
+      "sha256": "d2d744b6b2df2bbb0d73cb7a43f6675bd03881bc2a2c2a74e54ecf18667789e2"
+    },
+    {
+      "name": "proof/green01-original-tool.json",
+      "bytes": 105,
+      "sha256": "40c9becffaafa52f71f881a8c47b289122a59a7cd21c5520c3d2442c867f1827"
+    },
+    {
+      "name": "proof/green01-command.json",
+      "bytes": 709,
+      "sha256": "1119c80dbdcb164916caec6bcd31f4604a26df2803f2b348b9b8bf7fffb6b488"
+    },
+    {
+      "name": "proof/final02.log",
+      "bytes": 99,
+      "sha256": "c04bd9127198c587d78ed286477144111800ea6097dce916e7886289dd247b9f"
+    },
+    {
+      "name": "proof/final02-original-tool.json",
+      "bytes": 105,
+      "sha256": "ce5ec2e21becc1fdd2958adcd452dd7213f7f423e9140f23941f62cfef5003d2"
+    },
+    {
+      "name": "proof/final02-command.json",
+      "bytes": 709,
+      "sha256": "776aef8e438b05fb44bea6b4553f3f7772aada650cbf9ec17e4b46e14f3e8d8a"
+    },
+    {
+      "name": "proof/related01.log",
+      "bytes": 759,
+      "sha256": "a4217349ce2b1309d62eec7155fe1285b6fb52540f799e178a95cba136faa2b5"
+    },
+    {
+      "name": "proof/related01-original-tool-start.json",
+      "bytes": 110,
+      "sha256": "c1e5c306abf533af91b00e7344dfd2086924153dfc8e8f6b9db16e840823ad5a"
+    },
+    {
+      "name": "proof/related01-original-tool-completion.json",
+      "bytes": 105,
+      "sha256": "8301cc87ec18918cc058490916ad71433e360c38462fee1a99b9463354586f52"
+    },
+    {
+      "name": "proof/related01-command.json",
+      "bytes": 1142,
+      "sha256": "f47da712705ed6ede452842e88c6c6885a79345149d85028d280498dd085e82a"
+    },
+    {
+      "name": "proof/baseline01.log",
+      "bytes": 747,
+      "sha256": "53e602f2da64b2a8f3ff8d2bdcae0f33857f2e969d3929a5adbd469f4e4f882a"
+    },
+    {
+      "name": "proof/baseline01-original-tool-start.json",
+      "bytes": 110,
+      "sha256": "1399c2d937c85a04fbd9726b97d98f8d3ea54ba55723c32a0a17efa6996e76b2"
+    },
+    {
+      "name": "proof/baseline01-original-tool-completion.json",
+      "bytes": 105,
+      "sha256": "93e48f3e76f31ba7a08ed3d12f3ff7dc4bac0c8e9008d0ba77de48cc9fc5f643"
+    },
+    {
+      "name": "proof/baseline01-command.json",
+      "bytes": 813,
+      "sha256": "e4ea1398388d580e07e21c836a2f2a7770740efba116b6e7d2493fa329fe6a9b"
+    },
+    {
+      "name": "proof/related02.log",
+      "bytes": 100,
+      "sha256": "2709e6b95e1d8dac343e107a0aa372559e43853764b53be67348fc428778fb25"
+    },
+    {
+      "name": "proof/related02-original-tool-start.json",
+      "bytes": 110,
+      "sha256": "b71b1cc7d1f9145682c4f26c36d80c7d995489effbf834330b663393a861ffdc"
+    },
+    {
+      "name": "proof/related02-original-tool-completion.json",
+      "bytes": 104,
+      "sha256": "3cec82a72bffefecb3984409b5d3d84b731e5fd75a70987808b2e28a8952d0bd"
+    },
+    {
+      "name": "proof/related02-command.json",
+      "bytes": 1142,
+      "sha256": "73a614a0cf25710a6f9f70cddd0de794d51ea936def957a90d3462ec595f3b7c"
+    },
+    {
+      "name": "finite-evidence-final01.json",
+      "bytes": 19719,
+      "sha256": "2a2512387f6fcf86764df5d1e7db32ad9c23621e098d562af0426c308246afd5"
+    },
+    {
+      "name": "source-freeze-final02.json",
+      "bytes": 15331,
+      "sha256": "ddf3fc7e530e481d92612dbe1f2c864c164ba0abf3c77da2f6441ea92a549025"
+    },
+    {
+      "name": "strict-ssh-test-only.diff",
+      "bytes": 1164,
+      "sha256": "ca60e4dba80a9fbbadf93ff1f403637eca9d76f74f93153bcc60e6cc934df46a"
+    },
+    {
+      "name": "source-freeze-final03.json",
+      "bytes": 16062,
+      "sha256": "b1fe3402c21c256672d6dbaa7c4f7ae8618b849c276f24793349897fc9f4f70a"
+    },
+    {
+      "name": "retirement-only.diff",
+      "bytes": 2928,
+      "sha256": "2a8fdc3dd7de8f7ab54f9410afce3529e475ab4df697ef0cea532b023d834021"
+    },
+    {
+      "name": "committed-final03-vs-base.diff",
+      "bytes": 21361,
+      "sha256": "422fa4b361bf1d4dd3e872ffa6aeab1b2ec258907f1471664654c1fe0986119c"
+    },
+    {
+      "name": "proof/red03.log",
+      "bytes": 929,
+      "sha256": "c64ffade3e4f9e4184ed32876f69bdc816b6067fa719b55ba8bcfefafffd0d71"
+    },
+    {
+      "name": "proof/red03-original-tool.json",
+      "bytes": 105,
+      "sha256": "1a998cd018223d3ffc9507e64e8d6ab9a38dcf0ad687aa7f3f71cda6f3c31caf"
+    },
+    {
+      "name": "proof/red03-command.json",
+      "bytes": 817,
+      "sha256": "a1e3ac50ef22abbc8c97a67bcac01acc6c871079348bc0d72696617bf239e465"
+    },
+    {
+      "name": "proof/red03-test.copy.py",
+      "bytes": 10693,
+      "sha256": "b6cab557b651f0a5ac64a123a054e33a6591061c7672b40f67d4a558d979ca90"
+    },
+    {
+      "name": "proof/final03.log",
+      "bytes": 100,
+      "sha256": "d1079bbc1951838c20b34873c6130e62bb5fb7049723237abd7a30e10bb910bc"
+    },
+    {
+      "name": "proof/final03-original-tool-start.json",
+      "bytes": 110,
+      "sha256": "1fc7819b7e51fe67723e94587f96f833ebccba01560df719474b2eaaf7037d4e"
+    },
+    {
+      "name": "proof/final03-original-tool-completion.json",
+      "bytes": 103,
+      "sha256": "01594248a15265c0d98a9ab556176c8f477c098dd107ff89a533d458a2cdbff7"
+    },
+    {
+      "name": "proof/final03-command.json",
+      "bytes": 1196,
+      "sha256": "5efcf5d9f202957761c93004131cad42dbd9f65ad72cb024845d4180c0cdc6ec"
+    },
+    {
+      "name": "finite-evidence-final03.json",
+      "bytes": 9635,
+      "sha256": "616437358cc8a11e56315901f03c0dced5c9e6edd0d2db7e2fa74cebcbbc8cec"
+    }
+  ],
+  "preserved_history": [
+    "RED01 failed noncausally because the local resumed-operation spec fixture was absent; original test copy, log and tool object remain. RED02 repaired only this fixture and demonstrated 33 original probes before product changes.",
+    "Initial related01 was 15 pass / 1 fail. The exact clean public base reproduced the sole stale argv-prefix assertion failure. Both failed original logs and tool envelopes remain; only the assertion successor changed before final related02.",
+    "The first metadata AST comparator used colliding nested leaf names and stopped. Its error is retained; corrected qualified lexical function paths verified 109 unchanged original functions. No product edit was made for this metadata issue.",
+    "The single-case GREEN01 and final focused11/related16 runs are separate observations and are not aggregated with repeated earlier runs.",
+    "Private checkpoint 7c9f591 and the first public draft are immutable superseded candidates. Independent review identified retained copied-context lifetime leakage; RED03 reproduced it, then only shared-cache retirement and the new control changed. The prior 11-pass and 16-pass results remain previous-candidate observations, not final-current proof."
+  ],
+  "limitations": [
+    "No real remote command, SSH connection, worker launch, model construction/forward, GPU or installed native action occurred in these source tests. Controlled command/exit suppliers do not establish genuine worker authority or lifetime.",
+    "This eliminates 32 repeated positive capability queries for the demonstrated 33-output operation. All 33 original transfer invocations remain. Actual elapsed-time improvement and a pass under the unchanged request budget require a fresh genuine execution.",
+    "The earlier installed request deadline refusal and strict native closure remain failed historical evidence. This source change does not identify the strict closure emitter or establish client receipt, GUI completion, native acceptance, model quality, parent completion or action-cell credit."
+  ],
+  "privacy": {
+    "private_paths_auth_tokens_raw_headers_real_project_ids_or_raw_app_bodies_embedded": false,
+    "public_counts_or_action_cells_promoted": false
+  }
+}
