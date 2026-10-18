@@ -1,0 +1,27 @@
+{
+  "after_free_bytes": 12119592960,
+  "all_OS_handles_visible": false,
+  "backing_after_free_bytes": 50808487936,
+  "backing_before_free_bytes": 50808487936,
+  "backing_physical_reclamation_claimed": false,
+  "before_free_bytes": 8306663424,
+  "errors": [],
+  "logical_bytes_removed": 3781213007,
+  "native_acceptance_or_lease_release_credit": false,
+  "permission_elevation_or_security_setting_change": false,
+  "plan_sha256": "d6e2f9e0d5fd2822df067fb88175728d42aeca1c1bfae0a101efa5093a488dec",
+  "protected_errors": [],
+  "protected_files": 12092,
+  "protected_source_trees": 4,
+  "protected_source_trees_clean": true,
+  "remaining": [],
+  "removed_entries": 13319,
+  "result_sha256": "586e53dec8246249890ce50f4c394a70778810323332b97c2681575ae418b62f",
+  "schema": "modu-vision.completed-compiler-scratch-cleanup-result/v1",
+  "scope": "Completed compiler cache19 and redundant portable assembly18/19 scratch only; exact original ZIPs, releases, source trees, installed failure fixtures, leases, logs and models retained.",
+  "targets": [
+    "backend19 compiler cache",
+    "assembly18 portable scratch",
+    "assembly19 portable scratch"
+  ]
+}

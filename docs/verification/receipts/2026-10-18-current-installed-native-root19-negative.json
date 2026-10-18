@@ -1,0 +1,156 @@
+{
+  "failure_scope": {
+    "Root18_causal_equivalence_claimed": false,
+    "exact_phase_or_cause_proven": false,
+    "health05_HTTP_status_or_body_claimed": false,
+    "health05_poison_or_truncation_inferred": false,
+    "opaque_original_exception_preserved": true
+  },
+  "health_chain": [
+    {
+      "failure_count": 0,
+      "first_poisoned_interval": false,
+      "request_count": 15,
+      "sampled_active_scopes": 2,
+      "sequence": 1,
+      "stage": "baseline",
+      "stop_further_UI": false,
+      "truncated": false,
+      "uncertain": false
+    },
+    {
+      "failure_count": 0,
+      "first_poisoned_interval": false,
+      "request_count": 57,
+      "sampled_active_scopes": 8,
+      "sequence": 2,
+      "stage": "login",
+      "stop_further_UI": false,
+      "truncated": false,
+      "uncertain": false
+    },
+    {
+      "failure_count": 0,
+      "first_poisoned_interval": false,
+      "request_count": 107,
+      "sampled_active_scopes": 12,
+      "sequence": 3,
+      "stage": "project",
+      "stop_further_UI": false,
+      "truncated": false,
+      "uncertain": false
+    },
+    {
+      "failure_count": 0,
+      "first_poisoned_interval": false,
+      "request_count": 118,
+      "sampled_active_scopes": 4,
+      "sequence": 4,
+      "stage": "gallery",
+      "stop_further_UI": false,
+      "truncated": false,
+      "uncertain": false
+    },
+    {
+      "first_poisoned_interval": null,
+      "health_returned": false,
+      "observation_failure_class": "ValueError",
+      "sequence": 5,
+      "stage": "project",
+      "stop_further_UI": true
+    }
+  ],
+  "installed_CLI_setup": {
+    "actual_compiled_CLI_install": true,
+    "canary_monkeypatch": false,
+    "complete": true,
+    "private_controlled_signer_only": true
+  },
+  "native_launch": {
+    "CUA_basis": "Root original CUA transcript; no saved screenshot file claimed.",
+    "READY_reached": true,
+    "observed_UI": "Own local fixture login, shared A to B gallery, reopened server management, selected shared A. A header and six-image gallery observed with modal open at final health.",
+    "original_caps_unchanged": true
+  },
+  "not_reached_or_not_credited": [
+    "flow open/edit/save",
+    "GUI known-image RUN",
+    "export",
+    "reopen",
+    "GPU dispatch or model-quality approval",
+    "native scoped closure",
+    "parent or action-cell promotion",
+    "whole process-tree or launch-lease release"
+  ],
+  "ordinary_closure": {
+    "errors": [
+      {
+        "exception_class": "ValueError",
+        "phase": "normal-closure"
+      }
+    ],
+    "external_timeout_must_report_unresolved_scope": false,
+    "final_journal": {
+      "active_scopes": 0,
+      "revision": 9,
+      "sha256": "b6ace411b9054cc75adeed5db02eca7315522d953c49494a9cf3110574c5369b",
+      "state": "recovery_required",
+      "unsupported": [
+        "uncovered_request_protocol"
+      ],
+      "whole_writer_coverage": false,
+      "writer_drain": "refused"
+    },
+    "holder_returncode": 1,
+    "lease_released_or_whole_tree_closed": false,
+    "normal_quit_requested": true,
+    "original_backend_exited": true,
+    "original_controller_reaped": true,
+    "original_controller_still_live": false,
+    "original_main_exited": true,
+    "signals_sent": false,
+    "state_repaired": false,
+    "strict_lifetime_and_scoped_closure_verified": false
+  },
+  "original_custody": {
+    "active_pointer_changed_by_UI": false,
+    "after_UI_operation_exit_code": 0,
+    "captured_original_protected_files": 68,
+    "installed_profile_unchanged": true,
+    "original_model_source_profile_pins_unchanged": true
+  },
+  "raw_pins": {
+    "01-baseline.json__12": "72960255c3963ec03eaaafafa76fc3a01ef4e4f1ceea077b1a451064fc5ed06d",
+    "02-login.json__13": "d580162deae42bb259d881e2ede115f543047afaf01f6254c7c0d24d05209b61",
+    "03-project.json__14": "85011f0679ec2336daaf6854ebb7c3e2aca892482c9973e3644722057a42901d",
+    "04-gallery.json__15": "5416d39b38fb97225ae263be0e4cd7813720d776e141c20ce82dc3867675183e",
+    "05-project.json__16": "405a656891a9a25faffd3c00f5cba4fc8cd782566714a3b0f68277a56800aef7",
+    "backend-build-original-tool-envelope.json__10": "c01f6c476f006dc84724e44b48950c7be2702e0b9f928d358994a25348bc7e26",
+    "coherent-assembly-original-tool-envelope.json__11": "eab5d048b0ce91d2642c5a0a8972e8002685f16391b2a5a458852bfcc41e72b5",
+    "controller-stderr.log__3": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "finite-custody-sha256": "1adb615195cfed7653db95bb41914b4c3ec15b1b73780a80585367aecb5a3e0f",
+    "health05-original-tool-result.json__9": "8f3b80fc959eaa87642c19a41a594250c102227362ffa2e129b5768d47199af0",
+    "holder-original-tool-final.json__8": "ad3f1ef8b42d3ce49583333cef01d3b9b32dd20e1d4dd4d7617f713d87f6f58f",
+    "journal.json__7": "b6ace411b9054cc75adeed5db02eca7315522d953c49494a9cf3110574c5369b",
+    "populated-setup.json__6": "8f679fdd6a2a1af2f26542ac46c4517c6fac8e3783d46df323543a73578d9863",
+    "protected-after-UI.json__4": "7c06184f50f26aae499afc8b1526f92e0007fc0803dd9404138a76fae2569d5f",
+    "quit.json__2": "2a04dd71300f234ffd93903d0d73fbca31b198f9eaa38e2fccff5c01d436e3d2",
+    "ready.json__1": "381361f822b47ac74256966c3811aad8f6cadf5bf96f3291efb901b1171db24f",
+    "result.json__0": "64fb6e142734a62e0d3ccc30f9c0942487d2a8498324219334ae698d9ade83e7",
+    "result.json__5": "62d27c3bf353eb5896178a797b051061cbe1ecda7fbd4a649ede37ca0d240850"
+  },
+  "result": "observation_refused_native_acceptance_unresolved",
+  "schema": "modu-vision.current-installed-native-root19-negative/v1",
+  "scope": "One fresh current installed native launch. Original own health01-04 valid; return-A health05 collector raised before yielding a trace. No exact request or application cause inferred. Further UI stopped, then ordinary quit.",
+  "source_cohort": {
+    "backend": {
+      "HEAD": "df5e9e8578bcebddcc84a9fd8d734bcc3850f47a",
+      "clean": true
+    },
+    "frontend": {
+      "HEAD": "85a462fc516a68c8d18d52dc92f32b88235e6778",
+      "clean": true
+    }
+  },
+  "source_only": false
+}
