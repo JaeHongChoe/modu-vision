@@ -1,0 +1,135 @@
+{
+  "schema": "modu-vision.source-only-library-no-revision-lifetime/v1",
+  "source_base": "7510a432337b1b9149be081f38254dbd190ae1fd",
+  "private_source_checkpoint": "01b29dd500c63db4e9a8316ca61b13d68522b8d1",
+  "scope": "Original warm GET image-library no-active-revision refusal ownership only",
+  "source_files": [
+    {
+      "path": "backend/api/routes_image_library.py",
+      "bytes": 5933,
+      "sha256": "5337b80a3453b42dd8f69db26a2f062e49d75a9a0c9b8cb0a45c4b8e4cb261ff"
+    },
+    {
+      "path": "backend/engine/original_owned_UI_ancillary_request.py",
+      "bytes": 206874,
+      "sha256": "1f557b84607aff96cc466ac05db13ed12f3ab420e8332a9dbd5daf7d67e677f5"
+    },
+    {
+      "path": "backend/tests/test_original_owned_library_no_revision.py",
+      "bytes": 14220,
+      "sha256": "6ce16349bb34e11ed8e279af861d4316bd38a0b83bcb437518ffff4e2f16a227"
+    }
+  ],
+  "causal_source_control": {
+    "route": "GET /api/dataset/library/images",
+    "query_shape": "state=valid, limit=120",
+    "original_status": 409,
+    "response_bytes": 101,
+    "response_sha256": "7a4a178604dadfb9fe568dd784cfbad381214db0dd37b93f6e91819c3bc9a222",
+    "original_context_and_ASGI_terminal_closed": true,
+    "original_graph_files_unchanged": true,
+    "old_first_origin": "ADMISSION / DIRECT_ENTER",
+    "old_failures": 0,
+    "old_uncertain": false,
+    "old_drain": "refused: uncovered_request_protocol",
+    "new_drain": "managed_scopes_drained"
+  },
+  "proof_boundary": {
+    "existing_warm_coordinator_required": true,
+    "exact_definition_origin_function_code_globals": true,
+    "same_original_revision_throw_frame": true,
+    "two_closed_original_index_SQLite_connections": true,
+    "same_context_project_and_project_key": true,
+    "original_handler_body_full_inverse_exact": true,
+    "RED04_positive_functions_AST_exact": true
+  },
+  "source_controls": [
+    {
+      "name": "original warm-lane RED04",
+      "failed": 1,
+      "passed": 1,
+      "reported_seconds": 8.15,
+      "source": "unchanged base"
+    },
+    {
+      "name": "candidate import/helper-identity RED05",
+      "failed": 2,
+      "passed": 1,
+      "deselected": 12,
+      "reported_seconds": 11.66,
+      "source": "superseded candidate01"
+    },
+    {
+      "name": "final focused GREEN03",
+      "passed": 15,
+      "exit_code": 0,
+      "reported_seconds": 33.17,
+      "source": "final three pinned files"
+    },
+    {
+      "name": "final related02",
+      "passed": 10,
+      "exit_code": 0,
+      "reported_seconds": 12.98,
+      "source": "final three pinned files",
+      "selection": "original revision/source-status two controls, canonical context seven controls, unchanged save one control"
+    }
+  ],
+  "negative_boundaries": [
+    "cold coordinator initialization",
+    "successful active-library 200",
+    "named missing revision 404",
+    "foreign actor/workspace and nonmember",
+    "late and pre-factory index delegates",
+    "late coordinator replacement",
+    "original send failure",
+    "unavailable optional import",
+    "pre-factory delegated/copied revision helper"
+  ],
+  "compatibility_pending": "The immutable private v5 collector does not yet accept the new static LIBRARY_IMAGES ancillary-attribution enum. No collector was changed; any future use needs a separate exact allowlist successor review.",
+  "evidence_digests": {
+    "red04_start": {
+      "bytes": 1108,
+      "sha256": "f6b27c610c1d53b85a993a886d35f2e2e45971136296f26a40472085bca95ee3"
+    },
+    "red04_completion": {
+      "bytes": 9998,
+      "sha256": "94ede6ab05c790837c3ea0244e1ff322d8f2bc16ea40647ba3dcfe4f88d3beb1"
+    },
+    "red05_start": {
+      "bytes": 1103,
+      "sha256": "ce2c695613590ace296c14ef0dd5479f1e88fee9aa2aeb0f9bcd2fcbfed6586d"
+    },
+    "red05_completion": {
+      "bytes": 21584,
+      "sha256": "398d7dd5d722c5cf4e2e1ee4cdb53604ea20bb7cc272e5555d1a89cac92315f6"
+    },
+    "green03_start": {
+      "bytes": 1062,
+      "sha256": "e49fe4a50f30f2ae37e6c4550715765d0e6f53eade67fce90b8076bcf8a5f957"
+    },
+    "green03_completion": {
+      "bytes": 4924,
+      "sha256": "2949f708b367386f9a4be4ecc4d2a600c7207b173f69d54b28818363a751ffec"
+    },
+    "related02_start": {
+      "bytes": 1421,
+      "sha256": "bca0c6244cf80edb15acd25c942975a7ff34b53376a79d1e8b0f8df79e5b53e1"
+    },
+    "related02_completion": {
+      "bytes": 399,
+      "sha256": "af24cff21ac7aaac22eab7c9ca41cd236db2e445c39b7577c27ab209131430ad"
+    },
+    "peer_final02": {
+      "bytes": 6987,
+      "sha256": "8cabd796f7b74e21be3ef24f8324e11697c8feb273f1aa0a0e81358acbd1f9f7"
+    }
+  },
+  "limits": [
+    "This is controlled CPU in-process ASGI evidence, not a native replay.",
+    "Root28 request80 route and causal equivalence remain unproved.",
+    "The prior candidate12/related10 results remain separate historical evidence, not added to final counts.",
+    "Cold/success/other-error operations remain unsupported; no generic GET or 409 exemption.",
+    "No installed/native, model/GPU, process-tree/lease, whole-flow/manual/parent acceptance or action-ledger credit."
+  ]
+}
