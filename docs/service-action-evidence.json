@@ -953,7 +953,27 @@
               ]
             },
             "invalid": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S3-03",
+                  "source_sha": "c91c11fdd4028859c69b007ddb4e5fc4c830a2f5",
+                  "kind": "click",
+                  "action": "현재 라벨 복제",
+                  "expected": "Reject copying an active annotation source that contains a symbolic link, without creating or activating a named set or changing original labels.",
+                  "observed": "Browser valid-name copy returned actual backend422 with the symbolic-link detail and a visible alert. Registry/default active set, project, source images and annotations remained exact; no activation/new target occurred and only the newly owned link was removed.",
+                  "reviewer": "Codex root actual clean-source browser, original HTTP body and no-follow file readback; independent human quality, native and whole-feature acceptance pending",
+                  "test": "scripts/e2e/named-labelset-copy-invalid.spec.ts::named labelset copy rejects its own invalid source tree with actual 422 and preserves original labels",
+                  "receipt": "2026-10-19-named-labelset-copy-invalid-c91c11f-browser.json",
+                  "receipt_sha256": "c5013803bbd037671a759781cf75553d4d68e8011fdf33cc5e7005e8952966dc",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "e6e9e083a6a7775765da26b01255f433fb2832c1fbab92d41b61725b49182b93"
+                    }
+                  ]
+                }
+              ]
             },
             "error": {
               "state": "verified",
