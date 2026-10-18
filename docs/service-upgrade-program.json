@@ -548,7 +548,7 @@
         "native Windows: the interface half in the desktop app on Windows (the hosted Windows job runs the backend regressions, the baseline records and the Electron smoke, not this browser spec)",
         "review P3s: the record's tests fake git, so a narrowed status path or a non-transitive fixture list would pass; Decimal or lists of numpy scalars in metrics and NaN tokens; the e2e checks the crop verdict, not final_verdict; failure messages can contain local paths",
         "handoff and target execution gates",
-        "the same flow in the Electron app, on native Windows and on a GPU server (native QA, Codex; GPU on hold)",
+        "the same flow in the Electron app, on native Windows and on a GPU server (native QA, Development executor; GPU on hold)",
         "other model families through this flow (classification, detection, DINOv3, YOLO and the rest)",
         "review qaf4 P3: the click on the already pressed history row after the reload proves nothing more (drop it or assert its request); the console errors 409/404/ERR_EMPTY_RESPONSE in the run are not explained yet",
         "hosted Linux run on 9da1093 (the S2-04 browser check this fixes) and native Windows with a case-sensitive folder",
@@ -1886,9 +1886,9 @@
           "platform": "macOS development; Windows hosted run pending for this commit"
         },
         {
-          "kind": "fix-reviewed-published (Codex, parallel slice)",
+          "kind": "fix-reviewed-published (Development executor, parallel slice)",
           "result": "c481021: a fixed flow comparison refuses a damaged image (the image library marks it invalid) and filters to valid images by default, keeping an existing valid selection; clearing the package comparison selection also clears the earlier refusal notice; browser scenarios: a damaged image refused with a valid one chosen and restored after restart, a moved image checked again, a deleted saved image kept and explained",
-          "scope": "Codex final freeze-4: base 3c1322d + the 13 owned files (one CI line each for the COCO test). Backend 147, renderer 413, typecheck and build are freeze-3 receipts, reused because the application, backend and unit-test sources, configuration and dependency lock hashes did not change; freeze-4 only narrowed an e2e selector (scripts/e2e/service-s2-07-invalid-images.spec.ts) and ran again the e2e harness (14 of 14), the e2e typecheck and the 3 Chrome browser scenarios (actual isolated backend, test-only desktop host shim); independent source review ACCEPT after three RED-reproduced review fixes",
+          "scope": "Development executor final freeze-4: base 3c1322d + the 13 owned files (one CI line each for the COCO test). Backend 147, renderer 413, typecheck and build are freeze-3 receipts, reused because the application, backend and unit-test sources, configuration and dependency lock hashes did not change; freeze-4 only narrowed an e2e selector (scripts/e2e/service-s2-07-invalid-images.spec.ts) and ran again the e2e harness (14 of 14), the e2e typecheck and the 3 Chrome browser scenarios (actual isolated backend, test-only desktop host shim); independent source review ACCEPT after three RED-reproduced review fixes",
           "platform": "macOS CPU contract tests and Chrome browser runs with the desktop host shim; not native Electron, not a Windows install, no GPU"
         },
         {
@@ -2361,15 +2361,15 @@
           "platform": "macOS development; Windows hosted run pending for this commit"
         },
         {
-          "kind": "fix-reviewed-published (Codex, parallel slice)",
+          "kind": "fix-reviewed-published (Development executor, parallel slice)",
           "result": "955e302: an API rejection in the dataset import panel always shows a visible alert. A pure formatter (datasetImportError.ts) reads Korean catalog messages first, then message, FastAPI validation msg and detail, joins validation lists, skips blank fields, and answers a fixed Korean fallback for an empty list, null or a detail with no readable text",
-          "scope": "Codex freeze on 2115263 + 7 files: red renderer 3 failed; green renderer 408, typecheck and build exit 0; independent review ACCEPT",
+          "scope": "Development executor freeze on 2115263 + 7 files: red renderer 3 failed; green renderer 408, typecheck and build exit 0; independent review ACCEPT",
           "platform": "macOS renderer checks; the panel test uses the real panel with a mocked API; a real browser failure-injection path, native Windows and GPU were not run"
         },
         {
-          "kind": "fix-reviewed-published (Codex, parallel slice)",
+          "kind": "fix-reviewed-published (Development executor, parallel slice)",
           "result": "c481021: a COCO document in a sub-folder binds its relative image paths from its own folder, the same way in the importer and the dataset index; a path that would resolve to different real images is refused as ambiguous; an internal link to the same file is kept; an annotation document read from outside the source is refused",
-          "scope": "Codex final freeze-4: base 3c1322d + the 13 owned files (one CI line each for the COCO test). Backend 147, renderer 413, typecheck and build are freeze-3 receipts, reused because the application, backend and unit-test sources, configuration and dependency lock hashes did not change; freeze-4 only narrowed an e2e selector (scripts/e2e/service-s2-07-invalid-images.spec.ts) and ran again the e2e harness (14 of 14), the e2e typecheck and the 3 Chrome browser scenarios (actual isolated backend, test-only desktop host shim); independent source review ACCEPT after three RED-reproduced review fixes",
+          "scope": "Development executor final freeze-4: base 3c1322d + the 13 owned files (one CI line each for the COCO test). Backend 147, renderer 413, typecheck and build are freeze-3 receipts, reused because the application, backend and unit-test sources, configuration and dependency lock hashes did not change; freeze-4 only narrowed an e2e selector (scripts/e2e/service-s2-07-invalid-images.spec.ts) and ran again the e2e harness (14 of 14), the e2e typecheck and the 3 Chrome browser scenarios (actual isolated backend, test-only desktop host shim); independent source review ACCEPT after three RED-reproduced review fixes",
           "platform": "macOS CPU contract tests and Chrome browser runs with the desktop host shim; not native Electron, not a Windows install, no GPU"
         },
         {
@@ -5276,15 +5276,15 @@
           "platform": "the hosted Windows run of e096adb passed the renderer step and reached the backend suites for the first time"
         },
         {
-          "kind": "fix-reviewed-published (Codex, parallel slice)",
+          "kind": "fix-reviewed-published (Development executor, parallel slice)",
           "result": "e7fce1c: external LabelMe files read next to an image in backend/api/routes_annotation.py use read_source_text (UTF-8 with or without a BOM, else this machine's code page such as cp949 where it is not UTF-8); input a UTF-8 machine cannot decode still answers 422 with a conversion hint; saved Studio JSON and the permission policy are unchanged. backend/tests/test_annotation_source_encoding.py adds four API regressions and joins both CI pytest lists",
-          "scope": "Codex freeze on be1f2a8 + the 4 files: red 3 failed 1 passed (BOM and cp949 labels, the conversion hint); green 35 passed across 7 annotation and source-encoding modules; independent review approved",
+          "scope": "Development executor freeze on be1f2a8 + the 4 files: red 3 failed 1 passed (BOM and cp949 labels, the conversion hint); green 35 passed across 7 annotation and source-encoding modules; independent review approved",
           "platform": "macOS API checks only; native Windows and the desktop UI are not verified by this change; no GPU used"
         },
         {
-          "kind": "fix-reviewed-published (Codex, parallel slice)",
+          "kind": "fix-reviewed-published (Development executor, parallel slice)",
           "result": "955e302: grouped dataset views treat Pillow's errno-less OSError 'Truncated File Read' (a short image header) for a LabelMe file without image size as damaged content and list it without geometry instead of failing; permission, missing-file, OS I/O and other share errors still raise. backend/tests/test_annotation_truncated_source.py joins both CI pytest lists",
-          "scope": "Codex freeze on 2115263 + 7 files: red backend 1 failed; green backend 51 across 10 annotation, gallery and text-encoding modules; independent review ACCEPT",
+          "scope": "Development executor freeze on 2115263 + 7 files: red backend 1 failed; green backend 51 across 10 annotation, gallery and text-encoding modules; independent review ACCEPT",
           "platform": "macOS backend checks; native Windows and GPU not run"
         },
         {
@@ -5885,9 +5885,9 @@
           "platform": "macOS development; the hosted runs of be1f2a8 were cancelled by e7fce1c's push, and e7fce1c was running when this was recorded"
         },
         {
-          "kind": "fix-reviewed-published (Codex, parallel slice)",
+          "kind": "fix-reviewed-published (Development executor, parallel slice)",
           "result": "c481021: the plan gate refuses duplicate JSON keys at any depth in the program, the evidence registry and the two existing baseline files; the coverage table reads IDs with spaces or backticks and no longer drops duplicated, added or broken rows silently; command-line errors return an ASCII JSON receipt",
-          "scope": "Codex final freeze-4: base 3c1322d + the 13 owned files (one CI line each for the COCO test). Backend 147, renderer 413, typecheck and build are freeze-3 receipts, reused because the application, backend and unit-test sources, configuration and dependency lock hashes did not change; freeze-4 only narrowed an e2e selector (scripts/e2e/service-s2-07-invalid-images.spec.ts) and ran again the e2e harness (14 of 14), the e2e typecheck and the 3 Chrome browser scenarios (actual isolated backend, test-only desktop host shim); independent source review ACCEPT after three RED-reproduced review fixes",
+          "scope": "Development executor final freeze-4: base 3c1322d + the 13 owned files (one CI line each for the COCO test). Backend 147, renderer 413, typecheck and build are freeze-3 receipts, reused because the application, backend and unit-test sources, configuration and dependency lock hashes did not change; freeze-4 only narrowed an e2e selector (scripts/e2e/service-s2-07-invalid-images.spec.ts) and ran again the e2e harness (14 of 14), the e2e typecheck and the 3 Chrome browser scenarios (actual isolated backend, test-only desktop host shim); independent source review ACCEPT after three RED-reproduced review fixes",
           "platform": "macOS CPU contract tests and Chrome browser runs with the desktop host shim; not native Electron, not a Windows install, no GPU"
         },
         {
@@ -11365,7 +11365,7 @@
     ],
     "last_verified_on": "2026-10-07",
     "git_publication": "Ordinary main publication of E03/E04/E07 and E05; source-bound local checks and exact hosted platform receipts recorded separately.",
-    "owner": "Codex",
+    "owner": "Development executor",
     "verified_source_sha": "9ae77cd3f082cfd3cc2fe1183dae4c71f9f518bf",
     "progress": {
       "counting_rule": "Parent software implementation and merged slices are separate, overlapping measures; never add them. Parent acceptance requires its remaining dimensions.",

@@ -3,7 +3,7 @@
 The 82-parent accounting remains64 software verified/18 pending/zero finally
 accepted. Windows installation/use QA is waived. These component results do not
 supply human quality, device acceptance, publisher credentials or independent
-review. No Claude source work is resumed.
+review. The former parallel source lane remains stopped.
 
 ## Model-improvement handoff (S5-08/S4-14)
 

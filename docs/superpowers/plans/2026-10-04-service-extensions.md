@@ -1,4 +1,4 @@
-# Codex service extension execution
+# Service extension execution
 
 > For agentic workers: execute the existing phase plans with test-first changes and independent review. This record assigns work; it does not mark parent acceptance complete.
 
@@ -21,7 +21,7 @@
 | Operations | S5-06, S5-08, S5-09 | Staged fleet rollout, distribution drift, protected retention and backup/restore |
 | Verification | S7-01, S6-09 | Slice receipts, fresh combined regression, independent review and publication hygiene |
 
-As of the final 2026-10-04 handoff, Codex owns the remaining development, including E01–E08, S2-01/S2-05, labeling and native app QA. The extension batch is merged in PR #3, NQA4 in PR #4, and the E06 sampling component in PR #5. Preserve the received source separately and compose reviewed slices onto current main. Parent acceptance stays scoped; the current progress summary is in `../../implementation-ledger/SERVICE-UPGRADE.md`. GPU execution is temporarily deferred for the user's network move; local implementation continues.
+As of the final 2026-10-04 handoff, the development executor owns the remaining development, including E01–E08, S2-01/S2-05, labeling and native app QA. The extension batch is merged in PR #3, NQA4 in PR #4, and the E06 sampling component in PR #5. Preserve the received source separately and compose reviewed slices onto current main. Parent acceptance stays scoped; the current progress summary is in `../../implementation-ledger/SERVICE-UPGRADE.md`. GPU execution is temporarily deferred for the user's network move; local implementation continues.
 
 ## Execution checks for every lane
 
@@ -30,7 +30,7 @@ As of the final 2026-10-04 handoff, Codex owns the remaining development, includ
 - [x] Implement through the existing production entry points and user controls, with explicit capability/provenance boundaries.
 - [x] Run the focused tests and relevant existing suites; bind all receipts to source hashes and source commit.
 - [x] Review independently, fix material findings, and re-run the affected checks.
-- [x] Commit the owned batch and publish a review branch without overwriting Claude's working files; main integration is separate.
+- [x] Commit the owned batch and publish a review branch without overwriting the parallel checkout working files; main integration is separate.
 
 Executed evidence and remaining qualification are recorded in `../../verification/2026-10-04-service-extension-evidence.md`. Combined backend verification covers the complete collected file set in three isolated pytest processes with disjoint file lists; source hashes and per-process receipts are retained outside the public repository.
 

@@ -3,7 +3,7 @@
 The original 25 parents are reviewed as complete requirements. A passing control
 or a document does not automatically close a parent. Human quality decisions,
 actual signing, device execution and runtime soak are separate acceptance gates.
-Windows native QA remains waived by the user. No Claude source work is resumed.
+Windows native QA remains waived by the user. The former parallel source lane remains stopped.
 
 ## Current software outcomes
 
