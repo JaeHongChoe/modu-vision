@@ -1527,6 +1527,81 @@ def _prepare_backend_shutdown(original_cache, frame, *, started):
     return capability
 
 
+def _write_final_diagnostic_descriptor(fd, data):
+    """One nonblocking attempt on an existing descriptor; never a destination.
+
+    Production supplies only inherited FD2. The explicit descriptor is the
+    source-test OS transport seam, not an application argument or capability.
+    """
+    duplicate = None; expected = None; success = False
+    try:
+        import fcntl
+        import signal
+        import stat
+        if type(fd) is not int or fd < 0 or type(data) is not bytes or not 0 < len(data) <= 8192:
+            return False
+
+        def pin(number):
+            value = os.fstat(number)
+            # Darwin socket permission bits reflect readiness; retain the same
+            # kernel-object/type identity as the original stdin adapter.
+            return ((value.st_dev, value.st_ino,
+                stat.S_IFMT(value.st_mode) if stat.S_ISSOCK(value.st_mode) else value.st_mode, value.st_nlink,
+                value.st_uid, value.st_gid), fcntl.fcntl(number, fcntl.F_GETFL))
+
+        expected = pin(fd)
+        mode = expected[0][2]; flags = expected[1]
+        if not (stat.S_ISFIFO(mode) or stat.S_ISSOCK(mode)): return False
+        # A per-call socket flag did not prove bounded on a full Darwin stream.
+        # Never change an inherited OFD or attempt any blocking descriptor.
+        if not flags & os.O_NONBLOCK: return False
+        if signal.getsignal(signal.SIGPIPE) != signal.SIG_IGN: return False
+        duplicate = os.dup(fd)
+        if pin(fd) != expected or pin(duplicate) != expected: return False
+        written = os.write(duplicate, data)  # Exactly one already-nonblocking attempt.
+        current = pin(fd)
+        # Darwin exposes FWASWRITTEN in F_GETFL after raw write. Preserve raw
+        # values and classify only this documented 0->1 kernel-history change;
+        # every access/nonblock/other bit and object identity must still match.
+        if (sys.platform == 'darwin' and not flags & 0x10000
+                and current == (expected[0], flags | 0x10000)):
+            expected = current
+        success = written == len(data) and pin(fd) == expected and pin(duplicate) == expected
+    except Exception:
+        success = False
+    finally:
+        if duplicate is not None:
+            try:
+                current = pin(duplicate)
+                if current[0] != expected[0]: success = False
+                else:
+                    if current != expected: success = False
+                    os.close(duplicate)  # Only this call's checked duplicate.
+            except Exception: success = False
+        if expected is not None:
+            try:
+                if pin(fd) != expected: success = False
+            except Exception: success = False
+    return success
+
+
+def _emit_final_drain_diagnostic(admission, receipt):
+    """Optional stderr sibling only; never an authority frame or a new request."""
+    try:
+        from backend.engine.original_request_activity import OriginalRequestActivityObserver
+        observer = admission._activity_observer
+        if type(observer) is not OriginalRequestActivityObserver: return False
+        value = observer.final_drain_diagnostic(admission)
+        if value is None: return False
+        value.update(capture_phase='after_original_receipt_send',
+            receipt_sha256=hashlib.sha256(_canonical(receipt)).hexdigest())
+        line = 'OWNED_FINAL_DRAIN_DIAGNOSTIC '+json.dumps(value, sort_keys=True, separators=(',', ':'), allow_nan=False)+'\n'
+        if len(line.encode('utf-8')) > 8 * 1024: return False
+        return _write_final_diagnostic_descriptor(2, line.encode('utf-8'))
+    except Exception:
+        return False  # Missing/partial diagnostics are unavailable, never success.
+
+
 def backend_execution_service(stop_event=None):
     """Consume at most one controller-origin CPU request after admitted ready.
 
@@ -1664,6 +1739,7 @@ def backend_execution_service(stop_event=None):
                         closing_status = completed['status']
                         closing_deadline = drain['deadline']; closing_unsupported = tuple(completed['unsupported']); drain = None
                         closing_current()
+                        _emit_final_drain_diagnostic(original_admission, completed)
                         continue
                 if pending is not None:
                     _, deadline = queue.outgoing(pending)
