@@ -1,0 +1,61 @@
+{
+  "schema": "modu-vision.shared-account-and-compute-hydration-regression/v1",
+  "date": "2026-10-19",
+  "base_commit": "0e036185f77eebedb5a8f460ca4e2fea7145678a",
+  "changes": [
+    "Bind mounted WizardHeader compute loading lifecycle to transportRevision, preserving cancellation and retry policy.",
+    "Explicit request-local projectContext:null on eight account-global me/users-list/select-project calls; accepted project context and authentication are preserved."
+  ],
+  "regression": {
+    "before": {
+      "tests": 9,
+      "passed": 2,
+      "failed": 7,
+      "account_context_header_failures": 5,
+      "compute_hydration_lifecycle_failures": 2
+    },
+    "after_same_test_bytes": {
+      "tests": 9,
+      "passed": 9,
+      "failed": 0
+    },
+    "related_unchanged_specs": {
+      "files": 7,
+      "tests": 59,
+      "passed": 59,
+      "failed": 0
+    },
+    "renderer_typecheck_exit_code": 0,
+    "electron_main_typecheck_exit_code": 0
+  },
+  "independent_source_review_blockers": 0,
+  "source_and_test_sha256": {
+    "src/renderer/components/wizard/WizardHeader.tsx": "c317beec8fbe5f9af1c70eb1e287bd354811ee604792b7ddbfa2292727e10f65",
+    "src/renderer/components/wizard/WizardHeader.computeHydration.test.cjs": "9310dc4fba753bc9fd4489ff3e42aca4ac37b9410d9cb3a6eee888ae16ee358d",
+    "src/renderer/components/compute/SharedProjectPanel.tsx": "d54e97449b1164a53bb65510b4196834c680673b27999d520532a780e0e1f953",
+    "src/renderer/components/compute/SharedProjectPanelAccountScope.test.cjs": "fcba79d566c63fb43c11838ee2db83e1b40125087b68b2ead5c71626936a9347"
+  },
+  "retained_log_pins": {
+    "Root47-account-header-RED.log": {
+      "sha256": "9b2fe7fc4b61164ff99538a092a5f25a8a074dc7cb9c6f96624ea645ecb2fd3d",
+      "bytes": 8291
+    },
+    "Root47-header-GREEN.log": {
+      "sha256": "ecc9b0b98b751eb52afb2637de5240721b9e2059d64053cc2d9021c7c493b94a",
+      "bytes": 378
+    },
+    "Root47-account-header-GREEN.log": {
+      "sha256": "e627845ec0e60b2fe0f9a9e54daa49da7078411ac8ec5c3484e36a936823bed3",
+      "bytes": 1064
+    },
+    "Root47-account-header-related.log": {
+      "sha256": "dc29172190a01f4a76becc0099e4a3585987f72bb1028fda16db6fe822da8f65",
+      "bytes": 5681
+    }
+  },
+  "action_inventory_source_pin_refresh_only": true,
+  "scenario_state_changes": 0,
+  "new_native_Save_Run_Export_verified": false,
+  "first_unsupported_native_request_URL_proven": false,
+  "whole_feature_or_model_quality_or_release_acceptance": false
+}
