@@ -1,0 +1,72 @@
+{
+  "schema": "modu-vision.current-scoped-gallery-source-Electron-requalification/v1",
+  "case_id": "electron-summary",
+  "source_sha": "e7ea1a2ee7d85c03e466a9af16667b30bbf60ff8",
+  "test": "scripts/e2e/classification-summary-scoped-media.spec.ts::native classification import summary matches eligible default loader partitions and reopens",
+  "test_source_sha256": "951ebe302eee33792d3306edbe96cc26ccd4ba02ff123a209ef5d54552e985db",
+  "mode": "source Electron",
+  "actual_original_case_passed_once": true,
+  "original_collector_exit": 0,
+  "observed_scope": "Four original eligible default-loader cohorts (6/4/2/2 images) retain exact classes and Train/Val/Test counts through ordinary import/reopen, including return to the first project. Hidden/NAS files remain excluded; original source bytes remain exact.",
+  "observation_policy": {
+    "explicit_instrumented_QA": true,
+    "four_original_function_identities_temporarily_observed": true,
+    "exact_original_Promise_app_Blob_and_native_URL_result_preserved": true,
+    "no_second_HTTP_or_Response_consume": true,
+    "CSP_unchanged": true
+  },
+  "finite_media": {
+    "epochs": 9,
+    "qualified_assertions": 9,
+    "original_HTTP_app_Blob_records": 34,
+    "retained_body_files": 34,
+    "all_original_context_and_body_digests_joined": true,
+    "displayed_native_URL_owners_and_RGBA_receipts_match": true,
+    "all_provisional_assertions_have_actual_final_closed_epoch": true,
+    "actual_pixel_redecode_by_file_reader": false
+  },
+  "original_10s_min_epoch_and_assertion_budgets_unchanged": true,
+  "source31_exact": true,
+  "Source_Electron_and_owned_backend_closed_with_empty_teardown_and_scans": true,
+  "original_console_errors": 0,
+  "original_screenshot_digests": [
+    {
+      "id": "screenshot-0",
+      "sha256": "34624f6d7a4ffe655ea013e17c0956e9667405879f2429e312db4ddb0a085a82"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "6588f9777fae33a99ada7bb9e926035248b40c757ed6b5ab8de68b2ff8a86d2f"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "ce142a1a7e6b531d1994a1f63c42a12d761282e87ac89e24741724c9bb2c5da2"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "c26985f8707bfb3d4e44087ac2848dee3cac5385aa5817771b6506a10ebdd59c"
+    }
+  ],
+  "digest_refs": {
+    "original_GUI_receipt": "2f443d744d0e5bca7e53bdc5f89505ef4d9e5aaaab7ce8b16fe0d3abe14ad973",
+    "manifest": "58f3a143d6e20dc1a1f2507f2afa671640ba00520f090549968c49b5f806f596",
+    "runner_result": "5ea2b4a0bff453e9304d28a23f236f4b9569eae2ce5a7bc0fb610c989a91719c",
+    "collector": "40588c21842fd18e85bf2314957422d9fecd90db51695d608a97748e7573bca7",
+    "file_readback": "0e17f1cdff05478943e07c503b7d125e7921889ce016319a040e647e5e2742b6"
+  },
+  "acceptance": {
+    "exact_dimensions": [
+      "F019.success",
+      "F019.reopen",
+      "F022.success",
+      "F022.reopen"
+    ],
+    "ledger_changed_by_preparer": false,
+    "installed_native": false,
+    "real_OS_picker": false,
+    "model_execution_or_quality": false,
+    "whole_feature_or_parent": false
+  },
+  "source_variant_disclosure": "Electron3 executed e7ea1a2; browser4 executed parent a7d6145. This successor adds only explicit epoch closure before four existing project transitions; existing strict guard bodies and browser copied specs are unchanged.",
+  "preserved_failed_scope": "Earlier failed summary at parent a7d6145 remains failed; no credit. First successful summary was followed by outer bookkeeping KeyError backend_stop; its original GUI result stayed0 and Root later collected that same attempt without replay using actual electron_stop. Remaining two cases ran once."
+}

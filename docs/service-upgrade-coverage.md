@@ -323,3 +323,10 @@
 기존 항목별 근거는 `docs/service-upgrade-evidence.json`의 RequirementEvidence 기록(구현·GUI·저장·다시 열기·실패·인계·대상 실행, native Windows, 선행 조건)에 남긴다. 각 항목은 pending, verified(근거 포함) 또는 not_required(사유 포함)이며, 기존 registry의 주장은 근거가 아니다. 근거 하나에는 담당 task, 40자 커밋, 종류(click·api·unit·real_input·native_windows·target), action·expected·observed·reviewer와 저장소 시험 경로 또는 해시가 붙은 receipt를 적는다. GUI는 실제 클릭(scripts/e2e 시험 또는 해시가 붙은 receipt), native Windows는 Windows 실행(receipt 또는 Windows workflow가 실행하는 시험), 대상 실행은 실제 장비 실행 receipt와 산출물 해시만 인정한다. not_required에는 사유와 검토자를 적는다. `scripts/check_service_plan.py`가 이 표의 새 검증 칸을 기록에서 다시 계산하고, 모든 항목이 근거를 갖추고 native Windows가 verified일 때만 accepted를 허용한다.
 
 원본 데이터나 credentials를 공개 evidence에 넣지 않는다. private 원본 mapping은 보존하고 공개 fixtures 또는 redacted summary와 source hash로 연결한다.
+
+
+## 2026-10-18 분류 갤러리 현재 소스 재실행
+
+원래 일곱 사례를 각각 한 번 통과하고 원본 GUI collector와 실제 app Blob·native object URL·화소·최종 epoch 종료를 연결했다. browser 네 사례는 `a7d6145`, Source Electron 세 사례는 `e7ea1a2`에서 실행했다. F019/F022의 기존 두 action에 한정하여14개 차원을 다시 검증했으며, 과거 근거와 pending 사유는 이력으로 보존한다. curated 집계는 검증 1008개·pending 441개·not_required 0개다. 두 feature의 다른 동작과 전체 기능·설치 native·실제 OS picker·모델 품질·부모 수락은 추가하지 않는다. 일곱 원본 GUI receipt와 별도 scoped-gallery details가 실행 소스와 관측 예외를 명시한다. 기존 네 함수의 identity는 임시 관측되며 원래 Promise·Blob·URL 결과는 그대로다.
+
+Publication formatting note: the unused predecessor `scoped-gallery-cdp-stream.cjs` fixture drops one trailing blank line to satisfy the Git whitespace gate. Executed selectors, active Blob/native-URL observation, metadata guards and original GUI receipts retain their exact reviewed bytes; no new execution on this formatting variant is claimed.

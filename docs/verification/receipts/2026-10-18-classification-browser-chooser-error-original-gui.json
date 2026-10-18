@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "a7d6145b4f0086879ecb967efa5c851a8134dc7c",
+  "source_dirty": false,
+  "test": "scripts/e2e/classification-folder-chooser-error-scoped-media.spec.ts::classification folder chooser failure preserves owning source counts and bytes through ordinary reload",
+  "test_source_sha256": "309be6bcf2edfd1a3ae5336e60ba58ddf40b835c94f0e1d172970a023d8db0df",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "2af9a1a6ef5a5f7c566a7e0f0f1e74fccd4b2a72e74077151e08268f9b572117",
+  "harness_sha256": "14ffe4bd0d349769aa7d89277d4710e3e98705540785a9fa831a13a3f5d8bc54",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "c2af62c5c4ea45506757fa4a838b76686095bb9fb739d2510beac0e4a518a2f3"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "2cf6d86b24c5af3db0f93e1e8f2d1bb74027bdc46c7cc5d87b5c94647750dd46"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

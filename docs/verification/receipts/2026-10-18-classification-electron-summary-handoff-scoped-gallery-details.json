@@ -1,0 +1,113 @@
+{
+  "schema": "modu-vision.current-scoped-gallery-source-Electron-requalification/v1",
+  "case_id": "electron-summary-handoff",
+  "source_sha": "e7ea1a2ee7d85c03e466a9af16667b30bbf60ff8",
+  "test": "scripts/e2e/classification-summary-scoped-media.spec.ts::native classification import-label summary follows own saved projects A B A",
+  "test_source_sha256": "951ebe302eee33792d3306edbe96cc26ccd4ba02ff123a209ef5d54552e985db",
+  "mode": "source Electron",
+  "actual_original_case_passed_once": true,
+  "original_collector_exit": 0,
+  "observed_scope": "Original saved-project UI switches A/B/A then C/D/C and reloads C, retaining each owning imported gallery, label summary, actual image metadata identities and complete declared project/source custody.",
+  "observation_policy": {
+    "explicit_instrumented_QA": true,
+    "four_original_function_identities_temporarily_observed": true,
+    "exact_original_Promise_app_Blob_and_native_URL_result_preserved": true,
+    "no_second_HTTP_or_Response_consume": true,
+    "CSP_unchanged": true
+  },
+  "finite_media": {
+    "epochs": 15,
+    "qualified_assertions": 30,
+    "original_HTTP_app_Blob_records": 52,
+    "retained_body_files": 52,
+    "all_original_context_and_body_digests_joined": true,
+    "displayed_native_URL_owners_and_RGBA_receipts_match": true,
+    "all_provisional_assertions_have_actual_final_closed_epoch": true,
+    "actual_pixel_redecode_by_file_reader": false
+  },
+  "original_10s_min_epoch_and_assertion_budgets_unchanged": true,
+  "source31_exact": true,
+  "Source_Electron_and_owned_backend_closed_with_empty_teardown_and_scans": true,
+  "original_console_errors": 0,
+  "original_screenshot_digests": [
+    {
+      "id": "screenshot-0",
+      "sha256": "da2a3bd09d067a94f40a0664cf2c5c09197cbe1e9ee44f0c036527aaf898324b"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "6156cd0aca76116d6ba9b25e3ea5d5c603b3df761951a92feb3cbed6c454408d"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "ebf5aff92a08eaea4ee625cc6acd9fbf5719b6576dfb58414e015a4178c49a6f"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "1daee786ed3693d9cb6dab4b27d1aca3e610f7e7e8c0e73d3293aef15c508743"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "0fecb9769d726897ba53fc780b1f6c6a7a605efda339ea2b48cf39183984e9c1"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "362ce12a9c484448ec0befffae67809101bf1957cdd35c9fe943259c16520afc"
+    },
+    {
+      "id": "screenshot-6",
+      "sha256": "8b3ca9d57f8d7f5e30200fae5fc0567842c5c6f3a08da3c6efaebc46d69917b4"
+    },
+    {
+      "id": "screenshot-7",
+      "sha256": "746df886163c3bd5ac90a9e55195a63d0443cf2feef5a13abe1e831014256d51"
+    },
+    {
+      "id": "screenshot-8",
+      "sha256": "d1db398e568a507f14d9f67d29915edebc0184d5f4aca8b3e83ec06c4f8401cc"
+    },
+    {
+      "id": "screenshot-9",
+      "sha256": "a7892e2f4189347bbb1b99919c4561ea7353e0189208c65a7a1a6f3d225e012f"
+    },
+    {
+      "id": "screenshot-10",
+      "sha256": "f137a89403055948a2fead61333a6cfcb0f8c94b76b62a9a937a77f2daea226a"
+    },
+    {
+      "id": "screenshot-11",
+      "sha256": "550806f477214a69ef592048b36b74a5b746ccc3ffe7f5d01049b94b0b04be80"
+    },
+    {
+      "id": "screenshot-12",
+      "sha256": "031e16a802ab44d9bda1b84eaa9e53631a3d810ccf6ec8fc48997f22ecb751f8"
+    },
+    {
+      "id": "screenshot-13",
+      "sha256": "dd2384a4922e948c13f699ada02bcc65dcf810c08e1a3a410e3e1f3e19a8c687"
+    },
+    {
+      "id": "screenshot-14",
+      "sha256": "8d698d37db0b92f93a7b165b2fead90685cde78e38cc50a97479f1ecede2bd1c"
+    }
+  ],
+  "digest_refs": {
+    "original_GUI_receipt": "8404a543d224dc32504035801fc183e00ab4dd30c2c03fead3565cfc16cf1d54",
+    "manifest": "c051b557683642bdfd97aed4385ca50b95302ee0b0b2560ec5bad4c608b53eff",
+    "runner_result": "e6dedb5c3056043dc0cd39172422e20b4168cf3bad2c3ebd28a78c4aa9152f75",
+    "collector": "fbbbce95ad1f3bb5c5799039c57563bf49dd426930eee8c1aa9c362c26114e9d",
+    "file_readback": "831e664315086c408efe46200f4bff269e717e8bab9b04d73fa8742da79c87cd"
+  },
+  "acceptance": {
+    "exact_dimensions": [
+      "F019.handoff"
+    ],
+    "ledger_changed_by_preparer": false,
+    "installed_native": false,
+    "real_OS_picker": false,
+    "model_execution_or_quality": false,
+    "whole_feature_or_parent": false
+  },
+  "source_variant_disclosure": "Electron3 executed e7ea1a2; browser4 executed parent a7d6145. This successor adds only explicit epoch closure before four existing project transitions; existing strict guard bodies and browser copied specs are unchanged.",
+  "preserved_failed_scope": "Earlier failed observer attempts remain failed and provide no scenario credit."
+}
