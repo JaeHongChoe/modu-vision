@@ -1,0 +1,230 @@
+{
+  "schema": "modu-vision.scoped-native-readback/v1",
+  "status": "actual-installed-draft-save-observed-normal-exits-but-strict-writer-closure-refused",
+  "source_cohort": {
+    "backend_HEAD": "e3442a51724122ff2c842e01b72e5a39a05d03f8",
+    "frontend_HEAD": "4d2f4e48842e1b89c9c1ecdc61bacc97bf8824f5",
+    "backend_retained_from_Root15": true
+  },
+  "actual_GUI": {
+    "Root_CUA_login_gallery_flow_saved_version_selector_observed": true,
+    "Root_selected_setup_seed_then_active_saved_B_without_activation": true,
+    "Root_explicit_draft_save_and_saved_status_observed": true,
+    "current_draft_base": "de0934efe90f429aa6e573b22672a690",
+    "full_pipeline_POST_activation_run_export_stage_reopen": false,
+    "standalone_PNG_claim": false,
+    "evidence_scope": "Root CUA transcript observations; original health and persisted draft custody independently read after ordinary quit"
+  },
+  "health_intervals": [
+    {
+      "stage": "baseline",
+      "sequence": 1,
+      "request_count": 15,
+      "pending_records": 1,
+      "failure_count": 0,
+      "uncertain": false,
+      "truncated": false
+    },
+    {
+      "stage": "login",
+      "sequence": 2,
+      "request_count": 57,
+      "pending_records": 2,
+      "failure_count": 0,
+      "uncertain": false,
+      "truncated": false
+    },
+    {
+      "stage": "gallery",
+      "sequence": 3,
+      "request_count": 58,
+      "pending_records": 2,
+      "failure_count": 0,
+      "uncertain": false,
+      "truncated": false
+    },
+    {
+      "stage": "flow-open",
+      "sequence": 4,
+      "request_count": 85,
+      "pending_records": 8,
+      "failure_count": 0,
+      "uncertain": false,
+      "truncated": false
+    },
+    {
+      "stage": "flow-open",
+      "sequence": 5,
+      "request_count": 102,
+      "pending_records": 3,
+      "failure_count": 0,
+      "uncertain": false,
+      "truncated": false
+    },
+    {
+      "stage": "flow-open",
+      "sequence": 6,
+      "request_count": 112,
+      "pending_records": 2,
+      "failure_count": 0,
+      "uncertain": false,
+      "truncated": false
+    },
+    {
+      "stage": "flow-edit",
+      "sequence": 7,
+      "request_count": 123,
+      "pending_records": 4,
+      "failure_count": 0,
+      "uncertain": false,
+      "truncated": false
+    }
+  ],
+  "shutdown": {
+    "original_holder_exit": 1,
+    "ordinary_nonce_quit_accepted": true,
+    "original_main_backend_exited_controller_reaped": true,
+    "signals_sent": false,
+    "strict_managed_writer_closure": false,
+    "protocol_version": 4,
+    "state": "recovery_required",
+    "active_scopes": 0,
+    "unsupported": [
+      "uncovered_request_protocol"
+    ],
+    "exact_first_emitter_or_cause_proven": false,
+    "health_before_quit_is_not_final_drain_proof": true,
+    "failed_lease_preserved_no_reopen_or_recovery": true
+  },
+  "custody": {
+    "protected68_before_after_gate_exact": true,
+    "prior33_saved_versions_and_active_pointer_exact": true,
+    "saved_versions_after": 34,
+    "only_new_version_is_controlled_setup_seed": true,
+    "current_draft_sha256": "c9a65edd7552ac24cee99e0dd516c9fe43d9efe7cd2fcb7f65eeb161662defa1",
+    "Root_closed_read_numeric_normalization_correction_preserved": true
+  },
+  "postclosure": {
+    "original_three_PIDs_absent": true,
+    "matching_process_and_open_file_scans_empty": true,
+    "loopback_closed": true,
+    "whole_tree_proof_inferred": false
+  },
+  "limits": [
+    "The last health response includes pending requests and does not prove final writer drain.",
+    "The final original lease refuses uncovered_request_protocol; exact first emitter is not retained as a final diagnostic and is not invented.",
+    "Root transcript is the actual UI observation; no retrospective standalone screenshots are manufactured.",
+    "The first post-UI readback failed an ad-hoc non-normalized graph hash comparison before receipt creation. The preserved v2 follows original finite numeric normalization and passes.",
+    "No native, full helper tree, parent, model quality, publisher or scenario acceptance."
+  ],
+  "raw_evidence": [
+    {
+      "label": "original-holder-result",
+      "bytes": 4578,
+      "sha256": "659ab812b219fbe643f5e3bf695026753709062c814ce7bc3709c75106eccdb0"
+    },
+    {
+      "label": "original-final-journal",
+      "bytes": 5318,
+      "sha256": "7bab0d91bc2c9bab912cb844ddcd140512ec579be44d3536460ff8247f4451df"
+    },
+    {
+      "label": "health-01-baseline.json",
+      "bytes": 8581,
+      "sha256": "13290f9f1528334ccc8fb3a99e6d0a5ee4d36b0f995e824f14e4d5eb011ed70a"
+    },
+    {
+      "label": "health-02-login.json",
+      "bytes": 23606,
+      "sha256": "7646dc6cb7b4a27324af5cfcd44249124cf77281a6fc2c30eb3e74c2c0080174"
+    },
+    {
+      "label": "health-03-gallery.json",
+      "bytes": 23956,
+      "sha256": "282339898ff49360eed638daec3d80ee04216b9e849e4cef9a832acdefe49127"
+    },
+    {
+      "label": "health-04-flow-open.json",
+      "bytes": 33409,
+      "sha256": "4678590cbb056e653bcb358e931d46b857406acf0b4576958602ec4dca78aecf"
+    },
+    {
+      "label": "health-05-flow-open.json",
+      "bytes": 39332,
+      "sha256": "8980f7b6ed97be5596b1dcbb5b07680a7f36191960bf026ebf914d8a838c016e"
+    },
+    {
+      "label": "health-06-flow-open.json",
+      "bytes": 42830,
+      "sha256": "86ed30fce768ecd56fae7eb48407fd2a939ad31b8b0e9d29f56319d10fd4cece"
+    },
+    {
+      "label": "health-07-flow-edit.json",
+      "bytes": 46686,
+      "sha256": "2ade0475775f0368738e9c299403228f669d6759d34e31361bbbbda4e4c42ead"
+    },
+    {
+      "label": "Root-post-UI-custody",
+      "bytes": 5956,
+      "sha256": "97d4fc14bca761163021ab84c5aaefe44a58706eea2fdf53f4e57844174bd1cf"
+    },
+    {
+      "label": "Root-postclosure-readonly",
+      "bytes": 1877,
+      "sha256": "cd059ae8804a0af36bfbaf11c6f5fb49e448ad14fa5a14894c12abba8142e70d"
+    },
+    {
+      "label": "protected-before-setup",
+      "bytes": 58318,
+      "sha256": "baf2634f210bad886770a8ef4638554f641767576b90e913a13a7e94c6c865b6"
+    },
+    {
+      "label": "protected-after-UI",
+      "bytes": 59869,
+      "sha256": "d3d51cb2b581f72a53f8e00c8643f56c26822f490b664f2574e7274f11d9e315"
+    },
+    {
+      "label": "original-holder-tool-start",
+      "bytes": 131,
+      "sha256": "305f9f512c3df50b5a11c97347d7fcfab07494247b51f00bbbf1db89c4aff482"
+    },
+    {
+      "label": "original-holder-tool-final",
+      "bytes": 320,
+      "sha256": "1034b37c6d788f39df7c47bccdcffebcf2678ac478ea515f68f5b8ecab3f7546"
+    },
+    {
+      "label": "original-quit-tool",
+      "bytes": 241,
+      "sha256": "8a369f656f9b4929946cf2c78a569256b98d55384ea292c2b5ee304c50b7ade7"
+    },
+    {
+      "label": "original-after-UI-tool-final",
+      "bytes": 390,
+      "sha256": "4af9ebeadee94ed5dd950eccdde649a44b84825b64eb10b0e0e576d10a8674c0"
+    },
+    {
+      "label": "source-freeze.actual.json",
+      "bytes": 2173688,
+      "sha256": "83104cbbc43f06018b5b7181639bfe40fa2039ee6012198b9459ae99f66d1867"
+    },
+    {
+      "label": "Root-operator-saved-version-correction.json",
+      "bytes": 1196,
+      "sha256": "8733966e4845f77e1b79b678a2e09087b171f5b25c8d21905b4a451c91d24322"
+    },
+    {
+      "label": "root16_custody_actual.actual.json",
+      "bytes": 672,
+      "sha256": "b4292639f6be62e15492135b8c3506db58b9ea684ade1036c81676a3cf92fcc7"
+    },
+    {
+      "label": "root16_custody_v2_actual.actual.json",
+      "bytes": 832,
+      "sha256": "4a4761ddab06000651cfd7934ffad51230d886a6c207ddc301eb68fb578f3a8b"
+    }
+  ],
+  "native_acceptance": false,
+  "lease_release_authority": false,
+  "parent_or_scenario_credit": 0
+}

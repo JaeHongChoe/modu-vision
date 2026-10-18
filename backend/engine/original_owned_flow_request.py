@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from functools import wraps
 import builtins
+import hashlib
 import inspect
 import io
 import json
@@ -59,6 +60,31 @@ def _draft_original(value,held):
             for (key,item),(old,captured)in zip(value.items(),children[0])))
     return type(value)is list and len(value)==len(children[0]) and all(
         _draft_original(item,captured)for item,captured in zip(value,children[0]))
+
+
+def _draft_raw9(info):
+    return [getattr(info,name)for name in ('st_dev','st_ino','st_mode','st_nlink','st_size',
+        'st_mtime_ns','st_ctime_ns','st_uid','st_gid')]
+
+
+def _draft_closed_file(path):
+    """One bounded original read; a missing/foreign file supplies no witness."""
+    path=Path(path);before=path.lstat()
+    if (path.resolve(strict=True)!=path or not stat.S_ISREG(before.st_mode)
+            or before.st_nlink!=1 or before.st_uid!=os.getuid() or before.st_size>4*1024*1024):
+        return None
+    descriptor=os.open(path,os.O_RDONLY|os.O_NOFOLLOW)
+    try:handle=io.open(descriptor,mode='r',encoding='utf-8',closefd=True)
+    except BaseException:
+        os.close(descriptor);raise
+    with handle:
+        if type(handle)is not io.TextIOWrapper or _draft_raw9(os.fstat(handle.fileno()))!=_draft_raw9(before):
+            return None
+        text=handle.read(4*1024*1024+1);raw=text.encode('utf-8')
+        if len(raw)!=before.st_size or _draft_raw9(os.fstat(handle.fileno()))!=_draft_raw9(before):return None
+    if not handle.closed or _draft_raw9(path.lstat())!=_draft_raw9(before):return None
+    return ({'path':str(path),'raw9':_draft_raw9(before),'sha256':hashlib.sha256(raw).hexdigest(),
+        'text':text,'value':json.loads(text)},handle)
 
 
 def observe_original_flow_draft_atomic(stage,path,value,temporary_path,handle):
@@ -435,7 +461,7 @@ class OriginalOwnedFlowRequest:
             (os, ('replace','fsync','getpid','getuid','fstat','open','close','unlink')),
             (tempfile, ('NamedTemporaryFile','_mkstemp_inner','_sanitize_params','_infer_return_type')),
             (time, ('time_ns',)),
-            (builtins, ('open',)), (json, ('load','dump','loads','dumps')),
+            (builtins, ('open',)), (json, ('load','dump','loads','dumps')), (hashlib, ('sha256',)),
             (sys.modules[__name__], ('_ACTIVE','_HANDLERS','_SPEC','_context','_headers','_SelectedCurrentAuth',
                 'OriginalOwnedFlowRequest','_FlowAttempt','_FlowAuth','_FlowIncluded')),
         ) for name in names]
@@ -624,6 +650,7 @@ class _FlowAttempt:
         self.draft_stages=[];self.draft_handle=self.draft_temporary=self.draft_record=None
         self.draft_pin=None;self.draft_reads=[];self.draft_active=[]
         self.draft_record_binding=None
+        self.draft_prior=self.draft_prior_binding=None;self.draft_read_pins=[]
         self.auth=_FlowAuth(self,headers,project,token)
 
     def fail(self,reason):
@@ -646,6 +673,9 @@ class _FlowAttempt:
             and (self.draft_record is None or self.draft_record_binding is not None
                 and self.draft_record is self.draft_record_binding[0]
                 and _draft_original(self.draft_record,self.draft_record_binding[1]))
+            and (self.draft_prior is None or self.draft_prior_binding is not None
+                and self.draft_prior is self.draft_prior_binding[0]
+                and _draft_original(self.draft_prior,self.draft_prior_binding[1]))
             and (self.values is None or self.values.get(
                 'http_request' if self.name=='verify_flowchart_models' else 'request') is self.request)
             and self.activity.scope is self.scope and self.scope.get('query_string',b'') is self.query
@@ -783,8 +813,69 @@ class _FlowAttempt:
             try:self.draft_record_binding=value,_draft_capture(value,(),[65536])
             except (ValueError,TypeError):valid=False
         if not valid:self.fail('draft_publication_entry')
-        else:self.draft_record=value
+        else:
+            self.draft_record=value
+            self.draft_prior_entry(path)
         return valid
+
+    def draft_prior_entry(self,path):
+        """Bind an existing draft in this namespace, never a historical labelset."""
+        from backend.api import routes_flowchart as flows
+        try:
+            project=self.scope.get('state',{}).get('scoped_project');base=self.values['req'].base_version_id
+            if not self.draft_entry(self.handler_frame()) or type(base)is not str or re.fullmatch('[0-9a-f]{32}',base)is None:return
+            prior=_draft_closed_file(path)
+            if prior is None:return
+            record=prior[0]['value'];context=self.draft_record['context']
+            if (type(record)is not dict or set(record)!={'version','context','draft_sha256','saved_at_ns','pipeline','base_version_id'}
+                    or type(record['version'])is not int or record['version']!=1
+                    or type(record['saved_at_ns'])is not int or record['saved_at_ns']<=0
+                    or record['context']!=context or record['base_version_id']!=base
+                    or flows.pipeline_sha256(flows.FlowchartPipeline.model_validate(record['pipeline']))!=record['draft_sha256']):return
+            previous=_draft_closed_file(flows._version_dir(Path(project['project_dir']))/(base+'.json'))
+            if previous is None:return
+            version=previous[0]['value']
+            fields={'version_id','saved_at','saved_at_ns','recipe_task','source_dataset_path','pipeline'}
+            if (type(version)is not dict or not fields<=set(version)<=fields|{'project_id','labelset_id'}
+                    or version.get('version_id')!=base or type(version['saved_at'])is not str
+                    or re.fullmatch('[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z',version['saved_at'])is None
+                    or type(version['saved_at_ns'])is not int or not 0<version['saved_at_ns']<=record['saved_at_ns']
+                    or type(version['recipe_task'])is not str
+                    or version.get('source_dataset_path')!=context['source_dataset_path']
+                    or ('project_id'in version and version['project_id']!=context['project_id'])
+                    or ('labelset_id'in version and version['labelset_id']!=context['labelset_id'])):return
+            flows.FlowchartPipeline.model_validate(version['pipeline'])
+            held={'draft':prior[0],'base':previous[0]}
+            if not self.draft_entry(self.handler_frame()):return
+            captured=_draft_capture(held,(),[65536])
+            self.draft_prior=held
+            self.draft_prior_binding=held,captured,(prior[1],previous[1])
+        except (OSError,ValueError,TypeError,KeyError,AttributeError,RecursionError):return
+
+    def draft_prior_unchanged(self):
+        try:
+            proof=self.draft_prior
+            if (proof is None or self.draft_prior_binding is None
+                    or not all(handle.closed for handle in self.draft_prior_binding[2])):return False
+            return all(_draft_raw9(Path(row['path']).lstat())==row['raw9']for row in proof.values())
+        except (OSError,ValueError,TypeError,KeyError,AttributeError):return False
+
+    def draft_prior_active(self,active,version):
+        """The old target may be replaced only by this original atomic writer."""
+        try:
+            proof=self.draft_prior
+            if (proof is None or not self.draft_prior_binding
+                    or not all(handle.closed for handle in self.draft_prior_binding[2])
+                    or proof['draft']['value']['base_version_id']!=self.values['req'].base_version_id):return False
+            current_A=_draft_closed_file(proof['base']['path'])
+            if current_A is None or current_A[0]!=proof['base']:return False
+            if len(self.draft_read_pins)!=2:return False
+            for (handle,path),pin,wanted in zip(self.draft_reads,self.draft_read_pins,(active,version)):
+                current=_draft_closed_file(path)
+                if (not handle.closed or current is None or current[0]['raw9']!=pin
+                        or current[0]['value']!=wanted):return False
+            return self.draft_entry(self.handler_frame())
+        except (OSError,ValueError,TypeError,KeyError,AttributeError,RecursionError):return False
 
     def draft_atomic(self,stage,path,value,temporary,handle,frame):
         from backend.api import routes_flowchart as flows
@@ -809,6 +900,10 @@ class _FlowAttempt:
                     valid=(valid and handle.closed and not Path(temporary).exists()
                         and stat.S_ISREG(info.st_mode) and info.st_nlink==1 and info.st_uid==os.getuid()
                         and self.draft_pin==(info.st_dev,info.st_ino))
+            if valid and stage in ('open','flushed') and self.draft_prior is not None:
+                # This is a before-replace target check, not an immutable-draft
+                # claim after a normal last-writer-wins publication.
+                if not self.draft_prior_unchanged():self.draft_prior=None;self.draft_prior_binding=None
             if not valid:self.fail('draft_atomic_'+str(stage))
             else:self.draft_stages.append(stage)
         except (OSError,ValueError,TypeError,AttributeError,IndexError):self.fail('draft_atomic_observation')
@@ -842,7 +937,8 @@ class _FlowAttempt:
             valid=(valid and stat.S_ISREG(info.st_mode) and info.st_nlink==1 and info.st_uid==os.getuid()
                 and info.st_size<=4*1024*1024)
             if not valid:self.fail('draft_read_entry')
-            else:self.draft_reads.append((handle,Path(path)))
+            else:
+                self.draft_reads.append((handle,Path(path)));self.draft_read_pins.append(_draft_raw9(info))
         except (OSError,ValueError,TypeError,KeyError,AttributeError):self.fail('draft_read_observation')
 
     def draft_active_return(self,project,context,checksum,active,version,pipeline,result,frame):
@@ -867,7 +963,7 @@ class _FlowAttempt:
                 identifier=active.get('version_id')if type(active)is dict else None
                 valid=(valid and len(self.draft_reads)==2 and all(frame.f_locals.get(name)is value for name,value in zip(names,values))
                     and type(identifier)is str and re.fullmatch('[0-9a-f]{32}',identifier)is not None
-                    and self.values['req'].base_version_id==identifier and type(version)is dict
+                    and (self.values['req'].base_version_id==identifier or self.draft_prior_active(active,version)) and type(version)is dict
                     and version.get('version_id')==identifier and version.get('source_dataset_path')==context['source_dataset_path']
                     and active.get('project_id')==context['project_id'] and active.get('source_dataset_path')==context['source_dataset_path']
                     and active.get('labelset_id','default')==context['labelset_id'] and type(pipeline)is flows.FlowchartPipeline

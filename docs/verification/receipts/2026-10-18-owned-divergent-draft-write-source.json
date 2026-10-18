@@ -1,0 +1,236 @@
+{
+  "schema": "modu-vision.source-owned-divergent-draft-write-validation/v1",
+  "source_only": true,
+  "base": "b921c94aab8a128f540db19553468ee7e6dda571",
+  "reviewed_private_source_commit": "4b0f30b0d39a6df7ea5a9fc81691546bb3e56324",
+  "source_files": {
+    "backend/engine/original_owned_flow_request.py": "1c338574408d910f76c8fbd889978b957e8e07a6e75b365b67f76fd55bde69f8",
+    "backend/tests/test_original_owned_divergent_draft_write.py": "c86735b91a68d70290b71867803b26568ae978c71e2be16af28fe4c0d5f2c228",
+    "backend/api/routes_flowchart.py": "0a5089591f4e3c82da44e8d2098bd587a7c290209335d755c5cf012ed7f30ed8"
+  },
+  "scope": "Recognize a genuine same-current-namespace preexisting draft based on saved A while active B remains unchanged. Draft persistence does not authorize stale full-version publication.",
+  "proof_boundary": "Existing D proves association in the exact current project/source/labelset namespace. Saved A proves the real closed source-bound base file and chronology. Historical A labelset provenance is not claimed.",
+  "causal_RED01": {
+    "actual_exit_code": 1,
+    "summary": "1 failed, 1 passed in 8.75s",
+    "normally_closed_HTTP_rows": 7,
+    "HTTP_PUT_status": 200,
+    "durable_write_and_active_B_unchanged": true,
+    "exact_failures": [
+      "owned_flow_draft_active_return",
+      "owned_flow_handler_return",
+      "owned_flow_unconfirmed_lifetime"
+    ],
+    "drain": {
+      "status": "refused",
+      "active_scopes": 1,
+      "unsupported": [
+        "uncovered_request_protocol"
+      ]
+    }
+  },
+  "optional_witness_recursion_fix": {
+    "RED04_RED05": "Both noncausal probes already returned200 and passed; neither proves the recursion defect.",
+    "causal_RED06": "16384 nested arrays in32769bytes first raised actual json.loads RecursionError; genuine PUT then returned500 on both prior-D and saved-A paths.",
+    "cases": [
+      {
+        "prior_kind": "draft",
+        "bytes": 32769,
+        "RED_HTTP": 500,
+        "GREEN_HTTP": 200,
+        "RED_exact_failures": [
+          "owned_flow_handler_failed",
+          "owned_flow_storage_scope_failed",
+          "owned_flow_selected_account_middleware_failed",
+          "downstream_error",
+          "incomplete_original_envelope",
+          "owned_flow_unconfirmed_lifetime"
+        ],
+        "GREEN_exact_failures": [
+          "owned_flow_draft_active_return",
+          "owned_flow_handler_return",
+          "owned_flow_unconfirmed_lifetime"
+        ]
+      },
+      {
+        "prior_kind": "saved-A",
+        "bytes": 32769,
+        "RED_HTTP": 500,
+        "GREEN_HTTP": 200,
+        "RED_exact_failures": [
+          "owned_flow_handler_failed",
+          "owned_flow_storage_scope_failed",
+          "owned_flow_selected_account_middleware_failed",
+          "downstream_error",
+          "incomplete_original_envelope",
+          "owned_flow_unconfirmed_lifetime"
+        ],
+        "GREEN_exact_failures": [
+          "owned_flow_draft_active_return",
+          "owned_flow_handler_return",
+          "owned_flow_unconfirmed_lifetime"
+        ]
+      }
+    ],
+    "minimal_delta": "Contain RecursionError only in the two new optional witness acquisition/recheck catch tuples; original writer and handler catches remain unchanged."
+  },
+  "final_GREEN04": {
+    "actual_exit_code": 0,
+    "passed": 69,
+    "elapsed_seconds": 96.52,
+    "composition": {
+      "new_divergent_draft_controls": 24,
+      "existing_draft_write_controls": 19,
+      "existing_saved_flow_lifetime_controls": 14,
+      "existing_superseded_draft_controls": 12
+    },
+    "command": "PYTHONDONTWRITEBYTECODE=1 <existing-approved-python> -B -m pytest backend/tests/test_original_owned_divergent_draft_write.py backend/tests/test_original_owned_flow_draft_write.py backend/tests/test_original_owned_flow_lifetime.py backend/tests/test_original_owned_superseded_flow_draft.py -q --basetemp=<fresh-private-green04-data>",
+    "log_sha256": "c1669ff6931a1371e91db8c4e76e62b1661f1201b73aff0a81584f9683f41912",
+    "actual_tool_completion_sha256": "466657bac45ff26b3b26c34b2feaafadd41bd18cf3ddcc5394c6b7f78038f53a"
+  },
+  "related_frontend_store_control": {
+    "actual_exit_code": 0,
+    "passed": 18,
+    "transport": "controlled HTTP supplier; real store/draft service/API serializer, separate from actual backend CAS/native proof",
+    "log_sha256": "7bf6bbe88ba97eb56e231989c8c44b44e2e538bca3dc6ed09ee942a5be484076",
+    "actual_tool_sha256": "e910a5a1637b7245a6cfd96260fee8d5361beae1be823e21bd4bd021abe5c8ac"
+  },
+  "strict_refusals_retained": [
+    "missing/malformed/foreign namespace D",
+    "wrong D hash/base/context",
+    "missing/malformed/foreign source A",
+    "explicit foreign A metadata",
+    "symlink/hardlink A",
+    "A missing fields/future chronology",
+    "copied prior proof",
+    "recursive optional witnesses",
+    "stale full POST expectedA remains409"
+  ],
+  "original_preserved": {
+    "entire_routes_flowchart_byteexact": true,
+    "original_business_write_and_CAS_bodies_unchanged": true,
+    "original_atomic_stages_and_lock_used": true,
+    "original_auth_body_context_deadline_drain_guards_retained": true,
+    "diagnostic_caps_and_shutdown_files_unchanged": true
+  },
+  "concurrency": "Two genuine simultaneous original requests use an external transport barrier only; original lock serializes last-writer-wins. The second real writer observes the first actual draft publication.",
+  "independent_static_review": "SOURCE-ONLY ACCEPT at final exact source pins; recursive optional witness blocker was reproduced and contained.",
+  "actual_run_history": [
+    {
+      "name": "red01",
+      "classification": "causal original-source ownership false negative",
+      "actual_exit_code": 1,
+      "pytest_summary": "1 failed, 1 passed in 8.75s",
+      "log_sha256": "f9dc22909b2fa579b1113903b5fdd251e099bd2c9fb2472dc8e3d2c0d307a3bd",
+      "actual_tool_pins": {
+        "red01-actual-tool.json": "b055c4a42530103983292b8bf54a1b755bb891d998606d50b8b1318a8ef03531"
+      }
+    },
+    {
+      "name": "green01",
+      "classification": "initial candidate",
+      "actual_exit_code": 0,
+      "pytest_summary": "2 passed in 9.37s",
+      "log_sha256": "384b5aa787ab20a57d04275b8cbffaa3b4bd86e8582708432f9b8c47b9c4d457",
+      "actual_tool_pins": {
+        "green01-actual-tool.json": "528b877f2e04858c66b9201063bb369749ca7d59ae747722885c7cf217ea94f8"
+      }
+    },
+    {
+      "name": "red02",
+      "classification": "candidate explicit foreign metadata gap",
+      "actual_exit_code": 1,
+      "pytest_summary": "2 failed, 18 deselected in 8.87s",
+      "log_sha256": "46dea757ef58764cc948b1a0ea992c7a094137ffa389b10523ef1fdc8ec189b0",
+      "actual_tool_pins": {
+        "red02-actual-tool.json": "86ed5a531356117d19ff89d9cff99e038617eebf12453a7a1286f4f8e8b5f201"
+      }
+    },
+    {
+      "name": "green02",
+      "classification": "candidate focused controls",
+      "actual_exit_code": 0,
+      "pytest_summary": "20 passed in 39.07s",
+      "log_sha256": "71b858cc40f45855645ef74d4c360bdb7c43f8f0cc76ce9e8aa7231c19dbb862",
+      "actual_tool_pins": {
+        "green02-actual-completion.json": "0ec4296cd6569b7bd02ff178360b4faca394b5e67a4f57c6066a557803a7b350",
+        "green02-actual-poll01.json": "9f3648d8ac216994b504ccb08b9ae232f21046c5a91faa3cb97a6b298cd23eb4",
+        "green02-actual-start.json": "2ee511df9db881e36bb27fed73e186ae8368defda2ff25d08a32ed8c774063d7"
+      }
+    },
+    {
+      "name": "red03",
+      "classification": "candidate A schema/chronology gap",
+      "actual_exit_code": 1,
+      "pytest_summary": "2 failed, 20 deselected in 9.07s",
+      "log_sha256": "259e00201cf16aae060397de6d6afd24be5ed8a7d81b3e72591673952cec4a6d",
+      "actual_tool_pins": {
+        "red03-actual-tool.json": "d6fe226eb5e777d2d87c66c1aebca94987fb1ef02939c3ee4a5c53c9540905e4"
+      }
+    },
+    {
+      "name": "green03",
+      "classification": "previous candidate67 before recursion fix",
+      "actual_exit_code": 0,
+      "pytest_summary": "67 passed in 100.92s (0:01:40)",
+      "log_sha256": "6e60b79086a610b96c57350e7b507d185f2bdcaa53ed6f1c1b5b31007b83fcda",
+      "actual_tool_pins": {
+        "green03-actual-completion.json": "5cea167c67c1681bf1fc099cf11965ca3b5a1d00bdcd86555ddcab17be5c8a9a",
+        "green03-actual-poll01.json": "3685976a6ad7fa7ee6cab2aeba51ffb290857bd5879224f89102b98bda985a97",
+        "green03-actual-start.json": "99db576b53917798737bf095b98107ecd9e7e8618c67e869f012570e80f1da59"
+      }
+    },
+    {
+      "name": "red04",
+      "classification": "noncausal 1500-level parser probe",
+      "actual_exit_code": 0,
+      "pytest_summary": "2 passed, 22 deselected in 8.50s",
+      "log_sha256": "136a0bbe619700c60fc22a88b07c69330b3761709c2915f09c1125a910c8840d",
+      "actual_tool_pins": {
+        "red04-actual-tool.json": "c77216c3cd69f80bbd28a2192c8739db302c513af7a65ae66dc5ddc8a036d023"
+      }
+    },
+    {
+      "name": "red05",
+      "classification": "noncausal 1100-level parser probe",
+      "actual_exit_code": 0,
+      "pytest_summary": "2 passed, 22 deselected in 7.74s",
+      "log_sha256": "f93d546455795f4389ac9456ffeac01e301837c2b655ced15652d1ef0bf401b4",
+      "actual_tool_pins": {
+        "red05-actual-tool.json": "006f8a70843cd186c3d1b18d3c5f1e92031b01acffb1f32e2be7bac8514b26ac"
+      }
+    },
+    {
+      "name": "red06",
+      "classification": "causal recursive optional witness HTTP500",
+      "actual_exit_code": 1,
+      "pytest_summary": "2 failed, 22 deselected in 7.16s",
+      "log_sha256": "29fd93b1756a2e8d5370413b131e81dbc2d65bec69f617c7f9372b409e391024",
+      "actual_tool_pins": {
+        "red06-actual-tool.json": "38db4fa30b0a73ce2531ac36491c9b1899eba69b3f935867625cc998e2ab45a3"
+      }
+    },
+    {
+      "name": "green04",
+      "classification": "FINAL69 exact current source",
+      "actual_exit_code": 0,
+      "pytest_summary": "69 passed in 96.52s (0:01:36)",
+      "log_sha256": "c1669ff6931a1371e91db8c4e76e62b1661f1201b73aff0a81584f9683f41912",
+      "actual_tool_pins": {
+        "green04-actual-completion.json": "466657bac45ff26b3b26c34b2feaafadd41bd18cf3ddcc5394c6b7f78038f53a",
+        "green04-actual-start.json": "9d20c38f552a05aa6cba2b494863d38262d090e6456b0f766b350c6305772c67"
+      }
+    }
+  ],
+  "limits": {
+    "historical_A_labelset_provenance": false,
+    "native_Root15_PUT93_98_cause_proven": false,
+    "native_Root16_closure_cause_proven": false,
+    "native_application_acceptance": false,
+    "whole_writer_coverage": false,
+    "process_tree_exit_verified": false,
+    "can_release_launch_lease": false,
+    "parent_or_action_count_promotion": false,
+    "PUB_modified_by_preparation": false
+  }
+}
