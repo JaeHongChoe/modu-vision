@@ -521,6 +521,16 @@
       "retained_spec_commit": "eb6541e82fa27398878611e0cb98f8d1ea81af81",
       "current_test_source_sha256": "5bc7420d2748a7b272ccdc6188c86c699ff1094f5545c6bf4701df0d59717c3b",
       "reason": "The exact previous public keyboard spec is retained at eb6541e. One separate decoder-error case was appended; all46585 historical bytes remain unchanged. This declaration supplies no new execution or current GUI acceptance for the older cases."
+    },
+    {
+      "receipt": "2026-10-17-f029-center-fit-empty-reset-browser.json",
+      "receipt_sha256": "2c7b59a27e3d805589301cad50417793d4d98b3f0943cb97bb266186ba55e67e",
+      "execution_source_sha": "c849ad4a6a6a48b4bf5b870c6a18c23e780947c1",
+      "test": "scripts/e2e/obb-center-fit-empty-reset.spec.ts::center fitting empty and redraw discard only the unsent proposal and reopen exact saved truth",
+      "recorded_test_source_sha256": "e17af821f161ee8e6d0eaf9e2bbac8118bca1bed019785be4b7eec98c90f2135",
+      "retained_spec_commit": "43009a8c4b74b41086e2cb0276a20315b2d3d608",
+      "current_test_source_sha256": "d8c5aaca2fa5b8a065c78c8f96d16c611c85371076dad32437d2b20a9a3ee5b5",
+      "reason": "Exact previous public center-fitting spec is retained at43009a8. One separate source-change-error case was appended; all23740 historical bytes remain unchanged. This historical declaration supplies no new GUI execution or acceptance for the older case."
     }
   ]
 }

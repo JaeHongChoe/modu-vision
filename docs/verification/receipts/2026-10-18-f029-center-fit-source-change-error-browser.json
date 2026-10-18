@@ -1,0 +1,422 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "cf4be7ed0cf0ae10f621123cf565924ba4bd46ab",
+  "source_dirty": false,
+  "test": "scripts/e2e/obb-center-fit-empty-reset.spec.ts::center fitting source-change error retires the unsent proposal and recovers original saved truth",
+  "test_source_sha256": "d8c5aaca2fa5b8a065c78c8f96d16c611c85371076dad32437d2b20a9a3ee5b5",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "workers": 1,
+  "retries": 0,
+  "report_sha256": "6eceeff45c6a9e005e4037c42671d1ef1b33a2a0fd4bdd599ab77d39c93bd55b",
+  "harness_sha256": "a747fd709ed7f5807ed2df92e50413166ace0369d9e9f4ecc3ebe9634ee55214",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "9eede5fa89c2c2fa14e8d49ba3861db30fe53f176087b625d371f5ffa6efa50a"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "ed38866002a37376ead9e3bfe6757cd794f32b0550b7d6e072119884bcfcf50b"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "025888ca236f1594ed8cd28d33b462d1019cdb5dcbede0a302eb5bad9ce87c80"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "baf168870152f3b21b0baf3dec86a4481fb90b37d864e327efe88835667e89b3"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Only F029.obb-native-center-fit-save-reopen.error on the actual source-browser geometric fitting UI. Successful fits, restored preview and saved-truth reopen are controls; no installed-native lifetime, model quality or parent acceptance.",
+  "execution": {
+    "command_exit_code": 0,
+    "command_elapsed_seconds": 20.502247666940093,
+    "test_cases": 1,
+    "passed": 1,
+    "failed": 0,
+    "flaky": 0,
+    "skipped": 0,
+    "original_action_and_full_response_budget_ms": 10000,
+    "browser_version": "155.0.8059.80",
+    "source_clean_before_after": true
+  },
+  "positive_control": {
+    "dimensions": [
+      256,
+      256
+    ],
+    "actual_pointer_points": [
+      [
+        79.84761904761905,
+        59.733333333333334
+      ],
+      [
+        99.96190476190476,
+        59.733333333333334
+      ],
+      [
+        79.84761904761905,
+        69.48571428571428
+      ]
+    ],
+    "independently_recomputed_center_box": {
+      "cx": 79.84761904761905,
+      "cy": 59.733333333333334,
+      "width": 40.22857142857143,
+      "height": 19.504761904761892,
+      "angle_deg": 0
+    },
+    "successful_original_fit_POST200_before_and_after": true,
+    "fresh_normal_selection_preview_after_source_body_restoration": true
+  },
+  "error_control": {
+    "own_synthetic_source_changed_after_preview": true,
+    "original_SHA256": "a637bc630cbf369e26ea1d1525263cf1f26ff90cc29d66ae8a70478d37628f73",
+    "changed_SHA256": "30d629f39f7790b373299bc37c355dc1b5a797c0bf4de4e064389298cf064be7",
+    "restored_SHA256": "a637bc630cbf369e26ea1d1525263cf1f26ff90cc29d66ae8a70478d37628f73",
+    "source_bytes_original_changed_restored": [
+      139327,
+      139228,
+      139327
+    ],
+    "inode_mode_uid_gid_nlink_preserved": true,
+    "original_mtime_ctime_restored": false,
+    "only_final_allowed_source_deltas": [
+      "mtime_ns",
+      "ctime_ns"
+    ],
+    "original_fit_POST_status": 422,
+    "original_exact_body": {
+      "detail": "Fitting source changed after preview"
+    },
+    "original_exact_body_SHA256": "813070a0b99c284ce2d33cd4d2e1da635f4d8c2a96caee9b23e33665fc78d330",
+    "original_exact_body_bytes": 49,
+    "prior_successful_polygon_removed_and_append_disabled": true,
+    "saved_table_three_rows_unchanged": true,
+    "saved_split_counts": {
+      "train": 1,
+      "val": 1,
+      "test": 1
+    },
+    "postbaseline_geometric_POSTs": 3,
+    "postbaseline_persistent_API_mutations": 0
+  },
+  "custody": {
+    "tracked_source_files_raw9_and_SHA_exact": 2967,
+    "thin_provider_links_exact": 321,
+    "selected_provider_files_exact": 10,
+    "runtime_bindings_exact": 3,
+    "private_inputs_exact": 22,
+    "original_UI_complete_responses": 7,
+    "response_status_counts": {
+      "200": 6,
+      "422": 1
+    },
+    "fixture_setup_responses_separate": 9,
+    "harness_artifact_references_rehashed": 17,
+    "protected_other_source_project_and_prepared_raw9_SHA_exact_through_poststop": true,
+    "owned_source_body_SHA_restored_with_original_identity_but_new_mtime_ctime": true,
+    "file_descriptors_opened": 175,
+    "file_descriptors_closed": 175,
+    "close_uncertainties": 0
+  },
+  "guards": {
+    "page_errors": 0,
+    "unexpected_errors": 0,
+    "expected_exact_owning_422_console_errors": 1,
+    "foreign_origin_requests": 0,
+    "renderer_rejected_requests": 0,
+    "response_fabrication": false,
+    "route_or_full_body_policy_changes": false,
+    "deadline_or_retry_relaxation": false
+  },
+  "owned_original_closure": {
+    "backend_exit_code": 0,
+    "backend_naturally_exited": true,
+    "forced": false,
+    "original_Popen_reaped": true,
+    "wrapper_signals_sent": false,
+    "backend_pid_alive": false,
+    "backend_port_closed": true,
+    "escaped_processes": 0,
+    "unowned_references": 0,
+    "global_leftovers": 0,
+    "scan_error": null
+  },
+  "typecheck_and_collection": {
+    "exits": [
+      0,
+      0
+    ],
+    "elapsed_seconds": 5.033265250036493,
+    "collection_only_no_case_execution": true
+  },
+  "visual_review": {
+    "Root_viewed_all_four_canonical_PNG": true,
+    "source_error_alert_and_disabled_append_seen": true,
+    "restored_fresh_fit_polygon_seen": true,
+    "reopen_saved_table_in_PNG_viewport": false,
+    "reopen_saved_truth_basis": "Actual DOM/API/protected-file assertions; final PNG captured the upper training hub viewport."
+  },
+  "raw_evidence_pins": {
+    "ready-handoff.json": {
+      "raw9": [
+        16777231,
+        178170899,
+        33152,
+        1,
+        501,
+        20,
+        5498,
+        1792288629135503147,
+        1792288629135503147
+      ],
+      "bytes": 5498,
+      "sha256": "6114bee461065bef51635062b05cd497227b0a154da155c1e11fc596e63b66dc"
+    },
+    "preparation.json": {
+      "raw9": [
+        16777231,
+        178170898,
+        33152,
+        1,
+        501,
+        20,
+        210720,
+        1792288629134102337,
+        1792288629134102337
+      ],
+      "bytes": 210720,
+      "sha256": "411418ccbe4fb489bc46857e4caf7a257648d9b97e2ef1f2d65b4a8b5a43b291"
+    },
+    "source-ready.json": {
+      "raw9": [
+        16777231,
+        178170881,
+        33152,
+        1,
+        501,
+        20,
+        1058196,
+        1792288628956792976,
+        1792288628956792976
+      ],
+      "bytes": 1058196,
+      "sha256": "4f615eac1d9653acf622883ad491b0792ecca28b793d2d3da1c7fe6c9ff66d09"
+    },
+    "root-browser-actual-tool-start.json": {
+      "raw9": [
+        16777231,
+        178172305,
+        33188,
+        1,
+        501,
+        20,
+        131,
+        1792289008604328888,
+        1792289008604328888
+      ],
+      "bytes": 131,
+      "sha256": "0a6b243a8962c1419a10eccda178f742e0b6427f7d51d75b2a13557cca3dc2a9"
+    },
+    "root-browser-actual-tool-completion.json": {
+      "raw9": [
+        16777231,
+        178175537,
+        33188,
+        1,
+        501,
+        20,
+        126,
+        1792289045433818575,
+        1792289045433818575
+      ],
+      "bytes": 126,
+      "sha256": "f73495d7ede7791dd09f9cd19901036f344b0269affe708210655fb24269b5f6"
+    },
+    "result.json": {
+      "raw9": [
+        16777231,
+        178172264,
+        33188,
+        1,
+        501,
+        20,
+        1100,
+        1792288964213543866,
+        1792288964213543866
+      ],
+      "bytes": 1100,
+      "sha256": "327e74a187d0779d0c811a2e36f9ed26eae178bb9165e9238b6b83b6857f4456"
+    },
+    "source-before.json": {
+      "raw9": [
+        16777258,
+        340415,
+        33152,
+        1,
+        501,
+        20,
+        1055213,
+        1792289007933829495,
+        1792289007934156166
+      ],
+      "bytes": 1055213,
+      "sha256": "80181d03ff6e77e4bebf3f3e4934910a8036036e5cff43cdd21febaed19edea3"
+    },
+    "source-after.json": {
+      "raw9": [
+        16777258,
+        340771,
+        33152,
+        1,
+        501,
+        20,
+        1055213,
+        1792289028783429012,
+        1792289028783678099
+      ],
+      "bytes": 1055213,
+      "sha256": "80181d03ff6e77e4bebf3f3e4934910a8036036e5cff43cdd21febaed19edea3"
+    },
+    "original-popen.json": {
+      "raw9": [
+        16777258,
+        340418,
+        33152,
+        1,
+        501,
+        20,
+        549,
+        1792289007937282956,
+        1792289007937337207
+      ],
+      "bytes": 549,
+      "sha256": "93c9409fc7e4843d510488554ed3cd2b4d46b02e936aced0c64c2dd7ac71b153"
+    },
+    "invocation.json": {
+      "raw9": [
+        16777258,
+        340416,
+        33152,
+        1,
+        501,
+        20,
+        1106,
+        1792289007935411265,
+        1792289007935457099
+      ],
+      "bytes": 1106,
+      "sha256": "b3c4d60ce9b6a4c401e3c2d614dfe6f2f61f36ba5447eb7cbddc53b8043c9897"
+    },
+    "run-result.json": {
+      "raw9": [
+        16777258,
+        340772,
+        33152,
+        1,
+        501,
+        20,
+        1591,
+        1792289028785954462,
+        1792289028785996212
+      ],
+      "bytes": 1591,
+      "sha256": "c9246212ff2d82249dc081d500b3032e761c457253dcce60accb87b7a5165b4b"
+    },
+    "browser-01.log": {
+      "raw9": [
+        16777258,
+        340417,
+        33188,
+        1,
+        501,
+        20,
+        400,
+        1792289028380233072,
+        1792289028380233072
+      ],
+      "bytes": 400,
+      "sha256": "9de99b3a82765699f933b4592599eddfecaa3790a9ee1872e5936a2a3b98fe5a"
+    },
+    "report.json": {
+      "raw9": [
+        16777258,
+        340760,
+        33188,
+        1,
+        501,
+        20,
+        7591,
+        1792289028382398559,
+        1792289028382398559
+      ],
+      "bytes": 7591,
+      "sha256": "6eceeff45c6a9e005e4037c42671d1ef1b33a2a0fd4bdd599ab77d39c93bd55b"
+    },
+    "harness-manifest.json": {
+      "raw9": [
+        16777258,
+        340754,
+        33188,
+        1,
+        501,
+        20,
+        239706,
+        1792289028189818249,
+        1792289028189923042
+      ],
+      "bytes": 239706,
+      "sha256": "a747fd709ed7f5807ed2df92e50413166ace0369d9e9f4ecc3ebe9634ee55214"
+    },
+    "teardown.json": {
+      "raw9": [
+        16777258,
+        340759,
+        33188,
+        1,
+        501,
+        20,
+        343,
+        1792289028379430520,
+        1792289028379550439
+      ],
+      "bytes": 343,
+      "sha256": "e2601653e365905742cd9e82bee0fd59bfce8718cce3cf196284307b78972d33"
+    }
+  },
+  "finite_readback_pin": {
+    "raw9": [
+      16777231,
+      178179400,
+      33152,
+      1,
+      501,
+      20,
+      20356,
+      1792289288739984398,
+      1792289288740016066
+    ],
+    "bytes": 20356,
+    "sha256": "a873fcb5c66d77fcfff2be6de19be132848d3d81b570c7878c8471afdfc6c460"
+  },
+  "limits": {
+    "training_or_model_inference_invoked": false,
+    "health_device_availability_is_model_execution": false,
+    "installed_native_lifetime_qualified": false,
+    "parent_acceptance": false,
+    "whole_feature_accepted": false,
+    "independent_acceptance": false
+  }
+}

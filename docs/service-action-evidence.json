@@ -10702,7 +10702,39 @@
               ]
             },
             "error": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S4-07",
+                  "source_sha": "cf4be7ed0cf0ae10f621123cf565924ba4bd46ab",
+                  "kind": "click",
+                  "action": "중심 기준 · 회전 박스 맞추기 · 정답 표에 추가",
+                  "expected": "An actual original source-byte change after preview must refuse the refit and remove the earlier unsent proposal while preserving saved truth; a normal fresh preview after original-body restoration recovers.",
+                  "observed": "The original fit-box POST returned exact422 Fitting source changed after preview within10s after one own synthetic PNG body change. The prior successful polygon disappeared and append stayed disabled. Exact original bytes and original inode/mode/owner/nlink were restored; original mtime/ctime were intentionally not restored. A normal deselect/reselect fetched a fresh sourceGET200 and trusted fitPOST200 recovered independently checked geometry. Three geometricPOSTs and zero persistent API writes occurred; saved3-row train1/val1/test1 truth and other source/project/prepared raw9/SHA remained exact through real reload and natural backend shutdown. One exact owning422 console diagnostic was expected; unexpected errors0.",
+                  "reviewer": "Codex Root exact source, actual browser responses and four canonical PNG review plus independent finite evidence readback. Final reopen table is supported by actual DOM/API/file checks, not the upper-viewport PNG. Human quality, installed native, independent acceptance and parents remain pending.",
+                  "test": "scripts/e2e/obb-center-fit-empty-reset.spec.ts::center fitting source-change error retires the unsent proposal and recovers original saved truth",
+                  "receipt": "2026-10-18-f029-center-fit-source-change-error-browser.json",
+                  "receipt_sha256": "d6bd0b9d7e78d564739e33ee0e99ac3217c4ffca6bb07897012fd3acca9bf176",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "9eede5fa89c2c2fa14e8d49ba3861db30fe53f176087b625d371f5ffa6efa50a"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "ed38866002a37376ead9e3bfe6757cd794f32b0550b7d6e072119884bcfcf50b"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "025888ca236f1594ed8cd28d33b462d1019cdb5dcbede0a302eb5bad9ce87c80"
+                    },
+                    {
+                      "id": "screenshot-3",
+                      "sha256": "baf168870152f3b21b0baf3dec86a4481fb90b37d864e327efe88835667e89b3"
+                    }
+                  ]
+                }
+              ]
             },
             "cancel": {
               "state": "verified",
