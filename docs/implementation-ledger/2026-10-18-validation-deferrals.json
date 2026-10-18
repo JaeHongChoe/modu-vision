@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "kind": "deferred_validation_not_acceptance",
+  "authority": {
+    "kind": "direct_user_instruction",
+    "instruction": "장비 검증과 앱 검증으로 못하는건 일단 넘기자 나도 확인이 어려운거니",
+    "recorded_on": "2026-10-18"
+  },
+  "decisions": [
+    {
+      "domain": "equipment_validation",
+      "state": "deferred_for_current_work",
+      "scope": "Unavailable physical-device and target-hardware validation, including camera, PLC, MES and device-specific execution or performance acceptance.",
+      "original_acceptance_preserved": true
+    },
+    {
+      "domain": "actual_application_validation",
+      "state": "deferred_for_current_work",
+      "scope": "Blocked actual GUI, installed-app, native lifecycle and manual app-validation runs. Suspend further app launches, rebuild/setup loops undertaken only for these checks.",
+      "original_acceptance_preserved": true
+    }
+  ],
+  "continue": [
+    "Source review and necessary code corrections",
+    "Unit, contract and controlled in-process automated tests",
+    "Static dependency, CI, source integrity and publication checks",
+    "Authorized bounded cleanup of completed temporary build outputs"
+  ],
+  "accounting": {
+    "verified_count_increment": 0,
+    "accepted_count_increment": 0,
+    "pending_action_scenarios_unchanged": true,
+    "deferred_checks_are_not_passes": true,
+    "existing_failed_evidence_and_known_issues_preserved": true,
+    "Windows_only_waivers_remain_separate": true
+  },
+  "known_issue": "The prior native managed-drain refusal remains unresolved. The source diagnostic and successful in-process tests do not establish a native fix.",
+  "remaining_external_conditions": "Publisher signing, model-quality approval, human pilot and final release decisions retain their original requirements; this record does not grant publication, credential or production authority."
+}
