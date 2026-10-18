@@ -1,0 +1,90 @@
+{
+  "schema": "modu-vision.current-installed-native-partial/v1",
+  "attempt": "Root22",
+  "backend_source": "1b2beb194cf2c251027966e09baaee039c73aef1",
+  "frontend_source": "d4071b7b870ecbf52e1e0e148d31c01ae32a7553",
+  "current_build_installation": {
+    "original_backend_build_exit": 0,
+    "original_native_assembly_exit": 0,
+    "whole_payload_reader_exit": 0,
+    "original_setup_operations_exit": [0, 0, 0, 0, 0],
+    "original_AppKit_holder_reached_ready": true,
+    "original_startup_and_execution_caps_unchanged": true
+  },
+  "observed_native_UI": {
+    "local_fixture_login": true,
+    "existing_six_image_project_loaded": true,
+    "fresh_seed_selected": true,
+    "five_node_four_edge_flow_saved_and_activated": true,
+    "same_198_byte_PNG_selected_through_original_OS_picker": true,
+    "selected_GPU2_Run_clicked": true,
+    "final_Run_result_displayed_and_observed": false,
+    "export_and_reopen_verified": false,
+    "health_samples_before_quit": 9,
+    "all_nine_health_samples_clean": true
+  },
+  "SAVE_file_readback": {
+    "original_reader_exit": 0,
+    "prior_versions_preserved_raw9_and_SHA256": 41,
+    "seed_preserved": true,
+    "saved_seed_and_recipe_full_pipeline_equal": true,
+    "active_pointer_matches_saved_scope": true,
+    "read_descriptors_closed": true,
+    "receipt_SHA256": "63e0a75ee3e4a27652658c732ffc7dc0c374c90b491151aeb327ebafbe7eb87d"
+  },
+  "original_remote_worker_result": {
+    "same_request_operation_models_image_profile_and_GPU_joined": true,
+    "operation_completed_and_worker_exit_confirmed": true,
+    "status": "success",
+    "execution_device": "cuda",
+    "device_name": "NVIDIA L40S",
+    "models": ["rotation", "segmentation"],
+    "total_latency_ms": 1390.74,
+    "final_verdict": "NG",
+    "output_files_verified": 33,
+    "output_bytes_verified": 304082,
+    "passive_capture_complete": true,
+    "passive_observer_removed": true,
+    "producer_roles_returned": 5,
+    "capture_errors": 0,
+    "result_SHA256": "baae41c8f57c4d5ecf320a1f45cb1c2e8d392c109c9f2177179b5dc074fa3fad",
+    "capture_SHA256": "e1af2915385bea75ac206940ac4bd9c5295f3347c99451cd52e53b5283d93e75",
+    "finite_file_readback_SHA256": "e47045ef5a8d50b8273308102ee577fe3232aaaa0f6cb6583000422d32a15598"
+  },
+  "original_HTTP_acceptance": {
+    "route": "FLOWCHART_RUN",
+    "status": 200,
+    "server_ASGI_send_receipt": true,
+    "elapsed_seconds": 94.751303459052,
+    "original_passive_request_budget_seconds": 60,
+    "complete": false,
+    "refusals": ["request_deadline"],
+    "client_receive_proven": false,
+    "terminal_SHA256": "5f432695f90c00174dcaf14eb4794e0c490861757f275306f8d160241f2ead98",
+    "limit": "Worker inference latency is distinct from total request latency. Existing file timestamps do not establish an exact preparation, upload, worker and download split."
+  },
+  "original_normal_closure": {
+    "nonce_bound_normal_quit_requested": true,
+    "main_and_backend_direct_exit_observed": true,
+    "controller_naturally_reaped": true,
+    "signals_sent": false,
+    "holder_exit": 1,
+    "strict_managed_store_closure_verified": false,
+    "unsupported": ["uncovered_request_protocol"],
+    "lease_state": "recovery_required",
+    "failed_fixture_and_lease_preserved": true,
+    "whole_Electron_helper_tree_exit_verified": false,
+    "original_68_protected_inputs_unchanged_after_UI": true,
+    "lifetime_result_SHA256": "aaa858678f3b7d403a20c796fd6fac2d15f52736acf89cd970e9217c2fae19b1",
+    "protected_after_UI_SHA256": "7dbd2097eccf7142ddf20842137bbf80f3853e1bd94a7e169e14849ee5e096f5"
+  },
+  "acceptance": {
+    "new_GUI_scenario_credit": 0,
+    "whole_Run_EXPORT_REOPEN": false,
+    "strict_native_lifetime": false,
+    "model_quality": false,
+    "production_deployment": false,
+    "parent_acceptance": false
+  },
+  "privacy": "Only bounded validation facts and hashes are published; no private paths, credentials, headers, nonce, remote endpoint or raw model output is included."
+}
