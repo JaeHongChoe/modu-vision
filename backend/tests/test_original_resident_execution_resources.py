@@ -136,3 +136,17 @@ def test_original_GET_send_failure_is_not_resident_metadata_completion(tmp_path,
     target, = [row for row in observer._records.values() if row['ingress'] == {'type': 'http', 'method': 'GET', 'path': PATH}]
     assert target['response_status'] == 200 and target['transport_failed'] and not target['normal_return']
     _refused(admission, observer)
+
+
+def test_current_parameterless_producer_cohort_equals_actual_six_source_files():
+    """A registered current cohort must describe this source tree, not a prior build."""
+    import hashlib
+    from pathlib import Path
+    from backend.engine import required_flow_passive_capture as capture
+    source_root = Path(capture.__file__).resolve().parents[2]
+    pins = capture.PARAMETERLESS_ROTATION_PRODUCER_SOURCE_PINS
+    assert len(pins) == 6
+    for name, pin in pins.items():
+        body = (source_root / name).read_bytes()
+        assert len(body) == pin['size'], name
+        assert hashlib.sha256(body).hexdigest() == pin['sha256'], name

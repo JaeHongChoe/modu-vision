@@ -70,7 +70,7 @@ from backend.engine.original_owned_flow_request import (
     observe_original_flow_specialist_resolution, observe_original_flow_retained_source,
     observe_original_flow_draft_atomic, original_flow_draft_read_text, observe_original_flow_draft_active_return,
     observe_original_flow_recipe_read, observe_original_flow_no_legacy, observe_original_flow_recipe_return,
-    observe_original_jobless_template_constructor, observe_original_flow_resource_engines,
+    observe_original_jobless_template_constructor, observe_original_flow_resource_engines, original_flow_resource_call,
 )
 
 _resolve_job_artifacts = observe_original_flow_model_resolution(_resolve_job_artifacts)
@@ -105,7 +105,8 @@ class FlowExecutionResourcesRequest(BaseModel):
 
 @observe_original_flow_handler(router.get('/execution-resources'))
 def execution_resources(device: Optional[Literal['cpu']] = None, *, request: Request = None):
-    return (_CPU_ENGINE if device == 'cpu' else _ENGINE).execution_resources()
+    selected = _CPU_ENGINE if device == 'cpu' else _ENGINE
+    return original_flow_resource_call(selected)
 
 
 @router.put('/execution-resources')
