@@ -1,0 +1,72 @@
+{
+  "schema": "modu-vision.source-regression-receipt/v1",
+  "recorded_date": "2026-10-19",
+  "base_commit": "5c5b44816f869999207f4efd4a25efde7415c9cc",
+  "change_scope": "Keep execution-resource read observation at the API boundary and restore the exact original inference engine source.",
+  "business_semantics_preserved": true,
+  "actual_tests": {
+    "current_source_cohort_before_correction": {
+      "failed": 1,
+      "seconds": 0.03,
+      "point": "Actual producer source bytes differ from the declared six-file cohort."
+    },
+    "focused": {
+      "passed": 10,
+      "seconds": 17.75,
+      "test": "backend/tests/test_original_resident_execution_resources.py",
+      "original_nine_test_bodies_unchanged": true,
+      "additional_control": "Actual six producer file sizes and hashes equal their existing current cohort declaration."
+    },
+    "related": {
+      "passed": 81,
+      "seconds": 55.03,
+      "public_tests": [
+        "backend/tests/test_original_owned_flow_lifetime.py",
+        "backend/tests/test_flowchart_flow_contract.py",
+        "backend/tests/test_warm_scoped_get_lifetime.py",
+        "backend/tests/test_original_owned_run_export_lifetime.py"
+      ],
+      "additional_private_original_resource_causal_cases": 2
+    },
+    "CI_gates": {
+      "passed": 7,
+      "seconds": 8.48,
+      "public_tests": [
+        "backend/tests/test_service_ci_dependencies.py",
+        "backend/tests/test_original_unchanged_flow_save_lifetime.py",
+        "backend/tests/test_application_final_drain_diagnostic.py"
+      ]
+    }
+  },
+  "proof_scope": {
+    "getter": "Captured original resident bound method is called once inside the same original reentrant execution-state lock.",
+    "result": "Same actual dictionary observed under the outer lock, with original helper and API frames, MethodType, request, worker and context identities; both lock acquisitions must finish.",
+    "live_getter_frame_claim": false,
+    "producer_cohort_or_preflight_guard_changed": false,
+    "PUT_configuration_coverage": false,
+    "model_load_or_execute_added": false,
+    "whole_writer_coverage": false,
+    "can_release_launch_lease": false,
+    "parent_acceptance": false
+  },
+  "compiled_predecessor": {
+    "backend_and_assembly_exit": 0,
+    "full_artifact_reader_exit": 0,
+    "source_guard_bind_exit": 1,
+    "reason": "Predecessor metadata hook changed inference engine bytes outside its existing producer cohort.",
+    "installed_fixture_or_lease_created": false,
+    "native_or_parent_acceptance": false
+  },
+  "independent_source_review_sha256": "1f4706ec9b12885ef2d4426b19bdd25e64b534bd1f3ab887dae2b6b568d1b162",
+  "changed_source_sha256": {
+    "backend/api/routes_flowchart.py": "e98d5fe35251d40570f6bc2828cf4dcce0578708f808ea88704fdccdaeeba081",
+    "backend/engine/original_owned_flow_request.py": "f76191425b26b05785b9de58df622b0e48e2be89063254a49c4da0825890f91f",
+    "backend/engine/flowchart_engine.py": "958fb9f1d1047d351615f435b3ec16cb4dd5a5d21415ce886948b822f9bf7cba",
+    "backend/tests/test_original_resident_execution_resources.py": "30d20180e2b2b6693cabfe9f5ba72f661264577a31143d195380cde9e250bf6c"
+  },
+  "limitations": [
+    "A new compiled installed-app QA pass is required for this source.",
+    "Predecessor artifacts keep their actual earlier source identity.",
+    "No equipment, model-quality, signing, pilot or release acceptance is implied."
+  ]
+}

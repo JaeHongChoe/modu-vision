@@ -48,11 +48,29 @@ def observe_original_flow_resource_engines(default_engine, cpu_engine, kind):
             default_engine._execution_state_lock,cpu_engine._execution_state_lock)
 
 
-def observe_original_flow_resource_result(engine, result):
+def original_flow_resource_call(engine):
+    """Call the original resident getter once; inspect its result under its real RLock."""
+    method = engine.execution_resources
     attempt = _ACTIVE.get()
-    if type(attempt)is not _FlowAttempt or attempt.name!='execution_resources':return
-    try:attempt.resource_observation(engine,result,sys._getframe(1))
-    except Exception:attempt.fail('resource_inspection_failed')
+    if type(attempt)is not _FlowAttempt or attempt.name!='execution_resources':return method()
+    lock = engine._execution_state_lock
+    frame = sys._getframe()
+    try:valid = attempt.resource_entry(engine,method,lock,frame)
+    except Exception:
+        attempt.fail('resource_inspection_failed');valid=False
+    if not valid:return method()
+    call = attempt.resource_call
+    try:
+        with lock:
+            result = method()
+            try:attempt.resource_observation(engine,result,frame)
+            except Exception:attempt.fail('resource_inspection_failed')
+            return result
+    finally:
+        # The outer lock has exited before the handler can claim this result.
+        if attempt.resource_call is call:attempt.resource_call=(*call[:5],None)
+        else:attempt.fail('resource_call_changed')
+        frame=call=None
 
 
 def _observe_flow_get(kind, *values):
@@ -478,10 +496,10 @@ class OriginalOwnedFlowRequest:
                 'observe_original_flow_draft_atomic','observe_original_flow_draft_active_return',
                 '_legacy_owner','_get_pipeline_unlocked','_single_inspection_template','_pipeline_matches_recipe',
                 'DEFAULT_PIPELINE_FILE','get_single_segmentation_flowchart','observe_original_flow_recipe_read',
-                '_ENGINE','_CPU_ENGINE','FlowchartEngine',
+                '_ENGINE','_CPU_ENGINE','FlowchartEngine','original_flow_resource_call',
                 'observe_original_flow_no_legacy','observe_original_flow_recipe_return')),
             (flowchart_engine, ('get_single_segmentation_flowchart','FlowchartPipeline','FlowNode','FlowNodeData','FlowEdge',
-                'FlowchartEngine','observe_original_flow_resource_result','os')),
+                'FlowchartEngine','os')),
             (flowchart_engine.FlowchartEngine, ('execution_resources',)),
             (retained_preprocessors, ('resolve_retained_rotation','retained_rotation_jobs','read_registered_project',
                 '_source_model','_location','_target','_path','_pin','_json','_exact','_raw','_require',
@@ -742,7 +760,7 @@ class _FlowAttempt:
         self.draft_prior=self.draft_prior_binding=None;self.draft_read_pins=[]
         self.get_stages=();self.get_read=None;self.get_no_legacy=None;self.get_return=None
         self.template_constructor=None;self.template_value=None;self.get_result_binding=None
-        self.resource_state=None;self.resource_result=None;self.resource_result_binding=None
+        self.resource_state=None;self.resource_result=None;self.resource_result_binding=None;self.resource_call=None
         self.auth=_FlowAuth(self,headers,project,token)
 
     def fail(self,reason):
@@ -875,18 +893,45 @@ class _FlowAttempt:
             frame=frame.f_back
         return None
 
-    def resource_observation(self,engine,result,frame):
+    def resource_entry(self,engine,method,lock,frame):
         from backend.api import routes_flowchart as flows
         origin=_RESIDENT_RESOURCE_ORIGIN
         caller=frame.f_back;function=self.owner.handlers[self.name][1]
         selected=origin[1] if self.values.get('device')=='cpu' else origin[0]
         project=self.scope.get('state',{}).get('scoped_project')
-        valid=(self.worker_original() and self.handler_frame() is not None and self.name=='execution_resources'
-            and self.owner.resident_resources_original() and engine is selected and self.resource_state is None
+        valid=(self.worker_original() and self.name=='execution_resources'
+            and self.owner.resident_resources_original() and engine is selected and self.resource_call is None
+            and self.resource_state is None and self.resource_result is None
             and type(project)is dict and self.resolutions and all(item is project for item in self.resolutions)
-            and frame.f_code is origin[4] and frame.f_locals.get('self') is engine and frame.f_locals.get('result') is result
-            and caller is not None and caller.f_code is function.__code__ and caller.f_locals.get('request') is self.request
-            and caller.f_locals.get('device') is self.values.get('device') and engine._execution_state_lock._is_owned()
+            and sys._getframe(1) is frame and frame.f_code is original_flow_resource_call.__code__
+            and frame.f_locals.get('engine') is engine and frame.f_locals.get('method') is method
+            and frame.f_locals.get('lock') is lock and frame.f_locals.get('attempt') is self
+            and caller is not None and self.handler_frame() is caller and caller.f_code is function.__code__
+            and caller.f_locals.get('request') is self.request and caller.f_locals.get('selected') is engine
+            and caller.f_locals.get('device') is self.values.get('device')
+            and type(method)is MethodType and method.__self__ is engine and method.__func__ is origin[3]
+            and method.__func__.__code__ is origin[4] and lock is origin[6 if self.values.get('device')=='cpu' else 5]
+            and engine._execution_state_lock is lock and type(lock)is self.owner.lock_type and not lock._is_owned())
+        if not valid:self.fail('resident_resource_entry');return False
+        self.resource_call=(self,self.token,engine,method,lock,frame)
+        return True
+
+    def resource_observation(self,engine,result,frame):
+        origin=_RESIDENT_RESOURCE_ORIGIN
+        caller=frame.f_back;function=self.owner.handlers[self.name][1];call=self.resource_call
+        valid=(self.worker_original() and self.name=='execution_resources'
+            and self.owner.resident_resources_original() and type(call)is tuple and len(call)==6
+            and call[0] is self and call[1] is self.token and call[2] is engine and call[5] is frame
+            and self.resource_state is None and sys._getframe(1) is frame
+            and frame.f_code is original_flow_resource_call.__code__ and frame.f_locals.get('engine') is engine
+            and frame.f_locals.get('method') is call[3] and frame.f_locals.get('lock') is call[4]
+            and frame.f_locals.get('attempt') is self and frame.f_locals.get('valid') is True
+            and frame.f_locals.get('call') is call and frame.f_locals.get('result') is result
+            and caller is not None and self.handler_frame() is caller and caller.f_code is function.__code__
+            and caller.f_locals.get('request') is self.request and caller.f_locals.get('selected') is engine
+            and caller.f_locals.get('device') is self.values.get('device')
+            and type(call[3])is MethodType and call[3].__self__ is engine and call[3].__func__ is origin[3]
+            and call[3].__func__.__code__ is origin[4] and engine._execution_state_lock is call[4] and call[4]._is_owned()
             and type(engine._max_device_concurrency)is int and 1<=engine._max_device_concurrency<=8
             and type(engine._active_executions)is int and engine._active_executions>=0
             and type(result)is dict and set(result)=={'device','engine_device_capacity','active_executions',
@@ -899,15 +944,23 @@ class _FlowAttempt:
                 'configuration_available':engine.device.type=='cpu','cpu_configuration_available':True,
                 'gpu_capacity_requires_reservation':engine.device.type!='cpu'})
         if not valid:self.fail('resident_resource_result');return
-        self.resource_state=(self,self.token,engine,engine._execution_state_lock,engine.device,
+        self.resource_state=(self,self.token,engine,call[4],engine.device,
             engine._max_device_concurrency,engine._active_executions)
         self.resource_result=result;self.resource_result_binding=_draft_capture(result,(),[32])
 
+    def resource_call_closed(self):
+        call=self.resource_call;state=self.resource_state;origin=_RESIDENT_RESOURCE_ORIGIN
+        return (type(call)is tuple and len(call)==6 and call[0] is self and call[1] is self.token
+            and state is not None and call[2] is state[2] and call[4] is state[3] and call[5] is None
+            and type(call[3])is MethodType and call[3].__self__ is call[2]
+            and call[3].__func__ is origin[3] and call[3].__func__.__code__ is origin[4]
+            and not call[4]._is_owned())
+
     def resource_response_original(self):
-        """The actual getter result stays in custody after its own lock exits."""
+        """The same actual result stays in custody after both RLock acquisitions exit."""
         try:
             state=self.resource_state
-            return (state is not None and state[0] is self and state[1] is self.token
+            return (state is not None and state[0] is self and state[1] is self.token and self.resource_call_closed()
                 and self.owner.resident_resources_original() and self.resource_result_binding is not None
                 and self.result is self.resource_result and _draft_original(self.result,self.resource_result_binding)
                 and state[2]._execution_state_lock is state[3] and not state[3]._is_owned()
@@ -919,9 +972,10 @@ class _FlowAttempt:
         # self.result is assigned by the unchanged outer returned() only afterward.
         held=self.resource_result
         return (result is held and self.resource_state is not None and self.resource_result_binding is not None
-            and _draft_original(result,self.resource_result_binding) and self.owner.resident_resources_original()
-            and not self.resource_state[3]._is_owned() and not self.locked and not self.publications
-            and self.audit_db is None and self.audit_result is None and not self.model_calls and not self.retained_sources
+            and self.resource_call_closed() and _draft_original(result,self.resource_result_binding)
+            and self.owner.resident_resources_original() and not self.resource_state[3]._is_owned()
+            and not self.locked and not self.publications and self.audit_db is None and self.audit_result is None
+            and not self.model_calls and not self.retained_sources
             and not self.get_stages and self.get_read is None and self.template_value is None)
 
     def get_observation(self,kind,values,helper_frame):
