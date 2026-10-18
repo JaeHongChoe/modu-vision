@@ -4,7 +4,9 @@
   "authority": {
     "kind": "direct_user_instruction",
     "instruction": "장비 검증과 앱 검증으로 못하는건 일단 넘기자 나도 확인이 어려운거니",
-    "recorded_on": "2026-10-18"
+    "recorded_on": "2026-10-18",
+    "clarification": "아아 내말은 장비 검증같은 부분은 스킵하는데 할 수 있는부분은 진행하자는 말이야",
+    "latest_clarification_controls": true
   },
   "decisions": [
     {
@@ -15,14 +17,15 @@
     },
     {
       "domain": "actual_application_validation",
-      "state": "deferred_for_current_work",
-      "scope": "Blocked actual GUI, installed-app, native lifecycle and manual app-validation runs. Suspend further app launches, rebuild/setup loops undertaken only for these checks.",
+      "state": "continue_when_locally_executable",
+      "scope": "Continue local GUI, installed-app, lifecycle and automated validation when executable by the agent. Defer only checks actually blocked by unavailable equipment or required direct human verification; do not suspend all app validation.",
       "original_acceptance_preserved": true
     }
   ],
   "continue": [
     "Source review and necessary code corrections",
     "Unit, contract and controlled in-process automated tests",
+    "Locally executable GUI, installed-app and lifecycle validation using available resources and existing authorized scopes",
     "Static dependency, CI, source integrity and publication checks",
     "Authorized bounded cleanup of completed temporary build outputs"
   ],
