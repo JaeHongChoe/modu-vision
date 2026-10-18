@@ -23,7 +23,10 @@ from backend.engine.original_owned_account_request import _headers, _SelectedCur
 
 _ACTIVE = ContextVar('original_owned_flow_request', default=None)
 _HANDLERS = {}
+_TEMPLATE_CONSTRUCTOR_ORIGIN = None
 _SPEC = {
+    'get_pipeline':('GET','/api/flowchart/pipeline'),
+    'get_single_segmentation_template':('GET','/api/flowchart/templates/single-segmentation'),
     'list_saved_pipelines':('GET','/api/flowchart/pipelines'),
     'get_active_pipeline_record':('GET','/api/flowchart/pipeline/active/record'),
     'get_saved_pipeline_version':('GET','/api/flowchart/pipelines/{version_id}'),
@@ -32,6 +35,44 @@ _SPEC = {
     'catalog_flowchart_models':('GET','/api/flowchart/models/catalog'),
     'verify_flowchart_models':('POST','/api/flowchart/models/verify'),
 }
+
+
+def _observe_flow_get(kind, *values):
+    """New optional inspection only; never replace the original business error."""
+    attempt = _ACTIVE.get()
+    if type(attempt) is not _FlowAttempt or attempt.name not in {'get_pipeline', 'get_single_segmentation_template'}:
+        return
+    try:
+        attempt.get_observation(kind, values, sys._getframe(1))
+    except Exception:
+        attempt.fail('get_inspection_failed')
+
+
+def observe_original_flow_no_legacy(project_dir, claim):
+    _observe_flow_get('no_legacy', project_dir, claim, sys._getframe(1))
+
+
+def observe_original_flow_recipe_read(stage, path, handle, data=None):
+    """Inspect the actual original json.load handle; never consume it again."""
+    _observe_flow_get('recipe_'+stage, path, handle, data, sys._getframe(1))
+
+
+def observe_original_flow_recipe_return(path, target, pipeline):
+    _observe_flow_get('recipe_return', path, target, pipeline, sys._getframe(1))
+
+
+def observe_original_jobless_template_constructor(function):
+    """Retain the first real route-import constructor, never a later clone."""
+    global _TEMPLATE_CONSTRUCTOR_ORIGIN
+    @wraps(function)
+    def observed(*args, **kwargs):
+        _observe_flow_get('template_enter', function, args, kwargs, sys._getframe(1))
+        result = function(*args, **kwargs)
+        _observe_flow_get('template_return', function, result)
+        return result
+    if _TEMPLATE_CONSTRUCTOR_ORIGIN is None:
+        _TEMPLATE_CONSTRUCTOR_ORIGIN = (observed,function,observed.__code__,function.__code__)
+    return observed
 
 
 def _draft_capture(value,kinds,budget,depth=0):
@@ -360,7 +401,7 @@ class OriginalOwnedFlowRequest:
         from backend.contracts.context import ContextRegistry
         from backend.engine import (config_audit, original_current_project_request, shared_accounts,
             annotation_storage, checkpoint_paths, dataset_fingerprint, retained_preprocessors,
-            specialized_models, rotation)
+            specialized_models, rotation, flowchart_engine)
         from backend.api import routes_dataset_versions, routes_patch_classification
         from backend.engine import patch_classification, source_aliases
         from backend.engine import original_owned_flow_execution_request
@@ -416,7 +457,11 @@ class OriginalOwnedFlowRequest:
                 '_resolve_project_specialist','_registered_retained_source','resolve_specialized_checkpoint',
                 'valid_flow_job','SPECIALIZED_TASKS','_draft_context','_draft_file','_draft_active_version',
                 'FlowDraftSaveRequest','FlowchartPipeline','pipeline_sha256','original_flow_draft_read_text',
-                'observe_original_flow_draft_atomic','observe_original_flow_draft_active_return')),
+                'observe_original_flow_draft_atomic','observe_original_flow_draft_active_return',
+                '_legacy_owner','_get_pipeline_unlocked','_single_inspection_template','_pipeline_matches_recipe',
+                'DEFAULT_PIPELINE_FILE','get_single_segmentation_flowchart','observe_original_flow_recipe_read',
+                'observe_original_flow_no_legacy','observe_original_flow_recipe_return')),
+            (flowchart_engine, ('get_single_segmentation_flowchart','FlowchartPipeline','FlowNode','FlowNodeData','FlowEdge')),
             (retained_preprocessors, ('resolve_retained_rotation','retained_rotation_jobs','read_registered_project',
                 '_source_model','_location','_target','_path','_pin','_json','_exact','_raw','_require',
                 'SCHEMA','DIRECTORY','_PIN_NAMES')),
@@ -436,9 +481,9 @@ class OriginalOwnedFlowRequest:
             (dataset_fingerprint, ('fingerprint_dataset','_files_under','_update_file','request_project_root')),
             (routes_dataset, ('_split_manifest_file','STUDIO_ANNOTATIONS_DIR')),
             (annotation_storage, ('request_project_root','request_shared_scope')),
-            (self.manager_kind, ('get_job',)), (Path, ('open','read_text','read_bytes','mkdir','unlink','lstat','stat','resolve','is_file','exists')),
+            (self.manager_kind, ('get_job',)), (Path, ('open','read_text','read_bytes','mkdir','unlink','lstat','stat','resolve','is_file','exists','glob','_glob_selector','is_symlink')),
             (io, ('text_encoding','TextIOWrapper','open')),
-            (io.TextIOWrapper, ('write','flush','close','read','fileno','__enter__','__exit__')),
+            (io.TextIOWrapper, ('write','flush','close','read','fileno','tell','__enter__','__exit__')),
             (tempfile._TemporaryFileWrapper, ('__enter__','__exit__')),
             (tempfile._TemporaryFileCloser, ('cleanup','close')),
             (original_owned_UI_ancillary_request, ('original_UI_ancillary_read_text','observe_original_UI_draft_active_return')),
@@ -462,7 +507,7 @@ class OriginalOwnedFlowRequest:
             (tempfile, ('NamedTemporaryFile','_mkstemp_inner','_sanitize_params','_infer_return_type')),
             (time, ('time_ns',)),
             (builtins, ('open',)), (json, ('load','dump','loads','dumps')), (hashlib, ('sha256',)),
-            (sys.modules[__name__], ('_ACTIVE','_HANDLERS','_SPEC','_context','_headers','_SelectedCurrentAuth',
+            (sys.modules[__name__], ('_ACTIVE','_HANDLERS','_SPEC','_TEMPLATE_CONSTRUCTOR_ORIGIN','_context','_headers','_SelectedCurrentAuth',
                 'OriginalOwnedFlowRequest','_FlowAttempt','_FlowAuth','_FlowIncluded')),
         ) for name in names]
         for name,(endpoint,function) in self.handlers.items(): self.calls.append((flows,name,function))
@@ -489,6 +534,12 @@ class OriginalOwnedFlowRequest:
         self.eligible = (set(self.handlers)==set(_SPEC) and type(self.lock) is self.lock_type
             and all(type(route) is self.route_kind for route in self.routes.values())
             and flows._resolve_job_artifacts.__wrapped__ is routes_evaluation._resolve_job_artifacts
+            and type(_TEMPLATE_CONSTRUCTOR_ORIGIN)is tuple and len(_TEMPLATE_CONSTRUCTOR_ORIGIN)==4
+            and flows.get_single_segmentation_flowchart is _TEMPLATE_CONSTRUCTOR_ORIGIN[0]
+            and flowchart_engine.get_single_segmentation_flowchart is _TEMPLATE_CONSTRUCTOR_ORIGIN[1]
+            and flows.get_single_segmentation_flowchart.__wrapped__ is _TEMPLATE_CONSTRUCTOR_ORIGIN[1]
+            and flows.get_single_segmentation_flowchart.__code__ is _TEMPLATE_CONSTRUCTOR_ORIGIN[2]
+            and flowchart_engine.get_single_segmentation_flowchart.__code__ is _TEMPLATE_CONSTRUCTOR_ORIGIN[3]
             and type(self.registry) is ContextRegistry
             and flows.get_current_project is routes_project.get_current_project is main.get_current_project
             and routes_project.get_current_project is original_current_project_request._DECORATED.get('resolution')
@@ -651,6 +702,8 @@ class _FlowAttempt:
         self.draft_pin=None;self.draft_reads=[];self.draft_active=[]
         self.draft_record_binding=None
         self.draft_prior=self.draft_prior_binding=None;self.draft_read_pins=[]
+        self.get_stages=();self.get_read=None;self.get_no_legacy=None;self.get_return=None
+        self.template_constructor=None;self.template_value=None;self.get_result_binding=None
         self.auth=_FlowAuth(self,headers,project,token)
 
     def fail(self,reason):
@@ -678,6 +731,7 @@ class _FlowAttempt:
                 and _draft_original(self.draft_prior,self.draft_prior_binding[1]))
             and (self.values is None or self.values.get(
                 'http_request' if self.name=='verify_flowchart_models' else 'request') is self.request)
+            and (self.get_result_binding is None or _draft_original(self.result,self.get_result_binding))
             and self.activity.scope is self.scope and self.scope.get('query_string',b'') is self.query
             and _headers(self.scope)==self.headers
             and (self.header_container is None or self.scope.get('headers') is self.header_container))
@@ -746,6 +800,9 @@ class _FlowAttempt:
                     or not 1<=len(body.models)<=24 or any(type(model) is not FlowchartModelReference for model in body.models)):
                 valid=False
             else:self.model_body=body,body.source_dataset_path,tuple((model,model.job_id,model.task) for model in body.models)
+        if self.name=='get_single_segmentation_template':
+            valid=(valid and values.get('job_id') is None and type(values.get('inspection_task'))is str
+                and values['inspection_task'] in {'segmentation','classification','anomaly','patch_classification','ocr','rotated_detection'})
         self.header_container=self.scope.get('headers');self.auth.header_container=self.header_container
         if not valid:self.fail('handler_entry')
         return valid
@@ -774,6 +831,141 @@ class _FlowAttempt:
                 return frame if frame.f_locals.get(field) is self.request else None
             frame=frame.f_back
         return None
+
+    def get_observation(self,kind,values,helper_frame):
+        from backend.api import routes_flowchart as flows
+        if not self.worker_original() or self.handler_frame() is None:
+            self.fail('get_observation_owner');return
+        project=self.scope.get('state',{}).get('scoped_project')
+        if type(project)is not dict or not self.resolutions or any(item is not project for item in self.resolutions):
+            self.fail('get_observation_context');return
+        if self.name=='get_pipeline':
+            task=self.values.get('inspection_task');source=self.values.get('source_dataset_path')
+            if type(task)is not str or type(source)is not str or source!=project.get('source_dataset_dir'):
+                self.fail('recipe_scope');return
+            root=Path(project['project_dir'])
+            expected=root/'flowcharts'/('pipeline_'+task+'_'+hashlib.sha256(source.encode()).hexdigest()[:16]+'.json')
+            if kind=='no_legacy':
+                directory,claim,frame=values
+                valid=(self.get_no_legacy is None and self.get_read is None
+                    and helper_frame.f_code is observe_original_flow_no_legacy.__code__
+                    and frame.f_code is flows._legacy_owner.__code__ and frame.f_locals.get('project_dir') is directory
+                    and frame.f_locals.get('claim') is claim and directory==root
+                    and claim==flows.DEFAULT_PIPELINE_FILE.parent/'.legacy_flowchart_owner.json'
+                    and not claim.exists() and not claim.is_symlink()
+                    and self.owner.lock._is_owned())
+                if not valid:self.fail('recipe_legacy_branch')
+                else:self.get_no_legacy=(self,self.token,directory,claim)
+                return
+            if kind=='recipe_open':
+                path,handle,data,frame=values
+                valid=(self.get_no_legacy is not None and self.get_read is None and data is None
+                    and helper_frame.f_code is observe_original_flow_recipe_read.__code__
+                    and frame.f_code is flows._get_pipeline_unlocked.__wrapped__.__code__
+                    and frame.f_locals.get('f') is handle and frame.f_locals.get('path') is path
+                    and frame.f_locals.get('project_dir')==root and frame.f_locals.get('candidates',[None])[0]==(path,path)
+                    and type(handle)is io.TextIOWrapper and path==expected and path.resolve(strict=True)==path
+                    and not any(part.is_symlink() for part in (path,*path.parents)) and self.owner.lock._is_owned())
+                info=path.lstat();fd=os.fstat(handle.fileno())
+                valid=(valid and stat.S_ISREG(info.st_mode) and info.st_nlink==1 and info.st_uid==os.getuid()
+                    and info.st_size<=4*1024*1024 and _draft_raw9(fd)==_draft_raw9(info))
+                if not valid:self.fail('recipe_open_identity')
+                else:self.get_read=(self,self.token,path,handle,tuple(_draft_raw9(info)),None)
+            elif kind in {'recipe_read','recipe_closed'}:
+                path,handle,data,frame=values;held=self.get_read
+                valid=(held is not None and held[0] is self and held[1] is self.token and held[2]==path and held[3] is handle
+                    and helper_frame.f_code is observe_original_flow_recipe_read.__code__
+                    and frame.f_code is flows._get_pipeline_unlocked.__wrapped__.__code__
+                    and frame.f_locals.get('f') is handle and frame.f_locals.get('path') is path
+                    and frame.f_locals.get('data') is data
+                    and self.owner.lock._is_owned() and tuple(_draft_raw9(path.lstat()))==held[4])
+                if kind=='recipe_read':
+                    valid=(valid and self.get_stages==('recipe_open',) and not handle.closed
+                        and tuple(_draft_raw9(os.fstat(handle.fileno())))==held[4] and handle.tell()==held[4][4])
+                    if valid:self.get_read=(*held[:5],_draft_capture(data,(),[65536]))
+                else:
+                    valid=(valid and self.get_stages==('recipe_open','recipe_read') and handle.closed
+                        and _draft_original(data,held[5]))
+                if not valid:self.fail('recipe_read_lifetime')
+            elif kind=='recipe_return':
+                path,target,pipeline,frame=values;held=self.get_read
+                valid=(held is not None and self.get_return is None and self.get_stages==('recipe_open','recipe_read','recipe_closed')
+                    and helper_frame.f_code is observe_original_flow_recipe_return.__code__
+                    and frame.f_code is flows._get_pipeline_unlocked.__wrapped__.__code__
+                    and frame.f_locals.get('path') is path and frame.f_locals.get('migration_target') is target
+                    and path is target and path==expected and frame.f_locals.get('pipeline') is pipeline
+                    and _draft_original(frame.f_locals.get('data'),held[5]) and held[3].closed
+                    and tuple(_draft_raw9(path.lstat()))==held[4] and self.owner.lock._is_owned())
+                if not valid:self.fail('recipe_return_identity')
+                else:self.get_return=(self,self.token,pipeline)
+                return
+            else:
+                self.fail('unexpected_recipe_effect');return
+            self.get_stages+=kind,
+        else:
+            if kind=='template_enter':
+                function,args,kwargs,frame=values
+                origin=_TEMPLATE_CONSTRUCTOR_ORIGIN
+                valid=(self.name=='get_single_segmentation_template' and self.template_constructor is None
+                    and helper_frame.f_code is origin[2] and helper_frame.f_locals.get('function') is origin[1] is function
+                    and helper_frame.f_locals.get('args') is args and helper_frame.f_locals.get('kwargs') is kwargs
+                    and not args and kwargs=={'job_id':None} and self.values.get('job_id') is None
+                    and frame.f_code is flows._single_inspection_template.__code__
+                    and frame.f_locals.get('job_id') is None and not self.owner.lock._is_owned()
+                    and flows.get_single_segmentation_flowchart.__wrapped__ is function)
+                if not valid:self.fail('template_constructor_entry')
+                else:self.template_constructor=(self,self.token,function)
+            elif kind=='template_return':
+                function,result=values
+                held=self.template_constructor
+                origin=_TEMPLATE_CONSTRUCTOR_ORIGIN
+                valid=(held is not None and held[0] is self and held[1] is self.token and held[2] is function and self.template_value is None
+                    and helper_frame.f_code is origin[2] and helper_frame.f_locals.get('function') is origin[1] is function
+                    and helper_frame.f_locals.get('result') is result
+                    and not self.owner.lock._is_owned() and type(result)is flows.FlowchartPipeline
+                    and len(result.nodes)==4 and len(result.edges)==3 and all(node.data.model_job_id is None for node in result.nodes))
+                if not valid:self.fail('template_constructor_return')
+                else:self.template_value=(self,self.token,result)
+            else:self.fail('unexpected_template_effect')
+
+    def get_completed_result(self,result):
+        from backend.api import routes_flowchart as flows
+        if (type(result)is not flows.FlowchartPipeline or self.publications or self.audit_db is not None
+                or self.audit_result is not None or self.model_calls or self.retained_sources):return False
+        if self.name=='get_pipeline':
+            held=self.get_read
+            returned=self.get_return;legacy=self.get_no_legacy
+            if (held is None or returned is None or returned[0] is not self or returned[1] is not self.token or returned[2] is not result
+                    or legacy is None or legacy[0] is not self or legacy[1] is not self.token
+                    or legacy[3].exists() or legacy[3].is_symlink()
+                    or self.get_stages!=('recipe_open','recipe_read','recipe_closed') or not held[3].closed
+                    or tuple(_draft_raw9(held[2].lstat()))!=held[4]
+                    or self.locked!=['_project_dir','_get_pipeline_unlocked']):return False
+        else:
+            returned=self.template_value
+            if (returned is None or returned[0] is not self or returned[1] is not self.token or returned[2] is not result
+                    or self.template_constructor is None
+                    or self.get_stages or self.get_read is not None or self.get_no_legacy is not None
+                    or self.locked or self.values.get('job_id') is not None
+                    or len(result.nodes)!=4 or len(result.edges)!=3
+                    or any(node.data.model_job_id is not None for node in result.nodes)):return False
+        kinds=tuple(item[0]for item in self.owner.draft_model_calls)
+        self.get_result_binding=_draft_capture(result,kinds,[65536])
+        return True
+
+    def get_response_original(self):
+        """Only the new optional proof; missing/changed files refuse, not escape."""
+        try:
+            if self.get_result_binding is None or not _draft_original(self.result,self.get_result_binding):return False
+            if self.name=='get_pipeline':
+                held=self.get_read;legacy=self.get_no_legacy
+                return (held is not None and held[0] is self and held[1] is self.token and held[3].closed
+                    and tuple(_draft_raw9(held[2].lstat()))==held[4]
+                    and legacy is not None and legacy[0] is self and legacy[1] is self.token
+                    and not legacy[3].exists() and not legacy[3].is_symlink())
+            return self.name=='get_single_segmentation_template'
+        except Exception:
+            return False
 
     def model_body_original(self):
         body,source,models=self.model_body
@@ -1242,7 +1434,10 @@ class _FlowAttempt:
             and caller.f_locals.get('attempt') is self and caller.f_locals.get('function') is function
             and caller.f_locals.get('values') is self.values and caller.f_locals.get('result') is result
             and len(live)==1 and live[0][0]=='storage_scope' and live[0][1] is self.owner.storage)
-        if self.name=='save_pipeline':
+        if self.name in {'get_pipeline','get_single_segmentation_template'}:
+            try:valid=valid and self.get_completed_result(result)
+            except Exception:valid=False  # New optional inspection cannot replace business return.
+        elif self.name=='save_pipeline':
             valid=(valid and len(self.publications)==3 and self.audit_result is not None and not self.audit_live
                 and type(result) is dict and result.get('version_id')==self.saved_version
                 and result.get('change_id')==self.audit_result.get('change_id'))
@@ -1282,7 +1477,9 @@ class _FlowAttempt:
             and all(kind=='context_db' and registry is self.owner.registry for kind,registry in self.events[:3])
             and self.events[3][0]=='storage_scope' and self.events[3][1] is self.owner.storage
             and self.model_live is None and self.specialist_live is None and self.source_live is None
-            and len(self.resolutions)==(4 if self.name=='get_active_pipeline_record' else
+            and (self.name not in {'get_pipeline','get_single_segmentation_template'} or self.get_response_original())
+            and len(self.resolutions)==(1 if self.name=='get_single_segmentation_template' else
+                4 if self.name=='get_active_pipeline_record' else
                 1+len(self.retained_sources) if self.name=='verify_flowchart_models' else 2)
             and all(result is project for result in self.resolutions)
             and self.auth.original() and self.auth.middleware_calls==self.auth.middleware_returns==1

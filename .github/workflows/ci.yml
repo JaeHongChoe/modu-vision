@@ -118,6 +118,10 @@ jobs:
           backend/tests/test_owned_health_diagnostic.py
           backend/tests/test_owned_health_failure_diagnostic.py
           backend/tests/test_original_request_route_projection.py
+          backend/tests/test_flow_open_additional_route_labels.py
+          backend/tests/test_warm_scoped_get_lifetime.py
+          backend/tests/test_original_owned_flow_lifetime.py
+          backend/tests/test_flowchart_flow_contract.py
           backend/tests/test_application_final_drain_diagnostic.py
           backend/tests/test_original_unchanged_flow_save_lifetime.py
           backend/tests/test_original_owned_library_no_revision.py

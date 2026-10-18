@@ -69,9 +69,12 @@ from backend.engine.original_owned_flow_request import (
     observe_original_flow_model_resolution,
     observe_original_flow_specialist_resolution, observe_original_flow_retained_source,
     observe_original_flow_draft_atomic, original_flow_draft_read_text, observe_original_flow_draft_active_return,
+    observe_original_flow_recipe_read, observe_original_flow_no_legacy, observe_original_flow_recipe_return,
+    observe_original_jobless_template_constructor,
 )
 
 _resolve_job_artifacts = observe_original_flow_model_resolution(_resolve_job_artifacts)
+get_single_segmentation_flowchart = observe_original_jobless_template_constructor(get_single_segmentation_flowchart)
 
 logger = logging.getLogger("vision_ai_studio.routes_flowchart")
 
@@ -147,6 +150,7 @@ def _legacy_owner(project_dir: Path) -> bool:
     claim = DEFAULT_PIPELINE_FILE.parent / ".legacy_flowchart_owner.json"
     if not claim.is_file():
         if not any(DEFAULT_PIPELINE_FILE.parent.glob("pipeline*.json")):
+            observe_original_flow_no_legacy(project_dir, claim)
             return False
         claim.parent.mkdir(parents=True, exist_ok=True)
         try:
@@ -385,7 +389,7 @@ def _single_inspection_template(inspection_task: InspectionTask, job_id: Optiona
     return pipeline
 
 
-@router.get("/pipeline")
+@observe_original_flow_handler(router.get("/pipeline"))
 def get_pipeline(
     inspection_task: PipelineTask = "segmentation", source_dataset_path: Optional[str] = None,
     request: Request = None,
@@ -395,6 +399,7 @@ def get_pipeline(
         return _get_pipeline_unlocked(inspection_task, source_dataset_path, request)
 
 
+@observe_original_flow_locked
 def _get_pipeline_unlocked(
     inspection_task: PipelineTask, source_dataset_path: Optional[str], request: Request,
 ) -> FlowchartPipeline:
@@ -414,7 +419,10 @@ def _get_pipeline_unlocked(
             continue
         try:
             with open(path, "r", encoding="utf-8") as f:
+                observe_original_flow_recipe_read('open', path, f)
                 data = json.load(f)
+                observe_original_flow_recipe_read('read', path, f, data)
+            observe_original_flow_recipe_read('closed', path, f, data)
             pipeline = FlowchartPipeline.model_validate(data)
             ordered_linear_nodes(pipeline)
             if path.name == "pipeline.json" and inspection_task == "detection" and any(
@@ -439,6 +447,7 @@ def _get_pipeline_unlocked(
                                 "recipe_task": inspection_task,
                                 "source_dataset_path": source,
                             })
+                observe_original_flow_recipe_return(path, migration_target, pipeline)
                 return pipeline
             if path.name != "pipeline.json":
                 raise ValueError("Saved flowchart task does not match its recipe file.")
@@ -494,10 +503,11 @@ def get_single_detection_template(job_id: Optional[str] = None) -> FlowchartPipe
     return get_single_detection_flowchart(job_id=job_id)
 
 
-@router.get("/templates/single-segmentation")
+@observe_original_flow_handler(router.get("/templates/single-segmentation"))
 def get_single_segmentation_template(
     job_id: Optional[str] = None,
     inspection_task: InspectionTask = "segmentation",
+    *, request: Request = None,
 ) -> FlowchartPipeline:
     """Create a full-image inspection flow without changing the saved graph."""
     return _single_inspection_template(inspection_task, job_id=job_id)

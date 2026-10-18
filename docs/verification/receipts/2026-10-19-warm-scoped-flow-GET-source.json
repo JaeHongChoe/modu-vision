@@ -1,0 +1,75 @@
+{
+  "schema": "modu-vision.source-regression-receipt/v1",
+  "recorded_date": "2026-10-19",
+  "base_commit": "117cd5be2a167b0fa876022c371adf286dcaaf9f",
+  "change_scope": [
+    "actual warm scoped saved-recipe GET lifetime",
+    "actual jobless single-template GET lifetime",
+    "six additional closed GET diagnostic labels"
+  ],
+  "business_semantics_preserved": true,
+  "guard_scope": {
+    "warm_recipe": "original no-legacy branch; first same-project scoped recipe; original json.load actual FD/read/EOF/closed/data identity; no claimed content digest",
+    "jobless_template": "original constructor and actual return identity; no model_job_id",
+    "larger_or_other_paths": "retain original business response; do not borrow these narrow completion proofs",
+    "blanket_GET_exemption": false,
+    "whole_writer_coverage": false,
+    "can_release_launch_lease": false,
+    "parent_acceptance": false
+  },
+  "actual_tests": {
+    "before_change_causal": {
+      "failed": 2,
+      "seconds": 6.37,
+      "point": "strict drain after real HTTP 200, context echo, normal terminal and unchanged project files"
+    },
+    "focused": {
+      "passed": 15,
+      "seconds": 24.47,
+      "public_test": "backend/tests/test_warm_scoped_get_lifetime.py"
+    },
+    "related_batch": {
+      "passed": 89,
+      "seconds": 24.42,
+      "public_tests": [
+        "backend/tests/test_original_owned_flow_lifetime.py",
+        "backend/tests/test_flowchart_flow_contract.py",
+        "backend/tests/test_original_request_route_projection.py",
+        "backend/tests/test_flow_open_additional_route_labels.py"
+      ],
+      "additional_private_causal_cases": 2
+    },
+    "CI_gates": {
+      "passed": 7,
+      "seconds": 10.12,
+      "public_tests": [
+        "backend/tests/test_service_ci_dependencies.py",
+        "backend/tests/test_original_unchanged_flow_save_lifetime.py",
+        "backend/tests/test_application_final_drain_diagnostic.py"
+      ]
+    },
+    "private_collector_schema": {
+      "passed": 11,
+      "seconds": 0.13,
+      "scope": "separate schema/diagnostic checks; not runtime acceptance"
+    }
+  },
+  "independent_source_reviews": {
+    "warm": "9f647a892b027af5f0f5caecf790e68161a4f4b35cc60d0194c90413de2dc04e",
+    "diagnostic": "c2ce6e3c98bf327d40f9650b1e6696d9bfd9d3f81e5ce928e39f048f02416f99"
+  },
+  "limitations": [
+    "No native attribution of request 78 or 124 established.",
+    "The new source has not yet completed a compiled installed-app QA pass.",
+    "No equipment, signing, model-quality, pilot, release or parent acceptance is implied."
+  ],
+  "changed_source_sha256": {
+    "backend/api/routes_flowchart.py": "86bcac42157243143298f87255849697a8ccd7186171c3d041f7025ae08bbe82",
+    "backend/engine/original_owned_flow_request.py": "58381ddce1f252f7d2aced9b1c1bfb9da27cbff0fc2aff51febb85be2d5d3ab1",
+    "backend/engine/original_request_activity.py": "6c8462a19b2d401c8a4968b07538801e7811c469808ad9885a98eee6bf562485",
+    "backend/tests/test_warm_scoped_get_lifetime.py": "7cc46fbd0f748d3bf09f6b4a26b1638375a308c844a5474c98919fdaa3dd1bbd",
+    "backend/tests/test_flow_open_additional_route_labels.py": "45e29f0d1bbba872d3d68755ac21f6065cb27b4e15ca4da3b71173e98ab9f9f8",
+    ".github/workflows/ci.yml": "6726a336ca5d26cef60d58ea7a5c397482c910316818f618df80de616a9a8766"
+  },
+  "public_test_trailing_blank_line_only_normalized": true
+}
