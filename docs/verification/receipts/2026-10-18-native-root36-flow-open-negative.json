@@ -1,0 +1,66 @@
+{
+  "schema": "modu-vision.local-native-attempt/v1",
+  "recorded_date": "2026-10-18",
+  "product_commit": "117cd5be2a167b0fa876022c371adf286dcaaf9f",
+  "scope": "isolated installed macOS application with retained synthetic source; equipment qualification deferred",
+  "install": {
+    "compiled_preview_exit": 0,
+    "compiled_install_exit": 0,
+    "actual_install_committed": true,
+    "private_test_signer_only": true,
+    "publisher_authority": false
+  },
+  "execution": {
+    "startup_ready": true,
+    "baseline_health_exit": 0,
+    "login_health_exit": 0,
+    "project_health_exit": 0,
+    "gallery_health_exit": 0,
+    "Root_observed_gallery_images": 6,
+    "split_counts": [
+      2,
+      2,
+      2
+    ],
+    "flow_open_health_exit": 2,
+    "further_UI_stopped": true
+  },
+  "observation": {
+    "first_unsupported": {
+      "source": "DIRECT_ENTER",
+      "family": "ADMISSION",
+      "method": "GET",
+      "request_identity": 78,
+      "entered_sequence": 845,
+      "route": "UNKNOWN",
+      "pending_at_observation": true
+    },
+    "failure_count": 0,
+    "uncertain": false,
+    "truncated": false,
+    "exact_URL_proven": false,
+    "prior_native_request_attribution": false
+  },
+  "closure": {
+    "ordinary_quit_requested": true,
+    "original_lifetime_exit": 1,
+    "original_normal_closure_error": "AssertionError",
+    "scoped_closure_proof_emitted": false,
+    "later_original_controller_main_backend_absent": true,
+    "whole_helper_tree_exit_verified": false,
+    "failed_fixture_and_lease_reused": false
+  },
+  "preservation": {
+    "original_model_source_profile_inputs": 68,
+    "before_setup_exact": true,
+    "after_setup_exact": true,
+    "after_UI_exact": true
+  },
+  "acceptance": {
+    "full_native_QA": false,
+    "model_quality": false,
+    "equipment": false,
+    "parent_credit": false,
+    "release_approval": false
+  }
+}

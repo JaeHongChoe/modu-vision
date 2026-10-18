@@ -13,11 +13,14 @@ class ActivityObservationError(ValueError):pass
 
 
 def _flow_open_get_route(path, method):
-    """Public literal labels only; no request ownership or raw-path output."""
+    """Closed public route shapes only; no handler or ownership proof and no raw-path output."""
     if type(path) is not str or type(method) is not str or method != 'GET':
         return 'UNKNOWN'
-    return {
+    literal = {
         '/api/flowchart/pipeline': 'FLOW_PIPELINE',
+        '/api/flowchart/execution-resources': 'FLOW_EXECUTION_RESOURCES',
+        '/api/flowchart/changes': 'FLOW_CHANGES',
+        '/api/export/flow/preflights': 'FLOW_PREFLIGHTS',
         '/api/flowchart/templates/single-segmentation': 'FLOW_SINGLE_SEG_TEMPLATE',
         '/api/evaluation/results': 'EVALUATION_RESULTS',
         '/api/flowchart/models/catalog': 'FLOW_MODEL_CATALOG',
@@ -33,6 +36,21 @@ def _flow_open_get_route(path, method):
         '/api/dataset/library/images': 'LIBRARY_IMAGES',
         '/api/flow-workspace/image-info': 'FLOW_IMAGE_INFO',
     }.get(path, 'UNKNOWN')
+
+    if literal != 'UNKNOWN':
+        return literal
+    prefix = '/api/flowchart/pipelines/'
+    if (len(path) == len(prefix) + 32 and path.startswith(prefix)
+            and all(char in '0123456789abcdef' for char in path[len(prefix):])):
+        return 'FLOW_SAVED_VERSION'
+    prefix = '/api/export/flow/preflights/'
+    if (len(path) == len(prefix) + 32 and path.startswith(prefix)
+            and all(char in '0123456789abcdef' for char in path[len(prefix):])):
+        return 'FLOW_PREFLIGHT_REPORT'
+    prefix = '/api/dataset/thumbnail/'
+    if len(path) > len(prefix) and path.startswith(prefix):
+        return 'DATASET_THUMBNAIL'
+    return 'UNKNOWN'
 
 
 def _context():
