@@ -1,0 +1,57 @@
+{
+  "schema": "modu-vision.current-native-negative-partial-save/v1",
+  "date": "2026-10-18",
+  "attempt": "Root21",
+  "backend_source_HEAD": "6dd2f79ca3d4dc59d4d059d98baf555ab2b192d9",
+  "frontend_source_HEAD": "29110b524e9b9a9dd501a24cc034b82fa6305902",
+  "scope": "Actual installed private native UI SAVE verified; image selection remained clean. After the actual UI Run click, the sixth health interval refused. No final Run result was observed.",
+  "observed": {
+    "baseline_login_flow_SAVE_and_image_selection_healths_1_to_5_clean": true,
+    "SAVE_version_id": "db24cf21cbed40e79f0cb492fa004ca3",
+    "saved_seed_recipe_pipeline_equal": true,
+    "prior_versions_exact_raw9_SHA256": 39,
+    "active_pointer_matches_saved_scope": true,
+    "actual_UI_Run_clicked": true,
+    "final_UI_Run_result_observed": false,
+    "health06_first_poisoned_interval": true,
+    "first_reason_source_match": "owned_flow_selected_compute_profile_entry",
+    "first_reason_specific_HTTP_request_attribution": false,
+    "GPU_dispatch_or_completion_proven": false,
+    "RUN_EXPORT_REOPEN_completed": false,
+    "audit_change_reason_independently_verified": false
+  },
+  "closure": {
+    "original_holder_exit": 1,
+    "normal_quit_requested": true,
+    "main_backend_exited_controller_reaped": true,
+    "signals_sent": false,
+    "strict_lifetime_and_scoped_closure_verified": false,
+    "complete_helper_tree_verified": false,
+    "failed_fixture_and_lease_preserved": true,
+    "protected_original_files_unchanged": 68
+  },
+  "credit": {
+    "new_GUI_cells": 0,
+    "installed_native_acceptance": false,
+    "model_quality": false,
+    "deployment": false,
+    "parent_acceptance": false
+  },
+  "private_evidence_SHA256": {
+    "health_1": "11396a4af4bd2ceab119459c6393106d1cc81aa3fcd30a6f0c40694d4a515216",
+    "health_2": "eef36c762add61eb0ef66e8f4426d88655e21e1fcae872e37f7040fbe14944c6",
+    "health_3": "642a26949f76ba6efbf2ee2bcbc77ae8b9b65f123a99d48c950ed2595780700a",
+    "health_4": "ba838a5ebdf4f6e41602ffc72228b5e707a914e3e619bf6c8ab97e14b5137fb4",
+    "health_5": "ac6fce453ce8ad999a54cc1986ed1c71412011404ba67781d19b7f2c6bf8c8ba",
+    "health_6": "6003ef6325bb61ae3620fa6a94c80c8a66a3ae81e73dd1ab2f016e897604e6df",
+    "lifetime_result": "db0ae1158565c7c469f1c726c8f10f27a2534845e31c751eb203089b129e5b73",
+    "holder_original_tool_final": "f7b29ca938eda191bba0ac59fcb0d7db754f6bc313211667ea1cdf1110c433c4",
+    "after_UI": "fa2266d638a5b55f33aa8a4f907381fa9ed159269a8818790c358c20a6ff7c61",
+    "save_only": "7dce9de8925935e64a9fc61abf544f270f28a9dc4b183809ec13046227dbfb23",
+    "save_reader": "d3eed4f45153a324ee8dd59be216f50a00726dd5ac453f526dc85b93d2640e47",
+    "save_reader_binding": "23565367f1e1b46886c2de3bd9094b96180a165f96a5fb426063e80a5ba7a207",
+    "gpu_before": "534efc89da1300546dbaefaefda7a53e924b11b95d8c2cda0deb6743819ce214",
+    "gpu_after": "68e20cb13a13aa9c6726b3b6b13669787da6fb8435a37aeaa2f62bc4caa339f4",
+    "source_binding": "6838a0b05cf9c60681a2cf690b5c3ae000c5e8b28f383ccb1acc489aec40158b"
+  }
+}
