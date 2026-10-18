@@ -422,6 +422,86 @@ class OriginalRequestActivityObserver:
         with condition:
             return self._snapshot_locked()
 
+    def final_drain_diagnostic(self, admission):
+        """Passive finite projection; no health request, poison, or authority.
+
+        The service calls this after sending its unchanged drain receipt. That
+        receipt and this later sequence are separate observations, not an
+        atomic claim about every request at the instant of the receipt.
+        """
+        if not self._original(admission): return None
+        with self._condition, self._lock:
+            if (not self._original(admission) or admission._closed is not True
+                    or self._middleware is None or self._middleware.app is not self._downstream
+                    or self._sequence != admission._activity_sequence
+                    or type(self._records) is not dict or len(self._records) > 10000
+                    or type(self._request_count) is not int or self._request_count < len(self._records)
+                    or type(self._sequence) is not int or self._sequence < 0
+                    or type(self._settled_history) is not tuple or len(self._settled_history) != 3
+                    or type(self._failures) is not list or len(self._failures) > 32
+                    or type(self._uncertain) is not bool or self._uncertain != bool(self._failures)
+                    or type(admission._active) is not int or admission._active < 0
+                    or type(admission._unsupported) is not set
+                    or not admission._unsupported <= {'uncovered_request_protocol', 'accepted_background_work',
+                        'startup_background_protocols', 'cpu_producer_unconfirmed'}): return None
+            hashes = []
+            for reason in self._failures:
+                if type(reason) is not str or not 1 <= len(reason) <= 256: return None
+                try: hashes.append(hashlib.sha256(reason.encode('utf-8')).hexdigest())
+                except UnicodeEncodeError: return None
+            if len(set(hashes)) != len(hashes): return None
+            routes = {'/health':'HEALTH', '/api/project/current':'PROJECT_CURRENT',
+                '/api/onboarding':'ONBOARDING', '/api/project/list':'PROJECT_LIST',
+                '/api/accounts/config':'ACCOUNTS_CONFIG', '/api/errors':'ERRORS',
+                '/ws/telemetry':'TELEMETRY', '/ws/training':'TRAINING_TELEMETRY'}
+            methods = {'GET', 'HEAD', 'OPTIONS', 'POST', 'PUT', 'PATCH', 'DELETE'}
+            rows = []; previous = 0
+            for row in self._records.values():
+                if type(row) is not dict: return None
+                carrier = row.get('carrier')
+                if (type(carrier) is not _RequestActivity or type(carrier.binding) is not tuple
+                        or len(carrier.binding) != 7 or carrier is not carrier.binding[0]
+                        or carrier.observer is not self or carrier.binding[1] is not self
+                        or carrier.middleware is not self._middleware or carrier.binding[2] is not self._middleware
+                        or carrier.downstream is not self._downstream or carrier.binding[3] is not self._downstream
+                        or carrier.scope is not carrier.binding[4] or carrier.context is not carrier.binding[5]
+                        or type(carrier.ingress) is not dict or tuple(carrier.ingress.items()) != carrier.binding[6]
+                        or type(row.get('ingress')) is not dict or row['ingress'] != carrier.ingress
+                        or type(row.get('identity')) is not int or row['identity'] <= previous
+                        or type(row.get('entered_sequence')) is not int or not 0 < row['entered_sequence'] <= self._sequence
+                        or row.get('released_sequence') is not None and (type(row['released_sequence']) is not int
+                            or not row['entered_sequence'] < row['released_sequence'] <= self._sequence)
+                        or any(type(row.get(key)) is not bool for key in ('accepted', 'released', 'completed',
+                            'normal_return', 'canceled', 'terminal_forwarded'))
+                        or row.get('error_type') is not None and type(row['error_type']) is not str): return None
+                previous = row['identity']; ingress = row['ingress']; status = row.get('response_status')
+                protocol, method, path = (ingress.get(key) for key in ('type', 'method', 'path'))
+                rows.append({key:row[key] for key in ('identity', 'entered_sequence', 'released_sequence',
+                    'accepted', 'released', 'completed', 'normal_return', 'canceled', 'terminal_forwarded')})
+                rows[-1].update(protocol='HTTP' if type(protocol) is str and protocol == 'http' else
+                    'WEBSOCKET' if type(protocol) is str and protocol == 'websocket' else 'UNKNOWN',
+                    method=method if type(method) is str and method in methods else 'NONE' if method is None else 'UNKNOWN',
+                    route=routes.get(path, 'UNKNOWN') if type(path) is str else 'UNKNOWN',
+                    status=status if type(status) is int and 100 <= status <= 599 else None,
+                    error='CANCELLED' if row['canceled'] else 'ERROR' if row['error_type'] is not None else 'NONE')
+            # Keep failed/pending originals first, then the latest normal rows.
+            selected = [row for row in rows if not row['released'] or not row['completed'] or row['error'] != 'NONE'][:16]
+            identities = {row['identity'] for row in selected}
+            for row in reversed(rows):
+                if len(selected) == 16: break
+                if row['identity'] not in identities: selected.append(row); identities.add(row['identity'])
+            selected.sort(key=lambda row:row['identity'])
+            archived = self._settled_history[0]
+            if type(archived) is not int or archived < 0: return None
+            omitted = len(rows) - len(selected) + archived
+            return {'schema':'modu-vision.original-final-drain-diagnostic/v1',
+                'sequence':self._sequence, 'request_count':self._request_count,
+                'active_scopes':admission._active, 'unsupported':sorted(admission._unsupported),
+                'uncertain':self._uncertain, 'reason_sha256':hashes,
+                'retained_records':len(rows), 'omitted_records':omitted,
+                'truncated':bool(omitted) or self._request_count != len(rows), 'records':selected,
+                'whole_writer_coverage':False, 'process_tree_exit_verified':False, 'can_release_launch_lease':False}
+
     def health_diagnostic(self, original_scope):
         """Bounded, sanitized observation only; the health request stays active."""
         condition = self._binding[2] if self._binding is not None else self._lock

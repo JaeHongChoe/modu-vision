@@ -1,0 +1,167 @@
+{
+  "schema": "modu-vision.source-final-managed-drain-diagnostic-validation/v1",
+  "source_only": true,
+  "base": "3856216c50a72fd473b9df99c6a63a8cb7d85ead",
+  "reviewed_private_source_commit": "ff6f660e5c651cb2e2e45cfed7c2a8d7f50af5e3",
+  "implementation_parent": "ad620c48ec58bba1b5756803c9733e1fd34b494a",
+  "scope": "Optional passive observer projection after the original validated drain receipt send and freshness/closing checks; original receipt remains the only managed protocol result.",
+  "source_files": {
+    "backend/engine/application_launch_handshake.py": "f68da6220f647497bf5de682d463ea2b78a5c17a7d969ed2cec6460cd124b678",
+    "backend/engine/original_request_activity.py": "c2eba29de7b0e311f1fc0be20d73d42f219818e30a0851a35e6496556b942232",
+    "backend/tests/test_application_final_drain_diagnostic.py": "66bcfa365ecc33b656176d2c2c1c6082c65562dba6831f5ebc9c96bc3c08f75c",
+    "backend/tests/test_final_drain_stderr_transport.py": "701ffb6c7d7559507bea1395f64b14de10d43417242f671b64e1606595388cf3"
+  },
+  "diagnostic_contract": {
+    "reason_SHA256_limit": 32,
+    "record_limit": 16,
+    "encoded_line_limit_bytes": 8192,
+    "record_selection": "Failed or pending retained original records first; then latest normal records, sorted by original identity. Total request and omitted counts plus truncation remain explicit.",
+    "fields": "Original ordinal identities/sequences, finite method/route/protocol/error enums, status, accepted/released/completed/normal/canceled/terminal-forwarded booleans, sticky failure hashes, sampled active/unsupported.",
+    "not_exported": [
+      "raw path or query",
+      "headers or tokens",
+      "request or response bodies",
+      "raw exception text",
+      "environment or destinations"
+    ],
+    "receipt_relation": "Later observation linked by canonical receipt SHA256; not an atomic snapshot at receipt time and not an exact first-emitter attribution.",
+    "read_only": true,
+    "no_new_health_request": true,
+    "no_poison_or_reset": true,
+    "authority_flags_always_false": [
+      "whole_writer_coverage",
+      "process_tree_exit_verified",
+      "can_release_launch_lease"
+    ]
+  },
+  "transport_contract": {
+    "production_descriptor": 2,
+    "one_os_write_maximum": true,
+    "eligibility": "Only an already O_NONBLOCK FIFO or socket, with SIGPIPE already ignored. All blocking descriptors immediately return unavailable before dup/write.",
+    "custody": "Original and owned duplicate kernel identity/type plus all raw flags are checked; only the owned matching duplicate is closed.",
+    "darwin_kernel_history": "After actual write only, the exact same-object F_GETFL transition 0->1 FWASWRITTEN (0x10000) is separately classified. Every other flag, including O_NONBLOCK, must remain equal; no general mask and no reverse transition.",
+    "unavailable": [
+      "blocking FD",
+      "unproved descriptor or handler",
+      "EAGAIN/error",
+      "partial write",
+      "changed identity/other flags"
+    ],
+    "no_mutations": [
+      "F_SETFL",
+      "socket wrapper",
+      "socket options",
+      "signal handlers",
+      "connect or new destination",
+      "threads",
+      "retries",
+      "flush"
+    ],
+    "native_limit": "Blocking native FD2 receives no optional diagnostic. Installed/native delivery or complete stderr-tail retention has not been executed or established by this receipt."
+  },
+  "projection_RED03": {
+    "exit_code": 1,
+    "passed": 0,
+    "failed": 4,
+    "errors": 0,
+    "skipped": 0,
+    "meaning": "Four intended missing-projection/unavailable-result assertions after the original protocol and genuine ASGI controls.",
+    "test_sha256": "5a113a1110c0ff3df8e8f43d6a54490684636196cedf3e4fb6804277fc9f88a4",
+    "log_sha256": "e0aa37fc36a08cff6dfd7d31a9f6e7142e5592f5ac0045cfd19057ca8956c860",
+    "limit": "The final four source controls explicitly model the descriptor sink for literal FD2; this boundary was revised and is not claimed byte-identical to the original RED test."
+  },
+  "retained_blocked_candidates": {
+    "synchronous_f482": "Four modeled source controls passed, but synchronous stderr could block; never accepted for OS/native emission.",
+    "libc_29653": {
+      "exit_code": 1,
+      "passed": 17,
+      "failed": 2,
+      "errors": 0,
+      "skipped": 0,
+      "failures": [
+        "Empty nonblocking pipe raw F_GETFL gained documented kernel write-history bit",
+        "Actual full blocking STREAM send reached the own 0.25s test alarm"
+      ],
+      "log_sha256": "76fd722f4c71cf2e15b7be16b8098d0406cfcfad9594b9df0d2d3d774d07eac2"
+    },
+    "fresh_syscall_observation": {
+      "raw_os_write_pipe_flags": [
+        5,
+        65541
+      ],
+      "body_bytes": 13,
+      "blocking_stream_alarm": true,
+      "blocking_stream_errno_after_interrupt": 4,
+      "observation_sha256": "484391d8d5e335aea5176a3a6e9ac71cce22bd764708ef5473701395ea506cb6",
+      "meaning": "Independent measurement only; no candidate safety pass."
+    },
+    "other_preparation_failures": "Earlier setup/import/fixture-fill negatives, original interrupted session, all original logs and blocked checkpoints retained. No failed attempt was relabeled as passing."
+  },
+  "simplified_contract_RED": {
+    "exit_code": 1,
+    "passed": 0,
+    "failed": 2,
+    "errors": 0,
+    "skipped": 0,
+    "meaning": "Exact positive raw-write acceptance and immediate blocking-stream refusal assertions failed against the retained prior helper.",
+    "log_sha256": "fe22b2896ecdb12183af8bbf3fc7d698c2bb5908a7f87d91e91d4e2647fd61a8"
+  },
+  "simplified_source_GREEN": {
+    "exit_code": 0,
+    "passed": 23,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 6.09,
+    "private_commit": "587a0af54aa441dda3bd3cd673804e952d15723c",
+    "log_sha256": "8b3079802e96d8791d731b2ac0e1b5043aa42025947f48a098e7c4f46b8d5b75"
+  },
+  "final_integrated_controls": {
+    "exit_code": 0,
+    "passed": 137,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 17.21,
+    "files": [
+      "test_application_final_drain_diagnostic.py",
+      "test_final_drain_stderr_transport.py",
+      "test_application_terminal_drain_closing.py",
+      "test_original_request_activity_witness.py",
+      "test_owned_health_diagnostic.py",
+      "test_owned_health_failure_diagnostic.py"
+    ],
+    "command": "python -B -m pytest -p backend.conftest <the six listed files> -q; fresh private session/basetemp, no HOME override.",
+    "new_controls": 23,
+    "related_original_controls": 114,
+    "real_OS_scope": "Own isolated-process pipes/socketpairs only; nonblocking empty/full STREAM/DGRAM, full blocking refusal, global Python timeout, closed peers, partial one-write result, raw before/after FD and flags. Own test alarm/handler restored; no original/native PID signals.",
+    "modeled_service_scope": "Original factory/ASGI admission/observer plus original terminal service/relay/drain validator; controller/artifact authority, frame/clock boundary and FD2-to-owned-sink binding are explicitly modeled.",
+    "FD_counts": "All OS cases restore owned descriptors; original service deliberately closes its peer once (14->13), recorded separately.",
+    "log_sha256": "c17aebd26624cfd9d6eb15013b6005315a2adcd956245b055231fbd2bb3ccc01",
+    "junit_sha256": "b807cf380630e630e6357570dd34ae926f85ebef2f08c021df310d97614853ed",
+    "actual_tool_start_sha256": "9b29f55c2fca0c34b19fce739080baa15137221f8ae9bbf98674ae424c9c4dc4",
+    "actual_tool_completion_sha256": "0524d3db66e7e78f025be8530dd20c418ba9842829833db6fb02f92129672ec1"
+  },
+  "source_custody": {
+    "tracked_files": 3004,
+    "clean_HEAD": "ff6f660e5c651cb2e2e45cfed7c2a8d7f50af5e3",
+    "before_after_full_raw9_and_SHA256_equal": true,
+    "snapshot_sha256": "c0409c44ab6ca1cc4a40bbafb92183ed53381eb0818f64ea50507a34149e21ce",
+    "published_385_normal_private_merge": true,
+    "four_candidate_file_bodies_unchanged_by_merge": true,
+    "all_original_observer_functions_AST_exact": true,
+    "all_original_handshake_functions_AST_exact_after_removing_the_single_optional_call": true,
+    "preservation_proof_sha256": "d5fb4d116a5b3649726caddf49d9bf7d999e715eddc44a1f8224882612b71910"
+  },
+  "independent_review": "SOURCE-ONLY STATIC ACCEPT at exact product/test hashes; reviewer did not run tests/runtime.",
+  "limits": {
+    "native_or_browser_execution": false,
+    "Root16_exact_cause_proven": false,
+    "installed_stderr_emission_proven": false,
+    "whole_CI_or_release_acceptance": false,
+    "model_or_device_discovery": false,
+    "parent_or_action_cell_credit": false,
+    "protocol_schema_auth_guard_or_clock_change": false,
+    "PUB_mutated_by_this_fixture": false
+  }
+}
