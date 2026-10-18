@@ -1,0 +1,32 @@
+{
+  "schema": "modu-vision.private-verification-image-growth/v1",
+  "date": "2026-10-18",
+  "attempt": "Root07-growth03",
+  "old_virtual_bytes": 68719476736,
+  "new_virtual_bytes": 85899345920,
+  "before_container_free_bytes": 9702490112,
+  "after_container_free_bytes": 26897334272,
+  "after_backing_free_bytes": 50798002176,
+  "deleted_files": 0,
+  "selected_retained_files": 6061,
+  "selected_body_SHA256_and_nondevice_attributes_exact": true,
+  "device_transition_files": 0,
+  "volume_UUID_unchanged": true,
+  "original_owners_enabled_restored_by_normal_remount": true,
+  "verifyVolume_exit_code": 0,
+  "original_modern_probe_exit_code": 1,
+  "original_outer_grow_exit_code": 1,
+  "original_false_owner_guard_preserved": true,
+  "normal_remount_finalizer_exit_code": 0,
+  "force_or_signals": false,
+  "whole_volume_body_integrity_claim": false,
+  "original_process_visibility_limits_retained": true,
+  "original_compile_free_gate_bytes": 12000000000,
+  "original_backing_reserve_bytes": 10000000000,
+  "native_or_parent_credit": false,
+  "private_evidence_SHA256": {
+    "growth_result": "2134ebe18d736d343c72cc2bdcf8c2220bb36648e01029d9c22ddc542c3b1dc1",
+    "growth_plan": "36ef6f6694666b4aaffdf5441a7b8a89a6da4c6fd7e83be4e37c6db1e632ec21",
+    "growth_verify": "171d42e4470c9e06e2bf78685de7f3ab2c3e9ae1c1aaedaedd1225702d3be6c9"
+  }
+}

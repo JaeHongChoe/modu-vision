@@ -1,0 +1,51 @@
+{
+  "schema": "modu-vision.current-native-negative-partial-save/v1",
+  "date": "2026-10-18",
+  "attempt": "Root20",
+  "backend_source_HEAD": "df5e9e8578bcebddcc84a9fd8d734bcc3850f47a",
+  "frontend_source_HEAD": "85a462fc516a68c8d18d52dc92f32b88235e6778",
+  "scope": "Actual installed private native UI SAVE verified; execution stopped before RUN after the first poisoned health interval.",
+  "observed": {
+    "baseline_login_flow_open_and_SAVE_healths_1_to_4_clean": true,
+    "SAVE_version_id": "9c414c0b359245fd8bed0ad9f25531c4",
+    "saved_seed_recipe_pipeline_equal": true,
+    "prior_versions_exact_raw9_SHA256": 37,
+    "active_pointer_matches_saved_scope": true,
+    "GET_IMAGE_INFO_request_121_HTTP200_normal_return": true,
+    "health05_first_poisoned_interval": true,
+    "health05_reason_count": 32,
+    "thumbnail_request_identity_proved": false,
+    "model_run_dispatched": false,
+    "RUN_EXPORT_REOPEN_completed": false,
+    "audit_change_reason_independently_verified": false
+  },
+  "closure": {
+    "original_holder_exit": 1,
+    "normal_quit_requested": true,
+    "main_backend_exited_controller_reaped": true,
+    "signals_sent": false,
+    "strict_lifetime_and_scoped_closure_verified": false,
+    "complete_helper_tree_verified": false,
+    "failed_fixture_and_lease_preserved": true
+  },
+  "credit": {
+    "new_GUI_cells": 0,
+    "installed_native_acceptance": false,
+    "model_quality": false,
+    "deployment": false,
+    "parent_acceptance": false
+  },
+  "private_evidence_SHA256": {
+    "health_1": "278c2aef2b5e8f458f44a270b3ba2f9b94f227f6f37798e85b10132c898ea0c8",
+    "health_2": "a88ff79e76a63c53b15f97c552efdea7849aec01e78d8bc0177f83dfb89e9125",
+    "health_3": "b50604cb3a397e7792a0374be82b034dc3b78bab9e75ab52cfe4e92c0d88518e",
+    "health_4": "7cc1ea511aaf5b377ee7db367558d28f11f55725bd0767377a7aa8200d454a09",
+    "health_5": "b6d80cec0cfc034f1983ccd40899d3604af327854764e77a32a2adce3c5ab115",
+    "lifetime_result": "166a6548a9f7becf0fc505f3e5ebc4490bd68be94bbc837e3cc35fff62ea4619",
+    "after_UI": "de831eff96e48683885b312b9a08dc2e8413392c50c10af58c1e2e8e6f7ad900",
+    "save_only": "c2fc283903a697eea2149cfb50f96c40a3636e17b94ba5e903c1dc2099e90266",
+    "save_reader": "1dce63f8c85db07de94c31a5c56bbdb3e56153b73ec230047d2ff8c6838aaf94",
+    "gpu_readiness": "c2a8f14d41c7ce0ad52d9ba965a4afed3714e4c13141164736af269969eb680c",
+    "source_binding": "b7ca932d74e32a60a234b8e44d7dc37b0007c96b8b3e06e68e4de084da85c1c9"
+  }
+}

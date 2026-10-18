@@ -425,10 +425,11 @@ class OriginalOwnedUIAncillaryRequest:
             (subprocess,('Popen',)),(subprocess.Popen,('__init__','wait','poll','_internal_poll','_wait')),
             (Image,('open','Image')),(Image.Image,('__enter__','__exit__','close')),
             (ImageFile.ImageFile,('load',)),(PngImagePlugin,('PngImageFile',)),(PngImagePlugin.PngImageFile,('_open','load')),
-            (Path,('open','read_text','read_bytes','glob')),(builtins,('open','map','iter','next','staticmethod')),(io,('open','text_encoding','TextIOWrapper','BufferedReader','BufferedRandom','FileIO')),
+            (Path,('open','read_text','read_bytes','glob','resolve','is_symlink','is_relative_to','is_absolute','lstat','stat','is_dir')),(builtins,('open','map','iter','next','staticmethod')),(io,('open','text_encoding','TextIOWrapper','BufferedReader','BufferedRandom','FileIO')),
+            (io.BufferedReader,('fileno',)),
             (json,('load','loads','dump','dumps')),(os,('replace','fsync','getpid','open','fdopen','fstat','close')),
             (sys.modules[__name__],('_ACTIVE','_HANDLERS','_SPEC','_RESOURCES','_PROFILE_KIND','_context','_headers','_SelectedCurrentAuth',
-                'OriginalOwnedUIAncillaryRequest','_AncillaryAttempt','_AncillaryAuth','_AncillaryIncluded','GeneratorType','LockType','_DATASET_NAMES','_DATASET_METADATA_NAMES','_DATASET_OPERATION_ROUTES')),
+                'OriginalOwnedUIAncillaryRequest','_AncillaryAttempt','_AncillaryAuth','_AncillaryIncluded','GeneratorType','LockType','Path','_DATASET_NAMES','_DATASET_METADATA_NAMES','_DATASET_OPERATION_ROUTES')),
         ) for name in names]
         if os.name!='nt':
             import fcntl
@@ -921,6 +922,7 @@ class _AncillaryAttempt:
         self.values_identity=self.original_values_identity=None;self.value_rows=None
         self.events=[];self.inflight={};self.resolutions=[];self.storage=0
         self.files=[];self.images=[];self.contexts=[];self.profiles=[];self.profile_live=None
+        self.selected_image_inputs=[]
         self.metadata=[];self.metadata_live=None;self.processes=[];self.process_live=False
         self.package_rows=[];self.result=None;self.status=None;self.body_binding=None
         self.lease_connections=[];self.job_lists=[];self.job_snapshots=[];self.job_rows=[];self.job_live=None
@@ -1061,6 +1063,62 @@ class _AncillaryAttempt:
             return Path(project['project_dir'])/'flowcharts'/'comparisons'
         return None
 
+    def selected_image_input(self,path,include_source=False):
+        """Narrow additional proof for the original current-project file picker.
+
+        The imported-source/name branch remains separate. New internal PNG and
+        literal preview reads retain their canonical original query and file
+        identity until original HTTP completion; no alias grants ownership.
+        """
+        project=self.scope.get('state',{}).get('scoped_project')
+        if (type(project) is not dict or type(include_source) is not bool
+                or type(path) is not type(Path('.')) or self.original_values is None
+                or self.name not in {'image_info','get_thumbnail'}):return False
+        key='image_path' if self.name=='image_info' else 'file_path'
+        raw=self.original_values.get(key)
+        fields=tuple(project.get(name) for name in ('project_dir','dataset_dir','source_dataset_dir'))
+        if type(raw) is not str or raw!=str(path) or not all(type(value) is str for value in fields):return False
+        root,dataset,source=map(Path,fields)
+        try:
+            roots=(root,dataset,source) if include_source else (root,dataset)
+            if (any(not item.is_absolute() or item.resolve()!=item
+                    or any(part.is_symlink() for part in (item,*item.parents)) for item in (*roots,path))
+                    or dataset!=root/'dataset' or not all(item.is_dir() for item in roots)
+                    or not (path.is_relative_to(dataset) or include_source and path.is_relative_to(source))):return False
+            value=path.lstat()
+            if value.st_mode&0o170000!=0o100000 or value.st_nlink!=1:return False
+            identity=(value.st_dev,value.st_ino,value.st_mode,value.st_nlink,value.st_size,
+                      value.st_mtime_ns,value.st_ctime_ns,value.st_uid,value.st_gid)
+            for held in self.selected_image_inputs:
+                if held[2]==path:
+                    return held[0] is project and held[1]==fields and held[3]==include_source and held[4]==identity
+            if not self.worker_original() or self.handler_frame() is None:return False
+            self.selected_image_inputs.append((project,fields,path,include_source,identity))
+            return True
+        except (OSError,ValueError,TypeError):return False
+
+    def selected_image_handle(self,path,handle,include_source=False):
+        if (type(handle) is not io.BufferedReader or handle.closed
+                or not self.selected_image_input(path,include_source)):return False
+        try:value=os.fstat(io.BufferedReader.fileno(handle))
+        except (OSError,ValueError,TypeError):return False
+        identity=(value.st_dev,value.st_ino,value.st_mode,value.st_nlink,value.st_size,
+                  value.st_mtime_ns,value.st_ctime_ns,value.st_uid,value.st_gid)
+        return any(row[2]==path and row[3]==include_source and row[4]==identity
+                   for row in self.selected_image_inputs)
+
+    def selected_image_inputs_valid(self):
+        if self.name not in {'image_info','get_thumbnail'}:return not self.selected_image_inputs
+        try:
+            project=self.scope['state']['scoped_project']
+            key='image_path' if self.name=='image_info' else 'file_path'
+            path=Path(self.original_values[key]).resolve()
+            imported=path.is_relative_to(Path(project['source_dataset_dir']).resolve())
+            legacy=imported and (self.name=='image_info' or path.name==self.original_values['image_path'])
+            return (len(self.selected_image_inputs)==(0 if legacy else 1)
+                and all(self.selected_image_input(row[2],row[3]) for row in self.selected_image_inputs))
+        except (OSError,ValueError,TypeError,KeyError):return False
+
     def record_file(self,handle,path,role):
         original_path=path;project=self.scope.get('state',{}).get('scoped_project');path=Path(path)
         valid=self.resource_entry('file') and type(project) is dict and (type(handle) in (io.TextIOWrapper,io.BufferedReader,io.BufferedRandom,io.FileIO) or role=='thumbnail_cache' and type(handle) is io.BufferedWriter) and not handle.closed
@@ -1075,7 +1133,8 @@ class _AncillaryAttempt:
                     and any(path.resolve().is_relative_to(r.resolve()) for r in roots))
             else:valid=valid and self.name in _DATASET_NAMES and any(path.resolve().is_relative_to(r.resolve()) for r in roots)
         elif role=='profile':valid=valid and self.profile_live is not None and path==self.profile_live[0].path
-        elif role=='image':valid=valid and path.is_relative_to(source) and self.name in {'image_info','list_dataset_images'}
+        elif role=='image':valid=valid and (path.is_relative_to(source) and self.name in {'image_info','list_dataset_images'}
+            or self.name=='image_info' and self.selected_image_input(path))
         elif role=='flow':
             valid=valid and self.name in {'get_flow_draft','preview_pipeline_change','get_active_version_id'} and path.is_relative_to(root/'flowcharts')
             if self.name=='get_active_version_id':valid=valid and self.owner.flow_lock._is_owned()
@@ -1090,6 +1149,8 @@ class _AncillaryAttempt:
         elif role=='package':valid=valid and self.name=='packages' and path==root/'delivery'/'library.json'
         elif role=='global_project':valid=valid and self.name=='list_projects' and self.global_project_live is not None and path.is_relative_to(self.global_project_live['path'])
         else:valid=False
+        if valid and self.selected_image_inputs and role in {'image','thumbnail_source'}:
+            valid=self.selected_image_handle(path,handle,self.selected_image_inputs[0][3])
         if not valid:self.fail('file_binding')
         self.files.append((handle,path,role))
 
@@ -1098,7 +1159,10 @@ class _AncillaryAttempt:
         handle=getattr(image,'fp',None)
         if type(image) is not self.owner.png_kind or not isinstance(handle,io.IOBase) or handle.closed:valid=False
         project=self.scope.get('state',{}).get('scoped_project');path=Path(path).resolve()
-        if type(project) is not dict or not path.is_relative_to(Path(project['source_dataset_dir'])):valid=False
+        if type(project) is not dict or not (path.is_relative_to(Path(project['source_dataset_dir']))
+                or self.name=='image_info' and self.selected_image_input(path)):valid=False
+        if valid and self.selected_image_inputs:
+            valid=self.selected_image_handle(path,handle,self.selected_image_inputs[0][3])
         if not valid:self.fail('image_binding')
         self.images.append((image,handle,path))
 
@@ -1107,8 +1171,12 @@ class _AncillaryAttempt:
         if type(project) is not dict or self.original_values is None:self.fail('thumbnail_source_scope');return Path('.')
         value=self.original_values.get('file_path')
         source=Path(value).resolve() if type(value) is str else Path('.')
-        if (not source.is_relative_to(Path(project['source_dataset_dir']).resolve())
-                or source.name!=self.original_values.get('image_path')):self.fail('thumbnail_source_binding')
+        original=(source.is_relative_to(Path(project['source_dataset_dir']).resolve())
+            and source.name==self.original_values.get('image_path'))
+        name=self.original_values.get('image_path')
+        selected=(not original and name in {source.name,'preview'}
+            and self.selected_image_input(source,name=='preview'))
+        if not (original or selected):self.fail('thumbnail_source_binding')
         return source
 
     def thumbnail_return(self,result):
@@ -1409,6 +1477,7 @@ class _AncillaryAttempt:
         if self.name=='list_projects':expected=expected[:5]
         resolutions=2 if self.name in {'get_flow_draft','preview_pipeline_change','image_info','packages','reservations','jobs','inputs','comparisons','get_active_version_id',*_DATASET_NAMES} else 1
         return bool(self.original() and not self.failed and self.handler_done and not self.worker_live and not self.inflight and not self.dataset_live
+            and self.selected_image_inputs_valid()
             and (self.name!='get_thumbnail' or self.thumbnail_response_done and not self.thumbnail_response_live)
             and self.storage==1 and self.entries==1 and len(self.events)==(5 if self.name in {'job_events','list_revisions','revision_source_status'} else 4) and len(self.resolutions)==resolutions
             and all(kind=='context_db' and registry is self.owner.registry for kind,registry in self.events[:-1])
@@ -2645,7 +2714,10 @@ def original_dataset_thumbnail_image_open(function,*args,**kwargs):
         and isinstance(handle,io.IOBase) and not handle.closed)
     if type(target) is attempt.owner.thumbnail_spool_kind:
         valid=valid and handle is target and any(row is target for row in attempt.thumbnail_spools)
-    else:valid=valid and type(target) is type(Path('.')) and target.resolve()==attempt.thumbnail_source()
+    else:
+        valid=valid and type(target) is type(Path('.')) and target.resolve()==attempt.thumbnail_source()
+        if valid and attempt.selected_image_inputs:
+            valid=attempt.selected_image_handle(target.resolve(),handle,attempt.selected_image_inputs[0][3])
     if not valid:attempt.fail('thumbnail_image_binding')
     attempt.images.append((image,handle,attempt.thumbnail_source()))
     return image
