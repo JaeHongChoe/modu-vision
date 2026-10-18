@@ -1,0 +1,332 @@
+{
+  "schema": "modu-vision.source-regression-evidence/v1",
+  "task": "S7-05",
+  "scope": "Endurance failure-receipt execution flag correctness only; not a new capacity/soak/target qualification.",
+  "requirement": {
+    "file": "docs/service-upgrade-program.json",
+    "lines": "6635-6638",
+    "contract": "CapacityReceipt(images,pixels,users,workers,queue_rate,duration,resources,errors)",
+    "relevant_existing_requirement": "Retain truthful resource/error evidence including diskquota/refusal in continuous operation."
+  },
+  "source": {
+    "base_public_HEAD": "2f44f6d41127127c102d22f56ceb127102f046f5",
+    "RED_test_only_clean_HEAD": "03394ac910abb852e443cbeb927eb0124e8990b8",
+    "GREEN_private_clean_HEAD": "eadfb0db0e6b34436525fcba97aa03cd3a9d6566",
+    "tracked_count": 2956,
+    "tracked_bytes": 35754993,
+    "only_changed_files": [
+      "scripts/acceptance/inspection_endurance.py",
+      "backend/tests/test_inspection_endurance.py"
+    ],
+    "product_sha256": "df1b4175faa259debae782896c9f939063b4db5ccab0e7236c38cf9cd4399889",
+    "test_sha256": "9d978ccea25355df72b6ab9207efe2b8a6dc9754e94844854519b440129cf313",
+    "full_diff": {
+      "file": "final-two-file.diff",
+      "bytes": 5259,
+      "sha256": "7b7382e934a52806203b3218b50c02ac23f04a490cd3186f20051503c3d438b0"
+    },
+    "unchanged_other_top_level_function_AST": true
+  },
+  "causal_failure": {
+    "old_behavior": "Receipt unconditionally claimed actual_cpu_inference=true before the first free-disk/quota admission and before any engine.execute call.",
+    "actual_RED": {
+      "source_HEAD": "03394ac910abb852e443cbeb927eb0124e8990b8",
+      "source_clean": true,
+      "tracked_count": 2956,
+      "test_sha256": "9d978ccea25355df72b6ab9207efe2b8a6dc9754e94844854519b440129cf313",
+      "pytest_exitcode": 1,
+      "wrapper_seconds": 7.581467582844198,
+      "natural_original_Popen_reaped": true,
+      "signals_sent": false,
+      "isolation_rows": 5,
+      "isolation_errors": [],
+      "all_inputs_before_after_exact": true,
+      "log": {
+        "file": "pytest.log",
+        "bytes": 3592,
+        "sha256": "4b783de54f08eacee3bd252dc5c011571d235e0bdbaea4712f593cf046c33254"
+      },
+      "junit": {
+        "file": "junit.xml",
+        "bytes": 3428,
+        "sha256": "1961d069b6080f7f5ed3010bd04e84f460c90508b2c4286dac70b2f276ab1470"
+      }
+    },
+    "negative": {
+      "status": "failed",
+      "error_type": "RuntimeError",
+      "error": "Owned output quota or free-disk reserve reached",
+      "cycles": 0,
+      "completed": 0,
+      "jobs": 0,
+      "events": 0,
+      "deliveries": 0,
+      "interval_bytes": 0,
+      "minimum_free_bytes": 34149982209,
+      "actual_cpu_inference": true,
+      "receipt": {
+        "file": "receipt.json",
+        "bytes": 112538,
+        "sha256": "97b41814f2a8d3ec2282cc75a2caa1215f4c0308cdde0cb3019738f022b69dfc"
+      }
+    },
+    "intended_assertion": "All exact reserve exception/0jobs/0cycles/empty intervals/preserved input raw9+SHA/signal restoration assertions passed; only true-is-false execution flag failed.",
+    "no_mock_or_disk_fill": "Caller reserve equals actual owned APFS total+1; existing original disk_usage guard fails naturally. No underlying volume or quota is altered.",
+    "negative_checkpoint": "Explicit non-model sentinel bytes, valid only for original input SHA admission before execution. No model parsing/inference occurs in this negative."
+  },
+  "minimal_repair": {
+    "initial_actual_cpu_inference": false,
+    "transition_to_true": "Immediately after original CPU engine.execute returns and its status/verdict/step-error checks pass.",
+    "not_tied_to_requested_run_or_model_initialization": true,
+    "unchanged": "Capacity/range/pin/source-change/deadline/quota/disk checks, REVIEW result, existing failure handler, signal restoration and historical72h evidence."
+  },
+  "GREEN": {
+    "actual": {
+      "source_HEAD": "eadfb0db0e6b34436525fcba97aa03cd3a9d6566",
+      "source_clean": true,
+      "tracked_count": 2956,
+      "test_sha256": "9d978ccea25355df72b6ab9207efe2b8a6dc9754e94844854519b440129cf313",
+      "pytest_exitcode": 0,
+      "wrapper_seconds": 6.646311166929081,
+      "natural_original_Popen_reaped": true,
+      "signals_sent": false,
+      "isolation_rows": 7,
+      "isolation_errors": [],
+      "all_inputs_before_after_exact": true,
+      "log": {
+        "file": "pytest.log",
+        "bytes": 246,
+        "sha256": "78ed3dad5dcbf85ce997015c1e754e9a581203bb77a847541377369c1c6af6ed"
+      },
+      "junit": {
+        "file": "junit.xml",
+        "bytes": 542,
+        "sha256": "470744f125832207d5e7a5f50c0a60a3a12ebc6efd6b6f73bf0e4b1eb3fcf7cb"
+      }
+    },
+    "negative": {
+      "status": "failed",
+      "error_type": "RuntimeError",
+      "error": "Owned output quota or free-disk reserve reached",
+      "cycles": 0,
+      "completed": 0,
+      "jobs": 0,
+      "events": 0,
+      "deliveries": 0,
+      "interval_bytes": 0,
+      "minimum_free_bytes": 34149982209,
+      "actual_cpu_inference": false,
+      "receipt": {
+        "file": "receipt.json",
+        "bytes": 112540,
+        "sha256": "f4d8f9992289269f0432f3f95b853abdb09c77888da08e7134912a7b06b8244c"
+      }
+    },
+    "positive": {
+      "status": "completed",
+      "elapsed_seconds": 0.42733958386816084,
+      "requested_seconds": 0.3,
+      "cycles": 1,
+      "completed": 1,
+      "duplicate_requests": 1,
+      "backpressure_refusals": 1,
+      "actual_cpu_inference": true,
+      "published_verdict": "REVIEW",
+      "soak_72h_completed": false,
+      "receipt": {
+        "file": "receipt.json",
+        "bytes": 112473,
+        "sha256": "31af8655772842664f8840890903dd1fb0130b862e09e6375e2d169a8b798a6a"
+      }
+    },
+    "same_permanent_negative_body_RED_GREEN": true,
+    "selectors": [
+      "backend/tests/test_inspection_endurance.py::test_initial_disk_reserve_refusal_does_not_claim_cpu_inference",
+      "backend/tests/test_inspection_endurance.py::test_real_cpu_flow_retains_review_results_duplicates_backpressure_and_short_run_boundary"
+    ],
+    "pytest_summary": "2 passed in1.17s",
+    "positive_fixture": "Existing generated untrained ResNet18 weights and one32x32PNG in owned private test output. It executes original CPU flow; no real learned model, quality approval or GPU."
+  },
+  "isolation": {
+    "source_count_raw9_SHA_before_after_and_postrun_exact": 2956,
+    "provider_links": 321,
+    "provider_link_witness": "target/inode/mode/mtimeNs/ctimeNs; not raw9",
+    "selected_provider_files_raw9_SHA": 10,
+    "resolved_runtime_files_raw9_SHA": 3,
+    "original_backend_conftest_explicit_preload": true,
+    "fresh_MODU_TEST_DATA_DIR_before_imports": true,
+    "original_reviewed_isolation_probe_sha256": "5a23a61a2e53a318a9d38a8e89069c10e549cda19f34c45cfb1343ceb3acd101",
+    "original120s_pytest_bound": true,
+    "natural_original_pytest_Popen_children_reaped": true,
+    "signals_sent_by_runner": false
+  },
+  "preexecution_attempt_disclosure": {
+    "wrong_expected_product_SHA_was_refused": true,
+    "actual_test_count_in_that_attempt": 0,
+    "output_not_created_in_that_attempt": true,
+    "original_guard_unchanged": true,
+    "actual_original_tool": {
+      "file": "wrong-expected-pin-preflight-original-tool.json",
+      "bytes": 517,
+      "sha256": "e9135e2521aa65c54f9eb3b370f1cb5150c3e23b317e0417cc4e241dabe05c3e"
+    },
+    "subsequent_actual_RED_used_reopened_correct_product_SHA": "867fbbe7309230571217c4ac542aee2e9c9832917653697b1ecb905b187a416a"
+  },
+  "limitations": {
+    "no_new_72h_run": true,
+    "original_a184b1e_72h_terminal_unchanged": true,
+    "no_target_capacity_performance_real_photo_camera_PLC_MES_or_native_claim": true,
+    "no_real_model_or_GPU_write": true,
+    "generated_positive_test_fixture_checkpoint_retained": true,
+    "no_product_UI_or_public_release_acceptance": true,
+    "no_PUB_registry_or_action_count_change": true
+  },
+  "raw_refs_path_redacted": [
+    {
+      "phase": "red",
+      "file": "result.json",
+      "bytes": 21364,
+      "sha256": "b65949c671ee401710ab83373fc6d551a1fa7339d9f8b6e6655d0e784ad9220b"
+    },
+    {
+      "phase": "red",
+      "file": "inputs-before.json",
+      "bytes": 1222542,
+      "sha256": "e12010ecaba2966985e87bb2d4f0c3c0f2586b64e0e5a424d98f29ff3745d9cc"
+    },
+    {
+      "phase": "red",
+      "file": "inputs-after.json",
+      "bytes": 1222542,
+      "sha256": "e12010ecaba2966985e87bb2d4f0c3c0f2586b64e0e5a424d98f29ff3745d9cc"
+    },
+    {
+      "phase": "red",
+      "file": "pytest.log",
+      "bytes": 3592,
+      "sha256": "4b783de54f08eacee3bd252dc5c011571d235e0bdbaea4712f593cf046c33254"
+    },
+    {
+      "phase": "red",
+      "file": "junit.xml",
+      "bytes": 3428,
+      "sha256": "1961d069b6080f7f5ed3010bd04e84f460c90508b2c4286dac70b2f276ab1470"
+    },
+    {
+      "phase": "red",
+      "file": "invocation.json",
+      "bytes": 1424,
+      "sha256": "64b5e6a8fc5188a75c6c0d4bf61ebbe203c658b1b7947161c4f53ca883ab0003"
+    },
+    {
+      "phase": "red",
+      "file": "original-popen.json",
+      "bytes": 689,
+      "sha256": "80e0edddb3f785d87083db0d2afd460491078af3c6d8d17e5a4ae8181303d7f2"
+    },
+    {
+      "phase": "red",
+      "file": "isolation-final.json",
+      "bytes": 20118,
+      "sha256": "6a290ceccce2b0f99e84ccbe1223f1d34558b64f3a2287b35c500278466a9d29"
+    },
+    {
+      "phase": "red",
+      "file": "red-original-tool-start.json",
+      "bytes": 131,
+      "sha256": "e295b249da2fb0138bb5ddf62adf4225b8139e7298caf43e37166278c6459d9d"
+    },
+    {
+      "phase": "red",
+      "file": "red-original-tool-completion.json",
+      "bytes": 489,
+      "sha256": "a5572ad72dcf8ce9af4fc4589eb139763334aead7e9c653c5d590165170f1ef5"
+    },
+    {
+      "phase": "green",
+      "file": "result.json",
+      "bytes": 30951,
+      "sha256": "42753aaf107b0702c1b928177f4de35526110a72ee2304e1f85037a711ed5e44"
+    },
+    {
+      "phase": "green",
+      "file": "inputs-before.json",
+      "bytes": 1222542,
+      "sha256": "0e3e3ae515668880c45b0b08765c0a607ac833acbd2c8e327fb59f8bd066d9bc"
+    },
+    {
+      "phase": "green",
+      "file": "inputs-after.json",
+      "bytes": 1222542,
+      "sha256": "0e3e3ae515668880c45b0b08765c0a607ac833acbd2c8e327fb59f8bd066d9bc"
+    },
+    {
+      "phase": "green",
+      "file": "pytest.log",
+      "bytes": 246,
+      "sha256": "78ed3dad5dcbf85ce997015c1e754e9a581203bb77a847541377369c1c6af6ed"
+    },
+    {
+      "phase": "green",
+      "file": "junit.xml",
+      "bytes": 542,
+      "sha256": "470744f125832207d5e7a5f50c0a60a3a12ebc6efd6b6f73bf0e4b1eb3fcf7cb"
+    },
+    {
+      "phase": "green",
+      "file": "invocation.json",
+      "bytes": 1570,
+      "sha256": "bd3cfd4f4e5af7bc4ff900ead70a29b5a3324bef6cf6b512d0b09b9537616c63"
+    },
+    {
+      "phase": "green",
+      "file": "original-popen.json",
+      "bytes": 833,
+      "sha256": "2003601d56a29ddef50dd92463761746f09e4ddf7d31d797c6996732b6a3e9fa"
+    },
+    {
+      "phase": "green",
+      "file": "isolation-final.json",
+      "bytes": 29367,
+      "sha256": "e9fb82daeb0fd16cd9335374bd957973bb9afb595e92d30196f25e44b31b6450"
+    },
+    {
+      "phase": "green",
+      "file": "green-original-tool-start.json",
+      "bytes": 128,
+      "sha256": "376931e9deed1f0ffae1d6035dd6c8b91a04a6b1d68e5fc394ecaefccc66d496"
+    },
+    {
+      "phase": "green",
+      "file": "green-original-tool-completion.json",
+      "bytes": 487,
+      "sha256": "f92f2eef53e2a7b96d78821021efa9da9997c5e42211c28d6d8c0c6e0fec1733"
+    },
+    {
+      "phase": "red",
+      "kind": "negative_measurement",
+      "file": "receipt.json",
+      "bytes": 112538,
+      "sha256": "97b41814f2a8d3ec2282cc75a2caa1215f4c0308cdde0cb3019738f022b69dfc"
+    },
+    {
+      "phase": "green",
+      "kind": "negative_measurement",
+      "file": "receipt.json",
+      "bytes": 112540,
+      "sha256": "f4d8f9992289269f0432f3f95b853abdb09c77888da08e7134912a7b06b8244c"
+    },
+    {
+      "phase": "green",
+      "kind": "positive_measurement",
+      "file": "receipt.json",
+      "bytes": 112473,
+      "sha256": "31af8655772842664f8840890903dd1fb0130b862e09e6375e2d169a8b798a6a"
+    }
+  ],
+  "private_checkpoint": {
+    "file": "final-private-checkpoint.json",
+    "bytes": 16497,
+    "sha256": "4faad37899d73c4abe2e00bd119766252885c6b02bd55644aeb3ec3168987879"
+  }
+}

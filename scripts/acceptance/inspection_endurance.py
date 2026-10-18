@@ -79,7 +79,7 @@ def run(output,*,checkpoint,checkpoint_sha256,images,seconds=259200,interval=60,
     old_handlers={s:signal.signal(s,stop) for s in (signal.SIGTERM,signal.SIGINT)}
     receipt={'schema_version':1,'status':'running','pid':os.getpid(),'started_utc':time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()),
         'requested_seconds':seconds,'interval_seconds':interval,'checkpoint_sha256':checkpoint_sha256,
-        'images':rows,'source_binding':binding,'actual_cpu_inference':True,'model_quality_approved':False,
+        'images':rows,'source_binding':binding,'actual_cpu_inference':False,'model_quality_approved':False,
         'approved_field_service':False,'hardware_delivery_exercised':False,'soak_72h_completed':False,
         'host':host(),'quota_bytes':quota_bytes,'minimum_free_bytes':minimum_free_bytes}
     log=output/'intervals.jsonl'
@@ -117,6 +117,7 @@ def run(output,*,checkpoint,checkpoint_sha256,images,seconds=259200,interval=60,
                     t=time.monotonic();result=engine.execute(pipeline,image_path=job['image_path'])
                     if result.get('status') not in {'success','review'} or result.get('final_verdict') not in {'OK','NG','REVIEW'}:raise RuntimeError('Flow did not complete an explicit verdict')
                     if any(s.get('status') in {'error','warning_untrained'} for s in result.get('execution_steps',[])):raise RuntimeError('Unexecuted model or flow error invalidates endurance')
+                    receipt['actual_cpu_inference']=True
                     # Functional control predictions never become a released OK.
                     model_verdict=result['final_verdict']
                     store.finish(job['job_id'],result={'final_verdict':'REVIEW','model_verdict':model_verdict,'endurance_control':True})
