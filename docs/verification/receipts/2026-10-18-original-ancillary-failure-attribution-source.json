@@ -1,0 +1,296 @@
+{
+  "schema": "modu-vision.original-ancillary-attribution-source-verification/v1",
+  "status": "source-only-verified",
+  "source": {
+    "base": "43009a8c4b74b41086e2cb0276a20315b2d3d608",
+    "HEAD": "6b0dbade0639268a119d777115d8f46d90994976",
+    "clean": true,
+    "files": [
+      {
+        "file": "backend/engine/original_request_activity.py",
+        "bytes": 38382,
+        "sha256": "b7053e30875e5c8e278ccb5c7c840c0d989af17b7e63397b9fdca78fc9be89ae"
+      },
+      {
+        "file": "backend/engine/original_owned_UI_ancillary_request.py",
+        "bytes": 173936,
+        "sha256": "179b533b87b24aedcf3f821a2005385354b61350f5f400507410ac3d5305779e"
+      },
+      {
+        "file": "backend/main.py",
+        "bytes": 45518,
+        "sha256": "8bbfbe711a3a6ba0a1890f18cb75ebaf815527915ae9c067d8f7b9ebcf2438de"
+      },
+      {
+        "file": "backend/tests/test_owned_ancillary_failure_attribution.py",
+        "bytes": 16501,
+        "sha256": "7d3c1c443f20795541edcfbc3933118f69e818d28969fab7f634cb119fedfe15"
+      }
+    ],
+    "diff_sha256": "968f9ef1c5dc90f197aced5ef8a3323bd390b65e17311785d1a486d71a4046b2",
+    "tracked_source_bodies_checked": 2968
+  },
+  "verification": {
+    "command_with_private_paths_abstracted": [
+      "python",
+      "-I",
+      "-B",
+      "-m",
+      "pytest",
+      "-c",
+      "backend/pytest.ini",
+      "-o",
+      "pythonpath=<isolated-source>",
+      "--basetemp=<private-test-output>",
+      "-q",
+      "backend/tests/test_owned_ancillary_failure_attribution.py",
+      "backend/tests/test_owned_health_failure_diagnostic.py",
+      "backend/tests/test_original_owned_populated_package_library.py"
+    ],
+    "environment": {
+      "PYTHONDONTWRITEBYTECODE": "1"
+    },
+    "tests_passed": 37,
+    "pytest_elapsed_seconds": 78.84,
+    "actual_exit_code": 0,
+    "entire_repository_suite_executed": false,
+    "logs_and_actual_tool_records": [
+      {
+        "label": "finalizer-actual-tool-start.json",
+        "bytes": 464,
+        "sha256": "153c9f5d7905e50878705daeb3ab77c278d9ce55c4a379e38f4a0cedba17f641"
+      },
+      {
+        "label": "green-01-actual-tool-completion.json",
+        "bytes": 126,
+        "sha256": "fed3ad9bb6fc4968e98a3825581a6794240b935f4eb2d2e5447b95497cc7bc65"
+      },
+      {
+        "label": "green-01-actual-tool-start.json",
+        "bytes": 131,
+        "sha256": "7cfd36542faa48a8c15dbed19226cd3a8f89f307c60157e3b87682c266b4428c"
+      },
+      {
+        "label": "green-final-02-actual-tool-completion.json",
+        "bytes": 126,
+        "sha256": "866acf76a1d962f6dc4c4354348c16e3a2539d2989987105f364f2f66705e439"
+      },
+      {
+        "label": "green-final-02-actual-tool-start.json",
+        "bytes": 131,
+        "sha256": "da5c7485eb1624060bee1e602d5e55b926ad9812ae4d63027434eabae2a21408"
+      },
+      {
+        "label": "red-01-actual-tool-completion.json",
+        "bytes": 126,
+        "sha256": "37de77ea643b57cf0e23d14b19da61910466caf1557853f346a566c126fc6254"
+      },
+      {
+        "label": "red-01-actual-tool-start.json",
+        "bytes": 130,
+        "sha256": "6cb0c958bb66b7b180ea2fe304ba685bc1bc39a4b0749d207498b54d71f79aa6"
+      },
+      {
+        "label": "red-02-actual-tool-completion.json",
+        "bytes": 126,
+        "sha256": "0f0ee19024bd856469c6e7a85715bd51280e3020714544f0c96701213280cb29"
+      },
+      {
+        "label": "red-02-actual-tool-start.json",
+        "bytes": 131,
+        "sha256": "de7581a13c840e2fb4445dec4d946444011bb9d9e85a8316b25faba9284db34e"
+      },
+      {
+        "label": "red-04-actual-tool-completion.json",
+        "bytes": 126,
+        "sha256": "a03ee2c26531887a95f30fa4be3d72d910c2a7a6ae6f0eeff9f868b556eef74f"
+      },
+      {
+        "label": "red-04-actual-tool-start.json",
+        "bytes": 131,
+        "sha256": "79807bf7b634094f9503bff79e01ba14ea14ddb9a03477e9e13eae350df0bfd1"
+      },
+      {
+        "label": "red-characterization-03-actual-tool-completion.json",
+        "bytes": 126,
+        "sha256": "cb3955a9fe4757af97d0f7921a90b7d2a6646738a6a45b263cfb98404d0aac9b"
+      },
+      {
+        "label": "red-characterization-03-actual-tool-start.json",
+        "bytes": 131,
+        "sha256": "c608c74768420d0b3a2b7cc2c71f4b144cf2559a7e3b7fabfcb38ab786a91077"
+      },
+      {
+        "label": "red-equality-07-actual-tool-completion.json",
+        "bytes": 126,
+        "sha256": "f6f43baa84e93ad1ba73da4e19c5b0ba07bdbd00169fdc2926dbc5da60471e19"
+      },
+      {
+        "label": "red-equality-07-actual-tool-start.json",
+        "bytes": 128,
+        "sha256": "d41bbb9cfebf8bf1cc9546809db90d513d0a708aa92f0783d1941d4a7a1c5f8c"
+      },
+      {
+        "label": "red-foreign-05-actual-tool-completion.json",
+        "bytes": 126,
+        "sha256": "d48ab20f804435f7bad52cadbf343729ddcdaf3901ef739a02575d5764f38572"
+      },
+      {
+        "label": "red-foreign-05-actual-tool-start.json",
+        "bytes": 131,
+        "sha256": "5fee601ef3925d05924e4a91500c7c3e51b4dd3b65300d4bc99dc09933d72f1e"
+      },
+      {
+        "label": "red-provenance-06-actual-tool-completion.json",
+        "bytes": 126,
+        "sha256": "2aefb1f0b79023a0e46a5fd0c8ea7187236ba51f654e0351b9604c5d26ab4fe3"
+      },
+      {
+        "label": "red-provenance-06-actual-tool-start.json",
+        "bytes": 131,
+        "sha256": "49fa109404f90576271dc03a6f815180949ee0e14ccbd6d07dab76c34c55fc0e"
+      },
+      {
+        "label": "green-01.log",
+        "bytes": 100,
+        "sha256": "a441972f46e631812a52f5594179bf5612cad6331ca97c7ae937ec1c52f0f861"
+      },
+      {
+        "label": "green-final-02.log",
+        "bytes": 110,
+        "sha256": "dcc110edc4e941eca160b5dafeb6fab477f63fc5c9db427524432f7dd3633462"
+      },
+      {
+        "label": "red-01.log",
+        "bytes": 3784,
+        "sha256": "36ee8c6f0e1d8c45dd4656dd0bdfdf7efe17dff288068ae0b08aa09663b0f606"
+      },
+      {
+        "label": "red-02.log",
+        "bytes": 4860,
+        "sha256": "3a31458480832c43f46c519d1541117e3fc178801a95ca8060a522a72afc17e2"
+      },
+      {
+        "label": "red-04.log",
+        "bytes": 5160,
+        "sha256": "ff4110fabb45d8a85eb149eba79ccce3e5d5d14d248a710f469ca3136908f4ca"
+      },
+      {
+        "label": "red-characterization-03.log",
+        "bytes": 5173,
+        "sha256": "d51a205b9cb0f48649bafee11b7d1a618c10df2e20e8e0bb2b261718382e3d49"
+      },
+      {
+        "label": "red-equality-07.log",
+        "bytes": 15269,
+        "sha256": "ac8cfa0164cb31fd4d6dd8a04e39981ed519f58982a21029af73f0797daf1a24"
+      },
+      {
+        "label": "red-foreign-05.log",
+        "bytes": 14749,
+        "sha256": "5b6515dd99b67f3c30aa5c96692a5ccb6f0a4cc209ff2fbc856bd2083f42bddc"
+      },
+      {
+        "label": "red-provenance-06.log",
+        "bytes": 11950,
+        "sha256": "12464f7847d0572100fc4028adf2e26e8f9dcddfa3e782776894d3e693e96cfd"
+      }
+    ]
+  },
+  "causal_RED": [
+    {
+      "run": "red-04",
+      "result": "original concurrent real refusal plus healthy request; exact full five-reason sequence before failure at missing attribution"
+    },
+    {
+      "run": "red-foreign-05",
+      "result": "exact retained attempt foreign carrier property invoked by new optional inspection"
+    },
+    {
+      "run": "red-provenance-06-forged-case",
+      "result": "noncanonical exact-type attempt incorrectly attributed to canonical original request"
+    },
+    {
+      "run": "red-equality-07",
+      "result": "foreign binding equality invoked only inside new optional inspection"
+    }
+  ],
+  "noncausal_or_characterization_records": [
+    {
+      "run": "red-01",
+      "result": "test incorrectly expected only two fixture reasons; failed that assumption before attribution"
+    },
+    {
+      "run": "red-02",
+      "result": "missing attribution reached, but full original reason sequence was not yet frozen"
+    },
+    {
+      "run": "red-characterization-03",
+      "result": "direct retained original five-reason characterization"
+    },
+    {
+      "run": "red-provenance-06-owner-calls-case",
+      "result": "malformed owner.calls failed the original admission before optional inspection; original guard was not caught or relaxed; negative replaced by raising-binding"
+    }
+  ],
+  "controlled_fixture": {
+    "exact_reason_sequence": [
+      "owned_ancillary_provenance_operation_failed",
+      "owned_ancillary_provenance_operation_return_entry",
+      "owned_ancillary_provenance_operation_return",
+      "owned_ancillary_handler_return",
+      "owned_ancillary_unconfirmed_lifetime"
+    ],
+    "all_real_ASGI_records_normal_completed_released": true,
+    "healthy_concurrent_request_sequence": 3,
+    "first_failed_request_sequence": 4,
+    "duplicate_failed_request_sequence": 6,
+    "first_attribution_preserved": true,
+    "duplicate_cannot_overwrite": true,
+    "prior_unbound_reason_remains_null": true,
+    "noncanonical_or_foreign_binding_unattributed": true,
+    "original_refused_active_scopes": 2,
+    "original_unsupported": [
+      "uncovered_request_protocol"
+    ]
+  },
+  "preserved": {
+    "original_poison_body_exact": true,
+    "original_health_diagnostic_body_exact": true,
+    "original_health_failure_diagnostic_body_exact": true,
+    "original_ancillary_complete_and_finish_exact": true,
+    "existing_health_payload_fields_unmodified": true,
+    "existing_reason_cap_32_and_sticky_uncertainty_unchanged": true,
+    "existing_authentication_guard_unchanged": true,
+    "body_limits_deadlines_and_original_refusals_unchanged": true,
+    "new_observation_grants_no_authority": true,
+    "original_function_custody_sha256": "9b6f1fa2a8fb762476785af17d1b2e02acf3a77bbed7454590fe98c83e93be74"
+  },
+  "privacy": {
+    "new_data_only": "finite static owner and handler enums, method, reason hashes, local request and observation sequence numbers",
+    "raw_URLs_paths_headers_tokens_business_IDs_or_bodies_exported": false
+  },
+  "independent_review": {
+    "status": "source-only ACCEPT",
+    "evidence": "Read-only collaboration review of these exact four source hashes; reviewer ran no tests or runtime."
+  },
+  "limits": [
+    "No native, browser, GPU, training, model-forward, server or remote execution. Existing tiny CPU checkpoint fixture is construction only.",
+    "Controlled corrupted-package fixture has five reason classes, unlike the old Root12 native interval with two; no native causal identity is inferred.",
+    "No Root12 replay or failed-lease adoption; no installation, release, model-quality, parent or action-count promotion.",
+    "Future v3 strict reader is proposal only; original v1/v2 readers and their framing, process binding and deadlines remain unchanged."
+  ],
+  "prepublication_operator_errors": [
+    {
+      "phase": "finite artifact auditor before any source stage or commit",
+      "cause": "Expected function names create_app and create_app.health_check were corrected to the actual base AST names _admitted_create_app and _admitted_create_app.health_check.",
+      "original_error_and_auditor_retained": true,
+      "product_source_or_test_failure": false
+    }
+  ],
+  "no_parent_or_action_promotion": true,
+  "private_readback": {
+    "bytes": 21730,
+    "sha256": "6d8f026f033ec0a085e489ccaa5a4895f2840f04b38b2e35540d41ee3a0db5a9"
+  }
+}

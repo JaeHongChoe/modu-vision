@@ -580,6 +580,14 @@ def _admitted_create_app(project_dir: Optional[str] = None, shared_auth_dir: Opt
                 if (failures is not None
                         and failures['diagnostic_request_identity'] == diagnostic['diagnostic_request_identity']):
                     result['owned_request_failure_diagnostic'] = failures
+                    try:
+                        attribution = health_observer.health_ancillary_failure_attribution(request.scope)
+                        if (attribution is not None
+                                and attribution['diagnostic_request_identity'] == diagnostic['diagnostic_request_identity']
+                                and [row['reason_sha256'] for row in attribution['reasons']] == failures['reason_sha256']):
+                            result['owned_ancillary_failure_attribution'] = attribution
+                    except Exception:
+                        pass  # Only the optional sibling is omitted; original health remains unchanged.
         return result
 
     # Error catalog endpoints
