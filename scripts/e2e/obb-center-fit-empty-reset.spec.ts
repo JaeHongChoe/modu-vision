@@ -169,3 +169,286 @@ test('center fitting empty and redraw discard only the unsent proposal and reope
   }
   if (failed) throw primary; expect(custody.opened).toBe(custody.closed); expect(custody.uncertain).toEqual([]); e.note('f029_center_fit_empty_reset', proof);
 });
+
+// One independent original changed-source refusal and ordinary recovery case.
+test('center fitting source-change error retires the unsent proposal and recovers original saved truth', async ({page, request, renderer, workspace: w, evidence: e}) => {
+  await installDesktopHostShim(page, renderer.port);
+  const head = execFileSync('git', ['rev-parse', 'HEAD'], {encoding: 'utf8'}).trim(); expect(head).toMatch(/^[a-f0-9]{40}$/);
+  const custody = {opened: 0, closed: 0, uncertain: [] as string[]};
+  const proofs: any[] = [], writes: Array<{method: string; route: string; body: unknown}> = [], callbackErrors: string[] = [];
+  const pageErrors: string[] = [], consoleErrors: Array<{text: string; location: {url: string; lineNumber: number; columnNumber: number}}> = [], non2xx: unknown[] = [];
+  const pageError = (error: Error) => pageErrors.push(error.message);
+  const consoleError = (message: {type(): string; text(): string; location(): {url: string; lineNumber: number; columnNumber: number}}) => {if (message.type() === 'error') consoleErrors.push({text: message.text(), location: message.location()});};
+  const failedResponse = (response: Response) => {try {const u = new URL(response.url()); if (u.origin === renderer.origin && u.pathname.startsWith('/api/') && response.status() >= 400) non2xx.push({method: response.request().method(), route: u.pathname, status: response.status()});} catch (error) {callbackErrors.push(String(error));}};
+  page.on('pageerror', pageError); page.on('console', consoleError); page.on('response', failedResponse);
+  const file = (name: string): FilePin => {
+    const before = fs.lstatSync(name, {bigint: true}); expect(before.isSymbolicLink()).toBe(false); expect(before.isFile()).toBe(true); expect(before.nlink).toBe(1n);
+    const descriptor = fs.openSync(name, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW); custody.opened++;
+    let primary: unknown, failed = false, result: FilePin | undefined;
+    try {expect(raw9(fs.fstatSync(descriptor, {bigint: true}))).toEqual(raw9(before)); const bytes = fs.readFileSync(descriptor); expect(BigInt(bytes.length)).toBe(before.size);
+      expect(raw9(fs.fstatSync(descriptor, {bigint: true}))).toEqual(raw9(before)); expect(raw9(fs.lstatSync(name, {bigint: true}))).toEqual(raw9(before)); result = {kind: 'file', raw9: raw9(before), sha256: sha(bytes)};
+    } catch (error) {failed = true; primary = error;}
+    finally {try {fs.closeSync(descriptor); custody.closed++;} catch (error) {custody.uncertain.push(String(error)); if (!failed) {failed = true; primary = error;}}}
+    if (failed) throw primary; return result!;
+  };
+  const tree = (root: string): Tree => {
+    expect(fs.realpathSync(root)).toBe(root); const rows: Tree = {};
+    const walk = (directory: string) => {const before = fs.lstatSync(directory, {bigint: true}); expect(before.isDirectory()).toBe(true); expect(before.isSymbolicLink()).toBe(false);
+      const names = fs.readdirSync(directory).sort(); rows[path.relative(root, directory) || '.'] = {kind: 'directory', raw9: raw9(before)};
+      for (const name of names) {const member = path.join(directory, name), info = fs.lstatSync(member); expect(info.isSymbolicLink()).toBe(false); if (info.isDirectory()) walk(member); else rows[path.relative(root, member)] = file(member);}
+      expect(fs.readdirSync(directory).sort()).toEqual(names); expect(raw9(fs.lstatSync(directory, {bigint: true}))).toEqual(raw9(before));
+    }; walk(root); return rows;
+  };
+  const api = async (route: string, data?: unknown, method = data === undefined ? 'GET' : 'POST') => {
+    const deadline = performance.now() + 10_000;
+    const response = await within(request.fetch(renderer.origin + route, {method, ...(data === undefined ? {} : {data}), timeout: remaining(deadline)}), deadline, 'fixture API');
+    const raw = await within(response.body(), deadline, 'fixture full body'); expect(response.status()).toBe(200); expect(raw.length).toBeLessThanOrEqual(1024 * 1024);
+    const body = JSON.parse(raw.toString('utf8')); proofs.push({kind: 'fixture API', method, route, request: data ?? null, status: 200, response_sha256: sha(raw), response: body}); return body;
+  };
+  const wire = (route: string, method: string, match: (r: Request, u: URL) => boolean) => {
+    let original: Request | undefined, accept!: (r: Response) => void, refuse!: (error: unknown) => void;
+    const reply = new Promise<Response>((resolve, reject) => {accept = resolve; refuse = reject;}); void reply.catch(() => undefined);
+    const poison = (error: unknown) => {callbackErrors.push(String(error)); refuse(error);};
+    const timer = setTimeout(() => poison(Error('Original 10s UI response missing: ' + route)), 10_000);
+    const started = (r: Request) => {try {const u = new URL(r.url()); if (u.origin === renderer.origin && u.pathname === route && r.method() === method && match(r, u)) {expect(r.frame()).toBe(page.mainFrame()); expect(original).toBeUndefined(); original = r;}} catch (error) {poison(error);}};
+    const responded = (r: Response) => {try {if (r.request() === original) accept(r);} catch (error) {poison(error);}};
+    page.on('request', started); page.on('response', responded);
+    return {reply, original: () => original, close: () => {clearTimeout(timer); page.off('request', started); page.off('response', responded);}};
+  };
+  let project: any, context: any;
+  const body = async (response: Response, deadline: number, label: string, original: Request | undefined, status = 200) => {
+    const own = response.request(); expect(original).toBeDefined(); expect(own).toBe(original); expect(own.frame()).toBe(page.mainFrame()); expect(new URL(response.url()).origin).toBe(renderer.origin); expect(response.status()).toBe(status);
+    expect(await within(own.headerValue('x-vision-project'), deadline, 'own project header')).toBe(project.id);
+    const rawContext = await within(own.headerValue('x-vision-context'), deadline, 'own request context header'); expect(rawContext).not.toBeNull(); const actualContext = JSON.parse(rawContext!); expect(actualContext.project_id).toBe(project.id); expect(actualContext.mode).toBe('local');
+    if (context) expect(actualContext).toEqual(context); else context = actualContext;
+    const raw = await within(response.body(), deadline, 'same Request full response'); expect(raw.length).toBeLessThanOrEqual(1024 * 1024); expect(await within(response.finished(), deadline, 'same response completion')).toBeNull();
+    const actual = JSON.parse(raw.toString('utf8')), rawFile = path.join(w.logs, label + '-raw-response.json'); fs.writeFileSync(rawFile, raw, {flag: 'wx'}); e.addFile(rawFile);
+    proofs.push({kind: 'original UI response', label, method: own.method(), url: response.url(), request_body: own.postDataJSON(), project_id: project.id, request_context: actualContext, status, response: actual, response_sha256: sha(raw), bytes: raw.length, raw_file: rawFile, same_Request: true, main_frame: true, finished: true, deadline, completed: performance.now()}); return actual;
+  };
+  const source = path.join(fs.realpathSync(w.root), 'owned-center-fitting-source-error'), relative = ['train.png', 'val.png', 'test.png']; fs.mkdirSync(source);
+  const originalInputBodies = new Map<string, Buffer>();
+  for (const [i, name] of relative.entries()) {const target = path.join(source, name); const input = png(256, 3, (x, y) => [x, y, 31 + i * 67]); originalInputBodies.set(target, Buffer.from(input)); fs.writeFileSync(target, input, {flag: 'wx'}); e.addFile(target);}
+  const sourceHashes = Object.fromEntries(relative.map(name => [name, file(path.join(source, name)).sha256]));
+  project = await api('/api/project/create', {name: 'Owned center fitting source-change error fixture', task: 'classification'});
+  project = await api('/api/project/update', {source_dataset_dir: source}, 'PUT'); expect(project.source_dataset_dir).toBe(source); expect(path.dirname(project.project_dir)).toBe(w.projects);
+  const imported = await api('/api/dataset/import', {folder_path: source, task: 'classification', validate_images: true}); expect(imported.total_images).toBe(3);
+  for (const name of relative) await api('/api/dataset/metadata/image?image_path=' + encodeURIComponent(path.join(source, name)));
+  await api('/api/team-data/readiness');
+  const samples = relative.map((image, i) => ({image, split: ['train', 'val', 'test'][i], label: 'owned-fixture-box', box: {cx: 80, cy: 60, width: 40, height: 20, angle_deg: 0}, direction_deg: 15 + i}));
+  const saved = await api('/api/rotated-detection/manifest', {dataset_path: source, samples}); expect(saved.sample_count).toBe(3); expect(saved.split_counts).toEqual({train: 1, val: 1, test: 1});
+  expect(path.dirname(saved.dataset_path)).toBe(path.join(project.dataset_dir, 'rotated_detection')); expect(path.basename(saved.dataset_path)).toMatch(/^[a-f0-9]{32}$/);
+  expect(saved.samples).toHaveLength(3);
+  for (const sample of saved.samples) {const supplied = samples.find(row => row.image === sample.image)!; expect(supplied).toBeDefined(); expect(sample.source_sha256).toBe(sourceHashes[sample.image]); expect(sample.split).toBe(supplied.split);
+    const objects = sample.objects ?? [{label: sample.label, box: sample.box, direction_deg: sample.direction_deg}]; expect(objects).toEqual([{label: supplied.label, box: supplied.box, direction_deg: supplied.direction_deg}]);}
+  const manifestRoute = '/api/rotated-detection/manifest', manifestQuery = manifestRoute + '?dataset_path=' + encodeURIComponent(saved.dataset_path);
+  expect(await api(manifestQuery)).toEqual(saved);
+  const panel = () => page.locator('details').filter({has: page.locator('summary').filter({hasText: '회전 객체 위치 모델'})}).first();
+  const fitting = () => panel().locator('section').filter({has: page.getByRole('heading', {name: '원본 이미지에서 회전 박스 그리기', exact: true})});
+  const fitButton = () => fitting().getByRole('button', {name: '회전 박스 맞추기', exact: true}), append = () => fitting().getByRole('button', {name: '정답 표에 추가', exact: true});
+  const table = () => panel().getByRole('textbox', {name: /^정답 표 · 이미지 상대 경로/});
+  const open = async (label: string, reload: boolean) => {
+    const capture = wire(manifestRoute, 'GET', (_r, u) => u.searchParams.get('dataset_path') === saved.dataset_path), deadline = performance.now() + 10_000;
+    try {
+      if (reload) await within(page.reload(), deadline, 'actual browser reload'); else await within(page.goto(renderer.url), deadline, 'original browser entry');
+      await within(expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name, {timeout: remaining(deadline)}), deadline, 'own current project');
+      await within(page.getByRole('navigation', {name: 'Workflow Stages'}).getByRole('button').nth(2).click({timeout: remaining(deadline)}), deadline, 'ordinary training stage');
+      await within(page.getByRole('region', {name: '모델 학습 허브'}).getByRole('button', {name: /^회전 객체 검출/}).click({timeout: remaining(deadline)}), deadline, 'ordinary rotated workbench');
+      expect(await body(await within(capture.reply, deadline, 'original saved manifest GET'), deadline, label, capture.original())).toEqual(saved);
+      await within(expect(panel().getByRole('combobox', {name: '프로젝트에 저장된 회전 박스 정답', exact: true})).toHaveValue(saved.dataset_path, {timeout: remaining(deadline)}), deadline, 'own saved manifest selection');
+      await within(expect(fitting().getByRole('combobox', {name: '이미지', exact: true}).locator('option')).toHaveCount(4, {timeout: remaining(deadline)}), deadline, 'three original image options');
+      await within(expect(table()).not.toHaveValue('', {timeout: remaining(deadline)}), deadline, 'saved truth table hydrated');
+    } finally {capture.close();}
+  };
+  await open('initial-own-saved-manifest', false);
+  const image = path.join(source, 'train.png'), previewCapture = wire('/api/rotated-detection/fit-source', 'GET', (_r, u) => u.searchParams.get('image_path') === image);
+  let preview: any;
+  try {const deadline = performance.now() + 10_000; await within(fitting().getByRole('combobox', {name: '이미지', exact: true}).selectOption(image, {timeout: remaining(deadline)}), deadline, 'own source image selection');
+    preview = await body(await within(previewCapture.reply, deadline, 'original fit-source GET'), deadline, 'own-fitting-source', previewCapture.original()); expect(preview.source_size).toEqual([256, 256]); expect(preview.source_sha256).toBe(sourceHashes['train.png']);
+    await within(expect(fitting().getByRole('img', {name: '회전 박스 정답 그리기', exact: true}).locator('image')).toHaveAttribute('href', preview.preview_data_url, {timeout: remaining(deadline)}), deadline, 'original preview rendered');
+  } finally {previewCapture.close();}
+  await fitting().getByRole('button', {name: '중심 기준', exact: true}).click();
+  const initialTable = await table().inputValue(); expect(initialTable.split('\n')).toHaveLength(3);
+  const protectedTrees = () => ({source: tree(source), project: tree(project.project_dir), prepared: tree(saved.dataset_path)});
+  const before = protectedTrees(); expect(before.source).toEqual(tree(source));
+  for (const name of relative) expect((before.source[name] as FilePin).sha256).toBe(sourceHashes[name]);
+  const observe = (own: Request) => {try {const u = new URL(own.url()); if (u.origin === renderer.origin && u.pathname.startsWith('/api/') && !['GET', 'HEAD', 'OPTIONS'].includes(own.method())) writes.push({method: own.method(), route: u.pathname, body: own.postDataJSON()});} catch (error) {callbackErrors.push(String(error));}};
+  page.on('request', observe);
+  await page.evaluate(() => {const state = {clicks: [] as any[]}; (window as any).__f029SourceChange = state; document.addEventListener('click', event => {const target = event.target instanceof Element ? event.target.closest('button') : null; if (target && ['회전 박스 맞추기', '점 다시 그리기'].includes(target.textContent?.trim() || '')) state.clicks.push({text: target.textContent!.trim(), trusted: event.isTrusted});}, true);});
+  const originalImageBytes = Buffer.from(originalInputBodies.get(image)!);
+  const changedImageBytes = png(256, 3, (x, y) => [255 - x, y, 173]);
+  expect(sha(originalImageBytes)).toBe(sourceHashes['train.png']);
+  expect(sha(changedImageBytes)).not.toBe(sourceHashes['train.png']);
+  const alternate = path.join(w.logs, 'owned-source-change-alternate.png');
+  fs.writeFileSync(alternate, changedImageBytes, {flag: 'wx'}); e.addFile(alternate);
+  const alternatePin = file(alternate);
+  let restoreNeeded = false, imagePin = before.source['train.png'] as FilePin;
+  let changedPin: FilePin | undefined, restoredPin: FilePin | undefined, finalImagePin: FilePin | undefined;
+  let failed = false, primary: unknown, proof: any; const secondary: string[] = [];
+  const failedWriteReadbacks: Array<{expected: FilePin; observed: FilePin; cause: string}> = [];
+  const replaceOwnedImage = (expected: FilePin, bytes: Buffer): FilePin => {
+    expect(file(image)).toEqual(expected);
+    const descriptor = fs.openSync(image, fs.constants.O_RDWR | fs.constants.O_NOFOLLOW); custody.opened++;
+    let failed = false, primary: unknown, result: FilePin | undefined, writeEligible = false;
+    try {
+      expect(raw9(fs.fstatSync(descriptor, {bigint: true}))).toEqual(expected.raw9);
+      writeEligible = true; restoreNeeded = true;
+      let offset = 0;
+      while (offset < bytes.length) {const written = fs.writeSync(descriptor, bytes, offset, bytes.length - offset, offset); expect(written).toBeGreaterThan(0); offset += written;}
+      fs.ftruncateSync(descriptor, bytes.length); fs.fsyncSync(descriptor);
+      const after = fs.fstatSync(descriptor, {bigint: true});
+      for (const index of [0, 1, 2, 3, 7, 8]) expect(raw9(after)[index]).toBe(expected.raw9[index]);
+      const readback = fs.readFileSync(descriptor); expect(readback).toEqual(bytes);
+      expect(raw9(fs.fstatSync(descriptor, {bigint: true}))).toEqual(raw9(after));
+      expect(raw9(fs.lstatSync(image, {bigint: true}))).toEqual(raw9(after));
+      result = {kind: 'file', raw9: raw9(after), sha256: sha(readback)};
+      imagePin = result;
+    } catch (error) {
+      failed = true; primary = error;
+      if (writeEligible) {
+        // Preserve a partial own write only under the held original descriptor
+        // and unchanged path identity. Unknown/replaced custody is refused.
+        try {
+          const actual = fs.fstatSync(descriptor, {bigint: true});
+          for (const index of [0, 1, 2, 3, 7, 8]) expect(raw9(actual)[index]).toBe(expected.raw9[index]);
+          expect(actual.size).toBeLessThanOrEqual(BigInt(Math.max(originalImageBytes.length, changedImageBytes.length)));
+          expect(raw9(fs.lstatSync(image, {bigint: true}))).toEqual(raw9(actual));
+          const observed = file(image); expect(observed.raw9).toEqual(raw9(actual));
+          expect(raw9(fs.fstatSync(descriptor, {bigint: true}))).toEqual(observed.raw9);
+          imagePin = observed; failedWriteReadbacks.push({expected, observed, cause: String(error)});
+        } catch (custodyError) {secondary.push('owned source failed-write custody: ' + String(custodyError));}
+      }
+    }
+    finally {try {fs.closeSync(descriptor); custody.closed++;} catch (error) {custody.uncertain.push(String(error)); if (!failed) {failed = true; primary = error;}}}
+    if (failed) throw primary; return result!;
+  };
+  const protectedAt = (expectedImage: FilePin) => {
+    const now = protectedTrees();
+    expect(now.project).toEqual(before.project); expect(now.prepared).toEqual(before.prepared);
+    expect({...now.source, 'train.png': before.source['train.png']}).toEqual(before.source);
+    expect(now.source['train.png']).toEqual(expectedImage);
+    for (const index of [0, 1, 2, 3, 7, 8]) expect(expectedImage.raw9[index]).toBe((before.source['train.png'] as FilePin).raw9[index]);
+    return now;
+  };
+  const fitRoute = '/api/rotated-detection/fit-box';
+  const fitPositive = async (label: string) => {
+    const svg = fitting().getByRole('img', {name: '회전 박스 정답 그리기', exact: true});
+    const delivered: number[][] = [], capture = wire(fitRoute, 'POST', r => r.postDataJSON()?.image_path === image && r.postDataJSON()?.mode === 'center');
+    try {
+      const deadline = performance.now() + 10_000;
+      await within(svg.scrollIntoViewIfNeeded({timeout: remaining(deadline)}), deadline, 'original fitting viewport');
+      for (const [x, y] of [[80, 60], [100, 60], [80, 70]]) {
+        const b = await within(svg.boundingBox(), deadline, 'actual original SVG geometry'); expect(b).not.toBeNull();
+        const scale = Math.min(b!.width / 256, b!.height / 256), left = b!.x + (b!.width - 256 * scale) / 2, top = b!.y + (b!.height - 256 * scale) / 2;
+        const clientX = Math.floor(left + x * scale), clientY = Math.floor(top + y * scale);
+        delivered.push([(clientX - left) / scale, (clientY - top) / scale]);
+        await within(page.mouse.click(clientX, clientY), deadline, 'actual source fitting point');
+      }
+      await within(expect(svg.locator('circle')).toHaveCount(3, {timeout: remaining(deadline)}), deadline, 'three delivered points');
+      await within(expect(fitButton()).toBeEnabled({timeout: remaining(deadline)}), deadline, 'real fitting available');
+      await within(fitButton().click({timeout: remaining(deadline)}), deadline, 'ordinary fit click');
+      const fitted = await body(await within(capture.reply, deadline, 'original fit-box POST'), deadline, label, capture.original());
+      const actualRequest = capture.original()!.postDataJSON();
+      expect(actualRequest).toEqual({image_path: image, mode: 'center', points: actualRequest.points, source_sha256: sourceHashes['train.png']});
+      expect(actualRequest.points).toHaveLength(3);
+      for (let i = 0; i < 3; i++) for (let axis = 0; axis < 2; axis++) expect(actualRequest.points[i][axis]).toBeCloseTo(delivered[i][axis], 8);
+      const [a, b, c] = delivered, dx = b[0] - a[0], dy = b[1] - a[1], length = Math.hypot(dx, dy), nx = -dy / length, ny = dx / length;
+      const expected = {cx: a[0], cy: a[1], width: 2 * length, height: 2 * Math.abs((c[0] - a[0]) * nx + (c[1] - a[1]) * ny), angle_deg: (Math.atan2(dy, dx) * 180 / Math.PI + 90) % 180 - 90};
+      expect(fitted.mode).toBe('center'); expect(fitted.source_size).toEqual([256, 256]); expect(fitted.source_sha256).toBe(sourceHashes['train.png']);
+      for (const [key, value] of Object.entries(expected)) expect(fitted.box[key]).toBeCloseTo(value, 6);
+      const radians = expected.angle_deg * Math.PI / 180, co = Math.cos(radians), si = Math.sin(radians);
+      const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([sx, sy]) => [expected.cx + sx * expected.width / 2 * co - sy * expected.height / 2 * si, expected.cy + sx * expected.width / 2 * si + sy * expected.height / 2 * co]);
+      const actual = [...fitted.polygon].sort((p: number[], q: number[]) => p[0] - q[0] || p[1] - q[1]), sorted = corners.sort((p, q) => p[0] - q[0] || p[1] - q[1]); expect(actual).toHaveLength(4);
+      for (let i = 0; i < 4; i++) for (let axis = 0; axis < 2; axis++) expect(actual[i][axis]).toBeCloseTo(sorted[i][axis], 3);
+      await within(expect(svg.locator('polygon')).toHaveCount(1, {timeout: remaining(deadline)}), deadline, 'returned proposal actually visible');
+      await within(expect(append()).toBeEnabled({timeout: remaining(deadline)}), deadline, 'fresh geometric proposal appendable');
+      return {delivered, actual_fit_request: actualRequest, independently_expected_box: expected, fitted};
+    } finally {capture.close();}
+  };
+  try {
+    const originalFit = await fitPositive('original-center-fit-before-source-change');
+    expect(await table().inputValue()).toBe(initialTable); expect(protectedTrees()).toEqual(before);
+    await e.screenshot(page, 'f029-center-before-source-change-unsent-proposal');
+    const capture = wire(fitRoute, 'POST', r => r.postDataJSON()?.image_path === image && r.postDataJSON()?.mode === 'center');
+    let refusal: any, failedFitRequest: any;
+    try {
+      const deadline = performance.now() + 10_000;
+      changedPin = replaceOwnedImage(imagePin, changedImageBytes); imagePin = changedPin; restoreNeeded = true;
+      expect(changedPin.sha256).toBe(alternatePin.sha256); expect(changedPin.sha256).not.toBe(preview.source_sha256);
+      protectedAt(changedPin);
+      await within(fitButton().click({timeout: remaining(deadline)}), deadline, 'ordinary stale-preview refit');
+      refusal = await body(await within(capture.reply, deadline, 'original changed-source 422'), deadline, 'actual-source-changed-refusal', capture.original(), 422);
+      expect(refusal).toEqual({detail: 'Fitting source changed after preview'});
+      failedFitRequest = capture.original()!.postDataJSON(); expect(failedFitRequest).toEqual(originalFit.actual_fit_request);
+      expect(failedFitRequest.source_sha256).toBe(preview.source_sha256); expect(failedFitRequest.source_sha256).not.toBe(changedPin.sha256);
+      await within(expect(fitting().getByRole('alert')).toHaveText(refusal.detail, {timeout: remaining(deadline)}), deadline, 'exact original owning refusal');
+      await within(expect(fitting().getByRole('alert')).toBeVisible({timeout: remaining(deadline)}), deadline, 'refusal visible');
+      await within(expect(append()).toBeDisabled({timeout: remaining(deadline)}), deadline, 'old successful proposal cannot append after refit refusal');
+      await within(expect(fitting().locator('polygon')).toHaveCount(0, {timeout: remaining(deadline)}), deadline, 'previous proposal retired');
+      await within(expect(fitButton()).toBeEnabled({timeout: remaining(deadline)}), deadline, 'original action is no longer busy');
+      expect(await table().inputValue()).toBe(initialTable); protectedAt(changedPin);
+      await e.screenshot(page, 'f029-center-source-changed-owning-refusal-no-append');
+    } finally {capture.close();}
+    restoredPin = replaceOwnedImage(imagePin, originalImageBytes); imagePin = restoredPin; restoreNeeded = false;
+    expect(restoredPin.sha256).toBe(sourceHashes['train.png']); expect(restoredPin.raw9[4]).toBe((before.source['train.png'] as FilePin).raw9[4]);
+    protectedAt(restoredPin);
+    // A normal selection transition obtains a new original preview; no API is
+    // called to refresh or bypass the rejected preview digest.
+    const recoveryPreviewCapture = wire('/api/rotated-detection/fit-source', 'GET', (_r, u) => u.searchParams.get('image_path') === image);
+    let recoveryPreview: any;
+    try {
+      const deadline = performance.now() + 10_000, selector = fitting().getByRole('combobox', {name: '이미지', exact: true});
+      await within(selector.selectOption('', {timeout: remaining(deadline)}), deadline, 'ordinary deselection');
+      await within(expect(fitting().getByRole('img', {name: '회전 박스 정답 그리기', exact: true})).toHaveCount(0, {timeout: remaining(deadline)}), deadline, 'old preview removed');
+      await within(selector.selectOption(image, {timeout: remaining(deadline)}), deadline, 'ordinary restored original selection');
+      recoveryPreview = await body(await within(recoveryPreviewCapture.reply, deadline, 'fresh original preview GET'), deadline, 'restored-source-fresh-preview', recoveryPreviewCapture.original());
+      expect(recoveryPreview.source_sha256).toBe(sourceHashes['train.png']); expect(recoveryPreview.source_size).toEqual([256, 256]);
+      expect(recoveryPreview.preview_data_url).toBe(preview.preview_data_url);
+      await within(expect(fitting().getByRole('img', {name: '회전 박스 정답 그리기', exact: true}).locator('image')).toHaveAttribute('href', recoveryPreview.preview_data_url, {timeout: remaining(deadline)}), deadline, 'fresh original preview rendered');
+      await within(expect(fitting().getByRole('alert')).toHaveCount(0, {timeout: remaining(deadline)}), deadline, 'normal selection cleared old error');
+    } finally {recoveryPreviewCapture.close();}
+    const recoveredFit = await fitPositive('restored-source-center-fit-success');
+    expect(await table().inputValue()).toBe(initialTable); protectedAt(restoredPin);
+    await e.screenshot(page, 'f029-center-restored-source-fresh-preview-fit-recovered');
+    const trusted = await page.evaluate(() => (window as any).__f029SourceChange.clicks);
+    expect(trusted).toEqual(Array.from({length: 3}, () => ({text: '회전 박스 맞추기', trusted: true})));
+    await open('real-reload-own-saved-manifest-after-source-recovery', true);
+    expect(await table().inputValue()).toBe(initialTable); protectedAt(restoredPin);
+    await expect(fitting().getByRole('alert')).toHaveCount(0); await expect(fitButton()).toBeDisabled(); await expect(append()).toBeDisabled();
+    expect(writes).toEqual([originalFit.actual_fit_request, failedFitRequest, recoveredFit.actual_fit_request].map(value => ({method: 'POST', route: fitRoute, body: value})));
+    expect(pageErrors).toEqual([]); expect(callbackErrors).toEqual([]);
+    expect(non2xx).toEqual([{method: 'POST', route: fitRoute, status: 422}]);
+    expect(consoleErrors).toHaveLength(1); expect(consoleErrors[0].text).toBe('Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)');
+    expect(consoleErrors[0].location.url).toBe(renderer.origin + fitRoute);
+    await e.screenshot(page, 'f029-center-source-error-recovery-real-reload-saved-truth');
+    proof = {schema: 'modu-vision.F029-center-fit-source-change-error/v1', cells: ['F029.obb-native-center-fit-save-reopen.error'], source_head: head,
+      project, source, source_hashes: sourceHashes, saved_manifest: saved, initial_table: initialTable, preview, original_fit: originalFit, refusal,
+      failed_fit_request: failedFitRequest, recovery_preview: recoveryPreview, recovered_fit: recoveredFit, trusted_clicks: trusted,
+      intentional_source_mutation: {image, original: before.source['train.png'], alternate_fixture: {path: alternate, pin: alternatePin}, changed: changedPin, restored: restoredPin,
+        original_bytes_restored: true, inode_mode_uid_gid_nlink_preserved: true, historical_mtime_ctime_restored: false,
+        intentional_phase_deltas: ['content bytes and SHA256', 'file size', 'mtime_ns', 'ctime_ns'], final_allowed_deltas: ['mtime_ns', 'ctime_ns']},
+      source_other_files_and_directories_raw9_preserved: true, project_prepared_all_raw9_preserved: true,
+      protected_before: before, protected_after: protectedAt(restoredPin), same_saved_table_after_refusal_recovery_and_reload: true,
+      old_successful_proposal_removed_on_refit_refusal: true, fresh_preview_and_successful_fit_after_exact_byte_restoration: true,
+      after_baseline_nonGET_requests: writes.slice(), persistent_API_mutations_after_baseline: 0, full_request_context_header_equality: true,
+      original_UI_responses: proofs, errors: {page: pageErrors, console: consoleErrors, non2xx, callbacks: callbackErrors}, expected_original_HTTP_refusal: 422,
+      unexpected_errors: 0, training_started: false, actual_model_inference: false, fitting_scope: 'Original PIL preview and geometric fit; one owned synthetic source byte replacement and exact-body restoration',
+      native_or_installed_GUI_claim: false, quality_approved: false, parent_completion_credit: false, registry_credit: false};
+  } catch (error) {failed = true; primary = error;}
+  finally {
+    if (restoreNeeded) {
+      try {restoredPin = replaceOwnedImage(imagePin, originalImageBytes); imagePin = restoredPin; restoreNeeded = false;}
+      catch (error) {secondary.push('owned source restoration: ' + String(error)); if (!failed) {failed = true; primary = error;}}
+    }
+    for (const [label, cleanup] of [['request observer', () => page.off('request', observe)], ['page-error observer', () => page.off('pageerror', pageError)],
+      ['console observer', () => page.off('console', consoleError)], ['response observer', () => page.off('response', failedResponse)],
+      ['protected trees', () => {finalImagePin = file(image); expect(finalImagePin.sha256).toBe(sourceHashes['train.png']); expect(finalImagePin).toEqual(imagePin); protectedAt(finalImagePin); expect(file(alternate)).toEqual(alternatePin);}]] as const) {
+      try {cleanup();} catch (error) {secondary.push(label + ': ' + String(error)); if (!failed) {failed = true; primary = error;}}
+    }
+    e.note('f029_center_fit_source_error_progress', {proof, original_UI_responses: proofs, writes,
+      source_phase_pins: {original: before.source['train.png'], changed: changedPin, restored: restoredPin, actual_final: finalImagePin}, failed_write_readbacks: failedWriteReadbacks,
+      errors: {page: pageErrors, console: consoleErrors, non2xx, callbacks: callbackErrors}});
+    e.note('f029_center_fit_source_error_closure', {FD_custody: custody, owned_source_bytes_restored: finalImagePin?.sha256 === sourceHashes['train.png'], restoration_protocol_completed: !restoreNeeded,
+      source_other_files_and_project_prepared_preserved: !secondary.some(row => row.startsWith('protected trees:')), secondary, first_exception: failed ? String(primary) : null});
+  }
+  if (failed) throw primary; expect(custody.opened).toBe(custody.closed); expect(custody.uncertain).toEqual([]); e.note('f029_center_fit_source_error', proof);
+});

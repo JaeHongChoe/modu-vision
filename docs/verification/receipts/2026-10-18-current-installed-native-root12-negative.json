@@ -1,0 +1,717 @@
+{
+  "schema": "modu-vision.scoped-native-readback/v1",
+  "status": "original-result-or-strict-closure-not-passed",
+  "source_cohort": {
+    "backend_HEAD": "0e7e03833bc3683899e00b3aec0051da7ef8462e",
+    "frontend_HEAD": "7f756f299b03c731ec0e2e747f606823253bbf8b",
+    "source_checks": [
+      {
+        "kind": "frontend",
+        "HEAD": "7f756f299b03c731ec0e2e747f606823253bbf8b",
+        "tracked_count": 2966,
+        "current_body_mode_exact": true,
+        "raw9_if_declared_exact": true
+      },
+      {
+        "kind": "backend",
+        "HEAD": "0e7e03833bc3683899e00b3aec0051da7ef8462e",
+        "tracked_count": 2965,
+        "current_body_mode_exact": true,
+        "raw9_if_declared_exact": true
+      }
+    ],
+    "backend_release_sha256": "73f6adacdb1c4b1eb93c399d16868fd60eee365c658bbc3bcfc43d32eb9770f3",
+    "backend_executable_sha256": "33b67813d29757804f1b5b4ec7a9a666e323f8cd7ad7016663fd9267afb07091",
+    "original_full_build_archive_readback_reused": true,
+    "no_new_giant_build_tree_or_archive_sweep": true
+  },
+  "setup": {
+    "outer_start_available": true,
+    "outer_completion_available": true,
+    "outer_exit_code_only_if_actual_completion": 0,
+    "internal_fixture_complete": true,
+    "actual_compiled_CLI_install": true,
+    "children": {
+      "preview": {
+        "returncode": 0,
+        "closed": true,
+        "natural_join": true,
+        "original_child_reaped": true,
+        "original_child_unresolved": false,
+        "signals_sent": false,
+        "elapsed_seconds": 26.423941124929115,
+        "original_bound_seconds": 180
+      },
+      "install": {
+        "returncode": 0,
+        "closed": true,
+        "natural_join": true,
+        "original_child_reaped": true,
+        "original_child_unresolved": false,
+        "signals_sent": false,
+        "elapsed_seconds": 127.98137766704895,
+        "original_bound_seconds": 360
+      }
+    }
+  },
+  "health_intervals": [
+    {
+      "stage": "baseline",
+      "stage_sequence": 1,
+      "diagnostic": {
+        "sequence": 85,
+        "request_count": 15,
+        "diagnostic_request_identity": 15,
+        "pending_records": 1,
+        "released_records": 14,
+        "settled_records": 14,
+        "sampled_active_scopes": 2,
+        "uncertain": false,
+        "truncated": false
+      },
+      "failure_packet": {
+        "sequence": 85,
+        "request_count": 15,
+        "diagnostic_request_identity": 15,
+        "failure_count": 0,
+        "reason_sha256": [],
+        "uncertain": false
+      },
+      "first_poisoned_interval": false,
+      "stop_further_UI": false,
+      "all_released_complete_normal": true,
+      "abnormal_released_count": 0,
+      "pending_route_classes": {
+        "HEALTH": 1
+      }
+    },
+    {
+      "stage": "login",
+      "stage_sequence": 2,
+      "diagnostic": {
+        "sequence": 286,
+        "request_count": 49,
+        "diagnostic_request_identity": 48,
+        "pending_records": 3,
+        "released_records": 46,
+        "settled_records": 46,
+        "sampled_active_scopes": 6,
+        "uncertain": false,
+        "truncated": false
+      },
+      "failure_packet": {
+        "sequence": 286,
+        "request_count": 49,
+        "diagnostic_request_identity": 48,
+        "failure_count": 0,
+        "reason_sha256": [],
+        "uncertain": false
+      },
+      "first_poisoned_interval": false,
+      "stop_further_UI": false,
+      "all_released_complete_normal": true,
+      "abnormal_released_count": 0,
+      "pending_route_classes": {
+        "TELEMETRY": 1,
+        "HEALTH": 1,
+        "UNKNOWN": 1
+      }
+    },
+    {
+      "stage": "gallery",
+      "stage_sequence": 3,
+      "diagnostic": {
+        "sequence": 510,
+        "request_count": 63,
+        "diagnostic_request_identity": 63,
+        "pending_records": 2,
+        "released_records": 61,
+        "settled_records": 61,
+        "sampled_active_scopes": 4,
+        "uncertain": false,
+        "truncated": false
+      },
+      "failure_packet": {
+        "sequence": 510,
+        "request_count": 63,
+        "diagnostic_request_identity": 63,
+        "failure_count": 0,
+        "reason_sha256": [],
+        "uncertain": false
+      },
+      "first_poisoned_interval": false,
+      "stop_further_UI": false,
+      "all_released_complete_normal": true,
+      "abnormal_released_count": 0,
+      "pending_route_classes": {
+        "TELEMETRY": 1,
+        "HEALTH": 1
+      }
+    },
+    {
+      "stage": "flow-open",
+      "stage_sequence": 4,
+      "diagnostic": {
+        "sequence": 734,
+        "request_count": 91,
+        "diagnostic_request_identity": 90,
+        "pending_records": 8,
+        "released_records": 83,
+        "settled_records": 83,
+        "sampled_active_scopes": 16,
+        "uncertain": true,
+        "truncated": false
+      },
+      "failure_packet": {
+        "sequence": 735,
+        "request_count": 91,
+        "diagnostic_request_identity": 90,
+        "failure_count": 2,
+        "reason_sha256": [
+          "518ccf86c34e5831fe84b7e932f2194fee669753213aefcdd3cb5720c2d252da",
+          "00c7651a85aa999510d02daaa141a489befebd708a9bf37228ae6bbb2080f905"
+        ],
+        "uncertain": true
+      },
+      "first_poisoned_interval": true,
+      "stop_further_UI": true,
+      "all_released_complete_normal": true,
+      "abnormal_released_count": 0,
+      "pending_route_classes": {
+        "TELEMETRY": 1,
+        "UNKNOWN": 6,
+        "HEALTH": 1
+      }
+    }
+  ],
+  "shutdown": {
+    "hold_result_returncode": 1,
+    "errors": [
+      {
+        "exception_class": "ValueError",
+        "phase": "normal-closure"
+      }
+    ],
+    "signals_sent": false,
+    "cleanup": {
+      "external_timeout_must_report_unresolved_scope": false,
+      "normal_quit_requested": true,
+      "original_backend_exited": true,
+      "original_controller_reaped": true,
+      "original_controller_still_live": false,
+      "original_main_exited": true
+    },
+    "final_lease": {
+      "protocol": 4,
+      "state": "recovery_required",
+      "revision": 9,
+      "writer_drain_phase": "refused",
+      "status": "refused",
+      "active_scopes": 1,
+      "unsupported": [
+        "uncovered_request_protocol"
+      ],
+      "authenticated_backend_exit_record_present": false
+    },
+    "strict_managed_store_closure_verified": false,
+    "launch_lease_release_authority": false,
+    "whole_process_tree_verified": false
+  },
+  "custody": {
+    "current_protected68_raw9_SHA_exact": true,
+    "profile_unchanged": true,
+    "active_pointer_unchanged": true,
+    "failed_or_closed_journal_pointer_preserved": true,
+    "no_recovery_relaunch_or_old_lease_adoption": true
+  },
+  "all_nonzero_tool_records": [
+    {
+      "raw_label": "actual-tool-root-bind-inputs-actual-tool-start.json",
+      "exit_code": 1
+    },
+    {
+      "raw_label": "actual-tool-root-health-flow-open-actual-tool-completion.json",
+      "exit_code": 2
+    },
+    {
+      "raw_label": "actual-tool-root-hold-actual-ready-poll-01.json",
+      "exit_code": 1
+    },
+    {
+      "raw_label": "actual-tool-root-hold-capacity-retry-actual-tool-completion.json",
+      "exit_code": 1
+    }
+  ],
+  "operator_input_errors": [
+    {
+      "raw_label": "actual-tool-root-bind-inputs-actual-tool-start.json",
+      "exit_code": 1,
+      "classification": "Root explicitly identified an operator-input precondition refusal; separate from product/runtime failure."
+    }
+  ],
+  "CUA": {
+    "evidence": "Root actual CUA action/accessibility and screenshot transcript; no standalone native PNG files retained",
+    "persisted_PNG": false,
+    "screenshot_file_pin": null,
+    "independent_GUI_action_acceptance": false,
+    "Root_confirmation_required_before_publication": false,
+    "Root_reported_observations": [
+      "Exact isolated installed application and loopback backend port61967 were checked before interaction.",
+      "Existing synthetic fixture login and data gallery6split2train/2val/2test were observed.",
+      "Flowchart loading was observed; all further UI stopped after health4 first poison.",
+      "No edit,save,run,export,inference,connection test or reopen was performed.",
+      "Original nonce-bound normal quit was requested and original holder final1 was retained."
+    ],
+    "Root_final_actual_transcript_confirmed": true,
+    "Root_observed_exact_installed_app_port": 61967
+  },
+  "limits": [
+    "No exact request/emitter inference from reason-class hashes or another cohort.",
+    "Health siblings share original response and own request identity; separate snapshots need not be atomic.",
+    "Natural original identities exited/reaped and scoped managed-writer closure are separate facts.",
+    "No complete Electron helper/process tree, Provider18 manual8, model-quality, release, parent or scenario-count credit.",
+    "This reader performs no API, UI, process operation or qualification.",
+    "The populated-package source fix is present in this compiled backend cohort; its source regression passing does not identify or repair the unretained native emitter.",
+    "The first retained reader projection mislabeled a bind-error disclosure as an actual tool record; both original projection and explicit correction are retained.",
+    "Baseline health actual0 is supported by Root transcript and the retained capture-error disclosure; no original tool-result file was retained or reconstructed."
+  ],
+  "caps": {
+    "backend_exit_seconds": 15,
+    "controller_exit_seconds": 10,
+    "main_exit_seconds": 30,
+    "manual_seconds": 600,
+    "original_export_seconds": 115,
+    "original_run_seconds": 60,
+    "readiness_seconds": 360,
+    "startup_seconds": 210
+  },
+  "private_readback": {
+    "size": 50045,
+    "sha256": "bf1ed0ab42dc7aede5e8fb273b1c1c7d66248770f99461aae1cfc50a39b63af8"
+  },
+  "raw_evidence": [
+    {
+      "label": "lifetime-result",
+      "bytes": 4581,
+      "sha256": "581cfe4227e026817761eb27c1b07b97abd4568dd6ecf63e5a0752b6507b2337"
+    },
+    {
+      "label": "READY",
+      "bytes": 1720,
+      "sha256": "966eaf9a184a8d57e44c3fe8f82efe8b1be363bce9cff7fe31ef3aa066f67be1"
+    },
+    {
+      "label": "ACK",
+      "bytes": 404,
+      "sha256": "71a5eae4e4be0509ffe4055aa6bbfcd2b020cd556cb87cec4f868062274a180f"
+    },
+    {
+      "label": "readiness-proof",
+      "bytes": 19485,
+      "sha256": "c22e6171ba5e4b73aa0e98a2499c5133f08454c9a909631db35ef82ee76a9b4c"
+    },
+    {
+      "label": "quit",
+      "bytes": 222,
+      "sha256": "635d165411631f28af9a0868e8d9627906eaa525c8bec3eb6cf9f07554956859"
+    },
+    {
+      "label": "final-journal",
+      "bytes": 5322,
+      "sha256": "26f2a41b71b4d5d190b3f0aa58cb6965f6e347d05694450b8f7633b18d6053ec"
+    },
+    {
+      "label": "final-lease-pointer",
+      "bytes": 221,
+      "sha256": "f8666cdd57d6474e2a7a55aa6e05f19e0577a2016d9bb959afdafb4f889fd66b"
+    },
+    {
+      "label": "health-01-baseline.json",
+      "bytes": 8243,
+      "sha256": "e67c0369f0c3499b82b18f2d8811e1264e63a8450810d799596ddfcd891341bb"
+    },
+    {
+      "label": "health-02-login.json",
+      "bytes": 20501,
+      "sha256": "49776dc150ea6ada51d5abbce133320696b0e0a041072a7c0f721dc1a3ec23b7"
+    },
+    {
+      "label": "health-03-gallery.json",
+      "bytes": 25355,
+      "sha256": "b2e800d1852c2974ce4a976f11cb7c8aaa2636cf5d3250689c14d742bc390370"
+    },
+    {
+      "label": "health-04-flow-open.json",
+      "bytes": 35256,
+      "sha256": "3761e9b5cfe8c6f335e17cb844df13224fe4abda766c5f8e745e4e86e5bfc5e9"
+    },
+    {
+      "label": "controls-inputs",
+      "bytes": 6896,
+      "sha256": "27a2b58157ac9adf2910696bd5c32fbf3a34b10ef4727fb3123452a68b93da26"
+    },
+    {
+      "label": "frontend-snapshot",
+      "bytes": 1054947,
+      "sha256": "78916b5878299399ff22c1bca7055de353fbce90fdf82b2493328e40dde7a038"
+    },
+    {
+      "label": "backend-snapshot",
+      "bytes": 546557,
+      "sha256": "6f16a7706daad3694860f01d03c411ffbf26c5eb60c45f1dc9ef8274a5a9be14"
+    },
+    {
+      "label": "backend-after-snapshot",
+      "bytes": 546557,
+      "sha256": "6f16a7706daad3694860f01d03c411ffbf26c5eb60c45f1dc9ef8274a5a9be14"
+    },
+    {
+      "label": "protected-before",
+      "bytes": 58318,
+      "sha256": "e8fe13312fc62ab03226acc2aca218952f1c3ac8417b6f2a238b42b874b33c9c"
+    },
+    {
+      "label": "protected-after-setup",
+      "bytes": 60251,
+      "sha256": "da3dcfc00f65cc2674f90c4f380961b0b91cd1787e0f010e9654efde72668feb"
+    },
+    {
+      "label": "protected-after-UI",
+      "bytes": 59869,
+      "sha256": "0f1c1f0b60809939e2092a37d2ebd2cae48a49db184f4fd7fce49da1428ae45f"
+    },
+    {
+      "label": "active-before-UI",
+      "bytes": 410,
+      "sha256": "8af1eb6fe7da83610dbc04350e60081f1f484542ec11c666aa82b0e23eff29cc"
+    },
+    {
+      "label": "fixture-result",
+      "bytes": 14910,
+      "sha256": "ae85e907557940cbd8637fcfdf0832e06f317009a0524d040f0bcd091872d714"
+    },
+    {
+      "label": "fixture-preview-child",
+      "bytes": 2849,
+      "sha256": "69d535a5c56b6507ca14f60668c3ef5620ecf751dc2d6263d56613e4ae8bf69e"
+    },
+    {
+      "label": "fixture-preview-stdout",
+      "bytes": 2373,
+      "sha256": "76149788b9f0cffde9ab77efbf137571042573c1bdfc80cc6cc9ac18e42a6820"
+    },
+    {
+      "label": "fixture-preview-stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "fixture-install-child",
+      "bytes": 2949,
+      "sha256": "29dfbd312427eb8e09d0fe47016efde72d8065ea865c7dbe1dc660e96062b3c4"
+    },
+    {
+      "label": "fixture-install-stdout",
+      "bytes": 503,
+      "sha256": "309a13089071fd137beb47bfd2fa767a43423de350aa3f2c97a59bb8a18e7dc5"
+    },
+    {
+      "label": "fixture-install-stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "fixture-preview.json",
+      "bytes": 2571,
+      "sha256": "366d2915fde12f0be189c0f886e754cfe2dc13b4751f1dc394101896c7a0f283"
+    },
+    {
+      "label": "fixture-install.json",
+      "bytes": 545,
+      "sha256": "e38a5598d79397ab4b119230926f0ca37f7fcce76dfa7e57af23467dac3dc181"
+    },
+    {
+      "label": "fixture-preview-child-start.json",
+      "bytes": 1933,
+      "sha256": "3e29a9823297edf389f292928af0c1fa0d2c03874a2cabb7d6130b389740869c"
+    },
+    {
+      "label": "fixture-install-child-start.json",
+      "bytes": 2035,
+      "sha256": "0a2c52fd43b65b9b5beda9eba3ad8b714858a2bef89813bc0f9a5636df4239d8"
+    },
+    {
+      "label": "fixture-populated-setup.json",
+      "bytes": 24520,
+      "sha256": "80fd941cc6a3b69dc3550f6f5144532ab2c64aea5cd2adf3c363a43e8d131613"
+    },
+    {
+      "label": "fixture-controller-argv.json",
+      "bytes": 891,
+      "sha256": "bf71aaa3ef2c02d4c8ff880a4af93739a84e0239c90777a270750175c758c5a5"
+    },
+    {
+      "label": "fixture-controller-inputs.json",
+      "bytes": 524,
+      "sha256": "976c4f7be2314738c769536412ef9bbc757434d49b88609ddeee6a1c99b42b3c"
+    },
+    {
+      "label": "lifetime-inputs",
+      "bytes": 1675,
+      "sha256": "4b38b0ea106347bde90b9d8b2cea5bd72710b031b0010488b7d1efb2fd37c5cf"
+    },
+    {
+      "label": "controller-start",
+      "bytes": 3484,
+      "sha256": "96267a0400f6ce698fa258fa7646cad5211b210d1b12818cd6258df938a8f14d"
+    },
+    {
+      "label": "controller-stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "artifact-artifact_pins",
+      "bytes": 59588,
+      "sha256": "f778ecb470cf542441f79cb068e76daf5a80516ce9eb9a1122874357bbf7ddd5"
+    },
+    {
+      "label": "artifact-assembly_provenance",
+      "bytes": 2164989,
+      "sha256": "266aaf8640803967e2e696b24e58ca41c430211c0d703068026099e0a3d03bc6"
+    },
+    {
+      "label": "artifact-backend_release",
+      "bytes": 957364,
+      "sha256": "73f6adacdb1c4b1eb93c399d16868fd60eee365c658bbc3bcfc43d32eb9770f3"
+    },
+    {
+      "label": "artifact-build_tool_result",
+      "bytes": 1018,
+      "sha256": "579c5b1b6cd0be39dc4497877644a95a274db2068aaaab24affacef5d4420112"
+    },
+    {
+      "label": "assembly-original_tool_result",
+      "bytes": 525,
+      "sha256": "7de5c3632b05ec9426b1758fe7e748ec69c2fc7edf2e8d2086fd045591125985"
+    },
+    {
+      "label": "assembly-wrapper_result",
+      "bytes": 168,
+      "sha256": "6682dba08ce7641bb6c4397a1c3d9fff85c47996bf6100b8a11a63d50b12e30c"
+    },
+    {
+      "label": "assembly-child_stdout",
+      "bytes": 279,
+      "sha256": "6631bf382789170fd35298a28fbe02bec6820a608ebd0288b1251bc28c53fcf8"
+    },
+    {
+      "label": "backend-result",
+      "bytes": 649,
+      "sha256": "de3ae9e53d7bee12833883a439104670d4d84f0c14ccccebd0162755ecc41ecd"
+    },
+    {
+      "label": "backend-start",
+      "bytes": 4684,
+      "sha256": "9dd3e2b94880c00d26f223d021b27d91ccd4d0ddc8bac65e13b80eb0d479191b"
+    },
+    {
+      "label": "reviewed-actual-build-archive-readback",
+      "bytes": 1757426,
+      "sha256": "949e3af8549e51b02c05cbfb9a0a2ecfdf5e7030a76683d2f559bce76c591136"
+    },
+    {
+      "label": "adapter-ready-bound-handoff.json",
+      "bytes": 9367,
+      "sha256": "b40105ed2ddf9e3efcc5177654a276c8fae14fd7f8c14fdade487d15ec8d0c31"
+    },
+    {
+      "label": "adapter-coherent-declaration.final.json",
+      "bytes": 5850,
+      "sha256": "7640e0ddace1af064f467ef2dcdd8eac63dbbedef18c4b833d42229517c2ca22"
+    },
+    {
+      "label": "actual-tool-root-after-UI-actual-tool-completion.json",
+      "bytes": 387,
+      "sha256": "0c08fc473423afa00f0c967d567f93c5a7b8b11a48114a3c32f464d1bde0133f"
+    },
+    {
+      "label": "actual-tool-root-after-UI-actual-tool-start.json",
+      "bytes": 130,
+      "sha256": "a1b3dad0eec063572ce936ab0ee0ba3dc69da528ad582bd19ed72c5f16d1bc0e"
+    },
+    {
+      "label": "actual-tool-root-after-setup-actual-tool-completion.json",
+      "bytes": 393,
+      "sha256": "22a2e0f818143589eab9684b23cbca7d25e70fefcc519ede0f0c4addbaf002f3"
+    },
+    {
+      "label": "actual-tool-root-after-setup-actual-tool-start.json",
+      "bytes": 131,
+      "sha256": "a6577af4b1395c5fe8438d47a5578bc07b3a238560d679e46e2d13e9af6f7a76"
+    },
+    {
+      "label": "actual-tool-root-artifact-reader-actual-tool-completion.json",
+      "bytes": 1742,
+      "sha256": "cf198f1ea3c8fc47834d54cabf3119158ec1b3f2db337b66bc537725e60a4ca2"
+    },
+    {
+      "label": "actual-tool-root-artifact-reader-actual-tool-start.json",
+      "bytes": 131,
+      "sha256": "624eb4ae1497055a069464b2c4c5c15cedf8f424c4b6ed5babfcfc6eaabdfd8a"
+    },
+    {
+      "label": "actual-tool-root-before-setup-actual-tool-completion.json",
+      "bytes": 394,
+      "sha256": "0324ddea997a0b8bd2177aa904e91c5974b8d3b9770a1b8544610ba5fd932e8e"
+    },
+    {
+      "label": "actual-tool-root-before-setup-actual-tool-start.json",
+      "bytes": 131,
+      "sha256": "2d7badc9cb285580ef8dd45cbb005e709e651cafda78a7569dd48c5fe6dcacbc"
+    },
+    {
+      "label": "disclosure-root-bind-environment-input-error-01.json",
+      "bytes": 438,
+      "sha256": "716bb80d342a9360c75e2b17e962c25212326a6c4789a54b191b86fb973e6ddf"
+    },
+    {
+      "label": "actual-tool-root-bind-inputs-actual-tool-start.json",
+      "bytes": 1280,
+      "sha256": "068488f59b965a771c2eaff616c7b35ee7a92366714e237a4ca119dc5445e746"
+    },
+    {
+      "label": "actual-tool-root-bind-inputs-corrected-actual-tool-completion.json",
+      "bytes": 549,
+      "sha256": "b0e8f20adad377327fbe2b592c84ffc294a05f2a820e89d31cb7e1f5ae82af59"
+    },
+    {
+      "label": "actual-tool-root-bind-inputs-corrected-actual-tool-start.json",
+      "bytes": 130,
+      "sha256": "bcea9400edc6d75f4f5499c2c4d14bc39ffc98d043cbea9ce01ae0a8f526ce0e"
+    },
+    {
+      "label": "actual-tool-root-health-baseline-capture-error.json",
+      "bytes": 555,
+      "sha256": "359edf63a517dcec50ab4d2b27513318f112eb45352411b12ea5c360e83a13a8"
+    },
+    {
+      "label": "actual-tool-root-health-flow-open-actual-tool-completion.json",
+      "bytes": 443,
+      "sha256": "3874850b47bf36172b8adf0f6fb1978c36e823284912cad814f746a7c844b676"
+    },
+    {
+      "label": "actual-tool-root-health-flow-open-actual-tool-start.json",
+      "bytes": 129,
+      "sha256": "e9be662cb7076522da37df2b350ff0af66341149ef9ec3bdf288cae49d57ef43"
+    },
+    {
+      "label": "actual-tool-root-health-gallery-actual-tool-start.json",
+      "bytes": 441,
+      "sha256": "597c45146a460a7922764a0030e3e99ee5c9ff2d5bab69eb39fcdf730c308dc9"
+    },
+    {
+      "label": "actual-tool-root-health-login-actual-tool-completion.json",
+      "bytes": 437,
+      "sha256": "04f1f34c11bd8b038cf0ab525b84ee4372349507d03d92845b9e16c4fc711755"
+    },
+    {
+      "label": "actual-tool-root-health-login-actual-tool-start.json",
+      "bytes": 130,
+      "sha256": "8691dbe36ea07265c69dd035da6a0d1ed087449a3f02c191409977e22a76b3ef"
+    },
+    {
+      "label": "actual-tool-root-hold-actual-ready-poll-01.json",
+      "bytes": 1935,
+      "sha256": "48bcc045637b926ccd5b4575be42951f30d84b9278bac6c7bdd82e43df7950e4"
+    },
+    {
+      "label": "actual-tool-root-hold-actual-tool-start.json",
+      "bytes": 131,
+      "sha256": "ea1f7b00ab4a26a00afee12adc7fe6fa64a6d8260d707723f2d5beb8fae9a881"
+    },
+    {
+      "label": "actual-tool-root-hold-capacity-refusal-01.json",
+      "bytes": 456,
+      "sha256": "45656f2d79cc12f188e0f403fc709fafbac1fc41eef94ec9f6e4c66133197c54"
+    },
+    {
+      "label": "actual-tool-root-hold-capacity-retry-actual-ready-poll-05.json",
+      "bytes": 643,
+      "sha256": "7adaba735e5cbac50d678af0e1c9dd51961e1419b738b44a2a7ff7fb5edddb32"
+    },
+    {
+      "label": "actual-tool-root-hold-capacity-retry-actual-tool-completion.json",
+      "bytes": 320,
+      "sha256": "6f8224d9d0b551a09cbb99bdac5f47e99c0278509500ba0309bff8afae8f0320"
+    },
+    {
+      "label": "actual-tool-root-hold-capacity-retry-actual-tool-start.json",
+      "bytes": 131,
+      "sha256": "ce7288e420376df4b224255db1a4986ca3dcdcb81e21f12379de445d1a57ebdb"
+    },
+    {
+      "label": "actual-tool-root-lifetime-inputs-actual-tool-start.json",
+      "bytes": 281,
+      "sha256": "1e7dddbef79e1c8eee23eedcd8fa572f6fda72cbc58d6c73148a75c66aed3ee4"
+    },
+    {
+      "label": "actual-tool-root-quit-request-actual-tool-start.json",
+      "bytes": 241,
+      "sha256": "ee353a3adb412dc53e8203f705a66d23da85226101ed6707a263d7d90f745a4e"
+    },
+    {
+      "label": "actual-tool-root-setup-actual-tool-completion.json",
+      "bytes": 356,
+      "sha256": "b08b30ef7e77b7af64a823216ce1c0955175ea7dc391c7816df540928938ef36"
+    },
+    {
+      "label": "actual-tool-root-setup-actual-tool-start.json",
+      "bytes": 131,
+      "sha256": "967b2e4bcf4b51bb809c25a444c58e1f1cbec12519c7248661734250f42a50d5"
+    }
+  ],
+  "draft_projection_corrections": [
+    {
+      "kind": "metadata-is-not-an-actual-tool-envelope",
+      "retained_initial_reader_projection": true,
+      "initial_label": "actual-tool-root-bind-environment-input-error-01.json",
+      "corrected_label": "disclosure-root-bind-environment-input-error-01.json",
+      "reason": "This file records the same initial bind input failure; it is not a second executed tool result."
+    }
+  ],
+  "tool_capture_limits": {
+    "baseline_health_receipt_retained": true,
+    "baseline_actual_tool_file_available": false,
+    "baseline_actual_exit_0_asserted_in_retained_capture_error_and_Root_transcript": true,
+    "baseline_envelope_reconstructed": false,
+    "baseline_capture_error_sha256": "359edf63a517dcec50ab4d2b27513318f112eb45352411b12ea5c360e83a13a8",
+    "baseline_retry_performed": false
+  },
+  "prelifetime_capacity_refusal": {
+    "before_AppKit_lifetime_started": true,
+    "original_gate_bytes": 7000000000,
+    "free_bytes_at_recorded_readback": 5975527424,
+    "original_gate_unchanged": true,
+    "retained_actual_tool_label": "actual-tool-root-hold-actual-ready-poll-01.json",
+    "capacity_refusal_disclosure_sha256": "45656f2d79cc12f188e0f403fc709fafbac1fc41eef94ec9f6e4c66133197c54"
+  },
+  "decoded_failure_classes": [
+    {
+      "name": "owned_ancillary_handler_return",
+      "sha256": "518ccf86c34e5831fe84b7e932f2194fee669753213aefcdd3cb5720c2d252da"
+    },
+    {
+      "name": "owned_ancillary_unconfirmed_lifetime",
+      "sha256": "00c7651a85aa999510d02daaa141a489befebd708a9bf37228ae6bbb2080f905"
+    }
+  ],
+  "native_cause_attribution": {
+    "exact_HTTP_request_identity_proven": false,
+    "exact_route_proven": false,
+    "native_package_library_cause_proven": false,
+    "same_reason_hashes_as_Root11_are_not_a_causal_join": true,
+    "reason": "Failure history retains distinct reason strings without request tokens; health public route allowlist projects most ancillary routes to UNKNOWN."
+  },
+  "no_acceptance_or_count_promotion": true
+}
