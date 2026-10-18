@@ -12,6 +12,29 @@ from types import MethodType
 class ActivityObservationError(ValueError):pass
 
 
+def _flow_open_get_route(path, method):
+    """Public literal labels only; no request ownership or raw-path output."""
+    if type(path) is not str or type(method) is not str or method != 'GET':
+        return 'UNKNOWN'
+    return {
+        '/api/flowchart/pipeline': 'FLOW_PIPELINE',
+        '/api/flowchart/templates/single-segmentation': 'FLOW_SINGLE_SEG_TEMPLATE',
+        '/api/evaluation/results': 'EVALUATION_RESULTS',
+        '/api/flowchart/models/catalog': 'FLOW_MODEL_CATALOG',
+        '/api/flowchart/pipelines': 'FLOW_PIPELINES',
+        '/api/flowchart/pipeline/active/record': 'FLOW_ACTIVE_RECORD',
+        '/api/flowchart/pipeline/active-version': 'FLOW_ACTIVE_VERSION',
+        '/api/flowchart/draft': 'FLOW_DRAFT',
+        '/api/compute/profiles': 'COMPUTE_PROFILES',
+        '/api/compute/selection': 'COMPUTE_SELECTION',
+        '/api/flow-workspace/templates': 'FLOW_WORKSPACE_TEMPLATES',
+        '/api/flow-workspace/comparisons': 'FLOW_WORKSPACE_COMPARISONS',
+        '/api/dataset/images': 'DATASET_IMAGES',
+        '/api/dataset/library/images': 'LIBRARY_IMAGES',
+        '/api/flow-workspace/image-info': 'FLOW_IMAGE_INFO',
+    }.get(path, 'UNKNOWN')
+
+
 def _context():
     try:return (asyncio.current_task(),asyncio.get_running_loop(),threading.current_thread(),os.getpid())
     except RuntimeError:return (None,None,threading.current_thread(),os.getpid())
@@ -614,7 +637,7 @@ class OriginalRequestActivityObserver:
                 rows[-1].update(protocol='HTTP' if type(protocol) is str and protocol == 'http' else
                     'WEBSOCKET' if type(protocol) is str and protocol == 'websocket' else 'UNKNOWN',
                     method=method if type(method) is str and method in methods else 'NONE' if method is None else 'UNKNOWN',
-                    route=routes.get(path, 'UNKNOWN') if type(path) is str else 'UNKNOWN',
+                    route=routes.get(path, _flow_open_get_route(path, method)) if type(path) is str else 'UNKNOWN',
                     status=status if type(status) is int and 100 <= status <= 599 else None,
                     error='CANCELLED' if row['canceled'] else 'ERROR' if row['error_type'] is not None else 'NONE')
             # Keep failed/pending originals first, then the latest normal rows.
@@ -678,7 +701,7 @@ class OriginalRequestActivityObserver:
                         'protocol': 'HTTP' if type(protocol) is str and protocol == 'http' else
                             'WEBSOCKET' if type(protocol) is str and protocol == 'websocket' else 'UNKNOWN',
                         'method': method if type(method) is str and method in methods else 'NONE' if method is None else 'UNKNOWN',
-                        'route': routes.get(path, 'UNKNOWN') if type(path) is str else 'UNKNOWN',
+                        'route': routes.get(path, _flow_open_get_route(path, method)) if type(path) is str else 'UNKNOWN',
                         'status': status if type(status) is int and 100 <= status <= 599 else None,
                         'accepted': row['accepted'], 'released': row['released'],
                         'completed': row['completed'], 'normal_return': row['normal_return'],
