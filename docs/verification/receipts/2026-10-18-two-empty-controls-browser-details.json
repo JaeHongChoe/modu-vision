@@ -1,0 +1,159 @@
+{
+  "schema": "modu-vision.two-empty-controls-browser-details/v1",
+  "source_sha": "646622dd3acfa042c5640de11087cc0cb1dab477",
+  "public_source_base": "b921c94aab8a128f540db19553468ee7e6dda571",
+  "source_dirty": false,
+  "scope": "Only F118.pixel-mask-source-choice.empty and U007.native-original-roi-scale-drag.empty. Parent/action-family/native/cancel/reopen/handoff/model-quality/release states remain unchanged.",
+  "generic_receipts": {
+    "mask": {
+      "bytes": 4698,
+      "sha256": "0a55f30baa438f0a905944ce98efa72191c940729e78e54c87eb508265fa2191"
+    },
+    "roi": {
+      "bytes": 4700,
+      "sha256": "0b3395fe79ed48fd9ee70b592165baa5f259ed7ee7645d330c6af846475eec7b"
+    }
+  },
+  "qualification": {
+    "cases": 2,
+    "expected": 2,
+    "failed": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "attempts_per_case": 1,
+    "workers": 1,
+    "retries": 0,
+    "original_action_response_budget_ms": 10000,
+    "loopback_only": true
+  },
+  "source_custody": {
+    "tracked_files": 2992,
+    "current_full_raw9_SHA_reopened": true,
+    "before_after_equal_each_case": true,
+    "both_actual_records_equal_prepared_exact_HEAD_Git_blob_and_mode_snapshot": true,
+    "published_base_difference": "Two added reviewed specs only; all2990 published files unchanged.",
+    "normal_merge_parents": [
+      "488fb199d89edf5156669b530ebc0a2721467a5d",
+      "b921c94aab8a128f540db19553468ee7e6dda571"
+    ],
+    "old_premerge_checkpoint_preserved": true,
+    "provider_links": 321,
+    "selected_provider_files": 10,
+    "runtimes": 3,
+    "original_runner_bodies_and_caps_unchanged": true
+  },
+  "mask": {
+    "checkbox_states": [
+      true,
+      false,
+      true
+    ],
+    "preview_rows": [
+      0,
+      0,
+      0
+    ],
+    "chooser_calls": 0,
+    "postbaseline_mutations": 0,
+    "preview_apply_export_dispatched": false,
+    "protected_API_before_after_exact": true,
+    "fixture_raw_full_response_strings_rehashed": 40,
+    "UI_full_completion_parsed_payload_SHA_receipts": 19,
+    "UI_raw_original_body_files_retained": false,
+    "body_retention_limit": "UI JSON/JPEG full bodies were completed by original observer under10s and retained as parsed payload/SHA/decode/finish records; original UI raw bytes are not separate files and are not retrospectively reconstructed. Forty fixture response strings retain exact originals.",
+    "full_request_context_header_equality_when_present": true,
+    "separate_server_accepted_context_receipt": false,
+    "original_FD_opened_closed": [
+      169,
+      169
+    ],
+    "FD_uncertain": [],
+    "protected_distinct_regular_files": 12,
+    "current_poststop_protected_raw9_SHA_names_exact": true
+  },
+  "ROI": {
+    "owning_placeholder_counts_input_ROI_reload": [
+      0,
+      1,
+      1
+    ],
+    "SVG_editor_counts": [
+      0,
+      0,
+      0
+    ],
+    "saved_original_coordinates": [
+      32,
+      16,
+      128,
+      96
+    ],
+    "postbaseline_writes": 0,
+    "postbaseline_image_info_requests": 0,
+    "UI_raw_full_body_files_rehashed": 65,
+    "fixture_raw_full_body_files_rehashed": 16,
+    "context_headers_retained": false,
+    "context_limit": "No full request-context-header equality or separate server-accepted-context receipt is asserted for this spec.",
+    "real_revision_validation_terminal_CAS_accept_library_prerequisite": true,
+    "protected_distinct_regular_files": 6,
+    "current_poststop_protected_raw9_SHA_names_exact": true,
+    "protected_scope_limit": "Only original source/tiny/draft/flowcharts/annotations/models/reports/project.json/labelsets.json roots; runtime SQLite/home outside these roots are not claimed immutable."
+  },
+  "closure": {
+    "each_backend_original_natural_exit_code": 0,
+    "signals": null,
+    "forced": false,
+    "early_exit": false,
+    "port_closed": true,
+    "pid_alive": false,
+    "group_alive": false,
+    "escaped": [],
+    "unowned_references": [],
+    "scan_errors": null,
+    "global_leftovers": [],
+    "all_admitted_original_requests_completed": true,
+    "zero_page_console_request_or_foreign_errors": true
+  },
+  "visual_review": {
+    "Root_direct_canonical_PNG_review_reported": true,
+    "record_type": "Parent task transcript; raw original files are retained and SHA-pinned.",
+    "mask": "Original unchecked and rechecked checkbox visible in respective PNGs.",
+    "ROI": "No image, selected fixed-ROI node, owning placeholder and original32/16/128/96 coordinates visible; ordinary reload screenshot repeats empty state.",
+    "no_new_UI_action_or_screenshot_recapture_by_reader": true
+  },
+  "private_readback_pin": {
+    "bytes": 961235,
+    "sha256": "6af555a5af352fd24e75dad14ac66c43bacdbfc7eebf48c708f78667d88a0694"
+  },
+  "source_record_join_pin": {
+    "bytes": 2824,
+    "sha256": "47a9d9f18e23cd090cc40d25566345148cea969a58ce369bca4c014f14232773"
+  },
+  "reader_pin": {
+    "bytes": 24677,
+    "sha256": "f040f450c1f666a332f6ff7d1bc7543d2749200b6cd2660b6e7e1519f3ca55d3"
+  },
+  "reader_actual_tool_pin": {
+    "bytes": 126,
+    "sha256": "743e9c61107591dfba445ecabddb09c9dd4efbec0e936a4bafb3655db42efe38"
+  },
+  "reader_log_pin": {
+    "bytes": 562,
+    "sha256": "ba74bf8342759ade65c172ee20cc31a1d05292a5b156bf7575df1e51c7e5708e"
+  },
+  "finite_original_refs": 3140,
+  "reader_FDs_opened_closed": [
+    6243,
+    6243
+  ],
+  "claims": {
+    "PUB_mutated": false,
+    "ledger_promoted": false,
+    "parent_acceptance": false,
+    "installed_native_acceptance": false,
+    "model_training_or_inference": false,
+    "whole_run_zero_GPU_claim": false,
+    "worker_process_exit_claim": false,
+    "quality_approval": false
+  }
+}
