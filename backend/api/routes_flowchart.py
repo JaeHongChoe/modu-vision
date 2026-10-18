@@ -68,6 +68,7 @@ from backend.engine.original_owned_flow_request import (
     observe_original_flow_handler, observe_original_flow_locked, observe_original_flow_publication,
     observe_original_flow_model_resolution,
     observe_original_flow_specialist_resolution, observe_original_flow_retained_source,
+    observe_original_flow_draft_atomic, original_flow_draft_read_text, observe_original_flow_draft_active_return,
 )
 
 _resolve_job_artifacts = observe_original_flow_model_resolution(_resolve_job_artifacts)
@@ -172,13 +173,17 @@ def _write_json(path: Path, value: Dict[str, Any]) -> None:
             prefix=f".{path.name}.", suffix=".tmp", delete=False,
         ) as handle:
             temporary_path = Path(handle.name)
+            observe_original_flow_draft_atomic('open',path,value,temporary_path,handle)
             json.dump(value, handle, indent=2, ensure_ascii=False)
             handle.flush()
             os.fsync(handle.fileno())
+            observe_original_flow_draft_atomic('flushed',path,value,temporary_path,handle)
         os.replace(temporary_path, path)
+        observe_original_flow_draft_atomic('published',path,value,temporary_path,handle)
     finally:
         if temporary_path is not None:
             temporary_path.unlink(missing_ok=True)
+            observe_original_flow_draft_atomic('clean',path,value,temporary_path,handle)
 
 
 def _write_pipeline(path: Path, pipeline: FlowchartPipeline) -> None:
@@ -248,24 +253,26 @@ def _draft_file(project: dict, context: dict) -> Path:
 def _draft_active_version(project: dict, context: dict, checksum: str) -> Optional[str]:
     pointer = _active_flow_file(Path(project["project_dir"]))
     if not pointer.is_file():
+        observe_original_flow_draft_active_return(project,context,checksum,None,None,None,None)
         return None
     try:
-        active = json.loads(original_UI_ancillary_read_text(pointer,encoding='utf-8',role='flow'))
+        active = json.loads(original_flow_draft_read_text(pointer,encoding='utf-8',role='flow'))
         version_file = _version_dir(Path(project["project_dir"])) / f"{active['version_id']}.json"
         if (active.get("project_id") != context["project_id"]
                 or active.get("source_dataset_path") != context["source_dataset_path"]
                 or active.get("labelset_id", "default") != context["labelset_id"]):
             return None
-        version = json.loads(original_UI_ancillary_read_text(version_file,encoding='utf-8',role='flow'))
+        version = json.loads(original_flow_draft_read_text(version_file,encoding='utf-8',role='flow'))
         pipeline = FlowchartPipeline.model_validate(version["pipeline"])
         result = active["version_id"] if pipeline_sha256(pipeline) == checksum else None
         observe_original_UI_draft_active_return(project, context, checksum, active, version, pipeline, result)
+        observe_original_flow_draft_active_return(project,context,checksum,active,version,pipeline,result)
         return result
     except (OSError, ValueError, KeyError, TypeError):
         return None
 
 
-@router.put("/draft")
+@observe_original_flow_handler(router.put("/draft"))
 def save_flow_draft(req: FlowDraftSaveRequest, request: Request) -> dict:
     """Save an editable graph without resolving models or activating a version."""
     with _FLOW_SAVE_LOCK:
