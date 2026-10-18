@@ -1,0 +1,129 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "646622dd3acfa042c5640de11087cc0cb1dab477",
+  "source_dirty": false,
+  "test": "scripts/e2e/mask-source-choice-empty.spec.ts::empty mask source choice stays local through actual checkbox changes without a chosen bundle or preview",
+  "test_source_sha256": "61b879742a7ef7c2207734fc17d34c68dfc430049a61a0ccf1b5d657bbaaa49e",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "workers": 1,
+  "retries": 0,
+  "report_sha256": "04748679b8fe63d300c3d96c52e30c75fa1983c20bdc314212baf0e1809191d2",
+  "harness_sha256": "d7b74cc9661b73ccea164c28629aaea9a00effe48b3ea20813f45de47546544c",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "1cb3b8b09c9980d101d67d41f71c8d0c95d1372e6068dae7c8be4308b9aa1db1"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "7ce0926d3c7674ff2215ea5e64488a1b8ef25ea3831ff795e52d41e7f8803dac"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Only F118.pixel-mask-source-choice.empty. No other success/invalid/error/cancel/reopen/handoff cell, installed-native, whole-flow, model quality, parent, human, device, signing or release acceptance.",
+  "public_source_base": "b921c94aab8a128f540db19553468ee7e6dda571",
+  "private_execution_source_difference": "Normal merge includes exact published base plus only these two new test specs; no execution relabel to public HEAD.",
+  "execution": {
+    "browser_channel": "chrome",
+    "browser_version": "155.0.8059.80",
+    "test_cases": 1,
+    "command_exit_code": 0,
+    "wrapper_elapsed_seconds": 17.29758945805952,
+    "original_action_and_response_body_budget_ms": 10000
+  },
+  "facts": {
+    "cell": "F118.pixel-mask-source-choice.empty",
+    "pointer": "/records/117/actions/3/scenarios/empty",
+    "actual_checkbox_states": [
+      true,
+      false,
+      true
+    ],
+    "preview_rows": [
+      0,
+      0,
+      0
+    ],
+    "chooser_calls": 0,
+    "postbaseline_mutations": 0,
+    "preview_apply_export_dispatched": false,
+    "fixture_full_original_response_strings_rehashed": 40,
+    "UI_complete_parsed_payload_and_SHA_receipts": 19,
+    "UI_original_raw_response_bytes_retained": false,
+    "UI_raw_byte_rehash_limit": "Original observer completed each full body under10s and retained parsed payload/SHA/finish; raw UI JSON/JPEG bytes are not separate artifacts and are not reconstructed.",
+    "request_and_response_context_header_values_equal_recorded_transport_when_present": true,
+    "independent_server_accepted_context_receipt_claim": false,
+    "original_FD_ledger": {
+      "opened": 169,
+      "closed": 169,
+      "uncertain": []
+    },
+    "protected_API_exact": true
+  },
+  "owned_natural_closure": {
+    "exitCode": 0,
+    "signal": null,
+    "forced": false,
+    "exitedBeforeStop": false,
+    "port_closed": true,
+    "pid_alive": false,
+    "groupAlive": false,
+    "escaped": [],
+    "unownedReferences": [],
+    "scanError": null
+  },
+  "Root_visual_review": "Root reported direct inspection of both canonical PNGs in the parent task transcript; no new CUA action or raw tool reconstruction by this reader.",
+  "visual_scope": "Mask checkbox unchecked/rechecked states visible.",
+  "raw_evidence_pins": {
+    "log": {
+      "bytes": 405,
+      "sha256": "dd6b31548951cbfbe58a85409e1dae3b1f6872884e128dbc7ae7e689c3fba62b"
+    },
+    "harness": {
+      "bytes": 232236,
+      "sha256": "d7b74cc9661b73ccea164c28629aaea9a00effe48b3ea20813f45de47546544c"
+    },
+    "report": {
+      "bytes": 6929,
+      "sha256": "04748679b8fe63d300c3d96c52e30c75fa1983c20bdc314212baf0e1809191d2"
+    },
+    "teardown": {
+      "bytes": 380,
+      "sha256": "5c8c87fc3c53e2bca8176ad5958afc46d6c5ecbf473f0c6eccd80d041b2c69b4"
+    },
+    "source_before": {
+      "bytes": 1073532,
+      "sha256": "db4575ffe688ca34ed61b6ec76a7592dccda4fc48e9c66178291eadd3dbd2734"
+    },
+    "source_after": {
+      "bytes": 1073532,
+      "sha256": "db4575ffe688ca34ed61b6ec76a7592dccda4fc48e9c66178291eadd3dbd2734"
+    },
+    "actual_tool_start": {
+      "bytes": 131,
+      "sha256": "f5c377d6075ddbdec31c808644ab51f775121db2715657d6f8609b3914dfaa27"
+    },
+    "actual_tool_completion": {
+      "bytes": 133,
+      "sha256": "d298d37cfc86f3e64eaf3c5e4ab054ca942a2790edd28b118525bebe24b42b6f"
+    }
+  },
+  "limits": {
+    "training_inference_invoked": false,
+    "whole_run_GPU_execution_claim": false,
+    "worker_process_exit_claim": false,
+    "Native_acceptance": false,
+    "parent_acceptance": false,
+    "registry_promoted_by_reader": false
+  }
+}

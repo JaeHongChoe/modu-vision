@@ -1,0 +1,128 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "646622dd3acfa042c5640de11087cc0cb1dab477",
+  "source_dirty": false,
+  "test": "scripts/e2e/roi-no-image-preflight.spec.ts::empty ROI image selection shows the owning placeholder and preserves saved original coordinates through node selection and reload",
+  "test_source_sha256": "1c0ac0564b6d2a57e0c757ad4651c4253727b037c79391a95015ddc620b45cdc",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "workers": 1,
+  "retries": 0,
+  "report_sha256": "9d7788485a49e944ef43d3ba0ee18e425b6759a49117910efc338fb4feda234a",
+  "harness_sha256": "de21e9f3bf90d098b86e641dafc0a0b65081f98ee7e56ff2b14aebac03384d72",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "70fbfada6f20d61093419e1e2bab16474503283d687f0c116fd4857700eed358"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "a7c9e9cdb3522ebd1d55e9f71b019e40fe8b644eab33152a44b3c3621564deb7"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Only U007.native-original-roi-scale-drag.empty. No other success/invalid/error/cancel/reopen/handoff cell, installed-native, whole-flow, model quality, parent, human, device, signing or release acceptance.",
+  "public_source_base": "b921c94aab8a128f540db19553468ee7e6dda571",
+  "private_execution_source_difference": "Normal merge includes exact published base plus only these two new test specs; no execution relabel to public HEAD.",
+  "execution": {
+    "browser_channel": "chrome",
+    "browser_version": "155.0.8059.80",
+    "test_cases": 1,
+    "command_exit_code": 0,
+    "wrapper_elapsed_seconds": 13.913785082986578,
+    "original_action_and_response_body_budget_ms": 10000
+  },
+  "facts": {
+    "cell": "U007.native-original-roi-scale-drag.empty",
+    "pointer": "/records/129/actions/0/scenarios/empty",
+    "actual_placeholder_counts_input_ROI_reload": [
+      0,
+      1,
+      1
+    ],
+    "ROI_editor_counts": [
+      0,
+      0,
+      0
+    ],
+    "saved_original_coordinates": [
+      32,
+      16,
+      128,
+      96
+    ],
+    "postbaseline_mutations": 0,
+    "postbaseline_image_info_requests": 0,
+    "original_UI_raw_response_bodies_rehashed": 65,
+    "fixture_original_raw_response_bodies_rehashed": 16,
+    "request_context_headers_not_retained_no_equality_claim": true,
+    "valid_revision_library_prerequisite": true,
+    "drag_key_cancel_reopen_cell_native_credit": false,
+    "protected_scope_limit": "source, tiny input, draft, flowcharts, annotations, models, reports, project.json, labelsets.json; runtime SQLite/home outside these roots are not claimed immutable"
+  },
+  "owned_natural_closure": {
+    "exitCode": 0,
+    "signal": null,
+    "forced": false,
+    "exitedBeforeStop": false,
+    "port_closed": true,
+    "pid_alive": false,
+    "groupAlive": false,
+    "escaped": [],
+    "unownedReferences": [],
+    "scanError": null
+  },
+  "Root_visual_review": "Root reported direct inspection of both canonical PNGs in the parent task transcript; no new CUA action or raw tool reconstruction by this reader.",
+  "visual_scope": "No selected image, selected fixed-ROI node, owning placeholder and saved coordinates visible; no native/drag gesture inferred.",
+  "raw_evidence_pins": {
+    "log": {
+      "bytes": 429,
+      "sha256": "7a6b7c1f591c164e8a8e1ef0bf7dba1e6af82f1b6875118b564e65c4d64673eb"
+    },
+    "harness": {
+      "bytes": 141984,
+      "sha256": "de21e9f3bf90d098b86e641dafc0a0b65081f98ee7e56ff2b14aebac03384d72"
+    },
+    "report": {
+      "bytes": 7164,
+      "sha256": "9d7788485a49e944ef43d3ba0ee18e425b6759a49117910efc338fb4feda234a"
+    },
+    "teardown": {
+      "bytes": 379,
+      "sha256": "81386f3e0cca275694a57330c9f2c2fe807bbb3a796e964c499c5747dcbcea25"
+    },
+    "source_before": {
+      "bytes": 1073532,
+      "sha256": "db4575ffe688ca34ed61b6ec76a7592dccda4fc48e9c66178291eadd3dbd2734"
+    },
+    "source_after": {
+      "bytes": 1073532,
+      "sha256": "db4575ffe688ca34ed61b6ec76a7592dccda4fc48e9c66178291eadd3dbd2734"
+    },
+    "actual_tool_start": {
+      "bytes": 131,
+      "sha256": "c92fb9fac69e9764ad44cfbd4bdf6adf858258dabf0532476474e6338946b747"
+    },
+    "actual_tool_completion": {
+      "bytes": 126,
+      "sha256": "f2aef3eb9555765d32e29f2624f0b24d5106b40174234459d0219e3b3edb5e45"
+    }
+  },
+  "limits": {
+    "training_inference_invoked": false,
+    "whole_run_GPU_execution_claim": false,
+    "worker_process_exit_claim": false,
+    "Native_acceptance": false,
+    "parent_acceptance": false,
+    "registry_promoted_by_reader": false
+  }
+}

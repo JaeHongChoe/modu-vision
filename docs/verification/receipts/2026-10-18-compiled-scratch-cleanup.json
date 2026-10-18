@@ -1,0 +1,28 @@
+{
+  "schema": "modu-vision.archive-proven-compiled-scratch-cleanup/v1",
+  "source_context": "b921c94aab8a128f540db19553468ee7e6dda571",
+  "scope": [
+    "B13 completed PyInstaller cache binary regulars",
+    "B14 completed PyInstaller cache binary regulars",
+    "B15 completed PyInstaller cache binary regulars",
+    "A15 portable staging regular duplicates"
+  ],
+  "removed_regulars": 6527,
+  "logical_removed_bytes": 4293951995,
+  "actual_free_before_bytes": 8026673152,
+  "actual_free_after_bytes": 12338159616,
+  "observed_free_gain_bytes": 4311486464,
+  "exclusive_APFS_reclaim_claim": false,
+  "protected_files_rechecked": 1197,
+  "errors": [],
+  "remaining_targets": 0,
+  "original_compiler_build_release_archive_source_and_failed_native_fixtures_preserved": true,
+  "all_links_directories_and_cache_indexes_retained": true,
+  "fresh_mount_process_open_reference_dependency_and_file_identity_gates_passed": true,
+  "APFS_all_entry_directory_nlink_delta_postcheck_passed": true,
+  "build_capacity_gate_waived": false,
+  "raw_result_sha256": "a20bf4c9da54d1b35aca4ef7ebfda31f009321f4e8b7ec538e469455b0471b32",
+  "original_tool_completion_sha256": "99e573cb8b0d875ddc750209fa5abccdb183ed0200aec2ec21eec1095f4a3c6a",
+  "executor_sha256": "c6e342ff401ee48937cf963ad7217aa9a8175505145f8da11ac934e7278d02d6",
+  "native_or_parent_acceptance": false
+}

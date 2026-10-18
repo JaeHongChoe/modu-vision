@@ -31695,7 +31695,31 @@
               ]
             },
             "empty": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S3-05",
+                  "source_sha": "646622dd3acfa042c5640de11087cc0cb1dab477",
+                  "kind": "click",
+                  "action": "원본 이미지 함께 내보내기",
+                  "expected": "Render the owning empty preflight during ordinary control actions while preserving the saved source/project truth and prohibiting downstream dispatch.",
+                  "observed": "browser: With no chosen mask bundle and zero preview rows, ordinary owning checkbox actions changed true→false→true. Preview/apply remained disabled; chooser and business mutation counts stayed0. Full protected API responses and source/project/empty-manifest/harness trees remained exact through natural shutdown.",
+                  "reviewer": "Codex root canonical PNG inspection plus finite original body/source/protected-custody/natural-closure readback; independent human quality, native lifetime, device and parent acceptance pending.",
+                  "test": "scripts/e2e/mask-source-choice-empty.spec.ts::empty mask source choice stays local through actual checkbox changes without a chosen bundle or preview",
+                  "receipt": "2026-10-18-mask-source-choice-empty-browser.json",
+                  "receipt_sha256": "0a55f30baa438f0a905944ce98efa72191c940729e78e54c87eb508265fa2191",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "1cb3b8b09c9980d101d67d41f71c8d0c95d1372e6068dae7c8be4308b9aa1db1"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "7ce0926d3c7674ff2215ea5e64488a1b8ef25ea3831ff795e52d41e7f8803dac"
+                    }
+                  ]
+                }
+              ]
             },
             "invalid": {
               "state": "pending"
@@ -32569,7 +32593,31 @@
               ]
             },
             "empty": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S2-05",
+                  "source_sha": "646622dd3acfa042c5640de11087cc0cb1dab477",
+                  "kind": "click",
+                  "action": "원본 이미지 ROI 편집 · 원본 좌표 끌기",
+                  "expected": "Render the owning empty preflight during ordinary control actions while preserving the saved source/project truth and prohibiting downstream dispatch.",
+                  "observed": "browser: With no selected inspection image, ordinary input-node selection removed the ROI placeholder; selecting the real fixed-ROI node restored it without an SVG editor. Ordinary reload retained the same owning empty branch and saved coordinates[32,16,128,96]. No postbaseline write or image-info request occurred; exact protected source/draft/annotation/project bodies remained after natural shutdown.",
+                  "reviewer": "Codex root canonical PNG inspection plus finite original body/source/protected-custody/natural-closure readback; independent human quality, native lifetime, device and parent acceptance pending.",
+                  "test": "scripts/e2e/roi-no-image-preflight.spec.ts::empty ROI image selection shows the owning placeholder and preserves saved original coordinates through node selection and reload",
+                  "receipt": "2026-10-18-u007-no-selected-image-empty-browser.json",
+                  "receipt_sha256": "0b3395fe79ed48fd9ee70b592165baa5f259ed7ee7645d330c6af846475eec7b",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "70fbfada6f20d61093419e1e2bab16474503283d687f0c116fd4857700eed358"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "a7c9e9cdb3522ebd1d55e9f71b019e40fe8b644eab33152a44b3c3621564deb7"
+                    }
+                  ]
+                }
+              ]
             },
             "invalid": {
               "state": "verified",
