@@ -8,7 +8,7 @@
       "execution_source_sha": "d88843ef220daaad0fa03feb57702190fe3db6c8",
       "test": "scripts/e2e/ocr-empty-workbench-controls.spec.ts::OCR empty truth prepared input completed job and model selection preserve originals through reopen",
       "recorded_test_source_sha256": "238bb9d59cc8cb998f222e4ec38a9aeb87d0b86f35eb3e44c7d7a01f54757b62",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "8c869e9c7fa829d2e22ad97ee3e3d97dae16aa82b507c75e55b7ee2060f5aa74",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
     },
@@ -18,7 +18,7 @@
       "execution_source_sha": "d88843ef220daaad0fa03feb57702190fe3db6c8",
       "test": "scripts/e2e/ocr-empty-workbench-controls.spec.ts::OCR invalid numeric training preflight with valid saved truth preserves whole originals through reopen",
       "recorded_test_source_sha256": "238bb9d59cc8cb998f222e4ec38a9aeb87d0b86f35eb3e44c7d7a01f54757b62",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "8c869e9c7fa829d2e22ad97ee3e3d97dae16aa82b507c75e55b7ee2060f5aa74",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
     },
@@ -28,7 +28,7 @@
       "execution_source_sha": "d88843ef220daaad0fa03feb57702190fe3db6c8",
       "test": "scripts/e2e/ocr-empty-workbench-controls.spec.ts::native OCR empty truth prepared input completed job and model selection preserve originals through reopen",
       "recorded_test_source_sha256": "238bb9d59cc8cb998f222e4ec38a9aeb87d0b86f35eb3e44c7d7a01f54757b62",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "8c869e9c7fa829d2e22ad97ee3e3d97dae16aa82b507c75e55b7ee2060f5aa74",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
     },
@@ -38,7 +38,7 @@
       "execution_source_sha": "d88843ef220daaad0fa03feb57702190fe3db6c8",
       "test": "scripts/e2e/ocr-empty-workbench-controls.spec.ts::native OCR invalid numeric training preflight with valid saved truth preserves whole originals through reopen",
       "recorded_test_source_sha256": "238bb9d59cc8cb998f222e4ec38a9aeb87d0b86f35eb3e44c7d7a01f54757b62",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "8c869e9c7fa829d2e22ad97ee3e3d97dae16aa82b507c75e55b7ee2060f5aa74",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
     },
@@ -48,7 +48,7 @@
       "execution_source_sha": "2489104fa58a9330cbf8d66daf323024d7ed0720",
       "test": "scripts/e2e/ocr-prepared-unsent-handoff.spec.ts::OCR unsent alphabet draft and saved alphabet split handoff preserve whole originals",
       "recorded_test_source_sha256": "47d0083f0980707408476282bd8f72bea3b472b3138b2c39560180f4fdc99368",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "19f4afb43c1a6ed14f1c7a0856dfb1590d2a4d944edfea1beb7b108381b56100",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
     },
@@ -58,7 +58,7 @@
       "execution_source_sha": "2489104fa58a9330cbf8d66daf323024d7ed0720",
       "test": "scripts/e2e/ocr-prepared-unsent-handoff.spec.ts::native OCR unsent alphabet draft and saved alphabet split handoff preserve whole originals",
       "recorded_test_source_sha256": "47d0083f0980707408476282bd8f72bea3b472b3138b2c39560180f4fdc99368",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "19f4afb43c1a6ed14f1c7a0856dfb1590d2a4d944edfea1beb7b108381b56100",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
     },
@@ -68,7 +68,7 @@
       "execution_source_sha": "44c923d9e91cfec197f0c7045fe7d7678ab8c138",
       "test": "scripts/e2e/flow-readonly-control-preflights.spec.ts::F064 empty inspector search partial-run input and unsent typed connection cancellation preserve saved originals",
       "recorded_test_source_sha256": "ac2e7d606ea8f74110ee82831972c866381c54a02a9172c203b41ade1897fed6",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "dbebd879dbe8b28bacfac1a97b5c90ee928e8e1d8e5144df5cc877c543e8bc5c",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
     },
@@ -78,7 +78,7 @@
       "execution_source_sha": "44c923d9e91cfec197f0c7045fe7d7678ab8c138",
       "test": "scripts/e2e/flow-readonly-control-preflights.spec.ts::native F064 empty inspector search partial-run input and unsent typed connection cancellation preserve saved originals",
       "recorded_test_source_sha256": "ac2e7d606ea8f74110ee82831972c866381c54a02a9172c203b41ade1897fed6",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "dbebd879dbe8b28bacfac1a97b5c90ee928e8e1d8e5144df5cc877c543e8bc5c",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
     },
@@ -88,7 +88,7 @@
       "execution_source_sha": "58eaccddb104da9e41269824625f033d28333fc4",
       "test": "scripts/e2e/flow-node-limit-preflights.spec.ts::F064 ninth fixed ROI and inspection node keyboard additions fail before graph or saved draft writes",
       "recorded_test_source_sha256": "6236bb318378715ae00131829ee56497e1eeb75c7f7a2bb3a9664c8fa386dfa8",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "2d78fdeb79fa480168c42f89a7bd3260242626404c31e3b01bd1b1cc960c966e",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
     },
@@ -98,7 +98,7 @@
       "execution_source_sha": "58eaccddb104da9e41269824625f033d28333fc4",
       "test": "scripts/e2e/flow-node-limit-preflights.spec.ts::native F064 ninth fixed ROI and inspection node keyboard additions fail before graph or saved draft writes",
       "recorded_test_source_sha256": "6236bb318378715ae00131829ee56497e1eeb75c7f7a2bb3a9664c8fa386dfa8",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "2d78fdeb79fa480168c42f89a7bd3260242626404c31e3b01bd1b1cc960c966e",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
     },
@@ -108,7 +108,7 @@
       "execution_source_sha": "2a7edd3df0b339ab83a175ab7446ed2cec8aacbe",
       "test": "scripts/e2e/flow-existing-refusal-controls.spec.ts::F064 empty model history mapping and keyboard layout connection deletion refusals preserve saved originals",
       "recorded_test_source_sha256": "90d100eab9cccde0a6992e91da468aed4ece7eaaa44ffbad2d9cbd924a9ca244",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "58e24569d8e20b3886adc9a45554dad832e939a74112170da6c315588e35137d",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
     },
@@ -118,7 +118,7 @@
       "execution_source_sha": "2a7edd3df0b339ab83a175ab7446ed2cec8aacbe",
       "test": "scripts/e2e/flow-existing-refusal-controls.spec.ts::native F064 empty model history mapping and keyboard layout connection deletion refusals preserve saved originals",
       "recorded_test_source_sha256": "90d100eab9cccde0a6992e91da468aed4ece7eaaa44ffbad2d9cbd924a9ca244",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "58e24569d8e20b3886adc9a45554dad832e939a74112170da6c315588e35137d",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
     },
@@ -128,7 +128,7 @@
       "execution_source_sha": "bbc531dd32b4304be74ce1ebdfa1773d88848762",
       "test": "scripts/e2e/flow-model-less-reopen-controls.spec.ts::F064 model-less inspection ROI and typed connection drafts reopen with exact saved graphs",
       "recorded_test_source_sha256": "2055dacdc591178b81ebef1dc85598d2b0cc322ddc49c509e5635a724cefe3b0",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "2eb85950f2bc9877787ea7d122b00b1a951a918357111f0392a3f98ec01ea9dc",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
     },
@@ -138,7 +138,7 @@
       "execution_source_sha": "bbc531dd32b4304be74ce1ebdfa1773d88848762",
       "test": "scripts/e2e/flow-model-less-reopen-controls.spec.ts::native F064 model-less inspection ROI and typed connection drafts reopen with exact saved graphs",
       "recorded_test_source_sha256": "2055dacdc591178b81ebef1dc85598d2b0cc322ddc49c509e5635a724cefe3b0",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "2eb85950f2bc9877787ea7d122b00b1a951a918357111f0392a3f98ec01ea9dc",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
     },
@@ -148,7 +148,7 @@
       "execution_source_sha": "e53171e93b3527ca22ebc9b436f4e52555fa398d",
       "test": "scripts/e2e/label-mask-empty-preflights.spec.ts::label and mask empty chooser preview and apply preflights preserve originals",
       "recorded_test_source_sha256": "b3c7c07af92471aefb2b236e9552987bea28e1a089d8c7415be007dcaf08ebbd",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "cfe95c29cae62d3ac1e2c3beaa495ac12481c7b3e092456df75c4256ce9d8c0b",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
     },
@@ -158,7 +158,7 @@
       "execution_source_sha": "e53171e93b3527ca22ebc9b436f4e52555fa398d",
       "test": "scripts/e2e/label-mask-empty-preflights.spec.ts::native label and mask empty chooser preview and apply preflights preserve originals",
       "recorded_test_source_sha256": "b3c7c07af92471aefb2b236e9552987bea28e1a089d8c7415be007dcaf08ebbd",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "cfe95c29cae62d3ac1e2c3beaa495ac12481c7b3e092456df75c4256ce9d8c0b",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
     },
@@ -168,7 +168,7 @@
       "execution_source_sha": "f7175f5b8bf0be6ee2a0bdc33dc5160506888923",
       "test": "scripts/e2e/evaluation-late-labelset-lifecycle.spec.ts::late saved labelset responses preserve current empty, refused and failed scopes through actual stage abandonment, reload and remount",
       "recorded_test_source_sha256": "e6c663a3765ed64552470e0d3acd00174fdb16f11cc609be8a0253e394db62ad",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "808104f67f070740d0ddf8c22d74607a4b8c20fd9f4215872e10a0f5a9dba0db",
       "reason": "Inherited public spec anchor retains exact historical test bytes. Current fixture opens the real OCR disclosure before its existing original-response wait; original deadlines, schemas and protection guards remain; no new current GUI execution."
     },
@@ -178,7 +178,7 @@
       "execution_source_sha": "f7175f5b8bf0be6ee2a0bdc33dc5160506888923",
       "test": "scripts/e2e/evaluation-late-labelset-lifecycle.spec.ts::native late saved labelset responses preserve current empty, refused and failed scopes through actual stage abandonment, reload and remount",
       "recorded_test_source_sha256": "e6c663a3765ed64552470e0d3acd00174fdb16f11cc609be8a0253e394db62ad",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "808104f67f070740d0ddf8c22d74607a4b8c20fd9f4215872e10a0f5a9dba0db",
       "reason": "Inherited public spec anchor retains exact historical test bytes. Current fixture opens the real OCR disclosure before its existing original-response wait; original deadlines, schemas and protection guards remain; no new current GUI execution."
     },
@@ -188,7 +188,7 @@
       "execution_source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
       "test": "scripts/e2e/review-queue-progress-lifecycle.spec.ts::saved queue progress retries preserve labels and empty selection and origin failures retain exact saved records",
       "recorded_test_source_sha256": "d2c7b39a7f578866deb7b302618f03d63e005398cbee023600805ae793e9df7e",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "08a99853a658805dc65b7f2eb8537a4f758dc7ad06efd943090f79190acd0d83",
       "reason": "Inherited public spec anchor retains exact historical test bytes. Current fixture opens the real OCR disclosure before its existing original-response wait; original deadlines, schemas and protection guards remain; no new current GUI execution."
     },
@@ -198,7 +198,7 @@
       "execution_source_sha": "2b288354ac4e56e9e23c11801f707fab8a10838b",
       "test": "scripts/e2e/review-queue-progress-lifecycle.spec.ts::native saved queue progress retries and real empty states preserve complete originals labels and older origin",
       "recorded_test_source_sha256": "d2c7b39a7f578866deb7b302618f03d63e005398cbee023600805ae793e9df7e",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "08a99853a658805dc65b7f2eb8537a4f758dc7ad06efd943090f79190acd0d83",
       "reason": "Inherited public spec anchor retains exact historical test bytes. Current fixture opens the real OCR disclosure before its existing original-response wait; original deadlines, schemas and protection guards remain; no new current GUI execution."
     },
@@ -208,7 +208,7 @@
       "execution_source_sha": "31a3d1f9d4c58a5c9c26aa3e5717707e3fc7504c",
       "test": "scripts/e2e/saved-evaluation-record-error.spec.ts::saved evaluation history failure clears stale record and explicit refresh recovers exact original identity result and preference",
       "recorded_test_source_sha256": "5e6a5dbc88a0963f564dfb43786f3d955967c3e2f16a7da81ff9d1e36e8614e0",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "3a1661dbcb72347110e0da7f32a80e476a4b3d8bff1f2996a01a2f3df9776b69",
       "reason": "Inherited public spec anchor retains exact historical test bytes. Current fixture opens the real OCR disclosure before its existing original-response wait; original deadlines, schemas and protection guards remain; no new current GUI execution."
     },
@@ -218,7 +218,7 @@
       "execution_source_sha": "31a3d1f9d4c58a5c9c26aa3e5717707e3fc7504c",
       "test": "scripts/e2e/saved-evaluation-record-error.spec.ts::native saved evaluation history failure clears stale record and explicit refresh recovers exact original identity result and preference",
       "recorded_test_source_sha256": "5e6a5dbc88a0963f564dfb43786f3d955967c3e2f16a7da81ff9d1e36e8614e0",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "3a1661dbcb72347110e0da7f32a80e476a4b3d8bff1f2996a01a2f3df9776b69",
       "reason": "Inherited public spec anchor retains exact historical test bytes. Current fixture opens the real OCR disclosure before its existing original-response wait; original deadlines, schemas and protection guards remain; no new current GUI execution."
     },
@@ -228,7 +228,7 @@
       "execution_source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
       "test": "scripts/e2e/saved-evaluation-selection-lifecycle.spec.ts::saved evaluation choices refuse missing preferences, empty scopes and catalog errors while actual picker dismissal and stage return preserve exact records",
       "recorded_test_source_sha256": "b070c56d87865609e908151e45837c94d63a47c61a7d9102bdb4320876d25f3a",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "e7a0fff477f858f3931bc7c9e9748de9d1a3cfc07d301958882a44e91ffc32aa",
       "reason": "Inherited public spec anchor retains exact historical test bytes. Current fixture opens the real OCR disclosure before its existing original-response wait; original deadlines, schemas and protection guards remain; no new current GUI execution."
     },
@@ -238,7 +238,7 @@
       "execution_source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
       "test": "scripts/e2e/saved-evaluation-selection-lifecycle.spec.ts::native saved evaluation choices refuse missing preferences, empty scopes and catalog errors while actual picker dismissal and stage return preserve exact records",
       "recorded_test_source_sha256": "b070c56d87865609e908151e45837c94d63a47c61a7d9102bdb4320876d25f3a",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "e7a0fff477f858f3931bc7c9e9748de9d1a3cfc07d301958882a44e91ffc32aa",
       "reason": "Inherited public spec anchor retains exact historical test bytes. Current fixture opens the real OCR disclosure before its existing original-response wait; original deadlines, schemas and protection guards remain; no new current GUI execution."
     },
@@ -248,7 +248,7 @@
       "execution_source_sha": "03d65b02519ff10ecfed6d62244a161b19d8a7cb",
       "test": "scripts/e2e/derived-adoption-import-four-controls.spec.ts::derived review real revision conflict and owned abort retries plus original non LabelMe folder refusal preserve original data",
       "recorded_test_source_sha256": "9eb213a22f9f4868af39277eb96a6a841e49272039bf82fb5a314ed4ac7d6a2d",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "6830327e87099c8b9c576abd33009acbc12074ea5012a76a98af097bead75f55",
       "reason": "Inherited public spec anchor retains exact historical test bytes. Current directory-link checks support verified Linux and APFS semantics with all regular-file and ownership guards retained; no new current GUI execution."
     },
@@ -258,7 +258,7 @@
       "execution_source_sha": "03d65b02519ff10ecfed6d62244a161b19d8a7cb",
       "test": "scripts/e2e/derived-adoption-import-four-controls.spec.ts::native derived review real revision conflict and owned abort retries plus original non LabelMe folder refusal preserve original data",
       "recorded_test_source_sha256": "9eb213a22f9f4868af39277eb96a6a841e49272039bf82fb5a314ed4ac7d6a2d",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "6830327e87099c8b9c576abd33009acbc12074ea5012a76a98af097bead75f55",
       "reason": "Inherited public spec anchor retains exact historical test bytes. Current directory-link checks support verified Linux and APFS semantics with all regular-file and ownership guards retained; no new current GUI execution."
     },
@@ -268,7 +268,7 @@
       "execution_source_sha": "d2d7f3ecda68977a9a7a027ef0a53d5bfaa7ae97",
       "test": "scripts/e2e/flow-history-input-boundaries.spec.ts::native input-focused history shortcuts preserve graph and durable draft boundary",
       "recorded_test_source_sha256": "400df9d3d2f258d587d815351fe2404005bbf7482ad8f828a568b039f8e3791a",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "bb465f90abf35e1f4842c2fa5475d3402dc7bae650004c496c2bd607f86d2a05",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Current no-job startup now verifies the original200 empty model catalog and refuses an obsolete evaluator404; no new GUI execution or current acceptance is supplied."
     },
@@ -278,7 +278,7 @@
       "execution_source_sha": "d2d7f3ecda68977a9a7a027ef0a53d5bfaa7ae97",
       "test": "scripts/e2e/flow-history-input-boundaries.spec.ts::input-focused history shortcuts preserve available undo and redo plus saved source",
       "recorded_test_source_sha256": "400df9d3d2f258d587d815351fe2404005bbf7482ad8f828a568b039f8e3791a",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "bb465f90abf35e1f4842c2fa5475d3402dc7bae650004c496c2bd607f86d2a05",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Current no-job startup now verifies the original200 empty model catalog and refuses an obsolete evaluator404; no new GUI execution or current acceptance is supplied."
     },
@@ -288,7 +288,7 @@
       "execution_source_sha": "6288eb8b0e9cd501e7a66e72a7e38468963658ac",
       "test": "scripts/e2e/flow-draft-save-error.spec.ts::native owning draft PUT503 retains original source and explicit save200 readback",
       "recorded_test_source_sha256": "1991a427a21bec2cab6a7d9d9ed326cf2e64ccc9b67118317959741f0edd5a7a",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "331992a0c2b7a1af5e6531d5afadbed22af546deacd2123025cbf8b8ad8cc219",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Current no-job startup now verifies the original200 empty model catalog and refuses an obsolete evaluator404; no new GUI execution or current acceptance is supplied."
     },
@@ -298,7 +298,7 @@
       "execution_source_sha": "6288eb8b0e9cd501e7a66e72a7e38468963658ac",
       "test": "scripts/e2e/flow-draft-save-error.spec.ts::owning draft PUT503 preserves saved graph and explicitly recovers same dirty edit",
       "recorded_test_source_sha256": "1991a427a21bec2cab6a7d9d9ed326cf2e64ccc9b67118317959741f0edd5a7a",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "331992a0c2b7a1af5e6531d5afadbed22af546deacd2123025cbf8b8ad8cc219",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Current no-job startup now verifies the original200 empty model catalog and refuses an obsolete evaluator404; no new GUI execution or current acceptance is supplied."
     },
@@ -308,7 +308,7 @@
       "execution_source_sha": "6288eb8b0e9cd501e7a66e72a7e38468963658ac",
       "test": "scripts/e2e/flow-draft-save-error.spec.ts::saved editable flow graphs and hashes stay scoped through A B A project handoff after owning draft saves",
       "recorded_test_source_sha256": "1991a427a21bec2cab6a7d9d9ed326cf2e64ccc9b67118317959741f0edd5a7a",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "331992a0c2b7a1af5e6531d5afadbed22af546deacd2123025cbf8b8ad8cc219",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Current no-job startup now verifies the original200 empty model catalog and refuses an obsolete evaluator404; no new GUI execution or current acceptance is supplied."
     },
@@ -318,7 +318,7 @@
       "execution_source_sha": "5c1760d1cb3a98e177ec684caa6a4279fcf5463a",
       "test": "scripts/e2e/comparison-submit-real-cancel.spec.ts::original manual comparison submit cancels its accepted owned CPU job and preserves earlier records",
       "recorded_test_source_sha256": "08bd4634ca28f94fbb60696901abe44f2ddb2e6f18852d9faba58529dd22cd62",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "5a8d1d5b0692f8b52665b6287b57cc1bb5c18826bf66e87d8577622a90c717a5",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Reviewed current fixture changes establish legitimate API readiness or platform prerequisites with original interaction guards retained; no new GUI execution or current acceptance is supplied."
     },
@@ -328,7 +328,7 @@
       "execution_source_sha": "5c1760d1cb3a98e177ec684caa6a4279fcf5463a",
       "test": "scripts/e2e/comparison-submit-real-cancel.spec.ts::native original manual comparison submit cancels its accepted owned CPU job and preserves earlier records",
       "recorded_test_source_sha256": "08bd4634ca28f94fbb60696901abe44f2ddb2e6f18852d9faba58529dd22cd62",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "5a8d1d5b0692f8b52665b6287b57cc1bb5c18826bf66e87d8577622a90c717a5",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Reviewed current fixture changes establish legitimate API readiness or platform prerequisites with original interaction guards retained; no new GUI execution or current acceptance is supplied."
     },
@@ -338,7 +338,7 @@
       "execution_source_sha": "3ab27ae5353dc6d3c25a3061b705be05270c9e89",
       "test": "scripts/e2e/flow-debug-model-freeze.spec.ts::native CPU debug cache and model hash history reopen",
       "recorded_test_source_sha256": "155708aac056bf6a57269a44be553d3eb068d37bf705cd40f73f32deccaced8c",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "8f6bd5a326ee206a2bfb57d242c998354ffcf6482e82ea23f54b54f2e373ea9a",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Reviewed current fixture changes establish legitimate API readiness or platform prerequisites with original interaction guards retained; no new GUI execution or current acceptance is supplied."
     },
@@ -348,7 +348,7 @@
       "execution_source_sha": "1352bff9672356decc39dbf7cd2c3fcc4f2d01a9",
       "test": "scripts/e2e/flow-template-draft-history.spec.ts::native cross-project mapping undo redo and persistent draft recovery",
       "recorded_test_source_sha256": "a9a1e640a5d660773a4aedf8a9923ab06573ec2cd395a07ce569be5be6e358ba",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "7aacf560bf67b2a42024cea59ca3a26dc9421cd9c7f4e1c610d6d9d4b07efa11",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Reviewed current fixture changes establish legitimate API readiness or platform prerequisites with original interaction guards retained; no new GUI execution or current acceptance is supplied."
     },
@@ -358,7 +358,7 @@
       "execution_source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
       "test": "scripts/e2e/flow-template-safety.spec.ts::template save and explicit mapping preserve originals across errors cancellation and reopen",
       "recorded_test_source_sha256": "1774c498e87dc0248b2592ee3bdcfa8ccc39ada24a47350353f8a630cff80f74",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "c1db5ad8408622d7a83d7bbfd28c14ee3b3ef996782adfbf4e33991d9ae0b8ad",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Reviewed current fixture changes establish legitimate API readiness or platform prerequisites with original interaction guards retained; no new GUI execution or current acceptance is supplied."
     },
@@ -368,7 +368,7 @@
       "execution_source_sha": "42edae72800026e4b1f6125e99947599b1ad978d",
       "test": "scripts/e2e/flow-template-safety.spec.ts::native template safety preserves saved versions and reopens explicitly mapped draft",
       "recorded_test_source_sha256": "1774c498e87dc0248b2592ee3bdcfa8ccc39ada24a47350353f8a630cff80f74",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "c1db5ad8408622d7a83d7bbfd28c14ee3b3ef996782adfbf4e33991d9ae0b8ad",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Reviewed current fixture changes establish legitimate API readiness or platform prerequisites with original interaction guards retained; no new GUI execution or current acceptance is supplied."
     },
@@ -378,7 +378,7 @@
       "execution_source_sha": "0544e0ee84611e39cf67cf3ca76dc1010e15ccd4",
       "test": "scripts/e2e/flow-template-draft-history.spec.ts::cross-project model class mapping preserves source and recovers draft",
       "recorded_test_source_sha256": "a9a1e640a5d660773a4aedf8a9923ab06573ec2cd395a07ce569be5be6e358ba",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "7aacf560bf67b2a42024cea59ca3a26dc9421cd9c7f4e1c610d6d9d4b07efa11",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Reviewed current fixture changes establish legitimate API readiness or platform prerequisites with original interaction guards retained; no new GUI execution or current acceptance is supplied."
     },
@@ -388,7 +388,7 @@
       "execution_source_sha": "0544e0ee84611e39cf67cf3ca76dc1010e15ccd4",
       "test": "scripts/e2e/flow-template-draft-history.spec.ts::native cross-project mapping undo redo and persistent draft recovery",
       "recorded_test_source_sha256": "a9a1e640a5d660773a4aedf8a9923ab06573ec2cd395a07ce569be5be6e358ba",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "7aacf560bf67b2a42024cea59ca3a26dc9421cd9c7f4e1c610d6d9d4b07efa11",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Reviewed current fixture changes establish legitimate API readiness or platform prerequisites with original interaction guards retained; no new GUI execution or current acceptance is supplied."
     },
@@ -398,7 +398,7 @@
       "execution_source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
       "test": "scripts/e2e/flow-debugger-artifact-controls.spec.ts::flow debugger pages searches and returns exact controlled artifacts without writes",
       "recorded_test_source_sha256": "31075ec4b4386d146c08b80091a5bbcb5cc30c41411aa7ef8e502705c71ec937",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "8d3493ffcf68f3440c8961a4c9cf9b9d323a5e6f6c271f9d915c963f02fdee0e",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Reviewed current fixture changes establish legitimate API readiness or platform prerequisites with original interaction guards retained; no new GUI execution or current acceptance is supplied."
     },
@@ -408,7 +408,7 @@
       "execution_source_sha": "e28d1d9d14b2e7878a4acc323f9ca9459309d607",
       "test": "scripts/e2e/flow-debugger-artifact-controls.spec.ts::native flow debugger keyboard controls keep exact controlled artifact and return focus",
       "recorded_test_source_sha256": "31075ec4b4386d146c08b80091a5bbcb5cc30c41411aa7ef8e502705c71ec937",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "8d3493ffcf68f3440c8961a4c9cf9b9d323a5e6f6c271f9d915c963f02fdee0e",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Reviewed current fixture changes establish legitimate API readiness or platform prerequisites with original interaction guards retained; no new GUI execution or current acceptance is supplied."
     },
@@ -418,7 +418,7 @@
       "execution_source_sha": "2520ec27b18a95910eb0e194e72198155aabb352",
       "test": "scripts/e2e/flow-debug-model-freeze-f064-controls.spec.ts::F064 owning selected-node503 retries genuine CPU partial and cache identity survives reopen and A B A",
       "recorded_test_source_sha256": "6b4aa3c55d78d1870114a4cf57106feb7820f2a51e4ad49d11a832223e21dd65",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "debbfb4153d4a5a26d8029a00d61fedaa313fd7eec469b39917272e35c4df3df",
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Reviewed current fixture uses real authenticated project/provider and validated library image identity under original10s execution/recovery guards; no new GUI execution or current acceptance is supplied."
     },
@@ -429,7 +429,7 @@
       "receipt": "2026-10-10-root443-direction-old-electron.json",
       "receipt_sha256": "03051bb997d3bcd8d6bda737b4472322b964ba63f606060c384b30dd18c3d49b",
       "recorded_test_source_sha256": "859276df7e87a7247793a712f740e60deac40a4558350c1720fc0759e234f9fb",
-      "retained_spec_commit": "f4e1cde796e0684e0b2f4f8c55a27520c7beb888",
+      "retained_spec_commit": "1774a52be04e2756f11e0c2dbe1903e1d96ba6b4",
       "test": "scripts/e2e/direction-field-input-boundaries.spec.ts::native independent direction rejects invalid values and persists an intentional empty label"
     },
     {
@@ -439,7 +439,7 @@
       "receipt": "2026-10-10-root443-direction-handoff-browser.json",
       "receipt_sha256": "abc8df73ae55dd2b09a11682ea2b1ff0efd4246377352cf4381b0f90a1c38735",
       "recorded_test_source_sha256": "859276df7e87a7247793a712f740e60deac40a4558350c1720fc0759e234f9fb",
-      "retained_spec_commit": "f4e1cde796e0684e0b2f4f8c55a27520c7beb888",
+      "retained_spec_commit": "1774a52be04e2756f11e0c2dbe1903e1d96ba6b4",
       "test": "scripts/e2e/direction-field-input-boundaries.spec.ts::independent direction and axial angle stay scoped through A B A project handoff and an old owning label read"
     },
     {
@@ -448,7 +448,7 @@
       "execution_source_sha": "3e5be751e917b2ca0efa8547f804ccac8efe1f8d",
       "test": "scripts/e2e/comparison-manual-selection.spec.ts::manual comparison pair and explicit empty survive evaluation model changes",
       "recorded_test_source_sha256": "559c82bc35c3ad49d06ad5221dff081f92bd3e90e1361bbb3fb5741d6dea3dab",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "52cc4b8f2edb4cd8b97526527890cd31b2bedb36f5202c42b2588b8926ef9a7f",
       "reason": "Retained public ancestor preserves exact historical executed test bytes. The reviewed current fixture joins already-issued stage-entry evaluation responses before immutable custody, retaining original request-start10s, full-body and source/context guards. This declaration preserves the old execution source and supplies no new GUI execution or current acceptance."
     },
@@ -458,7 +458,7 @@
       "execution_source_sha": "3e5be751e917b2ca0efa8547f804ccac8efe1f8d",
       "test": "scripts/e2e/comparison-manual-selection.spec.ts::native manual comparison pair and explicit empty survive evaluation model changes",
       "recorded_test_source_sha256": "559c82bc35c3ad49d06ad5221dff081f92bd3e90e1361bbb3fb5741d6dea3dab",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "52cc4b8f2edb4cd8b97526527890cd31b2bedb36f5202c42b2588b8926ef9a7f",
       "reason": "Retained public ancestor preserves exact historical executed test bytes. The reviewed current fixture joins already-issued stage-entry evaluation responses before immutable custody, retaining original request-start10s, full-body and source/context guards. This declaration preserves the old execution source and supplies no new GUI execution or current acceptance."
     },
@@ -468,7 +468,7 @@
       "execution_source_sha": "3e5be751e917b2ca0efa8547f804ccac8efe1f8d",
       "test": "scripts/e2e/comparison-manual-selection.spec.ts::manual baseline empty and exact saved comparison pair reopen through owning A B A project handoff",
       "recorded_test_source_sha256": "559c82bc35c3ad49d06ad5221dff081f92bd3e90e1361bbb3fb5741d6dea3dab",
-      "retained_spec_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
       "current_test_source_sha256": "52cc4b8f2edb4cd8b97526527890cd31b2bedb36f5202c42b2588b8926ef9a7f",
       "reason": "Retained public ancestor preserves exact historical executed test bytes. The reviewed current fixture joins already-issued stage-entry evaluation responses before immutable custody, retaining original request-start10s, full-body and source/context guards. This declaration preserves the old execution source and supplies no new GUI execution or current acceptance."
     },
@@ -478,7 +478,7 @@
       "execution_source_sha": "abf68757ea15784945f2dc8b60132569faaf21c5",
       "test": "scripts/e2e/patch-prepare-reopen-error-controls.spec.ts::patch preparation reports a real owned filesystem obstruction and reloads without fabricated prepared data",
       "recorded_test_source_sha256": "f397d085539bc381133f62a00d5dddfc526d5ccfca8e1ef7380d2acf81a13fa7",
-      "retained_spec_commit": "3c7a62bcea0c19e20ca8aa77c5a71b1a41a71e8a",
+      "retained_spec_commit": "6af66fae87d6ead335ea9c2dbd95f08910d32566",
       "current_test_source_sha256": "5e03e8604b1cd97c67c6af0b2092d68ca7d77485085dbed7ebd1932e0c11e661",
       "reason": "Retained public ancestor preserves the exact historical executed spec and original receipt. Current test adds exact assertions for four intentionally added preparation metadata fields, independently derived provenance, and pre-reload numeric captions within the same original deadline. Existing error and reopen operations, custody and full-response guards remain unchanged. This declaration supplies no new execution or acceptance and does not rewrite either historical result."
     },
@@ -488,7 +488,7 @@
       "execution_source_sha": "74fcce8bdc55c22036a8035a5641b7a5d81c2a3f",
       "test": "scripts/e2e/patch-prepare-reopen-error-controls.spec.ts::patch preparation reopens its actual saved dataset manifest and original-coordinate preview without training",
       "recorded_test_source_sha256": "f397d085539bc381133f62a00d5dddfc526d5ccfca8e1ef7380d2acf81a13fa7",
-      "retained_spec_commit": "3c7a62bcea0c19e20ca8aa77c5a71b1a41a71e8a",
+      "retained_spec_commit": "6af66fae87d6ead335ea9c2dbd95f08910d32566",
       "current_test_source_sha256": "5e03e8604b1cd97c67c6af0b2092d68ca7d77485085dbed7ebd1932e0c11e661",
       "reason": "Retained public ancestor preserves the exact historical executed spec and original receipt. Current test adds exact assertions for four intentionally added preparation metadata fields, independently derived provenance, and pre-reload numeric captions within the same original deadline. Existing error and reopen operations, custody and full-response guards remain unchanged. This declaration supplies no new execution or acceptance and does not rewrite either historical result."
     },
@@ -498,7 +498,7 @@
       "execution_source_sha": "54cda06a8162fc239752b1d6feb2752e93821d26",
       "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::keyboard edited graphs ROI and incomplete policies stay owned across A B A project handoff",
       "recorded_test_source_sha256": "4d378467d88e280bb960e0a060276a5dc2a485b18fff01de11ec498bed0fd1bc",
-      "retained_spec_commit": "eb6541e82fa27398878611e0cb98f8d1ea81af81",
+      "retained_spec_commit": "5929dbde50a0127549ad2c01b39892f68d7c72f1",
       "current_test_source_sha256": "5bc7420d2748a7b272ccdc6188c86c699ff1094f5545c6bf4701df0d59717c3b",
       "reason": "The exact previous public keyboard spec is retained at eb6541e. One separate decoder-error case was appended; all46585 historical bytes remain unchanged. This declaration supplies no new execution or current GUI acceptance for the older cases."
     },
@@ -508,7 +508,7 @@
       "execution_source_sha": "54cda06a8162fc239752b1d6feb2752e93821d26",
       "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard edited graphs ROI and incomplete policies stay owned across A B A project handoff",
       "recorded_test_source_sha256": "4d378467d88e280bb960e0a060276a5dc2a485b18fff01de11ec498bed0fd1bc",
-      "retained_spec_commit": "eb6541e82fa27398878611e0cb98f8d1ea81af81",
+      "retained_spec_commit": "5929dbde50a0127549ad2c01b39892f68d7c72f1",
       "current_test_source_sha256": "5bc7420d2748a7b272ccdc6188c86c699ff1094f5545c6bf4701df0d59717c3b",
       "reason": "The exact previous public keyboard spec is retained at eb6541e. One separate decoder-error case was appended; all46585 historical bytes remain unchanged. This declaration supplies no new execution or current GUI acceptance for the older cases."
     },
@@ -518,7 +518,7 @@
       "execution_source_sha": "54cda06a8162fc239752b1d6feb2752e93821d26",
       "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
       "recorded_test_source_sha256": "4d378467d88e280bb960e0a060276a5dc2a485b18fff01de11ec498bed0fd1bc",
-      "retained_spec_commit": "eb6541e82fa27398878611e0cb98f8d1ea81af81",
+      "retained_spec_commit": "5929dbde50a0127549ad2c01b39892f68d7c72f1",
       "current_test_source_sha256": "5bc7420d2748a7b272ccdc6188c86c699ff1094f5545c6bf4701df0d59717c3b",
       "reason": "The exact previous public keyboard spec is retained at eb6541e. One separate decoder-error case was appended; all46585 historical bytes remain unchanged. This declaration supplies no new execution or current GUI acceptance for the older cases."
     },
@@ -528,7 +528,7 @@
       "execution_source_sha": "c849ad4a6a6a48b4bf5b870c6a18c23e780947c1",
       "test": "scripts/e2e/obb-center-fit-empty-reset.spec.ts::center fitting empty and redraw discard only the unsent proposal and reopen exact saved truth",
       "recorded_test_source_sha256": "e17af821f161ee8e6d0eaf9e2bbac8118bca1bed019785be4b7eec98c90f2135",
-      "retained_spec_commit": "43009a8c4b74b41086e2cb0276a20315b2d3d608",
+      "retained_spec_commit": "0bb86299000ee5c014707510bad591efb8047ffe",
       "current_test_source_sha256": "d8c5aaca2fa5b8a065c78c8f96d16c611c85371076dad32437d2b20a9a3ee5b5",
       "reason": "Exact previous public center-fitting spec is retained at43009a8. One separate source-change-error case was appended; all23740 historical bytes remain unchanged. This historical declaration supplies no new GUI execution or acceptance for the older case."
     }

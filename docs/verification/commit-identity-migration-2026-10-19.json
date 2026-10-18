@@ -1,0 +1,1318 @@
+{
+  "schema": "modu-vision.commit-identity-migration/v1",
+  "scope": "author_committer_identity_and_same_tree_parent_links_only_no_new_test_execution",
+  "account": {
+    "login": "JaeHongChoe",
+    "id": 65914440
+  },
+  "original_head": "0f934feb302df5014825533c9ed074f8a2c79044",
+  "corrected_history_head": "adf2b260a8e51a497f540019335c1fae0397033b",
+  "unchanged_head_tree": "e98ba6b947eb71202db9591a9f96936e8e853f26",
+  "unchanged_boundary": "0c3a28f0de9c55340921f01c4ea04a612c09bfb2",
+  "original_history_tag": "verification-history-before-identity-correction-20261019",
+  "identities_corrected": 131,
+  "commits_reidentified": 132,
+  "receipt_files_unchanged": 952,
+  "historical_execution_source_sha_fields": "preserved verbatim; the archive tag retains previously public history, and does not assert availability of private execution commits",
+  "retained_spec_anchors_migrated": 53,
+  "current_source_test_execution": "none; exact original code, test, timestamps, commit messages and receipt bodies retained",
+  "commits": [
+    {
+      "original_commit": "02a2e036a4fe67851fb415170ea00f2104409f36",
+      "corrected_commit": "36c9a4450cdaea907809daa04c67b4ada1f5dcb6",
+      "unchanged_tree": "8369aded7efbc3ce58ce6ef7374f6859d6fd050a",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "7ee43b0ce959a9b470530fc13f424251447ec589",
+      "corrected_commit": "7b8916a6db56873a5c7cbe2bb0797c525b829b4c",
+      "unchanged_tree": "16112a3dd2862f1fa6c2fd6c796a28b15903a0ce",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "d378a5bbdead5c0857a878e73c7c32eae3dc1f0e",
+      "corrected_commit": "c6ebea4ac41a4388f48e878253d15b566b5b3dc6",
+      "unchanged_tree": "647aed8bd7c04f21dc650aa36ed2911e20e8a03c",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "04112a854b241f049d924f1f5ccec1502934bba8",
+      "corrected_commit": "bc674360ec617757b2044d28db51e57e4526f63c",
+      "unchanged_tree": "530216d1673188ac2038bcb434a4db12c31e5463",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "8054d356acd23fceef3b617710ca4623eca864a1",
+      "corrected_commit": "16d21695ee38e15b2dbc9f04999d6cc4fb2c3ead",
+      "unchanged_tree": "3d1db32fcc670e6c42f5e3bcb0f9508b61a9c9d2",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "db6aeaa687e9043c2e37b4b0670ac24ddee709ea",
+      "corrected_commit": "db105127a51c3fef8a4ab9507da9170eb1b651c5",
+      "unchanged_tree": "70e64784bb5f5458a1a27c5a75e5a137d78fe752",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "d00f07f3d7c940317848762abdf6743831dfe63d",
+      "corrected_commit": "1913c646fd17abe0cf433e967bdb7fcb5e389866",
+      "unchanged_tree": "7828b61ffe5cadc235f5c04951c99c591eb3ef5d",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_commit": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_tree": "9028d35484dafc40f961fe88dfd434334367bd16",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "760b4a90891a9ff15f0feed95a12a29aa85f6208",
+      "corrected_commit": "849f8c3b62db4e39e5ed9a7b55d75bfd97cd5074",
+      "unchanged_tree": "877ef467b909f5d7a7ae8c2ef7ac11a14fc6410b",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "4c2c23875f310695bbebaf60b77939167824e494",
+      "corrected_commit": "aa5bf406a103e37c0f41b5b50277e5e0819a85dd",
+      "unchanged_tree": "212192f7e7ffabd583afa27902a8613d00db5cbb",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "685137104b9fea05760d3457bc5f6421c0a774d5",
+      "corrected_commit": "4dc5635531669792dc29a8375396b9bd97fa48f6",
+      "unchanged_tree": "0931826243a08f5f857c225c2a2902ca35a636b5",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "0b235a16ca8130c29dc2681da3db29c95f13a65b",
+      "corrected_commit": "0913e2d656fd1040555a535e3b3ab662ab5b5354",
+      "unchanged_tree": "ab7eba7df4dcdff3363b225456e3aecba3963363",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "15ea0e64563612b0d0ce447401b3a2785b4ff8b6",
+      "corrected_commit": "6b659ac47937fa11e30b84410e0a692b8e80a7ac",
+      "unchanged_tree": "e6f071cb49c06e2a917dd126976aa640af05fc70",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "35ac911a83dd105a794f83e0a65e108d29461054",
+      "corrected_commit": "9d1f13ab71dc40b832e2572572090ed21b11bba2",
+      "unchanged_tree": "a791c4f6980136d99096764409dabf459c1050a4",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "e5516efc87bd2e2e142cb0352ac3a2d22339ca14",
+      "corrected_commit": "f44935de4c7a8f0fce8027ee59762222ae9cdb03",
+      "unchanged_tree": "b1fc6f5b6e883dbdaa813636e8c5f8e138515dcb",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "2bf54a90cbde0ec9ecef0f777699a33a9669e75e",
+      "corrected_commit": "1dc63c76dcc42b013de2165ca2ad4212379f92d4",
+      "unchanged_tree": "eb1482f70f788a4ad8b548f7b69bbe786930bbee",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "d571b4b44df035576347536756c7c36fc2678d7d",
+      "corrected_commit": "0af0336d85db353e7e3122c3bad2f0eb077e972a",
+      "unchanged_tree": "1b4bff9dbd4af1235daefb10b8fb43ff3af3a706",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "5f43c863f46606782c260270365e61e7c1b52aab",
+      "corrected_commit": "1b84c9dd3163ddf72d0b6462ad813fa5de1ac810",
+      "unchanged_tree": "80ec2c7fd715010ecbee1b008258f123a25fcb9b",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "a186f9dc3b9fe7119fb5be12f4d5aa97bb4d6ea6",
+      "corrected_commit": "80f19a7dab4e88233525f97bc4574bdd4a35f53b",
+      "unchanged_tree": "3bc6f67767a4b5ce59638914d8237036f50308c5",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "f6cc043b0a30e1384c245c0abf314aed8a3a2eb7",
+      "corrected_commit": "4a9c65b26422ec1549138a473d57d98cea967b3e",
+      "unchanged_tree": "217839b1368ad065d779162805299f398f7f471e",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "cdb8e66d159797e8c9e7b7826cb57e9cb971c5ef",
+      "corrected_commit": "ad5160dcbb755d3f8807e4e555640f6fb4c813a4",
+      "unchanged_tree": "932685cf502270493a6806ee99ce07599a733381",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "425e02c23b8dfccb1449d1c194cbe663416655a9",
+      "corrected_commit": "b860da0a3e2227ad27128d9878a455fedf532c14",
+      "unchanged_tree": "87d9b5b037f9a3e2fd2ec01465438d4761ed15e9",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "1a7527e7c6890c89d452098ab5088f998fe3008d",
+      "corrected_commit": "425798db86b5a0c118cfca12057f4c7f6b108738",
+      "unchanged_tree": "ddcd838998d3d0ae43fe931febde22d15b776a06",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "348baec9913dfaa0b285149084eac563ad77c603",
+      "corrected_commit": "5a8cd4aead8e6221b2775a7dfdc28f75515b9a6b",
+      "unchanged_tree": "85b0fd7c414385d3a1795d27100218e0f4dad4d0",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "af50a81569a70d367ff0f0230d2571ef66e980d5",
+      "corrected_commit": "c02d39744700da815a3581dd487a167ae9748f9b",
+      "unchanged_tree": "c20cda079f00fc828ca56821240a9adffb703de2",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "990898f87881592b58e54b687f74e8b288b835b0",
+      "corrected_commit": "77317006b822cc33c2f9a38e655c3fa6796a78f5",
+      "unchanged_tree": "cb8c4c66a8a2a0ab494da26f835d1ca120a92dcb",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "e5d870502ba856b2ea2ff461a5d744912b9b5873",
+      "corrected_commit": "e105f16f0af2feab4a4d1370501f80b4019f610b",
+      "unchanged_tree": "d7027e914891fbe59e38ebea25c1769a8ab20bd4",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "3b37784e9aa8a1176d1b9107557c4533bc22dbe8",
+      "corrected_commit": "5ff1add4fd200075804b3447aa4bf1f6c22baae5",
+      "unchanged_tree": "ad63dcd1d8ae7ad20afb9888006f5bbe26d8cd2e",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "07978db97775f46fa40738c99ace2ec8c94f95d4",
+      "corrected_commit": "7b9d73479c3fe667876a7816374cd71079916a9d",
+      "unchanged_tree": "653c5e335d5f71c8a727156625bba24d027542e2",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "d29485680c75f00baed9085cd17c871e647128a3",
+      "corrected_commit": "52c94a06cdde86180def2fbcf893374208c40cc7",
+      "unchanged_tree": "b06e71cd4b73271c992ec32d051fcc21fa74df0b",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "3857f108dcb5484fb7271c6809b41536440e19ea",
+      "corrected_commit": "ba9f4c0bce32c5f51089e3e025e9aff036dbdffd",
+      "unchanged_tree": "9d79fd9c8a1cb61f04b392776eff470364c7c48d",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "68821555e8e67373af90c06314df21f54dc93482",
+      "corrected_commit": "360650cb9700a8892063092d0f2db08e9b06a82f",
+      "unchanged_tree": "3b75340cf97339794a67dbfe3986736a58da73c6",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "74fd6e3a337b4b931081f4a466ebcee5ddcd9fa2",
+      "corrected_commit": "16362ecd057a31ff3f9f93c4de97a6b2d2d3d8d3",
+      "unchanged_tree": "6a3241b86a6e04a2298148461a39fe8bc06b7b08",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "8fb806339984991b00d045d44361781b74ea9850",
+      "corrected_commit": "fc9a8b252240e8b6a906672109ff05e42202a8a1",
+      "unchanged_tree": "990431be1dcabe98b073068aacedb754ffec0ce2",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "c2cab4eb80971b8e5b1da8df2db11315564fa194",
+      "corrected_commit": "e1b848f507fe5f8d52c628694e5ea6c7441cfea6",
+      "unchanged_tree": "b8380011688804138826cb9536668e302faccf76",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "b916cf17d47a23cb960d71a85c2f05682f859ec6",
+      "corrected_commit": "75be449c204e1b07386ef23509a4977296671d96",
+      "unchanged_tree": "7e1ddb4db4b2a0ef2b65c3a1fabd4e003e5258aa",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "bc3fbd503a5e752048aa1179da0d95130e4500c5",
+      "corrected_commit": "27175f8d55ef06861a8b07f62feae2cfefd0400b",
+      "unchanged_tree": "d62a40b9764afa31839b1e0fa4a06ef159ac0027",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "2dcb7490f71e8efaa0ee118650b9a63dcea40065",
+      "corrected_commit": "8d0080284f7f55ee50f066d9499df63ab03e3d63",
+      "unchanged_tree": "94b8b03f47e0347e76b0def08f18ea6d818ef6ad",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "cb436d5e0630b44288846728f1d2bfdf7b2f5fb7",
+      "corrected_commit": "a47523570894fffeb7787624eddca9ab690b2593",
+      "unchanged_tree": "49c601510434b65d413d1b0d35f29f9d7282a803",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "2c132d0d6b43200baf39248d21abee08113d4968",
+      "corrected_commit": "fc79c8d8af1042bfcc0083eec940bfc60652183f",
+      "unchanged_tree": "82f9cdc60b4ba33d18878dfee318a04905046785",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "b8be25cad7f80010f830e688628ad358266ffcc6",
+      "corrected_commit": "c8bbbcaa202020a6cb8a4884ce82e0ef90a0d5ed",
+      "unchanged_tree": "c15a1750796c8b1aa0716808b23180dc2198ac16",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "88a65834e7905f41efb07f899925507f6e2f89a1",
+      "corrected_commit": "7d4f22e2a3e25f4b1d7e15d25934855bcbd31a37",
+      "unchanged_tree": "308c839460eecb4b7034a034db49504b782dc12b",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "b32a707bb8a53ff9845ca3ccf83ec513afd0604e",
+      "corrected_commit": "8dd2396aae6849e5749c5aa25f7dcb166f98582f",
+      "unchanged_tree": "59922672145dd953ae347d9c0934a79a27be78b9",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "27eb9e0fb8c46a2fcd6325efc7c1f29bd7d02343",
+      "corrected_commit": "51108526ebc7aef3d7312c3eee6af8c9ac2bf5f4",
+      "unchanged_tree": "65b41f75a882ca7a28d1cb6411619ff8c966b9e1",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "230387f99a9d66aafd065d98bccbb57d4029dd02",
+      "corrected_commit": "7250bc0d85d8cc35c890df9078600135d8b56ce9",
+      "unchanged_tree": "ed26a34143a9007effaba14bdb119de2f5c1cf29",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "c624cc3f31a2f45d1be9057cb4c5de1d768550a5",
+      "corrected_commit": "211abe90b64f51e751a44f6065594c27bbdcf6dd",
+      "unchanged_tree": "204eb8f217b73778c2083e69b323fe28e450cb2d",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "49b597a08dc64bf7a39cee30e767e4c563175f2e",
+      "corrected_commit": "533fe977a3be2da3e3efcbb04f9658708d38cc62",
+      "unchanged_tree": "6c9b83e9c97d1d0e440e86562c2d43ec02ec1626",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "95bceb88781f581ee56299196f5405368d8b46f7",
+      "corrected_commit": "aa1e285ab65395f3900ebf1a3eda94c8eb1d079f",
+      "unchanged_tree": "23dd927359064b30492e07d79a67f87ce8546486",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "3086fb8114ae1e55e335dde5813dc5e4e21251ef",
+      "corrected_commit": "f4005e3da204473cf38ffe462fadc3150e315b3c",
+      "unchanged_tree": "f085213944b0ca14ceaa172e13a55c19d825b1fb",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "3a582ef3f41969d7d8272dbd926ea06c034b1413",
+      "corrected_commit": "d51568015503047e04ff5bf96e5519ae53ed5cf8",
+      "unchanged_tree": "8d3e3dba934a864d61b6013bb9ecc5ccf02505c9",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "9cc8d37c66507c845af8d6c3179f4e854a09922e",
+      "corrected_commit": "b255a58f00786e3ca8d2698f95d0adbbf3372523",
+      "unchanged_tree": "777cafe26bf700ca84689ec4ed6ece936696d4a3",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "dcb45ec717a9c36a351d8b303fd6fe29d4a975e6",
+      "corrected_commit": "c290b15de4df5b344668ac4f1ca112eb845b664c",
+      "unchanged_tree": "7cf9718a4519554e7f5bbf535206129860988f06",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "772e78f37ec6d1c6f2dbe2060649e2fcca2b7894",
+      "corrected_commit": "8c0bf1591386160317af62608e29ceaf6a3cfc25",
+      "unchanged_tree": "a50bb0db85dcf68641e33c987abcd2d7bd40b514",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "ea00488a03e9642dada4b81382e59e11c2b2c2a0",
+      "corrected_commit": "53d4929016e2bf5ce35fba5f05df717169b36bbe",
+      "unchanged_tree": "f6fedec65ed49b5a0872944048e37c78d1ff2dda",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "2e911f4fa50067b8cf0735e22432b5b0dc6b0a18",
+      "corrected_commit": "7f343f02337a57b7058cb7feccc39816db35a192",
+      "unchanged_tree": "ccfb8aa59b9c65d0d15ff3a4394bb1d379cfa989",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "f4e1cde796e0684e0b2f4f8c55a27520c7beb888",
+      "corrected_commit": "1774a52be04e2756f11e0c2dbe1903e1d96ba6b4",
+      "unchanged_tree": "b193f9dc1499e0db7fe0634d3356c0d9e26f7fe9",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "8119f03b5e0f15823198bc479e15a03cdc774da0",
+      "corrected_commit": "1dc44beca4db96c9cab33cdd3f23cb6288ac4d69",
+      "unchanged_tree": "8015665d13a536b82fbcd43d633879f8bd8ed4ae",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "8f6f1b5f649311e74fd7a43b378b3069ab32b0a1",
+      "corrected_commit": "9e8ee5e77254c7c74403e4056392383ed1f92ed9",
+      "unchanged_tree": "c6ceddaccbc5b26f5692a530903dcbad9e625064",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "70d5b5d1bcfe6b8c5ad1147c089cc8adfc73aad1",
+      "corrected_commit": "ea4bfbeeb16466ce0f3550adaf7bca6fff97898b",
+      "unchanged_tree": "433c561e1515b2f24730580056a78d0ca6394e1c",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "60abf066db049d81101f5b4dd50904cf09aa7c3f",
+      "corrected_commit": "3ba847de3afd2c736fc626ce3d1581e1d8564278",
+      "unchanged_tree": "156d73d7eec160eea28e8fdb7891d12280337172",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "76503620c250d91ba16575b2ac08c004e708dc27",
+      "corrected_commit": "af3cf17a59629232880771d6582711ae833ef834",
+      "unchanged_tree": "925a5cdce6c66d5529e311b552257e3d588b062b",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "4c2c9e847d8d784c6baeb4083d5428c9884d3b84",
+      "corrected_commit": "faa224c8926e8a3a90747448787ad0dafa5da9e0",
+      "unchanged_tree": "76ba743e938141680c3d1133faacd2aad581c12a",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "a448950deeea1664c07aabe2d19a1c6aea9fa838",
+      "corrected_commit": "f7a4456a3d5fb0548db0bdf2f94e6aa86699e698",
+      "unchanged_tree": "adf66fbcb260bd4256c8f22fba271afd33e18ef5",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "20e68d22c57ddc8e35b504d41218b64d5352a58f",
+      "corrected_commit": "5665718ee9b91f94eb1bc5db86f6324c56ee49e3",
+      "unchanged_tree": "52126c3ef6d635d148d5031a920db338f1a0c2ae",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "7e5e7e15d708390b024c346e4dec7140725fb520",
+      "corrected_commit": "b5bbd36ef02599fb107cc9cc6f66c3831525aa21",
+      "unchanged_tree": "80c1d4bf09a3051e28def4e4793b673d6dea284f",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "b7b2c27c78194de6714d717180147d2dee2cad92",
+      "corrected_commit": "cbedd2440336ec2af0d8fb4c2ca2b5082464767a",
+      "unchanged_tree": "09c046a9b4a7e7a3654245abcb00822fc1314292",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "8d98e212894dc575d1073f77448c5eddb013f74b",
+      "corrected_commit": "7366a55a0e1018ac0179a4be335531b9d8f48513",
+      "unchanged_tree": "48bf5a9605d8831adf89b958553cead12ee0d3f0",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "617888a5ea3892d8d73c08125b15c70a20699e17",
+      "corrected_commit": "7ea8443494ec51f758f6e0f7846a55461caf80a7",
+      "unchanged_tree": "2aefa6edfcf5ccef5386ae36c5b9996becc6aa61",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "10c9088c4ef38e6db0b44157d48c2de6a5d4e2fa",
+      "corrected_commit": "4f51258e3201e898a78b782b070b09f48d02c520",
+      "unchanged_tree": "ea2bbc4619871478c278696511b5fec5517ad9e2",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "c522a50311226924659ba0ffddb49ebde79ec5e2",
+      "corrected_commit": "43d3acfae52ae718e270caadf4895ab4f9fc13d7",
+      "unchanged_tree": "5e96adbef4a32ee03b694c10296077609cfe839f",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "000f5778b581d6861b21ea183c67ae6b712c0b89",
+      "corrected_commit": "bf65c201364b9e85d88595fa52cd38c794387b53",
+      "unchanged_tree": "2ca8c2aa43db641d3b6cfca71dcc4c722d279044",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "7e504ca217cb78cd47e027e8ca6172007b8ba991",
+      "corrected_commit": "3c9ccf76369c7c686e2e45652240ae51740dbb29",
+      "unchanged_tree": "4567f5acb9e27905b559eaa24a81438b762f0436",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "ad8fbee8684fc243704d46f639314d62656a95b1",
+      "corrected_commit": "7cbb3946b24ee0b0079b8fae61d97f38b4205760",
+      "unchanged_tree": "11974de8ec7636b57169e7113fa857622a636ac1",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "fafa790b8c175dc1e6b4d72075d1293bace51dfe",
+      "corrected_commit": "4d4fbd28740bbd8fbce719d2aab4bcad38c2eff5",
+      "unchanged_tree": "135bca02ed049c7e7febdd811c4e84087505e0fa",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "695e04c4127009b04d6a3fe472374060547ae54b",
+      "corrected_commit": "5bd42b93a81dcb02b1978723bf280c6c0592e6e2",
+      "unchanged_tree": "194c99db8d1656c71d26a6dabea1ffff87b6e16b",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "d748b536252c1de87b164b500dabc14acd299448",
+      "corrected_commit": "98ec98dce02ca4de5c1503792e6bb033e13fe29e",
+      "unchanged_tree": "690ce45812fb009797c5a5b0748b171077cc6755",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "3c7a62bcea0c19e20ca8aa77c5a71b1a41a71e8a",
+      "corrected_commit": "6af66fae87d6ead335ea9c2dbd95f08910d32566",
+      "unchanged_tree": "bce4f9163bc0a4b1cc2b3583403e77b03d281c6f",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "7da0daa1cde3c54411bc723f060561825dd8e815",
+      "corrected_commit": "0827f939e8a989685ee80b0c9904a45aa6d8b45f",
+      "unchanged_tree": "53dbbc468c72ad4ceed7b3c245effbd2aa379462",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "71d17a08cdbcef82502b8fb6c1a27a87763433fd",
+      "corrected_commit": "6847077358553145993a75e48756ff2b5c97f9c8",
+      "unchanged_tree": "d82cfe65aa3f4b401d3e3e14323b39d0073ace41",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "2f44f6d41127127c102d22f56ceb127102f046f5",
+      "corrected_commit": "785524bd086c46d44c344dbca8f1c97fd859e4c6",
+      "unchanged_tree": "1a03f31c8c9dddfe4847075e9b24527a2dc40c11",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "4e76f2c5683a357ded5202413260f9c07f6fb830",
+      "corrected_commit": "90a6c8208a23eec0ea3672c456b5d6ef325a9edb",
+      "unchanged_tree": "4243342c43be0ac8b9811f760af6e4aac4a7e8fe",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "9c4560457fc3c01a330b11802865c9cecd5c5b3e",
+      "corrected_commit": "074c34743a608ff6f644b67c789e9901fc10b7fb",
+      "unchanged_tree": "23a3b9df50bba5aa00d7dfb47a7987dcc6b66410",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "eb6541e82fa27398878611e0cb98f8d1ea81af81",
+      "corrected_commit": "5929dbde50a0127549ad2c01b39892f68d7c72f1",
+      "unchanged_tree": "c7d9251275fbcbb58eb7e14bdaaa4f0a4288a07e",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "0e7e03833bc3683899e00b3aec0051da7ef8462e",
+      "corrected_commit": "c5a014c7ffa90c601ea09e3dcf0371f9b8acd727",
+      "unchanged_tree": "3c7dcc84facc4166baaadd93cfdf40c40fa48825",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "43009a8c4b74b41086e2cb0276a20315b2d3d608",
+      "corrected_commit": "0bb86299000ee5c014707510bad591efb8047ffe",
+      "unchanged_tree": "2827e04c9550c2f91096553d1e9d0dcca2220f69",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "9d44301029aecff5e99302bbc513ae5f54c08227",
+      "corrected_commit": "6ccac1373695c88948d613f3029a9787c91f1066",
+      "unchanged_tree": "6f961129f5223c1a388c693f5ddcd04413097bb1",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "1513d228b32908e567e9dcff9e00ed950662278c",
+      "corrected_commit": "a36630cf8b70d22edd8f61030319d50f80297eb3",
+      "unchanged_tree": "d9612e8b3088d47c7f6de3415e57fcfb630c42f0",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "d4accaf77cda20f1f5cf1472cba3cdb2f70f22cd",
+      "corrected_commit": "e9fe2ce3b71f656b1add3bb23d52ede5a49d0544",
+      "unchanged_tree": "101160a74ab61b015952c6e151c0b214290aa27e",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "9274d273881b1366bf21dbda6202c9058dcdc486",
+      "corrected_commit": "6ab417fc53e63c2883a209afd415f19a3004bc61",
+      "unchanged_tree": "ab3c2ae987efcd4a2929c41cbf37850f2a8bc5fd",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "6ad893b8aa940e30678782b81933458778554a93",
+      "corrected_commit": "2d360ff0d2a4369233ba0517bb53383b6eb79115",
+      "unchanged_tree": "8f431b0a2f71a2bbaa9b509ec996a7ff694e4bde",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "26cefcff2ed5a8c87de6a81d0b2207c0f2fb243c",
+      "corrected_commit": "702079c943bee07242f067f1c0eaaf0e27270a26",
+      "unchanged_tree": "52f25cd2a8c767999b2b65771b285af5c4296aa0",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "af962671db447bee63febe3fe6a9227eba846997",
+      "corrected_commit": "07ad2a87a4322eb667c53a130d03b33fe7ca05f4",
+      "unchanged_tree": "70dd2474aaa1237b99f21395a8d7f951a124d117",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "e3442a51724122ff2c842e01b72e5a39a05d03f8",
+      "corrected_commit": "66e2c49c6e1ba56be0422f3a52caf9a3c58ebd5e",
+      "unchanged_tree": "8d5d4a1455dc9e9395c08b6774a79d14196b90d5",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "b921c94aab8a128f540db19553468ee7e6dda571",
+      "corrected_commit": "ec6da47b0596d9d144f3a5eff68fa6855263004b",
+      "unchanged_tree": "87d863f9d2e6bf9490649e99bf304453da689e59",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "2049645217caea9c5cd1cb638e7c48a2387fe1d6",
+      "corrected_commit": "31fdb2c4ab6cf2c912044990805b5ae2fbce2534",
+      "unchanged_tree": "fade169d678f2a03bed1cf6d5aad19a0e58b4fe3",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "ad620c48ec58bba1b5756803c9733e1fd34b494a",
+      "corrected_commit": "0ed037cf453bd74dad02126e03afb6baa4262c0d",
+      "unchanged_tree": "2ec2ad65b27382a3721ad35de18050d4309a5b5e",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "3856216c50a72fd473b9df99c6a63a8cb7d85ead",
+      "corrected_commit": "bc61f0e9d1e9790fc3faefb2053c0f53372d27fb",
+      "unchanged_tree": "1f12b500e23ebc83b9a98acbee78a6265840773a",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "5b1f23560daae2887ee9f295bb37919afcaa4494",
+      "corrected_commit": "81a12f5945cf3d9cc0272a0ead10fdee00f36771",
+      "unchanged_tree": "4d570649c58ce1fe6cac23d8ba89bce61d258235",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "57cd546f10dffdf34f410b8f5f3eee277767c8fa",
+      "corrected_commit": "6108610a0c449f169d8ac0550bfb1e4df128f77b",
+      "unchanged_tree": "832da469504ba828e9194a2586301458971db842",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "f5d2165ac2b0c7fc440e239cc2e650491dcc6c28",
+      "corrected_commit": "0c14a1ac151f8ac819e66d4d9bbedbccb8759428",
+      "unchanged_tree": "6ac905ee6e5683776d098682a83e4c2859cbdf9a",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "472ab751f5f0304f6d0685a9f3f3a7eea63afd99",
+      "corrected_commit": "4a68bd482a105162fe8b821805038060f0842d25",
+      "unchanged_tree": "22728686cfbd82c13fce12b8f5727410792c5854",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "9c414e1de7477c588749bb6c35532bda9dd77b64",
+      "corrected_commit": "c04f26f3713778b58ae61eaa3dbaa56964279b14",
+      "unchanged_tree": "a61fe6f22dd83e5caa12608a346709d10ed685f6",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "df5e9e8578bcebddcc84a9fd8d734bcc3850f47a",
+      "corrected_commit": "6dd4c1f16fc4cff93fd27036ee001d95ae06ad44",
+      "unchanged_tree": "01a7d422d1b1971a0b9de5b4aaa6228d194552a9",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "e67fc4b328fdb9d889ff0641ba63ce9b4455e7be",
+      "corrected_commit": "19e57e089e33c61c2c93104065c00f0d57485d28",
+      "unchanged_tree": "ea4ac071b401ff8ff27782d0daf0e8edf9f28d38",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "6dd2f79ca3d4dc59d4d059d98baf555ab2b192d9",
+      "corrected_commit": "8ea5e1ac4a7f104a1aa4ee2d23c3f678479500f8",
+      "unchanged_tree": "8ea316a6cc7ad9de5a597894f51f5cb2104812ca",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "07ae30895ec2c7d0a60a152fdb2fbdf5aa672379",
+      "corrected_commit": "92e874542a804f3da89111342cf3efce8dda5f73",
+      "unchanged_tree": "9ff6e09c9715d40d9e422c267b194035f5414c6f",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "1b2beb194cf2c251027966e09baaee039c73aef1",
+      "corrected_commit": "33223ad1eb9ee8396217b44ac1a5ad828f80eb57",
+      "unchanged_tree": "62c77cd21b8134dbf2a9b2bc5227427cf3e02b43",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "2dfc51b59b7b868bafdf602f30fd20513985eb1d",
+      "corrected_commit": "6342dd0d74bb637fdb917ac7e0e93c41b252af11",
+      "unchanged_tree": "12c4ae53863de70df0640673b8fa8fc34aad22cf",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "7e30b6fb68fef41a6a3099b112edc632d64c9a79",
+      "corrected_commit": "cd0e9170844ddbe13486983bb3457528c47d654c",
+      "unchanged_tree": "b3c585ce5994d073bfc61ddfea7ffdf5c60c97d1",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "31830c8cdc1eb689c82bb46b0aefd33fabf2a7b0",
+      "corrected_commit": "d6f8b066cf5967fff97fafb55129bac0cb257fbd",
+      "unchanged_tree": "0bd45ed1019aff78779f7119d0b6364a6647a42b",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "2b1ccac2adf8bae71bc4eecdb7570a9c1c4785e6",
+      "corrected_commit": "c3673dd338a80cf5bbb4e91f2b23a0b210f65267",
+      "unchanged_tree": "cac74b02aa6482fca5af6bfed24a51f3dbcae3c1",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "cdcfede66e3f9f72bb1cece9cf13b0d9304e734d",
+      "corrected_commit": "79440d3c95b57eef164fc76618aa82609b0cfb9a",
+      "unchanged_tree": "3ad48f5f91d3f096bdd9c74d3a9e211dbc3be3cd",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "7510a432337b1b9149be081f38254dbd190ae1fd",
+      "corrected_commit": "a0d737fac6d63655fbc2135872a0e03633bb4f52",
+      "unchanged_tree": "5ee840a5b44dc0823cc62bde1072d644b6a844d0",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "a132c48cb6df797b73847a936c487156b5f7678c",
+      "corrected_commit": "0f2f850105b1cb44d10f3dc7d5be28eedc586d86",
+      "unchanged_tree": "dbeecf64698d8fe9aec71a123dc4f1a73038aaf0",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "117cd5be2a167b0fa876022c371adf286dcaaf9f",
+      "corrected_commit": "c4fc996864aafd7bc7c278cc686be18f4aac141b",
+      "unchanged_tree": "7b569a48a7dbff73d27d4af2602e900a15da3b4c",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "5e6e4eb976f2f6eac6d05e01587574d69e6a632c",
+      "corrected_commit": "6bcb7cd55477bbc39ddacf3b79d34ff0863ac8c5",
+      "unchanged_tree": "1def2efe1690f5346d85a7c464838dbaa621f11d",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "5c5b44816f869999207f4efd4a25efde7415c9cc",
+      "corrected_commit": "7a5497bc9cac9477344d539f2f490fad9a9cea65",
+      "unchanged_tree": "bcf72a22d50953ea466b7e91bbc7dbc01ea04615",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "df56852bbe2eedd1a6faa98f05346f756cb5434a",
+      "corrected_commit": "e18d5dd00e82e5e3e235952c7af2e859da348609",
+      "unchanged_tree": "cb398df18027f6a66bf815992bcbd4cee2c4df47",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "2d4eb6f2fec4b2df831ac56cc88e51f30903994e",
+      "corrected_commit": "b5d0b40c1dfa2b86cbf08ba7c389e9ebeeacd649",
+      "unchanged_tree": "ea7e9230a804be51cf9249060cd506176cbe67d1",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "8d21102eed5082e2ff9a47177fefbc8bf30012b6",
+      "corrected_commit": "9e4f6fd88036e43cd0dc47cf1b503e192454c3bf",
+      "unchanged_tree": "b1c597ade106acf4bf4831cb38c19495f77aad27",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "b1aeb8e3172326fc81669ae71f1daa64ab875d56",
+      "corrected_commit": "1ab81a78a6be513ae02f62e5f739b8c20affad16",
+      "unchanged_tree": "e6e05943da422290f4bf2e739e56456b6bdba80b",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "0cad86975e825f49b570c437883ffd3b2a0243ee",
+      "corrected_commit": "68f13e5d49424c47c7a6a8e0d5c09e4378e6bed1",
+      "unchanged_tree": "0f4e5b09bc25f025a1e8c50fc4138cde7b83fe83",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "1d208d2083cf8c1e353a724e4f6bc80f2a5e0174",
+      "corrected_commit": "7c07047c6de343092d8336c7a48856201238f5a4",
+      "unchanged_tree": "606172e3977394c9fd8b83133ce7337550515197",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "6d7d0df5fc8b9bdc5374d912fdf890f4e2b5613b",
+      "corrected_commit": "2a9eb3285c6a73a2602e65afffa33078d26c2833",
+      "unchanged_tree": "38f2611b37f8e0186ce6484a9b749bd067172d81",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "413edc0f8ef534fe3595f8ce42711c1c0033913e",
+      "corrected_commit": "7e6e0d840f401e70db06c0456306c01156982620",
+      "unchanged_tree": "835ba76c5fdd0aafd39b9760aeb9a64a57197c25",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "0e036185f77eebedb5a8f460ca4e2fea7145678a",
+      "corrected_commit": "7cca1b389b5667fbfa23432bb7ed89ac2ac90c90",
+      "unchanged_tree": "552fa11e0b5356938414d2d47e62448e6d585730",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "8a3a3ab7f0e5cccec63aebc8190fb5ce0d4bb17f",
+      "corrected_commit": "85a13b324d973f892d7f0be4dcc41a9a5922682b",
+      "unchanged_tree": "53adba8bee59b7663bca254f9cab80039d142465",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "426e631ee7e805bea2ebb3942fc8adc7e96d1727",
+      "corrected_commit": "a53c8333f2a0e5c5a44bdc6c71abd57f51a49505",
+      "unchanged_tree": "f5a08f1f5c0662efe5dc81ad18cdd36b50bf5aaa",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "53b44e820beb9ea2e5b9cb8d56eeb390957ddb9b",
+      "corrected_commit": "e866e96c823df2995a56d343a22f2f814cb60c66",
+      "unchanged_tree": "29830ff6ae288865ff9f39245f76361c6335e2bb",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "c91c11fdd4028859c69b007ddb4e5fc4c830a2f5",
+      "corrected_commit": "4463690fbbc3d7337bc5676570c6944e5a089b1d",
+      "unchanged_tree": "cde4a4c860e76065c1c9839a2757a05713862629",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "aefb2f029863ae5f767b4df58c7d248f80349437",
+      "corrected_commit": "da85f6137833e7719c571ec082bd9191661049b8",
+      "unchanged_tree": "96ba06d49d3319fc75dbfda29a6a276c88acc9ab",
+      "author_corrected": true,
+      "committer_corrected": true
+    },
+    {
+      "original_commit": "0f934feb302df5014825533c9ed074f8a2c79044",
+      "corrected_commit": "adf2b260a8e51a497f540019335c1fae0397033b",
+      "unchanged_tree": "e98ba6b947eb71202db9591a9f96936e8e853f26",
+      "author_corrected": false,
+      "committer_corrected": false
+    }
+  ],
+  "retained_spec_connections": [
+    {
+      "receipt": "2026-10-12-app-f030-root570-browser-empty.json",
+      "test": "scripts/e2e/ocr-empty-workbench-controls.spec.ts::OCR empty truth prepared input completed job and model selection preserve originals through reopen",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "238bb9d59cc8cb998f222e4ec38a9aeb87d0b86f35eb3e44c7d7a01f54757b62"
+    },
+    {
+      "receipt": "2026-10-12-app-f030-root570-browser-invalid.json",
+      "test": "scripts/e2e/ocr-empty-workbench-controls.spec.ts::OCR invalid numeric training preflight with valid saved truth preserves whole originals through reopen",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "238bb9d59cc8cb998f222e4ec38a9aeb87d0b86f35eb3e44c7d7a01f54757b62"
+    },
+    {
+      "receipt": "2026-10-12-app-f030-root570-electron-empty.json",
+      "test": "scripts/e2e/ocr-empty-workbench-controls.spec.ts::native OCR empty truth prepared input completed job and model selection preserve originals through reopen",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "238bb9d59cc8cb998f222e4ec38a9aeb87d0b86f35eb3e44c7d7a01f54757b62"
+    },
+    {
+      "receipt": "2026-10-12-app-f030-root570-electron-invalid.json",
+      "test": "scripts/e2e/ocr-empty-workbench-controls.spec.ts::native OCR invalid numeric training preflight with valid saved truth preserves whole originals through reopen",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "238bb9d59cc8cb998f222e4ec38a9aeb87d0b86f35eb3e44c7d7a01f54757b62"
+    },
+    {
+      "receipt": "2026-10-12-app-f030-root572-browser-handoff.json",
+      "test": "scripts/e2e/ocr-prepared-unsent-handoff.spec.ts::OCR unsent alphabet draft and saved alphabet split handoff preserve whole originals",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "47d0083f0980707408476282bd8f72bea3b472b3138b2c39560180f4fdc99368"
+    },
+    {
+      "receipt": "2026-10-12-app-f030-root572-electron-handoff.json",
+      "test": "scripts/e2e/ocr-prepared-unsent-handoff.spec.ts::native OCR unsent alphabet draft and saved alphabet split handoff preserve whole originals",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "47d0083f0980707408476282bd8f72bea3b472b3138b2c39560180f4fdc99368"
+    },
+    {
+      "receipt": "2026-10-12-app-f064-root575-browser-controls.json",
+      "test": "scripts/e2e/flow-readonly-control-preflights.spec.ts::F064 empty inspector search partial-run input and unsent typed connection cancellation preserve saved originals",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "ac2e7d606ea8f74110ee82831972c866381c54a02a9172c203b41ade1897fed6"
+    },
+    {
+      "receipt": "2026-10-12-app-f064-root575-electron-controls.json",
+      "test": "scripts/e2e/flow-readonly-control-preflights.spec.ts::native F064 empty inspector search partial-run input and unsent typed connection cancellation preserve saved originals",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "ac2e7d606ea8f74110ee82831972c866381c54a02a9172c203b41ade1897fed6"
+    },
+    {
+      "receipt": "2026-10-12-app-f064-root576-browser-limits.json",
+      "test": "scripts/e2e/flow-node-limit-preflights.spec.ts::F064 ninth fixed ROI and inspection node keyboard additions fail before graph or saved draft writes",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "6236bb318378715ae00131829ee56497e1eeb75c7f7a2bb3a9664c8fa386dfa8"
+    },
+    {
+      "receipt": "2026-10-12-app-f064-root576-electron-limits.json",
+      "test": "scripts/e2e/flow-node-limit-preflights.spec.ts::native F064 ninth fixed ROI and inspection node keyboard additions fail before graph or saved draft writes",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "6236bb318378715ae00131829ee56497e1eeb75c7f7a2bb3a9664c8fa386dfa8"
+    },
+    {
+      "receipt": "2026-10-12-app-f064-root578-browser-refusals.json",
+      "test": "scripts/e2e/flow-existing-refusal-controls.spec.ts::F064 empty model history mapping and keyboard layout connection deletion refusals preserve saved originals",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "90d100eab9cccde0a6992e91da468aed4ece7eaaa44ffbad2d9cbd924a9ca244"
+    },
+    {
+      "receipt": "2026-10-12-app-f064-root578-electron-refusals.json",
+      "test": "scripts/e2e/flow-existing-refusal-controls.spec.ts::native F064 empty model history mapping and keyboard layout connection deletion refusals preserve saved originals",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "90d100eab9cccde0a6992e91da468aed4ece7eaaa44ffbad2d9cbd924a9ca244"
+    },
+    {
+      "receipt": "2026-10-12-app-f064-root580-browser-reopen.json",
+      "test": "scripts/e2e/flow-model-less-reopen-controls.spec.ts::F064 model-less inspection ROI and typed connection drafts reopen with exact saved graphs",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "2055dacdc591178b81ebef1dc85598d2b0cc322ddc49c509e5635a724cefe3b0"
+    },
+    {
+      "receipt": "2026-10-12-app-f064-root580-electron-reopen.json",
+      "test": "scripts/e2e/flow-model-less-reopen-controls.spec.ts::native F064 model-less inspection ROI and typed connection drafts reopen with exact saved graphs",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "2055dacdc591178b81ebef1dc85598d2b0cc322ddc49c509e5635a724cefe3b0"
+    },
+    {
+      "receipt": "2026-10-12-app-label-mask-root581-browser-empty.json",
+      "test": "scripts/e2e/label-mask-empty-preflights.spec.ts::label and mask empty chooser preview and apply preflights preserve originals",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "b3c7c07af92471aefb2b236e9552987bea28e1a089d8c7415be007dcaf08ebbd"
+    },
+    {
+      "receipt": "2026-10-12-app-label-mask-root581-electron-empty.json",
+      "test": "scripts/e2e/label-mask-empty-preflights.spec.ts::native label and mask empty chooser preview and apply preflights preserve originals",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "b3c7c07af92471aefb2b236e9552987bea28e1a089d8c7415be007dcaf08ebbd"
+    },
+    {
+      "receipt": "2026-10-08-late-original-response-lifecycle-f7175f5-browser.json",
+      "test": "scripts/e2e/evaluation-late-labelset-lifecycle.spec.ts::late saved labelset responses preserve current empty, refused and failed scopes through actual stage abandonment, reload and remount",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "e6c663a3765ed64552470e0d3acd00174fdb16f11cc609be8a0253e394db62ad"
+    },
+    {
+      "receipt": "2026-10-08-late-original-response-lifecycle-f7175f5-electron.json",
+      "test": "scripts/e2e/evaluation-late-labelset-lifecycle.spec.ts::native late saved labelset responses preserve current empty, refused and failed scopes through actual stage abandonment, reload and remount",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "e6c663a3765ed64552470e0d3acd00174fdb16f11cc609be8a0253e394db62ad"
+    },
+    {
+      "receipt": "2026-10-08-queue-progress-2b28835-browser.json",
+      "test": "scripts/e2e/review-queue-progress-lifecycle.spec.ts::saved queue progress retries preserve labels and empty selection and origin failures retain exact saved records",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "d2c7b39a7f578866deb7b302618f03d63e005398cbee023600805ae793e9df7e"
+    },
+    {
+      "receipt": "2026-10-08-queue-progress-2b28835-electron.json",
+      "test": "scripts/e2e/review-queue-progress-lifecycle.spec.ts::native saved queue progress retries and real empty states preserve complete originals labels and older origin",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "d2c7b39a7f578866deb7b302618f03d63e005398cbee023600805ae793e9df7e"
+    },
+    {
+      "receipt": "2026-10-08-saved-record-error-31a3d1f-browser.json",
+      "test": "scripts/e2e/saved-evaluation-record-error.spec.ts::saved evaluation history failure clears stale record and explicit refresh recovers exact original identity result and preference",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "5e6a5dbc88a0963f564dfb43786f3d955967c3e2f16a7da81ff9d1e36e8614e0"
+    },
+    {
+      "receipt": "2026-10-08-saved-record-error-31a3d1f-electron.json",
+      "test": "scripts/e2e/saved-evaluation-record-error.spec.ts::native saved evaluation history failure clears stale record and explicit refresh recovers exact original identity result and preference",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "5e6a5dbc88a0963f564dfb43786f3d955967c3e2f16a7da81ff9d1e36e8614e0"
+    },
+    {
+      "receipt": "2026-10-08-saved-selection-lifecycle-4ce9550-browser.json",
+      "test": "scripts/e2e/saved-evaluation-selection-lifecycle.spec.ts::saved evaluation choices refuse missing preferences, empty scopes and catalog errors while actual picker dismissal and stage return preserve exact records",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "b070c56d87865609e908151e45837c94d63a47c61a7d9102bdb4320876d25f3a"
+    },
+    {
+      "receipt": "2026-10-08-saved-selection-lifecycle-4ce9550-electron.json",
+      "test": "scripts/e2e/saved-evaluation-selection-lifecycle.spec.ts::native saved evaluation choices refuse missing preferences, empty scopes and catalog errors while actual picker dismissal and stage return preserve exact records",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "b070c56d87865609e908151e45837c94d63a47c61a7d9102bdb4320876d25f3a"
+    },
+    {
+      "receipt": "2026-10-14-derived-adoption-import-four-controls-browser.json",
+      "test": "scripts/e2e/derived-adoption-import-four-controls.spec.ts::derived review real revision conflict and owned abort retries plus original non LabelMe folder refusal preserve original data",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "9eb213a22f9f4868af39277eb96a6a841e49272039bf82fb5a314ed4ac7d6a2d"
+    },
+    {
+      "receipt": "2026-10-14-derived-adoption-import-four-controls-electron.json",
+      "test": "scripts/e2e/derived-adoption-import-four-controls.spec.ts::native derived review real revision conflict and owned abort retries plus original non LabelMe folder refusal preserve original data",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "9eb213a22f9f4868af39277eb96a6a841e49272039bf82fb5a314ed4ac7d6a2d"
+    },
+    {
+      "receipt": "2026-10-09-flow-input-history-d2d7f3e-electron.json",
+      "test": "scripts/e2e/flow-history-input-boundaries.spec.ts::native input-focused history shortcuts preserve graph and durable draft boundary",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "400df9d3d2f258d587d815351fe2404005bbf7482ad8f828a568b039f8e3791a"
+    },
+    {
+      "receipt": "2026-10-09-flow-input-history-d2d7f3e-browser.json",
+      "test": "scripts/e2e/flow-history-input-boundaries.spec.ts::input-focused history shortcuts preserve available undo and redo plus saved source",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "400df9d3d2f258d587d815351fe2404005bbf7482ad8f828a568b039f8e3791a"
+    },
+    {
+      "receipt": "2026-10-10-root442-flow-old-electron.json",
+      "test": "scripts/e2e/flow-draft-save-error.spec.ts::native owning draft PUT503 retains original source and explicit save200 readback",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "1991a427a21bec2cab6a7d9d9ed326cf2e64ccc9b67118317959741f0edd5a7a"
+    },
+    {
+      "receipt": "2026-10-10-root442-flow-old-browser.json",
+      "test": "scripts/e2e/flow-draft-save-error.spec.ts::owning draft PUT503 preserves saved graph and explicitly recovers same dirty edit",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "1991a427a21bec2cab6a7d9d9ed326cf2e64ccc9b67118317959741f0edd5a7a"
+    },
+    {
+      "receipt": "2026-10-10-root442-flow-handoff-browser.json",
+      "test": "scripts/e2e/flow-draft-save-error.spec.ts::saved editable flow graphs and hashes stay scoped through A B A project handoff after owning draft saves",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "1991a427a21bec2cab6a7d9d9ed326cf2e64ccc9b67118317959741f0edd5a7a"
+    },
+    {
+      "receipt": "2026-10-14-comparison-submit-real-cancel-browser.json",
+      "test": "scripts/e2e/comparison-submit-real-cancel.spec.ts::original manual comparison submit cancels its accepted owned CPU job and preserves earlier records",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "08bd4634ca28f94fbb60696901abe44f2ddb2e6f18852d9faba58529dd22cd62"
+    },
+    {
+      "receipt": "2026-10-14-comparison-submit-real-cancel-electron.json",
+      "test": "scripts/e2e/comparison-submit-real-cancel.spec.ts::native original manual comparison submit cancels its accepted owned CPU job and preserves earlier records",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "08bd4634ca28f94fbb60696901abe44f2ddb2e6f18852d9faba58529dd22cd62"
+    },
+    {
+      "receipt": "2026-10-07-app-execution-32ce71c24472565c8fbb.json",
+      "test": "scripts/e2e/flow-debug-model-freeze.spec.ts::native CPU debug cache and model hash history reopen",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "155708aac056bf6a57269a44be553d3eb068d37bf705cd40f73f32deccaced8c"
+    },
+    {
+      "receipt": "2026-10-07-clean-template-draft-electron.json",
+      "test": "scripts/e2e/flow-template-draft-history.spec.ts::native cross-project mapping undo redo and persistent draft recovery",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "a9a1e640a5d660773a4aedf8a9923ab06573ec2cd395a07ce569be5be6e358ba"
+    },
+    {
+      "receipt": "2026-10-07-flow-template-safety-42edae7-browser.json",
+      "test": "scripts/e2e/flow-template-safety.spec.ts::template save and explicit mapping preserve originals across errors cancellation and reopen",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "1774c498e87dc0248b2592ee3bdcfa8ccc39ada24a47350353f8a630cff80f74"
+    },
+    {
+      "receipt": "2026-10-07-flow-template-safety-42edae7-electron.json",
+      "test": "scripts/e2e/flow-template-safety.spec.ts::native template safety preserves saved versions and reopens explicitly mapped draft",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "1774c498e87dc0248b2592ee3bdcfa8ccc39ada24a47350353f8a630cff80f74"
+    },
+    {
+      "receipt": "2026-10-07-flow-template-draft-history-0544e0e-browser.json",
+      "test": "scripts/e2e/flow-template-draft-history.spec.ts::cross-project model class mapping preserves source and recovers draft",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "a9a1e640a5d660773a4aedf8a9923ab06573ec2cd395a07ce569be5be6e358ba"
+    },
+    {
+      "receipt": "2026-10-07-flow-template-draft-history-0544e0e-electron.json",
+      "test": "scripts/e2e/flow-template-draft-history.spec.ts::native cross-project mapping undo redo and persistent draft recovery",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "a9a1e640a5d660773a4aedf8a9923ab06573ec2cd395a07ce569be5be6e358ba"
+    },
+    {
+      "receipt": "2026-10-08-flow-debugger-e28d1d9-browser.json",
+      "test": "scripts/e2e/flow-debugger-artifact-controls.spec.ts::flow debugger pages searches and returns exact controlled artifacts without writes",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "31075ec4b4386d146c08b80091a5bbcb5cc30c41411aa7ef8e502705c71ec937"
+    },
+    {
+      "receipt": "2026-10-08-flow-debugger-e28d1d9-electron.json",
+      "test": "scripts/e2e/flow-debugger-artifact-controls.spec.ts::native flow debugger keyboard controls keep exact controlled artifact and return focus",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "31075ec4b4386d146c08b80091a5bbcb5cc30c41411aa7ef8e502705c71ec937"
+    },
+    {
+      "receipt": "2026-10-15-app-f064-root06-browser-partial-controls.json",
+      "test": "scripts/e2e/flow-debug-model-freeze-f064-controls.spec.ts::F064 owning selected-node503 retries genuine CPU partial and cache identity survives reopen and A B A",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "6b4aa3c55d78d1870114a4cf57106feb7820f2a51e4ad49d11a832223e21dd65"
+    },
+    {
+      "receipt": "2026-10-10-root443-direction-old-electron.json",
+      "test": "scripts/e2e/direction-field-input-boundaries.spec.ts::native independent direction rejects invalid values and persists an intentional empty label",
+      "original_anchor": "f4e1cde796e0684e0b2f4f8c55a27520c7beb888",
+      "corrected_anchor": "1774a52be04e2756f11e0c2dbe1903e1d96ba6b4",
+      "unchanged_spec_sha256": "859276df7e87a7247793a712f740e60deac40a4558350c1720fc0759e234f9fb"
+    },
+    {
+      "receipt": "2026-10-10-root443-direction-handoff-browser.json",
+      "test": "scripts/e2e/direction-field-input-boundaries.spec.ts::independent direction and axial angle stay scoped through A B A project handoff and an old owning label read",
+      "original_anchor": "f4e1cde796e0684e0b2f4f8c55a27520c7beb888",
+      "corrected_anchor": "1774a52be04e2756f11e0c2dbe1903e1d96ba6b4",
+      "unchanged_spec_sha256": "859276df7e87a7247793a712f740e60deac40a4558350c1720fc0759e234f9fb"
+    },
+    {
+      "receipt": "2026-10-10-root456-manual-old-browser.json",
+      "test": "scripts/e2e/comparison-manual-selection.spec.ts::manual comparison pair and explicit empty survive evaluation model changes",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "559c82bc35c3ad49d06ad5221dff081f92bd3e90e1361bbb3fb5741d6dea3dab"
+    },
+    {
+      "receipt": "2026-10-10-root456-manual-old-electron.json",
+      "test": "scripts/e2e/comparison-manual-selection.spec.ts::native manual comparison pair and explicit empty survive evaluation model changes",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "559c82bc35c3ad49d06ad5221dff081f92bd3e90e1361bbb3fb5741d6dea3dab"
+    },
+    {
+      "receipt": "2026-10-10-root456-manual-handoff-browser.json",
+      "test": "scripts/e2e/comparison-manual-selection.spec.ts::manual baseline empty and exact saved comparison pair reopen through owning A B A project handoff",
+      "original_anchor": "42ad635e74013a7ba0a410845b7faafe8830430a",
+      "corrected_anchor": "9a18c088eda03610546190b64c32a5bf129737af",
+      "unchanged_spec_sha256": "559c82bc35c3ad49d06ad5221dff081f92bd3e90e1361bbb3fb5741d6dea3dab"
+    },
+    {
+      "receipt": "2026-10-18-patch-prepare-owned-filesystem-error-current-browser.json",
+      "test": "scripts/e2e/patch-prepare-reopen-error-controls.spec.ts::patch preparation reports a real owned filesystem obstruction and reloads without fabricated prepared data",
+      "original_anchor": "3c7a62bcea0c19e20ca8aa77c5a71b1a41a71e8a",
+      "corrected_anchor": "6af66fae87d6ead335ea9c2dbd95f08910d32566",
+      "unchanged_spec_sha256": "f397d085539bc381133f62a00d5dddfc526d5ccfca8e1ef7380d2acf81a13fa7"
+    },
+    {
+      "receipt": "2026-10-18-patch-prepare-reopen-current-browser.json",
+      "test": "scripts/e2e/patch-prepare-reopen-error-controls.spec.ts::patch preparation reopens its actual saved dataset manifest and original-coordinate preview without training",
+      "original_anchor": "3c7a62bcea0c19e20ca8aa77c5a71b1a41a71e8a",
+      "corrected_anchor": "6af66fae87d6ead335ea9c2dbd95f08910d32566",
+      "unchanged_spec_sha256": "f397d085539bc381133f62a00d5dddfc526d5ccfca8e1ef7380d2acf81a13fa7"
+    },
+    {
+      "receipt": "2026-10-10-root456-flow-new-browser.json",
+      "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::keyboard edited graphs ROI and incomplete policies stay owned across A B A project handoff",
+      "original_anchor": "eb6541e82fa27398878611e0cb98f8d1ea81af81",
+      "corrected_anchor": "5929dbde50a0127549ad2c01b39892f68d7c72f1",
+      "unchanged_spec_sha256": "4d378467d88e280bb960e0a060276a5dc2a485b18fff01de11ec498bed0fd1bc"
+    },
+    {
+      "receipt": "2026-10-10-root456-flow-new-electron.json",
+      "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard edited graphs ROI and incomplete policies stay owned across A B A project handoff",
+      "original_anchor": "eb6541e82fa27398878611e0cb98f8d1ea81af81",
+      "corrected_anchor": "5929dbde50a0127549ad2c01b39892f68d7c72f1",
+      "unchanged_spec_sha256": "4d378467d88e280bb960e0a060276a5dc2a485b18fff01de11ec498bed0fd1bc"
+    },
+    {
+      "receipt": "2026-10-10-root456-flow-old-electron.json",
+      "test": "scripts/e2e/keyboard-canvas-closure.spec.ts::native keyboard graph and original ROI preserve draft and focus",
+      "original_anchor": "eb6541e82fa27398878611e0cb98f8d1ea81af81",
+      "corrected_anchor": "5929dbde50a0127549ad2c01b39892f68d7c72f1",
+      "unchanged_spec_sha256": "4d378467d88e280bb960e0a060276a5dc2a485b18fff01de11ec498bed0fd1bc"
+    },
+    {
+      "receipt": "2026-10-17-f029-center-fit-empty-reset-browser.json",
+      "test": "scripts/e2e/obb-center-fit-empty-reset.spec.ts::center fitting empty and redraw discard only the unsent proposal and reopen exact saved truth",
+      "original_anchor": "43009a8c4b74b41086e2cb0276a20315b2d3d608",
+      "corrected_anchor": "0bb86299000ee5c014707510bad591efb8047ffe",
+      "unchanged_spec_sha256": "e17af821f161ee8e6d0eaf9e2bbac8118bca1bed019785be4b7eec98c90f2135"
+    }
+  ]
+}
