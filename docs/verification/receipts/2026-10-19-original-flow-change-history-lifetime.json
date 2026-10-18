@@ -1,0 +1,64 @@
+{
+  "schema": "modu-vision.original-flow-change-history-lifetime-source-verification/v1",
+  "date": "2026-10-19",
+  "base_commit": "2d4eb6f2fec4b2df831ac56cc88e51f30903994e",
+  "scope": "Existing authenticated GET /api/flowchart/changes and the actual original list, integrity, active-version and runtime-state read lifetimes",
+  "causal_before": {
+    "failed": 1,
+    "seconds": 6.34,
+    "genuine_HTTP200_context_and_normal_terminal_before_strict_drain_refusal": true,
+    "protected_project_recipe_active_and_saved_version_files": 4,
+    "native_request_attribution": false
+  },
+  "after": {
+    "focused": {
+      "passed": 15,
+      "seconds": 27.26
+    },
+    "related_lifetime_regressions": {
+      "passed": 65,
+      "seconds": 88.64
+    },
+    "CI_contracts": {
+      "passed": 7,
+      "seconds": 9.15
+    },
+    "existing_ledger_connection_and_recovery_compatibility": {
+      "passed": 19,
+      "seconds": 0.35
+    },
+    "total_passed": 106
+  },
+  "prior_control_failure": {
+    "failed": 1,
+    "passed": 14,
+    "seconds": 28.39,
+    "cause": "Test queried and closed a retained worker-thread SQLite connection from the test thread. Product positive cases passed.",
+    "test_only_correction": "Post-response original predicate control: genuine closed witness true, real same-store open connection false, restored original witness true; new connection queried and closed in its creating thread."
+  },
+  "source_file_SHA256": {
+    "backend/api/routes_flowchart.py": "5d4350199055d0e1ddb593f28b2b8ea2fd7eecf3c776009e6a4028064fa5c947",
+    "backend/engine/original_owned_flow_request.py": "5bd99a88fffd09c5cb8deab6823146c9fcf819ecb9b107b0b7a46f8f89c0d7c9",
+    "backend/engine/config_audit.py": "c86ce586ad9cb9ee5c36875232c334a3478651682d4f3eefeb0e252b75c7105d",
+    "backend/engine/runtime_deployment.py": "dcae9c265ff62a4cb167bc8c8ce686ee34f4754c87151d9bfc2002f8eccdf39d",
+    "backend/tests/test_original_owned_flow_change_history_lifetime.py": "ba5c544de1ce2085174e99ed86df243039f874a86744e495d2003ce0f49e7a8e",
+    ".github/workflows/ci.yml": "271cbe4f78e9a47720e2fd7ec4593608689cd5c4f1683048baee1a87e44bb99d"
+  },
+  "behavior_preserved": [
+    "Original audit list and integrity results, including a tampered-chain warning",
+    "Original separate ledger connections and existing schema, WAL and synchronous PRAGMA effects",
+    "Original active-version lock and actual pointer/version file reads",
+    "Original SAVE append, deployment apply/recover and model behavior"
+  ],
+  "verification_limits": [
+    "Source and local HTTP/SQLite verification only",
+    "Open-connection negative is an adversarial retained-witness control after a real response",
+    "SQLite close-protocol proof is not operating-system file-descriptor attestation",
+    "No atomic runtime-state snapshot, installed-app acceptance, hardware acceptance or parent completion credit",
+    "No model/device/remote action executed by these controls"
+  ],
+  "independent_source_reviews": {
+    "full_product": "2f06c9a2c38b31f7c783c1b1f2cc29539cefbffa1bc2477334bdea9349da24eb",
+    "test_only_delta": "8b1f30e3479c49e755aa860a52894fed23852d736c35db13aabaf687db05e30f"
+  }
+}

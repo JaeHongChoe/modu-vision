@@ -23,6 +23,7 @@ from typing import Any, Literal, Optional
 from backend.engine.sqlite_wal import use_wal
 from backend.engine.original_owned_flow_request import (
     observe_original_flow_audit_connection, observe_original_flow_audit_append,
+    register_original_flow_history_sources,
 )
 
 Action = Literal['save', 'activate']
@@ -166,3 +167,6 @@ def runtime_release_status(project_dir: Path | str) -> dict:
                        'acknowledged': bool(active.get('ack'))} if active else None,
             'pending': {'operation_id': pending.get('operation_id'), 'status': pending.get('status'),
                         'manifest_sha256': (pending.get('release') or {}).get('manifest_sha256')} if pending else None}
+
+
+register_original_flow_history_sources(ConfigAuditStore, runtime_release_status)

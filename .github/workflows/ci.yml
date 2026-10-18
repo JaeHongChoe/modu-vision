@@ -122,6 +122,7 @@ jobs:
           backend/tests/test_warm_scoped_get_lifetime.py
           backend/tests/test_original_resident_execution_resources.py
           backend/tests/test_original_owned_preflight_list_lifetime.py
+          backend/tests/test_original_owned_flow_change_history_lifetime.py
           backend/tests/test_original_owned_flow_lifetime.py
           backend/tests/test_flowchart_flow_contract.py
           backend/tests/test_application_final_drain_diagnostic.py

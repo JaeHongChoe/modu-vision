@@ -8,6 +8,9 @@ import time
 import uuid
 from pathlib import Path
 from backend.engine.runtime_process_control import runtime_state_lock
+from backend.engine.original_owned_flow_request import (
+    observe_original_flow_history_ledger_connection, register_original_flow_history_sources,
+)
 
 
 class DeploymentLedger:
@@ -24,7 +27,12 @@ class DeploymentLedger:
         conn=sqlite3.connect(self.path,timeout=30)
         try:
             conn.row_factory=sqlite3.Row
-            use_wal(conn, 30); conn.execute('PRAGMA synchronous=FULL'); return conn
+            use_wal(conn, 30); conn.execute('PRAGMA synchronous=FULL')
+            observer = globals().get('observe_original_flow_history_ledger_connection')
+            if observer is not None:
+                try: observer(self, conn)
+                except Exception: pass  # Optional inspection never changes the existing read result.
+            return conn
         except BaseException as error:
             try:
                 conn.close()
@@ -123,3 +131,6 @@ class DeploymentLedger:
         target=next((row for row in self.history() if row['deployment_id']==deployment_id),None)
         if target is None: raise KeyError(deployment_id)
         return self.apply(target['release'],apply_runtime,reviewer=reviewer,restored_from=deployment_id)
+
+
+register_original_flow_history_sources(DeploymentLedger)

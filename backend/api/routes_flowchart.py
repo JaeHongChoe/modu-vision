@@ -71,6 +71,8 @@ from backend.engine.original_owned_flow_request import (
     observe_original_flow_draft_atomic, original_flow_draft_read_text, observe_original_flow_draft_active_return,
     observe_original_flow_recipe_read, observe_original_flow_no_legacy, observe_original_flow_recipe_return,
     observe_original_jobless_template_constructor, observe_original_flow_resource_engines, original_flow_resource_call,
+    original_flow_history_call, original_flow_history_read_text, register_original_flow_history_active,
+    observe_original_flow_history_active, observe_original_flow_history_result,
 )
 
 _resolve_job_artifacts = observe_original_flow_model_resolution(_resolve_job_artifacts)
@@ -828,11 +830,14 @@ def _active_version(project_dir: Optional[Path]) -> tuple[Optional[str], Optiona
     if project_dir is None:
         return None, None
     try:
-        active = json.loads(original_UI_ancillary_read_text(_active_flow_file(project_dir),encoding="utf-8",role="flow"))
-        record = json.loads(original_UI_ancillary_read_text(_version_dir(project_dir) / f"{active['version_id']}.json",encoding="utf-8",role="flow"))
+        active = json.loads(original_flow_history_read_text(_active_flow_file(project_dir),encoding="utf-8",role="flow"))
+        record = json.loads(original_flow_history_read_text(_version_dir(project_dir) / f"{active['version_id']}.json",encoding="utf-8",role="flow"))
         return active["version_id"], FlowchartPipeline.model_validate(record["pipeline"])
     except (OSError, ValueError, KeyError, TypeError):
         return None, None
+
+
+register_original_flow_history_active(_active_version)
 
 
 @observe_original_flow_handler(router.post("/pipeline"))
@@ -1082,7 +1087,7 @@ def activate_saved_pipeline_version(
     return {"status": "active", "version_id": version_id, "pipeline": pipeline}
 
 
-@router.get("/changes")
+@observe_original_flow_handler(router.get("/changes"))
 def list_configuration_changes(request: Request, limit: int = Query(100, ge=1, le=1000)):
     """The project's inspection-rule changes, newest first, whether the record is intact, and the runtime release
     running now (a saved change reaches inspection only through an applied and acknowledged release)."""
@@ -1090,9 +1095,14 @@ def list_configuration_changes(request: Request, limit: int = Query(100, ge=1, l
     project_dir = Path(get_current_project(request)["project_dir"]).resolve()
     store = ConfigAuditStore(project_dir)
     with _FLOW_SAVE_LOCK:
-        active_version, _ = _active_version(project_dir)
-    return {"changes": store.list(limit), "integrity": store.verify(), "active_version_id": active_version,
-            "runtime": runtime_release_status(project_dir)}
+        active_version, active_pipeline = _active_version(project_dir)
+        observe_original_flow_history_active(project_dir, active_version, active_pipeline)
+    changes = original_flow_history_call(store.list, limit)
+    integrity = original_flow_history_call(store.verify)
+    runtime = original_flow_history_call(runtime_release_status, project_dir)
+    result = {"changes": changes, "integrity": integrity, "active_version_id": active_version, "runtime": runtime}
+    observe_original_flow_history_result(project_dir, store, result)
+    return result
 
 
 @observe_original_UI_ancillary_handler(router.get("/pipeline/active-version"))
