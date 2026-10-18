@@ -1,0 +1,73 @@
+{
+  "schema": "modu-vision.saved-bound-flow-startup-verification/v1",
+  "base_commit": "8d21102eed5082e2ff9a47177fefbc8bf30012b6",
+  "change": "Open a clean current fully model-bound saved flow with metadata verification before optional evaluation recovery; prevent pending reads from overwriting edits or a changed project.",
+  "source_files": [
+    "src/renderer/components/flowchart/flowchartStartup.ts",
+    "src/renderer/components/flowchart/FlowchartStudio.tsx",
+    "src/renderer/stores/useFlowchartStore.ts"
+  ],
+  "causal_comparison": {
+    "scope": "Original Studio hook/effect bodies, real helper, Zustand flow/evaluation stores and API, controlled React scheduler and transport; no DOM or native execution.",
+    "same_original_cases": 4,
+    "before": {
+      "passed": 1,
+      "failed": 3,
+      "exit_code": 1
+    },
+    "after": {
+      "passed": 4,
+      "failed": 0,
+      "exit_code": 0
+    },
+    "original_four_are_included_in_final_twenty": true
+  },
+  "verification": {
+    "focused": {
+      "tests": 20,
+      "passed": 20,
+      "failed": 0,
+      "skipped": 0,
+      "exit_code": 0
+    },
+    "related": {
+      "tests": 133,
+      "passed": 133,
+      "failed": 0,
+      "skipped": 0,
+      "exit_code": 0
+    },
+    "typecheck": {
+      "renderer": true,
+      "main": true,
+      "exit_code": 0
+    },
+    "renderer_build": {
+      "exit_code": 0,
+      "modules": 2167,
+      "warnings": [
+        "Existing shared static/dynamic import warning",
+        "Large output chunk warning"
+      ]
+    },
+    "static_UI_audit": {
+      "baseline_findings": 110,
+      "final_findings": 110,
+      "added_rule_file_message_findings": 0,
+      "full_strict_compliance": false
+    }
+  },
+  "preserved": [
+    "Default recovery callers and recovery suffix",
+    "Original source model reference verification",
+    "Dirty or incomplete draft execution restrictions",
+    "Save version concurrency checks",
+    "Evaluation and native ownership boundaries"
+  ],
+  "acceptance": {
+    "native_app_retest_pending": true,
+    "installation_recovery_pending": true,
+    "equipment_validation_deferred_by_user": true,
+    "hardware_or_parent_completion_credit": false
+  }
+}

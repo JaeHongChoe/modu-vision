@@ -25,7 +25,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
-import { flowSemanticKey, isExecutionResultCurrent, isStaleBaseError, STALE_SAVE_MESSAGE, useFlowchartStore } from '../../stores/useFlowchartStore';
+import { flowSemanticKey, isCurrentSavedPipeline as isCurrentSavedFlowPipeline, isExecutionResultCurrent, isStaleBaseError, STALE_SAVE_MESSAGE, useFlowchartStore } from '../../stores/useFlowchartStore';
 import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useEvaluationStore } from '../../stores/useEvaluationStore';
 import { useProjectStore } from '../../stores/useProjectStore';
@@ -332,13 +332,38 @@ export const FlowchartStudio: React.FC = () => {
     const openFlow = async () => {
       setModelCheck({ status: 'checking' });
       const sourceKey = datasetKey;
+      const project = useProjectStore.getState().project;
+      const epoch = getProjectContextGeneration(), transport = getApiPersistenceIdentity();
+      const authority = JSON.stringify(getProjectContext());
       const isCurrent = () => !cancelled && useDatasetStore.getState().datasetKey === sourceKey
-        && useProjectStore.getState().task === task;
+        && useProjectStore.getState().task === task && useProjectStore.getState().project === project
+        && getProjectContextGeneration() === epoch && getApiPersistenceIdentity() === transport
+        && JSON.stringify(getProjectContext()) === authority;
       const result = await recoverThenLoadFlowchart({
         folderPath, task, datasetKey, hasSelectedFolder, datasetIsLoading, importError,
         allowLatestRecovery, completedCurrentJobId,
         getVerifiedJobId: () => useEvaluationStore.getState().jobId,
         loadEvaluation,
+        loadCurrentSavedPipeline: async () => {
+          const before = useFlowchartStore.getState();
+          if (before.pipelineDirty || before.pipelineIsDraft || before.isLoading || before.isSaving || before.isRunning || before.historyGroupStart) return null;
+          const graph = before.pipeline, serialized = JSON.stringify(graph), identity = before.flowIdentity;
+          const canPublish = () => {
+            const current = useFlowchartStore.getState();
+            try {
+              return isCurrent() && current.pipeline === graph && JSON.stringify(current.pipeline) === serialized
+                && current.flowIdentity === identity && !current.pipelineDirty && !current.pipelineIsDraft
+                && !current.isSaving && !current.isRunning && !current.historyGroupStart;
+            } catch { return false; }
+          };
+          const loaded = await loadPipeline(true, task, folderPath, canPublish);
+          if (!loaded && !canPublish()) {
+            if (isCurrent()) setModelCheck({ status: 'blocked', reason: 'saved_flow_unavailable' });
+            cancelled = true; return null;
+          }
+          return loaded && isCurrentSavedFlowPipeline(loaded, task, folderPath) ? loaded : null;
+        },
+        isCurrentSavedPipeline: saved => isCurrent() && isCurrentSavedFlowPipeline(saved, task, folderPath),
         loadSavedPipeline: () => {
           const current = useFlowchartStore.getState();
           return current.pipeline && current.pipelineDirty && pipelineMatchesTask(current.pipeline, task)
@@ -348,7 +373,8 @@ export const FlowchartStudio: React.FC = () => {
         verifyModels: verifyModelReferences,
         isCurrent,
       });
-      if (!isCurrent() || result.status === 'cancelled') return;
+      if (!isCurrent()) return;
+      if (result.status === 'cancelled') { setModelCheck({ status: 'blocked', reason: 'saved_flow_unavailable' }); return; }
       if (result.status === 'waiting') return;
       if (result.status === 'blocked') {
         setModelCheck({ status: 'blocked', reason: result.reason });

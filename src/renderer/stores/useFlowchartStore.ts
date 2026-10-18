@@ -128,7 +128,7 @@ interface FlowchartState {
   inspectedCrop: FlowchartCrop | null;
 
   // Actions
-  loadPipeline: (force?: boolean, inspectionTask?: VisionTask, sourceDatasetPath?: string) => Promise<FlowchartPipeline | null>;
+  loadPipeline: (force?: boolean, inspectionTask?: VisionTask, sourceDatasetPath?: string, canPublish?: () => boolean) => Promise<FlowchartPipeline | null>;
   loadPipelineVersion: (versionId: string, sourceDatasetPath: string) => Promise<FlowchartPipeline | null>;
   loadSingleSegmentationTemplate: (jobId?: string, inspectionTask?: VisionTask) => Promise<void>;
   loadDetectorRoiTemplate: (inspectionTask: Exclude<VisionTask, 'detection'>) => Promise<void>;
@@ -184,6 +184,33 @@ function draftBase(draft: FlowDraft): string | null | undefined {
 /** The project's active version now (undefined when it cannot be read: the save is then not checked). */
 async function activeBase(): Promise<string | null | undefined> {
   try { return (await api.flowchart.activeVersionId()).version_id ?? null; } catch { return undefined; }
+}
+
+// A startup shortcut needs the actual saved-record read, not an unrelated base ID.
+let savedStartupRead: { pipeline: FlowchartPipeline; version: string; scope: string; graph: string; identity: FlowIdentity } | null = null;
+function savedStartupScope(task?: VisionTask, source?: string): string | null {
+  try {
+    const state = useProjectStore.getState(), project = state.project;
+    if (!project || !source || !task || state.isProjectBusy || state.task !== task || project.task !== task
+      || state.projectDir !== project.project_dir || project.source_dataset_dir !== source) return null;
+    return JSON.stringify([project.id, project.project_dir, project.active_labelset_id || 'default', task, source,
+      getProjectContextGeneration(), getApiPersistenceIdentity(), getProjectContext()]);
+  } catch { return null; }
+}
+function rememberSavedStartupRead(pipeline: FlowchartPipeline, version: unknown, scope: string | null) {
+  savedStartupRead = null;
+  if (scope && typeof version === 'string' && /^[a-f0-9]{32}$/.test(version)) {
+    try { savedStartupRead = {pipeline, version, scope, graph: JSON.stringify(pipeline), identity: useFlowchartStore.getState().flowIdentity}; } catch { /* No shortcut proof. */ }
+  }
+}
+export function isCurrentSavedPipeline(pipeline: FlowchartPipeline, task: VisionTask, source: string): boolean {
+  const state = useFlowchartStore.getState(), read = savedStartupRead;
+  try {
+    return Boolean(read && read.pipeline === pipeline && state.pipeline === pipeline && state.cleanPipeline === pipeline
+      && !state.pipelineDirty && !state.pipelineIsDraft && !state.isLoading && !state.isSaving && !state.isRunning
+      && !state.historyGroupStart && state.flowIdentity === read.identity && state.baseVersionId === read.version && savedStartupScope(task, source) === read.scope
+      && JSON.stringify(pipeline) === read.graph);
+  } catch { return false; }
 }
 
 /** The refusal of a save or activation based on a version that is no longer active (not another 409, such as a
@@ -391,17 +418,21 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
   isImagePickerOpen: false,
   inspectedCrop: null,
 
-  loadPipeline: async (force = false, inspectionTask, sourceDatasetPath) => {
+  loadPipeline: async (force = false, inspectionTask, sourceDatasetPath, canPublish) => {
     if (!force && get().pipeline) return get().pipeline;
+    if (canPublish && !canPublish()) return null;
+    savedStartupRead = null;
+    const savedScope = savedStartupScope(inspectionTask, sourceDatasetPath);
     const generation = ++flowchartGeneration;
     set({ isLoading: true, errorMessage: null });
     try {
       let data: FlowchartPipeline;
+      let savedRecordVersion: string | null = null;
       const context = draftContext();
       if (context && (!sourceDatasetPath || context.source_dataset_path === sourceDatasetPath)) {
         try {
           const draft = await flowDraft.get();
-          if (generation !== flowchartGeneration || !sameContext(context, draftContext())) return null;
+          if (generation !== flowchartGeneration || !sameContext(context, draftContext()) || (canPublish && !canPublish())) return null;
           if (!sameContext(context, draft.context)) throw new Error('저장 초안의 프로젝트 또는 라벨셋이 다릅니다.');
           if (!/^[a-f0-9]{64}$/.test(draft.draft_sha256)) throw new Error('저장 초안의 검증 해시를 확인하세요.');
           data = draft.pipeline;
@@ -410,6 +441,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
             historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
             pipelineDirty: false, selectedNodeId: null, executionResult: null, lastRunSource: null,
             inspectedCrop: null, isLoading: false });
+          rememberSavedStartupRead(data, draft.active_version_id, savedScope);
           return data;
         } catch (error) {
           if ((error as { status?: number }).status !== 404) throw error;
@@ -421,6 +453,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
           const record = await api.flowchart.getActivePipelineRecord(sourceDatasetPath);
           data = record.pipeline;
           base = record.version_id;
+          savedRecordVersion = record.version_id;
         } catch (error) {
           if ((error as { status?: number }).status !== 404) throw error;
           data = await api.flowchart.getPipeline(inspectionTask, sourceDatasetPath);
@@ -429,7 +462,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       } else {
         data = await api.flowchart.getPipeline(inspectionTask, sourceDatasetPath);
       }
-      if (generation !== flowchartGeneration) return null;
+      if (generation !== flowchartGeneration || (canPublish && !canPublish())) return null;
       set({
         ...loadedIdentity(get()),
         pipeline: data,
@@ -444,12 +477,15 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
         inspectedCrop: null,
         isLoading: false,
       });
+      rememberSavedStartupRead(data, savedRecordVersion, savedScope);
       return data;
     } catch (e: any) {
-      if (generation !== flowchartGeneration) return null;
+      if (generation !== flowchartGeneration || (canPublish && !canPublish())) return null;
       console.error('Failed to load flowchart pipeline:', e);
       set({ isLoading: false, errorMessage: e?.message || '파이프라인 로드 실패' });
       return null;
+    } finally {
+      if (canPublish && generation === flowchartGeneration && get().isLoading) set({ isLoading: false });
     }
   },
 
