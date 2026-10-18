@@ -18,6 +18,8 @@ interface FlowchartStartupOptions {
   getVerifiedJobId: () => string | null;
   loadEvaluation: (jobId?: string, source?: { folderPath: string; task: VisionTask }) => Promise<void>;
   loadSavedPipeline: () => Promise<FlowchartPipeline | null>;
+  loadCurrentSavedPipeline?: () => Promise<FlowchartPipeline | null>;
+  isCurrentSavedPipeline?: (pipeline: FlowchartPipeline) => boolean;
   verifyModels: (sourceFolder: string, models: Array<{ job_id: string; task: FlowModelTask }>) => Promise<void>;
   isCurrent: () => boolean;
 }
@@ -81,6 +83,32 @@ export async function recoverThenLoadFlowchart(options: FlowchartStartupOptions)
   if (options.importError || !options.hasSelectedFolder ||
       options.datasetKey !== `${options.folderPath}\0${options.task}`) {
     return { status: 'blocked', reason: 'dataset_unavailable' };
+  }
+
+  // Opening a current, fully bound saved graph is a metadata verification, not
+  // an implicit request to evaluate its model or generate heatmaps.
+  if (options.loadCurrentSavedPipeline && options.isCurrentSavedPipeline) {
+    try {
+      const saved = await options.loadCurrentSavedPipeline();
+      if (!options.isCurrent()) return { status: 'cancelled' };
+      if (saved && options.isCurrentSavedPipeline(saved) && pipelineMatchesTask(saved, options.task)) {
+        const modelNodes = saved.nodes.filter(node => getFlowchartModelTask(node) !== null);
+        const models = getFlowchartModelReferences(saved);
+        if (models.length > 0 && models.length === modelNodes.length) {
+          try { await options.verifyModels(options.folderPath, models); }
+          catch {
+            if (!options.isCurrent() || !options.isCurrentSavedPipeline(saved)) return { status: 'cancelled' };
+            throw new Error('Saved model verification failed');
+          }
+          if (!options.isCurrent() || !options.isCurrentSavedPipeline(saved)) return { status: 'cancelled' };
+          return { status: 'ready', pipeline: saved, verifiedJobId: options.getVerifiedJobId() || '' };
+        }
+      }
+    } catch {
+      if (!options.isCurrent()) return { status: 'cancelled' };
+      // Unqualified reads or still-current verification failures retain the
+      // original recovery path below. A retired saved proof returns above.
+    }
   }
 
   let verifiedJobId = options.getVerifiedJobId();
