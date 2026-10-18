@@ -1,277 +1,253 @@
 <div align="center">
 
-<img src="assets/logo.png" width="128" height="128" alt="Modu Vision Logo" style="border-radius: 28px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);" />
+<img src="assets/logo.png" width="112" height="112" alt="Modu Vision 로고" />
 
-# 👁️ Modu Vision (모두의 비전)
-### 데스크톱 비전 AI 학습·검사 스튜디오
-**데이터, 라벨, 학습, 평가, 저장된 검사 플로우와 이력을 연결하는 개발 프로젝트**
+# Modu Vision (모두의 비전)
 
-<br />
+**데이터 준비부터 라벨링, 학습, 평가, 검사 플로우와 모델 내보내기까지 연결하는 데스크톱 비전 AI 스튜디오**
 
-[![macOS](https://img.shields.io/badge/macOS-arm64%20%7C%20MPS-000000?style=for-the-badge)](#-빠른-시작-quick-start)
-[![Windows](https://img.shields.io/badge/Windows-11%20x64%20%7C%20CUDA%20%7C%20CPU-0078D6?style=for-the-badge)](#-빠른-시작-quick-start)
-[![Electron](https://img.shields.io/badge/Electron-44-47848F?style=for-the-badge&logo=electron&logoColor=white)](https://electronjs.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.142-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.9-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)](https://pytorch.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
-[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+[![Linux CPU source checks](https://github.com/JaeHongChoe/modu-vision/actions/workflows/ci.yml/badge.svg)](https://github.com/JaeHongChoe/modu-vision/actions/workflows/ci.yml)
+[![Node.js 24](https://img.shields.io/badge/Node.js-24-339933)](package.json)
+[![Python 3.13](https://img.shields.io/badge/Python-3.13-3776AB)](CONTRIBUTING.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-<br />
-
-[✨ 핵심 기능](#-핵심-기능-key-features) •
-[🧭 작업 흐름](#-작업-흐름-workflow) •
-[🏗 아키텍처](#-시스템-아키텍처-system-architecture) •
-[⚡ 빠른 시작](#-빠른-시작-quick-start) •
-[📦 패키징](#-데스크톱-패키징-desktop-packaging)
-
-<br />
-
----
-
+[작업 흐름](#작업-흐름) · [주요 기능](#주요-기능) · [빠른 시작](#빠른-시작) · [패키징](#데스크톱-패키징) · [문서](#문서)
 
 </div>
 
-<br />
+## 프로젝트 소개
 
-## 💡 프로젝트 소개 (Overview)
+Modu Vision은 Electron·React 화면과 Python·FastAPI 학습 엔진으로 구성됩니다. 앱 이름은 **Vision AI Studio**입니다. 프로젝트의 이미지와 라벨, 학습 작업, 저장 모델, 평가 결과와 검사 이력을 연결해 관리합니다. 저장한 플로우를 데스크톱에서 실행하거나, 실행 패키지와 독립 검사 서비스로 내보낼 수 있습니다.
 
-**Modu Vision(모두의 비전)**은 이미지 가져오기, 라벨링, 모델 학습·평가, 저장된 검사 플로우와 검사 이력을 연결하는 Electron/FastAPI 데스크톱 앱입니다. 10개 모델군의 준비·작업·평가 경로와 프로젝트별 팀 라벨 기준·검수 정책을 제공합니다. Fast/Precision 설정과 제한된 후보·초매개변수 자동 탐색을 지원하며, 자동 탐색은 현재 로컬 실행 전용입니다.
+현재 버전은 **0.1.0, 개발 단계**입니다. 코드 구현, 자동 테스트, 실제 앱 실행, 대상 OS의 설치·복구, 현장 장비와 모델 품질의 검증은 각각 구분합니다. 플랫폼별 빌드·서명·실행 조건은 [배포 지원 표](docs/release-platform-matrix.md), 기능별 구현·확인 범위는 [작업 계획](docs/service-upgrade-program.json)과 [검증 근거](docs/service-upgrade-evidence.json)를 확인하세요.
 
-저장된 플로우는 단일·병렬 모델과 ROI, Blob 측정, 결과 집계를 실행할 수 있습니다. 전체 플로우 패키지와 별도 프로세스 검사 서비스도 구현돼 있습니다. 현재 QA는 제한된 실제 이미지와 CPU/한 원격 GPU 환경의 **기능 동작**을 확인한 범위입니다. 독립 검증된 정상(OK) 코호트, 현장 장비 신호, 연속 운전·택트시간, 모델 품질과 운영 승인은 별도로 필요합니다. 범위별 근거는 [기능 상태표](docs/FEATURE_STATUS_2026-09-30.md)와 [Phase 0~4 QA](docs/QA_WORKFLOW_PHASES_0_4_2026-09-30.md)에 있습니다.
+## 작업 흐름
 
-<br />
+번호가 있는 Studio 화면은 다음 **6단계**입니다. 별도의 운영자 검사 작업 공간과 작업 센터에서 실행과 이력을 관리할 수 있습니다.
 
-## ✨ 핵심 기능 (Key Features)
+| 단계 | 화면 | 주요 작업 |
+| --- | --- | --- |
+| 1 | 데이터 관리 | 이미지·LabelMe 가져오기, 데이터 분할·버전 관리, 합성 후보 관리 |
+| 2 | 라벨링 & AI | 도형·마스크 편집, 라벨 세트, 팀 기준서·배정·검수 |
+| 3 | 오토딥러닝 | 모델·실행 자원·학습 설정 선택, 후보 탐색, 작업 상태 확인 |
+| 4 | 평가 & 과검/미검 | 이미지별 결과, 임계값 검토, 동일 이미지 기준 모델 비교·보고서 |
+| 5 | 플로우차트 | 모델·ROI·측정·집계 연결, 저장·테스트·일괄 평가 |
+| 6 | 추론 & 모델 내보내기 | 저장된 플로우 실행, 결과·검토 이력, 모델·전체 플로우 패키지 내보내기 |
 
-### 🔍 1. 고해상도 이미지 라벨링 캔버스
-* **화면 영역 렌더링**: 원본 이미지의 보이는 영역을 캔버스에 그려 확대·이동한다. 파일 크기와 장치별 프레임률은 별도 측정이 필요하다.
-* **픽셀 확인 모드**: 3배 이상 확대 시 스무딩을 꺼 원본 픽셀 경계를 확인할 수 있다. 표시 방식이 1픽셀 결함의 검출 품질을 보장하지는 않는다.
+## 주요 기능
 
-### 🏷️ 2. LabelMe 가져오기와 라벨링 도구
-* **LabelMe 연동**: 인접 JSON의 지원 형상을 가져오고 프로젝트별 Studio 라벨로 편집한다. 모든 LabelMe 변형의 호환성은 검증하지 않았다.
-* **캔버스 도구**: 선택/이동, bbox, 회전 bbox, polygon, brush, eraser, Auto-Selector를 제공한다. Auto-Selector의 실제 이미지 클릭은 일부 확인했으며 학습형 대량 Auto-Labeling과 구분한다.
-* **형상 변환기**: 지원 형상 사이의 변환 기능이 있다. 변환 결과는 검토 후 저장한다.
-* **트랙패드와 마우스**:
-  - Mac 트랙패드 핀치 줌 (`Math.exp(-deltaY * 0.008)`) & 두 손가락 2D 캔버스 부드러운 패닝.
-  - 마우스 휠 커서 기준 줌 및 스페이스바 팬(Pan) 지원.
+### 데이터와 라벨링
 
-### 🤖 3. 모델 학습·평가와 자원 표시
-* **분류·분할·패치 분류**: 기본 사전학습 구조는 DINOv3이다. 공식 체크포인트 가져오기, 클래스·원본 해시를 연결한 준비 데이터와 CPU/MPS/CUDA 학습 경로를 제공한다.
-* **검출·이상탐지**: 검출 기본 구조는 YOLO이며 Faster R-CNN 대체 경로도 있다. 이상탐지는 PaDiM/PatchCore 통계 재구성과 DINOv3 합성 결함 학습을 구분한다.
-* **전문 모델군**: 단일 행 OCR, 회전 객체 검출, 학습형 정방향 보정, 이미지 개선, 결함 크롭 GAN을 지원한다. 명시적 정답과 원본 해시를 사용하며, GAN은 후보 생성·검토·채택에 사용한다. 검사 모델과 전처리 모델은 호환 플로우 노드에 전달할 수 있다.
-* **로컬·서버 학습과 재학습 후보**: 10개 모델군에서 선택한 실행 자원과 설정·부모 모델을 유지한다. 실행 작업 ID와 저장 모델 ID를 구분해 취소·재열기·평가·플로우 연결을 처리한다. 사전 준비 검사는 의존성·가중치·입력·부모를 확인하며 실제 학습이나 품질 승인을 대신하지 않는다.
-* **팀 데이터 품질**: 라벨 기준서 버전·예시, 담당 배정·우선순위, 공동 편집 권한, 1인/2인 검수와 의견 불일치 조정을 제공한다. 승인 데이터만 학습하는 정책은 선택적으로 활성화한다. 라벨·기준·정책 변경 시 이전 검수는 무효화되며 학습 출처에 기준·정책·입력 집합의 해시를 남긴다.
-* **학습 상태**: loss와 CPU·메모리·GPU 메모리 등의 텔레메트리를 표시한다. 전력 소비량과 학습 FPS의 실측 보장은 없다.
-* **장치 선택**: 사용 가능한 환경에서 CPU/MPS/CUDA 경로를 사용한다. OS·장치 조합별 검증 범위는 다르다.
+- 폴더·지원 LabelMe 형상 가져오기, 데이터셋 분할과 버전·원본 출처 관리
+- BBox, 회전 BBox, polygon, brush·eraser와 자동 선택 도구
+- 확대·이동·화면 맞춤과 픽셀 확인, 선택 형상 이동, 실행 취소·다시 실행
+- 원본을 유지하는 파생 이미지 편집과 라벨 세트 관리
+- 프로젝트별 라벨 기준서, 담당 배정·우선순위, 편집 잠금, 1인·2인 검수와 의견 조정
+- 선택적 승인 입력 정책: 라벨·기준·정책이 바뀌면 이전 검수를 무효화하고 학습 입력의 출처 기록
 
-### 🛡️ 4. 판정 검토와 보고서
-* **임계값 검토**: 평가 데이터의 판정 변화를 확인할 수 있다. 정상·불량을 대표하는 별도 검증 집합 없이 유출 0%나 과검률을 보장할 수 없다.
-* **이미지별 평가·모델 비교**: 혼동 행렬과 오검·미검 사례, 두 완료 모델의 같은 이미지 판정 차이를 확인한다.
-* **보고서**: 독립 HTML·JSON 보고서를 생성한다. HTML은 브라우저에서 인쇄해 PDF로 저장할 수 있으며 직접 PDF 파일을 생성하는 API는 없다.
+### 10개 모델군
 
-<br />
-
----
-
-## 🧭 작업 흐름 (Workflow)
-
-| 화면 | 주요 동작 |
+| 모델군 | 구현된 학습·처리 경로 |
 | --- | --- |
-| 1. 데이터 | 폴더·LabelMe 가져오기, 분할, 버전, 합성 후보 |
-| 2. 라벨링 | 도형·브러시 편집, 라벨 세트, 기준서·배정·편집 잠금·검수 |
-| 3. 학습 | 모델별 준비·실행 자원·부모 선택, 승인 입력 정책, 상태·취소·재열기 |
-| 4. 평가 | 이미지별 결과, 모델 비교, 보고서와 승인 검토 |
-| 5. 플로우 | 모델·ROI·측정·집계 연결, 검증, 저장 버전 |
-| 6. 검사 | 저장된 플로우 실행, 검토 이력, CSV/JSON·패키지 |
+| 이미지 분류 | DINOv3 기본 구조와 ResNet·ConvNeXt·EfficientNet 대체 구조 |
+| 영역 분할 | DINOv3 기반 분할과 U-Net 경로 |
+| 객체 검출 | YOLO 기본 구조와 Faster R-CNN 대체 경로 |
+| 이상탐지 | PaDiM·PatchCore 통계 구성, DINOv3 합성 결함 학습 |
+| 패치 분류 | 원본 해시·패치 좌표·클래스를 연결한 학습 |
+| 문자 인식 | CTC 인식, 수평 문자 영역 제안, 다중 줄 정렬과 문자열 규칙 |
+| 회전 객체 검출 | 회전 박스 모델과 명시적으로 가져온 로컬 YOLO OBB 가중치 경로 |
+| 정방향 보정 | 정답 보정각을 이용한 각도 예측 |
+| 이미지 개선 | 개선 전·후 정답 이미지 쌍을 이용한 학습 |
+| 결함 이미지 생성 | 결함 crop GAN 학습, 후보 생성·검토·train 입력 채택 |
 
-최근 변경과 실제 확인 범위는 [팀 작업·전체 흐름 변경 기록](docs/implementation-ledger/TEAM-WORKFLOW.md)에 기록한다. 이전 시점의 실행 근거는 [기능 상태표](docs/FEATURE_STATUS_2026-09-30.md)에 남긴다.
+GAN은 생성 데이터를 검토해 학습에 채택하는 용도이며, 검사 플로우의 판정 모델로 사용하지 않습니다. OCR의 영역 제안은 고전적 수평 영역 분석 방식입니다. 모델군별 의존성·입력·실행 단계는 [모델 카탈로그](backend/engine/model_catalog.py)에 정의되어 있습니다.
 
-<br />
+### 학습과 평가
 
----
+- 사용 가능한 CPU·Apple MPS·CUDA 자원과 SSH 원격 실행 프로필 선택
+- 로컬·SSH 후보 탐색: 지원 recipe 안에서 후보 수·시간·자원 예산을 제한하는 AutoDL
+- 학습 상태·loss·자원 사용량 표시, 작업 취소·재연결·재열기와 부모 모델 연결
+- 호환성을 검사한 체크포인트에서 학습 재개, 준비 입력과 저장 모델의 식별자·해시 기록
+- 이미지별 예측, 혼동 행렬과 과검·미검 사례, 같은 이미지 집합에 대한 두 모델 비교
+- HTML·JSON 보고서 생성과 브라우저 인쇄를 통한 PDF 저장
 
-## 🏗 시스템 아키텍처 (System Architecture)
+직접 학습과 자동 후보 탐색의 지원 범위는 다릅니다. 원격 AutoDL은 단일 CPU/CUDA worker 경로이며, exact resume·다중 줄 OCR·네이티브 YOLO OBB 후보 등에는 제한이 있습니다. 학습 화면의 준비 검사와 선택한 recipe의 지원 범위를 확인하세요.
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                 Desktop Client Layer (Electron 44 + React 18)               │
-│   ┌───────────────────────┐ ┌────────────────────────┐ ┌────────────────┐  │
-│   │ 6-Stage Studio UI     │ │ Labeling Canvas        │ │ Zustand Stores │  │
-│   │ (Data → Inference)    │ │ (Base/Mask/Vector)     │ │ (Sync State)   │  │
-│   └───────────────────────┘ └────────────────────────┘ └────────────────┘  │
-└──────────────────────────────────────┬──────────────────────────────────────┘
-                                       │ IPC / WebSocket Telemetry
-┌──────────────────────────────────────▼──────────────────────────────────────┐
-│             Backend Process Supervisor (supervisor.ts)                      │
-│   ┌───────────────────────────────────┐ ┌────────────────────────────────┐  │
-│   │ Compiled backend, if present      │ │ Resolved Python environment    │  │
-│   │ (separate build artifact)         │ │ (dependencies required)        │  │
-│   └───────────────────────────────────┘ └────────────────────────────────┘  │
-└──────────────────────────────────────┬──────────────────────────────────────┘
-                                       │ REST / WebSocket (Port 0 Ephemeral)
-┌──────────────────────────────────────▼──────────────────────────────────────┐
-│                    FastAPI Backend Daemon & AI Engine                       │
-│   ┌───────────────────────┐ ┌────────────────────────┐ ┌────────────────┐  │
-│   │ Dataset / Annotations │ │ PyTorch Models Engine  │ │ Saved Flow DAG │  │
-│   │ (LabelMe Import)      │ │ (DINOv3, YOLO, etc.)   │ │ & Audit Trail  │  │
-│   └───────────────────────┘ └────────────────────────┘ └────────────────┘  │
-└──────────────────────────────────────┬──────────────────────────────────────┘
-                                       │ Hardware Direct Compute
-┌──────────────────────────────────────▼──────────────────────────────────────┐
-│       Metal / MPS               │  CUDA              │  CPU               │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+### 검사 플로우와 운영자 작업 공간
 
-전체 플로우 패키지의 [독립 검사 서비스](backend/engine/inspection_service.py)는 데스크톱 앱과 별도 프로세스로 실행한다. 저장된 파일·HTTP 작업과 이력을 처리하지만 PLC 판정 신호 또는 양산 지연시간 보증은 포함하지 않는다.
+- 모델, ROI, 전처리, Blob 측정과 결과 집계를 연결하는 플로우 편집·저장·실행
+- 운영자 검사 화면의 수동 입력, 프로젝트 폴더 감시, 카메라·RTSP 입력 경로
+- 부품·제품·Lot와 재검사 연결, 모델 판정과 운영자 검수 분리
+- 접수 시 검사 recipe 고정, 용량이 제한된 입력 대기열과 backpressure, 재처리·ACK 전송 재시도
+- 검사 결과와 검토 이력 조회, CSV·JSON 내보내기
 
-<br />
+### 패키지와 외부 연동
 
----
+- 그래프·모델·체크섬을 함께 묶는 전체 플로우 패키지와 패키지 보관함
+- 앱과 별도로 실행하는 검사 서비스, 인증된 HTTP 작업 접수와 결과 내보내기
+- Python·CLI·REST 연동, CPython 런타임을 사용하는 C ABI/C++·C# 래퍼
+- 단계 적용·롤백, drift·sampling, 보존 정책·복구 가능한 휴지통과 진단 자료
+- macOS LaunchAgent, Linux systemd user, Windows 로그온 작업을 통한 사용자 시작 등록
+- 별도의 Windows SCM 서비스 사전 검사·등록 파일 준비·등록 경로. 관리자 권한과 서비스 계정 등 대상 환경의 사전 조건 필요
 
-## ⚡ 빠른 시작 (Quick Start)
+통합 방법은 [검사 서비스·SDK 안내](docs/api-integration.md)와 [학습 CLI·REST 안내](docs/training-engine-cli-rest.md)를 참고하세요.
 
-### 필수 요구 조건
-* **Python**: 3.13 (고정 잠금 파일이 3.13용)
-* **Node.js**: 24
-* **OS**: Windows 11 x64(주 대상), macOS arm64(개발 환경). 지원 범위와 현재 근거는 [기여 안내](CONTRIBUTING.md#8-지원-범위-support-matrix)에 있다.
+## 빠른 시작
 
-### 저장소 복제 및 설치
-운영체제별 명령(Windows PowerShell, Linux, macOS)은 [기여 안내의 1단계](CONTRIBUTING.md#1-새-pc에서-시작하기-fresh-checkout)에 있다. Linux x64 예:
+### 개발 환경
+
+**Git, Node.js 24, Python 3.13**을 준비합니다. Windows·Linux 명령은 CPU용 해시 잠금 파일을 사용합니다. macOS arm64는 별도 잠금 파일이 없어 `requirements.txt`를 사용합니다. GPU 학습에는 장치에 맞는 드라이버와 Python 의존성 구성이 추가로 필요합니다.
+
+### 1. 저장소 받기
 
 ```bash
 git clone https://github.com/JaeHongChoe/modu-vision.git
 cd modu-vision
+```
+
+### 2. 운영체제별 설치·실행
+
+<details>
+<summary><strong>Windows 11 x64 · PowerShell</strong></summary>
+
+가상환경의 Python과 `npm.cmd`를 직접 사용합니다.
+
+```powershell
+py -3.13 -m venv .venv
+.venv\Scripts\python.exe -m pip install --require-hashes --only-binary=:all: -r build/ci/requirements-windows-py313-cpu.lock
+npm.cmd ci
+$env:VISION_AI_PYTHON = (Resolve-Path .venv\Scripts\python.exe).Path
+npm.cmd run dev
+```
+
+자세한 첫 실행·문제 해결 순서는 [Windows 빠른 시작](docs/quickstart-windows.md)을 확인하세요.
+
+</details>
+
+<details>
+<summary><strong>macOS arm64 · zsh 또는 bash</strong></summary>
+
+```bash
+python3.13 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt pytest==8.3.4
+npm ci
+export VISION_AI_PYTHON="$PWD/.venv/bin/python"
+npm run dev
+```
+
+</details>
+
+<details>
+<summary><strong>Linux x64 · bash</strong></summary>
+
+```bash
 python3.13 -m venv .venv
 source .venv/bin/activate
 python -m pip install --require-hashes --only-binary=:all: -r build/ci/requirements-ubuntu-py313-cpu.lock
 npm ci
-```
-
-### 개발 모드 실행
-```bash
-# UI와 백엔드 데몬을 동시에 핫 리로드 모드로 실행
+export VISION_AI_PYTHON="$PWD/.venv/bin/python"
 npm run dev
 ```
 
-<br />
+</details>
 
----
+`npm run dev`가 Vite 개발 서버, Electron 코드 감시와 데스크톱 앱·백엔드를 실행합니다. 백엔드 Python 코드를 바꿨다면 앱을 재시작하세요.
 
-## 📦 데스크톱 패키징 (Desktop Packaging)
+**사전학습 가중치는 소스와 기본 설치본에 포함되지 않습니다.** 해당 모델을 사용하려면 제공자에게서 내려받거나 사용자가 가져와야 합니다. 오프라인 사용에는 허용된 가중치와 선택적 런타임을 미리 준비해야 합니다. DICOM·OpenVINO·의미 기반 라벨링 등의 선택적 환경은 해당 기능의 준비 조건을 확인하세요.
 
-`package:mac`과 `package:win`은 Electron 패키지를 만든다. 패키지는 같은 플랫폼에서 먼저 빌드한 frozen 백엔드(`backend_bin`)와 그 체크섬 목록을 담으며, 대상 PC에 Python 패키지를 설치하지 않는다(빌드·검증 절차는 [docs/release-platform-matrix.md](docs/release-platform-matrix.md)). 서명, 설치본 검증, 실제 장비 실행은 플랫폼별 근거가 따로 필요하다.
+### 3. CPU 데모
 
-먼저 같은 플랫폼에서 가상환경의 Python으로 frozen 백엔드를 빌드한 뒤 Electron 패키지를 만든다. 패키지 빌더는 같은 OS·아키텍처에서 실행 검증을 마친 백엔드 빌드가 없으면 멈춘다.
+설치 후 작은 합성 이미지로 정방향 보정 모델을 학습·평가할 수 있습니다. GPU와 가중치 다운로드는 필요하지 않습니다.
 
-### 🍎 macOS 애플리케이션 번들 (.app)
 ```bash
+python scripts/cpu_demo.py
+```
+
+Windows에서는 `python` 대신 `.venv\Scripts\python.exe`를 사용합니다. 결과를 보존하려면 `--keep` 또는 `--workdir 경로`를 지정하세요. 데모 데이터와 작업 기록은 격리된 작업 폴더에 저장됩니다.
+
+## 개발 검사
+
+변경한 영역의 백엔드 테스트와 타입·화면 검사를 먼저 실행합니다.
+
+```bash
+python -m pytest backend/tests/test_service_s1_04.py -q
+npm run typecheck
+npm run test:renderer
+npm run build
+```
+
+화면 검사는 `npm run test:e2e:browser`, 데스크톱 검사는 `npm run test:e2e:electron`입니다. Playwright 브라우저와 테스트용 Python 설정, 회귀 범위는 [기여 안내](CONTRIBUTING.md)에 있습니다. Windows에서는 `npm.cmd`와 가상환경 Python을 사용하세요.
+
+## 데스크톱 패키징
+
+**대상 OS·아키텍처에서 frozen 백엔드를 먼저 빌드한 뒤 Electron 패키지를 만듭니다.** 패키지 빌더는 백엔드의 실행·체크섬 기록과 소스 일치를 검사합니다. 다른 플랫폼의 백엔드 빌드 결과를 재사용할 수 없습니다.
+
+빠른 시작의 의존성을 설치한 환경에 PyInstaller를 추가합니다. macOS 패키징에는 Xcode Command Line Tools(macOS SDK·clang), Linux 패키징에는 C 컴파일러와 해당 Python 개발 헤더가 필요합니다.
+
+**macOS arm64**
+
+```bash
+.venv/bin/python -m pip install pyinstaller
 .venv/bin/python scripts/build_backend_binary.py
 npm run package:mac
-# 출력 위치: release/ 아래의 macOS 산출물
 ```
 
-### 🪟 Windows 설치 파일 (NSIS, PowerShell)
+**Windows x64 · PowerShell**
+
 ```powershell
-.venv\Scripts\python.exe scripts\build_backend_binary.py
+.venv\Scripts\python.exe -m pip install --no-deps --require-hashes --only-binary=:all: -r build/ci/requirements-windows-packaging.lock
+.venv\Scripts\python.exe scripts/build_backend_binary.py
 npm.cmd run package:win
-# 출력 위치: release/ 아래의 NSIS 산출물
 ```
 
-서명, 설치본 설치·제거 검증, 대상 Windows PC에서의 첫 실행은 따로 확인해야 한다.
+출력은 `release/`에 생성됩니다. macOS는 DMG·ZIP, Windows는 NSIS 설정을 사용하며 Linux x64의 AppImage·deb 빌드 경로도 있습니다. 설치본의 백엔드 Python 런타임은 번들에 포함됩니다. 플랫폼별 서명, 설치·제거·복구, 오프라인 준비 절차는 [배포 지원 표](docs/release-platform-matrix.md)를 따릅니다.
 
-프로젝트 열기 전에 스키마 호환성을 검사하며, 기존 스키마 정규화는 원본 바이트 백업과 해시 연결 기록을 남긴다. 배포 화면은 실제 데스크톱 버전·서명 상태와 사용자가 설정한 HTTPS 업데이트 채널을 표시한다. 검증된 파일의 수동 다운로드를 지원하며 자동 설치는 지원하지 않는다. 검사 서비스의 사용자 시작 등록은 macOS LaunchAgent, Linux systemd user, Windows logon task를 제공한다. 실제 서명·배포 채널과 OS별 재로그인·재부팅 검증은 별도로 필요하다. 상세 근거는 [배포·호환성 기록](docs/implementation-ledger/TEAM-DELIVERY.md)에 있다.
+## 라벨링 단축키
 
-<br />
+캔버스에 포커스가 있을 때 사용합니다. 자동 선택과 100% 배율은 도구 모음에서 선택합니다.
 
----
+| 키 | 동작 |
+| --- | --- |
+| `1` ~ `6` | 선택, BBox, 회전 BBox, polygon, brush, eraser 순서로 전환 |
+| `F` | 이미지 화면 맞춤 |
+| `Space` + 드래그 | 캔버스 이동 |
+| 방향키 / `Shift` + 방향키 | 선택 형상 1px / 10px 이동 |
+| `Ctrl` / `Cmd` + `Z` | 실행 취소 |
+| `Ctrl` / `Cmd` + `Shift` + `Z` 또는 `Ctrl` / `Cmd` + `Y` | 다시 실행 |
+| `Delete` / `Backspace` | 선택 라벨 삭제 |
+| `Enter` / `Esc` | polygon 완성 / 현재 편집 취소 |
 
-## ⌨️ 키보드 & 마우스 단축키 일람 (Cheatsheet)
+## 프로젝트 구조
 
-| 단축키 | 동작 | 설명 |
-| :---: | :--- | :--- |
-| `1` ~ `7` | **도구 전환** | 1: 선택, 2: BBox, 3: OBB, 4: 폴리곤, 5: 브러시, 6: 지우개, 7: 오토 셀렉터 |
-| `트랙패드 핀치` | **커서 중심 스무스 줌** | 두 손가락으로 모으거나 벌려 부드럽게 지수 확대/축소 |
-| `트랙패드 2손가락` | **2D 캔버스 팬(Pan)** | 마우스 없이 두 손가락 드래그로 상하좌우 화면 이동 |
-| `Space` + `드래그` | **화면 패닝 (Pan)** | 스페이스바를 누른 채 마우스 좌클릭 드래그로 캔버스 이동 |
-| `F` | **화면 맞춤 (Fit)** | 현재 이미지를 화면 정중앙에 꽉 차게 자동 배율 조정 |
-| `1` (넘버패드/메뉴) | **100% 배율 (1:1)** | 이미지의 실제 1픽셀을 모니터 1픽셀에 1:1로 원본 매핑 |
-| `방향키 (↑, ↓, ←, →)` | **1px 서브픽셀 넛지** | 선택된 BBox/폴리곤을 1픽셀 단위로 정밀 미세 이동 |
-| `Shift` + `방향키` | **10px 단위 고속 넛지** | 선택된 어노테이션을 10픽셀 단위로 이동 |
-| `Delete` / `Backspace` | **삭제** | 선택된 결함 어노테이션 제거 |
-| `Ctrl` / `Cmd` + `Z` | **실행 취소 (Undo)** | 최대 40단계 히스토리 롤백 |
-| `Enter` | **폴리곤 완성** | 다각형 그리기 중 시작점으로 닫기 |
-| `Esc` | **작업 취소** | 현재 드래프팅 취소 및 선택 해제 |
+| 경로 | 역할 |
+| --- | --- |
+| `src/main/`, `src/preload/` | Electron 실행, 백엔드 프로세스 관리와 데스크톱 bridge |
+| `src/renderer/` | React Studio·운영자 화면과 상태 관리 |
+| `backend/api/`, `backend/contracts/` | REST·WebSocket API, 인증·프로젝트 문맥과 실행 계약 |
+| `backend/engine/` | 데이터·학습·평가·플로우 엔진과 독립 검사 서비스 |
+| `backend/remote/` | SSH 원격 실행 조정자와 worker |
+| `native_runtime/`, `examples/` | 외부 프로그램 연동 래퍼와 예제 |
+| `backend/tests/`, `scripts/e2e/` | 백엔드 회귀와 브라우저·Electron 검사 |
+| `build/`, `scripts/` | 패키징 설정, 의존성 잠금 파일과 개발·검증 도구 |
+| `docs/` | 사용·연동·배포 안내와 기능별 구현·검증 기록 |
 
-<br />
+## 문서
 
----
+| 문서 | 내용 |
+| --- | --- |
+| [기여 안내](CONTRIBUTING.md) | 새 환경 설치, CPU 데모, 테스트와 지원 범위 |
+| [Windows 빠른 시작](docs/quickstart-windows.md) | Windows 설치·첫 실행·진단 |
+| [문제 해결](docs/troubleshooting.md) | 오류 재현과 진단 자료 |
+| [검사 서비스·SDK](docs/api-integration.md) | 전체 플로우 패키지, Python·CLI·REST·C++·C# 연동 |
+| [학습 CLI·REST](docs/training-engine-cli-rest.md) | 외부 프로그램에서 학습 엔진 사용 |
+| [배포 지원 표](docs/release-platform-matrix.md) | 네이티브 빌드, 서명, 설치와 복구 조건 |
+| [모델 라이선스 표](docs/model-license-matrix.md) | 사전학습·파생 모델과 가중치 배포 조건 |
+| [작업 계획](docs/service-upgrade-program.json) · [검증 근거](docs/service-upgrade-evidence.json) | 기능별 범위와 확인 상태 |
+| [팀 작업 흐름](docs/implementation-ledger/TEAM-WORKFLOW.md) · [배포 기록](docs/implementation-ledger/TEAM-DELIVERY.md) | 영역별 구현과 남은 확인 사항 |
 
-## 🧪 테스트 무결성 검증 (Verification Suite)
+## 기여와 라이선스
 
-코드 변경 후 실행할 주요 검사. 테스트 통과는 앱 설치, 현장 장비, 모델 품질 승인을 뜻하지 않는다.
+버그 제보와 변경 제안은 [Issues](https://github.com/JaeHongChoe/modu-vision/issues), 코드 기여는 [기여 안내](CONTRIBUTING.md)를 이용하세요. 보안 문제 제보 방법은 [SECURITY.md](SECURITY.md)에 있습니다.
 
-```bash
-# 백엔드 회귀
-python -m pytest backend/tests -q
-
-# TypeScript 검사와 빌드
-npm run typecheck
-npm run build
-
-# 패키징 규칙 검사 (실제 설치·첫 실행과 별개)
-node scripts/verify-packaging.js
-```
-
-<br />
-
----
-
-## 📁 프로젝트 레이아웃 (Repository Layout)
-
-```
-modu-vision/
-├── 📂 assets/                     # 앱 로고
-├── 📂 backend/                    # Python 3 / FastAPI 백엔드 데몬 및 PyTorch 엔진
-│   ├── 📂 api/                    # REST 엔드포인트 및 WebSocket 원격 측정
-│   ├── 📂 engine/                 # PyTorch 모델, 저장 플로우, 독립 서비스 및 합성기
-│   ├── 📂 utils/                  # 2개 국어 에러 카탈로그 및 공통 유틸리티
-│   └── 📄 pytest.ini              # 백엔드 테스트 명세서
-├── 📂 src/                        # 프론트엔드 UI 및 Electron 소스
-│   ├── 📂 main/                   # Electron 메인 프로세스 & 프로세스 감시자(Supervisor)
-│   ├── 📂 preload/                # 보안 Context Bridge IPC 프리로드
-│   └── 📂 renderer/               # React 18 / TailwindCSS 산업용 UI 컴포넌트
-├── 📂 build/                      # 윈도우/맥 패키징 명세, 아이콘 및 인스톨러 스크립트
-│   ├── 📄 electron-builder.yml    # macOS DMG 및 Windows NSIS 크로스 패키징 스펙
-│   ├── 📄 tsconfig.node.json      # Electron 메인 프로세스 빌드 설정
-│   └── 📄 installer.nsh           # 윈도우 무인 자동 설치 스크립트
-├── 📂 scripts/                    # 자동화 부트스트랩, 바이너리 컴파일러, 검증 스크립트
-├── 📂 tests/                      # E2E 적대적 테스트 및 단위 테스트 스위트
-├── 📄 requirements.txt            # 파이썬 의존성 명세서
-└── 📄 package.json                # Node.js 프로젝트 명세서
-```
-
-<br />
-
----
-
-## 🤝 기여하기 (Contributing)
-
-버그 제보, 기능 제안 및 풀 리퀘스트(PR)는 언제나 환영합니다.
-
-- [기여 안내](CONTRIBUTING.md): 새 PC 설치(CI와 같은 잠금 파일), GPU 없는 CPU 데모(`python scripts/cpu_demo.py`), 집중 테스트, PR 절차, 모듈 지도, 코드 규칙, 지원 범위와 릴리스 정책
-- [Windows 빠른 시작](docs/quickstart-windows.md) · [문제 해결과 진단 자료](docs/troubleshooting.md) · [SDK·REST·배치 연동](docs/api-integration.md)
-- [보안 정책](SECURITY.md): 취약점은 공개 이슈가 아닌 비공개 신고로 알려 주세요. 실제 검사 이미지나 비밀정보는 첨부하지 않습니다.
-- [행동 강령](CODE_OF_CONDUCT.md)
-
-<br />
-
----
-
-## 📄 라이선스 (License)
-
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
-
-<div align="center">
-  <sub>Built with ❤️ by the Modu Vision Open Source Team.</sub>
-</div>
+프로젝트 코드는 [MIT License](LICENSE)를 따릅니다. 외부 라이브러리와 모델 가중치에는 각각의 조건이 적용됩니다. 특히 DINOv3·YOLO 등 사전학습 모델과 파생 모델의 이용·재배포 조건은 [모델 라이선스 표](docs/model-license-matrix.md)와 [외부 구성 요소 고지](THIRD_PARTY_NOTICES.md)를 확인하세요.
