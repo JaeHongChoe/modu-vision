@@ -1,0 +1,85 @@
+{
+  "schema": "modu-vision.current-scoped-gallery-source-Electron-requalification/v1",
+  "case_id": "electron-partition-handoff",
+  "source_sha": "e7ea1a2ee7d85c03e466a9af16667b30bbf60ff8",
+  "test": "scripts/e2e/classification-summary-scoped-media.spec.ts::native classification Train Val Test cards and imported gallery stay owning through C D C project handoff",
+  "test_source_sha256": "951ebe302eee33792d3306edbe96cc26ccd4ba02ff123a209ef5d54552e985db",
+  "mode": "source Electron",
+  "actual_original_case_passed_once": true,
+  "original_collector_exit": 0,
+  "observed_scope": "Original saved-project UI switches C/D/C and reloads C, retaining the original automatic-versus-explicit partition contract, owning imported images/counts/metadata and complete declared project/source custody.",
+  "observation_policy": {
+    "explicit_instrumented_QA": true,
+    "four_original_function_identities_temporarily_observed": true,
+    "exact_original_Promise_app_Blob_and_native_URL_result_preserved": true,
+    "no_second_HTTP_or_Response_consume": true,
+    "CSP_unchanged": true
+  },
+  "finite_media": {
+    "epochs": 8,
+    "qualified_assertions": 16,
+    "original_HTTP_app_Blob_records": 16,
+    "retained_body_files": 16,
+    "all_original_context_and_body_digests_joined": true,
+    "displayed_native_URL_owners_and_RGBA_receipts_match": true,
+    "all_provisional_assertions_have_actual_final_closed_epoch": true,
+    "actual_pixel_redecode_by_file_reader": false
+  },
+  "original_10s_min_epoch_and_assertion_budgets_unchanged": true,
+  "source31_exact": true,
+  "Source_Electron_and_owned_backend_closed_with_empty_teardown_and_scans": true,
+  "original_console_errors": 0,
+  "original_screenshot_digests": [
+    {
+      "id": "screenshot-0",
+      "sha256": "6d3873863160204ef3cee952f5f951795827ccfa99ecadcca9d419f358dac189"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "edc9816d7f87ca8987dd58e0122abe3c4a0126031d72ff17f5d55937100979a1"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "9933b93dea71d09da32271e9d64124d375cf33742529259351758603082f1417"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "17709b7906ef348c4cab7c72c4b07e25a9ed236a99ccd35be71f1f2a0ae8004d"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "d1c6fec2daa093be793629634039313c44e90edcbcffa2a5441cee04e8a77200"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "16f1dcfd029b20f1391872eaeb9579207c83859c9c8abb908069f286cd36a630"
+    },
+    {
+      "id": "screenshot-6",
+      "sha256": "19f654bf5d01b0f088ff34dce8a0bf57ca378bf2599356687d50f6f648a30f6f"
+    },
+    {
+      "id": "screenshot-7",
+      "sha256": "cc8cc41869bf6be3cf317d0d346791aa884388e015603f2dd5d027176d1b16bc"
+    }
+  ],
+  "digest_refs": {
+    "original_GUI_receipt": "a2eee495b8a42c1c742a44d597de83f0d8ab7dc2b07b6ad3719a503ce50bf991",
+    "manifest": "a493d8e7fcb100f5eba3f8972aa2603c29c806021883e3c0a5b1a2472c755ade",
+    "runner_result": "51997da28fbd7e23ab55f72d739a7c8e8e3501f24dd06cea73cc1c2c9be869bd",
+    "collector": "767cfebe84552c10a0d9e0b770fe084e8d0740a6a6de800238028bc586c74c40",
+    "file_readback": "3f74e1fe96c1adea333d991e5952b7004b17ff7ff72de4de8a28f030a8fa8075"
+  },
+  "acceptance": {
+    "exact_dimensions": [
+      "F022.handoff"
+    ],
+    "ledger_changed_by_preparer": false,
+    "installed_native": false,
+    "real_OS_picker": false,
+    "model_execution_or_quality": false,
+    "whole_feature_or_parent": false
+  },
+  "source_variant_disclosure": "Electron3 executed e7ea1a2; browser4 executed parent a7d6145. This successor adds only explicit epoch closure before four existing project transitions; existing strict guard bodies and browser copied specs are unchanged.",
+  "preserved_failed_scope": "Earlier failed observer attempts remain failed and provide no scenario credit."
+}

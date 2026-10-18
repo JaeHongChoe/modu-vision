@@ -1,0 +1,56 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "e7ea1a2ee7d85c03e466a9af16667b30bbf60ff8",
+  "source_dirty": false,
+  "test": "scripts/e2e/classification-summary-scoped-media.spec.ts::native classification Train Val Test cards and imported gallery stay owning through C D C project handoff",
+  "test_source_sha256": "951ebe302eee33792d3306edbe96cc26ccd4ba02ff123a209ef5d54552e985db",
+  "mode": "electron",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "report_sha256": "e52aab5f6a7a6bb98f24b3e0a52745385583b1c58ebb8b224bf293b0a3c31568",
+  "harness_sha256": "a493d8e7fcb100f5eba3f8972aa2603c29c806021883e3c0a5b1a2472c755ade",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "6d3873863160204ef3cee952f5f951795827ccfa99ecadcca9d419f358dac189"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "edc9816d7f87ca8987dd58e0122abe3c4a0126031d72ff17f5d55937100979a1"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "9933b93dea71d09da32271e9d64124d375cf33742529259351758603082f1417"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "17709b7906ef348c4cab7c72c4b07e25a9ed236a99ccd35be71f1f2a0ae8004d"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "d1c6fec2daa093be793629634039313c44e90edcbcffa2a5441cee04e8a77200"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "16f1dcfd029b20f1391872eaeb9579207c83859c9c8abb908069f286cd36a630"
+    },
+    {
+      "id": "screenshot-6",
+      "sha256": "19f654bf5d01b0f088ff34dce8a0bf57ca378bf2599356687d50f6f648a30f6f"
+    },
+    {
+      "id": "screenshot-7",
+      "sha256": "cc8cc41869bf6be3cf317d0d346791aa884388e015603f2dd5d027176d1b16bc"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Executed GUI case only; no human model quality, device, release or feature acceptance inferred"
+}

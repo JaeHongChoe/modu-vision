@@ -1,0 +1,61 @@
+{
+  "schema": "modu-vision.current-scoped-gallery-browser-requalification/v1",
+  "case_id": "browser-chooser-error",
+  "source_sha": "a7d6145b4f0086879ecb967efa5c851a8134dc7c",
+  "test": "scripts/e2e/classification-folder-chooser-error-scoped-media.spec.ts::classification folder chooser failure preserves owning source counts and bytes through ordinary reload",
+  "test_source_sha256": "309be6bcf2edfd1a3ae5336e60ba58ddf40b835c94f0e1d172970a023d8db0df",
+  "mode": "source browser",
+  "actual_original_case_passed_once": true,
+  "original_collector_exit": 0,
+  "observed_scope": "The original chooser Promise rejects; alert and six owning images/counts persist, with no import/source write and original source restored through reload.",
+  "observation_policy": {
+    "explicit_instrumented_QA": true,
+    "original_four_function_identities_temporarily_observed": true,
+    "original_native_Promise_Blob_and_URL_results_preserved": true,
+    "no_second_HTTP_or_Response_consume": true,
+    "CSP_unchanged": true
+  },
+  "finite_media": {
+    "epochs": 2,
+    "qualified_assertions": 4,
+    "original_HTTP_app_Blob_records": 12,
+    "retained_body_files": 12,
+    "all_original_context_and_body_digests_joined": true,
+    "displayed_native_URL_owners_and_RGBA_receipts_match": true,
+    "all_provisional_assertions_have_actual_final_closed_epoch": true,
+    "actual_pixel_redecode_by_this_reader": false
+  },
+  "original_10s_min_epoch_and_assertion_budgets_unchanged": true,
+  "source31_exact": true,
+  "original_owned_backend_natural0_and_teardown_scans_empty": true,
+  "expected_original_console_errors": 0,
+  "original_screenshot_digests": [
+    {
+      "id": "screenshot-0",
+      "sha256": "c2af62c5c4ea45506757fa4a838b76686095bb9fb739d2510beac0e4a518a2f3"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "2cf6d86b24c5af3db0f93e1e8f2d1bb74027bdc46c7cc5d87b5c94647750dd46"
+    }
+  ],
+  "digest_refs": {
+    "original_GUI_receipt": "4646f7e8b8d3f71a4212fb34690da6abaa97110cf8a3bd4059842e087c00806c",
+    "manifest": "14ffe4bd0d349769aa7d89277d4710e3e98705540785a9fa831a13a3f5d8bc54",
+    "runner_result": "f39cdc1bccb81e56a6c3a0dde52c5448ba9f5dfea8d774ec84581080a361c429",
+    "collector": "19995894b493f45f90e16b10de0c329ce310c7092ffcf1ffe948c73828a4713a",
+    "file_readback": "1ce1459adf9b2d7a961187ee994df9b28721f79ddb0ea4d5cce95bd78b1a09bc"
+  },
+  "acceptance": {
+    "exact_dimensions": [
+      "F019.native-classification-import-label-summary.error",
+      "F022.native-classification-partitions-import-reopen.error"
+    ],
+    "ledger_change_by_preparer": false,
+    "real_OS_picker": false,
+    "installed_native": false,
+    "model_execution_or_quality": false,
+    "whole_feature_or_parent": false
+  },
+  "source_variant_disclosure": "Executed at a7d6145. Later additive pretransition API and four Electron-copy callsites are not claimed as executed by this browser attempt; browser spec bytes and preexisting observer method bodies remain exact."
+}

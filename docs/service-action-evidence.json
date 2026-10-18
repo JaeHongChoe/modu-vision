@@ -2455,7 +2455,7 @@
           "source": "src/renderer/components/dataset/DatasetStudio.tsx",
           "scenarios": {
             "success": {
-              "state": "pending",
+              "state": "verified",
               "evidence": [
                 {
                   "task": "S3-03",
@@ -2508,13 +2508,43 @@
                       "sha256": "264aad9129a9d606fa90d3b82ad2cd4bf4ca1b3c20639f9866accc9aa7496460"
                     }
                   ]
+                },
+                {
+                  "task": "S3-03",
+                  "source_sha": "e7ea1a2ee7d85c03e466a9af16667b30bbf60ff8",
+                  "kind": "click",
+                  "action": "데이터셋 폴더 열기 · 라벨 완료·미완료 집계",
+                  "expected": "Retain the exact owning imported classification gallery, labels and default-loader partitions through the original success scenario.",
+                  "observed": "Four original eligible default-loader cohorts (6/4/2/2 images) retain exact classes and Train/Val/Test counts through ordinary import/reopen, including return to the first project. Hidden/NAS files remain excluded; original source bytes remain exact. Exact original Request/context, retained actual app Blob/native URL, same-decoder pixel and provisional-to-final closed epoch receipts qualify this scoped current replay. Details: 2026-10-18-classification-electron-summary-scoped-gallery-details.json",
+                  "reviewer": "Root original once-only execution/collector, finite file/body/context/epoch/custody/teardown and selected PNG review; independent source/proof review. Controlled browser/Source Electron folder answer; no real OS picker, installed native, model, quality, whole-feature or parent acceptance. Earlier pending reasons and evidence remain historical.",
+                  "test": "scripts/e2e/classification-summary-scoped-media.spec.ts::native classification import summary matches eligible default loader partitions and reopens",
+                  "receipt": "2026-10-18-classification-electron-summary-original-gui.json",
+                  "receipt_sha256": "2f443d744d0e5bca7e53bdc5f89505ef4d9e5aaaab7ce8b16fe0d3abe14ad973",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "34624f6d7a4ffe655ea013e17c0956e9667405879f2429e312db4ddb0a085a82"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "6588f9777fae33a99ada7bb9e926035248b40c757ed6b5ab8de68b2ff8a86d2f"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "ce142a1a7e6b531d1994a1f63c42a12d761282e87ac89e24741724c9bb2c5da2"
+                    },
+                    {
+                      "id": "screenshot-3",
+                      "sha256": "c26985f8707bfb3d4e44087ac2848dee3cac5385aa5817771b6506a10ebdd59c"
+                    }
+                  ]
                 }
               ],
-              "reason": "Current gallery transport and context authority changed; original receipts remain historical evidence. Fresh current browser/native replay is required.",
-              "reviewer": "Codex Root current-source impact review; no source-unit result substitutes for UI execution."
+              "reason": "Current Source Electron success replay passed its original once-only GUI case and collector, with exact owning Request/context, app Blob/native URL, pixel and final epoch-closure receipts. Qualification is limited to this action scenario; real OS picker, installed native, model quality, whole-feature and parent acceptance remain unqualified.",
+              "reviewer": "Root original GUI/collector, finite body/context/epoch/custody/teardown and selected PNG review, plus independent source/proof review. Controlled Source Electron folder answer; bounded current action evidence only."
             },
             "empty": {
-              "state": "pending",
+              "state": "verified",
               "evidence": [
                 {
                   "task": "S3-03",
@@ -2541,13 +2571,39 @@
                       "sha256": "9cc50b6627dd2858ca3372e434a9fb29d45665e3160abfbb3846db3a98631c24"
                     }
                   ]
+                },
+                {
+                  "task": "S3-03",
+                  "source_sha": "a7d6145b4f0086879ecb967efa5c851a8134dc7c",
+                  "kind": "click",
+                  "action": "데이터셋 폴더 열기 · 라벨 완료·미완료 집계",
+                  "expected": "Retain the exact owning imported classification gallery, labels and default-loader partitions through the original empty scenario.",
+                  "observed": "An existing genuinely cold empty source and a protected six-to-empty ordinary import show zero labels/partitions and remain empty through reload. Warm metadata initialization for the protected transition is explicit. Exact original Request/context, retained actual app Blob/native URL, same-decoder pixel and provisional-to-final closed epoch receipts qualify this scoped current replay. Details: 2026-10-18-classification-empty-scoped-gallery-browser.json",
+                  "reviewer": "Root original once-only execution/collector, finite file/body/context/epoch/custody/teardown and selected PNG review; independent source/proof review. Controlled browser/Source Electron folder answer; no real OS picker, installed native, model, quality, whole-feature or parent acceptance. Earlier pending reasons and evidence remain historical.",
+                  "test": "scripts/e2e/classification-import-empty-cancel-controls-scoped-media.spec.ts::classification folder import accepts an empty source with zero label and partition counts after reload",
+                  "receipt": "2026-10-18-classification-browser-empty-original-gui.json",
+                  "receipt_sha256": "c1acc2b0a1d3a23b18ba04c87aa30ec3e418cbea2aef99d578eece5f4c54bab0",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "ba8786093882ffd4bed984ceb37fa573e8071a2556bc2eb2ad073cd8d286053e"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "c3d04c147c7b3fbc46b03c11c41b1f2ac970d9dad81f0698cb86b4ec93cf1578"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "aed924f7ca1e2d1343c0d2264f2841d97c46445d05b007661b166603e7231647"
+                    }
+                  ]
                 }
               ],
-              "reason": "Current gallery transport and context authority changed; original receipts remain historical evidence. Fresh current browser/native replay is required.",
-              "reviewer": "Codex Root current-source impact review; no source-unit result substitutes for UI execution."
+              "reason": "Current source browser empty replay passed its original once-only GUI case and collector, with exact owning Request/context, app Blob/native URL, pixel and final epoch-closure receipts. Qualification is limited to this action scenario; real OS picker, installed native, model quality, whole-feature and parent acceptance remain unqualified.",
+              "reviewer": "Root original GUI/collector, finite body/context/epoch/custody/teardown and selected PNG review, plus independent source/proof review. Controlled source browser folder answer; bounded current action evidence only."
             },
             "invalid": {
-              "state": "pending",
+              "state": "verified",
               "evidence": [
                 {
                   "task": "S3-03",
@@ -2570,13 +2626,35 @@
                       "sha256": "f5687011c00db06965eb2b18efd4279d85fe5c85e5d522f6a572411f5ddababc"
                     }
                   ]
+                },
+                {
+                  "task": "S3-03",
+                  "source_sha": "a7d6145b4f0086879ecb967efa5c851a8134dc7c",
+                  "kind": "click",
+                  "action": "데이터셋 폴더 열기 · 라벨 완료·미완료 집계",
+                  "expected": "Retain the exact owning imported classification gallery, labels and default-loader partitions through the original invalid scenario.",
+                  "observed": "The ordinary folder button receives a missing-source answer; genuine owning404 is retained and prior six-image source/counts return through reload. The expected original404 console entry is retained. Exact original Request/context, retained actual app Blob/native URL, same-decoder pixel and provisional-to-final closed epoch receipts qualify this scoped current replay. Details: 2026-10-18-classification-invalid-scoped-gallery-browser.json",
+                  "reviewer": "Root original once-only execution/collector, finite file/body/context/epoch/custody/teardown and selected PNG review; independent source/proof review. Controlled browser/Source Electron folder answer; no real OS picker, installed native, model, quality, whole-feature or parent acceptance. Earlier pending reasons and evidence remain historical.",
+                  "test": "scripts/e2e/classification-import-invalid-controls-scoped-media.spec.ts::classification folder import rejects a missing source and restores owning label and partition counts on reload",
+                  "receipt": "2026-10-18-classification-browser-invalid-original-gui.json",
+                  "receipt_sha256": "592b940fd6098317e2cd3ae09fe0c89fae8383797c22c71ecadaf42977fb4703",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "59038f479414d036856a5c6270121061c84898455bf1e86dca9545219a842756"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "6b2a0e355a85acd8128dc2c5d450203b654b58eeac31e1b4adaf8bdba46ee06c"
+                    }
+                  ]
                 }
               ],
-              "reason": "Current gallery transport and context authority changed; original receipts remain historical evidence. Fresh current browser/native replay is required.",
-              "reviewer": "Codex Root current-source impact review; no source-unit result substitutes for UI execution."
+              "reason": "Current source browser invalid replay passed its original once-only GUI case and collector, with exact owning Request/context, app Blob/native URL, pixel and final epoch-closure receipts. Qualification is limited to this action scenario; real OS picker, installed native, model quality, whole-feature and parent acceptance remain unqualified.",
+              "reviewer": "Root original GUI/collector, finite body/context/epoch/custody/teardown and selected PNG review, plus independent source/proof review. Controlled source browser folder answer; bounded current action evidence only."
             },
             "error": {
-              "state": "pending",
+              "state": "verified",
               "evidence": [
                 {
                   "task": "S3-03",
@@ -2599,13 +2677,35 @@
                       "sha256": "4cf4c8de34436583c169079ba7448b502b5a8cdc572ac2c5feb82b6270c6395a"
                     }
                   ]
+                },
+                {
+                  "task": "S3-03",
+                  "source_sha": "a7d6145b4f0086879ecb967efa5c851a8134dc7c",
+                  "kind": "click",
+                  "action": "데이터셋 폴더 열기 · 라벨 완료·미완료 집계",
+                  "expected": "Retain the exact owning imported classification gallery, labels and default-loader partitions through the original error scenario.",
+                  "observed": "The original chooser Promise rejects; alert and six owning images/counts persist, with no import/source write and original source restored through reload. Exact original Request/context, retained actual app Blob/native URL, same-decoder pixel and provisional-to-final closed epoch receipts qualify this scoped current replay. Details: 2026-10-18-classification-chooser-error-scoped-gallery-browser.json",
+                  "reviewer": "Root original once-only execution/collector, finite file/body/context/epoch/custody/teardown and selected PNG review; independent source/proof review. Controlled browser/Source Electron folder answer; no real OS picker, installed native, model, quality, whole-feature or parent acceptance. Earlier pending reasons and evidence remain historical.",
+                  "test": "scripts/e2e/classification-folder-chooser-error-scoped-media.spec.ts::classification folder chooser failure preserves owning source counts and bytes through ordinary reload",
+                  "receipt": "2026-10-18-classification-browser-chooser-error-original-gui.json",
+                  "receipt_sha256": "4646f7e8b8d3f71a4212fb34690da6abaa97110cf8a3bd4059842e087c00806c",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "c2af62c5c4ea45506757fa4a838b76686095bb9fb739d2510beac0e4a518a2f3"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "2cf6d86b24c5af3db0f93e1e8f2d1bb74027bdc46c7cc5d87b5c94647750dd46"
+                    }
+                  ]
                 }
               ],
-              "reason": "Current gallery transport and context authority changed; original receipts remain historical evidence. Fresh current browser/native replay is required.",
-              "reviewer": "Codex Root current-source impact review; no source-unit result substitutes for UI execution."
+              "reason": "Current source browser error replay passed its original once-only GUI case and collector, with exact owning Request/context, app Blob/native URL, pixel and final epoch-closure receipts. Qualification is limited to this action scenario; real OS picker, installed native, model quality, whole-feature and parent acceptance remain unqualified.",
+              "reviewer": "Root original GUI/collector, finite body/context/epoch/custody/teardown and selected PNG review, plus independent source/proof review. Controlled source browser folder answer; bounded current action evidence only."
             },
             "cancel": {
-              "state": "pending",
+              "state": "verified",
               "evidence": [
                 {
                   "task": "S3-03",
@@ -2628,13 +2728,35 @@
                       "sha256": "2fc3f039bcbbae02e16e5c7864544bf8c7bf1107ceaad31859d0367c2ccaa42e"
                     }
                   ]
+                },
+                {
+                  "task": "S3-03",
+                  "source_sha": "a7d6145b4f0086879ecb967efa5c851a8134dc7c",
+                  "kind": "click",
+                  "action": "데이터셋 폴더 열기 · 라벨 완료·미완료 집계",
+                  "expected": "Retain the exact owning imported classification gallery, labels and default-loader partitions through the original cancel scenario.",
+                  "observed": "The ordinary folder button receives its owned null answer; no import/source update occurs and six owning images/counts persist through reload. This is chooser cancellation, not running-job cancellation. Exact original Request/context, retained actual app Blob/native URL, same-decoder pixel and provisional-to-final closed epoch receipts qualify this scoped current replay. Details: 2026-10-18-classification-cancel-scoped-gallery-browser.json",
+                  "reviewer": "Root original once-only execution/collector, finite file/body/context/epoch/custody/teardown and selected PNG review; independent source/proof review. Controlled browser/Source Electron folder answer; no real OS picker, installed native, model, quality, whole-feature or parent acceptance. Earlier pending reasons and evidence remain historical.",
+                  "test": "scripts/e2e/classification-import-empty-cancel-controls-scoped-media.spec.ts::classification null folder selection preserves owning source label and partition counts after reload",
+                  "receipt": "2026-10-18-classification-browser-cancel-original-gui.json",
+                  "receipt_sha256": "db3ee611f623b5a7cc698e99ff25c80a7d697def792872f349a60db1583c5716",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "0fa829e6e96684600c8366eda31cf3e3d227a4080d8f9c9bf8e4ecdafe23ca02"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "622f24cf2181946fac189bcc0a23fa2c6bef22287b902ac53065be1c890195c1"
+                    }
+                  ]
                 }
               ],
-              "reason": "Current gallery transport and context authority changed; original receipts remain historical evidence. Fresh current browser/native replay is required.",
-              "reviewer": "Codex Root current-source impact review; no source-unit result substitutes for UI execution."
+              "reason": "Current source browser cancel replay passed its original once-only GUI case and collector, with exact owning Request/context, app Blob/native URL, pixel and final epoch-closure receipts. Qualification is limited to this action scenario; real OS picker, installed native, model quality, whole-feature and parent acceptance remain unqualified.",
+              "reviewer": "Root original GUI/collector, finite body/context/epoch/custody/teardown and selected PNG review, plus independent source/proof review. Controlled source browser folder answer; bounded current action evidence only."
             },
             "reopen": {
-              "state": "pending",
+              "state": "verified",
               "evidence": [
                 {
                   "task": "S3-03",
@@ -2665,13 +2787,43 @@
                       "sha256": "9c00aa205138260ef09066fa7299d754d5e78cd21dac7bed3fd31d1a71b73350"
                     }
                   ]
+                },
+                {
+                  "task": "S3-03",
+                  "source_sha": "e7ea1a2ee7d85c03e466a9af16667b30bbf60ff8",
+                  "kind": "click",
+                  "action": "데이터셋 폴더 열기 · 라벨 완료·미완료 집계",
+                  "expected": "Retain the exact owning imported classification gallery, labels and default-loader partitions through the original reopen scenario.",
+                  "observed": "Four original eligible default-loader cohorts (6/4/2/2 images) retain exact classes and Train/Val/Test counts through ordinary import/reopen, including return to the first project. Hidden/NAS files remain excluded; original source bytes remain exact. Exact original Request/context, retained actual app Blob/native URL, same-decoder pixel and provisional-to-final closed epoch receipts qualify this scoped current replay. Details: 2026-10-18-classification-electron-summary-scoped-gallery-details.json",
+                  "reviewer": "Root original once-only execution/collector, finite file/body/context/epoch/custody/teardown and selected PNG review; independent source/proof review. Controlled browser/Source Electron folder answer; no real OS picker, installed native, model, quality, whole-feature or parent acceptance. Earlier pending reasons and evidence remain historical.",
+                  "test": "scripts/e2e/classification-summary-scoped-media.spec.ts::native classification import summary matches eligible default loader partitions and reopens",
+                  "receipt": "2026-10-18-classification-electron-summary-original-gui.json",
+                  "receipt_sha256": "2f443d744d0e5bca7e53bdc5f89505ef4d9e5aaaab7ce8b16fe0d3abe14ad973",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "34624f6d7a4ffe655ea013e17c0956e9667405879f2429e312db4ddb0a085a82"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "6588f9777fae33a99ada7bb9e926035248b40c757ed6b5ab8de68b2ff8a86d2f"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "ce142a1a7e6b531d1994a1f63c42a12d761282e87ac89e24741724c9bb2c5da2"
+                    },
+                    {
+                      "id": "screenshot-3",
+                      "sha256": "c26985f8707bfb3d4e44087ac2848dee3cac5385aa5817771b6506a10ebdd59c"
+                    }
+                  ]
                 }
               ],
-              "reason": "Current gallery transport and context authority changed; original receipts remain historical evidence. Fresh current browser/native replay is required.",
-              "reviewer": "Codex Root current-source impact review; no source-unit result substitutes for UI execution."
+              "reason": "Current Source Electron reopen replay passed its original once-only GUI case and collector, with exact owning Request/context, app Blob/native URL, pixel and final epoch-closure receipts. Qualification is limited to this action scenario; real OS picker, installed native, model quality, whole-feature and parent acceptance remain unqualified.",
+              "reviewer": "Root original GUI/collector, finite body/context/epoch/custody/teardown and selected PNG review, plus independent source/proof review. Controlled Source Electron folder answer; bounded current action evidence only."
             },
             "handoff": {
-              "state": "pending",
+              "state": "verified",
               "evidence": [
                 {
                   "task": "S3-03",
@@ -2768,10 +2920,84 @@
                       "sha256": "264aad9129a9d606fa90d3b82ad2cd4bf4ca1b3c20639f9866accc9aa7496460"
                     }
                   ]
+                },
+                {
+                  "task": "S3-03",
+                  "source_sha": "e7ea1a2ee7d85c03e466a9af16667b30bbf60ff8",
+                  "kind": "click",
+                  "action": "데이터셋 폴더 열기 · 라벨 완료·미완료 집계",
+                  "expected": "Retain the exact owning imported classification gallery, labels and default-loader partitions through the original handoff scenario.",
+                  "observed": "Original saved-project UI switches A/B/A then C/D/C and reloads C, retaining each owning imported gallery, label summary, actual image metadata identities and complete declared project/source custody. Exact original Request/context, retained actual app Blob/native URL, same-decoder pixel and provisional-to-final closed epoch receipts qualify this scoped current replay. Details: 2026-10-18-classification-electron-summary-handoff-scoped-gallery-details.json",
+                  "reviewer": "Root original once-only execution/collector, finite file/body/context/epoch/custody/teardown and selected PNG review; independent source/proof review. Controlled browser/Source Electron folder answer; no real OS picker, installed native, model, quality, whole-feature or parent acceptance. Earlier pending reasons and evidence remain historical.",
+                  "test": "scripts/e2e/classification-summary-scoped-media.spec.ts::native classification import-label summary follows own saved projects A B A",
+                  "receipt": "2026-10-18-classification-electron-summary-handoff-original-gui.json",
+                  "receipt_sha256": "8404a543d224dc32504035801fc183e00ab4dd30c2c03fead3565cfc16cf1d54",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "da2a3bd09d067a94f40a0664cf2c5c09197cbe1e9ee44f0c036527aaf898324b"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "6156cd0aca76116d6ba9b25e3ea5d5c603b3df761951a92feb3cbed6c454408d"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "ebf5aff92a08eaea4ee625cc6acd9fbf5719b6576dfb58414e015a4178c49a6f"
+                    },
+                    {
+                      "id": "screenshot-3",
+                      "sha256": "1daee786ed3693d9cb6dab4b27d1aca3e610f7e7e8c0e73d3293aef15c508743"
+                    },
+                    {
+                      "id": "screenshot-4",
+                      "sha256": "0fecb9769d726897ba53fc780b1f6c6a7a605efda339ea2b48cf39183984e9c1"
+                    },
+                    {
+                      "id": "screenshot-5",
+                      "sha256": "362ce12a9c484448ec0befffae67809101bf1957cdd35c9fe943259c16520afc"
+                    },
+                    {
+                      "id": "screenshot-6",
+                      "sha256": "8b3ca9d57f8d7f5e30200fae5fc0567842c5c6f3a08da3c6efaebc46d69917b4"
+                    },
+                    {
+                      "id": "screenshot-7",
+                      "sha256": "746df886163c3bd5ac90a9e55195a63d0443cf2feef5a13abe1e831014256d51"
+                    },
+                    {
+                      "id": "screenshot-8",
+                      "sha256": "d1db398e568a507f14d9f67d29915edebc0184d5f4aca8b3e83ec06c4f8401cc"
+                    },
+                    {
+                      "id": "screenshot-9",
+                      "sha256": "a7892e2f4189347bbb1b99919c4561ea7353e0189208c65a7a1a6f3d225e012f"
+                    },
+                    {
+                      "id": "screenshot-10",
+                      "sha256": "f137a89403055948a2fead61333a6cfcb0f8c94b76b62a9a937a77f2daea226a"
+                    },
+                    {
+                      "id": "screenshot-11",
+                      "sha256": "550806f477214a69ef592048b36b74a5b746ccc3ffe7f5d01049b94b0b04be80"
+                    },
+                    {
+                      "id": "screenshot-12",
+                      "sha256": "031e16a802ab44d9bda1b84eaa9e53631a3d810ccf6ec8fc48997f22ecb751f8"
+                    },
+                    {
+                      "id": "screenshot-13",
+                      "sha256": "dd2384a4922e948c13f699ada02bcc65dcf810c08e1a3a410e3e1f3e19a8c687"
+                    },
+                    {
+                      "id": "screenshot-14",
+                      "sha256": "8d698d37db0b92f93a7b165b2fead90685cde78e38cc50a97479f1ecede2bd1c"
+                    }
+                  ]
                 }
               ],
-              "reason": "Current gallery transport and context authority changed; original receipts remain historical evidence. Fresh current browser/native replay is required.",
-              "reviewer": "Codex Root current-source impact review; no source-unit result substitutes for UI execution."
+              "reason": "Current Source Electron handoff replay passed its original once-only GUI case and collector, with exact owning Request/context, app Blob/native URL, pixel and final epoch-closure receipts. Qualification is limited to this action scenario; real OS picker, installed native, model quality, whole-feature and parent acceptance remain unqualified.",
+              "reviewer": "Root original GUI/collector, finite body/context/epoch/custody/teardown and selected PNG review, plus independent source/proof review. Controlled Source Electron folder answer; bounded current action evidence only."
             }
           }
         }
@@ -3170,7 +3396,7 @@
           "source": "src/renderer/components/dataset/DatasetStudio.tsx",
           "scenarios": {
             "success": {
-              "state": "pending",
+              "state": "verified",
               "evidence": [
                 {
                   "task": "S3-07",
@@ -3201,13 +3427,43 @@
                       "sha256": "9c00aa205138260ef09066fa7299d754d5e78cd21dac7bed3fd31d1a71b73350"
                     }
                   ]
+                },
+                {
+                  "task": "S3-07",
+                  "source_sha": "e7ea1a2ee7d85c03e466a9af16667b30bbf60ff8",
+                  "kind": "click",
+                  "action": "데이터셋 폴더 열기 · Train·Val·Test 표시",
+                  "expected": "Retain the exact owning imported classification gallery, labels and default-loader partitions through the original success scenario.",
+                  "observed": "Four original eligible default-loader cohorts (6/4/2/2 images) retain exact classes and Train/Val/Test counts through ordinary import/reopen, including return to the first project. Hidden/NAS files remain excluded; original source bytes remain exact. Exact original Request/context, retained actual app Blob/native URL, same-decoder pixel and provisional-to-final closed epoch receipts qualify this scoped current replay. Details: 2026-10-18-classification-electron-summary-scoped-gallery-details.json",
+                  "reviewer": "Root original once-only execution/collector, finite file/body/context/epoch/custody/teardown and selected PNG review; independent source/proof review. Controlled browser/Source Electron folder answer; no real OS picker, installed native, model, quality, whole-feature or parent acceptance. Earlier pending reasons and evidence remain historical.",
+                  "test": "scripts/e2e/classification-summary-scoped-media.spec.ts::native classification import summary matches eligible default loader partitions and reopens",
+                  "receipt": "2026-10-18-classification-electron-summary-original-gui.json",
+                  "receipt_sha256": "2f443d744d0e5bca7e53bdc5f89505ef4d9e5aaaab7ce8b16fe0d3abe14ad973",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "34624f6d7a4ffe655ea013e17c0956e9667405879f2429e312db4ddb0a085a82"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "6588f9777fae33a99ada7bb9e926035248b40c757ed6b5ab8de68b2ff8a86d2f"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "ce142a1a7e6b531d1994a1f63c42a12d761282e87ac89e24741724c9bb2c5da2"
+                    },
+                    {
+                      "id": "screenshot-3",
+                      "sha256": "c26985f8707bfb3d4e44087ac2848dee3cac5385aa5817771b6506a10ebdd59c"
+                    }
+                  ]
                 }
               ],
-              "reason": "Current gallery transport and context authority changed; original receipts remain historical evidence. Fresh current browser/native replay is required.",
-              "reviewer": "Codex Root current-source impact review; no source-unit result substitutes for UI execution."
+              "reason": "Current Source Electron success replay passed its original once-only GUI case and collector, with exact owning Request/context, app Blob/native URL, pixel and final epoch-closure receipts. Qualification is limited to this action scenario; real OS picker, installed native, model quality, whole-feature and parent acceptance remain unqualified.",
+              "reviewer": "Root original GUI/collector, finite body/context/epoch/custody/teardown and selected PNG review, plus independent source/proof review. Controlled Source Electron folder answer; bounded current action evidence only."
             },
             "empty": {
-              "state": "pending",
+              "state": "verified",
               "evidence": [
                 {
                   "task": "S3-07",
@@ -3234,13 +3490,39 @@
                       "sha256": "9cc50b6627dd2858ca3372e434a9fb29d45665e3160abfbb3846db3a98631c24"
                     }
                   ]
+                },
+                {
+                  "task": "S3-07",
+                  "source_sha": "a7d6145b4f0086879ecb967efa5c851a8134dc7c",
+                  "kind": "click",
+                  "action": "데이터셋 폴더 열기 · Train·Val·Test 표시",
+                  "expected": "Retain the exact owning imported classification gallery, labels and default-loader partitions through the original empty scenario.",
+                  "observed": "An existing genuinely cold empty source and a protected six-to-empty ordinary import show zero labels/partitions and remain empty through reload. Warm metadata initialization for the protected transition is explicit. Exact original Request/context, retained actual app Blob/native URL, same-decoder pixel and provisional-to-final closed epoch receipts qualify this scoped current replay. Details: 2026-10-18-classification-empty-scoped-gallery-browser.json",
+                  "reviewer": "Root original once-only execution/collector, finite file/body/context/epoch/custody/teardown and selected PNG review; independent source/proof review. Controlled browser/Source Electron folder answer; no real OS picker, installed native, model, quality, whole-feature or parent acceptance. Earlier pending reasons and evidence remain historical.",
+                  "test": "scripts/e2e/classification-import-empty-cancel-controls-scoped-media.spec.ts::classification folder import accepts an empty source with zero label and partition counts after reload",
+                  "receipt": "2026-10-18-classification-browser-empty-original-gui.json",
+                  "receipt_sha256": "c1acc2b0a1d3a23b18ba04c87aa30ec3e418cbea2aef99d578eece5f4c54bab0",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "ba8786093882ffd4bed984ceb37fa573e8071a2556bc2eb2ad073cd8d286053e"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "c3d04c147c7b3fbc46b03c11c41b1f2ac970d9dad81f0698cb86b4ec93cf1578"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "aed924f7ca1e2d1343c0d2264f2841d97c46445d05b007661b166603e7231647"
+                    }
+                  ]
                 }
               ],
-              "reason": "Current gallery transport and context authority changed; original receipts remain historical evidence. Fresh current browser/native replay is required.",
-              "reviewer": "Codex Root current-source impact review; no source-unit result substitutes for UI execution."
+              "reason": "Current source browser empty replay passed its original once-only GUI case and collector, with exact owning Request/context, app Blob/native URL, pixel and final epoch-closure receipts. Qualification is limited to this action scenario; real OS picker, installed native, model quality, whole-feature and parent acceptance remain unqualified.",
+              "reviewer": "Root original GUI/collector, finite body/context/epoch/custody/teardown and selected PNG review, plus independent source/proof review. Controlled source browser folder answer; bounded current action evidence only."
             },
             "invalid": {
-              "state": "pending",
+              "state": "verified",
               "evidence": [
                 {
                   "task": "S3-07",
@@ -3263,13 +3545,35 @@
                       "sha256": "f5687011c00db06965eb2b18efd4279d85fe5c85e5d522f6a572411f5ddababc"
                     }
                   ]
+                },
+                {
+                  "task": "S3-07",
+                  "source_sha": "a7d6145b4f0086879ecb967efa5c851a8134dc7c",
+                  "kind": "click",
+                  "action": "데이터셋 폴더 열기 · Train·Val·Test 표시",
+                  "expected": "Retain the exact owning imported classification gallery, labels and default-loader partitions through the original invalid scenario.",
+                  "observed": "The ordinary folder button receives a missing-source answer; genuine owning404 is retained and prior six-image source/counts return through reload. The expected original404 console entry is retained. Exact original Request/context, retained actual app Blob/native URL, same-decoder pixel and provisional-to-final closed epoch receipts qualify this scoped current replay. Details: 2026-10-18-classification-invalid-scoped-gallery-browser.json",
+                  "reviewer": "Root original once-only execution/collector, finite file/body/context/epoch/custody/teardown and selected PNG review; independent source/proof review. Controlled browser/Source Electron folder answer; no real OS picker, installed native, model, quality, whole-feature or parent acceptance. Earlier pending reasons and evidence remain historical.",
+                  "test": "scripts/e2e/classification-import-invalid-controls-scoped-media.spec.ts::classification folder import rejects a missing source and restores owning label and partition counts on reload",
+                  "receipt": "2026-10-18-classification-browser-invalid-original-gui.json",
+                  "receipt_sha256": "592b940fd6098317e2cd3ae09fe0c89fae8383797c22c71ecadaf42977fb4703",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "59038f479414d036856a5c6270121061c84898455bf1e86dca9545219a842756"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "6b2a0e355a85acd8128dc2c5d450203b654b58eeac31e1b4adaf8bdba46ee06c"
+                    }
+                  ]
                 }
               ],
-              "reason": "Current gallery transport and context authority changed; original receipts remain historical evidence. Fresh current browser/native replay is required.",
-              "reviewer": "Codex Root current-source impact review; no source-unit result substitutes for UI execution."
+              "reason": "Current source browser invalid replay passed its original once-only GUI case and collector, with exact owning Request/context, app Blob/native URL, pixel and final epoch-closure receipts. Qualification is limited to this action scenario; real OS picker, installed native, model quality, whole-feature and parent acceptance remain unqualified.",
+              "reviewer": "Root original GUI/collector, finite body/context/epoch/custody/teardown and selected PNG review, plus independent source/proof review. Controlled source browser folder answer; bounded current action evidence only."
             },
             "error": {
-              "state": "pending",
+              "state": "verified",
               "evidence": [
                 {
                   "task": "S3-07",
@@ -3292,13 +3596,35 @@
                       "sha256": "4cf4c8de34436583c169079ba7448b502b5a8cdc572ac2c5feb82b6270c6395a"
                     }
                   ]
+                },
+                {
+                  "task": "S3-07",
+                  "source_sha": "a7d6145b4f0086879ecb967efa5c851a8134dc7c",
+                  "kind": "click",
+                  "action": "데이터셋 폴더 열기 · Train·Val·Test 표시",
+                  "expected": "Retain the exact owning imported classification gallery, labels and default-loader partitions through the original error scenario.",
+                  "observed": "The original chooser Promise rejects; alert and six owning images/counts persist, with no import/source write and original source restored through reload. Exact original Request/context, retained actual app Blob/native URL, same-decoder pixel and provisional-to-final closed epoch receipts qualify this scoped current replay. Details: 2026-10-18-classification-chooser-error-scoped-gallery-browser.json",
+                  "reviewer": "Root original once-only execution/collector, finite file/body/context/epoch/custody/teardown and selected PNG review; independent source/proof review. Controlled browser/Source Electron folder answer; no real OS picker, installed native, model, quality, whole-feature or parent acceptance. Earlier pending reasons and evidence remain historical.",
+                  "test": "scripts/e2e/classification-folder-chooser-error-scoped-media.spec.ts::classification folder chooser failure preserves owning source counts and bytes through ordinary reload",
+                  "receipt": "2026-10-18-classification-browser-chooser-error-original-gui.json",
+                  "receipt_sha256": "4646f7e8b8d3f71a4212fb34690da6abaa97110cf8a3bd4059842e087c00806c",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "c2af62c5c4ea45506757fa4a838b76686095bb9fb739d2510beac0e4a518a2f3"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "2cf6d86b24c5af3db0f93e1e8f2d1bb74027bdc46c7cc5d87b5c94647750dd46"
+                    }
+                  ]
                 }
               ],
-              "reason": "Current gallery transport and context authority changed; original receipts remain historical evidence. Fresh current browser/native replay is required.",
-              "reviewer": "Codex Root current-source impact review; no source-unit result substitutes for UI execution."
+              "reason": "Current source browser error replay passed its original once-only GUI case and collector, with exact owning Request/context, app Blob/native URL, pixel and final epoch-closure receipts. Qualification is limited to this action scenario; real OS picker, installed native, model quality, whole-feature and parent acceptance remain unqualified.",
+              "reviewer": "Root original GUI/collector, finite body/context/epoch/custody/teardown and selected PNG review, plus independent source/proof review. Controlled source browser folder answer; bounded current action evidence only."
             },
             "cancel": {
-              "state": "pending",
+              "state": "verified",
               "evidence": [
                 {
                   "task": "S3-07",
@@ -3321,13 +3647,35 @@
                       "sha256": "2fc3f039bcbbae02e16e5c7864544bf8c7bf1107ceaad31859d0367c2ccaa42e"
                     }
                   ]
+                },
+                {
+                  "task": "S3-07",
+                  "source_sha": "a7d6145b4f0086879ecb967efa5c851a8134dc7c",
+                  "kind": "click",
+                  "action": "데이터셋 폴더 열기 · Train·Val·Test 표시",
+                  "expected": "Retain the exact owning imported classification gallery, labels and default-loader partitions through the original cancel scenario.",
+                  "observed": "The ordinary folder button receives its owned null answer; no import/source update occurs and six owning images/counts persist through reload. This is chooser cancellation, not running-job cancellation. Exact original Request/context, retained actual app Blob/native URL, same-decoder pixel and provisional-to-final closed epoch receipts qualify this scoped current replay. Details: 2026-10-18-classification-cancel-scoped-gallery-browser.json",
+                  "reviewer": "Root original once-only execution/collector, finite file/body/context/epoch/custody/teardown and selected PNG review; independent source/proof review. Controlled browser/Source Electron folder answer; no real OS picker, installed native, model, quality, whole-feature or parent acceptance. Earlier pending reasons and evidence remain historical.",
+                  "test": "scripts/e2e/classification-import-empty-cancel-controls-scoped-media.spec.ts::classification null folder selection preserves owning source label and partition counts after reload",
+                  "receipt": "2026-10-18-classification-browser-cancel-original-gui.json",
+                  "receipt_sha256": "db3ee611f623b5a7cc698e99ff25c80a7d697def792872f349a60db1583c5716",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "0fa829e6e96684600c8366eda31cf3e3d227a4080d8f9c9bf8e4ecdafe23ca02"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "622f24cf2181946fac189bcc0a23fa2c6bef22287b902ac53065be1c890195c1"
+                    }
+                  ]
                 }
               ],
-              "reason": "Current gallery transport and context authority changed; original receipts remain historical evidence. Fresh current browser/native replay is required.",
-              "reviewer": "Codex Root current-source impact review; no source-unit result substitutes for UI execution."
+              "reason": "Current source browser cancel replay passed its original once-only GUI case and collector, with exact owning Request/context, app Blob/native URL, pixel and final epoch-closure receipts. Qualification is limited to this action scenario; real OS picker, installed native, model quality, whole-feature and parent acceptance remain unqualified.",
+              "reviewer": "Root original GUI/collector, finite body/context/epoch/custody/teardown and selected PNG review, plus independent source/proof review. Controlled source browser folder answer; bounded current action evidence only."
             },
             "reopen": {
-              "state": "pending",
+              "state": "verified",
               "evidence": [
                 {
                   "task": "S3-07",
@@ -3358,13 +3706,43 @@
                       "sha256": "9c00aa205138260ef09066fa7299d754d5e78cd21dac7bed3fd31d1a71b73350"
                     }
                   ]
+                },
+                {
+                  "task": "S3-07",
+                  "source_sha": "e7ea1a2ee7d85c03e466a9af16667b30bbf60ff8",
+                  "kind": "click",
+                  "action": "데이터셋 폴더 열기 · Train·Val·Test 표시",
+                  "expected": "Retain the exact owning imported classification gallery, labels and default-loader partitions through the original reopen scenario.",
+                  "observed": "Four original eligible default-loader cohorts (6/4/2/2 images) retain exact classes and Train/Val/Test counts through ordinary import/reopen, including return to the first project. Hidden/NAS files remain excluded; original source bytes remain exact. Exact original Request/context, retained actual app Blob/native URL, same-decoder pixel and provisional-to-final closed epoch receipts qualify this scoped current replay. Details: 2026-10-18-classification-electron-summary-scoped-gallery-details.json",
+                  "reviewer": "Root original once-only execution/collector, finite file/body/context/epoch/custody/teardown and selected PNG review; independent source/proof review. Controlled browser/Source Electron folder answer; no real OS picker, installed native, model, quality, whole-feature or parent acceptance. Earlier pending reasons and evidence remain historical.",
+                  "test": "scripts/e2e/classification-summary-scoped-media.spec.ts::native classification import summary matches eligible default loader partitions and reopens",
+                  "receipt": "2026-10-18-classification-electron-summary-original-gui.json",
+                  "receipt_sha256": "2f443d744d0e5bca7e53bdc5f89505ef4d9e5aaaab7ce8b16fe0d3abe14ad973",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "34624f6d7a4ffe655ea013e17c0956e9667405879f2429e312db4ddb0a085a82"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "6588f9777fae33a99ada7bb9e926035248b40c757ed6b5ab8de68b2ff8a86d2f"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "ce142a1a7e6b531d1994a1f63c42a12d761282e87ac89e24741724c9bb2c5da2"
+                    },
+                    {
+                      "id": "screenshot-3",
+                      "sha256": "c26985f8707bfb3d4e44087ac2848dee3cac5385aa5817771b6506a10ebdd59c"
+                    }
+                  ]
                 }
               ],
-              "reason": "Current gallery transport and context authority changed; original receipts remain historical evidence. Fresh current browser/native replay is required.",
-              "reviewer": "Codex Root current-source impact review; no source-unit result substitutes for UI execution."
+              "reason": "Current Source Electron reopen replay passed its original once-only GUI case and collector, with exact owning Request/context, app Blob/native URL, pixel and final epoch-closure receipts. Qualification is limited to this action scenario; real OS picker, installed native, model quality, whole-feature and parent acceptance remain unqualified.",
+              "reviewer": "Root original GUI/collector, finite body/context/epoch/custody/teardown and selected PNG review, plus independent source/proof review. Controlled Source Electron folder answer; bounded current action evidence only."
             },
             "handoff": {
-              "state": "pending",
+              "state": "verified",
               "evidence": [
                 {
                   "task": "S3-07",
@@ -3411,10 +3789,56 @@
                       "sha256": "e9da32240be90480034f9744f7d31f8b4bb522f37735bb7f9f0ae42e32f4d337"
                     }
                   ]
+                },
+                {
+                  "task": "S3-07",
+                  "source_sha": "e7ea1a2ee7d85c03e466a9af16667b30bbf60ff8",
+                  "kind": "click",
+                  "action": "데이터셋 폴더 열기 · Train·Val·Test 표시",
+                  "expected": "Retain the exact owning imported classification gallery, labels and default-loader partitions through the original handoff scenario.",
+                  "observed": "Original saved-project UI switches C/D/C and reloads C, retaining the original automatic-versus-explicit partition contract, owning imported images/counts/metadata and complete declared project/source custody. Exact original Request/context, retained actual app Blob/native URL, same-decoder pixel and provisional-to-final closed epoch receipts qualify this scoped current replay. Details: 2026-10-18-classification-electron-partition-handoff-scoped-gallery-details.json",
+                  "reviewer": "Root original once-only execution/collector, finite file/body/context/epoch/custody/teardown and selected PNG review; independent source/proof review. Controlled browser/Source Electron folder answer; no real OS picker, installed native, model, quality, whole-feature or parent acceptance. Earlier pending reasons and evidence remain historical.",
+                  "test": "scripts/e2e/classification-summary-scoped-media.spec.ts::native classification Train Val Test cards and imported gallery stay owning through C D C project handoff",
+                  "receipt": "2026-10-18-classification-electron-partition-handoff-original-gui.json",
+                  "receipt_sha256": "a2eee495b8a42c1c742a44d597de83f0d8ab7dc2b07b6ad3719a503ce50bf991",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "6d3873863160204ef3cee952f5f951795827ccfa99ecadcca9d419f358dac189"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "edc9816d7f87ca8987dd58e0122abe3c4a0126031d72ff17f5d55937100979a1"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "9933b93dea71d09da32271e9d64124d375cf33742529259351758603082f1417"
+                    },
+                    {
+                      "id": "screenshot-3",
+                      "sha256": "17709b7906ef348c4cab7c72c4b07e25a9ed236a99ccd35be71f1f2a0ae8004d"
+                    },
+                    {
+                      "id": "screenshot-4",
+                      "sha256": "d1c6fec2daa093be793629634039313c44e90edcbcffa2a5441cee04e8a77200"
+                    },
+                    {
+                      "id": "screenshot-5",
+                      "sha256": "16f1dcfd029b20f1391872eaeb9579207c83859c9c8abb908069f286cd36a630"
+                    },
+                    {
+                      "id": "screenshot-6",
+                      "sha256": "19f654bf5d01b0f088ff34dce8a0bf57ca378bf2599356687d50f6f648a30f6f"
+                    },
+                    {
+                      "id": "screenshot-7",
+                      "sha256": "cc8cc41869bf6be3cf317d0d346791aa884388e015603f2dd5d027176d1b16bc"
+                    }
+                  ]
                 }
               ],
-              "reason": "Current gallery transport and context authority changed; original receipts remain historical evidence. Fresh current browser/native replay is required.",
-              "reviewer": "Codex Root current-source impact review; no source-unit result substitutes for UI execution."
+              "reason": "Current Source Electron handoff replay passed its original once-only GUI case and collector, with exact owning Request/context, app Blob/native URL, pixel and final epoch-closure receipts. Qualification is limited to this action scenario; real OS picker, installed native, model quality, whole-feature and parent acceptance remain unqualified.",
+              "reviewer": "Root original GUI/collector, finite body/context/epoch/custody/teardown and selected PNG review, plus independent source/proof review. Controlled Source Electron folder answer; bounded current action evidence only."
             }
           }
         }
