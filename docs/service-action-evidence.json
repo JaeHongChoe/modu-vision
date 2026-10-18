@@ -32708,7 +32708,47 @@
               ]
             },
             "handoff": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S2-05",
+                  "source_sha": "76f238d6e146387306d893a694e073e53182ce2f",
+                  "kind": "click",
+                  "action": "원본 이미지 ROI 편집 · 원본 좌표 끌기",
+                  "expected": "Ordinary project handoff clears the previous owning image/editor and preserves exact saved original-coordinate ROI and source/draft truth across A-to-B-to-A selection.",
+                  "observed": "browser: A512x256 actual SVG drag plus two trusted ordinary resize keys saved ROI[65,32,258,162] through an explicit owningPUT200. Ordinary B selection cleared A image/editor, selected its distinct384x192 source and ownROI[24,12,96,72]; returnA cleared B and reopened the exact saved A draft/source/ROI. Four selected-image witnesses join real image-info200 to original retained JPEG/context/input and visible HTMLImage pixels. ReturnA uses retained decoded resource, not a claimed fresh thumbnailHTTP. Only two project-open writes follow the saved baseline; declared protected trees remain raw9/SHA exact after natural backend0 closure.",
+                  "reviewer": "Codex root six canonical PNG inspection and finite full-body/source/protected-custody/natural-closure review; independent human quality, installed native, model, device and parent acceptance remain pending.",
+                  "test": "scripts/e2e/roi-edit-project-handoff.spec.ts::U007 actual ROI drag and trusted resize keys survive A B A project handoff with exact saved original coordinates",
+                  "receipt": "2026-10-18-u007-roi-edit-project-handoff-browser.json",
+                  "receipt_sha256": "54de60db9cba9f6e331dd7dcc2a892487d0b32760fd9cc31dd3eff816ccf2d80",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "2e20d0fa0114665d8b15a05456d2eb69a947e8c55455b2f61f5194ba5d3b859a"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "4942f87311351a1c9da759f1c1b437d2f4f70409d687a21533c57a7aced19f48"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "8cee877c88cea0f1f96a2d467dc42cc2a1bb34560a8c10d6f7c60a7ad3441b4e"
+                    },
+                    {
+                      "id": "screenshot-3",
+                      "sha256": "4f3f34bc642506ba8a2f6470fbf2b4f8110cbe0f298ad17372253e7a82515ec8"
+                    },
+                    {
+                      "id": "screenshot-4",
+                      "sha256": "6ab9466b5b402a60d16b41beea87763bb9259dee9249290a3beba2023f5dbcbd"
+                    },
+                    {
+                      "id": "screenshot-5",
+                      "sha256": "aa7b658a5ac1384080ffd824d01ef650275f546e9dddf806e30f22b58827c41c"
+                    }
+                  ]
+                }
+              ]
             }
           }
         },
@@ -32804,7 +32844,47 @@
               ]
             },
             "handoff": {
-              "state": "pending"
+              "state": "verified",
+              "evidence": [
+                {
+                  "task": "S2-05",
+                  "source_sha": "76f238d6e146387306d893a694e073e53182ce2f",
+                  "kind": "click",
+                  "action": "ArrowRight · Shift+ArrowDown",
+                  "expected": "Ordinary project handoff clears the previous owning image/editor and preserves exact saved original-coordinate ROI and source/draft truth across A-to-B-to-A selection.",
+                  "observed": "browser: A512x256 actual SVG drag plus two trusted ordinary resize keys saved ROI[65,32,258,162] through an explicit owningPUT200. Ordinary B selection cleared A image/editor, selected its distinct384x192 source and ownROI[24,12,96,72]; returnA cleared B and reopened the exact saved A draft/source/ROI. Four selected-image witnesses join real image-info200 to original retained JPEG/context/input and visible HTMLImage pixels. ReturnA uses retained decoded resource, not a claimed fresh thumbnailHTTP. Only two project-open writes follow the saved baseline; declared protected trees remain raw9/SHA exact after natural backend0 closure.",
+                  "reviewer": "Codex root six canonical PNG inspection and finite full-body/source/protected-custody/natural-closure review; independent human quality, installed native, model, device and parent acceptance remain pending.",
+                  "test": "scripts/e2e/roi-edit-project-handoff.spec.ts::U007 actual ROI drag and trusted resize keys survive A B A project handoff with exact saved original coordinates",
+                  "receipt": "2026-10-18-u007-roi-edit-project-handoff-browser.json",
+                  "receipt_sha256": "54de60db9cba9f6e331dd7dcc2a892487d0b32760fd9cc31dd3eff816ccf2d80",
+                  "artifacts": [
+                    {
+                      "id": "screenshot-0",
+                      "sha256": "2e20d0fa0114665d8b15a05456d2eb69a947e8c55455b2f61f5194ba5d3b859a"
+                    },
+                    {
+                      "id": "screenshot-1",
+                      "sha256": "4942f87311351a1c9da759f1c1b437d2f4f70409d687a21533c57a7aced19f48"
+                    },
+                    {
+                      "id": "screenshot-2",
+                      "sha256": "8cee877c88cea0f1f96a2d467dc42cc2a1bb34560a8c10d6f7c60a7ad3441b4e"
+                    },
+                    {
+                      "id": "screenshot-3",
+                      "sha256": "4f3f34bc642506ba8a2f6470fbf2b4f8110cbe0f298ad17372253e7a82515ec8"
+                    },
+                    {
+                      "id": "screenshot-4",
+                      "sha256": "6ab9466b5b402a60d16b41beea87763bb9259dee9249290a3beba2023f5dbcbd"
+                    },
+                    {
+                      "id": "screenshot-5",
+                      "sha256": "aa7b658a5ac1384080ffd824d01ef650275f546e9dddf806e30f22b58827c41c"
+                    }
+                  ]
+                }
+              ]
             }
           }
         }

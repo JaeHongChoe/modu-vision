@@ -292,3 +292,12 @@ retained separately. Coherent full original provenance now survives a fresh
 evaluation archive; malformed/foreign records stay absent. This adds no completed
 original model evaluation or parent approval. The scoped control receipt preserves
 the original RED and both corrected runs.
+
+
+## U007 original-coordinate ROI project handoff
+
+Clean source `76f238d6e146387306d893a694e073e53182ce2f` passed one actual browser case once (10.846 seconds; wrapper19.507 seconds), with no retries. A512x256 actual SVG drag and two trusted ordinary resize keys explicitly saved ROI[65,32,258,162]. Ordinary A-to-B-to-A project selection cleared the previous image editor, selected B's distinct384x192 source/ROI[24,12,96,72], and reopened exact A source/draft/coordinates. All154 UI and69 fixture full bodies completed under the original bounds. ReturnA reused a retained decoded resource: exact original JPEG/raw9/context/URI/input and visible HTMLImage RGBA matched, without a fresh thumbnailHTTP or cache-origin claim.
+
+Root inspected six canonical PNGs, with ROI and coordinate summary in separate visible frames. Three saved custody snapshots and current declared source/dataset/annotation/model/report/labelset/flowchart/project/draft files stayed exact; global project-pointer/runtime stores are outside that claim. Original3003 source files stayed exact, backend exit0 was natural, original Popen returned and all leftover/escaped/unowned/scan checks were empty. The test retained no aggregate original FD count; the finite reader's own6578 opens/closes are separate.
+
+Exactly two handoff cells are recorded: U007 original ROI drag and keyboard resize,1007 verified/442 pending. Prior04 strict pixel-decoder failure remains failed. The separate offline diagnostic's first case explained the HTMLImage/ImageBitmap difference, while its aggregate exit1 remains recorded. Current05 uses only the matching detached HTMLImage decoder and unchanged strict equality/deadlines. No installed-native lifetime, model/GPU quality, other scenario, whole-flow or parent acceptance is added. See `receipts/2026-10-18-u007-roi-edit-project-handoff-browser.json`.

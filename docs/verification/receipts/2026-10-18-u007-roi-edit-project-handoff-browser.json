@@ -1,0 +1,341 @@
+{
+  "schema": "modu-vision.gui-execution/v1",
+  "source_sha": "76f238d6e146387306d893a694e073e53182ce2f",
+  "source_dirty": false,
+  "test": "scripts/e2e/roi-edit-project-handoff.spec.ts::U007 actual ROI drag and trusted resize keys survive A B A project handoff with exact saved original coordinates",
+  "test_source_sha256": "f7f8c4e5ad7178e2693e6fdb6a2eb47f5f86d8b1f54638548971521f622b86ce",
+  "mode": "browser",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "27.0.0"
+  },
+  "status": "passed",
+  "expected_status": "passed",
+  "result": "expected",
+  "attempts": 1,
+  "workers": 1,
+  "retries": 0,
+  "report_sha256": "193f04232b8f1dd9e9048ae03f32a6b838f006739dcebedf875dd7f03e1efd99",
+  "harness_sha256": "f0fe2ab701fee7d5b789e9134494175c3efe7e804a353b81cdb4fa4e438347ae",
+  "artifacts": [
+    {
+      "id": "screenshot-0",
+      "sha256": "2e20d0fa0114665d8b15a05456d2eb69a947e8c55455b2f61f5194ba5d3b859a"
+    },
+    {
+      "id": "screenshot-1",
+      "sha256": "4942f87311351a1c9da759f1c1b437d2f4f70409d687a21533c57a7aced19f48"
+    },
+    {
+      "id": "screenshot-2",
+      "sha256": "8cee877c88cea0f1f96a2d467dc42cc2a1bb34560a8c10d6f7c60a7ad3441b4e"
+    },
+    {
+      "id": "screenshot-3",
+      "sha256": "4f3f34bc642506ba8a2f6470fbf2b4f8110cbe0f298ad17372253e7a82515ec8"
+    },
+    {
+      "id": "screenshot-4",
+      "sha256": "6ab9466b5b402a60d16b41beea87763bb9259dee9249290a3beba2023f5dbcbd"
+    },
+    {
+      "id": "screenshot-5",
+      "sha256": "aa7b658a5ac1384080ffd824d01ef650275f546e9dddf806e30f22b58827c41c"
+    }
+  ],
+  "quality_approved": false,
+  "independent_review_accepted": false,
+  "scope": "Only U007.native-original-roi-scale-drag.handoff and U007.native-original-roi-keyboard-resize.handoff on this source-browser cohort. Real drag and trusted resize keys precede explicit draft save; ordinary A-to-B-to-A project selection clears the prior image editor and reopens each owner source/draft/ROI. No installed-native lifetime, cancel/reopen-cell, whole-flow, model, GPU, parent, human, signing or release acceptance.",
+  "public_source_base": "3856216c50a72fd473b9df99c6a63a8cb7d85ead",
+  "private_execution_source_difference": "Exact public385 product and existing3002 Git blobs/modes plus only this new test spec. Execution is bound to private76f238 source, never relabelled to public HEAD.",
+  "execution": {
+    "browser_channel": "chrome",
+    "browser_version": "155.0.8059.80",
+    "test_cases": 1,
+    "passed": 1,
+    "failed": 0,
+    "flaky": 0,
+    "skipped": 0,
+    "command_exit_code": 0,
+    "case_duration_ms": 10846,
+    "wrapper_elapsed_seconds": 19.507160207955167,
+    "original_action_and_response_body_budget_ms": 10000,
+    "response_body_limit_bytes": 2097152,
+    "test_timeout_ms": 240000,
+    "automatic_retries": 0,
+    "current_fixture_typecheck_exit_code": 0,
+    "exact_one_collection_exit_code": 0
+  },
+  "facts": {
+    "cells": [
+      "U007.native-original-roi-scale-drag.handoff",
+      "U007.native-original-roi-keyboard-resize.handoff"
+    ],
+    "pointers": [
+      "/records/129/actions/0/scenarios/handoff",
+      "/records/129/actions/1/scenarios/handoff"
+    ],
+    "ordinary_UI_sequence": [
+      "A",
+      "B",
+      "A"
+    ],
+    "original_A_dimensions": [
+      512,
+      256
+    ],
+    "original_B_dimensions": [
+      384,
+      192
+    ],
+    "actual_mouse_drag_ROI_before_keys": [
+      64,
+      32,
+      257,
+      161
+    ],
+    "trusted_ordinary_keys": [
+      {
+        "key": "ArrowRight",
+        "shift": false
+      },
+      {
+        "key": "ArrowDown",
+        "shift": true
+      }
+    ],
+    "A_explicit_saved_and_reopened_ROI": [
+      65,
+      32,
+      258,
+      162
+    ],
+    "B_own_ROI": [
+      24,
+      12,
+      96,
+      72
+    ],
+    "trusted_original_SVG_keys": 2,
+    "explicit_save_original_PUT200_rawHTTP_matches_durable_JSON": true,
+    "postbaseline_mutations": {
+      "ordinary_project_open_POSTs": 2,
+      "other_business_writes": 0
+    },
+    "original_UI_raw_response_bodies_rehashed": 154,
+    "fixture_original_raw_response_bodies_rehashed": 69,
+    "owning_same_Request_image_info_joins": 8,
+    "project_open_request_context_absent_per_original_contract": true,
+    "project_open_response_context_matches_target": true,
+    "subsequent_image_info_request_response_full_context_matches_owner": true,
+    "image_selections": [
+      {
+        "JPEG_sha256": "b8b7fac2b08844f9ae204fa060608fb93ced4e8ccadc0f949d85bd392c10d8d6",
+        "branch": "actual_original_HTTP_response",
+        "decoded_RGBA": {
+          "height": 64,
+          "rgba_sha256": "6283bf644c51a8384b9aacb68751c77e3ccc69719a75e0709c1178146befcb63",
+          "width": 128
+        },
+        "fresh_preview_HTTP": true,
+        "input_sha256": "91b95be0227bb50f14c60d3443e88b743e42186ed328059610df8d7182c49b4a"
+      },
+      {
+        "JPEG_sha256": "054230e9a18e82c3722c455d12ad2b38b48c462c30630b2ffd46c85efce83048",
+        "branch": "actual_original_HTTP_response",
+        "decoded_RGBA": {
+          "height": 64,
+          "rgba_sha256": "f3b4e9483a8dfe655e567ca5e0cb80181c424cb9f32b960415bddaadb9895d5e",
+          "width": 128
+        },
+        "fresh_preview_HTTP": true,
+        "input_sha256": "22870ca01bae8ed3322f5647ff7637adbf8c86bdff386c23084d5e6069b30a6a"
+      },
+      {
+        "JPEG_sha256": "b8b7fac2b08844f9ae204fa060608fb93ced4e8ccadc0f949d85bd392c10d8d6",
+        "branch": "actual_original_HTTP_response",
+        "decoded_RGBA": {
+          "height": 64,
+          "rgba_sha256": "6283bf644c51a8384b9aacb68751c77e3ccc69719a75e0709c1178146befcb63",
+          "width": 128
+        },
+        "fresh_preview_HTTP": true,
+        "input_sha256": "91b95be0227bb50f14c60d3443e88b743e42186ed328059610df8d7182c49b4a"
+      },
+      {
+        "JPEG_sha256": "054230e9a18e82c3722c455d12ad2b38b48c462c30630b2ffd46c85efce83048",
+        "branch": "retained_decoded_resource",
+        "decoded_RGBA": {
+          "height": 64,
+          "rgba_sha256": "f3b4e9483a8dfe655e567ca5e0cb80181c424cb9f32b960415bddaadb9895d5e",
+          "width": 128
+        },
+        "fresh_preview_HTTP": false,
+        "input_sha256": "22870ca01bae8ed3322f5647ff7637adbf8c86bdff386c23084d5e6069b30a6a"
+      }
+    ],
+    "return_A_preview_branch": "retained_decoded_resource",
+    "return_A_fresh_thumbnail_HTTP": false,
+    "cache_implementation_claimed": false,
+    "original_JPEG_body_raw9_SHA_context_URI_input_and_visible_HTMLImage_RGBA_exact": true,
+    "A_B_visible_RGBA_different": true,
+    "valid_revision_library_prerequisite_per_project": true,
+    "protected_snapshots": 3,
+    "protected_current_disk_raw9_SHA_exact": true,
+    "protected_scope_limit": "Both original source/dataset/annotations/models/reports/labelsets/flowcharts trees plus project and labelset registries, normal/tiny inputs, drafts and harness dataset. Unrelated lifecycle SQLite/global project pointer namespace is not claimed immutable.",
+    "whole_global_context_store_immutable_claim": false,
+    "business_timestamps": "Python raw HTTP/durable comparisons preserve exact integers; browser manifest nanosecond timestamps compared under its explicit IEEE754 parse semantics only. Filesystem raw9 are compared as exact decimal strings.",
+    "original_test_FD_count_retained": false,
+    "finite_reader_FD_opened": 6578,
+    "finite_reader_FD_closed": 6578,
+    "finite_reader_unique_file_refs": 3265,
+    "current_source_files_raw9_SHA_exact": 3003
+  },
+  "guards": {
+    "page_errors": 0,
+    "console_errors": 0,
+    "failed_requests": 0,
+    "foreign_origin_requests": 0,
+    "unexpected_non2xx": 0,
+    "renderer_rejected_requests": 0,
+    "deadline_or_retry_relaxation": false,
+    "response_fabrication": false,
+    "backend_ownership_guard_relaxation": false
+  },
+  "owned_natural_closure": {
+    "exitCode": 0,
+    "signal": null,
+    "forced": false,
+    "exitedBeforeStop": false,
+    "port_closed": true,
+    "pid_alive": false,
+    "groupAlive": false,
+    "escaped": [],
+    "unownedReferences": [],
+    "scanError": null
+  },
+  "original_Popen_natural_wait_returned": true,
+  "runner_signals_sent": false,
+  "global_leftovers": [],
+  "Root_visual_review": "Root directly inspected all six canonical PNGs: A first/return original ROI65/32/258/162 and B own24/12/96/72, distinct owning images/project names and saved state. SVG ROI and coordinate summary are separate visible scroll frames; simultaneous visibility is not claimed. Root review artifact SHA retained below.",
+  "prior_failure_history": {
+    "original04": "Failed strict HTMLImage-visible versus ImageBitmap-decoded RGBA equality. It remains failed; no ROI handoff cell was credited.",
+    "offline01": "First exact3066B JPEG diagnostic matched original visible HTMLImage and original ImageBitmap hashes;8121 RGBA channels differed by at most1. Whole helper exit1 because a preserved negative spec was also collected after browser close. No whole-helper PASS and no diagnostic retry.",
+    "current05_correction": "+6/-3 test-only decoder change uses detached HTMLImage.decode for the exact retained JPEG, revokes Blob URL finally, keeps exact RGBA equality and the same original remaining10s deadline. No application DOM mutation, network fetch or cache setting.",
+    "finite_reader01": "A first-duplicate-response raw9 comparison assumption failed in the private reader; corrected reader joins the exact original response by its own raw9 before checking URI/body/context. This was a reader failure, not a browser rerun.",
+    "original_earlier_failures_preserved": true
+  },
+  "raw_evidence_pins": {
+    "original_log": {
+      "bytes": 415,
+      "sha256": "7abcbe48053280fb6ff8be8f603e3234988ce668810c4ef8d30c084e6fc8058a"
+    },
+    "original_harness": {
+      "bytes": 448121,
+      "sha256": "f0fe2ab701fee7d5b789e9134494175c3efe7e804a353b81cdb4fa4e438347ae"
+    },
+    "original_report": {
+      "bytes": 9574,
+      "sha256": "193f04232b8f1dd9e9048ae03f32a6b838f006739dcebedf875dd7f03e1efd99"
+    },
+    "original_run_result": {
+      "bytes": 1667,
+      "sha256": "d84fee8777131ec24e505b9703ed23e76504a8566b9783fe29819f0a262d8a90"
+    },
+    "original_Popen": {
+      "bytes": 586,
+      "sha256": "435334f4af2e32553daef94ec27d65ce030426e3cc6be8aefd96cdee07e8d870"
+    },
+    "original_teardown": {
+      "bytes": 381,
+      "sha256": "17f502e5736e6b28e5086db33278adfb8a6d021644aa148fbbc2ba5064418a90"
+    },
+    "source_before": {
+      "bytes": 1077655,
+      "sha256": "ea379c31a4cabaed9747aec840800a2092faef4b9970556329178685321a6830"
+    },
+    "source_after": {
+      "bytes": 1077655,
+      "sha256": "ea379c31a4cabaed9747aec840800a2092faef4b9970556329178685321a6830"
+    },
+    "actual_admission": {
+      "bytes": 1017,
+      "sha256": "2cfaae3073420c255c63c78830417c76549f04970a96fcc7babac74c8c93add3"
+    },
+    "actual_typecheck_initial": {
+      "bytes": 109,
+      "sha256": "57ec0565236f25c9ec6bbb287098127edadb51c74b78cb293181d4b0e977a0f1"
+    },
+    "actual_typecheck_completion": {
+      "bytes": 105,
+      "sha256": "7163fa8e51e2237c27a31aea683369affb94852b8307d4c09a5de939e8c16bd9"
+    },
+    "actual_exact_one_list": {
+      "bytes": 319,
+      "sha256": "7f85eaf0394beb5ba99e2f131ed9f1b6db9ec9bc8d92e73717030525e08f95ef"
+    },
+    "actual_browser_start": {
+      "bytes": 110,
+      "sha256": "83799e16c034ccf3b2ca3915ecf3739fc8250293e8ae13ba08e121f487b6c867"
+    },
+    "actual_browser_completion": {
+      "bytes": 105,
+      "sha256": "ab60fd06f5b93895a0fa3db32efa06135729b9eb8b548d7a0b1d522a6ff4551f"
+    },
+    "finite_reader": {
+      "bytes": 16433,
+      "sha256": "98547022b1afd4f11ba01db8b9a402f71e94e32be1a93a6dbd6896b47dd6df8a"
+    },
+    "finite_readback": {
+      "bytes": 2293787,
+      "sha256": "49d4bb51f703e9982be28a7c6a5c0591030405b47e88dc86314ca5f0107a47fa"
+    },
+    "finite_reader_first_comparator_failure": {
+      "bytes": 1042,
+      "sha256": "643389f723a568d209efae06c631a0c82cd5791d710c3ca33cda19f9e96479f4"
+    },
+    "finite_reader_corrected_actual": {
+      "bytes": 2361,
+      "sha256": "9fcfe6a1ffc213225a16114467b72c6a575eae01b6fa62812fa9c826ee1127ad"
+    },
+    "Root_six_PNG_review": {
+      "bytes": 4159,
+      "sha256": "b58a5bb14d551cbf0a6cb60c58d8e1621940872a03f66276a822965261390e88"
+    },
+    "original04_negative_actual": {
+      "bytes": 641,
+      "sha256": "a90309aafd99632e575fdea7f99a1f9fa581320854ab289c0766a546dbb7ee48"
+    },
+    "original04_retained_JPEG_readback": {
+      "bytes": 12270,
+      "sha256": "8548b45420d19b6f6c5e18c6ee182b8599d88aa80d832f5905e01a3fa5a1c29c"
+    },
+    "offline01_binding": {
+      "bytes": 4293,
+      "sha256": "fb657453ccbebc2cfc9c9e4db5c47fdbe03087d4ab2d45f67e1c9ea73dca7293"
+    },
+    "offline01_first_diagnostic": {
+      "bytes": 3224,
+      "sha256": "e4002e0f4776cd3d0235bc0edcbe2af1ce17e89ac8fb738ae0362b813719d185"
+    },
+    "offline01_aggregate_actual": {
+      "bytes": 718,
+      "sha256": "0745a349815f019ac39eb4ac1d00c765a7dbca4f86e32ec1001894ab97d8cf70"
+    },
+    "offline01_aggregate_result": {
+      "bytes": 670,
+      "sha256": "0a520bf963f7456b706f94abd9f1194b89ea6469174a4a2c379a8104193d8bf5"
+    }
+  },
+  "limits": {
+    "training_inference_invoked": false,
+    "whole_run_GPU_execution_claim": false,
+    "cache_origin_proven": false,
+    "fresh_return_A_thumbnail_HTTP_claim": false,
+    "worker_process_exit_claim": false,
+    "Native_acceptance": false,
+    "parent_acceptance": false,
+    "registry_promoted_by_reader": false
+  }
+}
