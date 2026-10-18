@@ -1,0 +1,170 @@
+{
+  "schema": "source-only-current-generation-selected-profile-ownership-v1",
+  "date": "2026-10-18",
+  "scope": "Original selected-compute profile getter ownership in the current owned global generation; partial source boundary only.",
+  "source": {
+    "public_base": "6dd2f79ca3d4dc59d4d059d98baf555ab2b192d9",
+    "private_commit": "6408ae868ce47d90fd7bccc51b13319ab7c0f479",
+    "files": [
+      {
+        "path": "backend/engine/original_owned_selected_compute_request.py",
+        "bytes": 41090,
+        "sha256": "9c0ab953d839a0100b0f40dbc3ca98d6e233179dd3b3b7a9323a23c870408335"
+      },
+      {
+        "path": "backend/tests/test_original_selected_profile_generation.py",
+        "bytes": 10609,
+        "sha256": "4c06de27f7ae06586d98314874ade68660b0c7c373cf85652c65f3e44ab06eab"
+      }
+    ],
+    "products": 1,
+    "tests": 1,
+    "whole_product_inverse_to_base_except_declared_delta_exact": true,
+    "original_auth_handler_ProfileStore_worker_FD_no_link_read_closure_and_whole_execution_refusals_unchanged": true
+  },
+  "changes": [
+    "The original nominal-profile-path branch remains. A resolved path is recognized only when it belongs to the same declared owned installation and exact current active generation and equals the original profile resolver result.",
+    "The profile resolver alias, original resolver, active-generation and validation functions are retained in the existing original source/call/code binding checks. An equivalent late alias delegate is not original authority.",
+    "Optional additional ownership inspection refuses on an inspection exception; it does not replace or suppress original business getter errors."
+  ],
+  "actual_runs": {
+    "causal_RED03": {
+      "pass": 1,
+      "fail": 1,
+      "duration_s": 8.1,
+      "exit_code": 1,
+      "scope": "Both genuine ASGI requests reached the original profile getter and explicit provider failstop. Only active generation failed the desired absence assertion, adding profile-entry/read-handle/maintenance/profile-return failures."
+    },
+    "same_body_GREEN01": {
+      "pass": 2,
+      "fail": 0,
+      "duration_s": 8.24,
+      "exit_code": 0,
+      "scope": "Exact causal test body from RED03; both cases retained the four intentional whole-execution refusals."
+    },
+    "final_focused02": {
+      "pass": 7,
+      "fail": 0,
+      "duration_s": 9.85,
+      "exit_code": 0,
+      "argv": [
+        "backend/tests/test_original_selected_profile_generation.py",
+        "-p",
+        "no:cacheprovider",
+        "--tb=short",
+        "-q"
+      ]
+    },
+    "final_related01": {
+      "pass": 6,
+      "fail": 0,
+      "duration_s": 5.28,
+      "exit_code": 0,
+      "scope": "Existing current-generation five-store attachment, retired-store write refusal, invalid-pointer refusal, linked control-file refusal and two profile-selection persistence/refusal controls."
+    }
+  },
+  "genuine_partial_fixture": {
+    "original_app_auth_context_ASGI_handler_ProfileStore_and_closed_IO": true,
+    "valid_original_four_node_graph": true,
+    "tiny_synthetic_checkpoint_dictionary_only": true,
+    "synthetic_metadata_and_completed_provenance_format_fixture_only_not_a_trained_model_or_actual_job": true,
+    "explicit_decorated_provider_failstop_before_transport_thread_model_construction_or_forward": true,
+    "original_HTTP_status": 502,
+    "original_records_normal_released_terminal": true,
+    "protected_profile_image_project_recipe_version_and_synthetic_artifact_bytes_raw9_unchanged": true,
+    "original_whole_execution_drain": "refused",
+    "exact_remaining_refusal_reasons_in_both_cases": [
+      "owned_flow_selected_compute_run_entry",
+      "owned_flow_selected_compute_run_failed",
+      "owned_flow_execution_handler_failed",
+      "owned_flow_unconfirmed_execution_lifetime"
+    ]
+  },
+  "negative_controls": [
+    "Byte-identical foreign profile file cannot satisfy the current-owned projection.",
+    "An unselected sibling generation path cannot satisfy it (the direct test is labeled retired-generation); an existing separate stale-store business control also remains passing.",
+    "An equivalent late resolver alias delegate is refused.",
+    "Malformed or linked global active pointer remains refused."
+  ],
+  "final_evidence": [
+    {
+      "name": "proof/red03.log",
+      "bytes": 1156,
+      "sha256": "f89ccfcb1563485296aa768b54dd07167a072ed47ecfddd93ee2908775237325"
+    },
+    {
+      "name": "proof/red03-original-tool-start.json",
+      "bytes": 131,
+      "sha256": "08846216d6f00d2a4d8f7fcb8285d4fe1e0b1fa9fc4d18429b74afcc60612fc6"
+    },
+    {
+      "name": "proof/red03-original-tool-completion.json",
+      "bytes": 126,
+      "sha256": "41f5499430fcfd53b60093cbf3f976bd239b0d59e272f20bf3a803a9f68c5534"
+    },
+    {
+      "name": "proof/green01.log",
+      "bytes": 98,
+      "sha256": "0c22bd0f32e3673e4fba74f08fd0578939f5c594a539c618d3a2259dc99bbc57"
+    },
+    {
+      "name": "proof/green01-original-tool-start.json",
+      "bytes": 110,
+      "sha256": "7569a3966a12ed3258cfe8274e298086b438589bc65f4bf0e878fcc6a706a8a4"
+    },
+    {
+      "name": "proof/green01-original-tool-completion.json",
+      "bytes": 105,
+      "sha256": "8d8d1252956d1ea02a8e11697ef1e466bc7bc31611f58957a79f30ddf07fe3de"
+    },
+    {
+      "name": "proof/final02.log",
+      "bytes": 98,
+      "sha256": "f91b9759451194ec0bc4d9ba5ca0d07513b77faaf0591d6024a0cbd267ffcf93"
+    },
+    {
+      "name": "proof/final02-original-tool-start.json",
+      "bytes": 109,
+      "sha256": "63ddbce3e0d5ae865d4d35e1117396c6abf9b41f291a1e58fd7182397c8e50a9"
+    },
+    {
+      "name": "proof/final02-original-tool-completion.json",
+      "bytes": 105,
+      "sha256": "2da49bfaa681736ba2eb90957aabaf14ad092d01e1c35813840860c446962bd5"
+    },
+    {
+      "name": "proof/related01.log",
+      "bytes": 98,
+      "sha256": "45296f64fcc3f3d400f8ff4502ab5c5c9cc51a0b28cc09d8420d7b3463a23030"
+    },
+    {
+      "name": "proof/related01-original-tool-start.json",
+      "bytes": 110,
+      "sha256": "100aa020e00988da39ef6ccd7b5b38c398caae18cd3671bd5bedae360befe2cb"
+    },
+    {
+      "name": "proof/related01-original-tool-completion.json",
+      "bytes": 105,
+      "sha256": "7f3ad9d93478967b962cd436338fa6329cf2bb46ef5079599eff746a67a38a8b"
+    },
+    {
+      "name": "finite-evidence-final01.json",
+      "bytes": 12605,
+      "sha256": "7e1d6b5c12e6a32a78dfc19b5fccfb1bdafd4312622ad196ec3df907708180fd"
+    }
+  ],
+  "preserved_history": [
+    "RED01 used an unsupported input/output graph and failed HTTP422 before the profile boundary. RED02 used an unset inspection task and likewise failed HTTP422. Both prototype failures, original tool envelopes and source copies remain; neither is causal evidence.",
+    "The initial two-case GREEN01 remains separate from the final seven-case run and six existing controls; run counts are reported separately.",
+    "All original failure reason lists and partial-fixture refused drains are retained."
+  ],
+  "limitations": [
+    "Source-only in-process original handler/profile/IO evidence; controlled failstop and synthetic checkpoint-format data do not prove a supported whole Run, model validation, transport, worker launch, GPU execution or installed native acceptance.",
+    "The installed first reason hash maps to the same profile-entry predicate, and recorded path metadata supports this source hypothesis. This source fixture does not establish the exact original native request route, exact first emitter/interleaving or completion of the native Run.",
+    "No original protocol, diagnostic capacity, authorization, deadline, parent/action cell, strict native lease closure or hardware acceptance is promoted."
+  ],
+  "privacy": {
+    "private_paths_auth_tokens_raw_headers_real_project_ids_or_raw_app_bodies_embedded": false,
+    "public_counts_or_action_cells_promoted": false
+  }
+}

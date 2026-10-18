@@ -200,6 +200,23 @@ def selected_thread_born(thread, target, stop, leases, key):
     if value is not None: value.thread_born(thread, target, stop, leases, key)
 
 
+def _current_profile_path(store):
+    from backend.remote import profiles
+    from backend.engine import global_store_paths
+    nominal = profiles.default_profile_path()
+    if store.path == nominal: return True
+    try:
+        if profiles.resolve_store_path is not global_store_paths.resolve_store_path: return False
+        root, owner = global_store_paths.owned_root(nominal)
+        if root is None or nominal != root / owner['scopes']['profiles']: return False
+        active = global_store_paths.active_generation(root)
+        return (active is not None and store.path == active[0] / owner['scopes']['profiles']
+            and store.path == profiles.resolve_store_path(nominal))
+    except Exception:
+        # Optional ownership inspection must not replace the original get.
+        return False
+
+
 @contextmanager
 def selected_heartbeat():
     value = _current()
@@ -232,7 +249,7 @@ def _original_sources():
             'selected_operation_closed', 'selected_thread_born', 'selected_heartbeat', 'selected_read_text',
             'SSHTransport', 'RemoteJobContext', '_sha256', 'threading', 'os')),
         (coordinator, ('_confirm_owned_exit', '_sha256', '_atomic_json', '_bundle_backend', 'selected_file', 'observe_original_selected_compute')),
-        (profiles, ('get_profile_store', 'ProfileStore', '_STORE_LOCK', 'default_profile_path', 'store_admission', 'selected_file', 'observe_original_selected_compute')),
+        (profiles, ('get_profile_store', 'ProfileStore', '_STORE_LOCK', 'default_profile_path', 'resolve_store_path', 'store_admission', 'selected_file', 'observe_original_selected_compute')),
         (profiles.ProfileStore, ('__init__', 'get', '_read')),
         (profiles, ('ComputeProfile',)),
         (scheduler, ('ResourceLeases', 'shared_leases', 'store_admission', 'use_wal', 'sqlite3', 'observe_original_selected_compute', 'observe_original_selected_lease_connection')),
@@ -242,7 +259,7 @@ def _original_sources():
         (migration_guard, ('maintenance_guard', '_execution_owner', '_admission_capability', '_HELD', 'observe_original_selected_maintenance')),
         (original_lock_acquisition, ('_capture_successful_acquisition', 'OriginalLockAcquisition')),
         (original_lock_acquisition.OriginalLockAcquisition, ('__init__', 'current', 'invalidate', '__copy__', '__deepcopy__', '__reduce_ex__')),
-        (global_store_paths, ('store_admission', 'owned_root', '_assert_current_store')),
+        (global_store_paths, ('store_admission', 'owned_root', '_assert_current_store', 'resolve_store_path', 'active_generation', 'validate_owner', '_hex')),
         (ssh_transport, ('SSHTransport',)),
         (ssh_transport.SSHTransport, ('__init__', 'launch', 'recover_handle', 'stop_owned', 'is_running', 'exec', 'upload', 'download')),
         (threading, ('Thread', 'Event', 'current_thread')),
@@ -375,7 +392,7 @@ class SelectedComputeLifetime:
             store = args[0] if args else None
             valid = (valid and self.profile is None and frame is not None and len(args) == 2 and not kwargs
                 and type(store) is profiles.ProfileStore and args[1] == self.attempt.req.compute_profile_id
-                and frame.f_locals.get('req') is self.attempt.req and store.path == profiles.default_profile_path()
+                and frame.f_locals.get('req') is self.attempt.req and _current_profile_path(store)
                 and not profiles._STORE_LOCK._is_owned() and _bound(store, profiles.ProfileStore, self.calls))
             self.profile_store = store
         elif kind == 'run':
