@@ -48,7 +48,7 @@ Linux run37180963980는 backend1127 통과/3 skip, renderer524 통과, browser72
 
 ## 2026-10-04 부모 진척 근거 · e376db1
 
-확인 소스: `e376db11e586a1866658349da6888c8eaf783d1b`, tree `ea8248352a8fe7387403eb98d41123e4f1d5551d`. [PR #3](https://github.com/JaeHongChoe/modu-vision/pull/3), [PR #4](https://github.com/JaeHongChoe/modu-vision/pull/4), [PR #5](https://github.com/JaeHongChoe/modu-vision/pull/5)는 모두 main에 병합됐다. Claude의 소스 담당은 Codex로 인계됐다. 아래는 e376db1 소스에서 확인한 집계이며, 새 slice는 앞 절에 따로 기록한다.
+확인 소스: `e376db11e586a1866658349da6888c8eaf783d1b`, tree `ea8248352a8fe7387403eb98d41123e4f1d5551d`. [PR #3](https://github.com/JaeHongChoe/modu-vision/pull/3), [PR #4](https://github.com/JaeHongChoe/modu-vision/pull/4), [PR #5](https://github.com/JaeHongChoe/modu-vision/pull/5)는 모두 main에 병합됐다. 남은 소스 개발의 담당을 통합했다. 아래는 e376db1 소스에서 확인한 집계이며, 새 slice는 앞 절에 따로 기록한다.
 
 - 82개 부모 작업의 소프트웨어 구현: **verified 24 / pending 58**. S1-10, S2-01, S6-07의 구현 근거를 최신 source-bound 실행과 대조해 pending에서 verified로 갱신했다. 각 작업의 다른 acceptance 차원은 유지했다.
 - 별도의 게시 진척: **확장 구현 slice 12개 + 추가 데이터·라벨링 개선 영역 2개**. 아래 14행은 부모 작업과 겹치므로 24에 더하지 않는다.
@@ -513,10 +513,10 @@ GitHub hosted Windows Server 2025 실행 37021912594가 `08a9d48`에서 모든 �
 - 확인 항목에는 그 기능을 맡은 작업, 전체 커밋 해시, 항목에 맞는 근거 종류와 그 종류가 요구하는 인용(클릭은 e2e 시험이나 해시가 있는 receipt, 대상 실행은 receipt와 산출물, native Windows는 receipt나 Windows 작업이 실행하는 시험)이 필요하다.
 - 작성자 실행: S7-01 시험 54 통과, 완료 기능 0개로 검사기 통과. 독립 검토 3회차가 승인했고 규칙 변이 72개 중 65개를 잡았다. 남은 것: 각 작업이 확인한 항목의 근거 채우기(156개 모두 대기), 검토 P3(클릭 인용·Windows 시험 경로·주체 규칙 등), Windows 실기.
 
-## S6-05 외부 LabelMe 읽기 인코딩(e7fce1c, Codex 병행 작업, 진행 중)
+## S6-05 외부 LabelMe 읽기 인코딩(e7fce1c, 병행 개발 작업, 진행 중)
 
 - 이미지 옆 외부 LabelMe 파일을 `read_source_text`로 읽는다(UTF-8·BOM, UTF-8이 아닌 시스템에서는 해당 code page, 예: cp949). UTF-8 시스템에서 해독할 수 없는 입력은 변환 안내와 함께 422로 답한다. 저장된 Studio JSON과 권한 정책은 바꾸지 않았다.
-- Codex 고정본(be1f2a8 + 4개 파일): red 3 실패·1 통과(BOM·cp949 라벨, 변환 안내), green 관련 7개 모듈 35 통과, 독립 검토 승인. 새 회귀 시험이 두 CI 목록에 들어갔다.
+- 격리 개발 고정본(be1f2a8 + 4개 파일): red 3 실패·1 통과(BOM·cp949 라벨, 변환 안내), green 관련 7개 모듈 35 통과, 독립 검토 승인. 새 회귀 시험이 두 CI 목록에 들어갔다.
 - macOS API 검증만이다. Windows 실기와 데스크톱 화면, GPU는 이 변경으로 확인하지 않았다.
 
 ## S3-01 남은 항목 정리
@@ -530,15 +530,15 @@ GitHub hosted Windows Server 2025 실행 37021912594가 `08a9d48`에서 모든 �
 - 작성자 receipt: 플로우 단위 시험 40, renderer 396, 타입 검사, 브라우저 e2e 12, Linux CI 목록 491 통과·2 건너뜀, Windows 목록 268 통과·2 건너뜀(이 Mac에서 실행). 독립 검토 2회차가 승인했다(1회차 P2: 공백 제거 후 비교).
 - 남은 것: 실제 학습 모델 목록으로 편집기를 움직이는 e2e(앱 흐름 QA에 포함 예정), 검토 P3(검출기 뒤 미연결 분할 노드의 Blob, 공백 이름 — 작업 트리에서 수정, 미검토), 좌표·범위 오류, UNKNOWN 판정 규칙, Windows 실기.
 
-## S3-01 가져오기 오류 안내(955e302, Codex 병행 작업)
+## S3-01 가져오기 오류 안내(955e302, 병행 개발 작업)
 
 - 데이터 가져오기 패널의 API 거절은 항상 보이는 안내를 남긴다. 한국어 메시지, message, 검증 msg, detail 순으로 읽고, 빈 목록·null·읽을 내용이 없는 응답에는 고정된 한국어 안내를 보인다.
-- Codex 고정본: renderer red 3 실패, green renderer 408, 타입 검사·빌드 통과, 독립 검토 승인. 패널 시험은 실제 패널과 모의 API를 쓴다. 실제 브라우저 오류 주입 경로, Windows 실기, GPU는 확인하지 않았다.
+- 격리 개발 고정본: renderer red 3 실패, green renderer 408, 타입 검사·빌드 통과, 독립 검토 승인. 패널 시험은 실제 패널과 모의 API를 쓴다. 실제 브라우저 오류 주입 경로, Windows 실기, GPU는 확인하지 않았다.
 
-## S6-05 크기 없는 LabelMe의 잘린 이미지 머리(955e302, Codex 병행 작업)
+## S6-05 크기 없는 LabelMe의 잘린 이미지 머리(955e302, 병행 개발 작업)
 
 - 이미지 크기가 없는 LabelMe 파일의 이미지가 Pillow의 errno 없는 'Truncated File Read'로 실패하면 손상된 내용으로 보고 형상 없이 표시한다. 권한, 없는 파일, OS 입출력 오류는 그대로 알린다. 다른 errno 없는 디코더 오류는 아직 그대로 실패한다.
-- Codex 고정본: backend red 1 실패, green 관련 10개 모듈 51 통과, 독립 검토 승인. 새 회귀 시험이 두 CI 목록에 들어갔다. macOS 검증만이며 Windows 실기와 GPU는 확인하지 않았다.
+- 격리 개발 고정본: backend red 1 실패, green 관련 10개 모듈 51 통과, 독립 검토 승인. 새 회귀 시험이 두 CI 목록에 들어갔다. macOS 검증만이며 Windows 실기와 GPU는 확인하지 않았다.
 
 ## S1-05 이 컴퓨터의 실제 사전 점검(79ffa03, 진행 중)
 
@@ -553,12 +553,12 @@ GitHub hosted Windows Server 2025 실행 37021912594가 `08a9d48`에서 모든 �
 
 - a19a8a4에서 S7-01 구현 상태를 검증됨으로 기록했으나, 수용 기준 2(버튼·메뉴·단축키·동작별 성공·빈 상태·잘못된 입력·오류·취소·다시 열기·전달 근거 목록)가 아직 기록되지 않아 구현 상태를 대기로 정정했다. 근거 계약과 검사기는 검증됨을 유지한다.
 
-## Codex 병행 작업 3묶음(c481021)
+## 병행 개발 작업 3묶음(c481021)
 
 - S3-01: 하위 폴더의 COCO 문서가 자기 폴더 기준 상대 이미지 경로로 연결된다(가져오기와 데이터 인덱스가 같게). 서로 다른 실제 이미지로 해석되는 경로는 모호함으로 거절하고, 같은 파일을 가리키는 내부 링크는 유지하며, 원본 밖의 주석 문서는 읽지 않는다.
 - S2-07: 고정 플로우 비교에서 손상 이미지 선택을 거절하고 정상 이미지를 기본으로 보여 준다. 기존 정상 선택은 유지한다. 패키지 비교 선택을 해제하면 이전 거절 안내도 지운다.
 - S7-01: 계획 검사기가 program, 근거 기록, 기존 기준 JSON 두 파일의 모든 깊이에서 중복 키를 거절한다. coverage 표의 공백·backtick ID를 읽고 중복·추가·깨진 행을 조용히 빠뜨리지 않는다. 명령줄 오류는 ASCII JSON receipt로 돌려준다.
-- Codex 최종 freeze-4(3c1322d + 소유 13개 파일): backend 147, renderer 413, 타입 검사·빌드는 freeze-3 receipt를 재사용했다(앱·backend·단위 시험 소스, 설정, 의존성 lock 해시가 같아서). freeze-4는 e2e 선택자 하나(service-s2-07-invalid-images.spec.ts)만 좁힌 뒤 e2e harness(14/14), e2e 타입 검사, Chrome 브라우저 시나리오 3개(실제 격리 백엔드, 시험용 desktop host shim)를 다시 실행해 통과했다. 독립 리뷰 승인. (2b6657e에서 harness 14를 freeze-3 재사용으로 적었던 것을 freeze-4 재실행으로 정정)
+- 최종 개발 freeze-4(3c1322d + 소유 13개 파일): backend 147, renderer 413, 타입 검사·빌드는 freeze-3 receipt를 재사용했다(앱·backend·단위 시험 소스, 설정, 의존성 lock 해시가 같아서). freeze-4는 e2e 선택자 하나(service-s2-07-invalid-images.spec.ts)만 좁힌 뒤 e2e harness(14/14), e2e 타입 검사, Chrome 브라우저 시나리오 3개(실제 격리 백엔드, 시험용 desktop host shim)를 다시 실행해 통과했다. 독립 리뷰 승인. (2b6657e에서 harness 14를 freeze-3 재사용으로 적었던 것을 freeze-4 재실행으로 정정)
 - macOS CPU 계약 시험과 Chrome 브라우저 검증이다. native Electron, Windows 설치, GPU 실행은 확인하지 않았다.
 
 ## S1-05 사전 점검 후속(4c838cc)

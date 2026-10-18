@@ -1,6 +1,6 @@
 # Specialist live control continuation
 
-Continue S1-08 in the isolated Codex checkout. Existing user authorization covers implementation and owned synthetic CPU verification.
+Continue S1-08 in the isolated development checkout. Existing user authorization covers implementation and owned synthetic CPU verification.
 
 ## Design
 
