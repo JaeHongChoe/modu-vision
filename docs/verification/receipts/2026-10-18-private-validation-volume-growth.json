@@ -1,0 +1,110 @@
+{
+  "schema": "modu-vision.private-validation-image-capacity-growth/v1",
+  "old_virtual_bytes": 51539607552,
+  "new_virtual_bytes": 68719476736,
+  "before_free": 7941124096,
+  "after_free": 25146937344,
+  "selected_files": 5996,
+  "selected_body_and_nondevice_attrs_exact": true,
+  "explicit_device_transitions": 0,
+  "original_volume_UUID_and_owner_mount_setting_retained": true,
+  "original_builder_minimum_free_bytes": 12000000000,
+  "original_backing_reserve_bytes": 10000000000,
+  "probe_and_original_false_owner_guard_failures_preserved": true,
+  "normal_detach_remount_only": true,
+  "deletion_force_signal_or_other_disk_change": false,
+  "whole_volume_full_body_hash_claim": false,
+  "native_or_parent_credit": false,
+  "raw_evidence": [
+    {
+      "label": "prepared-plan.json",
+      "bytes": 3343210,
+      "sha256": "6d010704a90aa2ca0ab5f0b8ccf976c2b526a660a431276b9b3fc3fcb5e11db1"
+    },
+    {
+      "label": "process-before.json",
+      "bytes": 88,
+      "sha256": "63379c4cdd3a1f57ac6267fc9f3192739abb01944885788395bcad52d31f3c9d"
+    },
+    {
+      "label": "lsof-before.json",
+      "bytes": 188,
+      "sha256": "76a71ba781246c5bd76fc9c0834fa0419073a803ecbdab1b6abe3c9ba8098910"
+    },
+    {
+      "label": "detach.json",
+      "bytes": 267,
+      "sha256": "f4f91e478914897832e7e9dade10ffb16dfaf9259b782bc77679f53fe2f49bff"
+    },
+    {
+      "label": "limits.json",
+      "bytes": 295,
+      "sha256": "1e4f18672cbcb904e91a46702eac1a46b301a40399a228a4eae755c3616cede9"
+    },
+    {
+      "label": "unsupported-probe-detach-admission.json",
+      "bytes": 1228,
+      "sha256": "f75a2a1a3b0219595fc3b3a0f0ee52b34e8989ca78dc8e0c4179e03ee8b87742"
+    },
+    {
+      "label": "unsupported-probe-normal-detach.json",
+      "bytes": 296,
+      "sha256": "5ea3fa6a30167ecc92edb076c29b3677dcc9297a294342c98124192de44e3496"
+    },
+    {
+      "label": "legacy-limits.json",
+      "bytes": 346,
+      "sha256": "02bbce4c42959a9270f9c722a9b4d057b72e682ee92d6162bda711dee27b4aaa"
+    },
+    {
+      "label": "resize-image-only.json",
+      "bytes": 388,
+      "sha256": "9a27d283f9122731cc6ffcb9aa3bccaa4e856938fc2cd450954256e352e16090"
+    },
+    {
+      "label": "attach.json",
+      "bytes": 806,
+      "sha256": "28e35d802b53d7a437d3199d83ac581f48e9276eef3ff1ade3e6b4c55024ef5e"
+    },
+    {
+      "label": "apfs-limits.json",
+      "bytes": 787,
+      "sha256": "77b07b9ae6bd77cf66bd0fcc6462aac7a5d21d5bbe6a00d8b270663dee9e24cd"
+    },
+    {
+      "label": "resize-apfs-container.json",
+      "bytes": 1499,
+      "sha256": "d4bb935ffb6a6c9298dc05ad660b1ce9977752a81ab870607cf2033052100390"
+    },
+    {
+      "label": "post-resize-original-ownership-mount-refusal.json",
+      "bytes": 176,
+      "sha256": "0d71cd185fb55b1f1a6031bd231b5f8970f363df981eb5b7df1ca2ca3604c587"
+    },
+    {
+      "label": "lsof-before-ownership-remount.json",
+      "bytes": 186,
+      "sha256": "38402d3213a16519a7e92e50b31c19afce845f861e5af6cb4dcdd4c5a1d6f8f3"
+    },
+    {
+      "label": "normal-detach-for-original-ownership.json",
+      "bytes": 266,
+      "sha256": "f58de529e8b4042592c3fa15660c03856fa227a321ab51b5baf83c68f2794493"
+    },
+    {
+      "label": "reattach-original-owners-on.json",
+      "bytes": 806,
+      "sha256": "a925380f33823bd4ada0b4e112ba298517286e9cccf01ac52e3b8f0ae2164f58"
+    },
+    {
+      "label": "verify-volume-final.json",
+      "bytes": 1228,
+      "sha256": "8e2af5d1f390e2cc83b2bf623d933e74eea883b1c3fe947868110ea15c12ea56"
+    },
+    {
+      "label": "result.json",
+      "bytes": 2714,
+      "sha256": "ee236d953252d210c88bf67d19099df255bcffa196375cbb7294c8befdafd6b3"
+    }
+  ]
+}

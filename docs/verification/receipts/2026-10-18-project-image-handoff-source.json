@@ -1,0 +1,116 @@
+{
+  "schema": "modu-vision.source-project-image-handoff-validation/v1",
+  "source_only": true,
+  "base": "ad620c48ec58bba1b5756803c9733e1fd34b494a",
+  "reviewed_private_source_commit": "00c9672bf1a0e95dbac7bdb7f45cc05735f19e45",
+  "source_files": {
+    "src/renderer/stores/useProjectStore.ts": "97ad076750a58f2c63bb5139ec887289b4a4dfe7a1a571856c7b34dcb986279c",
+    "src/renderer/stores/projectImageSelectionHandoff.test.cjs": "428f78fe3a688c688e942b10d290e9454c8d9be555c393c420d195dc76c9c849",
+    "src/renderer/components/flowchart/FlowchartStudio.tsx": "42ca12de813581bfc8ebc6684a0d6cc9b2ffe53fbbf454c3602305f2c8194616",
+    "src/renderer/stores/useFlowchartStore.ts": "962ae231b9a46b718065b2cf3bba10e4f35be65f30a5213421c554567a662218",
+    "src/renderer/services/api.ts": "8ec0aa68f5d5b42101cd9a732e01146b3744ce67cad563c10ad32fb032409ce0",
+    "src/renderer/stores/projectViewState.ts": "e2dd22525bf6bf9a096acaec4d7cdc8c18cbedbf1db049826e8a8007531fc05e",
+    "backend/api/routes_flow_workspace.py": "a24ffc358505a7691785ef9abb5e9fa837760e6acf8285cc7412a5cb65685aa9",
+    "backend/api/routes_flowchart.py": "0a5089591f4e3c82da44e8d2098bd587a7c290209335d755c5cf012ed7f30ed8"
+  },
+  "scope": "Within original accepted-project callback, clear only a selected image of a changed canonical project namespace before publishing the next visible project; preserve the original editable graph and all selection guards.",
+  "actual_browser02_negative_input": {
+    "trace_readback_sha256": "3cff7f8defa78cb1f5c5be7b3fee64a7ca1358bdb691545f2a6a6fe24a38e782",
+    "image_info_status": 422,
+    "body_bytes": 70,
+    "body_sha256": "99b9a491f1ac5ae633432d284beaa34d1aaf71049a02528fb868ae2867804513",
+    "relation": "Old A image path carried accepted B request context; response context also B.",
+    "initiator_retained": false,
+    "source_callsite_proven_by_trace": false,
+    "browser_source_commit": "c438b0ba4507e585be44196e9d25a225100634a2",
+    "cell_credit": false
+  },
+  "source_causal_RED02": {
+    "actual_exit_code": 1,
+    "passed": 6,
+    "failed": 3,
+    "duration_ms": 700.123084,
+    "real_code": "Original useProjectStore/useFlowchartStore, API acceptContext/request serializer, Zustand/API subscriptions.",
+    "controlled_boundaries": "HTTP replies plus annotation clear await and dataset boundary. No React mounting or backend execution.",
+    "observed": "A/A image GET200 followed by B/A image GET422 while original annotation clear remained pending.",
+    "proof_sha256": "2b0a152f0a31d24e166130508583f531a70879d455b1c4ea1189cb5a188647f6",
+    "log_sha256": "6350b375a88fc62fc5072d13749e14d335eb715be6a035b76a159b0bace99537",
+    "actual_tool_sha256": "f943a4c31f410fd59f3170a00dcf0d58eee7ff6ecf40f598aa3ae7bfdf1f6cda"
+  },
+  "RED01_partial_probe": {
+    "actual_exit_code": 1,
+    "passed": 6,
+    "failed": 3,
+    "limit": "Showed retained selection under visible B, but observer initially omitted API context notification and did not capture B/A HTTP wire. Not claimed as causal wire reproduction.",
+    "log_sha256": "cb387a27b580c1f4b80b8291ad86a89ad20af6dfca8ddc24cca2e85207f9900a"
+  },
+  "source_GREEN01": {
+    "actual_exit_code": 0,
+    "passed": 9,
+    "failed": 0,
+    "duration_ms": 643.574166,
+    "same_test_body_as_RED02": true,
+    "proof_sha256": "5adbfd94f37c820594b7d172ffade7feb3b924dec4b6e97cf3264a6460b14473",
+    "log_sha256": "61edc316cbad097b9f2627af4005b4a5570a074ecde11704fa0a9ee90b06964a",
+    "actual_tool_sha256": "1ac3183f2e96b89b7ce9c52e65cd6e9a70581255f04aa780f2f3b5e1a5fabb3a",
+    "cases": [
+      "accepted A to B clears image before annotation await; later own B image emits200",
+      "same namespace reopen preserves selection without new image read",
+      "HTTP403 refusal preserves A",
+      "stale candidate preserves A",
+      "real edit during selection preserves A/dirty and refuses B",
+      "source changes",
+      "labelset changes",
+      "task changes",
+      "project-directory changes"
+    ]
+  },
+  "related_original_regression": {
+    "actual_exit_code": 0,
+    "passed": 53,
+    "failed": 0,
+    "duration_ms": 4299.146833,
+    "files": [
+      "contextCommit.test.cjs",
+      "projectViewState.test.cjs",
+      "flowIdentity.test.cjs",
+      "taskContextCommit.test.cjs",
+      "flowDraftCanonicalBase.test.cjs"
+    ],
+    "log_sha256": "ac10b3553c8042b37b4215b9548701e273bd9361d148eba81830ff02ca7c4ce2",
+    "actual_completion_sha256": "f03c814162f85e5a8a33c3433e2ff16c6a512b60482c4915acff461a79a0aba9"
+  },
+  "renderer_TSC02": {
+    "actual_exit_code": 0,
+    "command": "node --no-experimental-webstorage node_modules/typescript/bin/tsc -p tsconfig.json --noEmit",
+    "log_bytes": 0,
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "actual_completion_sha256": "c34ea3480505a3ab991b80e9026298da3ebf5ac7690397103d06d6786dc3ada9"
+  },
+  "TSC01_setup_failure": {
+    "actual_exit_code": 1,
+    "compiler_started": false,
+    "reason": "Initial provider-link preparation selected a whole-provider symlink instead of retained thin-link inventory and stopped before creating node_modules; Node then could not find tsc.",
+    "correction": "Reused exact original321 retained provider-mapping symlinks; no install/download/provider content writes.",
+    "log_sha256": "010868f16370eed03d190794ca80a45192b5592e8624137ac4f77b4b43111461"
+  },
+  "original_preserved": {
+    "API_acceptance_auth_stale_membership_guards_byteexact": true,
+    "backend_ownership_guards_byteexact": true,
+    "Studio_image_info_effect_byteexact": true,
+    "flow_setter_and_editable_graph_methods_byteexact": true,
+    "canonical_projectViewScope_byteexact": true,
+    "browser_c438_case_modified": false
+  },
+  "independent_review": "SOURCE-ONLY STATIC ACCEPT at exact product/test pins; reviewer executed no tests/runtime.",
+  "limits": {
+    "source_test_is_React_mount": false,
+    "source_test_is_real_backend_HTTP": false,
+    "browser_GREEN": false,
+    "native_acceptance": false,
+    "transport_or_backend_identity_switch_coverage": false,
+    "new_model_or_GPU": false,
+    "parent_or_action_cell_credit": false
+  },
+  "next": "Root executes unchanged original browser case after normal integration and fresh source/provider/typecheck/list admission."
+}
