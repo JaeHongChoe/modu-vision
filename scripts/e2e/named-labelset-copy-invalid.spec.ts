@@ -107,6 +107,13 @@ test('named labelset copy rejects its own invalid source tree with actual 422 an
             } else if (address.pathname.startsWith('/api/dataset/thumbnail/')) {
               expect(workspace.images.map(image => fs.realpathSync(image.path))).toContain(address.searchParams.get('file_path'));
               expect(bytes.length).toBeGreaterThan(0);
+            } else if (address.pathname.startsWith('/api/dataset/raw/')) {
+              const image = workspace.images.find(item => address.pathname === '/api/dataset/raw/' + encodeURIComponent(path.basename(item.path))
+                && address.searchParams.get('file_path') === fs.realpathSync(item.path));
+              expect(image).toBeDefined(); expect([...address.searchParams.keys()]).toEqual(['file_path']);
+              expect(rh['x-vision-project']).toBeUndefined(); expect(rh['x-vision-context']).toBeUndefined();
+              expect(row.response_headers['content-type']).toMatch(/^image\/png(?:;|$)/i);
+              expect(bytes.length).toBe(image!.bytes); expect(sha(bytes)).toBe(image!.sha256);
             } else {
               expect(rh['x-vision-project']).toBe(project.id); expect(JSON.parse(rh['x-vision-context'])).toEqual(context);
             }
