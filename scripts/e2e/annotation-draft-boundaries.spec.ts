@@ -23,7 +23,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   await page.getByTitle('실제 크기 (1:1)',{exact:true}).click();
   for(const[x,y]of points){const p=await point(x,y);await page.mouse.move(p.x,p.y);await expect(page.getByTestId('canvas-hud')).toContainText(new RegExp(`X:\\s*${x}\\s*px\\s*Y:\\s*${y}\\s*px`));await page.mouse.click(p.x,p.y);}
  };
- const saveButton=page.getByTestId('annotation-save-button'),pending=()=>page.getByRole('button',{name:'Save Changes',exact:true}),count=()=>page.getByTitle('라벨 삭제',{exact:true});
+ const saveButton=page.getByTestId('annotation-save-button'),pending=()=>page.getByRole('button',{name:'변경 저장',exact:true}),count=()=>page.getByTitle('라벨 삭제',{exact:true});
  const writes:string[]=[];page.on('request',r=>{if(r.method()==='POST'&&new URL(r.url()).pathname==='/api/annotations/save')writes.push(r.url());});
  await page.getByTitle('선택 및 이동 (Select / Move - 1)',{exact:true}).click();await page.keyboard.press('Delete');await page.keyboard.press('Control+z');await page.keyboard.press('Control+y');await expect(count()).toHaveCount(0);await expect(pending()).toHaveCount(0);
  const cancellations:any[]=[];

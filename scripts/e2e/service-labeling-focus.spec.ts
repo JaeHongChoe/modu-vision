@@ -114,7 +114,7 @@ test('the shared editing lock is taken, renewed and kept in focus editing, and a
   };
   const save = async () => {
     const saved = page.waitForResponse(response => response.url().includes('/api/annotations/save'));
-    await page.locator('button', { hasText: /^(Saved|Save Changes)$/ }).first().click();
+    await page.locator('button', { hasText: /^(저장됨|변경 저장)$/ }).first().click();
     return (await saved).status();
   };
   await page.setViewportSize({ width: 1440, height: 900 });

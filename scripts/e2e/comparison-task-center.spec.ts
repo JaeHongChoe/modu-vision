@@ -208,11 +208,11 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   await comparisonViewer.getByRole('button',{name:'현재 라벨 편집',exact:true}).click();
   const editReturn=page.getByRole('region',{name:'판정 근거에서 시작한 라벨 편집'});
   await expect(editReturn).toContainText(editRow.image_id);
-  await expect(page.getByRole('button',{name:'Mark as Normal (OK)',exact:true})).toBeEnabled();
-  await page.getByRole('button',{name:'Mark as Normal (OK)',exact:true}).click();
+  await expect(page.getByRole('button',{name:'정상(OK)으로 표시',exact:true})).toBeEnabled();
+  await page.getByRole('button',{name:'정상(OK)으로 표시',exact:true}).click();
   await expect(editReturn.getByRole('button',{name:'원래 판정 근거로 돌아가기',exact:true})).toBeDisabled();
   await expect(editReturn.getByRole('button',{name:'근거 이미지의 현재 라벨 다시 열기',exact:true})).toBeDisabled();
-  await page.getByRole('button',{name:'Save Changes',exact:true}).click();
+  await page.getByRole('button',{name:'변경 저장',exact:true}).click();
   await expect(editReturn.getByRole('button',{name:'원래 판정 근거로 돌아가기',exact:true})).toBeEnabled();
   const afterLabels=await api(`/api/annotations/${editRow.image_id}?file_path=${encodeURIComponent(editRow.file_path)}`);
   expect(afterLabels.metadata.revision).toBeGreaterThan(beforeLabels.metadata.revision);
@@ -252,7 +252,7 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   await evidence.screenshot(page,native?'native-evidence-label-reopen-error':'browser-evidence-label-reopen-error');
   await page.unroute(metadataRoute);await reopen.click();
   await expect(editReturn.getByRole('alert')).toHaveCount(0);
-  await expect(page.getByRole('button',{name:'Normal (OK) Part',exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'정상(OK) 부품',exact:true})).toBeVisible();
   await expect(reopen).toBeEnabled();
   await expect(editReturn).toContainText(`확인한 수정 버전 ${savedMetadata.revision}`);
   await evidence.screenshot(page,native?'native-evidence-label-reopened':'browser-evidence-label-reopened');
@@ -329,7 +329,7 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   expect(await api(`/api/annotations/${editRow.image_id}?file_path=${encodeURIComponent(editRow.file_path)}`)).toEqual(afterLabels);
   const cancelCustodyAfter=custody();expect(cancelCustodyAfter).toEqual(cancelCustodyBefore);expect(posted).toBe(boundaryPosts);
   await evidence.screenshot(page,native?'native-evidence-label-cancelled-read':'browser-evidence-label-cancelled-read');
-  await page.unroute(metadataRoute);page.off('request',countAnnotation);await reopen.click();await expect(page.getByRole('button',{name:'Normal (OK) Part',exact:true})).toBeVisible();await expect(reopen).toBeEnabled();
+  await page.unroute(metadataRoute);page.off('request',countAnnotation);await reopen.click();await expect(page.getByRole('button',{name:'정상(OK) 부품',exact:true})).toBeVisible();await expect(reopen).toBeEnabled();
   evidence.note('evidence_label_boundary_custody',{cells:['U030.evidence-current-label-return.error','U030.evidence-current-label-return.cancel'],
     comparison_id:secondJob.report_id,project_id:project.id,source,task:'classification',labelset_id:selectedReport.labelset_id,
     image_id:editRow.image_id,image_uuid:savedMetadata.image_uuid,image_path:editRow.file_path,image_sha256:editRow.image_sha256,

@@ -273,7 +273,7 @@ async function exercise(page:Page,w:Workspace,e:Evidence,api:Api,native:boolean,
   const recoveryComparison=await openComparison();await compare.getByRole('checkbox').check();const applyRecovery=responseFor('GET',query);
   await apply().click();const applied=await captured(await applyRecovery);expect(applied.status).toBe(200);assertApplyRead(applied.request,origin,query);
   expect(JSON.parse(applied.body)).toEqual(JSON.parse(recovered.state.api.annotations.body));await expect(compare).toHaveCount(0);
-  await expect(rows()).toHaveCount(2);await expect(save()).toContainText('Save Changes');
+  await expect(rows()).toHaveCount(2);await expect(save()).toContainText('변경 저장');
   const nextEntries=await drafts();expect(nextEntries).toHaveLength(1);expect(nextEntries[0][0]).toBe(originalDraftEntry[0]);
   const nextDraft=JSON.parse(nextEntries[0][1]);expect(nextDraft.annotations).toEqual(originalDraft.annotations);
   expect(nextDraft.base_annotations).toEqual(JSON.parse(recovered.state.api.annotations.body).annotations);expect(nextDraft.base_revision).toBe(released.image.revision);
@@ -376,7 +376,7 @@ async function explicitDraftLifecycle(page:Page,w:Workspace,e:Evidence,api:Api,n
   await draftApplyWithin(expect(dialog().getByRole('checkbox')).not.toBeChecked({timeout:draftApplyRemaining(reply.deadline)}),reply.deadline,'explicit acceptance reset');await draftApplyWithin(expect(dialog().getByRole('button',{name:'비교한 초안을 명시적으로 적용',exact:true})).toBeDisabled({timeout:draftApplyRemaining(reply.deadline)}),reply.deadline,'no implicit apply');return reply;
  };
  const apply=async(scope:typeof A,prior:DraftEntry)=>{
-  await dialog().getByRole('checkbox').check();const reply=await captureRead(scope,d=>dialog().getByRole('button',{name:'비교한 초안을 명시적으로 적용',exact:true}).click({timeout:draftApplyRemaining(d)}));await draftApplyWithin(expect(dialog()).toHaveCount(0,{timeout:draftApplyRemaining(reply.deadline)}),reply.deadline,'comparison closes after apply');await draftApplyWithin(expect(rows()).toHaveCount(2,{timeout:draftApplyRemaining(reply.deadline)}),reply.deadline,'two unsaved editor labels');await draftApplyWithin(expect(page.getByTestId('annotation-save-button')).toContainText('Save Changes',{timeout:draftApplyRemaining(reply.deadline)}),reply.deadline,'not server saved');
+  await dialog().getByRole('checkbox').check();const reply=await captureRead(scope,d=>dialog().getByRole('button',{name:'비교한 초안을 명시적으로 적용',exact:true}).click({timeout:draftApplyRemaining(d)}));await draftApplyWithin(expect(dialog()).toHaveCount(0,{timeout:draftApplyRemaining(reply.deadline)}),reply.deadline,'comparison closes after apply');await draftApplyWithin(expect(rows()).toHaveCount(2,{timeout:draftApplyRemaining(reply.deadline)}),reply.deadline,'two unsaved editor labels');await draftApplyWithin(expect(page.getByTestId('annotation-save-button')).toContainText('변경 저장',{timeout:draftApplyRemaining(reply.deadline)}),reply.deadline,'not server saved');
   const next=await draftApplyWithin(entries(),reply.deadline,'owned draft observation');expect(next).toHaveLength(1);expect(next[0][0]).toBe(prior[0]);const previous=JSON.parse(prior[1]),current=JSON.parse(next[0][1]);expect(current.nonce).not.toBe(previous.nonce);expect(Number.isNaN(Date.parse(current.saved_at))).toBe(false);expect(current).toEqual({...previous,base_revision:scope.saved.metadata.revision,base_annotations:scope.saved.annotations,nonce:current.nonce,saved_at:current.saved_at});await unchanged(scope);return{reply,entry:next[0]};
  };
  const switchProject=async(scope:typeof A)=>{

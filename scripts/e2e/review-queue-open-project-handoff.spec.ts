@@ -86,7 +86,7 @@ async function exercise(page:Page,w:Workspace,e:Evidence,native:boolean,origin:s
  const assertImage=async(scope:Scope)=>{const target=scope.chosen.items[scope.chosen.cursor],image=scope.metadata.find(row=>row.file_path===target.file_path);expect(image).toBeTruthy();
   const filmstrip=page.locator('[data-labeling-filmstrip]'),thumb=filmstrip.getByRole('img',{name:path.basename(target.file_path),exact:true});
   await expect(thumb.locator('..')).toHaveClass(/border-blue-500/,{timeout:10_000});expect(new URL((await thumb.getAttribute('src'))!,page.url()).searchParams.get('file_path')).toBe(target.file_path);
-  await expect(page.getByTestId('annotation-save-button')).toHaveText('Saved',{timeout:10_000});return {queue_id:scope.chosen.id,cursor:scope.chosen.cursor,revision:scope.chosen.revision,
+  await expect(page.getByTestId('annotation-save-button')).toHaveText('저장됨',{timeout:10_000});return {queue_id:scope.chosen.id,cursor:scope.chosen.cursor,revision:scope.chosen.revision,
    file_path:target.file_path,image_uuid:image.image_uuid,image_revision:image.revision,source_sha256:target.source_sha256};};
  const rawPattern=origin+'/api/dataset/raw/**',fallback=(route:Route)=>route.fallback();
  const openImage=async(scope:Scope)=>{
@@ -206,7 +206,7 @@ async function exerciseQueueAdvanceHandoff(page:Page,w:Workspace,e:Evidence,orig
   const annotation=JSON.parse(labels.bytes.toString('utf8'));expect(annotation).toEqual(scope.annotations[target.file_path]);const metadata=scope.metadata.find(row=>row.file_path===target.file_path);expect(metadata).toBeTruthy();
   expect(annotation.metadata).toMatchObject({file_path:target.file_path,content_hash:target.source_sha256,image_uuid:metadata.image_uuid,revision:metadata.revision});
   const thumb=page.locator('[data-labeling-filmstrip]').getByRole('img',{name:path.basename(target.file_path),exact:true});await expect(thumb.locator('..')).toHaveClass(/border-blue-500/,{timeout:10_000});
-  expect(new URL((await thumb.getAttribute('src'))!,page.url()).searchParams.get('file_path')).toBe(target.file_path);await expect(page.getByTestId('annotation-save-button')).toHaveText('Saved',{timeout:10_000});
+  expect(new URL((await thumb.getAttribute('src'))!,page.url()).searchParams.get('file_path')).toBe(target.file_path);await expect(page.getByTestId('annotation-save-button')).toHaveText('저장됨',{timeout:10_000});
   return {raw:raw.proof,annotations:labels.proof,file_path:target.file_path,image_uuid:metadata.image_uuid,image_revision:metadata.revision,source_sha256:target.source_sha256};
  };
  const imageReads=(scope:Scope,target:any,deadline:number)=>({

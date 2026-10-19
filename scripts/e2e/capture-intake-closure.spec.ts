@@ -63,7 +63,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  await page.getByTitle('바운딩 박스 (BBox - 2)',{exact:true}).click();
  const canvas=(await page.locator('[data-canvas-container]').boundingBox())!,x=canvas.x+(canvas.width-32)/2,y=canvas.y+(canvas.height-32)/2;
  await page.mouse.move(x+4,y+4);await page.mouse.down();await page.mouse.move(x+20,y+20,{steps:5});await page.mouse.up();
- const saved=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/annotations/save'&&r.request().method()==='POST');await page.getByRole('button',{name:'Save Changes',exact:true}).click();expect((await saved).status()).toBe(200);
+ const saved=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/annotations/save'&&r.request().method()==='POST');await page.getByRole('button',{name:'변경 저장',exact:true}).click();expect((await saved).status()).toBe(200);
  const annotation=await api('/api/annotations/'+path.basename(image,'.png')+'?file_path='+encodeURIComponent(image));expect(annotation.annotations[0].bbox).toEqual([4,4,20,20]);
  const afterLabelTruth=await api('/api/image-truth?'+new URLSearchParams({image_path:image,task:'classification'})+'&classes=ok&classes=ng');expect(afterLabelTruth.verdict).toBe('UNKNOWN');
  const afterLabelMetadata=(await api('/api/dataset/metadata?limit=10')).items.find((r:any)=>r.file_path===image);expect(afterLabelMetadata.usage_state).toBe('not_used');

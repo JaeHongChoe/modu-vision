@@ -308,7 +308,7 @@ export const LabelingToolbar: React.FC = () => {
           >
             {maskVisible ? <Eye className="w-3.5 h-3.5 text-cyan-400" /> : <EyeOff className="w-3.5 h-3.5 text-slate-500" />}
           </button>
-          <span className="text-[11px] font-mono tabular-nums text-slate-400">Mask:</span>
+          <span className="text-[11px] font-mono tabular-nums text-slate-400">마스크:</span>
           <input
             type="range"
             min="0"
@@ -337,7 +337,7 @@ export const LabelingToolbar: React.FC = () => {
           }`}
         >
           <CheckCircle2 className={`w-4 h-4 ${isNormalMarked ? 'text-[#10B981]' : 'text-slate-400'}`} />
-          <span>{isNormalMarked ? 'Normal (OK) Part' : 'Mark as Normal (OK)'}</span>
+          <span>{isNormalMarked ? '정상(OK) 부품' : '정상(OK)으로 표시'}</span>
         </button>
       </div>
 
@@ -412,7 +412,7 @@ export const LabelingToolbar: React.FC = () => {
           }`}
         >
           <Save className="w-3.5 h-3.5" />
-          <span>{isSaving ? 'Saving...' : saveMessage || (isDirty ? 'Save Changes' : 'Saved')}</span>
+          <span>{isSaving ? '저장 중…' : saveMessage || (isDirty ? '변경 저장' : '저장됨')}</span>
         </button>
       </div>
     </div>

@@ -74,7 +74,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
    await page.mouse.move(box!.x+35,box!.y+35);await page.mouse.down();await page.mouse.move(box!.x+90,box!.y+80,{steps:8});await page.mouse.up();
   }
   await expect(page.getByTitle('라벨 삭제',{exact:true})).toHaveCount(0);
-  await expect(page.getByRole('button',{name:'Save Changes',exact:true})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'변경 저장',exact:true})).toHaveCount(0);
   await expect(page.getByText('이 이미지에는 라벨이 없습니다',{exact:true})).toBeVisible();
   await page.keyboard.press('Escape');expect(writes.slice(emptyWrites)).toEqual([]);
   const after=await emptySnapshot();expect(after).toEqual(emptyBefore);

@@ -299,7 +299,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
    await page.mouse.move(b.x+b.width/2-15,b.y+b.height/2);await page.mouse.down();await page.mouse.move(b.x+b.width/2+15,b.y+b.height/2,{steps:5});await page.mouse.up();
   }
   await expect(page.getByTitle('라벨 삭제',{exact:true})).toHaveCount(0);
-  await expect(page.getByRole('button',{name:'Save Changes',exact:true})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'변경 저장',exact:true})).toHaveCount(0);
   expect(writes.slice(start)).toEqual([]);const after=await unchanged(emptyBefore);await screenshot(action+'-empty');
   cells.push({action:'U030.'+action,dimension:'empty',before:emptyBefore,after,mutations:writes.slice(start),actual_current_image_absent:true,harness_disk_dataset_empty_claim:false});
  }
@@ -348,7 +348,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
    const refreshed=await refresh!;expect(refreshed.status()).toBe(200);importReply={status:200,body:await withinOriginalReadDeadline(readTimes.get(refreshed.request())!,()=>refreshed.text()),request:refreshed.request().postData(),order:importOrder};
    const loaded=await images!;expect(loaded.status()).toBe(200);imageReply={status:200,body:await withinOriginalReadDeadline(readTimes.get(loaded.request())!,()=>loaded.text()),url:loaded.url(),order:order.get(loaded.request())};
    const body=JSON.parse(imageReply.body);expect(body.total).toBe(1);expect(body.items).toHaveLength(1);expect(body.items[0].file_path).toBe(imagePath);
-   await expect(rows()).toHaveCount(2);await expect(saveButton()).toContainText('Saved');await expect(page.getByText('1 / 1',{exact:true})).toBeVisible();
+   await expect(rows()).toHaveCount(2);await expect(saveButton()).toContainText('저장됨');await expect(page.getByText('1 / 1',{exact:true})).toBeVisible();
   }
   const mutations=writes.slice(start);assertSaveCycle(mutations,status,source);saveCycles.push({label,result,importReply,imageReply,mutations});return result;
  };
@@ -378,7 +378,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
    await page.getByTitle(action==='brush-class-mask'?'브러시 마스크 (Brush - 5)':'마스크 지우개 (Eraser - 6)',{exact:true}).click();
    await stroke(80,90,105,'right');await page.keyboard.press('Escape');
   }
-  await expect(rows()).toHaveCount(2);await expect(page.getByRole('button',{name:'Save Changes',exact:true})).toHaveCount(0);
+  await expect(rows()).toHaveCount(2);await expect(page.getByRole('button',{name:'변경 저장',exact:true})).toHaveCount(0);
   await expect(page.getByTitle('실행 취소 (Ctrl+Z)',{exact:true})).toBeDisabled();await expect(page.getByTitle('다시 실행 (Ctrl+Y)',{exact:true})).toBeDisabled();
   expect(writes.slice(start)).toEqual([]);const after=await unchanged(initialProtected);await screenshot(action+'-invalid');
   cells.push({action:'U030.'+action,dimension:'invalid',before:initialProtected,after,mutations:writes.slice(start),unsupported_right_pointer_button:action!=='mask-undo-redo',nonempty_no_history:action==='mask-undo-redo',escape_brush_cancel_claim:false});
@@ -395,12 +395,12 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  };
  const cancel=async(action:string,makeDraft:()=>Promise<void>)=>{
   await focus(true);await selectClass();await recenter();const before=await protect(action+'-cancel',roots,routes),viewBefore=await view(),start=writes.length;
-  await makeDraft();await expect(page.getByRole('button',{name:'Save Changes',exact:true})).toBeVisible();
+  await makeDraft();await expect(page.getByRole('button',{name:'변경 저장',exact:true})).toBeVisible();
   await expect.poll(async()=> (await view()).source_plane.sha256).not.toBe(viewBefore.source_plane.sha256);const draftView=await view();
   await focus(false);await page.getByRole('button',{name:'이미지 정보·검토',exact:true}).click();
   const read=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/annotations/part'&&r.request().method()==='GET'&&new URL(r.url()).searchParams.get('file_path')===imagePath,{timeout:10_000});
   await page.getByRole('button',{name:'현재 편집을 버리고 최신 라벨 불러오기',exact:true}).click();const reply=await read;expect(reply.status()).toBe(200);const originalReply={status:200,body:await withinOriginalReadDeadline(readTimes.get(reply.request())!,()=>reply.text()),url:reply.url()};
-  await expect(rows()).toHaveCount(2);await expect(page.getByRole('button',{name:'Save Changes',exact:true})).toHaveCount(0);
+  await expect(rows()).toHaveCount(2);await expect(page.getByRole('button',{name:'변경 저장',exact:true})).toHaveCount(0);
   await page.getByRole('button',{name:'이미지 정보·검토',exact:true}).click();await focus(true);await recenter();
   await expect.poll(async()=>{const actual=await view();assertSameRenderedSourcePlane(actual,viewBefore);return true;}).toBe(true);
   const after=await unchanged(before);expect(writes.slice(start)).toEqual([]);const viewAfter=await view();assertSameRenderedSourcePlane(viewAfter,viewBefore);await screenshot(action+'-cancel-explicit-server-read');
@@ -415,7 +415,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   cells.push({action:'U030.'+action,dimension:'handoff',before,atPreparation,returned,mutations:writes.slice(start),training_or_dataset_adoption_claim:false});
  };
  const error=async(action:string,makeDraft:()=>Promise<void>,prior:any,priorOracle:any,operation:'brush'|'eraser'|'undo',restoreRecord?:any)=>{
-  const before=await protect(action+'-error',roots,routes);await makeDraft();await expect(page.getByRole('button',{name:'Save Changes',exact:true})).toBeVisible();
+  const before=await protect(action+'-error',roots,routes);await makeDraft();await expect(page.getByRole('button',{name:'변경 저장',exact:true})).toBeVisible();
   const route='**/api/annotations/save',detail='Controlled '+action+' raster save unavailable';let failed:SavedReply;
   await page.route(route,r=>r.fulfill({status:503,json:{detail}}));
   try{

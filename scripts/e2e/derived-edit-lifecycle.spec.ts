@@ -108,7 +108,7 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, sourceE
   const brightSave = panel.getByRole('button', {name: '밝기 새 버전 저장', exact: true});
   const stages = page.getByRole('navigation', {name: 'Workflow Stages'});
   const mount = async () => {
-    await stages.getByRole('button').nth(1).click(); await expect(page.getByTestId('annotation-save-button')).toHaveText('Saved');
+    await stages.getByRole('button').nth(1).click(); await expect(page.getByTestId('annotation-save-button')).toHaveText('저장됨');
     const focus = page.getByRole('button', {name: '집중 편집', exact: true}); if (await focus.getAttribute('aria-pressed') === 'true') await focus.click();
     const summary = page.locator('summary').filter({hasText: '원본 보존 이미지 편집 · 파생 버전'});
     if (await summary.locator('..').getAttribute('open') === null) await summary.click();
@@ -353,7 +353,7 @@ test('native empty align and brightness actions preserve owning A versions throu
     ownerSelections.push({owner: owner.id, selected, response_context: context}); return context;
   };
   const mountA = async (historyCount: number) => {
-    await stages.getByRole('button').nth(1).click(); await expect(page.getByTestId('annotation-save-button')).toHaveText('Saved'); await focusOff();
+    await stages.getByRole('button').nth(1).click(); await expect(page.getByTestId('annotation-save-button')).toHaveText('저장됨'); await focusOff();
     const summary = page.locator('summary').filter({hasText: '원본 보존 이미지 편집 · 파생 버전'});
     if (await summary.locator('..').getAttribute('open') === null) await summary.click();
     await expect(panel).toBeVisible(); await expect(choice.locator('option')).toHaveCount(historyCount + 1);

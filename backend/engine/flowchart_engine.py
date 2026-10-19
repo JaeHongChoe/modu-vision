@@ -389,7 +389,7 @@ def get_default_flowchart() -> FlowchartPipeline:
                 id="node_input",
                 position={"x": 50, "y": 180},
                 data=FlowNodeData(
-                    label="Camera Raw Input",
+                    label="카메라 원본 입력",
                     node_type="input",
                     params={"resolution": "1024x1024", "format": "RGB"},
                 ),
@@ -438,10 +438,10 @@ def get_default_flowchart() -> FlowchartPipeline:
             ),
         ],
         edges=[
-            FlowEdge(id="e1-2", source="node_input", target="node_crop", label="Raw Feed"),
-            FlowEdge(id="e2-3", source="node_crop", target="node_inspect", label="ROI Crops"),
-            FlowEdge(id="e3-4", source="node_inspect", target="node_decision", label="Defect Scores"),
-            FlowEdge(id="e4-5", source="node_decision", target="node_output", label="Verdict OK/NG"),
+            FlowEdge(id="e1-2", source="node_input", target="node_crop", label="원본 영상"),
+            FlowEdge(id="e2-3", source="node_crop", target="node_inspect", label="ROI 잘라내기"),
+            FlowEdge(id="e3-4", source="node_inspect", target="node_decision", label="결함 점수"),
+            FlowEdge(id="e4-5", source="node_decision", target="node_output", label="판정 OK/NG"),
         ],
     )
 
@@ -454,7 +454,7 @@ def get_single_segmentation_flowchart(job_id: Optional[str] = None) -> Flowchart
         description="원본 해상도 타일 검사 -> OK/NG/REVIEW 판정 -> 로컬 미리보기",
         nodes=[
             FlowNode(id="node_input", position={"x": 40, "y": 160}, data=FlowNodeData(
-                label="Inspection image", node_type="input",
+                label="검사 이미지", node_type="input",
             )),
             FlowNode(id="node_inspect", position={"x": 360, "y": 160}, data=FlowNodeData(
                 label="원본 타일 결함 분할", node_type="inspection",
@@ -462,16 +462,16 @@ def get_single_segmentation_flowchart(job_id: Optional[str] = None) -> Flowchart
                 params={"min_defect_area_px": 8},
             )),
             FlowNode(id="node_decision", position={"x": 680, "y": 160}, data=FlowNodeData(
-                label="Defect decision", node_type="decision", rule="any_defect_is_ng",
+                label="결함 판정", node_type="decision", rule="any_defect_is_ng",
             )),
             FlowNode(id="node_output", position={"x": 1000, "y": 160}, data=FlowNodeData(
-                label="Inspection result", node_type="output",
+                label="검사 결과", node_type="output",
             )),
         ],
         edges=[
-            FlowEdge(id="input-inspect", source="node_input", target="node_inspect", label="Original image"),
-            FlowEdge(id="inspect-decision", source="node_inspect", target="node_decision", label="Defect result"),
-            FlowEdge(id="decision-output", source="node_decision", target="node_output", label="Local verdict"),
+            FlowEdge(id="input-inspect", source="node_input", target="node_inspect", label="원본 이미지"),
+            FlowEdge(id="inspect-decision", source="node_inspect", target="node_decision", label="결함 결과"),
+            FlowEdge(id="decision-output", source="node_decision", target="node_output", label="판정"),
         ],
     )
 
@@ -484,23 +484,23 @@ def get_single_detection_flowchart(job_id: Optional[str] = None) -> FlowchartPip
         description="결함 객체 검출 -> 검출 수 기준 OK/NG 판정 -> 로컬 미리보기",
         nodes=[
             FlowNode(id="node_input", position={"x": 40, "y": 160}, data=FlowNodeData(
-                label="Inspection image", node_type="input",
+                label="검사 이미지", node_type="input",
             )),
             FlowNode(id="node_crop", position={"x": 360, "y": 160}, data=FlowNodeData(
                 label="결함 객체 검출", node_type="detection_crop", task="detection",
                 model_job_id=job_id, threshold=0.5, crop_padding=0,
             )),
             FlowNode(id="node_decision", position={"x": 680, "y": 160}, data=FlowNodeData(
-                label="Defect decision", node_type="decision", rule="any_defect_is_ng",
+                label="결함 판정", node_type="decision", rule="any_defect_is_ng",
             )),
             FlowNode(id="node_output", position={"x": 1000, "y": 160}, data=FlowNodeData(
-                label="Inspection result", node_type="output",
+                label="검사 결과", node_type="output",
             )),
         ],
         edges=[
-            FlowEdge(id="input-detect", source="node_input", target="node_crop", label="Original image"),
-            FlowEdge(id="detect-decision", source="node_crop", target="node_decision", label="Detected defects"),
-            FlowEdge(id="decision-output", source="node_decision", target="node_output", label="Local verdict"),
+            FlowEdge(id="input-detect", source="node_input", target="node_crop", label="원본 이미지"),
+            FlowEdge(id="detect-decision", source="node_crop", target="node_decision", label="검출된 결함"),
+            FlowEdge(id="decision-output", source="node_decision", target="node_output", label="판정"),
         ],
     )
 

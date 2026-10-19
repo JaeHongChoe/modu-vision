@@ -122,7 +122,7 @@ test('native independent direction rejects invalid values and persists an intent
   const point=async(x:number,y:number)=>{const b=await page.locator('[data-canvas-container]').boundingBox();expect(b).not.toBeNull();return{x:b!.x+(b!.width-256)/2+x,y:b!.y+(b!.height-256)/2+y};};
   const drag=async(x1:number,y1:number,x2:number,y2:number)=>{const a=await point(x1,y1),b=await point(x2,y2);await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(b.x,b.y,{steps:8});await page.mouse.up();};
   const query='/api/annotations/part?file_path='+encodeURIComponent(image);
-  const save=async()=>{const pending=page.waitForResponse(reply=>new URL(reply.url()).pathname==='/api/annotations/save'&&reply.request().method()==='POST');await page.getByRole('button',{name:'Save Changes',exact:true}).click();const reply=await io.captured(await pending);expect(reply.status,reply.body).toBe(200);expect(JSON.parse(reply.body).status).toBe('saved');return{reply,annotation:await io.value(query)};};
+  const save=async()=>{const pending=page.waitForResponse(reply=>new URL(reply.url()).pathname==='/api/annotations/save'&&reply.request().method()==='POST');await page.getByRole('button',{name:'변경 저장',exact:true}).click();const reply=await io.captured(await pending);expect(reply.status,reply.body).toBe(200);expect(JSON.parse(reply.body).status).toBe('saved');return{reply,annotation:await io.value(query)};};
   await page.getByTitle('바운딩 박스 (BBox - 2)',{exact:true}).click();await drag(20,20,70,60);const boxInitial=await save();
   await page.getByRole('button',{name:/^Crack(?: \d+)?$/}).click();await page.getByTitle('회전 바운딩 박스 (Rotated BBox OBB - 3)',{exact:true}).click();await page.getByTitle('실제 크기 (1:1)',{exact:true}).click();await drag(70,150,150,190);
   const direction=page.getByLabel('객체 독립 방향 라벨',{exact:true}),angle=page.getByText('Angle (θ)',{exact:true}).locator('..').locator('..').getByRole('spinbutton');
@@ -142,7 +142,7 @@ test('native independent direction rejects invalid values and persists an intent
   assertWrites(io.writes,[...io.calls.filter(row=>!['GET','HEAD'].includes(row.method)).map(row=>({method:row.method,route:row.route,body:row.request})),
     ...[boxInitial,initial].flatMap(row=>[{method:'POST',route:'/api/annotations/save',body:JSON.parse(row.reply.request.body!)},refresh])]);
   const before=await io.snapshot('before-invalid',routes,roots),beforeLabel=fs.readFileSync(label),beforeWorkflow=fs.readFileSync(workflow),beforeMask=fs.readFileSync(mask);const writeStart=io.writes.length;
-  for(const invalid of ['-1','360']){await direction.fill(invalid);await direction.press('Tab');await expect(direction).toHaveValue('315');await expect(angle).toHaveValue('30');await expect(page.getByTestId('annotation-save-button')).toContainText('Saved');}
+  for(const invalid of ['-1','360']){await direction.fill(invalid);await direction.press('Tab');await expect(direction).toHaveValue('315');await expect(angle).toHaveValue('30');await expect(page.getByTestId('annotation-save-button')).toContainText('저장됨');}
   await io.settle();await page.reload();await expect(page.getByRole('button',{name:/^Crack 1$/})).toBeVisible();await page.getByTitle('라벨 삭제',{exact:true}).nth(1).locator('..').locator('..').click();
   await expect(direction).toHaveValue('315');await expect(angle).toHaveValue('30');
   const afterInvalid=await io.snapshot('after-invalid-reopen',routes,roots);expect(afterInvalid).toEqual(before);expect(io.writes.slice(writeStart)).toEqual([]);
@@ -290,13 +290,13 @@ async function directionHandoffExercise(page:Page,w:Workspace,e:Evidence,origin:
   expect(request.annotations[0].direction_deg).toBe(scope.direction);expect(request.annotations[0].rotated_bbox).toEqual([110,170,80,40,scope.angle]);
   expect(refresh.request().postDataJSON()).toEqual({folder_path:scope.source,task:'segmentation',validate_images:false});await responseBody(refresh,scope,deadline,scope.tag+'-manifest-refreshed');
   scope.saved=checkSaved(scope,await readAnnotation(scope));expect(scope.saved.metadata.revision).toBe(before.metadata.revision+1);expect(scope.saved.metadata.image_uuid).toBe(before.metadata.image_uuid);
-  expect(savedRaw.body.metadata).toEqual(scope.saved.metadata);await expect(save).toContainText('Saved');
+  expect(savedRaw.body.metadata).toEqual(scope.saved.metadata);await expect(save).toContainText('저장됨');
   await e.screenshot(page,'direction-'+scope.tag+'-distinct-direction-and-axis-saved');
  };
  const selectSaved=async(scope:DirectionHandoffScope)=>{
   await current(scope);await expect(page.getByTitle('라벨 삭제',{exact:true})).toHaveCount(1);
   await page.getByTitle('라벨 삭제',{exact:true}).locator('..').locator('..').click();
-  await expect(direction).toHaveValue(String(scope.direction));await expect(angle).toHaveValue(String(scope.angle));await expect(save).toContainText('Saved');
+  await expect(direction).toHaveValue(String(scope.direction));await expect(angle).toHaveValue(String(scope.angle));await expect(save).toContainText('저장됨');
   return checkSaved(scope,await readAnnotation(scope));
  };
  const state=async(scope:DirectionHandoffScope)=>{

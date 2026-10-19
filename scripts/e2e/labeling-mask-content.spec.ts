@@ -31,11 +31,11 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Owne
  const stroke=async(offset:number,from:number,to:number)=>{
   const bounds=(await page.locator('[data-canvas-container]').boundingBox())!;const x=bounds.x+bounds.width/2,y=bounds.y+bounds.height/2+offset;
   await page.mouse.move(x+from,y);await page.mouse.down();await page.mouse.move(x+to,y,{steps:12});await page.mouse.up();
-  await expect(page.getByRole('button',{name:'Save Changes',exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'변경 저장',exact:true})).toBeVisible();
  };
  const save=async()=>{
   const response=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/annotations/save'&&r.request().method()==='POST');
-  await page.getByRole('button',{name:'Save Changes',exact:true}).click();expect((await response).status()).toBe(200);return api(query);
+  await page.getByRole('button',{name:'변경 저장',exact:true}).click();expect((await response).status()).toBe(200);return api(query);
  };
  await page.getByRole('button',{name:/^Solder Bridge(?: \d+)?$/}).click();await page.getByTitle('브러시 마스크 (Brush - 5)',{exact:true}).click();
  await stroke(0,-50,50);const first=await save();const firstMask=first.annotations.find((a:any)=>a.label==='Solder Bridge');expect(firstMask.type).toBe('brush_mask');

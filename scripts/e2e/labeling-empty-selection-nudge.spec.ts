@@ -194,7 +194,7 @@ test('U020 empty selection ignores a delivered coarse nudge after an owning OBB 
       }
       expect(headers['x-vision-project']).toBe(project.id);
       expect(JSON.parse(headers['x-vision-context']).project_id).toBe(project.id);
-      await expect(saveButton).toHaveText('Saved', {timeout: Math.max(1, Math.floor(deadline - performance.now()))});
+      await expect(saveButton).toHaveText('저장됨', {timeout: Math.max(1, Math.floor(deadline - performance.now()))});
       return {request: reply.request().postDataJSON(), original: byRequest.get(reply.request())!, annotation: await read(annotationRoute, undefined, undefined, headers)};
     };
     const initial = await save(); expect(initial.annotation.body.annotations).toHaveLength(1);
@@ -230,7 +230,7 @@ test('U020 empty selection ignores a delivered coarse nudge after an owning OBB 
     const center = await point(110, 170); await page.mouse.click(center.x, center.y);
     await expect(direction).toHaveValue('315', {timeout: 10_000}); await expect(angle).toHaveValue('30', {timeout: 10_000});
     const positiveKey = await delivered('positive', true);
-    await expect(saveButton).toHaveText('Save Changes', {timeout: 10_000});
+    await expect(saveButton).toHaveText('변경 저장', {timeout: 10_000});
     const moved = await save(), movedOBB = moved.annotation.body.annotations[0];
     expect(moved.annotation.body.annotations).toHaveLength(1);
     expect(movedOBB).toMatchObject({id: initial.annotation.body.annotations[0].id, type: 'rotated_bbox', label: 'Crack',
@@ -269,10 +269,10 @@ test('U020 empty selection ignores a delivered coarse nudge after an owning OBB 
     await expect(direction).toHaveCount(0, {timeout: 10_000}); await expect(angle).toHaveCount(0, {timeout: 10_000});
     await expect(page.getByTitle('라벨 삭제', {exact: true})).toHaveCount(1, {timeout: 10_000});
     await expect(page.getByTestId('canvas-hud')).toContainText(/W:\s*--/, {timeout: 10_000});
-    await expect(saveButton).toHaveText('Saved', {timeout: 10_000});
+    await expect(saveButton).toHaveText('저장됨', {timeout: 10_000});
     const emptyKey = await delivered('empty', false); proof.empty_key = emptyKey;
     await expect(direction).toHaveCount(0, {timeout: 10_000}); await expect(angle).toHaveCount(0, {timeout: 10_000});
-    await expect(saveButton).toHaveText('Saved', {timeout: 10_000});
+    await expect(saveButton).toHaveText('저장됨', {timeout: 10_000});
     const after = await snapshot(); proof.protected_after = after; expect(after).toEqual(before);
     expect(writes.slice(writeBoundary)).toEqual([]); expect(writes).toEqual(expectedWrites);
     expect(fs.readFileSync(image)).toEqual(originalImage);

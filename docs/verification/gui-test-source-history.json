@@ -189,8 +189,8 @@
       "test": "scripts/e2e/review-queue-progress-lifecycle.spec.ts::saved queue progress retries preserve labels and empty selection and origin failures retain exact saved records",
       "recorded_test_source_sha256": "d2c7b39a7f578866deb7b302618f03d63e005398cbee023600805ae793e9df7e",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "08a99853a658805dc65b7f2eb8537a4f758dc7ad06efd943090f79190acd0d83",
-      "reason": "Inherited public spec anchor retains exact historical test bytes. Current fixture opens the real OCR disclosure before its existing original-response wait; original deadlines, schemas and protection guards remain; no new current GUI execution."
+      "current_test_source_sha256": "a83dc23d3689c91149e9d5141c467709a76c59ea7518f774dbb39846a8e4b747",
+      "reason": "Inherited public spec anchor retains exact historical test bytes. Current fixture opens the real OCR disclosure before its existing original-response wait; original deadlines, schemas and protection guards remain; no new current GUI execution. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-08-queue-progress-2b28835-electron.json",
@@ -199,8 +199,8 @@
       "test": "scripts/e2e/review-queue-progress-lifecycle.spec.ts::native saved queue progress retries and real empty states preserve complete originals labels and older origin",
       "recorded_test_source_sha256": "d2c7b39a7f578866deb7b302618f03d63e005398cbee023600805ae793e9df7e",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "08a99853a658805dc65b7f2eb8537a4f758dc7ad06efd943090f79190acd0d83",
-      "reason": "Inherited public spec anchor retains exact historical test bytes. Current fixture opens the real OCR disclosure before its existing original-response wait; original deadlines, schemas and protection guards remain; no new current GUI execution."
+      "current_test_source_sha256": "a83dc23d3689c91149e9d5141c467709a76c59ea7518f774dbb39846a8e4b747",
+      "reason": "Inherited public spec anchor retains exact historical test bytes. Current fixture opens the real OCR disclosure before its existing original-response wait; original deadlines, schemas and protection guards remain; no new current GUI execution. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-08-saved-record-error-31a3d1f-browser.json",
@@ -249,8 +249,8 @@
       "test": "scripts/e2e/derived-adoption-import-four-controls.spec.ts::derived review real revision conflict and owned abort retries plus original non LabelMe folder refusal preserve original data",
       "recorded_test_source_sha256": "9eb213a22f9f4868af39277eb96a6a841e49272039bf82fb5a314ed4ac7d6a2d",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "6830327e87099c8b9c576abd33009acbc12074ea5012a76a98af097bead75f55",
-      "reason": "Inherited public spec anchor retains exact historical test bytes. Current directory-link checks support verified Linux and APFS semantics with all regular-file and ownership guards retained; no new current GUI execution."
+      "current_test_source_sha256": "927ef963743d914d60d8fd9cc928f7019839570100cc1760ae9eb78ccdd42b74",
+      "reason": "Inherited public spec anchor retains exact historical test bytes. Current directory-link checks support verified Linux and APFS semantics with all regular-file and ownership guards retained; no new current GUI execution. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-14-derived-adoption-import-four-controls-electron.json",
@@ -259,8 +259,8 @@
       "test": "scripts/e2e/derived-adoption-import-four-controls.spec.ts::native derived review real revision conflict and owned abort retries plus original non LabelMe folder refusal preserve original data",
       "recorded_test_source_sha256": "9eb213a22f9f4868af39277eb96a6a841e49272039bf82fb5a314ed4ac7d6a2d",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "6830327e87099c8b9c576abd33009acbc12074ea5012a76a98af097bead75f55",
-      "reason": "Inherited public spec anchor retains exact historical test bytes. Current directory-link checks support verified Linux and APFS semantics with all regular-file and ownership guards retained; no new current GUI execution."
+      "current_test_source_sha256": "927ef963743d914d60d8fd9cc928f7019839570100cc1760ae9eb78ccdd42b74",
+      "reason": "Inherited public spec anchor retains exact historical test bytes. Current directory-link checks support verified Linux and APFS semantics with all regular-file and ownership guards retained; no new current GUI execution. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-09-flow-input-history-d2d7f3e-electron.json",
@@ -423,9 +423,9 @@
       "reason": "Inherited public spec anchor retains the exact historical test declaration. Reviewed current fixture uses real authenticated project/provider and validated library image identity under original10s execution/recovery guards; no new GUI execution or current acceptance is supplied."
     },
     {
-      "current_test_source_sha256": "28ac6c6f70f4b8bda405a4c8e52e7efa68f118522cd2ae3711a12a7efcf15f56",
+      "current_test_source_sha256": "d4be86046140bd5049aa46388f0ba91915650c2f693e927e06af0c099d2bc181",
       "execution_source_sha": "fdc004bef91f51b8bcae01735b68be9a5277f727",
-      "reason": "The retained public ancestor preserves the exact historical spec body. Current spec adds a non2xx annotation-read regression guard; historical receipts and scenario states are unchanged and do not supply new execution. Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed",
+      "reason": "The retained public ancestor preserves the exact historical spec body. Current spec adds a non2xx annotation-read regression guard; historical receipts and scenario states are unchanged and do not supply new execution. Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed",
       "receipt": "2026-10-10-root443-direction-old-electron.json",
       "receipt_sha256": "03051bb997d3bcd8d6bda737b4472322b964ba63f606060c384b30dd18c3d49b",
       "recorded_test_source_sha256": "859276df7e87a7247793a712f740e60deac40a4558350c1720fc0759e234f9fb",
@@ -433,9 +433,9 @@
       "test": "scripts/e2e/direction-field-input-boundaries.spec.ts::native independent direction rejects invalid values and persists an intentional empty label"
     },
     {
-      "current_test_source_sha256": "28ac6c6f70f4b8bda405a4c8e52e7efa68f118522cd2ae3711a12a7efcf15f56",
+      "current_test_source_sha256": "d4be86046140bd5049aa46388f0ba91915650c2f693e927e06af0c099d2bc181",
       "execution_source_sha": "fdc004bef91f51b8bcae01735b68be9a5277f727",
-      "reason": "The retained public ancestor preserves the exact historical spec body. Current spec adds a non2xx annotation-read regression guard; historical receipts and scenario states are unchanged and do not supply new execution. Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed",
+      "reason": "The retained public ancestor preserves the exact historical spec body. Current spec adds a non2xx annotation-read regression guard; historical receipts and scenario states are unchanged and do not supply new execution. Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed",
       "receipt": "2026-10-10-root443-direction-handoff-browser.json",
       "receipt_sha256": "abc8df73ae55dd2b09a11682ea2b1ff0efd4246377352cf4381b0f90a1c38735",
       "recorded_test_source_sha256": "859276df7e87a7247793a712f740e60deac40a4558350c1720fc0759e234f9fb",
@@ -559,8 +559,8 @@
       "test": "scripts/e2e/vector-label-lifecycle.spec.ts::vector empty input service failures and explicit stage handoff preserve exact original labels",
       "recorded_test_source_sha256": "9f28943f680e05dba42037c0b6de10a2750161f6d321d12169b177c7b2cb08be",
       "retained_spec_commit": "f43cdb86bf5623dc7bbe431b65e0ce5f8c4ae681",
-      "current_test_source_sha256": "95908fe459410740625d033162dcb276d096bde2723b6e5d05877605a6e50fef",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean labeling-screen text (empty annotation list and list heading); the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "27ed30ae0fad651500ec2fb6096a265b9d5070e46bb40ceb1c297d2527062623",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean labeling-screen text (empty annotation list and list heading); the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-08-vector-null-mask-lifecycle-1a2e9e4-electron.json",
@@ -569,8 +569,8 @@
       "test": "scripts/e2e/vector-label-lifecycle.spec.ts::native vector empty input service failures and explicit stage handoff preserve exact original labels",
       "recorded_test_source_sha256": "9f28943f680e05dba42037c0b6de10a2750161f6d321d12169b177c7b2cb08be",
       "retained_spec_commit": "f43cdb86bf5623dc7bbe431b65e0ce5f8c4ae681",
-      "current_test_source_sha256": "95908fe459410740625d033162dcb276d096bde2723b6e5d05877605a6e50fef",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean labeling-screen text (empty annotation list and list heading); the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "27ed30ae0fad651500ec2fb6096a265b9d5070e46bb40ceb1c297d2527062623",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean labeling-screen text (empty annotation list and list heading); the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-19-named-labelset-copy-invalid-c91c11f-browser.json",
@@ -579,8 +579,8 @@
       "test": "scripts/e2e/named-labelset-copy-invalid.spec.ts::named labelset copy rejects its own invalid source tree with actual 422 and preserves original labels",
       "recorded_test_source_sha256": "ff2fa39a7a51f08e19577863b6cbd284a5b65cb2b0cc065c6edbfda281fe7fd2",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "c1df69301250473803ec0e6a94aaef98a781fc4eb3879ae9bf0d4db95cc35930",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "22502d33c7059e4d5abe40497696368f6196a7564cf6db1f79e264ac41e8cf9f",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-10-classification-270ff30-old-electron.json",
@@ -739,8 +739,8 @@
       "test": "scripts/e2e/team-draft-lease-error-lifecycle.spec.ts::empty image owner omits edit start and real Save clicks preserve both projects through exact reopen",
       "recorded_test_source_sha256": "e0947986ddfe8e995c965d9a80f8c4fa1d1fd44b31e45cae5482c46d1d457473",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "4d53a8948e60ec1600cffce74bb08ed5dbe966f170d4f16e746589329e2d78f3",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "d65f93e1cc87e37fec904dc3c47702ec37510edf5780636a87ce276ec7dcb28f",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-11-app-f024-root536-new-electron-1.json",
@@ -749,8 +749,8 @@
       "test": "scripts/e2e/team-draft-lease-error-lifecycle.spec.ts::native empty image owner omits edit start and actual Save clicks preserve exact original labels and reopen",
       "recorded_test_source_sha256": "e0947986ddfe8e995c965d9a80f8c4fa1d1fd44b31e45cae5482c46d1d457473",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "4d53a8948e60ec1600cffce74bb08ed5dbe966f170d4f16e746589329e2d78f3",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "d65f93e1cc87e37fec904dc3c47702ec37510edf5780636a87ce276ec7dcb28f",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-11-app-f024-root536-old-browser-3.json",
@@ -759,8 +759,8 @@
       "test": "scripts/e2e/team-draft-lease-error-lifecycle.spec.ts::draft apply503 and accepted dialog cancel preserve the original draft; lease503 explicitly recovers",
       "recorded_test_source_sha256": "e0947986ddfe8e995c965d9a80f8c4fa1d1fd44b31e45cae5482c46d1d457473",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "4d53a8948e60ec1600cffce74bb08ed5dbe966f170d4f16e746589329e2d78f3",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "d65f93e1cc87e37fec904dc3c47702ec37510edf5780636a87ce276ec7dcb28f",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-11-app-f024-root536-old-electron-5.json",
@@ -769,8 +769,8 @@
       "test": "scripts/e2e/team-draft-lease-error-lifecycle.spec.ts::native draft apply503 cancel and exact lease503 recovery preserve owned source labels and draft",
       "recorded_test_source_sha256": "e0947986ddfe8e995c965d9a80f8c4fa1d1fd44b31e45cae5482c46d1d457473",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "4d53a8948e60ec1600cffce74bb08ed5dbe966f170d4f16e746589329e2d78f3",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "d65f93e1cc87e37fec904dc3c47702ec37510edf5780636a87ce276ec7dcb28f",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-10-team-edit-lease-279-c0b1680d-browser.json",
@@ -779,8 +779,8 @@
       "test": "scripts/e2e/team-edit-lease-lifecycle.spec.ts::edit lease clean cancellation reload refusal and real project handoff preserve exact originals",
       "recorded_test_source_sha256": "1d31d64a30855992c24994ee4e1ecb62a6edb2f184465586d6e08f0841bf2cd7",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "7e35a1fe2a18c5466c1d3a3cd5f9be53903ef18bf1b985459767fc359e91bcf1",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "d83e1c44cfc8225cf3e27a170eeac1be7a3d530fec04f456d79178c6bf9f02e6",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-10-team-edit-lease-279-c0b1680d-electron.json",
@@ -789,8 +789,8 @@
       "test": "scripts/e2e/team-edit-lease-lifecycle.spec.ts::native edit lease cancellation reload refusal and project handoff retain original authority",
       "recorded_test_source_sha256": "1d31d64a30855992c24994ee4e1ecb62a6edb2f184465586d6e08f0841bf2cd7",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "7e35a1fe2a18c5466c1d3a3cd5f9be53903ef18bf1b985459767fc359e91bcf1",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "d83e1c44cfc8225cf3e27a170eeac1be7a3d530fec04f456d79178c6bf9f02e6",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-11-app-f024-root541-cancel-browser.json",
@@ -799,8 +799,8 @@
       "test": "scripts/e2e/annotation-unsent-cancel.spec.ts::unsent geometry Escape preserves saved bbox and client scope through exact A B A reopen",
       "recorded_test_source_sha256": "4c710d5779eff3a18b8e5bf178030324dec51aa94e3bbeeb53c5b2ecbf796d01",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "d8562095590b7d0f23511b3acbc9e4d65a8a3b855e2f23069028ef8114c65726",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "3e89cfaa7f4dd660242122ef6a4d0e89baf052e7520bf457bc8886595f793033",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-11-app-f024-root541-cancel-electron.json",
@@ -809,8 +809,8 @@
       "test": "scripts/e2e/annotation-unsent-cancel.spec.ts::native unsent geometry Escape preserves original saved bbox and owning client through A B A reopen",
       "recorded_test_source_sha256": "4c710d5779eff3a18b8e5bf178030324dec51aa94e3bbeeb53c5b2ecbf796d01",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "d8562095590b7d0f23511b3acbc9e4d65a8a3b855e2f23069028ef8114c65726",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "3e89cfaa7f4dd660242122ef6a4d0e89baf052e7520bf457bc8886595f793033",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-07-annotation-draft-boundaries-9880a31-browser.json",
@@ -819,8 +819,8 @@
       "test": "scripts/e2e/annotation-draft-boundaries.spec.ts::incomplete and cancelled annotation drafts cannot replace saved labels, failed save retries explicitly",
       "recorded_test_source_sha256": "4c2b64e4adaef9a202080bc21d0d26a91e9ff80623ff4882f258bcb52da53510",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "9db61285a93bc0467c90e8cb00d090111030074863a6f289de5bf578bb6c6b7d",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "722c8ad5c63995faacbf05c5ac2acbdae1e534906490960a20348c53c8f204de",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-07-annotation-draft-boundaries-9880a31-electron.json",
@@ -829,8 +829,8 @@
       "test": "scripts/e2e/annotation-draft-boundaries.spec.ts::native incomplete and cancelled annotation drafts preserve saved labels through explicit retry",
       "recorded_test_source_sha256": "4c2b64e4adaef9a202080bc21d0d26a91e9ff80623ff4882f258bcb52da53510",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "9db61285a93bc0467c90e8cb00d090111030074863a6f289de5bf578bb6c6b7d",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "722c8ad5c63995faacbf05c5ac2acbdae1e534906490960a20348c53c8f204de",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-10-gui398-legacy-comparison-existing-electron.json",
@@ -879,8 +879,8 @@
       "test": "scripts/e2e/team-draft-lease-error-lifecycle.spec.ts::empty draft recovery and reopened explicit apply preserve original labels across A B A",
       "recorded_test_source_sha256": "e0947986ddfe8e995c965d9a80f8c4fa1d1fd44b31e45cae5482c46d1d457473",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "4d53a8948e60ec1600cffce74bb08ed5dbe966f170d4f16e746589329e2d78f3",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "d65f93e1cc87e37fec904dc3c47702ec37510edf5780636a87ce276ec7dcb28f",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-11-app-f024-root536-old-electron-4.json",
@@ -889,8 +889,8 @@
       "test": "scripts/e2e/team-draft-lease-error-lifecycle.spec.ts::native empty recovery reopened draft and explicit apply remain scoped through project handoff",
       "recorded_test_source_sha256": "e0947986ddfe8e995c965d9a80f8c4fa1d1fd44b31e45cae5482c46d1d457473",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "4d53a8948e60ec1600cffce74bb08ed5dbe966f170d4f16e746589329e2d78f3",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "d65f93e1cc87e37fec904dc3c47702ec37510edf5780636a87ce276ec7dcb28f",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-10-gui398-review-browser.json",
@@ -929,8 +929,8 @@
       "test": "scripts/e2e/review-queue-handoff.spec.ts::saved queue returns to exact evaluation and gates training on saved data and policy",
       "recorded_test_source_sha256": "a6825c735b93a700c3a5bcee9a2e47f89c2adda0a7f7a4cec18226d8155fab4e",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "893a38076cb99e6275301f9e9a6c1f7e207caea4de240278f28ca19f784e3556",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "99ec84a2685511f47342fdf2c48a365f9b1901ef8897eb8807c6d69fcc9352bc",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-09-browser-context-e60919b-review-queue-handoff-electron.json",
@@ -939,8 +939,8 @@
       "test": "scripts/e2e/review-queue-handoff.spec.ts::native saved queue returns to exact evaluation and gates training on saved data and policy",
       "recorded_test_source_sha256": "a6825c735b93a700c3a5bcee9a2e47f89c2adda0a7f7a4cec18226d8155fab4e",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "893a38076cb99e6275301f9e9a6c1f7e207caea4de240278f28ca19f784e3556",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "99ec84a2685511f47342fdf2c48a365f9b1901ef8897eb8807c6d69fcc9352bc",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-11-root510-6345e81af8981e0cc0bb.json",
@@ -949,8 +949,8 @@
       "test": "scripts/e2e/labeling-vector-content.spec.ts::native bbox polygon OBB and independent direction retain exact saved geometry",
       "recorded_test_source_sha256": "569967074afdf1ff019cb42bae171f57bf8a19e3d6e9e31e86f230e8ffaf8fdc",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "5b13c82c94c87ff3fd268e1a3cc6295bb6c80132763a244ee8e123ca7fce201c",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "7d6a883ab124f1d11c047fd0d8d720784e57c53950571aa47fcb63ac8adb8706",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-11-root510-7c18c3d0c4474fa73243.json",
@@ -959,8 +959,8 @@
       "test": "scripts/e2e/labeling-vector-content.spec.ts::native OBB angle and independent direction nudge stay owned through A B A project handoff",
       "recorded_test_source_sha256": "569967074afdf1ff019cb42bae171f57bf8a19e3d6e9e31e86f230e8ffaf8fdc",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "5b13c82c94c87ff3fd268e1a3cc6295bb6c80132763a244ee8e123ca7fce201c",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "7d6a883ab124f1d11c047fd0d8d720784e57c53950571aa47fcb63ac8adb8706",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-17-u020-empty-selection-nudge-browser.json",
@@ -969,8 +969,8 @@
       "test": "scripts/e2e/labeling-empty-selection-nudge.spec.ts::U020 empty selection ignores a delivered coarse nudge after an owning OBB control",
       "recorded_test_source_sha256": "1fd0aec5059a85672ff1bc038c2b06d0b8a1ccaa143c3deaa12b59e128f75d98",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "571dc4c3221b86ce8e7d13b59db83fa611452d8993555194a987a024a40c588c",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "ca40573fa87445bf7cfa34f6e2718230d45dd1509c1fc0fd1ec684e50c65a979",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-11-root510-04b0a6184ee74eb4a571.json",
@@ -979,8 +979,8 @@
       "test": "scripts/e2e/keyboard-modal-isolation.spec.ts::modal keyboard cannot edit the selected background annotation",
       "recorded_test_source_sha256": "a241762cd168c12f846e942f501e394fe6fc2ace6b952d7f35c84292f529e9c7",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "f18e160b592b7fa80f5599c769ae3244f0975153c3a0cabd007ab9f0b1b3ab66",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "1ee06408566052ddc65951cd1f0ca3b26b30feb4e2b2ed4bebc2f1ae3fca1834",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-11-root510-e33b04517efa9dff7c52.json",
@@ -989,8 +989,8 @@
       "test": "scripts/e2e/keyboard-modal-isolation.spec.ts::native modal keyboard cannot edit the selected background annotation",
       "recorded_test_source_sha256": "a241762cd168c12f846e942f501e394fe6fc2ace6b952d7f35c84292f529e9c7",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "f18e160b592b7fa80f5599c769ae3244f0975153c3a0cabd007ab9f0b1b3ab66",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "1ee06408566052ddc65951cd1f0ca3b26b30feb4e2b2ed4bebc2f1ae3fca1834",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-11-root510-74de50c0ee785805ea9f.json",
@@ -999,8 +999,8 @@
       "test": "scripts/e2e/keyboard-modal-isolation.spec.ts::modal keyboard isolation and saved labels remain owning through A B A project handoff",
       "recorded_test_source_sha256": "a241762cd168c12f846e942f501e394fe6fc2ace6b952d7f35c84292f529e9c7",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "f18e160b592b7fa80f5599c769ae3244f0975153c3a0cabd007ab9f0b1b3ab66",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "1ee06408566052ddc65951cd1f0ca3b26b30feb4e2b2ed4bebc2f1ae3fca1834",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-08-vector-delete-undo-38b6995-browser.json",
@@ -1009,8 +1009,8 @@
       "test": "scripts/e2e/vector-delete-undo-lifecycle.spec.ts::vector delete undo invalid input failure cancellation and handoff preserve original saved labels",
       "recorded_test_source_sha256": "e19eecac84ef0797c3c66634381f6a2c58c779cc1a9bb3b827bbbceb81909589",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "86d8158fa42fbf4a9650fa501759aefbae88730f3c2874844ffcc5e6c6229060",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "ad9920c3a4d2d37654d05172874628c88ef3090ad89f774a66fa8e85cf5958af",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-08-vector-delete-undo-38b6995-electron.json",
@@ -1019,8 +1019,8 @@
       "test": "scripts/e2e/vector-delete-undo-lifecycle.spec.ts::native vector delete undo invalid input failure cancellation and handoff preserve original saved labels",
       "recorded_test_source_sha256": "e19eecac84ef0797c3c66634381f6a2c58c779cc1a9bb3b827bbbceb81909589",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "86d8158fa42fbf4a9650fa501759aefbae88730f3c2874844ffcc5e6c6229060",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "ad9920c3a4d2d37654d05172874628c88ef3090ad89f774a66fa8e85cf5958af",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-07-app-labeling-mask-content-electron.json",
@@ -1029,8 +1029,8 @@
       "test": "scripts/e2e/labeling-mask-content.spec.ts::native two-class brush erase undo redo and reload preserve exact mask content",
       "recorded_test_source_sha256": "21ea6a63e67a1f8538409129a19d00e326894b021945ae42d7f3cbb7ad1ecff9",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "b597c719d9fe6016003a7f141f8a8c26c1a68b6bda482a9e611391e784f6b892",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "c4fa9f56238ecb83d87806b48912c8c852cae18be89d196853dd9707cd16fff9",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-08-raster-lifecycle15-817f71f-electron.json",
@@ -1039,8 +1039,8 @@
       "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::native raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
       "recorded_test_source_sha256": "5f81545cd446471d593fab71f54f32609e07918a8a31fa78e356d40e39347890",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "510cb8185a1b97cf592efbc551a11a2b9c21d7c7437a7ea6e2315b8e5aeea946",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "ac6454aebc8c7f9c9ee15c132a7e6ec5a66a943f93995183fc5607acc2403ef9",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-08-raster-lifecycle15-817f71f-browser.json",
@@ -1049,8 +1049,188 @@
       "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
       "recorded_test_source_sha256": "5f81545cd446471d593fab71f54f32609e07918a8a31fa78e356d40e39347890",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "510cb8185a1b97cf592efbc551a11a2b9c21d7c7437a7ea6e2315b8e5aeea946",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "ac6454aebc8c7f9c9ee15c132a7e6ec5a66a943f93995183fc5607acc2403ef9",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+    },
+    {
+      "receipt": "2026-10-10-root456-derived-old-electron.json",
+      "receipt_sha256": "d4571df06d9cf502daa7b99da2bfc44720e5736d0e3a5be8f0fb1aa28ca060ad",
+      "execution_source_sha": "b081a54a904224825b48a37bf427abad7144cf4d",
+      "test": "scripts/e2e/derived-workflow-closure.spec.ts::native derived review branch retraining comparison and original return",
+      "recorded_test_source_sha256": "d2e84362bf5049d31f5653ee1dbc2668288051684f086e1613469e49bc1d7e80",
+      "retained_spec_commit": "bc9f02c52ed13247fd52d618cb3e7d829b4c91ba",
+      "current_test_source_sha256": "a81932ac70a7633c4863f04dbc87aa49f90f7f4c4c763159c1cb3423b577067a",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+    },
+    {
+      "receipt": "2026-10-09-gui05-folder-fd018f2-browser.json",
+      "receipt_sha256": "3b6993cbe059de3f0ba476b1fbc95c94ff2f9d8a454f4f473d46438f245273d6",
+      "execution_source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
+      "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::label exchange folder and unsent preview lifecycle preserve exact original handoff",
+      "recorded_test_source_sha256": "ba56ea675deaed387909644da0ba289c8b00e4796867f926b7bcf87b718c909c",
+      "retained_spec_commit": "bc9f02c52ed13247fd52d618cb3e7d829b4c91ba",
+      "current_test_source_sha256": "62a61d2aa4d1966e11a51908ee3d4bc2462589f2d1814e06f9cfdabbc37248d8",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+    },
+    {
+      "receipt": "2026-10-09-gui05-folder-fd018f2-electron.json",
+      "receipt_sha256": "0bd060bce2cbbb8dde2a49a81a926e03d5c6d4b030ee0c15fb5d6d7fc61e84f1",
+      "execution_source_sha": "fd018f28ae244f002fed9c88e80f7a0cf6b32cf3",
+      "test": "scripts/e2e/label-exchange-lifecycle.spec.ts::native label exchange folder and unsent preview lifecycle preserve original handoff",
+      "recorded_test_source_sha256": "ba56ea675deaed387909644da0ba289c8b00e4796867f926b7bcf87b718c909c",
+      "retained_spec_commit": "bc9f02c52ed13247fd52d618cb3e7d829b4c91ba",
+      "current_test_source_sha256": "62a61d2aa4d1966e11a51908ee3d4bc2462589f2d1814e06f9cfdabbc37248d8",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+    },
+    {
+      "receipt": "2026-10-09-current-label-return-3de0a94-electron.json",
+      "receipt_sha256": "815f379104c4c5556288f1dcc495dd29be39b1e05536ade947f17dc9d9ad1212",
+      "execution_source_sha": "3de0a9409adbbf88854cdb83b44e20e7ee490fde",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::native CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "recorded_test_source_sha256": "1a9a9e1f72fe9a78bca5683b025884f9b5651f341b4f1b5c1cb3b561aeb26f26",
+      "retained_spec_commit": "bc9f02c52ed13247fd52d618cb3e7d829b4c91ba",
+      "current_test_source_sha256": "1ff804b45acd0af46607b13abf290c811415048fc8812711797e2a5ebf8a6153",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+    },
+    {
+      "receipt": "2026-10-10-gui398-legacy-readiness-electron.json",
+      "receipt_sha256": "b0c8fb3a49cce99bb6eefa330348aa573fe3b4af20ea569d9cb8ae6f7ccdbd07",
+      "execution_source_sha": "fc3d284e579ac340bdf4b7d0a54e6cedf57d2c6b",
+      "test": "scripts/e2e/readiness-preview-lifecycle.spec.ts::source Electron readiness diagnosis and unsent grouped split lifecycle preserve exact originals and saved split",
+      "recorded_test_source_sha256": "19731918d4e7acc4798c7cad27a6332018f5a0583115e8ce6004ec72e38bf585",
+      "retained_spec_commit": "bc9f02c52ed13247fd52d618cb3e7d829b4c91ba",
+      "current_test_source_sha256": "0c579e11dcc404a81ff76e88755fb6654231b67422527e81879d27698600b82d",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+    },
+    {
+      "receipt": "2026-10-10-gui398-split-browser.json",
+      "receipt_sha256": "c312c37ecf4660ad8af631a06c442e0f71d6b19b6c9449202e088c47c81e64b1",
+      "execution_source_sha": "fc3d284e579ac340bdf4b7d0a54e6cedf57d2c6b",
+      "test": "scripts/e2e/readiness-preview-lifecycle.spec.ts::unsaved lot grouped preview hands off A B A while both original saved splits remain exact",
+      "recorded_test_source_sha256": "19731918d4e7acc4798c7cad27a6332018f5a0583115e8ce6004ec72e38bf585",
+      "retained_spec_commit": "bc9f02c52ed13247fd52d618cb3e7d829b4c91ba",
+      "current_test_source_sha256": "0c579e11dcc404a81ff76e88755fb6654231b67422527e81879d27698600b82d",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+    },
+    {
+      "receipt": "2026-10-10-gui398-split-electron.json",
+      "receipt_sha256": "f858799035898bff7fa3fa54dc5d1bc5a8d7b3423ecf778979624f4aa14f8377",
+      "execution_source_sha": "fc3d284e579ac340bdf4b7d0a54e6cedf57d2c6b",
+      "test": "scripts/e2e/readiness-preview-lifecycle.spec.ts::native lot grouped preview fences late A split read and restores exact saved split on return",
+      "recorded_test_source_sha256": "19731918d4e7acc4798c7cad27a6332018f5a0583115e8ce6004ec72e38bf585",
+      "retained_spec_commit": "bc9f02c52ed13247fd52d618cb3e7d829b4c91ba",
+      "current_test_source_sha256": "0c579e11dcc404a81ff76e88755fb6654231b67422527e81879d27698600b82d",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+    },
+    {
+      "receipt": "2026-10-11-app-u014-source03-empty-electron.json",
+      "receipt_sha256": "74f6d6c332bde312651d84084bb6187657075a45b4f2f35df1186c72291a1dee",
+      "execution_source_sha": "b04a2b02489e554a6a4784c83b222753cbdda1f3",
+      "test": "scripts/e2e/derived-edit-lifecycle.spec.ts::native empty align and brightness actions preserve owning A versions through empty B and exact reopen",
+      "recorded_test_source_sha256": "f3b025ecb0d839367dc27f500044d5ea4ab8c9cbbaa0d65ac236e55e739c6f07",
+      "retained_spec_commit": "bc9f02c52ed13247fd52d618cb3e7d829b4c91ba",
+      "current_test_source_sha256": "2f6a0f2bdf5f00cd3441e360a6efbcd5a3dba8ffc25e9e5c988a4ee24478124f",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+    },
+    {
+      "receipt": "2026-10-11-app-u014-source03-original-electron.json",
+      "receipt_sha256": "93d8f1f5cd4a1f62975cbfb5b6436884c861caa9e3222612d11697f3febe25cb",
+      "execution_source_sha": "b04a2b02489e554a6a4784c83b222753cbdda1f3",
+      "test": "scripts/e2e/derived-edit-lifecycle.spec.ts::native derived align and brightness lifecycle binds exact saved pixels labels and original custody",
+      "recorded_test_source_sha256": "f3b025ecb0d839367dc27f500044d5ea4ab8c9cbbaa0d65ac236e55e739c6f07",
+      "retained_spec_commit": "bc9f02c52ed13247fd52d618cb3e7d829b4c91ba",
+      "current_test_source_sha256": "2f6a0f2bdf5f00cd3441e360a6efbcd5a3dba8ffc25e9e5c988a4ee24478124f",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+    },
+    {
+      "receipt": "2026-10-10-root456-derived-handoff-browser.json",
+      "receipt_sha256": "3ab410277ca76ec75f741522303ff2fda10aabac73cc76c16d737522dcd8428b",
+      "execution_source_sha": "b081a54a904224825b48a37bf427abad7144cf4d",
+      "test": "scripts/e2e/derived-workflow-closure.spec.ts::saved derived alignment brightness review and training-source reopen retain their owning projects",
+      "recorded_test_source_sha256": "d2e84362bf5049d31f5653ee1dbc2668288051684f086e1613469e49bc1d7e80",
+      "retained_spec_commit": "bc9f02c52ed13247fd52d618cb3e7d829b4c91ba",
+      "current_test_source_sha256": "a81932ac70a7633c4863f04dbc87aa49f90f7f4c4c763159c1cb3423b577067a",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+    },
+    {
+      "receipt": "2026-10-08-derived-history-lifecycle-4ce9550-electron.json",
+      "receipt_sha256": "f51f9db6a72807611e92e6dc60204670540ba2bf1fd4ba9fd0a06c17b7f4851a",
+      "execution_source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+      "test": "scripts/e2e/derived-history-selection-lifecycle.spec.ts::native derived history empty error Escape and Dataset handoff preserve complete versions and originals",
+      "recorded_test_source_sha256": "25d309c8d13ad7ed0932d678f66c8ba70dec39b8bd4f163a12224f7fe4d7dc67",
+      "retained_spec_commit": "bc9f02c52ed13247fd52d618cb3e7d829b4c91ba",
+      "current_test_source_sha256": "2e7c12a36d989178728a0036ba71711f76157d5448260c70a8217730a8131499",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+    },
+    {
+      "receipt": "2026-10-08-derived-history-lifecycle-4ce9550-browser.json",
+      "receipt_sha256": "1998fef75cc167203da1a252282b72d26abd972ce807cf7300171a066d95786f",
+      "execution_source_sha": "4ce95509864bc09484ba618f9df6189c6ed29269",
+      "test": "scripts/e2e/derived-history-selection-lifecycle.spec.ts::derived history empty error Escape and Dataset handoff preserve exact versions and originals",
+      "recorded_test_source_sha256": "25d309c8d13ad7ed0932d678f66c8ba70dec39b8bd4f163a12224f7fe4d7dc67",
+      "retained_spec_commit": "bc9f02c52ed13247fd52d618cb3e7d829b4c91ba",
+      "current_test_source_sha256": "2e7c12a36d989178728a0036ba71711f76157d5448260c70a8217730a8131499",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+    },
+    {
+      "receipt": "2026-10-10-root456-queue-input-old-electron.json",
+      "receipt_sha256": "f352540890ff8c981810fd69aadd7d9a485d33c53a40bc5ab30c34bf2c66ae51",
+      "execution_source_sha": "4fc488a44b007f23c013b34f0c52649b1877b620",
+      "test": "scripts/e2e/review-queue-lifecycle.spec.ts::native unsent queue choices and saved queue exact original open preserve complete source labels and history",
+      "recorded_test_source_sha256": "c93b03f0f3dcd62a439e0322ccc001c9cbac2b28c0fba4261351a3e9f421a069",
+      "retained_spec_commit": "bc9f02c52ed13247fd52d618cb3e7d829b4c91ba",
+      "current_test_source_sha256": "437b5f9722df0748d4384c21f8eb90b2d7bbb0e9052dffdada379e5e5a375110",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+    },
+    {
+      "receipt": "2026-10-10-root456-queue-input-handoff-browser.json",
+      "receipt_sha256": "0cbe7669dfa3dc746d20483ece75eed59676b8de3180edf944cdb7964c68b03d",
+      "execution_source_sha": "4fc488a44b007f23c013b34f0c52649b1877b620",
+      "test": "scripts/e2e/review-queue-lifecycle.spec.ts::saved queue threshold margin and selected origin stay bound through A B A project handoff",
+      "recorded_test_source_sha256": "c93b03f0f3dcd62a439e0322ccc001c9cbac2b28c0fba4261351a3e9f421a069",
+      "retained_spec_commit": "bc9f02c52ed13247fd52d618cb3e7d829b4c91ba",
+      "current_test_source_sha256": "437b5f9722df0748d4384c21f8eb90b2d7bbb0e9052dffdada379e5e5a375110",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+    },
+    {
+      "receipt": "2026-10-10-u015-root434-old-open-browser.json",
+      "receipt_sha256": "ac3edef5b39d7ac720cddaaf4d1301554512cbca575fee6e077e8146a5ddc4e7",
+      "execution_source_sha": "13d7aeddc69242b81a1108e94ce9858a544e8a79",
+      "test": "scripts/e2e/review-queue-open-project-handoff.spec.ts::saved queue open and remembered nondefault selection stay scoped through A B A project handoff",
+      "recorded_test_source_sha256": "822041ef79ed68a01269c1022e1dbc8cacd5d7674c698487f8281a4db731d12c",
+      "retained_spec_commit": "bc9f02c52ed13247fd52d618cb3e7d829b4c91ba",
+      "current_test_source_sha256": "5054c0c9ccc871e531894e936ba5148e72e9065a331aa5aeeb809739e38c22db",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+    },
+    {
+      "receipt": "2026-10-10-u015-root434-old-open-electron.json",
+      "receipt_sha256": "2027229d0c740082ebf324d1d9100ef31b5ac3ae667de3e1076b54817688d943",
+      "execution_source_sha": "13d7aeddc69242b81a1108e94ce9858a544e8a79",
+      "test": "scripts/e2e/review-queue-open-project-handoff.spec.ts::native saved queue open fences old replies and reopens only the owning remembered queue",
+      "recorded_test_source_sha256": "822041ef79ed68a01269c1022e1dbc8cacd5d7674c698487f8281a4db731d12c",
+      "retained_spec_commit": "bc9f02c52ed13247fd52d618cb3e7d829b4c91ba",
+      "current_test_source_sha256": "5054c0c9ccc871e531894e936ba5148e72e9065a331aa5aeeb809739e38c22db",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+    },
+    {
+      "receipt": "2026-10-10-u015-root434-new-advance-browser.json",
+      "receipt_sha256": "c10e8217ec01b468d78035125d629ff7207d59ab367e79f6ab4c5c87da8cdbbf",
+      "execution_source_sha": "13d7aeddc69242b81a1108e94ce9858a544e8a79",
+      "test": "scripts/e2e/review-queue-open-project-handoff.spec.ts::real saved queue review and skip advances retain only the owning cursor and history through A B A project handoff",
+      "recorded_test_source_sha256": "822041ef79ed68a01269c1022e1dbc8cacd5d7674c698487f8281a4db731d12c",
+      "retained_spec_commit": "bc9f02c52ed13247fd52d618cb3e7d829b4c91ba",
+      "current_test_source_sha256": "5054c0c9ccc871e531894e936ba5148e72e9065a331aa5aeeb809739e38c22db",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+    },
+    {
+      "receipt": "2026-10-09-current-label-return-3de0a94-browser.json",
+      "receipt_sha256": "09cdfa11c1dd9a96ef7299d43f94917bc6b5fd09f1fbc15950df57aa3c2ffe38",
+      "execution_source_sha": "3de0a9409adbbf88854cdb83b44e20e7ee490fde",
+      "test": "scripts/e2e/comparison-task-center.spec.ts::CPU comparison reopens the exact completed job from Task Center and after refresh",
+      "recorded_test_source_sha256": "1a9a9e1f72fe9a78bca5683b025884f9b5651f341b4f1b5c1cb3b561aeb26f26",
+      "retained_spec_commit": "bc9f02c52ed13247fd52d618cb3e7d829b4c91ba",
+      "current_test_source_sha256": "1ff804b45acd0af46607b13abf290c811415048fc8812711797e2a5ebf8a6153",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     }
   ]
 }

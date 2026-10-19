@@ -74,7 +74,7 @@ async function unsentGeometryCancelLifecycle(page:Page,w:Workspace,e:Evidence,ap
  const A=await make('A'),B=await make('B');expect(A.project.id).not.toBe(B.project.id);expect(A.saved.metadata.image_uuid).not.toBe(B.saved.metadata.image_uuid);
  const ownerRoot=native?path.join(w.userData,'projects'):w.projects;for(const scope of[A,B]){expect(path.dirname(scope.project.project_dir)).toBe(ownerRoot);expect(fs.realpathSync(scope.source)).toBe(scope.source);expect(fs.realpathSync(scope.project.project_dir)).toBe(scope.project.project_dir);}
  await read('/api/project/open',{project_dir:A.project.project_dir});if(url)await page.goto(url);else await page.reload();
- const rows=()=>page.getByTitle('라벨 삭제',{exact:true}),save=()=>page.getByTestId('annotation-save-button'),pending=()=>page.getByRole('button',{name:'Save Changes',exact:true}),hud=()=>page.getByTestId('canvas-hud');
+ const rows=()=>page.getByTitle('라벨 삭제',{exact:true}),save=()=>page.getByTestId('annotation-save-button'),pending=()=>page.getByRole('button',{name:'변경 저장',exact:true}),hud=()=>page.getByTestId('canvas-hud');
  const drafts=()=>page.evaluate(()=>Object.entries(localStorage).filter(([key])=>key.startsWith('modu-annotation-draft:v1:')).sort(([a],[b])=>a.localeCompare(b))) as Promise<DraftEntry[]>;
  const trees=()=>({A:{source:geometryCancelTree(A.source,custody),project:geometryCancelTree(A.project.project_dir,custody)},B:{source:geometryCancelTree(B.source,custody),project:geometryCancelTree(B.project.project_dir,custody)}});
  const enter=async(scope:typeof A)=>{
