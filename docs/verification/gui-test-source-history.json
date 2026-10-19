@@ -9,8 +9,8 @@
       "test": "scripts/e2e/ocr-empty-workbench-controls.spec.ts::OCR empty truth prepared input completed job and model selection preserve originals through reopen",
       "recorded_test_source_sha256": "238bb9d59cc8cb998f222e4ec38a9aeb87d0b86f35eb3e44c7d7a01f54757b62",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "b8f158784e4740caed2f767e0597023c615dde58d46fb7e6925964e886765e1c",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "ed4717e89bae4672be4c747c3d0345a5582811b77c6a80916a447480de620c61",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-12-app-f030-root570-browser-invalid.json",
@@ -19,8 +19,8 @@
       "test": "scripts/e2e/ocr-empty-workbench-controls.spec.ts::OCR invalid numeric training preflight with valid saved truth preserves whole originals through reopen",
       "recorded_test_source_sha256": "238bb9d59cc8cb998f222e4ec38a9aeb87d0b86f35eb3e44c7d7a01f54757b62",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "b8f158784e4740caed2f767e0597023c615dde58d46fb7e6925964e886765e1c",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "ed4717e89bae4672be4c747c3d0345a5582811b77c6a80916a447480de620c61",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-12-app-f030-root570-electron-empty.json",
@@ -29,8 +29,8 @@
       "test": "scripts/e2e/ocr-empty-workbench-controls.spec.ts::native OCR empty truth prepared input completed job and model selection preserve originals through reopen",
       "recorded_test_source_sha256": "238bb9d59cc8cb998f222e4ec38a9aeb87d0b86f35eb3e44c7d7a01f54757b62",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "b8f158784e4740caed2f767e0597023c615dde58d46fb7e6925964e886765e1c",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "ed4717e89bae4672be4c747c3d0345a5582811b77c6a80916a447480de620c61",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-12-app-f030-root570-electron-invalid.json",
@@ -39,8 +39,8 @@
       "test": "scripts/e2e/ocr-empty-workbench-controls.spec.ts::native OCR invalid numeric training preflight with valid saved truth preserves whole originals through reopen",
       "recorded_test_source_sha256": "238bb9d59cc8cb998f222e4ec38a9aeb87d0b86f35eb3e44c7d7a01f54757b62",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "b8f158784e4740caed2f767e0597023c615dde58d46fb7e6925964e886765e1c",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "ed4717e89bae4672be4c747c3d0345a5582811b77c6a80916a447480de620c61",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-12-app-f030-root572-browser-handoff.json",
@@ -49,8 +49,8 @@
       "test": "scripts/e2e/ocr-prepared-unsent-handoff.spec.ts::OCR unsent alphabet draft and saved alphabet split handoff preserve whole originals",
       "recorded_test_source_sha256": "47d0083f0980707408476282bd8f72bea3b472b3138b2c39560180f4fdc99368",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "19f4afb43c1a6ed14f1c7a0856dfb1590d2a4d944edfea1beb7b108381b56100",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
+      "current_test_source_sha256": "89303e5a3e1022bc766b3a606d97871a786c1c91f012c258db8be2e183e932f6",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-12-app-f030-root572-electron-handoff.json",
@@ -59,8 +59,8 @@
       "test": "scripts/e2e/ocr-prepared-unsent-handoff.spec.ts::native OCR unsent alphabet draft and saved alphabet split handoff preserve whole originals",
       "recorded_test_source_sha256": "47d0083f0980707408476282bd8f72bea3b472b3138b2c39560180f4fdc99368",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "19f4afb43c1a6ed14f1c7a0856dfb1590d2a4d944edfea1beb7b108381b56100",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
+      "current_test_source_sha256": "89303e5a3e1022bc766b3a606d97871a786c1c91f012c258db8be2e183e932f6",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-12-app-f064-root575-browser-controls.json",
@@ -69,8 +69,8 @@
       "test": "scripts/e2e/flow-readonly-control-preflights.spec.ts::F064 empty inspector search partial-run input and unsent typed connection cancellation preserve saved originals",
       "recorded_test_source_sha256": "ac2e7d606ea8f74110ee82831972c866381c54a02a9172c203b41ade1897fed6",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "f754af17f0ed06b0df6d0bb21436600cf2c769bf1a8c92a3ad8e139c93b8edec",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now expects the Korean evaluation-results refusal from the backend; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "3f66e84d1dc379db84399ad766a28ceb2f3b144540c7c0681752035cf57f4f5b",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now expects the Korean evaluation-results refusal from the backend; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-12-app-f064-root575-electron-controls.json",
@@ -79,8 +79,8 @@
       "test": "scripts/e2e/flow-readonly-control-preflights.spec.ts::native F064 empty inspector search partial-run input and unsent typed connection cancellation preserve saved originals",
       "recorded_test_source_sha256": "ac2e7d606ea8f74110ee82831972c866381c54a02a9172c203b41ade1897fed6",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "f754af17f0ed06b0df6d0bb21436600cf2c769bf1a8c92a3ad8e139c93b8edec",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now expects the Korean evaluation-results refusal from the backend; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "3f66e84d1dc379db84399ad766a28ceb2f3b144540c7c0681752035cf57f4f5b",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now expects the Korean evaluation-results refusal from the backend; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-12-app-f064-root576-browser-limits.json",
@@ -89,8 +89,8 @@
       "test": "scripts/e2e/flow-node-limit-preflights.spec.ts::F064 ninth fixed ROI and inspection node keyboard additions fail before graph or saved draft writes",
       "recorded_test_source_sha256": "6236bb318378715ae00131829ee56497e1eeb75c7f7a2bb3a9664c8fa386dfa8",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "22bb75808688bd7c2b34175599a8bbb53772391c0bfceeeb7fd349c8fb884595",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now expects the Korean evaluation-results refusal from the backend; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "a12552d7b69fdd1658b9995a9669fd976631b87f711b028c88a09c48d8742ab5",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now expects the Korean evaluation-results refusal from the backend; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-12-app-f064-root576-electron-limits.json",
@@ -99,8 +99,8 @@
       "test": "scripts/e2e/flow-node-limit-preflights.spec.ts::native F064 ninth fixed ROI and inspection node keyboard additions fail before graph or saved draft writes",
       "recorded_test_source_sha256": "6236bb318378715ae00131829ee56497e1eeb75c7f7a2bb3a9664c8fa386dfa8",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "22bb75808688bd7c2b34175599a8bbb53772391c0bfceeeb7fd349c8fb884595",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now expects the Korean evaluation-results refusal from the backend; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "a12552d7b69fdd1658b9995a9669fd976631b87f711b028c88a09c48d8742ab5",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now expects the Korean evaluation-results refusal from the backend; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-12-app-f064-root578-browser-refusals.json",
@@ -109,8 +109,8 @@
       "test": "scripts/e2e/flow-existing-refusal-controls.spec.ts::F064 empty model history mapping and keyboard layout connection deletion refusals preserve saved originals",
       "recorded_test_source_sha256": "90d100eab9cccde0a6992e91da468aed4ece7eaaa44ffbad2d9cbd924a9ca244",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "8e721b5b94c5d6043d93521965dfdca6a59b1bbd3d7884167796d302a6101be1",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now expects the Korean evaluation-results refusal from the backend; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "f0476eb37cac3dffe5a5de7d23f0f94953ad5af8eddf7f9f965a52d1b9a9bc0e",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now expects the Korean evaluation-results refusal from the backend; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-12-app-f064-root578-electron-refusals.json",
@@ -119,8 +119,8 @@
       "test": "scripts/e2e/flow-existing-refusal-controls.spec.ts::native F064 empty model history mapping and keyboard layout connection deletion refusals preserve saved originals",
       "recorded_test_source_sha256": "90d100eab9cccde0a6992e91da468aed4ece7eaaa44ffbad2d9cbd924a9ca244",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "8e721b5b94c5d6043d93521965dfdca6a59b1bbd3d7884167796d302a6101be1",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now expects the Korean evaluation-results refusal from the backend; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "f0476eb37cac3dffe5a5de7d23f0f94953ad5af8eddf7f9f965a52d1b9a9bc0e",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now expects the Korean evaluation-results refusal from the backend; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-12-app-f064-root580-browser-reopen.json",
@@ -129,8 +129,8 @@
       "test": "scripts/e2e/flow-model-less-reopen-controls.spec.ts::F064 model-less inspection ROI and typed connection drafts reopen with exact saved graphs",
       "recorded_test_source_sha256": "2055dacdc591178b81ebef1dc85598d2b0cc322ddc49c509e5635a724cefe3b0",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "15c3d78df6234020d2758c489621969f884d1a6deb8ea205b151929fb79ac047",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now expects the Korean evaluation-results refusal from the backend; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "05b5238d07aac7bae897391db044c2c92dc5d566bcb1d1d2ad830d1079193a26",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now expects the Korean evaluation-results refusal from the backend; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-12-app-f064-root580-electron-reopen.json",
@@ -139,8 +139,8 @@
       "test": "scripts/e2e/flow-model-less-reopen-controls.spec.ts::native F064 model-less inspection ROI and typed connection drafts reopen with exact saved graphs",
       "recorded_test_source_sha256": "2055dacdc591178b81ebef1dc85598d2b0cc322ddc49c509e5635a724cefe3b0",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "15c3d78df6234020d2758c489621969f884d1a6deb8ea205b151929fb79ac047",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now expects the Korean evaluation-results refusal from the backend; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "05b5238d07aac7bae897391db044c2c92dc5d566bcb1d1d2ad830d1079193a26",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now expects the Korean evaluation-results refusal from the backend; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-12-app-label-mask-root581-browser-empty.json",
@@ -149,8 +149,8 @@
       "test": "scripts/e2e/label-mask-empty-preflights.spec.ts::label and mask empty chooser preview and apply preflights preserve originals",
       "recorded_test_source_sha256": "b3c7c07af92471aefb2b236e9552987bea28e1a089d8c7415be007dcaf08ebbd",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "cfe95c29cae62d3ac1e2c3beaa495ac12481c7b3e092456df75c4256ce9d8c0b",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
+      "current_test_source_sha256": "b75a251ea96709f3d76023bb1d679b267df12f10a82e13665aa1a26d4fbf6ebc",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-12-app-label-mask-root581-electron-empty.json",
@@ -159,8 +159,8 @@
       "test": "scripts/e2e/label-mask-empty-preflights.spec.ts::native label and mask empty chooser preview and apply preflights preserve originals",
       "recorded_test_source_sha256": "b3c7c07af92471aefb2b236e9552987bea28e1a089d8c7415be007dcaf08ebbd",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "cfe95c29cae62d3ac1e2c3beaa495ac12481c7b3e092456df75c4256ce9d8c0b",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
+      "current_test_source_sha256": "b75a251ea96709f3d76023bb1d679b267df12f10a82e13665aa1a26d4fbf6ebc",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-08-late-original-response-lifecycle-f7175f5-browser.json",
@@ -629,8 +629,8 @@
       "test": "scripts/e2e/classification-import-invalid-controls.spec.ts::classification folder import rejects a missing source and restores owning label and partition counts on reload",
       "recorded_test_source_sha256": "714c90a6e30b246b19e5e745afcc13e2f2978033954f0445e9d0c7e819221f45",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "d040ba84ac2f0d219df34486d1f8097aea9b20bc66200aa6654656bc139e79af",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "ff4d1ef3961a56aad1e510b31705f7e5809fb724583b88b6b3043f50c7fcf301",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-18-classification-browser-invalid-original-gui.json",
@@ -639,8 +639,8 @@
       "test": "scripts/e2e/classification-import-invalid-controls-scoped-media.spec.ts::classification folder import rejects a missing source and restores owning label and partition counts on reload",
       "recorded_test_source_sha256": "ec808d06a460406ce4f970eb30445b08bd6893e5ba317fca99b7a6b7e31d253c",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "95acf85d5ab5e3c476cc439d82be0a73c46cbd20b09785b4e55e1a7ebc829581",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "26f2dac43f10bec5463cadd28f69371ecd717c38f29f6fa66ec82c51db6d6d3e",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-17-classification-chooser-error-current-browser.json",
@@ -1039,8 +1039,8 @@
       "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::native raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
       "recorded_test_source_sha256": "5f81545cd446471d593fab71f54f32609e07918a8a31fa78e356d40e39347890",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "455d086335d16af389806addb7315813431bf6a8d172e1b771204671c9455c9f",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean canvas readout (배율) instead of 'scale'; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "a1e9a94909d9c0dd8a1bc299a0b48e4d65748d4ec8ddb2f4d5cfbc7c802eb7d8",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean canvas readout (배율) instead of 'scale'; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-08-raster-lifecycle15-817f71f-browser.json",
@@ -1049,8 +1049,8 @@
       "test": "scripts/e2e/raster-edit-lifecycle.spec.ts::raster brush erase undo empty invalid failures discard and stage handoff preserve full original class pixels",
       "recorded_test_source_sha256": "5f81545cd446471d593fab71f54f32609e07918a8a31fa78e356d40e39347890",
       "retained_spec_commit": "6b14126fed9b3e0151d10d25e8dbce52606f8025",
-      "current_test_source_sha256": "455d086335d16af389806addb7315813431bf6a8d172e1b771204671c9455c9f",
-      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean canvas readout (배율) instead of 'scale'; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+      "current_test_source_sha256": "a1e9a94909d9c0dd8a1bc299a0b48e4d65748d4ec8ddb2f4d5cfbc7c802eb7d8",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean control names and footer wording of the simple view; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean canvas readout (배율) instead of 'scale'; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed. Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-10-root456-derived-old-electron.json",
@@ -1231,6 +1231,26 @@
       "retained_spec_commit": "bc9f02c52ed13247fd52d618cb3e7d829b4c91ba",
       "current_test_source_sha256": "1ff804b45acd0af46607b13abf290c811415048fc8812711797e2a5ebf8a6153",
       "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean save and normal-mark labels of the labeling toolbar; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+    },
+    {
+      "receipt": "2026-10-18-mask-source-choice-empty-browser.json",
+      "receipt_sha256": "0a55f30baa438f0a905944ce98efa72191c940729e78e54c87eb508265fa2191",
+      "execution_source_sha": "646622dd3acfa042c5640de11087cc0cb1dab477",
+      "test": "scripts/e2e/mask-source-choice-empty.spec.ts::empty mask source choice stays local through actual checkbox changes without a chosen bundle or preview",
+      "recorded_test_source_sha256": "61b879742a7ef7c2207734fc17d34c68dfc430049a61a0ccf1b5d657bbaaa49e",
+      "retained_spec_commit": "d45817a83d72793570f888a6fff4701fbddced7f",
+      "current_test_source_sha256": "0c7f447b2ed871173ad855c8b3fe5e5670296c364f3bb5c8bcc36b44dc244db1",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+    },
+    {
+      "receipt": "2026-10-07-app-project-recovery-closure.spec-electron.json",
+      "receipt_sha256": "ce8ab037654b0d4c32ed842c5ed66265b86d9e6e0a083544a4b5f4e8faf3f17d",
+      "execution_source_sha": "0f3be05ab94628359dab75aca99ce33fee6af67e",
+      "test": "scripts/e2e/project-recovery-closure.spec.ts::native fresh project recovery preserves reviewed labels DB runtime settings and holds",
+      "recorded_test_source_sha256": "e90d26c8d0f173f275c62e8afef5fdcac0bcdd695de4a511fb9a4947c3e93915",
+      "retained_spec_commit": "d45817a83d72793570f888a6fff4701fbddced7f",
+      "current_test_source_sha256": "cad69a3602b2fc9addb03043e97075f2737effeaceed8906f86c6f907f6a7b33",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean labels, readouts and refusals of the simple view and carries current source pins; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     }
   ]
 }

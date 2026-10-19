@@ -42,7 +42,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   await expect(panel.getByLabel('Operator inspection image',{exact:true})).toHaveValue(image);
   await page.keyboard.press('Escape');await expect(panel.getByRole('complementary')).toHaveCount(0);
   await page.reload();
-  await expect(page.getByRole('button',{name:'Switch to English'})).toContainText('EN');
+  await expect(page.getByRole('button',{name:'Switch to English'})).toContainText('English');
   await page.getByRole('button',{name:'Operator inspection',exact:true}).click();
   panel=page.getByRole('region',{name:'Operator inspection workspace',exact:true});
   await expect(panel).toContainText('Model OK · Operator REVIEW');

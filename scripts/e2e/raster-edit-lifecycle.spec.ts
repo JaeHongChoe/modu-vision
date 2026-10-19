@@ -23,7 +23,7 @@ export function readRenderedSourceView(canvas:HTMLCanvasElement){
  const rect=container.getBoundingClientRect(),canvasRect=canvas.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
  const context=canvas.getContext('2d');if(!context)throw Error('Original rendered mask context absent');
  const hud=(container.querySelector('[data-testid="canvas-hud"]') as HTMLElement|null)?.innerText||'';
- if(!/\bscale\s*100\s*%/.test(hud))throw Error('Actual original 1:1 toolbar view required');
+ if(!/배율\s*100\s*%/.test(hud))throw Error('Actual original 1:1 toolbar view required');
  if(![1,2].includes(dpr)||![rect.x,rect.y,rect.width,rect.height].every(Number.isFinite))throw Error('Original fixture DPR/geometry invalid');
  if(rect.width!==canvasRect.width||rect.height!==canvasRect.height||rect.x!==canvasRect.x||rect.y!==canvasRect.y)throw Error('Canvas and original container geometry differ');
  if(canvas.width!==Math.trunc(rect.width*dpr)||canvas.height!==Math.trunc(rect.height*dpr))throw Error('Original canvas bitmap has not followed its container');
@@ -43,7 +43,7 @@ export function readRenderedSourceView(canvas:HTMLCanvasElement){
 export function assertRenderedSourceView(view:any){
  const g=view.geometry,r=g.css,p=g.physical_cover,s=view.source_plane;
  expect([1,2]).toContain(g.dpr);for(const v of [r.x,r.y,r.width,r.height])expect(Number.isFinite(v)).toBe(true);
- expect(g.context_transform).toEqual([g.dpr,0,0,g.dpr,0,0]);expect(g.hud).toMatch(/\bscale\s*100\s*%/);
+ expect(g.context_transform).toEqual([g.dpr,0,0,g.dpr,0,0]);expect(g.hud).toMatch(/배율\s*100\s*%/);
  expect(g.actual_size_transform).toEqual({scale:1,offsetX:(r.width-256)/2,offsetY:(r.height-256)/2});
  expect(view.width).toBe(Math.trunc(r.width*g.dpr));expect(view.height).toBe(Math.trunc(r.height*g.dpr));
  const startX=g.actual_size_transform.offsetX*g.dpr,startY=g.actual_size_transform.offsetY*g.dpr,endX=startX+256*g.dpr,endY=startY+256*g.dpr;

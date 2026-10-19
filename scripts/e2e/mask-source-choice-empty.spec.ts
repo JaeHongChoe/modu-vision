@@ -41,7 +41,7 @@ const harness=require('./fixtures/harness.cjs');
 const UI_SOURCE={
   "src/renderer/components/dataset/DatasetWorkflowPanel.tsx": "e973ea1f07c2296f8c227608b1ad0ccef8f5abb01c94bcd4f7bb7b9511a4c6f4",
   "src/renderer/components/dataset/ExternalMaskExchangePanel.tsx": "6a5d0fd5e8b57d05ae7e91b47ba447eac694a5f7c37509da9d2fbe8d7924f7a4",
-  "backend/api/routes_dataset.py": "7a4bcea5d2aed6cee0f61d6a0d5c8a09e048dcc38e644d83c1c301ac59c7e801",
+  "backend/api/routes_dataset.py": "56c6b138d383a4cdeef30ef5e9283ce5b563b36b52a7dbde7080707248337965",
   "backend/api/routes_mask_exchange.py": "f66d4f4273692bf3c46f038c25b56a60ad4b4db5ba3dee9d31c3bac6dcd9a7c5",
   "backend/engine/annotation_formats.py": "dd046ef5e66187577217fe7de19ec6cf0376db5abf30d1b845c5b36a66e9a90c",
   "backend/engine/mask_exchange.py": "e12e6e0f10e9af2267e2f511cc7526ee98f088f0d778ce8959b7e9d6b72fafeb",

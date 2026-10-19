@@ -153,6 +153,9 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   page: async ({ page, evidence, loopbackGuard }, use) => {
     const pageErrors: string[] = [];
     const consoleErrors: string[] = [];
+    // The suites were written against every control. A first launch shows the simple view, so the page declares the
+    // full view before the app boots, whichever origin a spec opens (the renderer server, a team server, a shim).
+    await page.addInitScript(() => { try { localStorage.setItem('modu:view-mode:v1', 'full'); } catch { /* blocked storage: the URL default still applies */ } });
     // The renderer falls back to port 8000 without ?port=, which on a shared
     // machine could reach another application's backend. Only loopback ports
     // registered by fixtures are reachable from the page.

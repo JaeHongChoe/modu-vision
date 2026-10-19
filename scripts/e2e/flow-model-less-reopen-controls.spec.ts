@@ -47,36 +47,36 @@ const F064_POINTERS=[
 ] as const;
 const FLOW_DRAFT_SERVICE={
  'src/renderer/services/flowDraft.ts':'f8cd76aab7d1045c3af1fa41f68ae09daa757c0db05772f4085e2e093348b800',
- 'backend/engine/flowchart_engine.py':'958fb9f1d1047d351615f435b3ec16cb4dd5a5d21415ce886948b822f9bf7cba',
+ 'backend/engine/flowchart_engine.py':'409c61e73a74f59182928fc1948d859145b4e933632e38af3a23f2268cb64b8e',
 } as const;
 const UI_SOURCE={
  "scripts/e2e/fixtures/flow_navigation_control.py": "b5752088a03ff1640510208e15a17b3f1389295c62dadabaf2ff6511a929ee73",
  "scripts/e2e/fixtures/flow_template_control.py": "2ba50b8bcafd02905f03b19ad393496d9befb453c3bab127f0966a48848cb505",
  "scripts/e2e/fixtures/flow_large_dag_control.py": "6434d381ed45d68922c058544d0b515caa3d19d93d88c90028a3463a9903d871",
  "scripts/e2e/qa/appFlow.ts": "4eed3e5dad1d9d65a6b19fc9bb51a1f9b0e23911a39e7f255220bec0ce37fea2",
- "src/renderer/components/flowchart/FlowchartStudio.tsx": "b046065d152575c1bd4d9a5e95eef60c15f8c56dec7c9f758173c8566b31c0e6",
- "src/renderer/components/flowchart/FlowEditorWorkspace.tsx": "2a81b6421956520cd58648a32e458150f176e1afd38f53d05403b6075e0a36a8",
+ "src/renderer/components/flowchart/FlowchartStudio.tsx": "50ac1c9daad32e70fd7abeca28841fcec97b0238ee17425d14b205c7308175cc",
+ "src/renderer/components/flowchart/FlowEditorWorkspace.tsx": "c50fad3e7d9a2539f4e9b4728781c5c4a7901fc56dcd20007117af0c43c10d47",
  "src/renderer/components/flowchart/FlowDraftControls.tsx": "3bd10fc68ea4ae2dc600dfad2b6c51b56d74d213f7483923107295aac303f5a8",
  "src/renderer/components/flowchart/FlowGraphNavigator.tsx": "656832c214f41742d5bc0f66c9f8983c5fb6892cfaf3b42b48ee353f282da20a",
  "src/renderer/components/flowchart/FlowInspectorPanel.tsx": "c108ee18336c2d3cdc2accb200eb739b0a3252c7fcbd60f35902e66da06c6707",
  "src/renderer/components/flowchart/CustomNode.tsx": "c0219bf9a011c5a86c7122bd100f5e88259b425164cee6d6a3e93548482e7fad",
  "src/renderer/components/flowchart/ImagePickerModal.tsx": "0ef27d643ddc2fddd5014e2c27087116eefbc87eb5dd92c95b732a401ceb6e4e",
- "src/renderer/stores/useFlowchartStore.ts": "8fdfa3a8faadf5c5f4f1ed339334486476218ee7f4aa348d4f3093578c7665f3",
- "src/renderer/services/api.ts": "ba82fc801fb827ab16b453ee4722ede933a641177be9994f6666f82965bc472e",
+ "src/renderer/stores/useFlowchartStore.ts": "6f30da4bd22d0f13846ca65c5b89ad82afc4ae8023bb4b5c1d219fec90cadf36",
+ "src/renderer/services/api.ts": "8ec0aa68f5d5b42101cd9a732e01146b3744ce67cad563c10ad32fb032409ce0",
  "src/renderer/components/flowchart/FlowWorkspacePanel.tsx": "6e7c74ae465e6a426601de756a91a9966615195f52c1e6aa9e4691b187baa8bf",
  "src/renderer/components/flowchart/FlowChangeDialog.tsx": "2e66a530f565b8211829d1cb3507bf2d9d1e7aa7173a1a37a54de98d19230347",
  "src/renderer/components/flowchart/FlowRecipeDialog.tsx": "09418ce7091fd126a9f341fddf0acb9d30f20fe955268c71ae21f25204c935ba",
  "src/renderer/components/flowchart/flowchartGraph.ts": "6243ad045d305177de33dd638a1c3f5e02440931345479c43582ee3f6ee4d76b",
  "src/renderer/components/flowchart/flowchartViewport.ts": "65564c68bb1242e5c78767cdbc1b77596815b14ef071d68bfb96b42799e5aac1",
  "src/renderer/components/common/ImagePickerModal.tsx": "4ad3777c3152c0204afc4f2d517b056f5720e0b4d2caa90c4ab383b5c994d966",
- "backend/api/routes_flowchart.py": "ef5e056bd09d695d45e52f7e5e63f43b9337061fba1e99c48e75545d8bc31330",
+ "backend/api/routes_flowchart.py": "f460b0ec5387c949b0e36f119390f118738e3b848c239b14055b219803c0957d",
  "src/renderer/components/flowchart/FlowNodeDebugger.tsx": "82b81c5ceb3556f4bdc14fd7a93edbe9657a528a1af140c5755aa9e6daa83a2f",
  "src/renderer/components/flowchart/flowWorkspace.ts": "17c39a0236efa5b444fcc99751bc8db95d613071c916ecf0e3ec44ebb49253e4",
  "scripts/e2e/fixtures/remaining-project-handoff.ts": "7a7c74a2f42a5d6ad991dadc97626c1f8330f962edaf73fd461d31f9c4764904",
  "scripts/e2e/fixtures/test.ts": "49171e2d0d4d7d9559416fdb43bc7dae9394129bbc237fe4f2a4cea0a7afa480",
  "scripts/e2e/fixtures/harness.cjs": "171460c1cf1697b7a44b8f86a197d2b944928381f736f81af304412126464975",
  "scripts/e2e/fixtures/desktop-host-shim.ts": "4f598862ec0e08189628c72bbb552f72bf8fd73f5a9a05b8da1d3ddf516dcfa6",
- "backend/api/routes_dataset.py": "7a4bcea5d2aed6cee0f61d6a0d5c8a09e048dcc38e644d83c1c301ac59c7e801"
+ "backend/api/routes_dataset.py": "56c6b138d383a4cdeef30ef5e9283ce5b563b36b52a7dbde7080707248337965"
 } as const;
 export function canonical(value:any):any{return Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])):value;}
 export function assertDraftRecord(record:any,pipeline:any,context:any){

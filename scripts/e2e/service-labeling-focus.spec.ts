@@ -38,7 +38,7 @@ function largePng(width: number, height: number): Buffer {
 
 // The HUD's scale (percent of the image's pixels per screen pixel).
 const hudScale = (page: Page) => page.evaluate(() => {
-  const label = [...document.querySelectorAll('span')].find(span => span.textContent === 'scale');
+  const label = [...document.querySelectorAll('span')].find(span => span.textContent === '배율');
   return Number(label?.nextElementSibling?.textContent);
 });
 

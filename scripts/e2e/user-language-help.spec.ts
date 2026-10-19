@@ -15,7 +15,7 @@ async function exercise(page:Page,evidence:Evidence,api:Api,native:boolean,url?:
  await expect(dialog).toContainText('An actual NG item predicted as OK');
  await expect(dialog).not.toContainText('The production cycle time per item.');
  await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);
- await page.reload();await expect(page.getByRole('button',{name:'Switch to English'})).toContainText('EN');
+ await page.reload();await expect(page.getByRole('button',{name:'Switch to English'})).toContainText('English');
  await expect(page.getByText('Before continuing',{exact:true})).toBeVisible();
  await expect(page.getByRole('button',{name:'Collapse guidance',exact:true})).toHaveAttribute('aria-expanded','true');
  await page.getByRole('button',{name:'Operator inspection',exact:true}).click();

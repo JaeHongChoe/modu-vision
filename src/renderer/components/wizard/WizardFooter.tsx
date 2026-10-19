@@ -36,12 +36,13 @@ export const WizardFooter = () => {
       <p className="mt-2 text-slate-400">학습·평가·승인·현장 적용은 각각의 실행 응답으로 확인합니다. 이전 결과와 다른 단계는 계속 볼 수 있습니다.</p>
       <button className="workspace-button mt-2" onClick={refresh}>현재 입력 다시 확인</button>
     </section>}
-    <div className="flex flex-wrap items-center gap-2">
+    {/* One line at 1280px and wider: the status text truncates (its title holds the full text) so the canvas keeps its height. */}
+    <div className="flex items-center gap-2 whitespace-nowrap">
       <button className="workspace-button" disabled={activeStep===1} onClick={()=>move(activeStep-1)} aria-label="이전 단계 보기" title={ko?'이전 단계 (Alt+←)':'Previous step (Alt+←)'}><ArrowLeft className="h-3 w-3"/></button>
       <span className="font-mono text-slate-400">{activeStep}/6</span>
-      <div role="status" aria-live="polite" className={`flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 rounded border px-3 py-1.5 ${tone}`}>
+      <div role="status" aria-live="polite" title={blocker?`${blocker} → ${readiness.nextAction.label}`:undefined} className={`flex min-w-0 flex-1 items-center gap-x-3 rounded border px-3 py-1.5 ${tone}`}>
         <span className="whitespace-nowrap font-semibold">{labels[readiness.status]}</span>
-        <span className="min-w-0 flex-1">{blocker?(readiness.status==='ready'?blocker:`${blocker} → ${readiness.nextAction.label}`):(ko?`완료 입력 ${readiness.completedInputs.length} · 안내된 행동의 입력 준비됨`:`${readiness.completedInputs.length} inputs done · ready for the suggested action`)}</span>
+        <span className="min-w-0 flex-1 truncate">{ko?`완료 입력 ${readiness.completedInputs.length} · `:`${readiness.completedInputs.length} inputs done · `}{blocker?(readiness.status==='ready'?blocker:`${blocker} → ${readiness.nextAction.label}`):(ko?'안내된 행동의 입력 준비됨':'ready for the suggested action')}</span>
         <button className="workspace-button whitespace-nowrap" aria-expanded={expanded} onClick={()=>setExpanded(value=>!value)}>{ko?(expanded?'자세히 닫기':'왜 그런가요?'):(expanded?'Close details':'Why?')}</button>
       </div>
       <AsyncAction className="workspace-button--primary whitespace-nowrap" aria-label={`권장 행동: ${readiness.nextAction.label}`} onClick={()=>void action()}>{readiness.nextAction.label}</AsyncAction>
