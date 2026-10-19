@@ -24,7 +24,7 @@ export const CategorySelector: React.FC = () => {
     <div className="bg-slate-950 border-b border-slate-800 px-4 py-2 flex items-center space-x-2 overflow-x-auto select-none">
       <span className="text-xs font-medium text-slate-400 flex items-center space-x-1 mr-2">
         <Tag className="w-3.5 h-3.5" />
-        <span>Classes:</span>
+        <span>클래스:</span>
       </span>
 
       {categories.map((cat) => {

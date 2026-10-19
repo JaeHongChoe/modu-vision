@@ -575,7 +575,7 @@ export const DatasetStudio: React.FC = () => {
                     ? (language === 'ko' ? '마스크 채널별 이미지 수' : 'Images per Mask Channel')
                     : distribution.countUnit === 'objects'
                     ? (language === 'ko' ? '클래스별 객체 주석 분포' : 'Annotated Objects by Class')
-                    : (language === 'ko' ? '클래스별 계측 분포' : 'Class Digital Gauges')}
+                    : (language === 'ko' ? '클래스별 이미지 수' : 'Class Digital Gauges')}
                 </span>
               </div>
               <span className="text-[11px] font-mono tabular-nums text-slate-400 bg-[#0B0E14] px-1.5 py-0.5 rounded border border-[#2B3547]">
@@ -817,8 +817,8 @@ export const DatasetStudio: React.FC = () => {
             <div className="flex items-center space-x-4 text-slate-400">
               {/* Defect Physical Scale Indicator (μm unit) */}
               <div className="hidden sm:flex items-center space-x-1.5 text-[11px] font-mono bg-[#0B0E14] px-2 py-1 rounded-[4px] border border-[#2B3547]">
-                <span className="text-slate-400">Pixel Pitch:</span>
-                <span className="text-slate-200 tabular-nums font-semibold">Not calibrated</span>
+                <span className="text-slate-400">픽셀당 길이:</span>
+                <span className="text-slate-200 tabular-nums font-semibold">미보정</span>
               </div>
 
               {/* Thumbnail Density Toggle (S: 96px, M: 144px, L: 200px) */}

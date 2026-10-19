@@ -63,7 +63,7 @@ export const LabelSetBar: React.FC<{ compact?: boolean }> = ({ compact = false }
   const active = sets.find((item) => item.id === project.active_labelset_id);
   return <div className={`border-b border-[#34465B] bg-[#101D2C] px-4 ${compact ? 'py-1' : 'py-2.5'} text-slate-200`}>
     <div className="flex flex-wrap items-center gap-2.5">
-      <span className="flex items-center gap-1.5 text-[10px] font-semibold tracking-[0.12em] text-cyan-300"><Layers3 className="h-3.5 w-3.5" /> LABEL SET</span>
+      <span className="flex items-center gap-1.5 text-[10px] font-semibold tracking-[0.12em] text-cyan-300"><Layers3 className="h-3.5 w-3.5" /> 라벨 세트</span>
       <label className="sr-only" htmlFor="active-labelset">활성 레이블셋</label>
       <select id="active-labelset" value={project.active_labelset_id} disabled={busy || loading} onChange={(event) => void select(event.target.value)} className="min-w-[145px] max-w-[230px] rounded-md border border-[#41627A] bg-[#1A2E40] px-2.5 py-1.5 text-xs font-semibold text-white outline-none focus:border-cyan-400 disabled:opacity-50">
         {sets.length === 0 && <option value={project.active_labelset_id}>{active?.name || '레이블셋 불러오는 중'}</option>}

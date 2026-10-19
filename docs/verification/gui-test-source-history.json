@@ -551,6 +551,26 @@
       "retained_spec_commit": "a267a4cfcec905c715bbf314f2daa4d8da692ab4",
       "current_test_source_sha256": "a5d9cd686e7fd5e55ea89330420e8a31d539b66c3f5e8b9d9ca5fd7f06be2ab1",
       "reason": "The spec changed on the beginner-UX branch only in the words it reads from the screen (Korean control names and refusal messages); the retained public commit holds the exact bytes the receipt executed. This declares history and supplies no new GUI execution."
+    },
+    {
+      "receipt": "2026-10-08-vector-null-mask-lifecycle-1a2e9e4-browser.json",
+      "receipt_sha256": "e094f5b39fa0011b1c7787e0bcf6e52a2ed40a3640d25260099dd61058f745b0",
+      "execution_source_sha": "1a2e9e420c444c2f1ec6eedec9d94ec9b7615939",
+      "test": "scripts/e2e/vector-label-lifecycle.spec.ts::vector empty input service failures and explicit stage handoff preserve exact original labels",
+      "recorded_test_source_sha256": "9f28943f680e05dba42037c0b6de10a2750161f6d321d12169b177c7b2cb08be",
+      "retained_spec_commit": "f43cdb86bf5623dc7bbe431b65e0ce5f8c4ae681",
+      "current_test_source_sha256": "9d3163eebe8f291d8c30627e0c631d3f3b36e40a677f7beb64ccf59aa82eaa4f",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean labeling-screen text (empty annotation list and list heading); the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
+    },
+    {
+      "receipt": "2026-10-08-vector-null-mask-lifecycle-1a2e9e4-electron.json",
+      "receipt_sha256": "18b5a9dea8a858926650cb0dfcb6a018210cb732aaeebbe1b4a9511bec159eeb",
+      "execution_source_sha": "1a2e9e420c444c2f1ec6eedec9d94ec9b7615939",
+      "test": "scripts/e2e/vector-label-lifecycle.spec.ts::native vector empty input service failures and explicit stage handoff preserve exact original labels",
+      "recorded_test_source_sha256": "9f28943f680e05dba42037c0b6de10a2750161f6d321d12169b177c7b2cb08be",
+      "retained_spec_commit": "f43cdb86bf5623dc7bbe431b65e0ce5f8c4ae681",
+      "current_test_source_sha256": "9d3163eebe8f291d8c30627e0c631d3f3b36e40a677f7beb64ccf59aa82eaa4f",
+      "reason": "Refreshed on the beginner-UX branch: the spec now reads the Korean labeling-screen text (empty annotation list and list heading); the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     }
   ]
 }

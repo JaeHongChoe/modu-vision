@@ -31,7 +31,7 @@ test('app flow · segmentation (UNet) on this computer: register data, train, ab
   // 02 labels: what the labeling screen shows for the mask folders the trainer reads (recorded as found).
   await stage(page, '02', '라벨링').click();
   await expect(page.getByText(/^\d+ \/ \d+$/).first()).toBeVisible({ timeout: 60_000 });
-  const noLabels = await page.getByText('No annotations on this image').count();
+  const noLabels = await page.getByText('이 이미지에는 라벨이 없습니다').count();
   evidence.note('labels_step_02', { mask_labels_shown: noLabels === 0,
     note: noLabels ? 'QA finding: the mask folders train the model but step 02 shows no labels for them (S3-01 mask binding gap)' : 'mask labels shown' });
   await evidence.screenshot(page, 'qa-02-labels');

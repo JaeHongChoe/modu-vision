@@ -75,7 +75,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   }
   await expect(page.getByTitle('Delete annotation',{exact:true})).toHaveCount(0);
   await expect(page.getByRole('button',{name:'Save Changes',exact:true})).toHaveCount(0);
-  await expect(page.getByText('No annotations on this image',{exact:true})).toBeVisible();
+  await expect(page.getByText('이 이미지에는 라벨이 없습니다',{exact:true})).toBeVisible();
   await page.keyboard.press('Escape');expect(writes.slice(emptyWrites)).toEqual([]);
   const after=await emptySnapshot();expect(after).toEqual(emptyBefore);
   await screenshot(tool.action+'-empty-no-current-image');

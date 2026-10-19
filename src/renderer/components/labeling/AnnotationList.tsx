@@ -202,7 +202,7 @@ export const AnnotationList: React.FC = () => {
         <div className="flex items-center space-x-2">
           <span className="w-2 h-2 rounded-full bg-cyan-400" />
           <span className="text-xs font-bold tracking-wider text-slate-200 uppercase">
-            Geometric Inspector
+            측정 정보
           </span>
         </div>
         <div className="flex items-center space-x-1.5">
@@ -212,7 +212,7 @@ export const AnnotationList: React.FC = () => {
             className="p-1 rounded bg-[#1A212E] hover:bg-[#222B3D] border border-[#2B3547] text-slate-300 text-[10px] font-mono tabular-nums flex items-center space-x-1 cursor-pointer"
           >
             <Ruler className="w-3 h-3 text-cyan-400" />
-            <span>{pixelPitchUm > 0 ? `${pixelPitchUm} μm/px` : 'Not calibrated'}</span>
+            <span>{pixelPitchUm > 0 ? `${pixelPitchUm} μm/px` : '미보정'}</span>
           </button>
           <span className="px-1.5 py-0.5 text-[10px] font-mono tabular-nums bg-[#1A212E] border border-[#2B3547] rounded text-cyan-400 font-bold">
             {annotations.length}
@@ -250,7 +250,7 @@ export const AnnotationList: React.FC = () => {
       {/* Main Annotation List */}
       <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
         <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-1">
-          Annotations ({annotations.length})
+          라벨 목록 ({annotations.length})
         </div>
 
         {annotations.length === 0 ? (
@@ -258,8 +258,8 @@ export const AnnotationList: React.FC = () => {
             <div className="w-8 h-8 mx-auto mb-2 text-slate-500 flex items-center justify-center">
               <Ruler className="w-5 h-5 stroke-[1.5]" />
             </div>
-            <div className="text-xs font-medium text-slate-300">No annotations on this image</div>
-            <div className="mt-1 text-[11px] text-slate-400">Select a canvas tool [1-6] to calibrate regions.</div>
+            <div className="text-xs font-medium text-slate-300">이 이미지에는 라벨이 없습니다</div>
+            <div className="mt-1 text-[11px] text-slate-400">왼쪽 도구(단축키 1~6)로 결함 영역을 그리세요.</div>
           </div>
         ) : (
           annotations.map((ann, idx) => {
@@ -336,7 +336,7 @@ export const AnnotationList: React.FC = () => {
             <div className="flex items-center space-x-1.5">
               <Crosshair className="w-3.5 h-3.5 text-cyan-400" />
               <span className="text-[11px] font-bold text-slate-200 uppercase tracking-wide">
-                Geometric Inspector
+                측정 정보
               </span>
             </div>
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#1A212E] border border-[#2B3547] text-cyan-400 uppercase">

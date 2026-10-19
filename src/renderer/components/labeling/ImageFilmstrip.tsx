@@ -92,7 +92,7 @@ export const ImageFilmstrip: React.FC<{ compact?: boolean }> = ({ compact = fals
             : `0 / ${totalImagesCount}`}
         </span>
         {pageCount > 1 && (
-          <span className="text-[10px] font-mono text-slate-500">Page {page}/{pageCount}</span>
+          <span className="text-[10px] font-mono text-slate-500">{page}/{pageCount} 쪽</span>
         )}
         <button
           onClick={goForward}

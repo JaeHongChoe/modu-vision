@@ -1410,7 +1410,7 @@ export const LabelingCanvas: React.FC = () => {
       >
         {/* Crosshair Cursor Coordinates: X, Y */}
         <div className="flex items-center gap-1.5">
-          <span className="text-slate-500 font-semibold tracking-wider text-[10px]">POS</span>
+          <span className="text-slate-500 font-semibold tracking-wider text-[10px]">위치</span>
           <span className="text-slate-400">X:</span>
           <span className="tabular-nums text-slate-200">{cursorX}</span>
           <span className="text-slate-500 text-[10px]">px</span>
@@ -1423,14 +1423,14 @@ export const LabelingCanvas: React.FC = () => {
 
         {/* Selected or In-Progress Geometry: W, H, Angle */}
         <div className="flex items-center gap-1.5">
-          <span className="text-slate-500 font-semibold tracking-wider text-[10px]">DIM</span>
+          <span className="text-slate-500 font-semibold tracking-wider text-[10px]">크기</span>
           <span className="text-slate-400">W:</span>
           <span className="tabular-nums text-slate-200">{activeMetrics ? activeMetrics.w : '--'}</span>
           <span className="text-slate-500 text-[10px]">px</span>
           <span className="text-slate-400 ml-1">H:</span>
           <span className="tabular-nums text-slate-200">{activeMetrics ? activeMetrics.h : '--'}</span>
           <span className="text-slate-500 text-[10px]">px</span>
-          <span className="text-slate-400 ml-1">angle</span>
+          <span className="text-slate-400 ml-1">각도</span>
           <span className="tabular-nums text-slate-200">{activeMetrics ? activeMetrics.angle : 0}</span>
           <span className="text-slate-500 text-[10px]">°</span>
         </div>
@@ -1439,11 +1439,11 @@ export const LabelingCanvas: React.FC = () => {
 
         {/* Viewport Scale & Sensor Pitch Calibration (μm) */}
         <div className="flex items-center gap-1.5">
-          <span className="text-slate-500 font-semibold tracking-wider text-[10px]">VIEW</span>
-          <span className="text-slate-400">scale</span>
+          <span className="text-slate-500 font-semibold tracking-wider text-[10px]">보기</span>
+          <span className="text-slate-400">배율</span>
           <span className="tabular-nums text-slate-200">{scalePercent}</span>
           <span className="text-slate-500 text-[10px]">%</span>
-          <span className="text-[#3B82F6] text-[10px] ml-1">(pixel pitch uncalibrated)</span>
+          <span className="text-[#3B82F6] text-[10px] ml-1">(실제 크기 미보정)</span>
         </div>
       </div>
     </div>
