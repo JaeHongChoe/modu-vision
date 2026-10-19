@@ -255,7 +255,7 @@ def test_flat_ng_labelme_import_rejects_unsupported_training_task(tmp_path, task
             folder_path=str(folder), task=task, validate_images=False,
         ))
     assert error.value.status_code == 422
-    assert "segmentation" in str(error.value.detail).lower()
+    assert "영역 분할" in str(error.value.detail) or "segmentation" in str(error.value.detail).lower()
 
 
 def test_industrial_anomaly_import_never_counts_flat_ng_images_as_good(tmp_path):

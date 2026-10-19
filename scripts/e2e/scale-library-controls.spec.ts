@@ -57,7 +57,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  // No image is implied for metadata-only rows. Check actual filesystem/API failure independently.
  await search.fill('entry-000001.png');await expect(grid.getByRole('listitem')).toHaveCount(1);await expect(grid).toContainText('READ_ERROR');
  const missing=await api('/api/dataset/library/images?q=entry-000001.png&limit=120');expect(missing.items).toHaveLength(1);expect(missing.items[0].valid).toBe(false);expect(missing.items[0].sha256).toBeNull();expect(fs.existsSync(missing.items[0].file_path)).toBe(false);
- const missingThumbnail=await probe(`/api/dataset/thumbnail/entry-000001.png?file_path=${encodeURIComponent(missing.items[0].file_path)}`);expect(missingThumbnail.status).toBe(404);expect(missingThumbnail.body).toContain('Image file not found');
+ const missingThumbnail=await probe(`/api/dataset/thumbnail/entry-000001.png?file_path=${encodeURIComponent(missing.items[0].file_path)}`);expect(missingThumbnail.status).toBe(404);expect(missingThumbnail.body).toContain('이미지 파일을 찾을 수 없습니다');
  await grid.getByRole('listitem').click();
  evidence.note('missing_source_click_observation',{row:missing.items[0],actual_thumbnail:missingThumbnail,picker_text:await picker.textContent(),saved_tail:saved[0]});
  await expect(picker).toContainText('선택: metadata/entry-099999.png');await expect(picker.getByRole('alert')).toContainText('검사 대상으로 선택할 수 없습니다.');

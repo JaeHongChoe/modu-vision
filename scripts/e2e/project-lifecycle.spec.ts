@@ -109,7 +109,7 @@ async function exercise(page:Page, workspace:Workspace, evidence:Evidence, api:A
   dialog = await manage();await dialog.getByRole('button',{name:'백업에서 복원',exact:true}).click();
   await dialog.getByPlaceholder('.mvision.zip 파일 경로').fill(backup.archive_path);await dialog.getByPlaceholder('아직 존재하지 않는 새 폴더 경로').fill(target);
   response = page.waitForResponse(r=>new URL(r.url()).pathname==='/api/project/restore'&&r.request().method()==='POST');await dialog.getByRole('button',{name:'새 프로젝트로 복원',exact:true}).click();expect((await response).status()).toBe(409);
-  await expect(dialog.getByRole('alert')).toContainText('already exists');await evidence.screenshot(page,'lifecycle-existing-target-refusal');
+  await expect(dialog.getByRole('alert')).toContainText('이미 있습니다');await evidence.screenshot(page,'lifecycle-existing-target-refusal');
   for(const image of fixture.images){expect(sha(path.join(fixture.source,image.image))).toBe(image.source_sha256);expect(sha(path.join(restored.source_dataset_dir,image.image))).toBe(image.source_sha256);}
   evidence.note('project_lifecycle',{fixture,project,template,fresh,prepared,training,model,evaluated,version,flow_version:flowVersion,original_result:originalResult,run,before_run:beforeRun,backup,restored,restored_model:restoredModel,restored_result:restoredResult,restored_run:restoredRun,restored_versions:restoredVersions,annotation,review:row,actual_cpu_training:true,actual_app_template_backup_restore:true,original_unchanged:true,quality_approval:false});
 }

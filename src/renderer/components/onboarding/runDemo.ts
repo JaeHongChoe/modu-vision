@@ -86,7 +86,7 @@ export async function runDemo(deps: DemoDeps, onUpdate: (state: DemoState) => vo
           continue;
         }
         // Only this run's collisions count toward the budget, not the names already listed.
-        if (!/already exists/i.test(error) || ++collisions >= NAME_ATTEMPTS) throw new Error(error || '예제 프로젝트를 만들지 못했습니다.');
+        if (!/already exists|이미 있습니다/.test(error) || ++collisions >= NAME_ATTEMPTS) throw new Error(error || '예제 프로젝트를 만들지 못했습니다.');
         tried.push(projectName);
         projectName = nextExampleName(DEMO_PROJECT_NAME, tried.map(name => ({ name })));
       }
