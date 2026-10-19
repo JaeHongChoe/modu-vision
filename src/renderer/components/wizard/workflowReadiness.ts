@@ -30,6 +30,7 @@ export function getNextAction(input: ReadinessContext): ReadinessAction {
     if(input.train<1 || input.val<1)return result('blocked',[`저장된 학습·검증 분할 부족 (Train ${input.train} / Val ${input.val})`],'데이터 분할 확인',1);
     completedInputs.push(`저장 분할 Train ${input.train} / Val ${input.val}`);
     if(['queued','preparing','running','transferring','syncing','stopping'].includes(input.trainingStatus||''))return result('checking',['작업 완료 응답 확인 중'],'학습 진행 상태 보기',3,'workflow-training');
+    if(input.trainingStatus==='completed')return result('ready',[],'학습 결과 평가 (4단계)',4);
     return result('ready',[],'실행 자원·학습 설정 확인',3,'workflow-training');
   }
   const currentModels=evidence.impact.models.filter(row=>row.task===input.task && row.scope_matches===true && row.checkpoint_state==='current' && row.data_state==='current');

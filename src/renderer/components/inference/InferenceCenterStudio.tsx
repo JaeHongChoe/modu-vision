@@ -171,8 +171,6 @@ python infer.py --self-test`;
       {/* Top Operator Guidance Banner */}
       <OperatorGuidanceBanner step={6} />
 
-      <CoreModelTrialPanel task={task} jobId={jobId||''} device={trialDevice} setDevice={setTrialDevice}/>
-
       {/* Title & Action Strip */}
       <div className="flex flex-col gap-3 border-b border-[#2B3547] bg-[#131822] -mx-5 -mt-5 p-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
@@ -254,6 +252,8 @@ python infer.py --self-test`;
       )}
 
       <BatchInspectionPanel />
+
+      <CoreModelTrialPanel task={task} jobId={jobId||''} device={trialDevice} setDevice={setTrialDevice}/>
 
       <div id="whole-flow-package-panel" ref={flowPackageRef} tabIndex={-1}
         className="scroll-mt-4 rounded-lg focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-sky-400">

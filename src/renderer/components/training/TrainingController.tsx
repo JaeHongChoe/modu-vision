@@ -58,7 +58,7 @@ export const TrainingController: React.FC = () => {
   const [warmParentId, setWarmParentId] = useState('');
   const [warmParents, setWarmParents] = useState<ParentCandidate[]>([]);
   const [warmParentsError, setWarmParentsError] = useState<string | null>(null);
-  const { task, language, setStep, projectDir, project, isProjectBusy } = useProjectStore();
+  const { task, language, setStep, projectDir, project, isProjectBusy, technicalDetails } = useProjectStore();
   const handoff=useTaskHandoff();
   const [taskProposal,setTaskProposal]=useState<{task:VisionTask;scope:string}|null>(null);
   const [selectedFamily, setSelectedFamily] = useState<ModelFamily>(()=>handoff?.family||task);
@@ -276,7 +276,7 @@ export const TrainingController: React.FC = () => {
             <div className="flex items-center gap-2">
               <Server className="h-4 w-4 text-blue-400" />
               <span className="font-semibold text-slate-400">새 학습 대상</span>
-              <span className="font-bold text-slate-100">{!isComputeLoaded ? '설정 확인 중' : selectedProfileId ? (selectedProfile?.name || `설정 없음: ${selectedProfileId}`) : 'This computer'}</span>
+              <span className="font-bold text-slate-100">{!isComputeLoaded ? '설정 확인 중' : selectedProfileId ? (selectedProfile?.name || `설정 없음: ${selectedProfileId}`) : '이 컴퓨터'}</span>
               {selectedProfileId && <span className={selectedReadiness.ready ? 'text-emerald-400' : 'text-amber-300'}>
                 {selectedReadiness.ready ? `준비 완료 · ${selectedProbe?.device_name || selectedProbe?.device_type || '서버'}` : selectedReadiness.reason}
               </span>}
@@ -428,6 +428,10 @@ export const TrainingController: React.FC = () => {
             className="mt-2 rounded border border-cyan-500/50 bg-cyan-700/20 px-3 py-2 font-semibold text-cyan-100 hover:bg-cyan-700/40">
             4단계에서 {warmStartParentJobId} → {jobId} 비교
           </button>}
+          {status === 'completed' && !warmStartParentJobId && jobId && <div role="status" className="mt-2 flex flex-wrap items-center gap-2 rounded border border-emerald-600/60 bg-emerald-950/30 px-3 py-2 text-sm text-emerald-100">
+            <span>학습이 끝났습니다. 시험 이미지로 결과를 확인하세요.</span>
+            <button type="button" onClick={() => void setStep(4)} className="workspace-button workspace-button--primary">결과 평가하기 (4단계)</button>
+          </div>}
         </div>}
 
         <details className="rounded border border-slate-600 bg-[#111C2A] p-3 text-sm text-slate-200"><summary className="cursor-pointer">다음 학습 배치·로컬 장치 설정</summary><div className="mt-3 grid gap-3 sm:grid-cols-2"><label>배치 크기<input aria-label="다음 학습 배치 크기" type="number" min={1} max={128} disabled={isTraining} value={nextBatchSize ?? trainingPresetBatchSize(preset)} onChange={event=>setNextSettings({batchSize:Number(event.target.value)})} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2" /></label><label>로컬 장치<select aria-label="다음 학습 로컬 장치" disabled={isTraining} value={nextDevice || 'auto'} onChange={event=>setNextSettings({device:event.target.value})} className="mt-1 w-full rounded border border-slate-600 bg-[#0B1520] p-2"><option value="auto">자동 감지</option><option value="cpu">CPU</option><option value="mps">Apple Metal / MPS</option><option value="cuda">CUDA</option></select></label></div><p className="mt-2 text-slate-400">새 학습에 적용됩니다. 서버를 선택하면 서버 설정의 실행 장치를 사용합니다.</p></details>
@@ -465,22 +469,22 @@ export const TrainingController: React.FC = () => {
               <LedAnnunciator
                 state={getStatusLedState()}
                 size="md"
-                label="STATUS"
-                value={status.toUpperCase()}
+                label={language === 'ko' ? '상태' : 'Status'}
+                value={phaseLabels[status] || status}
                 pulse={isTraining}
               />
 
               {isTraining && (
                 <div className="flex items-center space-x-3 text-slate-300 font-mono text-[11px] tabular-nums">
                   <span className="bg-[#0B0E14] px-2 py-0.5 rounded-[2px] border border-[#2B3547]">
-                    EPOCH {currentEpoch.toString().padStart(2, '0')}/{totalEpochs.toString().padStart(2, '0')}
+                    학습 {currentEpoch}/{totalEpochs}회
                   </span>
                   <span className="bg-[#0B0E14] px-2 py-0.5 rounded-[2px] border border-[#2B3547]">
-                    STEP {currentStep}/{totalSteps}
+                    단계 {currentStep}/{totalSteps}
                   </span>
                   <span className="flex items-center space-x-1 text-amber-400 bg-[#0B0E14] px-2 py-0.5 rounded-[2px] border border-[#2B3547]">
                     <Clock className="w-3 h-3" />
-                    <span>ETA: {formatTime(totalEtaSeconds || epochEtaSeconds)}</span>
+                    <span>남은 시간 {formatTime(totalEtaSeconds || epochEtaSeconds)}</span>
                   </span>
                 </div>
               )}
@@ -491,7 +495,7 @@ export const TrainingController: React.FC = () => {
           {bestMetric !== null && (
             <div className="flex items-center space-x-2">
               <span title={task === 'anomaly' ? '저장된 모델 선택 지표 · 검증 수치와 학습 손실은 아래 기록에서 확인' : undefined}
-                className="text-[10px] text-slate-400 uppercase font-semibold font-mono">{task === 'anomaly' ? '저장 지표' : 'BEST VAL LOSS:'}</span>
+                className="text-[10px] text-slate-400 uppercase font-semibold font-mono">{task === 'anomaly' ? '저장 지표' : '최적 검증 손실'}</span>
               <span className="text-sm font-mono tabular-nums font-bold text-emerald-400 bg-[#0B0E14] px-2.5 py-1 rounded-[3px] border border-[#2B3547]">
                 {bestMetric.toFixed(4)}
               </span>
@@ -561,12 +565,17 @@ export const TrainingController: React.FC = () => {
                 </div>
                 <div className="mt-3 text-slate-400">학습이 시작되면 이 서버에서 손실 곡선과 작업 상태를 받습니다.</div>
               </div>
-            ) : (
+            ) : technicalDetails ? (
               <HardwareTelemetryPanel
                 hardware={hardware}
                 isTraining={isTraining}
                 language={language}
               />
+            ) : (
+              <div className="h-full rounded border border-[#2B3547] bg-[#131822] p-4 text-sm text-slate-300">
+                <div className="font-semibold text-slate-100">{language === 'ko' ? '이 컴퓨터에서 학습합니다' : 'Training on this computer'}</div>
+                <p className="mt-2">{language === 'ko' ? '장치 사용량(CPU·메모리·GPU)은 상단의 기술 상세를 켜면 보입니다.' : 'Turn on Technical details in the header to see CPU, memory and GPU use.'}</p>
+              </div>
             )}
           </div>
         </div>

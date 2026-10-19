@@ -254,7 +254,7 @@ export const OscilloscopeLossCurve: React.FC<OscilloscopeLossCurveProps> = ({
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              LINEAR
+              선형
             </button>
             <button
               type="button"
@@ -265,7 +265,7 @@ export const OscilloscopeLossCurve: React.FC<OscilloscopeLossCurveProps> = ({
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              LOG (dB)
+              로그
             </button>
           </div>
         </div>
@@ -518,8 +518,8 @@ export const OscilloscopeLossCurve: React.FC<OscilloscopeLossCurveProps> = ({
               fontFamily="JetBrains Mono, monospace"
             >
               {language === 'ko'
-                ? '학습 시작 시 실시간 오실로스코프 손실 곡선이 스트리밍됩니다.'
-                : 'Real-time oscilloscope loss traces will stream upon training.'}
+                ? '학습을 시작하면 오차(손실)가 줄어드는 모습이 여기에 그려집니다. 선이 아래로 내려갈수록 좋습니다.'
+                : 'Once training starts the loss curve is drawn here; lower is better.'}
             </text>
           )}
         </svg>
@@ -540,19 +540,19 @@ export const OscilloscopeLossCurve: React.FC<OscilloscopeLossCurveProps> = ({
               </span>
             </div>
             <div>
-              <span className="text-blue-400 mr-1.5">CH1:</span>
+              <span className="text-blue-400 mr-1.5">학습:</span>
               <span className="font-bold text-blue-300">
                 {trainLoss !== null ? trainLoss.toFixed(4) : '--'}
               </span>
             </div>
             <div>
-              <span className="text-amber-400 mr-1.5">CH2:</span>
+              <span className="text-amber-400 mr-1.5">검증:</span>
               <span className="font-bold text-amber-300">
                 {valLoss !== null ? valLoss.toFixed(4) : '--'}
               </span>
             </div>
             <div className="col-span-2 border-t border-[#1E293B] pt-0.5 mt-0.5 flex justify-between text-xs">
-              <span className="text-slate-500">TIME REMAINING:</span>
+              <span className="text-slate-500">남은 시간:</span>
               <span className="font-bold text-amber-400">{formatTime(etaSeconds)}</span>
             </div>
           </div>
@@ -568,20 +568,20 @@ export const OscilloscopeLossCurve: React.FC<OscilloscopeLossCurveProps> = ({
             }}
           >
             <div className="font-bold text-slate-100 pb-1 border-b border-[#2B3547] mb-1">
-              EPOCH {hoverPoint.epoch} MEASUREMENT
+              {hoverPoint.epoch}회차 학습 값
             </div>
             <div className="space-y-0.5">
               <div className="flex justify-between space-x-3">
-                <span className="text-blue-400">Train Loss:</span>
+                <span className="text-blue-400">학습 손실:</span>
                 <span className="font-bold text-slate-100">{hoverPoint.trainLoss.toFixed(4)}</span>
               </div>
               <div className="flex justify-between space-x-3">
-                <span className="text-amber-400">Val Loss:</span>
+                <span className="text-amber-400">검증 손실:</span>
                 <span className="font-bold text-slate-100">{hoverPoint.valLoss !== null ? hoverPoint.valLoss.toFixed(4) : '--'}</span>
               </div>
               {hoverPoint.lr && (
                 <div className="flex justify-between space-x-3 text-slate-400 text-xs">
-                  <span>Learning Rate:</span>
+                  <span>학습률:</span>
                   <span>{hoverPoint.lr.toExponential(2)}</span>
                 </div>
               )}
@@ -592,8 +592,8 @@ export const OscilloscopeLossCurve: React.FC<OscilloscopeLossCurveProps> = ({
 
       {/* Oscilloscope Chassis Footer Ticks */}
       <div className="flex items-center justify-between pt-2 mt-1 text-xs font-mono text-slate-500">
-        <div>TIMEBASE: 1.0 EPOCH/DIV • SAMPLING: 10Hz REALTIME</div>
-        <div>BANDWIDTH: FULL CONVERGENCE • TRIGGER: AUTO</div>
+        <div>가로축: 학습 횟수 · 10Hz 갱신</div>
+        <div>아래로 내려갈수록 모델이 더 잘 맞춥니다</div>
       </div>
     </div>
   );

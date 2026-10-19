@@ -49,6 +49,13 @@ const comparisonTasks = new Set<string>([
   'ocr', 'rotated_detection', 'enhancement', 'rotation',
 ] satisfies FlowModelTask[]);
 
+/** Metric keys as a first-time user reads them; unknown keys keep their name. */
+const METRIC_NAMES_KO: Record<string, string> = {
+  accuracy: '정확도', precision: '정밀도', recall: '재현율', f1: 'F1', macro_precision: '정밀도 (평균)', macro_recall: '재현율 (평균)',
+  macro_f1: 'F1 (평균)', best_metric: '학습 중 최적 지표', image_auroc: '이미지 AUROC', pixel_auroc: '픽셀 AUROC', map: 'mAP', map50: 'mAP@50',
+  iou: 'IoU', mean_iou: '평균 IoU', dice: 'Dice', escape_rate: '미검률', overkill_rate: '과검률', review_rate: '확인 필요 비율',
+};
+
 export const SampleVerdictBadge: React.FC<{ verdict: SampleVerdict; compact?: boolean }> = ({
   verdict,
 }) => {
@@ -57,28 +64,28 @@ export const SampleVerdictBadge: React.FC<{ verdict: SampleVerdict; compact?: bo
       return (
         <span className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded-[4px] text-[10px] bg-[#450A0A] text-[#FCA5A5] border border-[#EF4444] font-mono font-bold">
           <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] animate-pulse" />
-          <span>🚨 FN 미검 (Escape)</span>
+          <span title="FN · Escape">미검 · 결함을 놓침</span>
         </span>
       );
     case 'OVERKILL':
       return (
         <span className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded-[4px] text-[10px] bg-[#451A03] text-[#FCD34D] border border-[#F59E0B] font-mono font-bold">
           <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B]" />
-          <span>⚠️ FP 과검 (Overkill)</span>
+          <span title="FP · Overkill">과검 · 정상을 결함으로</span>
         </span>
       );
     case 'CORRECT_NG':
       return (
         <span className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded-[4px] text-[10px] bg-[#083344] text-[#67E8F9] border border-[#06B6D4] font-mono font-semibold">
           <span className="w-1.5 h-1.5 rounded-full bg-[#06B6D4]" />
-          <span>🎯 TP 결함검출</span>
+          <span title="TP">결함 검출 · 맞음</span>
         </span>
       );
     case 'CORRECT_OK':
       return (
         <span className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded-[4px] text-[10px] bg-[#064E3B] text-[#6EE7B7] border border-[#10B981] font-mono font-semibold">
           <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
-          <span>🟢 TN 정상합격</span>
+          <span title="TN">정상 판정 · 맞음</span>
         </span>
       );
     case 'REVIEW':
@@ -633,6 +640,11 @@ export const EvaluationStudio: React.FC = () => {
                 ? '이 데이터는 임계값 보정에도 사용했습니다. 보정 효과는 별도 시험 데이터에서 확인하세요.'
                 : 'This data was also used for threshold calibration. Validate the calibration on a separate test set.'}</p>}
             </div>}
+            <p role="status" aria-label="평가 요약" className="mb-2 rounded border border-[#2B3547] bg-[#131822] px-3 py-2 text-sm text-slate-100">
+              {language === 'ko'
+                ? `시험 이미지 ${sampleCounts.all}장 중 ${sampleCounts.normal + sampleCounts.defect}장 맞음 · 미검(놓친 결함) ${sampleCounts.escape} · 과검(정상을 결함으로) ${sampleCounts.overkill}`
+                : `${sampleCounts.normal + sampleCounts.defect} of ${sampleCounts.all} test images right · ${sampleCounts.escape} escapes · ${sampleCounts.overkill} overkills`}
+            </p>
             <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
               {language === 'ko' ? '주요 품질 지표' : 'Primary Quality Metrics'}
             </h3>
@@ -645,7 +657,7 @@ export const EvaluationStudio: React.FC = () => {
                   <div key={k} className="p-2.5 bg-[#1A212E] rounded-[4px] border border-[#2B3547]">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-[10px] text-slate-400 block uppercase">
-                        {k.replace(/_/g, ' ')}
+                        {language === 'ko' ? (METRIC_NAMES_KO[k] || k.replace(/_/g, ' ')) : k.replace(/_/g, ' ')}
                       </span>
                       {termKey && <JargonTooltip termKey={termKey} />}
                     </div>
@@ -724,7 +736,7 @@ export const EvaluationStudio: React.FC = () => {
                     <thead>
                       <tr className="border-b border-[#2B3547]">
                         <th className="p-1.5 text-slate-400 font-mono text-[10px] uppercase text-left">
-                          True \ Pred
+                          {language === 'ko' ? '실제 \\ 판정' : 'True \\ Pred'}
                         </th>
                         {classes.map((c) => (
                           <th key={c} className="p-1.5 font-mono font-semibold text-slate-300 max-w-[80px] truncate" title={c}>
@@ -732,10 +744,10 @@ export const EvaluationStudio: React.FC = () => {
                           </th>
                         ))}
                         <th className="p-1.5 font-mono font-semibold text-slate-400 bg-[#131822] border-l border-[#2B3547] text-[10px]">
-                          Support
+                          {language === 'ko' ? '개수' : 'Support'}
                         </th>
                         <th className="p-1.5 font-mono font-semibold text-[#6EE7B7] bg-[#131822] text-[10px]">
-                          {task === 'detection' ? (language === 'ko' ? '행 일치율' : 'Row match') : 'Recall'}
+                          {task === 'detection' ? (language === 'ko' ? '행 일치율' : 'Row match') : (language === 'ko' ? '재현율' : 'Recall')}
                         </th>
                       </tr>
                     </thead>
@@ -978,7 +990,7 @@ export const EvaluationStudio: React.FC = () => {
                       : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  <span>FN 미검</span>
+                  <span title="FN">미검</span>
                   <span className="tabular-nums">({sampleCounts.escape})</span>
                 </button>
                 <button
@@ -992,7 +1004,7 @@ export const EvaluationStudio: React.FC = () => {
                       : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  <span>FP 과검</span>
+                  <span title="FP">과검</span>
                   <span className="tabular-nums">({sampleCounts.overkill})</span>
                 </button>
               </div>
@@ -1006,7 +1018,7 @@ export const EvaluationStudio: React.FC = () => {
                       : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  <span>🎯 TP 결함</span>
+                  <span title="TP">결함 맞음</span>
                   <span className="tabular-nums">({sampleCounts.defect})</span>
                 </button>
                 <button
@@ -1018,7 +1030,7 @@ export const EvaluationStudio: React.FC = () => {
                       : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  <span>🟢 TN 정상</span>
+                  <span title="TN">정상 맞음</span>
                   <span className="tabular-nums">({sampleCounts.normal})</span>
                 </button>
               </div>
@@ -1107,7 +1119,7 @@ export const EvaluationStudio: React.FC = () => {
                       }).catch((cause) => setReportError(cause instanceof Error ? cause.message : '라벨 화면을 열지 못했습니다.'));
                     }} className="rounded border border-cyan-700 px-2 py-1 text-[10px] text-cyan-200 hover:bg-cyan-950 disabled:opacity-50 disabled:cursor-not-allowed">라벨 수정</button>
                     <span className="text-[10px] text-slate-400 font-mono">
-                      GT: {pred.ground_truth}
+                      정답: {pred.ground_truth}
                     </span>
                   </div>
                 </div>

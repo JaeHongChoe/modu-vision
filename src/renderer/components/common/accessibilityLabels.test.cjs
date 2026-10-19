@@ -46,3 +46,15 @@ test('the operator workspace has one primary action and explains what approval m
  assert.match(operator,/workspace-button--primary/);
  assert.match(operator,/승인하면 검사를 시작할 수 있습니다/);
 });
+
+test('the training and evaluation screens speak plain Korean (no console codes)',()=>{
+ const training=read('training/TrainingController.tsx')+read('training/RecipePresetSelector.tsx')+read('training/OscilloscopeLossCurve.tsx')+read('training/HardwareTelemetryPanel.tsx');
+ for(const jargon of ['BEST VAL LOSS','(Recipe B)','(RECIPE A)','Light Aug','Feasibility Check','TIMEBASE','HARDWARE TELEMETRY','label="STATUS"','EPOCH {','AUTOML'])assert.ok(!training.includes(jargon),`training screen still says ${jargon}`);
+ assert.match(training,/결과 평가하기 \(4단계\)/);
+ const evaluation=read('evaluation/EvaluationStudio.tsx')+read('evaluation/SynchronizedDualViewport.tsx');
+ for(const jargon of ['RAW INSPECTION IMAGE','DEFECT HEATMAP OVERLAY','FN 미검 (Escape)','TN 정상합격',"'VERDICT'","'PRED'"])assert.ok(!evaluation.includes(jargon),`evaluation screen still says ${jargon}`);
+ assert.match(evaluation,/장 맞음 · 미검/);
+ assert.match(read('wizard/workflowReadiness.ts'),/학습 결과 평가 \(4단계\)/);
+ const inference=read('inference/InferenceCenterStudio.tsx');
+ assert.ok(inference.indexOf('<BatchInspectionPanel />')<inference.indexOf('<CoreModelTrialPanel'),'the batch inspection comes after the single-model trial');
+});
