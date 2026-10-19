@@ -285,7 +285,7 @@ test('renderer server serves static files, blocks traversal and injects the toke
   const backend = await harness.startOwnedBackend(fakeBackendOptions(dir));
   const renderer = await harness.startRendererServer({ staticDir, backend });
   try {
-    assert.equal(renderer.url, `http://127.0.0.1:${renderer.port}/index.html?port=${renderer.port}`);
+    assert.equal(renderer.url, `http://127.0.0.1:${renderer.port}/index.html?port=${renderer.port}&view=full`);
     const index = await get(renderer.port, '/');
     assert.equal(index.status, 200);
     assert.match(index.body, /shell/);
