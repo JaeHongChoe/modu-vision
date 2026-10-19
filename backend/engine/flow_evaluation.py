@@ -263,7 +263,7 @@ def evaluate_flow(project, version_id, cohort_id, *, engine=None, model_provider
     if cohort['scope']['task'] == 'mixed' and cohort.get('participating_tasks') != _participating_tasks(graph):
         raise ValueError('Flow participating tasks differ from the frozen truth dependencies')
     changed = _cohort_changes(project,cohort)
-    if changed: raise ValueError('Frozen cohort truth/source changed; freeze a new cohort: '+', '.join(changed[:10]))
+    if changed: raise ValueError('고정한 시험 묶음의 정답이나 원본이 바뀌었습니다. 묶음을 새로 고정한 뒤 평가하세요: '+', '.join(changed[:10]))
     graph_hash = pipeline_sha256(graph); engine = engine or FlowchartEngine(device='cpu')
     confusion = {truth:{verdict:0 for verdict in ('OK','NG','REVIEW')} for truth in ('OK','NG')}
     records = []; escapes = []; overkills = []; unknown = []; errors = []
