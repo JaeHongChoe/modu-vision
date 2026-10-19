@@ -21,7 +21,7 @@ import { ErrorDiagnosticsModal } from './components/common/ErrorDiagnosticsModal
 import { FirstRunStudio } from './components/onboarding/FirstRunStudio';
 import { useFirstRunStore } from './components/onboarding/firstRunStore';
 import { EXAMPLE_NOTICE, shouldOpenFirstRun } from './components/onboarding/firstRun';
-import { useProjectStore } from './stores/useProjectStore';
+import { resolveTheme, useProjectStore } from './stores/useProjectStore';
 import { useTrainingStore } from './stores/useTrainingStore';
 import { useComputeStore } from './stores/useComputeStore';
 import { telemetryService } from './services/websocket';
@@ -105,6 +105,20 @@ export default function App() {
       telemetryService.disconnect();
     };
   }, [setBackendStatus, showError, updateFromTelemetry]);
+
+  // The chosen theme (or the OS preference) is written on <html>, where the light stylesheet keys off it.
+  const theme = useProjectStore(s => s.theme);
+  useEffect(() => {
+    const media = typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-color-scheme: light)') : null;
+    const apply = () => {
+      const resolved = resolveTheme(theme, Boolean(media?.matches));
+      document.documentElement.dataset.theme = resolved;
+      document.documentElement.classList.toggle('dark', resolved === 'dark');
+    };
+    apply();
+    media?.addEventListener?.('change', apply);
+    return () => media?.removeEventListener?.('change', apply);
+  }, [theme]);
 
   useEffect(() => {
     if (!backendStatus.healthy) return;

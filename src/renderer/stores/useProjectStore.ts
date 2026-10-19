@@ -119,11 +119,28 @@ function rememberTechnicalDetails(storage: Pick<Storage, 'setItem'> | undefined,
   catch { /* Keep the choice for this session when persistence is unavailable. */ }
 }
 
+// The colour theme is a device preference: 'system' follows the OS until the user picks one.
+export type ThemeChoice = 'system' | 'light' | 'dark';
+const THEME_KEY = 'modu:theme:v1';
+function readTheme(storage?: Pick<Storage, 'getItem'>): ThemeChoice {
+  try { const value = storage?.getItem(THEME_KEY); return value === 'light' || value === 'dark' ? value : 'system'; }
+  catch { return 'system'; }
+}
+function rememberTheme(storage: Pick<Storage, 'setItem'> | undefined, theme: ThemeChoice): void {
+  try { storage?.setItem(THEME_KEY, theme); }
+  catch { /* Keep the choice for this session when persistence is unavailable. */ }
+}
+/** The theme actually shown for a choice, given whether the OS prefers light. */
+export function resolveTheme(choice: ThemeChoice, systemPrefersLight: boolean): 'light' | 'dark' {
+  return choice === 'system' ? (systemPrefersLight ? 'light' : 'dark') : choice;
+}
+
 interface ProjectState {
   activeStep: WizardStep;
   task: VisionTask;
   language: Language;
   technicalDetails: boolean;
+  theme: ThemeChoice;
   backendPort: number | null;
   backendStatus: BackendStatus;
   activeError: ErrorCatalogItem | null;
@@ -136,6 +153,7 @@ interface ProjectState {
 
   setStep: (step: WizardStep) => Promise<void>;
   setTechnicalDetails: (value: boolean) => void;
+  setTheme: (theme: ThemeChoice) => void;
   openImageForLabeling: (imageId: string, filePath: string, expected?:{imageSha256:string;revision:number;isCurrent?:()=>boolean}) => Promise<boolean>;
   /** Changes the project task; the outcome always names the task that is actually active. */
   updateTask: (task: VisionTask) => Promise<TaskChangeOutcome>;
@@ -292,6 +310,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   task: 'classification',
   language: readUserLanguage(viewStorage()),
   technicalDetails: readTechnicalDetails(viewStorage()),
+  theme: readTheme(viewStorage()),
   backendPort: null,
   backendStatus: { port: null, healthy: false, pid: null },
   activeError: null,
@@ -438,6 +457,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   setLanguage: (language) => { rememberUserLanguage(viewStorage(), language); set({ language }); },
   setTechnicalDetails: (technicalDetails) => { rememberTechnicalDetails(viewStorage(), technicalDetails); set({ technicalDetails }); },
+  setTheme: (theme) => { rememberTheme(viewStorage(), theme); set({ theme }); },
   setBackendStatus: (status) => {
     setCachedPort(status.port);
     set({ backendStatus: status, backendPort: status.port });

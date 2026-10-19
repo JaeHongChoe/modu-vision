@@ -45,6 +45,8 @@ export const WizardHeader: React.FC = () => {
     setLanguage,
     technicalDetails,
     setTechnicalDetails,
+    theme,
+    setTheme,
     backendStatus,
     projectName,
     projectError,
@@ -56,6 +58,8 @@ export const WizardHeader: React.FC = () => {
   } = useComputeStore();
   const { jobId, jobComputeProfileId, jobComputeLabel } = useTrainingStore();
   const ko = language === 'ko';
+  // What the user currently sees; 'system' resolves through the <html> attribute App keeps in step with the OS.
+  const shownTheme = theme === 'system' ? (typeof document !== 'undefined' && document.documentElement.dataset.theme === 'light' ? 'light' : 'dark') : theme;
   const taskScope = () => {
     const currentProject = useProjectStore.getState();
     const currentCompute = useComputeStore.getState();
@@ -170,6 +174,9 @@ export const WizardHeader: React.FC = () => {
           <button type="button" onClick={() => setShowProvenance(true)} className={CONTROL}>{ko ? '데이터·판정 이력' : 'Data and verdict history'}</button>
           <button type="button" aria-pressed={technicalDetails} onClick={() => setTechnicalDetails(!technicalDetails)} className={`${CONTROL} ${technicalDetails ? 'border-sky-500 bg-sky-950/60 text-sky-100' : ''}`}>
             {ko ? '기술 상세' : 'Technical details'}
+          </button>
+          <button type="button" onClick={() => setTheme(shownTheme === 'light' ? 'dark' : 'light')} className={CONTROL} aria-pressed={shownTheme === 'light'}>
+            {shownTheme === 'light' ? (ko ? '어두운 화면' : 'Dark screen') : (ko ? '밝은 화면' : 'Light screen')}
           </button>
           <button type="button" onClick={() => setLanguage(ko ? 'en' : 'ko')} className={CONTROL} aria-label={ko ? 'Switch to English' : '한국어로 전환'}>
             {ko ? 'English' : '한국어'}
