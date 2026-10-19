@@ -218,7 +218,7 @@ export const WizardHeader: React.FC = () => {
                     : 'bg-[#0E121A] text-slate-300 hover:bg-[#151C27]'
                 }`}
               >
-                <span className={`font-mono tabular-nums ${isActive ? 'text-[#10B981]' : 'text-slate-400'}`}>{s.num}</span>
+                <span className={`font-mono tabular-nums ${isActive ? 'text-[#10B981]' : 'text-slate-400'}`}>{String(s.num).padStart(2, '0')}</span>
                 <Icon className={`h-4 w-4 ${isActive ? 'text-[#10B981]' : 'text-slate-400'}`} aria-hidden="true" />
                 <span className="font-medium">{ko ? s.nameKo : s.nameEn}</span>
               </button>
