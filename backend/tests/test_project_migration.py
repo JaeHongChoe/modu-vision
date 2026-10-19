@@ -8,6 +8,16 @@ from fastapi import HTTPException
 from backend.api import routes_project
 
 
+@pytest.fixture(autouse=True)
+def _private_control_root(tmp_path, monkeypatch):
+    """Migration apply inventories the global control root (job ledger, journals, leases) named by
+    VISION_AI_STUDIO_USER_DATA_DIR and refuses while jobs there are active. The backend conftest points
+    that variable at one folder shared by the whole session, so jobs left by earlier suites would block
+    these fresh projects. Each case gets its own empty control root instead; the blocker behaviour itself
+    is unchanged."""
+    monkeypatch.setenv('VISION_AI_STUDIO_USER_DATA_DIR', str(tmp_path / 'control_root'))
+
+
 def manifest(root, schema=None):
     root.mkdir()
     value = {'id':'project','name':'Inspection','task':'classification',
