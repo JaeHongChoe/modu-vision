@@ -40,10 +40,10 @@ export const WizardFooter = () => {
     <div className="flex items-center gap-2 whitespace-nowrap">
       <button className="workspace-button" disabled={activeStep===1} onClick={()=>move(activeStep-1)} aria-label="이전 단계 보기" title={ko?'이전 단계 (Alt+←)':'Previous step (Alt+←)'}><ArrowLeft className="h-3 w-3"/></button>
       <span className="font-mono text-slate-400">{activeStep}/6</span>
-      <div role="status" aria-live="polite" title={blocker?`${blocker} → ${readiness.nextAction.label}`:undefined} className={`flex min-w-0 flex-1 items-center gap-x-3 rounded border px-3 py-1.5 ${tone}`}>
+      <div role="status" aria-live="polite" title={blocker?`${blocker} → ${readiness.nextAction.label}`:undefined} className={`flex min-w-0 flex-1 items-center gap-x-3 rounded border px-3 py-0.5 ${tone}`}>
         <span className="whitespace-nowrap font-semibold">{labels[readiness.status]}</span>
         <span className="min-w-0 flex-1 truncate">{ko?`완료 입력 ${readiness.completedInputs.length} · `:`${readiness.completedInputs.length} inputs done · `}{blocker?(readiness.status==='ready'?blocker:`${blocker} → ${readiness.nextAction.label}`):(ko?'안내된 행동의 입력 준비됨':'ready for the suggested action')}</span>
-        <button className="workspace-button whitespace-nowrap" aria-expanded={expanded} onClick={()=>setExpanded(value=>!value)}>{ko?(expanded?'자세히 닫기':'왜 그런가요?'):(expanded?'Close details':'Why?')}</button>
+        <button className="workspace-button min-h-0 whitespace-nowrap py-0.5" aria-expanded={expanded} onClick={()=>setExpanded(value=>!value)}>{ko?(expanded?'자세히 닫기':'왜 그런가요?'):(expanded?'Close details':'Why?')}</button>
       </div>
       <AsyncAction className="workspace-button--primary whitespace-nowrap" aria-label={`권장 행동: ${readiness.nextAction.label}`} onClick={()=>void action()}>{readiness.nextAction.label}</AsyncAction>
       <button className="workspace-button" disabled={activeStep===6} onClick={()=>move(activeStep+1)} aria-label="다음 단계 보기" title={ko?'다음 단계 (Alt+→)':'Next step (Alt+→)'}><ArrowRight className="h-3 w-3"/></button>
