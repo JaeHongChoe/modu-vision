@@ -35,6 +35,7 @@ import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
 import { JargonTooltip } from '../common/JargonTooltip';
 import { GuardrailBanner } from '../common/GuardrailBanner';
 import { classDistributionStats } from './classDistribution';
+import { calibratorView, severeClassImbalance } from './splitCalibrator';
 import { isSplitUnavailable } from '../../utils/datasetSplitCapability';
 import { ScopedDatasetThumbnail } from '../common/ScopedDatasetThumbnail';
 
@@ -140,12 +141,14 @@ export const DatasetStudio: React.FC = () => {
   const [imgDimensions, setImgDimensions] = useState<Record<string, { w: number; h: number }>>({});
 
   // Precision 3-Way Split Calibrator Ratios (Train / Val / Test)
-  const [splitRatios, setSplitRatios] = useState<{ train: number; val: number; test: number }>(() => {
+  // `touchedFor` names the dataset whose calibrator the user changed: until then the saved split is shown.
+  const [splitRatios, setSplitRatios] = useState<{ train: number; val: number; test: number; touchedFor?: string | null }>(() => {
     const train = Math.round(trainRatio * 100) || 70;
     const remaining = 100 - train;
     const val = Math.round(remaining / 2);
     return { train, val, test: remaining - val };
   });
+  const calibratorTouched = Boolean(datasetKey) && splitRatios.touchedFor === datasetKey;
 
   const handleImageLoad = (filePath: string, naturalWidth: number, naturalHeight: number) => {
     setImgDimensions((prev) => {
@@ -155,7 +158,7 @@ export const DatasetStudio: React.FC = () => {
   };
 
   const handlePresetSplit = (t: number, v: number, te: number) => {
-    setSplitRatios({ train: t, val: v, test: te });
+    setSplitRatios({ train: t, val: v, test: te, touchedFor: datasetKey });
     setTrainRatio(t / 100);
   };
 
@@ -163,7 +166,7 @@ export const DatasetStudio: React.FC = () => {
     const remaining = 100 - newTrain;
     const newVal = Math.round(remaining * (2 / 3));
     const newTest = remaining - newVal;
-    setSplitRatios({ train: newTrain, val: newVal, test: newTest });
+    setSplitRatios({ train: newTrain, val: newVal, test: newTest, touchedFor: datasetKey });
     setTrainRatio(newTrain / 100);
   };
 
@@ -222,24 +225,15 @@ export const DatasetStudio: React.FC = () => {
   // Class distribution calculation
   const classEntries = Object.entries(classes);
   const distribution = classDistributionStats(task, classes, classCountUnit === 'images' ? sourceImages : totalImages, classCountUnit ?? undefined);
+  const isImbalanced = severeClassImbalance(classes);
   const maxClassCount = Math.max(...Object.values(classes), 1);
-  const minClassCount = Math.min(...Object.values(classes), 1);
-  const isImbalanced = classEntries.length > 1 && maxClassCount / minClassCount > 20;
-
-  // Calibrator estimates; status cards and gallery tabs use the saved split instead.
-  const trainCount = Math.round(totalImages * (splitRatios.train / 100));
-  const valCount = Math.round(totalImages * (splitRatios.val / 100));
-  const testCount = Math.max(0, totalImages - trainCount - valCount);
   const appliedTotal = split.train + split.val + split.test;
-  const showAppliedSplit = splitUnavailableForTask && appliedTotal > 0;
-  const shownCounts = showAppliedSplit ? split : { train: trainCount, val: valCount, test: testCount };
-  const shownRatios = showAppliedSplit
-    ? {
-        train: Math.round((split.train / appliedTotal) * 100),
-        val: Math.round((split.val / appliedTotal) * 100),
-        test: 100 - Math.round((split.train / appliedTotal) * 100) - Math.round((split.val / appliedTotal) * 100),
-      }
-    : splitRatios;
+
+  // The saved split until the calibrator is touched; status cards and gallery tabs always use the saved split.
+  const calibrator = calibratorView({ touched: calibratorTouched, locked: splitUnavailableForTask, applied: split, totalImages, ratios: splitRatios });
+  const showAppliedSplit = calibrator.mode === 'applied';
+  const shownCounts = calibrator.counts;
+  const shownRatios = calibrator.ratios;
 
   const gridClassByDensity = {
     S: 'grid grid-cols-[repeat(auto-fill,minmax(96px,1fr))] gap-2',
@@ -312,19 +306,19 @@ export const DatasetStudio: React.FC = () => {
         <div className="flex items-center space-x-3 bg-[#0B0E14] px-3 py-1.5 rounded-[4px] border border-[#2B3547] text-xs font-mono tabular-nums">
           <div className="flex items-center space-x-1.5">
             <span className="w-2 h-2 rounded-full bg-[#3B82F6]" />
-            <span className="text-slate-400">Train:</span>
+            <span className="text-slate-400">{language === 'ko' ? '학습' : 'Train'}:</span>
             <span className="font-bold text-blue-400">{split.train}</span>
           </div>
           <span className="w-[1px] h-3 bg-[#2B3547]" />
           <div className="flex items-center space-x-1.5">
             <span className="w-2 h-2 rounded-full bg-[#F59E0B]" />
-            <span className="text-slate-400">Val:</span>
+            <span className="text-slate-400">{language === 'ko' ? '검증' : 'Val'}:</span>
             <span className="font-bold text-amber-400">{split.val}</span>
           </div>
           <span className="w-[1px] h-3 bg-[#2B3547]" />
           <div className="flex items-center space-x-1.5">
             <span className="w-2 h-2 rounded-full bg-[#10B981]" />
-            <span className="text-slate-400">Test:</span>
+            <span className="text-slate-400">{language === 'ko' ? '시험' : 'Test'}:</span>
             <span className="font-bold text-emerald-400">{split.test}</span>
           </div>
         </div>
@@ -445,17 +439,20 @@ export const DatasetStudio: React.FC = () => {
                 <Sliders className="w-3.5 h-3.5 text-blue-400" />
                 <span className="text-xs font-bold text-slate-200 tracking-wide uppercase">
                   {showAppliedSplit
-                    ? (language === 'ko' ? '원본 폴더 분할' : 'Source Folder Split')
-                    : (language === 'ko' ? '3-Way 분할 캘리브레이터' : '3-Way Split Calibrator')}
+                    ? (language === 'ko' ? '학습 · 검증 · 시험 분할 (저장됨)' : 'Train / val / test split (saved)')
+                    : (language === 'ko' ? '학습 · 검증 · 시험 분할 (예상)' : 'Train / val / test split (preview)')}
                 </span>
               </div>
               <JargonTooltip termKey="early_stopping" />
             </div>
 
-            {!showAppliedSplit && <p className="text-[11px] text-slate-400">
-              {language === 'ko' ? '아래는 분할 예상입니다. 적용 버튼을 눌러야 저장된 분할이 변경됩니다.'
-                : 'Preview below. Saved splits change when you select Apply.'}
-            </p>}
+            <p className="text-xs text-slate-400">
+              {showAppliedSplit
+                ? (splitUnavailableForTask
+                  ? (language === 'ko' ? '원본 폴더의 분할을 그대로 사용합니다.' : 'The source folder\'s own split is used.')
+                  : (language === 'ko' ? '지금 저장된 분할입니다. 바꾸려면 아래에서 비율을 고르고 적용을 누르세요.' : 'This is the saved split. Pick a ratio below and apply it to change it.'))
+                : (language === 'ko' ? '아래는 바뀔 분할의 예상입니다. 적용 버튼을 눌러야 저장된 분할이 변경됩니다.' : 'Preview of the new split. Saved splits change when you select Apply.')}
+            </p>
 
             {/* Quick Calibration Presets */}
             <div className="grid grid-cols-3 gap-1.5">
@@ -493,28 +490,28 @@ export const DatasetStudio: React.FC = () => {
                 <div
                   className="bg-[#3B82F6] h-full transition-all duration-200"
                   style={{ width: `${shownRatios.train}%` }}
-                  title={`Train: ${shownRatios.train}% (${shownCounts.train}장)`}
+                  title={`학습: ${shownRatios.train}% (${shownCounts.train}장)`}
                 />
                 <div
                   className="bg-[#F59E0B] h-full transition-all duration-200"
                   style={{ width: `${shownRatios.val}%` }}
-                  title={`Val: ${shownRatios.val}% (${shownCounts.val}장)`}
+                  title={`검증: ${shownRatios.val}% (${shownCounts.val}장)`}
                 />
                 <div
                   className="bg-[#10B981] h-full transition-all duration-200"
                   style={{ width: `${shownRatios.test}%` }}
-                  title={`Test: ${shownRatios.test}% (${shownCounts.test}장)`}
+                  title={`시험: ${shownRatios.test}% (${shownCounts.test}장)`}
                 />
               </div>
               <div className="flex items-center justify-between text-[10px] font-mono tabular-nums">
                 <span className="text-blue-400 font-semibold">
-                  Train: {shownRatios.train}% ({shownCounts.train})
+                  {language === 'ko' ? '학습' : 'Train'}: {shownRatios.train}% ({shownCounts.train})
                 </span>
                 <span className="text-amber-400 font-semibold">
-                  Val: {shownRatios.val}% ({shownCounts.val})
+                  {language === 'ko' ? '검증' : 'Val'}: {shownRatios.val}% ({shownCounts.val})
                 </span>
                 <span className="text-emerald-400 font-semibold">
-                  Test: {shownRatios.test}% ({shownCounts.test})
+                  {language === 'ko' ? '시험' : 'Test'}: {shownRatios.test}% ({shownCounts.test})
                 </span>
               </div>
             </div>
@@ -683,25 +680,25 @@ export const DatasetStudio: React.FC = () => {
                           ? (confirmedClassSplit ? '적용된 분할' : '분할 예상')
                           : (confirmedClassSplit ? 'Applied split' : 'Split preview')}</span>
                         <div className="flex space-x-2">
-                          <span className="text-blue-400">T: {cTrain}</span>
-                          <span className="text-amber-400">V: {cVal}</span>
-                          <span className="text-emerald-400">Test: {cTest}</span>
+                          <span className="text-blue-400">{language === 'ko' ? '학습' : 'T'}: {cTrain}</span>
+                          <span className="text-amber-400">{language === 'ko' ? '검증' : 'V'}: {cVal}</span>
+                          <span className="text-emerald-400">{language === 'ko' ? '시험' : 'Test'}: {cTest}</span>
                         </div>
                         <div className="w-16 bg-[#0B0E14] h-1 rounded-[1px] overflow-hidden flex border border-[#2B3547]/60">
                           <div
                             className="bg-[#3B82F6] h-full"
                             style={{ width: `${count > 0 ? (cTrain / count) * 100 : 0}%` }}
-                            title={`Train: ${cTrain}`}
+                            title={`학습: ${cTrain}`}
                           />
                           <div
                             className="bg-[#F59E0B] h-full"
                             style={{ width: `${count > 0 ? (cVal / count) * 100 : 0}%` }}
-                            title={`Val: ${cVal}`}
+                            title={`검증: ${cVal}`}
                           />
                           <div
                             className="bg-[#10B981] h-full"
                             style={{ width: `${count > 0 ? (cTest / count) * 100 : 0}%` }}
-                            title={`Test: ${cTest}`}
+                            title={`시험: ${cTest}`}
                           />
                         </div>
                       </div>}

@@ -524,7 +524,7 @@ export const BatchInspectionPanel: React.FC = () => {
         refreshKey={reviewQueueRevision} disabled={isRunning}
         onOpen={(runId, imagePath) => { void openHistoryRun(runId, imagePath); }} />
 
-      <div className="rounded-lg border border-[#2B3547] bg-[#0E1420] px-3 py-3" aria-label="검사 이력">
+      <div id="workflow-inspection-history" tabIndex={-1} className="rounded-lg border border-[#2B3547] bg-[#0E1420] px-3 py-3 outline-none" aria-label="검사 이력">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-100">
             <History className="h-4 w-4 text-sky-400" /> 검사 이력

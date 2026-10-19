@@ -9,6 +9,7 @@ import { runBatchInspection, summarizeBatch } from '../inference/batchInspection
 import { DEMO_PROJECT_NAME, DEMO_TRAINING, runDemo, type DemoDeps } from './runDemo';
 import { EXAMPLE_NOTICE, demoStepRows, demoSummary, nextExampleName } from './firstRun';
 import { useFirstRunStore } from './firstRunStore';
+import { focusWorkflowTarget } from '../wizard/workflowReadiness';
 
 const STATUS_MARK: Record<string, string> = { pending: '○', running: '…', done: '✓', failed: '⚠' };
 
@@ -21,7 +22,7 @@ function appDeps(): DemoDeps {
       let team = true;
       try { team = getApiPersistenceIdentity() !== 'local'; } catch { /* an unreadable team address counts as a team connection */ }
       if (team) return '예제는 개인 모드의 이 컴퓨터에서만 만듭니다. 팀 서버 연결을 끊고 다시 시작하세요.';
-      if (useComputeStore.getState().selectedProfileId) return '예제는 이 컴퓨터의 CPU에서 실행합니다. 상단 Compute에서 This computer를 선택한 뒤 다시 시작하세요.';
+      if (useComputeStore.getState().selectedProfileId) return '예제는 이 컴퓨터의 CPU에서 실행합니다. 상단 "실행 위치"에서 "이 컴퓨터"를 선택한 뒤 다시 시작하세요.';
       return null;
     },
     createProject: data => project().createProject(data),
@@ -111,11 +112,12 @@ export function FirstRunStudio({ onClose, onDismiss }: { onClose: () => void; on
       <h3 id="first-run-order" className="font-semibold text-slate-100">처음 프로젝트를 만드는 순서</h3>
       <ol className="mt-2 list-decimal space-y-2 pl-5 text-slate-300">
         <li><strong className="text-slate-100">작업 방식</strong> · 개인 모드는 이 컴퓨터에서 바로 시작합니다. 팀 서버를 쓰려면 상단의 서버 관리에서 서버를 추가하고 연결을 확인하세요.</li>
-        <li><strong className="text-slate-100">이 컴퓨터·서버 사전 점검</strong> · 3단계 모델 학습 허브의 이 컴퓨터 지원 상태에서 실제 사전 점검을 실행할 수 있습니다.
-          <button type="button" className="workspace-button ml-2" disabled={running} onClick={() => setStep(3)}>3단계로 이동</button></li>
-        <li><strong className="text-slate-100">프로젝트 만들기</strong> · 상단 프로젝트 이름 옆의 프로젝트 관리에서 새 프로젝트를 만듭니다.</li>
-        <li><strong className="text-slate-100">데이터 가져오기</strong> · 1단계 데이터 관리에서 데이터 폴더를 엽니다.
+        <li><strong className="text-slate-100">프로젝트 만들기</strong> · 상단 프로젝트 이름을 누르면 새 프로젝트를 만들 수 있습니다.
+          <button type="button" className="workspace-button ml-2" disabled={running} onClick={() => { onClose(); focusWorkflowTarget('workflow-project'); }}>프로젝트 관리 열기</button></li>
+        <li><strong className="text-slate-100">데이터 가져오기</strong> · 1단계 데이터 관리에서 검사 이미지가 든 폴더를 엽니다.
           <button type="button" className="workspace-button ml-2" disabled={running} onClick={() => setStep(1)}>1단계로 이동</button></li>
+        <li><strong className="text-slate-100">학습 시작</strong> · 3단계에서 모델을 고르고 이 컴퓨터의 사전 점검을 통과하면 학습을 시작합니다.
+          <button type="button" className="workspace-button ml-2" disabled={running} onClick={() => setStep(3)}>3단계로 이동</button></li>
       </ol>
     </section>
     <section aria-labelledby="first-run-example" className="rounded border border-slate-600 p-3">
@@ -133,7 +135,7 @@ export function FirstRunStudio({ onClose, onDismiss }: { onClose: () => void; on
       {demo?.state === 'failed' && <p role="alert" className="mt-2 text-amber-300">예제를 만들지 못했습니다: {demo.error}</p>}
       {demo?.state === 'ready' && demo.result && <div role="status" className="mt-3 space-y-2">
         <p className="text-emerald-300">{demoSummary(demo.result)}</p>
-        <button type="button" className="workspace-button workspace-button--primary" onClick={() => setStep(6)}>검사 결과 보기 (6단계)</button>
+        <button type="button" className="workspace-button workspace-button--primary" onClick={() => { setStep(6); focusWorkflowTarget('workflow-inspection-history'); }}>검사 결과 보기 (6단계)</button>
       </div>}
     </section>
     <div className="flex justify-end gap-2">
