@@ -33,6 +33,7 @@ import {DataReadinessPanel} from './DataReadinessPanel';
 import {DatasetStatisticsPanel} from './DatasetStatisticsPanel';
 import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
 import { SimpleViewFold } from '../common/SimpleViewFold';
+import { BrowserFolderPathInput } from './BrowserFolderPathInput';
 import { JargonTooltip } from '../common/JargonTooltip';
 import { GuardrailBanner } from '../common/GuardrailBanner';
 import { classDistributionStats } from './classDistribution';
@@ -269,6 +270,7 @@ export const DatasetStudio: React.FC = () => {
             <FolderOpen className="w-4 h-4" />
             <span>{language === 'ko' ? '데이터셋 폴더 열기' : 'Open Dataset Folder'}</span>
           </button>
+          <BrowserFolderPathInput disabled={isLoading} onImport={folder => importFolder(folder, task, undefined, false).catch(() => {})} />
 
           <button
             onClick={() => setShowGeneratorModal(true)}

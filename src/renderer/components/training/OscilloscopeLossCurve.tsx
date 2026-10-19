@@ -528,13 +528,13 @@ export const OscilloscopeLossCurve: React.FC<OscilloscopeLossCurveProps> = ({
         <div className="absolute top-2 right-2 bg-[#0B0E14]/90 border border-[#2B3547] rounded-[3px] p-2 text-xs font-mono tabular-nums pointer-events-none">
           <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-slate-300">
             <div>
-              <span className="text-slate-500 mr-1.5">EPOCH:</span>
+              <span className="text-slate-500 mr-1.5">회차:</span>
               <span className="font-bold text-slate-100">
                 {currentEpoch.toString().padStart(2, '0')}/{totalEpochs.toString().padStart(2, '0')}
               </span>
             </div>
             <div>
-              <span className="text-slate-500 mr-1.5">STEP:</span>
+              <span className="text-slate-500 mr-1.5">단계:</span>
               <span className="font-bold text-slate-100">
                 {currentStep}/{totalSteps}
               </span>

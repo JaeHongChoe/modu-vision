@@ -105,78 +105,84 @@ export const LabelingToolbar: React.FC = () => {
         <button
           onClick={() => setActiveTool('select')}
           title="선택 및 이동 (Select / Move - 1)"
-          className={`p-2 rounded border transition-all cursor-pointer ${
+          className={`flex items-center px-2 py-1.5 rounded border transition-all cursor-pointer ${
             activeTool === 'select'
               ? 'bg-[#1F2E40] text-cyan-400 border-cyan-500/80 ring-1 ring-cyan-500/30 font-semibold shadow-sm'
               : 'bg-[#1A212E] hover:bg-[#222B3D] text-slate-400 hover:text-slate-200 border-[#2B3547]'
           }`}
         >
           <MousePointer className="w-4 h-4" />
+          <span className="ml-1 text-xs">선택</span>
         </button>
 
         {/* Tool 2: BBox */}
         <button
           onClick={() => setActiveTool('bbox')}
           title="바운딩 박스 (BBox - 2)"
-          className={`p-2 rounded border transition-all cursor-pointer ${
+          className={`flex items-center px-2 py-1.5 rounded border transition-all cursor-pointer ${
             activeTool === 'bbox'
               ? 'bg-[#1F2E40] text-cyan-400 border-cyan-500/80 ring-1 ring-cyan-500/30 font-semibold shadow-sm'
               : 'bg-[#1A212E] hover:bg-[#222B3D] text-slate-400 hover:text-slate-200 border-[#2B3547]'
           }`}
         >
           <Square className="w-4 h-4" />
+          <span className="ml-1 text-xs">박스</span>
         </button>
 
         {/* Tool 3: Rotated BBox (OBB) */}
         <button
           onClick={() => setActiveTool('rotated_bbox')}
           title="회전 바운딩 박스 (Rotated BBox OBB - 3)"
-          className={`p-2 rounded border transition-all cursor-pointer ${
+          className={`flex items-center px-2 py-1.5 rounded border transition-all cursor-pointer ${
             activeTool === 'rotated_bbox'
               ? 'bg-[#1F2E40] text-purple-400 border-purple-500/80 ring-1 ring-purple-500/30 font-semibold shadow-sm'
               : 'bg-[#1A212E] hover:bg-[#222B3D] text-slate-400 hover:text-slate-200 border-[#2B3547]'
           }`}
         >
           <RotateCw className="w-4 h-4" />
+          <span className="ml-1 text-xs">회전 박스</span>
         </button>
 
         {/* Tool 4: Polygon */}
         <button
           onClick={() => setActiveTool('polygon')}
           title="다각형 폴리곤 (Polygon - 4)"
-          className={`p-2 rounded border transition-all cursor-pointer ${
+          className={`flex items-center px-2 py-1.5 rounded border transition-all cursor-pointer ${
             activeTool === 'polygon'
               ? 'bg-[#1F2E40] text-amber-400 border-amber-500/80 ring-1 ring-amber-500/30 font-semibold shadow-sm'
               : 'bg-[#1A212E] hover:bg-[#222B3D] text-slate-400 hover:text-slate-200 border-[#2B3547]'
           }`}
         >
           <Scissors className="w-4 h-4" />
+          <span className="ml-1 text-xs">다각형</span>
         </button>
 
         {/* Tool 5: Brush Mask */}
         <button
           onClick={() => setActiveTool('brush')}
           title="브러시 마스크 (Brush - 5)"
-          className={`p-2 rounded border transition-all cursor-pointer ${
+          className={`flex items-center px-2 py-1.5 rounded border transition-all cursor-pointer ${
             activeTool === 'brush'
               ? 'bg-[#1F2E40] text-emerald-400 border-emerald-500/80 ring-1 ring-emerald-500/30 font-semibold shadow-sm'
               : 'bg-[#1A212E] hover:bg-[#222B3D] text-slate-400 hover:text-slate-200 border-[#2B3547]'
           }`}
         >
           <Paintbrush className="w-4 h-4" />
+          <span className="ml-1 text-xs">브러시</span>
         </button>
 
         {/* Tool 6: Eraser */}
         <button
           onClick={() => setActiveTool('eraser')}
           title="마스크 지우개 (Eraser - 6)"
-          className={`p-2 rounded border transition-all cursor-pointer ${
+          className={`flex items-center px-2 py-1.5 rounded border transition-all cursor-pointer ${
             activeTool === 'eraser'
               ? 'bg-rose-950/60 text-rose-300 border-rose-600/80 ring-1 ring-rose-500/30 font-semibold shadow-sm'
               : 'bg-[#1A212E] hover:bg-[#222B3D] text-slate-400 hover:text-slate-200 border-[#2B3547]'
           }`}
         >
           <Eraser className="w-4 h-4" />
+          <span className="ml-1 text-xs">지우개</span>
         </button>
 
         <div className="w-[1px] h-5 bg-[#2B3547] mx-1" />

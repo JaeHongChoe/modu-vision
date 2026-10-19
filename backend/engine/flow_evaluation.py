@@ -362,3 +362,47 @@ def create_review_queue(project, evaluation_id):
               'version_id':record['version_id'],'cohort_id':record['cohort_id'],'graph_sha256':record['graph_sha256'],'step':5}
     return dw.create_review_queue(project['project_dir'],project['source_dataset_dir'],project['task'],
                                   project.get('active_labelset_id','default'),rows,origin,margin=0)
+
+
+def _label_verdict(label, roles):
+    """OK for a normal-role class, NG naming a defect-role class; anomaly folders map to the single class of that role."""
+    if label in roles:
+        role = roles[label]
+        return ('OK', []) if role == 'normal' else ('NG', [label]) if role == 'defect' else None
+    wanted = 'normal' if label == 'good' else 'defect' if label == 'defect' else None
+    names = [name for name, role in roles.items() if role == wanted] if wanted else []
+    if len(names) != 1: return None
+    return ('OK', []) if wanted == 'normal' else ('NG', names)
+
+
+def confirm_truth_from_labels(project, cohort_id, version_id, *, reviewer, note='폴더 라벨을 검토해 정답으로 확정', model_provider=None):
+    """A reviewer confirms a frozen cohort's folder labels as its explicit truth in one step. Every image still gets
+    its own dated declaration under the reviewer's name; an image whose folder names no class of the scope stays
+    unknown, and a declaration that already says the same is kept."""
+    from pathlib import PurePath
+    from backend.engine import image_truth
+    from backend.engine.dataset_inventory import folder_label_split
+    if not isinstance(reviewer, str) or not reviewer.strip():
+        raise ValueError('정답 확정에는 검토자 이름이 필요합니다.')
+    cohort = read_cohort(project, cohort_id)
+    scope = describe_scope(project, version_id, model_provider=model_provider)
+    task, classes, roles = scope['task'], scope['classes'], scope['class_semantics']['roles']
+    if task == 'mixed':
+        raise ValueError('여러 종류의 모델이 섞인 흐름은 폴더 라벨로 정답을 정할 수 없습니다. 이미지별로 검토하세요.')
+    declared = kept = 0; unknown = []
+    for sample in cohort['samples']:
+        label, _ = folder_label_split(PurePath(sample['relative_path']), task)
+        decided = _label_verdict(label, roles) if label else None
+        if decided is None:
+            unknown.append(sample['relative_path']); continue
+        verdict, defects = decided
+        current = image_truth.read_truth(project, sample['image_path'], task=task, classes=classes, class_roles=roles)
+        if current['verdict'] == verdict and current['defect_classes'] == defects and not current['invalidated']:
+            kept += 1; continue
+        image_truth.declare_truth(project, sample['image_path'], task=task, classes=classes, verdict=verdict, defect_classes=defects,
+                                  reviewer=reviewer, expected_revision=current['truth_revision'],
+                                  expected_image_revision=current['image_revision'], note=note, class_roles=roles)
+        declared += 1
+    return {'cohort_id': cohort_id, 'total': len(cohort['samples']), 'declared': declared, 'kept': kept,
+            'skipped': len(unknown), 'unknown': unknown[:50]}
+
