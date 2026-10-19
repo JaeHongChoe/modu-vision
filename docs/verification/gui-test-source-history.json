@@ -531,6 +531,26 @@
       "retained_spec_commit": "0bb86299000ee5c014707510bad591efb8047ffe",
       "current_test_source_sha256": "d8c5aaca2fa5b8a065c78c8f96d16c611c85371076dad32437d2b20a9a3ee5b5",
       "reason": "Exact previous public center-fitting spec is retained at43009a8. One separate source-change-error case was appended; all23740 historical bytes remain unchanged. This historical declaration supplies no new GUI execution or acceptance for the older case."
+    },
+    {
+      "receipt": "2026-10-08-metadata-picker-fe92877-browser.json",
+      "receipt_sha256": "139c823ccd2076bf687ab06acf50ea94f7c7ee2836152ef89e93eb82151c2d02",
+      "execution_source_sha": "fe9287701aec070dd4a729511c2abfe8e2076e81",
+      "test": "scripts/e2e/scale-library-controls.spec.ts::100k metadata pages through the actual library picker and restores the exact tail image",
+      "recorded_test_source_sha256": "54bca13b3b3cfc0b36b3c87fba7d6ba9b3888727e68188a378fc2d901e0d4915",
+      "retained_spec_commit": "a267a4cfcec905c715bbf314f2daa4d8da692ab4",
+      "current_test_source_sha256": "a5d9cd686e7fd5e55ea89330420e8a31d539b66c3f5e8b9d9ca5fd7f06be2ab1",
+      "reason": "The spec changed on the beginner-UX branch only in the words it reads from the screen (Korean control names and refusal messages); the retained public commit holds the exact bytes the receipt executed. This declares history and supplies no new GUI execution."
+    },
+    {
+      "receipt": "2026-10-08-metadata-picker-fe92877-electron.json",
+      "receipt_sha256": "27cd152592e7153e1d07c4559a1f2514d5147cd98862bc1e52515016fcb2ccb0",
+      "execution_source_sha": "fe9287701aec070dd4a729511c2abfe8e2076e81",
+      "test": "scripts/e2e/scale-library-controls.spec.ts::native 100k metadata picker preserves keyset progress and exact reopened identity",
+      "recorded_test_source_sha256": "54bca13b3b3cfc0b36b3c87fba7d6ba9b3888727e68188a378fc2d901e0d4915",
+      "retained_spec_commit": "a267a4cfcec905c715bbf314f2daa4d8da692ab4",
+      "current_test_source_sha256": "a5d9cd686e7fd5e55ea89330420e8a31d539b66c3f5e8b9d9ca5fd7f06be2ab1",
+      "reason": "The spec changed on the beginner-UX branch only in the words it reads from the screen (Korean control names and refusal messages); the retained public commit holds the exact bytes the receipt executed. This declares history and supplies no new GUI execution."
     }
   ]
 }

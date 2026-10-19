@@ -1,6 +1,16 @@
 @import './styles/design-tokens.css';
 @import './styles/theme-light.css';
 
+/* Pretendard Std (SIL Open Font License 1.1, public/fonts/PRETENDARD-LICENSE.txt): one Korean face on every OS,
+   served from the app itself so an offline install looks the same as a connected one. */
+@font-face {
+  font-family: 'Pretendard Variable';
+  font-weight: 45 920;
+  font-style: normal;
+  font-display: swap;
+  src: local('Pretendard Variable'), url('/fonts/PretendardStdVariable.woff2') format('woff2-variations');
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

@@ -8,6 +8,12 @@ This file lists third-party components that the desktop application distributes 
 
 - modu-vision: MIT (see `LICENSE`)
 
+## Bundled fonts
+
+| Component | Version | License | Status | Source |
+| --- | --- | --- | --- | --- |
+| Pretendard Std (variable woff2) | 1.3.9 | SIL Open Font License 1.1 (`public/fonts/PRETENDARD-LICENSE.txt`) | resolved | https://github.com/orioncactus/pretendard/releases/tag/v1.3.9 |
+
 ## Electron runtime
 
 | Component | Version | License | Status | Source |
