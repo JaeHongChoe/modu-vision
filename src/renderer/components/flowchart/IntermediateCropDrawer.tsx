@@ -292,6 +292,7 @@ export const IntermediateCropDrawer: React.FC<{onSelectNode?:(id:string)=>void}>
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="부품명 / 결함 분류 검색..."
+              aria-label="부품명·결함 분류 검색"
               className="w-full bg-[#0B0E14] border border-[#2B3547] rounded pl-8 pr-2.5 py-1 text-xs font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:border-slate-400"
             />
           </div>

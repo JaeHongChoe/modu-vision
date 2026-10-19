@@ -1,0 +1,45 @@
+// Icon-only controls carry Korean names, the error dialog is a dialog, and hashes in the results stay behind
+// "기술 상세". These read the component sources: the behaviour they guard is the accessible name itself.
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),test=require('node:test');
+const read=file=>fs.readFileSync(path.resolve(__dirname,'..',file),'utf8');
+
+test('labeling toolbar tooltips are Korean, not "Zoom In" / "Undo (Ctrl+Z)"',()=>{
+ const toolbar=read('labeling/LabelingToolbar.tsx');
+ for(const english of ['title="Undo','title="Redo','title="Zoom Out"','title="Zoom In"','title="Fit to Screen','title="100% Zoom'])assert.ok(!toolbar.includes(english),`still ${english}`);
+ assert.match(toolbar,/title="확대"/);assert.match(toolbar,/title="축소"/);assert.match(toolbar,/실행 취소 \(Ctrl\+Z\)/);
+});
+
+test('icon-only buttons in the gallery pager, class editor, mask controls and annotation list are named',()=>{
+ assert.match(read('dataset/DatasetStudio.tsx'),/aria-label="이전 페이지"/);
+ assert.match(read('dataset/DatasetStudio.tsx'),/aria-label="다음 페이지"/);
+ const categories=read('labeling/CategorySelector.tsx');
+ assert.ok(!categories.includes('placeholder="New class..."')&&!categories.includes('"Add new category"'),'class editor still English');
+ assert.match(categories,/aria-label="새 클래스 이름"/);assert.match(categories,/aria-label="추가 취소"/);
+ assert.ok(!read('labeling/MaskLayerControls.tsx').includes('Hide Mask Layer'));
+ const list=read('labeling/AnnotationList.tsx');
+ assert.ok(!list.includes('title="Delete annotation"')&&!list.includes('placeholder="Enter measured pitch"'));
+ assert.match(list,/aria-label="픽셀당 길이 \(μm\)"/);
+ assert.match(read('flowchart/IntermediateCropDrawer.tsx'),/aria-label="부품명·결함 분류 검색"/);
+ assert.match(read('dataset/ProceduralGeneratorModal.tsx'),/aria-label="닫기"/);
+});
+
+test('the error dialog is announced as a modal dialog with plain Korean section names',()=>{
+ const modal=read('common/ErrorModal.tsx');
+ assert.match(modal,/role="dialog"/);assert.match(modal,/aria-modal="true"/);assert.match(modal,/aria-labelledby=/);
+ assert.match(modal,/aria-label="닫기"/);
+ assert.ok(!modal.includes('[진단 원인 설명]')&&!modal.includes('[권장 엔지니어링 조치 방안]'),'console-style headings remain');
+ assert.match(modal,/key === 'Escape'/);
+});
+
+test('the batch inspection results show hashes only with 기술 상세, and the readiness footer says "다음 할 일"',()=>{
+ const batch=read('inference/BatchInspectionPanel.tsx');
+ assert.match(batch,/technicalDetails/);
+ const footer=read('wizard/WizardFooter.tsx');
+ assert.match(footer,/다음 할 일/);assert.ok(!footer.includes("blocked:'부족한 입력'"));
+});
+
+test('the operator workspace has one primary action and explains what approval means',()=>{
+ const operator=read('runtime/OperatorWorkspace.tsx');
+ assert.match(operator,/workspace-button--primary/);
+ assert.match(operator,/승인하면 검사를 시작할 수 있습니다/);
+});

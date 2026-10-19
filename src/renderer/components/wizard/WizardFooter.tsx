@@ -24,8 +24,7 @@ export const WizardFooter = () => {
     if(readiness.nextAction.kind==='refresh'){refresh();return;}
     await setStep(readiness.nextAction.step);focusWorkflowTarget(readiness.nextAction.target);
   };
-  const labels={ready:'입력 준비됨',blocked:'부족한 입력',checking:'확인 중',unknown:'확인 필요'};
-  labels.ready=language==='ko'?'입력 준비됨':'Inputs ready';
+  const labels=language==='ko'?{ready:'입력 준비됨',blocked:'다음 할 일',checking:'확인 중',unknown:'확인 필요'}:{ready:'Inputs ready',blocked:'Next to do',checking:'Checking',unknown:'Needs a check'};
   return <footer className="relative shrink-0 border-t border-slate-700 bg-[#0B0E14] px-4 py-2 text-xs text-slate-200">
     {expanded&&<section aria-label="단계 준비도 상세" className="absolute bottom-full left-4 right-4 max-h-52 overflow-auto rounded-t-lg border border-slate-600 bg-[#142131] p-3 shadow-xl">
       <p className="font-semibold">완료된 입력</p><ul className="mt-1 list-disc pl-5">{readiness.completedInputs.length?readiness.completedInputs.map(item=><li key={item}>{item}</li>):<li>확인된 입력 없음</li>}</ul>

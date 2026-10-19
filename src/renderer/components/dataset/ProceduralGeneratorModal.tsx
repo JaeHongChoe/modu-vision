@@ -48,6 +48,7 @@ export const ProceduralGeneratorModal: React.FC = () => {
           <button
             onClick={() => setShowGeneratorModal(false)}
             disabled={isGenerating}
+            aria-label="닫기"
             className="text-slate-400 hover:text-white p-1 rounded hover:bg-[#1A212E] transition-tactile cursor-pointer"
           >
             <X className="w-5 h-5" />

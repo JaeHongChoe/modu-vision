@@ -854,6 +854,7 @@ export const DatasetStudio: React.FC = () => {
                 <div className="flex space-x-1">
                   <button
                     disabled={page <= 1}
+                    aria-label="이전 페이지"
                     onClick={() => loadImages(page - 1)}
                     className="p-1 rounded-[3px] bg-[#1A212E] hover:bg-[#222B3D] text-slate-300 disabled:opacity-30 border border-[#2B3547] cursor-pointer"
                   >
@@ -861,6 +862,7 @@ export const DatasetStudio: React.FC = () => {
                   </button>
                   <button
                     disabled={page >= totalPages}
+                    aria-label="다음 페이지"
                     onClick={() => loadImages(page + 1)}
                     className="p-1 rounded-[3px] bg-[#1A212E] hover:bg-[#222B3D] text-slate-300 disabled:opacity-30 border border-[#2B3547] cursor-pointer"
                   >

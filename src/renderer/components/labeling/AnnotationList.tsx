@@ -208,7 +208,7 @@ export const AnnotationList: React.FC = () => {
         <div className="flex items-center space-x-1.5">
           <button
             onClick={() => setIsCalibratorOpen(!isCalibratorOpen)}
-            title="Optical Calibration Settings (μm/px)"
+            title="광학 배율 설정 (μm/px)"
             className="p-1 rounded bg-[#1A212E] hover:bg-[#222B3D] border border-[#2B3547] text-slate-300 text-[10px] font-mono tabular-nums flex items-center space-x-1 cursor-pointer"
           >
             <Ruler className="w-3 h-3 text-cyan-400" />
@@ -225,18 +225,19 @@ export const AnnotationList: React.FC = () => {
       {isCalibratorOpen && (
         <div className="p-2.5 bg-[#1A212E] border-b border-[#2B3547] text-xs space-y-2">
           <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-            <span>Optical Calibration</span>
-            <span className="text-cyan-400 font-mono">{pixelPitchUm > 0 ? `1 px = ${pixelPitchUm} μm` : 'Measured scale required'}</span>
+            <span>광학 배율 (실제 길이 환산)</span>
+            <span className="text-cyan-400 font-mono">{pixelPitchUm > 0 ? `1 px = ${pixelPitchUm} μm` : '측정한 배율을 입력하세요'}</span>
           </div>
           <div className="flex items-center space-x-2">
-            <span className="text-[11px] text-slate-400">Scale:</span>
+            <span className="text-[11px] text-slate-400">픽셀당 길이:</span>
             <input
               type="number"
               step="0.1"
               min="0.1"
               max="100"
               value={pixelPitchUm || ''}
-              placeholder="Enter measured pitch"
+              placeholder="예: 2.5"
+              aria-label="픽셀당 길이 (μm)"
               onChange={(e) => setPixelPitchUm(Math.max(0, parseFloat(e.target.value) || 0))}
               className="flex-1 bg-[#131822] border border-[#2B3547] rounded px-2 py-0.5 text-xs font-mono tabular-nums text-slate-200 focus:outline-none focus:border-cyan-500"
             />
@@ -296,7 +297,7 @@ export const AnnotationList: React.FC = () => {
                         if (ann.id) deleteAnnotation(ann.id);
                       }}
                       className="p-1 hover:text-red-400 text-slate-500 transition-colors cursor-pointer"
-                      title="Delete annotation"
+                      title="라벨 삭제"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>

@@ -60,14 +60,15 @@ export const CategorySelector: React.FC = () => {
             value={newCatName}
             onChange={(e) => setNewCatName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-            placeholder="New class..."
+            placeholder="새 클래스 이름"
+            aria-label="새 클래스 이름"
             autoFocus
             className="px-2 py-0.5 text-xs bg-slate-900 border border-slate-700 rounded text-slate-100 w-28 focus:outline-none focus:border-blue-500"
           />
           <button onClick={handleAdd} className="px-2 py-0.5 bg-blue-600 rounded text-xs text-white cursor-pointer">
-            Add
+            추가
           </button>
-          <button onClick={() => setIsAdding(false)} className="px-1.5 py-0.5 text-xs text-slate-400 hover:text-white cursor-pointer">
+          <button onClick={() => setIsAdding(false)} aria-label="추가 취소" className="px-1.5 py-0.5 text-xs text-slate-400 hover:text-white cursor-pointer">
             ✕
           </button>
         </div>
@@ -75,7 +76,8 @@ export const CategorySelector: React.FC = () => {
         <button
           onClick={() => setIsAdding(true)}
           className="p-1 rounded-full text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors cursor-pointer"
-          title="Add new category"
+          title="클래스 추가"
+          aria-label="클래스 추가"
         >
           <Plus className="w-3.5 h-3.5" />
         </button>

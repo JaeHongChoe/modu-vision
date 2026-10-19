@@ -347,7 +347,7 @@ export const LabelingToolbar: React.FC = () => {
         <button
           onClick={undo}
           disabled={annotationLoadStatus !== 'ready' || history.length === 0}
-          title="Undo (Ctrl+Z)"
+          title="실행 취소 (Ctrl+Z)"
           className="p-1.5 rounded bg-[#1A212E] hover:bg-[#222B3D] disabled:opacity-30 text-slate-300 border border-[#2B3547] cursor-pointer"
         >
           <CornerUpLeft className="w-4 h-4" />
@@ -355,7 +355,7 @@ export const LabelingToolbar: React.FC = () => {
         <button
           onClick={redo}
           disabled={annotationLoadStatus !== 'ready' || future.length === 0}
-          title="Redo (Ctrl+Y)"
+          title="다시 실행 (Ctrl+Y)"
           className="p-1.5 rounded bg-[#1A212E] hover:bg-[#222B3D] disabled:opacity-30 text-slate-300 border border-[#2B3547] cursor-pointer"
         >
           <CornerUpRight className="w-4 h-4" />
@@ -366,7 +366,7 @@ export const LabelingToolbar: React.FC = () => {
         {/* Zoom */}
         <button
           onClick={() => handleZoom(0.85)}
-          title="Zoom Out"
+          title="축소"
           className="p-1.5 rounded bg-[#1A212E] hover:bg-[#222B3D] text-slate-400 border border-[#2B3547] cursor-pointer"
         >
           <ZoomOut className="w-4 h-4" />
@@ -376,7 +376,7 @@ export const LabelingToolbar: React.FC = () => {
         </span>
         <button
           onClick={() => handleZoom(1.15)}
-          title="Zoom In"
+          title="확대"
           className="p-1.5 rounded bg-[#1A212E] hover:bg-[#222B3D] text-slate-400 border border-[#2B3547] cursor-pointer"
         >
           <ZoomIn className="w-4 h-4" />
@@ -384,14 +384,14 @@ export const LabelingToolbar: React.FC = () => {
 
         <button
           onClick={handleFit}
-          title="Fit to Screen (F)"
+          title="화면 맞춤 (F)"
           className="p-1.5 rounded bg-[#1A212E] hover:bg-[#222B3D] text-slate-400 border border-[#2B3547] cursor-pointer"
         >
           <Maximize2 className="w-4 h-4" />
         </button>
         <button
           onClick={handle100}
-          title="100% Zoom (1:1)"
+          title="실제 크기 (1:1)"
           className="p-1.5 rounded bg-[#1A212E] hover:bg-[#222B3D] text-slate-400 text-xs font-mono tabular-nums border border-[#2B3547] cursor-pointer"
         >
           1:1

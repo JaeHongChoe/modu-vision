@@ -131,7 +131,7 @@ export const RecipePresetSelector: React.FC<RecipePresetSelectorProps> = ({
         >
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center space-x-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span className="w-2 h-2 rounded-full bg-emerald-400" aria-hidden="true" />
               <span className="font-bold text-xs text-slate-100 uppercase tracking-wide">
                 {language === 'ko' ? '🎯 고정밀 후보 학습 (Recipe B)' : '🎯 Precision Candidate (Recipe B)'}
               </span>

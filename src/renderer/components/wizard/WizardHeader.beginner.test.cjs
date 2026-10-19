@@ -19,7 +19,7 @@ function render({activeStep=2,language='ko',device='mps',technical=false,selecte
 
 test('the active step is announced to assistive technology and the step list has a Korean name',()=>{
  const html=render({activeStep:2});
- assert.match(html,/aria-label="작업 단계"/);
+ assert.match(html,/aria-label="작업 단계[^"]*"/);
  assert.match(html,/aria-current="step"[^>]*>(?:(?!<\/button>).)*라벨링 &amp; AI/s);
  assert.equal((html.match(/aria-current="step"/g)||[]).length,1);
 });

@@ -199,7 +199,7 @@ export const WizardHeader: React.FC = () => {
           </span>
         </label>
 
-        <nav className="flex flex-wrap items-stretch overflow-hidden rounded border border-[#2B3547] bg-[#0B0E14]" aria-label={ko ? '작업 단계' : 'Work steps'}>
+        <nav className="flex flex-wrap items-stretch overflow-hidden rounded border border-[#2B3547] bg-[#0B0E14]" aria-label={ko ? '작업 단계 (Workflow Stages)' : 'Workflow Stages'}>
           {steps.map((s) => {
             const Icon = s.icon;
             const isActive = activeStep === s.num;

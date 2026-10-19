@@ -60,6 +60,7 @@ export const BatchInspectionPanel: React.FC = () => {
   const projectDir = useProjectStore((state) => state.projectDir);
   const project = useProjectStore((state) => state.project);
   const setStep = useProjectStore((state) => state.setStep);
+  const technicalDetails = useProjectStore((state) => state.technicalDetails);
   const hasUnsavedDraft = useFlowchartStore((state) => state.pipelineDirty);
   const { folderPath, datasetKey, hasSelectedFolder, importError, sourceSaveError, isLoading: datasetIsLoading,
     isSplitting, lastImportedKey, staleDatasetKeys } = useDatasetStore();
@@ -569,11 +570,11 @@ export const BatchInspectionPanel: React.FC = () => {
               {report.execution_config.execution_target !== 'model_compute' && ` · ${report.execution_config.device.toUpperCase()}`}
               {report.execution_config.execution_target === 'model_compute' && ' · 실제 장치는 이미지별 기록에서 확인'}
             </p>}
-            <div className="grid gap-1.5 sm:grid-cols-2">
+            {technicalDetails ? <div className="grid gap-1.5 sm:grid-cols-2">
               <span className="break-all">저장 플로우 버전 <strong className="font-mono text-slate-100">{report.saved_version_id || '이전 기록 · 미기록'}</strong></span>
               <span className="break-all">그래프 SHA-256 <strong className="font-mono text-slate-100" title={report.pipeline_hash}>{report.pipeline_hash || '이전 기록 · 미기록'}</strong></span>
-            </div>
-            {Object.entries(report.model_sha256 || {}).length > 0 ? <div className="mt-2 space-y-1 border-t border-sky-800/50 pt-2">
+            </div> : <p className="text-slate-400">저장한 검사 플로우 {report.saved_version_id ? `v${report.saved_version_id.slice(0, 8)}` : '(이전 기록)'}로 검사했습니다. 버전 해시는 상단 "기술 상세"에서 볼 수 있습니다.</p>}
+            {!technicalDetails ? null : Object.entries(report.model_sha256 || {}).length > 0 ? <div className="mt-2 space-y-1 border-t border-sky-800/50 pt-2">
               <span className="font-semibold text-sky-200">검사 시작 시 검증한 체크포인트</span>
               {Object.entries(report.model_sha256 || {}).map(([jobId, digest]) => <div key={jobId} className="grid gap-0.5 sm:grid-cols-[minmax(150px,0.35fr)_minmax(0,1fr)]">
                 <span className="truncate font-mono" title={jobId}>{jobId}</span>
