@@ -89,6 +89,7 @@ const MAX_STARTUP_STDERR_BYTES = 16 * 1024;
 /** Spawn options for the backend. Its stdin stays open as the graceful stop channel, closed by stopBackend (when the
  *  app itself exits, the exit hook force-stops the backend instead), and no console window opens for it on Windows. */
 export function backendSpawnOptions(cwd: string, env: NodeJS.ProcessEnv, owned=false) {
+  // stdin의 EOF는 종료 요청 채널이고, owned 실행의 네 번째 스트림(fd 3)은 실행 소유권·제어 메시지 전용 채널이다.
   return {
     cwd,
     env: { ...env, VISION_AI_STUDIO_STOP_ON_STDIN_EOF: '1' },
@@ -110,6 +111,7 @@ export function forceStop(proc: ChildProcess): void {
   }
 }
 
+// Electron 메인에서 로컬 백엔드의 수명주기를 관리한다. 독립 세션의 학습 워커는 직접 종료하지 않는다.
 export class BackendSupervisor extends EventEmitter {
   private runtimeIdentity:BackendStatusInfo['runtimeIdentity']=null;
   private config: Required<Omit<SupervisorConfig,'ownedApplicationLaunch'>>;
@@ -250,6 +252,7 @@ export class BackendSupervisor extends EventEmitter {
 
     try {
       const owned=this.ownedApplicationLaunch;
+      // 한 번 시작을 시도한 owned 실행은 소유권을 다시 조정한 새 컨트롤러 실행이 있어야 재시작할 수 있다.
       if(owned&&this.ownedBackendAttempted)throw new Error('Owned backend restart requires reconciled launch ownership');
       const projectDir = owned?.projects || this.resolveProjectDir();
       const standaloneBin = this.resolveStandaloneBinary();
@@ -319,6 +322,7 @@ export class BackendSupervisor extends EventEmitter {
 
       // Attach stream listeners
       this.attachProcessListeners(this.childProcess);
+      // 생성한 핸들과 실행 파일·빌드 신원을 전용 스트림으로 바인딩하는 비동기 절차를 시작한다.
       const bootstrap=owned?.bindBackend(this.childProcess,spawnBin,this.runtimeIdentity?.build_identity_sha256||null);
       // Attach immediately so an early descriptor refusal is always handled.
       bootstrap?.catch(()=>{});
@@ -328,6 +332,7 @@ export class BackendSupervisor extends EventEmitter {
       // initialization. A packaged app must not fall back to system Python.
       const startupTimeout=standaloneBin&&getElectronApp()?.isPackaged
         ? Math.max(this.config.portDiscoveryTimeoutMs,180000):this.config.portDiscoveryTimeoutMs;
+      // 포트 발견과 소유권 바인딩 완료를 확인한 뒤 HTTP 준비 검사를 통과해야 ready를 알린다.
       const port = await this.discoverPort(this.childProcess, startupTimeout);
       this.port = port;
       console.log(`[Supervisor] Ephemeral port discovered: ${port}`);
@@ -389,6 +394,7 @@ export class BackendSupervisor extends EventEmitter {
     console.log(`[Supervisor] Initiating graceful shutdown for PID ${pid}...`);
     this.stoppingPromise = new Promise<void>((resolve, reject) => {
       const owned = this.ownedApplicationLaunch;
+      // 관리 대상 쓰기 작업은 종료 준비·drain 승인, 원래 핸들의 exit, 컨트롤러 최종 확인을 거친다.
       const twoPhase = !!owned?.requiresWriterDrain && typeof owned.prepareBackendShutdown === 'function';
       let expired = false, prepared = false, drainError: Error | null = null;
       let forceKillTimer: NodeJS.Timeout | null = null, physicalDeadline: number | null = null;
@@ -557,6 +563,7 @@ export class BackendSupervisor extends EventEmitter {
     );
 
     if(this.ownedApplicationLaunch)this.ownedApplicationLaunch.refuse();
+    // owned 실행의 충돌은 소유권 재조정이 필요하므로 owned 바인딩이 없는 실행에만 자동 재시작을 허용한다.
     if (!this.ownedApplicationLaunch && this.config.autoRestart && this.restartTimestamps.length < this.config.maxRestartAttempts) {
       this.restartTimestamps.push(now);
       this.restartCount++;
@@ -824,6 +831,7 @@ export class BackendSupervisor extends EventEmitter {
 
     // 1. Packaged resources path
     if (app && app.isPackaged) {
+      // 배포 앱은 실행 파일 해시를 검증 기록과 대조하고, 빌드 식별자가 있는 동결 백엔드만 선택한다.
       const candidates = [
         path.join(process.resourcesPath, 'bin', binName),
         path.join(process.resourcesPath, 'backend_bin', binName),

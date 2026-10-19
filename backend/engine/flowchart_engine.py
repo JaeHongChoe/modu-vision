@@ -17,6 +17,7 @@ Features:
 
 from __future__ import annotations
 
+# execute()가 그래프 검증 → 노드별 실행 → 결과 집계·출력 분기를 조율하고, 모델 로더는 엔진 캐시를 공유한다.
 import base64
 from copy import deepcopy
 from contextlib import contextmanager
@@ -226,6 +227,7 @@ class CropInspectionResult(BaseModel):
     corrected_text: Optional[str] = None
     correction_applied: Optional[bool] = None
     rule_violations: List[Dict[str, Any]] = Field(default_factory=list)
+    # 원시 마스크·지역 영상은 좌표 환산·후속 측정용 내부 상태이며, 응답에는 위의 직렬화 가능한 증거를 담는다.
     _defect_mask: Optional[np.ndarray] = PrivateAttr(default=None)
     _segmentation_masks: Dict[int, np.ndarray] = PrivateAttr(default_factory=dict)
     _region: Optional[Dict[str, Any]] = PrivateAttr(default=None)
@@ -356,6 +358,7 @@ def safe_crop_roi(
             y1_pad = max(0, y2_pad - min_size)
 
     crop = img[y1_pad:y2_pad, x1_pad:x2_pad]
+    # 반환 bbox는 아래 모델 입력 리사이즈와 무관하게 원본 영상에서 실제로 잘라낸 범위를 유지한다.
     actual_bbox = [int(x1_pad), int(y1_pad), int(x2_pad), int(y2_pad)]
 
     # Extreme edge fallback for empty source image
@@ -886,6 +889,7 @@ def _branch_matches(
 ) -> bool:
     if edge.predicate:
         if verdict == "REVIEW":
+            # 검사 불확실성을 클래스 부재(absent)가 확인된 결과로 취급하지 않는다.
             return False
         predicate = edge.predicate
         candidates = []
@@ -986,6 +990,7 @@ class FlowchartEngine:
             raise ValueError('GPU flow capacity requires an owned scheduler reservation; this endpoint configures CPU')
         if type(device_slots) is not int or not 1 <= device_slots <= min(8, os.cpu_count() or 1):
             raise ValueError('CPU flow slots exceed the available bounded CPU capacity')
+        # 실행이 쥐고 있는 gate를 중간에 교체하면 장치 동시성 제한이 분리되므로, 실행이 끝난 뒤에만 바꾼다.
         with self._execution_state_lock:
             if self._active_executions:
                 raise RuntimeError('Cannot change flow resource capacity while an execution is active')
@@ -1039,6 +1044,7 @@ class FlowchartEngine:
         key: Tuple[Any, ...] = (task, job_id, preset)
         if checkpoint is None:
             return key
+        # 같은 작업 ID와 경로에 가중치를 다시 저장해도 이전 모델을 재사용하지 않도록 파일 내용까지 키에 넣는다.
         digest = sha256()
         with Path(checkpoint).open("rb") as stream:
             for chunk in iter(lambda: stream.read(1024 * 1024), b""):
@@ -1328,6 +1334,7 @@ class FlowchartEngine:
 
         if np.any(coverage == 0):
             raise RuntimeError("Segmentation tiling left part of the inspection image uncovered.")
+        # 겹친 구역은 타일별 확률을 평균내어 어느 한 타일의 경계 예측만 남지 않게 한다.
         probability_sum /= coverage[None]
         # Historical direct callers receive the binary foreground raster. The
         # inspection path explicitly requests all channels for class evidence.
@@ -1407,6 +1414,7 @@ class FlowchartEngine:
         )
         job_id = inspect_node.data.model_job_id if inspect_node else None
 
+        # 전처리·정렬된 ROI는 자체 영상 좌표에서 검사한 뒤 bbox·마스크·문자 위치를 원본 좌표로 되돌린다.
         if any("image" in roi for roi in rois):
             combined = []
             for roi in rois:
@@ -1449,6 +1457,7 @@ class FlowchartEngine:
                         crop._defect_mask = source[y1:y2, x1:x2]
                         crop.mask = image_uri(crop._defect_mask, mask=True)
                     if crop.segmentation_classes:
+                        # 변환 후 원본 픽셀의 마스크 면적을 다시 세어야 면적 임계값과 같은 단위로 판정할 수 있다.
                         crop.segmentation_classes, crop._segmentation_masks = (
                             remap_class_evidence(
                                 crop.segmentation_classes,
@@ -1723,6 +1732,7 @@ class FlowchartEngine:
                             "Classification checkpoint normal/OK class index exceeds model outputs."
                         )
                     predicted_index = int(probs[0].argmax().item())
+                    # 정상 역할이 여러 클래스에 지정될 수 있어, 결함 점수는 정상 확률의 합을 1에서 뺀 값이다.
                     defect_score = float(
                         (1.0 - probs[0, normal_indices].sum()).clamp(0, 1).item()
                     )
@@ -2005,6 +2015,7 @@ class FlowchartEngine:
                 status = region_status
             for roi in rois:
                 x1, y1, x2, y2 = roi["bbox"]
+                # 검출용 축소 비율을 먼저 되돌리고 부모 ROI 오프셋을 더해야 원본 영상의 좌표가 된다.
                 mapped = [
                     max(0, min(image_w - 1, round(x1 / scale) + offset_x)),
                     max(0, min(image_h - 1, round(y1 / scale) + offset_y)),
@@ -2516,6 +2527,7 @@ class FlowchartEngine:
             needs_device = node.data.node_type in ("inspection", "detection_crop") or (
                 node.data.node_type == "preprocess" and node.data.params.get("operation") in ("learned_rotation", "enhancement"))
             if needs_device:
+                # run_gate는 이번 실행의 한도, _device_gate는 같은 엔진의 모든 실행을 합친 장치 한도다.
                 with run_gate, self._device_gate:
                     _check_partial_cancel()
                     result = process_node(node)
@@ -2615,6 +2627,7 @@ class FlowchartEngine:
             reason = "; ".join(f"{row['class_name']}: detected {row['count']}, required {row['min_count']}..{row['max_count'] if row['max_count'] is not None else 'unbounded'}" for row in failed_counts)
         elif count_steps and not crops:
             verdict, is_ok, reason, dec_status = "OK", True, "Explicit object count requirements passed.", "passed"
+        # 일부 경로에 결과가 있어도 미완료 사유가 남으면 최종 정책을 우선 적용해 OK 확정을 막는다.
         if incomplete_reasons:
             incomplete_policy = decision_node.data.params.get("incomplete_policy", "review")
             if incomplete_policy == "ng":
@@ -2666,6 +2679,7 @@ class FlowchartEngine:
         defective_count = sum(1 for c in crops if c.verdict == "NG")
 
         from backend.engine.flow_provenance import pipeline_sha256
+        # 실행 완료(success)에는 NG도 포함된다. 합격 여부는 final_verdict와 is_ok로 구분한다.
         result = FlowchartExecutionResult(
             status="partial" if stop_node_id else "review" if verdict == "REVIEW" else "success",
             execution_resources={"requested_workers": pipe.execution_config.max_workers,

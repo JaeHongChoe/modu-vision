@@ -6,6 +6,9 @@ Coordinates background worker threads, hooks WebSocket telemetry,
 and handles clean aborts with GPU/MPS memory clearing.
 """
 
+# 읽는 순서: JobRecord/TrainingLedgerLink(상태·원장) → TrainingJobManager(실행 조율)
+# → /start(요청 검증·입력 고정) → /status·/jobs(현재 프로젝트의 결과 조회).
+# 화면에서 선택한 프로젝트와 접수 당시 프로젝트가 달라질 수 있으므로 두 문맥을 구분한다.
 from __future__ import annotations
 from backend.engine.original_owned_UI_ancillary_request import observe_original_UI_ancillary_job_list, original_UI_ancillary_job_snapshot
 
@@ -340,6 +343,8 @@ def _write_job_receipt(record: JobRecord) -> None:
     if record.status == 'completed' and checkpoint.is_file() and not checkpoint.is_symlink():
         from backend.engine.warm_start import _sha256
         receipt['checkpoint_sha256'] = _sha256(checkpoint)
+    # 종료 상태 파일은 평가·재시작 복구에서도 읽는다. 완성된 파일만 보이도록
+    # 같은 폴더의 임시 파일을 flush/fsync한 뒤 교체하고, 원격 종료 기록은 그 뒤 갱신한다.
     temporary_path = None
     try:
         with tempfile.NamedTemporaryFile(
@@ -1623,6 +1628,8 @@ def _reserve_training_job(request: Request, req: TrainingStartRequest, d_path: P
 
 
 def _start_training(req: TrainingStartRequest, request: Optional[Request], reserved: List[TrainingLedgerLink]):
+    # 재시도 판별에는 사용자가 보낸 원래 요청을 쓰고, 아래 req에는 서버가 확인한 설정을 채운다.
+    # exact resume은 같은 학습을 잇는 경로이고, warm-start는 부모 가중치로 새 작업을 만드는 경로다.
     requested = req.model_copy(deep=True)  # the client request, before server defaults are filled in
     options = req.config_overrides or {}
     if options.get('resume_checkpoint'):
@@ -1884,6 +1891,8 @@ def _start_training(req: TrainingStartRequest, request: Optional[Request], reser
                 ledger.store.set_budget(ledger.job_id, {"max_runtime_s": req.max_runtime_s, "max_attempts": 1})
             except _LEDGER_ERRORS as exc:
                 raise HTTPException(503, 'The runtime budget could not be recorded; no worker was launched') from exc
+    # HTTP 요청은 작업 예약과 요청한 실행 예산 기록을 마친 뒤 폴더·입력 버전을 만든다.
+    # 원본 지문과 고정 라벨을 작업에 연결해 출처를 남기고, 완료 결과 기록 전에 변경 여부를 확인한다.
     out_dir.mkdir(parents=True, exist_ok=True)
     dataset_binding = None
     if request is not None:
@@ -1932,6 +1941,8 @@ def _start_training(req: TrainingStartRequest, request: Optional[Request], reser
     elif profile is not None and req.task == "classification":
         dataset_for_training = job_dir / "dataset"
 
+    # 여기서부터 로컬/원격 실행 경로가 갈린다. 두 경로 모두 위에서 만든 job_id와
+    # dataset_binding을 넘겨 원장, 실제 실행, 평가 결과를 같은 작업으로 연결한다.
     if profile is not None:
         from backend.remote.coordinator import make_remote_runner
 
@@ -2367,6 +2378,8 @@ def _job_observation(record: "JobRecord", reserved: Optional[set]) -> Dict[str, 
     """What happened to the job from evidence only, with one next action (S1-04): run journal, cancel intent, reservation."""
     from dataclasses import asdict
     from backend.engine.job_observation import cancellation_evidence, classify_observation
+    # 취소 요청, 프로세스 종료, 장치 예약 반환은 서로 다른 사실이다.
+    # 상태 문자열 하나로 완료를 추정하지 않고 실행 기록·취소 의도·예약을 함께 읽는다.
     journal: Dict[str, Any] = {}
     unreadable = False
     for name in ("local_job.json", "remote_job.json"):

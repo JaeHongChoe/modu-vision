@@ -239,6 +239,7 @@ npm.cmd run package:win
 | [기여 안내](CONTRIBUTING.md) | 새 환경 설치, CPU 데모, 테스트와 지원 범위 |
 | [Windows 빠른 시작](docs/quickstart-windows.md) | Windows 설치·첫 실행·진단 |
 | [문제 해결](docs/troubleshooting.md) | 오류 재현과 진단 자료 |
+| [코드 읽기·리팩토링 검토](docs/CODE_GUIDE.md) | 핵심 진입점, 상태 구분과 구조 개선 우선순위 |
 | [검사 서비스·SDK](docs/api-integration.md) | 전체 플로우 패키지, Python·CLI·REST·C++·C# 연동 |
 | [학습 CLI·REST](docs/training-engine-cli-rest.md) | 외부 프로그램에서 학습 엔진 사용 |
 | [배포 지원 표](docs/release-platform-matrix.md) | 네이티브 빌드, 서명, 설치와 복구 조건 |

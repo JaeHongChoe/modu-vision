@@ -128,6 +128,8 @@ function datasetImageReference(imagePath: string) {
     thumbnailUrl: `/api/dataset/thumbnail/${encodeURIComponent(imageId)}?file_path=${encodeURIComponent(imagePath)}&size=256` };
 }
 
+// 저장소의 그래프·학습·평가 상태를 묶어 편집 → 모델 검증 → 저장/실행을 조율한다.
+// 그래프와 실행 근거는 저장소에 두고, 탭·대화상자·확대 배율 등 화면에서만 필요한 상태는 여기서 관리한다.
 export const FlowchartStudio: React.FC = () => {
   const { language, task, setStep, isProjectBusy } = useProjectStore();
   const { jobId: trainedJobId, status: trainingStatus, isCurrentData } = useTrainingStore();
@@ -212,6 +214,7 @@ export const FlowchartStudio: React.FC = () => {
       || getApiPersistenceIdentity() !== partialStopTransport) return;
     void cancelPartialRun();
   };
+  // ROI 검증에는 썸네일 크기가 아닌 원본 크기가 필요하므로, 조회 결과를 해당 이미지의 키와 함께 보관한다.
   const sourceKey=`${getProjectContextGeneration()}/${folderPath}/${selectedImage?.imagePath||''}`;
   const [sourceInfo,setSourceInfo]=useState<{key:string;size?:number[];error?:string}|null>(null);
   useEffect(()=>{
@@ -266,6 +269,7 @@ export const FlowchartStudio: React.FC = () => {
   const offeredModel=modelHandoff&&modelHandoffDismissed!==`${modelHandoff.scope}:${modelHandoff.selectedAt}`
     ?modelCatalog.find(row=>row.job_id===modelHandoff.modelId&&row.task===modelHandoff.family):null;
   const dismissModelHandoff=()=>{if(modelHandoff){clearModelFlowHandoff(localStorage,handoffState);setModelHandoffDismissed(`${modelHandoff.scope}:${modelHandoff.selectedAt}`);}};
+  // 다른 화면에서 넘긴 모델 선택도 현재 데이터의 출처 검증을 통과한 뒤 그래프에 반영한다.
   const applyModelHandoff=async()=>{
     if(!pipeline||!offeredModel||!modelHandoff||isRunning||isSaving||isVerifyingAction)return;
     const captured=modelHandoff.scope;setIsVerifyingAction(true);
@@ -335,6 +339,7 @@ export const FlowchartStudio: React.FC = () => {
       const project = useProjectStore.getState().project;
       const epoch = getProjectContextGeneration(), transport = getApiPersistenceIdentity();
       const authority = JSON.stringify(getProjectContext());
+      // 같은 폴더·작업으로 돌아온 경우도 구별하기 위해 프로젝트 세대와 API 연결까지 확인한다.
       const isCurrent = () => !cancelled && useDatasetStore.getState().datasetKey === sourceKey
         && useProjectStore.getState().task === task && useProjectStore.getState().project === project
         && getProjectContextGeneration() === epoch && getApiPersistenceIdentity() === transport
@@ -348,6 +353,7 @@ export const FlowchartStudio: React.FC = () => {
           const before = useFlowchartStore.getState();
           if (before.pipelineDirty || before.pipelineIsDraft || before.isLoading || before.isSaving || before.isRunning || before.historyGroupStart) return null;
           const graph = before.pipeline, serialized = JSON.stringify(graph), identity = before.flowIdentity;
+          // 자동 복구를 기다리는 동안 생긴 편집·저장·실행은 복구 응답보다 우선한다.
           const canPublish = () => {
             const current = useFlowchartStore.getState();
             try {
@@ -453,6 +459,7 @@ export const FlowchartStudio: React.FC = () => {
   const canVerifyGraph = modelCheck.status !== 'checking' && hasSelectedFolder && !datasetIsLoading
     && !importError && datasetKey === `${folderPath}\0${task}` && (!selectedImage||Boolean(originalSize));
 
+  // 그래프 연결 검증과 별개로, 모든 모델 노드의 작업 ID가 현재 데이터에 속하는지 서버에서 확인한다.
   const verifyCurrentPipeline = async (current: FlowchartPipeline, sourceFolder: string) => {
     const modelNodes = current.nodes.filter((node) => getFlowchartModelTask(node) !== null);
     const models = getFlowchartModelReferences(current);
@@ -497,6 +504,7 @@ export const FlowchartStudio: React.FC = () => {
       const execution = flowExecutionOptions(executionChoice, selectedProfileId);
       await verifyCurrentPipeline(currentPipeline, folderPath);
       if (useDatasetStore.getState().datasetKey !== sourceKey || useFlowchartStore.getState().pipeline !== currentPipeline) return;
+      // 편집 중인 그래프나 비활성 저장본의 실행을 활성 버전의 실행 근거로 기록하지 않는다.
       const activeVersionId = !pipelineDirty && !useFlowchartStore.getState().pipelineIsDraft
         ? savedVersions.find((version) => version.version_id === selectedVersionId && version.is_active)?.version_id || null
         : null;
@@ -517,6 +525,7 @@ export const FlowchartStudio: React.FC = () => {
     if (ok) setActiveTab('edit');
   };
 
+  // 레시피·저장 확인·승인 조회가 공유하는 범위다. 라벨 버전이나 연결이 바뀌면 이전 화면 상태를 폐기한다.
   const recipeScope = () => JSON.stringify([getProjectContextGeneration(),getProjectContext(),getApiPersistenceIdentity(),
     useProjectStore.getState().project?.id,useProjectStore.getState().projectDir,useProjectStore.getState().project?.active_labelset_id,
     useDatasetStore.getState().datasetKey,useProjectStore.getState().task]);
@@ -580,6 +589,7 @@ export const FlowchartStudio: React.FC = () => {
   };
   const selectedSaved=savedVersions.find(row=>row.version_id===selectedVersionId);
   const savedIsExact=Boolean(selectedSaved&&!pipelineDirty&&!pipelineIsDraft);
+  // 승인 조회 응답은 프로젝트 범위·저장 버전·검사 규칙이 모두 같은 동안에만 현재 근거로 표시한다.
   const currentApproval=approval?.scope===scopeKey&&approval.version===selectedVersionId&&approval.semantic===semanticKey&&savedIsExact?approval.receipt:null;
   const identity=flowWorkspaceIdentity({
     revision:useFlowchartStore.getState().flowIdentity?.semantic_revision||0,
@@ -675,6 +685,7 @@ export const FlowchartStudio: React.FC = () => {
       setActionValidationError('확인하는 동안 데이터 또는 플로우가 바뀌었습니다. 다시 저장하세요.');
       return;
     }
+    // 확인 중 바뀐 그래프에 이전 변경 사유가 붙지 않도록, 사용자가 확인한 스냅샷을 기준으로 요청한다.
     const changeReason = reason || undefined;
     const requestId = ++changeRequest.current;
     let expectedBase = useFlowchartStore.getState().baseVersionId;
@@ -717,6 +728,7 @@ export const FlowchartStudio: React.FC = () => {
   const selectedNode = pipeline?.nodes.find((n) => n.id === selectedNodeId);
   const selectedEdge = pipeline && selectedEdgeSelection ? selectedFlowEdge(pipeline, selectedEdgeSelection) : null;
 
+  // 입력창의 너비·높이를 저장 형식인 [x1, y1, x2, y2]로 변환하며, 시작점 이동 시 기존 크기를 유지한다.
   const updateFixedRoiField = (field: 'x' | 'y' | 'width' | 'height', rawValue: string) => {
     if (!selectedNode || selectedNode.data.node_type !== 'fixed_roi') return;
     const parsed = Number(rawValue);
@@ -844,6 +856,7 @@ export const FlowchartStudio: React.FC = () => {
   };
   const deleteSelectedNode = () => deleteEditableNode(selectedNode?.id);
 
+  // 연결선 선택은 배열과 객체 참조까지 묶인 스냅샷이므로, 수정 후에는 새 배열의 같은 연결선으로 갱신한다.
   const commitSelectedEdge = (next: FlowchartPipeline) => {
     if (!pipeline || !selectedEdgeSelection || !selectedFlowEdge(pipeline, selectedEdgeSelection)) return;
     const index = selectedEdgeSelection.index;

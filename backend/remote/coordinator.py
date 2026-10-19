@@ -28,6 +28,8 @@ from backend.remote.profiles import ComputeProfile
 from backend.remote.snapshot import build_snapshot
 from backend.remote.ssh_transport import SSHTransport, SSHTransportError
 
+# 로컬 데몬이 작업 소유권과 복구 기록을 유지하고, 원격 워커에는 고정한 입력·코드·설정만 전달한다.
+# 원격 상태 보고, 워커 종료 확인, 로컬 결과 등록은 각각 별도의 검증 단계다.
 logger = logging.getLogger("vision_ai_studio.remote_coordinator")
 
 PROTOCOL_VERSION = 1
@@ -122,6 +124,7 @@ def _read_journal(output: Path, job_id: str) -> dict[str, Any]:
 
 def _save_journal(journal: dict[str, Any]) -> None:
     from backend.engine.live_control_migration import journal_admission
+    # 출력 폴더와 사용자 인덱스에 복구 기록을 이중 저장하며, 오래된 감시 사본이 취소 의도를 덮어쓰지 않게 병합한다.
     with _JOURNAL_LOCK, journal_admission(journal), store_admission(_journal_index()):
         output = Path(journal["output_dir"])
         path = output / "remote_job.json"
@@ -242,6 +245,7 @@ def _local_pretrained_weights(task, preset, overrides):
 
 def _pretrained_transfer(output, task, preset, overrides, parent=None):
     options = dict(overrides or {})
+    # 부모 모델·재개 상태가 있으면 그 가중치를 사용하고, 새 초기화에 필요한 사전학습 가중치만 따로 전송한다.
     # Parent checkpoints already contain all initialized weights and their provenance.
     if parent is not None or options.get('resume_checkpoint') or not options.get('pretrained', True):
         options.pop('pretrained_checkpoint', None)
@@ -273,6 +277,7 @@ def _remote_path(profile: ComputeProfile, job_id: str, relative: str) -> str:
 
 def _copy_training_state(transport, profile, journal, output):
     """Receive only a terminal owned run's separately sealed epoch state."""
+    # 정확한 학습 재개용 상태는 best_model과 별도로 입력 해시·학습 신원·다음 epoch까지 검증해 보관한다.
     if journal.get('operation', 'train') != 'train': return
     manifest = _remote_json(transport, profile, _remote_path(profile, journal['job_id'], 'training_state_artifact.json'))
     if manifest is None: return  # Old workers and zero completed epochs have no continuation.
@@ -323,6 +328,7 @@ def _copy_artifacts(
     transport: SSHTransport, profile: ComputeProfile,
     journal: dict[str, Any], output_dir: Path,
 ) -> None:
+    # 완료 결과를 이 작업의 입력 manifest와 묶고, 필수 파일의 크기·해시·내용을 모두 확인한 뒤 공개 경로로 옮긴다.
     job_id = journal["job_id"]
     manifest = _remote_json(transport, profile, _remote_path(profile, job_id, "artifacts.json"))
     if manifest is None:
@@ -428,6 +434,7 @@ def _monitor(record: Any, profile: ComputeProfile, transport: SSHTransport, jour
             record.phase = "stopping"
         status = _remote_json(transport, profile, status_path)
         handle = journal.get("remote_handle")
+        # 시작 응답이 유실된 경우 저장한 spec 해시로 기존 워커 핸들을 복구해 중복 실행을 피한다.
         if not handle and status is not None and hasattr(transport, 'recover_handle'):
             spec_hash = next((row.get('sha256') for row in journal.get('transfers', []) if row.get('target') == 'spec.json'), None)
             handle = transport.recover_handle(profile, job_id, job_id=job_id,
@@ -499,6 +506,7 @@ def _monitor(record: Any, profile: ComputeProfile, transport: SSHTransport, jour
                 _save_journal(journal)
             except OSError:
                 logger.exception('Could not save terminal publication; reconciling owned worker exit %s', job_id)
+            # 최종 상태를 게시한 워커도 종료 확인을 통과해야 자원 예약을 해제할 수 있다.
             _confirm_owned_exit(transport, profile, job_id, handle)
             journal['worker_exit_confirmed'] = True
             if state in {'completed', 'aborted'}:
@@ -581,6 +589,7 @@ def _transfer_and_launch(record: Any, profile: ComputeProfile, transport: SSHTra
         result = transport.exec(profile, command)
         if result.returncode != 0:
             raise SSHTransportError(f'Could not stage isolated remote code: {result.stderr}')
+    # launch 요청 전에 경계를 기록한다. 이후 통신 오류는 기존 워커의 신원을 확인하는 복구로 이어진다.
     journal['state'] = 'launching'
     _save_journal(journal)
     handle = transport.launch(profile, ['-m', 'backend.remote.worker', journal.get('operation', 'train'),
@@ -611,6 +620,7 @@ def run_remote_training(
     launched = resume
     journal: dict[str, Any] = {}
     try:
+        # 이 resume는 기존 원격 실행에 다시 연결하는 경로이며, optimizer 상태를 잇는 학습 재개와 구별된다.
         if resume:
             journal = _read_journal(output, record.job_id)
             if journal.get("job_id") != record.job_id or ComputeProfile.model_validate(journal['profile']) != profile:
@@ -653,6 +663,7 @@ def run_remote_training(
             _save_journal(journal)
             record.phase = "preparing"
             from backend.engine.training_provenance import validate_training_binding
+            # 데이터 준비와 스냅샷 복사 전후에 선택한 학습 버전의 바인딩을 다시 확인한다.
             validate_training_binding(getattr(record, "dataset_binding", None))
             if prepare_dataset is not None:
                 prepare_dataset(record.preparation_cancel)
@@ -673,6 +684,7 @@ def run_remote_training(
                 journal["state"] = "aborted"
                 _save_journal(journal)
                 return {"status": "aborted"}
+            # 이후 작업 기록의 dataset_path는 복사해 고정한 스냅샷 경로를 가리킨다.
             record.dataset_path = str(snapshot.data_path)
             code_archive = _bundle_backend(output)
             journal.update({
@@ -742,6 +754,7 @@ def run_remote_training(
             if pretrained_transfer: transfers = transfers + (pretrained_transfer,)
             if state_transfer: transfers = transfers + (state_transfer,)
             if source_snapshot:transfers=transfers+((source_snapshot.archive_path,'source.tar.gz'),)
+            # 전송 재시도는 이 파일 목록의 크기·해시가 그대로일 때만 허용해 동일 입력을 유지한다.
             journal['transfers'] = [{'source': str(source.absolute()), 'target': target,
                                      'size': source.stat().st_size, 'sha256': _sha256(source)} for source, target in transfers]
             journal['state'] = 'transferring'
@@ -775,6 +788,7 @@ def run_remote_training(
         if journal.get('state') == 'transferring' and isinstance(exc, (SSHTransportError, OSError, TimeoutError, subprocess.TimeoutExpired)):
             record.phase = 'disconnected'
             return {'status': 'disconnected', 'error': str(exc), 'recovery_mode': 'transfer', 'optimizer_resume': False}
+        # 실행 요청 이후의 불명확한 오류는 원격 종료를 뜻하지 않으므로 재조정할 상태로 돌려준다.
         if launched:
             logger.warning("Remote run %s outcome needs reconciliation: %s", record.job_id, exc)
             record.phase = "disconnected"
@@ -887,6 +901,7 @@ def _terminal_receipt_matches_record(saved: Any, record: Any) -> bool:
 
 def recover_remote_jobs(manager: Any, *, outcome_observer=None) -> None:
     """Reattach launched runs first, then reclaim queued launch intents."""
+    # 데몬 재시작 시 기존 실행부터 재연결하고, 완료 영수증의 작업·데이터 신원이 맞을 때만 저장 지표를 복원한다.
     from backend.engine.startup_recovery_outcomes import recovery_stage
     with recovery_stage(outcome_observer, 'remote_recovery', manager) as observed:
         observed.manager(manager)

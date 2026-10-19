@@ -13,6 +13,7 @@ Orchestrates:
 
 from __future__ import annotations
 
+# train()은 태스크별 준비 → 학습·검증 → 체크포인트 저장을 조율하고, infer()는 저장된 계약으로 모델을 재구성한다.
 import json
 import logging
 import os
@@ -552,6 +553,7 @@ class UnifiedAutoMLTrainer:
 
                 try:
                     import copy
+                    # 임계값 보정에는 정상 검증 샘플만 쓰고, 뒤의 성능 측정에는 원래 val_ds 전체를 사용한다.
                     calibration_ds = copy.copy(val_ds)
                     calibration_ds.samples = [sample for sample in val_ds.samples if int(sample[1]) == 0]
                     if self._anomaly_method == 'dino_synthetic':
@@ -563,6 +565,7 @@ class UnifiedAutoMLTrainer:
                             self.callback.on_epoch_end(epoch - 1, total_epochs, train_loss, val_loss, lr, metrics)
                         model.fit(train_loader, cancellation_requested=self._abort_flag.is_set,
                             progress_callback=anomaly_progress, calibration_dataset=calibration_ds)
+                        # 학습 도중 정상 보정 데이터가 바뀌지 않았는지 확인한 뒤 보정 이력을 모델에 남긴다.
                         verify_normal_snapshot(calibration_snapshot, self._abort_flag.is_set)
                         model.calibration.update(calibration_snapshot['public'])
                         model.calibration.update({'quality_approved': False, 'population_fpr_verified': False})
@@ -637,6 +640,7 @@ class UnifiedAutoMLTrainer:
             total_steps = epochs * len(train_loader)
             global_step = 0; first_epoch = 0
             if self.overrides.get('resume_checkpoint'):
+                # 정확 재개는 가중치뿐 아니라 optimizer·scheduler·AMP·조기 종료 상태도 복원해야 다음 epoch가 이어진다.
                 state = restore_training_state(self.overrides['resume_checkpoint'], model, optimizer, scheduler, scaler,
                     identity=resume_identity, early_stopping=early_stopping, allow_snapshot_relocation=self.resume_snapshot_relocation)
                 first_epoch, global_step = state['next_epoch'], state['global_step']
@@ -762,6 +766,7 @@ class UnifiedAutoMLTrainer:
                     metrics={"val_loss": mean_val_loss},
                 )
 
+                # 다음 epoch의 학습률로 진행한 뒤 상태를 저장해야 next_epoch와 scheduler 위치가 맞는다.
                 scheduler.step()
                 if not distributed:
                     save_training_state(self.output_dir / 'latest_training_state.pt', model, optimizer, scheduler, scaler,
@@ -814,6 +819,7 @@ class UnifiedAutoMLTrainer:
         model=unwrap_model(model)
         tmp_pt = self.output_dir / "best_model.pt.tmp"
 
+        # 클래스 순서·입력 크기·점수 보정을 가중치와 함께 기록해야 추론에서 같은 의미의 출력을 복원할 수 있다.
         meta = {
             "task": self.task,
             "preset": self.preset_key,
@@ -1053,6 +1059,7 @@ def infer(
         filtered = []
         for b, s, l in zip(boxes, scores, labels):
             if s >= threshold:
+                # 모델 입력 크기의 박스를 원본 좌표로 돌려야 반환 bbox와 오버레이가 같은 위치를 가리킨다.
                 scale_x = orig_w / img_size[0]
                 scale_y = orig_h / img_size[1]
                 x1, y1, x2, y2 = b[0] * scale_x, b[1] * scale_y, b[2] * scale_x, b[3] * scale_y
@@ -1084,6 +1091,7 @@ def infer(
             logits = model(img_t)
             pred_mask = torch.argmax(logits, dim=1)[0].cpu().numpy().astype(np.uint8)
 
+        # 클래스 번호는 보간하면 다른 번호가 생기므로 최근접으로 복원하고, 아래 확률 맵만 연속값으로 보간한다.
         mask_orig = cv2.resize(pred_mask, (orig_w, orig_h), interpolation=cv2.INTER_NEAREST)
         color_mask = np.zeros_like(overlay)
         color_mask[mask_orig > 0] = [255, 40, 40]
@@ -1145,6 +1153,7 @@ def infer(
         with torch.no_grad():
             anom_map, score = model.predict_anomaly_map(img_t[0], out_size=(orig_h, orig_w))
 
+        # 열지도 색상만 정규화한다. 판정과 반환 점수에는 모델의 보정 척도를 그대로 쓴다.
         map_norm = np.clip(anom_map / max(1e-4, float(np.max(anom_map))), 0.0, 1.0)
         heat_u8 = np.uint8(255 * map_norm)
         heat_color = cv2.cvtColor(cv2.applyColorMap(heat_u8, cv2.COLORMAP_JET), cv2.COLOR_BGR2RGB)

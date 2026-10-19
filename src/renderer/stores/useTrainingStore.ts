@@ -14,6 +14,7 @@ export type TrainingStatus = 'idle' | 'queued' | 'preparing' | 'transferring' | 
   | 'stopping' | 'syncing' | 'disconnected' | 'unverified' | 'interrupted'
   | 'completed' | 'aborted' | 'cancelled' | 'stopped' | 'failed';
 
+// 연결 미확인을 작업 종료로 오인하지 않도록 대기·전송·동기화·연결 단절도 진행 중에 포함한다.
 const ACTIVE_STATUSES: TrainingStatus[] = [
   'queued', 'preparing', 'transferring', 'running', 'stopping', 'syncing', 'disconnected', 'unverified',
 ];
@@ -140,10 +141,13 @@ interface TrainingState {
   resetTraining: () => void;
 }
 
+// 시작 응답보다 먼저 도착한 종료 이벤트는 작업 ID를 받은 뒤 같은 작업의 이벤트만 재생한다.
 let startRequest: ReturnType<typeof api.training.start> | null = null;
 let pendingStartEvents: Array<{ event: string; data: any }> = [];
+// 데이터 변경·초기화·새 시작이 이 값을 올려 이전 복구 요청의 상태 반영을 막는다.
 let trainingRecoverySequence = 0;
 
+// 중단 요청의 접수와 작업 종료를 구분하기 위해 서버의 종료 상태가 확인될 때까지 조회한다.
 async function waitForStoppedJob(jobId: string): Promise<TrainingStatus> {
   const deadline = Date.now() + 60000;
   while (Date.now() < deadline) {
@@ -159,6 +163,8 @@ async function waitForStoppedJob(jobId: string): Promise<TrainingStatus> {
   throw new Error('학습 중단을 요청했지만 종료 확인이 지연되고 있습니다. 상태를 다시 확인하세요.');
 }
 
+// 작업의 진행 여부와 현재 데이터에 대응하는지는 별도다. isCurrentData가 후자를 나타낸다.
+// 시작/중단 요청, 상태 조회, 실시간 이벤트를 이 저장소의 단일 작업 상태로 모은다.
 export const useTrainingStore = create<TrainingState>((set, get) => ({
   jobId: null,
   warmStartParentJobId: null,
@@ -208,6 +214,7 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
     if (useDatasetStore.getState().isSplitting) {
       throw new Error('데이터 분할이 진행 중입니다. 완료 후 학습을 시작하세요.');
     }
+    // 시작 시점의 컴퓨팅 선택을 캡처해 이후 서버 선택 변경과 이미 시작한 작업의 위치를 분리한다.
     const compute = useComputeStore.getState();
     if (!compute.isLoaded) {
       throw new Error('컴퓨팅 위치를 아직 확인하지 못했습니다. 서버 설정을 다시 불러오세요.');
@@ -299,6 +306,7 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
 
   stopTraining: async () => {
     if (get().isStopRequestPending) return;
+    // 준비 중에 눌러도 시작 응답의 작업 ID를 기다린 뒤 그 작업에 중단을 요청한다.
     const wasStarting = startRequest;
     let stopAccepted = false;
     set({ status: 'stopping', isTraining: true, isStopRequestPending: true, stopError: null });
@@ -333,6 +341,7 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
     if (get().isCurrentData && get().status === 'completed' && get().jobId) return;
     const sequence = ++trainingRecoverySequence;
     const stillIdle = () => sequence === trainingRecoverySequence && !get().isTraining && !startRequest;
+    // 완료 모델 복구는 폴더만 같아서는 부족하며, 작업 종류와 가져오기/분할 완료 상태까지 맞아야 한다.
     const sourceCurrent = () => {
       const dataset = useDatasetStore.getState();
       return source && stillIdle() && dataset.folderPath === source.folderPath
@@ -412,6 +421,7 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
     if (!jobId) return;
     try {
       const job = await api.training.getStatus(jobId);
+      // 조회 대기 중 다른 작업으로 바뀌었다면 이전 응답과 오류가 새 작업 화면을 덮지 않게 한다.
       if (get().jobId !== jobId) return;
       if (job?.job_id !== jobId) {
         throw new Error('학습 상태 응답의 작업 ID가 다릅니다.');
@@ -477,6 +487,7 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
   },
 
   updateFromTelemetry: (event, data) => {
+    // 하드웨어 수치는 작업별 이벤트가 아니므로 작업 ID 필터보다 먼저 반영한다.
     if (event === 'hardware_stats') {
       set({
         hardware: {
@@ -535,6 +546,7 @@ export const useTrainingStore = create<TrainingState>((set, get) => ({
         ],
       }));
     } else if (event === 'training_completed') {
+      // 중단 처리 중에는 종료 이벤트보다 stopTraining의 종료 확인 결과를 우선한다.
       if (get().status === 'stopping') return;
       if (!get().isCurrentData) { get().resetTraining(); return; }
       set({
