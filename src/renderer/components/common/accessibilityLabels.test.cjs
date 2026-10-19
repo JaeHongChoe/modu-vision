@@ -34,6 +34,9 @@ test('the error dialog is announced as a modal dialog with plain Korean section 
 test('the batch inspection results show hashes only with 기술 상세, and the readiness footer says "다음 할 일"',()=>{
  const batch=read('inference/BatchInspectionPanel.tsx');
  assert.match(batch,/technicalDetails/);
+ const card=read('flowchart/SavedFlowIdentityCard.tsx');
+ assert.match(card,/technicalDetails/);assert.match(card,/technicalDetails && <>/);
+ assert.match(read('flowchart/FlowEditorWorkspace.tsx'),/selectedVersion\.slice\(0,8\)/);
  const footer=read('wizard/WizardFooter.tsx');
  assert.match(footer,/다음 할 일/);assert.ok(!footer.includes("blocked:'부족한 입력'"));
 });

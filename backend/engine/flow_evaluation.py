@@ -22,7 +22,7 @@ from backend.engine.flow_workspace import atomic_json, catalog_class_vocabulary
 from backend.engine.image_truth import digest, read_truth, truth_scope
 from backend.engine.specialized_models import SPECIALIZED_TASKS, flow_model_task, resolve_specialized_checkpoint
 from backend.engine.class_semantics import class_role, recorded_roles, class_semantics_record
-from backend.engine.heldout_splits import normalized_assignments
+from backend.engine.heldout_splits import folder_split_assignments, folder_split_fingerprint, normalized_assignments
 
 
 def _root(project):
@@ -147,10 +147,16 @@ def describe_scope(project, version_id, *, model_provider=None):
 
 
 def _split(project):
+    """(split file or None, assignments): the saved split when there is one, else the source's own train/val/test
+    folders, which a user laid out by hand and which the loaders already honour."""
     source = Path(project['source_dataset_dir']).resolve()
     key = hashlib.sha256(str(source).encode()).hexdigest()
     file = Path(project['dataset_dir']) / 'splits' / f'{key}.json'
-    if file.is_symlink() or not file.is_file(): raise ValueError('Save an explicit test split before freezing a held-out cohort')
+    if file.is_symlink() or not file.is_file():
+        assignments = folder_split_assignments(source)
+        if not any(part == 'test' for part in assignments.values()):
+            raise ValueError('Save an explicit test split, or keep the held-out images in a test/ folder of the source, before freezing a held-out cohort')
+        return None, assignments
     record = json.loads(file.read_text(encoding='utf-8'))
     if record.get('folder_path') != str(source) or not isinstance(record.get('assignments'),dict): raise ValueError('Saved test split belongs to another source')
     return file, normalized_assignments(source, record['assignments'])
@@ -197,10 +203,12 @@ def freeze_cohort(project, version_id, *, relative_paths=None, name='Held-out te
             candidate = source/relative
             if candidate.is_file() and candidate.resolve().is_relative_to(source) and dm._hash(candidate) in selected_hashes:
                 raise ValueError(f'Duplicate image leakage between held-out test and {partition}: {relative}')
-        if dm._hash(split_file) is None: raise ValueError('Saved split is unavailable')
+        if split_file is not None and dm._hash(split_file) is None: raise ValueError('Saved split is unavailable')
+        split_kind = 'file' if split_file is not None else 'folders'
+        split_sha256 = dm._hash(split_file) if split_file is not None else folder_split_fingerprint(assignments)
         record = {'schema_version':1,'cohort_id':cohort_id,'name':name.strip(),'created_at':dm._now(),'scope':scope,
-                  'frozen_from_version_id':version_id,'split':'test','split_sha256':dm._hash(split_file),
-                  'split_path':str(split_file),'samples':snapshots,'count':len(snapshots),
+                  'frozen_from_version_id':version_id,'split':'test','split_kind':split_kind,'split_sha256':split_sha256,
+                  'split_path':str(split_file if split_file is not None else source),'samples':snapshots,'count':len(snapshots),
                   'truth_sha256':digest([row['truth']['truth_sha256'] for row in snapshots]),
                   'input_sha256':digest([{'relative_path':row['relative_path'],'sha256':row['input_sha256']} for row in snapshots])}
         if participating_tasks:record['participating_tasks']=participating_tasks
@@ -217,6 +225,12 @@ def read_cohort(project, cohort_id):
     return record
 
 
+def _split_fingerprint(cohort):
+    """What the cohort's split looks like now: the saved file's hash, or the folder membership's digest."""
+    if cohort.get('split_kind') == 'folders': return folder_split_fingerprint(folder_split_assignments(Path(cohort['split_path'])))
+    return dm._hash(Path(cohort['split_path']))
+
+
 def _cohort_changes(project, cohort):
     reasons = []
     scope = cohort['scope']
@@ -226,7 +240,7 @@ def _cohort_changes(project, cohort):
     if (scope['source_dataset_path'] != str(Path(project.get('source_dataset_dir') or '').resolve())
             or scope['labelset_id'] != project.get('active_labelset_id','default')):
         return ['source_or_labelset_changed']
-    if dm._hash(Path(cohort['split_path'])) != cohort['split_sha256']: reasons.append('held_out_split_changed')
+    if _split_fingerprint(cohort) != cohort['split_sha256']: reasons.append('held_out_split_changed')
     from backend.engine.annotation_quality import gold_image_paths
     gold = gold_image_paths(project)
     reasons += [f"gold_image:{sample['relative_path']}" for sample in cohort['samples'] if str(Path(sample['image_path']).resolve()) in gold]

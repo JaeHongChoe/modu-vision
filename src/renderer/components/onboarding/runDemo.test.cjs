@@ -13,18 +13,20 @@ function deps(overrides={}){const calls=[];let clock=0;const statuses=['running'
   jobStatus:async id=>{calls.push(['status',id]);return {status:statuses.shift()||'completed'};},
   trainingEnded:async id=>{calls.push(['ended',id]);},
   saveFlow:async(job,folder)=>{calls.push(['flow',job,folder]);return {version_id:'abcdef1234567890'};},
+  evaluateFlow:async version=>{calls.push(['evaluate',version]);return {evaluation_id:'eval_1',known:12,escapes:0,overkills:1};},
   inspect:async folder=>{calls.push(['inspect',folder]);return {run_id:'run_1',counts:{OK:5,NG:7},images:12};},
   projectId:()=>'project_1',sleep:async()=>{clock+=1000;},now:()=>clock};
  return {deps:{...base,...overrides},calls};}
 test('the example runs dataset, project, import (then marks it), training until completed, flow and inspection in order',async()=>{const {runDemo,DEMO_PROJECT_NAME}=load();
  const {deps:d,calls}=deps();const updates=[];const final=await runDemo(d,state=>updates.push(state));
  assert.equal(final.state,'ready');
- assert.deepEqual(final.result,{project_id:'project_1',project_name:DEMO_PROJECT_NAME,job_id:'job_1',flow_version_id:'abcdef1234567890',run_id:'run_1',counts:{OK:5,NG:7},images:12});
- assert.deepEqual(calls.map(c=>Array.isArray(c)?c[0]:c),['dataset','project','import','mark','train','status','status','status','ended','flow','inspect']);
+ assert.deepEqual(final.result,{project_id:'project_1',project_name:DEMO_PROJECT_NAME,job_id:'job_1',flow_version_id:'abcdef1234567890',run_id:'run_1',counts:{OK:5,NG:7},images:12,evaluation:{evaluation_id:'eval_1',known:12,escapes:0,overkills:1}});
+ assert.deepEqual(calls.map(c=>Array.isArray(c)?c[0]:c),['dataset','project','import','mark','train','status','status','status','ended','flow','evaluate','inspect']);
+ assert.equal(calls.find(c=>c[0]==='evaluate')[1],'abcdef1234567890','the saved version is the one evaluated');
  assert.deepEqual(calls[1][1],{name:DEMO_PROJECT_NAME,task:'classification'});
  assert.equal(calls.find(c=>c[0]==='train')[1],'/private/ud/examples/demo-v1','training uses the folder the import settled on');
- assert.deepEqual(Object.values(final.steps).map(s=>s.status),['done','done','done','done','done','done']);
- assert.equal(final.steps.train.detail,'작업 job_1');assert.equal(final.steps.flow.detail,'저장 버전 abcdef12');
+ assert.deepEqual(Object.values(final.steps).map(s=>s.status),['done','done','done','done','done','done','done']);
+ assert.equal(final.steps.train.detail,'작업 job_1');assert.equal(final.steps.flow.detail,'저장 버전 abcdef12');assert.equal(final.steps.evaluate.detail,'12장 · 미검 0 · 과검 1');
  assert.ok(updates.some(state=>state.steps.train?.status==='running'),'each step is shown running before done');});
 test('a failed training names its step, keeps the later steps pending and ends failed',async()=>{const {runDemo}=load();
  const {deps:d,calls}=deps({jobStatus:async()=>({status:'failed',error:{message:'out of memory'}})});
@@ -79,3 +81,9 @@ test('an ended example training is read again by the training store, so a projec
  assert.equal(running.calls.filter(c=>c[0]==='ended').length,0,'a job still running is not settled');
  const broken=await runDemo(deps({trainingEnded:async()=>{throw new Error('status read failed');}}).deps,()=>{});
  assert.equal(broken.state,'ready','a failed re-read does not fail the example');});
+
+test('a failed flow evaluation names its step, leaves the inspection pending and ends failed',async()=>{const {runDemo}=load();
+ const {deps:d,calls}=deps({evaluateFlow:async()=>{throw new Error('Choose 1–5000 unique held-out test images');}});
+ const final=await runDemo(d,()=>{});
+ assert.equal(final.state,'failed');assert.equal(final.steps.evaluate.status,'failed');assert.match(final.steps.evaluate.detail,/held-out/);
+ assert.equal(final.steps.inspect,undefined,'the inspection never started');assert.ok(!calls.some(c=>c[0]==='inspect'));});

@@ -157,7 +157,7 @@ test('a delayed opening list cannot replace the new saved/active header after sa
   f.initial.resolve(oldList); await f.settle();
   assert.equal(f.identity().selectedVersion, B, 'late pre-save rows cannot select the prior version');
   assert.equal(f.identity().activeVersion, B, 'the header retains the fresh active readback');
-  assert.match(f.header(), new RegExp(`저장\\s+${B}.*활성\\s+${B}`));
+  assert.match(f.header(), new RegExp(`저장\\s+v${B.slice(0,8)}.*활성\\s+v${B.slice(0,8)}`));
   assert.equal(walk(f.tree()).find(node => node.type === 'FlowWorkspacePanel').props.models[0].job_id, 'job_current',
     'the still-current model catalog is retained independently of stale version rows');
 });

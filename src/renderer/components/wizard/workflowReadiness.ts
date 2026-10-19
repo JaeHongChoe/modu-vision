@@ -49,7 +49,7 @@ export function getNextAction(input: ReadinessContext): ReadinessAction {
   if(!flow)return result('blocked',['저장 버전과 현재 정답에 일치하는 전체 플로우 평가 필요'],'전체 플로우 평가 확인',5);
   completedInputs.push('현재 입력과 일치하는 전체 플로우 평가');
   if(stage===5)return result('ready',[],'승인·패키지 입력 확인',6,'workflow-package');
-  return result('unknown',['정확한 승인 revision·패키지 검증·대상 응답을 별도로 확인하세요.'],'승인·패키지·대상 확인',6,'workflow-package');
+  return result('unknown',['검사 결과까지 확인했습니다. 현장에 쓰려면 플로우 승인, 패키지 만들기, 대상 장치 확인을 차례로 진행하세요.'],'승인·패키지·대상 확인',6,'workflow-package');
 }
 
 export const recoveryStep = (action:string):WorkflowStep => ({review_data:2,train_candidate:3,evaluate_model:4,compare_fixed_cohort:4,approve_model:4,review_approval:4,evaluate_flow:5,export_package:6,verify_target:6} as Record<string,WorkflowStep>)[action] || 1;

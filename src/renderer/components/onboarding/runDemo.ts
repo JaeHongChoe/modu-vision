@@ -37,6 +37,8 @@ export interface DemoDeps {
   /** The job ended: the training store reads it again, so it no longer counts as running (a project switch checks it). */
   trainingEnded: (jobId: string) => Promise<void>;
   saveFlow: (jobId: string, folder: string) => Promise<{ version_id: string }>;
+  /** Freeze the held-out test images and evaluate the saved flow on them (the evidence step 6's readiness asks for). */
+  evaluateFlow: (versionId: string) => Promise<{ evaluation_id: string; known: number; escapes: number; overkills: number }>;
   inspect: (folder: string) => Promise<{ run_id: string | null; counts: Record<string, number>; images: number }>;
   projectId: () => string | null;
   sleep: (ms: number) => Promise<void>;
@@ -125,9 +127,11 @@ export async function runDemo(deps: DemoDeps, onUpdate: (state: DemoState) => vo
       }
     }, value => `작업 ${value}`);
     const flow = await step('flow', () => deps.saveFlow(jobId, folder), value => `저장 버전 ${value.version_id.slice(0, 8)}`);
+    const evaluation = await step('evaluate', () => deps.evaluateFlow(flow.version_id),
+      value => `${value.known}장 · 미검 ${value.escapes} · 과검 ${value.overkills}`);
     const inspected = await step('inspect', () => deps.inspect(folder), value => `${value.images}장 검사`);
     const result: DemoResult = { project_id: deps.projectId() || '', project_name: projectName, job_id: jobId,
-      flow_version_id: flow.version_id, run_id: inspected.run_id || '', counts: inspected.counts, images: inspected.images };
+      flow_version_id: flow.version_id, run_id: inspected.run_id || '', counts: inspected.counts, images: inspected.images, evaluation };
     publish({ state: 'ready', result });
   } catch (cause) {
     // A refusal before the first step marks no step; a step that failed shows its reason on its own row.

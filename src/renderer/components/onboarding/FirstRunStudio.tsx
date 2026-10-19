@@ -5,6 +5,7 @@ import { useDatasetStore } from '../../stores/useDatasetStore';
 import { useTrainingStore } from '../../stores/useTrainingStore';
 import { useComputeStore } from '../../stores/useComputeStore';
 import { useFlowchartStore } from '../../stores/useFlowchartStore';
+import { flowEvaluation } from '../../services/flowEvaluation';
 import { runBatchInspection, summarizeBatch } from '../inference/batchInspection';
 import { DEMO_PROJECT_NAME, DEMO_TRAINING, runDemo, type DemoDeps } from './runDemo';
 import { EXAMPLE_NOTICE, demoStepRows, demoSummary, nextExampleName } from './firstRun';
@@ -64,6 +65,11 @@ function appDeps(): DemoDeps {
       const saved = await api.flowchart.savePipeline(pipeline, 'classification', folder);
       await useFlowchartStore.getState().loadPipeline(true, 'classification', folder);
       return saved;
+    },
+    evaluateFlow: async versionId => {
+      const cohort = await flowEvaluation.freeze(versionId, '예제 시험 이미지');
+      const evaluated = await flowEvaluation.run(versionId, cohort.cohort_id);
+      return { evaluation_id: evaluated.evaluation_id, known: evaluated.coverage.known, escapes: evaluated.escapes.length, overkills: evaluated.overkills.length };
     },
     inspect: async folder => {
       const projectId = project().project?.id;

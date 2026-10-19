@@ -2,11 +2,13 @@
 // server, creating a project, bringing data) and offers a small example that runs end to end on this computer's
 // CPU without network, GPU or accounts. The example's results are never a quality approval of a real process.
 
-export type DemoStepId = 'dataset' | 'project' | 'import' | 'train' | 'flow' | 'inspect';
+export type DemoStepId = 'dataset' | 'project' | 'import' | 'train' | 'flow' | 'evaluate' | 'inspect';
 export type DemoStepStatus = 'pending' | 'running' | 'done' | 'failed';
 export type DemoResult = {
   project_id: string; project_name: string; job_id: string; flow_version_id: string; run_id: string;
   counts: Record<string, number>; images: number;
+  /** The saved flow's evaluation on the held-out test images (what the readiness check asks for before step 6). */
+  evaluation?: { evaluation_id: string; known: number; escapes: number; overkills: number } | null;
 };
 export type DemoState = {
   state: 'idle' | 'running' | 'ready' | 'failed';
@@ -23,6 +25,7 @@ export const DEMO_STEPS: Array<[DemoStepId, string]> = [
   ['import', '데이터 가져오기'],
   ['train', '이 컴퓨터 CPU로 짧게 학습'],
   ['flow', '검사 플로우 저장'],
+  ['evaluate', '시험 이미지로 플로우 평가'],
   ['inspect', '테스트 이미지 검사·기록'],
 ];
 
@@ -48,5 +51,6 @@ export function nextExampleName(base: string, existing: Array<{ name: string }> 
 /** The ready demo's summary line, with the example notice kept next to the numbers. */
 export function demoSummary(result: DemoResult): string {
   const counts = ['OK', 'NG', 'REVIEW'].filter(key => key in result.counts).map(key => `${key} ${result.counts[key]}`).join(' · ');
-  return `예제 검사 ${result.images}장 · ${counts}`;
+  const evaluation = result.evaluation ? ` · 평가 ${result.evaluation.known}장: 미검 ${result.evaluation.escapes} · 과검 ${result.evaluation.overkills}` : '';
+  return `예제 검사 ${result.images}장 · ${counts}${evaluation}`;
 }
