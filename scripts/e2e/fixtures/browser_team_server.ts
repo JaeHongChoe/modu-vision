@@ -42,6 +42,7 @@ Path(sys.argv[2]).chmod(0o600)
       res.writeHead(404); res.end(); return;
     }
     res.setHeader('Content-Type', file.endsWith('.js') ? 'text/javascript' : file.endsWith('.css') ? 'text/css' : 'text/html');
+    if (path.basename(file) === 'index.html') { res.end(harness.withFullView(fs.readFileSync(file, 'utf8'))); return; }
     fs.createReadStream(file).pipe(res);
   });
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));

@@ -499,6 +499,13 @@ function forwardedHeaders(incoming, backend) {
   return headers;
 }
 
+/** The suites were written against every control; a user's first launch shows the simple view. Every page the test
+ * servers serve stores the full view before the app boots, whichever context or origin a spec opens it from. */
+const FULL_VIEW_SCRIPT = "<script>try{localStorage.setItem('modu:view-mode:v1','full')}catch(e){}</script>";
+function withFullView(html) {
+  return html.includes(FULL_VIEW_SCRIPT) ? html : html.replace(/<head>/i, '<head>' + FULL_VIEW_SCRIPT);
+}
+
 async function startRendererServer({ staticDir, backend }) {
   const root = fs.realpathSync(staticDir);
   const counters = { served: 0, proxied: 0, rejected: 0, foreignOrigin: 0 };
@@ -568,6 +575,7 @@ async function startRendererServer({ staticDir, backend }) {
       'cache-control': 'no-store',
     });
     if (req.method === 'HEAD') { res.end(); return; }
+    if (path.basename(resolved.file) === 'index.html') { res.end(withFullView(fs.readFileSync(resolved.file, 'utf8'))); return; }
     const stream = fs.createReadStream(resolved.file);
     stream.on('error', () => res.destroy());
     stream.pipe(res);
@@ -829,6 +837,7 @@ async function waitForPortClosed(port, timeoutMs = 15000) {
 }
 
 module.exports = {
+  withFullView,
   BACKEND_IMPORTS,
   REPO_ROOT,
   assertElectronBuild,

@@ -48,8 +48,8 @@ const UI_SOURCE={
   "src/renderer/services/datasetWorkflow.ts": "67a0b469b78b0d991921244d81d571c954e5c9bda5b767f1c3b0d55270f90bab",
   "backend/api/routes_dataset_metadata.py": "dbe9ca7edab694241693ce942c56cb013223fcd2f26d76f898a3a947805b489a",
   "scripts/e2e/fixtures/desktop-host-shim.ts": "4f598862ec0e08189628c72bbb552f72bf8fd73f5a9a05b8da1d3ddf516dcfa6",
-  "scripts/e2e/fixtures/harness.cjs": "171460c1cf1697b7a44b8f86a197d2b944928381f736f81af304412126464975",
-  "scripts/e2e/fixtures/test.ts": "49171e2d0d4d7d9559416fdb43bc7dae9394129bbc237fe4f2a4cea0a7afa480",
+  "scripts/e2e/fixtures/harness.cjs": "6fe3bb6411a28bc83c6da36ba0b2480b12de6b86fd08daa61d8d0e76d7dac950",
+  "scripts/e2e/fixtures/test.ts": "7a7effa184e71c02414773308e0ea88e16cf83dfbd72d77d47046f2cfc1b8d09",
   "scripts/e2e/qa/appFlow.ts": "4eed3e5dad1d9d65a6b19fc9bb51a1f9b0e23911a39e7f255220bec0ce37fea2",
   "src/renderer/services/hostAdapter.ts": "f1776e473ca9f46565e8b1ad6ed3ed0df2362a4ca351911ffec7aa80640f6d0c"
 } as const;

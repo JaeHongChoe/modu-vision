@@ -201,7 +201,7 @@ export const WizardHeader: React.FC = () => {
               </button>
             </div>
           </details>}
-          <button type="button" onClick={() => setLanguage(ko ? 'en' : 'ko')} className={CONTROL} aria-label={ko ? 'Switch to English' : '한국어로 전환'}>
+          <button type="button" onClick={() => setLanguage(ko ? 'en' : 'ko')} className={CONTROL} aria-label="언어 전환 (KR / EN)" title={ko ? 'Switch to English' : '한국어로 전환'}>
             {ko ? 'English' : '한국어'}
           </button>
         </div>
