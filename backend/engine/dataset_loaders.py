@@ -1020,6 +1020,21 @@ def _folder_names(root: Path) -> List[str]:
     return names
 
 
+# Field exports often keep normal and defect shots in one folder and say which is which in the file name
+# ("nomaly20240925….jpg" beside "anomaly001.jpg"). A name that starts with a defect word is never a normal sample, a name
+# that starts with a normal word is normal wherever it sits; names that say nothing keep the folder rules.
+DEFECT_NAME_PREFIXES = ('anomaly', 'abnormal', 'defect', 'ng_', 'ng-', 'bad_', 'bad-', 'fail')
+NORMAL_NAME_PREFIXES = ('nomaly', 'normal', 'good', 'ok_', 'ok-', 'pass')
+
+
+def name_says_normal(stem: str):
+    """True / False when the file name itself says normal / defect, None when it says nothing."""
+    name = stem.casefold()
+    if name.startswith(DEFECT_NAME_PREFIXES): return False
+    if name.startswith(NORMAL_NAME_PREFIXES): return True
+    return None
+
+
 def named_child_dir(root: Path, name: str) -> Path:
     """``root / name`` for a folder name a layout fixes (train, test, val, ground_truth, test_crop_output, OK, fail, NG,
     ...), found whatever its letter case, so a case-sensitive file system (Linux, a case-sensitive Windows folder) reads
@@ -1089,7 +1104,7 @@ class AnomalyDataset(Dataset):
                     )
             if folders:
                 return sorted(p for folder in folders for p in image_paths(folder, recursive=False))
-            return sorted(image_paths(directory, recursive=False))
+            return sorted(p for p in image_paths(directory, recursive=False) if name_says_normal(p.stem) is not False)
 
         if self.split == "train":
             if self.normal_dir and self.normal_dir.is_dir():
@@ -1100,7 +1115,8 @@ class AnomalyDataset(Dataset):
                 train_dir = named_child_dir(self.root_dir, "train")
                 if train_dir.is_dir():
                     self.samples.extend((p, 0, None) for p in train_normal_paths(train_dir))
-                    if not named_child_dir(self.root_dir, "test").is_dir() and not named_child_dir(self.root_dir, "val").is_dir():
+                    if (not named_child_dir(self.root_dir, "test").is_dir() and not named_child_dir(self.root_dir, "val").is_dir()
+                            and not named_child_dir(self.root_dir, "validation").is_dir()):
                         self.samples = [
                             (p, 0, None)
                             for p in partition_normal_images(p for p, _, _ in self.samples)["train"]
@@ -1133,6 +1149,8 @@ class AnomalyDataset(Dataset):
             elif self.root_dir is not None:
                 test_dir = named_child_dir(self.root_dir, "test")
                 val_dir = named_child_dir(self.root_dir, "val")
+                if not val_dir.is_dir() and named_child_dir(self.root_dir, "validation").is_dir():
+                    val_dir = named_child_dir(self.root_dir, "validation")
 
                 if test_dir.is_dir() or val_dir.is_dir():
                     gt_dir = named_child_dir(self.root_dir, "ground_truth")
@@ -1156,6 +1174,10 @@ class AnomalyDataset(Dataset):
                                     mask_p = candidate
                             sample = (p, 0 if is_good else 1, mask_p)
                             (normal_samples if is_good else defect_samples).append(sample)
+                    # Files lying directly in the split folder: their names say which are defects.
+                    for p in sorted(image_paths(source_dir, recursive=False)):
+                        said = name_says_normal(p.stem)
+                        (defect_samples if said is False else normal_samples).append((p, 1 if said is False else 0, None))
 
                     if has_named_splits:
                         self.samples.extend(normal_samples + defect_samples)

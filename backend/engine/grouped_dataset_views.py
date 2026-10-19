@@ -34,23 +34,13 @@ def source_image_paths(source,task,*,include_unused=False):
     return sorted(p for p in inventory_root(source,task).rglob('*') if p.is_file() and str(p.resolve()) not in unused and (not exclude_project or not p.is_relative_to(project))
                   and is_inventory_path(p.relative_to(source).parts,task))
 
-# Field exports often keep normal and defect shots in one folder and say which is which in the file name
-# ("nomaly20240925….jpg" beside "anomaly001.jpg"). A name that starts with a defect word is never a normal sample, even
-# inside train/; a name that starts with a normal word is normal wherever it sits. Folder names decide the rest.
-DEFECT_NAME_PREFIXES=('anomaly','abnormal','defect','ng_','ng-','bad_','bad-','fail')
-NORMAL_NAME_PREFIXES=('nomaly','normal','good','ok_','ok-','pass')
-
-def _name_says(stem):
-    name=stem.casefold()
-    if name.startswith(DEFECT_NAME_PREFIXES):return False
-    if name.startswith(NORMAL_NAME_PREFIXES):return True
-    return None
+from backend.engine.dataset_loaders import name_says_normal as _name_says_normal
 
 def is_anomaly_normal(image,source=None):
     path=Path(image)
     if source is not None:path=path.relative_to(Path(source))
     parts=path.parts[:-1]
-    said=_name_says(path.stem)
+    said=_name_says_normal(path.stem)
     if said is not None:return said
     if len(parts)==1 and parts[0]=='train':return True
     return any(part.casefold() in NORMAL_NAMES or part=='test_crop_output' for part in parts)

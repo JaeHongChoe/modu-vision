@@ -179,6 +179,7 @@ jobs:
           backend/tests/test_flow_evaluation_folder_split.py
           backend/tests/test_flow_truth_from_labels.py
           backend/tests/test_anomaly_name_prefixes.py
+          backend/tests/test_anomaly_flat_name_layout.py
           backend/tests/test_beginner_errors_korean.py
           backend/tests/test_openvino_runtime.py::test_openvino_service_inference_uses_owned_worker_without_a_deadline
           backend/tests/test_runtime_deadline_sdk.py::test_runtime_ignores_unlisted_bytecode_and_preserves_all_package_bytes

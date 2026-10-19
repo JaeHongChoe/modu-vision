@@ -89,6 +89,7 @@ jobs:
               backend/tests/test_flow_evaluation_folder_split.py
               backend/tests/test_flow_truth_from_labels.py
               backend/tests/test_anomaly_name_prefixes.py
+              backend/tests/test_anomaly_flat_name_layout.py
               backend/tests/test_beginner_errors_korean.py
               scripts/tests/test_publication_audit.py
               backend/tests/test_sdk_cancellation.py::test_interruption_reaps_the_actual_owned_child
