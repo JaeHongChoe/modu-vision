@@ -33,6 +33,7 @@ export const OperatorGuidanceBanner: React.FC<OperatorGuidanceBannerProps> = ({
   className = '',
 }) => {
   const isKo = useProjectStore(s=>s.language)==='ko';
+  const technicalDetails = useProjectStore(s=>s.technicalDetails);
   const [isExpanded, setIsExpanded] = useState(()=>{try{return localStorage.getItem('vision-step-guidance')==='expanded';}catch{return false;}});
   const [isGlossaryOpen, setIsGlossaryOpen] = useState(false);
   const guidance = STEP_GUIDANCE_DATA[step];
@@ -51,7 +52,7 @@ export const OperatorGuidanceBanner: React.FC<OperatorGuidanceBannerProps> = ({
             <span className="font-bold text-slate-100 font-mono text-xs uppercase tracking-wide">
               STEP {step}: {isKo ? guidance.titleKo : guidance.titleEn}
             </span>
-            <span className="text-slate-500 font-mono text-[11px]">[{isKo ? guidance.titleEn : guidance.titleKo}]</span>
+            {technicalDetails && <span className="text-slate-500 font-mono text-[11px]">[{isKo ? guidance.titleEn : guidance.titleKo}]</span>}
           </div>
 
           <div className="flex items-center space-x-2.5">

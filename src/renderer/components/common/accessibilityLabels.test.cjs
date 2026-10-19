@@ -58,3 +58,11 @@ test('the training and evaluation screens speak plain Korean (no console codes)'
  const inference=read('inference/InferenceCenterStudio.tsx');
  assert.ok(inference.indexOf('<BatchInspectionPanel />')<inference.indexOf('<CoreModelTrialPanel'),'the batch inspection comes after the single-model trial');
 });
+
+test('step banners name the steps in plain Korean and keep the English code behind 기술 상세',()=>{
+ const titles=read('../data/jargonDictionary.ts');
+ for(const jargon of ["'오토딥러닝 학습'","'인퍼런스 센터","'플로우차트 다중 모델 스튜디오'","오토라벨러'",'"completed" 상태'])assert.ok(!titles.includes(jargon),`step title still says ${jargon}`);
+ assert.match(titles,/titleKo: '모델 학습'/);
+ const banner=read('common/OperatorGuidanceBanner.tsx');
+ assert.match(banner,/technicalDetails && <span/);
+});
