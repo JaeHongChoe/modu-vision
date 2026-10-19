@@ -41,7 +41,7 @@ def test_anomaly_segmentation_evaluation_retains_real_masks_and_score_maps(tmp_p
 
 
 def test_missing_defect_mask_cannot_be_claimed_as_segmentation_evidence(tmp_path,monkeypatch):
-    with pytest.raises(HTTPException,match='masks'):_evaluate(tmp_path,monkeypatch,'segmentation',False)
+    with pytest.raises(HTTPException,match='masks|마스크'):_evaluate(tmp_path,monkeypatch,'segmentation',False)
     result=_evaluate(tmp_path,monkeypatch,'classification',False)
     assert result['metrics']['pixel_missing_masks']==1
     assert result['test_predictions'][1]['pixel_evidence']['mask_key'] is None

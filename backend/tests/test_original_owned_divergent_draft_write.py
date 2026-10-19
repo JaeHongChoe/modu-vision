@@ -138,7 +138,7 @@ def test_real_full_save_based_on_A_after_B_is_still_409_and_preserves_active_B(t
             before = _basis(root)
             response = await client.post('/api/flowchart/pipeline',headers=headers,params=params,json=graph.model_dump())
             assert response.status_code == 409
-            assert response.json() == {'detail':'The active flow changed since this one was opened; reopen it before saving.'}
+            assert response.json() == {'detail':'이 플로우를 연 뒤 적용 중인 플로우가 바뀌었습니다. 플로우를 다시 연 뒤 저장하세요.'}
             assert _basis(root) == before
             assert json.loads(flows._active_flow_file(root).read_bytes())['version_id'] == B.json()['version_id']
             assert audit.verify() == {'intact':True,'rows':1}

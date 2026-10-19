@@ -116,7 +116,7 @@ def test_original_selected_profile_read_uses_current_owned_store(generation, tmp
                 'project_id': project['id'], 'execution_target': 'selected_compute',
                 'device': 'cuda:0', 'compute_profile_id': profile.id})
             assert response.status_code == 502, response.text
-            assert response.json() == {'detail': 'Selected flow execution could not be verified: source-only failstop before transport or thread'}
+            assert response.json() == {'detail': '선택한 장비의 실행 결과를 확인하지 못했습니다: source-only failstop before transport or thread'}
             assert response.headers['x-vision-context'] == headers['x-vision-context']
     asyncio.run(request())
     assert stop_calls == [(profile.id, 1)]

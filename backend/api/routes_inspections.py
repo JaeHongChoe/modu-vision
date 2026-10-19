@@ -84,10 +84,10 @@ def _model_references(pipeline: FlowchartPipeline) -> Dict[str, str]:
         if (not job_id or not valid_flow_job(job_id, task)
                 or task not in FLOW_TASKS
                 or (job_id in references and references[job_id] != task)):
-            raise HTTPException(status_code=409, detail="Saved inspection flow has an invalid model reference.")
+            raise HTTPException(status_code=409, detail="저장된 검사 플로우에 연결된 모델 정보가 올바르지 않습니다.")
         references[job_id] = task
     if not references:
-        raise HTTPException(status_code=409, detail="Active saved inspection flow has no completed model.")
+        raise HTTPException(status_code=409, detail="적용 중인 검사 플로우에 학습을 끝낸 모델이 없습니다. 학습을 먼저 끝내세요.")
     return references
 
 
@@ -133,7 +133,7 @@ def _verified_run_provenance(payload: "CreateRun", project: Dict[str, Any], requ
     source = Path(configured).expanduser().resolve()
     requested = Path(payload.source_folder).expanduser().resolve()
     if not source.is_dir() or requested != source or payload.task != project.get("task"):
-        raise HTTPException(status_code=409, detail="Inspection source or task differs from the active project.")
+        raise HTTPException(status_code=409, detail="검사의 데이터셋이나 작업 종류가 현재 프로젝트와 다릅니다.")
 
     project_dir = Path(project["project_dir"]).resolve()
     pointer = project_dir / "flowcharts" / "active.json"
@@ -161,7 +161,7 @@ def _verified_run_provenance(payload: "CreateRun", project: Dict[str, Any], requ
                 raise ValueError("Inspection graph differs from the active saved flow version.")
             ordered_linear_nodes(pipeline)
         except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
-            raise HTTPException(status_code=409, detail=f"Active saved inspection flow is unavailable or changed: {exc}") from exc
+            raise HTTPException(status_code=409, detail=f"적용 중인 검사 플로우를 열 수 없거나 바뀌었습니다: {exc}") from exc
 
     listed = list_dataset_images(
         folder_path=str(source), task=payload.task, limit=50000, offset=0,
@@ -177,7 +177,7 @@ def _verified_run_provenance(payload: "CreateRun", project: Dict[str, Any], requ
                 or image.image_id != expected["image_id"]
                 or image.file_name != expected["file_name"]
                 or image.split != expected["split"]):
-            raise HTTPException(status_code=409, detail=f"Inspection image is not in the selected source and scope: {image.file_path}")
+            raise HTTPException(status_code=409, detail=f"검사 이미지가 선택한 데이터셋 범위 밖에 있습니다: {image.file_path}")
 
     model_sha256: Dict[str, str] = {}
     model_paths: Dict[str, str] = {}
@@ -200,7 +200,7 @@ def _verified_run_provenance(payload: "CreateRun", project: Dict[str, Any], requ
             model_sha256[job_id] = _sha256(checkpoint)
             model_paths[job_id] = str(checkpoint.resolve())
         except (HTTPException, OSError, ValueError) as exc:
-            raise HTTPException(status_code=409, detail=f"Saved model {job_id} is no longer verified for this source and task.") from exc
+            raise HTTPException(status_code=409, detail=f"저장된 모델 {job_id}은(는) 이 데이터셋과 작업에 더 이상 맞지 않습니다. 다시 학습하거나 다른 모델을 고르세요.") from exc
     return version_id, model_sha256, model_paths
 
 
@@ -227,20 +227,20 @@ class CreateRun(BaseModel):
 
 def _freeze_execution_config(payload: CreateRun, project: Dict[str, Any]) -> Dict[str, Any]:
     if payload.execution_target != "model_compute" and not payload.project_id:
-        raise HTTPException(status_code=422, detail="Explicit inspection execution requires its project identity.")
+        raise HTTPException(status_code=422, detail="검사를 실행하려면 어느 프로젝트의 검사인지 지정해야 합니다.")
     if payload.project_id is not None and payload.project_id != project["id"]:
-        raise HTTPException(status_code=409, detail="Inspection project changed before the run was created.")
+        raise HTTPException(status_code=409, detail="검사를 만들기 전에 프로젝트가 바뀌었습니다. 현재 프로젝트에서 다시 시도하세요.")
     profile = None
     if payload.execution_target == "selected_compute":
         from backend.remote.profiles import get_profile_store
         if not payload.compute_profile_id:
-            raise HTTPException(status_code=422, detail="Choose an explicit execution compute profile.")
+            raise HTTPException(status_code=422, detail="검사를 실행할 장비를 고르세요.")
         selected = get_profile_store().get(payload.compute_profile_id)
         if selected is None:
-            raise HTTPException(status_code=404, detail="Execution compute profile is unavailable.")
+            raise HTTPException(status_code=404, detail="실행 장비를 찾을 수 없습니다. 설정에서 장비를 다시 고르세요.")
         profile = selected.model_dump(mode="json")
     elif payload.compute_profile_id is not None:
-        raise HTTPException(status_code=422, detail="A compute profile applies only to selected compute execution.")
+        raise HTTPException(status_code=422, detail="장비 설정은 특정 장비를 골라 실행할 때만 지정할 수 있습니다.")
     return {"execution_target": payload.execution_target, "device": payload.device,
             "compute_profile_id": payload.compute_profile_id, "project_id": project["id"],
             "profile": profile}
@@ -272,7 +272,7 @@ def _verified_execution_choice(run: Dict[str, Any], project: Dict[str, Any]):
             raise ValueError("Stored execution has an unexpected compute profile.")
         return config, frozen_profile
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
-        raise HTTPException(status_code=409, detail=f"Inspection execution configuration is invalid: {exc}") from exc
+        raise HTTPException(status_code=409, detail=f"검사 실행 설정이 올바르지 않습니다: {exc}") from exc
 
 
 @contextmanager
@@ -292,7 +292,7 @@ def _execution_request(request: Request, project: Dict[str, Any], frozen_profile
     state = {**request.scope.get("state", {}), "frozen_execution_profile": frozen_profile}
     selected = state.get("scoped_project")
     if state.get("account_user") is not None and (selected is None or selected.get("id") != project["id"]):
-        raise HTTPException(status_code=409, detail="Select this inspection run's project to execute it.")
+        raise HTTPException(status_code=409, detail="이 검사를 실행하려면 검사가 속한 프로젝트를 먼저 여세요.")
     state["scoped_project"] = project
     registry = getattr(request.app.state, "context_registry", None)
     if registry is not None:
@@ -384,13 +384,13 @@ def _run_project(request: Request, run_id: str) -> Dict[str, Any]:
         same = (selected is not None and selected.get("id") == owner["project_id"]
                 and Path(selected.get("project_dir", "")).expanduser().resolve() == Path(owner["project_dir"]).expanduser().resolve())
         if not same:  # a restored copy keeps the ID at another folder; 404 does not confirm the run exists elsewhere
-            raise HTTPException(status_code=404, detail="Inspection run not found in the active project.")
+            raise HTTPException(status_code=404, detail="현재 프로젝트에서 이 검사를 찾을 수 없습니다.")
     try:
         project = _load_project(Path(owner["project_dir"]).expanduser().resolve())
     except HTTPException as exc:
-        raise HTTPException(status_code=409, detail="Inspection run's original project is unavailable.") from exc
+        raise HTTPException(status_code=409, detail="이 검사가 만들어진 프로젝트를 열 수 없습니다.") from exc
     if project["id"] != owner["project_id"]:
-        raise HTTPException(status_code=409, detail="Inspection run project identity changed.")
+        raise HTTPException(status_code=409, detail="이 검사가 속한 프로젝트 정보가 바뀌었습니다.")
     return project
 
 
@@ -479,7 +479,7 @@ def _store(request: Request, run_id: Optional[str] = None):
 def _run_row(conn: sqlite3.Connection, run_id: str) -> sqlite3.Row:
     record = conn.execute("SELECT * FROM runs WHERE run_id = ?", (run_id,)).fetchone()
     if record is None:
-        raise HTTPException(status_code=404, detail="Inspection run not found in the active project.")
+        raise HTTPException(status_code=404, detail="현재 프로젝트에서 이 검사를 찾을 수 없습니다.")
     return record
 
 
@@ -518,7 +518,7 @@ def _verified_execution_context(run: sqlite3.Row, project: Dict[str, Any], reque
     source = Path(run["source_folder"]).expanduser().resolve()
     if (project.get("source_dataset_dir") != str(source) or project.get("task") != run["task"]
             or not source.is_dir() or not run["saved_version_id"]):
-        raise HTTPException(status_code=409, detail="Inspection run no longer matches this project's source and task.")
+        raise HTTPException(status_code=409, detail="이 검사가 현재 프로젝트의 데이터셋이나 작업과 더 이상 맞지 않습니다.")
     version_id = run["saved_version_id"]
     version_path = Path(project["project_dir"]) / "flowcharts" / "versions" / f"{version_id}.json"
     try:
@@ -557,7 +557,7 @@ def _verified_execution_context(run: sqlite3.Row, project: Dict[str, Any], reque
             checkpoints[(job_id, task)] = checkpoint
         return pipeline, checkpoints
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
-        raise HTTPException(status_code=409, detail=f"Stored inspection provenance is invalid: {exc}") from exc
+        raise HTTPException(status_code=409, detail=f"저장된 검사 출처 기록이 올바르지 않습니다: {exc}") from exc
 
 
 def _check_checkpoint_hashes(run: sqlite3.Row, checkpoints: Dict[tuple[str, str], Path]) -> None:
@@ -566,26 +566,26 @@ def _check_checkpoint_hashes(run: sqlite3.Row, checkpoints: Dict[tuple[str, str]
         if any(_sha256(path) != expected[job_id] for (job_id, _task), path in checkpoints.items()):
             raise ValueError("A checkpoint changed during inspection execution.")
     except (OSError, KeyError, ValueError) as exc:
-        raise HTTPException(status_code=409, detail=f"Inspection checkpoint changed: {exc}") from exc
+        raise HTTPException(status_code=409, detail=f"검사에 쓴 학습 모델 파일이 바뀌었습니다: {exc}") from exc
 
 
 @router.post("/runs")
 def create_run(payload: CreateRun, request: Request):
     paths = [image.file_path for image in payload.images]
     if len(paths) != len(set(paths)):
-        raise HTTPException(status_code=422, detail="Inspection image paths must be unique within a run.")
+        raise HTTPException(status_code=422, detail="한 검사 안에 같은 이미지를 두 번 넣을 수 없습니다.")
     if not payload.pipeline.get("id") or not payload.pipeline.get("name"):
-        raise HTTPException(status_code=422, detail="A named flowchart is required for inspection provenance.")
+        raise HTTPException(status_code=422, detail="검사 기록을 남기려면 이름이 있는 플로우가 필요합니다. 플로우를 저장한 뒤 다시 시도하세요.")
     project = get_current_project(request)
     execution_config = _freeze_execution_config(payload, project)
     execution_json = _canonical_json(execution_config)
     source_folder = _source_identity(payload.source_folder)
     if source_folder is None:
-        raise HTTPException(status_code=422, detail="Inspection source path cannot be resolved.")
+        raise HTTPException(status_code=422, detail="검사 데이터셋 경로를 찾을 수 없습니다.")
     try:
         pipeline_json = canonical_pipeline_json(payload.pipeline)
     except (ValueError, TypeError) as exc:
-        raise HTTPException(status_code=422, detail=f"Inspection graph is invalid: {exc}") from exc
+        raise HTTPException(status_code=422, detail=f"검사 플로우가 올바르지 않습니다: {exc}") from exc
     saved_version_id, model_sha256, model_paths = _verified_run_provenance(payload, project, request)
     run_id, stamp = str(uuid.uuid4()), _now()
     with _run_index(request) as index:
@@ -629,7 +629,7 @@ def review_queue(request: Request, source_folder: str, task: Literal["classifica
     source_folder = _source_identity(source_folder)
     if (not configured or source_folder is None or _source_identity(configured) != source_folder
             or project.get("task") != task):
-        raise HTTPException(status_code=409, detail="Review queue source or task differs from the active project.")
+        raise HTTPException(status_code=409, detail="검토 목록의 데이터셋이나 작업 종류가 현재 프로젝트와 다릅니다.")
     latest_review = """(SELECT reviews.final_verdict FROM reviews
         WHERE reviews.run_id = rows.run_id AND reviews.image_path = rows.image_path
         ORDER BY reviews.created_at DESC, reviews.rowid DESC LIMIT 1)"""
@@ -715,12 +715,12 @@ def evidence_image(run_id: str, request: Request, image_path: str = Query(...)):
         row = conn.execute("SELECT image_sha256 FROM rows WHERE run_id=? AND image_path=?",
                            (run_id, image_path)).fetchone()
         if row is None:
-            raise HTTPException(404, "Image does not belong to this inspection run.")
+            raise HTTPException(404, "이 검사에 속하지 않는 이미지입니다.")
         expected = row["image_sha256"]
         source = Path(run["source_folder"]).expanduser().resolve()
         version = run["saved_version_id"]
     if not expected:
-        raise HTTPException(409, "This run has no captured source image hash; historical original is unavailable.")
+        raise HTTPException(409, "이 검사에는 원본 이미지의 해시가 기록되지 않아 당시 원본을 보여줄 수 없습니다.")
     from backend.engine.evidence_image import verified_preview
     try:
         preview = verified_preview(image_path, source, expected)
@@ -741,11 +741,11 @@ def execute_row(run_id: str, payload: ExecuteRow, request: Request):
             (run_id, payload.image_path),
         ).fetchone()
         if row is None:
-            raise HTTPException(status_code=404, detail="Image does not belong to the inspection run.")
+            raise HTTPException(status_code=404, detail="이 검사에 속하지 않는 이미지입니다.")
         if row["state"] in {"OK", "NG", "REVIEW"} and row["result_json"]:
             return json.loads(row["result_json"])
         if run["status"] != "running" or row["state"] != "pending":
-            raise HTTPException(status_code=409, detail="Image is already running or finished in this inspection run.")
+            raise HTTPException(status_code=409, detail="이 이미지는 이미 검사 중이거나 검사가 끝났습니다.")
         image = json.loads(row["image_json"])
         run_record = dict(run)
 
@@ -755,7 +755,7 @@ def execute_row(run_id: str, payload: ExecuteRow, request: Request):
     source_path = Path(run_record["source_folder"]).expanduser().resolve()
     if (not image_path.is_file() or not image_path.is_relative_to(source_path)
             or str(image_path) != payload.image_path or image.get("file_path") != payload.image_path):
-        raise HTTPException(status_code=409, detail="Inspection image path changed or is unavailable.")
+        raise HTTPException(status_code=409, detail="검사 이미지의 경로가 바뀌었거나 파일을 열 수 없습니다.")
     image_sha256 = _sha256(image_path)
     with _store(request, run_id) as conn:
         run = _run_row(conn, run_id)
@@ -765,7 +765,7 @@ def execute_row(run_id: str, payload: ExecuteRow, request: Request):
             (_now(), run_id, payload.image_path, run_id),
         )
         if run["status"] != "running" or changed.rowcount != 1:
-            raise HTTPException(status_code=409, detail="Inspection run or image changed before execution.")
+            raise HTTPException(status_code=409, detail="실행 전에 검사나 이미지가 바뀌었습니다. 다시 시도하세요.")
 
     from backend.api import routes_flowchart
     try:
@@ -779,14 +779,14 @@ def execute_row(run_id: str, payload: ExecuteRow, request: Request):
         if (result.image_path != payload.image_path or result.image_id != image["image_id"]
                 or result.status not in ("success", "review")
                 or not result.execution_steps):
-            raise HTTPException(status_code=502, detail="Flowchart engine returned a result for a different image or without execution evidence.")
+            raise HTTPException(status_code=502, detail="플로우 실행 결과가 다른 이미지의 것이거나 실행 증빙이 없습니다.")
         if execution_config["execution_target"] != "model_compute" and (
                 raw.get("execution_target") != execution_config["execution_target"]
                 or raw.get("execution_device") != execution_config["device"]
                 or raw.get("compute_profile_id") != execution_config["compute_profile_id"]):
-            raise HTTPException(status_code=502, detail="Flowchart result used a different execution target, device, or compute profile.")
+            raise HTTPException(status_code=502, detail="플로우 실행 결과가 지정한 장비나 장치와 다른 곳에서 만들어졌습니다.")
         if _sha256(image_path) != image_sha256:
-            raise HTTPException(status_code=409, detail="Inspection image changed during execution.")
+            raise HTTPException(status_code=409, detail="검사하는 동안 이미지가 바뀌었습니다. 다시 시도하세요.")
         _check_checkpoint_hashes(run_record, checkpoints)
     except Exception:
         # The browser may record a diagnostic error or retry; it cannot supply a model verdict.
@@ -805,7 +805,7 @@ def execute_row(run_id: str, payload: ExecuteRow, request: Request):
     with _store(request, run_id) as conn:
         run = _run_row(conn, run_id)
         if run["status"] != "running":
-            raise HTTPException(status_code=409, detail="Inspection run was stopped before the model result could be saved.")
+            raise HTTPException(status_code=409, detail="모델 결과를 저장하기 전에 검사가 중단되었습니다.")
         updated = conn.execute(
             "UPDATE rows SET state = ?, result_json = ?, image_sha256 = ?, error = NULL, updated_at = ? "
             "WHERE run_id = ? AND image_path = ? AND state = 'running'",
@@ -813,7 +813,7 @@ def execute_row(run_id: str, payload: ExecuteRow, request: Request):
              stamp, run_id, payload.image_path),
         )
         if updated.rowcount != 1:
-            raise HTTPException(status_code=409, detail="Inspection image changed before the model result could be saved.")
+            raise HTTPException(status_code=409, detail="모델 결과를 저장하기 전에 검사 이미지가 바뀌었습니다.")
         conn.execute("UPDATE runs SET updated_at = ? WHERE run_id = ?", (stamp, run_id))
     return saved
 
@@ -823,19 +823,19 @@ def update_row(run_id: str, payload: UpdateRow, request: Request):
     with _store(request, run_id) as conn:
         run = _run_row(conn, run_id)
         if run["status"] != "running":
-            raise HTTPException(status_code=409, detail="Completed inspection runs cannot be changed.")
+            raise HTTPException(status_code=409, detail="끝난 검사는 바꿀 수 없습니다.")
         row = conn.execute(
             "SELECT state, image_json FROM rows WHERE run_id = ? AND image_path = ?",
             (run_id, payload.image_path),
         ).fetchone()
         if row is None:
-            raise HTTPException(status_code=404, detail="Image does not belong to the inspection run.")
+            raise HTTPException(status_code=404, detail="이 검사에 속하지 않는 이미지입니다.")
         if row["state"] != "pending":
-            raise HTTPException(status_code=409, detail="Only a pending image may receive a client diagnostic error.")
+            raise HTTPException(status_code=409, detail="아직 검사하지 않은 이미지에만 오류를 기록할 수 있습니다.")
         if payload.state != "error" or payload.result is not None:
-            raise HTTPException(status_code=409, detail="Only a diagnostic error may be submitted by the client; the server records model verdicts.")
+            raise HTTPException(status_code=409, detail="화면에서는 오류만 기록할 수 있습니다. 모델 판정은 서버가 기록합니다.")
         if not payload.error:
-            raise HTTPException(status_code=422, detail="An inspection error needs its diagnostic message.")
+            raise HTTPException(status_code=422, detail="검사 오류에는 오류 내용이 있어야 합니다.")
         stamp = _now()
         conn.execute(
             "UPDATE rows SET state = ?, result_json = ?, error = ?, updated_at = ? WHERE run_id = ? AND image_path = ?",
@@ -851,12 +851,12 @@ def finish_run(run_id: str, payload: FinishRun, request: Request):
     with _store(request, run_id) as conn:
         run = _run_row(conn, run_id)
         if run["status"] != "running":
-            raise HTTPException(status_code=409, detail="Inspection run is already finished.")
+            raise HTTPException(status_code=409, detail="이 검사는 이미 끝났습니다.")
         unfinished = conn.execute(
             "SELECT COUNT(*) FROM rows WHERE run_id = ? AND state IN ('pending', 'running')", (run_id,)
         ).fetchone()[0]
         if payload.status == "completed" and unfinished:
-            raise HTTPException(status_code=409, detail=f"{unfinished} images have no completed inspection record.")
+            raise HTTPException(status_code=409, detail=f"아직 검사 결과가 없는 이미지가 {unfinished}장 있습니다. 모든 이미지를 검사한 뒤 마치세요.")
         stamp = _now()
         if payload.status == "stopped":
             conn.execute(
@@ -879,9 +879,9 @@ def review_row(run_id: str, payload: ReviewRow, request: Request):
             (run_id, payload.image_path),
         ).fetchone()
         if row is None:
-            raise HTTPException(status_code=404, detail="Image does not belong to the inspection run.")
+            raise HTTPException(status_code=404, detail="이 검사에 속하지 않는 이미지입니다.")
         if row["state"] not in {"OK", "NG", "REVIEW"}:
-            raise HTTPException(status_code=409, detail="Only inspected images can receive an operator verdict.")
+            raise HTTPException(status_code=409, detail="검사가 끝난 이미지에만 작업자 판정을 남길 수 있습니다.")
         review_id, stamp = str(uuid.uuid4()), _now()
         conn.execute(
             "INSERT INTO reviews VALUES (?, ?, ?, ?, ?, ?, ?)",

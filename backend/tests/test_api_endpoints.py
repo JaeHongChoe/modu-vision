@@ -418,7 +418,7 @@ class TestEvaluationRoutes:
         _, client, _ = app_and_client
         res = client.get("/api/evaluation/results?job_id=non_existent_job_999")
         assert res.status_code == 404
-        assert "not found" in res.json()["detail"].lower()
+        assert "not found" in res.json()["detail"].lower() or "찾을 수 없습니다" in res.json()["detail"]
 
     def test_evaluation_heatmap_base64_and_image(self, app_and_client, trained_eval_job):
         _, client, _ = app_and_client

@@ -164,8 +164,8 @@ def test_unproved_real_draft_write_keeps_business_result_and_refuses(tmp_path, m
                 if expected_status == 200:
                     assert response.json() == {**json.loads(draft.read_bytes()), 'active_version_id': None}
                     assert response.json()['base_version_id'] == payload['base_version_id']
-                elif fault == 'context': assert response.json() == {'detail':'Draft project, source or labelset changed'}
-                elif fault == 'invalid-base': assert response.json() == {'detail':'base_version_id must be a saved flow version id or none'}
+                elif fault == 'context': assert response.json() == {'detail':'임시 저장본의 프로젝트, 데이터셋 또는 라벨 목록이 바뀌었습니다. 플로우를 다시 연 뒤 시도하세요.'}
+                elif fault == 'invalid-base': assert response.json() == {'detail':'base_version_id는 저장된 플로우 버전 id이거나 비어 있어야 합니다.'}
                 elif fault == 'malformed-json': assert response.json() == {'detail':'Request data is outside this project or invalid'}
             if expected_status in {403,409,422,500}: assert _basis(Path(project['project_dir'])) == before
             return response

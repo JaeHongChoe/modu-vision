@@ -63,7 +63,7 @@ def _comparison_execution(payload):
         return {'execution_target':'local_cpu','device':'cpu','compute_profile':None}
     from backend.remote.profiles import get_profile_store
     profile=get_profile_store().get(payload.compute_profile_id)
-    if profile is None:raise HTTPException(404,'Selected comparison compute profile is unavailable')
+    if profile is None:raise HTTPException(404,'선택한 비교 실행 장비를 찾을 수 없습니다. 설정에서 장비를 다시 고르세요.')
     return {'execution_target':'selected_compute','device':payload.device,'compute_profile':profile.model_dump()}
 
 
@@ -195,7 +195,7 @@ def _test_images(source: Path, task: Task, maximum: int | None) -> tuple[list[di
     if maximum is None:
         while len(images) < total:
             more = routes_dataset.list_dataset_images(folder_path=str(source), task=task, limit=500, offset=len(images), split="test", class_name=None)
-            if not more["items"]: raise HTTPException(409, "Test inventory changed during selection")
+            if not more["items"]: raise HTTPException(409, "시험 이미지를 고르는 동안 테스트 이미지 목록이 바뀌었습니다. 다시 시도하세요.")
             images.extend(more["items"])
     images = sorted(images, key=lambda item: item["file_path"])
     selected: list[dict[str, Any]] = []
@@ -207,7 +207,7 @@ def _test_images(source: Path, task: Task, maximum: int | None) -> tuple[list[di
             raise HTTPException(status_code=409, detail="test 이미지 경로가 원본 데이터 폴더를 벗어났습니다.")
         from backend.engine.annotation_storage import request_shared_scope
         if request_shared_scope() and (path.is_symlink() or not path.resolve().is_relative_to(source)):
-            raise HTTPException(409,'Shared comparison image escaped its authorized source')
+            raise HTTPException(409,'비교에 쓸 이미지가 허용된 데이터셋 밖에 있습니다.')
         try:
             # The flow engine substitutes a synthetic example if decoding
             # fails. Validate with its own reader so comparison never does so.
@@ -233,16 +233,16 @@ def _patch_test_images(source: Path, maximum: int) -> tuple[list[dict[str, Any]]
         manifest = load_patch_manifest(source)
         raw = json.loads((source / "patches.json").read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
-        raise HTTPException(status_code=422, detail=f"Invalid patch holdout: {exc}") from exc
+        raise HTTPException(status_code=422, detail=f"패치 시험 이미지 묶음이 올바르지 않습니다: {exc}") from exc
     test_sources = {record.image: record for record in manifest.patches if record.split == "test"}
     if not test_sources:
-        raise HTTPException(status_code=422, detail="Patch comparison needs test source images in patches.json")
+        raise HTTPException(status_code=422, detail="패치 모델을 비교하려면 patches.json에 테스트 원본 이미지가 있어야 합니다.")
     truth = raw.get("test_image_verdicts") if isinstance(raw, dict) else None
     if (not isinstance(truth, dict) or set(truth) != set(test_sources)
             or any(value not in ("OK", "NG") for value in truth.values())):
         raise HTTPException(status_code=422, detail=(
-            "patches.json needs test_image_verdicts with an independently reviewed OK or NG "
-            "image-level truth for every test source image"
+            "patches.json의 test_image_verdicts에 모든 테스트 원본 이미지의 "
+            "검토된 OK/NG 정답이 있어야 합니다."
         ))
     ordered = sorted(test_sources)
     if len(ordered) > maximum:
@@ -260,9 +260,9 @@ def _patch_test_images(source: Path, maximum: int) -> tuple[list[dict[str, Any]]
             read_image_safely_rgb(path, max_dim=32)
             digest = _sha256(path)
         except (OSError, ValueError) as exc:
-            raise HTTPException(status_code=422, detail=f"Patch test image is unreadable: {relative}") from exc
+            raise HTTPException(status_code=422, detail=f"패치 테스트 이미지를 읽을 수 없습니다: {relative}") from exc
         if digest != record.source_sha256:
-            raise HTTPException(status_code=409, detail=f"Patch test image changed after manifest validation: {relative}")
+            raise HTTPException(status_code=409, detail=f"패치 테스트 이미지가 목록을 확인한 뒤 바뀌었습니다: {relative}")
         selected.append({
             "image_id": path.stem,
             "file_name": path.name,
@@ -284,11 +284,11 @@ def _owned_patch_test_images(project, source, models, maximum):
             continue
         requested = model.get('family_dataset_path')
         if not requested:
-            raise HTTPException(409, 'Patch model has no prepared dataset identity')
+            raise HTTPException(409, '이 패치 모델에는 준비된 데이터셋 기록이 없습니다.')
         dataset = Path(requested)
         allowed = (Path(project['dataset_dir']).resolve(), Path(project['models_dir']).resolve())
         if dataset.is_symlink() or not any(dataset.resolve().is_relative_to(root) for root in allowed):
-            raise HTTPException(409, 'Patch comparison inputs belong to another project')
+            raise HTTPException(409, '비교할 패치 모델이 다른 프로젝트의 것입니다.')
         try:
             manifest = load_patch_manifest(dataset)
             raw = json.loads((dataset / 'patches.json').read_text(encoding='utf-8'))
@@ -304,12 +304,12 @@ def _owned_patch_test_images(project, source, models, maximum):
                                'file_name': original.name})
             cohorts.append(sorted(cohort, key=lambda row: row['file_path']))
         except (OSError, ValueError, KeyError) as exc:
-            raise HTTPException(409, f'Prepared patch holdout is invalid: {exc}') from exc
+            raise HTTPException(409, f'준비된 패치 시험 이미지 묶음이 올바르지 않습니다: {exc}') from exc
     if not cohorts:
-        raise HTTPException(422, 'Choose a patch model with a reviewed prepared test holdout')
+        raise HTTPException(422, '검토된 테스트 시험 이미지 묶음이 준비된 패치 모델을 고르세요.')
     identity = lambda rows: [(r['file_path'], r['image_sha256'], r['ground_truth_verdict']) for r in rows]
     if any(identity(rows) != identity(cohorts[0]) for rows in cohorts[1:]):
-        raise HTTPException(409, 'Patch models have different test images or reviewed image truth')
+        raise HTTPException(409, '두 패치 모델의 테스트 이미지나 검토된 정답이 서로 다릅니다. 같은 데이터로 준비된 모델을 고르세요.')
     rows = cohorts[0]
     if len(rows) > maximum:
         quota = maximum // 2
@@ -430,7 +430,7 @@ def comparison_models(request: Request, source_dataset_path: str, task: Task):
 @router.get('/models/all')
 def all_comparison_models(request:Request,source_dataset_path:str):
     project=get_current_project(request);source=Path(source_dataset_path).expanduser().resolve()
-    if not project.get('source_dataset_dir') or source!=Path(project['source_dataset_dir']).resolve():raise HTTPException(409,'Comparison source differs from active project')
+    if not project.get('source_dataset_dir') or source!=Path(project['source_dataset_dir']).resolve():raise HTTPException(409,'비교 대상 데이터셋이 현재 프로젝트와 다릅니다.')
     models=[];root=_models_dir(project)
     for task in ('classification','detection','segmentation','anomaly','patch_classification','rotated_detection','ocr'):
         directories=(root/task).iterdir() if task in ('rotated_detection','ocr') and (root/task).is_dir() else root.iterdir()
@@ -464,14 +464,14 @@ def _comparison_inputs(payload: ComparisonRequest, project, source):
     dataset_fingerprint = _fingerprint(source)
     intake_lineage=baseline.get('intake_lineage') or candidate.get('intake_lineage')
     if intake_lineage:
-        if baseline_task!=candidate_task:raise HTTPException(409,'Intake ancestor comparison requires the same task and ordered classes')
+        if baseline_task!=candidate_task:raise HTTPException(409,'이전 모델과 비교하려면 작업 종류와 클래스 순서가 같아야 합니다.')
         from backend.engine.intake_lineage import verify_current_model
         for model in (baseline,candidate):
             if not model.get('intake_lineage'):
                 try:verify_current_model(project,source,model['checkpoint_path'],model['task'],intake_lineage)
                 except (ValueError,OSError,KeyError,TypeError) as exc:raise HTTPException(409,str(exc)) from exc
         other=baseline.get('intake_lineage') and candidate.get('intake_lineage')
-        if other and other['cohort_sha256']!=intake_lineage['cohort_sha256']:raise HTTPException(409,'Ancestor models require the identical frozen held-out cohort')
+        if other and other['cohort_sha256']!=intake_lineage['cohort_sha256']:raise HTTPException(409,'이전 모델과 비교하려면 똑같이 고정된 시험 이미지 묶음을 써야 합니다.')
         images=list(intake_lineage['images']);total_test_images=len(images)
         if not payload.full_test:images=images[:payload.max_images]
     else:
@@ -489,15 +489,15 @@ def _comparison_inputs(payload: ComparisonRequest, project, source):
 def _binding_from_inputs(project, source, inputs):
     manifest = Path(project['project_dir']) / 'project.json'
     if manifest.is_symlink():
-        raise HTTPException(409, 'Project binding cannot be linked')
+        raise HTTPException(409, '비교를 프로젝트에 연결할 수 없습니다.')
     try:
         current = json.loads(manifest.read_text(encoding='utf-8'))
     except (OSError, ValueError) as exc:
-        raise HTTPException(409, 'Project binding unavailable') from exc
+        raise HTTPException(409, '비교를 연결할 프로젝트 정보를 찾을 수 없습니다.') from exc
     for key in ('id', 'source_dataset_dir', 'active_labelset_id', 'task'):
         default = 'default' if key == 'active_labelset_id' else None
         if current.get(key, default) != project.get(key, default):
-            raise HTTPException(409, 'Project scope changed during comparison input capture')
+            raise HTTPException(409, '비교 입력을 기록하는 동안 프로젝트가 바뀌었습니다. 다시 시도하세요.')
     return {"project_id": project["id"], "labelset_id": project.get("active_labelset_id", "default"),
             "source_dataset_path": str(source), "inputs": inputs,
             "scope_identity": {key: current.get(key) for key in ('id', 'source_dataset_dir', 'active_labelset_id', 'task')}}
@@ -512,7 +512,7 @@ def _run_comparison(payload: ComparisonRequest, project, source, progress=None, 
     inputs = _comparison_inputs(payload, project, source)
     binding = _binding_from_inputs(project, source, inputs) if expected_binding is not None else None
     if expected_binding is not None and binding != expected_binding:
-        raise HTTPException(409, "Comparison inputs changed after acceptance")
+        raise HTTPException(409, "비교 요청을 받은 뒤 입력이 바뀌었습니다. 다시 시도하세요.")
     baseline, candidate = inputs['baseline'], inputs['candidate']
     baseline_task, candidate_task = inputs['baseline_task'], inputs['candidate_task']
     model_hashes, dataset_fingerprint = inputs['model_hashes'], inputs['dataset_fingerprint']
@@ -590,7 +590,7 @@ def _run_comparison(payload: ComparisonRequest, project, source, progress=None, 
 
     if cancelled and cancelled(): raise InterruptedError("Comparison cancelled by user")
     if _comparison_execution(payload)!=execution:
-        raise HTTPException(409,'Comparison compute profile changed during execution')
+        raise HTTPException(409,'비교하는 동안 실행 장비 설정이 바뀌었습니다. 다시 시도하세요.')
     # Reject a mixed-version comparison; the saved report must describe one
     # exact dataset, image list, and pair of checkpoint contents.
     if _fingerprint(source) != dataset_fingerprint:
@@ -606,7 +606,7 @@ def _run_comparison(payload: ComparisonRequest, project, source, progress=None, 
             if model.get('intake_lineage'):
                 try:current=verify_ancestor_model(project,source,model['checkpoint_path'],model['task'])
                 except (ValueError,OSError,KeyError,TypeError) as exc:raise HTTPException(409,str(exc)) from exc
-                if current!=model['intake_lineage']:raise HTTPException(409,'Intake frozen cohort or truth changed during comparison')
+                if current!=model['intake_lineage']:raise HTTPException(409,'비교하는 동안 고정된 시험 이미지 묶음이나 정답이 바뀌었습니다. 다시 시도하세요.')
             else:
                 try:verify_current_model(project,source,model['checkpoint_path'],model['task'],intake_lineage)
                 except (ValueError,OSError,KeyError,TypeError) as exc:raise HTTPException(409,str(exc)) from exc
@@ -746,10 +746,10 @@ def _durable_row(jobs, identifier, context, key, source, task, request):
     try:
         record = jobs.scoped(identifier, context, key)
     except KeyError:
-        raise HTTPException(404, "Comparison job not found in this actor/project scope") from None
+        raise HTTPException(404, "이 사용자와 프로젝트 범위에서 비교 작업을 찾을 수 없습니다.") from None
     payload = json.loads(record['spec_json'])['request']
     if payload['source_dataset_path'] != str(source) or payload['task'] != task:
-        raise HTTPException(404, "Comparison job belongs to another source")
+        raise HTTPException(404, "이 비교 작업은 다른 데이터셋의 것입니다.")
     return _job_view(jobs, identifier, request)
 
 
@@ -759,7 +759,7 @@ def queue_comparison(payload: AsyncComparisonRequest, request: Request):
     context, key, project, jobs = _durable_scope(request)
     idempotency = request.headers.get('Idempotency-Key')
     if idempotency is not None and not re.fullmatch(r'[A-Za-z0-9_.:-]{1,128}', idempotency):
-        raise HTTPException(422, 'Invalid Idempotency-Key')
+        raise HTTPException(422, 'Idempotency-Key 헤더가 올바르지 않습니다.')
     normalized = payload.model_dump()
     normalized['source_dataset_path'] = str(Path(payload.source_dataset_path).expanduser().resolve())
     try:
@@ -768,7 +768,7 @@ def queue_comparison(payload: AsyncComparisonRequest, request: Request):
             return jobs.view(held['id'])
         project, source = _scope(request, normalized['source_dataset_path'], payload.task)
         if payload.incumbent_job_id == payload.candidate_job_id:
-            raise HTTPException(409, 'Comparison requires two distinct completed source-bound models')
+            raise HTTPException(409, '비교하려면 같은 데이터셋으로 학습을 끝낸 서로 다른 모델 두 개가 필요합니다.')
         binding = _comparison_binding(payload, project, source)
         identifier, created = jobs.submit(context, key, project, normalized, binding, idempotency)
     except JobConflict as exc:
@@ -777,7 +777,7 @@ def queue_comparison(payload: AsyncComparisonRequest, request: Request):
         def worker():
             def verify(expected):
                 if _comparison_binding(payload, project, source) != expected:
-                    raise HTTPException(409, 'Comparison inputs changed after acceptance')
+                    raise HTTPException(409, '비교 요청을 받은 뒤 입력이 바뀌었습니다. 다시 시도하세요.')
             jobs.run(identifier,
                      lambda progress, cancelled, publish, expected: _run_comparison(
                          payload, project, source, progress, cancelled, publish_report=publish, expected_binding=expected,execution_id=identifier),
@@ -878,7 +878,7 @@ def comparison_job(job_id: str, request: Request, source_dataset_path: str, task
         for row in _legacy_rows(project):
             if row['job_id'] == job_id and row['payload']['source_dataset_path'] == str(source) and row['payload']['task'] == task:
                 return row
-        raise HTTPException(404, 'Comparison job not found') from None
+        raise HTTPException(404, '비교 작업을 찾을 수 없습니다.') from None
     return _durable_row(jobs, job_id, context, key, source, task, request)
 
 
@@ -909,7 +909,7 @@ def get_comparison(comparison_id: str, request: Request, source_dataset_path: st
             or report.get("task") != task):
         raise HTTPException(status_code=404, detail="현재 프로젝트의 모델 비교 기록이 아닙니다.")
     if report.get("comparison_id") != comparison_id or not _report_available(report, request):
-        raise HTTPException(409, "Durable comparison report is not verified/available in this actor scope")
+        raise HTTPException(409, "이 사용자 범위에서 확인된 비교 보고서를 찾을 수 없습니다.")
     return report
 
 
@@ -918,10 +918,10 @@ def comparison_image(comparison_id: str, request: Request, source_dataset_path: 
     report = get_comparison(comparison_id, request, source_dataset_path, task)
     row = next((row for row in report.get('images', []) if row.get('file_path') == image_path), None)
     if row is None:
-        raise HTTPException(404, 'Image does not belong to this comparison.')
+        raise HTTPException(404, '이 비교에 속하지 않는 이미지입니다.')
     expected = row.get('image_sha256')
     if not expected:
-        raise HTTPException(409, 'This comparison has no captured source image hash.')
+        raise HTTPException(409, '이 비교에는 원본 이미지의 해시가 기록되지 않았습니다.')
     from backend.engine.evidence_image import verified_preview
     try:
         preview = verified_preview(image_path, Path(report['source_dataset_path']), expected)
@@ -936,13 +936,13 @@ def export_comparison(comparison_id: str, request: Request, source_dataset_path:
     project, _ = _scope(request, source_dataset_path, task)
     path = _report_dir(project) / f'{comparison_id}.json'
     if path.is_symlink():
-        raise HTTPException(409, 'Comparison changed during export')
+        raise HTTPException(409, '내보내는 동안 비교 결과가 바뀌었습니다. 다시 시도하세요.')
     try:
         raw = path.read_bytes()
         if json.loads(raw) != report:
             raise ValueError('Comparison changed during export')
     except (OSError, ValueError) as exc:
-        raise HTTPException(409, 'Comparison changed during export') from exc
+        raise HTTPException(409, '내보내는 동안 비교 결과가 바뀌었습니다. 다시 시도하세요.') from exc
     return {'schema': 'ModelComparisonEvidenceExport/v1',
             'saved_report_sha256': hashlib.sha256(raw).hexdigest(), 'report': report,
             'binary_metrics': _binary_metrics(report['images']),

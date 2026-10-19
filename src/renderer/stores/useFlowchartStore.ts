@@ -217,7 +217,7 @@ export function isCurrentSavedPipeline(pipeline: FlowchartPipeline, task: Vision
  * changed dataset). */
 export function isStaleBaseError(error: unknown): boolean {
   const value = error as { status?: number; message?: string } | null;
-  return value?.status === 409 && /active flow changed since/.test(String(value?.message ?? ''));
+  return value?.status === 409 && /active flow changed since|적용 중인 플로우가 바뀌었습니다/.test(String(value?.message ?? ''));
 }
 
 export const STALE_SAVE_MESSAGE = '이 편집을 시작한 뒤 다른 곳에서 활성 플로우가 바뀌었습니다. 편집 내용은 그대로 있습니다. 활성 버전을 다시 열어 확인한 뒤 저장하세요.';

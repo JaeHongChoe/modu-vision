@@ -1,11 +1,13 @@
-"""The routes a first-time user meets first (projects, datasets, the first-run example) answer refusals in Korean.
+"""The routes a first-time user meets (projects, datasets, the first-run example, training, evaluation, flows,
+inspections and model comparisons) answer refusals in Korean.
 A detail that only forwards an exception (``str(exc)``), a catalogued error or a shared constant is not a literal."""
 import re
 from pathlib import Path
 
 import pytest
 
-ROUTES = ['routes_project.py', 'routes_dataset.py', 'routes_onboarding.py']
+ROUTES = ['routes_project.py', 'routes_dataset.py', 'routes_onboarding.py', 'routes_training.py', 'routes_evaluation.py',
+          'routes_flowchart.py', 'routes_inspections.py', 'routes_model_comparisons.py']
 LITERAL = re.compile(r"""HTTPException\(\s*(?:status_code=)?\d+\s*,\s*(?:detail=)?\(?\s*f?(['"])(.+?)\1""", re.S)
 HANGUL = re.compile('[가-힣]')
 

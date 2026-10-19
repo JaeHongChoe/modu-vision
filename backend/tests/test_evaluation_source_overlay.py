@@ -85,5 +85,5 @@ def test_source_change_during_segmentation_loading_refuses_new_evidence(tmp_path
 
     monkeypatch.setattr(evaluation.SegmentationDataset, '__getitem__', changed)
     monkeypatch.setattr(evaluation, 'build_segmentation_model', lambda **kw: ControlledForward())
-    with pytest.raises(HTTPException, match='changed'):
+    with pytest.raises(HTTPException, match='changed|바뀌었습니다'):
         evaluation._evaluate_segmentation(checkpoint, {'image_size': [32, 32]}, tmp_path, torch.device('cpu'))

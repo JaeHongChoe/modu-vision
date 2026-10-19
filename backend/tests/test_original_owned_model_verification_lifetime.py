@@ -122,7 +122,7 @@ def test_owned_model_verification_preserves_source_task_refusal(tmp_path, monkey
                 'source_dataset_path':project['source_dataset_dir'], 'models':[{'job_id':job,'task':task}]})
             assert response.status_code == 409
             assert response.json() == {'detail':
-                f'Model {job} is not a completed {task} model for the selected dataset.'}
+                f'모델 {job}은(는) 선택한 데이터셋으로 학습을 끝낸 {task} 모델이 아닙니다. 학습을 먼저 끝내세요.'}
     asyncio.run(original_sequence())
     _unchanged(basis)
     assert audit.verify() == {'intact':True,'rows':0}

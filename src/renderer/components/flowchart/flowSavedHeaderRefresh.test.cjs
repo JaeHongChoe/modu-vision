@@ -80,7 +80,7 @@ function fixture(t, {delayInitial = false, refuseSave = false, delayReadback = f
     }
     if (call.path === '/api/flowchart/models/verify' && method === 'POST') return response({verified_job_ids: ['job_current']});
     if (call.path === '/api/flowchart/pipeline' && method === 'POST') {
-      if (refuseSave) return response({detail: 'The active flow changed since this one was opened; reopen it before saving.'}, 409);
+      if (refuseSave) return response({detail: '이 플로우를 연 뒤 적용 중인 플로우가 바뀌었습니다. 플로우를 다시 연 뒤 저장하세요.'}, 409);
       stored = {...structuredClone(call.body), execution_config: {max_workers: 1, device_slots: 1},
         nodes: call.body.nodes.map(node => ({...structuredClone(node), type: 'custom',
           data: {...structuredClone(node.data), crop_padding: 10, params: node.data.params || {}}}))};

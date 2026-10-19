@@ -69,8 +69,8 @@
       "test": "scripts/e2e/flow-readonly-control-preflights.spec.ts::F064 empty inspector search partial-run input and unsent typed connection cancellation preserve saved originals",
       "recorded_test_source_sha256": "ac2e7d606ea8f74110ee82831972c866381c54a02a9172c203b41ade1897fed6",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "dbebd879dbe8b28bacfac1a97b5c90ee928e8e1d8e5144df5cc877c543e8bc5c",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
+      "current_test_source_sha256": "f754af17f0ed06b0df6d0bb21436600cf2c769bf1a8c92a3ad8e139c93b8edec",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now expects the Korean evaluation-results refusal from the backend; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-12-app-f064-root575-electron-controls.json",
@@ -79,8 +79,8 @@
       "test": "scripts/e2e/flow-readonly-control-preflights.spec.ts::native F064 empty inspector search partial-run input and unsent typed connection cancellation preserve saved originals",
       "recorded_test_source_sha256": "ac2e7d606ea8f74110ee82831972c866381c54a02a9172c203b41ade1897fed6",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "dbebd879dbe8b28bacfac1a97b5c90ee928e8e1d8e5144df5cc877c543e8bc5c",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
+      "current_test_source_sha256": "f754af17f0ed06b0df6d0bb21436600cf2c769bf1a8c92a3ad8e139c93b8edec",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now expects the Korean evaluation-results refusal from the backend; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-12-app-f064-root576-browser-limits.json",
@@ -89,8 +89,8 @@
       "test": "scripts/e2e/flow-node-limit-preflights.spec.ts::F064 ninth fixed ROI and inspection node keyboard additions fail before graph or saved draft writes",
       "recorded_test_source_sha256": "6236bb318378715ae00131829ee56497e1eeb75c7f7a2bb3a9664c8fa386dfa8",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "2d78fdeb79fa480168c42f89a7bd3260242626404c31e3b01bd1b1cc960c966e",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
+      "current_test_source_sha256": "22bb75808688bd7c2b34175599a8bbb53772391c0bfceeeb7fd349c8fb884595",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now expects the Korean evaluation-results refusal from the backend; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-12-app-f064-root576-electron-limits.json",
@@ -99,8 +99,8 @@
       "test": "scripts/e2e/flow-node-limit-preflights.spec.ts::native F064 ninth fixed ROI and inspection node keyboard additions fail before graph or saved draft writes",
       "recorded_test_source_sha256": "6236bb318378715ae00131829ee56497e1eeb75c7f7a2bb3a9664c8fa386dfa8",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "2d78fdeb79fa480168c42f89a7bd3260242626404c31e3b01bd1b1cc960c966e",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
+      "current_test_source_sha256": "22bb75808688bd7c2b34175599a8bbb53772391c0bfceeeb7fd349c8fb884595",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now expects the Korean evaluation-results refusal from the backend; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-12-app-f064-root578-browser-refusals.json",
@@ -109,8 +109,8 @@
       "test": "scripts/e2e/flow-existing-refusal-controls.spec.ts::F064 empty model history mapping and keyboard layout connection deletion refusals preserve saved originals",
       "recorded_test_source_sha256": "90d100eab9cccde0a6992e91da468aed4ece7eaaa44ffbad2d9cbd924a9ca244",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "58e24569d8e20b3886adc9a45554dad832e939a74112170da6c315588e35137d",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
+      "current_test_source_sha256": "8e721b5b94c5d6043d93521965dfdca6a59b1bbd3d7884167796d302a6101be1",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now expects the Korean evaluation-results refusal from the backend; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-12-app-f064-root578-electron-refusals.json",
@@ -119,8 +119,8 @@
       "test": "scripts/e2e/flow-existing-refusal-controls.spec.ts::native F064 empty model history mapping and keyboard layout connection deletion refusals preserve saved originals",
       "recorded_test_source_sha256": "90d100eab9cccde0a6992e91da468aed4ece7eaaa44ffbad2d9cbd924a9ca244",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "58e24569d8e20b3886adc9a45554dad832e939a74112170da6c315588e35137d",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
+      "current_test_source_sha256": "8e721b5b94c5d6043d93521965dfdca6a59b1bbd3d7884167796d302a6101be1",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now expects the Korean evaluation-results refusal from the backend; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-12-app-f064-root580-browser-reopen.json",
@@ -129,8 +129,8 @@
       "test": "scripts/e2e/flow-model-less-reopen-controls.spec.ts::F064 model-less inspection ROI and typed connection drafts reopen with exact saved graphs",
       "recorded_test_source_sha256": "2055dacdc591178b81ebef1dc85598d2b0cc322ddc49c509e5635a724cefe3b0",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "2eb85950f2bc9877787ea7d122b00b1a951a918357111f0392a3f98ec01ea9dc",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
+      "current_test_source_sha256": "15c3d78df6234020d2758c489621969f884d1a6deb8ea205b151929fb79ac047",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now expects the Korean evaluation-results refusal from the backend; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-12-app-f064-root580-electron-reopen.json",
@@ -139,8 +139,8 @@
       "test": "scripts/e2e/flow-model-less-reopen-controls.spec.ts::native F064 model-less inspection ROI and typed connection drafts reopen with exact saved graphs",
       "recorded_test_source_sha256": "2055dacdc591178b81ebef1dc85598d2b0cc322ddc49c509e5635a724cefe3b0",
       "retained_spec_commit": "9a18c088eda03610546190b64c32a5bf129737af",
-      "current_test_source_sha256": "2eb85950f2bc9877787ea7d122b00b1a951a918357111f0392a3f98ec01ea9dc",
-      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance."
+      "current_test_source_sha256": "15c3d78df6234020d2758c489621969f884d1a6deb8ea205b151929fb79ac047",
+      "reason": "Inherited public spec anchor retains the exact historical test declaration. Current source SHA declarations changed after reviewed product changes; this supplies no new GUI execution or current acceptance. Refreshed on the beginner-UX branch: the spec now expects the Korean evaluation-results refusal from the backend; the retained commit still holds the exact bytes the receipt executed, and no new GUI execution is claimed"
     },
     {
       "receipt": "2026-10-12-app-label-mask-root581-browser-empty.json",

@@ -193,7 +193,7 @@ async function flowReadonlyExercise(page:Page,w:Workspace,e:Evidence,api:FlowApi
      if(u.pathname==='/api/dataset/library/images'){
       expect(u.search).toBe('?state=valid&limit=120');expect(row.status).toBe(409);expect(row.body).toEqual({detail:'No validated dataset revision is active; validate the source and accept a revision first'});
      }else{
-      expect(u.pathname).toBe('/api/evaluation/results');expect(u.search).toBe('?'+new URLSearchParams({source_dataset_path:source,source_task:'anomaly'}).toString());expect(row.status).toBe(404);expect(row.body).toEqual({detail:'No completed training job has been selected'});
+      expect(u.pathname).toBe('/api/evaluation/results');expect(u.search).toBe('?'+new URLSearchParams({source_dataset_path:source,source_task:'anomaly'}).toString());expect(row.status).toBe(404);expect(row.body).toEqual({detail:'학습을 끝낸 모델을 아직 고르지 않았습니다. 학습을 먼저 끝낸 뒤 평가할 모델을 고르세요.'});
      }
     }else if(u.pathname==='/api/project/current'){expect((row.body as any).id).toBe(project.id);expect((row.body as any).source_dataset_dir).toBe(source);}
    }

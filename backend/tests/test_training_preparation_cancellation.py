@@ -175,7 +175,7 @@ def test_training_start_rejects_partial_existing_split_manifest(monkeypatch, tmp
             task="segmentation", dataset_path=str(source), output_dir=str(tmp_path / "models"),
         ))
     assert error.value.status_code == 422
-    assert "split" in str(error.value.detail).lower()
+    assert "split" in str(error.value.detail).lower() or "분할" in str(error.value.detail)
     assert not (tmp_path / "models").exists()
 
 

@@ -319,7 +319,7 @@ def test_remote_evaluation_rejects_dataset_override_even_with_cached_result(tmp_
     with pytest.raises(HTTPException) as error:
         routes_evaluation.run_or_load_evaluation(job_id=context.job_id, dataset_path=str(another))
     assert error.value.status_code == 422
-    assert "snapshot" in str(error.value.detail)
+    assert "snapshot" in str(error.value.detail) or "학습할 때 쓴 데이터로만" in str(error.value.detail)
 
 
 def test_remote_operation_worker_exit_returns_failure_without_hour_long_wait(tmp_path, monkeypatch):

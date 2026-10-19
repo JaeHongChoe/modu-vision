@@ -1026,5 +1026,5 @@ def test_a_refused_training_start_names_the_preflight_as_a_possible_holder(tmp_p
     assert holder.acquire('worker-preflight-x', 'local-compute', 'all')
     with pytest.raises(HTTPException) as refused:
         manager.start_job('job_refused', 'classification', str(tmp_path / 'data'), str(tmp_path / 'out'))
-    assert refused.value.status_code == 409 and 'worker preflight' in refused.value.detail
+    assert refused.value.status_code == 409 and '학습 장비 준비 작업' in refused.value.detail
     assert holder.release('worker-preflight-x')

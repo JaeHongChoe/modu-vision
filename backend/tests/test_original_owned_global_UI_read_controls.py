@@ -92,7 +92,7 @@ def test_initial_job_cursor_real_sqlite_abort_never_borrows_transaction_completi
             headers = await _login_current(client, app, project)
             response = await client.get('/api/job-events', headers=headers)
             assert response.status_code == 503
-            assert response.json()['detail'].startswith('The job ledger could not be read:')
+            assert response.json()['detail'].startswith('작업 기록 저장소를 읽지 못했습니다:')
     asyncio.run(original_sequence())
     with store._connect() as db:
         assert db.execute("SELECT value FROM meta WHERE key='ledger_id'").fetchone() is None

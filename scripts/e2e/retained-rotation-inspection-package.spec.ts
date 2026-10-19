@@ -363,11 +363,11 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ra
   for (const row of traffic.filter(row => row.method === 'GET')) {
     const parsed = new URL(row.url);
     if (parsed.pathname === '/api/flowchart/draft' && row.status === 404)
-      expect(row.response).toEqual({detail: 'No draft for this project, source and labelset'});
+      expect(row.response).toEqual({detail: '이 프로젝트, 데이터셋, 라벨 목록에 해당하는 임시 저장본이 없습니다.'});
     else if (parsed.pathname === '/api/evaluation/results' && row.status === 404) {
       expect(Object.fromEntries(parsed.searchParams)).toEqual({source_dataset_path: source, source_task: project.task});
       expect(project.task).toBe('classification');
-      expect(row.response).toEqual({detail: 'No completed training job has been selected'});
+      expect(row.response).toEqual({detail: '학습을 끝낸 모델을 아직 고르지 않았습니다. 학습을 먼저 끝낸 뒤 평가할 모델을 고르세요.'});
     }
     else expect(row.status, row.url).toBe(200);
   }

@@ -904,7 +904,7 @@ def test_missing_image_is_reported_before_model_configuration():
         routes_flowchart.run_flowchart(request)
 
     assert error.value.status_code == 422
-    assert "image" in str(error.value.detail).lower()
+    assert "image" in str(error.value.detail).lower() or "이미지" in str(error.value.detail)
 
 
 def test_trained_segmentation_checkpoint_with_null_model_name_loads(tmp_path, monkeypatch):
@@ -1016,4 +1016,4 @@ def test_run_rejects_known_training_job_until_completed(tmp_path, monkeypatch, s
         routes_flowchart.run_flowchart(FlowchartRunRequest(pipeline=pipeline, image_path=str(image_path)))
 
     assert error.value.status_code == 409
-    assert "training" in str(error.value.detail).lower()
+    assert "training" in str(error.value.detail).lower() or "학습 상태" in str(error.value.detail)

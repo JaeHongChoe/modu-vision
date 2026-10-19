@@ -136,7 +136,7 @@ def _recipe_file(
         return base.with_name(f"pipeline_{task}.json")
     source = Path(source_dataset_path).expanduser().resolve()
     if not source.is_dir():
-        raise HTTPException(status_code=422, detail="Select an existing dataset folder before saving or loading its flowchart.")
+        raise HTTPException(status_code=422, detail="플로우를 저장하거나 불러오려면 먼저 실제로 있는 데이터셋 폴더를 고르세요.")
     source_key = hashlib.sha256(str(source).encode("utf-8")).hexdigest()[:16]
     return base.with_name(f"pipeline_{task}_{source_key}.json")
 
@@ -253,7 +253,7 @@ def _draft_context(project: dict) -> dict:
 def _draft_file(project: dict, context: dict) -> Path:
     labelset = context["labelset_id"]
     if not isinstance(labelset, str) or not re.fullmatch(r"[A-Za-z0-9_-]+", labelset):
-        raise HTTPException(status_code=422, detail="Invalid draft labelset")
+        raise HTTPException(status_code=422, detail="임시 저장본의 라벨 목록이 올바르지 않습니다.")
     source_key = hashlib.sha256(context["source_dataset_path"].encode()).hexdigest()[:16] if context["source_dataset_path"] else "no_source"
     return Path(project["project_dir"]) / "flowcharts" / "drafts" / labelset / source_key / "draft.json"
 
@@ -287,14 +287,14 @@ def save_flow_draft(req: FlowDraftSaveRequest, request: Request) -> dict:
         project = get_current_project(request)
         context = _draft_context(project)
         if req.context != context:
-            raise HTTPException(status_code=409, detail="Draft project, source or labelset changed")
+            raise HTTPException(status_code=409, detail="임시 저장본의 프로젝트, 데이터셋 또는 라벨 목록이 바뀌었습니다. 플로우를 다시 연 뒤 시도하세요.")
         identifiers = [node.id for node in req.pipeline.nodes]
         edge_ids = [edge.id for edge in req.pipeline.edges]
         if (len(set(identifiers)) != len(identifiers) or len(set(edge_ids)) != len(edge_ids)
                 or any(edge.source not in identifiers or edge.target not in identifiers for edge in req.pipeline.edges)):
-            raise HTTPException(status_code=422, detail="Draft node/edge identifiers are invalid")
+            raise HTTPException(status_code=422, detail="임시 저장본의 노드/연결선 식별자가 올바르지 않습니다.")
         if not _valid_expected_version(req.base_version_id):
-            raise HTTPException(status_code=422, detail="base_version_id must be a saved flow version id or none")
+            raise HTTPException(status_code=422, detail="base_version_id는 저장된 플로우 버전 id이거나 비어 있어야 합니다.")
         checksum = pipeline_sha256(req.pipeline)
         record = {"version": 1, "context": context, "draft_sha256": checksum,
                   "saved_at_ns": time.time_ns(), "pipeline": req.pipeline.model_dump(), "base_version_id": req.base_version_id}
@@ -309,7 +309,7 @@ def get_flow_draft(request: Request) -> dict:
         context = _draft_context(project)
         file = _draft_file(project, context)
         if not file.is_file():
-            raise HTTPException(status_code=404, detail="No draft for this project, source and labelset")
+            raise HTTPException(status_code=404, detail="이 프로젝트, 데이터셋, 라벨 목록에 해당하는 임시 저장본이 없습니다.")
         try:
             record = json.loads(original_UI_ancillary_read_text(file,encoding='utf-8',role='flow'))
             pipeline = FlowchartPipeline.model_validate(record["pipeline"])
@@ -324,11 +324,11 @@ def get_flow_draft(request: Request) -> dict:
                         and active.get("source_dataset_path") == context["source_dataset_path"]
                         and active.get("labelset_id", "default") == context["labelset_id"]
                         and _draft_active_version(project, context, checksum) is None):
-                    raise HTTPException(status_code=404, detail="A newer saved flow supersedes this draft")
+                    raise HTTPException(status_code=404, detail="이 임시 저장본보다 새로 저장된 플로우가 있습니다. 저장된 플로우를 여세요.")
             return {**record, "pipeline": pipeline.model_dump(), "base_version_id": record.get("base_version_id"),
                     "active_version_id": _draft_active_version(project, context, checksum)}
         except (OSError, ValueError, KeyError, TypeError) as exc:
-            raise HTTPException(status_code=409, detail=f"Saved draft is invalid: {exc}") from exc
+            raise HTTPException(status_code=409, detail=f"저장된 임시 저장본이 올바르지 않습니다: {exc}") from exc
 
 
 def _save_version(
@@ -457,7 +457,7 @@ def _get_pipeline_unlocked(
                 raise ValueError("Saved flowchart task does not match its recipe file.")
         except Exception as e:
             logger.exception("Could not read saved pipeline: %s", e)
-            raise HTTPException(status_code=409, detail=f"Saved flowchart is invalid: {e}") from e
+            raise HTTPException(status_code=409, detail=f"저장된 플로우가 올바르지 않습니다: {e}") from e
     if inspection_task == "detection":
         return get_single_detection_flowchart()
     if inspection_task == "mixed":
@@ -477,12 +477,12 @@ def _get_active_pipeline_unlocked(
     source_dataset_path: Optional[str], request: Request,
 ) -> FlowchartPipeline:
     if request is None:
-        raise HTTPException(status_code=404, detail="No active project flowchart.")
+        raise HTTPException(status_code=404, detail="이 프로젝트에 적용 중인 플로우가 없습니다. 플로우를 저장한 뒤 적용하세요.")
     project = get_current_project(request)
     project_dir = Path(project["project_dir"])
     active_file = _active_flow_file(project_dir)
     if not active_file.is_file():
-        raise HTTPException(status_code=404, detail="No active project flowchart.")
+        raise HTTPException(status_code=404, detail="이 프로젝트에 적용 중인 플로우가 없습니다. 플로우를 저장한 뒤 적용하세요.")
     try:
         active = json.loads(active_file.read_text(encoding="utf-8"))
         selected_source = project.get("source_dataset_dir")
@@ -493,12 +493,12 @@ def _get_active_pipeline_unlocked(
         if (active.get("project_id") != project["id"]
                 or active.get("source_dataset_path") != selected_source
                 or requested_source != selected_source):
-            raise HTTPException(status_code=404, detail="No active flowchart for this project and dataset.")
+            raise HTTPException(status_code=404, detail="이 프로젝트와 데이터셋에 적용 중인 플로우가 없습니다. 플로우를 저장한 뒤 적용하세요.")
         return get_saved_pipeline_version(active["version_id"], request=request)
     except HTTPException:
         raise
     except (OSError, ValueError, KeyError, TypeError) as exc:
-        raise HTTPException(status_code=409, detail=f"Active flowchart pointer is invalid: {exc}") from exc
+        raise HTTPException(status_code=409, detail=f"적용 중인 플로우 기록이 올바르지 않습니다: {exc}") from exc
 
 
 @router.get("/templates/single-detection")
@@ -582,20 +582,20 @@ def _registered_retained_source(request, source_project_id, *, binding_target=No
     account = getattr(request.state, 'account_user', None)
     if accounts is not None:
         if account is None:
-            raise HTTPException(403, 'Original shared source permission is required')
+            raise HTTPException(403, '원본 공유 데이터셋에 대한 권한이 필요합니다.')
         if binding_target is not None and accounts.project_role(account['id'], binding_target['id']) != 'owner':
-            raise HTTPException(403, 'Only the target project owner may bind retained model data')
+            raise HTTPException(403, '보관된 모델 데이터는 대상 프로젝트의 소유자만 연결할 수 있습니다.')
         session = getattr(request.state, 'account_session_token', None)
         if not session:
-            raise HTTPException(403, 'Original source session is required')
+            raise HTTPException(403, '원본 데이터셋 프로젝트에 로그인한 세션이 필요합니다.')
         decision = accounts.authorize(account['id'], 'flow.execute', source_project_id, session_token=session)
         if not decision.allowed:
-            raise HTTPException(403, 'Original source project execution permission is required')
+            raise HTTPException(403, '원본 데이터셋 프로젝트의 실행 권한이 필요합니다.')
         if binding_target is not None and accounts.project_role(account['id'], source_project_id) != 'owner':
-            raise HTTPException(403, 'Only the original source owner may publish its retained reference')
+            raise HTTPException(403, '보관된 참조는 원본 데이터셋의 소유자만 공개할 수 있습니다.')
         row = accounts.project_for(account['id'], source_project_id)
         if row is None:
-            raise HTTPException(403, 'Registered retained source project is unavailable')
+            raise HTTPException(403, '등록된 보관 원본 프로젝트를 열 수 없습니다.')
         directory = row['path']
     else:
         from backend.api.routes_project import _load_history
@@ -639,7 +639,7 @@ def bind_retained_preprocessor(req: RetainedPreprocessorBindingRequest, request:
                 source_project_manifest_sha256=req.source_project_manifest_sha256,
                 checkpoint_sha256=req.checkpoint_sha256, version_manifest_sha256=req.version_manifest_sha256)
     except (ValueError, OSError, KeyError) as exc:
-        raise HTTPException(409, 'Retained rotation binding refused: original model/source/ownership must remain valid') from exc
+        raise HTTPException(409, '보관된 회전 모델을 연결할 수 없습니다. 원본 모델, 데이터셋, 소유자가 그대로 유효해야 합니다.') from exc
 
 
 @observe_original_flow_handler(router.post("/models/verify"))
@@ -648,7 +648,7 @@ def verify_flowchart_models(request: FlowchartModelVerificationRequest, http_req
     verified: List[str] = []
     for model in request.models:
         if not valid_flow_job(model.job_id, model.task):
-            raise HTTPException(status_code=409, detail=f"Invalid model job ID: {model.job_id}")
+            raise HTTPException(status_code=409, detail=f"모델 작업 ID가 올바르지 않습니다: {model.job_id}")
         try:
             if model.task in SPECIALIZED_TASKS:
                 project=get_current_project(http_request)
@@ -663,7 +663,7 @@ def verify_flowchart_models(request: FlowchartModelVerificationRequest, http_req
         except (HTTPException, ValueError, OSError) as exc:
             raise HTTPException(
                 status_code=409,
-                detail=f"Model {model.job_id} is not a completed {model.task} model for the selected dataset.",
+                detail=f"모델 {model.job_id}은(는) 선택한 데이터셋으로 학습을 끝낸 {model.task} 모델이 아닙니다. 학습을 먼저 끝내세요.",
             ) from exc
         verified.append(model.job_id)
     return {"verified_job_ids": verified}
@@ -700,7 +700,7 @@ def catalog_flowchart_models(source_dataset_path: str, request: Request = None):
     """List completed checkpoints whose dataset fingerprint still matches."""
     source = Path(source_dataset_path).expanduser().resolve()
     if not source.is_dir():
-        raise HTTPException(status_code=422, detail="Select an existing dataset folder.")
+        raise HTTPException(status_code=422, detail="실제로 있는 데이터셋 폴더를 고르세요.")
     roots = []
     project = get_current_project(request) if request is not None else None
     if project:
@@ -852,9 +852,9 @@ def save_pipeline(
     session, the inspection-rule difference from the active version, the reason); with ``expected_version_id`` a save
     based on a version that is no longer active is refused, and a refused or failed save leaves no audit row."""
     if change_reason is not None and (not isinstance(change_reason, str) or len(change_reason) > 2000):
-        raise HTTPException(status_code=422, detail="The change reason must be text of at most 2000 characters.")
+        raise HTTPException(status_code=422, detail="변경 사유는 2000자 이하의 글이어야 합니다.")
     if not _valid_expected_version(expected_version_id):
-        raise HTTPException(status_code=422, detail="expected_version_id must be a saved flow version id or none.")
+        raise HTTPException(status_code=422, detail="expected_version_id는 저장된 플로우 버전 id이거나 비어 있어야 합니다.")
     try:
         ordered_linear_nodes(pipeline)
         task = recipe_task or _inferred_recipe(pipeline)
@@ -867,7 +867,7 @@ def save_pipeline(
     project_dir = Path(project["project_dir"]).resolve() if project else None
     project_source = project.get("source_dataset_dir") if project else None
     if source_dataset_path and project_source and str(Path(source_dataset_path).expanduser().resolve()) != project_source:
-        raise HTTPException(status_code=409, detail="Flowchart source differs from the active project dataset.")
+        raise HTTPException(status_code=409, detail="플로우의 데이터셋이 현재 프로젝트의 데이터셋과 다릅니다. 현재 데이터셋으로 플로우를 다시 만드세요.")
     effective_source = source_dataset_path or project_source
     try:
         validate_recorded_flow_classes(
@@ -883,7 +883,7 @@ def save_pipeline(
         previous_active: Optional[bytes] = None
         parent_version, parent_pipeline = _active_version(project_dir)
         if _stale(expected_version_id, parent_version):
-            raise HTTPException(status_code=409, detail="The active flow changed since this one was opened; reopen it before saving.")
+            raise HTTPException(status_code=409, detail="이 플로우를 연 뒤 적용 중인 플로우가 바뀌었습니다. 플로우를 다시 연 뒤 저장하세요.")
         try:
             previous_recipe = target_path.read_bytes() if target_path.exists() else None
             previous_active = active_path.read_bytes() if active_path and active_path.exists() else None
@@ -974,7 +974,7 @@ def _list_saved_pipelines_unlocked(source_dataset_path: Optional[str], request: 
     if source_dataset_path:
         source = Path(source_dataset_path).expanduser().resolve()
         if not source.is_dir():
-            raise HTTPException(status_code=422, detail="Select an existing dataset folder.")
+            raise HTTPException(status_code=422, detail="실제로 있는 데이터셋 폴더를 고르세요.")
         source_filter = str(source)
     else:
         source_filter = None
@@ -1036,20 +1036,20 @@ def activate_saved_pipeline_version(
     """Make a saved revision the active flow for this project and dataset (audited like a save; with
     ``expected_version_id``, refused when the active flow changed since it was shown)."""
     if change_reason is not None and (not isinstance(change_reason, str) or len(change_reason) > 2000):
-        raise HTTPException(status_code=422, detail="The change reason must be text of at most 2000 characters.")
+        raise HTTPException(status_code=422, detail="변경 사유는 2000자 이하의 글이어야 합니다.")
     if not _valid_expected_version(expected_version_id):
-        raise HTTPException(status_code=422, detail="expected_version_id must be a saved flow version id or none.")
+        raise HTTPException(status_code=422, detail="expected_version_id는 저장된 플로우 버전 id이거나 비어 있어야 합니다.")
     if not re.fullmatch(r"[0-9a-f]{32}", version_id):
-        raise HTTPException(status_code=404, detail="Flow version not found.")
+        raise HTTPException(status_code=404, detail="플로우 버전을 찾을 수 없습니다.")
     project = get_current_project(request)
     project_dir = Path(project["project_dir"]).resolve()
     requested_source = str(Path(source_dataset_path).expanduser().resolve())
     with _FLOW_SAVE_LOCK:
         path = _version_dir(project_dir) / f"{version_id}.json"
         if not path.is_file():
-            raise HTTPException(status_code=404, detail="Flow version not found.")
+            raise HTTPException(status_code=404, detail="플로우 버전을 찾을 수 없습니다.")
         if requested_source != project.get("source_dataset_dir"):
-            raise HTTPException(status_code=409, detail="Selected flow source differs from the active project dataset.")
+            raise HTTPException(status_code=409, detail="선택한 플로우의 데이터셋이 현재 프로젝트의 데이터셋과 다릅니다.")
         try:
             record = json.loads(path.read_text(encoding="utf-8"))
             if (record.get("version_id") != version_id
@@ -1063,10 +1063,10 @@ def activate_saved_pipeline_version(
             if not _pipeline_matches_recipe(pipeline, task):
                 raise ValueError("Saved flow model tasks do not match its recipe.")
         except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
-            raise HTTPException(status_code=409, detail=f"Saved flow version is invalid: {exc}") from exc
+            raise HTTPException(status_code=409, detail=f"저장된 플로우 버전이 올바르지 않습니다: {exc}") from exc
         parent_version, parent_pipeline = _active_version(project_dir)
         if _stale(expected_version_id, parent_version):
-            raise HTTPException(status_code=409, detail="The active flow changed since this one was shown; reopen it before activating.")
+            raise HTTPException(status_code=409, detail="이 플로우가 표시된 뒤 적용 중인 플로우가 바뀌었습니다. 플로우를 다시 연 뒤 적용하세요.")
         active_path = _active_flow_file(project_dir)
         previous_active = active_path.read_bytes() if active_path.exists() else None
         _write_json(active_path, {
@@ -1083,7 +1083,7 @@ def activate_saved_pipeline_version(
                           version_id=version_id, reason=change_reason)
         except Exception as exc:
             _restore_flow_file(active_path, previous_active)
-            raise HTTPException(status_code=500, detail=f"The flow was not activated: its change could not be recorded ({exc})") from exc
+            raise HTTPException(status_code=500, detail=f"플로우를 적용하지 못했습니다. 변경 내역을 기록할 수 없었습니다 ({exc}).") from exc
     return {"status": "active", "version_id": version_id, "pipeline": pipeline}
 
 
@@ -1128,7 +1128,7 @@ def preview_pipeline_change(pipeline: FlowchartPipeline, request: Request, expec
     reason is asked; ``stale`` when the active flow is no longer ``expected_version_id``."""
     from backend.engine.flow_provenance import semantic_delta
     if not _valid_expected_version(expected_version_id):
-        raise HTTPException(status_code=422, detail="expected_version_id must be a saved flow version id or none.")
+        raise HTTPException(status_code=422, detail="expected_version_id는 저장된 플로우 버전 id이거나 비어 있어야 합니다.")
     with _FLOW_SAVE_LOCK:
         parent_version, parent_pipeline = _active_version(Path(get_current_project(request)["project_dir"]).resolve())
     delta = semantic_delta(parent_pipeline, pipeline)
@@ -1140,18 +1140,18 @@ def preview_pipeline_change(pipeline: FlowchartPipeline, request: Request, expec
 def get_saved_pipeline_version(version_id: str, request: Request = None) -> FlowchartPipeline:
     """Open one saved revision without changing the current recipe."""
     if not re.fullmatch(r"[0-9a-f]{32}", version_id):
-        raise HTTPException(status_code=404, detail="Flow version not found.")
+        raise HTTPException(status_code=404, detail="플로우 버전을 찾을 수 없습니다.")
     with _FLOW_SAVE_LOCK:
         path = _version_dir(_project_dir(request)) / f"{version_id}.json"
         if not path.is_file():
-            raise HTTPException(status_code=404, detail="Flow version not found.")
+            raise HTTPException(status_code=404, detail="플로우 버전을 찾을 수 없습니다.")
         try:
             record = json.loads(path.read_text(encoding="utf-8"))
             pipeline = FlowchartPipeline.model_validate(record["pipeline"])
             ordered_linear_nodes(pipeline)
             return pipeline
         except (OSError, ValueError, KeyError) as exc:
-            raise HTTPException(status_code=409, detail=f"Saved flow version is invalid: {exc}") from exc
+            raise HTTPException(status_code=409, detail=f"저장된 플로우 버전이 올바르지 않습니다: {exc}") from exc
 
 
 @router.get("/sample-images")
@@ -1228,7 +1228,7 @@ def _partial_owner(request, project):
             or context is None or registry is None
             or context.actor_id != account['id'] or context.project_id != project['id']
             or context.workspace_id != registry.workspace_id):
-        raise HTTPException(401, 'An original authenticated project context is required')
+        raise HTTPException(401, '로그인한 상태에서 프로젝트를 연 뒤 요청해야 합니다.')
     return (registry.workspace_id, account['id'], project['id'],
             str(Path(project['project_dir']).resolve()))
 
@@ -1236,9 +1236,9 @@ def _partial_owner(request, project):
 def _partial_binding(req, project):
     if (req.pipeline is None or req.execution_target != 'local' or req.device != 'cpu'
             or req.compute_profile_id is not None or not req.stop_node_id):
-        raise HTTPException(422, 'Prepare an explicit local CPU partial inspection')
+        raise HTTPException(422, '부분 검사는 이 컴퓨터의 CPU로 실행하도록 지정해서 준비하세요.')
     if req.project_id != project['id']:
-        raise HTTPException(409, 'Partial inspection belongs to another project')
+        raise HTTPException(409, '이 부분 검사는 다른 프로젝트의 것입니다.')
     try:
         ordered_linear_nodes(req.pipeline)
         debug_ancestor_ids(req.pipeline, req.stop_node_id)
@@ -1265,7 +1265,7 @@ def _partial_binding(req, project):
 def prepare_partial_run(req: FlowchartRunRequest, request: Request):
     from backend.engine.flow_partial_runs import registry_for
     if req.partial_run_id is not None:
-        raise HTTPException(422, 'Partial capabilities are issued by this server')
+        raise HTTPException(422, '부분 검사 권한은 이 서버가 발급한 것만 쓸 수 있습니다.')
     project = get_current_project(request)
     return registry_for(request.app).prepare(_partial_owner(request, project), _partial_binding(req, project))
 
@@ -1287,7 +1287,7 @@ def cancel_partial_run(run_id: str, request: Request):
 def _run_prepared_partial(req, request):
     from backend.engine.flow_partial_runs import registry_for
     if request is None:
-        raise HTTPException(401, 'An original authenticated partial request is required')
+        raise HTTPException(401, '로그인한 상태에서 보낸 부분 검사 요청만 받을 수 있습니다.')
     project = get_current_project(request)
     row = registry_for(request.app).owned(req.partial_run_id, _partial_owner(request, project))
     row.consume(_partial_binding(req, project))
@@ -1322,7 +1322,7 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
     try:
         project = get_current_project(request) if request is not None else None
         if req.project_id is not None and (not project or req.project_id != project["id"]):
-            raise HTTPException(status_code=409, detail="Flow execution project changed before the request was accepted.")
+            raise HTTPException(status_code=409, detail="요청을 받기 전에 프로젝트가 바뀌었습니다. 현재 프로젝트에서 다시 실행하세요.")
         if req.pipeline is not None:
             pipeline = req.pipeline
         elif request is not None:
@@ -1332,7 +1332,7 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
                     active = json.loads(active_file.read_text(encoding="utf-8"))
                     source = project.get("source_dataset_dir")
                     if active.get("project_id") != project["id"] or active.get("source_dataset_path") != source:
-                        raise HTTPException(status_code=409, detail="Active flow belongs to a different source dataset.")
+                        raise HTTPException(status_code=409, detail="적용 중인 플로우가 다른 데이터셋의 것입니다. 현재 데이터셋의 플로우를 적용하세요.")
                     pipeline = get_saved_pipeline_version(active["version_id"], request=request)
                 else:
                     pipeline = get_pipeline(
@@ -1351,12 +1351,12 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         if not req.image_path or not Path(req.image_path).is_file():
-            raise HTTPException(status_code=422, detail="Select an existing inspection image before running the flowchart.")
+            raise HTTPException(status_code=422, detail="플로우를 실행하려면 먼저 실제로 있는 검사 이미지를 고르세요.")
         if project is not None:
             image=Path(req.image_path).expanduser().resolve()
             roots=[Path(project[key]).expanduser().resolve() for key in ('project_dir','dataset_dir','source_dataset_dir') if project.get(key)]
             if not any(image.is_relative_to(root) for root in roots):
-                raise HTTPException(422,'Select an inspection image inside the current project or its registered source dataset.')
+                raise HTTPException(422,'검사 이미지는 현재 프로젝트 안이나 등록된 데이터셋 안에서 고르세요.')
             req.image_path=str(image)
         model_contexts: Dict[str, Any] = {}
         local_model_jobs: set[str] = set()
@@ -1366,16 +1366,16 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
                 continue
             job_id = node.data.model_job_id
             if not job_id:
-                raise HTTPException(status_code=409, detail=f"Model job is missing for {node.data.label}.")
+                raise HTTPException(status_code=409, detail=f"{node.data.label} 노드에 모델이 연결되어 있지 않습니다. 학습을 끝낸 모델을 고르세요.")
             known_job = training_job_manager.get_job(job_id)
             if known_job is not None and known_job.status != "completed":
                 raise HTTPException(
                     status_code=409,
-                    detail=f"Model training is {known_job.status} for {node.data.label}; wait for a completed job.",
+                    detail=f"{node.data.label} 노드의 모델 학습 상태가 {known_job.status}입니다. 학습이 끝난 뒤 다시 실행하세요.",
                 )
             expected_task = flow_model_task(node)
             if expected_task in SPECIALIZED_TASKS:
-                if project is None: raise HTTPException(status_code=409,detail="Specialized models require an active project.")
+                if project is None: raise HTTPException(status_code=409,detail="특수 모델을 쓰려면 먼저 프로젝트를 여세요.")
                 try: checkpoint,_=_resolve_project_specialist(project, job_id, expected_task, project.get('source_dataset_dir'), request, node=node)
                 except (ValueError,OSError) as exc: raise HTTPException(status_code=409,detail=str(exc)) from exc
                 verified_checkpoints[(job_id,expected_task)]=checkpoint.resolve()
@@ -1386,18 +1386,18 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
                 if project is not None else _ENGINE._resolve_checkpoint(job_id, expected_task)
             )
             if checkpoint is None:
-                raise HTTPException(status_code=409, detail=f"Trained model is unavailable for {node.data.label}.")
+                raise HTTPException(status_code=409, detail=f"{node.data.label} 노드의 학습한 모델을 찾을 수 없습니다.")
             if project is not None and not _matches_source_dataset(
                 checkpoint.parent, project.get("source_dataset_dir"), expected_task,
             ):
-                raise HTTPException(status_code=409, detail=f"Model source is incompatible with {node.data.label}.")
+                raise HTTPException(status_code=409, detail=f"{node.data.label} 노드의 모델이 현재 데이터셋으로 학습한 것이 아닙니다.")
             try:
                 metadata = torch.load(checkpoint, map_location="cpu", weights_only=True)
                 actual_task = str(metadata.get("task", "")).lower()
                 if actual_task != expected_task or "model_state_dict" not in metadata:
                     raise ValueError(f"Expected {expected_task}, found {actual_task or 'unknown'}")
             except Exception as exc:
-                raise HTTPException(status_code=409, detail=f"Model is incompatible with {node.data.label}: {exc}") from exc
+                raise HTTPException(status_code=409, detail=f"{node.data.label} 노드에 이 모델을 쓸 수 없습니다: {exc}") from exc
             from backend.remote.operations import remote_job_context
             from backend.remote.coordinator import ArtifactValidationError
 
@@ -1411,7 +1411,7 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
                     verify_downloaded_checkpoint(checkpoint.parent, job_id)
                     context = None
             except ArtifactValidationError as exc:
-                raise HTTPException(status_code=409, detail=f"Remote model provenance is invalid for {node.data.label}: {exc}") from exc
+                raise HTTPException(status_code=409, detail=f"{node.data.label} 노드의 원격 모델 출처 기록이 올바르지 않습니다: {exc}") from exc
             if context is None:
                 local_model_jobs.add(job_id)
             else:
@@ -1434,17 +1434,17 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
             return {**result, "execution_target": "local", "execution_device": str(device), "compute_profile_id": None}
         if req.execution_target == "selected_compute":
             if not project or not req.compute_profile_id:
-                raise HTTPException(status_code=422, detail="Choose an explicit compute profile for flow execution.")
+                raise HTTPException(status_code=422, detail="플로우를 실행할 장비를 고르세요.")
             from backend.remote.profiles import get_profile_store
             from backend.remote.operations import run_verified_flowchart_on_compute, RemoteComputeBusy
             from backend.remote.coordinator import ArtifactValidationError, RemoteDisconnected
             profile = get_profile_store().get(req.compute_profile_id)
             if profile is None:
-                raise HTTPException(status_code=404, detail="Selected execution compute profile is unavailable.")
+                raise HTTPException(status_code=404, detail="선택한 실행 장비를 찾을 수 없습니다. 설정에서 장비를 다시 고르세요.")
             frozen_profile = getattr(getattr(request, "state", None), "frozen_execution_profile", None)
             if frozen_profile is not None:
                 if frozen_profile.id != req.compute_profile_id or profile.model_dump() != frozen_profile.model_dump():
-                    raise HTTPException(status_code=409, detail="Execution compute profile changed after this inspection run was created.")
+                    raise HTTPException(status_code=409, detail="이 검사를 만든 뒤 실행 장비 설정이 바뀌었습니다. 검사를 새로 만드세요.")
                 profile = frozen_profile
             try:
                 required_capture_grant = getattr(getattr(getattr(request, 'app', None), 'state', None), 'required_retained_flow_capture', None)
@@ -1464,12 +1464,12 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
             except RemoteComputeBusy as exc:
                 raise HTTPException(status_code=409, detail=str(exc)) from exc
             except RemoteDisconnected as exc:
-                raise HTTPException(status_code=503, detail=f"Selected flow execution connection lost: {exc}") from exc
+                raise HTTPException(status_code=503, detail=f"선택한 장비와의 연결이 끊겼습니다: {exc}") from exc
             except (ArtifactValidationError, ValueError) as exc:
-                raise HTTPException(status_code=502, detail=f"Selected flow execution could not be verified: {exc}") from exc
+                raise HTTPException(status_code=502, detail=f"선택한 장비의 실행 결과를 확인하지 못했습니다: {exc}") from exc
         if model_contexts:
             if local_model_jobs:
-                raise HTTPException(status_code=409, detail="Flowchart models must all be on the same compute server; train or select matching models.")
+                raise HTTPException(status_code=409, detail="플로우의 모든 모델은 같은 장비에 있어야 합니다. 같은 장비에서 학습한 모델을 고르거나 다시 학습하세요.")
             from backend.remote.operations import run_remote_flowchart
             from backend.remote.coordinator import ArtifactValidationError, RemoteDisconnected
 
@@ -1481,9 +1481,9 @@ def run_flowchart(req: FlowchartRunRequest, request: Request = None):
                 return {**result, "execution_target": "model_compute", "compute_profile_id": profile.id,
                         "compute_profile_name": profile.name}
             except RemoteDisconnected as exc:
-                raise HTTPException(status_code=503, detail=f"Remote flowchart connection lost; retry the same run: {exc}") from exc
+                raise HTTPException(status_code=503, detail=f"원격 플로우 연결이 끊겼습니다. 같은 실행을 다시 시도하세요: {exc}") from exc
             except ArtifactValidationError as exc:
-                raise HTTPException(status_code=502, detail=f"Remote flowchart result could not be verified: {exc}") from exc
+                raise HTTPException(status_code=502, detail=f"원격 플로우 결과를 확인하지 못했습니다: {exc}") from exc
         with verified_checkpoint_scope(verified_checkpoints), _project_calibrations(project):
             result = _ENGINE.execute(
                 pipeline=pipeline,

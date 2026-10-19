@@ -74,7 +74,7 @@ def test_a_stale_or_failed_save_records_nothing_and_keeps_the_active_flow(tmp_pa
     # An editor that opened the first version saves after another save landed: refused, nothing recorded.
     flow.nodes[1].data.threshold = 0.9
     stale = client.post(path + f'&expected_version_id={first}', json=flow.model_dump())
-    assert stale.status_code == 409 and 'reopen' in stale.json()['detail']
+    assert stale.status_code == 409 and ('reopen' in stale.json()['detail'] or '다시 연 뒤' in stale.json()['detail'])
     versions = sorted(p.stem for p in (project_dir / 'flowcharts' / 'versions').glob('*.json'))
     assert len(versions) == 2 and len(client.get('/api/flowchart/changes').json()['changes']) == 2
     # The record cannot be written: the save is undone, and neither a version nor a record is left.

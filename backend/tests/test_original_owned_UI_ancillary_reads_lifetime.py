@@ -81,7 +81,7 @@ def test_original_UI_ancillary_read_preserves_data_and_drains(case, tmp_path, mo
                     # The real UI tries draft first. An absent draft is a normal
                     # 404 result, then it reads the separately proved active flow.
                     assert response.status_code == 404
-                    assert response.json() == {'detail':'No draft for this project, source and labelset'}
+                    assert response.json() == {'detail':'이 프로젝트, 데이터셋, 라벨 목록에 해당하는 임시 저장본이 없습니다.'}
                     assert not flows._draft_file(project, flows._draft_context(project)).exists()
                 else:
                     assert response.status_code == 200

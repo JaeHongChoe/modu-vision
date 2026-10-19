@@ -118,7 +118,7 @@ def test_detection_evaluation_rejects_metadata_with_different_class_order(tmp_pa
     })
     monkeypatch.setattr(routes_evaluation, "create_detection_model", lambda **kwargs: None)
 
-    with pytest.raises(HTTPException, match="class order") as error:
+    with pytest.raises(HTTPException, match="class order|클래스 순서") as error:
         routes_evaluation._evaluate_detection(
             tmp_path / "model.pt", {"classes": ["Bow", "Scratch"], "image_size": [32, 32]},
             tmp_path, torch.device("cpu"),
