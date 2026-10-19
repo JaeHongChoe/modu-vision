@@ -98,7 +98,7 @@ export const LabelingToolbar: React.FC = () => {
   };
 
   return (
-    <div className="h-12 bg-[#131822] border-b border-[#2B3547] px-4 flex items-center justify-between text-slate-200 select-none">
+    <div className="min-h-12 bg-[#131822] border-b border-[#2B3547] px-4 py-1 flex flex-wrap items-center justify-between gap-y-1 text-slate-200 select-none whitespace-nowrap">
       {/* Tool Selector: 7 Industrial Tools */}
       <div className="flex items-center space-x-1">
         {/* Tool 1: Select / Move */}

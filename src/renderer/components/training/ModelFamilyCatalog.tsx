@@ -3,10 +3,27 @@ import { Boxes } from 'lucide-react';
 import { request } from '../../services/api';
 import type { ModelFamily } from '../../services/modelTrainingProgram';
 import { WorkerSupportPanel } from './WorkerSupportPanel';
+import { useProjectStore } from '../../stores/useProjectStore';
 
 type Method = {method: string; architectures: string[]; continuation: string; prerequisite: string; missing_dependencies: string[]};
 type Family = {task: ModelFamily; label: string; model: string; architectures: string[]; devices: string[]; default_architecture: string; prerequisite: string; remote_training: boolean; continuation: string; stages: string[]; missing_dependencies: string[]; methods?: Method[]; execution?: {native_recipe_stages: string[]; generation_only: boolean}};
 const stageNames: Record<string, string> = {label: '정답 준비', train: '학습', evaluate: '평가', predict: '단일 예측', benchmark: '모델 forward 계측', flow: '플로우 검사', generate: '생성', review: '검토·채택', export: '내보내기'};
+
+/** The cards. The simple view shows the project's own kind of training first and folds the other kinds away. */
+function FamilyCards({families, selectedFamily, onSelect, disabled}: {families: Family[]; selectedFamily?: ModelFamily; onSelect: (family: ModelFamily) => void; disabled: boolean}) {
+  const full = useProjectStore(state => state.viewMode) === 'full';
+  const card = (family: Family) => <button type="button" key={family.task} disabled={disabled} onClick={() => onSelect(family.task)} aria-pressed={selectedFamily === family.task}
+      className={`rounded-lg border p-3 text-left transition-colors disabled:cursor-wait disabled:opacity-50 ${selectedFamily === family.task ? 'border-cyan-500 bg-cyan-950/40' : 'border-[#314155] bg-[#0D1622] hover:border-slate-500'}`}>
+      <span className="block font-semibold text-white">{family.label}</span><span className="mt-1 block text-[11px] text-slate-400">{family.model}</span>
+    </button>;
+  if (full || !selectedFamily) return <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">{families.map(card)}</div>;
+  const own = families.filter(family => family.task === selectedFamily), others = families.filter(family => family.task !== selectedFamily);
+  return <>
+    <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">{own.map(card)}</div>
+    {!!others.length && <details className="mt-2"><summary className="cursor-pointer text-slate-400">다른 학습 종류 보기 ({others.length})</summary>
+      <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">{others.map(card)}</div></details>}
+  </>;
+}
 
 export function ModelFamilyCatalog({selectedFamily, onSelect, disabled=false}: {selectedFamily?: ModelFamily; onSelect?: (family: ModelFamily) => void; disabled?: boolean}) {
   const [families, setFamilies] = useState<Family[]>([]);
@@ -21,10 +38,7 @@ export function ModelFamilyCatalog({selectedFamily, onSelect, disabled=false}: {
   return <section className="rounded-xl border border-[#344255] bg-[#131D2B] p-4 text-xs text-slate-200" aria-label="모델 학습 허브">
     <h2 className="flex items-center gap-2 text-sm font-semibold"><Boxes className="h-4 w-4 text-cyan-300" />모델 학습 허브</h2>
     <p className="mt-2 text-slate-400">검사 목적에 맞는 모델을 선택하고 정답 준비부터 완료 후보의 평가·배포까지 진행하세요.</p>
-    {onSelect && <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">{families.map(family => <button type="button" key={family.task} disabled={disabled} onClick={() => onSelect(family.task)} aria-pressed={selectedFamily === family.task}
-      className={`rounded-lg border p-3 text-left transition-colors disabled:cursor-wait disabled:opacity-50 ${selectedFamily === family.task ? 'border-cyan-500 bg-cyan-950/40' : 'border-[#314155] bg-[#0D1622] hover:border-slate-500'}`}>
-      <span className="block font-semibold text-white">{family.label}</span><span className="mt-1 block text-[11px] text-slate-400">{family.model}</span>
-    </button>)}</div>}
+    {onSelect && <FamilyCards families={families} selectedFamily={selectedFamily} onSelect={onSelect} disabled={disabled} />}
     {disabled&&<p role="status" className="mt-2 text-cyan-200">프로젝트 데이터를 확인 중입니다. 완료 후 모델을 선택하세요.</p>}
     <details className="mt-4"><summary className="cursor-pointer text-slate-300">{onSelect ? '선택 모델의 데이터·장치·학습 구조' : '모델 종류와 필요한 데이터'}</summary>
     <div className="mt-3">

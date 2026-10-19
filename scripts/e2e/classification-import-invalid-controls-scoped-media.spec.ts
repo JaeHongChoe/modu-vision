@@ -93,7 +93,7 @@ test('classification folder import rejects a missing source and restores owning 
     await handoffWithin(expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name, opts()), deadline, 'own project title');
     await handoffWithin(expect(page.locator('span[title]').filter({hasText: source})).toHaveAttribute('title', source, opts()), deadline, 'own saved source');
     await handoffWithin(expect(page.getByText('학습 가능 이미지', {exact: true}).locator('..').getByText('6', {exact: true})).toBeVisible(opts()), deadline, 'own eligible count');
-    for (const [label, count] of [['Train:', 3], ['Val:', 2], ['Test:', 1]] as const) await handoffWithin(expect(page.getByText(label, {exact: true}).locator('..').getByText(String(count), {exact: true})).toBeVisible(opts()), deadline, 'own partition count');
+    for (const [label, count] of [['학습:', 3], ['검증:', 2], ['시험:', 1]] as const) await handoffWithin(expect(page.getByText(label, {exact: true}).locator('..').getByText(String(count), {exact: true})).toBeVisible(opts()), deadline, 'own partition count');
     const panel = page.getByRole('region', {name: '활성 라벨 세트 데이터 통계', exact: true});
     for (const [label, count] of [['전체', 6], ['라벨 완료', 6], ['라벨 미완료', 0]] as const) await handoffWithin(expect(panel.getByRole('button').filter({has: page.getByText(label, {exact: true})}).locator('strong')).toHaveText(String(count), opts()), deadline, 'own label count');
     const images = page.locator('button[aria-label$=" 라벨링에서 열기"] img'); await handoffWithin(expect(images).toHaveCount(6, opts()), deadline, 'own gallery count');

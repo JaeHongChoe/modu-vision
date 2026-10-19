@@ -54,8 +54,8 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Owne
  await stroke(0,-8,8);const erased=await save();const erasedMask=erased.annotations.find((a:any)=>a.label==='Solder Bridge');const erasedPixels=await pixels(page,erasedMask.mask_rle);
  expect(erasedPixels.painted).toBeGreaterThan(0);expect(erasedPixels.painted).toBeLessThan(firstPixels.painted);
  expect(hash(erased.annotations.find((a:any)=>a.label==='Scratch').mask_rle)).toBe(otherSha);
- await page.getByTitle('Undo (Ctrl+Z)',{exact:true}).click();const undone=await save();expect(undone.annotations.find((a:any)=>a.label==='Solder Bridge').mask_rle).toBe(firstMask.mask_rle);
- await page.getByTitle('Redo (Ctrl+Y)',{exact:true}).click();const redone=await save();expect(redone.annotations.find((a:any)=>a.label==='Solder Bridge').mask_rle).toBe(erasedMask.mask_rle);
+ await page.getByTitle('실행 취소 (Ctrl+Z)',{exact:true}).click();const undone=await save();expect(undone.annotations.find((a:any)=>a.label==='Solder Bridge').mask_rle).toBe(firstMask.mask_rle);
+ await page.getByTitle('다시 실행 (Ctrl+Y)',{exact:true}).click();const redone=await save();expect(redone.annotations.find((a:any)=>a.label==='Solder Bridge').mask_rle).toBe(erasedMask.mask_rle);
  await release();
  await page.reload();await expect(page.getByRole('button',{name:/^Solder Bridge 1$/})).toBeVisible();await expect(page.getByRole('button',{name:/^Scratch 1$/})).toBeVisible();
  const reopened=await api(query);expect(reopened.annotations.find((a:any)=>a.label==='Solder Bridge').mask_rle).toBe(erasedMask.mask_rle);

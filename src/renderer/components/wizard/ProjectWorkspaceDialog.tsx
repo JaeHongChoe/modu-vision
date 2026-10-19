@@ -145,18 +145,22 @@ export const ProjectWorkspaceDialog: React.FC<Props> = ({ onClose }) => {
               <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-cyan-300"><span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />{project ? taskLabels[project.task] : '대기'}</div>
               <div className="mt-3 break-all font-mono text-[10px] leading-4 text-slate-500">{project?.project_dir || '—'}</div>
             </div>
+            {/* What a first run needs comes first; backup, restore, retention and templates sit under 고급. */}
             {([
-              ['recent', Clock3, '최근 프로젝트'],
               ['create', FolderPlus, '새 프로젝트'],
+              ['recent', Clock3, '최근 프로젝트'],
               ['open', FolderOpen, '폴더에서 열기'],
               ['backup', Archive, '프로젝트 백업'],
               ['restore', ArchiveRestore, '백업에서 복원'],
               ['retention', HardDrive, '보존기한·복구 보관함'],
               ['template', Layers3, '프로젝트 설정 템플릿'],
             ] as const).map(([id, Icon, label]) => (
-              <button key={id} type="button" onClick={() => switchTab(id)} className={`mb-1 flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-left text-xs font-medium transition-colors ${tab === id ? 'bg-[#263D58] text-cyan-200' : 'text-slate-400 hover:bg-[#1C293A] hover:text-slate-200'}`}>
-                <Icon className="h-4 w-4" />{label}
-              </button>
+              <React.Fragment key={id}>
+                {id === 'backup' && <div className="mb-1 mt-4 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">고급</div>}
+                <button type="button" onClick={() => switchTab(id)} className={`mb-1 flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-left text-xs font-medium transition-colors ${tab === id ? 'bg-[#263D58] text-cyan-200' : 'text-slate-400 hover:bg-[#1C293A] hover:text-slate-200'}`}>
+                  <Icon className="h-4 w-4" />{label}
+                </button>
+              </React.Fragment>
             ))}
           </aside>
 

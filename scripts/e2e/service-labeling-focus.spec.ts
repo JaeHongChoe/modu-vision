@@ -74,7 +74,7 @@ test('focus editing gives the labeling canvas the window height, refits the imag
   const focused = { canvas: await canvasHeight(page), scale: await hudScale(page) };
   // What focus editing keeps: the label set in use, the classes, and compact rows.
   await expect(page.getByLabel('레이블셋 목록 새로고침')).toBeVisible();
-  await expect(page.getByTitle('Add new category')).toBeVisible();
+  await expect(page.getByTitle('클래스 추가')).toBeVisible();
   await expect(page.getByText('활성 레이블셋의 편집 라벨만 학습·평가에 사용합니다', { exact: false })).toHaveCount(0);
   const filmstrip = page.locator('[data-labeling-filmstrip]');
   const focusFilmstrip = (await filmstrip.boundingBox())!.height;

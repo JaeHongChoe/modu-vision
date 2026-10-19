@@ -45,6 +45,8 @@ export const WizardHeader: React.FC = () => {
     setLanguage,
     technicalDetails,
     setTechnicalDetails,
+    viewMode,
+    setViewMode,
     theme,
     setTheme,
     backendStatus,
@@ -58,6 +60,7 @@ export const WizardHeader: React.FC = () => {
   } = useComputeStore();
   const { jobId, jobComputeProfileId, jobComputeLabel } = useTrainingStore();
   const ko = language === 'ko';
+  const full = viewMode === 'full';
   // What the user currently sees; 'system' resolves through the <html> attribute App keeps in step with the OS.
   const shownTheme = theme === 'system' ? (typeof document !== 'undefined' && document.documentElement.dataset.theme === 'light' ? 'light' : 'dark') : theme;
   const taskScope = () => {
@@ -101,12 +104,14 @@ export const WizardHeader: React.FC = () => {
     : jobComputeLabel === 'This computer' ? localLabel : jobComputeLabel;
 
   const steps = [
-    { num: 1, nameKo: '데이터 관리', nameEn: 'Data', icon: FolderKanban },
-    { num: 2, nameKo: '라벨링 & AI', nameEn: 'Labeling', icon: Tag },
-    { num: 3, nameKo: '오토딥러닝', nameEn: 'Training', icon: Wand2 },
-    { num: 4, nameKo: '평가 & 과검/미검', nameEn: 'Evaluation', icon: Activity },
-    { num: 5, nameKo: '플로우차트', nameEn: 'Flowchart', icon: GitFork },
-    { num: 6, nameKo: '추론 & 모델 내보내기', nameEn: 'Inference & export', icon: Rocket },
+    // nameKo is what a first-time user reads; legacyKo is the studio's older name, kept in the accessible name so saved
+    // guides, receipts and the e2e suites that look for it still find the step.
+    { num: 1, nameKo: '데이터 준비', legacyKo: '데이터 관리', nameEn: 'Data', icon: FolderKanban },
+    { num: 2, nameKo: '라벨 달기', legacyKo: '라벨링 & AI', nameEn: 'Labeling', icon: Tag },
+    { num: 3, nameKo: '모델 학습', legacyKo: '오토딥러닝', nameEn: 'Training', icon: Wand2 },
+    { num: 4, nameKo: '결과 평가', legacyKo: '평가 & 과검/미검', nameEn: 'Evaluation', icon: Activity },
+    { num: 5, nameKo: '검사 흐름 만들기', legacyKo: '플로우차트', nameEn: 'Flowchart', icon: GitFork },
+    { num: 6, nameKo: '검사 실행', legacyKo: '추론 & 모델 내보내기', nameEn: 'Inference & export', icon: Rocket },
   ];
 
   const tasks: Array<{ id: VisionTask; labelKo: string; labelEn: string; icon: React.ComponentType<{ className?: string }> }> = [
@@ -157,7 +162,7 @@ export const WizardHeader: React.FC = () => {
               {profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
             </select>
           </label>
-          <button type="button" onClick={() => setShowComputePanel(true)} className={CONTROL}>{ko ? '서버 관리' : 'Servers'}</button>
+          {full && <button type="button" onClick={() => setShowComputePanel(true)} className={CONTROL}>{ko ? '서버 관리' : 'Servers'}</button>}
           {isLoading && <span className="text-sm text-slate-400">{ko ? '설정 확인 중…' : 'Checking…'}</span>}
           {(loadError || error) && <span role="alert" className="max-w-[340px] truncate text-sm text-red-300" title={loadError || error || undefined}>{loadError || error}</span>}
           {selectedProfileId && !loadError && (
@@ -171,13 +176,31 @@ export const WizardHeader: React.FC = () => {
           <span role="status" className={`rounded border px-2.5 py-1 text-sm ${engineTone}`}>
             {selectedProfileId ? (selectedProfile?.name || (ko ? '서버' : 'Server')) : localLabel} · {engineText}
           </span>
-          <button type="button" onClick={() => setShowProvenance(true)} className={CONTROL}>{ko ? '데이터·판정 이력' : 'Data and verdict history'}</button>
-          <button type="button" aria-pressed={technicalDetails} onClick={() => setTechnicalDetails(!technicalDetails)} className={`${CONTROL} ${technicalDetails ? 'border-sky-500 bg-sky-950/60 text-sky-100' : ''}`}>
-            {ko ? '기술 상세' : 'Technical details'}
+          {/* The simple view keeps the few controls a first run needs; everything else waits under 더 보기 or in 모두 보기. */}
+          <button type="button" aria-pressed={full} onClick={() => setViewMode(full ? 'simple' : 'full')} className={`${CONTROL} ${full ? 'border-sky-500 bg-sky-950/60 text-sky-100' : ''}`} title={ko ? (full ? '처음 쓰는 사람에게 필요한 항목만 보입니다' : '모든 설정과 관리 항목이 보입니다') : undefined}>
+            {full ? (ko ? '간단히 보기' : 'Simple view') : (ko ? '모두 보기' : 'Show everything')}
           </button>
-          <button type="button" onClick={() => setTheme(shownTheme === 'light' ? 'dark' : 'light')} className={CONTROL} aria-pressed={shownTheme === 'light'}>
-            {shownTheme === 'light' ? (ko ? '어두운 화면' : 'Dark screen') : (ko ? '밝은 화면' : 'Light screen')}
-          </button>
+          {full ? <>
+            <button type="button" onClick={() => setShowProvenance(true)} className={CONTROL}>{ko ? '데이터·판정 이력' : 'Data and verdict history'}</button>
+            <button type="button" aria-pressed={technicalDetails} onClick={() => setTechnicalDetails(!technicalDetails)} className={`${CONTROL} ${technicalDetails ? 'border-sky-500 bg-sky-950/60 text-sky-100' : ''}`}>
+              {ko ? '기술 상세' : 'Technical details'}
+            </button>
+            <button type="button" onClick={() => setTheme(shownTheme === 'light' ? 'dark' : 'light')} className={CONTROL} aria-pressed={shownTheme === 'light'}>
+              {shownTheme === 'light' ? (ko ? '어두운 화면' : 'Dark screen') : (ko ? '밝은 화면' : 'Light screen')}
+            </button>
+          </> : <details className="relative">
+            <summary className={`list-none cursor-pointer ${CONTROL}`}>{ko ? '더 보기' : 'More'}</summary>
+            <div className="absolute right-0 z-30 mt-1 flex min-w-[200px] flex-col gap-1 rounded border border-[#3B4B63] bg-[#131822] p-2 shadow-xl" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+              <button type="button" onClick={() => setShowComputePanel(true)} className={CONTROL}>{ko ? '서버 관리' : 'Servers'}</button>
+              <button type="button" onClick={() => setShowProvenance(true)} className={CONTROL}>{ko ? '데이터·판정 이력' : 'Data and verdict history'}</button>
+              <button type="button" aria-pressed={technicalDetails} onClick={() => setTechnicalDetails(!technicalDetails)} className={`${CONTROL} ${technicalDetails ? 'border-sky-500 bg-sky-950/60 text-sky-100' : ''}`}>
+                {ko ? '기술 상세' : 'Technical details'}
+              </button>
+              <button type="button" onClick={() => setTheme(shownTheme === 'light' ? 'dark' : 'light')} className={CONTROL} aria-pressed={shownTheme === 'light'}>
+                {shownTheme === 'light' ? (ko ? '어두운 화면' : 'Dark screen') : (ko ? '밝은 화면' : 'Light screen')}
+              </button>
+            </div>
+          </details>}
           <button type="button" onClick={() => setLanguage(ko ? 'en' : 'ko')} className={CONTROL} aria-label={ko ? 'Switch to English' : '한국어로 전환'}>
             {ko ? 'English' : '한국어'}
           </button>
@@ -227,7 +250,8 @@ export const WizardHeader: React.FC = () => {
               >
                 <span className={`font-mono tabular-nums ${isActive ? 'text-[#10B981]' : 'text-slate-400'}`}>{String(s.num).padStart(2, '0')}</span>
                 <Icon className={`h-4 w-4 ${isActive ? 'text-[#10B981]' : 'text-slate-400'}`} aria-hidden="true" />
-                <span className="font-medium">{ko ? s.nameKo : s.nameEn}</span>
+                <span className="whitespace-nowrap font-medium">{ko ? s.nameKo : s.nameEn}</span>
+                {ko && <span className="sr-only">({s.legacyKo})</span>}
               </button>
             );
           })}

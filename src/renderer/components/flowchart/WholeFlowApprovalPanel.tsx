@@ -1,3 +1,4 @@
+import {bumpWorkflowEvidence} from '../../stores/workflowEvidence';
 import {useEffect,useRef,useState} from 'react';
 import type {FlowEvaluation} from '../../services/flowEvaluationTypes';
 import {wholeFlowApproval,type WholeFlowApproval,type WholeFlowPolicy} from '../../services/wholeFlowApproval';
@@ -26,7 +27,7 @@ export function WholeFlowApprovalPanel({evaluation,contextKey}:{evaluation:FlowE
     try{
       const value=await wholeFlowApproval.approve({evaluation_id:evaluation.evaluation_id,policy,reviewer,reason,
         holdout_reviewed:reviewed,expected_revision:active?.revision_id||null});
-      if(generation.current===epoch){setActive(value);setReviewed(false);setNotice('전체 흐름 검토를 저장했습니다. 패키지·대상 장치 적격성은 별도로 확인하세요.');}
+      if(generation.current===epoch){setActive(value);setReviewed(false);setNotice('전체 흐름 검토를 저장했습니다. 패키지·대상 장치 적격성은 별도로 확인하세요.');bumpWorkflowEvidence();}
     }catch(cause){if(generation.current===epoch){setError(String(cause));setLoaded(false);
       try{const value=await wholeFlowApproval.active();if(generation.current===epoch){setActive(value);setLoaded(true);}}catch{/* Preserve the original refusal. */}
     }}finally{if(generation.current===epoch)setBusy(false);}

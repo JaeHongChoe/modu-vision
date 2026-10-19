@@ -108,7 +108,7 @@ async function exercise(page: Page, w: Workspace, e: Evidence, api: Api, native:
     await unchanged(); await e.screenshot(page, `${native ? 'native' : 'browser'}-compare-empty-no-local-draft`);
     // Make the local draft through the actual canvas. No save or apply button
     // is clicked, and the original server labels and review ledger are pinned.
-    await page.getByTitle('100% Zoom (1:1)', {exact: true}).click();
+    await page.getByTitle('실제 크기 (1:1)', {exact: true}).click();
     await page.getByRole('button', {name: /^Scratch(?: \d+)?$/}).click();
     await page.getByTitle('바운딩 박스 (BBox - 2)', {exact: true}).click();
     const box = (await page.locator('[data-canvas-container]').boundingBox())!;
@@ -302,7 +302,7 @@ async function comparisonProjectHandoff(page:Page,w:Workspace,e:Evidence,api:Han
    const context=canvas.getContext('2d');if(!context)return false;
    return context.getImageData(Math.floor(canvas.width/2),Math.floor(canvas.height/2),1,1).data[3]>0;
   },undefined,{timeout:10_000});
- await page.getByTitle('100% Zoom (1:1)',{exact:true}).click();await page.getByRole('button',{name:/^Scratch(?: \d+)?$/}).click();await page.getByTitle('바운딩 박스 (BBox - 2)',{exact:true}).click();
+ await page.getByTitle('실제 크기 (1:1)',{exact:true}).click();await page.getByRole('button',{name:/^Scratch(?: \d+)?$/}).click();await page.getByTitle('바운딩 박스 (BBox - 2)',{exact:true}).click();
   const hud=page.getByTestId('canvas-hud');
   await expect(hud).toContainText(/VIEW\s*scale\s*100\s*%/,{timeout:10_000});
   await page.evaluate(()=>new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve()))));

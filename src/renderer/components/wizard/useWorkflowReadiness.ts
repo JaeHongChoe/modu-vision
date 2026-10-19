@@ -8,9 +8,12 @@ import { useEvaluationStore } from '../../stores/useEvaluationStore';
 import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { flowSemanticKey, useFlowchartStore } from '../../stores/useFlowchartStore';
 import { getNextAction, type WorkflowEvidence, type WorkflowImpact } from './workflowReadiness';
+import { subscribeWorkflowEvidence, workflowEvidenceRevision } from '../../stores/workflowEvidence';
 
 export function useWorkflowReadiness() {
   const project=useProjectStore(s=>s.project),projectDir=useProjectStore(s=>s.projectDir),task=useProjectStore(s=>s.task),stage=useProjectStore(s=>s.activeStep),projectBusy=useProjectStore(s=>s.isProjectBusy);
+  const [evidenceRevision,setEvidenceRevision]=useState(workflowEvidenceRevision);
+  useEffect(()=>subscribeWorkflowEvidence(()=>setEvidenceRevision(workflowEvidenceRevision())),[]);
   const revision=useComputeStore(s=>s.transportRevision);
   const data=useDatasetStore(),training=useTrainingStore();
   const modelJobId=useEvaluationStore(s=>s.jobId);
@@ -54,7 +57,7 @@ export function useWorkflowReadiness() {
       setReceipt({key,evidence:{status:'ready',review,impact},versionId,flowMatchesSaved});
     }).catch(cause=>{if(current())setReceipt({key,evidence:{status:'error',error:String(cause.message||cause)}});});
     return()=>{sequence.current++;};
-  },[key,sourceReady,refresh,data.isLoading,data.isSplitting,training.status,flow.flowIdentity.semantic_revision,flow.pipelineDirty]);
+  },[key,sourceReady,refresh,data.isLoading,data.isSplitting,training.status,flow.flowIdentity.semantic_revision,flow.pipelineDirty,flow.pipelineIsDraft,flow.baseVersionId,evidenceRevision]);
   const evidence=receipt?.key===key?receipt.evidence:{status:'error' as const,error:'현재 프로젝트 근거 확인 필요'};
   return {readiness:getNextAction({stage,projectReady:Boolean(projectDir&&project),sourceReady,totalImages:data.totalImages,train:data.split.train,val:data.split.val,
     busy:projectBusy||data.isLoading||data.isSplitting||annotationDirty,task,modelJobId:modelJobId || (training.isCurrentData?training.jobId:null),flowVersionId:receipt?.key===key?receipt.versionId:null,

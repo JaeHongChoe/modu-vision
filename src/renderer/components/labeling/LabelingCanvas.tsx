@@ -1406,7 +1406,7 @@ export const LabelingCanvas: React.FC = () => {
       {/* Precision Instrument Coordinate HUD */}
       <div
         data-testid="canvas-hud"
-        className="absolute bottom-2 left-2 z-40 bg-[#0B0E14]/90 border border-[#2B3547] rounded px-3 py-1.5 text-[11px] font-mono text-slate-300 flex items-center gap-3 shadow-md select-none pointer-events-none"
+        className="absolute bottom-2 left-2 z-40 bg-[#0B0E14]/90 border border-[#2B3547] rounded px-3 py-1.5 text-[11px] font-mono text-slate-300 flex flex-wrap items-center gap-x-3 gap-y-1 whitespace-nowrap max-w-[calc(100%-1rem)] shadow-md select-none pointer-events-none"
       >
         {/* Crosshair Cursor Coordinates: X, Y */}
         <div className="flex items-center gap-1.5">

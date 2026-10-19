@@ -139,10 +139,10 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
    expect(fs.readFileSync(path.join(root,relative))).toEqual(fs.readFileSync(path.join(original.folder,key,relative)));
   return after;
  };
- const rows=()=>page.getByTitle('Delete annotation',{exact:true}),undo=()=>page.getByTitle('Undo (Ctrl+Z)',{exact:true}),redo=()=>page.getByTitle('Redo (Ctrl+Y)',{exact:true});
+ const rows=()=>page.getByTitle('라벨 삭제',{exact:true}),undo=()=>page.getByTitle('실행 취소 (Ctrl+Z)',{exact:true}),redo=()=>page.getByTitle('다시 실행 (Ctrl+Y)',{exact:true});
  const saveButton=()=>page.getByTestId('annotation-save-button');
  const point=async(x:number,y:number)=>{const box=await page.locator('[data-canvas-container]').boundingBox();expect(box).not.toBeNull();return{x:box!.x+(box!.width-256)/2+x,y:box!.y+(box!.height-256)/2+y};};
- const recenter=async()=>{await page.getByTitle('100% Zoom (1:1)',{exact:true}).click();await expect(page.getByTestId('canvas-hud')).toContainText('100%');};
+ const recenter=async()=>{await page.getByTitle('실제 크기 (1:1)',{exact:true}).click();await expect(page.getByTestId('canvas-hud')).toContainText('100%');};
  const drag=async(x1:number,y1:number,x2:number,y2:number)=>{
   const a=await point(x1,y1),b=await point(x2,y2);await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(b.x,b.y,{steps:8});await page.mouse.up();
  };

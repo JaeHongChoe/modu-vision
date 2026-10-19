@@ -73,7 +73,7 @@ async function exercise(page:Page,w:Workspace,e:Evidence,api:Api,native:boolean,
  const remainingCanvas=()=>{const remaining=canvasDeadline-Date.now();expect(remaining).toBeGreaterThan(0);return remaining;};
  await expect.poll(async()=>{const probe=await canvasSourceCentres(page);return probe?.pixels.every((value,index)=>index%4===2?value===100:index%4===3?value===255:true)||false;},{timeout:remainingCanvas()}).toBe(true);
  await page.getByTitle('바운딩 박스 (BBox - 2)',{exact:true}).click();
- await page.getByTitle('100% Zoom (1:1)',{exact:true}).click();await expect(page.getByTestId('canvas-hud')).toContainText('100%');
+ await page.getByTitle('실제 크기 (1:1)',{exact:true}).click();await expect(page.getByTestId('canvas-hud')).toContainText('100%');
  const beforeAlignment=await canvasSourceCentres(page);expect(beforeAlignment).not.toBeNull();
  const rasterPan=canvasRasterAlignment(beforeAlignment!),panBounds=(await page.locator('[data-canvas-container]').boundingBox())!;
  expect(panBounds.width).toBe(beforeAlignment!.css_width);expect(panBounds.height).toBe(beforeAlignment!.css_height);

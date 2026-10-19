@@ -162,18 +162,21 @@ async function createWindow(): Promise<BrowserWindow> {
     }
   });
 
-  // Load renderer
+  // Load renderer. MV_VIEW_MODE=full (the test launches) keeps every control on screen through the page URL; a user's
+  // first launch shows the simple view and a stored choice wins either way.
+  const viewMode = process.env.MV_VIEW_MODE === 'full' || process.env.MV_VIEW_MODE === 'simple' ? process.env.MV_VIEW_MODE : null;
+  const loadProd = () => win.loadFile(prodHtmlPath, viewMode ? { query: { view: viewMode } } : undefined);
   if (isDev) {
     const devServerUrl = process.env.VITE_DEV_SERVER_URL || 'http://127.0.0.1:5173';
     try {
-      await win.loadURL(devServerUrl);
+      await win.loadURL(viewMode ? `${devServerUrl}${devServerUrl.includes('?') ? '&' : '?'}view=${viewMode}` : devServerUrl);
     } catch (err) {
       console.warn(`[Main] Failed to load dev server at ${devServerUrl}, falling back to static build if present:`, err);
-      await win.loadFile(prodHtmlPath);
+      await loadProd();
     }
   } else {
     // In production, load dist/index.html
-    await win.loadFile(prodHtmlPath);
+    await loadProd();
   }
 
   win.on('closed', () => {

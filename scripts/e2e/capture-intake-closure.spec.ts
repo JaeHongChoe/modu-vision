@@ -59,7 +59,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  const team=page.getByRole('dialog',{name:'팀 데이터 작업',exact:true});await team.getByLabel('팀 작업자 이름').fill('capture-labeler');await team.getByRole('button',{name:'편집 시작',exact:true}).click();await expect(team.getByRole('button',{name:'편집 종료',exact:true})).toBeEnabled();await team.getByRole('button',{name:'팀 데이터 작업 닫기',exact:true}).click();
  await page.getByRole('button',{name:'집중 편집',exact:true}).click();
  await expect.poll(async()=>Number((await page.getByTestId('canvas-hud').innerText()).match(/scale\s*([\d.]+)\s*%/)?.[1]||0)).toBeGreaterThan(100);
- await page.getByTitle('100% Zoom (1:1)',{exact:true}).click();await expect(page.getByTestId('canvas-hud')).toContainText('100%');
+ await page.getByTitle('실제 크기 (1:1)',{exact:true}).click();await expect(page.getByTestId('canvas-hud')).toContainText('100%');
  await page.getByTitle('바운딩 박스 (BBox - 2)',{exact:true}).click();
  const canvas=(await page.locator('[data-canvas-container]').boundingBox())!,x=canvas.x+(canvas.width-32)/2,y=canvas.y+(canvas.height-32)/2;
  await page.mouse.move(x+4,y+4);await page.mouse.down();await page.mouse.move(x+20,y+20,{steps:5});await page.mouse.up();

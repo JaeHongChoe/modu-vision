@@ -140,7 +140,7 @@ async function exercise(page:Page,w:Workspace,e:Evidence,api:Api,native:boolean,
   const enter=async(scope:typeof A)=>{
    await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(scope.project.name);await stages.nth(1).click();
    const focus=page.getByRole('button',{name:'집중 편집',exact:true});if(await focus.getAttribute('aria-pressed')!=='true')await focus.click();
-   await expect(page.getByText('1 / 1',{exact:true})).toBeVisible();await expect(page.getByTitle('Delete annotation',{exact:true})).toHaveCount(1);
+   await expect(page.getByText('1 / 1',{exact:true})).toBeVisible();await expect(page.getByTitle('라벨 삭제',{exact:true})).toHaveCount(1);
    await expect(page.getByTestId('annotation-save-button')).not.toContainText('Save Changes');
    await expect(page.getByText('기존 라벨을 불러오는 중입니다.',{exact:true})).toHaveCount(0);
    await expect(page.getByRole('alert').filter({hasText:'기존 라벨 조회 실패'})).toHaveCount(0);
@@ -241,7 +241,7 @@ async function exercise(page:Page,w:Workspace,e:Evidence,api:Api,native:boolean,
   });
 
   phase='cancel';await frame('cancel clean acquired edit',async()=>{
-   await acquire(A);await release(A);await expect(page.getByTitle('Delete annotation',{exact:true})).toHaveCount(1);
+   await acquire(A);await release(A);await expect(page.getByTitle('라벨 삭제',{exact:true})).toHaveCount(1);
    await expect(page.getByTestId('annotation-save-button')).not.toContainText('Save Changes');
   });
   const cancelled=await snapshot('cancel-clean-release',A);sameReadValues(cancelled,originalViews.A);expect(cancelled.storage).toEqual(originalViews.A.storage);

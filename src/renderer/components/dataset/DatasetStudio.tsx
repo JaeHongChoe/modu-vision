@@ -32,6 +32,7 @@ import {useDeliveryScope} from '../runtime/useDeliveryScope';
 import {DataReadinessPanel} from './DataReadinessPanel';
 import {DatasetStatisticsPanel} from './DatasetStatisticsPanel';
 import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
+import { SimpleViewFold } from '../common/SimpleViewFold';
 import { JargonTooltip } from '../common/JargonTooltip';
 import { GuardrailBanner } from '../common/GuardrailBanner';
 import { classDistributionStats } from './classDistribution';
@@ -244,10 +245,12 @@ export const DatasetStudio: React.FC = () => {
   return (
     <div className="flex-1 flex flex-col h-full bg-[#0B0E14] text-slate-100 overflow-hidden">
       <OperatorGuidanceBanner step={1} />
-      <DatasetWorkflowPanel />
-      <CaptureIntakePanel sourceDatasetPath={folderPath} contextKey={sourceContextKey} onUseSource={source=>importFolder(source,task,false)}/>
-      <DerivedDatasetPanel sourceDatasetPath={folderPath} contextKey={sourceContextKey} onUseSource={source=>importFolder(source,task,false)}/>
-      <WorkflowImpactPanel />
+      <SimpleViewFold label="데이터 관리 도구" hint="이미지 검토·그룹 분할·라벨 교환, 현장 캡처, 파생 편집, 변경 영향 확인">
+        <DatasetWorkflowPanel />
+        <CaptureIntakePanel sourceDatasetPath={folderPath} contextKey={sourceContextKey} onUseSource={source=>importFolder(source,task,false)}/>
+        <DerivedDatasetPanel sourceDatasetPath={folderPath} contextKey={sourceContextKey} onUseSource={source=>importFolder(source,task,false)}/>
+        <WorkflowImpactPanel />
+      </SimpleViewFold>
       <DatasetStatisticsPanel />
       <DataReadinessPanel />
       {sourceSaveError && (

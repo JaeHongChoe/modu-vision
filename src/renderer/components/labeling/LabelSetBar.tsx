@@ -3,8 +3,9 @@ import { CopyPlus, Layers3, RefreshCw } from 'lucide-react';
 import { api, type ProjectLabelSet } from '../../services/api';
 import { useProjectStore } from '../../stores/useProjectStore';
 
-/** ``compact`` (focus editing): the label set in use and its switch only. */
-export const LabelSetBar: React.FC<{ compact?: boolean }> = ({ compact = false }) => {
+/** ``compact`` (focus editing): the label set in use and its switch only. ``collapsed`` (the simple view): one line
+ * naming the label set in use that opens to the full bar; the first labels never need another set. */
+export const LabelSetBar: React.FC<{ compact?: boolean; collapsed?: boolean }> = ({ compact = false, collapsed = false }) => {
   const project = useProjectStore((state) => state.project);
   const busy = useProjectStore((state) => state.isProjectBusy);
   const projectError = useProjectStore((state) => state.projectError);
@@ -61,6 +62,10 @@ export const LabelSetBar: React.FC<{ compact?: boolean }> = ({ compact = false }
 
   if (!project) return null;
   const active = sets.find((item) => item.id === project.active_labelset_id);
+  if (collapsed) return <details className="border-b border-[#34465B] bg-[#101D2C] px-4 py-1 text-slate-200">
+    <summary className="cursor-pointer text-xs text-slate-300">라벨 세트: <span className="font-semibold text-slate-100">{active?.name || '기본 라벨'}</span> <span className="text-slate-500">(바꾸거나 새로 만들기)</span></summary>
+    <LabelSetBar compact={compact} />
+  </details>;
   return <div className={`border-b border-[#34465B] bg-[#101D2C] px-4 ${compact ? 'py-1' : 'py-2.5'} text-slate-200`}>
     <div className="flex flex-wrap items-center gap-2.5">
       <span className="flex items-center gap-1.5 text-[10px] font-semibold tracking-[0.12em] text-cyan-300"><Layers3 className="h-3.5 w-3.5" /> 라벨 세트</span>

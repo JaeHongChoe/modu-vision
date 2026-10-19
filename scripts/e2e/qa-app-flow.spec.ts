@@ -25,7 +25,7 @@ test('app flow · segmentation (UNet) on this computer: register data, train, ab
   // 01 data: register the folder; the app reads its split from the folders.
   await createProject(page, 'QA segmentation', '영역 분할');
   await pickDataset(page);
-  await expect(page.getByText(/Train:\s*40/)).toBeVisible();
+  await expect(page.getByText(/학습:\s*40/)).toBeVisible();
   await evidence.screenshot(page, 'qa-01-dataset');
 
   // 02 labels: what the labeling screen shows for the mask folders the trainer reads (recorded as found).

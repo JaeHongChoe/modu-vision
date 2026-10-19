@@ -15,11 +15,12 @@ export const FOCUS_SWITCH_NAME = '집중 편집';
 // Reading localStorage itself can throw (blocked site data), so it is read inside the callers' try.
 const browserStorage = (): Storage | undefined => globalThis.localStorage;
 
-export function readLabelingFocus(storage?: Pick<Storage, 'getItem'> | null): boolean {
+export function readLabelingFocus(storage?: Pick<Storage, 'getItem'> | null, fallback = false): boolean {
   try {
-    return (storage === undefined ? browserStorage() : storage)?.getItem(KEY) === '1';
+    const stored = (storage === undefined ? browserStorage() : storage)?.getItem(KEY);
+    return stored === '1' || stored === '0' ? stored === '1' : fallback;
   } catch {
-    return false;
+    return fallback;
   }
 }
 

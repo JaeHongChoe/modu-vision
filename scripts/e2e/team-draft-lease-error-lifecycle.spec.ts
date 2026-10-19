@@ -110,7 +110,7 @@ async function exercise(page:Page,w:Workspace,e:Evidence,api:Api,native:boolean,
  const uuid=saved.metadata.image_uuid,query='/api/annotations/part?file_path='+encodeURIComponent(image),imageRoute='/api/team-data/images/'+uuid;
  const drafts=()=>page.evaluate(()=>Object.entries(localStorage).filter(([key])=>key.startsWith('modu-annotation-draft:v1:')).sort(([a],[b])=>a.localeCompare(b))) as Promise<DraftEntry[]>;
  const storage=()=>page.evaluate(()=>Object.fromEntries(Object.entries(localStorage).sort(([a],[b])=>a.localeCompare(b))));
- const rows=()=>page.getByTitle('Delete annotation',{exact:true}),save=()=>page.getByTestId('annotation-save-button');
+ const rows=()=>page.getByTitle('라벨 삭제',{exact:true}),save=()=>page.getByTestId('annotation-save-button');
  const enter=async()=>{
   await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(name);
   await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(1).click();
@@ -333,7 +333,7 @@ async function draftCanvasSourceReady(page:Page,deadline:number){
   if(!context||image.width<1||image.height<1)return 0;
   return context.getImageData(Math.floor(image.width/2),Math.floor(image.height/2),1,1).data[3];
  }),{timeout:draftApplyRemaining(deadline)}).toBeGreaterThan(0),deadline,'original base image painted');
- await draftApplyWithin(page.getByTitle('100% Zoom (1:1)',{exact:true}).click({timeout:draftApplyRemaining(deadline)}),deadline,'normal one to one');
+ await draftApplyWithin(page.getByTitle('실제 크기 (1:1)',{exact:true}).click({timeout:draftApplyRemaining(deadline)}),deadline,'normal one to one');
  await draftApplyWithin(expect(page.getByTestId('canvas-hud')).toContainText('100%',{timeout:draftApplyRemaining(deadline)}),deadline,'one to one before tools');
  await draftApplyWithin(page.getByRole('button',{name:/^Scratch(?: \d+)?$/}).click({timeout:draftApplyRemaining(deadline)}),deadline,'original Scratch category');
  await draftApplyWithin(page.getByTitle('바운딩 박스 (BBox - 2)',{exact:true}).click({timeout:draftApplyRemaining(deadline)}),deadline,'original bbox tool');
@@ -357,7 +357,7 @@ async function explicitDraftLifecycle(page:Page,w:Workspace,e:Evidence,api:Api,n
  const A=await make('A'),B=await make('B');expect(A.project.id).not.toBe(B.project.id);expect(A.saved.metadata.image_uuid).not.toBe(B.saved.metadata.image_uuid);
  await read('/api/project/open',{project_dir:A.project.project_dir});if(url)await page.goto(url);else await page.reload();
  const entries=()=>page.evaluate(()=>Object.entries(localStorage).filter(([key])=>key.startsWith('modu-annotation-draft:v1:')).sort(([a],[b])=>a.localeCompare(b))) as Promise<DraftEntry[]>;
- const rows=()=>page.getByTitle('Delete annotation',{exact:true}),region=()=>page.getByRole('region',{name:'라벨 연결 복구',exact:true});
+ const rows=()=>page.getByTitle('라벨 삭제',{exact:true}),region=()=>page.getByRole('region',{name:'라벨 연결 복구',exact:true});
  const compareButton=()=>page.getByRole('button',{name:'저장 전 초안 비교·복구',exact:true}),dialog=()=>page.getByRole('dialog',{name:'서버 라벨과 로컬 초안 비교',exact:true});
  const enter=async(scope:typeof A)=>{const deadline=performance.now()+10_000;await draftApplyWithin(expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(scope.project.name,{timeout:draftApplyRemaining(deadline)}),deadline,'own project header');await draftApplyWithin(page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(1).click({timeout:draftApplyRemaining(deadline)}),deadline,'label stage');
   const focus=page.getByRole('button',{name:'집중 편집',exact:true});if(await draftApplyWithin(focus.getAttribute('aria-pressed'),deadline,'focus state')!=='true')await draftApplyWithin(focus.click({timeout:draftApplyRemaining(deadline)}),deadline,'focus entry');await draftApplyWithin(expect(rows()).toHaveCount(1,{timeout:draftApplyRemaining(deadline)}),deadline,'original server label');await draftApplyWithin(expect(region()).toBeVisible({timeout:draftApplyRemaining(deadline)}),deadline,'recovery section');};
@@ -435,7 +435,7 @@ async function emptyEditSaveLifecycle(page:Page,w:Workspace,e:Evidence,api:Api,n
  const ownerRoot=native?path.join(w.userData,'projects'):w.projects;
  for(const scope of[A,B]){expect(path.dirname(scope.project.project_dir)).toBe(ownerRoot);expect(fs.realpathSync(scope.source)).toBe(scope.source);expect(fs.realpathSync(scope.project.project_dir)).toBe(scope.project.project_dir);}
  await read('/api/project/open',{project_dir:A.project.project_dir});if(url)await page.goto(url);else await page.reload();
- const rows=()=>page.getByTitle('Delete annotation',{exact:true}),save=()=>page.getByTestId('annotation-save-button');
+ const rows=()=>page.getByTitle('라벨 삭제',{exact:true}),save=()=>page.getByTestId('annotation-save-button');
  const team=()=>page.getByRole('dialog',{name:'팀 데이터 작업',exact:true});
  const drafts=()=>page.evaluate(()=>Object.entries(localStorage).filter(([key])=>key.startsWith('modu-annotation-draft:v1:')).sort(([a],[b])=>a.localeCompare(b))) as Promise<DraftEntry[]>;
  const roots=(scope:typeof A)=>({source:protectedTree(scope.source),project:protectedTree(scope.project.project_dir)});

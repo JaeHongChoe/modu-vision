@@ -119,6 +119,23 @@ function rememberTechnicalDetails(storage: Pick<Storage, 'setItem'> | undefined,
   catch { /* Keep the choice for this session when persistence is unavailable. */ }
 }
 
+// A first-time user sees the few controls each step needs ('simple'); '모두 보기' ('full') shows every control. The
+// stored choice wins; before any choice, the page URL may carry ?view= (the e2e harness and the test Electron launch use
+// it to keep every control on screen for the existing suites).
+export type ViewMode = 'simple' | 'full';
+const VIEW_MODE_KEY = 'modu:view-mode:v1';
+export function readViewMode(storage?: Pick<Storage, 'getItem'>, search = ''): ViewMode {
+  try { const stored = storage?.getItem(VIEW_MODE_KEY); if (stored === 'simple' || stored === 'full') return stored; }
+  catch { /* fall through to the page URL */ }
+  let param: string | null = null;
+  try { param = new URLSearchParams(search).get('view'); } catch { param = null; }
+  return param === 'full' || param === 'simple' ? param : 'simple';
+}
+function rememberViewMode(storage: Pick<Storage, 'setItem'> | undefined, mode: ViewMode): void {
+  try { storage?.setItem(VIEW_MODE_KEY, mode); }
+  catch { /* Keep the choice for this session when persistence is unavailable. */ }
+}
+
 // The colour theme is a device preference: 'system' follows the OS until the user picks one.
 export type ThemeChoice = 'system' | 'light' | 'dark';
 const THEME_KEY = 'modu:theme:v1';
@@ -140,6 +157,7 @@ interface ProjectState {
   task: VisionTask;
   language: Language;
   technicalDetails: boolean;
+  viewMode: ViewMode;
   theme: ThemeChoice;
   backendPort: number | null;
   backendStatus: BackendStatus;
@@ -153,6 +171,7 @@ interface ProjectState {
 
   setStep: (step: WizardStep) => Promise<void>;
   setTechnicalDetails: (value: boolean) => void;
+  setViewMode: (mode: ViewMode) => void;
   setTheme: (theme: ThemeChoice) => void;
   openImageForLabeling: (imageId: string, filePath: string, expected?:{imageSha256:string;revision:number;isCurrent?:()=>boolean}) => Promise<boolean>;
   /** Changes the project task; the outcome always names the task that is actually active. */
@@ -310,6 +329,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   task: 'classification',
   language: readUserLanguage(viewStorage()),
   technicalDetails: readTechnicalDetails(viewStorage()),
+  viewMode: readViewMode(viewStorage(), typeof window === 'undefined' ? '' : window.location?.search ?? ''),
   theme: readTheme(viewStorage()),
   backendPort: null,
   backendStatus: { port: null, healthy: false, pid: null },
@@ -457,6 +477,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   setLanguage: (language) => { rememberUserLanguage(viewStorage(), language); set({ language }); },
   setTechnicalDetails: (technicalDetails) => { rememberTechnicalDetails(viewStorage(), technicalDetails); set({ technicalDetails }); },
+  setViewMode: (viewMode) => { rememberViewMode(viewStorage(), viewMode); set({ viewMode }); },
   setTheme: (theme) => { rememberTheme(viewStorage(), theme); set({ theme }); },
   setBackendStatus: (status) => {
     setCachedPort(status.port);

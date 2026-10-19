@@ -38,9 +38,10 @@ export const LabelingStudio: React.FC = () => {
     currentImage, annotationLoadStatus, annotationLoadError, loadAnnotationsForCurrent,
     autoSelectError, clearAutoSelectError,
   } = useAnnotationStore();
-  const { task: projectTask, isProjectBusy } = useProjectStore();
-  // Focus editing folds the helper panels so the canvas keeps the window's height; the choice is remembered.
-  const [focus, setFocus] = useState(() => readLabelingFocus());
+  const { task: projectTask, isProjectBusy, viewMode } = useProjectStore();
+  // Focus editing folds the helper panels so the canvas keeps the window's height; the choice is remembered. The simple
+  // view starts folded (the image and the drawing tools first) until the user chooses otherwise.
+  const [focus, setFocus] = useState(() => readLabelingFocus(undefined, viewMode === 'simple'));
   const toggleFocus = () => setFocus(value => { writeLabelingFocus(!value); return !value; });
   // Every folded panel is named in LABELING_HELPER_PANELS (the record's keys must be exactly that list).
   const helperPanels: Record<LabelingHelperPanel, React.ReactNode> = {
@@ -76,7 +77,7 @@ export const LabelingStudio: React.FC = () => {
         <button type="button" aria-pressed={focus} onClick={toggleFocus} title={focus ? '보조 패널을 다시 보입니다' : '보조 패널을 접어 캔버스를 키웁니다'}
           className={`rounded border px-2 py-0.5 hover:bg-slate-800 ${focus ? 'border-cyan-500 bg-cyan-950/40 text-cyan-100' : 'border-slate-600 text-slate-200'}`}>{FOCUS_SWITCH_NAME}</button>
       </div>
-      <LabelSetBar compact={focus} />
+      <LabelSetBar compact={focus} collapsed={viewMode === 'simple'} />
       {/* The team row stays: it loads the team settings and the label book and holds the shared editing lock. */}
       <TeamDataPanel compact={focus} />
       <AnnotationDraftRecovery />

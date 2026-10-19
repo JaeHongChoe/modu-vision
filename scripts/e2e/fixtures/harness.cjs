@@ -608,7 +608,8 @@ async function startRendererServer({ staticDir, backend }) {
   return {
     port,
     origin: ownOrigin,
-    url: `${ownOrigin}/index.html?port=${port}`,
+    // The suites were written against every control; the beginner's simple view is a separate, smaller check.
+    url: `${ownOrigin}/index.html?port=${port}&view=full`,
     stats: () => ({ ...counters, rejectedPaths: [...rejectedPaths] }),
     close: () => new Promise(resolve => {
       for (const socket of sockets) socket.destroy();
@@ -697,6 +698,8 @@ function electronLaunchOptions({ appDir, workspace, python = resolvePython(), de
     VISION_AI_STUDIO_DEV_SOURCE_BACKEND: '1',
     VITE_DEV_SERVER_URL: devServerUrl,
     PYTHONDONTWRITEBYTECODE: '1',
+    // The suites were written against every control; a user's first launch shows the simple view instead.
+    MV_VIEW_MODE: 'full',
   });
   if (isolateHome) Object.assign(env, { HOME: workspace.home, USERPROFILE: workspace.home });
   return { executablePath: electronPath, args: [appDir], cwd: appDir, env };

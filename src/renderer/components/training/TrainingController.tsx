@@ -356,7 +356,7 @@ export const TrainingController: React.FC = () => {
               onClick: () => setStep(1),
             },
               {
-                label: '2단계에서 라벨·검수 확인',
+                label: '2단계에서 라벨 확인하기',
                 icon: ArrowLeft,
                 variant: 'secondary',
                 onClick: () => setStep(2),

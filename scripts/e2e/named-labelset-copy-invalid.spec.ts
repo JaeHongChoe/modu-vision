@@ -166,7 +166,7 @@ test('named labelset copy rejects its own invalid source tree with actual 422 an
       const focus = page.getByRole('button', {name: '집중 편집', exact: true});
       if (await focus.getAttribute('aria-pressed') === 'true') await focus.click();
       await page.locator('[data-labeling-filmstrip]').getByAltText(path.basename(imagePath), {exact: true}).click();
-      await expect(page.getByTitle('Delete annotation', {exact: true})).toHaveCount(1);
+      await expect(page.getByTitle('라벨 삭제', {exact: true})).toHaveCount(1);
       await expect(page.getByTestId('annotation-save-button')).toHaveText('Saved');
       const active = page.getByLabel('활성 레이블셋', {exact: true});
       await expect(active).toHaveValue('default'); await expect(active).toBeEnabled();

@@ -159,7 +159,7 @@ test('U020 empty selection ignores a delivered coarse nudge after an owning OBB 
     await page.getByRole('navigation', {name: 'Workflow Stages'}).getByRole('button').nth(1).click();
     await page.getByRole('button', {name: '집중 편집', exact: true}).click();
     await expect.poll(async () => Number((await page.getByTestId('canvas-hud').innerText()).match(/scale\s*([\d.]+)\s*%/)?.[1] || 0), {timeout: 10_000}).toBeGreaterThan(100);
-    await page.getByTitle('100% Zoom (1:1)', {exact: true}).click();
+    await page.getByTitle('실제 크기 (1:1)', {exact: true}).click();
     await expect(page.getByTestId('canvas-hud')).toContainText('100%', {timeout: 10_000});
     const canvas = page.locator('[data-canvas-container]');
     const point = async (x: number, y: number) => {
@@ -267,7 +267,7 @@ test('U020 empty selection ignores a delivered coarse nudge after an owning OBB 
     await page.evaluate(() => { (window as any).__u020EmptyNudge.phase = 'empty'; });
     const blank = await point(15, 15); await page.mouse.click(blank.x, blank.y);
     await expect(direction).toHaveCount(0, {timeout: 10_000}); await expect(angle).toHaveCount(0, {timeout: 10_000});
-    await expect(page.getByTitle('Delete annotation', {exact: true})).toHaveCount(1, {timeout: 10_000});
+    await expect(page.getByTitle('라벨 삭제', {exact: true})).toHaveCount(1, {timeout: 10_000});
     await expect(page.getByTestId('canvas-hud')).toContainText(/W:\s*--/, {timeout: 10_000});
     await expect(saveButton).toHaveText('Saved', {timeout: 10_000});
     const emptyKey = await delivered('empty', false); proof.empty_key = emptyKey;

@@ -85,7 +85,7 @@ async function exercise(mode: 'empty' | 'cancel', {page, request, renderer, work
     await handoffWithin(expect(page.getByTitle('프로젝트 관리', {exact: true})).toContainText(project.name, opts()), deadline, 'own project title');
     await handoffWithin(expect(page.locator('span[title]').filter({hasText: selected})).toHaveAttribute('title', selected, opts()), deadline, 'own saved source');
     await handoffWithin(expect(page.getByText('학습 가능 이미지', {exact: true}).locator('..').getByText(String(count), {exact: true})).toBeVisible(opts()), deadline, 'own eligible count');
-    const split = count === 6 ? [['Train:', 3], ['Val:', 2], ['Test:', 1]] as const : [['Train:', 0], ['Val:', 0], ['Test:', 0]] as const;
+    const split = count === 6 ? [['학습:', 3], ['검증:', 2], ['시험:', 1]] as const : [['학습:', 0], ['검증:', 0], ['시험:', 0]] as const;
     for (const [label, value] of split) await handoffWithin(expect(page.getByText(label, {exact: true}).locator('..').getByText(String(value), {exact: true})).toBeVisible(opts()), deadline, 'own partition count');
     for (const [label, value] of [['전체', count], ['라벨 완료', count], ['라벨 미완료', 0]] as const) await handoffWithin(expect(panel.getByRole('button').filter({has: page.getByText(label, {exact: true})}).locator('strong')).toHaveText(String(value), opts()), deadline, 'own label count');
     const images = page.locator('button[aria-label$=" 라벨링에서 열기"] img'); await handoffWithin(expect(images).toHaveCount(count, opts()), deadline, 'own gallery count');

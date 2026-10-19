@@ -282,7 +282,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  trackReads=true;
  if(url)await page.goto(url);else await page.reload();await enter();
  await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(emptyProject.name);
- await expect(page.getByTitle('Delete annotation',{exact:true})).toHaveCount(0);
+ await expect(page.getByTitle('라벨 삭제',{exact:true})).toHaveCount(0);
  const emptyCurrent=await value('/api/project/current');expect(emptyCurrent.source_dataset_dir).toBeNull();
  assertOwnedProjectDirectory(emptyCurrent.project_dir,ownedRoot);
  const emptyRoots={project:emptyCurrent.project_dir,originalHarnessDataset:workspace.dataset};
@@ -291,14 +291,14 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  for(const action of actions){
   const start=writes.length;
   if(action==='mask-undo-redo'){
-   await expect(page.getByTitle('Undo (Ctrl+Z)',{exact:true})).toBeDisabled();await expect(page.getByTitle('Redo (Ctrl+Y)',{exact:true})).toBeDisabled();
+   await expect(page.getByTitle('실행 취소 (Ctrl+Z)',{exact:true})).toBeDisabled();await expect(page.getByTitle('다시 실행 (Ctrl+Y)',{exact:true})).toBeDisabled();
    await page.keyboard.press('Control+z');await page.keyboard.press('Control+y');
   }else{
    await page.getByTitle(action==='brush-class-mask'?'브러시 마스크 (Brush - 5)':'마스크 지우개 (Eraser - 6)',{exact:true}).click();
    const b=(await page.locator('[data-canvas-container]').boundingBox())!;expect(b).not.toBeNull();
    await page.mouse.move(b.x+b.width/2-15,b.y+b.height/2);await page.mouse.down();await page.mouse.move(b.x+b.width/2+15,b.y+b.height/2,{steps:5});await page.mouse.up();
   }
-  await expect(page.getByTitle('Delete annotation',{exact:true})).toHaveCount(0);
+  await expect(page.getByTitle('라벨 삭제',{exact:true})).toHaveCount(0);
   await expect(page.getByRole('button',{name:'Save Changes',exact:true})).toHaveCount(0);
   expect(writes.slice(start)).toEqual([]);const after=await unchanged(emptyBefore);await screenshot(action+'-empty');
   cells.push({action:'U030.'+action,dimension:'empty',before:emptyBefore,after,mutations:writes.slice(start),actual_current_image_absent:true,harness_disk_dataset_empty_claim:false});
@@ -318,14 +318,14 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  const routes={current:'/api/project/current',labelsets:'/api/project/labelsets',team:'/api/team-data',readiness:'/api/team-data/readiness',versions:'/api/dataset/versions',annotations:query,metadata:metadataQuery};
  // Real first-read default initialization belongs to controlled setup.
  await focus(false);await treeSnapshot(roots,routes);await focus(true);
- const rows=()=>page.getByTitle('Delete annotation',{exact:true}),saveButton=()=>page.getByTestId('annotation-save-button');
+ const rows=()=>page.getByTitle('라벨 삭제',{exact:true}),saveButton=()=>page.getByTestId('annotation-save-button');
  const preludeWrites=writes.slice();expect(preludeWrites.map(w=>[w.method,w.endpoint])).toEqual(native?[
   ['POST','/api/project/create'],['POST','/api/project/create'],['PUT','/api/project/update'],['POST','/api/dataset/import']]:[]);
  if(native)expect(preludeWrites.map(w=>JSON.parse(w.body!))).toEqual([
   {name:emptyProject.name,task:'segmentation'},{name:project.name,task:'segmentation'},{source_dataset_dir:source},{folder_path:source,task:'segmentation'}]);
  const bodyWriteStart=writes.length;
  const selectClass=async()=>{await page.getByRole('button',{name:/^Solder Bridge(?: \d+)?$/}).click();};
- const recenter=async()=>{await page.getByTitle('100% Zoom (1:1)',{exact:true}).click();await expect(page.getByTestId('canvas-hud')).toContainText('100%');};
+ const recenter=async()=>{await page.getByTitle('실제 크기 (1:1)',{exact:true}).click();await expect(page.getByTestId('canvas-hud')).toContainText('100%');};
  const point=async(x:number,y:number)=>{const b=await page.locator('[data-canvas-container]').boundingBox();expect(b).not.toBeNull();return{x:b!.x+(b!.width-256)/2+x,y:b!.y+(b!.height-256)/2+y};};
  const stroke=async(y:number,x1:number,x2:number,button:'left'|'right'='left')=>{
   const a=await point(x1,y),b=await point(x2,y);await page.mouse.move(a.x,a.y);await page.mouse.down({button});await page.mouse.move(b.x,b.y,{steps:10});await page.mouse.up({button});
@@ -372,14 +372,14 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  for(const action of actions){
   const start=writes.length;
   if(action==='mask-undo-redo'){
-   await expect(page.getByTitle('Undo (Ctrl+Z)',{exact:true})).toBeDisabled();await expect(page.getByTitle('Redo (Ctrl+Y)',{exact:true})).toBeDisabled();
+   await expect(page.getByTitle('실행 취소 (Ctrl+Z)',{exact:true})).toBeDisabled();await expect(page.getByTitle('다시 실행 (Ctrl+Y)',{exact:true})).toBeDisabled();
    await page.keyboard.press('Control+z');await page.keyboard.press('Control+y');
   }else{
    await page.getByTitle(action==='brush-class-mask'?'브러시 마스크 (Brush - 5)':'마스크 지우개 (Eraser - 6)',{exact:true}).click();
    await stroke(80,90,105,'right');await page.keyboard.press('Escape');
   }
   await expect(rows()).toHaveCount(2);await expect(page.getByRole('button',{name:'Save Changes',exact:true})).toHaveCount(0);
-  await expect(page.getByTitle('Undo (Ctrl+Z)',{exact:true})).toBeDisabled();await expect(page.getByTitle('Redo (Ctrl+Y)',{exact:true})).toBeDisabled();
+  await expect(page.getByTitle('실행 취소 (Ctrl+Z)',{exact:true})).toBeDisabled();await expect(page.getByTitle('다시 실행 (Ctrl+Y)',{exact:true})).toBeDisabled();
   expect(writes.slice(start)).toEqual([]);const after=await unchanged(initialProtected);await screenshot(action+'-invalid');
   cells.push({action:'U030.'+action,dimension:'invalid',before:initialProtected,after,mutations:writes.slice(start),unsupported_right_pointer_button:action!=='mask-undo-redo',nonempty_no_history:action==='mask-undo-redo',escape_brush_cancel_claim:false});
  }
@@ -449,9 +449,9 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  await cancel('erase-selected-mask',async()=>{await page.getByTitle('마스크 지우개 (Eraser - 6)',{exact:true}).click();await stroke(80,100,115);});
  await focus(true);await selectClass();await page.getByTitle('마스크 지우개 (Eraser - 6)',{exact:true}).click();await recenter();
  const erased=await error('erase-selected-mask',()=>stroke(80,100,115),painted.record,painted.oracle,'eraser');await handoff('erase-selected-mask');
- const undone=await error('mask-undo-redo',async()=>{await page.getByTitle('Undo (Ctrl+Z)',{exact:true}).click();},erased.record,erased.oracle,'undo',{...painted.record,oracle:painted.oracle});
+ const undone=await error('mask-undo-redo',async()=>{await page.getByTitle('실행 취소 (Ctrl+Z)',{exact:true}).click();},erased.record,erased.oracle,'undo',{...painted.record,oracle:painted.oracle});
  expect(undone.oracle.expected_composite_sha256).toBe(painted.oracle.expected_composite_sha256);
- await cancel('mask-undo-redo',async()=>{await page.getByTitle('Redo (Ctrl+Y)',{exact:true}).click();});await handoff('mask-undo-redo');
+ await cancel('mask-undo-redo',async()=>{await page.getByTitle('다시 실행 (Ctrl+Y)',{exact:true}).click();});await handoff('mask-undo-redo');
  const finalBefore=await protect('final-reload',roots,routes),finalWriteStart=writes.length;
  await page.reload();await enter();await expect(rows()).toHaveCount(2);const finalAfter=await unchanged(finalBefore);expect(writes.slice(finalWriteStart)).toEqual([]);
  const reopened=await value(query);expect(reopened.annotations).toEqual(undone.record.annotations);const reopenedOracle=await oracle('reopened',reopened);expect(reopenedOracle).toEqual(undone.oracle);
