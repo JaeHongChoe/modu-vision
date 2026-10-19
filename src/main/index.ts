@@ -1,4 +1,5 @@
-import { app, BrowserWindow, nativeTheme, shell } from 'electron';
+import { app, BrowserWindow, Menu, nativeTheme, shell } from 'electron';
+import fs from 'fs';
 import path from 'path';
 import { pathToFileURL } from 'url';
 import { BackendSupervisor } from './supervisor';
@@ -25,6 +26,50 @@ function trustedRendererUrl(url: string, packagedUrl: string): boolean {
   } catch {
     return false;
   }
+}
+
+// The user's zoom (Ctrl/Cmd +, -, 0) is a device preference kept next to the other UI settings: a first-time user
+// with a 4K monitor or weaker eyesight can make the whole app larger once and keep it.
+const ZOOM_FILE = 'ui-zoom.json';
+const ZOOM_MIN = 0.8, ZOOM_MAX = 2.0;
+function readSavedZoom(): number {
+  try {
+    const raw = JSON.parse(fs.readFileSync(path.join(app.getPath('userData'), ZOOM_FILE), 'utf8')) as { zoom?: unknown };
+    const zoom = Number(raw.zoom);
+    return Number.isFinite(zoom) && zoom >= ZOOM_MIN && zoom <= ZOOM_MAX ? zoom : 1;
+  } catch { return 1; }
+}
+function rememberZoom(zoom: number): void {
+  try { fs.writeFileSync(path.join(app.getPath('userData'), ZOOM_FILE), JSON.stringify({ zoom })); }
+  catch { /* The zoom still applies for this session. */ }
+}
+function installZoomMenu(win: BrowserWindow): void {
+  const step = (delta: number) => {
+    const next = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round((win.webContents.getZoomFactor() + delta) * 10) / 10));
+    win.webContents.setZoomFactor(next);
+    rememberZoom(next);
+  };
+  const reset = () => { win.webContents.setZoomFactor(1); rememberZoom(1); };
+  const isMac = process.platform === 'darwin';
+  const template: Electron.MenuItemConstructorOptions[] = [
+    ...(isMac ? [{ role: 'appMenu' as const }] : []),
+    { role: 'editMenu' },
+    { label: '보기', submenu: [
+      { label: '크게 보기', accelerator: 'CommandOrControl+=', click: () => step(0.1) },
+      { label: '크게 보기', accelerator: 'CommandOrControl+Plus', visible: false, click: () => step(0.1) },
+      { label: '작게 보기', accelerator: 'CommandOrControl+-', click: () => step(-0.1) },
+      { label: '기본 크기', accelerator: 'CommandOrControl+0', click: reset },
+      { type: 'separator' },
+      { role: 'togglefullscreen', label: '전체 화면' },
+      ...(isDev ? [{ type: 'separator' as const }, { role: 'toggleDevTools' as const }] : []),
+    ] },
+    { role: 'windowMenu', label: '창' },
+  ];
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+  win.webContents.on('did-finish-load', () => {
+    const saved = readSavedZoom();
+    if (saved !== 1) win.webContents.setZoomFactor(saved);
+  });
 }
 
 async function createWindow(): Promise<BrowserWindow> {
@@ -93,6 +138,8 @@ async function createWindow(): Promise<BrowserWindow> {
     }
     callback({ requestHeaders: details.requestHeaders });
   });
+
+  installZoomMenu(win);
 
   // Smooth window display without flicker
   win.once('ready-to-show', () => {

@@ -1,27 +1,20 @@
 /**
  * src/renderer/components/wizard/WizardHeader.tsx
- * 
- * Industrial Machine Vision Console Header.
- * Features:
- * - Hardware acceleration annunciator LED (MPS / CUDA / CPU fallback)
- * - Contiguous 6-stage segmented process bar with 1px hairline dividers and tabular-nums
- * - Industrial inspection recipe dropdown (Classification, Detection, Segmentation, Anomaly)
- * - Industrial communication daemon port monitor
- * - Zero gradients, zero diffuse glows, high-contrast dark steel styling
+ *
+ * The app header a first-time user reads: the project, where work runs, the inspection type and the six steps.
+ * Port numbers, driver names and acceleration badges are facts for support, not for the first screen; they stay
+ * behind the "기술 상세" switch (a device preference kept with the language choice).
  */
 
 import React, { useEffect, useState } from 'react';
 import {
   Activity,
   ChevronDown,
-  Cpu,
   Disc,
   FolderKanban,
   GitFork,
-  Globe,
   Rocket,
   Scan,
-  Server,
   ShieldAlert,
   Tag,
   Wand2,
@@ -36,6 +29,9 @@ import { ProvenancePanel } from '../common/ProvenancePanel';
 import { TaskChangeImpactDialog, taskPreviewScope } from './TaskChangeImpactDialog';
 import type { VisionTask } from '../../types';
 
+const CONTROL = 'rounded border border-[#3B4B63] bg-[#0B0E14] px-2.5 py-1.5 text-sm text-slate-100 hover:bg-[#1B2537] disabled:opacity-50';
+const QUIET = 'rounded border border-transparent px-2.5 py-1.5 text-sm text-slate-200 hover:border-[#3B4B63] hover:bg-[#1B2537]';
+
 export const WizardHeader: React.FC = () => {
   const [showComputePanel, setShowComputePanel] = useState(false);
   const [showProjectPanel, setShowProjectPanel] = useState(false);
@@ -47,6 +43,8 @@ export const WizardHeader: React.FC = () => {
     task,
     language,
     setLanguage,
+    technicalDetails,
+    setTechnicalDetails,
     backendStatus,
     projectName,
     projectError,
@@ -57,6 +55,7 @@ export const WizardHeader: React.FC = () => {
     probeResults, load, selectTarget,
   } = useComputeStore();
   const { jobId, jobComputeProfileId, jobComputeLabel } = useTrainingStore();
+  const ko = language === 'ko';
   const taskScope = () => {
     const currentProject = useProjectStore.getState();
     const currentCompute = useComputeStore.getState();
@@ -92,294 +91,158 @@ export const WizardHeader: React.FC = () => {
 
   const selectedProfile = profiles.find((profile) => profile.id === selectedProfileId);
   const selectedProbe = selectedProfileId ? probeResults[selectedProfileId] : null;
+  const localLabel = ko ? '이 컴퓨터' : 'This computer';
   const resultLocation = jobComputeProfileId && jobComputeLabel === jobComputeProfileId
     ? profiles.find((profile) => profile.id === jobComputeProfileId)?.name || jobComputeLabel
-    : jobComputeLabel;
+    : jobComputeLabel === 'This computer' ? localLabel : jobComputeLabel;
 
   const steps = [
-    { num: 1, nameKo: '데이터 관리', nameEn: 'Data Studio', icon: FolderKanban },
-    { num: 2, nameKo: '라벨링 & AI', nameEn: 'Labeling Studio', icon: Tag },
-    { num: 3, nameKo: '오토딥러닝', nameEn: 'AutoML Trainer', icon: Wand2 },
-    { num: 4, nameKo: '평가 & 과검/미검', nameEn: 'Evaluation & Overkill', icon: Activity },
-    { num: 5, nameKo: '플로우차트', nameEn: 'Flowchart Studio', icon: GitFork },
-    { num: 6, nameKo: '추론 & 모델 내보내기', nameEn: 'Inference & Export', icon: Rocket },
+    { num: 1, nameKo: '데이터 관리', nameEn: 'Data', icon: FolderKanban },
+    { num: 2, nameKo: '라벨링 & AI', nameEn: 'Labeling', icon: Tag },
+    { num: 3, nameKo: '오토딥러닝', nameEn: 'Training', icon: Wand2 },
+    { num: 4, nameKo: '평가 & 과검/미검', nameEn: 'Evaluation', icon: Activity },
+    { num: 5, nameKo: '플로우차트', nameEn: 'Flowchart', icon: GitFork },
+    { num: 6, nameKo: '추론 & 모델 내보내기', nameEn: 'Inference & export', icon: Rocket },
   ];
 
-  const tasks: Array<{
-    id: VisionTask;
-    code: string;
-    labelKo: string;
-    labelEn: string;
-    icon: React.ComponentType<{ className?: string }>;
-  }> = [
-    {
-      id: 'classification',
-      code: 'CLS',
-      labelKo: '분류 (Classification)',
-      labelEn: 'Classification',
-      icon: Tag,
-    },
-    {
-      id: 'detection',
-      code: 'DET',
-      labelKo: '객체 검출 (Detection)',
-      labelEn: 'Object Detection',
-      icon: Scan,
-    },
-    {
-      id: 'segmentation',
-      code: 'SEG',
-      labelKo: '영역 분할 (Segmentation)',
-      labelEn: 'Segmentation',
-      icon: Disc,
-    },
-    {
-      id: 'anomaly',
-      code: 'ANO',
-      labelKo: '이상 탐지 (Anomaly)',
-      labelEn: 'Anomaly Detection',
-      icon: ShieldAlert,
-    },
+  const tasks: Array<{ id: VisionTask; labelKo: string; labelEn: string; icon: React.ComponentType<{ className?: string }> }> = [
+    { id: 'classification', labelKo: '분류', labelEn: 'Classification', icon: Tag },
+    { id: 'detection', labelKo: '객체 검출', labelEn: 'Object detection', icon: Scan },
+    { id: 'segmentation', labelKo: '영역 분할', labelEn: 'Segmentation', icon: Disc },
+    { id: 'anomaly', labelKo: '이상 탐지', labelEn: 'Anomaly detection', icon: ShieldAlert },
   ];
-
-  // Resolve current task icon
   const currentTaskMeta = tasks.find((t) => t.id === task) || tasks[0];
   const CurrentTaskIcon = currentTaskMeta.icon;
 
-  // Hardware acceleration logic
+  // Where work runs, in plain words. The raw device name and port live in the technical row.
   const isHealthy = Boolean(backendStatus.healthy);
   const rawDevice = (backendStatus.device || '').toLowerCase();
-  const isMps = rawDevice === 'mps';
-  const isCuda = rawDevice.startsWith('cuda');
-  const isAccelerated = isHealthy && (isMps || isCuda);
-  const isFallback = isHealthy && (!rawDevice || rawDevice === 'cpu');
-
-  // LED and label configuration
-  const ledBgColor = isAccelerated ? '#10B981' : isFallback ? '#F59E0B' : '#EF4444';
-  const ledRingClass = isAccelerated
-    ? 'ring-2 ring-emerald-500/40'
-    : isFallback
-    ? 'ring-2 ring-amber-500/40'
-    : 'ring-2 ring-red-500/40';
-
-  const hwDisplayName = isMps
-    ? 'METAL GPU MPS'
-    : isCuda
-    ? backendStatus.deviceName || 'CUDA'
-    : isFallback
-    ? 'CPU FALLBACK'
-    : 'DISCONNECTED';
-
-  const hwBadgeText = isAccelerated ? 'HW ACCEL' : isFallback ? 'FALLBACK' : 'OFFLINE';
-  const hwBadgeStyle = isAccelerated
-    ? 'bg-emerald-950/80 border-emerald-500/50 text-emerald-400'
-    : isFallback
-    ? 'bg-amber-950/80 border-amber-500/50 text-amber-300'
-    : 'bg-red-950/80 border-red-500/50 text-red-400';
+  const isAccelerated = isHealthy && (rawDevice === 'mps' || rawDevice.startsWith('cuda'));
+  const engineText = !isHealthy ? (ko ? '연결 중…' : 'Connecting…')
+    : isAccelerated ? (ko ? 'GPU 가속' : 'GPU acceleration') : (ko ? 'CPU로 실행' : 'Runs on the CPU');
+  const engineTone = !isHealthy ? 'border-amber-500/60 bg-amber-950/40 text-amber-200'
+    : isAccelerated ? 'border-emerald-500/60 bg-emerald-950/40 text-emerald-200' : 'border-[#3B4B63] bg-[#131822] text-slate-200';
 
   return (<>
     {taskProposal && <TaskChangeImpactDialog nextTask={taskProposal.task} scope={taskProposal.scope} onClose={()=>setTaskProposal(null)} onResult={outcome=>{setTaskProposal(null);if(!outcome.ok)setTaskFailure({scope:taskScope(),message:outcome.error});}}/>}
     <header className="bg-[#0B0E14] border-b border-[#2B3547] text-slate-200 select-none">
-      {/* Top Application Bar (Draggable Electron Region) */}
+      {/* Row 1 (draggable): the project, where work runs, history, language. */}
       <div
-        className={`h-10 flex items-center justify-between border-b border-[#2B3547] bg-[#0E121A] ${window.api?.platform === 'darwin' ? 'pl-24 pr-4' : 'px-4'}`}
+        className={`flex min-h-11 flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-[#2B3547] bg-[#0E121A] py-1 ${window.api?.platform === 'darwin' ? 'pl-24 pr-4' : 'px-4'}`}
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
-        {/* Left: Branding & Active Project Moniker */}
-        <div
-          className="flex items-center space-x-3"
-          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-        >
-          <div className="w-5 h-5 bg-[#1A212E] border border-blue-500/60 rounded flex items-center justify-center font-mono font-bold text-xs text-blue-400">
-            V
-          </div>
-          <span className="text-xs font-bold tracking-wider text-slate-200 font-mono">
-            VISION AI STUDIO
-          </span>
-          <span className="text-xs text-slate-500">|</span>
-          <button type="button" onClick={() => setShowProjectPanel(true)} title="프로젝트 관리" className="group flex max-w-xs items-center gap-1.5 rounded border border-transparent px-2 py-1 text-xs text-slate-300 hover:border-[#3B536B] hover:bg-[#1B2B3F] hover:text-white">
-            <FolderKanban className="h-3.5 w-3.5 shrink-0 text-cyan-400" />
-            <span className="truncate font-semibold tracking-tight">{projectName}</span>
-            <ChevronDown className="h-3 w-3 shrink-0 text-slate-500 group-hover:text-cyan-300" />
+        <div className="flex flex-wrap items-center gap-2" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+          <span className="text-sm font-bold tracking-wide text-slate-100">Vision AI Studio</span>
+          <button type="button" onClick={() => setShowProjectPanel(true)} title={ko ? '프로젝트 관리' : 'Manage projects'} className={`group flex max-w-xs items-center gap-1.5 ${QUIET}`}>
+            <FolderKanban className="h-4 w-4 shrink-0 text-cyan-400" aria-hidden="true" />
+            <span className="truncate font-semibold">{projectName}</span>
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden="true" />
           </button>
-          {projectError && <button type="button" onClick={() => setShowProjectPanel(true)} title={projectError} className="max-w-[180px] truncate rounded border border-red-700/50 bg-red-950/30 px-2 py-1 text-[10px] text-red-300">프로젝트 오류 · 자세히</button>}
-        </div>
-
-        {/* Right: Hardware Annunciator LED, Daemon Port & Controls */}
-        <div
-          className="flex items-center space-x-3 text-xs"
-          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-        >
-          {/* Hardware Acceleration Annunciator LED */}
-          <div
-            className="flex items-center space-x-2 px-2.5 py-1 rounded bg-[#131822] border border-[#2B3547] text-xs font-mono"
-            title={`Compute Engine: ${hwDisplayName} | Mode: ${hwBadgeText}`}
-          >
-            {/* Physical-style LED with recessed dark bezel & optical ring */}
-            <div className="relative flex items-center justify-center w-3.5 h-3.5 rounded-full bg-[#0B0E14] border border-[#2B3547]">
-              <span
-                className={`w-2 h-2 rounded-full ${ledRingClass} transition-colors duration-75`}
-                style={{ backgroundColor: ledBgColor }}
-              />
-            </div>
-            <Cpu className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-slate-300 font-semibold tracking-wide">
-              {hwDisplayName}
-            </span>
-            <span
-              className={`text-[10px] px-1.5 py-0.2 rounded border font-mono font-bold tracking-tight ${hwBadgeStyle}`}
+          {projectError && <button type="button" onClick={() => setShowProjectPanel(true)} title={projectError} className="max-w-[220px] truncate rounded border border-red-700/60 bg-red-950/40 px-2.5 py-1.5 text-sm text-red-200">{ko ? '프로젝트 오류 · 자세히' : 'Project error · details'}</button>}
+          <label className="flex items-center gap-1.5 text-sm text-slate-300">
+            <span>{ko ? '실행 위치' : 'Run on'}</span>
+            <select
+              aria-label={ko ? '실행 위치' : 'Run on'}
+              value={selectedProfileId || ''}
+              disabled={!isLoaded || isLoading}
+              onChange={(event) => void selectTarget(event.target.value || null).catch(() => {})}
+              className={`max-w-[220px] ${CONTROL}`}
             >
-              {hwBadgeText}
+              <option value="">{localLabel}</option>
+              {selectedProfileId && !selectedProfile && <option value={selectedProfileId}>{ko ? `연결되지 않은 서버: ${selectedProfileId}` : `Unavailable server: ${selectedProfileId}`}</option>}
+              {profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
+            </select>
+          </label>
+          <button type="button" onClick={() => setShowComputePanel(true)} className={CONTROL}>{ko ? '서버 관리' : 'Servers'}</button>
+          {isLoading && <span className="text-sm text-slate-400">{ko ? '설정 확인 중…' : 'Checking…'}</span>}
+          {(loadError || error) && <span role="alert" className="max-w-[340px] truncate text-sm text-red-300" title={loadError || error || undefined}>{loadError || error}</span>}
+          {selectedProfileId && !loadError && (
+            <span className={`text-sm ${selectedProbe?.ready ? 'text-emerald-300' : 'text-amber-200'}`}>
+              {selectedProbe?.ready ? (ko ? `준비 완료 · ${selectedProbe.device_name || '장치 확인됨'}` : `Ready · ${selectedProbe.device_name || 'device verified'}`) : (ko ? '연결 검사 필요' : 'Connection check needed')}
             </span>
-          </div>
+          )}
+        </div>
 
-          {/* Backend Daemon Communication Port Monitor */}
-          <div className="flex items-center space-x-2 px-2.5 py-1 rounded bg-[#131822] border border-[#2B3547] font-mono">
-            <span
-              className={`w-2 h-2 rounded-full ${
-                isHealthy
-                  ? 'bg-emerald-500 ring-2 ring-emerald-500/30'
-                  : 'bg-amber-400 ring-2 ring-amber-400/30 animate-pulse'
-              }`}
-            />
-            <span className="text-slate-300">
-              {isHealthy ? `PORT:${backendStatus.port}` : 'CONNECTING...'}
-            </span>
-          </div>
-
-          <button type="button" onClick={() => setShowProvenance(true)} className="rounded border border-[#364357] px-2.5 py-1 text-slate-200 hover:bg-[#263246]">{language==='ko'?'데이터·판정 이력':'Data and verdict history'}</button>
-          {/* Industrial Bilingual Switcher */}
-          <button
-            type="button"
-            onClick={() => setLanguage(language === 'ko' ? 'en' : 'ko')}
-            className="flex items-center space-x-1 px-2.5 py-1 rounded bg-[#131822] hover:bg-[#1A212E] active:bg-[#252F42] border border-[#2B3547] text-slate-300 transition-colors duration-75 cursor-pointer font-mono"
-            title="Toggle Language (KR / EN)"
-          >
-            <Globe className="w-3.5 h-3.5 text-slate-400" />
-            <span className="font-bold">{language === 'ko' ? 'KR' : 'EN'}</span>
+        <div className="flex flex-wrap items-center gap-2" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+          <span role="status" className={`rounded border px-2.5 py-1 text-sm ${engineTone}`}>
+            {selectedProfileId ? (selectedProfile?.name || (ko ? '서버' : 'Server')) : localLabel} · {engineText}
+          </span>
+          <button type="button" onClick={() => setShowProvenance(true)} className={CONTROL}>{ko ? '데이터·판정 이력' : 'Data and verdict history'}</button>
+          <button type="button" aria-pressed={technicalDetails} onClick={() => setTechnicalDetails(!technicalDetails)} className={`${CONTROL} ${technicalDetails ? 'border-sky-500 bg-sky-950/60 text-sky-100' : ''}`}>
+            {ko ? '기술 상세' : 'Technical details'}
+          </button>
+          <button type="button" onClick={() => setLanguage(ko ? 'en' : 'ko')} className={CONTROL} aria-label={ko ? 'Switch to English' : '한국어로 전환'}>
+            {ko ? 'English' : '한국어'}
           </button>
         </div>
       </div>
 
-      {/* New jobs use this saved target; running jobs retain their own location. */}
-      <div className="flex min-h-9 items-center gap-2 border-b border-[#2B3547] bg-[#101722] px-4 text-[11px] font-mono">
-        <Server className="h-3.5 w-3.5 text-blue-400" />
-        <span className="font-bold text-slate-400">Compute:</span>
-        <select
-          aria-label="Compute location"
-          value={selectedProfileId || ''}
-          disabled={!isLoaded || isLoading}
-          onChange={(event) => void selectTarget(event.target.value || null).catch(() => {})}
-          className="max-w-[210px] rounded border border-[#364357] bg-[#0B0E14] px-2 py-1 text-[11px] text-slate-200 disabled:opacity-50"
-        >
-          <option value="">This computer</option>
-          {selectedProfileId && !selectedProfile && <option value={selectedProfileId}>Missing server: {selectedProfileId}</option>}
-          {profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
-        </select>
-        <button type="button" onClick={() => setShowComputePanel(true)} className="rounded border border-[#364357] px-2 py-1 text-slate-300 hover:bg-[#263246]">
-          서버 관리
-        </button>
-        {isLoading && <span className="text-slate-500">설정 확인 중...</span>}
-        {(loadError || error) && <span role="alert" className="max-w-[340px] truncate text-red-300" title={loadError || error || undefined}>{loadError || error}</span>}
-        {selectedProfileId && !loadError && (
-          <span className={selectedProbe?.ready ? 'text-emerald-400' : 'text-amber-300'}>
-            {selectedProbe?.ready ? `준비 완료 · ${selectedProbe.device_name || '장치 확인됨'}` : '연결 검사 필요'}
-          </span>
-        )}
-        {activeStep >= 4 && jobId && (
-          <span className="ml-auto rounded border border-[#364357] px-2 py-1 text-slate-300">
-            현재 모델 위치: <strong className="text-white">{resultLocation}</strong>
-          </span>
-        )}
-      </div>
-
-      {/* Main Navigation Row: Recipe Selector & Contiguous Segmented Process Bar */}
-      <div className="px-4 py-2 flex items-center justify-between bg-[#131822]">
-        {/* Left: Industrial Task Recipe Selector */}
-        <div className="flex items-center space-x-2">
-          <span className="px-1.5 py-0.5 rounded bg-[#0B0E14] border border-[#2B3547] text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider">
-            RECIPE:
-          </span>
-          <div className="relative flex items-center">
-            <div className="pointer-events-none absolute left-2.5 flex items-center text-blue-400">
-              <CurrentTaskIcon className="w-3.5 h-3.5" />
-            </div>
+      {/* Row 2: the inspection type and the six steps. Labels wrap on a narrow window instead of being cut off. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 bg-[#131822] px-4 py-2">
+        <label className="flex items-center gap-2 text-sm text-slate-300">
+          <span>{ko ? '검사 종류' : 'Inspection type'}</span>
+          <span className="relative flex items-center">
+            <span className="pointer-events-none absolute left-2.5 flex items-center text-blue-400"><CurrentTaskIcon className="h-4 w-4" aria-hidden="true" /></span>
             <select
               aria-label="검사 작업 종류"
               aria-describedby={taskError ? 'task-change-error' : undefined}
               value={task}
               disabled={isProjectBusy}
               onChange={(e) => changeTask(e.target.value as VisionTask)}
-              className="bg-[#0B0E14] hover:bg-[#161C26] border border-[#2B3547] hover:border-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 text-xs font-mono font-semibold rounded pl-8 pr-8 py-1.5 text-slate-200 transition-colors duration-75 cursor-pointer appearance-none"
+              className={`appearance-none pl-8 pr-8 font-semibold ${CONTROL}`}
             >
               {tasks.map((t) => (
-                <option key={t.id} value={t.id} className="bg-[#131822] text-slate-200 py-1">
-                  [{t.code}] {language === 'ko' ? t.labelKo : t.labelEn}
-                </option>
+                <option key={t.id} value={t.id} className="bg-[#131822] text-slate-200">{ko ? t.labelKo : t.labelEn}</option>
               ))}
             </select>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400 pointer-events-none absolute right-2.5" />
-          </div>
-        </div>
+            <ChevronDown className="pointer-events-none absolute right-2.5 h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+          </span>
+        </label>
 
-        {/* Right: Contiguous 6-Stage Segmented Process Bar */}
-        <nav
-          className="inline-flex items-stretch bg-[#0B0E14] border border-[#2B3547] rounded overflow-hidden select-none"
-          aria-label="Workflow Stages"
-        >
+        <nav className="flex flex-wrap items-stretch overflow-hidden rounded border border-[#2B3547] bg-[#0B0E14]" aria-label={ko ? '작업 단계' : 'Work steps'}>
           {steps.map((s) => {
             const Icon = s.icon;
             const isActive = activeStep === s.num;
             const isPrevious = activeStep > s.num;
-
             return (
               <button
                 key={s.num}
                 type="button"
+                aria-current={isActive ? 'step' : undefined}
                 onClick={() => setStep(s.num as 1 | 2 | 3 | 4 | 5 | 6)}
-                className={`relative flex items-center space-x-2 px-3.5 py-1.5 text-xs transition-colors duration-75 cursor-pointer border-r border-[#2B3547] last:border-r-0 ${
+                className={`relative flex min-h-9 items-center gap-2 border-r border-[#2B3547] px-3.5 py-1.5 text-sm transition-colors duration-75 last:border-r-0 ${
                   isActive
-                    ? 'bg-[#1A212E] text-white font-bold shadow-[inset_0_2px_0_0_#10B981]'
+                    ? 'bg-[#1A212E] font-bold text-white shadow-[inset_0_3px_0_0_#10B981]'
                     : isPrevious
-                    ? 'bg-[#131822] hover:bg-[#1A212E] text-slate-200'
-                    : 'bg-[#0E121A] hover:bg-[#151C27] text-slate-400'
+                    ? 'bg-[#131822] text-slate-200 hover:bg-[#1A212E]'
+                    : 'bg-[#0E121A] text-slate-300 hover:bg-[#151C27]'
                 }`}
               >
-                {/* Tabular Stage Number */}
-                <span
-                  className={`font-mono tabular-nums text-[11px] font-bold ${
-                    isActive
-                      ? 'text-[#10B981]'
-                      : isPrevious
-                      ? 'text-slate-300'
-                      : 'text-slate-500'
-                  }`}
-                >
-                  {String(s.num).padStart(2, '0')}
-                </span>
-
-                {/* Stage Icon */}
-                <Icon
-                  className={`w-3.5 h-3.5 ${
-                    isActive
-                      ? 'text-[#10B981]'
-                      : isPrevious
-                      ? 'text-slate-300'
-                      : 'text-slate-500'
-                  }`}
-                />
-
-                {/* Stage Label */}
-                <span className="whitespace-nowrap font-medium">
-                  {language === 'ko' ? s.nameKo : s.nameEn}
-                </span>
-
+                <span className={`font-mono tabular-nums ${isActive ? 'text-[#10B981]' : 'text-slate-400'}`}>{s.num}</span>
+                <Icon className={`h-4 w-4 ${isActive ? 'text-[#10B981]' : 'text-slate-400'}`} aria-hidden="true" />
+                <span className="font-medium">{ko ? s.nameKo : s.nameEn}</span>
               </button>
             );
           })}
         </nav>
+
+        {activeStep >= 4 && jobId && (
+          <span className="rounded border border-[#364357] px-2.5 py-1 text-sm text-slate-300">
+            {ko ? '현재 모델 위치' : 'Current model location'}: <strong className="text-white">{resultLocation}</strong>
+          </span>
+        )}
       </div>
-      {taskError && <p id="task-change-error" role="alert" className="border-t border-rose-900/50 bg-rose-950/30 px-4 py-2 text-xs text-rose-200">{taskError}</p>}
+
+      {/* Technical row: only when asked for. The same facts the support bundle reports. */}
+      {technicalDetails && (
+        <dl className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-[#2B3547] bg-[#0E121A] px-4 py-1.5 font-mono text-sm text-slate-300" aria-label={ko ? '기술 상세' : 'Technical details'}>
+          <div className="flex gap-1.5"><dt className="text-slate-400">{ko ? '백엔드 포트' : 'Backend port'}</dt><dd>{isHealthy ? backendStatus.port : '—'}</dd></div>
+          <div className="flex gap-1.5"><dt className="text-slate-400">{ko ? '장치' : 'Device'}</dt><dd>{rawDevice || '—'}{backendStatus.deviceName ? ` · ${backendStatus.deviceName}` : ''}</dd></div>
+          <div className="flex gap-1.5"><dt className="text-slate-400">{ko ? '가속' : 'Acceleration'}</dt><dd>{!isHealthy ? (ko ? '연결 안 됨' : 'offline') : isAccelerated ? (ko ? '사용' : 'on') : (ko ? '없음 (CPU)' : 'none (CPU)')}</dd></div>
+          {selectedProbe?.device_name && <div className="flex gap-1.5"><dt className="text-slate-400">{ko ? '서버 장치' : 'Server device'}</dt><dd>{selectedProbe.device_name}</dd></div>}
+        </dl>
+      )}
+      {taskError && <p id="task-change-error" role="alert" className="border-t border-rose-900/50 bg-rose-950/30 px-4 py-2 text-sm text-rose-200">{taskError}</p>}
       {showComputePanel && <ComputeServerPanel onClose={() => setShowComputePanel(false)} />}
       {showProjectPanel && <ProjectWorkspaceDialog onClose={() => setShowProjectPanel(false)} />}
       {showProvenance && <ProvenancePanel onClose={() => setShowProvenance(false)} />}

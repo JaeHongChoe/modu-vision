@@ -42,7 +42,7 @@ export const WizardFooter = () => {
       </div>
       <button className="workspace-button" aria-expanded={expanded} onClick={()=>setExpanded(value=>!value)}>입력 상세</button>
       <StatusBadge tone={readiness.status==='ready'?'success':readiness.status==='blocked'?'warning':'neutral'}>{labels[readiness.status]}</StatusBadge>
-      <AsyncAction className="border-sky-500 bg-sky-900/50" aria-label={`권장 행동: ${readiness.nextAction.label}`} onClick={()=>void action()}>{readiness.nextAction.label}</AsyncAction>
+      <AsyncAction className="workspace-button--primary" aria-label={`권장 행동: ${readiness.nextAction.label}`} onClick={()=>void action()}>{readiness.nextAction.label}</AsyncAction>
       <button className="workspace-button" disabled={activeStep===6} onClick={()=>move(activeStep+1)} title="Alt+→">다음 단계 보기<ArrowRight className="ml-1 inline h-3 w-3"/></button>
     </div>
   </footer>;

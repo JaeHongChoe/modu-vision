@@ -108,10 +108,22 @@ function rememberUserLanguage(storage: Pick<Storage, 'setItem'> | undefined, lan
   catch { /* Keep the choice for this session when persistence is unavailable. */ }
 }
 
+// Port, device and hash readouts stay behind this switch; a first-time user sees plain words by default.
+const TECHNICAL_KEY = 'modu:technical-details:v1';
+function readTechnicalDetails(storage?: Pick<Storage, 'getItem'>): boolean {
+  try { return storage?.getItem(TECHNICAL_KEY) === '1'; }
+  catch { return false; }
+}
+function rememberTechnicalDetails(storage: Pick<Storage, 'setItem'> | undefined, value: boolean): void {
+  try { storage?.setItem(TECHNICAL_KEY, value ? '1' : '0'); }
+  catch { /* Keep the choice for this session when persistence is unavailable. */ }
+}
+
 interface ProjectState {
   activeStep: WizardStep;
   task: VisionTask;
   language: Language;
+  technicalDetails: boolean;
   backendPort: number | null;
   backendStatus: BackendStatus;
   activeError: ErrorCatalogItem | null;
@@ -123,6 +135,7 @@ interface ProjectState {
   projectError: string | null;
 
   setStep: (step: WizardStep) => Promise<void>;
+  setTechnicalDetails: (value: boolean) => void;
   openImageForLabeling: (imageId: string, filePath: string, expected?:{imageSha256:string;revision:number;isCurrent?:()=>boolean}) => Promise<boolean>;
   /** Changes the project task; the outcome always names the task that is actually active. */
   updateTask: (task: VisionTask) => Promise<TaskChangeOutcome>;
@@ -278,6 +291,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   activeStep: 1,
   task: 'classification',
   language: readUserLanguage(viewStorage()),
+  technicalDetails: readTechnicalDetails(viewStorage()),
   backendPort: null,
   backendStatus: { port: null, healthy: false, pid: null },
   activeError: null,
@@ -423,6 +437,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   setTask: (task) => get().updateTask(task),
 
   setLanguage: (language) => { rememberUserLanguage(viewStorage(), language); set({ language }); },
+  setTechnicalDetails: (technicalDetails) => { rememberTechnicalDetails(viewStorage(), technicalDetails); set({ technicalDetails }); },
   setBackendStatus: (status) => {
     setCachedPort(status.port);
     set({ backendStatus: status, backendPort: status.port });

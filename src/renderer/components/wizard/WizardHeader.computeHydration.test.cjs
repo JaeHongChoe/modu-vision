@@ -49,7 +49,7 @@ async function scenario(run){
   '../compute/ComputeServerPanel':{ComputeServerPanel:'ComputeServerPanel'},'./ProjectWorkspaceDialog':{ProjectWorkspaceDialog:'ProjectWorkspaceDialog'},
   '../common/ProvenancePanel':{ProvenancePanel:'ProvenancePanel'},'./TaskChangeImpactDialog':{TaskChangeImpactDialog:'TaskChangeImpactDialog',taskPreviewScope:()=>''},
  }).WizardHeader;
- const render=()=>lifecycle.render(Header),selector=tree=>nodes(tree).find(node=>node.type==='select'&&node.props['aria-label']==='Compute location');
+ const render=()=>lifecycle.render(Header),selector=tree=>nodes(tree).find(node=>node.type==='select'&&['Compute location','Run on','실행 위치'].includes(node.props['aria-label']));
  const flush=async()=>{await tick();await tick();};
  const clearForLogin=()=>{signedIn=true;api.setSharedApiBase(origin);api.setProjectContext(null);compute.resetComputeTransportCache();};
  const accept=async(actor,nextProfile)=>{active=context(actor);profile=nextProfile;const current=await api.api.project.getCurrent();api.api.project.acceptContext(current);compute.resetComputeTransportCache();};

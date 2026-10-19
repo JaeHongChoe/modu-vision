@@ -88,7 +88,7 @@ test('browser account login automatically hydrates the mounted Header and accoun
       page.on('response', responseSeen);
       page.on('framenavigated', navigationSeen);
       await page.goto(server.origin);
-      const target = page.getByLabel('Compute location', {exact: true});
+      const target = page.getByLabel('실행 위치', {exact: true});
       // Drain the original finite retry budget before login. A surviving old
       // 401 retry must not accidentally make the unpatched Header look fixed.
       // Source contract: initial attempt + four retries at 500/1000/1500/2000ms.
