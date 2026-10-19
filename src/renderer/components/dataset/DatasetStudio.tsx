@@ -34,6 +34,7 @@ import {DatasetStatisticsPanel} from './DatasetStatisticsPanel';
 import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
 import { SimpleViewFold } from '../common/SimpleViewFold';
 import { BrowserFolderPathInput } from './BrowserFolderPathInput';
+import { ImportTaskSwitch } from './ImportTaskSwitch';
 import { JargonTooltip } from '../common/JargonTooltip';
 import { GuardrailBanner } from '../common/GuardrailBanner';
 import { classDistributionStats } from './classDistribution';
@@ -721,6 +722,7 @@ export const DatasetStudio: React.FC = () => {
             <div role="alert" className="m-4 mb-0 p-3 bg-red-950/30 border border-red-500/40 rounded text-xs text-red-200">
               <div className="font-semibold mb-1">{language === 'ko' ? '데이터셋을 불러오지 못했습니다' : 'Could not import dataset'}</div>
               <div>{importError}</div>
+              <ImportTaskSwitch error={importError} folder={folderPath} onImport={(folder, nextTask) => importFolder(folder, nextTask, undefined, false)} />
             </div>
           )}
           {imageOpenError && (
