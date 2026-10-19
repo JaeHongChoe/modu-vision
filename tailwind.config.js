@@ -76,6 +76,8 @@ module.exports = {
           'monospace',
         ],
         sans: [
+          'Pretendard Variable',
+          'Pretendard',
           'Inter',
           '-apple-system',
           'BlinkMacSystemFont',

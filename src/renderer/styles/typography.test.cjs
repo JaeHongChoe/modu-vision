@@ -35,3 +35,8 @@ test('workspace tokens keep a 14px body and 36px controls',()=>{
  assert.match(tokens,/--workspace-font-body:\s*\.875rem/);
  assert.match(tokens,/\.workspace-button\s*\{[^}]*min-height:\s*2\.25rem/);
 });
+
+test('the Tailwind sans stack starts with the bundled Korean face, so font-sans does not override it',()=>{
+ const config=fs.readFileSync(path.resolve(__dirname,'..','..','..','tailwind.config.js'),'utf8');
+ assert.match(config,/sans:\s*\[\s*'Pretendard Variable',\s*'Pretendard',/);
+});
