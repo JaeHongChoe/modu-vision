@@ -7,7 +7,9 @@
   font-family: 'Pretendard Variable';
   font-weight: 45 920;
   font-style: normal;
-  font-display: swap;
+  /* optional: the face is used when it is ready at first paint (a local file or a warm cache) and never swapped in
+     after text has rendered, so nothing a user or a test has already measured moves. */
+  font-display: optional;
   src: local('Pretendard Variable'), url('/fonts/PretendardStdVariable.woff2') format('woff2-variations');
 }
 

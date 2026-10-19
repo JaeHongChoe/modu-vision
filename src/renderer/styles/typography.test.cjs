@@ -24,11 +24,11 @@ test('the document is Korean and the font stack names Korean faces',()=>{
  assert.match(css,/font-family:[^;]*(Pretendard|Apple SD Gothic Neo|Malgun Gothic|Noto Sans KR)/);
 });
 
-test('the bundled Korean font ships with its licence and is declared with font-display swap',()=>{
+test('the bundled Korean font ships with its licence and is declared with font-display optional (no swap after first paint)',()=>{
  const fonts=path.resolve(__dirname,'../../../public/fonts');
  assert.ok(fs.existsSync(path.join(fonts,'PretendardStdVariable.woff2')),'font file missing');
  assert.match(fs.readFileSync(path.join(fonts,'PRETENDARD-LICENSE.txt'),'utf8'),/SIL Open Font License, Version 1\.1/);
- assert.match(css,/@font-face\s*\{[^}]*Pretendard Variable[^}]*font-display:\s*swap[^}]*PretendardStdVariable\.woff2/s);
+ assert.match(css,/@font-face\s*\{[^}]*Pretendard Variable[^}]*font-display:\s*optional[^}]*PretendardStdVariable\.woff2/s);
 });
 
 test('workspace tokens keep a 14px body and 36px controls',()=>{
