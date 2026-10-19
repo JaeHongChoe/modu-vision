@@ -16,7 +16,7 @@ async function canvasSourceCentres(page:Page,rasterPan={x:0,y:0}){
  return page.locator('[data-canvas-container]').evaluate((container,rasterPan)=>{
   const canvas=container.querySelector('canvas'),hud=document.querySelector('[data-testid="canvas-hud"]') as HTMLElement|null;
   const rect=container.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
-  const scale=Number(hud?.innerText.match(/scale\s*([\d.]+)\s*%/)?.[1]||0)/100;
+  const scale=Number(hud?.innerText.match(/배율\s*([\d.]+)\s*%/)?.[1]||0)/100;
   if(!canvas||!scale)return null;
   const ctx=canvas.getContext('2d');if(!ctx)return null;
   const x0=(rect.width-64*scale)/2+rasterPan.x,y0=(rect.height-64*scale)/2+rasterPan.y;

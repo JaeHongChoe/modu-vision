@@ -87,7 +87,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  const project=await value('/api/project/create',{name:'Owned vector service failure and stage handoff',task:'segmentation'});
  await value('/api/project/update',{source_dataset_dir:source},'PUT');await value('/api/dataset/import',{folder_path:source,task:'segmentation'});
  await page.reload();await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);await enter();
- await expect.poll(async()=>Number((await page.getByTestId('canvas-hud').innerText()).match(/scale\s*([\d.]+)\s*%/)?.[1]||0)).toBeGreaterThan(100);
+ await expect.poll(async()=>Number((await page.getByTestId('canvas-hud').innerText()).match(/배율\s*([\d.]+)\s*%/)?.[1]||0)).toBeGreaterThan(100);
  const current=await value('/api/project/current'),query=`/api/annotations/part?file_path=${encodeURIComponent(imagePath)}`;
  const metadataQuery='/api/dataset/metadata/image?image_path='+encodeURIComponent(imagePath);
  const metadata=await value(metadataQuery);expect(metadata.image_uuid).toBeTruthy();

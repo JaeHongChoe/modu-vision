@@ -101,7 +101,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
   if(await focus.getAttribute('aria-pressed')!=='true')await focus.click();
  };
  await enter();
- await expect.poll(async()=>Number((await page.getByTestId('canvas-hud').innerText()).match(/scale\s*([\d.]+)\s*%/)?.[1]||0)).toBeGreaterThan(100);
+ await expect.poll(async()=>Number((await page.getByTestId('canvas-hud').innerText()).match(/배율\s*([\d.]+)\s*%/)?.[1]||0)).toBeGreaterThan(100);
  await expect(page.getByText('1 / 1',{exact:true})).toBeVisible();
  const preludeWrites=writes.slice();
  // Native fixture setup uses the existing renderer fetch transport; the browser

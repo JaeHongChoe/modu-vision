@@ -117,7 +117,7 @@ test('native independent direction rejects invalid values and persists an intent
   await io.value('/api/project/update',{source_dataset_dir:source},'PUT');await io.value('/api/dataset/import',{folder_path:source,task:'segmentation',validate_images:true});
   await io.settle();await page.reload();await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);
   await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(1).click();await page.getByRole('button',{name:'집중 편집',exact:true}).click();
-  await expect.poll(async()=>Number((await page.getByTestId('canvas-hud').innerText()).match(/scale\s*([\d.]+)\s*%/)?.[1]||0)).toBeGreaterThan(100);
+  await expect.poll(async()=>Number((await page.getByTestId('canvas-hud').innerText()).match(/배율\s*([\d.]+)\s*%/)?.[1]||0)).toBeGreaterThan(100);
   await page.getByTitle('실제 크기 (1:1)',{exact:true}).click();await expect(page.getByTestId('canvas-hud')).toContainText('100%');
   const point=async(x:number,y:number)=>{const b=await page.locator('[data-canvas-container]').boundingBox();expect(b).not.toBeNull();return{x:b!.x+(b!.width-256)/2+x,y:b!.y+(b!.height-256)/2+y};};
   const drag=async(x1:number,y1:number,x2:number,y2:number)=>{const a=await point(x1,y1),b=await point(x2,y2);await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(b.x,b.y,{steps:8});await page.mouse.up();};
@@ -271,9 +271,9 @@ async function directionHandoffExercise(page:Page,w:Workspace,e:Evidence,origin:
    },undefined,{timeout:10_000});
    await page.getByTitle('실제 크기 (1:1)',{exact:true}).click();await page.getByRole('button',{name:/^Crack(?: \d+)?$/}).click();
    await page.getByTitle('회전 바운딩 박스 (Rotated BBox OBB - 3)',{exact:true}).click();
-   await expect(page.getByTestId('canvas-hud')).toContainText(/VIEW\s*scale\s*100\s*%/,{timeout:10_000});
+   await expect(page.getByTestId('canvas-hud')).toContainText(/보기\s*배율\s*100\s*%/,{timeout:10_000});
    await page.evaluate(()=>new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve()))));
-   await expect(page.getByTestId('canvas-hud')).toContainText(/VIEW\s*scale\s*100\s*%/,{timeout:10_000});
+   await expect(page.getByTestId('canvas-hud')).toContainText(/보기\s*배율\s*100\s*%/,{timeout:10_000});
   })(),frame,'loaded original pixels and stable 1:1');
   const box=await page.locator('[data-canvas-container]').boundingBox();expect(box).not.toBeNull();
   const point=(x:number,y:number)=>({x:box!.x+(box!.width-256)/2+x,y:box!.y+(box!.height-256)/2+y});const from=point(70,150),to=point(150,190);

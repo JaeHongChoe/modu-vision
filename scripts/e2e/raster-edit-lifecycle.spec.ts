@@ -310,7 +310,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  if(url)await page.goto(url);else await page.reload();await enter();
  await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);
  await expect(page.getByText('1 / 1',{exact:true})).toBeVisible();
- await expect.poll(async()=>Number((await page.getByTestId('canvas-hud').innerText()).match(/scale\s*([\d.]+)\s*%/)?.[1]||0)).toBeGreaterThan(100);
+ await expect.poll(async()=>Number((await page.getByTestId('canvas-hud').innerText()).match(/배율\s*([\d.]+)\s*%/)?.[1]||0)).toBeGreaterThan(100);
  const current=await value('/api/project/current');expect(current.id).toBe(project.id);expect(current.source_dataset_dir).toBe(source);
  assertOwnedProjectDirectory(current.project_dir,ownedRoot);
  const query='/api/annotations/part?file_path='+encodeURIComponent(imagePath),metadataQuery='/api/dataset/metadata/image?image_path='+encodeURIComponent(imagePath);

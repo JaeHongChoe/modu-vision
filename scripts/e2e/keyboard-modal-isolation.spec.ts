@@ -17,7 +17,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Api,
  await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText(project.name);
  await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(1).click();
  await page.getByRole('button',{name:'집중 편집',exact:true}).click();
- await expect.poll(async()=>Number((await page.getByTestId('canvas-hud').innerText()).match(/scale\s*([\d.]+)\s*%/)?.[1]||0)).toBeGreaterThan(100);
+ await expect.poll(async()=>Number((await page.getByTestId('canvas-hud').innerText()).match(/배율\s*([\d.]+)\s*%/)?.[1]||0)).toBeGreaterThan(100);
  await page.getByTitle('실제 크기 (1:1)',{exact:true}).click();await expect(page.getByTestId('canvas-hud')).toContainText('100%');
  await page.getByTitle('바운딩 박스 (BBox - 2)',{exact:true}).click();
  const bounds=(await page.locator('[data-canvas-container]').boundingBox())!;

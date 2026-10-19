@@ -17,7 +17,7 @@ async function exercise(page:Page,workspace:Workspace,evidence:Evidence,api:Owne
  await expect(page.getByTitle('프로젝트 관리',{exact:true})).toContainText('Vector content fixture');
  await page.getByRole('navigation',{name:'Workflow Stages'}).getByRole('button').nth(1).click();await page.getByRole('button',{name:'집중 편집',exact:true}).click();
  // Wait for the actual source decode and focus-layout Fit before requesting 1:1.
- await expect.poll(async()=>Number((await page.getByTestId('canvas-hud').innerText()).match(/scale\s*([\d.]+)\s*%/)?.[1]||0)).toBeGreaterThan(100);
+ await expect.poll(async()=>Number((await page.getByTestId('canvas-hud').innerText()).match(/배율\s*([\d.]+)\s*%/)?.[1]||0)).toBeGreaterThan(100);
  await page.getByTitle('실제 크기 (1:1)',{exact:true}).click();
  await expect(page.getByTestId('canvas-hud')).toContainText('100%');
  const point=async(x:number,y:number)=>{const b=(await page.locator('[data-canvas-container]').boundingBox())!;return{x:b.x+(b.width-256)/2+x,y:b.y+(b.height-256)/2+y};};
@@ -123,7 +123,7 @@ test('native OBB angle and independent direction nudge stay owned through A B A 
   const response=await inspectResponse(await labels,owner,owner.context);expect(response.response.metadata.file_path).toBe(owner.image);expect(response.response.metadata.content_hash).toBe(owner.sha256);
   await expect(page.getByText('기존 라벨을 불러오는 중입니다.',{exact:true})).toHaveCount(0);await expect(page.getByText(/기존 라벨 조회 실패:/)).toHaveCount(0);
   // Keep the original real decode/layout gate before requesting 1:1.
-  await expect.poll(async()=>Number((await page.getByTestId('canvas-hud').innerText()).match(/scale\s*([\d.]+)\s*%/)?.[1]||0),{timeout:10_000}).toBeGreaterThan(100);
+  await expect.poll(async()=>Number((await page.getByTestId('canvas-hud').innerText()).match(/배율\s*([\d.]+)\s*%/)?.[1]||0),{timeout:10_000}).toBeGreaterThan(100);
   await page.getByTitle('실제 크기 (1:1)',{exact:true}).click();await expect(page.getByTestId('canvas-hud')).toContainText('100%');proof.visits.push({project:opened,context:owner.context,annotation_response:response});return response.response;
  };
  const select=async()=>{await expect(page.getByTitle('라벨 삭제',{exact:true})).toHaveCount(1);await page.getByTitle('라벨 삭제',{exact:true}).locator('..').locator('..').click();};
