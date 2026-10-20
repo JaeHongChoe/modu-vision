@@ -700,6 +700,12 @@ export const EvaluationStudio: React.FC = () => {
                 {calibrationMessage}
               </div>
             )}
+            {/* Where the threshold applies: export uses it at once; a flow node uses it only after "이 값 쓰기" in step 5. */}
+            <p className="text-[11px] text-slate-400">
+              {language === 'ko'
+                ? "적용한 기준 점수는 단일 모델 내보내기에 바로 쓰입니다. 검사 흐름에는 5단계 노드의 '이 값 쓰기'로 넣으세요. 이미 저장·승인한 흐름은 저절로 바뀌지 않습니다."
+                : 'An applied threshold is used by single-model export at once; add it to a flow with "Use this value" on the step 5 node. Saved or approved flows never change by themselves.'}
+            </p>
           </div>
 
           {/* Primary Metric KPI Cards */}

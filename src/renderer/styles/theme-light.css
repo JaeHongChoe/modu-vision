@@ -21,7 +21,7 @@ html[data-theme="light"] .workspace-badge[data-tone="danger"] { background: #FEE
 html[data-theme="light"] .workspace-badge[data-tone="info"] { background: #E0F2FE; }
 html[data-theme="light"] .workspace-field :is(input, select, textarea) { border-color: #94A3B8; }
 html[data-theme="light"] .flow-canvas-grid { --flow-grid-line: #E2E8F0; }
-html[data-theme="light"] .text-slate-400 { color: #475569; } /* 748 */
+html[data-theme="light"] .text-slate-400 { color: #475569; } /* 750 */
 html[data-theme="light"] .text-slate-300 { color: #334155; } /* 358 */
 html[data-theme="light"] .border-\[\#2B3547\] { border-color: #CBD5E1; } /* 331 */
 html[data-theme="light"] .border-slate-600 { border-color: #CBD5E1; } /* 285 */
@@ -49,8 +49,8 @@ html[data-theme="light"] .text-rose-300 { color: #BE123C; } /* 44 */
 html[data-theme="light"] .bg-\[\#0B1520\] { background-color: #E4EDF6; } /* 42 */
 html[data-theme="light"] .text-cyan-400 { color: #0E7490; } /* 38 */
 html[data-theme="light"] .border-amber-700 { border-color: #fcd34d; } /* 33 */
+html[data-theme="light"] .border-cyan-700 { border-color: #67e8f9; } /* 33 */
 html[data-theme="light"] .text-sky-200 { color: #0369A1; } /* 33 */
-html[data-theme="light"] .border-cyan-700 { border-color: #67e8f9; } /* 32 */
 html[data-theme="light"] .text-red-200 { color: #B91C1C; } /* 31 */
 html[data-theme="light"] .bg-slate-950 { background-color: #F8FAFC; } /* 29 */
 html[data-theme="light"] .text-\[\#10B981\] { color: #0A7A55; } /* 29 */
@@ -65,7 +65,7 @@ html[data-theme="light"] .border-\[\#364357\] { border-color: #CBD5E1; } /* 23 *
 html[data-theme="light"] .text-\[\#EF4444\] { color: #8D0C0C; } /* 22 */
 html[data-theme="light"] .bg-\[\#101722\] { background-color: #E7ECF4; } /* 21 */
 html[data-theme="light"] .bg-amber-950\/30 { background-color: #fef3c7; } /* 21 */
-html[data-theme="light"] .text-cyan-100 { color: #0E7490; } /* 18 */
+html[data-theme="light"] .text-cyan-100 { color: #0E7490; } /* 19 */
 html[data-theme="light"] .bg-\[\#111C2A\] { background-color: #E6ECF5; } /* 17 */
 html[data-theme="light"] .text-blue-300 { color: #1D4ED8; } /* 17 */
 html[data-theme="light"] .bg-slate-700 { background-color: #E2E8F0; } /* 16 */

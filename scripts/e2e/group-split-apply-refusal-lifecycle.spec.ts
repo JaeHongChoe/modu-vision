@@ -143,7 +143,7 @@ function statistics(images: Workspace['images'], source: string, assignments: Re
     const file = path.join(source, relative), label = relative.split('/')[0], split = assignments[relative];
     expect(['train', 'val', 'test']).toContain(split);
     return {image_id: path.basename(file, '.png'), file_name: path.basename(file), file_path: file, relative_path: relative,
-      labels: [label], label, label_status: 'labeled', split, thumbnail_url: `/api/dataset/thumbnail/${path.basename(file)}?file_path=${file}`};
+      labels: [label], label, class_source: 'folder', folder_label: label, label_status: 'labeled', split, thumbnail_url: `/api/dataset/thumbnail/${path.basename(file)}?file_path=${file}`};
   });
   const counts = Object.fromEntries(['train', 'val', 'test', 'not_used', 'not_split'].map(part => [part, {count: items.filter(row => row.split === part).length, ratio: items.filter(row => row.split === part).length / 2}]));
   return {total: 2, labeling: {labeled: {count: 2, ratio: 1}, unlabeled: {count: 0, ratio: 0}}, assignments: counts,

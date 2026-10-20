@@ -45,6 +45,7 @@ import { FlowEvaluationPanel } from './FlowEvaluationPanel';
 import { FlowGraphNavigator } from './FlowGraphNavigator';
 import { FlowInspectorPanel } from './FlowInspectorPanel';
 import { WorkflowImpactPanel } from '../common/WorkflowImpactPanel';
+import { ModelThresholdHint } from './ModelThresholdHint';
 import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
 import {FlowEditorWorkspace, flowWorkspaceIdentity, type FlowWorkspaceTab} from './FlowEditorWorkspace';
 import {FlowRecipeDialog} from './FlowRecipeDialog';
@@ -1784,6 +1785,10 @@ export const FlowchartStudio: React.FC = () => {
                       }}
                       className="w-full bg-[#1A212E] rounded p-2"
                     />
+                    {selectedNode.data.model_job_id && selectedNode.data.score_spec?.domain !== 'distance' && (
+                      <ModelThresholdHint jobId={selectedNode.data.model_job_id} current={selectedNode.data.threshold ?? 0.5}
+                        disabled={graphEditingDisabled} onUse={value => updateNodeData(selectedNode.id, thresholdUpdate(selectedNode.data, value))} />
+                    )}
                   </div>
                 )}
 
