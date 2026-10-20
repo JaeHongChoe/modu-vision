@@ -27,6 +27,13 @@ export const RELIABLE_TEST_IMAGES = 30;
 const NORMAL = new Set(['ok', 'good', 'normal', 'pass', '정상', '양품', '합격']);
 const name = (value: string) => value.trim().toLowerCase();
 
+/** Test images of normal-looking and defect classes, by class name (the approval rule counts confirmed OK and NG). */
+export function roleTestCounts(classSplitCounts: Record<string, { test: number }>): { normal: number; defect: number } {
+  const roles = Object.entries(classSplitCounts);
+  return { normal: roles.filter(([cls]) => NORMAL.has(name(cls))).reduce((sum, [, counts]) => sum + counts.test, 0),
+    defect: roles.filter(([cls]) => !NORMAL.has(name(cls))).reduce((sum, [, counts]) => sum + counts.test, 0) };
+}
+
 export function importChecks(input: ImportCheckInput): ImportCheck[] {
   const checks: ImportCheck[] = [];
   if (input.totalImages <= 0) {
@@ -75,9 +82,7 @@ export function importChecks(input: ImportCheckInput): ImportCheck[] {
       text: `시험 이미지가 ${input.split.test}장뿐입니다. 한 장마다 정확도가 ${(100 / input.split.test).toFixed(0)}%p씩 움직여 결과가 크게 흔들립니다 (${RELIABLE_TEST_IMAGES}장 이상 권장).` });
   }
   if (splitKnown && input.task === 'classification' && input.classSplitCounts) {
-    const roles = Object.entries(input.classSplitCounts);
-    const normal = roles.filter(([cls]) => NORMAL.has(name(cls))).reduce((sum, [, counts]) => sum + counts.test, 0);
-    const defect = roles.filter(([cls]) => !NORMAL.has(name(cls))).reduce((sum, [, counts]) => sum + counts.test, 0);
+    const { normal, defect } = roleTestCounts(input.classSplitCounts);
     if (normal < APPROVAL_TEST_IMAGES_PER_ROLE || defect < APPROVAL_TEST_IMAGES_PER_ROLE) {
       checks.push({ id: 'approval', level: 'warn',
         text: `현장 적용 승인에는 정상·불량 시험 이미지가 각각 ${APPROVAL_TEST_IMAGES_PER_ROLE}장 이상 필요합니다 (지금 정상 ${normal} · 불량 ${defect}).` });

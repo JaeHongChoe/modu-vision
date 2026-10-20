@@ -895,22 +895,32 @@ def review_row(run_id: str, payload: ReviewRow, request: Request):
 def export_run(run_id: str, request: Request, format: Literal["csv", "json"] = Query("csv")):
     with _store(request, run_id) as conn:
         run = _read_run(conn, run_id)
+        stamps = {item["image_path"]: item["updated_at"] for item in
+                  conn.execute("SELECT image_path, updated_at FROM rows WHERE run_id = ?", (run_id,)).fetchall()}
     if format == "json":
         return {"format": "json", "filename": f"inspection-{run_id}.json",
                 "content": json.dumps(run, ensure_ascii=False, indent=2)}
     output = io.StringIO()
     writer = csv.writer(output)
+    # The last five columns came later (audit F-19/B2); they are appended so existing column positions stay.
     writer.writerow(["run_id", "saved_version_id", "pipeline_hash", "model_sha256", "image_sha256", "image_path",
                      "image_id", "split", "model_state", "model_verdict", "operator_verdict",
-                     "reviewer", "review_reason", "error"])
+                     "reviewer", "review_reason", "error",
+                     "defect_score", "inspected_at", "execution_device", "device_name", "latency_ms"])
     for row in run["rows"]:
         latest = row["review"] or {}
         original = row["result"] or {}
+        scores = [crop.get("defect_score") for crop in original.get("crops") or []
+                  if isinstance(crop.get("defect_score"), (int, float))]
+        judged = row["state"] in {"OK", "NG", "REVIEW"}
         writer.writerow([_csv_cell(value) for value in [
             run_id, run["saved_version_id"], run["pipeline_hash"], _canonical_json(run["model_sha256"]),
             row["image_sha256"],
             row["image"]["file_path"], row["image"]["image_id"], row["image"].get("split"),
             row["state"], original.get("final_verdict"), latest.get("final_verdict"),
             latest.get("reviewer"), latest.get("reason"), row["error"],
+            # The highest region score is what decided an NG; blank when the image was not judged.
+            max(scores) if scores else None, stamps.get(row["image"]["file_path"]) if judged else None,
+            original.get("execution_device"), original.get("device_name"), original.get("total_latency_ms"),
         ]])
     return {"format": "csv", "filename": f"inspection-{run_id}.csv", "content": output.getvalue()}

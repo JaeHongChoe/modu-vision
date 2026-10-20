@@ -190,6 +190,7 @@ jobs:
           backend/tests/test_audit_decision_threshold.py
           backend/tests/test_audit_data_changes.py
           backend/tests/test_audit_training_setup.py
+          backend/tests/test_audit_inspection_csv.py
           backend/tests/test_openvino_runtime.py::test_openvino_service_inference_uses_owned_worker_without_a_deadline
           backend/tests/test_runtime_deadline_sdk.py::test_runtime_ignores_unlisted_bytecode_and_preserves_all_package_bytes
           backend/tests/test_runtime_deadline_sdk.py::test_packaged_cpp_native_sdk_embeds_python_and_matches_whole_graph

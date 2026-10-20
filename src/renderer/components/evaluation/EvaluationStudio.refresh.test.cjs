@@ -42,7 +42,7 @@ function fixture({commonCohort=false}={}){
   },
  };
  function ModelComparisonPanel(){return null;}
- const childNames=['OperatorGuidanceBanner','JargonTooltip','GuardrailBanner','ZeroEscapeTradeoffChart','SynchronizedDualViewport','DetectionEvaluationGrains','ModelDeploymentPanel','EvaluationHistoryPanel','EvaluationEvidencePanel'];
+ const childNames=['OperatorGuidanceBanner','JargonTooltip','GuardrailBanner','ZeroEscapeTradeoffChart','SynchronizedDualViewport','DetectionEvaluationGrains','ModelDeploymentPanel','EvaluationHistoryPanel','EvaluationEvidencePanel','FieldReadinessPanel'];
  const children=Object.fromEntries(childNames.map(name=>[name,{[name]:()=>null}]));
  const file=path.join(__dirname,'EvaluationStudio.tsx'),m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(__dirname);
  m.require=name=>{
@@ -61,6 +61,7 @@ function fixture({commonCohort=false}={}){
   };
   if(name.endsWith('/hostAdapter'))return{host:{can:()=>false}};
   if(name.endsWith('/ModelComparisonPanel'))return{ModelComparisonPanel};
+  if(name.endsWith('/sampleConfidence'))return{accuracyNote:()=> '',smallTestWarning:()=>null};
   const child=children[name.split('/').at(-1)];
   if(child)return name.endsWith('/DetectionEvaluationGrains')?{...child,summarizeDetectionGrains:()=>null}:child;
   throw new Error('Unexpected Studio fixture dependency: '+name);

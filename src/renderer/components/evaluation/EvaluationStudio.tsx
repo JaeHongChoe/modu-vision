@@ -43,6 +43,8 @@ import { ModelComparisonPanel } from './ModelComparisonPanel';
 import { ModelDeploymentPanel } from './ModelDeploymentPanel';
 import { EvaluationHistoryPanel } from './EvaluationHistoryPanel';
 import {EvaluationEvidencePanel} from './EvaluationEvidencePanel';
+import { accuracyNote, smallTestWarning } from './sampleConfidence';
+import { FieldReadinessPanel } from '../common/FieldReadinessPanel';
 
 const comparisonTasks = new Set<string>([
   'classification', 'detection', 'segmentation', 'anomaly', 'patch_classification',
@@ -484,7 +486,6 @@ export const EvaluationStudio: React.FC = () => {
       {simpleView && testPredictions.length > 0 && (() => {
         // The simple view opens with the answer: how many test images the model got right and what it missed.
         const right = sampleCounts.normal + sampleCounts.defect;
-        const percent = sampleCounts.all ? Math.round(right / sampleCounts.all * 100) : 0;
         const card = (label: string, value: string, note: string, tone: string) => (
           <div className={`rounded-lg border px-4 py-3 ${tone}`}>
             <p className="text-xs text-slate-300">{label}</p>
@@ -494,7 +495,7 @@ export const EvaluationStudio: React.FC = () => {
         );
         return (
           <section aria-label="평가 결과 한눈에 보기" className="grid shrink-0 grid-cols-2 gap-3 border-b border-[#2B3547] bg-[#0E1520] px-6 py-4 lg:grid-cols-4">
-            {card('맞힌 이미지', `${right} / ${sampleCounts.all}장`, `정확도 ${percent}%`, 'border-emerald-700/60 bg-emerald-950/20')}
+            {card('맞힌 이미지', `${right} / ${sampleCounts.all}장`, accuracyNote(right, sampleCounts.all), 'border-emerald-700/60 bg-emerald-950/20')}
             {card('놓친 불량 (미검)', `${sampleCounts.escape}장`, sampleCounts.escape ? '아래 목록의 미검 탭에서 이미지를 확인하세요' : '놓친 불량이 없습니다', sampleCounts.escape ? 'border-rose-700/70 bg-rose-950/30' : 'border-emerald-700/60 bg-emerald-950/20')}
             {card('잘못 잡은 정상 (과검)', `${sampleCounts.overkill}장`, sampleCounts.overkill ? '과검 탭에서 이미지를 확인하세요' : '정상을 불량으로 잡은 이미지가 없습니다', sampleCounts.overkill ? 'border-amber-700/70 bg-amber-950/30' : 'border-emerald-700/60 bg-emerald-950/20')}
             {card('판정 기준 점수', confidenceThreshold.toFixed(2), '오른쪽 위 기준값에서 바꿀 수 있습니다', 'border-[#2B3547] bg-[#131822]')}
@@ -633,6 +634,7 @@ export const EvaluationStudio: React.FC = () => {
           />
             </div>
           </details>}
+          <FieldReadinessPanel />
           {/* Approval, the inspection service, history and error analysis are a reviewer's tools: the simple view moves them
               to one closed line at the bottom of this column so the results come first. */}
           {!simpleView && <>
@@ -695,6 +697,9 @@ export const EvaluationStudio: React.FC = () => {
               </button>
             </div>
 
+            {smallTestWarning(sampleCounts.all) && (
+              <p role="note" className="rounded-[3px] border border-amber-700/60 bg-amber-950/20 p-2 text-[11px] text-amber-100">{smallTestWarning(sampleCounts.all)}</p>
+            )}
             {calibrationMessage && (
               <div className="p-2 bg-[#0B0E14] border border-[#2B3547] rounded-[3px] text-[11px] text-[#38BDF8] font-mono">
                 {calibrationMessage}

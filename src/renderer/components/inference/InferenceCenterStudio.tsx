@@ -40,6 +40,7 @@ import { BatchInspectionPanel } from './BatchInspectionPanel';
 import { FlowPackagePanel } from './FlowPackagePanel';
 import {ModelOperationsPanel} from '../runtime/ModelOperationsPanel';
 import { exportPackageGuidance } from './exportGuidance';
+import { SingleModelExportNotice } from '../common/FieldReadinessPanel';
 
 export const InferenceCenterStudio: React.FC = () => {
   const { language, backendStatus, task, isProjectBusy } = useProjectStore();
@@ -214,6 +215,7 @@ python infer.py --self-test`;
                 : 'Export Single Model Package'}
             </span>
           </button>
+          <SingleModelExportNotice jobId={jobId || null} />
         </div>
   );
   const packageNote = (
