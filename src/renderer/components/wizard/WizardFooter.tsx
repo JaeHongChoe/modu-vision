@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { AsyncAction } from '../common/AsyncAction';
 import { useWorkflowReadiness } from './useWorkflowReadiness';
+import { DataChangeNotice } from './DataChangeNotice';
 import { focusWorkflowTarget, type WorkflowStep } from './workflowReadiness';
 
 /** One place for the step's state: what is done, what blocks the next action, how to clear it, and the one button
@@ -23,6 +24,7 @@ export const WizardFooter = () => {
   },[activeStep]);
   const action=async()=>{
     if(readiness.nextAction.kind==='refresh'){refresh();return;}
+    if(readiness.nextAction.kind==='details'){setExpanded(true);return;}
     await setStep(readiness.nextAction.step);focusWorkflowTarget(readiness.nextAction.target);
   };
   const ko=language==='ko';
@@ -31,6 +33,7 @@ export const WizardFooter = () => {
   const tone=readiness.status==='ready'?'border-emerald-500/60 bg-emerald-950/30 text-emerald-100':readiness.status==='blocked'?'border-amber-500/60 bg-amber-950/30 text-amber-100':'border-slate-600 bg-slate-900 text-slate-200';
   return <footer className="relative shrink-0 border-t border-slate-700 bg-[#0B0E14] px-4 py-2 text-xs text-slate-200">
     {expanded&&<section aria-label="단계 준비도 상세" className="absolute bottom-full left-4 right-4 max-h-56 overflow-auto rounded-t-lg border border-slate-600 bg-[#142131] p-3 shadow-xl">
+      {readiness.dataChangedJobId&&<div className="mb-2"><DataChangeNotice jobId={readiness.dataChangedJobId}/></div>}
       <p className="font-semibold">끝난 것</p><ul className="mt-1 list-disc pl-5">{readiness.completedInputs.length?readiness.completedInputs.map(item=><li key={item}>{item}</li>):<li>확인된 입력 없음</li>}</ul>
       <p className="mt-2 font-semibold">아직 필요한 것</p><ul className="mt-1 list-disc pl-5">{readiness.missingInputs.length?readiness.missingInputs.map(item=><li key={item}>{item}</li>):<li>안내된 다음 행동의 입력이 준비되었습니다.</li>}</ul>
       <p className="mt-2 text-slate-400">학습·평가·승인·현장 적용은 각각의 실행 응답으로 확인합니다. 이전 결과와 다른 단계는 계속 볼 수 있습니다.</p>

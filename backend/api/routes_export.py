@@ -182,9 +182,12 @@ def _saved_flow_models(project: Dict[str, Any], source: Path, recipe_task: str, 
             checkpoint = _resolve_flow_checkpoint(project, source, task, job_id, **({"request": request, "node": node} if request is not None else {}))
         except (HTTPException, OSError, ValueError, RuntimeError, pickle.UnpicklingError,
                 ArtifactValidationError) as exc:
+            from backend.engine.data_changes import DATA_CHANGED_PREFIX
+            inner = str(getattr(exc, "detail", exc))
             raise HTTPException(
                 status_code=409,
-                detail=f"Completed {task} model {job_id} does not match the selected dataset or saved flow: {exc}",
+                detail=inner if inner.startswith(DATA_CHANGED_PREFIX)
+                else f"검사 흐름의 {task} 모델 {job_id}이(가) 선택한 데이터셋이나 저장한 흐름과 맞지 않습니다: {inner}",
             ) from exc
         checkpoints[job_id] = checkpoint
     return pipeline, checkpoints, job_tasks

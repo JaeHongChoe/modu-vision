@@ -122,9 +122,11 @@ def _analyze(project):
             try:
                 record=history.get(path.stem);job=record.get('result',{}).get('job_id');model=index.get(job);bound=record.get('binding',{})
                 # An evaluation bound to the exact checkpoint of a model that is itself current is current; the step 4
-                # readiness waits for that state, so without it the workflow could never pass step 4.
+                # readiness waits for that state, so without it the workflow could never pass step 4. The model's data
+                # must be current too: an evaluation of a model whose training data changed is evidence to redo.
                 state=('changed' if model and bound.get('checkpoint_sha256')!=model['checkpoint_sha256']
-                       else 'current' if model and model['checkpoint_state']=='current' and bound.get('checkpoint_sha256') else 'unverified')
+                       else 'revalidation_required' if model and model['data_state']=='changed'
+                       else 'current' if model and model['checkpoint_state']=='current' and model['data_state']=='current' and bound.get('checkpoint_sha256') else 'unverified')
                 evaluations.append({'evaluation_id':path.stem,'job_id':job,'state':state})
             except (ValueError,OSError,KeyError):evaluations.append({'evaluation_id':path.stem,'state':'changed'})
     approvals=[];database=root/'model_deployments.sqlite3'

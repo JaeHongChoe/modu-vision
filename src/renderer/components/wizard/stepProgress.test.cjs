@@ -24,3 +24,9 @@ test('the saved evidence proves training, evaluation and an evaluated flow only 
  assert.deepEqual(stepsFromEvidence({models:[model],model_evaluations:[{job_id:'other',state:'current'}],flows:[{state:'changed',scope_matches:true}]},'classification'),[3]);
  assert.deepEqual(stepsFromEvidence({models:[model],model_evaluations:[],flows:[]},'detection'),[],'another task\'s model does not count');
 });
+test('once an impact report exists, step 5 is the report\'s: a saved flow whose evaluation is stale loses its check (F-14)',()=>{
+ const {mergeStepProgress}=load('stepProgress.ts');
+ assert.deepEqual(mergeStepProgress([1,2,3,4,5],null),[1,2,3,4,5],'without a report the saved flow stands');
+ assert.deepEqual(mergeStepProgress([1,2,3,4,5],[3,4]),[1,2,3,4],'the report says the flow needs a new evaluation');
+ assert.deepEqual(mergeStepProgress([1,2],[3,4,5]),[1,2,3,4,5]);
+});

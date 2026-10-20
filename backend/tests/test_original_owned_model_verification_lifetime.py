@@ -121,7 +121,9 @@ def test_owned_model_verification_preserves_source_task_refusal(tmp_path, monkey
             response = await client.post('/api/flowchart/models/verify', headers=headers, json={
                 'source_dataset_path':project['source_dataset_dir'], 'models':[{'job_id':job,'task':task}]})
             assert response.status_code == 409
-            assert response.json() == {'detail':
+            # Same folder and task, changed image: the refusal names the data change (audit F-09).
+            from backend.engine.data_changes import data_changed_message
+            assert response.json() == {'detail': data_changed_message(job) if changed == 'source' else
                 f'모델 {job}은(는) 선택한 데이터셋으로 학습을 끝낸 {task} 모델이 아닙니다. 학습을 먼저 끝내세요.'}
     asyncio.run(original_sequence())
     _unchanged(basis)

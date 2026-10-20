@@ -40,3 +40,11 @@ export function stepsFromEvidence(impact: {models?: EvidenceRow[]; model_evaluat
   if ((impact.flows || []).some(row => row.state === 'current' && row.scope_matches === true)) done.push(5);
   return done;
 }
+
+/** The step bar: what the stores hold plus what the impact report proves. Once a report exists for this scope, step 5
+ *  is the report's (a saved flow whose whole-flow evaluation is stale or missing is not done), so a saved flow alone
+ *  never keeps the checkmark after its models' data changed. Without a report the local signal stands. */
+export function mergeStepProgress(local: number[], evidence: number[] | null): number[] {
+  const kept = evidence ? local.filter(step => step !== 5) : local;
+  return [...new Set([...kept, ...(evidence || [])])].sort((a, b) => a - b);
+}

@@ -10,4 +10,6 @@ export function publishWorkflowProgress(scope: string, steps: number[]): void {
   for (const listener of listeners) listener();
 }
 export function workflowProgressFor(scope: string): number[] { return current?.scope === scope ? current.steps : []; }
+/** The report's steps for this scope, or null when no report has arrived for it yet. */
+export function workflowProgressReport(scope: string): number[] | null { return current?.scope === scope ? current.steps : null; }
 export function subscribeWorkflowProgress(listener: Listener): () => void { listeners.add(listener); return () => { listeners.delete(listener); }; }

@@ -1,15 +1,17 @@
 export type WorkflowStep = 1 | 2 | 3 | 4 | 5 | 6;
-export type RecordedInput = { job_id?: string; task?: string; checkpoint_state?: string; data_state?: string; state?: string; scope_matches?: boolean; version_id?: string; revision_id?: string; evaluation_id?: string; package_id?: string };
+export type RecordedInput = { job_id?: string; task?: string; checkpoint_state?: string; data_state?: string; state?: string; scope_matches?: boolean; version_id?: string; revision_id?: string; evaluation_id?: string; package_id?: string; model_job_ids?: string[] };
 export type WorkflowImpact = { project_id?: string; source_dataset_path?: string; labelset_id?: string; models: RecordedInput[]; model_evaluations: RecordedInput[]; flows: RecordedInput[]; flow_evaluations: RecordedInput[]; approvals: RecordedInput[]; packages: RecordedInput[]; required_actions?: string[] };
 export type WorkflowEvidence = { status: 'checking' | 'error' | 'ready'; error?: string; review?: { ready: boolean; counts: { eligible: number; pending?: number }; blockers?: string[] }; impact?: WorkflowImpact };
-export type ReadinessAction = { stage: WorkflowStep; status: 'ready' | 'blocked' | 'checking' | 'unknown'; completedInputs: string[]; missingInputs: string[]; nextAction: { label: string; step: WorkflowStep; kind?: 'refresh'; target?: string } };
+export type ReadinessAction = { stage: WorkflowStep; status: 'ready' | 'blocked' | 'checking' | 'unknown'; completedInputs: string[]; missingInputs: string[]; nextAction: { label: string; step: WorkflowStep; kind?: 'refresh' | 'details'; target?: string };
+  /** A model whose training data changed since it was trained: the footer shows what changed and the ways back. */
+  dataChangedJobId?: string };
 export type ReadinessContext = { stage: WorkflowStep; projectReady: boolean; sourceReady: boolean; totalImages: number; train: number; val: number; busy: boolean; task: string; modelJobId?: string | null; flowVersionId?: string | null; flowDirty: boolean; flowMatchesSaved?: boolean; splitState?: 'saved' | 'source_folders' | 'automatic' | 'stale' | null; trainingStatus?: string; evidence: WorkflowEvidence };
 
 /** Navigation advice only. A recorded result is never authorization to run work. */
 export function getNextAction(input: ReadinessContext): ReadinessAction {
   const {stage,evidence}=input;
   const completedInputs: string[]=[];
-  const result=(status:ReadinessAction['status'],missingInputs:string[],label:string,step:WorkflowStep,target?:string,kind?:'refresh'):ReadinessAction=>({stage,status,completedInputs,missingInputs,nextAction:{label,step,target,kind}});
+  const result=(status:ReadinessAction['status'],missingInputs:string[],label:string,step:WorkflowStep,target?:string,kind?:'refresh'|'details'):ReadinessAction=>({stage,status,completedInputs,missingInputs,nextAction:{label,step,target,kind}});
   if(!input.projectReady)return result('blocked',['현재 프로젝트 선택 필요'],'프로젝트 만들기·열기',1,'workflow-project');
   completedInputs.push('현재 프로젝트 선택');
   if(input.busy)return result('checking',['프로젝트·데이터 변경 확인 중'],'데이터 변경 상태 보기',1);
@@ -37,6 +39,8 @@ export function getNextAction(input: ReadinessContext): ReadinessAction {
   const currentModels=evidence.impact.models.filter(row=>row.task===input.task && row.scope_matches===true && row.checkpoint_state==='current' && row.data_state==='current');
   if(stage===4){
     const model=currentModels.find(row=>row.job_id===input.modelJobId);
+    const changed=model?undefined:dataChangedModel(evidence.impact,input.task,input.modelJobId?[input.modelJobId]:[]);
+    if(changed)return {...result('blocked',[`모델 ${changed}을(를) 학습한 뒤 데이터가 바뀌었습니다`],'바뀐 내용과 되돌리기',4,undefined,'details'),dataChangedJobId:changed};
     if(!model)return result('blocked',['선택 모델의 현재 체크포인트·데이터 근거 확인 필요'],'학습 모델 확인 (3단계)',3,'workflow-training');
     completedInputs.push(`현재 입력과 일치하는 모델 ${model.job_id}`);
     const evaluation=evidence.impact.model_evaluations.find(row=>row.job_id===model.job_id && row.state==='current' && row.evaluation_id);
@@ -48,10 +52,18 @@ export function getNextAction(input: ReadinessContext): ReadinessAction {
   if(input.flowMatchesSaved===false)return result('blocked',['편집 화면과 활성 저장 버전의 규칙이 다릅니다.'],'보이는 검사 흐름 저장·평가 (5단계)',5,'flow-area-edit');
   completedInputs.push(`활성 저장 플로우 ${input.flowVersionId}`);
   const flow=evidence.impact.flows.find(row=>row.version_id===input.flowVersionId && row.scope_matches===true && row.state==='current');
+  const saved=flow?undefined:evidence.impact.flows.find(row=>row.version_id===input.flowVersionId && row.scope_matches===true && row.state==='revalidation_required');
+  const changed=saved?dataChangedModel(evidence.impact,input.task,saved.model_job_ids||[]):undefined;
+  if(changed)return {...result('blocked',[`검사 흐름의 모델 ${changed}을(를) 학습한 뒤 데이터가 바뀌었습니다`],'바뀐 내용과 되돌리기',stage,undefined,'details'),dataChangedJobId:changed};
   if(!flow)return result('blocked',['저장 버전과 현재 정답에 일치하는 전체 플로우 평가 필요'],'검사 흐름 평가 확인 (5단계)',5,'flow-area-evaluate');
   completedInputs.push('현재 입력과 일치하는 전체 플로우 평가');
   if(stage===5)return result('ready',[],'검사 결과 확인 (6단계)',6,'workflow-package');
   return result('unknown',['검사 결과까지 확인했습니다. 현장에 쓰려면 플로우 승인, 패키지 만들기, 대상 장치 확인을 차례로 진행하세요.'],'승인·패키지·대상 확인',6,'workflow-package');
+}
+
+/** The first of ``jobIds`` whose checkpoint is unchanged but whose training data changed since training. */
+function dataChangedModel(impact:WorkflowImpact,task:string,jobIds:string[]):string|undefined{
+  return impact.models.find(row=>jobIds.includes(row.job_id||'') && row.scope_matches===true && row.checkpoint_state==='current' && row.data_state==='changed' && (!task||!row.task||row.task===task||jobIds.length>1))?.job_id;
 }
 
 export const recoveryStep = (action:string):WorkflowStep => ({review_data:2,train_candidate:3,evaluate_model:4,compare_fixed_cohort:4,approve_model:4,review_approval:4,evaluate_flow:5,export_package:6,verify_target:6} as Record<string,WorkflowStep>)[action] || 1;

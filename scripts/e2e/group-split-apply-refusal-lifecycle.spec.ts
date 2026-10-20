@@ -300,7 +300,8 @@ async function exercise(page: Page, w: Workspace, e: Evidence, rawApi: Api, nati
       expect(row).toMatchObject({method: 'GET', request_body: null, status: 200, finished: null});
       expect(Object.fromEntries(new URLSearchParams(row.query))).toEqual({folder_path: w.dataset, task: 'classification', limit: '48', offset: '0'});
       const expectedItems = statistics(w.images, w.dataset, assignments).items.map(item => ({image_id: item.image_id, file_name: item.file_name,
-        file_path: item.file_path, width: 32, height: 32, split: item.split, label: item.label, labels: item.labels, thumbnail_url: item.thumbnail_url}));
+        file_path: item.file_path, width: 32, height: 32, split: item.split, label: item.label, labels: item.labels, class_source: item.class_source, folder_label: item.folder_label,
+        thumbnail_url: item.thumbnail_url}));
       expect(row.response).toEqual({total: 2, limit: 48, offset: 0, items: expectedItems,
         class_split_counts: {ng: {train: 0, val: 1, test: 0}, ok: {train: 1, val: 0, test: 0}}});
     }

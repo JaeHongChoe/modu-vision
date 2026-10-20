@@ -42,6 +42,7 @@ import { calibratorView, severeClassImbalance, splitStatus } from './splitCalibr
 import { importChecks } from './importChecklist';
 import { isSplitUnavailable } from '../../utils/datasetSplitCapability';
 import { ScopedDatasetThumbnail } from '../common/ScopedDatasetThumbnail';
+import { subscribeDataVersionRequest, takeDataVersionRequest } from '../../stores/dataVersionRequest';
 
 const SPLIT_BADGE_KO: Record<string, string> = { train: '학습', val: '검증', test: '시험', not_split: '미분할', not_used: '미사용' };
 
@@ -113,6 +114,13 @@ export const DatasetStudio: React.FC = () => {
   const [splitOpen, setSplitOpen] = useState(false);
   const [openingImageId, setOpeningImageId] = useState<string | null>(null);
   const [showVersions, setShowVersions] = useState(false);
+  // The footer's data-change notice asks for the version a model was trained on; take the request now or when it comes.
+  const [highlightVersionId, setHighlightVersionId] = useState<string | null>(null);
+  useEffect(() => {
+    const open = () => { const wanted = takeDataVersionRequest(); if (wanted) { setHighlightVersionId(wanted.versionId); setShowVersions(true); } };
+    open();
+    return subscribeDataVersionRequest(open);
+  }, []);
   const [showImports, setShowImports] = useState(false);
   // The active validated version of this project (full validation), so the step can say validation is done.
   const [activeRevision, setActiveRevision] = useState<DatasetRevisionRow | null>(null);
@@ -1068,7 +1076,7 @@ export const DatasetStudio: React.FC = () => {
       {showImports && project?.id && <DatasetImportPanel projectId={project.id} datasetPath={folderPath}
         registeredSource={project.source_dataset_dir || null} task={task}
         onClose={() => setShowImports(false)} onAccepted={() => { loadActiveRevision(); }} />}
-      {showVersions && <DatasetVersionPanel datasetPath={folderPath} onClose={() => setShowVersions(false)} onRestored={async () => {
+      {showVersions && <DatasetVersionPanel datasetPath={folderPath} highlightVersionId={highlightVersionId} onClose={() => { setShowVersions(false); setHighlightVersionId(null); }} onRestored={async () => {
         await importFolder(folderPath, task, false);
       }} />}
     </div>

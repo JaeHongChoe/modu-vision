@@ -98,6 +98,7 @@ jobs:
               backend/tests/test_audit_data_input.py
               backend/tests/test_audit_class_overrides.py
               backend/tests/test_audit_decision_threshold.py
+              backend/tests/test_audit_data_changes.py
               scripts/tests/test_publication_audit.py
               backend/tests/test_sdk_cancellation.py::test_interruption_reaps_the_actual_owned_child
               backend/tests/test_anomaly_folder_case.py

@@ -184,17 +184,36 @@ def test_review_eligibility_change_requires_candidate_training(tmp_path,monkeypa
     assert 'train_candidate' in report['required_actions']
 
 
-def test_evaluation_of_the_current_checkpoint_is_current_and_an_unbound_one_is_not(tmp_path):
-    """Step 4 readiness needs a current evaluation; one bound to the model's exact, unchanged checkpoint is that."""
+def test_evaluation_of_the_current_checkpoint_is_current_and_an_unbound_one_is_not(tmp_path,monkeypatch):
+    """Step 4 readiness needs a current evaluation: bound to the model's exact, unchanged checkpoint, of a model whose
+    training data is still current. Changed data makes the evaluation evidence to redo (audit F-14)."""
+    from backend.api import routes_dataset
+    from backend.engine.training_provenance import bind_training_version
+    from PIL import Image
     project,checkpoint=project_fixture(tmp_path);root=Path(project['project_dir'])
     history=root/'reports'/'evaluations';history.mkdir(parents=True)
     from backend.engine.evaluation_history import EvaluationHistory
     store=EvaluationHistory(history)
     store.append({'job_id':'job_one','task':'classification','test_predictions':[]},
         {'checkpoint_sha256':hashlib.sha256(checkpoint.read_bytes()).hexdigest()})
+    # A legacy model without a bound data version cannot prove its data, so its evaluation is not current either.
     report=workflow_impact.analyze(project)
-    assert report['models'][0]['checkpoint_state']=='current'
+    assert report['models'][0]['data_state']=='unverified'
+    assert [row['state'] for row in report['model_evaluations']]==['unverified']
+
+    source=Path(project['source_dataset_dir']);Image.new('RGB',(8,8)).save(source/'one.png')
+    monkeypatch.setattr(routes_dataset,'STUDIO_ANNOTATIONS_DIR',Path(project['annotations_dir']))
+    monkeypatch.setattr(routes_dataset,'SPLIT_MANIFEST_DIR',Path(project['dataset_dir'])/'splits')
+    meta=checkpoint.parent/'model_meta.json';value=json.loads(meta.read_text());value['training_provenance']=bind_training_version(project,source)
+    meta.write_text(json.dumps(value))
+    report=workflow_impact.analyze(project)
+    assert report['models'][0]['checkpoint_state']=='current' and report['models'][0]['data_state']=='current'
     assert [row['state'] for row in report['model_evaluations']]==['current']
     store.append({'job_id':'job_one','task':'classification','test_predictions':[]},{})
     states=sorted(row['state'] for row in workflow_impact.analyze(project)['model_evaluations'])
     assert states==['changed','current'], 'an evaluation without a checkpoint binding never counts as current'
+
+    Image.new('RGB',(8,8),(9,9,9)).save(source/'two.png')
+    report=workflow_impact.analyze(project)
+    assert report['models'][0]['data_state']=='changed'
+    assert sorted(row['state'] for row in report['model_evaluations'])==['changed','revalidation_required']

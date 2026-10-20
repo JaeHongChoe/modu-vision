@@ -90,7 +90,7 @@ test('the step bar keeps step numbers and marks finished steps with a check',()=
  const header=read('src/renderer/components/wizard/WizardHeader.tsx');
  assert.match(header,/completedSteps\?: readonly number\[\]/);assert.match(header,/const isDone = completedSteps\.includes\(s\.num\) && !isActive;/);
  assert.match(header,/String\(s\.num\)\.padStart\(2, '0'\)/,'the number stays in the button name');
- const app=read('src/renderer/App.tsx');assert.match(app,/completedSteps\(\{ hasData, images, unlabeled, trainingDone, evaluated, flowSaved \}\), \.\.\.workflowProgressFor\(progressScope\)/,'session state plus what the saved evidence proves');
+ const app=read('src/renderer/App.tsx');assert.match(app,/mergeStepProgress\(completedSteps\(\{ hasData, images, unlabeled, trainingDone, evaluated, flowSaved \}\), workflowProgressReport\(progressScope\)\)/,'session state plus what the saved evidence proves');
 });
 
 test('the simple view gives every step a plain page header and moves each step\'s main action up',()=>{

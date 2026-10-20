@@ -265,6 +265,29 @@ def _matches_source_dataset(
         return False
 
 
+
+def _source_mismatch_detail(output_dir: Path, source_dataset_path: Optional[str], source_task: Optional[str],
+                            job_id: str, recorded_source: Optional[str] = None) -> str:
+    """Why a completed model does not match the selected source. A model of the right task trained on this very folder
+    fails only because the folder's images, labels or split changed after training; say that, and how to get back."""
+    from backend.engine.data_changes import data_changed_message
+    receipt = completed_job_receipt(output_dir) or {}
+    try:
+        meta = json.loads((output_dir / "model_meta.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        meta = {}
+    original = receipt.get("source_dataset_path") or recorded_source or (meta.get("source_dataset_path") if isinstance(meta, dict) else None)
+    task = receipt.get("task") or (meta.get("task") if isinstance(meta, dict) else None)
+    try:
+        same_source = bool(source_dataset_path and original
+                           and Path(original).expanduser().resolve() == Path(source_dataset_path).expanduser().resolve())
+    except (OSError, ValueError):
+        same_source = False
+    if same_source and (not source_task or task == source_task):
+        return data_changed_message(job_id)
+    return f"선택한 데이터셋으로 학습을 끝낸 모델이 없습니다 (작업 {job_id}). 이 데이터셋으로 학습을 먼저 끝내세요."
+
+
 def _resolve_job_artifacts(
     job_id: Optional[str] = None,
     dataset_path_override: Optional[str] = None,
@@ -295,7 +318,8 @@ def _resolve_job_artifacts(
                 out_dir, source_dataset_path, source_task, rec.dataset_path,
                 getattr(rec, "source_dataset_path", None), getattr(rec, "dataset_fingerprint", None),
             ):
-                raise HTTPException(status_code=404, detail=f"선택한 데이터셋으로 학습을 끝낸 모델이 없습니다 (작업 {job_id}). 이 데이터셋으로 학습을 먼저 끝내세요.")
+                raise HTTPException(status_code=404, detail=_source_mismatch_detail(
+                    out_dir, source_dataset_path, source_task, job_id, getattr(rec, "source_dataset_path", None)))
             task_hint = rec.task
             dataset_hint = Path(rec.dataset_path)
             resolved_job_id = rec.job_id
@@ -305,7 +329,7 @@ def _resolve_job_artifacts(
                 raise HTTPException(status_code=404, detail=f"평가할 데이터나 학습한 모델 파일을 찾을 수 없습니다 (작업 {job_id}). 학습을 먼저 끝내세요.")
             out_dir = model_pt.parent
             if not _matches_source_dataset(out_dir, source_dataset_path, source_task):
-                raise HTTPException(status_code=404, detail=f"선택한 데이터셋으로 학습을 끝낸 모델이 없습니다 (작업 {job_id}). 이 데이터셋으로 학습을 먼저 끝내세요.")
+                raise HTTPException(status_code=404, detail=_source_mismatch_detail(out_dir, source_dataset_path, source_task, job_id))
             receipt = completed_job_receipt(out_dir) or {}
             task_hint = receipt.get("task")
             dataset_hint = Path(receipt["dataset_path"]) if receipt.get("dataset_path") else None

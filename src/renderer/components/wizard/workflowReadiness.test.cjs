@@ -228,3 +228,22 @@ test('stage three blocks an unsaved or stale classification split and sends the 
  for(const splitState of ['automatic','stale']){const r=getNextAction({...base,stage:3,splitState});assert.equal(r.status,'blocked');assert.equal(r.nextAction.step,1);assert.match(r.nextAction.label,/분할 저장/);}
  assert.notEqual(getNextAction({...base,stage:3,splitState:'saved'}).nextAction.label,'분할 저장하기 (1단계)');
 });
+test('a model or flow whose training data changed says so and opens what changed (F-09/A3)',()=>{
+ const {getNextAction}=load();
+ const model={job_id:'m',task:'classification',checkpoint_state:'current',data_state:'changed',scope_matches:true};
+ const atFour=getNextAction({...base,stage:4,modelJobId:'m',evidence:{...base.evidence,impact:{...base.evidence.impact,models:[model]}}});
+ assert.equal(atFour.status,'blocked');assert.equal(atFour.dataChangedJobId,'m');assert.equal(atFour.nextAction.kind,'details');
+ assert.match(atFour.missingInputs[0],/모델 m을\(를\) 학습한 뒤 데이터가 바뀌었습니다/);
+ const atFive=getNextAction({...base,stage:5,flowVersionId:'v',flowMatchesSaved:true,evidence:{...base.evidence,impact:{...base.evidence.impact,models:[model],
+   flows:[{version_id:'v',state:'revalidation_required',scope_matches:true,model_job_ids:['m']}]}}});
+ assert.equal(atFive.dataChangedJobId,'m');assert.match(atFive.missingInputs[0],/검사 흐름의 모델 m/);
+ const changedCheckpoint=getNextAction({...base,stage:4,modelJobId:'m',evidence:{...base.evidence,impact:{...base.evidence.impact,models:[{...model,checkpoint_state:'changed'}]}}});
+ assert.equal(changedCheckpoint.dataChangedJobId,undefined,'a changed model file is not a data change');assert.equal(changedCheckpoint.nextAction.step,3);
+});
+test('the footer opens the change details and step 1 takes the version request (F-09/A3)',()=>{
+ const footer=fs.readFileSync(path.join(__dirname,'WizardFooter.tsx'),'utf8');
+ assert.match(footer,/if\(readiness\.nextAction\.kind==='details'\)\{setExpanded\(true\);return;\}/);
+ assert.match(footer,/<DataChangeNotice jobId=\{readiness\.dataChangedJobId\}\/>/);
+ const studio=fs.readFileSync(path.join(__dirname,'..','dataset','DatasetStudio.tsx'),'utf8');
+ assert.match(studio,/takeDataVersionRequest\(\)/);assert.match(studio,/highlightVersionId=\{highlightVersionId\}/);
+});

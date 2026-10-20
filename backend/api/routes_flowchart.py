@@ -31,6 +31,7 @@ from pydantic import BaseModel, Field, ConfigDict
 import torch
 
 from backend.api.routes_evaluation import _matches_source_dataset, _resolve_job_artifacts
+from backend.engine.data_changes import DATA_CHANGED_PREFIX
 from backend.api.routes_training import training_job_manager
 from backend.api.routes_project import get_current_project
 from backend.engine.annotation_storage import request_shared_scope
@@ -666,9 +667,10 @@ def verify_flowchart_models(request: FlowchartModelVerificationRequest, http_req
                 source_task=model.task,
             )
         except (HTTPException, ValueError, OSError) as exc:
+            inner = str(getattr(exc, "detail", exc))
             raise HTTPException(
                 status_code=409,
-                detail=f"모델 {model.job_id}은(는) 선택한 데이터셋으로 학습을 끝낸 {model.task} 모델이 아닙니다. 학습을 먼저 끝내세요.",
+                detail=inner if inner.startswith(DATA_CHANGED_PREFIX) else f"모델 {model.job_id}은(는) 선택한 데이터셋으로 학습을 끝낸 {model.task} 모델이 아닙니다. 학습을 먼저 끝내세요.",
             ) from exc
         verified.append(model.job_id)
     return {"verified_job_ids": verified}
