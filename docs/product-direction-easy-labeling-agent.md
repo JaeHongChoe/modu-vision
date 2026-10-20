@@ -1,0 +1,179 @@
+# 쉬운 사용 · 라벨링 보조 · 내장 도우미 설계와 실행안 (검토용)
+
+작성 2026-10-21. 대상: 비개발자가 데이터를 준비하고 라벨을 달고 검사 결과까지 얻는 흐름. 이 문서는 **설계와 단계별 실행안**이며, 새 자동 라벨링 화면과 내장 도우미의 제품 코드는 이 문서를 검토한 뒤에 구현합니다. 지금 PR에서 이미 승인된 수정·검증(기능 점검 수정)은 그대로 이어 갑니다.
+
+지키는 것: 사용자 원본 이미지·라벨·클래스 이름·사용 중 모델·저장한 프로젝트와 흐름, 안전·승인·정답 검토·데이터 검증 조건. 기계가 만든 라벨은 사람이 확정하기 전까지 정답이 아니며, 기존 라벨을 몰래 덮어쓰지 않습니다. 지우기는 복구 가능한 이동(보관·백업)으로 합니다. 운영 배포, 서비스 등록, 보안 권한 확대, 계정 동의는 이 계획이 대신하지 않습니다.
+
+## 1. 지금 있는 것과 부족한 것
+
+| 영역 | 지금 있는 것 (근거) | 부족한 것 |
+| --- | --- | --- |
+| 단계 안내 | 하단 안내(WizardFooter: 상태·첫 막힘·"왜 그런가요?"·주 행동 하나), 준비도 판단(workflowReadiness, 막힘 단계로 이동), 간단히 보기와 접힘(SimpleViewFold), 학습 전 점검·현장 적용 조건·데이터 변경 안내(이번 PR) | 패널마다 따로 뜨는 오류(role=alert)가 한곳에 모이지 않음, 2단계는 승인 이미지 수만 알고 초안·검토 대기량을 모름, 도우미가 읽을 수 있는 "현재 상태·막힘·다음 행동" 데이터가 없음 |
+| 자동 라벨 초안 | 학습 모델 제안(`/api/label-suggestions`, 제안을 따로 저장, 고른 후보만 채택, 채택 전 데이터 버전 자동 백업), 라벨 후보(`/api/label-candidates`: SAM2 점·상자·문구, Grounding DINO, 템플릿, OpenAI 호환 VLM), 일괄 제안(한 프로젝트 한 작업), 원격 GPU 라벨 작업, ModelAssistPanel(미리보기·후보별 채택·거절) | 간단히 보기의 기본(집중 편집)에서 ModelAssistPanel이 숨겨짐, 제안 목록이 무작위 순서, 채택한 도형에 "기계 초안에서 왔다"는 표시가 저장되지 않음(`AnnotationItem` extra=ignore), 채택 하나만 되돌리는 방법 없음(데이터 버전 전체 복원만), 운영 주기의 `_auto_label`은 초안 없이 바로 라벨에 씀(검토 필요 표시만) |
+| 클릭·영역 보조 | 오토 셀렉터(OpenCV 영역 채우기), 형상 변환, SAM2 점·상자 프롬프트(로컬 모델 파일 필요) | 오토 셀렉터 결과가 바로 캔버스에 들어감(초안 단계 없음), SAM2는 모델 파일 준비가 비개발자에게 어려움 |
+| 재사용 | LabelMe·COCO·YOLO 가져오기(미리보기·충돌 정책·적용 전 백업), 마스크 교환, 이번 PR의 2단계 회전 박스→회전 검출 가져오기, 분류 클래스 지정 | 클래스 이름 일괄 변경·병합 없음 |
+| 검토 우선순위 | 평가 결과 기반 검토 대기열(오류·불일치·기준값 근처, data_workbench), 현장 수집 검토(capture_intake), 팀 검수 대기열(수동 우선순위) | 라벨 안 된 이미지를 "모델이 헷갈리는 것부터" 보여 주는 순서 없음 |
+| 기록·되돌리기 | 이미지별 편집 실행 취소 40단계, 메타데이터 장부(revision·audit), 데이터 버전 저장·복원, 출처 보기(`/api/provenance`) | 도형 단위 출처(기계/사람) 없음, `DELETE /api/annotations/{id}`가 장부·백업을 거치지 않음 |
+| 도우미 | 없음(LLM 대화·에이전트·도구 목록 없음). 공유 서버 토큰은 Electron 주 프로세스 메모리에만 있고 렌더러로 넘기지 않음, 백엔드에 OIDC+PKCE 인터페이스만 있음, 비밀값 저장 도구(fleet_secret_store: Windows DPAPI, POSIX 0600) | 로그인·토큰 보관(safeStorage 미사용)·도구 목록·실행 기록 전부 |
+
+## 2. 원칙
+
+1. **업무 용어.** 화면 문구는 "이미지 준비 → 라벨 달기 → 학습 → 평가 → 검사 흐름 → 검사"의 말로 씁니다. 코드·영어 상태는 기술 상세에만 둡니다(이번 PR의 F-15 방향).
+2. **단계마다 주된 행동 하나.** 화면에서 가장 큰 버튼은 그 단계에서 지금 해야 할 일 하나입니다.
+3. **한곳의 상태 카드.** 상태, 막힌 이유, 해결 방법, 다음 행동은 하단 안내 한곳에서 봅니다. 패널 오류도 같은 곳에 요약하고, 패널에는 자세한 내용만 둡니다.
+4. **상세는 접힘.** 전문가 기능은 지우지 않고 접힘 영역과 기술 상세로 옮깁니다(키보드·화면 읽기 프로그램으로 열 수 있게).
+5. **초안과 정답의 구분.** 모델·도우미가 만든 것은 "초안"이고, 사람이 미리보기에서 확인해야 라벨이 됩니다. 채택 기록(누가, 언제, 어떤 모델·제안에서)을 남기고, 채택 단위로 되돌릴 수 있어야 합니다.
+
+## 3. 라벨링 병목 완화
+
+### 3.1 후보 비교
+
+| 방법 | 지금 재사용할 것 | 이득 | 비용·위험 | 판단 |
+| --- | --- | --- | --- | --- |
+| 자동 라벨 초안(학습 모델) | label-suggestions, BulkLabelAssist, 제안 저장소·채택 전 백업 | 같은 종류 이미지가 많을 때 손이 가장 적게 감 | 첫 모델이 있어야 함(라벨 20~50장 뒤부터) | **1단계 포함** |
+| 기존 모델·라벨 재사용 | 형식 가져오기, 특징 모델(few-label), 회전 박스 재사용, 클래스 지정 | 다른 도구·이전 프로젝트 라벨을 그대로 씀 | 클래스 이름 불일치 | 1단계: 가져오기 안내를 초안 검토 화면에 연결 |
+| 클릭·영역 보조 | 오토 셀렉터, SAM2 점·상자 | 한 장씩 그릴 때 빨라짐 | SAM2 모델 파일·라이선스 준비, 오토 셀렉터는 초안 단계가 없음 | 2단계: 오토 셀렉터 결과를 초안으로, SAM2는 모델 준비 안내 후 |
+| 일괄 검토·수정 | ModelAssistPanel 후보 선택, 팀 검수 대기열 | 초안 수십 장을 한 번에 확인 | 잘못된 일괄 채택 | **1단계 포함**(미리보기·채택 단위 되돌리기와 함께) |
+| 헷갈리는 표본 먼저 | data_workbench 검토 대기열 규칙(기준값 ± 여유), 제안의 후보 신뢰도 | 사람 시간을 효과가 큰 이미지에 씀 | 신뢰도 보정이 안 된 모델은 순서가 틀릴 수 있음 | **1단계 포함**(정렬 기준을 화면에 표시) |
+
+### 3.2 첫 구현 범위: "초안 검토" 화면
+
+- 2단계 간단히 보기의 주 행동을 "초안 검토"로 둡니다(학습 모델이 없으면 "직접 라벨 달기", 모델이 있으면 "초안 만들기 → 검토").
+- 초안 원천은 기존 label-suggestions(학습 모델)와 label-candidates입니다. 새 모델 실행 경로를 만들지 않습니다.
+- 목록 순서: 기본은 "모델이 헷갈리는 것부터"(후보 최고 신뢰도가 기준값 근처이거나 낮은 것), 선택으로 "확실한 것부터"(일괄 채택용). 화면에 순서 기준을 씁니다.
+- 일괄 채택·거절: 여러 장을 고른 뒤 미리보기(겹쳐 보기)에서 확인하고 채택합니다. 이미 사람이 그린 라벨이 있는 이미지는 기본으로 "덧붙이기"이며, 바꾸기는 그 이미지에서 따로 확인합니다.
+- 출처 기록: 채택한 도형에 `origin`(종류 `model_draft`, 제안 ID, 모델 해시, 채택한 사람, 시각)을 저장합니다. `AnnotationItem`에 선택 필드로 더해 기존 파일과 호환을 유지합니다.
+- 되돌리기: 채택마다 "이 채택 되돌리기"를 둡니다. 채택 뒤 그 도형이 바뀌지 않았으면 그 도형만 빼고, 바뀌었으면 이유를 보여 주고 데이터 버전 복원(채택 전 자동 백업)으로 안내합니다.
+- 운영 주기의 `_auto_label`은 바로 쓰지 않고 같은 초안 저장소에 넣도록 바꿉니다(기본 꺼짐은 유지).
+- 하단 안내가 2단계에서 "초안 N장 검토 대기 · 확정 M장"을 알게 합니다.
+
+검증 기준: 초안은 채택 전 라벨 파일·학습 데이터·데이터 지문을 바꾸지 않음(백엔드 테스트), 채택은 백업 ID와 `origin`을 남김, 되돌리기는 그 도형만 정확히 빼고 다른 사람 편집은 보존, 기존 라벨이 있는 이미지에 덧붙이기 기본, 화면 단위 테스트와 브라우저 스펙(합성 데이터), 실사용 경로(라벨 20장 → 학습 → 초안 50장 → 일괄 검토 → 재학습).
+
+## 4. 내장 도우미(에이전트)
+
+### 4.1 목표와 한계
+
+도우미는 지금 열린 프로젝트·단계·오류를 이해해 "왜 막혔고 무엇을 하면 되는지"를 설명하고, 사용자가 허락한 앱 도구만 실행합니다. 학습·추론·자동 라벨 같은 계산은 지금처럼 이 컴퓨터(또는 사용자가 고른 계산 서버)에서 하고, 도우미는 계획·설명·도구 호출만 맡습니다. 판정·승인·배포는 도우미가 대신하지 않습니다.
+
+### 4.2 연결 방식: Sign in with ChatGPT(오픈소스 경로)
+
+2026-10-21에 공식 문서(quickstart, open-source sign-in, Codex app-server, models and inference, accounts and sessions, errors and recovery, token reference, preview limitations, UI/UX guidelines)를 직접 확인했습니다. 이 저장소는 MIT 라이선스(`LICENSE`)이고 사용자는 오픈소스로 배포한다고 확인했습니다. 문서는 오픈소스·로컬 실행 앱에 ChatGPT 플랜 사용을 열어 두고 있으며("ChatGPT plan usage is available to all open-source partners and selected private clients"), 비공개 앱의 제공 대상 제한은 이 프로젝트의 선행 장벽으로 두지 않습니다. 유료 또는 원격 호스팅 형태로 제공하려면 별도 신청(interest form)이 필요하다고 되어 있으므로, 공유 서버가 사용자 대신 토큰을 들고 호출하는 형태는 이번 범위에서 뺍니다.
+
+- **별도 API 키 없음.** 사용자는 브라우저에서 ChatGPT 계정으로 로그인하고 "이 앱이 내 ChatGPT 플랜을 쓰는 것"에 동의합니다. 앱은 OAuth 토큰으로 Responses API를 호출합니다. 클라이언트 비밀값이나 개발자 API 키를 앱에 넣지 않습니다.
+- **처음 등록.** 처음에는 `client_id=dynamic_agent_client`로 인가를 시작하고 `ext_agent_host_id`(이 컴퓨터의 불투명 식별자, 이메일·사용자 ID가 아닌 값)와 `agent_name_hint`(앱 이름)를 보냅니다. 콜백에서 발급된 client ID(`oaiapp_…`)를 저장하고 이후 로그인과 갱신에 씁니다.
+- **인가.** 시스템 브라우저로 `https://auth.openai.com/api/accounts/authorize`를 엽니다. PKCE(`S256`), 시도마다 새 `state`·`nonce`·verifier, 콜백은 `http://127.0.0.1:<port>/auth/callback`(localhost가 아닌 127.0.0.1, 리스너를 먼저 연 뒤 브라우저). 범위는 `openid profile email offline_access resource.invoke chatgpt.tokens.use.direct`, `resource=https://api.openai.com/v1`.
+- **토큰 교환.** `https://auth.openai.com/api/accounts/oauth/token`에 form 인코딩으로 `authorization_code` 교환. ID 토큰의 서명·발급자·대상(발급 client ID)·만료·nonce를 확인하고 `sub`를 계정 식별자로 씁니다. 응답의 granted scope에 `chatgpt.tokens.use.direct`가 없으면 로그인은 유지하되 플랜 사용은 꺼진 상태로 두고 추론하지 않습니다.
+- **수명과 갱신.** 접근 토큰 1시간, 갱신 토큰 30일(갱신할 때마다 교체). 만료 전에 `grant_type=refresh_token`으로 갱신하고, 같은 세션의 갱신은 하나씩 직렬화합니다(교체되는 토큰 경합 방지).
+- **호출.** `POST https://api.openai.com/v1/responses`, `Authorization: Bearer <access_token>`, `store: false`, `stream: true`. system 메시지 대신 `instructions`/developer 메시지. `temperature`, `max_output_tokens`, `metadata`, `user` 등은 보낼 수 없습니다. 함수 도구는 namespace로 묶거나 `additional_tools` 입력 항목으로 넣습니다. 이미지·파일 입력은 고른 모델이 받을 때만 됩니다. Files API는 쓸 수 없습니다. `response.completed`가 와야 성공으로 봅니다.
+- **모델 선택.** `GET https://api.openai.com/v1/models`의 `models` 중 `visibility == "list"`의 `slug`/`display_name`을 보여 줍니다. 계정을 바꾸면 다시 읽습니다. 목록은 권한 확인이 아니며, 실제 완료된 응답이 접근을 확인합니다.
+- **한도.** 사용 한도는 스트림 중 `response.failed`의 `subscription_sharing_usage_limit_exceeded`(429) 등으로 옵니다. ChatGPT Plus의 5시간 한도는 이 플랜을 쓰는 모든 앱이 함께 씁니다. 한도에 걸리면 새 요청을 멈추고 "Manage usage"(ChatGPT 설정 → 사용량) 링크를 주 행동으로 보여 줍니다. 초기화 시각을 추측하지 않습니다.
+- **로그아웃·권한 철회.** 로그아웃은 요청을 멈추고 `https://auth.openai.com/.well-known/openid-configuration`의 `revocation_endpoint`에 갱신 토큰 폐기를 보낸 뒤 토큰을 지웁니다. 원격 폐기를 확인하지 못하면 "이 컴퓨터에서는 지웠지만 원격 폐기는 확인되지 않음"을 알립니다. 사용자는 ChatGPT 설정에서 이 앱 연결을 끊을 수 있고, OpenAI는 앱에 알려 주지 않으므로 `subscription_sharing_invalid_user`(401)나 갱신 실패를 철회로 처리해 다시 로그인을 안내합니다.
+- **오류.** 범위 없음(403 `chatpass_v2_scope_not_authorized`), 자격 없음(403 `subscription_sharing_user_not_eligible`), 지원 안 하는 입력·도구·모델(400 `subscription_sharing_unsupported_capability`), 일시 불가(503 `subscription_sharing_usage_unavailable`, 제한된 재시도) 등 문서의 복구 방식을 그대로 따르고, 요청 ID를 기술 상세에 남깁니다.
+- **표기.** 로그인 버튼은 "Continue with ChatGPT". 처음 플랜 사용이 켜질 때 한 번 "ChatGPT 플랜을 사용합니다"와 관리 위치를 알리고, 도우미 입력창 옆에 "ChatGPT 플랜 사용 중 · 사용량 관리"를 둡니다.
+
+### 4.3 직접 호출과 Codex app-server 비교
+
+| 방식 | 장점 | 단점 | 판단 |
+| --- | --- | --- | --- |
+| Electron 주 프로세스에서 Responses API 직접 호출(권장) | 우리 앱 도구만 함수 도구로 정의·통제, 추가 바이너리 없음, 토큰 갱신을 한곳에서 처리 | 스트림·도구 반복을 직접 구현 | 1단계 시제품 |
+| Codex app-server(`codex app-server --listen stdio://`, `ACCESS_TOKEN` 환경 변수, `thread/start`·`turn/start`·`thread/resume`) | 대화 기록·재개, 스트림 처리 제공 | Codex 바이너리 배포 의존, 임의 Responses 파라미터 불가, 토큰 갱신마다 재시작·재개 필요, 기본 도구(셸·파일)를 막아야 함 | 대안으로 시험만 |
+
+사용자의 Codex 데스크톱 앱 자격 증명(`~/.codex/auth.json`)은 읽거나 재사용하지 않습니다. 지금 라벨 후보의 VLM 공급자(OpenAI 호환, 환경 변수 이름만 저장)는 API 키 방식 그대로 두고, 나중에 사용자가 원하면 같은 플랜 토큰을 쓰는 선택지를 따로 검토합니다. 이 앱은 자기 등록(client ID)과 자기 토큰 파일을 따로 가집니다.
+
+### 4.4 토큰 보호와 최소 전송
+
+- **보관 위치.** 토큰은 Electron 주 프로세스만 다룹니다. 렌더러(화면)·백엔드·로그·프로젝트 파일·브라우저 저장소에는 들어가지 않습니다(지금 공유 서버 세션 토큰을 주 프로세스가 붙이는 방식과 같은 원칙). 디스크에는 OS 보호 저장소(macOS 키체인/Windows DPAPI, Electron `safeStorage`)로 암호화한 파일을 소유자 전용 권한(`0600`)으로 원자적으로 씁니다. 계정마다 client ID·토큰을 따로 둡니다.
+- **URL·로그 금지.** 토큰은 URL에 넣지 않고, `id_token_hint`가 들어간 인가 URL은 기록에서 가립니다.
+- **보내는 내용 최소화.** 기본으로 보내는 것은 화면 단계, 상태·막힌 이유 문구, 오류 코드·메시지, 수치 요약(이미지 수, 클래스별 수, 정확도)입니다. 이미지 픽셀, 원본 경로 전체, 사용자 이름, 서버 주소는 보내지 않습니다. 경로는 파일 이름이나 상대 경로로 줄입니다. 이미지를 보여 주며 묻는 기능은 요청마다 "이 이미지 1장을 ChatGPT로 보냅니다" 확인 뒤에만 보냅니다(모델이 이미지를 받을 때만).
+- **서버 상태 없음.** `store:false`라 매 요청에 필요한 맥락을 다시 보냅니다. 대화가 길어지면 요약해 보내 한도 소모를 줄입니다.
+
+### 4.5 도구와 권한
+
+도우미가 부를 수 있는 도구는 앱이 정한 목록뿐이며, 모든 도구는 기존 백엔드 API(공유 서버에서는 기존 역할 검사 그대로)를 거칩니다. 도우미가 새 권한을 얻지 않습니다.
+
+| 등급 | 예 | 실행 조건 |
+| --- | --- | --- |
+| 읽기 | 프로젝트·단계 상태, 학습 전 점검, 데이터 변경 내용, 평가 요약, 오류 상세 읽기 | 자동(기록만) |
+| 화면 이동·준비 | 해당 단계 열기, 설정 값 채워 두기(저장 안 함) | 자동, 사용자가 화면에서 직접 누름 |
+| 쓰기(되돌릴 수 있음) | 분할 저장, 클래스 지정, 자동 라벨 초안 만들기, 학습 시작 | 미리보기와 사용자 확인 뒤 실행, 되돌리기 경로 표시 |
+| 금지 | 모델·흐름 승인, 배포·서비스 등록, 원본 삭제, 정답 확정, 계정·권한 변경, 외부로 파일 보내기 | 도우미는 실행하지 않고 "직접 하세요"로 안내 |
+
+### 4.6 실행 기록
+
+도우미 대화와 도구 실행은 프로젝트 아래 로컬 기록(JSON Lines)에 남깁니다: 시각, 도구 이름, 인자 요약과 해시, 사용자가 확인했는지, 결과(성공·거절·오류 코드), 기존 감사 기록과의 연결(예: 클래스 지정의 `class_changed` 이벤트). 토큰·이미지·전체 경로는 남기지 않습니다. 사용자는 기록을 보고 지울 수 있습니다(지우기는 휴지통·보관 폴더 이동). 지금 공유 서버는 모든 `actor`를 로그인 사용자로 덮어쓰므로, 도우미가 부른 쓰기는 장부에서 사용자 본인 행동과 구별되지 않습니다. 도우미 도구 호출에는 실행 ID 헤더를 붙여 백엔드 감사 이벤트에 `via: assistant`와 실행 ID를 함께 남기도록 바꿉니다(권한은 그대로 사용자 역할).
+
+### 4.7 사용자가 직접 해야 하는 것
+
+- ChatGPT 계정 로그인과 "이 앱이 내 ChatGPT 플랜을 쓰는 것" 동의(브라우저에서 사용자가 직접).
+- 플랜 사용 켜기·끄기, 모델 고르기, 이미지 전송 확인, 쓰기 도구 실행 확인.
+- 연결 끊기(앱의 로그아웃 또는 ChatGPT 설정).
+
+아직 실제 연결을 시험하지 않았습니다. 계정 인증과 동의는 사용자 몫이고, 이 문서는 연결이 된다고 주장하지 않습니다.
+
+## 5. 쉬운 사용: 화면 흐름
+
+1. **이미지 준비(1단계).** 주 행동 "이미지 폴더 불러오기" → 학습 전 점검(이번 PR) → "분할 저장". 막힘은 하단 안내 한 줄.
+2. **라벨 달기(2단계).** 모델이 없으면 "직접 라벨 달기"(분류는 클래스 고르기), 있으면 "초안 만들기 → 초안 검토". 진행: 확정 M장 / 초안 N장 / 남은 K장.
+3. **학습(3단계).** 주 행동 "학습 시작". 장치·가중치 준비는 카드가 스스로 확인(이번 PR).
+4. **평가(4단계).** 결과 카드(정확도 범위·놓친 불량·잘못 잡은 정상) → "추천 기준 점수 적용".
+5. **검사 흐름(5단계).** 템플릿에서 시작 → "저장 · 평가".
+6. **검사(6단계).** "검사 시작" → 결과·내보내기. 현장 적용 조건은 접힘.
+
+어느 단계든 오른쪽 아래 "도우미에게 묻기"는 지금 화면의 상태 카드 내용을 바탕으로 답합니다(4장). 도우미가 꺼져 있어도 모든 흐름은 그대로 됩니다.
+
+필요한 공통 부품: 상태 카드 데이터(`currentAssistContext()`: 단계, 상태, 막힌 이유, 다음 행동, 최근 오류 코드, 수치 요약)를 렌더러 한곳에서 만들고 하단 안내·도우미가 함께 씁니다. 패널 오류는 이 데이터에 등록해 하단 안내에 요약합니다.
+
+## 6. 비용과 연산 분담
+
+| 일 | 어디서 | 비용 |
+| --- | --- | --- |
+| 학습·평가·검사·자동 라벨 초안 | 이 컴퓨터 CPU/GPU 또는 사용자가 고른 계산 서버(지금과 같음) | 전기·장비 |
+| 도우미 대화·설명·도구 계획 | 사용자의 ChatGPT 플랜(Responses API) | 사용자 플랜 한도에서 차감(Plus 5시간 한도는 다른 앱과 공유) |
+| 이미지를 보여 주며 묻기 | 사용자의 ChatGPT 플랜, 요청마다 확인 | 한도를 더 많이 씀 |
+| 개발·배포 측 | 없음(API 키·서버 비용 없음) | 없음 |
+
+공유 서버 모드에서도 도우미 토큰은 각 사용자 컴퓨터에만 있고, 서버는 지금처럼 역할 검사만 합니다.
+
+## 7. 바뀌는 파일과 모듈 (예정)
+
+| 단계 | 새로 | 수정 |
+| --- | --- | --- |
+| 상태 카드 | `src/renderer/components/wizard/assistContext.ts` | WizardFooter, workflowReadiness(2단계 초안 수), 패널 오류 등록 |
+| 초안 검토 | `src/renderer/components/labeling/DraftReviewQueue.tsx`, `backend/engine/proposal_ordering.py` | routes_label_suggestions(정렬·일괄 채택·채택 되돌리기), routes_annotation(`origin` 선택 필드), model_operations `_auto_label`(초안 저장소로), LabelingStudio(간단히 보기 주 행동) |
+| 도우미 로그인·호출 | `src/main/chatgptAuth.ts`(PKCE·등록·갱신·폐기), `src/main/credentialStore.ts`(safeStorage·0600), `src/main/assistantClient.ts`(Responses 스트림·도구 반복) | `src/main/ipc.ts`·`src/preload/index.ts`(토큰 없는 IPC), CSP·요청 허용(`api.openai.com`, `auth.openai.com`만 주 프로세스에서) |
+| 도우미 화면·도구 | `src/renderer/components/assistant/AssistantPanel.tsx`, `src/renderer/services/assistantTools.ts`(도구 목록·등급), 실행 기록 `<project>/assistant/log.jsonl` | 설정(플랜 사용·모델·로그아웃), 기술 상세(요청 ID) |
+
+## 8. 단계별 실행안
+
+| 단계 | 범위 | 검증 기준 | 사용자 확인이 필요한 것 |
+| --- | --- | --- | --- |
+| 0. 설계 검토(이 문서) | 방향·범위 확정 | 사용자 검토 | 범위 승인 |
+| 1. 상태 카드 + 초안 검토 | 3.2와 5장 공통 부품, `origin`, 채택 되돌리기, `_auto_label` 초안화 | 3.2의 기준, 기존 라벨 무변경, CI 목록 추가 | 없음(로컬 기능) |
+| 2. 클릭 보조 정리 | 오토 셀렉터 결과를 초안으로, SAM2 모델 준비 안내, 클래스 이름 일괄 변경(미리보기·백업) | 초안·채택 규칙 동일, 클래스 변경은 데이터 버전과 근거 무효화에 반영 | SAM2 모델 파일 내려받기(크기·출처 확인 후) |
+| 3. 도우미 로그인과 읽기 전용 답변 | "Continue with ChatGPT", 등록·PKCE·토큰 보관·갱신·로그아웃·폐기, 모델 목록, 상태 카드 기반 설명, 실행 기록 | 토큰이 렌더러·로그·프로젝트에 없음(테스트), 오류 코드별 복구 화면, 모의 서버로 PKCE·갱신·폐기 테스트 | 사용자가 직접 로그인·플랜 사용 동의(실계정 시험은 사용자) |
+| 4. 도우미 도구 | 읽기·이동·준비 도구, 쓰기 도구는 미리보기+확인, 금지 목록 | 도구마다 기존 API·역할 검사 통과, 확인 없는 쓰기 0건, 실행 기록 | 쓰기 도구 실행마다 확인 |
+| 5. 이미지와 함께 묻기 | 이미지 1장 전송 확인, 모델 입력 지원 확인 | 확인 없이 픽셀 전송 0건 | 요청마다 이미지 전송 확인 |
+
+각 단계는 기존 PR 규칙대로 백엔드·화면 단위·브라우저·Electron 검증과 실사용 경로를 거치고, 새 테스트는 CI 목록에 넣습니다.
+
+## 9. 아직 확인하지 못한 것
+
+- 실제 ChatGPT 계정으로 로그인·플랜 사용이 되는지(사용자 계정과 동의가 필요해 시험하지 않음).
+- 계정별 사용 가능 모델과 이미지 입력 지원(문서: 모델이 받을 때만).
+- 함수 도구를 namespace·`additional_tools`로 줄 때의 실제 동작.
+- Plus·Pro 외 요금제의 자격(문서에 목록 없음), 계정·작업 공간 정책에 따른 제한.
+- 공유 서버처럼 원격으로 여러 사용자에게 제공하는 형태는 문서상 별도 신청 대상이라 이번 범위에서 뺌.
+
+## 10. 참고한 공식 문서 (2026-10-21 확인)
+
+- Sign in with ChatGPT quickstart: https://developers.openai.com/siwc/quickstart
+- 오픈소스 개요: https://developers.openai.com/siwc/token-sharing-open-source
+- 등록과 로그인: https://developers.openai.com/siwc/token-sharing-open-source/sign-in
+- 계정과 세션: https://developers.openai.com/siwc/token-sharing-open-source/profiles-and-sessions
+- 모델과 추론: https://developers.openai.com/siwc/token-sharing-open-source/models-and-inference
+- Codex app-server: https://developers.openai.com/siwc/token-sharing-open-source/codex-app-server
+- 토큰 참고: https://developers.openai.com/siwc/token-sharing-open-source/token-reference
+- 오류와 복구: https://developers.openai.com/siwc/token-sharing-open-source/errors-and-recovery
+- 미리보기 제한: https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations
+- 자체 호스팅 VM: https://developers.openai.com/siwc/token-sharing-open-source/self-hosted-vms
+- UI/UX 지침: https://developers.openai.com/siwc/ui-ux-guidelines
