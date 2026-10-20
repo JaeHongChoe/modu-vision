@@ -51,6 +51,8 @@ export function nextExampleName(base: string, existing: Array<{ name: string }> 
 /** The ready demo's summary line, with the example notice kept next to the numbers. */
 export function demoSummary(result: DemoResult): string {
   const counts = ['OK', 'NG', 'REVIEW'].filter(key => key in result.counts).map(key => `${key} ${result.counts[key]}`).join(' · ');
-  const evaluation = result.evaluation ? ` · 평가 ${result.evaluation.known}장: 미검 ${result.evaluation.escapes} · 과검 ${result.evaluation.overkills}` : '';
+  const evaluation = !result.evaluation ? '' : result.evaluation.known > 0
+    ? ` · 평가 ${result.evaluation.known}장: 미검 ${result.evaluation.escapes} · 과검 ${result.evaluation.overkills}`
+    : ' · 흐름 평가는 정답 확인 후';
   return `예제 검사 ${result.images}장 · ${counts}${evaluation}`;
 }

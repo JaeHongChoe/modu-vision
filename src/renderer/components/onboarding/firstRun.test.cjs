@@ -24,3 +24,9 @@ test('a new example never collides with one already made',()=>{const f=load();
  assert.equal(f.nextExampleName('예제',[]),'예제');assert.equal(f.nextExampleName('예제',undefined),'예제');
  assert.equal(f.nextExampleName('예제',[{id:'a',name:'예제',project_dir:'/a'}]),'예제 2');
  assert.equal(f.nextExampleName('예제',[{id:'a',name:'예제',project_dir:'/a'},{id:'b',name:'예제 2',project_dir:'/b'}]),'예제 3');});
+
+test('the example summary does not report a whole-flow evaluation of zero images',()=>{
+ const f=load();
+ const summary=f.demoSummary({project_id:'p',project_name:'예제',job_id:'j',flow_version_id:'v',run_id:'r',counts:{NG:5,OK:7},images:12,evaluation:{evaluation_id:'e',known:0,escapes:0,overkills:0}});
+ assert.match(summary,/흐름 평가는 정답 확인 후/);assert.doesNotMatch(summary,/평가 0장/);
+});

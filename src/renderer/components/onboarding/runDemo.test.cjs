@@ -87,3 +87,9 @@ test('a failed flow evaluation names its step, leaves the inspection pending and
  const final=await runDemo(d,()=>{});
  assert.equal(final.state,'failed');assert.equal(final.steps.evaluate.status,'failed');assert.match(final.steps.evaluate.detail,/held-out/);
  assert.equal(final.steps.inspect,undefined,'the inspection never started');assert.ok(!calls.some(c=>c[0]==='inspect'));});
+
+test('with no confirmed truth the example says so instead of reporting 0 images evaluated',async()=>{
+ const {runDemo}=load();const {deps:d}=deps({evaluateFlow:async()=>({evaluation_id:'eval_0',known:0,escapes:0,overkills:0})});
+ const final=await runDemo(d,()=>{});
+ assert.match(final.steps.evaluate.detail,/정답 확인 전/);assert.doesNotMatch(final.steps.evaluate.detail,/0장/);
+});

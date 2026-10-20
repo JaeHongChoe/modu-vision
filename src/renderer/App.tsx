@@ -28,6 +28,7 @@ import { useDatasetStore } from './stores/useDatasetStore';
 import { useEvaluationStore } from './stores/useEvaluationStore';
 import { useFlowchartStore } from './stores/useFlowchartStore';
 import { completedSteps } from './components/wizard/stepProgress';
+import { subscribeWorkflowProgress, workflowProgressFor } from './stores/workflowProgress';
 import { telemetryService } from './services/websocket';
 import { getBackendPort, request } from './services/api';
 import { needsBrowserHealthProbe, startBrowserHealthProbe } from './services/browserHealth';
@@ -49,7 +50,12 @@ export default function App() {
   const trainingDone = useTrainingStore(s => s.isCurrentData && s.status === 'completed');
   const evaluated = useEvaluationStore(s => Boolean(s.jobId) || s.testPredictions.length > 0);
   const flowSaved = useFlowchartStore(s => Boolean(s.baseVersionId) && !s.pipelineDirty && !s.pipelineIsDraft);
-  const doneSteps = completedSteps({ hasData, images, unlabeled, trainingDone, evaluated, flowSaved });
+  // The footer's last impact report adds what the saved project proves (a current model, its evaluation, an evaluated
+  // flow), so finished steps keep their checkmark after a reload.
+  const progressScope = useProjectStore(s => JSON.stringify([s.project?.id, s.project?.source_dataset_dir, s.project?.active_labelset_id || 'default', s.task]));
+  const [, setProgressTick] = useState(0);
+  useEffect(() => subscribeWorkflowProgress(() => setProgressTick(value => value + 1)), []);
+  const doneSteps = [...new Set([...completedSteps({ hasData, images, unlabeled, trainingDone, evaluated, flowSaved }), ...workflowProgressFor(progressScope)])].sort((a, b) => a - b);
   const { updateFromTelemetry } = useTrainingStore();
   const [workspace,setWorkspace]=useState<'studio'|'operator'>('studio');
   const [utility,setUtility]=useState<'tasks'|'delivery'|null>(null);

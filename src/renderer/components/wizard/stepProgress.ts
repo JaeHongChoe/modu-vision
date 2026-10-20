@@ -26,3 +26,17 @@ export function completedSteps(input: StepProgressInput): number[] {
   if (input.flowSaved) done.push(5);
   return done;
 }
+
+type EvidenceRow = Record<string, unknown>;
+/** Steps the saved project evidence proves, for the step bar after a reload: a model trained on the current data
+ *  (3), an evaluation of that exact checkpoint (4), and a saved flow whose whole-flow evaluation is current (5).
+ *  Read from the impact report the footer already fetches; it never adds a request. */
+export function stepsFromEvidence(impact: {models?: EvidenceRow[]; model_evaluations?: EvidenceRow[]; flows?: EvidenceRow[]} | null | undefined, task: string): number[] {
+  if (!impact) return [];
+  const models = (impact.models || []).filter(row => row.task === task && row.scope_matches === true && row.checkpoint_state === 'current' && row.data_state === 'current');
+  const done: number[] = [];
+  if (models.length) done.push(3);
+  if ((impact.model_evaluations || []).some(row => row.state === 'current' && models.some(model => model.job_id === row.job_id))) done.push(4);
+  if ((impact.flows || []).some(row => row.state === 'current' && row.scope_matches === true)) done.push(5);
+  return done;
+}

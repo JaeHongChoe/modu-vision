@@ -19,7 +19,7 @@ async function hookFixture({wrongProject=false}={}){
  const store=value=>selector=>selector?selector(value):value;
  const mocks={react:{useEffect:fn=>effects.push(fn),useState:initial=>{const i=cursor++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return[slots[i],v=>slots[i]=typeof v==='function'?v(slots[i]):v];},useRef:value=>{const i=cursor++;return slots[i]??(slots[i]={current:value});}},
  '../../services/api':{getProjectContext:()=>context,getApiPersistenceIdentity:()=>null,subscribeProjectContext:()=>()=>{},request:async endpoint=>endpoint.includes('team-data')?{ready:true,counts:{eligible:10}}:{project_id:wrongProject?'other':'p',source_dataset_path:'/data',labelset_id:'default',models:[],model_evaluations:[],flows:[{version_id:'a',scope_matches:true,state:'current'}],approvals:[],packages:[]},api:{flowchart:{listPipelines:async()=>({pipelines:[{version_id:'a',is_active:true}]}),getPipelineVersion:async id=>{calls.push(id);return saved;}}}},
- '../../stores/useProjectStore':{useProjectStore:store(project)},'../../stores/workflowEvidence':{subscribeWorkflowEvidence:()=>()=>{},workflowEvidenceRevision:()=>0},'../../stores/useComputeStore':{useComputeStore:store({transportRevision:0})},'../../stores/useDatasetStore':{useDatasetStore:store(data)},'../../stores/useTrainingStore':{useTrainingStore:store({status:'idle'})},'../../stores/useEvaluationStore':{useEvaluationStore:store({jobId:null})},'../../stores/useAnnotationStore':{useAnnotationStore:store({isDirty:false,metadata:null})},'../../stores/useFlowchartStore':{useFlowchartStore:store(flow),flowSemanticKey:value=>JSON.stringify(value)},'./workflowReadiness':load()};
+ '../../stores/useProjectStore':{useProjectStore:store(project)},'../../stores/workflowEvidence':{subscribeWorkflowEvidence:()=>()=>{},workflowEvidenceRevision:()=>0},'../../stores/useComputeStore':{useComputeStore:store({transportRevision:0})},'../../stores/useDatasetStore':{useDatasetStore:store(data)},'../../stores/useTrainingStore':{useTrainingStore:store({status:'idle'})},'../../stores/useEvaluationStore':{useEvaluationStore:store({jobId:null})},'../../stores/useAnnotationStore':{useAnnotationStore:store({isDirty:false,metadata:null})},'../../stores/useFlowchartStore':{useFlowchartStore:store(flow),flowSemanticKey:value=>JSON.stringify(value)},'./workflowReadiness':load(),'../../stores/workflowProgress':{publishWorkflowProgress:()=>{}},'./stepProgress':{stepsFromEvidence:()=>[]}};
  m.require=name=>mocks[name];m._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,filename);
  m.exports.useWorkflowReadiness();effects.forEach(fn=>fn());await new Promise(resolve=>setImmediate(resolve));cursor=0;const result=m.exports.useWorkflowReadiness();return{...result,calls};
 }
@@ -29,7 +29,7 @@ test('production readiness hook rejects evidence from a different project',async
 // Unit controls for stage-scoped readiness; no model or deployment authorization.
 function scopedHookFixture({stage=2}={}) {
  const filename=path.join(__dirname,'useWorkflowReadiness.ts'),m=new Module(filename,module);
- const slots=[],effectSlots=[],pendingEffects=[],requests=[],pipelineCalls=[],savedCalls=[];
+ const slots=[],effectSlots=[],pendingEffects=[],requests=[],pipelineCalls=[],savedCalls=[],published=[];
  let cursor=0,effectCursor=0,contextListener=null,persistence=null;
  let context={workspace_id:'w',project_id:'p',actor_id:'a',mode:'local'};
  const project={project:{id:'p',source_dataset_dir:'/data',active_labelset_id:'default'},projectDir:'/p',task:'classification',activeStep:stage,isProjectBusy:false};
@@ -37,6 +37,7 @@ function scopedHookFixture({stage=2}={}) {
  const annotation={isDirty:false,metadata:{revision:1},labelbookVersion:1};
  const training={status:'idle',isCurrentData:false,jobId:null};
  const flow={pipeline:null,pipelineDirty:false,flowIdentity:{semantic_revision:0}};
+ const evaluation={jobId:null,testPredictions:[]};
  const store=value=>selector=>selector?selector(value):value;
  const equalDeps=(a,b)=>Boolean(a&&b&&a.length===b.length&&a.every((value,index)=>Object.is(value,b[index])));
  const React={
@@ -55,11 +56,13 @@ function scopedHookFixture({stage=2}={}) {
   '../../stores/useComputeStore':{useComputeStore:store({transportRevision:0})},
   '../../stores/useDatasetStore':{useDatasetStore:store(data)},
   '../../stores/useTrainingStore':{useTrainingStore:store(training)},
-  '../../stores/useEvaluationStore':{useEvaluationStore:store({jobId:null})},
+  '../../stores/useEvaluationStore':{useEvaluationStore:store(evaluation)},
   '../../stores/useAnnotationStore':{useAnnotationStore:store(annotation)},
   '../../stores/useFlowchartStore':{useFlowchartStore:store(flow),flowSemanticKey:value=>JSON.stringify(value)},
   '../../stores/workflowEvidence':{subscribeWorkflowEvidence:()=>()=>{},workflowEvidenceRevision:()=>0},
   './workflowReadiness':load(),
+  '../../stores/workflowProgress':{publishWorkflowProgress:(scope,steps)=>published.push({scope,steps})},
+  './stepProgress':{stepsFromEvidence:(impact,task)=>impact.models.length?[3]:[]},
  };
  m.require=name=>{assert.ok(Object.hasOwn(mocks,name),`unexpected production dependency ${name}`);return mocks[name];};
  m._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,filename);
@@ -69,7 +72,7 @@ function scopedHookFixture({stage=2}={}) {
  const settle=async()=>{await new Promise(resolve=>setImmediate(resolve));return render();};
  const unmount=()=>{for(const row of effectSlots)row?.cleanup?.();};
  const impact=(overrides={})=>({project_id:'p',source_dataset_path:'/data',labelset_id:'default',models:[],model_evaluations:[],flows:[],flow_evaluations:[],approvals:[],packages:[],...overrides});
- return{requests,pipelineCalls,savedCalls,project,data,annotation,training,flow,render,runEffects,mount,settle,unmount,impact,
+ return{requests,pipelineCalls,savedCalls,published,project,data,annotation,training,flow,evaluation,render,runEffects,mount,settle,unmount,impact,
   setContext:value=>{context=value;contextListener?.(value);},
   rebindApiContext:value=>{context=value;},setPersistence:value=>{persistence=value;},
  };
@@ -198,4 +201,24 @@ test('a footer jump opens every closed section around its target',()=>{
  const target={tagName:'SECTION',parentElement:inner};
  openFoldsAround(target);
  assert.equal(inner.open,true);assert.equal(outer.open,true);
+});
+
+test('a model evaluation that lands re-reads the step 4 evidence',async()=>{
+ const fixture=scopedHookFixture({stage:4});
+ fixture.mount();
+ const impactReads=()=>fixture.requests.filter(row=>row.endpoint==='/api/provenance/impact').length;
+ assert.equal(impactReads(),1);
+ fixture.evaluation.jobId='m';fixture.evaluation.testPredictions=[{file_path:'a.png'}];
+ fixture.render();fixture.runEffects();
+ assert.equal(impactReads(),2,'the arrived evaluation triggers a fresh impact read');
+ fixture.unmount();
+});
+
+test('a ready impact report shares its proven steps with the step bar for this project scope',async()=>{
+ const fixture=scopedHookFixture({stage:4});
+ fixture.mount();
+ for(const row of fixture.requests.splice(0)){row.resolve(row.endpoint.includes('team-data')?{ready:true,counts:{eligible:12}}:fixture.impact({models:[{job_id:'m'}]}));}
+ await fixture.settle();
+ assert.deepEqual(fixture.published,[{scope:JSON.stringify(['p','/data','default','classification']),steps:[3]}]);
+ fixture.unmount();
 });

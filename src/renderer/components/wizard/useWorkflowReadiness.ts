@@ -9,6 +9,8 @@ import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { flowSemanticKey, useFlowchartStore } from '../../stores/useFlowchartStore';
 import { getNextAction, type WorkflowEvidence, type WorkflowImpact } from './workflowReadiness';
 import { subscribeWorkflowEvidence, workflowEvidenceRevision } from '../../stores/workflowEvidence';
+import { publishWorkflowProgress } from '../../stores/workflowProgress';
+import { stepsFromEvidence } from './stepProgress';
 
 export function useWorkflowReadiness() {
   const project=useProjectStore(s=>s.project),projectDir=useProjectStore(s=>s.projectDir),task=useProjectStore(s=>s.task),stage=useProjectStore(s=>s.activeStep),projectBusy=useProjectStore(s=>s.isProjectBusy);
@@ -17,6 +19,8 @@ export function useWorkflowReadiness() {
   const revision=useComputeStore(s=>s.transportRevision);
   const data=useDatasetStore(),training=useTrainingStore();
   const modelJobId=useEvaluationStore(s=>s.jobId);
+  // A finished model evaluation is saved as evidence; re-read when its results arrive so step 4 can move on.
+  const evaluatedSamples=useEvaluationStore(s=>s.testPredictions?.length ?? 0);
   const flow=useFlowchartStore();
   const annotationDirty=useAnnotationStore(s=>s.isDirty);
   const annotationRevision=useAnnotationStore(s=>s.metadata?.revision),labelbookVersion=useAnnotationStore(s=>s.labelbookVersion);
@@ -55,9 +59,11 @@ export function useWorkflowReadiness() {
       if(!current())return;
       const flowMatchesSaved=!flow.pipeline || Boolean(saved&&flowSemanticKey(saved)===flowSemanticKey(flow.pipeline));
       setReceipt({key,evidence:{status:'ready',review,impact},versionId,flowMatchesSaved});
+      // Share what the report proves with the step bar, so its checkmarks survive a reload without another request.
+      publishWorkflowProgress(JSON.stringify([project.id,project.source_dataset_dir,project.active_labelset_id||'default',task]),stepsFromEvidence(impact,task));
     }).catch(cause=>{if(current())setReceipt({key,evidence:{status:'error',error:String(cause.message||cause)}});});
     return()=>{sequence.current++;};
-  },[key,sourceReady,refresh,data.isLoading,data.isSplitting,training.status,flow.flowIdentity.semantic_revision,flow.pipelineDirty,flow.pipelineIsDraft,flow.baseVersionId,evidenceRevision]);
+  },[key,sourceReady,refresh,data.isLoading,data.isSplitting,training.status,flow.flowIdentity.semantic_revision,flow.pipelineDirty,flow.pipelineIsDraft,flow.baseVersionId,evidenceRevision,modelJobId,evaluatedSamples]);
   const evidence=receipt?.key===key?receipt.evidence:{status:'error' as const,error:'현재 프로젝트 근거 확인 필요'};
   return {readiness:getNextAction({stage,projectReady:Boolean(projectDir&&project),sourceReady,totalImages:data.totalImages,train:data.split.train,val:data.split.val,
     busy:projectBusy||data.isLoading||data.isSplitting||annotationDirty,task,modelJobId:modelJobId || (training.isCurrentData?training.jobId:null),flowVersionId:receipt?.key===key?receipt.versionId:null,

@@ -128,7 +128,9 @@ export async function runDemo(deps: DemoDeps, onUpdate: (state: DemoState) => vo
     }, value => `작업 ${value}`);
     const flow = await step('flow', () => deps.saveFlow(jobId, folder), value => `저장 버전 ${value.version_id.slice(0, 8)}`);
     const evaluation = await step('evaluate', () => deps.evaluateFlow(flow.version_id),
-      value => `${value.known}장 · 미검 ${value.escapes} · 과검 ${value.overkills}`);
+      // Folder labels become whole-flow truth only when a person confirms them in 5단계 일괄 평가, so the example never
+      // confirms them itself; with no confirmed truth it says so instead of reporting "0장 · 미검 0".
+      value => value.known > 0 ? `${value.known}장 · 미검 ${value.escapes} · 과검 ${value.overkills}` : '정답 확인 전 · 5단계 일괄 평가에서 폴더 라벨을 정답으로 확인하면 평가됩니다');
     const inspected = await step('inspect', () => deps.inspect(folder), value => `${value.images}장 검사`);
     const result: DemoResult = { project_id: deps.projectId() || '', project_name: projectName, job_id: jobId,
       flow_version_id: flow.version_id, run_id: inspected.run_id || '', counts: inspected.counts, images: inspected.images, evaluation };
