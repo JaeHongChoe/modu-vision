@@ -32,7 +32,7 @@ from typing import Any, Callable, Dict, List, Literal, Optional, Sequence, Tuple
 import cv2
 import numpy as np
 from PIL import Image
-from backend.engine.dicom_input import open_source_image, is_dicom, DICOM_EXTENSIONS
+from backend.engine.dicom_input import open_source_image, is_dicom, DICOM_EXTENSIONS, IMAGE_OPEN_ERRORS
 import torch
 from torch.utils.data import DataLoader, Dataset
 import torchvision.transforms.functional as TF
@@ -183,6 +183,9 @@ class DatasetSummary:
     split_counts: Dict[str, int]
     sample_size: Optional[Tuple[int, int]] = None
     folder_scanned: bool = False
+    # Classification only: "saved_manifest" (a saved split), "folders" (source train/val/test folders) or "automatic"
+    # (the loader's per-run split, which evaluation refuses). None for other tasks.
+    split_basis: Optional[str] = None
 
 
 # ============================================================================
@@ -352,6 +355,20 @@ def _read_image_rgb(path: Union[str, Path], bg_color: str = "white") -> np.ndarr
       4. Always returns uint8 RGB ndarray of shape (H, W, 3).
     """
     p_str = str(path)
+    try:
+        return _read_image_rgb_unchecked(p_str, bg_color)
+    except UndecodableImageError:
+        raise
+    except IMAGE_OPEN_ERRORS as exc:
+        # The worker's error catalog maps "corrupt image" to ERR_005; name the file so the user can find it.
+        raise UndecodableImageError(f"corrupt image file cannot be decoded: {p_str} ({type(exc).__name__})") from exc
+
+
+class UndecodableImageError(ValueError):
+    """An image file the loaders cannot decode; the message carries its path."""
+
+
+def _read_image_rgb_unchecked(p_str: str, bg_color: str = "white") -> np.ndarray:
     with open_source_image(p_str) as im:
         # Check for 16-bit / 32-bit single-channel modes (e.g. industrial TIFF/AOI)
         if im.mode in ("I;16", "I;16L", "I;16B", "I", "F"):
@@ -1347,7 +1364,7 @@ def inspect_dataset(root_dir: Union[str, Path], task: str, ignore_saved_split: b
             }
             return DatasetSummary(
                 task="classification", total_images=len(all_dataset),
-                classes=counts, split_counts=split_counts,
+                classes=counts, split_counts=split_counts, split_basis="saved_manifest",
             )
         if any((root / name).is_dir() for name in ("train", "val", "test")):
             split_counts: Dict[str, int] = {name: 0 for name in ("train", "val", "test")}
@@ -1366,6 +1383,7 @@ def inspect_dataset(root_dir: Union[str, Path], task: str, ignore_saved_split: b
                 total_images=total,
                 classes=counts,
                 split_counts=split_counts,
+                split_basis="folders",
             )
         else:
             ds = ClassificationDataset(root_dir=root, ignore_saved_split=ignore_saved_split)
@@ -1385,6 +1403,7 @@ def inspect_dataset(root_dir: Union[str, Path], task: str, ignore_saved_split: b
                 total_images=total,
                 classes=counts,
                 split_counts=split_counts,
+                split_basis=getattr(ds, "split_basis", "automatic"),
             )
 
     elif task_clean == "detection":

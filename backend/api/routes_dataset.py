@@ -546,6 +546,17 @@ def current_dataset_summary(request: Request, folder_path: str, task: str):
     return import_dataset(DatasetImportRequest(folder_path=source, task=project["task"], validate_images=True))
 
 
+TASK_NAMES_KO = {"classification": "분류", "detection": "객체 검출", "segmentation": "영역 분할", "anomaly": "이상 탐지",
+                 "patch_classification": "패치 분류"}
+# What each task reads, in the words the step-1 checklist and the layout error show.
+EXPECTED_LAYOUT_KO = {
+    "classification": "클래스마다 폴더 하나 (예: 데이터/OK/*.png, 데이터/NG/*.png). 이미 나눴다면 train·val·test 아래에 같은 구조",
+    "detection": "images/train, images/val 이미지와 annotations_train.json, annotations_val.json (COCO), 또는 이미지 옆 같은 이름의 LabelMe .json",
+    "segmentation": "images/ 와 masks/ (이미지와 같은 이름의 PNG 마스크), 또는 이미지 옆 같은 이름의 LabelMe .json. 마스크 없이 불러와 2단계에서 그려도 됩니다",
+    "anomaly": "train/good (정상만), test/good, test/<결함 이름> (선택: ground_truth/<결함 이름>/<이름>_mask.png), 또는 OK/ 와 NG/",
+}
+
+
 @observe_original_dataset_UI_operation('import_dataset')
 @router.post("/import")
 def import_dataset(req: DatasetImportRequest):
@@ -568,6 +579,16 @@ def import_dataset(req: DatasetImportRequest):
         )
 
     effective_folder = _resolve_task_folder(folder, req.task)
+    # Decode the images before counting them: undecodable ones are recorded in the project's usage ledger as not used
+    # (reason decode_error; the files themselves are untouched), so the inventory and split below, the loaders and the
+    # "excluded" message all agree. A file that decodes again later becomes active on the next import.
+    validation = _validate_folder_images(folder) if req.validate_images else ([], 0, False, [])
+    undecodable = {'excluded': [], 'restored': [], 'recorded': False}
+    from backend.engine.annotation_storage import request_project_root
+    validation_project = request_project_root()
+    if req.validate_images and validation_project is not None:
+        from backend.engine.undecodable_images import exclude_undecodable
+        undecodable = {**exclude_undecodable(validation_project, folder, validation[0]), 'recorded': True}
     # An inventory listed by annotation files may name images that are missing or outside the folder; a folder-scanned
     # one is a subset of the image files under the folder, which the validation below decodes.
     listed_inventory = False
@@ -597,6 +618,7 @@ def import_dataset(req: DatasetImportRequest):
                 # Training still rejects the stale manifest until that succeeds.
                 summary = inspect_dataset(effective_folder, req.task, ignore_saved_split=True)
                 summary.split_counts = {"train": 0, "val": 0, "test": 0}
+                summary.split_basis = "stale"
             # If standard scanner found 0 images, auto-inspect via industrial adapter (LabelMe, manufacturing layout)
             if summary.total_images == 0:
                 ind_res = inspect_industrial_dataset(effective_folder, task=req.task)
@@ -612,9 +634,14 @@ def import_dataset(req: DatasetImportRequest):
                     }
     except Exception as e:
         logger.exception("Failed to inspect dataset: %s", e)
+        # A loader that cannot read the folder means the layout does not fit the task, not "too few samples": say
+        # which layout this task expects and keep the loader's own message as the technical detail.
         raise HTTPException(
             status_code=422,
-            detail=format_error_response("ERR_NO_DATA", details=str(e)),
+            detail={**format_error_response("ERR_DATA_LAYOUT", details=str(e), custom_message_kr=(
+                f"이 폴더 구조는 '{TASK_NAMES_KO.get(req.task, req.task)}' 작업과 맞지 않습니다. "
+                f"이렇게 준비하세요: {EXPECTED_LAYOUT_KO.get(req.task, '')}")),
+                "expected_layout": EXPECTED_LAYOUT_KO.get(req.task, "")},
         )
 
     # Nested LabelMe inventory comes from the same folder paths the manifest
@@ -657,8 +684,7 @@ def import_dataset(req: DatasetImportRequest):
             summary.total_images = len(selected_paths)
 
     # Optional image validation scanning
-    corrupted_images, count_checked, sampled, gaps = (
-        _validate_folder_images(folder) if req.validate_images else ([], 0, False, []))
+    corrupted_images, count_checked, sampled, gaps = validation
     if not req.validate_images:
         scope = "not requested"
     elif sampled:
@@ -675,6 +701,13 @@ def import_dataset(req: DatasetImportRequest):
         scope = "all images: every image file under the folder was decoded"
 
     split_supported, split_unavailable_reason = _split_capability(req.task, flat_labelme)
+    # What the split counts are: a saved split, the source train/val/test folders, the loader's automatic per-run split
+    # (classification only; evaluation refuses it), or a saved split that no longer matches the images.
+    if req.task == "classification":
+        split_state = {"saved_manifest": "saved", "folders": "source_folders", "automatic": "automatic",
+                       "stale": "stale"}.get(getattr(summary, "split_basis", None) or "", "saved")
+    else:
+        split_state = "saved" if grouped_assignments else "source_folders"
 
     return {
         "status": "success",
@@ -688,6 +721,15 @@ def import_dataset(req: DatasetImportRequest):
             "test": split_counts.get("test", 0),
         },
         "corrupted_images": corrupted_images,
+        # Undecodable images kept out of the inventory, splits and training (relative paths), and earlier exclusions
+        # that decode again; "recorded" is false when there is no project to record the exclusion in.
+        "excluded_undecodable": undecodable,
+        "split_state": split_state,
+        # Detection/segmentation folders whose label inventory is empty (nothing to train on until labels are drawn
+        # in step 2 or masks/annotation files are added). Import still succeeds so the user can label here.
+        "labels_missing": req.task in ("detection", "segmentation")
+                          and not any(int(v or 0) for v in (summary.classes or {}).values()),
+        "expected_layout": EXPECTED_LAYOUT_KO.get(req.task, ""),
         # An empty corrupted list after a sampled check is not a statement about the unchecked images.
         "validation": {"requested": req.validate_images, "checked_images": count_checked,
                        "complete": scope.startswith("all images"), "scope": scope},

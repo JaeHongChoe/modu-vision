@@ -114,7 +114,7 @@ class TestErrorCatalogEndpoints:
         res = client.get("/api/errors")
         assert res.status_code == 200
         errors = res.json()["errors"]
-        assert len(errors) == 8
+        assert len(errors) == 9
         codes = [e["code"] for e in errors]
         assert "ERR_001" in codes
         assert "ERR_008" in codes

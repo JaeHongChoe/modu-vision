@@ -1068,6 +1068,10 @@ export const api = {
         split: { train: number; val: number; test?: number };
         corrupted_images?: any[];
         validation?: DatasetQuickValidation;
+        excluded_undecodable?: { excluded: string[]; restored: string[]; recorded: boolean };
+        split_state?: 'saved' | 'source_folders' | 'automatic' | 'stale';
+        labels_missing?: boolean;
+        expected_layout?: string;
       }>('/api/dataset/import', { method: 'POST', body: JSON.stringify(data) }),
 
     currentSummary: (data: { folder_path: string; task: VisionTask }) =>
@@ -1082,6 +1086,10 @@ export const api = {
         split: { train: number; val: number; test?: number };
         corrupted_images?: any[];
         validation?: DatasetQuickValidation;
+        excluded_undecodable?: { excluded: string[]; restored: string[]; recorded: boolean };
+        split_state?: 'saved' | 'source_folders' | 'automatic' | 'stale';
+        labels_missing?: boolean;
+        expected_layout?: string;
       }>(`/api/dataset/current-summary?${new URLSearchParams(data).toString()}`),
 
     generate: (data: {

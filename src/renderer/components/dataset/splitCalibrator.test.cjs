@@ -2,7 +2,7 @@
 // showed a preview (80/10/10 → 51/6/7) while the saved split (40/12/12) was what actually applied.
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),Module=require('node:module'),ts=require('typescript'),test=require('node:test');
 function load(file){const name=path.resolve(__dirname,file);const mod=new Module(name,module);mod.filename=name;mod.paths=Module._nodeModulePaths(path.dirname(name));mod._compile(ts.transpileModule(fs.readFileSync(name,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,name);return mod.exports;}
-const {severeClassImbalance,calibratorView}=load('splitCalibrator.ts');
+const {severeClassImbalance,calibratorView,splitStatus}=load('splitCalibrator.ts');
 
 test('a balanced 32/32 set is not called imbalanced; 1 vs 40 is; a single class or an empty class is ignored',()=>{
  assert.equal(severeClassImbalance({NG:32,OK:32}),false);
@@ -38,4 +38,14 @@ test('the data step reads these helpers and names the split sets in Korean',()=>
  assert.match(source,/calibratorView\(/);
  assert.ok(!/Math\.min\(\.\.\.Object\.values\(classes\), 1\)/.test(source),'the inverted floor is still there');
  assert.ok(!/>\s*Train: \{/.test(source),'split labels are still English');
+});
+
+test('the heading says saved only when the backend says the split is saved (F-02)',()=>{
+ assert.equal(splitStatus({mode:'applied',splitState:'automatic',locked:false}).label,'자동 · 저장 안 됨');
+ assert.equal(splitStatus({mode:'applied',splitState:'automatic',locked:false}).foldable,false,'an unsaved split never folds away');
+ assert.equal(splitStatus({mode:'applied',splitState:'saved',locked:false}).label,'저장됨');
+ assert.equal(splitStatus({mode:'applied',splitState:'source_folders',locked:false}).label,'원본 폴더 구성');
+ assert.equal(splitStatus({mode:'preview',splitState:'stale',locked:false}).label,'다시 나눠야 함','a stale split is called out even while the counts are zero');
+ assert.equal(splitStatus({mode:'preview',splitState:'saved',locked:false}).label,'예상');
+ assert.equal(splitStatus({mode:'applied',splitState:null,locked:false}).label,'저장됨','older backends without split_state keep the old wording');
 });

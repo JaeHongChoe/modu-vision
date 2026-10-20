@@ -38,7 +38,8 @@ import { ImportTaskSwitch } from './ImportTaskSwitch';
 import { JargonTooltip } from '../common/JargonTooltip';
 import { GuardrailBanner } from '../common/GuardrailBanner';
 import { classDistributionStats } from './classDistribution';
-import { calibratorView, severeClassImbalance } from './splitCalibrator';
+import { calibratorView, severeClassImbalance, splitStatus } from './splitCalibrator';
+import { importChecks } from './importChecklist';
 import { isSplitUnavailable } from '../../utils/datasetSplitCapability';
 import { ScopedDatasetThumbnail } from '../common/ScopedDatasetThumbnail';
 
@@ -77,6 +78,10 @@ export const DatasetStudio: React.FC = () => {
     isLoading,
     isSplitting,
     corruptedImages,
+    excludedUndecodable,
+    splitState,
+    labelsMissing,
+    expectedLayout,
     quickValidation,
     setSplitFilter,
     setClassFilter,
@@ -242,7 +247,14 @@ export const DatasetStudio: React.FC = () => {
   const showAppliedSplit = calibrator.mode === 'applied';
   // A saved split needs no attention from a first-time user: the simple view shows its counts on one line and keeps
   // the presets, slider and apply button one click away.
-  const splitFolded = simpleView && showAppliedSplit && !splitOpen;
+  // Labels come from what the backend says the split is (saved, source folders, automatic or stale), so an unsaved
+  // automatic split is never shown as saved and only a saved one folds to a single line.
+  const splitInfo = splitStatus({ mode: calibrator.mode, splitState, locked: splitUnavailableForTask });
+  const splitFolded = simpleView && splitInfo.foldable && !splitOpen;
+  const checklist = (importChecks({ task, totalImages: totalImages || 0, classes: classes || {}, split: split || { train: 0, val: 0, test: 0 },
+    splitState: splitState ?? null, classSplitCounts: classSplitCounts ?? null, corrupted: corruptedImages?.length ?? 0,
+    excludedUndecodable: excludedUndecodable ?? null, labelsMissing: Boolean(labelsMissing), expectedLayout: expectedLayout || '',
+    splitLocked: splitUnavailableForTask }) as ReturnType<typeof importChecks> | null) ?? [];
   const shownCounts = calibrator.counts;
   const shownRatios = calibrator.ratios;
 
@@ -384,6 +396,20 @@ export const DatasetStudio: React.FC = () => {
       <div className="flex-1 flex overflow-hidden">
         {/* Left Stats, Split Calibrator & Class Distribution Panel */}
         <aside className="w-84 bg-[#131822] border-r border-[#2B3547] p-3 flex flex-col space-y-3 overflow-y-auto">
+          {/* Before-training checks from the import result: what will block training or step 4, and what is weak. */}
+          {hasSelectedFolder && checklist.length > 0 && (
+            <section aria-label="학습 전 점검" className="rounded-[4px] border border-[#2B3547] bg-[#1A212E] p-2.5 text-xs">
+              <h3 className="mb-1.5 font-semibold text-slate-100">학습 전 점검</h3>
+              <ul className="space-y-1">
+                {checklist.map(check => (
+                  <li key={check.id} data-check={check.id} data-level={check.level}
+                    className={check.level === 'block' ? 'text-rose-200' : check.level === 'warn' ? 'text-amber-200' : 'text-emerald-200'}>
+                    <span aria-hidden="true">{check.level === 'block' ? '✕ ' : check.level === 'warn' ? '! ' : '✓ '}</span>{check.text}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           {/* Summary KPI Readout Tiles */}
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="p-2.5 bg-[#1A212E] rounded-[4px] border border-[#2B3547]">
@@ -463,9 +489,10 @@ export const DatasetStudio: React.FC = () => {
                 </span>
               </div>
               <p className="text-[11px] text-red-300">
-                {language === 'ko'
-                  ? 'ERR_005: 0바이트 또는 헤더 손상 이미지가 제외되었습니다.'
-                  : 'Corrupted image headers were excluded.'}
+                {language !== 'ko' ? (excludedUndecodable?.recorded ? 'Unreadable images were left out of training and splits; the files are unchanged.' : 'Unreadable images found; reopen the project and import again to leave them out.')
+                  : excludedUndecodable?.recorded
+                    ? `읽을 수 없는 이미지 ${excludedUndecodable.excluded.length}장을 학습·분할에서 뺐습니다 (원본 파일은 그대로): ${excludedUndecodable.excluded.slice(0, 5).join(', ')}${excludedUndecodable.excluded.length > 5 ? ' …' : ''}`
+                    : '읽을 수 없는 이미지가 있습니다. 프로젝트를 열고 다시 불러오면 학습에서 자동으로 빠집니다.'}
               </p>
             </div>
           )}
@@ -496,24 +523,21 @@ export const DatasetStudio: React.FC = () => {
               <div className="flex items-center space-x-1.5">
                 <Sliders className="w-3.5 h-3.5 text-blue-400" />
                 <span className="text-xs font-bold text-slate-200 tracking-wide uppercase">
-                  {showAppliedSplit
-                    ? (language === 'ko' ? '학습 · 검증 · 시험 분할 (저장됨)' : 'Train / val / test split (saved)')
-                    : (language === 'ko' ? '학습 · 검증 · 시험 분할 (예상)' : 'Train / val / test split (preview)')}
+                  {language === 'ko' ? `학습 · 검증 · 시험 분할 (${splitInfo.label})`
+                    : showAppliedSplit ? 'Train / val / test split (saved)' : 'Train / val / test split (preview)'}
                 </span>
               </div>
-              {simpleView && showAppliedSplit ? <span className="flex items-center gap-2 text-[11px] text-slate-300">
+              {simpleView && splitInfo.foldable ? <span className="flex items-center gap-2 text-[11px] text-slate-300">
                 {splitFolded && <span className="tabular-nums">학습 {calibrator.counts.train} · 검증 {calibrator.counts.val} · 시험 {calibrator.counts.test}</span>}
                 <button type="button" aria-expanded={!splitFolded} onClick={() => setSplitOpen(open => !open)} className="rounded border border-[#2B3547] px-2 py-0.5 text-slate-200 hover:bg-[#222B3D]">{splitFolded ? '바꾸기' : '접기'}</button>
               </span> : <JargonTooltip termKey="early_stopping" />}
             </div>
             <div className={splitFolded ? 'hidden' : 'flex flex-col space-y-2.5'}>
 
-            <p className="text-xs text-slate-400">
-              {showAppliedSplit
-                ? (splitUnavailableForTask
-                  ? (language === 'ko' ? '원본 폴더의 분할을 그대로 사용합니다.' : 'The source folder\'s own split is used.')
-                  : (language === 'ko' ? '지금 저장된 분할입니다. 바꾸려면 아래에서 비율을 고르고 적용을 누르세요.' : 'This is the saved split. Pick a ratio below and apply it to change it.'))
-                : (language === 'ko' ? '아래는 바뀔 분할의 예상입니다. 적용 버튼을 눌러야 저장된 분할이 변경됩니다.' : 'Preview of the new split. Saved splits change when you select Apply.')}
+            <p className={`text-xs ${splitInfo.tone === 'warn' ? 'text-amber-200' : 'text-slate-400'}`} role={splitInfo.tone === 'warn' ? 'status' : undefined}>
+              {language === 'ko' ? splitInfo.description
+                : showAppliedSplit ? (splitUnavailableForTask ? 'The source folder\'s own split is used.' : 'This is the saved split. Pick a ratio below and apply it to change it.')
+                : 'Preview of the new split. Saved splits change when you select Apply.'}
             </p>
 
             {/* Quick Calibration Presets */}
@@ -601,7 +625,9 @@ export const DatasetStudio: React.FC = () => {
             {/* Apply Split Button */}
             <button
               type="button"
-              onClick={() => void applySplit(splitRatios.train / 100, splitRatios.val / 100, splitRatios.test / 100).catch(() => {})}
+              onClick={() => void applySplit(splitRatios.train / 100, splitRatios.val / 100, splitRatios.test / 100)
+                .then(() => setSplitRatios(prev => ({ ...prev, touchedFor: null })))
+                .catch(() => {})}
               disabled={!sourceIsCurrent || isSplitting || totalImages === 0 || splitUnavailableForTask}
               title={splitUnavailableForTask ? splitUnavailableHint : undefined}
               className="w-full py-1.5 bg-[#2563EB] hover:bg-blue-500 text-white rounded-[4px] border border-blue-400 text-xs font-semibold flex items-center justify-center space-x-1.5 transition-tactile cursor-pointer disabled:opacity-40"

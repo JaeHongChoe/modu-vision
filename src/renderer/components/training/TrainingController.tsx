@@ -89,7 +89,7 @@ export const TrainingController: React.FC = () => {
   catch (error) { modelOptionsError = error instanceof Error ? error.message : String(error); }
   const modelOptionsKey = JSON.stringify(modelOptions);
   const { folderPath, totalImages, split, isLoading, isSplitting, importError, splitError,
-    splitSupported, splitUnavailableReason, datasetKey } = useDatasetStore();
+    splitSupported, splitUnavailableReason, datasetKey, splitState } = useDatasetStore();
   const {
     jobId,
     warmStartParentJobId,
@@ -214,6 +214,9 @@ export const TrainingController: React.FC = () => {
   const startBlocker = isProjectBusy || isLoading || isSplitting ? '프로젝트·데이터 변경이 진행 중입니다.'
     : !sourceReady || importError ? '현재 데이터 원본을 다시 가져와야 합니다.'
     : totalImages<1 || split.train<1 || split.val<1 ? '저장된 Train·Val 분할과 검수 이미지를 준비하세요.'
+    // Training on an automatic split works but step 4 refuses to evaluate it; a stale saved split is refused anyway.
+    : task === 'classification' && splitState === 'stale' ? '폴더의 이미지가 저장한 분할과 달라졌습니다. 1단계에서 분할을 다시 저장하세요.'
+    : task === 'classification' && splitState === 'automatic' ? "분할이 저장되지 않았습니다. 1단계에서 '이 비율로 나누기'를 누른 뒤 학습하세요 (저장하지 않으면 4단계에서 평가할 수 없습니다)." 
     : isRecoveringTraining ? '이전 학습의 실행 상태를 확인 중입니다.'
     : modelOptionsError || schedulingError || (!computeReady ? computeLoadError || selectedReadiness.reason || '실행 자원을 확인해야 합니다.' : null);
   const requiresSourcePartitions = isSplitUnavailable(task, splitSupported);

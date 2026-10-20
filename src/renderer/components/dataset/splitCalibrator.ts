@@ -30,3 +30,29 @@ export function calibratorView(input: { touched: boolean; locked: boolean; appli
   const val = Math.round(input.totalImages * (input.ratios.val / 100));
   return { mode: 'preview', counts: { train, val, test: Math.max(0, input.totalImages - train - val) }, ratios: input.ratios };
 }
+
+/** Where the split counts come from, as the import reports it (backend `split_state`). */
+export type SplitState = 'saved' | 'source_folders' | 'automatic' | 'stale';
+
+/** The calibrator heading and its one-line explanation. "Saved" is said only when the backend says a split is saved:
+ *  an automatic split (the loader's per-run split, which step 4 refuses to evaluate) and a saved split that no longer
+ *  matches the folder are called out instead of being shown as saved. */
+export function splitStatus(input: { mode: 'applied' | 'preview'; splitState: SplitState | null; locked: boolean }):
+  { label: string; description: string; tone: 'ok' | 'warn'; foldable: boolean } {
+  if (input.splitState === 'stale') {
+    return { label: '다시 나눠야 함', tone: 'warn', foldable: false,
+      description: "폴더의 이미지가 저장한 분할과 달라졌습니다(추가·삭제·이름 변경). 비율을 고르고 '이 비율로 나누기'로 다시 저장하세요." };
+  }
+  if (input.mode === 'preview') {
+    return { label: '예상', tone: 'ok', foldable: false,
+      description: "아래는 바뀔 분할의 예상입니다. '이 비율로 나누기'를 눌러야 저장됩니다." };
+  }
+  if (input.locked || input.splitState === 'source_folders') {
+    return { label: '원본 폴더 구성', tone: 'ok', foldable: true, description: '원본 폴더의 train·val·test 구성을 그대로 씁니다.' };
+  }
+  if (input.splitState === 'automatic') {
+    return { label: '자동 · 저장 안 됨', tone: 'warn', foldable: false,
+      description: "학습할 때마다 새로 나뉘어 4단계에서 평가할 수 없습니다. 비율을 고르고 '이 비율로 나누기'를 눌러 저장하세요." };
+  }
+  return { label: '저장됨', tone: 'ok', foldable: true, description: '지금 저장된 분할입니다. 바꾸려면 아래에서 비율을 고르고 적용을 누르세요.' };
+}

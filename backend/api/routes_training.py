@@ -292,6 +292,9 @@ class JobRecord:
     remote_runner: Optional[Callable[[JobRecord], Dict[str, Any]]] = field(default=None, repr=False)
     remote_profile: Optional[ComputeProfile] = field(default=None, repr=False)
     launch_spec: Optional[Dict[str, Any]] = field(default=None, repr=False)
+    # The starting request's project and annotation roots, re-entered by the job's thread (threads do not inherit
+    # the request context) so remote preparation applies the same image usage policy as the request.
+    data_scope: Optional[Dict[str, Optional[str]]] = field(default=None, repr=False)
     split_manifest_root: Optional[str] = None
     warm_start: Optional[WarmStartParent] = None
     dataset_binding: Optional[Dict[str, Any]] = None
@@ -586,7 +589,13 @@ class TrainingJobManager:
         queue_when_busy: bool = True,
         priority: int = 0,
         budget: Optional[Dict[str, Any]] = None,
+        data_scope: Optional[Dict[str, Optional[str]]] = None,
     ) -> JobRecord:
+        # Threads do not inherit the request's context: keep its project and annotation roots with the job (also
+        # while it waits in the queue) so the training thread and worker apply the same image usage policy.
+        if data_scope is None:
+            from backend.engine.local_training_worker import _data_scope_fields
+            data_scope = _data_scope_fields()
         with self._lock:
             active_record = next(
                 (record for record in self._jobs.values()
@@ -601,7 +610,7 @@ class TrainingJobManager:
                     task=task, dataset_path=dataset_path, output_dir=output_dir, preset=preset, device=device,
                     config_overrides=config_overrides, prepare_dataset=prepare_dataset, source_dataset_path=source_dataset_path,
                     dataset_fingerprint=dataset_fingerprint, split_manifest_root=split_manifest_root, warm_start=warm_start,
-                    dataset_binding=dataset_binding))
+                    dataset_binding=dataset_binding, data_scope=data_scope))
             # Build telemetry callback
             cb = WebSocketTelemetryCallback(job_id=job_id, max_hz=30.0)
 
@@ -677,7 +686,8 @@ class TrainingJobManager:
                 error = None
                 try:
                     logger.info("Background training thread started for job %s", job_id)
-                    with split_root_scope(split_manifest_root):
+                    from backend.engine.local_training_worker import worker_data_scope
+                    with worker_data_scope(data_scope), split_root_scope(split_manifest_root):
                         if record.preparation_cancel.is_set():
                             raise LabelMePreparationCancelled("Training preparation cancelled by user request")
                         if prepare_dataset is not None:
@@ -879,6 +889,8 @@ class TrainingJobManager:
                 split_manifest_root=split_manifest_root,
                 warm_start=warm_start, dataset_binding=dataset_binding, ledger=ledger,
             )
+            from backend.engine.local_training_worker import _data_scope_fields
+            record.data_scope = _data_scope_fields()
             if profile is not None and recovery_state is None:
                 from backend.remote.coordinator import persist_queued_remote_job
 
@@ -921,7 +933,8 @@ class TrainingJobManager:
                     from backend.engine.live_remote_control import bind_remote_control,bind_remote_recovery
                     record._global_remote_control=bind_remote_control(record,self._leases)
                     record._global_remote_recovery=bind_remote_recovery(record,self._leases) if record._global_remote_control is None else None
-                with split_root_scope(record.split_manifest_root):
+                from backend.engine.local_training_worker import worker_data_scope
+                with worker_data_scope(record.data_scope or {}), split_root_scope(record.split_manifest_root):
                     result = record.remote_runner(record)
                 state = result.get("status", "failed")
                 if state not in ("completed", "aborted", "failed", "disconnected"):
@@ -1790,10 +1803,24 @@ def _start_training(req: TrainingStartRequest, request: Optional[Request], reser
 
     if req.task == "classification":
         try:
-            train_count = len(ClassificationDataset(effective_dataset_path, split="train"))
+            train_set = ClassificationDataset(effective_dataset_path, split="train")
+            train_count = len(train_set)
             val_count = len(ClassificationDataset(effective_dataset_path, split="val"))
         except (OSError, ValueError) as exc:
-            raise HTTPException(status_code=422, detail=f"분류 데이터 분할을 다시 확인하세요. / Check classification split: {exc}") from exc
+            if str(exc).startswith("Saved split"):
+                raise HTTPException(status_code=422, detail=(
+                    "1단계에서 저장한 분할과 지금 폴더의 이미지가 다릅니다(이미지가 추가·삭제되었거나 이름이 바뀜). "
+                    "1단계에서 '이 비율로 나누기'로 다시 나눈 뒤 학습하세요.")) from exc
+            raise HTTPException(status_code=422, detail=f"분류 데이터 분할을 읽지 못했습니다. 1단계에서 분할을 다시 저장하세요. (기술 상세: {exc})") from exc
+        # A classifier needs at least two classes that have training images; one class only ever answers that class.
+        trained_classes = sorted({train_set.classes[label] for _, label in train_set.samples})
+        if len(trained_classes) < 2:
+            empty = [name for name in train_set.classes if name not in trained_classes]
+            only = trained_classes[0] if trained_classes else '없음'
+            raise HTTPException(status_code=422, detail=(
+                f"분류 학습에는 학습용 이미지가 있는 클래스가 2개 이상 필요합니다. 지금은 '{only}' 하나뿐입니다"
+                + (f" (빈 클래스 폴더: {', '.join(empty)})" if empty else "")
+                + ". 다른 클래스 폴더에 이미지를 넣고 1단계에서 다시 불러오세요."))
         if train_count == 0 or val_count == 0:
             raise HTTPException(
                 status_code=422,

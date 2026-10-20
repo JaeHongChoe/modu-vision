@@ -222,3 +222,9 @@ test('a ready impact report shares its proven steps with the step bar for this p
  assert.deepEqual(fixture.published,[{scope:JSON.stringify(['p','/data','default','classification']),steps:[3]}]);
  fixture.unmount();
 });
+
+test('stage three blocks an unsaved or stale classification split and sends the user to step 1 (F-02)',()=>{
+ const {getNextAction}=load();
+ for(const splitState of ['automatic','stale']){const r=getNextAction({...base,stage:3,splitState});assert.equal(r.status,'blocked');assert.equal(r.nextAction.step,1);assert.match(r.nextAction.label,/분할 저장/);}
+ assert.notEqual(getNextAction({...base,stage:3,splitState:'saved'}).nextAction.label,'분할 저장하기 (1단계)');
+});

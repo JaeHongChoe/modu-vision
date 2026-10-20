@@ -217,8 +217,8 @@ CATALOG: Dict[str, ErrorCatalogItem] = {
             "in standard PNG/JPEG/BMP format."
         ),
         remediation_kr=(
-            "파일 무결성을 확인하고 손상된 이미지를 프로젝트에서 제거하거나 표준 PNG/JPEG/BMP 형식으로 "
-            "다시 저장하십시오."
+            "1단계에서 폴더를 다시 불러오면 읽을 수 없는 이미지는 자동으로 학습·분할에서 빠집니다(원본 파일은 그대로). "
+            "그 이미지를 쓰려면 표준 PNG/JPEG/BMP로 다시 저장해 같은 자리에 두고 다시 불러오세요."
         ),
         cause_en="File transfer failure, disk corruption, or empty file generation resulted in unreadable image headers.",
         cause_kr="파일 전송 중단, 디스크 손상 또는 0바이트 생성으로 인해 이미지 헤더 디코딩이 불가능합니다.",
@@ -304,6 +304,20 @@ CATALOG: Dict[str, ErrorCatalogItem] = {
         severity=ErrorSeverity.CRITICAL,
         auto_fixable=True,
     ),
+    "ERR_009": ErrorCatalogItem(
+        code="ERR_009",
+        title_en="Folder Layout Does Not Match the Task",
+        title_kr="폴더 구조가 작업 종류와 맞지 않음",
+        description_en="The folder is not laid out the way this task reads its images and labels.",
+        description_kr="이 폴더는 선택한 작업 종류가 이미지와 라벨을 읽는 구조로 되어 있지 않습니다.",
+        remediation_en="Arrange the folder in the expected layout, or pick the task that matches the folder.",
+        remediation_kr="안내된 폴더 구조로 정리하거나, 폴더에 맞는 작업 종류의 프로젝트에서 불러오세요.",
+        cause_en="The dataset loader could not find the folders or label files this task needs.",
+        cause_kr="작업 종류에 필요한 폴더나 라벨 파일을 찾지 못했습니다.",
+        action="show_expected_layout",
+        severity=ErrorSeverity.MEDIUM,
+        auto_fixable=False,
+    ),
 }
 
 # Mapping legacy or semantic codes to canonical codes
@@ -321,6 +335,7 @@ _ALIAS_MAP = {
     "ERR_DEVICE_FALLBACK": "ERR_007",
     "ERR_TRAINING_DIVERGENCE": "ERR_008",
     "ERR_NAN_LOSS": "ERR_008",
+    "ERR_DATA_LAYOUT": "ERR_009",
 }
 
 
@@ -337,7 +352,7 @@ def get_error(code: str) -> Optional[ErrorCatalogItem]:
 
 
 def get_all_errors() -> Dict[str, ErrorCatalogItem]:
-    """Return all 8 registered catalog items."""
+    """Return all registered catalog items."""
     return CATALOG.copy()
 
 
