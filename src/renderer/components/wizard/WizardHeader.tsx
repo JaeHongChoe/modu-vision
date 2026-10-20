@@ -29,6 +29,7 @@ import { ProjectWorkspaceDialog } from './ProjectWorkspaceDialog';
 import { ProvenancePanel } from '../common/ProvenancePanel';
 import { TaskChangeImpactDialog, taskPreviewScope } from './TaskChangeImpactDialog';
 import type { VisionTask } from '../../types';
+import { ThumbnailDiagnostics } from '../common/ThumbnailDiagnostics';
 
 const CONTROL = 'rounded border border-[#3B4B63] bg-[#0B0E14] px-2.5 py-1.5 text-sm text-slate-100 hover:bg-[#1B2537] disabled:opacity-50';
 const QUIET = 'rounded border border-transparent px-2.5 py-1.5 text-sm text-slate-200 hover:border-[#3B4B63] hover:bg-[#1B2537]';
@@ -282,6 +283,7 @@ export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMe
           <div className="flex gap-1.5"><dt className="text-slate-400">{ko ? '장치' : 'Device'}</dt><dd>{rawDevice || '—'}{backendStatus.deviceName ? ` · ${backendStatus.deviceName}` : ''}</dd></div>
           <div className="flex gap-1.5"><dt className="text-slate-400">{ko ? '가속' : 'Acceleration'}</dt><dd>{!isHealthy ? (ko ? '연결 안 됨' : 'offline') : isAccelerated ? (ko ? '사용' : 'on') : (ko ? '없음 (CPU)' : 'none (CPU)')}</dd></div>
           {selectedProbe?.device_name && <div className="flex gap-1.5"><dt className="text-slate-400">{ko ? '서버 장치' : 'Server device'}</dt><dd>{selectedProbe.device_name}</dd></div>}
+          <ThumbnailDiagnostics />
         </dl>
       )}
       {taskError && <p id="task-change-error" role="alert" className="border-t border-rose-900/50 bg-rose-950/30 px-4 py-2 text-sm text-rose-200">{taskError}</p>}

@@ -90,7 +90,7 @@ function harness({ holdSave = false, holdImport = false, holdImages = false, hol
   const helpers = Object.fromEntries(['classDistribution', 'datasetImportView', 'splitCalibrator'].map(name =>
     ['./' + name, load(path.join(__dirname, name + '.ts'), {})]));
   helpers['../../utils/datasetSplitCapability'] = load(path.resolve(__dirname, '../../utils/datasetSplitCapability.ts'), {});
-  const scopedThumbnail = load(path.resolve(__dirname, '../common/ScopedDatasetThumbnail.tsx'), {'../../services/api': apiModule});
+  const scopedThumbnail = load(path.resolve(__dirname, '../common/ScopedDatasetThumbnail.tsx'), {'../../services/api': apiModule, '../../stores/thumbnailDiagnostics': {recordThumbnailRead: () => {}}});
   const filename = path.join(__dirname, 'DatasetStudio.tsx'), m = new Module(filename, module);
   m.filename = filename; m.paths = Module._nodeModulePaths(__dirname);
   const original = m.require.bind(m);

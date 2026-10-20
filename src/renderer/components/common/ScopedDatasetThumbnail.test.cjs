@@ -5,7 +5,7 @@ const tick=()=>new Promise(setImmediate),deferred=()=>{let resolve;const promise
 async function until(ready){const deadline=Date.now()+2000;while(!ready()){assert.ok(Date.now()<deadline,'owned source boundary did not settle');await tick();}}
 function load(relative,dependencies={}) {
  const file=path.resolve(__dirname,relative),m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(path.dirname(file));const original=m.require.bind(m);
- m.require=name=>Object.hasOwn(dependencies,name)?dependencies[name]:original(name);
+ m.require=name=>{if(Object.hasOwn(dependencies,name))return dependencies[name];const local=path.resolve(path.dirname(file),name+'.ts');return name.startsWith('.')&&fs.existsSync(local)?load(path.relative(__dirname,local)):original(name);};
  m._compile(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText,file);return m.exports;
 }
 const origin='https://thumbnail.invalid',B={workspace_id:'workspace',project_id:'B',actor_id:'actor',mode:'team'},A={...B,project_id:'A'};

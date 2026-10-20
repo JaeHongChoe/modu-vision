@@ -12,7 +12,7 @@ function render({activeStep=2,language='ko',device='mps',technical=false,selecte
  const computeStore=Object.assign(select=>select?select(computeState):computeState,{getState:()=>computeState});
  const {WizardHeader}=load('WizardHeader.tsx',{'lucide-react':icons,'../../stores/useProjectStore':{useProjectStore:projectStore},'../../stores/useComputeStore':{useComputeStore:computeStore},
   '../../stores/useTrainingStore':{useTrainingStore:()=>({jobId:null,jobComputeProfileId:null,jobComputeLabel:null})},'../../services/api':{getApiPersistenceIdentity:()=>'local'},
-  '../compute/ComputeServerPanel':{ComputeServerPanel:()=>null},'./ProjectWorkspaceDialog':{ProjectWorkspaceDialog:()=>null},'../common/ProvenancePanel':{ProvenancePanel:()=>null},'./TaskChangeImpactDialog':{TaskChangeImpactDialog:()=>null,taskPreviewScope:()=>''}});
+  '../compute/ComputeServerPanel':{ComputeServerPanel:()=>null},'./ProjectWorkspaceDialog':{ProjectWorkspaceDialog:()=>null},'../common/ThumbnailDiagnostics':{ThumbnailDiagnostics:()=>null},'../common/ProvenancePanel':{ProvenancePanel:()=>null},'./TaskChangeImpactDialog':{TaskChangeImpactDialog:()=>null,taskPreviewScope:()=>''}});
  global.window={api:{platform:'darwin'}};
  try{return renderToStaticMarkup(react.createElement(WizardHeader));}finally{delete global.window;}
 }

@@ -47,7 +47,7 @@ async function scenario(run){
   '../../stores/useProjectStore':{useProjectStore:projectStore},'../../stores/useComputeStore':{useComputeStore:computeHook},
   '../../stores/useTrainingStore':{useTrainingStore:()=>({jobId:null,jobComputeProfileId:null,jobComputeLabel:null})},'../../services/api':api,
   '../compute/ComputeServerPanel':{ComputeServerPanel:'ComputeServerPanel'},'./ProjectWorkspaceDialog':{ProjectWorkspaceDialog:'ProjectWorkspaceDialog'},
-  '../common/ProvenancePanel':{ProvenancePanel:'ProvenancePanel'},'./TaskChangeImpactDialog':{TaskChangeImpactDialog:'TaskChangeImpactDialog',taskPreviewScope:()=>''},
+  '../common/ThumbnailDiagnostics':{ThumbnailDiagnostics:'ThumbnailDiagnostics'},'../common/ProvenancePanel':{ProvenancePanel:'ProvenancePanel'},'./TaskChangeImpactDialog':{TaskChangeImpactDialog:'TaskChangeImpactDialog',taskPreviewScope:()=>''},
  }).WizardHeader;
  const render=()=>lifecycle.render(Header),selector=tree=>nodes(tree).find(node=>node.type==='select'&&['Compute location','Run on','실행 위치'].includes(node.props['aria-label']));
  const flush=async()=>{await tick();await tick();};

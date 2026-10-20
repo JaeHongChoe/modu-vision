@@ -1,5 +1,6 @@
 import React, {useLayoutEffect, useRef, useState} from 'react';
 import {getApiPersistenceIdentity, getProjectContext, request, type ProjectContext} from '../../services/api';
+import {recordThumbnailRead} from '../../stores/thumbnailDiagnostics';
 
 function sameContext(left: ProjectContext | null, right: ProjectContext | null): boolean {
   return left === right || Boolean(left && right && left.workspace_id === right.workspace_id
@@ -48,14 +49,18 @@ export function createScopedThumbnailRead(options: ThumbnailRead): {observe: (el
   const start = async () => {
     if (started || !current() || !thumbnailPath(options.path) || (transport !== 'local' && !captured)) return;
     started = true;
+    const project = captured?.project_id ?? null;
     try {
       const blob = await request<Blob>(options.path, {responseType: 'blob', projectContext: captured, signal: controller.signal});
-      if (!current()) return;
+      if (!current()) { recordThumbnailRead(options.path, project, 'stale', '응답이 오기 전에 프로젝트나 화면이 바뀌어 버림'); return; }
       const created = URL.createObjectURL(blob);
-      if (!current()) { URL.revokeObjectURL(created); return; }
+      if (!current()) { URL.revokeObjectURL(created); recordThumbnailRead(options.path, project, 'stale', '응답이 오기 전에 프로젝트나 화면이 바뀌어 버림'); return; }
       objectURL = created;
       options.publish(created);
+      recordThumbnailRead(options.path, project, 'ok');
     } catch (error) {
+      if (controller.signal.aborted) recordThumbnailRead(options.path, project, 'aborted', '화면을 떠나 읽기를 멈춤');
+      else recordThumbnailRead(options.path, project, current() ? 'failed' : 'stale', error instanceof Error ? error.message : String(error));
       if (current() && !controller.signal.aborted) options.failed(error);
     }
   };
