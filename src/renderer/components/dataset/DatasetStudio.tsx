@@ -105,6 +105,7 @@ export const DatasetStudio: React.FC = () => {
 
   // Thumbnail Grid Density (S: compact 96px, M: default 144px, L: detailed 200px)
   const [density, setDensity] = useState<'S' | 'M' | 'L'>('M');
+  const [splitOpen, setSplitOpen] = useState(false);
   const [openingImageId, setOpeningImageId] = useState<string | null>(null);
   const [showVersions, setShowVersions] = useState(false);
   const [showImports, setShowImports] = useState(false);
@@ -239,6 +240,9 @@ export const DatasetStudio: React.FC = () => {
   // The saved split until the calibrator is touched; status cards and gallery tabs always use the saved split.
   const calibrator = calibratorView({ touched: calibratorTouched, locked: splitUnavailableForTask, applied: split, totalImages, ratios: splitRatios });
   const showAppliedSplit = calibrator.mode === 'applied';
+  // A saved split needs no attention from a first-time user: the simple view shows its counts on one line and keeps
+  // the presets, slider and apply button one click away.
+  const splitFolded = simpleView && showAppliedSplit && !splitOpen;
   const shownCounts = calibrator.counts;
   const shownRatios = calibrator.ratios;
 
@@ -319,9 +323,23 @@ export const DatasetStudio: React.FC = () => {
             <FolderArchive className="h-4 w-4" />
             <span>데이터 버전</span>
           </button>
+          {/* The simple view keeps the verified-version workflow here instead of in the toolbar. */}
+          {simpleView && (
+            <button
+              type="button"
+              onClick={() => setShowImports(true)}
+              disabled={!hasSelectedFolder || !project?.id || isLoading}
+              title={hasSelectedFolder ? '모든 이미지를 열어 검증한 고정 버전을 만들고 채택합니다' : '데이터셋을 먼저 불러오세요'}
+              className="flex items-center gap-2 rounded-[4px] border border-emerald-700/60 bg-emerald-950/30 px-3 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-900/40 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ListChecks className="h-4 w-4" />
+              <span className="whitespace-nowrap">검증된 데이터 버전</span>
+            </button>
+          )}
 
             </div>
           </details>}
+          {!simpleView && (
           <button
             type="button"
             onClick={() => setShowImports(true)}
@@ -332,6 +350,7 @@ export const DatasetStudio: React.FC = () => {
             <ListChecks className="h-4 w-4" />
             <span className="whitespace-nowrap">검증된 데이터 버전</span>
           </button>
+          )}
 
           {/* The simple view names the folder, not its whole path (the tooltip keeps the path). */}
           <span className={`text-xs text-slate-400 truncate max-w-sm ${simpleView ? '' : 'font-mono'}`} title={folderPath}>
@@ -482,8 +501,12 @@ export const DatasetStudio: React.FC = () => {
                     : (language === 'ko' ? '학습 · 검증 · 시험 분할 (예상)' : 'Train / val / test split (preview)')}
                 </span>
               </div>
-              <JargonTooltip termKey="early_stopping" />
+              {simpleView && showAppliedSplit ? <span className="flex items-center gap-2 text-[11px] text-slate-300">
+                {splitFolded && <span className="tabular-nums">학습 {calibrator.counts.train} · 검증 {calibrator.counts.val} · 시험 {calibrator.counts.test}</span>}
+                <button type="button" aria-expanded={!splitFolded} onClick={() => setSplitOpen(open => !open)} className="rounded border border-[#2B3547] px-2 py-0.5 text-slate-200 hover:bg-[#222B3D]">{splitFolded ? '바꾸기' : '접기'}</button>
+              </span> : <JargonTooltip termKey="early_stopping" />}
             </div>
+            <div className={splitFolded ? 'hidden' : 'flex flex-col space-y-2.5'}>
 
             <p className="text-xs text-slate-400">
               {showAppliedSplit
@@ -590,7 +613,7 @@ export const DatasetStudio: React.FC = () => {
                     ? '분할 연산 중...'
                     : 'Splitting...'
                   : language === 'ko'
-                  ? '3-Way 분할 적용'
+                  ? simpleView ? '이 비율로 나누기' : '3-Way 분할 적용'
                   : 'Apply 3-Way Split'}
               </span>
             </button>
@@ -602,6 +625,7 @@ export const DatasetStudio: React.FC = () => {
                 {splitError}
               </div>
             )}
+            </div>
           </div>
 
           {/* Digital Class Gauges */}
@@ -856,7 +880,7 @@ export const DatasetStudio: React.FC = () => {
             {/* Density Toggle + Sensor Scale + Pagination */}
             <div className="flex items-center space-x-4 text-slate-400">
               {/* Defect Physical Scale Indicator (μm unit) */}
-              <div className="hidden sm:flex items-center space-x-1.5 text-[11px] font-mono bg-[#0B0E14] px-2 py-1 rounded-[4px] border border-[#2B3547]">
+              <div className={`${simpleView ? 'hidden' : 'hidden sm:flex'} items-center space-x-1.5 text-[11px] font-mono bg-[#0B0E14] px-2 py-1 rounded-[4px] border border-[#2B3547]`}>
                 <span className="text-slate-400">픽셀당 길이:</span>
                 <span className="text-slate-200 tabular-nums font-semibold">미보정</span>
               </div>

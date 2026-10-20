@@ -150,3 +150,15 @@ test('the step 4 viewer reads plainly: Korean verdicts, no pixel scale boxes ove
  const readiness=read('src/renderer/components/wizard/workflowReadiness.ts');
  assert.match(readiness,/승인은 필요하지 않습니다/);assert.match(readiness,/openFoldsAround\(element\)/);
 });
+
+test('step 1 in the simple view: a saved split is one line, the verified version sits in 더 보기, no pixel scale',()=>{
+ const studio=read('src/renderer/components/dataset/DatasetStudio.tsx');
+ assert.match(studio,/const splitFolded = simpleView && showAppliedSplit && !splitOpen;/);
+ assert.match(studio,/<div className=\{splitFolded \? 'hidden' : 'flex flex-col space-y-2\.5'\}>/);
+ assert.match(studio,/학습 \{calibrator\.counts\.train\} · 검증 \{calibrator\.counts\.val\} · 시험 \{calibrator\.counts\.test\}/);
+ assert.match(studio,/simpleView \? '이 비율로 나누기' : '3-Way 분할 적용'/);
+ const more=studio.indexOf("'더 보기' : 'More'}</summary>");
+ assert.ok(studio.indexOf('{simpleView && (',more)>more&&studio.indexOf('검증된 데이터 버전',more)<studio.indexOf('</details>}',more),'the verified version is a 더 보기 item in the simple view');
+ assert.match(studio,/\{!simpleView && \(\s*<button\s*type="button"\s*onClick=\{\(\) => setShowImports\(true\)\}/,'the full view keeps it in the toolbar');
+ assert.match(studio,/\$\{simpleView \? 'hidden' : 'hidden sm:flex'\} items-center/);
+});
