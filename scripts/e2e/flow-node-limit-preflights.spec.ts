@@ -46,7 +46,7 @@ const F064_POINTERS=[
 ] as const;
 const UI_SOURCE={
  "scripts/e2e/fixtures/flow_navigation_control.py": "b5752088a03ff1640510208e15a17b3f1389295c62dadabaf2ff6511a929ee73",
- "scripts/e2e/fixtures/flow_template_control.py": "2ba50b8bcafd02905f03b19ad393496d9befb453c3bab127f0966a48848cb505",
+ "scripts/e2e/fixtures/flow_template_control.py": "81f4a1844d05021d6c4c668627a732120c11aa20e45294ba55da0bfca410572a",
  "scripts/e2e/fixtures/flow_large_dag_control.py": "6434d381ed45d68922c058544d0b515caa3d19d93d88c90028a3463a9903d871",
  "scripts/e2e/qa/appFlow.ts": "4eed3e5dad1d9d65a6b19fc9bb51a1f9b0e23911a39e7f255220bec0ce37fea2",
  "src/renderer/components/flowchart/FlowchartStudio.tsx": "adf203e8a5fd9e066f820178a1c594a22d56d277c460b7b250ffc309b5e23712",
@@ -180,9 +180,15 @@ async function flowNodeLimitExercise(page:Page,w:Workspace,e:Evidence,api:FlowAp
     // Step 1's gallery owns its thumbnail reads and aborts them when the page leaves the step before a body arrives
     // (ScopedDatasetThumbnail, 6dd4c1f). Such a read is recorded as retired by the gallery; any other failure, and
     // every thumbnail that completes, is checked in full as before.
-    const early=await splitControlWithin(request.response(),row.deadline,'original F064 thumbnail response');
-    const ended=early?await splitControlWithin(early.finished(),row.deadline,'original F064 thumbnail completion'):null;
-    if(!early||ended){const failure=request.failure()?.errorText??String(ended);expect(failure).toMatch(/ERR_ABORTED|aborted|cancel/i);
+    // The browser's own end event decides: a response object of an aborted read may report no failure and an empty
+    // body. Both listeners are attached in the same tick the request starts, so neither event can be missed.
+    let detach=()=>{};
+    const outcome=await splitControlWithin(new Promise<'failed'|'finished'>(resolve=>{
+     const end=(kind:'failed'|'finished')=>(ended:SplitControlRequest)=>{if(ended===request){detach();resolve(kind);}};
+     const onFailed=end('failed'),onFinished=end('finished');page.on('requestfailed',onFailed);page.on('requestfinished',onFinished);
+     detach=()=>{page.off('requestfailed',onFailed);page.off('requestfinished',onFinished);};
+    }),row.deadline,'original F064 thumbnail end event').finally(()=>detach());
+    if(outcome==='failed'){const failure=request.failure()?.errorText??'';expect(failure).toMatch(/ERR_ABORTED|aborted|cancel/i);
      row.retired_gallery_read=true;row.failure_text=failure;row.finished=performance.now();row.complete=true;return;}
    }
    const response=await splitControlWithin(request.response(),row.deadline,'original F064 API GET response');expect(response).not.toBeNull();
