@@ -48,6 +48,7 @@ export const DatasetStudio: React.FC = () => {
   const {key:sourceContextKey}=useDeliveryScope();
   const { task, language, projectDir, openImageForLabeling, project } = useProjectStore();
   const full = useProjectStore(state => state.viewMode) === 'full';
+  const simpleView = useProjectStore(state => state.viewMode) === 'simple';
   const {
     folderPath,
     datasetKey,
@@ -273,7 +274,7 @@ export const DatasetStudio: React.FC = () => {
             className="flex items-center space-x-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-[4px] text-xs font-semibold text-white border border-blue-400 transition-tactile cursor-pointer"
           >
             <FolderOpen className="w-4 h-4" />
-            <span>{language === 'ko' ? '데이터셋 폴더 열기' : 'Open Dataset Folder'}</span>
+            <span className="whitespace-nowrap">{language === 'ko' ? '데이터셋 폴더 열기' : 'Open Dataset Folder'}</span>
           </button>
           <BrowserFolderPathInput disabled={isLoading} onImport={folder => importFolder(folder, task, undefined, false).catch(() => {})} />
 
@@ -332,13 +333,14 @@ export const DatasetStudio: React.FC = () => {
             <span className="whitespace-nowrap">검증된 데이터 버전</span>
           </button>
 
-          <span className="text-xs text-slate-400 font-mono truncate max-w-sm" title={folderPath}>
-            {folderPath}
+          {/* The simple view names the folder, not its whole path (the tooltip keeps the path). */}
+          <span className={`text-xs text-slate-400 truncate max-w-sm ${simpleView ? '' : 'font-mono'}`} title={folderPath}>
+            {simpleView && folderPath ? `폴더: ${folderPath.split(/[\\/]/).filter(Boolean).pop()}` : folderPath}
           </span>
         </div>
 
-        {/* Partition Status Annunciator */}
-        <div className="flex items-center space-x-3 bg-[#0B0E14] px-3 py-1.5 rounded-[4px] border border-[#2B3547] text-xs font-mono tabular-nums">
+        {/* Partition Status Annunciator (the gallery tabs below show the same counts in the simple view) */}
+        <div className={`${simpleView ? 'hidden' : 'flex'} items-center space-x-3 bg-[#0B0E14] px-3 py-1.5 rounded-[4px] border border-[#2B3547] text-xs font-mono tabular-nums`}>
           <div className="flex items-center space-x-1.5">
             <span className="w-2 h-2 rounded-full bg-[#3B82F6]" />
             <span className="text-slate-400">{language === 'ko' ? '학습' : 'Train'}:</span>

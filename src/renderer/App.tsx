@@ -24,6 +24,10 @@ import { EXAMPLE_NOTICE, shouldOpenFirstRun } from './components/onboarding/firs
 import { resolveTheme, useProjectStore } from './stores/useProjectStore';
 import { useTrainingStore } from './stores/useTrainingStore';
 import { useComputeStore } from './stores/useComputeStore';
+import { useDatasetStore } from './stores/useDatasetStore';
+import { useEvaluationStore } from './stores/useEvaluationStore';
+import { useFlowchartStore } from './stores/useFlowchartStore';
+import { completedSteps } from './components/wizard/stepProgress';
 import { telemetryService } from './services/websocket';
 import { getBackendPort, request } from './services/api';
 import { needsBrowserHealthProbe, startBrowserHealthProbe } from './services/browserHealth';
@@ -38,6 +42,14 @@ const catchUpJobEvents = createCatchUp(jobEventStream, () => useTrainingStore.ge
 
 export default function App() {
   const { language, activeStep, backendStatus, setBackendStatus, showError, syncCurrentProject, viewMode } = useProjectStore();
+  // The step bar marks finished steps from what the stores already hold (no extra request).
+  const hasData = useDatasetStore(s => s.hasSelectedFolder);
+  const images = useDatasetStore(s => s.sourceImages || s.totalImages);
+  const unlabeled = useDatasetStore(s => s.unlabeledImages);
+  const trainingDone = useTrainingStore(s => s.isCurrentData && s.status === 'completed');
+  const evaluated = useEvaluationStore(s => Boolean(s.jobId) || s.testPredictions.length > 0);
+  const flowSaved = useFlowchartStore(s => Boolean(s.baseVersionId) && !s.pipelineDirty && !s.pipelineIsDraft);
+  const doneSteps = completedSteps({ hasData, images, unlabeled, trainingDone, evaluated, flowSaved });
   const { updateFromTelemetry } = useTrainingStore();
   const [workspace,setWorkspace]=useState<'studio'|'operator'>('studio');
   const [utility,setUtility]=useState<'tasks'|'delivery'|null>(null);
@@ -137,7 +149,7 @@ export default function App() {
   return (
     <div className="flex flex-col h-screen w-screen bg-[#0B0E14] text-slate-200 select-none overflow-hidden font-sans">
       {/* Precision Industrial Header Frame */}
-      <WizardHeader simpleControls={workspace==='operator'?null:<button className="rounded border border-slate-600 px-3 py-1.5" onClick={()=>setFirstRunOpen(true)}>{language==='ko'?(demo?.state==='running'?'처음 시작 · 예제 만드는 중':'처음 시작 안내'):(demo?.state==='running'?'Getting started · building example':'Getting started')}</button>}
+      <WizardHeader completedSteps={doneSteps} simpleControls={workspace==='operator'?null:<button className="rounded border border-slate-600 px-3 py-1.5" onClick={()=>setFirstRunOpen(true)}>{language==='ko'?(demo?.state==='running'?'처음 시작 · 예제 만드는 중':'처음 시작 안내'):(demo?.state==='running'?'Getting started · building example':'Getting started')}</button>}
         simpleMenu={workspace==='operator'?null:<>
             <button className="rounded border border-slate-600 px-3 py-1.5 text-left" onClick={()=>setWorkspace('operator')}>{language==='ko'?'운영자 검사 화면':'Operator inspection'}</button>
             <button className="rounded border border-slate-600 px-3 py-1.5 text-left" onClick={()=>setUtility('tasks')}>{language==='ko'?'작업 센터 · 진행 중인 작업':'Task center'}</button>

@@ -19,9 +19,9 @@ export const BrowserFolderPathInput: React.FC<{ disabled?: boolean; onImport: (f
       <label className="flex items-center gap-2 text-slate-300">
         <span className="whitespace-nowrap">이미지 폴더 경로</span>
         <input aria-label="이미지 폴더 경로" value={value} onChange={event => setValue(event.target.value)} disabled={disabled || busy}
-          placeholder="예: /data/inspection/line-a (서버가 읽을 수 있는 경로)" className="w-72 rounded border border-slate-600 bg-[#0B0E14] px-2 py-1 text-slate-100" />
+          placeholder="예: /data/inspection/line-a (서버가 읽을 수 있는 경로)" className="w-64 rounded border border-slate-600 bg-[#0B0E14] px-2 py-1 text-slate-100" />
       </label>
-      <button type="submit" disabled={disabled || busy || !value.trim()} className="rounded border border-blue-400 bg-blue-600 px-3 py-1.5 font-semibold text-white disabled:opacity-50">
+      <button type="submit" disabled={disabled || busy || !value.trim()} className="whitespace-nowrap rounded border border-blue-400 bg-blue-600 px-3 py-1.5 font-semibold text-white disabled:opacity-50">
         {busy ? '불러오는 중…' : '경로로 불러오기'}
       </button>
     </form>

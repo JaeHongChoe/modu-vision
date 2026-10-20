@@ -28,17 +28,50 @@ export interface OperatorGuidanceBannerProps {
   className?: string;
 }
 
+/** The simple view's page header: the step bar's own name and one plain sentence about the step. */
+const SIMPLE_STEP_HEADER: Record<number, { title: string; lead: string }> = {
+  1: { title: '데이터 준비', lead: '검사할 이미지 폴더를 불러오고, 이미지와 정상·불량 표시가 잘 들어왔는지 확인합니다.' },
+  2: { title: '라벨 달기', lead: '이미지마다 정상인지, 불량이면 어디가 불량인지 표시합니다.' },
+  3: { title: '모델 학습', lead: '모델 종류와 학습 방식을 고르고 학습을 시작합니다. 설정은 추천값 그대로 두어도 됩니다.' },
+  4: { title: '결과 평가', lead: '학습한 모델이 시험 이미지를 얼마나 맞혔는지, 놓친 불량이 있는지 확인합니다.' },
+  5: { title: '검사 흐름 만들기', lead: '모델과 판정 규칙을 연결해 실제 검사 순서를 만들고 저장합니다.' },
+  6: { title: '검사 실행', lead: '저장한 검사 흐름으로 이미지를 검사하고 결과를 확인합니다.' },
+};
+
 export const OperatorGuidanceBanner: React.FC<OperatorGuidanceBannerProps> = ({
   step,
   className = '',
 }) => {
   const isKo = useProjectStore(s=>s.language)==='ko';
   const technicalDetails = useProjectStore(s=>s.technicalDetails);
+  // Only an explicit simple view uses the plain page header; callers without a view mode keep the guidance strip.
+  const simpleView = useProjectStore(s=>s.viewMode)==='simple';
   const [isExpanded, setIsExpanded] = useState(()=>{try{return localStorage.getItem('vision-step-guidance')==='expanded';}catch{return false;}});
   const [isGlossaryOpen, setIsGlossaryOpen] = useState(false);
   const guidance = STEP_GUIDANCE_DATA[step];
 
   if (!guidance) return null;
+  const simple = SIMPLE_STEP_HEADER[step];
+  if (simpleView && isKo && simple) {
+    return (
+      <>
+        <header className={`flex items-start justify-between gap-4 border-b border-[#2B3547] bg-[#131822] px-6 py-4 select-none ${className}`}>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-cyan-300">{step}단계</p>
+            <h2 className="text-xl font-bold leading-7 text-slate-50">{simple.title}</h2>
+            <p className="mt-1 max-w-3xl text-sm text-slate-400">{simple.lead}</p>
+          </div>
+          <button type="button" onClick={() => setIsGlossaryOpen(true)}
+            className="flex shrink-0 items-center gap-1.5 rounded border border-[#2B3547] px-2.5 py-1 text-xs text-slate-300 hover:bg-[#1A212E]"
+            title="제조 인공지능 기술 용어 사전 열기">
+            <BookOpen className="h-3.5 w-3.5 text-slate-400" />
+            <span>용어 사전</span>
+          </button>
+        </header>
+        <JargonGlossaryModal isOpen={isGlossaryOpen} onClose={() => setIsGlossaryOpen(false)} />
+      </>
+    );
+  }
 
   return (
     <>

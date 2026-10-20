@@ -9,6 +9,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Activity,
+  Check,
   ChevronDown,
   Disc,
   FolderKanban,
@@ -34,7 +35,7 @@ const QUIET = 'rounded border border-transparent px-2.5 py-1.5 text-sm text-slat
 
 /** The simple view takes the second row's few controls here: `simpleControls` sit next to 모두 보기 and `simpleMenu`
  * items join the 더 보기 menu, so the row disappears until the user asks for everything. */
-export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMenu?: React.ReactNode }> = ({ simpleControls, simpleMenu } = {}) => {
+export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMenu?: React.ReactNode; completedSteps?: readonly number[] }> = ({ simpleControls, simpleMenu, completedSteps = [] } = {}) => {
   const [showComputePanel, setShowComputePanel] = useState(false);
   const [showProjectPanel, setShowProjectPanel] = useState(false);
   const [showProvenance, setShowProvenance] = useState(false);
@@ -241,6 +242,7 @@ export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMe
             const Icon = s.icon;
             const isActive = activeStep === s.num;
             const isPrevious = activeStep > s.num;
+            const isDone = completedSteps.includes(s.num) && !isActive;
             return (
               <button
                 key={s.num}
@@ -255,10 +257,12 @@ export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMe
                     : 'bg-[#0E121A] text-slate-300 hover:bg-[#151C27]'
                 }`}
               >
-                <span className={`font-mono tabular-nums ${isActive ? 'text-[#10B981]' : 'text-slate-400'}`}>{String(s.num).padStart(2, '0')}</span>
+                <span className={`font-mono tabular-nums ${isActive ? 'text-[#10B981]' : isDone ? 'text-emerald-400' : 'text-slate-400'}`}>{String(s.num).padStart(2, '0')}</span>
                 <Icon className={`h-4 w-4 ${isActive ? 'text-[#10B981]' : 'text-slate-400'}`} aria-hidden="true" />
                 <span className="whitespace-nowrap font-medium">{ko ? s.nameKo : s.nameEn}</span>
                 {ko && <span className="sr-only">({s.legacyKo})</span>}
+                {/* A finished step keeps its number (specs and keyboard users find steps by it) and gains a check. */}
+                {isDone && <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-600 text-white" title={ko ? '끝난 단계' : 'Done'}><Check className="h-3 w-3" aria-hidden="true" /><span className="sr-only">{ko ? '끝남' : 'done'}</span></span>}
               </button>
             );
           })}

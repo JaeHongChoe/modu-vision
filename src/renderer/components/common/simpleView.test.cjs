@@ -76,7 +76,7 @@ test('the simple view folds the step 3 training location, the step 4 comparison 
  const header=read('src/renderer/components/wizard/WizardHeader.tsx');
  assert.match(header,/simpleControls\?: React\.ReactNode; simpleMenu\?: React\.ReactNode/);assert.match(header,/\{!full && simpleControls\}/);assert.match(header,/\{simpleMenu\}\s*<\/div>\s*<\/details>\}/);
  const app=read('src/renderer/App.tsx');
- assert.match(app,/<WizardHeader simpleControls=\{workspace==='operator'\?null:<button/);assert.match(app,/\{\(viewMode==='full'\|\|workspace==='operator'\)&&<nav/);
+ assert.match(app,/<WizardHeader completedSteps=\{doneSteps\} simpleControls=\{workspace==='operator'\?null:<button/);assert.match(app,/\{\(viewMode==='full'\|\|workspace==='operator'\)&&<nav/);
  const css=read('src/renderer/index.css');
  assert.match(css,/@media \(min-width: 1920px\) \{ html \{ font-size: 18px; \} \}/);assert.match(css,/@media \(min-width: 2400px\) \{ html \{ font-size: 20px; \} \}/);
 });
@@ -84,4 +84,22 @@ test('the simple view folds the step 3 training location, the step 4 comparison 
 test('a wrapped labeling toolbar keeps its height instead of hiding its second line under the next row',()=>{
  const toolbar=read('src/renderer/components/labeling/LabelingToolbar.tsx');
  assert.match(toolbar,/className="min-h-12 shrink-0 [^"]*flex-wrap/);
+});
+
+test('the step bar keeps step numbers and marks finished steps with a check',()=>{
+ const header=read('src/renderer/components/wizard/WizardHeader.tsx');
+ assert.match(header,/completedSteps\?: readonly number\[\]/);assert.match(header,/const isDone = completedSteps\.includes\(s\.num\) && !isActive;/);
+ assert.match(header,/String\(s\.num\)\.padStart\(2, '0'\)/,'the number stays in the button name');
+ const app=read('src/renderer/App.tsx');assert.match(app,/const doneSteps = completedSteps\(\{ hasData, images, unlabeled, trainingDone, evaluated, flowSaved \}\);/);
+});
+
+test('the simple view gives every step a plain page header and moves each step\'s main action up',()=>{
+ const banner=read('src/renderer/components/common/OperatorGuidanceBanner.tsx');
+ for(const title of ["title: '데이터 준비'","title: '라벨 달기'","title: '모델 학습'","title: '결과 평가'","title: '검사 흐름 만들기'","title: '검사 실행'"])assert.ok(banner.includes(title),title);
+ assert.match(banner,/if \(simpleView && isKo && simple\)/);
+ const training=read('src/renderer/components/training/TrainingController.tsx');assert.match(training,/고급 학습 설정/);
+ const evaluation=read('src/renderer/components/evaluation/EvaluationStudio.tsx');assert.match(evaluation,/aria-label="평가 결과 한눈에 보기"/);assert.match(evaluation,/다른 모델이나 시험 이미지 묶음으로 다시 평가/);
+ const inference=read('src/renderer/components/inference/InferenceCenterStudio.tsx');assert.match(inference,/내보내기·패키지·속도 측정/);
+ assert.ok(inference.indexOf('<BatchInspectionPanel />')<inference.indexOf('{simpleView && <details'),'exports follow the batch inspection');
+ const studio=read('src/renderer/components/dataset/DatasetStudio.tsx');assert.match(studio,/`폴더: \$\{folderPath/);
 });

@@ -98,6 +98,7 @@ export const EvaluationStudio: React.FC = () => {
   const handoff=useTaskHandoff();
   const { language, setStep, task } = useProjectStore();
   const full = useProjectStore(state => state.viewMode) === 'full';
+  const simpleView = useProjectStore(state => state.viewMode) === 'simple';
   const projectDir = useProjectStore((state) => state.projectDir);
   const warmCandidateJobId = useTrainingStore((state) => state.status === 'completed' && state.warmStartParentJobId ? state.jobId : null);
   const warmParentJobId = useTrainingStore((state) => state.status === 'completed' ? state.warmStartParentJobId : null);
@@ -432,6 +433,9 @@ export const EvaluationStudio: React.FC = () => {
     <div className="flex-1 flex flex-col h-full bg-[#0B0E14] text-slate-100 overflow-hidden select-none">
       <OperatorGuidanceBanner step={4} />
 
+      {/* With results on screen, the simple view keeps re-evaluating another model or test set behind one line. */}
+      {simpleView && testPredictions.length > 0 ? <details className="shrink-0 border-b border-slate-700 text-xs">
+        <summary className="cursor-pointer px-3 py-1.5 text-slate-400">다른 모델이나 시험 이미지 묶음으로 다시 평가</summary>
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-700 p-2 text-xs">
         <label>평가 모델<select aria-label="평가 모델" value={requestedCohortJob || ''} onChange={event=>{modelSelectionRevision.current++;invalidateForDataChange(true);setCohortModel(event.target.value);}} className="ml-2 rounded bg-slate-800 p-1"><option value="">완료 모델 선택</option>{cohortModels.map(model=><option key={model.job_id} value={model.job_id}>{model.task} · {model.job_id}</option>)}</select></label>
         <label>시험 이미지 묶음<select aria-label="평가 데이터 버전" value={cohortVersion} onChange={event=>{invalidateForDataChange(true);setCohortVersion(event.target.value);}} className="ml-2 rounded bg-slate-800 p-1"><option value="">저장한 데이터 버전 선택</option>{cohortVersions.map(version=><option key={version.id} value={version.id}>{version.name} · {version.image_count}장 · {version.status}</option>)}</select></label>
@@ -444,15 +448,47 @@ export const EvaluationStudio: React.FC = () => {
         {executionEvidence?.execution && <span aria-label="평가 실행 기록">실행 기록 {executionEvidence.execution.receipt_id} · SHA {executionEvidence.execution.evidence_sha256}</span>}
         {(cohortError || remoteOperationError) && <span role="alert" className="text-red-300">{cohortError || remoteOperationError}</span>}
       </div>
+      </details> : <div className="flex flex-wrap items-center gap-2 border-b border-slate-700 p-2 text-xs">
+        <label>평가 모델<select aria-label="평가 모델" value={requestedCohortJob || ''} onChange={event=>{modelSelectionRevision.current++;invalidateForDataChange(true);setCohortModel(event.target.value);}} className="ml-2 rounded bg-slate-800 p-1"><option value="">완료 모델 선택</option>{cohortModels.map(model=><option key={model.job_id} value={model.job_id}>{model.task} · {model.job_id}</option>)}</select></label>
+        <label>시험 이미지 묶음<select aria-label="평가 데이터 버전" value={cohortVersion} onChange={event=>{invalidateForDataChange(true);setCohortVersion(event.target.value);}} className="ml-2 rounded bg-slate-800 p-1"><option value="">저장한 데이터 버전 선택</option>{cohortVersions.map(version=><option key={version.id} value={version.id}>{version.name} · {version.image_count}장 · {version.status}</option>)}</select></label>
+        <span>실행 위치: {selectedProfileId ? profiles.find(profile=>profile.id===selectedProfileId)?.name || selectedProfileId : '이 컴퓨터'}</span>
+        <label>장치<select aria-label="평가 장치" value={evaluationDevice} onChange={event=>{invalidateForDataChange(true);setEvaluationDevice(event.target.value);}} className="ml-2 rounded bg-slate-800 p-1"><option value="cpu">CPU</option><option value="cuda:0">{selectedProfileId?'CUDA · 선택 서버 GPU '+(profiles.find(profile=>profile.id===selectedProfileId)?.gpu_selector || '0'):'CUDA · 이 컴퓨터 GPU 0'}</option>{!selectedProfileId&&<option value="mps">Metal MPS · 이 컴퓨터</option>}</select></label>
+        <button aria-label="선택 코호트 평가" disabled={isLoading || !requestedCohortJob || !cohortVersion || !sourceFolder || !useComputeStore.getState().isLoaded} onClick={runSelectedCohort} className="rounded border border-blue-500 p-1">선택 코호트 평가</button>
+        {remoteOperation && <span>작업 {remoteOperation.op_id} · {remoteOperation.state} · 취소요청 {remoteOperation.cancel_requested_at ? '기록됨' : '없음'} · ACK {remoteOperation.cancel_acknowledged_at ? '확인' : '미확인'} · worker 종료 {remoteOperation.worker_exit_confirmed ? '확인' : '미확인'}</span>}
+        {remoteOperation && <button aria-label="원격 평가 취소" onClick={()=>void cancelSelectedCohort()} disabled={Boolean(remoteOperation.cancel_requested_at)} className="rounded border border-amber-500 p-1">취소 요청</button>}
+        {executionEvidence?.common_cohort && <span>실제 코호트 {executionEvidence.common_cohort.dataset_version_id} · {executionEvidence.common_cohort.cohort_sha256} · 추가 분석·보정·보고서 미지원 · 실제 대상 {executionEvidence.execution_target==='local'?'이 컴퓨터':executionEvidence.compute_profile_name || executionEvidence.compute_profile_id} · {executionEvidence.resolved_device || executionEvidence.device}</span>}
+        {executionEvidence?.execution && <span aria-label="평가 실행 기록">실행 기록 {executionEvidence.execution.receipt_id} · SHA {executionEvidence.execution.evidence_sha256}</span>}
+        {(cohortError || remoteOperationError) && <span role="alert" className="text-red-300">{cohortError || remoteOperationError}</span>}
+      </div>}
+      {simpleView && testPredictions.length > 0 && (() => {
+        // The simple view opens with the answer: how many test images the model got right and what it missed.
+        const right = sampleCounts.normal + sampleCounts.defect;
+        const percent = sampleCounts.all ? Math.round(right / sampleCounts.all * 100) : 0;
+        const card = (label: string, value: string, note: string, tone: string) => (
+          <div className={`rounded-lg border px-4 py-3 ${tone}`}>
+            <p className="text-xs text-slate-300">{label}</p>
+            <p className="mt-1 text-2xl font-bold leading-8 text-slate-50">{value}</p>
+            <p className="mt-0.5 text-xs text-slate-400">{note}</p>
+          </div>
+        );
+        return (
+          <section aria-label="평가 결과 한눈에 보기" className="grid shrink-0 grid-cols-2 gap-3 border-b border-[#2B3547] bg-[#0E1520] px-6 py-4 lg:grid-cols-4">
+            {card('맞힌 이미지', `${right} / ${sampleCounts.all}장`, `정확도 ${percent}%`, 'border-emerald-700/60 bg-emerald-950/20')}
+            {card('놓친 불량 (미검)', `${sampleCounts.escape}장`, sampleCounts.escape ? '아래 목록의 미검 탭에서 이미지를 확인하세요' : '놓친 불량이 없습니다', sampleCounts.escape ? 'border-rose-700/70 bg-rose-950/30' : 'border-emerald-700/60 bg-emerald-950/20')}
+            {card('잘못 잡은 정상 (과검)', `${sampleCounts.overkill}장`, sampleCounts.overkill ? '과검 탭에서 이미지를 확인하세요' : '정상을 불량으로 잡은 이미지가 없습니다', sampleCounts.overkill ? 'border-amber-700/70 bg-amber-950/30' : 'border-emerald-700/60 bg-emerald-950/20')}
+            {card('판정 기준 점수', confidenceThreshold.toFixed(2), '오른쪽 위 기준값에서 바꿀 수 있습니다', 'border-[#2B3547] bg-[#131822]')}
+          </section>
+        );
+      })()}
 
       {/* Top Evaluation Toolbar */}
       <div className="h-14 bg-[#131822] border-b border-[#2B3547] px-6 flex items-center justify-between text-xs">
         <div className="flex items-center space-x-3">
           <Activity className="w-4 h-4 text-blue-400" />
           <h2 className="font-bold text-sm text-slate-200">
-            {language === 'ko' ? '검증 및 품질 분석 스튜디오' : 'Quality Evaluation & Inspection Studio'}
+            {simpleView && language === 'ko' ? '시험 이미지별 결과' : language === 'ko' ? '검증 및 품질 분석 스튜디오' : 'Quality Evaluation & Inspection Studio'}
           </h2>
-          {jobId && <span className="text-slate-400 font-mono text-[11px]">[{jobId}]</span>}
+          {jobId && !simpleView && <span className="text-slate-400 font-mono text-[11px]">[{jobId}]</span>}
         </div>
 
         {/* Export Buttons */}
