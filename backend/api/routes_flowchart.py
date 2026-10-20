@@ -82,6 +82,11 @@ logger = logging.getLogger("vision_ai_studio.routes_flowchart")
 
 router = APIRouter(prefix="/api/flowchart", tags=["flowchart"])
 
+# Draft-read protocol answers. The app treats both as "no draft" by their 404 status and never shows the text; the
+# request observer (original_owned_UI_ancillary_request) recognises these exact strings, so they stay as they are.
+NO_DRAFT_DETAIL = 'No draft for this project, source and labelset'
+SUPERSEDED_DRAFT_DETAIL = 'A newer saved flow supersedes this draft'
+
 FLOWCHARTS_DIR = Path("./projects/flowcharts")
 FLOWCHARTS_DIR.mkdir(parents=True, exist_ok=True)
 DEFAULT_PIPELINE_FILE = FLOWCHARTS_DIR / "pipeline.json"
@@ -309,7 +314,7 @@ def get_flow_draft(request: Request) -> dict:
         context = _draft_context(project)
         file = _draft_file(project, context)
         if not file.is_file():
-            raise HTTPException(status_code=404, detail="이 프로젝트, 데이터셋, 라벨 목록에 해당하는 임시 저장본이 없습니다.")
+            raise HTTPException(status_code=404, detail=NO_DRAFT_DETAIL)
         try:
             record = json.loads(original_UI_ancillary_read_text(file,encoding='utf-8',role='flow'))
             pipeline = FlowchartPipeline.model_validate(record["pipeline"])
@@ -324,7 +329,7 @@ def get_flow_draft(request: Request) -> dict:
                         and active.get("source_dataset_path") == context["source_dataset_path"]
                         and active.get("labelset_id", "default") == context["labelset_id"]
                         and _draft_active_version(project, context, checksum) is None):
-                    raise HTTPException(status_code=404, detail="이 임시 저장본보다 새로 저장된 플로우가 있습니다. 저장된 플로우를 여세요.")
+                    raise HTTPException(status_code=404, detail=SUPERSEDED_DRAFT_DETAIL)
             return {**record, "pipeline": pipeline.model_dump(), "base_version_id": record.get("base_version_id"),
                     "active_version_id": _draft_active_version(project, context, checksum)}
         except (OSError, ValueError, KeyError, TypeError) as exc:
