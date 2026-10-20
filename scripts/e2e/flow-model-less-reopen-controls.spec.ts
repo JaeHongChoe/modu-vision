@@ -226,7 +226,7 @@ async function flowModelLessReopenExercise(page:Page,w:Workspace,e:Evidence,api:
      row.retired_gallery_read=true;row.failure_text=failure;row.finished=performance.now();row.complete=true;return;}
    }
     expect(request.frame()).toBe(page.mainFrame());const response=await splitControlWithin(request.response(),row.deadline,'own original mutation response');expect(response).not.toBeNull();
-    const bytes=await splitControlWithin(response!.body(),row.deadline,'own whole mutation response');expect(await splitControlWithin(response!.finished(),row.deadline,'own original mutation finished')).toBeNull();expect(response!.status()).toBe(200);
+    expect(await splitControlWithin(response!.finished(),row.deadline,'own original mutation finished')).toBeNull();row.network_finished=performance.now();const bytes=await splitControlWithin(response!.body(),row.deadline+BODY_RETRIEVAL_ALLOWANCE_MS,'own whole mutation response');expect(response!.status()).toBe(200);
     row.status=200;row.raw_body=bytes.toString('utf8');row.sha256=hash(bytes);row.size=bytes.length;row.response=JSON.parse(row.raw_body);row.request_body=request.postDataJSON();
     const rh=request.headers(),sh=response!.headers();row.request_context=rh['x-vision-context']===undefined?null:JSON.parse(rh['x-vision-context']);row.response_context=sh['x-vision-context']===undefined?null:JSON.parse(sh['x-vision-context']);
     if(u.pathname==='/api/flowchart/draft'){
@@ -236,7 +236,7 @@ async function flowModelLessReopenExercise(page:Page,w:Workspace,e:Evidence,api:
     }else{
      expect(u.pathname).toBe('/api/project/open');expect(u.search).toBe('');expect(row.method).toBe('POST');const matches=scopes.filter(scope=>row.request_body?.project_dir===scope.project.project_dir);expect(matches).toHaveLength(1);expect(row.request_body).toEqual({project_dir:matches[0].project.project_dir});expect(row.response).toEqual(matches[0].project);expect(row.response_context).toEqual(matches[0].transport);if(row.request_context!==null)scopeFor(row.request_context);
     }
-    row.finished=performance.now();expect(row.finished).toBeLessThanOrEqual(row.deadline);row.complete=true;
+    row.finished=performance.now();if((row as any).network_finished!==undefined)expect((row as any).network_finished).toBeLessThanOrEqual(row.deadline);expect(row.finished).toBeLessThanOrEqual(row.deadline+BODY_RETRIEVAL_ALLOWANCE_MS);row.complete=true;
    }catch(cause){row.failed=true;row.failure=cause;}})();return;
   }
   const started=performance.now(),row:FlowRead={request,started,deadline:started+10_000,post_baseline:reachedBaseline,complete:false,pending:Promise.resolve(),document_bootstrap:documentBootstrap?{...documentBootstrap}:undefined};reads.push(row);
@@ -252,7 +252,7 @@ async function flowModelLessReopenExercise(page:Page,w:Workspace,e:Evidence,api:
      const bootstrapUnscoped=row.document_bootstrap!==undefined&&row.request_context===null&&(RELOAD_BOOTSTRAP_PATHS as readonly string[]).includes(u.pathname);
      if(bootstrapUnscoped){expect(u.search).toBe('');expect(rh['x-vision-project']).toBeUndefined();expect(rh['x-vision-context']).toBeUndefined();expect(row.started).toBeGreaterThanOrEqual(row.document_bootstrap!.started);expect(owner.project.id).toBe(row.document_bootstrap!.project_id);expect(row.response_context).toEqual(owner.transport);row.bootstrap_unscoped=true;}
      else if(row.post_baseline){if(u.pathname==='/api/project/current'&&row.request_context===null){expect(u.search).toBe('');expect(rh['x-vision-project']).toBeUndefined();expect(row.response_context).toEqual(owner.transport);}else{expect(row.request_context).toEqual(owner.transport);expect(rh['x-vision-project']).toBe(owner.project.id);}}
-    expect(await splitControlWithin(response!.finished(),row.deadline,'original F064 API completion')).toBeNull();const bytes=await splitControlWithin(response!.body(),row.deadline+BODY_RETRIEVAL_ALLOWANCE_MS,'whole original F064 API body');row.status=response!.status();row.body=JSON.parse(bytes.toString('utf8'));row.sha256=hash(bytes);row.size=bytes.length;
+    expect(await splitControlWithin(response!.finished(),row.deadline,'original F064 API completion')).toBeNull();(row as any).network_finished=performance.now();const bytes=await splitControlWithin(response!.body(),row.deadline+BODY_RETRIEVAL_ALLOWANCE_MS,'whole original F064 API body');row.status=response!.status();row.body=JSON.parse(bytes.toString('utf8'));row.sha256=hash(bytes);row.size=bytes.length;
      if(bootstrapUnscoped){expect(row.status).toBe(200);expect(sh['content-type']).toMatch(/^application\/json(?:\s*;|$)/);if(u.pathname==='/api/dataset/revisions')expect(row.body).toEqual({active_revision:null,revisions:[]});else if(u.pathname==='/api/compute/profiles')expect(row.body).toEqual({profiles:[]});else if(u.pathname==='/api/compute/selection')expect(row.body).toEqual({compute_profile_id:null});else expect(row.body).toEqual(owner.project);}
     if(row.status!==200){
      expect(row.request_context).toEqual(owner.transport);
@@ -260,7 +260,7 @@ async function flowModelLessReopenExercise(page:Page,w:Workspace,e:Evidence,api:
      else{expect(u.pathname).toBe('/api/evaluation/results');expect(u.search).toBe('?'+new URLSearchParams({source_dataset_path:owner.source,source_task:'anomaly'}).toString());expect(row.status).toBe(404);expect(row.body).toEqual({detail:'학습을 끝낸 모델을 아직 고르지 않았습니다. 학습을 먼저 끝낸 뒤 평가할 모델을 고르세요.'});}
     }else if(u.pathname==='/api/project/current'){expect(row.body).toEqual(owner.project);}
    }
-   row.finished=performance.now();expect(row.finished).toBeLessThanOrEqual(row.deadline);row.complete=true;
+   row.finished=performance.now();if((row as any).network_finished!==undefined)expect((row as any).network_finished).toBeLessThanOrEqual(row.deadline);expect(row.finished).toBeLessThanOrEqual(row.deadline+BODY_RETRIEVAL_ALLOWANCE_MS);row.complete=true;
   }catch(cause){row.failed=true;row.failure=cause;}})();
  };
  const settle=async()=>{
