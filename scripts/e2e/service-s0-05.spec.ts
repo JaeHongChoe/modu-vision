@@ -124,8 +124,8 @@ async function openStep(page: Page, port: number, url: string, step: RegExp) {
 }
 
 const flowNodes = (page: Page) => page.locator('[data-flow-node-id]');
-const inspectionNode = (page: Page) => flowNodes(page).filter({ hasText: /threshold/i }).filter({ hasNotText: /rule:/i });
-const decisionNode = (page: Page) => flowNodes(page).filter({ hasText: /rule:/i });
+const inspectionNode = (page: Page) => flowNodes(page).filter({ hasText: /threshold|기준 점수/i }).filter({ hasNotText: /rule:|규칙:/i });  // Korean node cards (15th pass)
+const decisionNode = (page: Page) => flowNodes(page).filter({ hasText: /rule:|규칙:/i });
 const nodeStatus = (node: ReturnType<typeof flowNodes>) => node.locator('[title^="Status:"]');
 const resultsTab = (page: Page) => page.getByRole('button', { name: /^검사 결과/ });
 const flowTab = (page: Page) => page.getByRole('tab', { name: '편집', exact: true });

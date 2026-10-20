@@ -68,7 +68,7 @@ async function trainAnomalyModel(page: Page, base: string, source: string): Prom
 }
 
 const flowNodes = (page: Page) => page.locator('[data-flow-node-id]');
-const inspectionNode = (page: Page) => flowNodes(page).filter({ hasText: /threshold/i }).filter({ hasNotText: /rule:/i });
+const inspectionNode = (page: Page) => flowNodes(page).filter({ hasText: /threshold|기준 점수/i }).filter({ hasNotText: /rule:|규칙:/i });  // Korean node cards (15th pass)
 const thresholdInput = (page: Page) => page.getByLabel('결함 판정 임계치');
 /** The verdict the server decided with threshold 8: a distance above 8 is NG, below is OK (at exactly 8 the rule depends on
  * the score kind, so that case is not judged). The calibrated threshold differs from 8, so a run deciding with it fails. */
