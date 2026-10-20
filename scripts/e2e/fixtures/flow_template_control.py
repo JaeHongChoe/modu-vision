@@ -15,6 +15,12 @@ if target:
         new=Path(project['models_dir'])/('job_target_'+suffix); old.rename(new)
         checkpoint=torch.load(new/'best_model.pt',weights_only=True,map_location='cpu')
         checkpoint['classes']=['OK','scratch']; torch.save(checkpoint,new/'best_model.pt')
+        # The model catalog reads model_meta.json (written with the checkpoint contract since cbedd24); the target's
+        # recorded classes must say 'scratch' there too, or class mapping to it is refused as unrecorded.
+        meta=new/'model_meta.json'
+        if meta.is_file():
+            recorded=json.loads(meta.read_text(encoding='utf-8')); recorded['classes']=['OK','scratch']
+            meta.write_text(json.dumps(recorded),encoding='utf-8')
         receipt=json.loads((new/'job_receipt.json').read_text(encoding='utf-8'))
         receipt['dataset_path']=str(new/'dataset')
         (new/'job_receipt.json').write_text(json.dumps(receipt),encoding='utf-8')
