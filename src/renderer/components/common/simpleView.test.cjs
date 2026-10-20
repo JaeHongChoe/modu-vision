@@ -67,3 +67,16 @@ test('the simple view shows three data counts, two tiles and one folder button r
  assert.match(footer,/다음: \$\{readiness\.nextAction\.label\}/);assert.match(footer,/sr-only">\{ko\?` · 완료 입력/);
  assert.ok(!footer.includes('`완료 입력 ${readiness.completedInputs.length} · `'),'the visible status no longer starts with a count');
 });
+
+test('the simple view folds the step 3 training location, the step 4 comparison and the second header row; wide monitors get larger type',()=>{
+ const training=read('src/renderer/components/training/TrainingController.tsx');
+ assert.match(training,/\{full \|\| jobId \? block : <details/);assert.match(training,/<summary[^>]*><span[^>]*>학습 위치<\/span>/);
+ const evaluation=read('src/renderer/components/evaluation/EvaluationStudio.tsx');
+ assert.match(evaluation,/<summary[^>]*>현행 모델 · 후보 모델 비교<\/summary>/);assert.match(evaluation,/\{full \? <>\s*<div className="rounded border border-\[#3B5269\]/);
+ const header=read('src/renderer/components/wizard/WizardHeader.tsx');
+ assert.match(header,/simpleControls\?: React\.ReactNode; simpleMenu\?: React\.ReactNode/);assert.match(header,/\{!full && simpleControls\}/);assert.match(header,/\{simpleMenu\}\s*<\/div>\s*<\/details>\}/);
+ const app=read('src/renderer/App.tsx');
+ assert.match(app,/<WizardHeader simpleControls=\{workspace==='operator'\?null:<button/);assert.match(app,/\{\(viewMode==='full'\|\|workspace==='operator'\)&&<nav/);
+ const css=read('src/renderer/index.css');
+ assert.match(css,/@media \(min-width: 1920px\) \{ html \{ font-size: 18px; \} \}/);assert.match(css,/@media \(min-width: 2400px\) \{ html \{ font-size: 20px; \} \}/);
+});

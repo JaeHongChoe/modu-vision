@@ -59,6 +59,7 @@ export const TrainingController: React.FC = () => {
   const [warmParents, setWarmParents] = useState<ParentCandidate[]>([]);
   const [warmParentsError, setWarmParentsError] = useState<string | null>(null);
   const { task, language, setStep, projectDir, project, isProjectBusy, technicalDetails } = useProjectStore();
+  const full = useProjectStore(state => state.viewMode) === 'full';
   const handoff=useTaskHandoff();
   const [taskProposal,setTaskProposal]=useState<{task:VisionTask;scope:string}|null>(null);
   const [selectedFamily, setSelectedFamily] = useState<ModelFamily>(()=>handoff?.family||task);
@@ -255,22 +256,7 @@ export const TrainingController: React.FC = () => {
   };
   const currentPhase = jobPhase || status;
 
-  return (<>
-    {taskProposal&&<TaskChangeImpactDialog nextTask={taskProposal.task} scope={taskProposal.scope} onClose={()=>setTaskProposal(null)} onResult={outcome=>{
-      setTaskProposal(null);
-      // A failed reimport may follow a persisted task change. Show that actual
-      // task while keeping its recovery error; it is not ready to train.
-      if(outcome.ok||outcome.applied){clearTaskHandoff(localStorage,{...useProjectStore.getState(),...useComputeStore.getState(),apiTransportIdentity:getApiPersistenceIdentity()});setSelectedFamily(outcome.task);}
-      if(!outcome.ok)setActionError(`모델 종류 변경 후 확인이 필요합니다: ${outcome.error}`);
-    }}/>}
-    <div id="workflow-training" tabIndex={-1} className="flex-1 flex flex-col h-full bg-[#0B0E14] text-slate-100 overflow-y-auto select-none">
-      {startBlocker&&<div className="workspace-record m-3 text-xs" role="note" aria-label="학습 시작 준비도"><p id="training-start-reason">학습 시작 보류: {startBlocker}</p><button className="workspace-button mt-2" onClick={()=>{if(!sourceReady||totalImages<1||split.train<1||split.val<1)void setStep(1);else document.getElementById('workflow-training')?.focus();}}>{!sourceReady||totalImages<1||split.train<1||split.val<1?'데이터·분할 확인 (1단계)':'실행 자원·학습 설정 확인 (3단계)'}</button></div>}
-      <OperatorGuidanceBanner step={3} />
-      <div className="max-w-7xl w-full mx-auto space-y-5 p-6">
-        <ModelFamilyCatalog selectedFamily={selectedFamily} onSelect={chooseFamily} disabled={isLoading||isSplitting||isProjectBusy} />
-        {selectedFamily===task&&<TrainingPreparationPanel family={selectedFamily} model={syntheticAnomaly ? syntheticOptions.anomaly_backbone : selectedBackbone} preset={preset} checkpoint={pretrainedCheckpoint} onCheckpointChange={setPretrainedCheckpoint} device={nextDevice==='mps'||nextDevice==='cuda' ? nextDevice : 'cpu'} config={modelOptions} warmStartJobId={warmParentId||undefined} />}
-        {remediationNotice&&<p role="status" className="rounded border border-cyan-800 bg-cyan-950/30 p-3 text-sm text-cyan-100">{remediationNotice}</p>}
-        {selectedFamily === task && <>
+  const block = (
         <div className="rounded border border-[#2B3547] bg-[#131822] p-3 text-xs">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
@@ -317,6 +303,28 @@ export const TrainingController: React.FC = () => {
             </div>
           )}
         </div>
+  );
+  return (<>
+    {taskProposal&&<TaskChangeImpactDialog nextTask={taskProposal.task} scope={taskProposal.scope} onClose={()=>setTaskProposal(null)} onResult={outcome=>{
+      setTaskProposal(null);
+      // A failed reimport may follow a persisted task change. Show that actual
+      // task while keeping its recovery error; it is not ready to train.
+      if(outcome.ok||outcome.applied){clearTaskHandoff(localStorage,{...useProjectStore.getState(),...useComputeStore.getState(),apiTransportIdentity:getApiPersistenceIdentity()});setSelectedFamily(outcome.task);}
+      if(!outcome.ok)setActionError(`모델 종류 변경 후 확인이 필요합니다: ${outcome.error}`);
+    }}/>}
+    <div id="workflow-training" tabIndex={-1} className="flex-1 flex flex-col h-full bg-[#0B0E14] text-slate-100 overflow-y-auto select-none">
+      {startBlocker&&<div className="workspace-record m-3 text-xs" role="note" aria-label="학습 시작 준비도"><p id="training-start-reason">학습 시작 보류: {startBlocker}</p><button className="workspace-button mt-2" onClick={()=>{if(!sourceReady||totalImages<1||split.train<1||split.val<1)void setStep(1);else document.getElementById('workflow-training')?.focus();}}>{!sourceReady||totalImages<1||split.train<1||split.val<1?'데이터·분할 확인 (1단계)':'실행 자원·학습 설정 확인 (3단계)'}</button></div>}
+      <OperatorGuidanceBanner step={3} />
+      <div className="max-w-7xl w-full mx-auto space-y-5 p-6">
+        <ModelFamilyCatalog selectedFamily={selectedFamily} onSelect={chooseFamily} disabled={isLoading||isSplitting||isProjectBusy} />
+        {selectedFamily===task&&<TrainingPreparationPanel family={selectedFamily} model={syntheticAnomaly ? syntheticOptions.anomaly_backbone : selectedBackbone} preset={preset} checkpoint={pretrainedCheckpoint} onCheckpointChange={setPretrainedCheckpoint} device={nextDevice==='mps'||nextDevice==='cuda' ? nextDevice : 'cpu'} config={modelOptions} warmStartJobId={warmParentId||undefined} />}
+        {remediationNotice&&<p role="status" className="rounded border border-cyan-800 bg-cyan-950/30 p-3 text-sm text-cyan-100">{remediationNotice}</p>}
+        {selectedFamily === task && <>
+        {/* The simple view keeps the training location behind one line until a job runs; 모두 보기 shows it as before. */}
+        {full || jobId ? block : <details className="rounded border border-[#2B3547] bg-[#131822] text-xs">
+          <summary className="cursor-pointer p-3 text-slate-300"><span className="font-semibold text-slate-400">학습 위치</span> <span className="font-bold text-slate-100">{!isComputeLoaded ? '설정 확인 중' : selectedProfileId ? (selectedProfile?.name || `설정 없음: ${selectedProfileId}`) : '이 컴퓨터'}</span></summary>
+          <div className="px-3 pb-3">{block}</div>
+        </details>}
         {/* In-Page Guardrails with 1-Click Remediation */}
         {totalImages === 0 ? (
           <GuardrailBanner

@@ -165,3 +165,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 
 /* Korean wraps between words, never one character per line in a narrow column; long paths may still break anywhere. */
 html[lang="ko"] body { word-break: keep-all; }
+
+/* Large monitors: at 1920 CSS px and wider (a 27-inch 1440p screen at 100% scaling) the rem-based type and spacing
+   grow, so the 13px body text is not read from arm's length. Test viewports are narrower and unaffected. */
+@media (min-width: 1920px) { html { font-size: 18px; } }
+@media (min-width: 2400px) { html { font-size: 20px; } }

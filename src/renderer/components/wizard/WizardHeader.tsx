@@ -32,7 +32,9 @@ import type { VisionTask } from '../../types';
 const CONTROL = 'rounded border border-[#3B4B63] bg-[#0B0E14] px-2.5 py-1.5 text-sm text-slate-100 hover:bg-[#1B2537] disabled:opacity-50';
 const QUIET = 'rounded border border-transparent px-2.5 py-1.5 text-sm text-slate-200 hover:border-[#3B4B63] hover:bg-[#1B2537]';
 
-export const WizardHeader: React.FC = () => {
+/** The simple view takes the second row's few controls here: `simpleControls` sit next to 모두 보기 and `simpleMenu`
+ * items join the 더 보기 menu, so the row disappears until the user asks for everything. */
+export const WizardHeader: React.FC<{ simpleControls?: React.ReactNode; simpleMenu?: React.ReactNode }> = ({ simpleControls, simpleMenu } = {}) => {
   const [showComputePanel, setShowComputePanel] = useState(false);
   const [showProjectPanel, setShowProjectPanel] = useState(false);
   const [showProvenance, setShowProvenance] = useState(false);
@@ -177,6 +179,7 @@ export const WizardHeader: React.FC = () => {
             {selectedProfileId ? (selectedProfile?.name || (ko ? '서버' : 'Server')) : localLabel} · {engineText}
           </span>}
           {/* The simple view keeps the few controls a first run needs; everything else waits under 더 보기 or in 모두 보기. */}
+          {!full && simpleControls}
           <button type="button" aria-pressed={full} onClick={() => setViewMode(full ? 'simple' : 'full')} className={`${CONTROL} ${full ? 'border-sky-500 bg-sky-950/60 text-sky-100' : ''}`} title={ko ? (full ? '처음 쓰는 사람에게 필요한 항목만 보입니다' : '모든 설정과 관리 항목이 보입니다') : undefined}>
             {full ? (ko ? '간단히 보기' : 'Simple view') : (ko ? '모두 보기' : 'Show everything')}
           </button>
@@ -202,6 +205,7 @@ export const WizardHeader: React.FC = () => {
               <button type="button" onClick={() => setTheme(shownTheme === 'light' ? 'dark' : 'light')} className={CONTROL} aria-pressed={shownTheme === 'light'}>
                 {shownTheme === 'light' ? (ko ? '어두운 화면' : 'Dark screen') : (ko ? '밝은 화면' : 'Light screen')}
               </button>
+              {simpleMenu}
             </div>
           </details>}
           <button type="button" onClick={() => setLanguage(ko ? 'en' : 'ko')} className={CONTROL} aria-label="언어 전환 (KR / EN)" title={ko ? 'Switch to English' : '한국어로 전환'}>

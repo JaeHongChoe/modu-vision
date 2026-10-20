@@ -97,6 +97,7 @@ export const SampleVerdictBadge: React.FC<{ verdict: SampleVerdict; compact?: bo
 export const EvaluationStudio: React.FC = () => {
   const handoff=useTaskHandoff();
   const { language, setStep, task } = useProjectStore();
+  const full = useProjectStore(state => state.viewMode) === 'full';
   const projectDir = useProjectStore((state) => state.projectDir);
   const warmCandidateJobId = useTrainingStore((state) => state.status === 'completed' && state.warmStartParentJobId ? state.jobId : null);
   const warmParentJobId = useTrainingStore((state) => state.status === 'completed' ? state.warmStartParentJobId : null);
@@ -532,6 +533,8 @@ export const EvaluationStudio: React.FC = () => {
       <div className="flex-1 flex overflow-hidden">
         {/* Left Side: Metrics & Clickable Confusion Matrix */}
         <div className="w-[500px] bg-[#131822] border-r border-[#2B3547] p-4 flex flex-col space-y-4 overflow-y-auto">
+          {/* The simple view keeps the comparison behind one line; the current model's own results stay in sight. */}
+          {full ? <>
           <div className="rounded border border-[#3B5269] bg-[#111C2A] p-2.5 text-xs text-slate-300">
             <div className="mb-2 font-semibold text-white">후보 모델 비교 유형</div>
             <div className="grid grid-cols-2 gap-2" role="group" aria-label="후보 모델 비교 유형">
@@ -550,6 +553,29 @@ export const EvaluationStudio: React.FC = () => {
             refreshRevision={comparisonRefreshRevision}
             language={language}
           />
+          </> : <details className="rounded border border-[#3B5269] bg-[#111C2A] text-xs text-slate-300">
+            <summary className="cursor-pointer p-2.5 font-semibold text-white">현행 모델 · 후보 모델 비교</summary>
+            <div className="space-y-4 p-2.5 pt-0">
+          <div className="rounded border border-[#3B5269] bg-[#111C2A] p-2.5 text-xs text-slate-300">
+            <div className="mb-2 font-semibold text-white">후보 모델 비교 유형</div>
+            <div className="grid grid-cols-2 gap-2" role="group" aria-label="후보 모델 비교 유형">
+              <button type="button" onClick={() => setComparisonTask(task)} aria-pressed={comparisonTask === task}
+                className={`rounded border px-2 py-1.5 ${comparisonTask === task ? 'border-cyan-400 bg-cyan-700/25 text-white' : 'border-[#415970] text-slate-300'}`}>프로젝트 모델</button>
+              <button type="button" onClick={() => setComparisonTask('patch_classification')} aria-pressed={comparisonTask === 'patch_classification'}
+                className={`rounded border px-2 py-1.5 ${comparisonTask === 'patch_classification' ? 'border-cyan-400 bg-cyan-700/25 text-white' : 'border-[#415970] text-slate-300'}`}>패치 분류 모델</button>
+            </div>
+          </div>
+          <ModelComparisonPanel
+            projectDir={projectDir}
+            sourceFolder={sourceFolder}
+            task={comparisonTask}
+            preferredJobId={warmCandidateJobId || jobId}
+            preferredParentJobId={warmParentJobId}
+            refreshRevision={comparisonRefreshRevision}
+            language={language}
+          />
+            </div>
+          </details>}
           <ModelDeploymentPanel taskOverride={comparisonTask} />
           <EvaluationHistoryPanel sourceFolder={sourceFolder} task={comparisonTask} jobId={jobId} />
           <EvaluationEvidencePanel samples={testPredictions} onSelect={path=>{const sample=testPredictions.find(item=>item.file_path===path);if(sample)void selectPrediction(sample);}}/>
