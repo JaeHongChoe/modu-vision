@@ -3,7 +3,7 @@
 * A LabelMe folder (image + .json side by side) chosen for a classification project is refused with the sentence
   the screen turns into "영역 분할로 바꾸고 가져오기 / 객체 검출로 바꾸고 가져오기"; the same folder imports as segmentation.
 * ``._name.jpg`` resource forks copied from a macOS external drive are not images: the inventory and the training
-  loaders both skip them instead of failing on the first unreadable file.
+  loaders both skip them instead of failing on the first unreadable file. Other dot-files keep their saved-split contract.
 """
 import json
 
