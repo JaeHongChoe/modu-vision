@@ -98,7 +98,9 @@ export const LabelingToolbar: React.FC = () => {
   };
 
   return (
-    <div className="min-h-12 bg-[#131822] border-b border-[#2B3547] px-4 py-1 flex flex-wrap items-center justify-between gap-y-1 text-slate-200 select-none whitespace-nowrap">
+    // shrink-0: the studio is a column that can be shorter than its rows; a wrapped toolbar must keep both lines
+    // instead of being squeezed to its 48px minimum with the second line (the save button) under the next row.
+    <div className="min-h-12 shrink-0 bg-[#131822] border-b border-[#2B3547] px-4 py-1 flex flex-wrap items-center justify-between gap-y-1 text-slate-200 select-none whitespace-nowrap">
       {/* Tool Selector: 7 Industrial Tools */}
       <div className="flex items-center space-x-1">
         {/* Tool 1: Select / Move */}

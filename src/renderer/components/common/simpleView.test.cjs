@@ -80,3 +80,8 @@ test('the simple view folds the step 3 training location, the step 4 comparison 
  const css=read('src/renderer/index.css');
  assert.match(css,/@media \(min-width: 1920px\) \{ html \{ font-size: 18px; \} \}/);assert.match(css,/@media \(min-width: 2400px\) \{ html \{ font-size: 20px; \} \}/);
 });
+
+test('a wrapped labeling toolbar keeps its height instead of hiding its second line under the next row',()=>{
+ const toolbar=read('src/renderer/components/labeling/LabelingToolbar.tsx');
+ assert.match(toolbar,/className="min-h-12 shrink-0 [^"]*flex-wrap/);
+});
