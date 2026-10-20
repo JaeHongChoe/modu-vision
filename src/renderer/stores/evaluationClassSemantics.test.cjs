@@ -143,7 +143,7 @@ function renderStudio(storeState) {
     './ZeroEscapeTradeoffChart': {}, './SynchronizedDualViewport': {},
     './DetectionEvaluationGrains': {}, './ModelComparisonPanel': {}, './ModelDeploymentPanel': {},
     './EvaluationHistoryPanel': {}, './EvaluationEvidencePanel': {},
-    './sampleConfidence': { accuracyNote: () => '', smallTestWarning: () => null }, '../common/FieldReadinessPanel': {},
+    '../../utils/plainLabels': require('../utils/plainLabels.fixture.cjs'), './sampleConfidence': { accuracyNote: () => '', smallTestWarning: () => null }, '../common/FieldReadinessPanel': {},
   });
   const tree = m.EvaluationStudio();
   const nodes = [];

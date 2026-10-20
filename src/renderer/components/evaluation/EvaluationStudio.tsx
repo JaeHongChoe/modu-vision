@@ -45,6 +45,7 @@ import { EvaluationHistoryPanel } from './EvaluationHistoryPanel';
 import {EvaluationEvidencePanel} from './EvaluationEvidencePanel';
 import { accuracyNote, smallTestWarning } from './sampleConfidence';
 import { FieldReadinessPanel } from '../common/FieldReadinessPanel';
+import { scoreUnitLabel } from '../../utils/plainLabels';
 
 const comparisonTasks = new Set<string>([
   'classification', 'detection', 'segmentation', 'anomaly', 'patch_classification',
@@ -670,7 +671,7 @@ export const EvaluationStudio: React.FC = () => {
             <div className="flex items-center justify-between text-xs">
               <div className="space-y-0.5">
                 <div className="text-[10px] text-slate-400 font-mono">
-                  {simpleView ? '지금 기준 점수' : `현재 임계값 (${metrics.score_spec?.unit || 'probability'})`}: <span className="text-slate-100 font-bold tabular-nums">{confidenceThreshold.toFixed(2)}</span>
+                  {simpleView ? '지금 기준 점수' : `현재 기준 점수 (${scoreUnitLabel(metrics.score_spec?.unit)})`}: <span className="text-slate-100 font-bold tabular-nums">{confidenceThreshold.toFixed(2)}</span>
                 </div>
                 <div className="text-[10px] text-[#38BDF8] font-mono">
                   {simpleView ? '시험 이미지로 찾은 추천 점수' : '평가 표본 탐색 임계값'}:{' '}
@@ -718,8 +719,8 @@ export const EvaluationStudio: React.FC = () => {
             {hasReportableResult && <div className="mb-3 rounded border border-[#3B5269] bg-[#111C2A] p-3 text-xs leading-relaxed text-slate-300" role="status">
               <p className="font-semibold text-slate-100">
                 {language === 'ko' ? '평가 데이터: ' : 'Evaluation data: '}
-                {metrics.evaluated_split === 'test' ? (language === 'ko' ? '시험 분할 (Test)' : 'Test partition')
-                  : metrics.evaluated_split === 'val' ? (language === 'ko' ? '검증 분할 (Validation)' : 'Validation partition')
+                {metrics.evaluated_split === 'test' ? (language === 'ko' ? '시험 분할' : 'Test partition')
+                  : metrics.evaluated_split === 'val' ? (language === 'ko' ? '검증 분할' : 'Validation partition')
                   : (language === 'ko' ? '분할 근거 미확인' : 'Partition evidence unavailable')}
               </p>
               {metrics.selection_overlap && <p className="mt-1 text-amber-200">{language === 'ko'

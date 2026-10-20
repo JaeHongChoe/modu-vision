@@ -18,6 +18,7 @@ import {openSelectedInspectionRun} from './inspectionHistorySelection';
 import {EvidenceImageViewer} from '../common/EvidenceImageViewer';
 import {inspectionEvidence, safeSnapshot, type EvidenceView} from '../common/evidenceViewer';
 import {inspectionPreview,inspectionThumbnail} from './inspectionImage';
+import { cropLabel } from '../../utils/plainLabels';
 import {
   batchSourceResetKey, filterBatchRows, isBatchSourceCurrent, isBatchSourceReady,
   isInspectionHistoryContextCurrent, inspectionRunMatchesSource, createInspectionHistoryContext, createInspectionRunExitGuard,
@@ -678,7 +679,7 @@ export const BatchInspectionPanel: React.FC = () => {
                                 {crop.crop_thumbnail&&safeSnapshot(crop.crop_thumbnail)
                                   ? <img src={crop.crop_thumbnail} alt={crop.label} className="h-16 w-full object-contain" />
                                   : <span className="text-amber-200">저장된 ROI 이미지 없음</span>}
-                                <div className="truncate">{crop.label === 'Full image' ? '전체 이미지' : crop.label}</div><div>{crop.verdict} · {Number(crop.defect_score).toFixed(2)}</div>
+                                <div className="truncate">{cropLabel(crop.label)}</div><div>{crop.verdict} · {Number(crop.defect_score).toFixed(2)}</div>
                               </div>
                             ))}
                           </div>

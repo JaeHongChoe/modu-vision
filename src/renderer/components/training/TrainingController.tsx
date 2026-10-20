@@ -541,7 +541,7 @@ export const TrainingController: React.FC = () => {
                 <Square className="w-3.5 h-3.5 fill-white" />
                 <span>{cancelIncomplete ? '종료 확인 중' : status === 'stopping'
                   ? (isStopRequestPending ? '중단 중...' : '중단 상태 다시 확인')
-                  : (language === 'ko' ? '학습 중단 (Abort)' : 'Abort Training')}</span>
+                  : (language === 'ko' ? '학습 중단' : 'Abort Training')}</span>
               </button>
             )}
 

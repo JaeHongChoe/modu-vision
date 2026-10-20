@@ -20,6 +20,7 @@ import { host } from '../../services/hostAdapter';
 import type { ImageMeta, SelectedInspectionImage } from '../../types';
 import { ImageLibraryBrowser } from './ImageLibraryBrowser';
 import { identityOf, recallSelection, rememberSelection, resolutionNotice, selectionFromImage } from './librarySelection';
+import { splitLabel } from '../../utils/plainLabels';
 
 export interface ImagePickerModalProps {
   isOpen: boolean;
@@ -214,7 +215,7 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
           <div className="flex items-center space-x-2">
             <ImageIcon className="w-4 h-4 text-slate-300" />
             <h3 className="font-bold text-xs font-mono uppercase tracking-wider text-slate-100">
-              검사 대상 이미지 선택 (Select Inspection Image)
+              검사 대상 이미지 선택
             </h3>
           </div>
           <button
@@ -301,13 +302,13 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
                     <button
                       key={split}
                       onClick={() => { setDatasetSplit(split); setDatasetPage(1); }}
-                      className={`px-2.5 py-1 rounded text-[11px] font-mono uppercase cursor-pointer transition-colors ${
+                      className={`px-2.5 py-1 rounded text-[11px] cursor-pointer transition-colors ${
                         isActive
                           ? 'bg-[#2B3547] text-white border border-[#3B4860] font-bold'
                           : 'bg-[#1A212E] text-slate-400 hover:text-slate-200 border border-[#2B3547]'
                       }`}
                     >
-                      {split}
+                      {splitLabel(split)}
                     </button>
                   );
                 })}
@@ -379,7 +380,7 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
                         <p className="text-[11px] font-mono font-bold text-slate-200 truncate">{img.file_name}</p>
                         <div className="flex items-center justify-between text-[10px] text-slate-400 mt-0.5">
                           <span className="truncate">{img.label || 'No Label'}</span>
-                          <span className="uppercase text-[9px] text-slate-400 font-mono">{img.split}</span>
+                          <span className="text-[9px] text-slate-400">{splitLabel(img.split)}</span>
                         </div>
                         {isSelected && (
                           <div className="absolute top-1 right-1 w-4 h-4 bg-[#10B981] text-slate-950 rounded flex items-center justify-center font-bold">
@@ -397,7 +398,7 @@ export const ImagePickerModal: React.FC<ImagePickerModalProps> = ({ isOpen, onCl
               {/* Local File Browser */}
               <div>
                 <label className="text-xs font-mono uppercase tracking-wider text-slate-300 block mb-1.5">
-                  로컬 이미지 파일 경로 (Absolute File Path)
+                  이 컴퓨터의 이미지 파일 경로
                 </label>
                 <div className="flex space-x-2">
                   <input

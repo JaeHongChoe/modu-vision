@@ -11,6 +11,7 @@ import {datasetWorkflow} from '../../services/datasetWorkflow';
 import {teamDataApi} from '../../services/teamDataApi';
 import {useAnnotationStore} from '../../stores/useAnnotationStore';
 import {openEvidenceLabeling,rememberEvidenceEdit,evidenceEditScope} from '../labeling/evidenceLabeling';
+import { scoreUnitLabel } from '../../utils/plainLabels';
 import {
   api,getApiPersistenceIdentity,getProjectContext,getProjectContextGeneration,
   request,
@@ -462,7 +463,7 @@ export const ModelComparisonPanel: React.FC<Props> = ({ projectDir, sourceFolder
               </select>
             </label>
           </div>
-          <div className="mt-2 flex flex-wrap gap-3 text-xs"><label>기준 모델 임계값 ({incumbentSpec?.unit||'probability'}) <input aria-label="비교 기준 임계값" type="number" min="0" max={incumbentSpec?.domain==='distance'?undefined:1} step="any" value={incumbentThreshold} onChange={e=>setIncumbentThreshold(Number(e.target.value))} className="w-20 rounded bg-[#0F1B27] p-1"/></label><label>후보 모델 임계값 ({candidateSpec?.unit||'probability'}) <input aria-label="비교 후보 임계값" type="number" min="0" max={candidateSpec?.domain==='distance'?undefined:1} step="any" value={candidateThreshold} onChange={e=>setCandidateThreshold(Number(e.target.value))} className="w-20 rounded bg-[#0F1B27] p-1"/></label>{models.some(m=>[incumbentId,candidateId].includes(m.job_id)&&m.task==='ocr')&&<label>OCR 합격 문자열 <input aria-label="비교 OCR 기대 문자열" value={expectedText} onChange={e=>setExpectedText(e.target.value)} className="rounded bg-[#0F1B27] p-1"/></label>}</div>
+          <div className="mt-2 flex flex-wrap gap-3 text-xs"><label>기준 모델 임계값 ({scoreUnitLabel(incumbentSpec?.unit)}) <input aria-label="비교 기준 임계값" type="number" min="0" max={incumbentSpec?.domain==='distance'?undefined:1} step="any" value={incumbentThreshold} onChange={e=>setIncumbentThreshold(Number(e.target.value))} className="w-20 rounded bg-[#0F1B27] p-1"/></label><label>후보 모델 임계값 ({candidateSpec?.unit||'probability'}) <input aria-label="비교 후보 임계값" type="number" min="0" max={candidateSpec?.domain==='distance'?undefined:1} step="any" value={candidateThreshold} onChange={e=>setCandidateThreshold(Number(e.target.value))} className="w-20 rounded bg-[#0F1B27] p-1"/></label>{models.some(m=>[incumbentId,candidateId].includes(m.job_id)&&m.task==='ocr')&&<label>OCR 합격 문자열 <input aria-label="비교 OCR 기대 문자열" value={expectedText} onChange={e=>setExpectedText(e.target.value)} className="rounded bg-[#0F1B27] p-1"/></label>}</div>
           <div className="mt-2 flex flex-wrap items-end gap-2">
             <div className="space-y-1 text-[11px] text-slate-300">
               <p>{isKo?'실행 위치: ':'Execution target: '}{compute.selectedProfileId?(selectedProfile?.name|| (isKo?'선택 서버를 사용할 수 없습니다':'Selected server unavailable')):(isKo?'로컬 CPU':'Local CPU')}</p>

@@ -63,6 +63,7 @@ import { getFlowchartModelReferences, getFlowchartModelTask, pipelineMatchesTask
 import { flowRecipeLabel, flowRunSourceLabel } from './flowHandoff';
 import { flowExecutionOptions, type FlowExecutionChoice } from './flowExecution';
 import { connectFlowNodes, decisionReachedOnlyByConditions, decisionRulePatch, flowIssuesByTarget, layoutFlowchart, locateFlowIssue, nodeClassChoices, removeFlowNode, removeFlowEdge, selectFlowEdge, selectedFlowEdge, flowEdgeKey, shouldShowThreshold, updateFlowEdgeData, updateFlowEdgeBranch, updateFlowEdgePayload, validateFlowchartGraph, type FlowPortPayload, type FlowEdgeSelection, rebaseFlowEdgeSelection } from './flowchartGraph';
+import { scoreUnitLabel } from '../../utils/plainLabels';
 
 const verifyModelReferences = async (
   sourceFolder: string,
@@ -1654,7 +1655,7 @@ export const FlowchartStudio: React.FC = () => {
             ) : selectedNode ? (
               <div className="space-y-4 text-xs">
                 <div>
-                  <label className="text-[#94A3B8] block mb-1">노드 명칭 (LABEL)</label>
+                  <label className="text-[#94A3B8] block mb-1">노드 명칭</label>
                   <input
                     type="text"
                     aria-label={language === 'ko' ? '노드 명칭' : 'Node label'}
@@ -1766,7 +1767,7 @@ export const FlowchartStudio: React.FC = () => {
                 {shouldShowThreshold(selectedNode) && (
                   <div>
                     <div className="flex justify-between text-[#94A3B8] mb-1">
-                      <span>결함 판정 임계치 · {selectedNode.data.score_spec?.unit || 'probability'}</span>
+                      <span>결함 판정 기준 점수 · {scoreUnitLabel(selectedNode.data.score_spec?.unit)}</span>
                       <span className="text-cyan-400 font-bold tabular-nums">
                         {(selectedNode.data.threshold ?? 0.5).toFixed(2)}
                       </span>
@@ -1867,7 +1868,7 @@ export const FlowchartStudio: React.FC = () => {
 
                 {selectedNode.data.node_type === 'decision' && (
                   <div>
-                    <label className="text-[#94A3B8] block mb-1">판정 룰 정책 (RULE POLICY)</label>
+                    <label className="text-[#94A3B8] block mb-1">판정 규칙</label>
                     <select value={selectedNode.data.rule || 'any_defect_is_ng'}
                       onChange={(event) => updateNodeData(selectedNode.id, decisionRulePatch(selectedNode.data, event.target.value, pipeline?.nodes.filter(node=>['inspection','detection_crop'].includes(node.data.node_type))))}
                       className="w-full bg-[#1A212E] border border-[#2B3547] rounded px-2.5 py-1.5 text-amber-400 font-bold">
@@ -1924,9 +1925,9 @@ export const FlowchartStudio: React.FC = () => {
                 )}
 
                 <div className="pt-4 border-t border-[#2B3547] text-xs text-[#94A3B8] space-y-1">
-                  <div>NODE ID: <span className="text-slate-300 font-bold">{selectedNode.id}</span></div>
-                  <div>TYPE: <span className="text-slate-300 font-bold">{selectedNode.data.node_type}</span></div>
-                  <div>COORD: <span className="text-slate-300 tabular-nums">({selectedNode.position?.x ?? 0}, {selectedNode.position?.y ?? 0})</span></div>
+                  <div>노드 ID: <span className="text-slate-300 font-bold">{selectedNode.id}</span></div>
+                  <div>노드 종류: <span className="text-slate-300 font-bold">{selectedNode.data.node_type}</span></div>
+                  <div>캔버스 위치: <span className="text-slate-300 tabular-nums">({selectedNode.position?.x ?? 0}, {selectedNode.position?.y ?? 0})</span></div>
                 </div>
                 {selectedNode.data.node_type !== 'input' && selectedNode.data.node_type !== 'decision' && (
                   <button onClick={deleteSelectedNode} disabled={graphEditingDisabled}

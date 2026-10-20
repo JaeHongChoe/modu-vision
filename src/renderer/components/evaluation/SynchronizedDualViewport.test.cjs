@@ -12,7 +12,7 @@ function harness() {
     useRef(initial) { const i = cursor++; if (!(i in states)) { states[i] = {current: initial}; refs.push(states[i]); } return states[i]; },
     useEffect() {}, useCallback(fn) { return fn; } };
   const load = file => { const m = new Module(file, module); m.filename=file; m.paths=Module._nodeModulePaths(path.dirname(file));
-    m.require = name => name === 'react' ? react : name === 'lucide-react' ? new Proxy({}, {get:(_, k)=>k})
+    m.require = name => name === 'react' ? react : name.endsWith('/utils/plainLabels') ? require('../../utils/plainLabels.fixture.cjs') : name === 'lucide-react' ? new Proxy({}, {get:(_, k)=>k})
       : name.endsWith('/services/api') ? {resolveApiUrl: value => value}
       : name === './PhysicalScaleOverlay' ? {PhysicalScaleOverlay: 'Scale'}
       : name.endsWith('/utils/coordinateMath') ? load(path.resolve(path.dirname(file), name+'.ts'))

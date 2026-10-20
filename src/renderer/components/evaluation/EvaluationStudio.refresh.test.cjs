@@ -61,6 +61,7 @@ function fixture({commonCohort=false}={}){
   };
   if(name.endsWith('/hostAdapter'))return{host:{can:()=>false}};
   if(name.endsWith('/ModelComparisonPanel'))return{ModelComparisonPanel};
+  if(name.endsWith('/utils/plainLabels'))return require('../../utils/plainLabels.fixture.cjs');
   if(name.endsWith('/sampleConfidence'))return{accuracyNote:()=> '',smallTestWarning:()=>null};
   const child=children[name.split('/').at(-1)];
   if(child)return name.endsWith('/DetectionEvaluationGrains')?{...child,summarizeDetectionGrains:()=>null}:child;

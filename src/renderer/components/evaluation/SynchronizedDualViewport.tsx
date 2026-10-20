@@ -18,6 +18,7 @@ import type { ScoreSpec, TestPredictionItem, ViewTransform, Point, VisionTask } 
 import { calculateZoomAtPoint, calculateFitToScreen, viewportToImage } from '../../utils/coordinateMath';
 import { PhysicalScaleOverlay } from './PhysicalScaleOverlay';
 import { resolveApiUrl } from '../../services/api';
+import { scoreUnitLabel } from '../../utils/plainLabels';
 
 export interface SynchronizedDualViewportProps {
   task: VisionTask;
@@ -128,7 +129,7 @@ export const SynchronizedDualViewport: React.FC<SynchronizedDualViewportProps> =
         {/* Left: Confidence Threshold Slider */}
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <Sliders className="w-4 h-4 text-[#3B82F6]" />
-          <span className="font-semibold text-slate-300">{plain ? '판정 기준 점수' : `기준값 · ${scoreSpec?.unit || 'probability'}`}:</span>
+          <span className="font-semibold text-slate-300">{plain ? '판정 기준 점수' : `기준값 · ${scoreUnitLabel(scoreSpec?.unit)}`}:</span>
           <span className="font-mono font-bold text-[#3B82F6] tabular-nums text-sm">
             {confidenceThreshold.toFixed(2)}
           </span>
