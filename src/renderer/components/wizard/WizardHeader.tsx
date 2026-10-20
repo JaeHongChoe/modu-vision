@@ -173,9 +173,9 @@ export const WizardHeader: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-          <span role="status" className={`rounded border px-2.5 py-1 text-sm ${engineTone}`}>
+          {full && <span role="status" className={`rounded border px-2.5 py-1 text-sm ${engineTone}`}>
             {selectedProfileId ? (selectedProfile?.name || (ko ? '서버' : 'Server')) : localLabel} · {engineText}
-          </span>
+          </span>}
           {/* The simple view keeps the few controls a first run needs; everything else waits under 더 보기 or in 모두 보기. */}
           <button type="button" aria-pressed={full} onClick={() => setViewMode(full ? 'simple' : 'full')} className={`${CONTROL} ${full ? 'border-sky-500 bg-sky-950/60 text-sky-100' : ''}`} title={ko ? (full ? '처음 쓰는 사람에게 필요한 항목만 보입니다' : '모든 설정과 관리 항목이 보입니다') : undefined}>
             {full ? (ko ? '간단히 보기' : 'Simple view') : (ko ? '모두 보기' : 'Show everything')}
@@ -191,6 +191,9 @@ export const WizardHeader: React.FC = () => {
           </> : <details className="relative">
             <summary className={`list-none cursor-pointer ${CONTROL}`}>{ko ? '더 보기' : 'More'}</summary>
             <div className="absolute right-0 z-30 mt-1 flex min-w-[200px] flex-col gap-1 rounded border border-[#3B4B63] bg-[#131822] p-2 shadow-xl" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+              <span role="status" className={`rounded border px-2.5 py-1 text-sm ${engineTone}`}>
+                {selectedProfileId ? (selectedProfile?.name || (ko ? '서버' : 'Server')) : localLabel} · {engineText}
+              </span>
               <button type="button" onClick={() => setShowComputePanel(true)} className={CONTROL}>{ko ? '서버 관리' : 'Servers'}</button>
               <button type="button" onClick={() => setShowProvenance(true)} className={CONTROL}>{ko ? '데이터·판정 이력' : 'Data and verdict history'}</button>
               <button type="button" aria-pressed={technicalDetails} onClick={() => setTechnicalDetails(!technicalDetails)} className={`${CONTROL} ${technicalDetails ? 'border-sky-500 bg-sky-950/60 text-sky-100' : ''}`}>

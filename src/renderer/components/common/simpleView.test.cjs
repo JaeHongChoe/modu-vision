@@ -50,3 +50,20 @@ test('the labeling screen starts folded in the simple view and the label set is 
  assert.match(read('src/renderer/App.tsx'),/viewMode==='full'\?<>/);
  assert.match(read('src/renderer/index.css'),/html\[lang="ko"\] body \{ word-break: keep-all;/);
 });
+
+test('the simple view shows three data counts, two tiles and one folder button row; the rest waits behind one line',()=>{
+ const studio=read('src/renderer/components/dataset/DatasetStudio.tsx');
+ assert.match(studio,/\{!full && <DataReadinessPanel \/>\}/);assert.match(studio,/\{full && <DataReadinessPanel \/>\}/);
+ assert.match(studio,/\{full \? <>\s*<button\s*onClick=\{\(\) => setShowGeneratorModal\(true\)\}/,'the generator and version dialogs wait under 더 보기');
+ assert.match(studio,/\{full && <>\s*<div className="p-2\.5 bg-\[#1A212E\][^>]*>\s*<div className="flex items-center justify-between">\s*<span[^>]*>\s*\{language === 'ko' \? '적용된 학습 분할'/);
+ assert.match(studio,/SPLIT_BADGE_KO\[img\.split\]/,'thumbnail badges read 학습/검증/시험/미분할 in Korean');
+ const stats=read('src/renderer/components/dataset/DatasetStatisticsPanel.tsx');
+ assert.match(stats,/\{full&&Object\.entries\(data\.assignments\)/);assert.match(stats,/분할별 이미지 보기/);
+ const header=read('src/renderer/components/wizard/WizardHeader.tsx');
+ assert.match(header,/\{full && <span role="status"/,'the engine badge is a 더 보기 line in the simple view');
+ const app=read('src/renderer/App.tsx');
+ assert.match(app,/\(viewMode==='full'\|\|workspace==='operator'\)&&<>/);assert.match(app,/운영자 검사 화면/);
+ const footer=read('src/renderer/components/wizard/WizardFooter.tsx');
+ assert.match(footer,/다음: \$\{readiness\.nextAction\.label\}/);assert.match(footer,/sr-only">\{ko\?` · 완료 입력/);
+ assert.ok(!footer.includes('`완료 입력 ${readiness.completedInputs.length} · `'),'the visible status no longer starts with a count');
+});

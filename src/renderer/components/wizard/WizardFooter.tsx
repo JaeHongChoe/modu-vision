@@ -42,7 +42,7 @@ export const WizardFooter = () => {
       <span className="font-mono text-slate-400">{activeStep}/6</span>
       <div role="status" aria-live="polite" title={blocker?`${blocker} → ${readiness.nextAction.label}`:undefined} className={`flex min-w-0 flex-1 items-center gap-x-3 rounded border px-3 py-0.5 ${tone}`}>
         <span className="whitespace-nowrap font-semibold">{labels[readiness.status]}</span>
-        <span className="min-w-0 flex-1 truncate">{ko?`완료 입력 ${readiness.completedInputs.length} · `:`${readiness.completedInputs.length} inputs done · `}{blocker?(readiness.status==='ready'?blocker:`${blocker} → ${readiness.nextAction.label}`):(ko?'안내된 행동의 입력 준비됨':'ready for the suggested action')}</span>
+        <span className="min-w-0 flex-1 truncate">{blocker?(readiness.status==='ready'?blocker:`${blocker} → ${readiness.nextAction.label}`):(ko?`다음: ${readiness.nextAction.label}`:`Next: ${readiness.nextAction.label}`)}<span className="sr-only">{ko?` · 완료 입력 ${readiness.completedInputs.length}`:` · ${readiness.completedInputs.length} inputs done`}</span></span>
         <button className="workspace-button min-h-0 whitespace-nowrap py-0.5" aria-expanded={expanded} onClick={()=>setExpanded(value=>!value)}>{ko?(expanded?'자세히 닫기':'왜 그런가요?'):(expanded?'Close details':'Why?')}</button>
       </div>
       <AsyncAction className="workspace-button--primary whitespace-nowrap" aria-label={`권장 행동: ${readiness.nextAction.label}`} onClick={()=>void action()}>{readiness.nextAction.label}</AsyncAction>

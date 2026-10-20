@@ -42,9 +42,12 @@ import { calibratorView, severeClassImbalance } from './splitCalibrator';
 import { isSplitUnavailable } from '../../utils/datasetSplitCapability';
 import { ScopedDatasetThumbnail } from '../common/ScopedDatasetThumbnail';
 
+const SPLIT_BADGE_KO: Record<string, string> = { train: '학습', val: '검증', test: '시험', not_split: '미분할', not_used: '미사용' };
+
 export const DatasetStudio: React.FC = () => {
   const {key:sourceContextKey}=useDeliveryScope();
   const { task, language, projectDir, openImageForLabeling, project } = useProjectStore();
+  const full = useProjectStore(state => state.viewMode) === 'full';
   const {
     folderPath,
     datasetKey,
@@ -252,9 +255,10 @@ export const DatasetStudio: React.FC = () => {
         <CaptureIntakePanel sourceDatasetPath={folderPath} contextKey={sourceContextKey} onUseSource={source=>importFolder(source,task,false)}/>
         <DerivedDatasetPanel sourceDatasetPath={folderPath} contextKey={sourceContextKey} onUseSource={source=>importFolder(source,task,false)}/>
         <WorkflowImpactPanel />
+        {!full && <DataReadinessPanel />}
       </SimpleViewFold>
       <DatasetStatisticsPanel />
-      <DataReadinessPanel />
+      {full && <DataReadinessPanel />}
       {sourceSaveError && (
         <div role="alert" className="border-b border-amber-700 bg-amber-950/40 px-4 py-2 text-xs text-amber-200">
           {sourceSaveError}
@@ -273,6 +277,7 @@ export const DatasetStudio: React.FC = () => {
           </button>
           <BrowserFolderPathInput disabled={isLoading} onImport={folder => importFolder(folder, task, undefined, false).catch(() => {})} />
 
+          {full ? <>
           <button
             onClick={() => setShowGeneratorModal(true)}
             className="flex items-center space-x-2 px-3 py-1.5 bg-[#1A212E] hover:bg-[#222B3D] border border-[#2B3547] rounded-[4px] text-xs font-semibold transition-tactile text-amber-300 cursor-pointer"
@@ -292,6 +297,30 @@ export const DatasetStudio: React.FC = () => {
             <span>데이터 버전</span>
           </button>
 
+          </> : <details className="relative">
+            <summary className="list-none cursor-pointer whitespace-nowrap rounded-[4px] border border-[#2B3547] bg-[#1A212E] px-3 py-1.5 text-xs font-semibold text-slate-300">{language === 'ko' ? '더 보기' : 'More'}</summary>
+            <div className="absolute left-0 z-30 mt-1 flex min-w-[200px] flex-col gap-1 rounded border border-[#3B4B63] bg-[#131822] p-2 shadow-xl">
+          <button
+            onClick={() => setShowGeneratorModal(true)}
+            className="flex items-center space-x-2 px-3 py-1.5 bg-[#1A212E] hover:bg-[#222B3D] border border-[#2B3547] rounded-[4px] text-xs font-semibold transition-tactile text-amber-300 cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4 text-amber-400" />
+            <span>{language === 'ko' ? '합성 데이터 생성기' : 'Procedural Generator'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowVersions(true)}
+            disabled={!hasSelectedFolder || !projectDir || isLoading}
+            title={hasSelectedFolder ? '데이터와 라벨 버전 저장·검증·복원' : '데이터셋을 먼저 불러오세요'}
+            className="flex items-center gap-2 rounded-[4px] border border-sky-700/60 bg-sky-950/30 px-3 py-1.5 text-xs font-semibold text-sky-200 hover:bg-sky-900/40 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <FolderArchive className="h-4 w-4" />
+            <span>데이터 버전</span>
+          </button>
+
+            </div>
+          </details>}
           <button
             type="button"
             onClick={() => setShowImports(true)}
@@ -300,7 +329,7 @@ export const DatasetStudio: React.FC = () => {
             className="flex items-center gap-2 rounded-[4px] border border-emerald-700/60 bg-emerald-950/30 px-3 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-900/40 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <ListChecks className="h-4 w-4" />
-            <span>검증된 데이터 버전</span>
+            <span className="whitespace-nowrap">검증된 데이터 버전</span>
           </button>
 
           <span className="text-xs text-slate-400 font-mono truncate max-w-sm" title={folderPath}>
@@ -352,6 +381,7 @@ export const DatasetStudio: React.FC = () => {
                 {classEntries.length}
               </span>
             </div>
+            {full && <>
             <div className="p-2.5 bg-[#1A212E] rounded-[4px] border border-[#2B3547]">
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 block text-[10px] tracking-wide uppercase mb-0.5">
@@ -374,6 +404,7 @@ export const DatasetStudio: React.FC = () => {
                 {split.val + split.test}
               </span>
             </div>
+            </>}
           </div>
 
           {split.train + split.val + split.test === 0 && totalImages > 0 && (
@@ -935,7 +966,7 @@ export const DatasetStudio: React.FC = () => {
                               : 'bg-slate-600 text-white'
                           }`}
                         >
-                          {img.split}
+                          {language === 'ko' ? (SPLIT_BADGE_KO[img.split] ?? img.split) : img.split}
                         </span>
                         {/* Resolution Hover Overlay / Badge */}
                         <span className="absolute bottom-1 right-1 font-mono tabular-nums text-[9px] bg-[#0B0E14]/90 text-slate-200 px-1 py-0.5 rounded-[2px] border border-[#2B3547] opacity-80 group-hover:opacity-100 transition-opacity">
