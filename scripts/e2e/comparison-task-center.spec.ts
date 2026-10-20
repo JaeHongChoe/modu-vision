@@ -208,15 +208,26 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   await comparisonViewer.getByRole('button',{name:'현재 라벨 편집',exact:true}).click();
   const editReturn=page.getByRole('region',{name:'판정 근거에서 시작한 라벨 편집'});
   await expect(editReturn).toContainText(editRow.image_id);
-  await expect(page.getByRole('button',{name:'정상(OK)으로 표시',exact:true})).toBeEnabled();
-  await page.getByRole('button',{name:'정상(OK)으로 표시',exact:true}).click();
+  // Step 2 of a classification project has no OK tag (the class comes from the folder or the class picker, F-04); the
+  // label edit that goes through 변경 저장 is a region drawn on the image.
+  await expect(page.getByText(`라벨 목록 (${beforeLabels.annotations.length})`,{exact:true})).toBeVisible();
+  await expect(page.getByText('기존 라벨을 불러오는 중입니다.',{exact:true})).toHaveCount(0);
+  // 모두 보기 opens every helper panel, which leaves the canvas almost no height; 집중 편집 folds them (the evidence return
+  // bar stays) as a user would before drawing.
+  await page.getByRole('button',{name:'집중 편집',exact:true}).click();
+  await expect.poll(async()=>(await page.locator('[data-canvas-container]').boundingBox())?.height??0).toBeGreaterThan(200);
+  await page.getByTitle('바운딩 박스 (BBox - 2)',{exact:true}).click();
+  const canvasBox=await page.locator('[data-canvas-container]').boundingBox();expect(canvasBox).not.toBeNull();
+  await page.mouse.move(canvasBox!.x+canvasBox!.width*.45,canvasBox!.y+canvasBox!.height*.45);await page.mouse.down();
+  await page.mouse.move(canvasBox!.x+canvasBox!.width*.55,canvasBox!.y+canvasBox!.height*.55,{steps:8});await page.mouse.up();
+  await expect(page.getByText(`라벨 목록 (${beforeLabels.annotations.length+1})`,{exact:true})).toBeVisible();
   await expect(editReturn.getByRole('button',{name:'원래 판정 근거로 돌아가기',exact:true})).toBeDisabled();
   await expect(editReturn.getByRole('button',{name:'근거 이미지의 현재 라벨 다시 열기',exact:true})).toBeDisabled();
   await page.getByRole('button',{name:'변경 저장',exact:true}).click();
   await expect(editReturn.getByRole('button',{name:'원래 판정 근거로 돌아가기',exact:true})).toBeEnabled();
   const afterLabels=await api(`/api/annotations/${editRow.image_id}?file_path=${encodeURIComponent(editRow.file_path)}`);
   expect(afterLabels.metadata.revision).toBeGreaterThan(beforeLabels.metadata.revision);
-  expect(afterLabels.annotations.some((row:any)=>row.is_normal)).toBe(true);
+  expect(afterLabels.annotations).toHaveLength(beforeLabels.annotations.length+1);expect(afterLabels.annotations[afterLabels.annotations.length-1].type).toBe('bbox');
   expect(afterLabels.metadata.content_hash).toBe(editRow.image_sha256);
   expect(beforeLabels.metadata.image_uuid).toBe(initialMetadata.image_uuid);
   expect(beforeLabels.metadata.revision).toBe(initialMetadata.revision);
@@ -252,7 +263,7 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   await evidence.screenshot(page,native?'native-evidence-label-reopen-error':'browser-evidence-label-reopen-error');
   await page.unroute(metadataRoute);await reopen.click();
   await expect(editReturn.getByRole('alert')).toHaveCount(0);
-  await expect(page.getByRole('button',{name:'정상(OK) 부품',exact:true})).toBeVisible();
+  await expect(page.getByText(`라벨 목록 (${afterLabels.annotations.length})`,{exact:true})).toBeVisible();
   await expect(reopen).toBeEnabled();
   await expect(editReturn).toContainText(`확인한 수정 버전 ${savedMetadata.revision}`);
   await evidence.screenshot(page,native?'native-evidence-label-reopened':'browser-evidence-label-reopened');
@@ -329,7 +340,7 @@ async function exercise(page: Page, workspace: Workspace, evidence: Evidence, ap
   expect(await api(`/api/annotations/${editRow.image_id}?file_path=${encodeURIComponent(editRow.file_path)}`)).toEqual(afterLabels);
   const cancelCustodyAfter=custody();expect(cancelCustodyAfter).toEqual(cancelCustodyBefore);expect(posted).toBe(boundaryPosts);
   await evidence.screenshot(page,native?'native-evidence-label-cancelled-read':'browser-evidence-label-cancelled-read');
-  await page.unroute(metadataRoute);page.off('request',countAnnotation);await reopen.click();await expect(page.getByRole('button',{name:'정상(OK) 부품',exact:true})).toBeVisible();await expect(reopen).toBeEnabled();
+  await page.unroute(metadataRoute);page.off('request',countAnnotation);await reopen.click();await expect(page.getByText(`라벨 목록 (${afterLabels.annotations.length})`,{exact:true})).toBeVisible();await expect(reopen).toBeEnabled();
   evidence.note('evidence_label_boundary_custody',{cells:['U030.evidence-current-label-return.error','U030.evidence-current-label-return.cancel'],
     comparison_id:secondJob.report_id,project_id:project.id,source,task:'classification',labelset_id:selectedReport.labelset_id,
     image_id:editRow.image_id,image_uuid:savedMetadata.image_uuid,image_path:editRow.file_path,image_sha256:editRow.image_sha256,
