@@ -63,7 +63,7 @@ const OCR_EMPTY_POINTERS=[
  '/records/29/actions/6/scenarios/empty',
  '/records/29/actions/7/scenarios/empty',
 ] as const;
-type OCREmptyWire={request:SplitControlRequest;deadline:number;complete:boolean;status?:number;sha256?:string;body?:unknown;request_context?:unknown;response_context?:unknown;expected_refusal?:string;failure?:string};
+type OCREmptyWire={request:SplitControlRequest;deadline:number;complete:boolean;status?:number;sha256?:string;body?:unknown;request_context?:unknown;response_context?:unknown;expected_refusal?:string;failure?:string;retired_gallery_read?:boolean};
 type OCROwnedThumbScope={source:string;images:Array<{image:string;sha256:string}>;project:{id:string}};
 async function ocrOwnedThumbnail(page:Page,response:import('@playwright/test').Response,request:SplitControlRequest,deadline:number,origin:string,scopes:OCROwnedThumbScope[],contexts:Map<string,unknown>,custody:SplitControlCustody){
  const u=new URL(request.url());expect(request.method()).toBe('GET');expect(u.origin).toBe(origin);expect(Array.from(u.searchParams.keys()).sort()).toEqual(['file_path']);
@@ -99,7 +99,10 @@ async function ocrEmptyExercise(page:Page,w:Workspace,e:Evidence,api:OwnedApi,na
   else if(!['HEAD','OPTIONS'].includes(request.method())){const row={method:request.method(),path:u.pathname,body:request.postData()};writes.push(row);if(u.pathname.startsWith('/api/ocr/')||/\/(train|training|jobs|evaluate|predict)(\/|$)/.test(u.pathname))modelRequests.push(row);}
  };
  const settleOriginalReads=async()=>{for(const row of reads){if(row.complete)continue;try{
-  const response=await splitControlWithin(row.request.response(),row.deadline,'original owned empty API GET');expect(response).not.toBeNull();
+  const response=await splitControlWithin(row.request.response(),row.deadline,'original owned empty API GET');
+  // Step 1's gallery aborts its own thumbnail reads when the page leaves the step (6dd4c1f): recorded, not a failure.
+  if(response===null&&new URL(row.request.url()).pathname.startsWith('/api/dataset/thumbnail/')&&/ERR_ABORTED|aborted|cancel/i.test(row.request.failure()?.errorText??'')){row.retired_gallery_read=true;row.complete=true;continue;}
+  expect(response).not.toBeNull();
   const u=new URL(row.request.url()),rh=row.request.headers(),sh=response!.headers();
   row.request_context=rh['x-vision-context']===undefined?null:JSON.parse(rh['x-vision-context']);row.response_context=sh['x-vision-context']===undefined?null:JSON.parse(sh['x-vision-context']);
   if(u.pathname==='/api/ocr/warm-start-parents'){
@@ -222,7 +225,10 @@ async function ocrTrainingInvalidExercise(page:Page,w:Workspace,e:Evidence,api:O
   else if(!['HEAD','OPTIONS'].includes(request.method())){const row={method:request.method(),path:u.pathname,body:request.postData()};writes.push(row);if(u.pathname.startsWith('/api/ocr/')||/\/(train|training|jobs|evaluate|predict)(\/|$)/.test(u.pathname))modelRequests.push(row);}
  };
  const settleOriginalReads=async()=>{for(const row of reads){if(row.complete)continue;try{
-  const response=await splitControlWithin(row.request.response(),row.deadline,'original owned empty API GET');expect(response).not.toBeNull();
+  const response=await splitControlWithin(row.request.response(),row.deadline,'original owned empty API GET');
+  // Step 1's gallery aborts its own thumbnail reads when the page leaves the step (6dd4c1f): recorded, not a failure.
+  if(response===null&&new URL(row.request.url()).pathname.startsWith('/api/dataset/thumbnail/')&&/ERR_ABORTED|aborted|cancel/i.test(row.request.failure()?.errorText??'')){row.retired_gallery_read=true;row.complete=true;continue;}
+  expect(response).not.toBeNull();
   const u=new URL(row.request.url()),rh=row.request.headers(),sh=response!.headers();
   row.request_context=rh['x-vision-context']===undefined?null:JSON.parse(rh['x-vision-context']);row.response_context=sh['x-vision-context']===undefined?null:JSON.parse(sh['x-vision-context']);
   if(u.pathname.startsWith('/api/dataset/thumbnail/')){
