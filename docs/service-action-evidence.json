@@ -3,7 +3,7 @@
   "kind": "curated_action_evidence_not_complete_feature_acceptance",
   "sources": {
     "src/renderer/components/flowchart/FlowWorkspacePanel.tsx": "6e7c74ae465e6a426601de756a91a9966615195f52c1e6aa9e4691b187baa8bf",
-    "src/renderer/components/flowchart/FlowchartStudio.tsx": "9991ad853f3d0c1a48a75babb643882921ad9f1db78ee1d090ebb310520abde0",
+    "src/renderer/components/flowchart/FlowchartStudio.tsx": "0656f780bd7c9affaaf95548d54781822b251895c244e7281fe6626b4f2d6837",
     "src/renderer/components/flowchart/FlowDraftControls.tsx": "3bd10fc68ea4ae2dc600dfad2b6c51b56d74d213f7483923107295aac303f5a8",
     "src/renderer/components/labeling/TeamDataPanel.tsx": "c3e0aa4756127e8b3ae8db14d06ed25261b2948856ebb9d26c7c3fc797979397",
     "src/renderer/components/labeling/LabelingToolbar.tsx": "bc5393adee4805451c68f0f58d77fb8cd42a1a0f1efef554c7eb693048af0be2",
@@ -45,7 +45,7 @@
     "src/renderer/components/training/OCRWorkbench.tsx": "769a2316ba1770bccd1c6c78987d99ee779ddf64d82f4c080ad5280924e51125",
     "src/renderer/components/training/RotationWorkbench.tsx": "196db2fe456d37b264fcda1ac600f9d61480487e873a1cf4200d1bc5b0a14dd1",
     "src/renderer/components/training/RotatedBoxFitting.tsx": "0baf99e83b1c35f8ca59b61bfee41bcb983ea463ce67ed15841c5282a167f768",
-    "src/renderer/components/flowchart/CustomNode.tsx": "7838cab7c4a19b18a0bcb3ee1238dadca0897da53df547032cbd931752337560",
+    "src/renderer/components/flowchart/CustomNode.tsx": "97350539036826f52411bc8defe234d638e2c18fde5092a5f104af7557dd1828",
     "src/renderer/components/flowchart/ImageRoiEditor.tsx": "498b466db43f32795b63f7f5cabb5bed5549c67d7be5d3d1e611b037dbe0016c",
     "src/renderer/components/dataset/DatasetStudio.tsx": "e34923a99916bf54f15ea2b141ccf8e317346f178d70e7a496d995273da393e2",
     "src/renderer/components/evaluation/EvaluationHistoryPanel.tsx": "ce9cfa541e63988176973a0966d031c5b8722b356feb1472671da73299d6e2fe",

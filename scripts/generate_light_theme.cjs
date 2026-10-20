@@ -156,6 +156,7 @@ html[data-theme="light"] .workspace-badge[data-tone="warning"] { background: #FE
 html[data-theme="light"] .workspace-badge[data-tone="danger"] { background: #FEE2E2; }
 html[data-theme="light"] .workspace-badge[data-tone="info"] { background: #E0F2FE; }
 html[data-theme="light"] .workspace-field :is(input, select, textarea) { border-color: #94A3B8; }
+html[data-theme="light"] .flow-canvas-grid { --flow-grid-line: #E2E8F0; }
 ${rules.join('\n')}
 `;
 }

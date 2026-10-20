@@ -45,6 +45,7 @@ import { FlowEvaluationPanel } from './FlowEvaluationPanel';
 import { FlowGraphNavigator } from './FlowGraphNavigator';
 import { FlowInspectorPanel } from './FlowInspectorPanel';
 import { WorkflowImpactPanel } from '../common/WorkflowImpactPanel';
+import { OperatorGuidanceBanner } from '../common/OperatorGuidanceBanner';
 import {FlowEditorWorkspace, flowWorkspaceIdentity, type FlowWorkspaceTab} from './FlowEditorWorkspace';
 import {FlowRecipeDialog} from './FlowRecipeDialog';
 import {createFlowRecipe, FLOW_RECIPES, type FlowRecipeKind} from './flowRecipes';
@@ -1093,6 +1094,8 @@ export const FlowchartStudio: React.FC = () => {
 
   return (
     <div className="min-h-0 flex-1 flex flex-col h-full bg-[#0B0E14] text-[#E2E8F0] overflow-y-auto overflow-x-hidden select-none">
+      {/* Every other step opens with its plain page header in the simple view; step 5 now does too. */}
+      {simpleView && <OperatorGuidanceBanner step={5} />}
       <FlowEditorWorkspace area={activeTab} onAreaChange={setActiveTab} identity={identity} compact={simpleView}/>
       {/* Top Flowchart Toolbar (Dark Steel Panel) */}
       <div className="shrink-0 min-h-14 bg-[#131822] border-b border-[#2B3547] px-4 py-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs">
@@ -1479,12 +1482,7 @@ export const FlowchartStudio: React.FC = () => {
           <div
             ref={canvasRef}
             aria-label="플로우 그래프 캔버스"
-            className="min-h-0 min-w-0 flex-1 bg-[#0B0E14] overflow-auto relative"
-            style={{
-              backgroundImage:
-                'linear-gradient(to right, #131822 1px, transparent 1px), linear-gradient(to bottom, #131822 1px, transparent 1px)',
-              backgroundSize: '32px 32px',
-            }}
+            className="flow-canvas-grid min-h-0 min-w-0 flex-1 bg-[#0B0E14] overflow-auto relative"
           >
             <div
               style={{

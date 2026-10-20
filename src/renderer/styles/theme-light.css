@@ -20,6 +20,7 @@ html[data-theme="light"] .workspace-badge[data-tone="warning"] { background: #FE
 html[data-theme="light"] .workspace-badge[data-tone="danger"] { background: #FEE2E2; }
 html[data-theme="light"] .workspace-badge[data-tone="info"] { background: #E0F2FE; }
 html[data-theme="light"] .workspace-field :is(input, select, textarea) { border-color: #94A3B8; }
+html[data-theme="light"] .flow-canvas-grid { --flow-grid-line: #E2E8F0; }
 html[data-theme="light"] .text-slate-400 { color: #475569; } /* 747 */
 html[data-theme="light"] .text-slate-300 { color: #334155; } /* 357 */
 html[data-theme="light"] .border-\[\#2B3547\] { border-color: #CBD5E1; } /* 329 */

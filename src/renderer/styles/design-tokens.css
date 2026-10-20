@@ -65,3 +65,5 @@
 .workspace-launcher { padding: var(--workspace-space-2); border-bottom: 1px solid var(--workspace-border); background: var(--workspace-bg); }
 @media (max-width: 600px) { .workspace-dialog__header, .workspace-dialog__body { padding: var(--workspace-space-4); } }
 @media (forced-colors: active) { .workspace-badge, .workspace-button, .workspace-section, .workspace-record { border-color: CanvasText; } }
+/* The step 5 canvas grid; the light theme lightens its lines (generate_light_theme.cjs) instead of drawing black on white. */
+.flow-canvas-grid { background-image: linear-gradient(to right, var(--flow-grid-line, #131822) 1px, transparent 1px), linear-gradient(to bottom, var(--flow-grid-line, #131822) 1px, transparent 1px); background-size: 32px 32px; }
