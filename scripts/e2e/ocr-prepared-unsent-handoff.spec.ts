@@ -98,7 +98,7 @@ async function ocrPreparedUnsentHandoffExercise(page:Page,w:Workspace,e:Evidence
   else if(!['HEAD','OPTIONS'].includes(request.method())){const row={method:request.method(),path:u.pathname,body:request.postData()};writes.push(row);if(u.pathname.startsWith('/api/ocr/')||/\/(train|training|jobs|evaluate|predict)(\/|$)/.test(u.pathname))modelRequests.push(row);}
  };
  const settleOriginalReads=async()=>{for(const row of reads){if(row.complete)continue;try{
-  const response=await splitControlWithin(row.request.response(),row.deadline,'original owned empty API GET');expect(response).not.toBeNull();
+  const response=await splitControlWithin(row.request.response(),row.deadline,'original owned empty API GET');if(response===null&&new URL(row.request.url()).pathname.startsWith('/api/dataset/thumbnail/')){/* Step 1's gallery aborts its thumbnail reads when the page leaves the step (ScopedDatasetThumbnail); only that is a retired read, any other missing answer still fails. */const failure=row.request.failure()?.errorText??'';expect(failure).toMatch(/ERR_ABORTED|aborted|cancel/i);(row as any).retired_gallery_read=true;row.complete=true;continue;}expect(response).not.toBeNull();
   const u=new URL(row.request.url()),rh=row.request.headers(),sh=response!.headers();
   row.request_context=rh['x-vision-context']===undefined?null:JSON.parse(rh['x-vision-context']);row.response_context=sh['x-vision-context']===undefined?null:JSON.parse(sh['x-vision-context']);
   if(u.pathname.startsWith('/api/dataset/thumbnail/')){
