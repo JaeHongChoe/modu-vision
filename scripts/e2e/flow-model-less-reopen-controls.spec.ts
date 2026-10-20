@@ -106,7 +106,7 @@ export function assertAnomalyImport(value:any){
 
 type FlowReply={status:number;body:string;url:string;headers:Record<string,string>};
 type FlowApi=(route:string,body?:unknown,method?:string,headers?:Record<string,string>)=>Promise<FlowReply>;
-type FlowRead={request:SplitControlRequest;started:number;deadline:number;post_baseline:boolean;complete:boolean;pending:Promise<void>;document_bootstrap?:{epoch:number;project_id:string;started:number};bootstrap_unscoped?:boolean;
+type FlowRead={request:SplitControlRequest;started:number;deadline:number;post_baseline:boolean;complete:boolean;pending:Promise<void>;document_bootstrap?:{epoch:number;project_id:string;started:number;retired_gallery_read?:boolean;failure_text?:string};bootstrap_unscoped?:boolean;
  status?:number;body?:unknown;sha256?:string;size?:number;request_context?:unknown;response_context?:unknown;finished?:number;failed?:boolean;failure?:unknown};
 type OCROwnedThumbScope={source:string;images:Array<{image:string;sha256:string}>;project:{id:string}};
 async function ocrOwnedThumbnail(page:Page,response:import('@playwright/test').Response,request:SplitControlRequest,deadline:number,origin:string,scopes:OCROwnedThumbScope[],contexts:Map<string,unknown>,custody:SplitControlCustody){
@@ -196,6 +196,15 @@ async function flowModelLessReopenExercise(page:Page,w:Workspace,e:Evidence,api:
    if(['HEAD','OPTIONS'].includes(request.method()))return;
    const row:any={request,method:request.method(),url:request.url(),body:request.postData(),post_baseline:reachedBaseline,started:performance.now(),complete:false,pending:Promise.resolve()};row.deadline=row.started+10_000;writes.push(row);
    row.pending=(async()=>{try{
+   if(u.pathname.startsWith('/api/dataset/thumbnail/')&&!row.post_baseline){
+    // Step 1's gallery owns its thumbnail reads and aborts them when the page leaves the step before a body arrives
+    // (ScopedDatasetThumbnail, 6dd4c1f). Such a read is recorded as retired by the gallery; any other failure, and
+    // every thumbnail that completes, is checked in full as before.
+    const early=await splitControlWithin(request.response(),row.deadline,'original F064 thumbnail response');
+    const ended=early?await splitControlWithin(early.finished(),row.deadline,'original F064 thumbnail completion'):null;
+    if(!early||ended){const failure=request.failure()?.errorText??String(ended);expect(failure).toMatch(/ERR_ABORTED|aborted|cancel/i);
+     row.retired_gallery_read=true;row.failure_text=failure;row.finished=performance.now();row.complete=true;return;}
+   }
     expect(request.frame()).toBe(page.mainFrame());const response=await splitControlWithin(request.response(),row.deadline,'own original mutation response');expect(response).not.toBeNull();
     const bytes=await splitControlWithin(response!.body(),row.deadline,'own whole mutation response');expect(await splitControlWithin(response!.finished(),row.deadline,'own original mutation finished')).toBeNull();expect(response!.status()).toBe(200);
     row.status=200;row.raw_body=bytes.toString('utf8');row.sha256=hash(bytes);row.size=bytes.length;row.response=JSON.parse(row.raw_body);row.request_body=request.postDataJSON();

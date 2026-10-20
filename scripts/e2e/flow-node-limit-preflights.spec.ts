@@ -102,7 +102,7 @@ export function assertAnomalyImport(value:any){
 type FlowReply={status:number;body:string;url:string;headers:Record<string,string>};
 type FlowApi=(route:string,body?:unknown,method?:string,headers?:Record<string,string>)=>Promise<FlowReply>;
 type FlowRead={request:SplitControlRequest;started:number;deadline:number;post_baseline:boolean;complete:boolean;pending:Promise<void>;
- status?:number;body?:unknown;sha256?:string;size?:number;request_context?:unknown;response_context?:unknown;finished?:number;failed?:boolean;failure?:unknown};
+ status?:number;body?:unknown;sha256?:string;size?:number;request_context?:unknown;response_context?:unknown;finished?:number;failed?:boolean;failure?:unknown;retired_gallery_read?:boolean;failure_text?:string};
 type OCROwnedThumbScope={source:string;images:Array<{image:string;sha256:string}>;project:{id:string}};
 async function ocrOwnedThumbnail(page:Page,response:import('@playwright/test').Response,request:SplitControlRequest,deadline:number,origin:string,scopes:OCROwnedThumbScope[],contexts:Map<string,unknown>,custody:SplitControlCustody){
  const u=new URL(request.url());expect(request.method()).toBe('GET');expect(u.origin).toBe(origin);expect(Array.from(u.searchParams.keys()).sort()).toEqual(['file_path']);
@@ -176,6 +176,15 @@ async function flowNodeLimitExercise(page:Page,w:Workspace,e:Evidence,api:FlowAp
   if(request.method()!=='GET'){if(!['HEAD','OPTIONS'].includes(request.method()))writes.push({method:request.method(),url:request.url(),body:request.postData(),post_baseline:reachedBaseline});return;}
   const started=performance.now(),row:FlowRead={request,started,deadline:started+10_000,post_baseline:reachedBaseline,complete:false,pending:Promise.resolve()};reads.push(row);
   row.pending=(async()=>{try{
+   if(u.pathname.startsWith('/api/dataset/thumbnail/')&&!row.post_baseline){
+    // Step 1's gallery owns its thumbnail reads and aborts them when the page leaves the step before a body arrives
+    // (ScopedDatasetThumbnail, 6dd4c1f). Such a read is recorded as retired by the gallery; any other failure, and
+    // every thumbnail that completes, is checked in full as before.
+    const early=await splitControlWithin(request.response(),row.deadline,'original F064 thumbnail response');
+    const ended=early?await splitControlWithin(early.finished(),row.deadline,'original F064 thumbnail completion'):null;
+    if(!early||ended){const failure=request.failure()?.errorText??String(ended);expect(failure).toMatch(/ERR_ABORTED|aborted|cancel/i);
+     row.retired_gallery_read=true;row.failure_text=failure;row.finished=performance.now();row.complete=true;return;}
+   }
    const response=await splitControlWithin(request.response(),row.deadline,'original F064 API GET response');expect(response).not.toBeNull();
    expect(request.frame()).toBe(page.mainFrame());expect(request.postData()).toBeNull();
    const rh=request.headers(),sh=response!.headers();row.request_context=rh['x-vision-context']===undefined?null:JSON.parse(rh['x-vision-context']);row.response_context=sh['x-vision-context']===undefined?null:JSON.parse(sh['x-vision-context']);
