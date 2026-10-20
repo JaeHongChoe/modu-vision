@@ -247,3 +247,18 @@ test('the footer opens the change details and step 1 takes the version request (
  const studio=fs.readFileSync(path.join(__dirname,'..','dataset','DatasetStudio.tsx'),'utf8');
  assert.match(studio,/takeDataVersionRequest\(\)/);assert.match(studio,/highlightVersionId=\{highlightVersionId\}/);
 });
+test('with no model selected and none current, the newest model of the task explains its data change',()=>{
+ const {getNextAction}=load();
+ const older={job_id:'job_1_a',task:'classification',checkpoint_state:'unverified',data_state:'unverified',scope_matches:true};
+ const newer={job_id:'job_2_b',task:'classification',checkpoint_state:'current',data_state:'changed',scope_matches:true};
+ const r=getNextAction({...base,stage:4,modelJobId:null,evidence:{...base.evidence,impact:{...base.evidence.impact,models:[newer,older]}}});
+ assert.equal(r.dataChangedJobId,'job_2_b');
+ const withCurrent=getNextAction({...base,stage:4,modelJobId:null,evidence:{...base.evidence,impact:{...base.evidence.impact,models:[newer,{...older,job_id:'job_3_c',checkpoint_state:'current',data_state:'current'}]}}});
+ assert.equal(withCurrent.dataChangedJobId,undefined,'a current model exists: the user picks it instead');
+});
+test('stage three blocks a one-class classification set and sends the user to step 1 (F-03)',()=>{
+ const {getNextAction}=load();
+ const one=getNextAction({...base,stage:3,splitState:'saved',populatedClasses:1});
+ assert.equal(one.status,'blocked');assert.equal(one.nextAction.step,1);assert.match(one.missingInputs[0],/클래스가 2개 이상/);
+ assert.notEqual(getNextAction({...base,stage:3,splitState:'saved',populatedClasses:2}).nextAction.step,1);
+});

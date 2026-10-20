@@ -5,7 +5,7 @@ export type WorkflowEvidence = { status: 'checking' | 'error' | 'ready'; error?:
 export type ReadinessAction = { stage: WorkflowStep; status: 'ready' | 'blocked' | 'checking' | 'unknown'; completedInputs: string[]; missingInputs: string[]; nextAction: { label: string; step: WorkflowStep; kind?: 'refresh' | 'details'; target?: string };
   /** A model whose training data changed since it was trained: the footer shows what changed and the ways back. */
   dataChangedJobId?: string };
-export type ReadinessContext = { stage: WorkflowStep; projectReady: boolean; sourceReady: boolean; totalImages: number; train: number; val: number; busy: boolean; task: string; modelJobId?: string | null; flowVersionId?: string | null; flowDirty: boolean; flowMatchesSaved?: boolean; splitState?: 'saved' | 'source_folders' | 'automatic' | 'stale' | null; trainingStatus?: string; evidence: WorkflowEvidence };
+export type ReadinessContext = { stage: WorkflowStep; projectReady: boolean; sourceReady: boolean; totalImages: number; train: number; val: number; busy: boolean; task: string; modelJobId?: string | null; flowVersionId?: string | null; flowDirty: boolean; flowMatchesSaved?: boolean; splitState?: 'saved' | 'source_folders' | 'automatic' | 'stale' | null; populatedClasses?: number; trainingStatus?: string; evidence: WorkflowEvidence };
 
 /** Navigation advice only. A recorded result is never authorization to run work. */
 export function getNextAction(input: ReadinessContext): ReadinessAction {
@@ -29,6 +29,7 @@ export function getNextAction(input: ReadinessContext): ReadinessAction {
   if(stage===3){
     if(!evidence.review.ready)return result('blocked',evidence.review.blockers?.length?evidence.review.blockers:['검수 기준을 통과한 학습 입력 필요'],'라벨 확인하기 (2단계)',2);
     completedInputs.push(`검수 기준 통과 ${evidence.review.counts.eligible}장`);
+    if(input.task==='classification'&&input.populatedClasses!==undefined&&input.populatedClasses<2)return result('blocked',[`분류에는 이미지가 있는 클래스가 2개 이상 필요합니다 (지금 ${input.populatedClasses}개)`],'데이터 다시 확인 (1단계)',1,'workflow-data');
     if(input.task==='classification'&&(input.splitState==='automatic'||input.splitState==='stale'))return result('blocked',[input.splitState==='stale'?'폴더 이미지가 저장한 분할과 달라졌습니다 (다시 나눠 저장 필요)':'분할이 저장되지 않았습니다 (자동 분할로는 4단계 평가를 할 수 없음)'],'분할 저장하기 (1단계)',1);
     if(input.train<1 || input.val<1)return result('blocked',[`저장된 학습·검증 분할 부족 (Train ${input.train} / Val ${input.val})`],'학습·시험 분할 확인 (1단계)',1);
     completedInputs.push(`저장 분할 Train ${input.train} / Val ${input.val}`);
@@ -39,7 +40,9 @@ export function getNextAction(input: ReadinessContext): ReadinessAction {
   const currentModels=evidence.impact.models.filter(row=>row.task===input.task && row.scope_matches===true && row.checkpoint_state==='current' && row.data_state==='current');
   if(stage===4){
     const model=currentModels.find(row=>row.job_id===input.modelJobId);
-    const changed=model?undefined:dataChangedModel(evidence.impact,input.task,input.modelJobId?[input.modelJobId]:[]);
+    // With no model selected (a data edit clears the selection) and none current, explain the newest model of this task.
+    const latest=currentModels.length?[]:evidence.impact.models.filter(row=>row.task===input.task).map(row=>row.job_id||'').sort().slice(-1);
+    const changed=model?undefined:dataChangedModel(evidence.impact,input.task,input.modelJobId?[input.modelJobId]:latest);
     if(changed)return {...result('blocked',[`모델 ${changed}을(를) 학습한 뒤 데이터가 바뀌었습니다`],'바뀐 내용과 되돌리기',4,undefined,'details'),dataChangedJobId:changed};
     if(!model)return result('blocked',['선택 모델의 현재 체크포인트·데이터 근거 확인 필요'],'학습 모델 확인 (3단계)',3,'workflow-training');
     completedInputs.push(`현재 입력과 일치하는 모델 ${model.job_id}`);

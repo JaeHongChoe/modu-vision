@@ -64,7 +64,9 @@ def dataset_summary(source:Path,task:str,*,assignments:dict[str,str]|None=None,
         if state=='not_used':
             partition='not_used'
         label_state='labeled' if labeled else 'unlabeled'
-        class_counts.update(labels)
+        # Class counts are of the images training reads; an image marked not used (an unreadable file the import
+        # excluded, or one a reviewer set aside) stays listed but no longer counts toward its class (audit F-01).
+        if state!='not_used':class_counts.update(labels)
         split_counts[partition]+=1
         state_counts[label_state]+=1
         items.append({'image_id':image.stem,'file_name':image.name,'file_path':str(image),

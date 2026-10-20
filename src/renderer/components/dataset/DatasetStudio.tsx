@@ -247,7 +247,7 @@ export const DatasetStudio: React.FC = () => {
 
   // Class distribution calculation
   const classEntries = Object.entries(classes);
-  const distribution = classDistributionStats(task, classes, classCountUnit === 'images' ? sourceImages : totalImages, classCountUnit ?? undefined);
+  const distribution = classDistributionStats(task, classes, classCountUnit === 'images' ? (totalImages || sourceImages) : totalImages, classCountUnit ?? undefined);
   const isImbalanced = severeClassImbalance(classes);
   const maxClassCount = Math.max(...Object.values(classes), 1);
   const appliedTotal = split.train + split.val + split.test;
@@ -703,8 +703,8 @@ export const DatasetStudio: React.FC = () => {
             {classCountUnit === 'images' && classEntries.length > 0 && (
               <p className="mb-2 text-[10px] text-slate-400">
                 {language === 'ko'
-                  ? `원본 이미지 ${sourceImages}장 기준입니다. 여러 클래스가 있는 이미지는 클래스별로 각각 집계합니다.`
-                  : `Percentages use ${sourceImages} source images. Images with multiple classes count once in each class.`}
+                  ? `학습에 쓰는 이미지 ${totalImages || sourceImages}장 기준입니다${sourceImages > totalImages && totalImages ? ` (사용 안 함 ${sourceImages - totalImages}장 제외)` : ''}. 여러 클래스가 있는 이미지는 클래스별로 각각 집계합니다.`
+                  : `Percentages use the ${totalImages || sourceImages} images training reads. Images with multiple classes count once in each class.`}
               </p>
             )}
 

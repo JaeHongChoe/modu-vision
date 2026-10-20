@@ -195,3 +195,17 @@ def test_training_threads_and_workers_apply_the_requests_image_usage_policy(tmp_
     thread.join()
     assert seen['bare'] == 6, 'without the scope a thread sees every image (the bug this guards against)'
     assert 'ok_01.png' not in seen['scoped'] and len(seen['scoped']) == 5
+
+
+def test_statistics_class_counts_leave_out_an_excluded_image(tmp_path):
+    """Step 1's class panel reads the statistics; an excluded unreadable file stays listed but is not counted."""
+    client = _client(tmp_path)
+    source = tmp_path / 'source'
+    _images(source / 'OK', 4)
+    _images(source / 'NG', 4, shade=200)
+    (source / 'NG' / 'broken.png').write_bytes(b'not an image')
+    _use_source(client, source)
+    assert _import(client, source).json()['classes'] == {'OK': 4, 'NG': 4}
+    statistics = client.get('/api/dataset/metadata/statistics').json()
+    assert statistics['classes']['NG']['count'] == 4 and statistics['classes']['OK']['count'] == 4
+    assert statistics['assignments']['not_used']['count'] == 1 and statistics['total'] == 9
