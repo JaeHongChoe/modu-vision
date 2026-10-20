@@ -1162,28 +1162,28 @@ export const FlowchartStudio: React.FC = () => {
         <span className="mr-1 text-xs font-bold tracking-wider text-slate-400">노드 추가</span>
         <button onClick={() => addEditableNode('patch_split')} disabled={!pipeline || graphEditingDisabled} className="rounded border border-slate-600 px-2 py-1 text-xs">패치 분할 추가</button>
         <button onClick={() => addEditableNode('preprocess')} disabled={!pipeline || graphEditingDisabled} className="rounded border border-slate-600 px-2 py-1 text-xs">영상 전처리 추가</button>
-        <button onClick={() => addEditableNode('fixed_roi')} disabled={!pipeline || isLoading || isSaving || isRunning}
+        <button onClick={() => addEditableNode('fixed_roi')} disabled={!pipeline || graphEditingDisabled}
           className="px-2 py-1 border border-sky-700 rounded text-sky-200 hover:bg-sky-950 disabled:opacity-50 flex items-center gap-1">
           <Plus className="w-3 h-3" /> 고정 ROI
         </button>
-        <button onClick={() => addEditableNode('detection_crop')} disabled={!pipeline || isLoading || isSaving || isRunning}
+        <button onClick={() => addEditableNode('detection_crop')} disabled={!pipeline || graphEditingDisabled}
           className="px-2 py-1 border border-amber-700 rounded text-amber-200 hover:bg-amber-950 disabled:opacity-50 flex items-center gap-1">
           <Plus className="w-3 h-3" /> 검출 모델
         </button>
-        <button onClick={() => addEditableNode('inspection')} disabled={!pipeline || isLoading || isSaving || isRunning}
+        <button onClick={() => addEditableNode('inspection')} disabled={!pipeline || graphEditingDisabled}
           className="px-2 py-1 border border-purple-700 rounded text-purple-200 hover:bg-purple-950 disabled:opacity-50 flex items-center gap-1">
           <Plus className="w-3 h-3" /> 검사 모델
         </button>
-        <button onClick={() => addEditableNode('blob_measure')} disabled={!pipeline || isLoading || isSaving || isRunning}
+        <button onClick={() => addEditableNode('blob_measure')} disabled={!pipeline || graphEditingDisabled}
           className="px-2 py-1 border border-teal-700 rounded text-teal-200 hover:bg-teal-950 disabled:opacity-50 flex items-center gap-1">
           <Plus className="w-3 h-3" /> Blob 측정
         </button>
-        <button onClick={() => addEditableNode('measurement')} disabled={!pipeline || isLoading || isSaving || isRunning} className="rounded border border-teal-700 px-2 py-1 text-teal-200 disabled:opacity-50">길이·면적 측정</button>
-        <button onClick={() => addEditableNode('aggregate')} disabled={!pipeline || isLoading || isSaving || isRunning}
+        <button onClick={() => addEditableNode('measurement')} disabled={!pipeline || graphEditingDisabled} className="rounded border border-teal-700 px-2 py-1 text-teal-200 disabled:opacity-50">길이·면적 측정</button>
+        <button onClick={() => addEditableNode('aggregate')} disabled={!pipeline || graphEditingDisabled}
           className="px-2 py-1 border border-indigo-700 rounded text-indigo-200 hover:bg-indigo-950 disabled:opacity-50 flex items-center gap-1">
           <Plus className="w-3 h-3" /> 결과 집계
         </button>
-        <button onClick={() => addEditableNode('output')} disabled={!pipeline || isLoading || isSaving || isRunning}
+        <button onClick={() => addEditableNode('output')} disabled={!pipeline || graphEditingDisabled}
           className="px-2 py-1 border border-emerald-700 rounded text-emerald-200 hover:bg-emerald-950 disabled:opacity-50 flex items-center gap-1">
           <Plus className="w-3 h-3" /> 판정 출력
         </button>
@@ -1468,7 +1468,7 @@ export const FlowchartStudio: React.FC = () => {
           <aside id="flow-node-palette" aria-label="검사 노드 팔레트" hidden={simpleView && !paletteOpen} className="w-40 shrink-0 border-r border-slate-700 bg-[#101722] p-3 space-y-2 overflow-auto text-xs">
             <h3 className="font-semibold text-slate-200">검사 노드</h3>
             {([['fixed_roi','고정 ROI'],['patch_split','패치 분할'],['preprocess','영상 전처리'],['detection_crop','검출 모델'],['inspection','검사 모델'],['blob_measure','Blob 규칙'],['measurement','치수 측정'],['aggregate','결과 집계'],['output','판정 출력']] as const).map(([type,label])=>
-              <button key={type} disabled={!pipeline||isRunning||isSaving||isLoading} onClick={()=>addEditableNode(type)} className="w-full rounded border border-slate-600 px-2 py-2 text-left hover:bg-slate-800 disabled:opacity-50">{label}</button>)}
+              <button key={type} disabled={!pipeline||graphEditingDisabled} onClick={()=>addEditableNode(type)} className="w-full rounded border border-slate-600 px-2 py-2 text-left hover:bg-slate-800 disabled:opacity-50">{label}</button>)}
             <h3 className="pt-2 font-semibold text-slate-200">목적 레시피</h3>
             <ul aria-label="목적 레시피" className="space-y-2">{FLOW_RECIPES.map(card=><li key={card.id}><button onClick={()=>openRecipe(card.id)} disabled={!pipeline||flowOpening||isRunning||isSaving||isLoading}
               aria-describedby={`recipe-card-${card.id}`} className="w-full rounded border border-slate-600 px-2 py-2 text-left hover:bg-slate-800 disabled:opacity-50">

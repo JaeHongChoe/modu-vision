@@ -60,7 +60,7 @@ const UI_SOURCE={
  "scripts/e2e/fixtures/flow_template_control.py": "81f4a1844d05021d6c4c668627a732120c11aa20e45294ba55da0bfca410572a",
  "scripts/e2e/fixtures/flow_large_dag_control.py": "6434d381ed45d68922c058544d0b515caa3d19d93d88c90028a3463a9903d871",
  "scripts/e2e/qa/appFlow.ts": "4eed3e5dad1d9d65a6b19fc9bb51a1f9b0e23911a39e7f255220bec0ce37fea2",
- "src/renderer/components/flowchart/FlowchartStudio.tsx": "adf203e8a5fd9e066f820178a1c594a22d56d277c460b7b250ffc309b5e23712",
+ "src/renderer/components/flowchart/FlowchartStudio.tsx": "9991ad853f3d0c1a48a75babb643882921ad9f1db78ee1d090ebb310520abde0",
  "src/renderer/components/flowchart/FlowEditorWorkspace.tsx": "e58f0b7a62572516d9ea04cbb45dafdfb104e805753e9f13a3c8f67c88210ee7",
  "src/renderer/components/flowchart/FlowDraftControls.tsx": "3bd10fc68ea4ae2dc600dfad2b6c51b56d74d213f7483923107295aac303f5a8",
  "src/renderer/components/flowchart/FlowGraphNavigator.tsx": "656832c214f41742d5bc0f66c9f8983c5fb6892cfaf3b42b48ee353f282da20a",

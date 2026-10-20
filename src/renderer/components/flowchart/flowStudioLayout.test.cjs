@@ -71,3 +71,16 @@ test('the simple view folds the flow information, the image bar, node search and
  assert.equal(full.find(node=>node.props?.['aria-label']==='검사 노드 팔레트').props.hidden,false);
  assert.ok(!full.some(node=>node.type==='summary'&&text(node).includes('노드 찾기·전체 보기')));
 });
+
+test('node add buttons are disabled while the flow is still opening, so a click is never silently ignored',()=>{
+ const all=node=>[node,...children(node).flatMap(all)];
+ const text=node=>[node.props?.children].flat(Infinity).map(value=>typeof value==='string'?value:value&&typeof value==='object'?text(value):'').join('');
+ const tree=all(editor());
+ const palette=tree.find(node=>node.props?.['aria-label']==='검사 노드 팔레트');
+ const paletteButtons=all(palette).filter(node=>node.type==='button'&&!node.props['aria-describedby']);
+ assert.ok(paletteButtons.length>=9,'every node type in the palette');
+ assert.ok(paletteButtons.every(button=>button.props.disabled===true),'palette node buttons wait for the flow to open');
+ const quick=tree.filter(node=>node.type==='button'&&/패치 분할 추가|길이·면적 측정|Blob 측정|결과 집계|판정 출력/.test(text(node)));
+ assert.ok(quick.length>=4,'quick-add row buttons are rendered');
+ assert.ok(quick.every(button=>button.props.disabled===true),'quick-add buttons wait for the flow to open');
+});
