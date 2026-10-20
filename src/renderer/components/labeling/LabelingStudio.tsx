@@ -29,7 +29,7 @@ import {TeamDataPanel} from './TeamDataPanel';
 import {AnnotationDraftRecovery} from './AnnotationDraftRecovery';
 import {EvidenceEditReturn} from './EvidenceEditReturn';
 import {WorkflowImpactPanel} from '../common/WorkflowImpactPanel';
-import { FOCUS_SWITCH_NAME, focusStatus, readLabelingFocus, writeLabelingFocus, type LabelingHelperPanel } from './labelingLayout';
+import { FOCUS_SWITCH_NAME, focusStatus, storedLabelingFocus, writeLabelingFocus, type LabelingHelperPanel } from './labelingLayout';
 
 export const LabelingStudio: React.FC = () => {
   const { images: datasetImages } = useDatasetStore();
@@ -41,8 +41,11 @@ export const LabelingStudio: React.FC = () => {
   const { task: projectTask, isProjectBusy, viewMode } = useProjectStore();
   // Focus editing folds the helper panels so the canvas keeps the window's height; the choice is remembered. The simple
   // view starts folded (the image and the drawing tools first) until the user chooses otherwise.
-  const [focus, setFocus] = useState(() => readLabelingFocus(undefined, viewMode === 'simple'));
-  const toggleFocus = () => setFocus(value => { writeLabelingFocus(!value); return !value; });
+  // Until the viewer presses 집중 편집, focus editing follows the view: on in the simple view, off in 모두 보기. Reading
+  // it once at mount left the panels open when the screen first mounted in 모두 보기 and the viewer then switched.
+  const [focusChoice, setFocusChoice] = useState<boolean | null>(() => storedLabelingFocus());
+  const focus = focusChoice ?? viewMode === 'simple';
+  const toggleFocus = () => { const next = !focus; writeLabelingFocus(next); setFocusChoice(next); };
   // Every folded panel is named in LABELING_HELPER_PANELS (the record's keys must be exactly that list).
   const helperPanels: Record<LabelingHelperPanel, React.ReactNode> = {
     '이미지 검토': <ImageReviewPanel />, '파생 이미지': <DerivedImagePanel />, '저장된 검토 대기열': <SavedReviewQueuePanel />,

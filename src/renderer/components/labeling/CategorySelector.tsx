@@ -18,6 +18,10 @@ export const CategorySelector: React.FC = () => {
   // while unused, and a dataset class that has no label class yet is offered as one click. Display only; the
   // categories and their IDs in saved labels are unchanged.
   const simpleView = useProjectStore((state) => state.viewMode) === 'simple';
+  // Classification trains on folder names, so the bar first says which class this image already has and where that
+  // answer comes from; drawn regions do not change it.
+  const classification = useProjectStore((state) => state.task) === 'classification';
+  const folderClass = useAnnotationStore((state) => state.currentImage?.label) || null;
   const datasetClasses = Object.keys(useDatasetStore((state) => state.classes) || {});
   const countOf = (cat: { id: number; name: string }) => annotations.filter((a) => a.category_id === cat.id || a.label === cat.name).length;
   const isUnusedSample = (cat: { id: number; name: string }) => simpleView && !labelbookVersion && cat.name !== 'OK'
@@ -38,6 +42,12 @@ export const CategorySelector: React.FC = () => {
 
   return (
     <div className="bg-slate-950 border-b border-slate-800 px-4 py-2 flex items-center space-x-2 overflow-x-auto select-none">
+      {classification && folderClass && (
+        <span className="mr-3 flex shrink-0 items-center gap-1.5 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-300"
+          title="분류 학습은 이미지가 들어 있는 폴더 이름을 정답으로 씁니다. 정답을 바꾸려면 이미지를 맞는 폴더로 옮긴 뒤 1단계에서 다시 불러오세요.">
+          이 이미지의 정답 <strong className="text-slate-100">{folderClass}</strong> <span className="text-slate-500">(폴더 이름)</span>
+        </span>
+      )}
       <span className="text-xs font-medium text-slate-400 flex items-center space-x-1 mr-2">
         <Tag className="w-3.5 h-3.5" />
         <span>클래스:</span>

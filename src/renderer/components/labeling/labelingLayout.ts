@@ -24,6 +24,16 @@ export function readLabelingFocus(storage?: Pick<Storage, 'getItem'> | null, fal
   }
 }
 
+/** The viewer's own 집중 편집 choice, or null when they never pressed it (the screen then follows the view mode). */
+export function storedLabelingFocus(storage?: Pick<Storage, 'getItem'> | null): boolean | null {
+  try {
+    const stored = (storage === undefined ? browserStorage() : storage)?.getItem(KEY);
+    return stored === '1' ? true : stored === '0' ? false : null;
+  } catch {
+    return null;
+  }
+}
+
 export function writeLabelingFocus(focus: boolean, storage?: Pick<Storage, 'setItem'> | null): void {
   try {
     (storage === undefined ? browserStorage() : storage)?.setItem(KEY, focus ? '1' : '0');

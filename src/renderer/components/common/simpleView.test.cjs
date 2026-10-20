@@ -45,7 +45,7 @@ test('the footer has one primary action, one status block and quiet step arrows'
 
 test('the labeling screen starts folded in the simple view and the label set is one line until opened',()=>{
  const studio=read('src/renderer/components/labeling/LabelingStudio.tsx');
- assert.match(studio,/readLabelingFocus\(undefined, viewMode === 'simple'\)/);assert.match(studio,/collapsed=\{viewMode === 'simple'\}/);
+ assert.match(studio,/const focus = focusChoice \?\? viewMode === 'simple';/);assert.match(studio,/collapsed=\{viewMode === 'simple'\}/);
  const bar=read('src/renderer/components/labeling/LabelSetBar.tsx');assert.match(bar,/if \(collapsed\) return <details/);
  assert.match(read('src/renderer/App.tsx'),/viewMode==='full'\?<>/);
  assert.match(read('src/renderer/index.css'),/html\[lang="ko"\] body \{ word-break: keep-all;/);

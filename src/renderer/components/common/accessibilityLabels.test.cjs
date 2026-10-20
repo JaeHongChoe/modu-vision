@@ -74,3 +74,11 @@ test('the simple view class bar leads with the project classes and folds unused 
  assert.match(categories,/예시 이름 \$\{samples\.length\}개/);assert.match(categories,/onClick=\{\(\) => addCategory\(name\)\}/);
  assert.match(categories,/cat\.id === activeCategory\.id/,'the drawing class stays visible');
 });
+
+test('a classification project says where each image\'s answer comes from instead of asking for drawn regions',()=>{
+ const categories=read('labeling/CategorySelector.tsx');
+ assert.match(categories,/이 이미지의 정답 <strong[^>]*>\{folderClass\}<\/strong>/);assert.match(categories,/classification && folderClass &&/);
+ const list=read('labeling/AnnotationList.tsx');
+ assert.match(list,/이 이미지에는 라벨이 없습니다/,'the empty-state title stays');
+ assert.match(list,/classification \? '분류 학습은 폴더 이름을 정답으로 씁니다/);
+});

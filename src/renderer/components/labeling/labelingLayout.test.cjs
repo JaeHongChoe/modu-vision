@@ -33,3 +33,11 @@ test('a canvas shown at Fit is fitted again when its area changes size; a zoomed
  assert.equal(layout.refitAfterResize(atFit,null,tall,image,fit),null,'first measure');
  assert.equal(layout.refitAfterResize(atFit,small,small,image,fit),null,'same size');
  assert.deepEqual(layout.refitAfterResize({scale:1,offsetX:0,offsetY:0},{width:0,height:0},tall,image,(w,h,iw,ih)=>w<=0||h<=0?{scale:1,offsetX:0,offsetY:0}:fit(w,h,iw,ih)),fit(tall.width,tall.height,image.width,image.height),'an image loaded into a zero-height area is fitted once it has room');});
+
+test('an unpressed 집중 편집 reads as no choice, so the screen can follow the view mode',()=>{
+ const layout=load();const values={};const storage={getItem:key=>values[key]??null,setItem:(key,value)=>{values[key]=value;}};
+ assert.equal(layout.storedLabelingFocus(storage),null);
+ layout.writeLabelingFocus(false,storage);assert.equal(layout.storedLabelingFocus(storage),false);
+ layout.writeLabelingFocus(true,storage);assert.equal(layout.storedLabelingFocus(storage),true);
+ assert.equal(layout.storedLabelingFocus({getItem:()=>{throw new Error('blocked');}}),null);
+});
