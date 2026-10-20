@@ -146,7 +146,8 @@ export const TrainingController: React.FC = () => {
   const completedJobId = status === 'completed' ? jobId : null;
   const displayedJobLabel = jobComputeProfileId && jobComputeLabel === jobComputeProfileId
     ? jobProfile?.name || jobComputeLabel
-    : jobComputeLabel;
+    : jobComputeLabel === 'This computer' ? '이 컴퓨터' : jobComputeLabel;
+  const sideCard = !simpleView || technicalDetails || Boolean(jobId && jobComputeProfileId) || Boolean(!jobId && selectedProfileId);
   const computeReady = isComputeLoaded && !isComputeLoading && !computeLoadError &&
     (!selectedProfileId || (Boolean(selectedProfile) && selectedReadiness.ready));
   const warmStartSupported = true;
@@ -321,8 +322,8 @@ export const TrainingController: React.FC = () => {
         {selectedFamily===task&&<TrainingPreparationPanel family={selectedFamily} model={syntheticAnomaly ? syntheticOptions.anomaly_backbone : selectedBackbone} preset={preset} checkpoint={pretrainedCheckpoint} onCheckpointChange={setPretrainedCheckpoint} device={nextDevice==='mps'||nextDevice==='cuda' ? nextDevice : 'cpu'} config={modelOptions} warmStartJobId={warmParentId||undefined} />}
         {remediationNotice&&<p role="status" className="rounded border border-cyan-800 bg-cyan-950/30 p-3 text-sm text-cyan-100">{remediationNotice}</p>}
         {selectedFamily === task && <>
-        {/* The simple view keeps the training location behind one line until a job runs; 모두 보기 shows it as before. */}
-        {full || jobId ? block : <details className="rounded border border-[#2B3547] bg-[#131822] text-xs">
+        {/* The simple view keeps the training location behind one line unless a job is still in flight; 모두 보기 shows it as before. */}
+        {full || (jobId && status !== 'completed') ? block : <details className="rounded border border-[#2B3547] bg-[#131822] text-xs">
           <summary className="cursor-pointer p-3 text-slate-300"><span className="font-semibold text-slate-400">학습 위치</span> <span className="font-bold text-slate-100">{!isComputeLoaded ? '설정 확인 중' : selectedProfileId ? (selectedProfile?.name || `설정 없음: ${selectedProfileId}`) : '이 컴퓨터'}</span></summary>
           <div className="px-3 pb-3">{block}</div>
         </details>}
@@ -562,7 +563,8 @@ export const TrainingController: React.FC = () => {
           </div>
 
           {/* Metric Summary Badge if completed */}
-          {bestMetric !== null && (
+          {/* A loss number means little to a first-time user; the simple view leaves it to the chart and to step 4. */}
+          {bestMetric !== null && !simpleView && (
             <div className="flex items-center space-x-2">
               <span title={task === 'anomaly' ? '저장된 모델 선택 지표 · 검증 수치와 학습 손실은 아래 기록에서 확인' : undefined}
                 className="text-[10px] text-slate-400 uppercase font-semibold font-mono">{task === 'anomaly' ? '저장 지표' : '최적 검증 손실'}</span>
@@ -573,6 +575,14 @@ export const TrainingController: React.FC = () => {
           )}
         </div>
 
+        {/* The completion banner and the comparison button live in 이전 모델에서 재학습, which the simple view folds into
+            고급 학습 설정; repeat them under the status so a finished run always points to step 4. */}
+        {simpleView && status === 'completed' && jobId && (warmStartParentJobId
+          ? <button type="button" onClick={() => void setStep(4)} className="workspace-button workspace-button--primary self-start">4단계에서 이전 모델과 비교하기</button>
+          : <div role="status" className="flex flex-wrap items-center gap-3 rounded border border-emerald-600/60 bg-emerald-950/30 px-4 py-3 text-sm text-emerald-100">
+            <span>학습이 끝났습니다. 시험 이미지로 결과를 확인하세요.</span>
+            <button type="button" onClick={() => void setStep(4)} className="workspace-button workspace-button--primary">결과 평가하기 (4단계)</button>
+          </div>)}
         {stopError && (
           <div role="alert" className="rounded border border-amber-600 bg-amber-950/40 px-3 py-2 text-xs text-amber-200">
             {stopError}
@@ -581,7 +591,8 @@ export const TrainingController: React.FC = () => {
 
         {/* The simple view keeps the epoch-by-epoch log behind one line; the progress bar below stays in sight. */}
         {simpleView ? <details className="rounded border border-[#2B3547] bg-[#0B0E14] text-xs text-slate-300"><summary className="cursor-pointer px-3 py-2 text-sm text-slate-300">학습 기록 보기 <span className="text-slate-500">회차별 손실 값</span></summary><div className="p-2 pt-0"><TrainingLogPanel lines={trainingLogLines({ jobId, status, jobPhase, totalEpochs, lossHistory, startError, jobStatusError, stopError, bestMetric })} /></div></details> : <TrainingLogPanel lines={trainingLogLines({ jobId, status, jobPhase, totalEpochs, lossHistory, startError, jobStatusError, stopError, bestMetric })} />}
-        <OperationsObservabilityPanel canConfigure={true} initialJobId={jobId||''} />
+        {/* Persistent logs and internal alerts are an operator's tool; the simple view leaves them to 모두 보기. */}
+        {!simpleView && <OperationsObservabilityPanel canConfigure={true} initialJobId={jobId||''} />}
         {selectedSavedJob.error&&<p role="alert" className="text-amber-200">{selectedSavedJob.error}</p>}
         {selectedSavedJob.job&&<section aria-label="선택한 저장 학습 작업">
           <h3 className="text-sm text-slate-300">선택한 저장 작업 · {selectedSavedJob.job.job_id}</h3>
@@ -591,12 +602,14 @@ export const TrainingController: React.FC = () => {
           current_epoch: currentEpoch, total_epochs: totalEpochs, current_step: currentStep, total_steps: totalSteps,
           current_train_loss: trainLoss, error: startError, observation: jobObservation,
           queue_position: jobQueuePosition, wait_reason: jobWaitReason} : null}
-          busy={isStopRequestPending} onCancel={handleAbort} showActions={false} />
+          busy={isStopRequestPending} onCancel={handleAbort} showActions={false} plain={simpleView} />
 
         {/* Dual Telemetry Split Grid: CRT Oscilloscope (66%) + Hardware Telemetry (34%) */}
+        {/* The simple view keeps the side card only when it says something new (a server, or 기술 상세's device
+            meters); otherwise the loss chart takes the full width. */}
         <div className="grid grid-cols-12 gap-5">
           {/* Left Column: CRT Phosphor Oscilloscope Loss Curve */}
-          <div className="col-span-8">
+          <div className={sideCard ? 'col-span-8' : 'col-span-12'}>
             <OscilloscopeLossCurve
               lossHistory={lossHistory}
               trainLoss={trainLoss}
@@ -612,7 +625,7 @@ export const TrainingController: React.FC = () => {
           </div>
 
           {/* Right Column: Hardware Telemetry Panel */}
-          <div className="col-span-4">
+          {sideCard && <div className="col-span-4">
             {jobId && jobComputeProfileId ? (
               <div className="h-full rounded border border-[#2B3547] bg-[#131822] p-4 text-xs">
                 <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">원격 장치</div>
@@ -648,7 +661,7 @@ export const TrainingController: React.FC = () => {
                 <p className="mt-2">{language === 'ko' ? '장치 사용량(CPU·메모리·GPU)은 상단의 기술 상세를 켜면 보입니다.' : 'Turn on Technical details in the header to see CPU, memory and GPU use.'}</p>
               </div>
             )}
-          </div>
+          </div>}
         </div>
         <AutoDLWorkbench task={task} anomalyPurpose={anomalyPurpose} />
         </>}

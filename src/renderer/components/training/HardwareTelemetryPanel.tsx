@@ -126,7 +126,7 @@ export const HardwareTelemetryPanel: React.FC<HardwareTelemetryPanelProps> = ({
           </span>
           <span className="inline-flex items-center space-x-1 px-1.5 py-0.5 rounded-[2px] bg-[#0B0E14] border border-[#2B3547] text-[9px] font-mono tabular-nums text-emerald-400 font-bold">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>10Hz 갱신</span>
+            <span>실시간</span>
           </span>
         </div>
 

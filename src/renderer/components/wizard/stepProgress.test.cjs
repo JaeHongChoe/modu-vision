@@ -12,3 +12,7 @@ test('labels are not done without images, and a folder without images is not dat
  assert.deepEqual(completedSteps({...base,hasData:true,images:0,unlabeled:0}),[]);
  assert.deepEqual(completedSteps({...base,hasData:false,images:10,unlabeled:0}),[]);
 });
+test('a loaded evaluation also marks training, since only a trained model can be evaluated',()=>{
+ assert.deepEqual(completedSteps({...base,hasData:true,images:64,unlabeled:0,evaluated:true}),[1,2,3,4]);
+ assert.deepEqual(completedSteps({...base,flowSaved:true}),[5],'a saved flow alone says nothing about training');
+});

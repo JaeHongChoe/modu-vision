@@ -19,7 +19,9 @@ export function completedSteps(input: StepProgressInput): number[] {
   const hasImages = input.hasData && input.images > 0;
   if (hasImages) done.push(1);
   if (hasImages && input.unlabeled === 0) done.push(2);
-  if (input.trainingDone) done.push(3);
+  // An evaluation needs a trained model, so a loaded evaluation also means step 3 has a result; after a reload the
+  // training status is not restored while the latest evaluation is.
+  if (input.trainingDone || input.evaluated) done.push(3);
   if (input.evaluated) done.push(4);
   if (input.flowSaved) done.push(5);
   return done;

@@ -70,7 +70,7 @@ test('the simple view shows three data counts, two tiles and one folder button r
 
 test('the simple view folds the step 3 training location, the step 4 comparison and the second header row; wide monitors get larger type',()=>{
  const training=read('src/renderer/components/training/TrainingController.tsx');
- assert.match(training,/\{full \|\| jobId \? block : <details/);assert.match(training,/<summary[^>]*><span[^>]*>학습 위치<\/span>/);
+ assert.match(training,/\{full \|\| \(jobId && status !== 'completed'\) \? block : <details/);assert.match(training,/<summary[^>]*><span[^>]*>학습 위치<\/span>/);
  const evaluation=read('src/renderer/components/evaluation/EvaluationStudio.tsx');
  assert.match(evaluation,/<summary[^>]*>현행 모델 · 후보 모델 비교<\/summary>/);assert.match(evaluation,/\{full \? <>\s*<div className="rounded border border-\[#3B5269\]/);
  const header=read('src/renderer/components/wizard/WizardHeader.tsx');
@@ -107,8 +107,26 @@ test('the simple view gives every step a plain page header and moves each step\'
 test('the simple view states the training target in one sentence and folds the review counts and team actions',()=>{
  const readiness=read('src/renderer/components/training/TeamTrainingReadiness.tsx');
  const simple=readiness.slice(readiness.indexOf("if(project.viewMode==='simple')"),readiness.indexOf(' return <section aria-label="팀 검수 학습 준비"',readiness.indexOf("if(project.viewMode==='simple')")+1));
- assert.match(simple,/학습에 쓸 이미지/);assert.match(simple,/reviewTrainingMessage\(value\)/);
+ assert.match(simple,/학습에 쓸 이미지/);assert.match(simple,/학습 대상 이미지 \$\{value\.counts\.eligible/);assert.match(simple,/:reviewTrainingMessage\(value\)/,'blockers still read as before');
  const folded=simple.slice(simple.indexOf('<summary'));
- for(const detail of ['라벨 기준','대상 다시 확인','팀 검수 열기'])assert.ok(folded.includes(detail),`${detail} sits behind 검수 세부`);
+ for(const detail of ['reviewTrainingMessage(value)','라벨 기준','대상 다시 확인','팀 검수 열기'])assert.ok(folded.includes(detail),`${detail} sits behind 검수 세부`);
  assert.ok(!simple.includes('sha256'),'hashes stay in the full view');
+});
+
+test('step 3 in the simple view: one model heading, plain preset words, a finished run points to step 4',()=>{
+ const catalog=read('src/renderer/components/training/ModelFamilyCatalog.tsx');
+ assert.match(catalog,/\{simpleView \? '모델 종류' : '모델 학습 허브'\}/);assert.match(catalog,/aria-label="모델 학습 허브"/,'the region keeps its name');
+ const prep=read('src/renderer/components/training/TrainingPreparationPanel.tsx');
+ assert.match(prep,/<summary className="cursor-pointer">학습 순서·사전학습 파일<\/summary>/);assert.match(prep,/\{!simpleView&&<><p className="mt-3 text-slate-300">다음 행동/);
+ const presets=read('src/renderer/components/training/RecipePresetSelector.tsx');
+ assert.match(presets,/처음 학습할 때 고르세요/);assert.match(presets,/\{showMatrix && !simpleView && \(/);
+ const training=read('src/renderer/components/training/TrainingController.tsx');
+ const banner=training.indexOf("{simpleView && status === 'completed' && jobId && (warmStartParentJobId");
+ assert.ok(banner>0&&banner<training.indexOf('{stopError && ('),'the finished-run banner sits under the status, outside 고급 학습 설정');
+ assert.match(training,/plain=\{simpleView\}/);assert.match(training,/\{!simpleView && <OperationsObservabilityPanel/);
+ assert.match(training,/'This computer' \? '이 컴퓨터'/);
+ const progress=read('src/renderer/components/training/JobProgressView.tsx');
+ assert.match(progress,/plain \? `학습 \$\{view\.epoch\}/);assert.match(progress,/!\(plain && view\.tone === 'completed'\)/);
+ const chart=read('src/renderer/components/training/OscilloscopeLossCurve.tsx');
+ assert.ok(!chart.includes('`EP ${epoch}`')&&!chart.includes('10Hz'),'chart labels are plain');
 });

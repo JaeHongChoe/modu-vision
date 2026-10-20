@@ -27,6 +27,8 @@ function FamilyCards({families, selectedFamily, onSelect, disabled}: {families: 
 
 export function ModelFamilyCatalog({selectedFamily, onSelect, disabled=false}: {selectedFamily?: ModelFamily; onSelect?: (family: ModelFamily) => void; disabled?: boolean}) {
   const [families, setFamilies] = useState<Family[]>([]);
+  // The page header already says what step 3 is for, so the simple view names this card by what it asks for.
+  const simpleView = useProjectStore(state => state.viewMode) === 'simple';
   const [error, setError] = useState('');
   useEffect(() => {
     let current = true;
@@ -36,8 +38,8 @@ export function ModelFamilyCatalog({selectedFamily, onSelect, disabled=false}: {
     return () => { current = false; };
   }, []);
   return <section className="rounded-xl border border-[#344255] bg-[#131D2B] p-4 text-xs text-slate-200" aria-label="모델 학습 허브">
-    <h2 className="flex items-center gap-2 text-sm font-semibold"><Boxes className="h-4 w-4 text-cyan-300" />모델 학습 허브</h2>
-    <p className="mt-2 text-slate-400">검사 목적에 맞는 모델을 선택하고 정답 준비부터 완료 후보의 평가·배포까지 진행하세요.</p>
+    <h2 className="flex items-center gap-2 text-sm font-semibold"><Boxes className="h-4 w-4 text-cyan-300" />{simpleView ? '모델 종류' : '모델 학습 허브'}</h2>
+    {!simpleView && <p className="mt-2 text-slate-400">검사 목적에 맞는 모델을 선택하고 정답 준비부터 완료 후보의 평가·배포까지 진행하세요.</p>}
     {onSelect && <FamilyCards families={families} selectedFamily={selectedFamily} onSelect={onSelect} disabled={disabled} />}
     {disabled&&<p role="status" className="mt-2 text-cyan-200">프로젝트 데이터를 확인 중입니다. 완료 후 모델을 선택하세요.</p>}
     <details className="mt-4"><summary className="cursor-pointer text-slate-300">{onSelect ? '선택 모델의 데이터·장치·학습 구조' : '모델 종류와 필요한 데이터'}</summary>

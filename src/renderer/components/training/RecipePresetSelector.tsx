@@ -9,6 +9,7 @@ import React, { useState } from 'react';
 import { Sliders, Table, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 import type { TrainingPreset } from '../../types';
 import { JargonTooltip } from '../common/JargonTooltip';
+import { useProjectStore } from '../../stores/useProjectStore';
 
 export interface RecipePresetSelectorProps {
   preset: TrainingPreset;
@@ -24,6 +25,9 @@ export const RecipePresetSelector: React.FC<RecipePresetSelectorProps> = ({
   language,
 }) => {
   const [showMatrix, setShowMatrix] = useState<boolean>(false);
+  // The simple view says when to pick each style in plain words; the numbers and the matrix stay in 모두 보기
+  // and in 고급 학습 설정.
+  const simpleView = useProjectStore((state) => state.viewMode) === 'simple';
 
   return (
     <div className="space-y-3 select-none">
@@ -34,6 +38,7 @@ export const RecipePresetSelector: React.FC<RecipePresetSelectorProps> = ({
           <span>{language === 'ko' ? '학습 방식 선택' : 'Training style'}</span>
         </h2>
 
+        {!simpleView && (
         <button
           type="button"
           onClick={() => setShowMatrix(!showMatrix)}
@@ -51,6 +56,7 @@ export const RecipePresetSelector: React.FC<RecipePresetSelectorProps> = ({
           </span>
           {showMatrix ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
         </button>
+        )}
       </div>
 
       {/* Recipe Cards View */}
@@ -88,10 +94,13 @@ export const RecipePresetSelector: React.FC<RecipePresetSelectorProps> = ({
 
           <p className="text-[11px] text-slate-400 mb-3 leading-relaxed">
             {language === 'ko'
-              ? '신속한 결함 검출 가능성 타진을 위한 고속 수렴 레시피. 가벼운 데이터 증강 및 빠른 웜업 학습률을 적용합니다.'
+              ? simpleView
+                ? '처음 학습할 때 고르세요. 짧게 학습해서 이 데이터로 불량을 찾을 수 있는지 먼저 확인합니다.'
+                : '신속한 결함 검출 가능성 타진을 위한 고속 수렴 레시피. 가벼운 데이터 증강 및 빠른 웜업 학습률을 적용합니다.'
               : 'Rapid defect feasibility screening preset with light augmentation and fast warmup learning rate.'}
           </p>
 
+          {!simpleView && (
           <div className="flex flex-wrap gap-1.5 text-[10px] font-mono text-slate-300">
             <span className="bg-[#0B0E14] px-2 py-0.5 rounded-[2px] border border-[#2B3547] tabular-nums">
               <JargonTooltip termKey="learning_rate">학습률 0.001</JargonTooltip>
@@ -102,6 +111,7 @@ export const RecipePresetSelector: React.FC<RecipePresetSelectorProps> = ({
             <span className="bg-[#0B0E14] px-2 py-0.5 rounded-[2px] border border-[#2B3547]">가벼운 이미지 변형</span>
             <span className="bg-[#0B0E14] px-2 py-0.5 rounded-[2px] border border-[#2B3547]">가능성 확인용</span>
           </div>
+          )}
 
           {preset === 'fast' && (
             <div className="absolute top-2 right-2 text-blue-400">
@@ -143,10 +153,13 @@ export const RecipePresetSelector: React.FC<RecipePresetSelectorProps> = ({
 
           <p className="text-[11px] text-slate-400 mb-3 leading-relaxed">
             {language === 'ko'
-              ? '더 큰 입력 이미지와 강한 증강으로 후보를 학습합니다. 양산 적용 여부는 별도 시험 데이터와 현장 검증으로 판단하세요.'
+              ? simpleView
+                ? '빠른 학습으로 가능성을 확인한 뒤 고르세요. 시간이 더 걸리지만 더 정확한 모델을 만듭니다.'
+                : '더 큰 입력 이미지와 강한 증강으로 후보를 학습합니다. 양산 적용 여부는 별도 시험 데이터와 현장 검증으로 판단하세요.'
               : 'Train with larger input images and stronger augmentation. Validate on separate test data and the production line before use.'}
           </p>
 
+          {!simpleView && (
           <div className="flex flex-wrap gap-1.5 text-[10px] font-mono text-slate-300">
             <span className="bg-[#0B0E14] px-2 py-0.5 rounded-[2px] border border-[#2B3547] tabular-nums">
               <JargonTooltip termKey="learning_rate">학습률 0.0005 · 서서히 감소</JargonTooltip>
@@ -157,6 +170,7 @@ export const RecipePresetSelector: React.FC<RecipePresetSelectorProps> = ({
             </span>
             <span className="bg-[#0B0E14] px-2 py-0.5 rounded-[2px] border border-[#2B3547]">후보 모델용</span>
           </div>
+          )}
 
           {preset === 'precision' && (
             <div className="absolute top-2 right-2 text-blue-400">
@@ -167,7 +181,7 @@ export const RecipePresetSelector: React.FC<RecipePresetSelectorProps> = ({
       </div>
 
       {/* Collapsible 8-Parameter Side-by-Side Comparison Matrix Table */}
-      {showMatrix && (
+      {showMatrix && !simpleView && (
         <div className="bg-[#0B0E14] border border-[#2B3547] rounded-[4px] p-3 overflow-x-auto">
           <table className="w-full text-left text-[11px] font-mono border-collapse">
             <thead>

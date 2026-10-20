@@ -9,6 +9,7 @@
 import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { Activity } from 'lucide-react';
 import type { LossPoint } from '../../stores/useTrainingStore';
+import { useProjectStore } from '../../stores/useProjectStore';
 
 export interface OscilloscopeLossCurveProps {
   lossHistory: LossPoint[];
@@ -39,6 +40,8 @@ export const OscilloscopeLossCurve: React.FC<OscilloscopeLossCurveProps> = ({
   language,
 }) => {
   const [scaleMode, setScaleMode] = useState<ScaleMode>('linear');
+  // The linear/log switch is a reading aid for people who already read loss curves; the simple view leaves it out.
+  const simpleView = useProjectStore((state) => state.viewMode) === 'simple';
   const [channelFilter, setChannelFilter] = useState<ChannelFilter>('all');
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
@@ -184,7 +187,7 @@ export const OscilloscopeLossCurve: React.FC<OscilloscopeLossCurveProps> = ({
     return Array.from({ length: steps }, (_, i) => {
       const epoch = Math.round(1 + (i / (steps - 1 || 1)) * (maxEpoch - 1));
       const x = getX(epoch);
-      return { x, label: `EP ${epoch}` };
+      return { x, label: `${epoch}회` };
     });
   }, [maxEpoch, getX]);
 
@@ -244,6 +247,7 @@ export const OscilloscopeLossCurve: React.FC<OscilloscopeLossCurveProps> = ({
         {/* Right: Scale Mode & Trace Filter Controls */}
         <div className="flex items-center space-x-2">
           {/* Scale Mode Switcher */}
+          {!simpleView && (
           <div className="inline-flex rounded-[3px] bg-[#131822] p-0.5 border border-[#2B3547]">
             <button
               type="button"
@@ -268,6 +272,7 @@ export const OscilloscopeLossCurve: React.FC<OscilloscopeLossCurveProps> = ({
               로그
             </button>
           </div>
+          )}
         </div>
       </div>
 
@@ -592,7 +597,7 @@ export const OscilloscopeLossCurve: React.FC<OscilloscopeLossCurveProps> = ({
 
       {/* Oscilloscope Chassis Footer Ticks */}
       <div className="flex items-center justify-between pt-2 mt-1 text-xs font-mono text-slate-500">
-        <div>가로축: 학습 횟수 · 10Hz 갱신</div>
+        <div>가로축: 학습 횟수</div>
         <div>아래로 내려갈수록 모델이 더 잘 맞춥니다</div>
       </div>
     </div>
