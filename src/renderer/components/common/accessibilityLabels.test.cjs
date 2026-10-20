@@ -56,7 +56,8 @@ test('the training and evaluation screens speak plain Korean (no console codes)'
  assert.match(evaluation,/장 맞음 · 미검/);
  assert.match(read('wizard/workflowReadiness.ts'),/학습 결과 평가 \(4단계\)/);
  const inference=read('inference/InferenceCenterStudio.tsx');
- assert.ok(inference.indexOf('<BatchInspectionPanel />')<inference.indexOf('<CoreModelTrialPanel'),'the batch inspection comes after the single-model trial');
+ const tools=inference.indexOf('const advancedTools');assert.ok(tools>0&&tools<inference.indexOf('<CoreModelTrialPanel'),'the single-model trial is one of the field tools');
+ assert.ok(inference.indexOf('<BatchInspectionPanel />')<inference.lastIndexOf('advancedTools}'),'the field tools render after the batch inspection');
 });
 
 test('step banners name the steps in plain Korean and keep the English code behind 기술 상세',()=>{

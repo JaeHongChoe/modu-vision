@@ -46,6 +46,9 @@ const stateColors: Record<string, string> = {
 };
 let activeBatchOperation = 0;
 
+/** Node step states as the batch result lists them; unknown states show as recorded. */
+const STEP_STATUS_KO: Record<string, string> = {passed: '통과', flagged_ng: 'NG 표시', skipped: '건너뜀', failed: '실패', error: '오류', review: '검토 필요'};
+
 export const BatchInspectionPanel: React.FC = () => {
   const handoff=useTaskHandoff();const requestedRun=handoff?.kind==='inspection'?handoff.jobId:undefined;
   const executionChoiceOverride = useFlowchartStore(state => state.executionChoiceOverride);
@@ -547,7 +550,7 @@ export const BatchInspectionPanel: React.FC = () => {
           >
             <span className="block truncate text-[11px] font-semibold text-slate-100">{item.pipeline_name}</span>
             <span className="mt-1 block truncate font-mono text-[10px] text-sky-300" title={item.saved_version_id || '이전 형식의 검사 기록'}>
-              {item.saved_version_id ? `저장 버전 ${item.saved_version_id.slice(0, 8)}` : '저장 버전 미기록'} · 그래프 {item.pipeline_hash.slice(0, 8)}
+              {item.saved_version_id ? `저장 버전 ${item.saved_version_id.slice(0, 8)}` : '저장 버전 미기록'}{technicalDetails && ` · 그래프 ${item.pipeline_hash.slice(0, 8)}`}
             </span>
             <span className="mt-1 block text-[10px] text-slate-400">{new Date(item.created_at).toLocaleString('ko-KR')} · {item.status === 'completed' ? '완료' : item.status === 'stopped' ? '중단' : '진행 중'}</span>
             <span className="mt-1 block text-[10px] text-slate-300">{item.total}장 · NG {item.counts.NG || 0} · 검토 {item.counts.REVIEW || 0}</span>
@@ -628,7 +631,8 @@ export const BatchInspectionPanel: React.FC = () => {
                     <div className="flex min-w-0 items-center gap-2"><ImageIcon className="h-4 w-4 shrink-0 text-cyan-400" /><strong className="truncate text-slate-100" title={selected.image.file_path}>{selected.image.file_name}</strong></div>
                     <span className={`${stateColors[selected.state]}`}>{stateNames[selected.state]}</span>
                   </div>
-                  <p className="break-all text-[10px] text-slate-400">원본: {selected.image.file_path}</p>
+                  {/* The full path and the image hash are records for 기술 상세; the file name above carries the path as its tooltip. */}
+                  {technicalDetails && <p className="break-all text-[10px] text-slate-400">원본: {selected.image.file_path}</p>}
                   <button type="button" onClick={()=>void openEvidence()} className="rounded border border-sky-700 px-3 py-2 text-xs text-sky-200">원본·판정 근거 보기</button>
                   {evidenceView?.scope===resetKey&&<EvidenceImageViewer evidence={evidenceView.view} onClose={closeEvidence} returnLabel="검사 결과로 돌아가기"/>}
                   <button type="button" disabled={isRunning} onClick={() => {
@@ -636,7 +640,7 @@ export const BatchInspectionPanel: React.FC = () => {
                       if (!opened) setError('선택한 이미지의 라벨 화면을 열지 못했습니다. 검사 데이터 출처와 저장 상태를 확인하세요.');
                     }).catch((cause) => setError(cause instanceof Error ? cause.message : '라벨 화면을 열지 못했습니다.'));
                   }} className="rounded border border-cyan-700 px-3 py-1 text-xs text-cyan-200 hover:bg-cyan-950 disabled:opacity-40">이 이미지 라벨 수정</button>
-                  {selected.image_sha256 && <p className="break-all font-mono text-[10px] text-slate-500">검사 원본 SHA-256: {selected.image_sha256}</p>}
+                  {technicalDetails && selected.image_sha256 && <p className="break-all font-mono text-[10px] text-slate-500">검사 원본 SHA-256: {selected.image_sha256}</p>}
                   <div className="flex h-48 items-center justify-center overflow-hidden rounded border border-[#243043] bg-black">
                     {previewSource
                       ? <img src={resolveApiUrl(previewSource)} alt={`${selected.image.file_name} ${previewIsResult?'검사 미리보기':'원본 썸네일'}`} className="h-full w-full object-contain" />
@@ -660,7 +664,7 @@ export const BatchInspectionPanel: React.FC = () => {
                           {selected.result.execution_steps.map((step, index) => (
                             <div key={`${step.node_id}-${index}`} className="flex items-center justify-between rounded border border-[#243043] px-2 py-1 text-[11px] text-slate-300">
                               <span className="truncate" title={step.node_id}>{step.name || step.node_id}</span>
-                              <span className="shrink-0 font-mono">{step.status} · {Number(step.latency_ms).toFixed(1)}ms</span>
+                              <span className="shrink-0 font-mono">{STEP_STATUS_KO[step.status] || step.status} · {Number(step.latency_ms).toFixed(1)}ms</span>
                             </div>
                           ))}
                         </div>
@@ -674,7 +678,7 @@ export const BatchInspectionPanel: React.FC = () => {
                                 {crop.crop_thumbnail&&safeSnapshot(crop.crop_thumbnail)
                                   ? <img src={crop.crop_thumbnail} alt={crop.label} className="h-16 w-full object-contain" />
                                   : <span className="text-amber-200">저장된 ROI 이미지 없음</span>}
-                                <div className="truncate">{crop.label}</div><div>{crop.verdict} · {Number(crop.defect_score).toFixed(2)}</div>
+                                <div className="truncate">{crop.label === 'Full image' ? '전체 이미지' : crop.label}</div><div>{crop.verdict} · {Number(crop.defect_score).toFixed(2)}</div>
                               </div>
                             ))}
                           </div>

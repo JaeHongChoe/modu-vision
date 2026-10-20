@@ -99,8 +99,9 @@ test('the simple view gives every step a plain page header and moves each step\'
  assert.match(banner,/if \(simpleView && isKo && simple\)/);
  const training=read('src/renderer/components/training/TrainingController.tsx');assert.match(training,/고급 학습 설정/);
  const evaluation=read('src/renderer/components/evaluation/EvaluationStudio.tsx');assert.match(evaluation,/aria-label="평가 결과 한눈에 보기"/);assert.match(evaluation,/다른 모델이나 시험 이미지 묶음으로 다시 평가/);
- const inference=read('src/renderer/components/inference/InferenceCenterStudio.tsx');assert.match(inference,/내보내기·패키지·속도 측정/);
- assert.ok(inference.indexOf('<BatchInspectionPanel />')<inference.indexOf('{simpleView && <details'),'exports follow the batch inspection');
+ const inference=read('src/renderer/components/inference/InferenceCenterStudio.tsx');
+ assert.ok(inference.indexOf('<BatchInspectionPanel />')<inference.indexOf('{simpleView ? <details'),'exports follow the batch inspection');
+ assert.match(inference,/현장 적용·내보내기 도구/);assert.match(inference,/\{exportActions\}\{packageNote\}\{advancedTools\}<\/div>\s*<\/details> : advancedTools\}/);
  const studio=read('src/renderer/components/dataset/DatasetStudio.tsx');assert.match(studio,/`폴더: \$\{folderPath/);
 });
 

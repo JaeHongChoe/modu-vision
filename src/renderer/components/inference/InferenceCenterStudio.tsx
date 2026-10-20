@@ -85,6 +85,7 @@ export const InferenceCenterStudio: React.FC = () => {
   const showFlowPackage = () => {
     const panel = flowPackageRef.current;
     if (!panel) return;
+    for (let node = panel.parentElement; node; node = node.parentElement) if (node.tagName === 'DETAILS') (node as HTMLDetailsElement).open = true;
     panel.focus({ preventScroll: true });
     panel.scrollIntoView({
       behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
@@ -223,50 +224,7 @@ python infer.py --self-test`;
       </div>
   );
 
-  return (
-    <div className="flex-1 flex flex-col h-full bg-[#0B0E14] text-slate-200 overflow-y-auto select-none p-5 space-y-5 font-sans">
-      {/* Top Operator Guidance Banner */}
-      <OperatorGuidanceBanner step={6} className={simpleView ? '-mx-5 -mt-5' : ''} />
-
-      {/* Title & Action Strip (the simple view moves the exports below the batch inspection) */}
-      {!simpleView && <>
-      <div className="flex flex-col gap-3 border-b border-[#2B3547] bg-[#131822] -mx-5 -mt-5 p-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <div className="flex items-center space-x-2.5">
-            <Server className="w-5 h-5 text-slate-300" />
-            <h2 className="text-sm font-bold text-slate-100 uppercase tracking-wider font-mono">
-              {isKo ? '검사 결과 및 플로우 배포' : 'Inspection Results & Flow Deployment'}
-            </h2>
-            <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[#1A212E] text-slate-300 border border-[#2B3547]">
-              STAGE 6
-            </span>
-          </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            {isKo
-              ? '5단계에서 저장한 검사 플로우를 실제 이미지로 확인하고, 결과 이력과 전체 플로우 패키지를 관리하세요.'
-              : 'Inspect real images with the saved Stage 5 flow, review results, and export the complete flow.'}
-          </p>
-        </div>
-
-        {/* The complete saved flow is the primary Stage 6 delivery. */}
-        {exportActions}
-      </div>
-      </>}
-
-      {actionError && <div role="alert" className="rounded border border-amber-600 bg-amber-950/40 p-2 text-xs text-amber-200">{actionError}</div>}
-      {!simpleView && packageNote}
-      {task === 'anomaly' && (
-        <div role="status" className="rounded border border-amber-700 bg-amber-950/30 p-2 text-xs text-amber-200">
-          이상탐지 모델의 단독 패키지 내보내기는 학습 통계와 메모리 뱅크를 적용하는 추론기가 준비될 때까지 사용할 수 없습니다. 앱 안의 검사 플로우에서 모델을 확인하세요.
-        </div>
-      )}
-
-      <BatchInspectionPanel />
-      {simpleView && <details className="rounded-lg border border-[#2B3547] bg-[#131822] text-xs text-slate-300">
-        <summary className="cursor-pointer px-4 py-2.5 text-sm text-slate-200">내보내기·패키지·속도 측정 <span className="text-slate-500">현장 설치용 검사 흐름 패키지, 처리 속도, 단일 모델 패키지</span></summary>
-        <div className="space-y-2 px-4 pb-4">{exportActions}{packageNote}</div>
-      </details>}
-
+  const advancedTools = (<>
       <CoreModelTrialPanel task={task} jobId={jobId||''} device={trialDevice} setDevice={setTrialDevice}/>
 
       <div id="whole-flow-package-panel" ref={flowPackageRef} tabIndex={-1}
@@ -569,6 +527,54 @@ python infer.py --self-test`;
           </pre>
         </div>
       </div>
+  </>);
+
+  return (
+    <div className="flex-1 flex flex-col h-full bg-[#0B0E14] text-slate-200 overflow-y-auto select-none p-5 space-y-5 font-sans">
+      {/* Top Operator Guidance Banner */}
+      <OperatorGuidanceBanner step={6} className={simpleView ? '-mx-5 -mt-5' : ''} />
+
+      {/* Title & Action Strip (the simple view moves the exports below the batch inspection) */}
+      {!simpleView && <>
+      <div className="flex flex-col gap-3 border-b border-[#2B3547] bg-[#131822] -mx-5 -mt-5 p-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center space-x-2.5">
+            <Server className="w-5 h-5 text-slate-300" />
+            <h2 className="text-sm font-bold text-slate-100 uppercase tracking-wider font-mono">
+              {isKo ? '검사 결과 및 플로우 배포' : 'Inspection Results & Flow Deployment'}
+            </h2>
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[#1A212E] text-slate-300 border border-[#2B3547]">
+              STAGE 6
+            </span>
+          </div>
+          <p className="text-xs text-slate-400 mt-0.5">
+            {isKo
+              ? '5단계에서 저장한 검사 플로우를 실제 이미지로 확인하고, 결과 이력과 전체 플로우 패키지를 관리하세요.'
+              : 'Inspect real images with the saved Stage 5 flow, review results, and export the complete flow.'}
+          </p>
+        </div>
+
+        {/* The complete saved flow is the primary Stage 6 delivery. */}
+        {exportActions}
+      </div>
+      </>}
+
+      {actionError && <div role="alert" className="rounded border border-amber-600 bg-amber-950/40 p-2 text-xs text-amber-200">{actionError}</div>}
+      {!simpleView && packageNote}
+      {task === 'anomaly' && (
+        <div role="status" className="rounded border border-amber-700 bg-amber-950/30 p-2 text-xs text-amber-200">
+          이상탐지 모델의 단독 패키지 내보내기는 학습 통계와 메모리 뱅크를 적용하는 추론기가 준비될 때까지 사용할 수 없습니다. 앱 안의 검사 플로우에서 모델을 확인하세요.
+        </div>
+      )}
+
+      <BatchInspectionPanel />
+      {/* The simple view keeps the batch inspection in sight and gathers the field tools (exports, packages, model
+          operations, single-model trial and speed) behind one line; 모두 보기 shows them as before. */}
+      {simpleView ? <details className="rounded-lg border border-[#2B3547] bg-[#131822] text-xs text-slate-300">
+        <summary className="cursor-pointer px-4 py-2.5 text-sm text-slate-200">현장 적용·내보내기 도구 <span className="text-slate-500">검사 흐름 패키지 · 모델 운영 · 단일 모델 시험 · 처리 속도</span></summary>
+        <div className="space-y-5 px-4 pb-4">{exportActions}{packageNote}{advancedTools}</div>
+      </details> : advancedTools}
+
     </div>
   );
 };
