@@ -302,6 +302,7 @@ def test_cpu_and_browser_ci_have_independent_original_bounds_and_complete_comman
             'backend/tests/test_anomaly_flat_name_layout.py',
             'backend/tests/test_field_export_layouts.py',
             'backend/tests/test_project_activation_race.py',
+            'backend/tests/test_managed_service_first_read.py',
             'backend/tests/test_beginner_errors_korean.py',
         )),
     )
@@ -322,7 +323,7 @@ def test_cpu_and_browser_ci_have_independent_original_bounds_and_complete_comman
     preserved = original_command.replace(marker + insertion, marker, 1)
     assert hashlib.sha256(preserved.encode()).hexdigest() == 'bcc48453cbc55193ffc09ddfab2675bc657897eb509143ebb2d52264b71742fe', 'Every original CPU selector, ordering and command bound must be preserved'
     assert hashlib.sha256(original_command.encode()).hexdigest() == '402fdf2a6f2a37e30ab2c7e52acf7236d083c819502a172e57e235558df5feee', 'Complete original CPU command plus exactly eighteen published controls must remain unchanged'
-    assert hashlib.sha256(command.encode()).hexdigest() == '673213e5ce4ce0b9dc1bdcb7a037de42eb24c440bba9b1602b7f07576a92dafe', 'All original selectors, the reviewed source controls and the later publications retain exact ordering and command bytes'
+    assert hashlib.sha256(command.encode()).hexdigest() == '2c6430ad42f68f5955357cef05ada665b8085168954a097fc34c5bd41bf4732a', 'All original selectors, the reviewed source controls and the later publications retain exact ordering and command bytes'
     assert cpu_step['env'] == {'MV_CI_RECORD_DIR': '${{ runner.temp }}/modu-ci-manifests'}
     assert step(cpu, 'Core defect baseline evidence')['run'] == 'python scripts/service_baseline_evidence.py --output "$MV_CI_RECORD_DIR/ci-baseline-evidence.json"'
     assert not any(value.get('name') in {'Install test browser', 'Browser transport and flow checks'} for value in cpu['steps'])
