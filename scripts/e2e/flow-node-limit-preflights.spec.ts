@@ -56,7 +56,7 @@ const UI_SOURCE={
  "src/renderer/components/flowchart/FlowInspectorPanel.tsx": "c108ee18336c2d3cdc2accb200eb739b0a3252c7fcbd60f35902e66da06c6707",
  "src/renderer/components/flowchart/CustomNode.tsx": "7838cab7c4a19b18a0bcb3ee1238dadca0897da53df547032cbd931752337560",
  "src/renderer/components/flowchart/ImagePickerModal.tsx": "0ef27d643ddc2fddd5014e2c27087116eefbc87eb5dd92c95b732a401ceb6e4e",
- "src/renderer/stores/useFlowchartStore.ts": "1474aa439324ce0074e0a48dc7e56e20a54dc5258b2d4ced8e3d1e5d6cdeb33c",
+ "src/renderer/stores/useFlowchartStore.ts": "00fa0e410ad822ce1ccbb9353f96635e8626dad965693164458b5450eb58426d",
  "src/renderer/services/api.ts": "8ec0aa68f5d5b42101cd9a732e01146b3744ce67cad563c10ad32fb032409ce0",
  "src/renderer/components/flowchart/FlowWorkspacePanel.tsx": "6e7c74ae465e6a426601de756a91a9966615195f52c1e6aa9e4691b187baa8bf",
  "src/renderer/components/flowchart/FlowChangeDialog.tsx": "2e66a530f565b8211829d1cb3507bf2d9d1e7aa7173a1a37a54de98d19230347",

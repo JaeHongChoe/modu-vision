@@ -25,6 +25,10 @@ let flowchartGeneration = 0;
 let flowchartSaveGeneration = 0;
 let flowchartRunInputRevision = 0;
 let flowchartRunSequence = 0;
+// Counts the user's graph edits. A load that started before an edit and finishes after it must not replace the edited,
+// unsaved graph with what it read (the studio can start a second read right after the first one shows the graph).
+let flowchartEditRevision = 0;
+function markUserEdit() { flowchartEditRevision += 1; }
 let activePartialOwner: { stop: () => Promise<boolean>; refresh: () => Promise<boolean> } | null = null;
 const HISTORY_LIMIT = 50;
 
@@ -87,6 +91,11 @@ function editedIdentity(state: { flowIdentity: FlowIdentity; pipeline: Flowchart
 
 /** A read of the graph keeps the user's selection when that node is still in it: a click must not lose to a
  * draft or version read that lands a moment later. A node that is gone clears the selection as before. */
+/** Whether the user edited the graph since a load began and has not saved it yet: the load keeps the edit. */
+function editedSinceLoad(editsAtStart: number, state: { pipeline: FlowchartPipeline | null; pipelineDirty: boolean }): boolean {
+  return editsAtStart !== flowchartEditRevision && Boolean(state.pipeline) && state.pipelineDirty;
+}
+
 function keptSelection(state: { selectedNodeId: string | null }, pipeline: { nodes: Array<{ id: string }> }): string | null {
   const id = state.selectedNodeId;
   return id && pipeline.nodes.some(node => node.id === id) ? id : null;
@@ -431,6 +440,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     savedStartupRead = null;
     const savedScope = savedStartupScope(inspectionTask, sourceDatasetPath);
     const generation = ++flowchartGeneration;
+    const editsAtStart = flowchartEditRevision;
     set({ isLoading: true, errorMessage: null });
     try {
       let data: FlowchartPipeline;
@@ -443,6 +453,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
           if (!sameContext(context, draft.context)) throw new Error('저장 초안의 프로젝트 또는 라벨셋이 다릅니다.');
           if (!/^[a-f0-9]{64}$/.test(draft.draft_sha256)) throw new Error('저장 초안의 검증 해시를 확인하세요.');
           data = draft.pipeline;
+          if (editedSinceLoad(editsAtStart, get())) { set({ isLoading: false }); return get().pipeline; }
           set({ ...loadedIdentity(get()), pipeline: data, cleanPipeline: data, pipelineIsDraft: !draft.active_version_id,
             persistedDraftHash: draft.draft_sha256, baseVersionId: draftBase(draft),
             historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
@@ -470,6 +481,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
         data = await api.flowchart.getPipeline(inspectionTask, sourceDatasetPath);
       }
       if (generation !== flowchartGeneration || (canPublish && !canPublish())) return null;
+      if (editedSinceLoad(editsAtStart, get())) { set({ isLoading: false }); return get().pipeline; }
       set({
         ...loadedIdentity(get()),
         pipeline: data,
@@ -500,11 +512,13 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     const context = draftContext();
     if (!context) return null;
     const generation = ++flowchartGeneration;
+    const editsAtStart = flowchartEditRevision;
     try {
       const draft = await flowDraft.get();
       if (generation !== flowchartGeneration || !sameContext(context, draftContext())) return null;
       if (!sameContext(context, draft.context)) throw new Error('저장 초안의 프로젝트 또는 라벨셋이 다릅니다.');
       if (!/^[a-f0-9]{64}$/.test(draft.draft_sha256)) throw new Error('저장 초안의 검증 해시를 확인하세요.');
+      if (editedSinceLoad(editsAtStart, get())) return get().pipeline;
       set({ ...loadedIdentity(get()), pipeline: draft.pipeline, cleanPipeline: draft.pipeline, pipelineIsDraft: !draft.active_version_id,
         persistedDraftHash: draft.draft_sha256, baseVersionId: draftBase(draft),
         pipelineDirty: false, historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
@@ -803,6 +817,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     });
     const next = { ...current, nodes: nextNodes };
     // The earlier result stays visible as an earlier version (isExecutionResultCurrent).
+    markUserEdit();
     set({
       ...editedHistory(state),
       flowIdentity: editedIdentity(state, next),
@@ -817,6 +832,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     const current = state.pipeline;
     if (!current) return;
     const next = { ...current, nodes: [...current.nodes, newNode] };
+    markUserEdit();
     set({
       ...editedHistory(state),
       flowIdentity: editedIdentity(state, next),
@@ -830,6 +846,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     const state = get();
     if (!state.pipeline || (state.pipeline === pipeline && !newBasis)) return;
     const selectedNodeId = state.selectedNodeId;
+    markUserEdit();
     set({
       // An explicit recipe starts a new edit basis. Its previous stale graph must
       // not be restored by undo while retaining the newly observed active base.
@@ -860,6 +877,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       : node);
     const next = { ...current, nodes: nextNodes };
     // Moving a node is a layout edit: results and running inspections stay valid.
+    markUserEdit();
     set({
       ...editedHistory(state),
       flowIdentity: editedIdentity(state, next),
@@ -888,6 +906,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     const previous = state.historyPast[state.historyPast.length - 1];
     const historyPast = state.historyPast.slice(0, -1);
     const historyFuture = [...state.historyFuture, state.pipeline].slice(-HISTORY_LIMIT);
+    markUserEdit();
     set({
       flowIdentity: editedIdentity(state, previous),
       pipeline: previous, pipelineDirty: previous !== state.cleanPipeline,
@@ -904,6 +923,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
     const next = state.historyFuture[state.historyFuture.length - 1];
     const historyFuture = state.historyFuture.slice(0, -1);
     const historyPast = [...state.historyPast, state.pipeline].slice(-HISTORY_LIMIT);
+    markUserEdit();
     set({
       flowIdentity: editedIdentity(state, next),
       pipeline: next, pipelineDirty: next !== state.cleanPipeline,
