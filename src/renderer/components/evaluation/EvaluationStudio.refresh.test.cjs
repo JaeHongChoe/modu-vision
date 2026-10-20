@@ -42,7 +42,7 @@ function fixture({commonCohort=false}={}){
   },
  };
  function ModelComparisonPanel(){return null;}
- const childNames=['OperatorGuidanceBanner','JargonTooltip','GuardrailBanner','ZeroEscapeTradeoffChart','SynchronizedDualViewport','DetectionEvaluationGrains','ModelDeploymentPanel','EvaluationHistoryPanel','EvaluationEvidencePanel','FieldReadinessPanel'];
+ const childNames=['OperatorGuidanceBanner','JargonTooltip','GuardrailBanner','ZeroEscapeTradeoffChart','SynchronizedDualViewport','DetectionEvaluationGrains','ModelDeploymentPanel','EvaluationHistoryPanel','EvaluationEvidencePanel','FieldReadinessPanel','SpecialistFamilyNote'];
  const children=Object.fromEntries(childNames.map(name=>[name,{[name]:()=>null}]));
  const file=path.join(__dirname,'EvaluationStudio.tsx'),m=new Module(file,module);m.filename=file;m.paths=Module._nodeModulePaths(__dirname);
  m.require=name=>{

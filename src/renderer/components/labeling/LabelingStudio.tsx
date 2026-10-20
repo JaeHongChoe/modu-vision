@@ -31,6 +31,7 @@ import {AnnotationDraftRecovery} from './AnnotationDraftRecovery';
 import {EvidenceEditReturn} from './EvidenceEditReturn';
 import {WorkflowImpactPanel} from '../common/WorkflowImpactPanel';
 import { FOCUS_SWITCH_NAME, focusStatus, storedLabelingFocus, writeLabelingFocus, type LabelingHelperPanel } from './labelingLayout';
+import { SpecialistFamilyNote } from '../common/SpecialistFamilyNote';
 
 export const LabelingStudio: React.FC = () => {
   const { images: datasetImages } = useDatasetStore();
@@ -107,6 +108,7 @@ export const LabelingStudio: React.FC = () => {
       {/* Class Tag Bar */}
       {/* A classification image's class is chosen here; the class bar below names the regions drawn on it. */}
       <ClassificationClassPicker />
+      {projectTask === 'detection' && <SpecialistFamilyNote step={2} />}
       <CategorySelector />
       {folded('모델 보조')}
 

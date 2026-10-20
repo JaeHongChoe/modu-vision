@@ -1530,6 +1530,20 @@ def ingest_source_artifact(body: DatasetArtifactIngestRequest, request: Request)
                        source_identity={'version': 'sha256-v1', 'sha256': digest, 'size_bytes': size})
 
 
+
+@router.get("/rotated-boxes")
+def step2_rotated_boxes(request: Request):
+    """Step-2 rotated boxes as rotated detection rows, read only (audit F-16 / B3); the workbench saves them itself."""
+    from backend.api.routes_project import get_current_project
+    from backend.engine.rotated_label_reuse import step2_rotated_samples
+    project = get_current_project(request)
+    source = project.get("source_dataset_dir")
+    if not source or not Path(source).is_dir():
+        raise HTTPException(status_code=409, detail="프로젝트에 원본 데이터 폴더를 먼저 연결하세요.")
+    folder = Path(source).resolve()
+    return step2_rotated_samples(folder, project.get("task") or "detection", _read_split_manifest(folder))
+
+
 class ClassOverrideRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     image_path: str = Field(min_length=1, max_length=4096)

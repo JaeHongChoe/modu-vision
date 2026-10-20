@@ -82,7 +82,7 @@ const UI_SOURCE={
  "scripts/e2e/fixtures/test.ts": "7a7effa184e71c02414773308e0ea88e16cf83dfbd72d77d47046f2cfc1b8d09",
  "scripts/e2e/fixtures/harness.cjs": "6fe3bb6411a28bc83c6da36ba0b2480b12de6b86fd08daa61d8d0e76d7dac950",
  "scripts/e2e/fixtures/desktop-host-shim.ts": "4f598862ec0e08189628c72bbb552f72bf8fd73f5a9a05b8da1d3ddf516dcfa6",
- "backend/api/routes_dataset.py": "6915177047d0b19a40a52315c69e38e709c55a7ec4c33c224ce9bf209de61cbb"
+ "backend/api/routes_dataset.py": "2a3732363608c05610811f76a21ef584710ae085402f3d8b748d6877431350c3"
 } as const;
 export function canonical(value:any):any{return Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])):value;}
 export function assertDraftRecord(record:any,pipeline:any,context:any){

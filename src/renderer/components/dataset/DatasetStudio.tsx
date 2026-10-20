@@ -44,6 +44,7 @@ import { isSplitUnavailable } from '../../utils/datasetSplitCapability';
 import { ScopedDatasetThumbnail } from '../common/ScopedDatasetThumbnail';
 import { subscribeDataVersionRequest, takeDataVersionRequest } from '../../stores/dataVersionRequest';
 import { FieldReadinessPanel } from '../common/FieldReadinessPanel';
+import { SpecialistFamilyNote } from '../common/SpecialistFamilyNote';
 
 const SPLIT_BADGE_KO: Record<string, string> = { train: '학습', val: '검증', test: '시험', not_split: '미분할', not_used: '미사용' };
 
@@ -420,6 +421,7 @@ export const DatasetStudio: React.FC = () => {
             </section>
           )}
           {hasSelectedFolder && <FieldReadinessPanel />}
+          {hasSelectedFolder && <SpecialistFamilyNote step={1} />}
           {/* Summary KPI Readout Tiles */}
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="p-2.5 bg-[#1A212E] rounded-[4px] border border-[#2B3547]">

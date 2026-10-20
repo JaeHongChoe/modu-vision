@@ -46,6 +46,7 @@ import {EvaluationEvidencePanel} from './EvaluationEvidencePanel';
 import { accuracyNote, smallTestWarning } from './sampleConfidence';
 import { FieldReadinessPanel } from '../common/FieldReadinessPanel';
 import { scoreUnitLabel } from '../../utils/plainLabels';
+import { SpecialistFamilyNote } from '../common/SpecialistFamilyNote';
 
 const comparisonTasks = new Set<string>([
   'classification', 'detection', 'segmentation', 'anomaly', 'patch_classification',
@@ -636,6 +637,7 @@ export const EvaluationStudio: React.FC = () => {
             </div>
           </details>}
           <FieldReadinessPanel />
+          <SpecialistFamilyNote step={4} />
           {/* Approval, the inspection service, history and error analysis are a reviewer's tools: the simple view moves them
               to one closed line at the bottom of this column so the results come first. */}
           {!simpleView && <>
