@@ -1565,6 +1565,12 @@ export type TrainingStopRequest = {
   job_id?: string | null;
 };
 
+export type TruthFromLabelsRequest = {
+  version_id: string;
+  reviewer: string;
+  note?: string;
+};
+
 export type TruthRequest = {
   image_path: string;
   task: string;
@@ -1933,6 +1939,7 @@ export interface ApiRequestBody {
   "POST /api/flow-evaluations/approvals/{revision_id}/runtime-review": RuntimeFlowReviewRequest;
   "PUT /api/flow-evaluations/approvals/{revision_id}/select": FlowSelectionRequest;
   "POST /api/flow-evaluations/cohorts": CohortRequest;
+  "POST /api/flow-evaluations/cohorts/{cohort_id}/truth-from-labels": TruthFromLabelsRequest;
   "POST /api/flow-workspace/comparisons": FlowCompare;
   "POST /api/flow-workspace/templates": TemplateSave;
   "POST /api/flow-workspace/templates/{template_id}/map": TemplateMap;
