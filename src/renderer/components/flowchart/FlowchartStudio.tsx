@@ -132,6 +132,10 @@ function datasetImageReference(imagePath: string) {
 // 그래프와 실행 근거는 저장소에 두고, 탭·대화상자·확대 배율 등 화면에서만 필요한 상태는 여기서 관리한다.
 export const FlowchartStudio: React.FC = () => {
   const { language, task, setStep, isProjectBusy } = useProjectStore();
+  // The simple view folds the flow information, the inspection-image bar, node search and the node palette. Only an
+  // explicit 'simple' folds: a caller without a view mode (the studio's own structure tests) keeps every row open.
+  const simpleView = useProjectStore((state) => state.viewMode) === 'simple';
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const { jobId: trainedJobId, status: trainingStatus, isCurrentData } = useTrainingStore();
   const evaluatedJobId = useEvaluationStore((state) => state.jobId);
   const allowLatestRecovery = useEvaluationStore((state) => state.allowLatestRecovery);
@@ -998,9 +1002,83 @@ export const FlowchartStudio: React.FC = () => {
     setDragViewport(null);
   };
 
+  const targetImageBar = (
+      <div style={{display:activeTab==='edit'||activeTab==='test'?undefined:'none'}} className="shrink-0 min-h-11 bg-[#0E131C] border-b border-[#2B3547] px-4 py-1.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="shrink-0 text-xs font-bold tracking-wide text-[#94A3B8]">검사 대상</span>
+          {selectedImage ? (
+            <div className="flex min-w-0 items-center space-x-2 bg-[#131822] px-2 py-0.5 rounded border border-[#2B3547]">
+              {selectedImage.thumbnailUrl && (
+                <img
+                  src={resolveApiUrl(selectedImage.thumbnailUrl)}
+                  alt="Thumbnail"
+                  className="w-4 h-4 object-cover rounded bg-[#0B0E14]"
+                />
+              )}
+              <span className="text-[#F8FAFC] font-bold truncate max-w-xs" title={selectedImage.fileName}>{selectedImage.fileName}</span>
+              <span className="text-xs text-cyan-400 bg-[#0B0E14] px-1.5 py-0.5 rounded border border-[#2B3547]">
+                {selectedImage.source.toUpperCase()}
+              </span>
+            </div>
+          ) : (
+            <span className="text-[#94A3B8] italic">검사 이미지가 선택되지 않았습니다.</span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3">
+          {/* Zoom Controls */}
+          <div className="flex items-center space-x-1 bg-[#131822] px-1 py-0.5 rounded border border-[#2B3547]">
+            <button
+              onClick={() => setZoomScale((scale) => Math.max(0.35, (scale ?? desiredScale) - 0.1))}
+              className="p-1 hover:bg-[#1A212E] rounded text-[#94A3B8] hover:text-[#F8FAFC]"
+              title="Zoom Out"
+              aria-label="플로우 축소"
+            >
+              <ZoomOut className="w-3 h-3" />
+            </button>
+            <span className="text-xs font-mono tabular-nums px-1 text-slate-300">
+              {Math.round(displayViewport.scale * 100)}%
+            </span>
+            <button
+              onClick={() => setZoomScale((scale) => Math.min(1.5, (scale ?? desiredScale) + 0.1))}
+              className="p-1 hover:bg-[#1A212E] rounded text-[#94A3B8] hover:text-[#F8FAFC]"
+              title="Zoom In"
+              aria-label="플로우 확대"
+            >
+              <ZoomIn className="w-3 h-3" />
+            </button>
+            <button
+              onClick={() => { setZoomScale(fitViewport.scale); canvasRef.current?.scrollTo({ left: 0, top: 0, behavior: 'smooth' }); }}
+              className="p-1 hover:bg-[#1A212E] rounded text-[#94A3B8] hover:text-[#F8FAFC]"
+              title="Fit graph"
+              aria-label="플로우 전체 맞춤"
+            >
+              <RotateCcw className="w-3 h-3" />
+            </button>
+          </div>
+
+          {displayViewport.contentWidth > canvasSize.width + 16 && <div className="flex items-center gap-1 rounded border border-[#2B3547] bg-[#131822] px-1 py-0.5 text-xs text-slate-400">
+            <button type="button" onClick={() => canvasRef.current?.scrollBy({ left: -Math.max(320, canvasSize.width * 0.65), behavior: 'smooth' })}
+              className="rounded p-1 text-slate-200 hover:bg-[#1A212E]" aria-label="이전 노드 보기" title="이전 노드 보기"><ChevronLeft className="h-3.5 w-3.5" /></button>
+            <span>좌우 탐색</span>
+            <button type="button" onClick={() => canvasRef.current?.scrollBy({ left: Math.max(320, canvasSize.width * 0.65), behavior: 'smooth' })}
+              className="rounded p-1 text-slate-200 hover:bg-[#1A212E]" aria-label="다음 노드 보기" title="다음 노드 보기"><ChevronRight className="h-3.5 w-3.5" /></button>
+          </div>}
+
+          <button
+            onClick={() => setImagePickerOpen(true)}
+            className="flex items-center space-x-1.5 px-2.5 py-1 bg-[#131822] hover:bg-[#1A212E] text-cyan-400 rounded border border-[#2B3547] font-bold cursor-pointer transition-colors"
+          >
+            <ImageIcon className="w-3 h-3" />
+            <span>이미지 변경...</span>
+          </button>
+        </div>
+      </div>
+  );
+
   return (
     <div className="min-h-0 flex-1 flex flex-col h-full bg-[#0B0E14] text-[#E2E8F0] overflow-y-auto overflow-x-hidden select-none">
-      <FlowEditorWorkspace area={activeTab} onAreaChange={setActiveTab} identity={identity}/>
+      <FlowEditorWorkspace area={activeTab} onAreaChange={setActiveTab} identity={identity} compact={simpleView}/>
       {/* Top Flowchart Toolbar (Dark Steel Panel) */}
       <div className="shrink-0 min-h-14 bg-[#131822] border-b border-[#2B3547] px-4 py-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs">
         <div className="flex min-w-0 items-center gap-3">
@@ -1011,9 +1089,9 @@ export const FlowchartStudio: React.FC = () => {
             <h2 className="font-bold text-sm text-[#F8FAFC] tracking-wide">
               {language === 'ko' ? '검사 플로우 편집기' : 'Inspection Flow Editor'}
             </h2>
-            <p className="text-xs text-[#94A3B8]">
+            {!simpleView && <p className="text-xs text-[#94A3B8]">
               {language === 'ko' ? '검사 노드·연결·판정 분기 편집' : 'Edit inspection nodes, edges and verdict branches'}
-            </p>
+            </p>}
           </div>
         </div>
 
@@ -1105,6 +1183,8 @@ export const FlowchartStudio: React.FC = () => {
       </div>
 
       </details>
+      {simpleView ? <details className="shrink-0 border-b border-[#2B3547] bg-[#111923] text-xs">
+        <summary className="cursor-pointer px-4 py-1.5 text-slate-300"><span className="font-semibold text-slate-100">{pipeline?.name || '플로우 불러오는 중'}</span>{pipeline && <span className="ml-2 text-slate-400">{flowDraftStatus(pipelineDirty,persistedDraftHash,!pipelineIsDraft&&savedVersions.some(version=>version.version_id===selectedVersionId&&version.is_active),Boolean(selectedVersionId))}</span>}<span className="ml-2 text-slate-500">저장 버전·변경 기록·새 플로우·검사 이미지·확대</span></summary>
       <div className="shrink-0 relative z-20 min-h-12 bg-[#111923] border-b border-[#2B3547] px-4 py-1.5 flex flex-wrap items-center justify-between gap-2 text-xs">
         <div className="flex flex-wrap items-center gap-2 min-w-0">
           <span className="font-semibold text-slate-100 truncate max-w-[280px]" title={pipeline?.name}>{pipeline?.name || '플로우 불러오는 중'}</span>
@@ -1176,6 +1256,78 @@ export const FlowchartStudio: React.FC = () => {
           </button>
         </div>
       </div>
+        {targetImageBar}
+      </details> : <div className="shrink-0 relative z-20 min-h-12 bg-[#111923] border-b border-[#2B3547] px-4 py-1.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
+          <span className="font-semibold text-slate-100 truncate max-w-[280px]" title={pipeline?.name}>{pipeline?.name || '플로우 불러오는 중'}</span>
+          {pipeline && <span role="status" className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-semibold ${pipelineDirty
+            ? 'border-amber-700 bg-amber-950/50 text-amber-200'
+            : selectedVersionId && savedVersions.some((version) => version.version_id === selectedVersionId && version.is_active)
+              ? 'border-emerald-800 bg-emerald-950/40 text-emerald-200'
+              : 'border-slate-700 bg-slate-900 text-slate-300'}`}>
+            {flowDraftStatus(pipelineDirty,persistedDraftHash,!pipelineIsDraft&&savedVersions.some(version=>version.version_id===selectedVersionId&&version.is_active),Boolean(selectedVersionId))}
+          </span>}
+          {savedVersions.length > 0 && <label className="ml-2 flex shrink-0 items-center gap-1.5 text-xs text-slate-400">
+            저장 버전
+            <select aria-label="저장 버전" value={selectedVersionId} onChange={(event) => openSavedVersion(event.target.value)}
+              disabled={flowOpening || isLoading || isSaving || isRunning || isVerifyingAction}
+              className="max-w-[220px] rounded border border-[#364357] bg-[#1A212E] px-2 py-1 text-xs text-slate-100 disabled:opacity-50">
+              <option value="">버전 선택</option>
+              {savedVersions.map((version) => <option key={version.version_id} value={version.version_id}>
+                {version.is_active ? '● 활성 · ' : ''}{version.name} · {version.is_active && !pipelineDirty && selectedVersionId === version.version_id && pipeline
+                  ? flowRecipeLabel(pipeline, version.recipe_task)
+                  : version.recipe_task === 'mixed' ? '복합 모델' : version.recipe_task} · {new Date(version.saved_at).toLocaleString('ko-KR')}
+              </option>)}
+            </select>
+          </label>}
+          {selectedVersionId && !savedVersions.some(v => v.version_id === selectedVersionId && v.is_active) &&
+            <button onClick={() => void activateSavedVersion()} disabled={pipelineDirty || pipelineIsDraft || isLoading || isSaving || isRunning || isVerifyingAction || needsModel || Boolean(graphError)}
+              title="저장 버전을 열면 편집 화면에만 표시됩니다. 검증 후 이 버튼으로 활성 검사 흐름을 지정하세요."
+              className="shrink-0 rounded border border-emerald-700 bg-emerald-950/40 px-2 py-1 text-xs text-emerald-100 disabled:opacity-40">이 버전 활성화</button>}
+          <div className="relative shrink-0">
+            <button type="button" aria-expanded={changeHistoryOpen} onClick={() => setChangeHistoryOpen(open => !open)}
+              className="rounded border border-[#344255] px-2 py-1 text-xs text-slate-300 hover:bg-[#222B3D]">변경 기록</button>
+            {changeHistoryOpen && <div className="absolute left-0 top-full z-30 mt-2 w-[28rem] max-w-[90vw] shadow-xl">
+              <FlowChangeHistory refreshKey={`${changeRevision}:${datasetKey}`} />
+            </div>}
+          </div>
+          <span className="shrink-0 rounded border border-[#344255] px-2 py-1 text-xs text-slate-300">
+            모델 {pipeline?.nodes.filter((node) => getFlowchartModelTask(node) !== null && Boolean(node.data.model_job_id)).length || 0}/{pipeline?.nodes.filter((node) => getFlowchartModelTask(node) !== null).length || 0} 연결
+          </span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <details className="group relative">
+            <summary className="cursor-pointer list-none rounded border border-sky-700 bg-sky-950/50 px-3 py-1.5 font-semibold text-sky-100 hover:bg-sky-900">
+              새 플로우 ▾
+            </summary>
+            <div className="absolute right-0 top-full mt-2 grid w-64 gap-1 rounded-lg border border-[#3B4B60] bg-[#192333] p-2 shadow-xl">
+              <span className="px-2 py-1 text-xs font-bold uppercase tracking-wider text-slate-400">기본</span>
+              <button onClick={handleSingleModel} disabled={flowOpening || isLoading || isSaving || isRunning || isVerifyingAction}
+                className="rounded px-2.5 py-2 text-left text-slate-100 hover:bg-[#293B51] disabled:opacity-50">
+                {task === 'classification' ? '원본 이미지 분류' : task === 'anomaly' ? '원본 이미지 이상 탐지' : task === 'detection' ? '결함 검출' : '원본 타일 분할'}
+              </button>
+              <button onClick={handleDetectorRoi} disabled={flowOpening || isLoading || isSaving || isRunning || isVerifyingAction}
+                className="rounded px-2.5 py-2 text-left text-slate-100 hover:bg-[#293B51] disabled:opacity-50">검출 ROI 검사</button>
+              <button onClick={handleFixedRoi} disabled={flowOpening || isLoading || isSaving || isRunning || isVerifyingAction}
+                className="rounded px-2.5 py-2 text-left text-sky-100 hover:bg-[#293B51] disabled:opacity-50">고정 ROI 검사 · 원본 픽셀 좌표</button>
+              <button onClick={()=>openRecipe('rotation')} disabled={flowOpening||isLoading||isSaving||isRunning||isVerifyingAction} className="rounded px-2.5 py-2 text-left text-slate-100 hover:bg-[#293B51] disabled:opacity-50">학습 회전 → OCR·검사</button>
+              <button onClick={()=>openRecipe('multi')} disabled={flowOpening||isLoading||isSaving||isRunning||isVerifyingAction} className="rounded px-2.5 py-2 text-left text-slate-100 hover:bg-[#293B51] disabled:opacity-50">전처리 → 다중 모델 → 집계</button>
+              <span className="mt-1 border-t border-[#344255] px-2 pt-2 text-xs font-bold uppercase tracking-wider text-slate-400">복합 검사 예시</span>
+              <button onClick={() => handleExampleTemplate('chain')} disabled={flowOpening || isLoading || isSaving || isRunning || isVerifyingAction}
+                className="rounded px-2.5 py-2 text-left text-slate-100 hover:bg-[#293B51] disabled:opacity-50">5개 모델 연속 검사</button>
+              <button onClick={() => handleExampleTemplate('conditional')} disabled={flowOpening || isLoading || isSaving || isRunning || isVerifyingAction}
+                className="rounded px-2.5 py-2 text-left text-slate-100 hover:bg-[#293B51] disabled:opacity-50">조건 분기 검사</button>
+            </div>
+          </details>
+          <button
+            onClick={handleRestoreSaved}
+            disabled={!canVerifyGraph || isVerifyingAction || isLoading || isSaving || isRunning}
+            className="px-2.5 py-1 bg-[#1A212E] hover:bg-[#222B3D] text-slate-300 border border-[#2B3547] rounded disabled:opacity-50"
+          >
+            저장본 불러오기
+          </button>
+        </div>
+      </div>}
 
       </div>
       {modelHandoff&&!offeredModel&&modelHandoffDismissed!==`${modelHandoff.scope}:${modelHandoff.selectedAt}`&&!modelCatalogLoading&&<div role="alert" className="border-b border-amber-700 bg-amber-950/30 p-3 text-sm text-amber-200">선택한 완료 모델이 현재 프로젝트·정답 버전의 모델 목록에 없습니다. 학습 화면에서 출처를 확인하세요.<button className="ml-3 underline" onClick={dismissModelHandoff}>선택 닫기</button></div>}
@@ -1257,78 +1409,8 @@ export const FlowchartStudio: React.FC = () => {
         </div>
       )}
 
-      {/* Target Image Selector Bar */}
-      <div style={{display:activeTab==='edit'||activeTab==='test'?undefined:'none'}} className="shrink-0 min-h-11 bg-[#0E131C] border-b border-[#2B3547] px-4 py-1.5 flex flex-wrap items-center justify-between gap-2 text-xs">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="shrink-0 text-xs font-bold tracking-wide text-[#94A3B8]">검사 대상</span>
-          {selectedImage ? (
-            <div className="flex min-w-0 items-center space-x-2 bg-[#131822] px-2 py-0.5 rounded border border-[#2B3547]">
-              {selectedImage.thumbnailUrl && (
-                <img
-                  src={resolveApiUrl(selectedImage.thumbnailUrl)}
-                  alt="Thumbnail"
-                  className="w-4 h-4 object-cover rounded bg-[#0B0E14]"
-                />
-              )}
-              <span className="text-[#F8FAFC] font-bold truncate max-w-xs" title={selectedImage.fileName}>{selectedImage.fileName}</span>
-              <span className="text-xs text-cyan-400 bg-[#0B0E14] px-1.5 py-0.5 rounded border border-[#2B3547]">
-                {selectedImage.source.toUpperCase()}
-              </span>
-            </div>
-          ) : (
-            <span className="text-[#94A3B8] italic">검사 이미지가 선택되지 않았습니다.</span>
-          )}
-        </div>
-
-        <div className="flex items-center gap-3">
-          {/* Zoom Controls */}
-          <div className="flex items-center space-x-1 bg-[#131822] px-1 py-0.5 rounded border border-[#2B3547]">
-            <button
-              onClick={() => setZoomScale((scale) => Math.max(0.35, (scale ?? desiredScale) - 0.1))}
-              className="p-1 hover:bg-[#1A212E] rounded text-[#94A3B8] hover:text-[#F8FAFC]"
-              title="Zoom Out"
-              aria-label="플로우 축소"
-            >
-              <ZoomOut className="w-3 h-3" />
-            </button>
-            <span className="text-xs font-mono tabular-nums px-1 text-slate-300">
-              {Math.round(displayViewport.scale * 100)}%
-            </span>
-            <button
-              onClick={() => setZoomScale((scale) => Math.min(1.5, (scale ?? desiredScale) + 0.1))}
-              className="p-1 hover:bg-[#1A212E] rounded text-[#94A3B8] hover:text-[#F8FAFC]"
-              title="Zoom In"
-              aria-label="플로우 확대"
-            >
-              <ZoomIn className="w-3 h-3" />
-            </button>
-            <button
-              onClick={() => { setZoomScale(fitViewport.scale); canvasRef.current?.scrollTo({ left: 0, top: 0, behavior: 'smooth' }); }}
-              className="p-1 hover:bg-[#1A212E] rounded text-[#94A3B8] hover:text-[#F8FAFC]"
-              title="Fit graph"
-              aria-label="플로우 전체 맞춤"
-            >
-              <RotateCcw className="w-3 h-3" />
-            </button>
-          </div>
-
-          {displayViewport.contentWidth > canvasSize.width + 16 && <div className="flex items-center gap-1 rounded border border-[#2B3547] bg-[#131822] px-1 py-0.5 text-xs text-slate-400">
-            <button type="button" onClick={() => canvasRef.current?.scrollBy({ left: -Math.max(320, canvasSize.width * 0.65), behavior: 'smooth' })}
-              className="rounded p-1 text-slate-200 hover:bg-[#1A212E]" aria-label="이전 노드 보기" title="이전 노드 보기"><ChevronLeft className="h-3.5 w-3.5" /></button>
-            <span>좌우 탐색</span>
-            <button type="button" onClick={() => canvasRef.current?.scrollBy({ left: Math.max(320, canvasSize.width * 0.65), behavior: 'smooth' })}
-              className="rounded p-1 text-slate-200 hover:bg-[#1A212E]" aria-label="다음 노드 보기" title="다음 노드 보기"><ChevronRight className="h-3.5 w-3.5" /></button>
-          </div>}
-
-          <button
-            onClick={() => setImagePickerOpen(true)}
-            className="flex items-center space-x-1.5 px-2.5 py-1 bg-[#131822] hover:bg-[#1A212E] text-cyan-400 rounded border border-[#2B3547] font-bold cursor-pointer transition-colors"
-          >
-            <ImageIcon className="w-3 h-3" />
-            <span>이미지 변경...</span>
-          </button>
-        </div>
-      </div>
+      {/* Target Image Selector Bar (inside the flow information fold in the simple view's edit tab) */}
+      {!(simpleView && activeTab === 'edit') && targetImageBar}
 
       {/* Error Notice */}
       {errorMessage && (
@@ -1355,11 +1437,20 @@ export const FlowchartStudio: React.FC = () => {
 
       {/* Main Flow Canvas or Results View */}
       <section role="tabpanel" id="flow-panel-edit" aria-labelledby="flow-area-edit" hidden={activeTab!=='edit'} className={activeTab==='edit'?'flex min-h-[240px] flex-1 shrink-0 flex-col overflow-hidden':undefined}>
-        <FlowGraphNavigator key={`${scopeKey}:${pipeline?.id}`} nodes={positionedNodes} viewport={displayViewport}
+        {simpleView ? <details className="shrink-0 border-b border-slate-700 bg-[#101722] text-xs"><summary className="cursor-pointer px-3 py-1.5 text-slate-400">노드 찾기·전체 보기</summary>
+          <FlowGraphNavigator key={`${scopeKey}:${pipeline?.id}`} nodes={positionedNodes} viewport={displayViewport}
           canvasRef={canvasRef} selectedNodeId={selectedNodeId} disabled={dragViewport!==null||isRoiEditing||isLoading}
           onSelect={id=>{selectNode(id);setSelectedEdgeSelection(null);}} />
+        </details> : <FlowGraphNavigator key={`${scopeKey}:${pipeline?.id}`} nodes={positionedNodes} viewport={displayViewport}
+          canvasRef={canvasRef} selectedNodeId={selectedNodeId} disabled={dragViewport!==null||isRoiEditing||isLoading}
+          onSelect={id=>{selectNode(id);setSelectedEdgeSelection(null);}} />}
         <div className="min-h-[240px] shrink-0 flex-1 flex overflow-hidden">
-          <aside aria-label="검사 노드 팔레트" className="w-40 shrink-0 border-r border-slate-700 bg-[#101722] p-3 space-y-2 overflow-auto text-xs">
+          {simpleView && <button type="button" aria-expanded={paletteOpen} aria-controls="flow-node-palette" onClick={() => setPaletteOpen(open => !open)}
+            title={paletteOpen ? '노드 목록 닫기' : '노드 목록 열기'}
+            className="w-9 shrink-0 border-r border-slate-700 bg-[#101722] py-3 text-xs font-semibold text-slate-300 [writing-mode:vertical-rl] hover:bg-slate-800">
+            {paletteOpen ? '노드 목록 닫기' : '노드 추가 · 레시피'}
+          </button>}
+          <aside id="flow-node-palette" aria-label="검사 노드 팔레트" hidden={simpleView && !paletteOpen} className="w-40 shrink-0 border-r border-slate-700 bg-[#101722] p-3 space-y-2 overflow-auto text-xs">
             <h3 className="font-semibold text-slate-200">검사 노드</h3>
             {([['fixed_roi','고정 ROI'],['patch_split','패치 분할'],['preprocess','영상 전처리'],['detection_crop','검출 모델'],['inspection','검사 모델'],['blob_measure','Blob 규칙'],['measurement','치수 측정'],['aggregate','결과 집계'],['output','판정 출력']] as const).map(([type,label])=>
               <button key={type} disabled={!pipeline||isRunning||isSaving||isLoading} onClick={()=>addEditableNode(type)} className="w-full rounded border border-slate-600 px-2 py-2 text-left hover:bg-slate-800 disabled:opacity-50">{label}</button>)}

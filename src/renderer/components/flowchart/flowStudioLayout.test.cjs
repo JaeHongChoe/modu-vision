@@ -2,7 +2,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 
 // Render the real editor structure without executing its network effects. The
 // regression is its flex/overflow contract, not graph or training behavior.
-function editor(){
+function editor(project={}){
  const previousStorage=Object.getOwnPropertyDescriptor(globalThis,'localStorage');
  const values=new Map();
  Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{
@@ -14,7 +14,7 @@ function editor(){
  const flow=store({pipeline,pipelineDirty:false,pipelineIsDraft:false,executionChoiceOverride:'local_cpu',errorMessage:'Visible error',canUndo:false,canRedo:false});
  const jsx=(type,props)=>({type,props:props||{}}),component=()=>null;
  const mocks={'react':{useState:initial=>[typeof initial==='function'?initial():initial,()=>{}],useRef:initial=>({current:initial}),useEffect(){},useLayoutEffect(){}},'react/jsx-runtime':{jsx,jsxs:jsx},'lucide-react':new Proxy({}, {get:()=>component}),
-  '../../stores/useFlowchartStore':{useFlowchartStore:flow,flowSemanticKey:()=>'',isExecutionResultCurrent:()=>true},'../../stores/useDatasetStore':{useDatasetStore:store({folderPath:'/source',datasetKey:'/source\0segmentation',hasSelectedFolder:true})},'../../stores/useProjectStore':{useProjectStore:store({language:'ko',task:'segmentation'})},'../../stores/useEvaluationStore':{useEvaluationStore:store({})},'../../stores/useTrainingStore':{useTrainingStore:store({})},'../../stores/useComputeStore':{useComputeStore:store({profiles:[],selectedProfileId:null,isLoaded:true})},'../../services/api':{getProjectContext:()=>null,getProjectContextGeneration:()=>0,getApiPersistenceIdentity:()=> 'local'},
+  '../../stores/useFlowchartStore':{useFlowchartStore:flow,flowSemanticKey:()=>'',isExecutionResultCurrent:()=>true},'../../stores/useDatasetStore':{useDatasetStore:store({folderPath:'/source',datasetKey:'/source\0segmentation',hasSelectedFolder:true})},'../../stores/useProjectStore':{useProjectStore:store({language:'ko',task:'segmentation',...project})},'../../stores/useEvaluationStore':{useEvaluationStore:store({})},'../../stores/useTrainingStore':{useTrainingStore:store({})},'../../stores/useComputeStore':{useComputeStore:store({profiles:[],selectedProfileId:null,isLoaded:true})},'../../services/api':{getProjectContext:()=>null,getProjectContextGeneration:()=>0,getApiPersistenceIdentity:()=> 'local'},
   './FlowEditorWorkspace':{FlowEditorWorkspace:component,flowWorkspaceIdentity:()=>({exactSaved:false,evaluationCurrent:false,approval:'미조회',models:[],revision:0,draft:''})},'./flowRecipes':{FLOW_RECIPES:[{id:'single',title:'단일 모델 검사',description:'원본 → 모델'}],createFlowRecipe:()=>null},
   './flowchartViewport':{computeFlowchartViewport:()=>({scale:1,contentWidth:800,contentHeight:240,offsetX:0,offsetY:0,layerWidth:800,layerHeight:240}),readableFlowScale:value=>value},'./flowchartStartup':{getFlowchartModelTask:()=>null},'./flowchartGraph':{nodeClassChoices:()=>[],validateFlowchartGraph:()=>null,locateFlowIssue:()=>null,flowIssuesByTarget:()=>({nodes:new Map(),edges:new Map()})},'./flowHandoff':{flowRecipeLabel:()=> '검사'},'./flowExecution':{}};
  const name=path.join(__dirname,'FlowchartStudio.tsx'),m=new Module(name,module);m.filename=name;m.paths=Module._nodeModulePaths(__dirname);m.require=ref=>mocks[ref]??new Proxy({}, {get:()=>component});m._compile(ts.transpileModule(fs.readFileSync(name,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText,name);return m.exports.FlowchartStudio();
@@ -49,4 +49,25 @@ test('recipes and example templates stay closed while the flow is still opening 
  const menu=all(tree).find(node=>node.type==='details'&&all(node).some(child=>child.type==='summary'&&String(child.props.children).includes('새 플로우')));
  assert.ok(menu,'the new-flow menu is rendered');const items=all(menu).filter(node=>node.type==='button');
  assert.ok(items.length>=7&&items.every(button=>button.props.disabled===true),`every new-flow item is held (${items.length})`);
+});
+
+test('the simple view folds the flow information, the image bar, node search and the node palette; other views keep them open',()=>{
+ const all=node=>[node,...children(node).flatMap(all)];
+ const text=node=>[node.props?.children].flat(Infinity).map(value=>typeof value==='string'?value:value&&typeof value==='object'?text(value):'').join('');
+ const simple=all(editor({viewMode:'simple'}));
+ const workspace=simple.find(node=>node.props&&'identity' in node.props&&'compact' in node.props);
+ assert.equal(workspace?.props.compact,true,'the tab header keeps its identity lines behind one line');
+ const summaries=simple.filter(node=>node.type==='summary').map(text);
+ assert.ok(summaries.some(value=>value.includes('저장 버전·변경 기록·새 플로우·검사 이미지·확대')),'flow information and the image bar share one line');
+ assert.ok(summaries.some(value=>value.includes('노드 찾기·전체 보기')),'node search and the minimap wait behind one line');
+ const fold=simple.find(node=>node.type==='details'&&text(node).includes('저장본 불러오기'));
+ assert.ok(fold&&text(fold).includes('검사 대상'),'the image bar moves into the flow information fold on the edit tab');
+ const palette=simple.find(node=>node.props?.['aria-label']==='검사 노드 팔레트');
+ assert.equal(palette.props.hidden,true,'the palette starts closed');
+ const toggle=simple.find(node=>node.props?.['aria-controls']==='flow-node-palette');
+ assert.equal(toggle.props['aria-expanded'],false);assert.match(text(toggle),/노드 추가 · 레시피/);
+ const full=all(editor({viewMode:'full'}));
+ assert.ok(!full.some(node=>node.props?.['aria-controls']==='flow-node-palette'),'모두 보기 has no palette toggle');
+ assert.equal(full.find(node=>node.props?.['aria-label']==='검사 노드 팔레트').props.hidden,false);
+ assert.ok(!full.some(node=>node.type==='summary'&&text(node).includes('노드 찾기·전체 보기')));
 });
