@@ -99,7 +99,7 @@ test('S0-08: a model trained on the actual backend carries its calibrated thresh
   await expect(page.getByText('모델 1/1 연결')).toBeVisible();
   await expect(thresholdInput(page), 'the evaluation calibration is the flow default').toHaveValue(String(calibrated));
   await thresholdInput(page).fill('8');
-  await expect(page.getByText('결함 판정 임계치 · mahalanobis_distance')).toBeVisible();
+  await expect(page.getByText('결함 판정 기준 점수 · 마할라노비스 거리')).toBeVisible();
   const saved = page.waitForResponse(response => new URL(response.url()).pathname === '/api/flowchart/pipeline' && response.request().method() === 'POST');
   await page.getByRole('button', { name: '플로우 저장', exact: true }).click();
   await confirmFlowSave(page, 'threshold 8');
