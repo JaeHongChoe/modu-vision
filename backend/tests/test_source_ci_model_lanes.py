@@ -276,6 +276,39 @@ def test_cpu_and_browser_ci_have_independent_original_bounds_and_complete_comman
     assert command.count(source_marker + source_insertion) == 1
     assert all(command.split().count(reference) == 1 for reference in source_controls)
     original_command = command.replace(source_marker + source_insertion, source_marker, 1)
+    # Later publications: the owned-lifetime diagnostics after the runtime update recovery control, and the
+    # beginner-path controls (truth from labels, anomaly name rules, Korean refusals) after the whole-flow review.
+    later_controls = (
+        ('backend/tests/test_runtime_update_recovery.py ', (
+            'backend/tests/test_first_unsupported_origin_diagnostic.py',
+            'backend/tests/test_owned_health_diagnostic.py',
+            'backend/tests/test_owned_health_failure_diagnostic.py',
+            'backend/tests/test_original_request_route_projection.py',
+            'backend/tests/test_flow_open_additional_route_labels.py',
+            'backend/tests/test_warm_scoped_get_lifetime.py',
+            'backend/tests/test_original_resident_execution_resources.py',
+            'backend/tests/test_original_owned_preflight_list_lifetime.py',
+            'backend/tests/test_original_owned_flow_change_history_lifetime.py',
+            'backend/tests/test_original_owned_flow_lifetime.py',
+            'backend/tests/test_flowchart_flow_contract.py',
+            'backend/tests/test_application_final_drain_diagnostic.py',
+            'backend/tests/test_original_unchanged_flow_save_lifetime.py',
+            'backend/tests/test_original_owned_library_no_revision.py',
+        )),
+        ('backend/tests/test_whole_flow_runtime_review.py ', (
+            'backend/tests/test_flow_evaluation_folder_split.py',
+            'backend/tests/test_flow_truth_from_labels.py',
+            'backend/tests/test_anomaly_name_prefixes.py',
+            'backend/tests/test_anomaly_flat_name_layout.py',
+            'backend/tests/test_field_export_layouts.py',
+            'backend/tests/test_beginner_errors_korean.py',
+        )),
+    )
+    for later_marker, controls in later_controls:
+        later_insertion = ' '.join(controls) + ' '
+        assert original_command.count(later_marker + later_insertion) == 1, later_marker
+        assert all(command.split().count(reference) == 1 for reference in controls), later_marker
+        original_command = original_command.replace(later_marker + later_insertion, later_marker, 1)
     history_marker = 'backend/tests/test_gui_execution_evidence.py '
     history_control = 'backend/tests/test_gui_execution_historical_source.py '
     assert original_command.count(history_marker + history_control) == 1
@@ -288,7 +321,7 @@ def test_cpu_and_browser_ci_have_independent_original_bounds_and_complete_comman
     preserved = original_command.replace(marker + insertion, marker, 1)
     assert hashlib.sha256(preserved.encode()).hexdigest() == 'bcc48453cbc55193ffc09ddfab2675bc657897eb509143ebb2d52264b71742fe', 'Every original CPU selector, ordering and command bound must be preserved'
     assert hashlib.sha256(original_command.encode()).hexdigest() == '402fdf2a6f2a37e30ab2c7e52acf7236d083c819502a172e57e235558df5feee', 'Complete original CPU command plus exactly eighteen published controls must remain unchanged'
-    assert hashlib.sha256(command.encode()).hexdigest() == '60bf9ff96d8625bc896f2ce4f272545c32751ebdb0aa5f58bcbd2973c12f678b', 'All original selectors and the five reviewed source controls retain exact ordering and command bytes'
+    assert hashlib.sha256(command.encode()).hexdigest() == '02f96f54339d5420a10a9299412d9a1b430b1e2b1cf1345747542cd0317b7c31', 'All original selectors, the reviewed source controls and the later publications retain exact ordering and command bytes'
     assert cpu_step['env'] == {'MV_CI_RECORD_DIR': '${{ runner.temp }}/modu-ci-manifests'}
     assert step(cpu, 'Core defect baseline evidence')['run'] == 'python scripts/service_baseline_evidence.py --output "$MV_CI_RECORD_DIR/ci-baseline-evidence.json"'
     assert not any(value.get('name') in {'Install test browser', 'Browser transport and flow checks'} for value in cpu['steps'])

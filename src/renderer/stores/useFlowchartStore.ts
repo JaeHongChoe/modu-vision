@@ -85,6 +85,13 @@ function editedIdentity(state: { flowIdentity: FlowIdentity; pipeline: Flowchart
     : { ...state.flowIdentity, semantic_revision: state.flowIdentity.semantic_revision + 1 };
 }
 
+/** A read of the graph keeps the user's selection when that node is still in it: a click must not lose to a
+ * draft or version read that lands a moment later. A node that is gone clears the selection as before. */
+function keptSelection(state: { selectedNodeId: string | null }, pipeline: { nodes: Array<{ id: string }> }): string | null {
+  const id = state.selectedNodeId;
+  return id && pipeline.nodes.some(node => node.id === id) ? id : null;
+}
+
 function loadedIdentity(state: { flowIdentity: FlowIdentity }): Pick<FlowchartState, 'flowIdentity' | 'executionIdentity'> {
   return { flowIdentity: { semantic_revision: state.flowIdentity.semantic_revision + 1, layout_revision: 0 }, executionIdentity: null };
 }
@@ -439,7 +446,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
           set({ ...loadedIdentity(get()), pipeline: data, cleanPipeline: data, pipelineIsDraft: !draft.active_version_id,
             persistedDraftHash: draft.draft_sha256, baseVersionId: draftBase(draft),
             historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
-            pipelineDirty: false, selectedNodeId: null, executionResult: null, lastRunSource: null,
+            pipelineDirty: false, selectedNodeId: keptSelection(get(), data), executionResult: null, lastRunSource: null,
             inspectedCrop: null, isLoading: false });
           rememberSavedStartupRead(data, draft.active_version_id, savedScope);
           return data;
@@ -472,7 +479,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
         pipelineDirty: false,
         pipelineIsDraft: false,
         persistedDraftHash: null,
-        selectedNodeId: null,
+        selectedNodeId: keptSelection(get(), data),
         executionResult: null,
         inspectedCrop: null,
         isLoading: false,
@@ -501,7 +508,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
       set({ ...loadedIdentity(get()), pipeline: draft.pipeline, cleanPipeline: draft.pipeline, pipelineIsDraft: !draft.active_version_id,
         persistedDraftHash: draft.draft_sha256, baseVersionId: draftBase(draft),
         pipelineDirty: false, historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
-        executionResult: null, lastRunSource: null, inspectedCrop: null, selectedNodeId: null, errorMessage: null });
+        executionResult: null, lastRunSource: null, inspectedCrop: null, selectedNodeId: keptSelection(get(), draft.pipeline), errorMessage: null });
       return draft.pipeline;
     } catch (error) {
       if (generation === flowchartGeneration && (error as { status?: number }).status !== 404)
@@ -553,7 +560,7 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
         pipeline: data, cleanPipeline: data, pipelineIsDraft: false, baseVersionId: base,
         persistedDraftHash: null,
         historyPast: [], historyFuture: [], historyGroupStart: null, canUndo: false, canRedo: false,
-        pipelineDirty: false, selectedNodeId: null,
+        pipelineDirty: false, selectedNodeId: keptSelection(get(), data),
         executionResult: null, inspectedCrop: null, isLoading: false,
       });
       return data;

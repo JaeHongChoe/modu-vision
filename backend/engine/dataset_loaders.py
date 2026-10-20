@@ -497,7 +497,7 @@ class ClassificationDataset(Dataset):
             cidx = class_to_idx[cname]
             cdir = folder / cname
             for p in sorted(cdir.glob("*")):
-                if (p.is_file() and str(p.resolve()) not in unused
+                if (p.is_file() and str(p.resolve()) not in unused and not p.name.startswith(".")
                         and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
                         and (not inventory_eligible or is_inventory_path(p.relative_to(folder).parts, "classification"))):
                     samples.append((p, cidx))
@@ -916,7 +916,7 @@ class SegmentationDataset(Dataset):
         from backend.engine.dataset_usage import unused_image_paths
         unused=unused_image_paths(self.images_dir)
         for img_p in sorted(self.images_dir.glob("*")):
-            if str(img_p.resolve()) in unused:continue
+            if str(img_p.resolve()) in unused or img_p.name.startswith("."):continue  # '._x.jpg' resource forks are not images
             if img_p.is_file() and (img_p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS or img_p.name.lower().endswith(".jpg.jpg")):
                 clean_stem = sanitize_file_stem(img_p)
                 raw_stem = img_p.stem
@@ -1481,7 +1481,7 @@ def inspect_dataset(root_dir: Union[str, Path], task: str, ignore_saved_split: b
             split_counts = {
                 name: sum(
                     1 for p in image_dir.glob("*")
-                    if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
+                    if p.is_file() and not p.name.startswith(".") and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
                 ) if image_dir.is_dir() else 0
                 for name, image_dir in split_image_dirs.items()
             }

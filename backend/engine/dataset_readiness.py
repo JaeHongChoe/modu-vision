@@ -58,4 +58,8 @@ def task_schema(source,task,rows):
             elif task not in {'anomaly','anomaly_detection'}:raise ValueError('Unsupported task schema')
         except (ValueError,OSError,KeyError,TypeError) as exc:error=str(exc)
         items.append({'relative_path':row['relative_path'],'valid':error is None,'error':error})
-    return {'task':task,'valid_count':sum(r['valid'] for r in items),'invalid_count':sum(not r['valid'] for r in items),'items':items,'limits':'Schema/geometry consistency only; labels and common-original metadata still need human review.'}
+    # Anomaly: files in train/ whose names say defect (anomaly*, NG_*, ...) are kept out of normal training and
+    # counted as defects, so the screen can say so instead of silently training on fewer images.
+    train_defect_named=sum(1 for row in rows if task in {'anomaly','anomaly_detection'}
+                           and folder_label_split(Path(row['relative_path']),task)==('defect','train'))
+    return {'task':task,'valid_count':sum(r['valid'] for r in items),'invalid_count':sum(not r['valid'] for r in items),'items':items,'train_defect_named':train_defect_named,'limits':'Schema/geometry consistency only; labels and common-original metadata still need human review.'}

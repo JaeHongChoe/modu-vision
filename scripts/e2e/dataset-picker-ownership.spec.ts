@@ -39,7 +39,7 @@ async function view(page: Page, project: any, data: Cohort) {
   const images = page.locator('button[aria-label$=" 라벨링에서 열기"] img');
   await expect(images).toHaveCount(data.count);
   await expect.poll(() => images.evaluateAll(nodes => nodes.every(node => node instanceof HTMLImageElement && node.complete && node.naturalWidth > 0))).toBe(true);
-  const paths = await images.evaluateAll(nodes => nodes.map(node => new URL((node as HTMLImageElement).src).searchParams.get('file_path')).sort());
+  const paths = await images.evaluateAll(nodes => nodes.map(node => new URL((node as HTMLImageElement).dataset.thumbnailPath || (node as HTMLImageElement).src, location.origin).searchParams.get('file_path')).sort());
   expect(paths).toEqual(data.originals.map(row => row.path).sort());
   return {project_id: project.id, source: data.source, count: data.count, original_paths: paths,
     original_sha256: data.originals, all_gallery_pixels_loaded: true};

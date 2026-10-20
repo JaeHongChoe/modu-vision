@@ -529,7 +529,7 @@ def _run_remote_operation_artifacts(
     downloads: dict[str, Path] = {}
     staged_paths: list[Path] = []
     capability_scope = (transport.download_capability_scope(context.profile)
-                        if isinstance(transport, SSHTransport) else nullcontext())
+                        if callable(getattr(transport, 'download_capability_scope', None)) else nullcontext())
     try:
         with capability_scope:
             for entry in entries:

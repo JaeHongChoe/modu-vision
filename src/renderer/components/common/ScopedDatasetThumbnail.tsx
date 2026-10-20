@@ -52,11 +52,13 @@ export function createScopedThumbnailRead(options: ThumbnailRead): {observe: (el
       if (observed || !current() || !thumbnailPath(options.path) || (transport !== 'local' && !captured)
           || typeof IntersectionObserver === 'undefined') return;
       observed = true;
+      // Read thumbnails that are near the viewport too, as the browser's own lazy images do: a gallery
+      // row just below the fold is ready when the user scrolls to it instead of showing empty boxes.
       observer = new IntersectionObserver(entries => {
         if (!current() || !entries.some(entry => entry.target === element && entry.isIntersecting)) return;
         observer?.disconnect();
         void start();
-      });
+      }, {rootMargin: '800px 0px'});
       observer.observe(element);
     },
     retire() {
@@ -100,6 +102,7 @@ export const ScopedDatasetThumbnail: React.FC<Props> = ({path, authority, contex
   const failed = eligible && loaded?.key === key && loaded.failed;
   return <img ref={image} src={displayed} alt={alt} className={className} loading="lazy" decoding="async"
     data-read-state={failed ? 'failed' : displayed ? 'ready' : 'pending'}
+    data-thumbnail-path={path}
     onLoad={event => { if (displayed && current() && event.currentTarget.src === displayed) onLoad?.(event); }}
     onError={() => { if (displayed && current()) setLoaded({key, url: null, failed: true}); }}/>
 };

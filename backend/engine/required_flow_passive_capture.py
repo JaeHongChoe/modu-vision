@@ -454,7 +454,7 @@ CURRENT_PRODUCER_SOURCE_PINS = types.MappingProxyType({name: types.MappingProxyT
 # Exact semantic successor: accepted local partial-cancel engine, same other five producers.
 COMBINED_PRODUCER_SOURCE_PINS = types.MappingProxyType({name: types.MappingProxyType(dict(row))
     for name, row in {**CURRENT_PRODUCER_SOURCE_PINS, 'backend/engine/flowchart_engine.py': {
-        'size': 149647, 'sha256': '958fb9f1d1047d351615f435b3ec16cb4dd5a5d21415ce886948b822f9bf7cba'}}.items()})
+        'size': 151573, 'sha256': 'ce9e52a393d0dd3210a9282a5b67a4eb4e5a97edab7c5e95be1ed32a32cc82eb'}}.items()})
 # Separate exact successor: rotation's parameterless-adapter input-device fallback.
 # The observed _predict/forward functions and the other five producer sources stay fixed.
 PARAMETERLESS_ROTATION_PRODUCER_SOURCE_PINS = types.MappingProxyType({name: types.MappingProxyType(dict(row))
