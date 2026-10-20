@@ -261,7 +261,7 @@ export const AnnotationList: React.FC = () => {
               <Ruler className="w-5 h-5 stroke-[1.5]" />
             </div>
             <div className="text-xs font-medium text-slate-300">이 이미지에는 라벨이 없습니다</div>
-            <div className="mt-1 text-[11px] text-slate-400">{classification ? '분류 학습은 폴더 이름을 정답으로 씁니다. 결함 영역은 그리지 않아도 됩니다.' : '왼쪽 도구(단축키 1~6)로 결함 영역을 그리세요.'}</div>
+            <div className="mt-1 text-[11px] text-slate-400">{classification ? "이미지 분류의 정답은 위 '이 이미지의 클래스'에서 정합니다. 영역은 패치 분류·근거용이라 그리지 않아도 됩니다." : '왼쪽 도구(단축키 1~6)로 결함 영역을 그리세요.'}</div>
           </div>
         ) : (
           annotations.map((ann, idx) => {

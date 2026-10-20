@@ -15,6 +15,7 @@ import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { useProjectStore } from '../../stores/useProjectStore';
 import { LabelingToolbar } from './LabelingToolbar';
 import { CategorySelector } from './CategorySelector';
+import { ClassificationClassPicker } from './ClassificationClassPicker';
 import { LabelingCanvas } from './LabelingCanvas';
 import { MaskLayerControls } from './MaskLayerControls';
 import { AnnotationList } from './AnnotationList';
@@ -73,7 +74,7 @@ export const LabelingStudio: React.FC = () => {
   return (
     <div className="flex flex-col h-full w-full bg-[#0B0E14] text-slate-200 overflow-hidden select-none">
       {/* Top Action Toolbar */}
-      <LabelingToolbar />
+      <LabelingToolbar classification={projectTask === 'classification'} />
       <EvidenceEditReturn />
       <div className="flex items-center justify-end gap-2 border-b border-slate-800 px-3 py-0.5 text-[11px] text-slate-400">
         {focus && <span>{focusStatus(focus)}</span>}
@@ -104,6 +105,8 @@ export const LabelingStudio: React.FC = () => {
       )}
 
       {/* Class Tag Bar */}
+      {/* A classification image's class is chosen here; the class bar below names the regions drawn on it. */}
+      <ClassificationClassPicker />
       <CategorySelector />
       {folded('모델 보조')}
 

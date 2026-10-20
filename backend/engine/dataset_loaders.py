@@ -406,6 +406,20 @@ def _read_image_rgb_unchecked(p_str: str, bg_color: str = "white") -> np.ndarray
 # Task 1: Multi-Class Classification Dataset
 # ============================================================================
 
+def _with_class_overrides(root: Path, samples, classes):
+    """Apply the classes chosen per image in step 2 (class_overrides) to (path, label index) samples. The class list is
+    the folder classes plus every chosen class, in the usual order, so separate train/val/test datasets of one source
+    agree on the indices."""
+    from backend.engine.class_overrides import read_class_overrides, sort_classes
+    overrides = read_class_overrides(root)
+    if not overrides:
+        return samples, list(classes), {name: idx for idx, name in enumerate(classes)}
+    merged = sort_classes(list(classes) + list(overrides.values()))
+    index = {name: idx for idx, name in enumerate(merged)}
+    remapped = [(path, index[overrides.get(str(Path(path).resolve()), classes[label])]) for path, label in samples]
+    return remapped, merged, index
+
+
 class ClassificationDataset(Dataset):
     """
     Folder-based industrial defect classification dataset.
@@ -458,6 +472,7 @@ class ClassificationDataset(Dataset):
             image_paths = {str(path) for path, _ in all_samples}
             if image_paths != set(assignments):
                 raise ValueError("Saved split no longer matches classification images; apply the split again")
+            all_samples, self.classes, self.class_to_idx = _with_class_overrides(self.root_dir, all_samples, self.classes)
             self.samples = [
                 sample for sample in all_samples
                 if split is None or assignments[str(sample[0])] == split
@@ -480,9 +495,11 @@ class ClassificationDataset(Dataset):
                 self.samples = [(path, self.class_to_idx[local_classes[label_idx]]) for path, label_idx in local_samples]
             else:
                 self.samples = []
+            self.samples, self.classes, self.class_to_idx = _with_class_overrides(self.root_dir, self.samples, self.classes)
         else:
             self.split_basis = "automatic"
             self.samples, self.classes, self.class_to_idx = self._load_from_folder(self.root_dir, inventory_eligible=True)
+            self.samples, self.classes, self.class_to_idx = _with_class_overrides(self.root_dir, self.samples, self.classes)
             if split and split in ["train", "val"]:
                 self.samples = self._split_samples(self.samples, split, val_split, seed)
             elif split == "test":
@@ -1373,6 +1390,7 @@ def inspect_dataset(root_dir: Union[str, Path], task: str, ignore_saved_split: b
                 s_dir = root / split_name
                 if s_dir.is_dir():
                     samples, classes, _ = ClassificationDataset._load_from_folder(s_dir, inventory_eligible=True)
+                    samples, classes, _ = _with_class_overrides(root, samples, classes)
                     for _, label_idx in samples:
                         cname = classes[label_idx]
                         counts[cname] = counts.get(cname, 0) + 1

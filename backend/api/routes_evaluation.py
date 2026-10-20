@@ -481,9 +481,9 @@ def _evaluate_classification(
     }
 
     with torch.no_grad():
-        for img_path, _ in val_ds.samples:
+        for img_path, sample_label in val_ds.samples:
             if cancel is not None and cancel.is_set(): raise InterruptedError("Common evaluation cancelled")
-            cname = img_path.parent.name
+            cname = val_ds.classes[sample_label]  # the folder class, or the class chosen for this image in step 2
             target_idx = class_to_idx.get(cname, 0)
 
             rgb = _read_image_rgb(img_path)

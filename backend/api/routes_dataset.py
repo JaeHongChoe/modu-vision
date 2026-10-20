@@ -23,7 +23,7 @@ import threading
 import time
 import uuid
 from collections import OrderedDict
-from pathlib import Path, PurePosixPath
+from pathlib import Path, PurePath, PurePosixPath
 from typing import Any, Dict, List, Literal, Optional, Union
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response
@@ -818,6 +818,12 @@ def split_dataset_endpoint(req: DatasetSplitRequest):
         for f in effective_folder.rglob("*"):
             if f.is_file() and not f.name.startswith("._") and f.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
                 items.append({"image_path": str(f), "label": f.parent.name})
+    if req.task == "classification":
+        # Stratify by the class training will read: a class chosen for an image in step 2 replaces its folder name.
+        from backend.engine.class_overrides import read_class_overrides
+        chosen = read_class_overrides(effective_folder)
+        for item in items:
+            item["label"] = chosen.get(str(Path(item["image_path"]).resolve()), item["label"])
 
     paired_images = _paired_labelme_images(effective_folder)
     if _has_flat_labelme_annotations(effective_folder):
@@ -916,7 +922,11 @@ def list_dataset_images(
                     with open_source_image(item.file_path) as opened:item.width,item.height=opened.size
                 except IMAGE_OPEN_ERRORS:
                     pass  # an undecodable image is listed without geometry; the import inspection reports it
-                paged.append(item.model_dump())
+                listed=item.model_dump()
+                if row.get('class_source'):
+                    # Classification rows say where the class comes from: the folder, or a class chosen in step 2.
+                    listed.update(class_source=row['class_source'],folder_label=row.get('folder_label'))
+                paged.append(listed)
             return {'total':len(filtered),'limit':limit,'offset':offset,'items':paged,
                     'class_split_counts':_class_split_counts([ImageMeta(**r) for r in all_rows]) if include_class_splits else None}
     effective_dir = _resolve_task_folder(target_dir, requested_task) if requested_task else target_dir
@@ -1059,9 +1069,10 @@ def list_dataset_images(
                         img_w = jd.get("image_width", jd.get("imageWidth"))
                         img_h = jd.get("image_height", jd.get("imageHeight"))
                         shapes = jd.get("annotations", []) if json_candidate == studio_json else jd.get("shapes", [])
-                        c_labels = list(dict.fromkeys(shape['label'] for shape in shapes
-                            if isinstance(shape,dict) and isinstance(shape.get('label'),str) and shape['label']))
-                        c_label = c_labels[0] if c_labels else None
+                        if requested_task != 'classification':  # a classification image keeps its folder class
+                            c_labels = list(dict.fromkeys(shape['label'] for shape in shapes
+                                if isinstance(shape,dict) and isinstance(shape.get('label'),str) and shape['label']))
+                            c_label = c_labels[0] if c_labels else None
                     except Exception:
                         pass
                 if has_labelme and f.resolve() not in paired_images:
@@ -1517,3 +1528,39 @@ def ingest_source_artifact(body: DatasetArtifactIngestRequest, request: Request)
             raise HTTPException(422, str(exc)) from exc
         return receipt(context, artifact_ref=ref.model_dump(), state='referenced',
                        source_identity={'version': 'sha256-v1', 'sha256': digest, 'size_bytes': size})
+
+
+class ClassOverrideRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    image_path: str = Field(min_length=1, max_length=4096)
+    # None, empty or the folder's own class returns the image to its folder class.
+    class_name: Optional[str] = Field(default=None, max_length=100)
+    actor: str = Field(default="operator", min_length=1, max_length=100)
+
+
+@router.put("/metadata/class-override")
+def set_image_class(body: ClassOverrideRequest, request: Request):
+    """Choose the class of one image in a folder-based classification project without moving the file (audit A2).
+
+    Training, evaluation, the step-1 counts, the gallery and whole-flow truth from labels all apply the choice; the
+    dataset fingerprint changes, so models, evaluations and flows built on the previous classes become stale.
+    """
+    from backend.api.routes_project import get_current_project
+    from backend.engine.class_overrides import set_class_override
+    from backend.engine.dataset_inventory import folder_label_split
+    project = get_current_project(request)
+    if project.get("task") != "classification":
+        raise HTTPException(409, "이미지별 클래스 지정은 분류 프로젝트에서만 쓸 수 있습니다.")
+    if not project.get("source_dataset_dir"):
+        raise HTTPException(409, "먼저 프로젝트의 데이터 원본을 선택하세요.")
+    source = Path(project["source_dataset_dir"]).resolve()
+    image = Path(body.image_path).expanduser().resolve()
+    if not image.is_relative_to(source):
+        raise HTTPException(422, "이미지가 프로젝트의 데이터 폴더 밖에 있습니다.")
+    folder_class, _ = folder_label_split(PurePath(image.relative_to(source).as_posix()), "classification")
+    try:
+        return set_class_override(Path(project["project_dir"]), source, image, body.class_name, body.actor, folder_class)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, "이미지 파일을 찾을 수 없습니다.") from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc

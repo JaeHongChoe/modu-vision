@@ -137,6 +137,8 @@ interface AnnotationState {
   setHeatmapUrl: (url: string | null) => void;
 
   markNormal: (isNormal: boolean) => void;
+  /** Classification: the class chosen for an image (or its folder class again), applied to the open image list. */
+  applyImageClass: (filePath: string, label: string | null, classSource: 'folder' | 'override') => void;
   loadAnnotationsForCurrent: () => Promise<boolean>;
   saveAnnotations: () => Promise<boolean>;
 
@@ -494,6 +496,13 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   toggleMaskVisible: () => set((state) => ({ maskVisible: !state.maskVisible })),
 
   setHeatmapUrl: (url) => set({ heatmapUrl: url }),
+
+  applyImageClass: (filePath, label, classSource) => {
+    const update = (image: ImageMeta) => image.file_path === filePath
+      ? { ...image, label, labels: label ? [label] : [], class_source: classSource } : image;
+    const { images, currentImage } = get();
+    set({ images: images.map(update), currentImage: currentImage ? update(currentImage) : currentImage });
+  },
 
   markNormal: (isNormal) => {
     if (get().annotationLoadStatus !== 'ready') return;

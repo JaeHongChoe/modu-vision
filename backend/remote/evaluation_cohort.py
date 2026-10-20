@@ -223,6 +223,8 @@ def freeze_cohort(project, version_id, source, task, meta, context):
         data = staging / 'data'
         data.mkdir()
         samples, detection_rows = [], []
+        from backend.engine.class_overrides import read_class_overrides
+        chosen_classes = read_class_overrides(source) if task == 'classification' else {}
         token = set_request_annotation_root(annotations)
         try:
             for index, image in enumerate(selected):
@@ -232,7 +234,7 @@ def freeze_cohort(project, version_id, source, task, meta, context):
                 name = f'{index:06d}' + image.suffix.lower()
                 truth = None
                 if task == 'classification':
-                    truth = image.parent.name
+                    truth = chosen_classes.get(str(image.resolve()), image.parent.name)  # step-2 class wins
                     if truth not in classes: raise ValueError('Cohort contains a class absent from the completed model')
                     target = Path('test') / truth / name
                 elif task == 'detection':

@@ -75,6 +75,9 @@ export interface ImageMeta {
   labels?: string[];
   thumbnail_url: string;
   has_annotation?: boolean;
+  /** Classification: where the class comes from (its folder, or a class chosen in step 2) and the folder's class. */
+  class_source?: 'folder' | 'override' | null;
+  folder_label?: string | null;
 }
 
 export interface AnnotationItem {

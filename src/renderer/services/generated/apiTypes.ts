@@ -253,6 +253,12 @@ export type CaptureGroupPolicyRequest = {
   policy: { [key: string]: unknown };
 };
 
+export type ClassOverrideRequest = {
+  image_path: string;
+  class_name?: string | null;
+  actor?: string;
+};
+
 export type CohortRequest = {
   version_id: string;
   name?: string;
@@ -1888,6 +1894,7 @@ export interface ApiRequestBody {
   "POST /api/dataset/masks/export": MaskExportRequest;
   "POST /api/dataset/masks/import": MaskImportRequest;
   "POST /api/dataset/metadata/bulk": BulkMetadataRequest;
+  "PUT /api/dataset/metadata/class-override": ClassOverrideRequest;
   "POST /api/dataset/metadata/split": SplitRequest;
   "PATCH /api/dataset/metadata/{image_uuid}": EditRequest;
   "POST /api/dataset/operations/backups/{job_id}/restore": RestoreRequest;

@@ -76,9 +76,11 @@ test('the simple view class bar leads with the project classes and folds unused 
 });
 
 test('a classification project says where each image\'s answer comes from instead of asking for drawn regions',()=>{
- const categories=read('labeling/CategorySelector.tsx');
- assert.match(categories,/이 이미지의 정답 <strong[^>]*>\{folderClass\}<\/strong>/);assert.match(categories,/classification && folderClass &&/);
+ const picker=read('labeling/ClassificationClassPicker.tsx');
+ assert.match(picker,/이 이미지의 클래스/);assert.match(picker,/폴더 클래스로 되돌리기/);assert.match(picker,/원본 파일은 옮기지 않습니다/);
+ assert.match(read('labeling/LabelingStudio.tsx'),/<ClassificationClassPicker \/>/);
+ assert.match(read('labeling/LabelingToolbar.tsx'),/classification \? 'hidden' : 'flex items-center space-x-2'/,'the OK tag toggle is not offered for classification');
  const list=read('labeling/AnnotationList.tsx');
  assert.match(list,/이 이미지에는 라벨이 없습니다/,'the empty-state title stays');
- assert.match(list,/classification \? '분류 학습은 폴더 이름을 정답으로 씁니다/);
+ assert.match(list,/이미지 분류의 정답은 위 '이 이미지의 클래스'에서 정합니다/);
 });

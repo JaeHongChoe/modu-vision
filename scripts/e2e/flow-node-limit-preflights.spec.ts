@@ -66,7 +66,7 @@ const UI_SOURCE={
  "src/renderer/components/flowchart/CustomNode.tsx": "97350539036826f52411bc8defe234d638e2c18fde5092a5f104af7557dd1828",
  "src/renderer/components/flowchart/ImagePickerModal.tsx": "0ef27d643ddc2fddd5014e2c27087116eefbc87eb5dd92c95b732a401ceb6e4e",
  "src/renderer/stores/useFlowchartStore.ts": "00fa0e410ad822ce1ccbb9353f96635e8626dad965693164458b5450eb58426d",
- "src/renderer/services/api.ts": "562c756dda6887b4f025c769b85f65dd58fe474c88753c6526b48f83ea57879d",
+ "src/renderer/services/api.ts": "8e9a6005af48cfa385463cef4521cffcbfa5096172ba14ad0cffc9ab6746357e",
  "src/renderer/components/flowchart/FlowWorkspacePanel.tsx": "6e7c74ae465e6a426601de756a91a9966615195f52c1e6aa9e4691b187baa8bf",
  "src/renderer/components/flowchart/FlowChangeDialog.tsx": "2e66a530f565b8211829d1cb3507bf2d9d1e7aa7173a1a37a54de98d19230347",
  "src/renderer/components/flowchart/FlowRecipeDialog.tsx": "09418ce7091fd126a9f341fddf0acb9d30f20fe955268c71ae21f25204c935ba",
@@ -80,7 +80,7 @@ const UI_SOURCE={
  "scripts/e2e/fixtures/test.ts": "7a7effa184e71c02414773308e0ea88e16cf83dfbd72d77d47046f2cfc1b8d09",
  "scripts/e2e/fixtures/harness.cjs": "6fe3bb6411a28bc83c6da36ba0b2480b12de6b86fd08daa61d8d0e76d7dac950",
  "scripts/e2e/fixtures/desktop-host-shim.ts": "4f598862ec0e08189628c72bbb552f72bf8fd73f5a9a05b8da1d3ddf516dcfa6",
- "backend/api/routes_dataset.py": "fa3bd8b169e3c01531db8a4703296a63e849886532b2a32b05a7a03339aa291f"
+ "backend/api/routes_dataset.py": "6915177047d0b19a40a52315c69e38e709c55a7ec4c33c224ce9bf209de61cbb"
 } as const;
 export function canonical(value:any):any{return Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])):value;}
 export function assertDraftRecord(record:any,pipeline:any,context:any){
@@ -105,7 +105,8 @@ export function assertSourcePixels(raw:Buffer,blue=100){
 export function assertAnomalyImport(value:any){
  expect(value).toEqual({status:'success',total_images:2,source_images:2,unlabeled_images:0,classes:{good:2},split:{train:1,val:1,test:0},corrupted_images:[],
   validation:{requested:true,checked_images:2,complete:true,scope:'all images: every image file under the folder was decoded'},split_supported:false,
-  split_unavailable_reason:'anomaly 분할은 현재 학습 데이터에 적용되지 않습니다. 원본 데이터의 train/val/test 구성을 사용하세요. / anomaly split is not applied by the training loader; use source train/val/test folders.'});
+  split_unavailable_reason:'anomaly 분할은 현재 학습 데이터에 적용되지 않습니다. 원본 데이터의 train/val/test 구성을 사용하세요. / anomaly split is not applied by the training loader; use source train/val/test folders.',
+  excluded_undecodable:{excluded:[],restored:[],recorded:true},split_state:'source_folders',labels_missing:false,expected_layout:"train/good (정상만), test/good, test/<결함 이름> (선택: ground_truth/<결함 이름>/<이름>_mask.png), 또는 OK/ 와 NG/"});
 }
 
 type FlowReply={status:number;body:string;url:string;headers:Record<string,string>};

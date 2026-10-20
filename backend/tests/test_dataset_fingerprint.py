@@ -60,6 +60,11 @@ def test_training_receipt_records_source_version(monkeypatch, tmp_path: Path):
     ok_class.mkdir(parents=True)
     (ok_class / "image_a.jpg").write_bytes(b"original a")
     (ok_class / "image_b.jpg").write_bytes(b"original b")
+    # Classification training needs two classes with training images (one class only ever answers that class).
+    ng_class = source / "NG"
+    ng_class.mkdir()
+    (ng_class / "image_c.jpg").write_bytes(b"original c")
+    (ng_class / "image_d.jpg").write_bytes(b"original d")
     captured = {}
 
     def capture_start(**kwargs):

@@ -294,7 +294,8 @@ async function exercise(page: Page, w: Workspace, e: Evidence, rawApi: Api, nati
     expect(automaticImport[0]).toMatchObject({method: 'POST', query: '', request_body: {folder_path: w.dataset, task: 'classification', validate_images: false}, status: 200, finished: null});
     expect(automaticImport[0].response).toEqual({status: 'success', total_images: 2, source_images: 2, unlabeled_images: 0, classes: {ng: 1, ok: 1},
       split: {train: 1, val: 1, test: 0}, corrupted_images: [], validation: {requested: false, checked_images: 0, complete: false, scope: 'not requested'},
-      split_supported: true, split_unavailable_reason: null});
+      split_supported: true, split_unavailable_reason: null, excluded_undecodable: {excluded: [], restored: [], recorded: false},
+      split_state: 'saved', labels_missing: false, expected_layout: "클래스마다 폴더 하나 (예: 데이터/OK/*.png, 데이터/NG/*.png). 이미 나눴다면 train·val·test 아래에 같은 구조"});
     for (const row of automaticImages) {
       expect(row).toMatchObject({method: 'GET', request_body: null, status: 200, finished: null});
       expect(Object.fromEntries(new URLSearchParams(row.query))).toEqual({folder_path: w.dataset, task: 'classification', limit: '48', offset: '0'});

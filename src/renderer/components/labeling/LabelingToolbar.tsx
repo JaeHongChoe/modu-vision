@@ -33,7 +33,9 @@ import { useAnnotationStore } from '../../stores/useAnnotationStore';
 import { calculateActualSize, calculateCenterZoom, calculateFitToScreen } from '../../utils/coordinateMath';
 import { isShapeConvertible } from './convertedAnnotation';
 
-export const LabelingToolbar: React.FC = () => {
+/** `classification`: the project's class comes from the folder or the class picker, so the OK-tag toggle (which
+ *  classification training never reads) is not offered. */
+export const LabelingToolbar: React.FC<{ classification?: boolean }> = ({ classification = false }) => {
   const {
     activeTool,
     setActiveTool,
@@ -334,7 +336,7 @@ export const LabelingToolbar: React.FC = () => {
       </div>
 
       {/* Normal Part (OK) 1-Click Fast Tagging */}
-      <div className="flex items-center space-x-2">
+      <div className={classification ? 'hidden' : 'flex items-center space-x-2'}>
         <button
           onClick={() => markNormal(!isNormalMarked)}
           disabled={annotationLoadStatus !== 'ready'}

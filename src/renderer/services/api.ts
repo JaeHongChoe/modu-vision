@@ -1074,6 +1074,11 @@ export const api = {
         expected_layout?: string;
       }>('/api/dataset/import', { method: 'POST', body: JSON.stringify(data) }),
 
+    /** Classification: choose one image's class without moving the file; null returns it to its folder class. */
+    setImageClass: (data: { image_path: string; class_name: string | null; actor?: string }) =>
+      request<{ relative_path: string; class: string | null; class_source: 'folder' | 'override'; folder_class: string | null; changed: boolean }>(
+        '/api/dataset/metadata/class-override', { method: 'PUT', body: JSON.stringify(data) }),
+
     currentSummary: (data: { folder_path: string; task: VisionTask }) =>
       request<{
         status: string;

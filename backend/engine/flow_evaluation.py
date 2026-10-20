@@ -390,8 +390,11 @@ def confirm_truth_from_labels(project, cohort_id, version_id, *, reviewer, note=
     if task == 'mixed':
         raise ValueError('여러 종류의 모델이 섞인 흐름은 폴더 라벨로 정답을 정할 수 없습니다. 이미지별로 검토하세요.')
     declared = kept = 0; unknown = []
+    from backend.engine.class_overrides import read_class_overrides, effective_class
+    overrides = read_class_overrides(Path(project['source_dataset_dir'])) if task == 'classification' else {}
     for sample in cohort['samples']:
         label, _ = folder_label_split(PurePath(sample['relative_path']), task)
+        label, _ = effective_class(Path(sample['image_path']), label, overrides)  # a class chosen in step 2 wins
         decided = _label_verdict(label, roles) if label else None
         if decided is None:
             unknown.append(sample['relative_path']); continue
