@@ -45,7 +45,7 @@
     "src/renderer/components/training/OCRWorkbench.tsx": "769a2316ba1770bccd1c6c78987d99ee779ddf64d82f4c080ad5280924e51125",
     "src/renderer/components/training/RotationWorkbench.tsx": "196db2fe456d37b264fcda1ac600f9d61480487e873a1cf4200d1bc5b0a14dd1",
     "src/renderer/components/training/RotatedBoxFitting.tsx": "0baf99e83b1c35f8ca59b61bfee41bcb983ea463ce67ed15841c5282a167f768",
-    "src/renderer/components/flowchart/CustomNode.tsx": "92759a4a3ca893c1b3ecd9e360c696a05fcdfcb330df2b19e6978649f1b7b5d8",
+    "src/renderer/components/flowchart/CustomNode.tsx": "7838cab7c4a19b18a0bcb3ee1238dadca0897da53df547032cbd931752337560",
     "src/renderer/components/flowchart/ImageRoiEditor.tsx": "498b466db43f32795b63f7f5cabb5bed5549c67d7be5d3d1e611b037dbe0016c",
     "src/renderer/components/dataset/DatasetStudio.tsx": "eab7240a18ff7ad8aa138bbd74be6a0e765451fa9fa52246d279e92fc37c14c4",
     "src/renderer/components/evaluation/EvaluationHistoryPanel.tsx": "ce9cfa541e63988176973a0966d031c5b8722b356feb1472671da73299d6e2fe",

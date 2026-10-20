@@ -59,7 +59,7 @@ const UI_SOURCE={
  "src/renderer/components/flowchart/FlowDraftControls.tsx": "3bd10fc68ea4ae2dc600dfad2b6c51b56d74d213f7483923107295aac303f5a8",
  "src/renderer/components/flowchart/FlowGraphNavigator.tsx": "656832c214f41742d5bc0f66c9f8983c5fb6892cfaf3b42b48ee353f282da20a",
  "src/renderer/components/flowchart/FlowInspectorPanel.tsx": "c108ee18336c2d3cdc2accb200eb739b0a3252c7fcbd60f35902e66da06c6707",
- "src/renderer/components/flowchart/CustomNode.tsx": "92759a4a3ca893c1b3ecd9e360c696a05fcdfcb330df2b19e6978649f1b7b5d8",
+ "src/renderer/components/flowchart/CustomNode.tsx": "7838cab7c4a19b18a0bcb3ee1238dadca0897da53df547032cbd931752337560",
  "src/renderer/components/flowchart/ImagePickerModal.tsx": "0ef27d643ddc2fddd5014e2c27087116eefbc87eb5dd92c95b732a401ceb6e4e",
  "src/renderer/stores/useFlowchartStore.ts": "1474aa439324ce0074e0a48dc7e56e20a54dc5258b2d4ced8e3d1e5d6cdeb33c",
  "src/renderer/services/api.ts": "8ec0aa68f5d5b42101cd9a732e01146b3744ce67cad563c10ad32fb032409ce0",

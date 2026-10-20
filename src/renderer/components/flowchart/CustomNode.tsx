@@ -54,13 +54,14 @@ const NODE_TYPE_KO: Record<string, string> = {
 };
 const PAYLOAD_KO: Record<string, string> = { IMAGE: '이미지', ROI: 'ROI', RESULT: '결과', VERDICT: '판정' };
 
-/** The visible Korean words for a port label such as "IMAGE/ROI IN" or "DEFECT BOXES"; unknown labels stay as they are. */
+/** The visible Korean words for a port label such as "IMAGE/ROI IN" or "DEFECT BOXES": what the port carries. The side
+ * of the node already says the direction (inputs left, outputs right) and the tooltip and button name repeat it, so the
+ * words stay short enough for both sides of a fixed-width node on a large monitor. Unknown labels stay as they are. */
 export function koreanPortLabel(label: string): string {
   if (label === 'DEFECT BOXES') return '결함 박스';
   const match = /^(.+) (IN|OUT)$/.exec(label);
   if (!match) return label;
-  const payloads = match[1].split('/').map((part) => PAYLOAD_KO[part] ?? part).join('·');
-  return `${payloads} ${match[2] === 'IN' ? '입력' : '출력'}`;
+  return match[1].split('/').map((part) => PAYLOAD_KO[part] ?? part).join('·');
 }
 
 export const CustomNode: React.FC<CustomNodeProps> = ({

@@ -289,11 +289,11 @@ test('object count rules refuse unknown classes, booleans, duplicates and condit
 });
 test('the canvas shows Korean type and port words while button names stay English for automation',()=>{
  const React=require('react'),{renderToStaticMarkup}=require('react-dom/server');const {CustomNode,koreanPortLabel}=compile('CustomNode.tsx',{'./flowchartViewport':{FLOW_NODE_WIDTH:272},'./flowchartGraph':graph});
- assert.equal(koreanPortLabel('IMAGE/ROI IN'),'이미지·ROI 입력');assert.equal(koreanPortLabel('RESULT OUT'),'결과 출력');
- assert.equal(koreanPortLabel('VERDICT OUT'),'판정 출력');assert.equal(koreanPortLabel('DEFECT BOXES'),'결함 박스');assert.equal(koreanPortLabel('SOMETHING'),'SOMETHING');
+ assert.equal(koreanPortLabel('IMAGE/ROI IN'),'이미지·ROI');assert.equal(koreanPortLabel('RESULT OUT'),'결과');
+ assert.equal(koreanPortLabel('VERDICT OUT'),'판정');assert.equal(koreanPortLabel('DEFECT BOXES'),'결함 박스');assert.equal(koreanPortLabel('SOMETHING'),'SOMETHING');
  const render=(props)=>renderToStaticMarkup(React.createElement(CustomNode,{isSelected:false,isActive:false,isPassed:false,isFlaggedNg:false,onSelect(){},...props}));
  const ko=render({node:node('judge','decision')});
- assert.match(ko,/>판정<\/span>/);assert.match(ko,/>결과 입력<\/span>/);assert.match(ko,/>판정 출력<\/span>/);
+ assert.match(ko,/>판정<\/span>/);assert.match(ko,/>결과<\/span>/);assert.match(ko,/title="이 노드의 입력에 연결 \(결과\)"/);assert.match(ko,/title="여기서 연결 시작 \(판정\)"/);
  assert.match(ko,/aria-label="Connect to [^"]* RESULT IN"/,'the button name keeps the English port');
  const en=render({node:node('judge','decision'),language:'en'});
  assert.match(en,/>decision<\/span>/);assert.match(en,/>RESULT IN<\/span>/);
