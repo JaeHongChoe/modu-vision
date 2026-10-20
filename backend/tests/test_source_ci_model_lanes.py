@@ -216,8 +216,9 @@ def test_cpu_and_browser_ci_have_independent_original_bounds_and_complete_comman
         values = [value for value in job['steps'] if value.get('name') == name]
         assert len(values) == 1, name
         return values[0]
-    for job in jobs.values():
-        assert job['runs-on'] == 'ubuntu-24.04' and job['timeout-minutes'] == 75
+    # Budgets from measured hosted-runner durations (source up to ~77 min, browser up to 69 min) with ~40% headroom.
+    for name, job in jobs.items():
+        assert job['runs-on'] == 'ubuntu-24.04' and job['timeout-minutes'] == {'source': 110, 'browser': 100}[name]
         assert not any(key in job for key in ('needs', 'if', 'permissions', 'environment', 'strategy'))
         assert job['env'] == {'OMP_NUM_THREADS': '2', 'MKL_NUM_THREADS': '2'}
         checkout = job['steps'][0]

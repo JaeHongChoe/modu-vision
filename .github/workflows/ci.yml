@@ -21,7 +21,10 @@ jobs:
     runs-on: ubuntu-24.04
     # The recorded 5098dac run exhausted 35 minutes after CPU checks passed.
     # Both lanes retain their full selected suites and isolated workspaces.
-    timeout-minutes: 75
+    # Measured on hosted runners (2026-10-20, runs 39396577197, 39381902182, 39398496681, 39407506214): setup ~3.5 min,
+    # the CPU contract step 50-71 min, the defect baseline step ~2.7 min, so up to ~77 min in all; 75 cut off the last
+    # step after the contract step had passed. 110 keeps ~40% headroom for runner speed; no selection is dropped.
+    timeout-minutes: 110
     env:
       OMP_NUM_THREADS: '2'
       MKL_NUM_THREADS: '2'
@@ -396,7 +399,8 @@ jobs:
     runs-on: ubuntu-24.04
     # The recorded 5098dac run exhausted 35 minutes after CPU checks passed.
     # Both lanes retain their full selected suites and isolated workspaces.
-    timeout-minutes: 75
+    # Measured on hosted runners (same runs): 48-69 min in all, the browser step up to 64 min. 100 keeps ~40% headroom.
+    timeout-minutes: 100
     env:
       OMP_NUM_THREADS: '2'
       MKL_NUM_THREADS: '2'
