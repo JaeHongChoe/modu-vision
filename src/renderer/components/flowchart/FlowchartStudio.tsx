@@ -60,7 +60,7 @@ import { computeFlowchartViewport, readableFlowScale, FLOW_NODE_WIDTH } from './
 import { getFlowchartModelReferences, getFlowchartModelTask, pipelineMatchesTask, recoverThenLoadFlowchart, singleModelAutoBinding } from './flowchartStartup';
 import { flowRecipeLabel, flowRunSourceLabel } from './flowHandoff';
 import { flowExecutionOptions, type FlowExecutionChoice } from './flowExecution';
-import { connectFlowNodes, decisionReachedOnlyByConditions, decisionRulePatch, flowIssuesByTarget, layoutFlowchart, locateFlowIssue, nodeClassChoices, removeFlowNode, removeFlowEdge, selectFlowEdge, selectedFlowEdge, flowEdgeKey, shouldShowThreshold, updateFlowEdgeData, updateFlowEdgeBranch, updateFlowEdgePayload, validateFlowchartGraph, type FlowPortPayload, type FlowEdgeSelection } from './flowchartGraph';
+import { connectFlowNodes, decisionReachedOnlyByConditions, decisionRulePatch, flowIssuesByTarget, layoutFlowchart, locateFlowIssue, nodeClassChoices, removeFlowNode, removeFlowEdge, selectFlowEdge, selectedFlowEdge, flowEdgeKey, shouldShowThreshold, updateFlowEdgeData, updateFlowEdgeBranch, updateFlowEdgePayload, validateFlowchartGraph, type FlowPortPayload, type FlowEdgeSelection, rebaseFlowEdgeSelection } from './flowchartGraph';
 
 const verifyModelReferences = async (
   sourceFolder: string,
@@ -730,6 +730,13 @@ export const FlowchartStudio: React.FC = () => {
   };
 
   const selectedNode = pipeline?.nodes.find((n) => n.id === selectedNodeId);
+  // A wire selection belongs to the edge list it was made on (legacy flows can repeat or omit edge IDs). A read that
+  // brings back exactly the same edges as a new list (step 5 can read the flow twice on entry) keeps the selection on
+  // the same row; any other change clears it as before.
+  useLayoutEffect(() => {
+    if (!pipeline || !selectedEdgeSelection || pipeline.edges === selectedEdgeSelection.edges) return;
+    setSelectedEdgeSelection(rebaseFlowEdgeSelection(pipeline, selectedEdgeSelection));
+  }, [pipeline, selectedEdgeSelection]);
   const selectedEdge = pipeline && selectedEdgeSelection ? selectedFlowEdge(pipeline, selectedEdgeSelection) : null;
 
   // 입력창의 너비·높이를 저장 형식인 [x1, y1, x2, y2]로 변환하며, 시작점 이동 시 기존 크기를 유지한다.

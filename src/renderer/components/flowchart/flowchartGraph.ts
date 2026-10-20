@@ -345,6 +345,15 @@ export function selectedFlowEdge(pipeline: FlowchartPipeline, selection: FlowEdg
     && selection.index >= 0 && pipeline.edges[selection.index] === selection.edge ? selection.edge : null;
 }
 
+/** A wire selection on a graph read again with exactly the same edges (a new list): the same row stays selected.
+ *  Any other change to the edges drops the selection, as the identity check above requires. */
+export function rebaseFlowEdgeSelection(pipeline: FlowchartPipeline, selection: FlowEdgeSelection | null): FlowEdgeSelection | null {
+  if (!selection || pipeline.edges === selection.edges) return selection;
+  const edge = pipeline.edges[selection.index];
+  const same = pipeline.edges.length === selection.edges.length && JSON.stringify(pipeline.edges) === JSON.stringify(selection.edges);
+  return same && edge ? { index: selection.index, edge, edges: pipeline.edges } : null;
+}
+
 function edgeSelectionIndex(pipeline: FlowchartPipeline, selection: string | FlowEdgeSelection): number {
   if (typeof selection === 'string') {
     const found = pipeline.edges.flatMap((edge, index) => edge.id === selection ? [index] : []);

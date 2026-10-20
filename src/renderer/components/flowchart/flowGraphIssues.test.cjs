@@ -298,3 +298,16 @@ test('the canvas shows Korean type and port words while button names stay Englis
  const en=render({node:node('judge','decision'),language:'en'});
  assert.match(en,/>decision<\/span>/);assert.match(en,/>RESULT IN<\/span>/);
 });
+test('a wire selection survives a read of the same edges as a new list and drops on any change',()=>{
+ const flow={id:'f',name:'f',nodes:[node('a','input'),node('b','decision')],edges:[{id:'',source:'a',target:'b'},{id:'dup',source:'a',target:'b'},{id:'dup',source:'b',target:'a'}]};
+ const selection={index:2,edge:flow.edges[2],edges:flow.edges};
+ assert.equal(graph.rebaseFlowEdgeSelection(flow,selection),selection,'the same list keeps the same selection');
+ const reread=JSON.parse(JSON.stringify(flow));const moved=graph.rebaseFlowEdgeSelection(reread,selection);
+ assert.equal(moved.index,2);assert.equal(moved.edges,reread.edges);assert.equal(moved.edge,reread.edges[2]);
+ assert.equal(graph.selectedFlowEdge(reread,moved),reread.edges[2],'the rebased selection resolves on the new list');
+ const renamed=JSON.parse(JSON.stringify(flow));renamed.edges[0].label='changed';
+ assert.equal(graph.rebaseFlowEdgeSelection(renamed,selection),null,'a changed edge list drops the selection');
+ const shorter={...flow,edges:flow.edges.slice(0,2)};
+ assert.equal(graph.rebaseFlowEdgeSelection(shorter,selection),null);
+ assert.equal(graph.rebaseFlowEdgeSelection(flow,null),null);
+});
