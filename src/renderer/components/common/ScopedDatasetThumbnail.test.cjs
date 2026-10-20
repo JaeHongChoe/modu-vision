@@ -98,3 +98,11 @@ test('StrictMode-style cleanup then new lifetime neither reuses a revoked URL no
  const second=f.make();second.observe({});old.deliver();assert.equal(f.calls.length,1);f.observers[1].deliver();await until(()=>f.published.length===2);
  assert.equal(f.calls.length,2);assert.equal(f.published.length,2);assert.notEqual(f.published[0],f.published[1]);second.retire();assert.deepEqual(f.revoked,f.allocated);
 });
+test('a missing or non-string thumbnail address observes nothing and never throws (the app must not blank)',async t=>{
+ const f=fixture(t,{headersFromMain:true});await f.switchMain();
+ for(const path of [undefined,null,42,{}]){
+  const read=f.make({path});assert.doesNotThrow(()=>read.observe({}));
+ }
+ assert.equal(f.observers.length,0,'no observer is attached for an address that is not a thumbnail path');
+ assert.equal(f.calls.length,0);assert.equal(f.published.length,0);
+});

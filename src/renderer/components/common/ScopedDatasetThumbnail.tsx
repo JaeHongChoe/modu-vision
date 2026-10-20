@@ -6,7 +6,10 @@ function sameContext(left: ProjectContext | null, right: ProjectContext | null):
     && left.project_id === right.project_id && left.actor_id === right.actor_id && left.mode === right.mode);
 }
 
-function thumbnailPath(value: string): boolean {
+/** A missing or malformed thumbnail address (an older server, a test double) leaves the image empty; it never
+ * throws inside a render or an observer, which would blank the whole app. */
+function thumbnailPath(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
   const prefix = '/api/dataset/thumbnail/';
   if (!value.startsWith(prefix) || /[\\\u0000-\u001f#]/.test(value.split('?')[0]) || /[\u0000-\u001f#]/.test(value)) return false;
   try {
