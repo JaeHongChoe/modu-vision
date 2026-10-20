@@ -66,3 +66,10 @@ test('step banners name the steps in plain Korean and keep the English code behi
  const banner=read('common/OperatorGuidanceBanner.tsx');
  assert.match(banner,/technicalDetails && <span/);
 });
+
+test('the simple view class bar leads with the project classes and folds unused example names',()=>{
+ const categories=read('labeling/CategorySelector.tsx');
+ assert.match(categories,/const simpleView = useProjectStore\(\(state\) => state\.viewMode\) === 'simple';/);
+ assert.match(categories,/예시 이름 \$\{samples\.length\}개/);assert.match(categories,/onClick=\{\(\) => addCategory\(name\)\}/);
+ assert.match(categories,/cat\.id === activeCategory\.id/,'the drawing class stays visible');
+});

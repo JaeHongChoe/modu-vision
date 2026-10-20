@@ -5,12 +5,28 @@
 
 import React, { useState } from 'react';
 import { Plus, Tag } from 'lucide-react';
-import { useAnnotationStore } from '../../stores/useAnnotationStore';
+import { DEFAULT_CATEGORIES, useAnnotationStore } from '../../stores/useAnnotationStore';
+import { useDatasetStore } from '../../stores/useDatasetStore';
+import { useProjectStore } from '../../stores/useProjectStore';
 
 export const CategorySelector: React.FC = () => {
   const { categories, activeCategory, setActiveCategory, addCategory, annotations, labelbookVersion } = useAnnotationStore();
   const [newCatName, setNewCatName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
+  const [showSamples, setShowSamples] = useState(false);
+  // The simple view leads with the project's own classes: the built-in example defect names stay one click away
+  // while unused, and a dataset class that has no label class yet is offered as one click. Display only; the
+  // categories and their IDs in saved labels are unchanged.
+  const simpleView = useProjectStore((state) => state.viewMode) === 'simple';
+  const datasetClasses = Object.keys(useDatasetStore((state) => state.classes) || {});
+  const countOf = (cat: { id: number; name: string }) => annotations.filter((a) => a.category_id === cat.id || a.label === cat.name).length;
+  const isUnusedSample = (cat: { id: number; name: string }) => simpleView && !labelbookVersion && cat.name !== 'OK'
+    && DEFAULT_CATEGORIES.some((d) => d.id === cat.id && d.name === cat.name)
+    && !datasetClasses.includes(cat.name) && countOf(cat) === 0;
+  // The class used for drawing is always visible, even when it is an unused example name.
+  const samples = categories.filter((cat) => isUnusedSample(cat) && cat.id !== activeCategory.id);
+  const shown = showSamples ? categories : categories.filter((cat) => !isUnusedSample(cat) || cat.id === activeCategory.id);
+  const missing = simpleView && !labelbookVersion ? datasetClasses.filter((name) => !categories.some((cat) => cat.name === name)) : [];
 
   const handleAdd = () => {
     if (newCatName.trim()) {
@@ -27,8 +43,8 @@ export const CategorySelector: React.FC = () => {
         <span>클래스:</span>
       </span>
 
-      {categories.map((cat) => {
-        const count = annotations.filter((a) => a.category_id === cat.id || a.label === cat.name).length;
+      {shown.map((cat) => {
+        const count = countOf(cat);
         const isActive = activeCategory.id === cat.id;
 
         return (
@@ -52,6 +68,19 @@ export const CategorySelector: React.FC = () => {
           </button>
         );
       })}
+
+      {missing.map((name) => (
+        <button key={`missing:${name}`} type="button" onClick={() => addCategory(name)} title={`데이터셋의 ${name} 클래스를 라벨 클래스로 추가합니다`}
+          className="flex items-center gap-1 whitespace-nowrap rounded-full border border-dashed border-cyan-600 px-2.5 py-1 text-xs text-cyan-200 hover:bg-cyan-950/40">
+          <Plus className="h-3 w-3" aria-hidden="true" /><span>{name}</span>
+        </button>
+      ))}
+      {samples.length > 0 && (
+        <button type="button" aria-expanded={showSamples} onClick={() => setShowSamples((open) => !open)}
+          className="whitespace-nowrap rounded-full px-2 py-1 text-xs text-slate-500 hover:text-slate-300">
+          {showSamples ? '예시 이름 숨기기' : `예시 이름 ${samples.length}개`}
+        </button>
+      )}
 
       {labelbookVersion ? <span className="whitespace-nowrap text-xs text-cyan-300">공유 기준 v{labelbookVersion} · 클래스 추가는 팀 기준서에서</span> : isAdding ? (
         <div className="flex items-center space-x-1">
