@@ -182,3 +182,19 @@ def test_review_eligibility_change_requires_candidate_training(tmp_path,monkeypa
     report=workflow_impact.analyze(project)
     assert report['models'][0]['data_state']=='changed'
     assert 'train_candidate' in report['required_actions']
+
+
+def test_evaluation_of_the_current_checkpoint_is_current_and_an_unbound_one_is_not(tmp_path):
+    """Step 4 readiness needs a current evaluation; one bound to the model's exact, unchanged checkpoint is that."""
+    project,checkpoint=project_fixture(tmp_path);root=Path(project['project_dir'])
+    history=root/'reports'/'evaluations';history.mkdir(parents=True)
+    from backend.engine.evaluation_history import EvaluationHistory
+    store=EvaluationHistory(history)
+    store.append({'job_id':'job_one','task':'classification','test_predictions':[]},
+        {'checkpoint_sha256':hashlib.sha256(checkpoint.read_bytes()).hexdigest()})
+    report=workflow_impact.analyze(project)
+    assert report['models'][0]['checkpoint_state']=='current'
+    assert [row['state'] for row in report['model_evaluations']]==['current']
+    store.append({'job_id':'job_one','task':'classification','test_predictions':[]},{})
+    states=sorted(row['state'] for row in workflow_impact.analyze(project)['model_evaluations'])
+    assert states==['changed','current'], 'an evaluation without a checkpoint binding never counts as current'

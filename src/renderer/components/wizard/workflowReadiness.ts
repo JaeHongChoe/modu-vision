@@ -39,7 +39,7 @@ export function getNextAction(input: ReadinessContext): ReadinessAction {
     if(!model)return result('blocked',['선택 모델의 현재 체크포인트·데이터 근거 확인 필요'],'학습 모델 확인 (3단계)',3,'workflow-training');
     completedInputs.push(`현재 입력과 일치하는 모델 ${model.job_id}`);
     const evaluation=evidence.impact.model_evaluations.find(row=>row.job_id===model.job_id && row.state==='current' && row.evaluation_id);
-    if(!evaluation)return result('unknown',['평가 결과를 확인하고 승인하면 5단계로 갈 수 있습니다'],'평가 결과·승인 확인 (4단계)',4,'workflow-approval');
+    if(!evaluation)return result('unknown',['이 모델로 시험 이미지를 평가하면 5단계로 갈 수 있습니다 (승인은 필요하지 않습니다)'],'시험 이미지로 평가하기 (4단계)',4);
     completedInputs.push(`현재 평가 ${evaluation.evaluation_id}`);
     return result('ready',[],'검사 흐름 만들기 (5단계)',5);
   }
@@ -56,9 +56,15 @@ export function getNextAction(input: ReadinessContext): ReadinessAction {
 export const recoveryStep = (action:string):WorkflowStep => ({review_data:2,train_candidate:3,evaluate_model:4,compare_fixed_cohort:4,approve_model:4,review_approval:4,evaluate_flow:5,export_package:6,verify_target:6} as Record<string,WorkflowStep>)[action] || 1;
 
 /** Focus a mounted recovery section after the normal stage transition. */
+/** The simple view folds secondary panels into <details>; a footer jump to a target inside one opens it first, or
+ *  the user lands on a closed line with nothing in sight. */
+export function openFoldsAround(element: Element) {
+  for (let node = element.parentElement; node; node = node.parentElement) if (node.tagName === 'DETAILS') (node as HTMLDetailsElement).open = true;
+}
+
 export function focusWorkflowTarget(target?: string) {
   if(!target || typeof document==='undefined')return;
   let attempts=0;
-  const focus=()=>{const label=target==='workflow-label-review'?'팀 작업 · 라벨 기준·검수':target==='workflow-data'?'데이터셋 폴더 열기':null;const element=document.getElementById(target)||(target==='workflow-project'?document.querySelector<HTMLElement>('[title="프로젝트 관리"]'):label?Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(button=>button.textContent?.trim()===label):null);if(element){if(element.getAttribute('role')==='tab'&&element.getAttribute('aria-selected')!=='true')element.click();element.scrollIntoView({block:'center'});element.focus();}else if(++attempts<12)requestAnimationFrame(focus);};
+  const focus=()=>{const label=target==='workflow-label-review'?'팀 작업 · 라벨 기준·검수':target==='workflow-data'?'데이터셋 폴더 열기':null;const element=document.getElementById(target)||(target==='workflow-project'?document.querySelector<HTMLElement>('[title="프로젝트 관리"]'):label?Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(button=>button.textContent?.trim()===label):null);if(element){openFoldsAround(element);if(element.getAttribute('role')==='tab'&&element.getAttribute('aria-selected')!=='true')element.click();element.scrollIntoView({block:'center'});element.focus();}else if(++attempts<12)requestAnimationFrame(focus);};
   requestAnimationFrame(focus);
 }

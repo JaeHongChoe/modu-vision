@@ -189,3 +189,13 @@ test('stages three through six keep their production impact request and malforme
   }finally{fixture.unmount();}
  }
 });
+
+test('a footer jump opens every closed section around its target',()=>{
+ const {openFoldsAround}=load();
+ const outer={tagName:'DETAILS',open:false,parentElement:null};
+ const middle={tagName:'DIV',parentElement:outer};
+ const inner={tagName:'DETAILS',open:false,parentElement:middle};
+ const target={tagName:'SECTION',parentElement:inner};
+ openFoldsAround(target);
+ assert.equal(inner.open,true);assert.equal(outer.open,true);
+});
