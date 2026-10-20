@@ -1707,6 +1707,13 @@ def _start_training(req: TrainingStartRequest, request: Optional[Request], reser
         if not options.get('pretrained_checkpoint'):
             prepared=imported_weight(get_current_project(request),req.task,selected)
             if prepared:req.config_overrides={**options,'pretrained_checkpoint':prepared}
+    # A weight file whose content and name disagree (an extension-less safetensors file) is named here instead of
+    # failing inside torch.load mid-training (audit F-13). The user's file is never renamed.
+    supplied_weights=(req.config_overrides or {}).get('pretrained_checkpoint')
+    if isinstance(supplied_weights,str) and supplied_weights and not req.compute_profile_id and Path(supplied_weights).expanduser().is_file():
+        from backend.engine.weights_format import weights_file_problem
+        weights_problem=weights_file_problem(Path(supplied_weights).expanduser())
+        if weights_problem:raise HTTPException(422,weights_problem)
     if req.task=='anomaly' and (req.config_overrides or {}).get('anomaly_mode','classification') not in ('classification','segmentation'):
         raise HTTPException(422,'이상 탐지 목적이 올바르지 않습니다. 이미지 분류 또는 영역 분할 중 하나를 고르세요.')
     synthetic_anomaly = (req.config_overrides or {}).get('anomaly_method') == 'dino_synthetic'

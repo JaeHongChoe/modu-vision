@@ -318,6 +318,20 @@ CATALOG: Dict[str, ErrorCatalogItem] = {
         severity=ErrorSeverity.MEDIUM,
         auto_fixable=False,
     ),
+    "ERR_010": ErrorCatalogItem(
+        code="ERR_010",
+        title_en="Pretrained Weights Unavailable",
+        title_kr="사전학습 가중치를 쓸 수 없음",
+        description_en="The model's official pretrained weights could not be downloaded or read.",
+        description_kr="모델의 공식 사전학습 가중치를 받지 못했거나 파일을 읽을 수 없습니다.",
+        remediation_en="Check the internet connection and use 'Download weights now' in step 3, or choose the official weight file with 'Import official pretrained weights'.",
+        remediation_kr="인터넷 연결을 확인한 뒤 3단계 준비 카드의 '가중치 미리 받기'로 다시 받거나, 공식 가중치 파일을 '공식 사전학습 가중치 가져오기'로 지정하세요. 무작위 초기값으로 대신 학습하지 않습니다.",
+        cause_en="The download failed (offline or access denied) or the file is not a weight file in the format its name says.",
+        cause_kr="내려받기가 실패했거나(오프라인·접근 권한), 파일 내용이 이름이 말하는 가중치 형식이 아닙니다.",
+        action="prepare_weights",
+        severity=ErrorSeverity.HIGH,
+        auto_fixable=False,
+    ),
 }
 
 # Mapping legacy or semantic codes to canonical codes
@@ -336,6 +350,7 @@ _ALIAS_MAP = {
     "ERR_TRAINING_DIVERGENCE": "ERR_008",
     "ERR_NAN_LOSS": "ERR_008",
     "ERR_DATA_LAYOUT": "ERR_009",
+    "ERR_WEIGHTS_UNAVAILABLE": "ERR_010",
 }
 
 
@@ -374,6 +389,9 @@ def classify_exception(exc: Exception, details: Optional[str] = None) -> ErrorCa
         canonical_code = "ERR_003"
     elif "no images" in msg or "single class" in msg or "at least 2 classes" in msg or "insufficient" in msg:
         canonical_code = "ERR_002"
+    elif ("pretrained weights are unavailable" in msg or "pretrained checkpoint is unavailable" in msg
+          or "invalid load key" in msg or "pretrained checkpoint does not exist" in msg):
+        canonical_code = "ERR_010"  # audit F-12/F-13: offline download or a weight file in the wrong format
     elif "fallback" in msg or "not available on this host" in msg:
         canonical_code = "ERR_007"
     else:

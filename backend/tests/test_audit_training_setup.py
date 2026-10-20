@@ -61,9 +61,21 @@ def test_weight_files_whose_content_and_name_disagree_are_named_in_korean(tmp_pa
     assert sniff_weights_format(torch_file) == 'torch_zip' and weights_file_problem(torch_file) is None
     assert '.safetensors로 바꾼 뒤' in weights_file_problem(renamed)
     assert '읽을 수 없습니다' in weights_file_problem(junk)
-    from backend.engine.model_backbones import _verified_weights
-    with pytest.raises(ValueError, match='safetensors 형식인데'):
-        _verified_weights(renamed, None)
+
+
+def test_training_start_names_a_mismatched_weight_file_and_failures_read_in_korean(tmp_path):
+    from safetensors.torch import save_file
+    from backend.utils.error_catalog import classify_exception
+    api, _, source = client(tmp_path)
+    renamed = tmp_path / 'weights'
+    save_file({'w': torch.zeros(2)}, str(tmp_path / 'weights.safetensors'))
+    renamed.write_bytes((tmp_path / 'weights.safetensors').read_bytes())
+    refused = api.post('/api/training/start', json={'task': 'classification', 'dataset_path': str(source), 'device': 'cpu',
+                                                   'config_overrides': {'pretrained_checkpoint': str(renamed)}})
+    assert refused.status_code == 422 and 'safetensors 형식인데' in refused.json()['detail']
+    for message in ('Authentic DINOv3 pretrained weights are unavailable for timm/x.', 'UnpicklingError: invalid load key, \'x\'.'):
+        item = classify_exception(RuntimeError(message))
+        assert item.code == 'ERR_010' and '가중치 미리 받기' in item.remediation_kr
 
 
 def _wait(model, state):
