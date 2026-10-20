@@ -116,14 +116,16 @@
 /* Beginner floor (after the utilities so source order wins at equal specificity):
    nothing renders below 12px, the smallest body size is 13px, and secondary text keeps AA contrast.
    Console-style 9-11px labels across the studios are lifted here instead of at 500 call sites. */
-.text-\[7px\], .text-\[8px\], .text-\[9px\], .text-\[10px\], .text-\[11px\] { font-size: 0.75rem; line-height: 1.35; }
-.text-xs { font-size: 0.8125rem; line-height: 1.3rem; }
+.text-\[7px\], .text-\[8px\], .text-\[9px\], .text-\[10px\], .text-\[11px\] { font-size: 0.75rem; line-height: 1rem; }
+.text-xs { font-size: 0.8125rem; line-height: 1.25rem; }
 .text-slate-500 { color: #8E9FB8; }
 .text-slate-600 { color: #7F90A8; }
+/* Line heights are whole pixels at the 16px root so the fixed header and footer rows have whole-pixel heights;
+   fractional rows offset every scroll area by a fraction and an element scrolled into view could stay 0.2px clipped. */
 /* Headings keep a visible hierarchy even when a studio sets them to the body size. */
-main h1 { font-size: 1.25rem; line-height: 1.3; }
-main h2 { font-size: 1.0625rem; line-height: 1.3; }
-main h3 { font-size: 0.9375rem; line-height: 1.35; }
+main h1 { font-size: 1.25rem; line-height: 1.625rem; }
+main h2 { font-size: 1.0625rem; line-height: 1.375rem; }
+main h3 { font-size: 0.9375rem; line-height: 1.25rem; }
 
 /* Custom Industrial Dark Steel Scrollbar */
 ::-webkit-scrollbar {

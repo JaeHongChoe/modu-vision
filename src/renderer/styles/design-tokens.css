@@ -33,7 +33,9 @@
 .workspace-section__header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--workspace-space-3); margin-bottom: var(--workspace-space-4); }
 .workspace-section h3 { font-size: 1rem; font-weight: 650; }
 .workspace-description { color: var(--workspace-muted); margin-top: var(--workspace-space-1); overflow-wrap: anywhere; }
-.workspace-button { display: inline-flex; align-items: center; justify-content: center; gap: var(--workspace-space-2); min-height: 2.25rem; padding: .45rem .8rem; color: var(--workspace-text); background: #223247; border: 1px solid #58718d; border-radius: .4rem; font-size: var(--workspace-font-body); font-weight: 550; white-space: normal; }
+.workspace-button { display: inline-flex; align-items: center; justify-content: center; gap: var(--workspace-space-2); min-height: 2.25rem; padding: .5rem .8rem; color: var(--workspace-text); background: #223247; border: 1px solid #58718d; border-radius: .4rem; font-size: var(--workspace-font-body); font-weight: 550; white-space: normal; }
+/* Whole-pixel vertical padding: with a 20px text line the button is 38px, so rows built from it (the footer) keep
+   whole-pixel heights and scroll areas do not start or end at a fraction of a pixel. */
 .workspace-button:hover:not(:disabled) { background: #2d445d; }
 .workspace-button:disabled { opacity: .55; cursor: not-allowed; }
 .workspace-button--primary { color: #e8f7ff; background: #0f4c6b; border-color: #38a3d1; font-weight: 650; }
