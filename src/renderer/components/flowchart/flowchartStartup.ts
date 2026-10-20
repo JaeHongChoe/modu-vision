@@ -157,3 +157,17 @@ export function canReuseStartupRead(
   return Boolean(alreadyRead) && current.pipeline === alreadyRead && !current.pipelineDirty
     && !current.isLoading && !current.isSaving && !current.isRunning;
 }
+
+/** The graph a start opened and the scope it opened it in (source, task, project, transport, context and retry count). */
+export interface OpenedFlowRead { key: string; pipeline: FlowchartPipeline }
+
+/** Whether a start that runs again in the same scope may keep the graph the previous start opened instead of reading
+ *  the flow again: the start re-runs when its own evaluation lookup selects a model, and a second read raced the
+ *  user's first click. A changed scope or retry count, an edit, another read or a busy flow always reads again. */
+export function canReuseOpenedFlow(
+  previous: OpenedFlowRead | null,
+  key: string,
+  current: { pipeline: FlowchartPipeline | null; pipelineDirty: boolean; isLoading: boolean; isSaving: boolean; isRunning: boolean },
+): boolean {
+  return Boolean(previous) && previous!.key === key && canReuseStartupRead(current, previous!.pipeline);
+}

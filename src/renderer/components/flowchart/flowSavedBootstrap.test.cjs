@@ -304,3 +304,14 @@ test('the recovery step reuses that read only while the same graph is on screen 
   assert.equal(reuse({...idle, pipelineDirty: true}, graph), false, 'the user edited it');
   for (const busy of ['isLoading', 'isSaving', 'isRunning']) assert.equal(reuse({...idle, [busy]: true}, graph), false, busy);
 });
+
+test('a start that runs again in the same scope keeps the graph the previous start opened', t => {
+  const f = fixture(t), graph = structuredClone(GRAPH), idle = {pipeline: graph, pipelineDirty: false, isLoading: false, isSaving: false, isRunning: false};
+  const reuse = f.startup.canReuseOpenedFlow, opened = {key: 'scope-1', pipeline: graph};
+  assert.equal(reuse(opened, 'scope-1', idle), true, 'the evaluation lookup re-ran the start: no second read');
+  assert.equal(reuse(null, 'scope-1', idle), false, 'the first start reads');
+  assert.equal(reuse(opened, 'scope-2', idle), false, 'another source, task, project, context or retry reads again');
+  assert.equal(reuse(opened, 'scope-1', {...idle, pipeline: structuredClone(GRAPH)}), false, 'another read replaced the graph');
+  assert.equal(reuse(opened, 'scope-1', {...idle, pipelineDirty: true}), false);
+  assert.equal(reuse(opened, 'scope-1', {...idle, isSaving: true}), false);
+});

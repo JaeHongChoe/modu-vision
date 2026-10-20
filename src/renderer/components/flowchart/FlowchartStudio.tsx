@@ -57,7 +57,7 @@ import { FlowPreflightPanel } from './FlowPreflightPanel';
 import { IntermediateCropDrawer } from './IntermediateCropDrawer';
 import { CropDetailModal } from './CropDetailModal';
 import { computeFlowchartViewport, readableFlowScale, FLOW_NODE_WIDTH } from './flowchartViewport';
-import { getFlowchartModelReferences, getFlowchartModelTask, pipelineMatchesTask, recoverThenLoadFlowchart, singleModelAutoBinding, canReuseStartupRead } from './flowchartStartup';
+import { getFlowchartModelReferences, getFlowchartModelTask, pipelineMatchesTask, recoverThenLoadFlowchart, singleModelAutoBinding, canReuseStartupRead, canReuseOpenedFlow, type OpenedFlowRead } from './flowchartStartup';
 import { flowRecipeLabel, flowRunSourceLabel } from './flowHandoff';
 import { flowExecutionOptions, type FlowExecutionChoice } from './flowExecution';
 import { connectFlowNodes, decisionReachedOnlyByConditions, decisionRulePatch, flowIssuesByTarget, layoutFlowchart, locateFlowIssue, nodeClassChoices, removeFlowNode, removeFlowEdge, selectFlowEdge, selectedFlowEdge, flowEdgeKey, shouldShowThreshold, updateFlowEdgeData, updateFlowEdgeBranch, updateFlowEdgePayload, validateFlowchartGraph, type FlowPortPayload, type FlowEdgeSelection, rebaseFlowEdgeSelection } from './flowchartGraph';
@@ -246,6 +246,8 @@ export const FlowchartStudio: React.FC = () => {
   useEffect(() => { void loadCompute().catch(() => {}); }, [loadCompute]);
   const [modelCheck, setModelCheck] = useState<{ status: 'checking' | 'ready' | 'blocked'; reason?: string }>({ status: 'checking' });
   const [verificationRetry, setVerificationRetry] = useState(0);
+  // The graph the last start opened, so a start that runs again in the same scope does not read the flow twice.
+  const openedFlow = useRef<OpenedFlowRead | null>(null);
   const [isVerifyingAction, setIsVerifyingAction] = useState(false);
   const [actionValidationError, setActionValidationError] = useState<string | null>(null);
   const [zoomScale, setZoomScale] = useState<number | null>(null);
@@ -344,6 +346,8 @@ export const FlowchartStudio: React.FC = () => {
       const epoch = getProjectContextGeneration(), transport = getApiPersistenceIdentity();
       const authority = JSON.stringify(getProjectContext());
       // 같은 폴더·작업으로 돌아온 경우도 구별하기 위해 프로젝트 세대와 API 연결까지 확인한다.
+      const readKey = JSON.stringify([folderPath, sourceKey, task, project?.id ?? null, epoch, transport, authority, contextRevision, verificationRetry]);
+      const remember = (graph: FlowchartPipeline | null) => { if (graph && isCurrent()) openedFlow.current = { key: readKey, pipeline: graph }; return graph; };
       const isCurrent = () => !cancelled && useDatasetStore.getState().datasetKey === sourceKey
         && useProjectStore.getState().task === task && useProjectStore.getState().project === project
         && getProjectContextGeneration() === epoch && getApiPersistenceIdentity() === transport
@@ -356,6 +360,7 @@ export const FlowchartStudio: React.FC = () => {
         loadCurrentSavedPipeline: async () => {
           const before = useFlowchartStore.getState();
           if (before.pipelineDirty || before.pipelineIsDraft || before.isLoading || before.isSaving || before.isRunning || before.historyGroupStart) return null;
+          if (canReuseOpenedFlow(openedFlow.current, readKey, before)) return before.pipeline;
           const graph = before.pipeline, serialized = JSON.stringify(graph), identity = before.flowIdentity;
           // 자동 복구를 기다리는 동안 생긴 편집·저장·실행은 복구 응답보다 우선한다.
           const canPublish = () => {
@@ -372,14 +377,16 @@ export const FlowchartStudio: React.FC = () => {
             cancelled = true; return null;
           }
           // The procedure checks whether this is a current saved flow; the graph is also handed to the recovery step.
-          return loaded;
+          return remember(loaded);
         },
         isCurrentSavedPipeline: saved => isCurrent() && isCurrentSavedFlowPipeline(saved, task, folderPath),
         loadSavedPipeline: (alreadyRead) => {
           const current = useFlowchartStore.getState();
           if (current.pipeline && current.pipelineDirty && pipelineMatchesTask(current.pipeline, task)) return Promise.resolve(current.pipeline);
           // The saved-flow check above already read this flow in this start; reading it again only raced the user's first click.
-          return canReuseStartupRead(current, alreadyRead) ? Promise.resolve(alreadyRead) : loadPipeline(true, task, folderPath);
+          if (canReuseStartupRead(current, alreadyRead)) return Promise.resolve(alreadyRead);
+          if (canReuseOpenedFlow(openedFlow.current, readKey, current)) return Promise.resolve(current.pipeline);
+          return loadPipeline(true, task, folderPath).then(remember);
         },
         verifyModels: verifyModelReferences,
         isCurrent,
