@@ -1507,26 +1507,35 @@ def list_resume_states(dataset_path: str, task: str, request: Request, preset: s
     fingerprint = fingerprint_dataset(source)
     content = dataset_content_sha256(source)
     rows = []
+    # Stopped runs of this task that cannot resume exactly, with the reason, so a run never just disappears (F-07).
+    excluded = []
     for path in models.glob('*/latest_training_state.pt'):
         if path.is_symlink() or any(parent.is_symlink() for parent in path.parents if parent.is_relative_to(models)): continue
         try:
             from backend.api.routes_project import get_current_project
             remote_profile = _resume_profile(path, compute_profile_id, get_current_project(request)['id'])
             state = read_training_state(path); identity = state['identity']
-            if (identity['task'] != task or identity['preset'] != preset
-                    or identity.get('dataset_content_sha256') != content
-                    or not remote_profile and identity['dataset_fingerprint'] != fingerprint
-                    or not remote_profile and identity['torch_version'] != str(torch.__version__)
-                    or not remote_profile and identity.get('backend_flags') != backend_numeric_flags()
-                    or identity['device']=='mps'
-                    or state['next_epoch'] >= identity['recipe']['epochs']
+            if (identity['task'] != task or state['next_epoch'] >= identity['recipe']['epochs']
                     or state['early_stopping'].get('early_stop')): continue
+            reason = ('학습 방식이 다릅니다 (저장된 학습: ' + ('정밀' if identity['preset'] == 'precision' else '빠른') + ')'
+                      if identity['preset'] != preset else
+                      '이전 버전 앱에서 저장한 상태라 데이터가 같은지 확인할 수 없습니다' if not identity.get('dataset_content_sha256') else
+                      '학습한 뒤 데이터가 바뀌었습니다' if identity.get('dataset_content_sha256') != content
+                      or not remote_profile and identity['dataset_fingerprint'] != fingerprint else
+                      'PyTorch 버전이 달라 같은 결과를 보장할 수 없습니다' if not remote_profile and identity['torch_version'] != str(torch.__version__) else
+                      '계산 설정이 학습 때와 다릅니다' if not remote_profile and identity.get('backend_flags') != backend_numeric_flags() else
+                      'Mac GPU(MPS)로 학습한 작업은 정확히 이어갈 수 없습니다. 새로 학습하거나 완료 모델의 가중치로 시작하세요'
+                      if identity['device'] == 'mps' else None)
+            if reason:
+                excluded.append({'job_id': path.parent.name, 'next_epoch': state['next_epoch'],
+                                 'epochs': identity['recipe']['epochs'], 'device': identity['device'], 'reason': reason})
+                continue
             rows.append({'checkpoint_path': str(path), 'job_id': path.parent.name,
                 'semantics': 'exact_resume', 'boundary': state['boundary'], 'next_epoch': state['next_epoch'],
                 'global_step': state['global_step'], 'device': identity['device'], 'recipe': identity['recipe'],
                 'compute_profile_id': compute_profile_id})
         except (OSError, ValueError, KeyError, RuntimeError): continue
-    return {'states': rows}
+    return {'states': rows, 'excluded': excluded}
 
 
 @router.get("/warm-start-parents")

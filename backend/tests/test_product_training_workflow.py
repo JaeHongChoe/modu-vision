@@ -47,10 +47,12 @@ def test_weight_import_preserves_source_binds_hash_and_reopens_without_download(
     from backend.engine import training_workspace
     assert hasattr(training_workspace,'import_pretrained_weight'),'No project weight import action'
     project={'project_dir':str(tmp_path/'project'),'models_dir':str(tmp_path/'project'/'models')}
-    source=tmp_path/'official.safetensors';source.write_bytes(b'fixture official bytes')
+    # A minimal, well-formed safetensors file (header only): the import checks the content matches the name (F-13).
+    header=b'{"__metadata__":{"fixture":"official bytes"}}';fixture=len(header).to_bytes(8,'little')+header
+    source=tmp_path/'official.safetensors';source.write_bytes(fixture)
     digest=hashlib.sha256(source.read_bytes()).hexdigest()
     saved=training_workspace.import_pretrained_weight(project,'classification','dinov3_vits16',str(source),digest)
-    assert source.read_bytes()==b'fixture official bytes'
+    assert source.read_bytes()==fixture
     assert saved['sha256']==digest
     assert training_workspace.imported_weight(project,'classification','dinov3_vits16')==saved['pretrained_checkpoint']
     from pathlib import Path

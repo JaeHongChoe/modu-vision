@@ -1253,7 +1253,7 @@ export type QueueRequest = {
 export type ReadinessRequest = {
   task: string;
   model: string;
-  device?: "cpu" | "mps" | "cuda";
+  device?: "auto" | "cpu" | "mps" | "cuda";
   pretrained_checkpoint?: string | null;
   compute_profile_id?: string | null;
   preset?: "fast" | "precision";
@@ -1622,7 +1622,7 @@ export type ViewRequest = {
 export type WeightImportRequest = {
   task: string;
   model: string;
-  device?: "cpu" | "mps" | "cuda";
+  device?: "auto" | "cpu" | "mps" | "cuda";
   pretrained_checkpoint?: string | null;
   compute_profile_id?: string | null;
   preset?: "fast" | "precision";
@@ -1630,6 +1630,10 @@ export type WeightImportRequest = {
   family_dataset_path?: string | null;
   warm_start_job_id?: string | null;
   expected_sha256?: string | null;
+};
+
+export type WeightPrefetchRequest = {
+  model: string;
 };
 
 export type ZeroEscapeCalibrateRequest = {
@@ -2047,6 +2051,7 @@ export interface ApiRequestBody {
   "POST /api/team-data/quality/profiles/{profile_id}/retire": ActorRequest;
   "PUT /api/team-data/settings": SettingsRequest;
   "POST /api/training-workspace/import-weights": WeightImportRequest;
+  "POST /api/training-workspace/prefetch-weights": WeightPrefetchRequest;
   "POST /api/training-workspace/readiness": ReadinessRequest;
   "POST /api/training/reconnect": TrainingStopRequest;
   "POST /api/training/reservations/confirm-release": ReservationReleaseRequest;

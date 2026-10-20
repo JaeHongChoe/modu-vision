@@ -45,7 +45,7 @@ const UI_SOURCE={
  "src/renderer/services/api.ts": "8e9a6005af48cfa385463cef4521cffcbfa5096172ba14ad0cffc9ab6746357e",
  "backend/engine/prepared_family_datasets.py": "656b31e84535da564ea3325b5d88f95414951ec7bf30c58970c72c9645b0f53d",
  "src/renderer/components/training/ProjectImagePicker.tsx": "96d972f0a2afc0791b0c7b68365c36ce65c4c6527e29af509a12cd88e73b9522",
- "src/renderer/components/training/TrainingPreparationPanel.tsx": "97fc865687c8cbfb7e98ccca84992caf11cbf9c4006dd9aa2bc6fdfccc8c2b0d",
+ "src/renderer/components/training/TrainingPreparationPanel.tsx": "2b8fd81f3188d4fcda2add4e1bb32b2c31a681c4b9c7257193c00823ee968262",
  "src/renderer/components/training/useSpecializedTraining.ts": "d0291891ab24c05a5078429c909be256565dd88e49424e9f736c819101f7c25e",
  "src/renderer/components/training/TrainingRuntimeSettings.tsx": "d9f6ad8b79c0a6639521ab4d2b9f3efc76a3d5962222666e8a8f03da86009080",
  "src/renderer/stores/useProjectStore.ts": "b52f486c29065e82aa48eaf9de30088f973c8060c2d85742ee7282fdd33b18fb",

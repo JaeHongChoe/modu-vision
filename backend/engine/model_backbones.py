@@ -52,7 +52,11 @@ def checkpoint_sha256(path: Path) -> str:
 def _verified_weights(path: str | Path, expected_sha256: str | None) -> tuple[Path, str]:
     weights = Path(path).expanduser()
     if not weights.is_file():
-        raise FileNotFoundError(f'Pretrained checkpoint does not exist: {weights}')
+        raise FileNotFoundError(f'사전학습 가중치 파일이 없습니다: {weights} (pretrained checkpoint not found)')
+    from backend.engine.weights_format import weights_file_problem
+    problem = weights_file_problem(weights)
+    if problem:
+        raise ValueError(problem)
     digest = checkpoint_sha256(weights)
     if expected_sha256 and digest != expected_sha256.strip().lower():
         raise ValueError('Pretrained checkpoint SHA256 hash does not match the requested weights')
@@ -69,9 +73,10 @@ def _dino_weights(name: str, checkpoint: str | None, expected_sha256: str | None
         path = hf_hub_download(repo_id=repo, filename='model.safetensors')
     except Exception as exc:
         raise RuntimeError(
-            f'Authentic DINOv3 pretrained weights are unavailable for {repo}. '
-            'Provide pretrained_checkpoint with the approved official checkpoint or grant access '
-            'through Hugging Face. Random initialization is not a pretrained substitute.'
+            f'DINOv3 사전학습 가중치({repo})를 받지 못했습니다. 인터넷 연결을 확인한 뒤 3단계 준비 카드의 '
+            "'가중치 미리 받기'로 다시 받거나, 공식 가중치 파일을 '공식 사전학습 가중치 가져오기'로 지정하세요. "
+            '무작위 초기값으로 대신 학습하지 않습니다. '
+            f'(Authentic DINOv3 pretrained weights are unavailable: {type(exc).__name__})'
         ) from exc
     path, digest = _verified_weights(path, expected_sha256)
     return path, digest, f'hf://{repo}/model.safetensors'
@@ -91,7 +96,11 @@ def _yolo_weights(name: str, checkpoint: str | None, expected_sha256: str | None
         path = attempt_download_asset(str(cache_path))
         path, digest = _verified_weights(path, expected_sha256)
     except Exception as exc:
-        raise RuntimeError('Authentic YOLO pretrained checkpoint is unavailable; provide pretrained_checkpoint') from exc
+        raise RuntimeError(
+            f'YOLO 사전학습 가중치({name}.pt)를 받지 못했습니다. 인터넷 연결을 확인한 뒤 다시 받거나, 공식 가중치 파일을 '
+            "'공식 사전학습 가중치 가져오기'로 지정하세요. "
+            f'(Authentic YOLO pretrained checkpoint is unavailable: {type(exc).__name__})'
+        ) from exc
     return path, digest, f'ultralytics:{name}.pt'
 
 

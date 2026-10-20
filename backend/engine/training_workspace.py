@@ -57,6 +57,10 @@ def model_readiness(task,model,device='cpu',checkpoint=None):
              'filename':path.name if exists else None,'content_verified':False,'sha256':digest,
              'origin':'explicit_file' if checkpoint else 'cached_file' if path is not None else None}
     if unreadable:weights['state']='unreadable'
+    if exists and checkpoint:
+        from backend.engine.weights_format import weights_file_problem
+        problem=weights_file_problem(path)
+        if problem:weights.update({'state':'wrong_format','problem':problem});unreadable=True
     return {'task':task,'model':model,'ready':not missing and runtime['available'] and not unreadable and (not required or exists),
             'dependencies':{'required':dependencies,'missing':missing},'runtime':runtime,'weights':weights,
             'execution_verified':False,'quality_approved':False,
@@ -110,6 +114,9 @@ def import_pretrained_weight(project,task,model,supplied,expected_sha256=None):
     source=Path(supplied).expanduser()
     if source.is_symlink() or not source.is_file() or source.stat().st_size==0:raise ValueError('Choose a regular nonempty pretrained file')
     if source.suffix.lower() not in ('.pt','.pth','.safetensors'):raise ValueError('Select .pt, .pth or .safetensors weights')
+    from backend.engine.weights_format import weights_file_problem
+    problem=weights_file_problem(source)
+    if problem:raise ValueError(problem)
     if not re.fullmatch(r'[a-z0-9_]+',task) or not re.fullmatch(r'[a-z0-9_]+',model):raise ValueError('Invalid model import identity')
     from backend.engine.model_backbones import checkpoint_sha256
     digest=checkpoint_sha256(source)
