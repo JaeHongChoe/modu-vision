@@ -17,7 +17,7 @@ function fixture(t,{local=false,unselected=false,noObserver=false,responseContex
  const authority=dataset.readDatasetAuthority(),context=api.getProjectContext(),pending=deferred(),calls=[],observers=[],allocated=[],revoked=[],published=[],errors=[],lifetimes=[];
  const original={fetch:global.fetch,observer:global.IntersectionObserver,create:URL.createObjectURL,revoke:URL.revokeObjectURL};
  class Observer {
-  constructor(callback){this.callback=callback;this.disconnected=false;observers.push(this);}
+  constructor(callback,options){this.callback=callback;this.options=options;this.disconnected=false;observers.push(this);}
   observe(target){this.target=target;}
   disconnect(){this.disconnected=true;}
   deliver(visible=true){this.callback([{target:this.target,isIntersecting:visible}],this);}
@@ -105,4 +105,17 @@ test('a missing or non-string thumbnail address observes nothing and never throw
  }
  assert.equal(f.observers.length,0,'no observer is attached for an address that is not a thumbnail path');
  assert.equal(f.calls.length,0);assert.equal(f.published.length,0);
+});
+
+test('the read-ahead margin is measured on the gallery scroll area, so clipped rows below the fold still load',async t=>{
+ const f=fixture(t,{headersFromMain:true});await f.switchMain();
+ const previous=globalThis.getComputedStyle;globalThis.getComputedStyle=node=>({overflowY:node.overflowY||'visible'});
+ t.after(()=>{if(previous)globalThis.getComputedStyle=previous;else delete globalThis.getComputedStyle;});
+ const gallery={overflowY:'auto',parentElement:{overflowY:'hidden',parentElement:null}};
+ const element={parentElement:{overflowY:'visible',parentElement:gallery}};
+ f.make().observe(element);
+ assert.equal(f.observers[0].options.root,gallery,'the nearest vertically scrolling ancestor is the root');
+ assert.equal(f.observers[0].options.rootMargin,'800px 0px');
+ f.make().observe({parentElement:{overflowY:'visible',parentElement:null}});
+ assert.equal(f.observers[1].options.root,null,'no scrolling ancestor falls back to the window');
 });

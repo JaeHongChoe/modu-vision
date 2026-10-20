@@ -27,6 +27,15 @@ interface ThumbnailRead {
   failed: (error: unknown) => void;
 }
 
+/** The nearest ancestor that scrolls vertically, or null for the window. */
+function scrollArea(element: Element): Element | null {
+  if (typeof getComputedStyle !== 'function') return null;
+  for (let node = element.parentElement; node; node = node.parentElement) {
+    if (/(auto|scroll)/.test(getComputedStyle(node).overflowY)) return node;
+  }
+  return null;
+}
+
 /** Own one lazy fetch and its Blob URL; no remote URL reaches an image element. */
 export function createScopedThumbnailRead(options: ThumbnailRead): {observe: (element: Element) => void; retire: () => void} {
   const captured = options.context ? {...options.context} : null;
@@ -55,13 +64,14 @@ export function createScopedThumbnailRead(options: ThumbnailRead): {observe: (el
       if (observed || !current() || !thumbnailPath(options.path) || (transport !== 'local' && !captured)
           || typeof IntersectionObserver === 'undefined') return;
       observed = true;
-      // Read thumbnails that are near the viewport too, as the browser's own lazy images do: a gallery
-      // row just below the fold is ready when the user scrolls to it instead of showing empty boxes.
+      // Read thumbnails that are near view too, as the browser's own lazy images do: a gallery row just below
+      // the fold is ready when the user scrolls to it instead of showing empty boxes. The margin is measured on
+      // the gallery's own scroll area; on the window it would not reach rows clipped inside that area.
       observer = new IntersectionObserver(entries => {
         if (!current() || !entries.some(entry => entry.target === element && entry.isIntersecting)) return;
         observer?.disconnect();
         void start();
-      }, {rootMargin: '800px 0px'});
+      }, {root: scrollArea(element), rootMargin: '800px 0px'});
       observer.observe(element);
     },
     retire() {
